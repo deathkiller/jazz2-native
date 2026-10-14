@@ -110,6 +110,8 @@ namespace Jazz2::Events
 		std::int32_t GetWarpByPosition(float x, float y);
 		/** @brief Returns target position for specified warp */
 		Vector2f GetWarpTarget(std::uint32_t id);
+		/** @brief Returns `true` if any target of specified warp lies within @p distance of @p pos */
+		bool IsNearWarpTarget(std::uint32_t id, Vector2f pos, float distance) const;
 
 		/** @brief Reads event layer data from stream */
 		void ReadEvents(Stream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty);

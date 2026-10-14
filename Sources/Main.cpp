@@ -1984,6 +1984,14 @@ void GameEventHandler::OnBeginInitialize()
 	if (fs::IsReadableFile(mappingsPath)) {
 		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
 	}
+	// Loaded after the shipped ones, so the user's mappings replace them
+	StringView userContentPath = resolver.GetUserContentPath();
+	if (!userContentPath.empty()) {
+		String userMappingsPath = fs::CombinePath(userContentPath, "gamecontrollerdb.txt"_s);
+		if (fs::IsReadableFile(userMappingsPath)) {
+			theApplication().GetInputManager().addJoyMappingsFromFile(userMappingsPath);
+		}
+	}
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -2023,7 +2031,9 @@ void GameEventHandler::OnAfterInitialize()
 	if (PreferencesCache::Language[0] != '\0') {
 		auto& resolver = ContentResolver::Get();
 		auto& i18n = I18n::Get();
-		if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }))) {
+		StringView userContentPath = resolver.GetUserContentPath();
+		if ((userContentPath.empty() || !i18n.LoadFromFile(fs::CombinePath({ userContentPath, "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }))) &&
+			!i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }))) {
 			i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }));
 		}
 	}

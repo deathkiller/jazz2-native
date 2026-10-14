@@ -531,6 +531,20 @@ namespace Jazz2::Multiplayer
 		// A connected peer that doesn't authenticate in this time is kicked - a genuine client does it right away
 		static constexpr std::int32_t AuthTimeoutSecs = 20;
 
+		// Anti-cheat escalation, see AntiCheatState - a violation adds 0.5-4 points to the suspicion, which decays by
+		// AntiCheatDecayPerSec, so an honest player's occasional desync never comes close to the thresholds
+		static constexpr float AntiCheatDecayPerSec = 0.1f;
+		static constexpr float AntiCheatNotifyThreshold = 5.0f;		// Server console and admins are notified
+		static constexpr float AntiCheatKickThreshold = 12.0f;		// The player is kicked, if the evidence is also sustained:
+		static constexpr std::uint32_t AntiCheatKickMinViolations = 5;	// - at least this many violations in the incident
+		static constexpr std::uint64_t AntiCheatKickMinIncidentMs = 10000;	// - spread over at least this time
+		static constexpr std::uint64_t AntiCheatNotifyIntervalMs = 30000;
+		static constexpr float AntiCheatBurstSecs = 1.5f;			// How much unused movement budget can be accumulated
+		static constexpr float AntiCheatMaxUncorrectedExcess = 128.0f;	// An excess up to this is tolerated without a snap back
+		static constexpr float AntiCheatWarpTargetDistance = 96.0f;	// How far from a warp target a client may already be
+		static constexpr std::uint64_t AntiCheatClockWindowMs = 10000;
+		static constexpr std::int64_t AntiCheatClockDriftToleranceMs = 1000;	// Per window, i.e. a client clock 10% faster
+
 		NetworkManager* _networkManager;
 		std::unique_ptr<GameModes::IGameMode> _gameMode;
 		float _updateTimeLeft;
@@ -697,6 +711,37 @@ namespace Jazz2::Multiplayer
 		void BroadcastLocalPlayerIdle(bool isIdle);
 
 		void EndActivePoll();
+
+		/** @brief Kind of anti-cheat violation */
+		enum class CheatViolation : std::uint8_t {
+			ImplausibleSpeed,
+			ImplausibleMovement,
+			ClockSpeedup,
+			WarpMismatch
+		};
+
+		/** @brief Returns monotonic server time in milliseconds used by the anti-cheat */
+		static std::uint64_t GetAntiCheatTimeMs();
+		/** @brief Returns the maximum plausible player speed (per axis, in pixels per frame) for the current gameplay */
+		float GetMaxPlausibleSpeed() const;
+		/**
+		 * @brief Records an anti-cheat violation of a peer and escalates
+		 *
+		 * Every violation is logged, a peer whose suspicion crosses @ref AntiCheatNotifyThreshold is reported to the
+		 * server console and admins, and a peer whose suspicion crosses @ref AntiCheatKickThreshold with enough
+		 * sustained evidence is kicked (unless disabled or the peer is an admin).
+		 */
+		void ReportCheatViolation(const Peer& peer, PeerDescriptor& peerDesc, CheatViolation type, float weight, StringView details);
+		/** @brief Compares the progression of the client clock with the server clock to detect a speed hack */
+		void CheckClientClockDrift(const Peer& peer, PeerDescriptor& peerDesc, std::uint64_t clientNowMs, std::uint64_t serverNowMs);
+		/**
+		 * @brief Returns `true` if a move from @p from to @p to can be explained by a warp
+		 *
+		 * The client handles warps on its own, so it may take a warp a moment before the server does. The move is
+		 * plausible if a warp origin lies within @p reach of @p from and one of its targets near @p to. The flags of the
+		 * warp are returned in @p flags.
+		 */
+		bool IsPlausibleClientWarp(Vector2f from, Vector2f to, float reach, WarpFlags& flags);
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
 		static std::int32_t GetTreasureWeight(std::uint8_t gemType);

@@ -36,6 +36,7 @@
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <cerrno>
 #	include <sys/types.h>
+#	include <emscripten.h>
 
 /**
 	Emscripten's libc declares fallocate() without implementing it, and the base layer's FileSystem::Copy() calls it -
@@ -49,6 +50,12 @@ extern "C" int fallocate(int fd, int mode, off_t offset, off_t length)
 	static_cast<void>(length);
 	errno = ENOSYS;
 	return -1;
+}
+
+/** Version of the game this tool was built for, the page shows it when a conversion starts (see Web/assetpacker-worker.js) */
+extern "C" EMSCRIPTEN_KEEPALIVE const char* GetGameVersion()
+{
+	return NCINE_VERSION;
 }
 #endif
 

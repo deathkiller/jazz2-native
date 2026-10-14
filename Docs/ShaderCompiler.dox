@@ -8,84 +8,65 @@ namespace Death {
 
 @m_class{m-noindent}
 
-ShaderCompiler is a standalone command-line tool in @cpp "Sources/Utilities/ShaderCompiler" @ce.
-It reads annotated `.shader` files from @cpp "Sources/Shaders" @ce, expands their variants,
-performs GLSL declaration reflection **offline**, and emits self-contained C++ headers with the
-sources and reflection data, so the runtime no longer needs `glGetActiveUniform` introspection or
-double compilation of batched shaders to size the std140 `InstancesBlock`. Beside that primary job
-it hosts every source-to-source lowering the non-GL backends need: an HLSL transform for
-Direct3D 11, a Vulkan GLSL transform with offline SPIR-V compilation, a Metal Shading Language
-transform for the macOS Metal backend, an ESSL 100 transform for the
-OpenGL|ES 2.0 profile, a GLSL-to-C++ transpiler for the software renderer, and a fixed-function
-transpiler for the backends that have no fragment shaders at all @m_span{m-text m-dim} (PVR on
-Dreamcast, GX on Wii/GameCube, GU on PlayStation Portable, GS on PlayStation 2, RDP on Nintendo 64,
-and LegacyGL on an OpenGL 1.x such as MorphOS' TinyGL) @m_endspan.
+ShaderCompiler (@cpp "Sources/Utilities/ShaderCompiler" @ce, dependency-free C++17) reads annotated
+`.shader` files from @cpp "Sources/Shaders" @ce, expands their variants, reflects the GLSL declarations
+offline and emits self-contained C++ headers with sources and reflection data, so the runtime needs no
+`glGetActiveUniform` introspection. It also performs every lowering the non-GL backends need: HLSL,
+Vulkan GLSL + SPIR-V, Metal, ESSL 100, Cg, GLSL-to-C++ for the software renderer, and a fixed-function
+transpiler for backends without fragment shaders @m_span{m-text m-dim} (PVR, GX, PICA, GU, GS, RDP,
+LegacyGL) @m_endspan.
 
-A `.shader` file therefore describes an effect on **two tiers**:
+A `.shader` file describes an effect on two tiers:
 
--   **Shader backends** get real GLSL --- the @cpp void vertex() @ce / @cpp void fragment() @ce
-    entry points, lowered per variant and then transformed per backend. The software renderer is
-    still a shader backend in this sense: its fragment function is the same GLSL transpiled to C++
-    ahead of time (@ref ShaderCompiler::GlslToCpp), not a hand-written CPU path.
--   **Fixed-function backends** get a @cpp void fixed_function() @ce block --- a short list of
-    hardware passes over the sprite quad, written next to the GLSL it approximates and transpiled
-    into C++ that drives that backend's fixed-function pipeline. The design rationale lives in
-    @cpp "Docs/FixedFunctionShaderDesign.md" @ce, the runtime contract in
-    @cpp "Sources/nCine/Graphics/RHI/FixedFunctionPass.h" @ce.
+-   <b>Shader backends</b> (software renderer included, via @ref ShaderCompiler::GlslToCpp) get the
+    GLSL of @cpp void vertex() @ce / @cpp void fragment() @ce, lowered per variant and per backend.
+-   <b>Fixed-function backends</b> get a @cpp void fixed_function() @ce block --- hardware passes over
+    the sprite quad, transpiled to C++. Design: @cpp "Docs/FixedFunctionShaderDesign.md" @ce; runtime
+    contract: @cpp "Sources/nCine/Graphics/RHI/FixedFunctionPass.h" @ce.
 
-The tool is plain C++17 with zero dependencies beyond the standard library and is portable
-across **MSVC**, **GCC** and **Clang**. All of its outputs are **committed to the repository** under
-@cpp "Sources/Shaders/Generated" @ce --- the game's build never runs the tool and never embeds a
-`.shader` file, so the headers have to be regenerated manually after editing a shader, see
-@ref shader-compiler-workflow "the workflow section".
+All outputs are <b>committed</b> under @cpp "Sources/Shaders/Generated" @ce; the game's build never runs
+the tool, so regenerate after every shader edit, see @ref shader-compiler-workflow.
 
 @section shader-compiler-artifacts Which artifact serves which platform
 
-Every backend consumes one artifact, and every artifact is produced by one mode of the tool. The
-per-shader header carries the modern GLSL plus its three per-backend lowerings side by side, so a
-single header serves GL, ES2, D3D11 and Vulkan, the other tiers get their own aggregate headers.
-The modes named below are the individual steps --- a regeneration runs all of them at once through
-@ref shader-compiler-workflow "`--generate-all`", and that is the only way the committed set should
-ever be produced.
+One per-shader header serves GL, ES2, D3D11 and Vulkan; the other tiers get aggregate headers. The
+committed set must only be produced by @ref shader-compiler-workflow "`--generate-all`", which runs
+every mode below.
 
-Backend | Artifact it consumes | Produced by
-------- | -------------------- | -----------
-OpenGL 3.3, OpenGL\|ES 3.0, WebGL 2.0 | `VsSource` / `FsSource` of the per-shader header @m_span{m-text m-dim} (the `#version` header and platform defines are injected by the engine at runtime) @m_endspan | primary mode
-OpenGL\|ES 2.0 profile (`NCINE_RHI_GL_PROFILE=ES2`) | `VsSource100` / `FsSource100` --- the ESSL 100 lowering baked into the same header | primary mode
-Direct3D 11 | `HlslVsSource` / `HlslFsSource` --- Shader Model 4/5 HLSL baked into the same header | primary mode
-Vulkan | `VkVsSpirv` / `VkFsSpirv` --- SPIR-V words compiled offline through `glslangValidator` | primary mode + glslang
-Metal (macOS) | `MslVsSource` / `MslFsSource` --- Metal Shading Language compiled on the device at load time (there is no MSL compiler outside Xcode) | primary mode
+Backend | Artifact | Produced by
+------- | -------- | -----------
+OpenGL 3.3, OpenGL\|ES 3.0, WebGL 2.0 | `VsSource` / `FsSource` of the per-shader header @m_span{m-text m-dim} (`#version` and platform defines injected at runtime) @m_endspan | primary mode
+OpenGL\|ES 2.0 profile (`NCINE_RHI_GL_PROFILE=ES2`) | `VsSource100` / `FsSource100` --- ESSL 100 lowering in the same header | primary mode
+Direct3D 11 | `HlslVsSource` / `HlslFsSource` --- Shader Model 4/5 HLSL in the same header | primary mode
+Vulkan | `VkVsSpirv` / `VkFsSpirv` --- SPIR-V compiled offline by `glslangValidator` | primary mode + glslang
+Metal (macOS) | `MslVsSource` / `MslFsSource` --- compiled on the device at load time (no MSL compiler outside Xcode) | primary mode
 Software renderer | @cpp "SwGeneratedShaders.h" @ce --- transpiled C++ fragment functions | `--emit-sw-generated`
-Dreamcast (PVR) | @cpp "PvrGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function pvr`
-Wii / GameCube (GX) | @cpp "GxGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gx`
-Nintendo 3DS (PICA) | @cpp "PicaGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function pica`
-PlayStation Portable (GU) | @cpp "GuGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gu`
-PlayStation 2 (GS) | @cpp "GsGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gs`
-Nintendo 64 (RDP) | @cpp "RdpGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function rdp`
-Legacy OpenGL 1.x @m_span{m-text m-dim} (MorphOS' TinyGL) @m_endspan | @cpp "LegacyGlGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function legacygl`
-PlayStation Vita (GXM) | @cpp "CgGeneratedShaders.h" @ce --- Cg stage sources compiled on the console | `--emit-cg`
-PlayStation 3 (RSX) | @cpp "RsxGeneratedShaders.h" @ce --- NV40 microcode compiled offline from that same Cg | `--emit-rsx` + cgcomp
+Dreamcast (PVR) | @cpp "PvrGeneratedEffects.h" @ce | `--emit-fixed-function pvr`
+Wii / GameCube (GX) | @cpp "GxGeneratedEffects.h" @ce | `--emit-fixed-function gx`
+Nintendo 3DS (PICA) | @cpp "PicaGeneratedEffects.h" @ce | `--emit-fixed-function pica`
+PlayStation Portable (GU) | @cpp "GuGeneratedEffects.h" @ce | `--emit-fixed-function gu`
+PlayStation 2 (GS) | @cpp "GsGeneratedEffects.h" @ce | `--emit-fixed-function gs`
+Nintendo 64 (RDP) | @cpp "RdpGeneratedEffects.h" @ce | `--emit-fixed-function rdp`
+Legacy OpenGL 1.x @m_span{m-text m-dim} (MorphOS' TinyGL) @m_endspan | @cpp "LegacyGlGeneratedEffects.h" @ce | `--emit-fixed-function legacygl`
+PlayStation Vita (GXM) | @cpp "CgGeneratedShaders.h" @ce --- Cg sources compiled on the console | `--emit-cg`
+PlayStation 3 (RSX) | @cpp "RsxGeneratedShaders.h" @ce --- NV40 microcode compiled offline from the same Cg | `--emit-rsx` + cgcomp
 
 @m_class{m-noindent}
 
-Fields whose lowering was unavailable are emitted as null: a construct outside the HLSL or ESSL 100
-subset leaves those sources null, and a generation run without glslang leaves the SPIR-V null. A
-program whose `fixed_function` block is missing is simply absent from the fixed-function tables and is
-skipped at runtime with a one-time warning, a shader the software transpiler declines is likewise
-absent from @cpp "SwGeneratedShaders.h" @ce.
+The `*GeneratedEffects.h` headers hold transpiled `fixed_function` effects. Unavailable lowerings are
+null (a construct outside the HLSL/ESSL 100 subset, or no glslang for SPIR-V). A program without a
+`fixed_function` block is skipped on those backends with a one-time warning; a shader the software
+transpiler declines is absent from @cpp "SwGeneratedShaders.h" @ce.
 
-Runtime-compiled `.shader` files @m_span{m-text m-dim} (the engine links the parser, reflection and
-`CompileRuntimeProgram` --- see @ref ShaderCompiler::RuntimeProgram) @m_endspan only ever produce
-GLSL plus reflection. Under the ES2 profile the engine additionally runs the very same ESSL 100
-emitter at load time, so runtime shaders get the same lowering, they have no HLSL, no SPIR-V and no
-fixed-function effect, which is why external shaders are unavailable on the fixed-function backends.
+Runtime-compiled `.shader` files (@ref ShaderCompiler::RuntimeProgram, `CompileRuntimeProgram`) get
+only GLSL, reflection and, under ES2, the ESSL 100 lowering --- so they are unavailable on the
+fixed-function backends.
 
 @section shader-compiler-building Building the tool
 
-The desktop CMake build adds the tool automatically as a utility target in the `Utilities` folder.
-It is skipped when cross-compiling @m_span{m-text m-dim} (Emscripten, Nintendo Switch, Vita, UWP,
-Wii, GameCube and Dreamcast) @m_endspan because it always runs on the build machine. It can also be
-built completely standalone:
+The desktop CMake build adds the tool as a utility target in the `Utilities` folder. It is skipped when
+cross-compiling @m_span{m-text m-dim} (Emscripten, Nintendo Switch, Vita, UWP, Wii, GameCube,
+Dreamcast) @m_endspan, since it runs on the build machine. Standalone build:
 
 @code{.sh}
 cmake -S Sources/Utilities/ShaderCompiler -B build-shadercompiler
@@ -108,306 +89,222 @@ ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 
 @m_class{m-noindent}
 
-The seven `--generate-all` / `--emit-*` / `*-check` **standalone modes** are recognized only as the
-first argument, everywhere else they are rejected as an unknown option. Everything else is the
-primary per-shader mode, which takes exactly one input file. `--generate-all` is the one that
-produces the committed tree --- the others are the individual steps it drives, kept separately
-usable for debugging a single artifact.
+The standalone modes (`--generate-all`, `--emit-*`, `--hlsl-check`, `--spirv-check`) are recognized
+only as the first argument; elsewhere they are an unknown option. Everything else is the primary
+per-shader mode, which takes exactly one input file.
 
 Mode or option | Meaning
 -------------- | -------
-`-o <output.h>` | Path of the generated C++ header. Required unless one of the five dump switches is given
-`-n <namespace>` | Namespace for the generated program **data** (default `ShaderArtifacts`); `::` nesting is allowed, an empty name, a leading digit or any character outside `[A-Za-z0-9_:]` is an error
-`--glslang <path>` | `glslangValidator` used to compile the embedded SPIR-V; otherwise discovered via `VULKAN_SDK\Bin`, `VULKAN_SDK\Bin32` and `PATH`
-`--check` | Human-readable reflection dump of every program and variant --- structs with std140 offsets, uniforms, blocks with `BaseSize`/`InstanceStride`, texture units, attribute locations. The test suite compares these dumps against @cpp "tests/expected" @ce
-`--essl100-check`, `--target essl100` | ESSL 100 (OpenGL\|ES 2.0) transform of every variant's stage sources. `essl100` is the only accepted `--target` value
-`--hlsl` | HLSL (Shader Model 4/5) transform of every stage
-`--cg` | Cg transform of every stage, in the dialect the PS Vita's sceGxm backend compiles @m_span{m-text m-dim} (the same emitter as `--hlsl`, see @ref shader-compiler-cg "below") @m_endspan
-`--vulkan` | Vulkan GLSL (@cpp "#version 450" @ce) transform of every stage @m_span{m-text m-dim} (does not require glslang) @m_endspan
-`--msl` | Metal Shading Language transform of every stage @m_span{m-text m-dim} (the source the Metal backend compiles on the Mac) @m_endspan
-`--generate-all` | Regenerates **every** committed artifact from one enumeration of the shader directory, see @ref shader-compiler-workflow "below". Both directories are auto-detected; `--shaders-dir` and `--out-dir` override them, `--check` compares instead of writing, `--no-dxbc` and `--glslang` are forwarded to the header emission
-`--emit-types <output.h>` | Writes the shared reflection-types header and nothing else
-`--emit-sw-generated <output.h> <in ...>` | Transpiles the fragment stage of every variant of every input to C++ and writes the aggregate software-renderer header
-`--emit-cg <output.h> <in ...>` | Transforms every variant of every input to Cg and writes the aggregate PS Vita header
-`--emit-rsx <output.h> <in ...>` | Transforms every variant to Cg, compiles each stage with `cgcomp` and writes the aggregate PlayStation 3 microcode header. The only path that builds stage sources with `NO_DYNAMIC_BRANCHING` defined, see @ref shader-compiler-input-preprocessor "the conditionals below"
-`--emit-fixed-function <pvr\|gx\|pica\|gu\|gs\|rdp\|legacygl> <output.h> <in ...>` | Transpiles the applicable `fixed_function` block of every variant of every input and writes the aggregate per-backend effect header
-`--hlsl-check <in ...>` | Emits the VS + PS HLSL of every variant and compiles each stage via `D3DCompile` (`vs_5_0` / `ps_5_0`), printing a pass/fail table @m_span{m-text m-dim} (Windows only, uses `d3dcompiler_47.dll`) @m_endspan
-`--spirv-check [--glslang <path>] <in ...>` | Emits the Vulkan GLSL of every variant and compiles each stage to SPIR-V via `glslangValidator`, printing a pass/fail table
-`--help`, `-h`, `/?` | Prints the usage text (to stderr) and exits successfully
+`-o <output.h>` | Generated C++ header. Required unless a dump switch is given
+`-n <namespace>` | Namespace for the program <b>data</b> (default `ShaderArtifacts`); `::` nesting allowed; empty, a leading digit or a character outside `[A-Za-z0-9_:]` is an error
+`--glslang <path>` | `glslangValidator` for the embedded SPIR-V; otherwise found via `VULKAN_SDK\Bin`, `VULKAN_SDK\Bin32` and `PATH`
+`--check` | Reflection dump of every program and variant (structs with std140 offsets, uniforms, blocks with `BaseSize`/`InstanceStride`, texture units, attribute locations); the test suite compares it against @cpp "tests/expected" @ce
+`--essl100-check`, `--target essl100` | ESSL 100 (OpenGL\|ES 2.0) transform of every variant; `essl100` is the only `--target` value
+`--hlsl` | HLSL (Shader Model 4/5) transform
+`--cg` | Cg transform in the PS Vita's sceGxm dialect, see @ref shader-compiler-cg "below"
+`--vulkan` | Vulkan GLSL (@cpp "#version 450" @ce) transform; needs no glslang
+`--msl` | Metal Shading Language transform
+`--generate-all` | Regenerates <b>every</b> committed artifact, see @ref shader-compiler-workflow "below". `--shaders-dir` / `--out-dir` override the auto-detected directories, `--check` compares instead of writing, `--no-dxbc` and `--glslang` are forwarded
+`--emit-types <output.h>` | Writes only the shared reflection-types header
+`--emit-sw-generated <output.h> <in ...>` | Software-renderer header: every variant's fragment stage as C++
+`--emit-cg <output.h> <in ...>` | PS Vita header: every variant as Cg
+`--emit-rsx <output.h> <in ...>` | PlayStation 3 header: every variant as Cg compiled by `cgcomp` (path via `--cgcomp`). The only path building with `NO_DYNAMIC_BRANCHING`
+`--emit-fixed-function <pvr\|gx\|pica\|gu\|gs\|rdp\|legacygl> <output.h> <in ...>` | Per-backend effect header: the applicable `fixed_function` block of every variant
+`--hlsl-check <in ...>` | Compiles every variant's HLSL via `D3DCompile` (`vs_5_0` / `ps_5_0`), printing a pass/fail table @m_span{m-text m-dim} (Windows only, `d3dcompiler_47.dll`) @m_endspan
+`--spirv-check [--glslang <path>] <in ...>` | Compiles every variant's Vulkan GLSL to SPIR-V via `glslangValidator`, printing a pass/fail table
+`--help`, `-h`, `/?` | Prints usage to stderr and exits successfully
 
 @m_class{m-noindent}
 
-The five dump switches **write nothing** --- they print to stdout and never touch the committed
-artifacts. They are not mutually exclusive, but they are ordered: when several are combined, the
-first of `--essl100-check`, `--hlsl`, `--cg`, `--vulkan`, `--msl`, `--check` wins and the others are silently
-ignored. `--glslang` is ignored by every dump path.
+The dump switches (`--check`, `--essl100-check`, `--hlsl`, `--cg`, `--vulkan`, `--msl`) print to
+stdout and write nothing. When several are combined, the first of `--essl100-check`, `--hlsl`, `--cg`,
+`--vulkan`, `--msl`, `--check` wins and the rest are silently ignored; `--glslang` is ignored by all of
+them.
 
-Diagnostics go to stderr in three shapes: @cpp "<file>:<line>: error: <message>" @ce for anything
-the parser, reflection or an emitter reports, @cpp "<file>: error: <message>" @ce for a failed
-`#include` expansion or an unreadable input, and a bare @cpp "error: <message>" @ce for
-command-line and I/O problems. The exit code is `0` on success, `1` for an input or emission
-failure, and `2` for a usage error.
+Diagnostics go to stderr as @cpp "<file>:<line>: error: <message>" @ce (parser, reflection, emitters),
+@cpp "<file>: error: <message>" @ce (failed `#include` or unreadable input) or a bare
+@cpp "error: <message>" @ce (command line and I/O). Exit code: `0` success, `1` input or emission
+failure, `2` usage error.
 
 @m_class{m-block m-warning}
 
 @par Windows-only integrations
 `D3DCompile` and `glslangValidator` are invoked through Windows APIs, so `--hlsl-check` and
-`--spirv-check` fail on other platforms and the primary mode silently emits null SPIR-V there. The
-HLSL and ESSL 100 **transforms** themselves are portable --- only the compile-and-verify steps and
-the SPIR-V embedding are not. A full regeneration therefore has to happen on Windows.
+`--spirv-check` fail elsewhere and the primary mode silently emits null SPIR-V. The transforms
+themselves are portable, but a full regeneration has to happen on Windows.
 
-@subsection shader-compiler-usage-aggregate The aggregate modes in practice
+@subsection shader-compiler-usage-aggregate The aggregate modes
 
-`--emit-types` writes the reflection **types** header, which every generated header includes, the
-types live in the fixed @cpp ShaderCompiler @ce namespace, deliberately independent of `-n`, so
-headers generated with different data namespaces can be included together.
-
-`--emit-sw-generated` never fails on unsupported input: shaders outside the transpiler's subset
-are **declined** and simply omitted, and the printed summary lists each one with its reason.
-It is also the only path that builds stage sources with `SOFTWARE_RENDERER` defined, see
-@ref shader-compiler-input-preprocessor "the conditionals below".
-
-`--emit-cg` is an aggregate for a different reason than the other two: its output *could* have been
-two more fields on the per-shader header, but rewriting those headers requires Windows (that is where
-the DXBC and SPIR-V blobs in them come from), so a Cg regeneration on any other host would silently
-drop them. A separate header keeps the two independent --- a Cg run touches nothing else. Like
-`--emit-sw-generated` it never fails on unsupported input: a variant the transform declines is
-omitted and listed in the printed summary, and the backend then reports that shader as unavailable at
-load time.
-
-`--emit-fixed-function` is the opposite: an invalid block is a **hard error** that fails the whole
-run, because a block is authored intent, see @ref shader-compiler-fixed-function "below".
+-   `--emit-types`: the types live in the fixed @cpp ShaderCompiler @ce namespace, independent of `-n`,
+    so headers with different data namespaces can be included together.
+-   `--emit-sw-generated` and `--emit-cg` never fail on unsupported input: the shader or variant is
+    <b>declined</b>, omitted and listed with its reason in the summary (the Vita backend then reports it
+    unavailable at load time). `--emit-sw-generated` is the only path building with `SOFTWARE_RENDERER`.
+-   Cg is a separate header because the per-shader headers can only be rewritten on Windows (DXBC,
+    SPIR-V); a Cg run touches nothing else.
+-   `--emit-fixed-function` treats an invalid block as a <b>hard error</b> that fails the whole run.
 
 @section shader-compiler-input The .shader input format
 
-A `.shader` file is a custom shader language: GLSL globals plus @cpp void vertex() @ce /
-@cpp void fragment() @ce entry points, annotated with plain keyword directives --- top-level
-statements at brace depth 0, terminated by `;`. Comments follow GLSL rules and pass through into the
-emitted sources. Do **not** put @cpp #version @ce in the input --- the engine injects the version
-header (@cpp "#version 330" @ce, @cpp "#version 300 es" @ce, @cpp "#version 100" @ce) and the
-platform defines at runtime. @cpp "Sources/Utilities/ShaderCompiler/README.md" @ce is the full in-tree
-specification, including the std140 layout rules and the `--check` dump format.
+A `.shader` file is GLSL globals plus @cpp void vertex() @ce / @cpp void fragment() @ce entry points,
+annotated with keyword directives --- top-level statements at brace depth 0, terminated by `;`.
+Comments follow GLSL rules and pass through into the emitted sources. Do <b>not</b> write
+@cpp #version @ce --- the engine injects the version header (@cpp "#version 330" @ce,
+@cpp "#version 300 es" @ce, @cpp "#version 100" @ce) and platform defines at runtime. The full in-tree
+specification, including std140 layout rules and the `--check` dump format, is
+@cpp "Sources/Utilities/ShaderCompiler/README.md" @ce.
 
 @subsection shader-compiler-input-directives Top-level directives
 
 Directive | Meaning
 --------- | -------
-`program <Name>;` | **Required, exactly once**, and it has to precede `shader_type`, `variant`, `batched`, `precision` and the entry points --- in practice, write it first. A C++/GLSL identifier; it names the emitted `Program` and is half of the identity the console tables are keyed by
-`shader_type canvas_item;` `shader_type custom;` | Optional --- the default is `custom`. `canvas_item` opts into the sprite-template lowering
-`variant <NAME>;` | Declares an optional variant; may appear multiple times. The output contains the unnamed **base variant** (always `Variants[0]`, its name is empty) plus one entry per declaration, compiled with `#define <NAME> (1)` baked in. There are **no cross-products** --- each variant is exactly one define
-`render_mode <mode>[, <mode>];` | Zero or more of `blend_mix`, `blend_add`, `blend_sub`, `blend_mul`, `blend_premul_alpha`, `unshaded`, OR-ed into the `RenderModes` bitmask on the emitted program. May repeat
-`precision mediump;` `precision highp;` | Optional (default `mediump`), those two spellings only --- the float precision of the auto-emitted @cpp "#ifdef GL_ES" @ce fragment prologue. Only the two-token form is a directive; a real GLSL statement with a type (`precision highp float;`) passes through as ordinary GLSL. `highp` is emitted guarded by @cpp "GL_FRAGMENT_PRECISION_HIGH" @ce, because fragment `highp` is optional in GLSL ES 1.00 and a bare declaration fails to compile where it is unsupported --- ESSL 300 always defines the macro, so ES 3.0 and WebGL 2.0 keep the requested precision and only an ES 2.0 device without it falls back to `mediump`
-`batched <Name>;` | `canvas_item` only --- also emits the batched twin program (`InstancesBlock` + the 6-vertex corner formula) into the same header, sharing the fragment stage, the variants and the `fixed_function` blocks. An error in custom mode
-`#include "relative/path"` | Replaced **textually** before parsing, recursively up to depth 8, relative to the including file, so the generated artifacts stay self-contained. Line numbers in diagnostics refer to the include-expanded stream
-`void fixed_function([<target>[, <target>...]]) { ... }` | Fixed-function implementation of the effect, see @ref shader-compiler-fixed-function "below". Empty parentheses declare the generic block, one target overrides it for that backend, a comma-separated list (`void fixed_function(pvr, gu, gs)`) declares one implementation shared by several. Never part of the GLSL stages --- a file that carries a block emits a byte-identical per-shader header
+`program <Name>;` | <b>Required, exactly once</b>, before `shader_type`, `variant`, `batched`, `precision` and the entry points --- write it first. A C++/GLSL identifier naming the emitted `Program` (and keying the console tables)
+`shader_type canvas_item;` `shader_type custom;` | Optional, default `custom`. `canvas_item` opts into the sprite template
+`variant <NAME>;` | May repeat. Output holds the unnamed base variant (`Variants[0]`) plus one entry per declaration, compiled with `#define <NAME> (1)`. <b>No cross-products</b>
+`render_mode <mode>[, <mode>];` | Any of `blend_mix`, `blend_add`, `blend_sub`, `blend_mul`, `blend_premul_alpha`, `unshaded`, OR-ed into `RenderModes`. May repeat
+`precision mediump;` `precision highp;` | Optional (default `mediump`), only these spellings: precision of the auto-emitted @cpp "#ifdef GL_ES" @ce fragment prologue (`precision highp float;` is plain GLSL). `highp` is guarded by @cpp "GL_FRAGMENT_PRECISION_HIGH" @ce, falling back to `mediump` on ES 2.0 devices without it
+`batched <Name>;` | `canvas_item` only --- also emits the batched twin (`InstancesBlock` + 6-vertex corner formula), sharing the fragment stage, variants and `fixed_function` blocks
+`#include "relative/path"` | Replaced <b>textually</b> before parsing, relative to the including file, up to depth 8. Diagnostic line numbers refer to the expanded stream
+`void fixed_function([<target>[, <target>...]]) { ... }` | Fixed-function implementation, see @ref shader-compiler-fixed-function "below". Never part of the GLSL stages
 
 @subsection shader-compiler-input-declarations Declarations shared by both modes
 
 Element | Meaning
 ------- | -------
-`varying [flat] [precision] <type> <name>;` | Lowered to an @cpp out @ce in the vertex stage and an @cpp in @ce in the fragment stage, qualifiers preserved. May be wrapped in a global-scope `SOFTWARE_RENDERER` or `LOW_POWER_GPU` conditional, see @ref shader-compiler-input-preprocessor "below"
-`attribute [layout(location = N)] <declaration>;` | A vertex attribute --- emitted as an @cpp in @ce global in the **vertex stage only**. A leading `layout(...)` stays in front of the @cpp in @ce keyword and the location is honored by reflection
-`uniform <type> <name> : <hint>[, <hint>];` | `texture_unit(N)` assigns the texture unit (**0--31**) of a sampler uniform and is the **only** way to assign one explicitly; in the primary mode the name must match a sampler in at least one variant, and two hints naming the same uniform are an error. `source_color`, `hint_range(...)`, `filter_nearest`, `filter_linear`, `repeat_enable` and `repeat_disable` are parsed and dropped, anything else is an error. The hint list is stripped from the lowered declaration, so hints never reach the emitted sources
-everything else | Global scope --- uniforms, std140 blocks, consts, structs, helper functions --- is shared by both stages of every lowered document
+`varying [flat] [precision] <type> <name>;` | Becomes @cpp out @ce in the vertex stage and @cpp in @ce in the fragment stage, qualifiers preserved. May be wrapped in a global-scope `SOFTWARE_RENDERER` or `LOW_POWER_GPU` conditional, see @ref shader-compiler-input-preprocessor "below"
+`attribute [layout(location = N)] <declaration>;` | Vertex attribute --- an @cpp in @ce global in the <b>vertex stage only</b>; a leading `layout(...)` is kept and honored by reflection
+`uniform <type> <name> : <hint>[, <hint>];` | `texture_unit(N)` (<b>0--31</b>) is the <b>only</b> explicit texture-unit assignment; the name must match a sampler in some variant, and two hints for one uniform are an error. `source_color`, `hint_range(...)`, `filter_nearest`, `filter_linear`, `repeat_enable`, `repeat_disable` are parsed and dropped; anything else is an error
+everything else | Uniforms, std140 blocks, consts, structs and helper functions are shared by both stages of every variant
 
 @m_class{m-block m-warning}
 
 @par Shared std140 blocks and precision
-    Because every global reaches **both** stages, a named `std140` block is declared in the fragment
-    stage as well --- whether that stage reads a member or not. GLSL ES requires the members of a
-    named uniform block to match in name, type **and precision** across the stages a program links
-    together @m_span{m-text m-dim} (ES 3.00 spec, §4.3.9) @m_endspan, and the fragment prologue is
-    the only thing that changes a default precision: the vertex stage has none and defaults `float`
-    to `highp`, so a `mediump` prologue leaves a shared block disagreeing with itself and the program
-    fails to link --- on WebGL 2.0 visibly, as a "precisions of uniform block member differ" log line
-    followed by an invalid program. Declare `precision highp;` in a shader whose block reaches both
-    stages, or qualify the block members explicitly.
+    A named `std140` block reaches both stages, and GLSL ES requires block members to match in
+    precision across stages. The vertex stage defaults `float` to `highp`, so a `mediump` fragment
+    prologue makes the program fail to link (on WebGL 2.0: "precisions of uniform block member differ").
+    Declare `precision highp;` in such a shader, or qualify the block members explicitly.
 
 @subsection shader-compiler-input-custom Custom mode (the default)
 
-No template and no built-in substitutions: user identifiers pass through untouched. Both entry
-points are required. The body of @cpp void vertex() @ce becomes the vertex @cpp main() @ce verbatim
-and writes @cpp gl_Position @ce itself. The body of @cpp void fragment() @ce is lowered with
-@cpp "out vec4 COLOR;" @ce, where @cpp COLOR @ce **is the fragment output variable itself** ---
-undefined until written, with no default and no epilogue, so an early @cpp return; @ce is safe.
-Referencing `fragColor` anywhere in a `.shader` file is a parse error --- that name does not exist,
-write @cpp COLOR @ce.
+No template, no substitutions; both entry points are required. The body of @cpp void vertex() @ce
+becomes the vertex @cpp main() @ce verbatim and writes @cpp gl_Position @ce itself. In
+@cpp void fragment() @ce, @cpp COLOR @ce is the output variable itself (@cpp "out vec4 COLOR;" @ce),
+undefined until written, so an early @cpp return; @ce is safe. `fragColor` anywhere in a `.shader` file
+is a parse error --- write @cpp COLOR @ce.
 
 @subsection shader-compiler-input-canvas Canvas mode (shader_type canvas_item)
 
-Opts into the engine's standard sprite template (`InstanceBlock` / `InstancesBlock` and the
-`vTexCoords` / `vColor` / `vPaletteOffset` varyings) and makes the `batched` twin available.
+Uses the engine's sprite template (`InstanceBlock` / `InstancesBlock`, the `vTexCoords` / `vColor` /
+`vPaletteOffset` varyings) and enables `batched`.
 
-@cpp void vertex() @ce is **optional**: the generated @cpp main() @ce computes the built-ins as
-locals, splices the body verbatim, then runs the standard epilogue (@cpp gl_Position @ce plus the
-varying stores). Because of that epilogue, @cpp return; @ce inside a canvas @cpp vertex() @ce is a
-parse error. It can also be given to the low-power emissions alone, by wrapping it in a global-scope
-`#if LOW_POWER_GPU` --- see @ref shader-compiler-input-preprocessor. @cpp void fragment() @ce is
-required and enters with @cpp COLOR @ce holding the instance color.
+-   @cpp void vertex() @ce is optional. The generated @cpp main() @ce computes the built-ins as locals,
+    splices the body, then runs the standard epilogue, so @cpp return; @ce in it is a parse error. It can
+    be given to the low-power emissions alone via a global-scope `#if LOW_POWER_GPU`, see
+    @ref shader-compiler-input-preprocessor.
+-   @cpp void fragment() @ce is required and enters with @cpp COLOR @ce holding the instance colour.
 
 Built-in | Vertex stage | Fragment stage
 -------- | ------------ | --------------
 `VERTEX` | sprite-local position in pixels, writable | ---
 `UV` | texture coordinates, writable | substituted with `vTexCoords`
-`COLOR` | instance color, writable | enters as the instance color, and is the output
+`COLOR` | instance colour, writable | enters as the instance colour, and is the output
 `PALETTE_OFFSET` | palette row of the instance, writable | substituted with `vPaletteOffset`
 `TEXTURE` | --- | substituted with `uTexture`
 
 @m_class{m-noindent}
 
-A canvas document that references @cpp TEXTURE @ce without declaring `uTexture` gets
-@cpp "uniform sampler2D uTexture;" @ce auto-declared with texture unit 0; an explicit declaration,
-with or without a `texture_unit(N)` hint, wins. The four fragment built-ins are the whole set: the
-names @cpp NORMAL @ce, @cpp SCREEN_UV @ce, @cpp SCREEN_PIXEL_SIZE @ce, @cpp TIME @ce,
-@cpp POINT_COORD @ce --- and @cpp VERTEX @ce, which exists only in the vertex stage --- are reported
-as unsupported rather than silently passed through, in @cpp void fragment() @ce and in the shared
-globals alike.
-
-The template's built-ins are ordinary locals of the generated @cpp main() @ce, so redeclaring one in
-the body is a GLSL redeclaration error. When a canvas document has no @cpp void vertex() @ce at all,
-the vertex stage is the template alone --- the shared globals are not emitted into it, since nothing
-there could reference them.
+-   @cpp TEXTURE @ce without a `uTexture` declaration auto-declares
+    @cpp "uniform sampler2D uTexture;" @ce on unit 0.
+-   @cpp NORMAL @ce, @cpp SCREEN_UV @ce, @cpp SCREEN_PIXEL_SIZE @ce, @cpp TIME @ce,
+    @cpp POINT_COORD @ce and @cpp VERTEX @ce are errors in @cpp void fragment() @ce and shared globals.
+-   Built-ins are locals of the generated @cpp main() @ce; redeclaring one is a GLSL error.
+-   Without @cpp void vertex() @ce the vertex stage is the template alone, without shared globals.
 
 @subsection shader-compiler-input-preprocessor Variants, conditionals and includes
 
-Reflection must run per variant, so the tool contains a mini preprocessor implementing the
-object-like subset of the C preprocessor (@cpp #define @ce / @cpp #undef @ce,
-@cpp #if @ce / @cpp #ifdef @ce / @cpp #ifndef @ce / @cpp #elif @ce / @cpp #else @ce /
-@cpp #endif @ce with integer constant expressions). It produces the *declaration stream* fed to the
-reflection parser --- the **emitted** sources are not preprocessed output, they keep the original
-text verbatim with only the variant define and @cpp "#line 1" @ce baked at the top. Two rules are
-special: `GL_ES` is never predefined (reflection is taken from the desktop GL view) and
-`BATCH_SIZE` is symbolic --- it evaluates as 1 inside @cpp #if @ce expressions but stays symbolic
-when used as an array size.
+Reflection runs per variant through a mini preprocessor implementing the object-like C subset
+(@cpp #define @ce / @cpp #undef @ce, @cpp #if @ce / @cpp #ifdef @ce / @cpp #ifndef @ce /
+@cpp #elif @ce / @cpp #else @ce / @cpp #endif @ce with integer constant expressions). It only feeds
+reflection: emitted sources keep the original text verbatim, with the variant define and
+@cpp "#line 1" @ce at the top. `GL_ES` is never predefined (reflection uses the desktop GL view);
+`BATCH_SIZE` evaluates as 1 in @cpp #if @ce but stays symbolic as an array size.
 
-Four macros are resolved by the tool and therefore never survive into any emitted source:
+These macros are resolved by the tool and never survive into an emitted source:
 
--   `VERTEX_STAGE` / `FRAGMENT_STAGE` (with an optional @cpp "#else" @ce) select which stage sees a
-    shared global, and are resolved at assembly time. They are rarely needed anymore --- attributes
-    and varyings have their own keywords, stage-specific helper functions need no guards because
-    unused functions are eliminated per stage, and everything else is harmless when shared.
--   `SOFTWARE_RENDERER` is resolved when the stage source is *built*, and only the
-    `--emit-sw-generated` path builds with it defined. A shader can therefore carry a cheaper CPU
-    variant of an expensive fragment path without changing any other backend's output --- see
-    @cpp "TexturedBackground.shader" @ce, whose software branch approximates `pow(distance, 1.5)` and
-    drops the per-pixel star field. Wrapped around **global-scope `varying` declarations** it goes one
-    step further and gives the software renderer a different set of varyings: the tool consumes the
-    directive lines while parsing, tags each declaration and re-wraps it per stage, so a conditional
-    there may contain nothing but `varying` declarations (and no nested directives).
-    @cpp "tests/SwVarying.shader" @ce is the worked example --- `vPos` for the shader backends,
-    `vRect` for the software one.
--   `NO_DYNAMIC_BRANCHING` is likewise resolved when the stage source is built, and only `--emit-rsx`
-    builds with it defined: a fragment stage that compiles to NV40 `IF`/`LOOP`/`BRK` control flow does
-    not survive that toolchain --- the branch body overwrites registers the surrounding code is still
-    holding --- so a shader gates any dynamically branching block on it.
--   `LOW_POWER_GPU` is resolved the same way, and `--emit-cg` (the PS Vita's sceGxm dialect) together
-    with the ESSL 100 (OpenGL|ES 2.0) lowering builds with it defined --- the ES2 profile is never a
-    default, it is selected only for hardware that has nothing else, which is the same class of part.
-    It says nothing about what such a part *can* compile --- both run every shader as written --- only
-    about how much per-pixel work it can sustain, so a shader gates a cheaper approximation of an
-    expensive path on it rather than dropping the feature for everyone. It is thus the one macro not
-    tied to a single emission: a per-shader header's `_Vs100`/`_Fs100` sources are built with it while
-    the modern GL, HLSL, SPIR-V and MSL artifacts beside them are not, and the engine's
-    `RHI_LOW_POWER_GPU` (`RhiFwd.h`) mirrors which of the two views a binary ended up compiling.
-    Around **global-scope `varying` declarations** it works like `SOFTWARE_RENDERER` does: the
-    varyings are tagged and only the low-power emissions declare them, which is what lets a cheaper
-    path move screen-linear work from the fragment stage to the vertex stage without changing any
-    other artifact (see @cpp "CombineWithWater.shader" @ce, and @cpp "tests/LowPowerVarying.shader" @ce
-    for the worked example). @cpp "TileMapMeshBlur.shader" @ce does the same for derivatives: its
-    `dFdx`/`dFdy` of the position are constant over a layer, so the low-power side takes the layer's
-    scale on screen from the diagonal of its matrices in the vertex stage instead. Only the *magnitude*
-    may be taken from there --- the projection's sign of y differs between backends (GL flips it while a
-    render target is bound) while every target is stored top-down, so a row further down is further down
-    the layer everywhere and the sign is a constant, not a matrix element. The same restriction applies --- such a conditional may contain nothing
-    but `varying` declarations --- with one exception: on its `LOW_POWER_GPU` side it may also hold the
-    @cpp vertex() @ce entry of a `canvas_item` shader. Only the low-power emissions then get a vertex
-    stage of their own, while every other emission keeps the default canvas vertex template, the exact
-    text the shader produces without the entry --- which is how @cpp "Blur.shader" @ce computes its tap
-    coordinates per vertex on the PS Vita (see @cpp "tests/LowPowerCanvasVertex.shader" @ce).
+Macro | Defined for | Use
+----- | ----------- | ---
+`VERTEX_STAGE` / `FRAGMENT_STAGE` | the respective stage, at assembly time | which stage sees a shared global (optional @cpp "#else" @ce). Rarely needed: attributes and varyings have keywords, unused functions are eliminated per stage
+`SOFTWARE_RENDERER` | `--emit-sw-generated` only | a cheaper CPU path that leaves every other backend unchanged (@cpp "TexturedBackground.shader" @ce)
+`NO_DYNAMIC_BRANCHING` | `--emit-rsx` only | gate every dynamically branching fragment block on it --- NV40 `IF`/`LOOP`/`BRK` miscompiles (the branch body overwrites live registers)
+`LOW_POWER_GPU` | `--emit-cg` (PS Vita) and the ESSL 100 lowering | a cheaper approximation of an expensive path, not a capability limit. In a per-shader header only `_Vs100`/`_Fs100` are built with it; the engine's `RHI_LOW_POWER_GPU` (`RhiFwd.h`) mirrors which view a binary compiled
 
-All five work in @cpp #ifdef @ce / @cpp #ifndef @ce **and** in @cpp #if @ce / @cpp #elif @ce
-expressions, which is what lets one directive replace a nest of them
-@m_span{m-text m-dim} (`#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING`) @m_endspan. Each family is
-folded by its own pass over the expression's top-level @cpp && @ce terms, so the two compose: a term
-naming only that pass's macros is evaluated, one naming anything else keeps its text. Defining or
-undefining one of them is still an error. A variant name resolves per variant in the same way, in the
-GLSL stages and inside a @cpp fixed_function @ce block alike.
+@m_class{m-noindent}
+
+-   They work in @cpp #ifdef @ce / @cpp #ifndef @ce <b>and</b> @cpp #if @ce / @cpp #elif @ce
+    expressions (`#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING`): each family folds the top-level
+    @cpp && @ce terms naming only its macros and leaves the rest. Defining or undefining them is an
+    error. Variant names resolve per variant the same way, also in @cpp fixed_function @ce blocks.
+-   Around <b>global-scope `varying` declarations</b>, `SOFTWARE_RENDERER` / `LOW_POWER_GPU` give those
+    emissions their own varyings. Such a conditional may hold only `varying` declarations, no nested
+    directives --- except that its `LOW_POWER_GPU` side may also hold a `canvas_item` shader's
+    @cpp vertex() @ce (@cpp "Blur.shader" @ce). See @cpp "tests/SwVarying.shader" @ce,
+    @cpp "tests/LowPowerVarying.shader" @ce, @cpp "tests/LowPowerCanvasVertex.shader" @ce.
+-   When a low-power vertex stage replaces derivatives with matrix data
+    (@cpp "TileMapMeshBlur.shader" @ce), take only the <em>magnitude</em>: the projection's y sign
+    differs between backends (GL flips it while a render target is bound).
 
 @m_class{m-block m-warning}
 
 @par Conditionals that survive into an emitted source
-Whatever @cpp #if @ce is left after that folding is real GLSL, and <b>GLSL ES rejects an undefined
-macro in an `#if` expression</b> where desktop GLSL substitutes `0` like C does. HLSL accepts it
-too and the Vulkan transform is `#version 450` *desktop* GLSL, so a bare `#if SOME_VARIANT` passes
-both `--hlsl-check` and `--spirv-check` while breaking every ES2/ES3/WebGL target. A macro with an
-<b>empty</b> body is worse still: @cpp "#if SLOPE" @ce is a `bad expression` even on desktop. So a purely
-boolean surviving @cpp #if @ce is lowered on the way out --- one term collapses to
-@cpp #ifdef @ce / @cpp #ifndef @ce, anything longer keeps its shape with each flag wrapped in
-@cpp defined(...) @ce. Write @cpp "#if USE_PALETTE" @ce and the emitted source gets
-@cpp "#ifdef USE_PALETTE" @ce; write @cpp "#if DITHER && !SOFTWARE_RENDERER" @ce and it gets
-@cpp "#ifdef DITHER" @ce. `tests/GlslSweep.ps1` compiles every generated stage source in all three
-profiles the engine injects and is the check that catches one that slipped through.
+A surviving @cpp #if @ce is real GLSL, and <b>GLSL ES rejects an undefined macro in an `#if`</b> ---
+desktop GLSL, HLSL and the `#version 450` Vulkan transform accept it, so `--hlsl-check` and
+`--spirv-check` do not catch it; a macro with an <b>empty</b> body (@cpp "#if SLOPE" @ce) fails even on
+desktop. The tool therefore lowers a purely boolean surviving @cpp #if @ce: one term becomes
+@cpp #ifdef @ce / @cpp #ifndef @ce (@cpp "#if DITHER && !SOFTWARE_RENDERER" @ce emits
+@cpp "#ifdef DITHER" @ce), longer ones wrap each flag in @cpp defined(...) @ce. `tests/GlslSweep.ps1`
+compiles every generated stage source in all three injected profiles and catches anything that slips
+through.
 
 @subsection shader-compiler-input-cleanup Automatic cleanup passes
 
-The emitted stage sources keep the original text verbatim, but several conservative passes run per
-stage, in this order:
+Run per stage, in this order:
 
--   **Stage conditionals** --- resolved as described above; no stage macros survive.
--   **Unused-function elimination** --- every global function never referenced outside its own
-    definition is removed, iterating to a fixpoint with @cpp main() @ce as the root.
--   **Unused-varying trimming** --- a varying the fragment stage never reads is removed together
-    with its provably dead vertex-stage stores, or demoted to a plain global when a store has side
-    effects.
--   **Unused-uniform/block elimination** --- per-stage dead uniforms, std140 blocks, defines and
-    structs are removed under a hard **reflection-preservation rule**: a declaration leaves a stage
-    only when the same declaration survives in the other stage, so the merged per-variant reflection
-    is byte-identical before and after the pass.
--   **Backend-resolved uniform trimming** --- the passes above count a reference inside any
-    preprocessor branch, so when a stage source is built for one backend view (with the
-    `SOFTWARE_RENDERER` / `NO_DYNAMIC_BRANCHING` / `LOW_POWER_GPU` conditionals resolved), a loose
-    uniform that only the dropped branches read leaves that stage as well --- provided the other
-    stage of the same view still reads it, the same reflection-preservation rule. Without it a
-    uniform read only by the low-power branch of a vertex stage would stay declared in the vertex
-    stage of every other emission, where it is a member of the HLSL cbuffer and the MSL argument
-    struct, i.e. a different interface.
--   **Constant folding** --- literal-only subexpressions inside function bodies are folded with
-    exact GLSL semantics. Global-scope declarations are never touched, which again guarantees
-    reflection stays byte-identical.
+1.  Stage conditionals are resolved.
+2.  Unused functions are removed, to a fixpoint rooted at @cpp main() @ce.
+3.  A varying the fragment stage never reads is removed with its dead vertex-stage stores, or demoted
+    to a plain global when a store has side effects.
+4.  Unused uniforms, blocks, defines and structs are removed from a stage only when the same
+    declaration survives in the other stage, so reflection stays byte-identical.
+5.  The same rule applies per backend view: a loose uniform read only by branches that view drops
+    (`SOFTWARE_RENDERER` / `NO_DYNAMIC_BRANCHING` / `LOW_POWER_GPU`) leaves that stage.
+6.  Literal-only subexpressions inside function bodies are constant-folded with exact GLSL semantics;
+    global declarations are never touched.
 
 @section shader-compiler-output Reflection and generated headers
 
-Reflection runs per stage and per variant over the global-scope declarations (structs, loose
-uniforms, @cpp "layout (std140)" @ce uniform blocks with computed offsets and strides,
-`sampler2D` / `sampler3D` / `samplerCube` texture bindings, vertex attributes), and the two stages
-are merged into one program-level view, GL style. `BATCH_SIZE` is symbolic: an array sized by it
-records its element stride as `InstanceStride` on the block and marks the count with a sentinel, and
-the runtime computes the batch size as `maxUniformBlockSize / InstanceStride` --- the engine's
-batched sprite instance struct yields a 112-byte stride, matching the default
-@cpp 585 = 65536 / 112 @ce.
+Reflection runs per stage and variant over global declarations (structs, loose uniforms,
+@cpp "layout (std140)" @ce blocks with computed offsets and strides, `sampler2D` / `sampler3D` /
+`samplerCube` bindings, vertex attributes) and the stages are merged GL-style. An array sized by
+`BATCH_SIZE` records its element stride as the block's `InstanceStride` with a sentinel count; the
+runtime computes the batch size as `maxUniformBlockSize / InstanceStride` @m_span{m-text m-dim}
+(the batched sprite instance's 112-byte stride gives @cpp 585 = 65536 / 112 @ce) @m_endspan.
 
-Each generated header is self-contained (only `<cstdint>` / `<cstddef>` plus the shared types
-header) and carries, per variant:
+Each header is self-contained (`<cstdint>` / `<cstddef>` plus the types header) and carries per variant:
 
--   The **stage sources** as raw string literals --- `<Program>_Vs` / `_Fs` for the base variant,
-    `<Program>_<VARIANT>_Vs` / `_Fs` for named ones --- each starting with the variant define and
-    @cpp "#line 1" @ce
--   The **ESSL 100** and **HLSL** lowerings of those sources (`_Vs100` / `_Fs100`, `_HlslVs` /
-    `_HlslFs`), and the offline-compiled **SPIR-V** words when glslang was available
--   **Reflection** as @cpp constexpr @ce arrays of plain structs (`Uniform`, `BlockMember`,
-    `UniformBlock`, `TextureBinding`, `Attribute`), tied together by `ProgramVariant` and `Program`
+-   <b>Stage sources</b> as raw string literals --- `<Program>_Vs` / `_Fs`, or
+    `<Program>_<VARIANT>_Vs` / `_Fs` --- each starting with the variant define and @cpp "#line 1" @ce
+-   The <b>ESSL 100</b> and <b>HLSL</b> lowerings (`_Vs100` / `_Fs100`, `_HlslVs` / `_HlslFs`), and
+    <b>SPIR-V</b> words when glslang was available
+-   <b>Reflection</b> as @cpp constexpr @ce arrays (`Uniform`, `BlockMember`, `UniformBlock`,
+    `TextureBinding`, `Attribute`), tied together by `ProgramVariant` and `Program`
 
-The reflection **types** live in @cpp "Generated/ShaderCompilerTypes.h" @ce in the fixed
-@cpp ShaderCompiler @ce namespace; program **data** goes into the `-n` namespace. Engine code can
-include the types header alone to consume reflection without pulling in any program's data.
+The types live in @cpp "Generated/ShaderCompilerTypes.h" @ce in the fixed @cpp ShaderCompiler @ce
+namespace, data in the `-n` namespace; engine code can include the types header alone.
 
 @section shader-compiler-fixed-function Fixed-function blocks
 
-The fixed-function backends @m_span{m-text m-dim} (PVR on the Dreamcast, GX on the Wii/GameCube, GU
-on the PlayStation Portable, GS on PlayStation 2, RDP on the Nintendo 64, LegacyGL on an OpenGL 1.x)
-@m_endspan have no fragment shaders --- an effect there is a short list of passes over the sprite
-quad, each a small bundle of hardware state. A @cpp fixed_function @ce block states that pass list in
-the shader file itself, next to the GLSL it approximates. This is the whole fixed-function tier of
+On backends without fragment shaders an effect is a list of passes over the sprite quad, stated by a
+@cpp fixed_function @ce block next to the GLSL it approximates. The whole block of
 @cpp "WhiteMask.shader" @ce:
 
 @code{.cpp}
@@ -421,58 +318,37 @@ void fixed_function() {
 
 @m_class{m-noindent}
 
-See @cpp "Docs/FixedFunctionShaderDesign.md" @ce for why the language looks like this and what each
-console can actually do, and @ref ShaderCompiler::ConsoleFixedFunction for the emitter.
+Anything outside the grammar is a <b>hard error</b> with file and line that fails the whole
+`--generate-all` run. Design and per-console capabilities: @cpp "Docs/FixedFunctionShaderDesign.md" @ce;
+emitter: @ref ShaderCompiler::ConsoleFixedFunction.
 
 @subsection shader-compiler-ff-selection Block selection and what gets emitted
 
-A block's parentheses hold its **target list**:
+A block's parentheses hold its target list:
 
 Spelling | Serves
 -------- | ------
-@cpp void fixed_function() @ce | every backend without a more specific block --- the generic implementation, restricted to the portable core
-@cpp void fixed_function(pvr) @ce | the Dreamcast only
-@cpp void fixed_function(gx) @ce | the Wii/GameCube only
-@cpp void fixed_function(gu) @ce | the PlayStation Portable only
-@cpp void fixed_function(gs) @ce | the PlayStation 2 only
-@cpp void fixed_function(rdp) @ce | the Nintendo 64 only
-@cpp void fixed_function(legacygl) @ce | the fixed-function OpenGL 1.x backend only @m_span{m-text m-dim} (MorphOS' TinyGL, and a desktop GL in a compatibility context) @m_endspan
-@cpp void fixed_function(pica) @ce | the Nintendo 3DS only
-@cpp void fixed_function(pvr, gu, gs) @ce | all three of those, from ONE body --- the list form
-@cpp void fixed_function(gu, gx, pvr) @ce | any subset in any order. Whitespace is free: `(pvr,gu)` and `( pvr , gu )` are the same declaration
+@cpp void fixed_function() @ce | every backend without a more specific block; restricted to the portable core
+@cpp void fixed_function(pvr) @ce | Dreamcast
+@cpp void fixed_function(gx) @ce | Wii/GameCube
+@cpp void fixed_function(pica) @ce | Nintendo 3DS
+@cpp void fixed_function(gu) @ce | PlayStation Portable
+@cpp void fixed_function(gs) @ce | PlayStation 2
+@cpp void fixed_function(rdp) @ce | Nintendo 64
+@cpp void fixed_function(legacygl) @ce | OpenGL 1.x @m_span{m-text m-dim} (MorphOS' TinyGL, or desktop GL in a compatibility context) @m_endspan
+@cpp void fixed_function(pvr, gu, gs) @ce | every listed target from one body; any subset, any order, whitespace free
 
 @m_class{m-noindent}
 
-A block that names a backend --- on its own or inside a list --- wins over the generic block for
-it **regardless of declaration order**, and every target belongs to exactly **one** block per file: a
-target claimed twice is an error whether it was spelled singly or inside a list. The list form is for
-the case where two consoles reach an effect with *literally the same code*; when the bodies genuinely
-differ, they stay separate blocks. Capabilities are then checked against the
-@ref shader-compiler-ff-target-lists "intersection of the listed targets".
+-   A block naming a backend (alone or in a list) wins over the generic block regardless of order.
+-   Each target belongs to exactly <b>one</b> block per file; claiming it twice is an error.
+-   Use a list only when the code is literally identical; capabilities are checked against the
+    @ref shader-compiler-ff-target-lists "intersection of the listed targets".
+-   A program with no applicable block is skipped on that backend at runtime.
 
-Today `FrozenMask.shader` carries a shared @cpp void fixed_function(pvr, pica, gu, gs, rdp, legacygl) @ce
-block plus a @cpp void fixed_function(gx) @ce one; `PartialWhiteMask.shader` a shared
-@cpp void fixed_function(pvr, gu, gs, rdp) @ce block plus a @cpp void fixed_function(gx, pica, legacygl) @ce
-one; `Colorized.shader` splits three ways --- a shared @cpp void fixed_function(pvr, gu, gs) @ce block, its
-own @cpp void fixed_function(rdp) @ce one @m_span{m-text m-dim} (its combiner ceiling caps the additive
-passes at two, see the output-scale section) @m_endspan and a @cpp void fixed_function(gx, pica, legacygl) @ce
-one; `Transition.shader` carries a @cpp void fixed_function(pvr) @ce block plus a shared
-@cpp void fixed_function(gx, pica, gu, gs, rdp, legacygl) @ce one @m_span{m-text m-dim} (the 16-vertex strip
-scratches) @m_endspan; the two background shaders split five ways --- `pvr` with `gs`, `gu`, `rdp`, `pica`,
-and `gx` with `legacygl` --- by the two macros of their shared include @m_span{m-text m-dim} (see the warp
-below) @m_endspan; and the two water combines split three ways --- a shared
-@cpp void fixed_function(gx, pica, gu, gs, legacygl) @ce block, an `rdp` one and a `pvr` one --- by the macros
-of their shared include @m_span{m-text m-dim} (`Include/CombineWaterFixedFunction.inc`: the `rdp` block draws
-the light variant without the light rays, because every triangle is expensive to set up there, and the `pvr`
-one cuts the wavy bands into strips its 8-vertex scratch holds) @m_endspan. Everything else has a
-single generic block --- which is the norm, since a program with no block at all for a backend is skipped at
-runtime there.
-
-The `--emit-fixed-function` mode transpiles the applicable block of **every program variant** ---
-the block is preprocessed once per variant with the variant define baked in, exactly like the
-fragment stage --- into the body of a
-@cpp "void <Program>[_<VARIANT>]_Effect(EffectContext&)" @ce C++ function, and collects them into
-one aggregate header per backend with a `FixedFunctionGeneratedEffects[]` table of
+Each variant's applicable block becomes a
+@cpp "void <Program>[_<VARIANT>]_Effect(EffectContext&)" @ce function, listed in a
+`FixedFunctionGeneratedEffects[]` table of
 
 @code{.cpp}
 { program, variant, usesOffsetColor, requirements, intrinsic, &function }
@@ -480,295 +356,197 @@ one aggregate header per backend with a `FixedFunctionGeneratedEffects[]` table 
 
 @m_class{m-noindent}
 
-entries, keyed by the true (program, variant) identity the loaders plumb in with
-`ShaderProgram::SetProgramIdentity()` --- no shader name is ever matched in a backend. An entry
-carries either a function or an intrinsic, never both. Programs without an applicable block are
-absent from the table and skipped at runtime with a one-time warning. The including device file
-supplies the concrete `EffectContext` through a @cpp using @ce alias before the include; the
-generated header is otherwise self-contained, carrying its own small `ff` vector runtime so that
-`FixedFunctionPass.h` stays the only contract between the generator and the backends.
+entries keyed by the (program, variant) identity from `ShaderProgram::SetProgramIdentity()`; an entry
+has a function or an intrinsic, never both. The including device file supplies `EffectContext` through
+a @cpp using @ce alias before the include.
 
-Two fields are computed statically per (program, variant) while the body is emitted:
+-   `usesOffsetColor` --- whether a reachable `p.offset_color = ...` exists (the PVR enables specular
+    per program).
+-   `requirements` --- `FixedFunctionRequirements` bits for the context facilities used:
+    `NeedsTexelStep` (`texel_size()` / `has_texel_size()`), `NeedsUniforms` (`has_uniform()` /
+    `uniform_vec2/vec4()`), `NeedsStripBuilder` (`strip_*()` / `submit_strip[_shaded]()`),
+    `NeedsQuadAxes` (`quad_origin()` / `quad_axis_x/y()`).
 
--   `usesOffsetColor` --- whether any reachable `p.offset_color = ...` assignment exists, because
-    the PVR needs it when compiling the **base** polygon header (specular enable is per program, not
-    per pass). It is derived from the *selected* body, so it can differ per backend: PartialWhiteMask
-    is `true` on the PVR and the PSP, which lift the sprite with an offset colour, and `false` on the
-    GX, which uses the combiner's x2 output scale instead.
--   `requirements` --- a `FixedFunctionRequirements` bitmask of the optional `EffectContext`
-    facilities the function can ever call: `NeedsTexelStep` (`texel_size()` / `has_texel_size()`),
-    `NeedsUniforms` (`has_uniform()` / `uniform_vec2/vec4()`), `NeedsStripBuilder` (`strip_*()` /
-    `submit_strip[_shaded]()`) and `NeedsQuadAxes` (`quad_origin()` / `quad_axis_x/y()`). The
-    backends' `Dispatch` gates the matching per-draw context setup on these bits and skips the rest;
-    because the bits come from the same analysis that emitted the calls, this can never change what
-    a function submits.
-
-Byte-identical bodies are deduplicated. Emitted bodies deliberately carry no program name, so
-batched twins and palette variants --- which differ only in the dispatch loop's instance decoding,
-not in their pass code --- come out identical and collapse into one function, named after its first
-occurrence and preceded by a provenance comment: a `from <file>:<block>` line naming where the body
-came from, plus a `// Shared by:` line listing every (program, variant) that points at it, each
-bracketed with its own origin when it came from a different file. Today's 39 table rows contain 6
-intrinsic bindings and 33 effect rows, which collapse to **10 emitted functions** on each of the
-three backends.
+Both are computed from the block selected for that backend. Byte-identical bodies are emitted once,
+with a `from <file>:<block>` line and a `// Shared by:` list.
 
 @subsection shader-compiler-ff-pipeline Pipeline bindings
 
-A block whose **sole** statement is `pipeline <name>;` does not describe passes at all: it binds the
-program to a backend pipeline stage that consumes an engine data structure, and the table entry
-carries the `FixedFunctionIntrinsic` value instead of a function pointer. Anything else in such a
-block is an error --- a block either describes passes or names a stage.
+A block whose <b>sole</b> statement is `pipeline <name>;` binds the program to a backend pipeline stage
+consuming an engine data structure; the table entry carries a `FixedFunctionIntrinsic` instead of a
+function. Anything else in such a block is an error.
 
 `pipeline` name | `FixedFunctionIntrinsic` | Stage | Declared by
 --------------- | ------------------------ | ----- | -----------
-`tile_map_mesh` | `TileMapMesh` | a whole tile layer as one indexed triangle-list mesh (the 8-float `TileMap::AppendTileQuad` contract, four corners per quad addressed through @cpp RenderResources::GetQuadIndices() @ce and resolved on the CPU, with quad-pattern recognition and, on the PVR, scissor clipping) | `TileMapMesh.shader`, `TileMapMeshPalette.shader`
-`lighting_combine` | `LightingCombine` | the viewport compositor --- the direct-tier CPU-lightmap lighting hook | `Combine.shader`, `CombineWithWater.shader`, `CombineWithWaterLow.shader`
-`line_strip_mesh` | `LineStripMesh` | vertex-fed textured line strip of the weapon wheel (the PVR expands segments into thin quads; the GX and the GU draw native lines) | `DefaultMeshSprite.shader`
+`tile_map_mesh` | `TileMapMesh` | a whole tile layer as one indexed triangle-list mesh (8-float `TileMap::AppendTileQuad` contract, corners addressed through @cpp RenderResources::GetQuadIndices() @ce, resolved on the CPU; PVR scissor-clips) | `TileMapMesh.shader`, `TileMapMeshPalette.shader`
+`lighting_combine` | `LightingCombine` | viewport compositor --- the direct-tier CPU-lightmap lighting hook | `Combine.shader`, `CombineWithWater.shader`, `CombineWithWaterLow.shader`
+`line_strip_mesh` | `LineStripMesh` | vertex-fed textured line strip of the weapon wheel (PVR expands to thin quads, GX/GU draw native lines) | `DefaultMeshSprite.shader`
 
 @m_class{m-noindent}
 
-The geometry-synthesized quad effects are **not** intrinsics --- the transition iris and the warped
-background are ordinary transpiled blocks built on the strip builder.
+Geometry-synthesized effects (transition iris, warped background) are ordinary blocks on the strip
+builder, not intrinsics.
 
 @subsection shader-compiler-ff-pass Passes and their fields
 
-`pass p;` declares a `FixedFunctionPass` local starting from the engine defaults (a plain modulated
-sprite pass with the material's own blending). It takes no initializer, each pass needs its own
-statement, the fields are **write-only** --- reading one back is an error --- and only plain `=`
-assignment is accepted.
+`pass p;` declares a `FixedFunctionPass` with engine defaults (plain modulated sprite, material
+blending). No initializer, one statement per pass; fields are <b>write-only</b> and take only plain `=`.
 
 Field | Type | Meaning
 ----- | ---- | -------
-`p.color` | `vec4` | per-vertex colour of the pass (the PVR `argb`, the GX raster colour, the GE vertex colour)
-`p.offset_color` | `vec3` | post-texture additive term (the PVR offset colour; the GX runs a silhouette pass instead; the GU expands the pass into modulate + additive silhouette, which is the same result). Writing it is what enables it, and what sets `usesOffsetColor`
-`p.screen_offset` | `vec2` | displacement of the whole quad in the quad's own coordinate space (the Outline ring taps)
-`p.luma_gain` | `float` | how much `LUMA_RAMP` amplifies the texel's luminance before saturating it; ignored by every other preset
-`p.texture_repeat` | `bool` literal | RDP only: the pass samples with hardware wrap along S (a mask on the tile descriptor), so texture-unit coordinates outside [0, 1] repeat instead of the strip being cut into pieces at the texture's edges --- accepted only in a `fixed_function(rdp)` block; the backends that take the wrap from the texture's own sampler state (the GE, the PICA200) need no flag for it. It only ever *adds* wrapping: a texture whose own sampler asks to repeat and whose whole image fits the backend's texture-memory budget is wrapped on both axes anyway, without any pass saying so
+`p.color` | `vec4` | per-vertex colour of the pass
+`p.offset_color` | `vec3` | post-texture additive term. Writing it enables it and sets `usesOffsetColor`. GX uses a silhouette pass; GU expands it into modulate + additive silhouette (same result, one draw when `color.rgb` is zero), so generic blocks using it work everywhere
+`p.screen_offset` | `vec2` | displacement of the whole quad in its own coordinate space
+`p.luma_gain` | `float` | `LUMA_RAMP` luminance amplification before saturation; ignored by other presets
+`p.texture_repeat` | `bool` literal | `fixed_function(rdp)` blocks only: hardware wrap along S, so coordinates outside [0, 1] repeat instead of the strip being cut. Only adds wrapping; GE and PICA200 take wrap from the sampler state
 `p.blend` | enum | blend override for this pass
-`p.tev` | enum | GX combiner preset --- portable intent, the PVR always modulates and the GE only knows `MODULATE` and `SILHOUETTE`
+`p.tev` | enum | combiner preset --- portable intent; the PVR always modulates, the GE knows only `MODULATE` and `SILHOUETTE`
 
 `p.blend` | `BlendMode` | Hardware
 --------- | ----------- | --------
-`MATERIAL` | `Material` | whatever the material configured (the default)
-`ADD` | `Additive` | additive glow and split-multiplier passes. The GX maps it to `ONE + ONE`; the PVR deliberately maps it to `SRCALPHA + ONE` --- the additive mechanism its split-multiplier passes have always used, whose contributions are scaled by the pass alpha, so the mapping stays bit-identical with the code it replaced
+`MATERIAL` | `Material` | whatever the material configured (default)
+`ADD` | `Additive` | additive glow and split-multiplier passes; GX `ONE + ONE`, PVR `SRCALPHA + ONE` (scaled by pass alpha)
 `OPAQUE` | `Opaque` | `ONE + ZERO`
-`ALPHA` | `Alpha` | plain source-alpha over (`SRCALPHA + INVSRCALPHA`), independent of the material --- the warp's horizon tint runs over a material whose own blend does not apply to that pass
+`ALPHA` | `Alpha` | `SRCALPHA + INVSRCALPHA`, independent of the material
 
-`p.tev` | `TevPreset` | Meaning
-------- | ----------- | -------
-`MODULATE` | `Modulate` | `texture * vertex colour` (the default)
-`SILHOUETTE` | `Silhouette` | vertex colour where the texture has alpha (flat masks, shadows, glows)
-`MODULATE_X2` | `ModulateX2` | modulate with the combiner's x2 output scale. **Not on the PSP or the PS2** --- neither the GE's texture environment nor the GS's texture function has an output scale, so every block whose targets include `gu` or `gs` rejects it. The RDP reaches it with its second combiner cycle, LegacyGL with `GL_RGB_SCALE`
-`MODULATE_X4` | `ModulateX4` | modulate with the combiner's x4 output scale. **Not on the PSP or the PS2**, same reason, and **not on the N64** either --- doubling again would need a third combiner cycle the RDP does not have
-`TINT_MIX` | `TintMix` | `mix(texel, colour, alpha)` with an opaque result, one combiner stage. Needs a **lerping combiner**: the GX's TEV stage, the RDP's `(PRIM - TEX) * PRIM_ALPHA + TEX` cycle, `GL_INTERPOLATE` or the PICA200's `GPU_INTERPOLATE`, so a block targeting any of `gx`/`pica`/`rdp`/`legacygl` may use it
-`LUMA_RAMP` | `LumaRamp` | silhouette whose tone is picked per texel from a two-endpoint ramp --- `color.rgb` is the tone at luminance 0, `offset_color` the tone at 1, with `luma_gain` amplifying and saturating the texel's Rec.601 luminance in between; coverage stays `texel alpha * color.a`. **GX only** --- needs a block targeting `gx` and nothing else
+`p.tev` | `TevPreset` | Meaning and availability
+------- | ----------- | ------------------------
+`MODULATE` | `Modulate` | `texture * vertex colour` (default)
+`SILHOUETTE` | `Silhouette` | vertex colour where the texture has alpha (masks, shadows, glows)
+`MODULATE_X2` | `ModulateX2` | modulate with x2 output scale. <b>Rejected in any block reaching `gu` or `gs`</b> (no output scale); RDP via its second combiner cycle, LegacyGL via `GL_RGB_SCALE`
+`MODULATE_X4` | `ModulateX4` | modulate with x4 output scale. Rejected for `gu`, `gs` <b>and `rdp`</b> (would need a third combiner cycle)
+`TINT_MIX` | `TintMix` | `mix(texel, colour, alpha)`, opaque result. Needs a lerping combiner: only blocks whose targets are all among `gx`, `pica`, `rdp`, `legacygl`
+`LUMA_RAMP` | `LumaRamp` | silhouette toned per texel: `color.rgb` at luminance 0, `offset_color` at 1, `luma_gain` amplifying the Rec.601 luminance; coverage `texel alpha * color.a`. <b>Only in a block targeting `gx` alone</b>
 
 @m_class{m-noindent}
 
-The two GX-only presets need the programmable TEV combiner --- the CLX2 can modulate a texel by the
-vertex colour and add an offset colour, and that is its whole vocabulary, while the GE has five fixed
-texture functions over one texel and the fragment colour --- so using them outside a block targeting
-the GX **alone** is a hard error rather than a silently wrong console frame. A *generic* block is
-rejected too, because it is transpiled for every backend, and so is a target list such as
-@cpp void fixed_function(gx, gu) @ce, because the GE it also serves cannot express them.
-
-The two output scales are the mirror image: the GE has no scale stage at all, so they are rejected for
-every block that reaches a backend without one --- a `gu` or `gs` block, a target list naming either, and a generic
-one alike. Unlike the GX-only presets this is not a per-block *capability* --- the PVR *silently
-ignores* `p.tev`, so a `pvr` block may keep using one --- but a shared block using an output scale
-would be honoured by only some of the consoles it serves, which is precisely the "silently depends on
-one console's feature" case these checks exist to prevent. On the no-combiner tiers a boost is
-expressed as passes instead: `Colorized.shader` splits its multiplier into up to three additive passes
-in its shared `pvr, gu, gs` block (and into up to two in its own `rdp` block, whose combiner ceiling
-makes the third pass unreachable).
-
-`p.offset_color` is a third capability gap, and the one place where the answer is **mechanism rather
-than policy**: the GE has no post-texture additive term either @m_span{m-text m-dim} (`GU_TFX_ADD`
-adds the texel to the fragment colour, not a third value) @m_endspan, so the GU's
-`EffectContext::SubmitQuad` expands a pass carrying an offset colour into the modulated sprite plus
-an additive silhouette pass over it. With `a = texel.a * color.a` the pair produces
-`dst*(1 - a) + a*texel*color.rgb + a*offset` --- term for term what the PVR's single specular-enabled
-draw produces --- and collapses to ONE draw when `color.rgb` is zero, which is the mask/outline/shield
-idiom where the offset colour *is* the effect. Because the expansion lives in the backend,
-every **generic** block that writes an offset colour keeps working unchanged on all three consoles;
-the GX does the analogous thing by reinterpreting the pass as its silhouette form.
+These checks reject the generic block too. The PVR silently ignores `p.tev` (an output scale has no
+effect there); without a combiner, express a boost as extra additive passes (`Colorized.shader`).
 
 @subsection shader-compiler-ff-builtins Built-ins
 
-The **portable core** is valid in every block. The **extended** vocabulary is reserved for blocks that
-NAME their backends @m_span{m-text m-dim} (a single target or a target list --- either way every
-backend it serves is spelled out) @m_endspan, so a shared description can never silently depend on one
-console's geometry synthesis.
+The <b>portable core</b> is valid in every block. The <b>extended</b> vocabulary is only valid in blocks
+that name their targets (single or list), never in the generic block.
 
-Built-in | Type | Meaning | Generic block?
--------- | ---- | ------- | --------------
-`COLOR` | `vec4` | the instance colour of the draw being dispatched, exactly the shader's `COLOR` input. Read-only, and cannot be redeclared | yes
-`texel_size()` | `vec2` | displacement of one texel in the quad's own coordinate space, already converted per backend (raster space on the PVR, logical pixels on the GX, screen pixels on the GU) | yes
-`has_texel_size()` | `bool` | whether that step is derivable at all (a zero `texRect` has no scale) --- blocks guard their `texel_size()` uses with it | yes
+Built-in | Type | Meaning | Core?
+-------- | ---- | ------- | -----
+`COLOR` | `vec4` | instance colour of the draw, the shader's `COLOR` input. Read-only, cannot be redeclared | yes
+`texel_size()` | `vec2` | one texel's displacement in the quad's coordinate space, converted per backend | yes
+`has_texel_size()` | `bool` | whether that step is derivable (a zero `texRect` has none); guard `texel_size()` with it | yes
 `submit_quad(p)` | statement | submits one pass over the current instance's quad | yes
-`quad_origin()` | `vec2` | **pre-clip** raster position of the sprite's (0,0) corner | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`quad_axis_x()`, `quad_axis_y()` | `vec2` | pre-clip raster displacements of the sprite's local axes. Synthesized geometry uses these instead of the post-scissor-clip corner arrays, so clipping cannot distort it | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`has_uniform(uName)` | `bool` | whether the program resolved that uniform. An unresolved name loads zeros, so blocks guard with this exactly like the code they replaced null-checked its pointers | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`uniform_vec2(uName)`, `uniform_vec4(uName)` | `vec2`, `vec4` | the program's resolved uniforms by name, through the backend's existing `ResolveUniform` machinery. The argument is an **identifier**, not a string literal | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`strip_position(i, <vec2>)` | statement | strip-builder vertex position | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`strip_uv(i, <vec2>)` | statement | strip-builder vertex UV, in the shader's texture space (the backend folds its padded-store scale) | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`strip_color(i, <vec4>)` | statement | strip-builder per-vertex colour | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`submit_strip(p, count)` | statement | submits the first `count` strip vertices textured, under the pass's flat colour | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`submit_strip_shaded(p, count)` | statement | submits them with their per-vertex colours --- gradients without a fragment shader. **Untextured** unless the pass's preset consumes the texel too (`TINT_MIX`), in which case the strip keeps its texture and UVs | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`quad_origin()` | `vec2` | <b>pre-clip</b> raster position of the sprite's (0,0) corner | no
+`quad_axis_x()`, `quad_axis_y()` | `vec2` | pre-clip raster displacements of the sprite's local axes; use these for synthesized geometry so clipping cannot distort it | no
+`has_uniform(uName)` | `bool` | whether the program resolved that uniform (unresolved ones load zeros) | no
+`uniform_vec2(uName)`, `uniform_vec4(uName)` | `vec2`, `vec4` | resolved uniform by name via `ResolveUniform`. The argument is an <b>identifier</b>, not a string | no
+`strip_position(i, <vec2>)` | statement | strip vertex position | no
+`strip_uv(i, <vec2>)` | statement | strip vertex UV in the shader's texture space | no
+`strip_color(i, <vec4>)` | statement | strip per-vertex colour | no
+`submit_strip(p, count)` | statement | submits the first `count` strip vertices textured, with the pass's flat colour | no
+`submit_strip_shaded(p, count)` | statement | submits them with per-vertex colours; <b>untextured</b> unless the preset consumes the texel (`TINT_MIX`) | no
 
 @m_class{m-noindent}
 
-The submission and strip calls are statements, not values; using one inside an expression is an
-error. The strip scratch is a backend capability --- **8** vertices on the PVR and **16** everywhere
-else, all of which prefer fewer, longer primitives (on the GE every strip costs a draw call of
-its own) --- and a **literal** vertex index outside `0` to
-capacity-1, or a literal count outside `3` to capacity, is a hard error, because at runtime an
-out-of-range index is dropped and an oversized count clamped, which would silently draw the wrong
-geometry. A block naming several targets is held to the **minimum** of their capacities, so
-@cpp void fixed_function(pvr, gx) @ce gets the PVR's 8. Computed indices and counts stay unchecked.
+Submission and strip calls cannot appear in expressions. Strip capacity is <b>8</b> vertices on the
+PVR and <b>16</b> elsewhere; a <b>literal</b> index outside `0`..capacity-1 or count outside
+`3`..capacity is a hard error (at runtime it would be silently dropped or clamped); computed values are
+unchecked. Prefer fewer, longer strips --- on the GE each is a draw call.
 
 @subsection shader-compiler-ff-target-lists Capability rules for a target list
 
-A block that names several backends is validated against the **intersection** of what they can do ---
-never against the backend whose header happens to be generated at that moment, which would accept a
-body that is silently wrong on the other backends the same block serves.
+A block naming several backends is validated against the <b>intersection</b> of their capabilities,
+whichever backend is being generated.
 
 Rule | On a target list
 ---- | ----------------
-Extended vocabulary @m_span{m-text m-dim} (strip builder, pre-clip quad axes, resolved uniforms) @m_endspan | allowed --- every backend a list names is spelled out in it, so nothing is implicit. Only the *generic* block is held to the portable core
-`TINT_MIX` | allowed only when **every** listed target has a lerping combiner --- any subset of `gx`, `pica`, `rdp`, `legacygl`. @cpp void fixed_function(gx, gu) @ce is rejected --- the GE has no combiner
-`LUMA_RAMP` | allowed only in a block targeting `gx` and nothing else --- the RDP's combiner has no dot product to derive the luminance from
-`MODULATE_X2` / `MODULATE_X4` | rejected as soon as `gu` or `gs` appears in the list. @cpp void fixed_function(pvr, gu) @ce cannot use them even while the PVR's own header is being written; `rdp` in a list rejects `MODULATE_X4` only, and `gx`/`legacygl`/`pica` have both
-Strip-builder capacity | the **minimum** across the listed targets. @cpp void fixed_function(pvr, gx) @ce is limited to 8 vertices, so a literal index `8` is an error there
+Extended vocabulary @m_span{m-text m-dim} (strip builder, quad axes, uniforms) @m_endspan | allowed; only the generic block is held to the portable core
+`TINT_MIX` | only when <b>every</b> target is among `gx`, `pica`, `rdp`, `legacygl`; @cpp void fixed_function(gx, gu) @ce is rejected
+`LUMA_RAMP` | only in a block targeting `gx` alone (the RDP combiner has no dot product)
+`MODULATE_X2` / `MODULATE_X4` | rejected as soon as `gu` or `gs` is listed, even while generating the PVR header; `rdp` rejects `MODULATE_X4` only; `gx`/`legacygl`/`pica` have both
+Strip-builder capacity | the <b>minimum</b> of the targets; @cpp void fixed_function(pvr, gx) @ce gets 8, so a literal index `8` is an error
 
 @m_class{m-noindent}
 
-Each diagnostic names which of the block's own targets rejects the feature, so the fix --- splitting
-the list back into separate blocks --- is obvious from the message alone.
+Each diagnostic names the target that rejects the feature; the fix is splitting the list into separate
+blocks.
 
 @subsection shader-compiler-ff-statements Statements and expressions
 
-The block body is a plain statement list over a deliberately small type system: `float`, `int`,
-`bool`, `vec2`, `vec3`, `vec4` and the opaque `pass`.
+Types: `float`, `int`, `bool`, `vec2`, `vec3`, `vec4` and the opaque `pass`.
 
--   **Statements** --- local declarations (with initializers and comma-separated declarators),
-    `pass` declarations, plain and compound assignment (`=`, `+=`, `-=`, `*=`, `/=`), prefix and
-    postfix `++` / `--` on an `int` variable, `if` / `else`, C-style `for` whose init declares or
-    assigns an `int` counter and whose condition is a `bool`, braced blocks with their own scope,
-    and the submission/strip calls above. Only those can stand alone as a statement.
--   **Operators** --- `+ - * /` on numeric operands, with a scalar broadcasting over a vector and
-    mismatched vector widths rejected; `%` on `int` only; `< > <= >=` on numeric scalars; `==` and
-    `!=` on numeric scalars or `bool`s; `&& || ^^` on `bool`s; unary `-` on any numeric scalar or
-    vector, unary `!` on a `bool`; and the ternary `?:`, whose condition must be `bool` and whose
-    branches must have the same type.
--   **Functions** --- `min` / `max` taking `(float, float)`, `(int, int)`, `(vecN, vecN)` or
-    `(vecN, float)`; `clamp` and `mix` in the corresponding 3-argument shapes; `ceil` / `floor` on a
-    `float` or a vector; `abs` / `sqrt` / `sin` / `cos` on a `float`; the conversions `float(x)` /
-    `int(x)`; and `vec2` / `vec3` / `vec4` constructors as either a single-scalar splat or any
-    scalar/vector mix whose components sum to the target width.
--   **Swizzles** --- single components in any spelling (`xyzw`, `rgba`, `stpq`), plus `.xy`, `.zw`,
-    `.xyz` and `.yzw` for reading. Only a **single component** can be assigned; a multi-component
-    swizzle store is rejected, because the emitted vector types expose multi-swizzles as read-only
-    accessors.
+-   <b>Statements</b> --- local declarations (initializers, comma-separated declarators), `pass`
+    declarations, `=`, `+=`, `-=`, `*=`, `/=`, prefix/postfix `++` / `--` on an `int`, `if` / `else`,
+    C-style `for` with an `int` counter and a `bool` condition, braced blocks with their own scope, and
+    the submission/strip calls. Nothing else stands alone as a statement.
+-   <b>Operators</b> --- `+ - * /` on numeric operands (scalar broadcasts over a vector, mismatched
+    widths rejected); `%` on `int` only; `< > <= >=` on numeric scalars; `==` / `!=` on numeric scalars
+    or `bool`s; `&& || ^^` on `bool`s; unary `-` on numeric, `!` on `bool`; ternary `?:` with a `bool`
+    condition and same-typed branches.
+-   <b>Functions</b> --- `min` / `max` on `(float, float)`, `(int, int)`, `(vecN, vecN)` or
+    `(vecN, float)`; `clamp` and `mix` in the matching 3-argument shapes; `ceil` / `floor` on `float` or
+    vector; `abs` / `sqrt` / `sin` / `cos` on `float`; `float(x)` / `int(x)`; `vec2` / `vec3` / `vec4`
+    constructors as a scalar splat or any mix whose components sum to the width.
+-   <b>Swizzles</b> --- single components in `xyzw`, `rgba` or `stpq`, plus `.xy`, `.zw`, `.xyz`, `.yzw`
+    for reading. Only a <b>single component</b> can be assigned.
 
 @m_class{m-noindent}
 
-Explicitly **not** part of the grammar, each with its own error: `while`, `do`, `switch`, `return`,
-`break`, `continue`, `discard`, arrays and indexing, unary `~`, the remaining compound assignments
-(`%=`, `&=`, `|=`, `^=`, `<<=`, `>>=`), assignments nested inside expressions, initializing or
-assigning a `pass` as a value, and redeclaring `COLOR` or `ctx`. A blend/tev preset name cannot be
-used as a variable either.
-
-@subsection shader-compiler-ff-errors Error behaviour
-
-Unlike the software transpiler, which **declines** shaders outside its subset --- they simply stay
-absent from its table --- a `fixed_function` block is authored intent: anything outside the grammar
-is a **hard error** with the offending file and line, and it fails the whole `--generate-all` run,
-so a mistake surfaces on the dev machine instead of silently dropping a console effect.
+Rejected, each with its own error: `while`, `do`, `switch`, `return`, `break`, `continue`, `discard`,
+arrays and indexing, unary `~`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, assignments inside expressions,
+initializing or assigning a `pass` as a value, redeclaring `COLOR` or `ctx`, and blend/tev preset names
+as variables.
 
 @subsection shader-compiler-ff-examples Worked examples
 
--   @cpp "WhiteMask.shader" @ce --- the minimal shape: one silhouette pass whose colour comes from
-    the offset colour. `PartialWhiteMask.shader` is the same effect split by capability, contrasting
-    the offset-colour lift @m_span{m-text m-dim} (one shared @cpp void fixed_function(pvr, gu, gs) @ce
-    block --- none of the three has an output scale, and all of them deliver an offset colour) @m_endspan
-    against the combiner's x2 output scale @m_span{m-text m-dim} (`gx`) @m_endspan. The smallest
-    example of the list form: two lines of pass code that used to exist twice.
--   @cpp "Outline.shader" @ce --- the ring is just a loop: a nested `for` over the eight
-    neighbours, each an offset silhouette guarded by `has_texel_size()`, then the sprite itself.
-    An idiom rather than a keyword, which is the whole point of the language being this small.
--   @cpp "Colorized.shader" @ce --- a runtime-dependent pass count on the no-combiner tiers (the
-    multiplier split into up to three additive passes in one shared @cpp void fixed_function(pvr, gu, gs)
-    @ce block, since none of those tiers can carry a multiplier above 1.0) versus a single `MODULATE_X4` pass
-    on the GX.
--   @cpp "FrozenMask.shader" @ce --- the consoles reaching the same GLSL `mix()` differently, and the
-    clearest illustration of *why* a target list is a capability statement: the PVR, the GU and the GS
-    share a block because none can do per-texel arithmetic, so all settle for a constant ice tone, while
-    the `gx` block picks the tone per texel with `LUMA_RAMP` and `luma_gain = 2.6`, reproducing the
-    shader's tone for every luminance.
--   @cpp "Transition.shader" @ce --- geometry synthesis: the iris fan built from `quad_origin()` /
-    `quad_axis_x/y()` and shaded strips, 32 segments in the `pvr` block and 64 with a three-band eased
-    edge in one shared @cpp void fixed_function(gx, pica, gu, gs, rdp, legacygl) @ce block. The iris
-    needs no combiner at all --- only geometry and per-vertex colours --- so what decides the split is
-    the strip scratch: every backend but the PowerVR takes the 10-vertex strip that walks all five radii
-    in ONE draw, and the PVR's 8 vertices cannot hold it. It is also the one shader whose list starts at `gx`
-    rather than at `pvr`.
--   @cpp "Include/TexturedBackgroundWarp.inc" @ce --- the warp rebuild, shared by both background
-    shaders **and** every backend: the band geometry uses only extended vocabulary that every console
-    implements the same way, so the include is literally the same code everywhere. Two macros the
-    including block defines before the `#include` specialize it per capability, which is also the
-    general idiom for specializing a shared include per backend:
-    -   `WARP_TINT_IN_VERTEX_COLOR` folds the horizon tint into each band piece's own draw through the
-        `TINT_MIX` combiner preset. Without it --- on the PowerVR, the GE and the GS, none of which can
-        lerp a texel toward an interpolated colour --- the tint is a second, alpha-blended gradient over
-        the bands, and it is emitted in a second walk of the bands after all the textured pieces rather
-        than band by band, so the backend batches the whole warp into two draws instead of alternating
-        between two states for every band. That is exact: the bands share only their edge rows, which
-        the rasterizer gives to one band or the other.
-    -   `WARP_TEXTURE_REPEAT` draws each band as **one** strip with unwrapped texture coordinates, for a
-        GPU that repeats the 256x256 render target in hardware, instead of cutting it into up to eight
-        pieces at the texture's edges. The RDP is told to wrap by the pass, so its block also defines
-        `WARP_TEXTURE_REPEAT_IN_PASS`, which sets `p.texture_repeat`; the GE and the PICA200 take the wrap
-        from the render target's own sampler state. The PowerVR's render target is a stride surface its
-        texture unit cannot wrap, so it keeps the pieces.
+Shader | Shows
+------ | -----
+@cpp "WhiteMask.shader" @ce | the minimal shape: one silhouette pass coloured by the offset colour
+`PartialWhiteMask.shader` | split by capability: offset-colour lift in `(pvr, gu, gs)`, x2 output scale on `gx`
+@cpp "Outline.shader" @ce | a nested `for` over eight neighbours, each an offset silhouette guarded by `has_texel_size()`
+@cpp "Colorized.shader" @ce | multiplier as up to three additive passes in `(pvr, gu, gs)`, two in `rdp`, one `MODULATE_X4` pass on `gx`
+@cpp "FrozenMask.shader" @ce | constant ice tone where there is no per-texel arithmetic; `LUMA_RAMP` with `luma_gain = 2.6` on `gx`
+@cpp "Transition.shader" @ce | iris fan from `quad_origin()` / `quad_axis_x/y()` and shaded strips; `pvr` gets its own block because the 10-vertex strip exceeds its 8
+`Include/CombineWaterFixedFunction.inc` | shared `(gx, pica, gu, gs, legacygl)` block plus separate `rdp` (no light rays) and `pvr` (8-vertex strips) blocks
 
-    The blocks are therefore @cpp void fixed_function(pvr, gs) @ce around the bare `#include`, `gu` with
-    the repeat, `rdp` with the repeat in the pass and the tint folded, `pica` with the repeat and the
-    tint folded, and @cpp void fixed_function(gx, legacygl) @ce with the tint folded.
+@m_class{m-noindent}
+
+@cpp "Include/TexturedBackgroundWarp.inc" @ce shows the idiom for specializing a shared include: the
+including block defines macros before the `#include`.
+
+-   `WARP_TINT_IN_VERTEX_COLOR` folds the horizon tint into each band via `TINT_MIX`; without it the
+    tint is a second alpha-blended pass after all bands.
+-   `WARP_TEXTURE_REPEAT` draws each band as one strip with unwrapped coordinates on hardware that
+    repeats the 256x256 render target (the PVR cannot); `WARP_TEXTURE_REPEAT_IN_PASS` also sets
+    `p.texture_repeat` for the RDP.
+
+The blocks: `(pvr, gs)` bare; `gu` repeat; `rdp` repeat in pass + tint; `pica` repeat + tint;
+`(gx, legacygl)` tint.
 
 @section shader-compiler-workflow Regenerating the committed headers
 
-`--generate-all` enumerates every @cpp "Sources/Shaders/*.shader" @ce and writes everything into
+`--generate-all` enumerates every `*.shader` in @cpp "Sources/Shaders" @ce and writes into
 @cpp "Sources/Shaders/Generated" @ce, in this order:
 
-1.  @cpp "ShaderCompilerTypes.h" @ce --- the shared reflection types (`--emit-types`)
-2.  One header per `.shader` file --- `Default*.shader` (the nCine default programs) go into the
-    @cpp nCine::ShadersGen @ce namespace, everything else into @cpp Jazz2::ShadersGen @ce
-3.  @cpp "ShadersGen.h" @ce --- the umbrella header including every generated program, plus the
-    per-namespace `AllPrograms[]` index arrays. Program symbols come from the `program` and
-    `batched` directives, so a file with a batched twin contributes two entries
-4.  @cpp "SwGeneratedShaders.h" @ce --- the software-renderer fragment functions
-    (`--emit-sw-generated`)
-5.  @cpp "CgGeneratedShaders.h" @ce --- the PS Vita's Cg stage sources (`--emit-cg`)
+1.  @cpp "ShaderCompilerTypes.h" @ce --- shared reflection types (`--emit-types`)
+2.  One header per `.shader` file --- `Default*.shader` into @cpp nCine::ShadersGen @ce, everything
+    else into @cpp Jazz2::ShadersGen @ce
+3.  @cpp "ShadersGen.h" @ce --- umbrella header plus the per-namespace `AllPrograms[]` arrays; a file
+    with a `batched` twin contributes two entries
+4.  @cpp "SwGeneratedShaders.h" @ce (`--emit-sw-generated`)
+5.  @cpp "CgGeneratedShaders.h" @ce (`--emit-cg`)
 6.  @cpp "PvrGeneratedEffects.h" @ce, @cpp "GxGeneratedEffects.h" @ce,
     @cpp "GuGeneratedEffects.h" @ce, @cpp "GsGeneratedEffects.h" @ce,
-    @cpp "RdpGeneratedEffects.h" @ce, @cpp "LegacyGlGeneratedEffects.h" @ce and @cpp "PicaGeneratedEffects.h" @ce ---
-    the fixed-function effects (`--emit-fixed-function pvr` / `gx` / `pica` / `gu` / `gs` / `rdp` / `legacygl`)
-
-7.  @cpp "RsxGeneratedShaders.h" @ce --- the PlayStation 3's RSX microcode (`--emit-rsx`), **only on a
-    host that has `cgcomp`**, see the note below
+    @cpp "RdpGeneratedEffects.h" @ce, @cpp "LegacyGlGeneratedEffects.h" @ce,
+    @cpp "PicaGeneratedEffects.h" @ce (`--emit-fixed-function`)
+7.  @cpp "RsxGeneratedShaders.h" @ce (`--emit-rsx`), <b>only on a host with `cgcomp`</b>
 
 @m_class{m-block m-info}
 
-@par The PlayStation 3 header is skipped rather than emptied
-Producing it needs `cgcomp` and NVIDIA's Cg Toolkit, which most machines do not have. Where the DXBC
-and SPIR-V fields degrade to nulls the backend falls back from, an empty microcode table would leave
-the RSX backend with no shaders and no way to make any --- so when `cgcomp` cannot be run
-`--generate-all` reports @cpp "skipped: RsxGeneratedShaders.h" @ce and leaves the committed file
-untouched, rather than overwriting it. Regenerate it on a machine with the PS3 toolchain, or point
-`--cgcomp` at one, see @ref shader-compiler-cg-rsx.
+@par The PlayStation 3 header is skipped, not emptied
+Without a runnable `cgcomp` (and NVIDIA's Cg Toolkit), `--generate-all` reports
+@cpp "skipped: RsxGeneratedShaders.h" @ce and leaves the committed file untouched. Regenerate it on a
+machine with the PS3 toolchain, or pass `--cgcomp`, see @ref shader-compiler-cg-rsx.
 
-The typical workflow after editing a `.shader` file is therefore:
+After editing a `.shader` file:
 
 @code{.bat}
 Sources\Utilities\ShaderCompiler\x64\Release\ShaderCompiler.exe --generate-all
@@ -777,67 +555,41 @@ git add Sources\Shaders Sources\Shaders\Generated
 
 @m_class{m-noindent}
 
-Neither directory has to be named: the shader directory is found by walking up from the executable
-(which normally lives in @cpp "Sources/Utilities/ShaderCompiler/x64/Release" @ce) and then from the
-working directory, looking for a @cpp "Sources/Shaders" @ce, and the output directory is its
-@cpp "Generated" @ce subdirectory. `--shaders-dir` and `--out-dir` cover any layout the walk misses.
-
-`GenerateAll.ps1` in @cpp "Sources/Utilities/ShaderCompiler" @ce is a thin wrapper that forwards
-`-Glslang`, `-NoDxbc` and `-Check` to the same mode, so the older invocation keeps working:
+The shader directory is found by walking up from the executable, then from the working directory, to a
+@cpp "Sources/Shaders" @ce; output goes to its @cpp "Generated" @ce subdirectory. Never regenerate
+artifacts piecemeal --- it leaves the committed set inconsistent. `GenerateAll.ps1` is a thin wrapper
+forwarding `-Glslang`, `-NoDxbc` and `-Check`:
 
 @code{.bat}
 cd Sources\Utilities\ShaderCompiler
 powershell .\GenerateAll.ps1
 @endcode
 
-@m_class{m-block m-info}
+SPIR-V is embedded when `glslangValidator` is found: `--glslang <path>`, then `VULKAN_SDK\Bin` and
+`VULKAN_SDK\Bin32`, then `PATH`, then a Visual Studio-bundled copy, then a repo-local build-tree copy.
+Without it a warning is printed and the SPIR-V fields are null --- the headers build, but the Vulkan
+backend does not.
 
-@par Why the driver lives in the tool
-Keeping the whole flow in one process, behind one enumeration of the shader directory, is what makes
-a regeneration all-or-nothing. Driven from a shell script it is easy to leave the committed set
-internally **inconsistent** --- one aggregate written from an older shader list, a single header
-re-emitted on a machine without glslang, everything else untouched --- and nothing detects it until
-a backend is built from headers that disagree with each other. The enumeration is also sorted with a
-plain byte-wise comparison rather than the shell's culture-sensitive one, so the entry order baked
-into the aggregates is identical on every machine, shell and locale.
+`--generate-all --check` is the <b>staleness guard</b>: it generates into a temporary directory,
+byte-compares with the committed headers (missing and extra files count), reports stale files and exits
+non-zero without touching the tree. Without glslang or with `--no-dxbc`, every header with SPIR-V or DXBC
+reports stale. Run it after editing a shader or in CI --- the build never detects stale headers.
 
-SPIR-V for the Vulkan backend is embedded when a `glslangValidator` can be found: an explicit
-`--glslang <path>`, then `VULKAN_SDK\Bin` and `VULKAN_SDK\Bin32`, then `PATH`, then a Visual
-Studio-bundled copy (globbed out of its version, edition and extension-id directories), then a
-repo-local build-tree copy. glslang is a **generation-time-only** dependency: when it is unavailable
-a warning is printed and the SPIR-V fields are emitted as null, so the headers still build but the
-Vulkan backend is not buildable from them.
-
-`--generate-all --check` is the **staleness guard**: it generates into a temporary directory
-instead, byte-compares the result against the committed headers, removes the temporary directory
-and then either reports every stale file and exits non-zero, or confirms that everything is up to
-date --- without ever modifying the tree. Missing and extra files count as stale too, and running
-`--check` without glslang (or with `--no-dxbc`) warns up front that every header with embedded
-SPIR-V or DXBC will be reported stale. Run it after editing a shader, or in CI: the build itself
-never detects stale committed headers.
-
-The tool also ships a test suite in @cpp "Sources/Utilities/ShaderCompiler/tests" @ce --- sample inputs with
-their exact `--check` dumps in @cpp "tests/expected" @ce, inputs that must fail to parse in
-@cpp "tests/errors" @ce, ESSL 100 fixtures in @cpp "tests/essl100" @ce, and `tests/RunTests.ps1` to
-run everything including emitted-header shape assertions.
+Tests in @cpp "Sources/Utilities/ShaderCompiler/tests" @ce: `--check` dumps in @cpp "tests/expected" @ce,
+must-fail inputs in @cpp "tests/errors" @ce, ESSL 100 fixtures in @cpp "tests/essl100" @ce;
+`tests/RunTests.ps1` runs them all.
 
 @section shader-compiler-editor Editor support (Visual Studio Code)
 
-@cpp "Sources/Utilities/VSCodeExtension" @ce is a Visual Studio Code extension for the `.shader`
-language. Its point of difference from a generic GLSL mode is that it **runs this tool**: diagnostics
-are the compiler's own, obtained from `ShaderCompiler <file> --check`, so the squiggles in the editor
-and the errors from a regeneration cannot disagree. Around that it adds highlighting that knows the
-keyword directives and the fixed-function DSL, completion driven by the cursor's context, hovers that
-explain what the compiler does with each construct, an outline, `#include` navigation, and one-keystroke
-previews of the five source-to-source transforms.
-
-It is plain JavaScript --- no build step, no npm dependency, nothing to compile. The extension host
-runs @cpp "src/extension.js" @ce directly.
+@cpp "Sources/Utilities/VSCodeExtension" @ce is a plain-JavaScript extension (no build step) for
+`.shader` and `.inc` files. Its diagnostics come from `ShaderCompiler <file> --check`, so they match the
+compiler exactly; it also provides highlighting, context-aware completion, hovers, an outline,
+`#include` navigation, go-to-definition, snippets and transform previews.
 
 @subsection shader-compiler-editor-install Installing
 
-Point the editor's extensions directory at the in-tree copy, then restart Visual Studio Code
-@m_span{m-text m-dim} (or run *Developer: Reload Window*) @m_endspan so the new directory is scanned:
+Symlink the in-tree copy (so it tracks the repository), then restart Visual Studio Code
+@m_span{m-text m-dim} (or <em>Developer: Reload Window</em>) @m_endspan:
 
 @code{.sh}
 # Linux / macOS
@@ -851,123 +603,60 @@ mklink /D "%USERPROFILE%\.vscode\extensions\death-shader" "%CD%\Sources\Utilitie
 
 @m_class{m-noindent}
 
-A symlink is preferable to a copy: the extension then tracks the repository, so a change to the
-language and a change to its editor support land together. To develop the extension itself, open
-@cpp "Sources/Utilities/VSCodeExtension" @ce as a folder and press <tt>F5</tt> --- the bundled
-@cpp ".vscode/launch.json" @ce starts an extension-host window with the repository root already open.
-For distribution outside the repository, `npx @vscode/vsce package` produces a `.vsix`, that is the
-only workflow that needs Node installed.
+To develop it, open the folder and press <tt>F5</tt> (@cpp ".vscode/launch.json" @ce opens the
+repository root). `npx @vscode/vsce package` builds a `.vsix`; only that needs Node.
 
 @subsection shader-compiler-editor-compiler How it finds the tool
 
-The executable is resolved in this order, the first hit winning:
+First hit wins:
 
-1.  The `deathShader.compilerPath` setting, if set --- absolute, or relative to the workspace folder
-    @m_span{m-text m-dim} (never relative to the editor's working directory) @m_endspan.
-2.  Build outputs inside the workspace:
-    @cpp "Sources/Utilities/ShaderCompiler/<x64|ARM64EC|Win32>/<Release|Debug>/" @ce (the MSBuild
-    project's output, and where `GenerateAll.ps1` expects it), then any CMake tree at the repository
-    root whose directory name starts with `build` or `cmake-build`, then
-    @cpp "out/build/<preset>/" @ce for the Visual Studio CMake integration.
+1.  The `deathShader.compilerPath` setting --- absolute, or relative to the workspace folder.
+2.  @cpp "Sources/Utilities/ShaderCompiler/<x64|ARM64EC|Win32>/<Release|Debug>/" @ce, then any CMake
+    tree at the repository root named `build*` or `cmake-build*`, then @cpp "out/build/<preset>/" @ce.
 3.  `ShaderCompiler` on `PATH`.
 
 @m_class{m-noindent}
 
-A status-bar item on the right names the executable in use, or warns when none was found, clicking it
-prints the resolved path. Without an executable the extension still works --- it falls back to the
-checks in @ref shader-compiler-editor-diagnostics "the second diagnostic layer" --- but nothing that
-needs to parse or transform a shader is available.
+The status bar shows the executable in use or warns when none was found; without one only the
+@ref shader-compiler-editor-diagnostics "built-in checks" work.
 
-@subsection shader-compiler-editor-features Highlighting, completion and navigation
+@subsection shader-compiler-editor-features Highlighting and completion
 
-The grammar is self-contained, so it does not depend on any other GLSL extension being installed. On
-top of ordinary GLSL it scopes the language's own vocabulary: the top-level directives, the
-`uniform ... : hint` list, the three entry points, the canvas built-ins, the compile-time stage macros,
-and the whole fixed-function DSL as its own region @m_span{m-text m-dim} (`pass`, `pipeline`, the
-`submit_*` calls, the pass fields and their `MATERIAL`/`ADD`/... and `MODULATE`/`LUMA_RAMP`/... values,
-the optional context facilities) @m_endspan. Constructs the language **rejects** are scoped as errors,
-so a colour theme paints them as mistakes before the compiler ever runs: `fragColor`, a `#version`
-line, an unsupported canvas built-in, an unknown render mode or uniform hint, and a stage macro used
-in `#if defined(...)` / `#elif` / `#define` / `#undef`.
+Constructs the language rejects are highlighted as errors: `fragColor`, `#version`, unsupported canvas
+built-ins, unknown render modes or uniform hints, and stage macros in `#if defined(...)` / `#elif` /
+`#define` / `#undef`. Completion depends on the cursor:
 
-Completion is chosen from the cursor's context rather than offered as one flat list:
-
-Where the cursor is | What is offered
-------------------- | ---------------
-Brace depth 0 | The directives, the entry points, `#include`, types, and the names this file declares
-After `shader_type`, `render_mode` or `precision` | Only that directive's legal values --- nothing else
-After the `:` of a `uniform` | Only the seven uniform hints
-Inside the parentheses of `void fixed_function(...)` | Only `pvr`, `gx`, `pica`, `gu`, `gs`, `rdp`, `legacygl`
-Inside a `fixed_function` body | The fixed-function statements, the `submit_*` calls, the pass fields with their enum values, the context facilities, and the small maths subset the transpiler accepts
-Inside `vertex()` or `fragment()` | GLSL built-ins and `gl_*`, the mode-appropriate canvas built-ins, and this file's uniforms, varyings, attributes, block members, structs, `#define`s, `variant` names and helper functions
-Inside an `#include "..."` | The sibling `.inc` / `.shader` files, walked directory by directory
-
-@m_class{m-noindent}
-
-The mode-awareness is real, not cosmetic: the canvas built-ins are only offered under
-`shader_type canvas_item` @m_span{m-text m-dim} (in custom mode `TEXTURE` is an ordinary user
-identifier, so offering it would be wrong) @m_endspan, `VERTEX` only inside `vertex()`, and
-`TEXTURE` / `PALETTE_OFFSET` only outside it.
-
-Hovering a directive, built-in, uniform hint, pass field or context facility shows what the compiler
-does with it --- the same rules this page documents. Hovering a name the file declares shows its
-declaration line. <tt>Ctrl</tt>-clicking an `#include` path opens the file, go-to-definition works on
-any name declared in the document, and the outline
-@m_span{m-text m-dim} (<tt>Ctrl</tt>+<tt>Shift</tt>+<tt>O</tt>) @m_endspan lists the programs, the
-batched twin, the variants, the uniform blocks, the uniforms with their texture units, the varyings,
-the attributes, the helper functions and the entry points with their `fixed_function` target lists.
-
-Snippets cover the whole-file skeletons @m_span{m-text m-dim} (`shader-custom`, `shader-canvas`)
-@m_endspan and every directive, entry point and `fixed_function` shape.
+Cursor position | Completion offers
+--------------- | -----------------
+Brace depth 0 | directives, entry points, `#include`, types, names declared in the file
+After `shader_type`, `render_mode` or `precision` | only that directive's values
+After the `:` of a `uniform` | only the seven uniform hints
+Inside `void fixed_function(...)` parentheses | only `pvr`, `gx`, `pica`, `gu`, `gs`, `rdp`, `legacygl`
+Inside a `fixed_function` body | the DSL statements, calls, pass fields and values, facilities, maths subset
+Inside `vertex()` or `fragment()` | GLSL built-ins, mode-appropriate canvas built-ins, the file's declarations
+Inside `#include "..."` | sibling `.inc` / `.shader` files
 
 @subsection shader-compiler-editor-diagnostics Diagnostics
 
-Two independent layers, both on by default:
+Two layers, both on by default:
 
-1.  **The compiler.** `ShaderCompiler <file> --check` is run over the document, it parses and reflects
-    the input and writes nothing. Its stderr is parsed in all three shapes described under
-    @ref shader-compiler-usage "the command-line reference" ---
-    @cpp "<file>:<line>: error: <message>" @ce, @cpp "<file>: error: <message>" @ce and a bare
-    @cpp "error: <message>" @ce --- including Windows paths whose drive letter contains a colon.
-    Anything the parser, the reflection or an emitter reports therefore reaches the editor verbatim.
-2.  **Checks the extension can prove on its own,** so a file still gets feedback with no executable
-    around: a missing or duplicate `program`, a missing `void fragment()`
-    @m_span{m-text m-dim} (or `void vertex()` in custom mode) @m_endspan, a directive written before
-    `program`, `batched` without `shader_type canvas_item`, a `#version` line, a reference to
-    `fragColor`, a stage macro in an illegal preprocessor form, a `return;` inside a canvas-mode
-    `vertex()`, and an unsupported canvas built-in. Each one is a hard error this page documents.
-    Set `deathShader.validate.builtinChecks` to @cpp false @ce to leave diagnostics entirely to the
-    compiler.
+1.  <b>The compiler</b> --- `ShaderCompiler <file> --check`; all three stderr shapes from
+    @ref shader-compiler-usage "the command-line reference" are parsed.
+2.  <b>Built-in checks</b> needing no executable: missing or duplicate `program`, missing
+    `void fragment()` (or `void vertex()` in custom mode), a directive before `program`, `batched`
+    without `shader_type canvas_item`, `#version`, `fragColor`, an illegal stage-macro form, `return;`
+    in a canvas `vertex()`, an unsupported canvas built-in. Set `deathShader.validate.builtinChecks` to
+    @cpp false @ce to leave diagnostics to the compiler.
 
 @m_class{m-noindent}
 
-The second layer knows when **not** to fire, which matters more than what it catches. Every structural
-check stands down for a file containing `#include`, because the includes are expanded textually before
-parsing and may legitimately carry the `program` directive or an entry point --- exactly the shape
-@cpp "LightingMesh.shader" @ce has. The canvas-only rules are skipped in custom mode, and a mention
-inside a comment never reports.
+Structural checks stand down in files with `#include` (as in @cpp "LightingMesh.shader" @ce) and in
+`.inc` fragments. Since the compiler reports include-expanded line numbers, the extension notes the
+expanded line in such files. Validation runs on open and save, or while typing with `onType`; a dirty
+buffer is then written to a short-lived @cpp ".vscode-death-shader-tmp." @ce copy, next to the original
+when it has `#include` lines, else in the OS temp directory.
 
-@m_class{m-block m-info}
-
-@par Line numbers and includes
-The compiler reports lines of the **include-expanded** stream, so for a file with `#include` lines a
-reported number need not correspond to anything in the buffer. Rather than anchoring a squiggle
-somewhere misleading, the extension appends a note to the message saying which line of the expanded
-stream it came from, and says so explicitly when that line is past the end of the file.
-
-Validation runs on save, and on open. Setting `deathShader.validate.run` to `onType` validates while
-typing, debounced by `deathShader.validate.delay`. Since the compiler reads from disk, a dirty buffer
-is then written to a temporary copy first: **next to the original** when the document has `#include`
-lines @m_span{m-text m-dim} (include paths resolve relative to the input file, so a copy elsewhere
-would not find them) @m_endspan and in the OS temporary directory otherwise. Those copies carry a
-@cpp ".vscode-death-shader-tmp." @ce infix and are deleted immediately, leftovers from a killed
-session are swept up on activation. Nothing else in the tree is ever written.
-
-@subsection shader-compiler-editor-previews Transform previews
-
-The five inspection dumps are exposed as commands --- right-click a `.shader` file, or use the command
-palette. All of them print to stdout and write nothing, so they are safe to run on a buffer at any
-time:
+@subsection shader-compiler-editor-previews Commands and settings
 
 Command | Runs
 ------- | ----
@@ -976,200 +665,108 @@ Command | Runs
 <em>Death™ Shader: Show Vulkan GLSL Transform</em> | `--vulkan`
 <em>Death™ Shader: Show Cg Transform</em> | `--cg`
 <em>Death™ Shader: Show ESSL 100 Transform</em> | `--essl100-check`
-
-@m_class{m-noindent}
-
-Each opens the transform in a preview beside the source, so the GLSL and what a given backend actually
-receives can be read side by side. *Show Resolved ShaderCompiler Path* and *Validate Current File*
-round out the command set.
-
-@subsection shader-compiler-editor-settings Settings
+<em>Show Resolved ShaderCompiler Path</em>, <em>Validate Current File</em> | ---
 
 Setting | Default | Meaning
 ------- | ------- | -------
-`deathShader.compilerPath` | `""` | Explicit path to the executable, empty auto-detects as described above
-`deathShader.validate.enable` | @cpp true @ce | Report diagnostics at all
+`deathShader.compilerPath` | `""` | explicit executable path; empty auto-detects
+`deathShader.validate.enable` | @cpp true @ce | report diagnostics at all
 `deathShader.validate.run` | `onSave` | `onSave` or `onType`
-`deathShader.validate.delay` | `400` | Debounce in milliseconds for `onType`
-`deathShader.validate.builtinChecks` | @cpp true @ce | The executable-free checks of the second layer
+`deathShader.validate.delay` | `400` | `onType` debounce in milliseconds
+`deathShader.validate.builtinChecks` | @cpp true @ce | the executable-free checks
 
 @m_class{m-noindent}
 
-The extension declares itself unsupported in untrusted workspaces, since diagnostics and the previews
-execute a binary from the workspace.
+The extension is disabled in untrusted workspaces, since it executes a binary from the workspace.
 
 @subsection shader-compiler-editor-maintaining Keeping it in step with the tool
 
-`.inc` is registered for the language as well, since the shader includes in @cpp "Sources/Shaders/Include" @ce
-use that extension. Such a file is treated as an **include fragment**: it is pasted textually into some
-`.shader` file, so it has no `program` directive, no entry points and no `shader_type` of its own. The
-structural checks therefore stand down for it @m_span{m-text m-dim} (the ones that do not depend on
-file structure still apply) @m_endspan, and because its shader mode cannot be known from the file
-alone, completion there offers the canvas built-ins regardless of mode instead of guessing.
-
-The language vocabulary lives in exactly one place, @cpp "src/language.js" @ce, which both the
-completion and the hovers read. **When this page gains a directive, a `render_mode`, a pass field or a
-context facility, add it there too** --- and to
-@cpp "syntaxes/deathshader.tmLanguage.json" @ce if it needs its own colour. The test suite asserts the
-closed sets against what the parser accepts @m_span{m-text m-dim} (the six render modes, the six
-fixed-function targets, the six pass fields, the four blend modes, the six tev presets, the three
-pipeline intrinsics) @m_endspan, so a set that drifts out of step fails a test rather than silently
-offering a stale list.
+<b>When this page gains a directive, `render_mode`, pass field or context facility, add it to
+@cpp "src/language.js" @ce</b> (and to @cpp "syntaxes/deathshader.tmLanguage.json" @ce if it needs its
+own colour). The dependency-free tests assert the closed sets against the parser:
 
 @code{.sh}
 node test/run-tests.js && node test/run-provider-tests.js
 @endcode
 
-@m_class{m-noindent}
-
-Both suites are dependency-free and also run under any other plain JS engine, `gjs` included.
-@cpp "run-tests.js" @ce covers the text analysis --- comment stripping, the document scan, the cursor
-contexts, the three diagnostic shapes, and every check together with the cases that must **not** fire.
-@cpp "run-provider-tests.js" @ce drives the real editor providers against a mock `vscode` API wrapped
-in a proxy that throws on any member it does not define, so a mistyped API name fails in the test
-rather than in the editor.
-
 @section shader-compiler-cg The Cg dialect (PS Vita and PlayStation 3)
 
-Two consoles want Cg, for opposite reasons, and both are served by the same emitter. They do not get
-the same text, though: each is built from its own view of a shader --- the PS Vita's with
-`LOW_POWER_GPU` defined, the PlayStation 3's with `NO_DYNAMIC_BRANCHING` instead (see
-@ref shader-compiler-input-preprocessor) --- so a shader's low-power paths are the Vita's alone.
+Both consoles get Cg from the same emitter, but from different views: the Vita's with `LOW_POWER_GPU`,
+the PS3's with `NO_DYNAMIC_BRANCHING` (see @ref shader-compiler-input-preprocessor).
 
-The PS Vita's `sceGxm` consumes compiled GXP shader binaries, and the VitaSDK ships no offline
-compiler for them --- the only Cg compiler for the platform is `libshacccg.suprx`, a firmware module
-on the console itself. The tool therefore emits Cg **source**, which the backend compiles at load
-time through vitaShaRK, and that is what @cpp "CgGeneratedShaders.h" @ce carries: two stage strings
-per program variant, looked up by the same program identity the fixed-function console tables use.
+-   <b>PS Vita</b> --- there is no offline GXP compiler (only the console's `libshacccg.suprx`), so
+    @cpp "CgGeneratedShaders.h" @ce carries Cg <b>source</b> per program variant, compiled at load time
+    through vitaShaRK.
+-   <b>PlayStation 3</b> --- the console has no shader compiler, so the Cg is compiled to microcode
+    offline, see @ref shader-compiler-cg-rsx "below".
 
-The PlayStation 3 is the mirror image: its RSX is an NV40-family part that Cg targets natively, but
-the console has no shader compiler of any kind, so its source has to be compiled **before** it ships,
-by the step @ref shader-compiler-cg-rsx "described below".
-
-Cg is the same language family as HLSL --- `floatN`, `mul()`, `lerp` / `frac` / `ddx`, `TEXCOORD<i>`
-interpolants --- so it is emitted by the *same* emitter (@ref ShaderCompiler::HlslEmitter, selected
-with @ref ShaderCompiler::HlslEmitter::Dialect "Dialect::Cg") rather than one of its own. The deltas
-are these:
+Cg comes from @ref ShaderCompiler::HlslEmitter with
+@ref ShaderCompiler::HlslEmitter::Dialect "Dialect::Cg". Differences from HLSL:
 
 -   Both entry points are named `main`, not `VSMain` / `PSMain`.
--   The system semantics are the fixed-function-era Cg set: `POSITION` for the clip position, `WPOS`
-    for the fragment position and `COLOR` for the colour output, in place of `SV_Position` /
-    `SV_Target`.
--   There is no `cbuffer`: uniforms are plain `uniform` declarations, and a std140 block's members are
-    hoisted to top-level uniforms. Samplers are combined `sampler2D` / `sampler3D` objects carrying
-    the GXM `TEXUNIT<n>` semantic and are read with `tex2D()` / `tex2Dlod()`.
--   There is **no vertex-ID or instance-ID input at all** --- the GXM parameter semantics have no
-    counterpart --- so the same `VertexIdRewrite` the ESSL 100 profile uses turns
-    the engine's `gl_VertexID` quad synthesis into reads of the `aQuadCorner` / `aInstanceIndex`
-    attributes. A stage still referencing either built-in after that rewrite is rejected with a
-    diagnostic rather than mis-emitted.
--   A batched shader's `BATCH_SIZE` is baked into the emitted source as a plain `#define`, because a
-    Cg source is compiled as one string with no place to inject a define ahead of it. The backend
-    rewrites that number when the runtime settles on a different batch size.
--   A `mix()` of two vectors by a scalar weight is emitted with the weight cast to the vectors' type,
-    @cpp lerp(a, b, ((float3)(t))) @ce, as GLSL defines it. The console's `SceShaccCg` resolves
-    @cpp lerp(float3, float3, float) @ce by converting the scalar and found that call *ambiguous* when
-    both vectors came straight from `tex2D()` --- the blur-behind layer failed to compile on hardware
-    while Vita3K accepted it. Only @cpp "CgGeneratedShaders.h" @ce changes with it; HLSL keeps the plain
-    call.
-
-@m_class{m-block m-info}
-
-@par Why Cg lives in its own header
-The Cg sources *could* have been two more fields on the per-shader header, but the DXBC and SPIR-V
-blobs in those headers can only be produced on Windows, so regenerating them anywhere else would
-silently drop both. A separate aggregate header keeps a Cg run from touching anything else.
+-   Semantics are `POSITION` (clip position), `WPOS` (fragment position) and `COLOR` (output), not
+    `SV_Position` / `SV_Target`.
+-   No `cbuffer`: std140 block members become top-level uniforms. Samplers are `sampler2D` /
+    `sampler3D` with the GXM `TEXUNIT<n>` semantic, read with `tex2D()` / `tex2Dlod()`.
+-   No vertex-ID or instance-ID input: the ESSL 100 `VertexIdRewrite` turns `gl_VertexID` quad synthesis
+    into reads of the `aQuadCorner` / `aInstanceIndex` attributes; a stage still using either built-in
+    is rejected.
+-   `BATCH_SIZE` is baked in as a plain `#define`; the backend rewrites the number when the runtime
+    picks a different batch size.
+-   A `mix()` of two vectors by a scalar casts the weight, @cpp lerp(a, b, ((float3)(t))) @ce, because
+    the console's `SceShaccCg` finds @cpp lerp(float3, float3, float) @ce ambiguous for `tex2D()`
+    results (Vita3K does not). HLSL keeps the plain call.
 
 @subsection shader-compiler-cg-rsx Compiling that Cg for the PlayStation 3
 
-`--emit-rsx` emits Cg the way `--emit-cg` does and then compiles it, which is why it lives beside
-`--emit-cg` rather than in a tool of its own. Three things about it are specific to the console:
+`--emit-rsx` emits Cg like `--emit-cg` and then compiles it:
 
-1.  **It compiles the plain view of every shader**, with `NO_DYNAMIC_BRANCHING` defined and
-    `LOW_POWER_GPU` not --- the text the desktop backends get, minus the dynamically branching blocks
-    the NV40 profiles miscompile. A shader's low-power paths therefore never reach the RSX, and an edit
-    confined to them leaves @cpp "RsxGeneratedShaders.h" @ce byte-identical.
-2.  **`BATCH_SIZE` is capped.** The Vita's value is derived from a 64 KB uniform-block budget, which is
-    what a shader-visible buffer holds there. The RSX has no such buffer --- a batched instance array
-    reaches the vertex program through its constant registers --- so the emitter is given the batch
-    the backend's corner stream covers, and bakes that in instead.
-3.  **Each stage is compiled by `cgcomp`**, PSL1GHT's offline Cg compiler, run as a child process with
-    the `vp40` / `fp40` profiles the RSX is --- the same way SPIR-V is produced by running
-    `glslangValidator`. It is found through `--cgcomp`, then `$PS3DEV/bin`, then `PATH`. Being a front
-    end over NVIDIA's `libCg.so`, it fails with "Unable to load Cg" when the Cg Toolkit is not on the
-    library path, which is reported like any other compile error.
+1.  <b>It compiles the plain view</b> --- `NO_DYNAMIC_BRANCHING` defined, `LOW_POWER_GPU` not. Low-power
+    paths never reach the RSX, and editing only them leaves @cpp "RsxGeneratedShaders.h" @ce unchanged.
+2.  <b>`BATCH_SIZE` is capped</b> to the batch the backend's corner stream covers, since instance arrays
+    live in vertex-program constant registers rather than a 64 KB uniform buffer as on the Vita.
+3.  <b>Each stage is compiled by `cgcomp`</b> (PSL1GHT) with the `vp40` / `fp40` profiles, found via
+    `--cgcomp`, then `$PS3DEV/bin`, then `PATH`. "Unable to load Cg" means NVIDIA's `libCg.so` (Cg
+    Toolkit) is not on the library path.
 
-The result is a table of byte arrays with a lookup by (program, variant) shaped like the one
-`CgGeneratedShaders.h` has, so the two console backends resolve a program the same way. It also
-carries the built-in **present** shader, which has no `.shader` file behind it: the RSX backend needs
-one to copy its intermediate screen surface into the display buffer and no other backend does, so it
-is written as Cg directly in @cpp "Sources/Shaders/Rsx/" @ce.
-
-A stage the profiles reject is reported and left out of the table, the backend then fails that one
-program at load time with a message naming the variant, rather than mis-rendering silently. Because
-the result is committed, the console build never invokes `cgcomp` --- neither the PS3 toolchain nor
-the Cg Toolkit is a build dependency. See @ref consoles-ps3-shaders for the invocation.
+The header is a byte-array table looked up by (program, variant), plus the built-in <b>present</b>
+shader written directly as Cg in @cpp "Sources/Shaders/Rsx/" @ce. A stage the profiles reject is
+reported and left out, and that program fails at load time. The console build never invokes `cgcomp`;
+see @ref consoles-ps3-shaders for the invocation.
 
 @section shader-compiler-platforms Platform notes
 
--   **OpenGL|ES 2.0** has neither uniform buffer objects nor @cpp gl_VertexID @ce, and the shared
-    sprite template uses both, so the ESSL 100 lowering rewrites std140 blocks into loose uniforms or
-    a uniform struct array and replaces the quad corner and batched instance index with the
-    `aQuadCorner` / `aInstanceIndex` vertex attributes. The profile is selected with
-    `NCINE_RHI_GL_PROFILE=ES2`, compiles with @cpp "#version 100" @ce, and prefers the baked
-    `*100` sources; a construct outside the emitter's subset leaves them null.
--   **Direct3D 11** consumes the baked HLSL --- `VSMain` / `PSMain` entry points, std140 blocks as
-    cbuffers, separate `Texture2D` + `SamplerState` objects and `mul()`-based matrix algebra.
--   **Vulkan** builds pipelines straight from the embedded SPIR-V and its descriptor-set layout from
-    the same reflection.
--   **The software renderer** is the only tier built with `SOFTWARE_RENDERER` defined, and the only
-    one that can decline a shader without failing generation.
--   **Dreamcast, Wii/GameCube, PlayStation Portable, PlayStation 2 and Nintendo 64** include their
-    aggregate effect header from the backend's device file under `WITH_RHI_PVR` / `WITH_RHI_GX` /
-    `WITH_RHI_GU` / `WITH_RHI_GS` / `WITH_RHI_RDP`, and resolve their table entry from the program
-    identity at link time.
--   **PlayStation Vita and PlayStation 3** are the two consoles with real shaders, and they resolve
-    them the same way --- an identity lookup into an aggregate header --- but what they find differs.
-    Under `WITH_RHI_GXM` the Vita finds Cg *source* and compiles it on the console, under
-    `WITH_RHI_RSX` the PS3 finds *microcode* that was compiled before it shipped, because it has no
-    compiler to run. See @ref shader-compiler-cg "above".
+-   <b>OpenGL|ES 2.0</b> (`NCINE_RHI_GL_PROFILE=ES2`, @cpp "#version 100" @ce) has no UBOs or
+    @cpp gl_VertexID @ce, so the ESSL 100 lowering turns std140 blocks into loose uniforms or a uniform
+    struct array and uses the `aQuadCorner` / `aInstanceIndex` attributes.
+-   <b>Direct3D 11</b> --- `VSMain` / `PSMain`, std140 blocks as cbuffers, separate `Texture2D` +
+    `SamplerState`, `mul()` matrix algebra.
+-   <b>Vulkan</b> --- pipelines from the embedded SPIR-V, descriptor-set layout from the reflection.
+-   <b>Fixed-function consoles</b> include their effect header from the device file under
+    `WITH_RHI_PVR` / `WITH_RHI_GX` / `WITH_RHI_GU` / `WITH_RHI_GS` / `WITH_RHI_RDP`.
+-   <b>PS Vita</b> (`WITH_RHI_GXM`) compiles Cg source on the console; <b>PlayStation 3</b>
+    (`WITH_RHI_RSX`) loads precompiled microcode, see @ref shader-compiler-cg "above".
 
 @m_class{m-noindent}
 
-Console content is fully preprocessed --- see @ref asset-packer "AssetPacker" for the asset side of
-the same principle --- which is why runtime-compiled shaders are a desktop-tier feature: there is no
-C++ JIT on a console, so a shader that arrives at runtime has no fixed-function effect to run --- and
-on the Vita it has no Cg source, which is the same restriction wearing a different hat. The PS3 makes
-the point plainest of all: even a *shipped* shader has to have been compiled on the build machine, so
-a variant the `vp40` / `fp40` profiles reject is a build-time fact the console cannot work around. See
-@ref consoles "Building for consoles" for how those backends are built and run.
+Console content is fully preprocessed (see @ref asset-packer "AssetPacker"), so runtime-compiled shaders
+are desktop-only. See @ref consoles "Building for consoles" for those backends.
 
 @section shader-compiler-pitfalls Pitfalls
 
--   **Committed generated headers are never rebuilt by the build.** Editing a `.shader` file does
-    nothing until `--generate-all` is re-run and the regenerated headers are committed, use
-    `--check` to catch it.
--   **Do not edit anything in** @cpp "Sources/Shaders/Generated" @ce **by hand** --- `--check` treats
-    a hand-edited header as stale, and the next regeneration overwrites it. That includes the
-    aggregate console headers: the effect they contain belongs in the shader file.
--   **SPIR-V requires glslangValidator at generation time**, and the glslang and `D3DCompile`
-    integrations are Windows-only, so a full regeneration has to happen on Windows. A `--check` run
-    elsewhere disagrees with headers that were generated with SPIR-V.
--   **A layout change of** @cpp "ShaderCompilerTypes.h" @ce invalidates all committed generated
-    headers at once --- one regeneration commit, guarded by `--check`.
--   **An error in a** @cpp fixed_function @ce **block fails the whole run by design**, while a
-    shader the software transpiler cannot handle is merely listed as declined. Read the summary
-    lines: a silently missing console effect is a missing block, not a failure.
--   The `--emit-fixed-function` mode never reflects GLSL, so a block is validated even when the
-    GLSL around it is not --- and the other way round: `--check` says nothing about a block.
--   **A misspelled directive is not diagnosed.** Unknown top-level keywords fall through into the
-    shared globals and reach GLSL verbatim, so `render_modee blend_mix;` fails in the GLSL compiler
-    rather than in the tool. Likewise, text after the `;` of a `varying`, `attribute` or
-    `render_mode` statement is silently discarded.
--   Function-like macros are recorded but never expanded by the reflection preprocessor; there can
-    be only one `BATCH_SIZE` array per block and it must be the last member; struct-typed loose
-    uniforms, sampler arrays, multi-dimensional arrays and array vertex attributes are rejected
-    with an error.
+-   <b>Never edit</b> @cpp "Sources/Shaders/Generated" @ce <b>by hand</b> (console headers included);
+    the next regeneration overwrites it.
+-   A layout change of @cpp "ShaderCompilerTypes.h" @ce invalidates every generated header --- one
+    regeneration commit, guarded by `--check`.
+-   A missing console effect means a missing block, not a failure --- read the generation summary.
+-   `--emit-fixed-function` never reflects GLSL and `--check` never validates blocks, so each can pass
+    while the other fails.
+-   <b>Misspelled directives are not diagnosed</b>: unknown top-level keywords pass into the GLSL
+    (`render_modee blend_mix;` fails in the GLSL compiler). Text after the `;` of a `varying`,
+    `attribute` or `render_mode` is silently discarded.
+-   Function-like macros are never expanded by the reflection preprocessor. Only one `BATCH_SIZE` array
+    per block, as its last member. Struct-typed loose uniforms, sampler arrays, multi-dimensional arrays
+    and array vertex attributes are rejected.
 
 */
 

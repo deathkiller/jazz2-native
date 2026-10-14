@@ -71,6 +71,9 @@ self.onmessage = async (e) => {
 
 	let sink = null;
 	try {
+		// Shown right away, the module takes a while to load with the game's content baked into it
+		post('log', { text: 'Process started', level: 'info' });
+
 		const module = await createAssetPacker({
 			print: (text) => post('log', { text, level: 'info' }),
 			printErr: (text) => post('log', { text, level: 'error' }),
@@ -87,6 +90,7 @@ self.onmessage = async (e) => {
 			}]
 		});
 
+		post('log', { text: 'AssetPacker built for Jazz² Resurrection ' + module.UTF8ToString(module._GetGameVersion()), level: 'info' });
 		post('status', { text: 'Converting...' });
 		const args = ['swap-content', '/input/image/' + image.name, '/output/' + image.name,
 			'--source=/input/source', '--content=/Content'].concat(extraArgs || []);

@@ -42,14 +42,23 @@ namespace Jazz2::UI::Menu
 		audioDevice.beginBlockingOperation();
 #endif
 
-		// Search both "Content/Episodes/" and "Cache/Episodes/"
-		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories)) {
-			AddEpisode(item);
-		}
+		// Search user "Content/Episodes/", "Content/Episodes/" and "Cache/Episodes/", the first file with a given name
+		// wins, the same way as ContentResolver::GetEpisode() resolves it
+		HashMap<String, bool> foundEpisodes;
+		auto addEpisodesIn = [&](StringView path) {
+			for (auto item : fs::Directory(fs::CombinePath(path, "Episodes"_s), fs::EnumerationOptions::SkipDirectories)) {
+				if (foundEpisodes.try_emplace(String(fs::GetFileName(item)), true).second) {
+					AddEpisode(item);
+				}
+			}
+		};
 
-		for (auto item : fs::Directory(fs::CombinePath(resolver.GetCachePath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories)) {
-			AddEpisode(item);
+		StringView userContentPath = resolver.GetUserContentPath();
+		if (!userContentPath.empty()) {
+			addEpisodesIn(userContentPath);
 		}
+		addEpisodesIn(resolver.GetContentPath());
+		addEpisodesIn(resolver.GetCachePath());
 
 #if defined(WITH_AUDIO)
 		audioDevice.endBlockingOperation();

@@ -40,7 +40,9 @@
 
 	/* Admins can use cheats in any game mode, other players only in Cooperation */
 	"AllowCheats": false,
-	
+	/* Suspicious players are always logged and reported first, only a sustained pattern leads to a kick */
+	"AntiCheatKick": true,
+
 	"BannedUniquePlayerIDs": {
 		"8C0D:8887:CDE3:F357:8D8B:8837:3123:1645": "User-defined comment 1",
 		"990D:9320:3755:3216:9876:8843:323C:1401": "User-defined comment 2"

@@ -60,6 +60,63 @@ namespace Jazz2::Multiplayer
 	DEATH_ENUM_FLAGS(SpectateMode);
 
 	/**
+		@brief Server-side anti-cheat state of a peer
+
+		Both the client and the server simulate the player, so their views of it always deviate a little (latency,
+		jitter, a different frame rate), and a single implausible update is not evidence of cheating. Violations
+		therefore only accumulate a suspicion score, which decays over time, and the server escalates in stages
+		based on it --- see @ref MpLevelHandler for the thresholds. Owned by the main thread.
+	*/
+	struct AntiCheatState
+	{
+		/** @brief Accumulated suspicion, decays over time */
+		float Suspicion = 0.0f;
+		/** @brief Server time in milliseconds when @ref Suspicion was last decayed */
+		std::uint64_t SuspicionUpdatedMs = 0;
+		/** @brief Server time in milliseconds when the current incident started, i.e., when @ref Suspicion rose from zero */
+		std::uint64_t IncidentStartMs = 0;
+		/** @brief Number of violations in the current incident */
+		std::uint32_t IncidentViolations = 0;
+		/** @brief Server time in milliseconds when the server console was last notified about this peer */
+		std::uint64_t NotifiedMs = 0;
+		/** @brief Whether the server console was already notified in the current incident */
+		bool Notified = false;
+		/** @brief Whether the peer was already kicked, so it's not kicked again by updates still in flight */
+		bool Kicked = false;
+		/** @brief Server time in milliseconds when an implausible speed was last counted (it's reported in every update) */
+		std::uint64_t SpeedViolationMs = 0;
+
+		/** @brief Last position reported by the client that was accepted */
+		Vector2f LastAcceptedPos;
+		/** @brief Whether @ref LastAcceptedPos is valid */
+		bool HasLastAcceptedPos = false;
+		/** @brief Remaining movement budget in pixels, refilled with the server time */
+		float MoveBudget = 0.0f;
+		/** @brief Server time in milliseconds when @ref MoveBudget was last refilled, @cpp 0 @ce to refill it completely */
+		std::uint64_t MoveBudgetUpdatedMs = 0;
+
+		/** @brief Server time in milliseconds when the current clock-drift window started, @cpp 0 @ce if not started yet */
+		std::uint64_t ClockWindowStartMs = 0;
+		/** @brief Minimal difference between the server and the client time in the current window */
+		std::int64_t ClockWindowMinOffset = INT64_MAX;
+		/** @brief Minimal difference between the server and the client time in the previous window, @cpp INT64_MAX @ce if none */
+		std::int64_t ClockPrevMinOffset = INT64_MAX;
+
+		/** @brief Forgets the movement history, the next update is checked only against the server position */
+		void ResetMovement() {
+			HasLastAcceptedPos = false;
+			MoveBudgetUpdatedMs = 0;
+		}
+
+		/** @brief Forgets the movement history and anchors it to the specified position with a full budget */
+		void ResetMovement(Vector2f pos) {
+			LastAcceptedPos = pos;
+			HasLastAcceptedPos = true;
+			MoveBudgetUpdatedMs = 0;
+		}
+	};
+
+	/**
 	 * @brief Peer descriptor
 	 *
 	 * Holds all per-peer session state tracked by @ref NetworkManager and @ref MpLevelHandler: identity and
@@ -104,6 +161,9 @@ namespace Jazz2::Multiplayer
 		std::uint64_t PacketRateWindowStart = 0;
 		/** @brief Number of packets received from this peer within the current rate window */
 		std::uint32_t PacketRateCount = 0;
+
+		/** @brief Anti-cheat state (server only) */
+		AntiCheatState AntiCheat;
 
 		/** @brief Elapsed frames when the player is idle */
 		float IdleElapsedFrames;

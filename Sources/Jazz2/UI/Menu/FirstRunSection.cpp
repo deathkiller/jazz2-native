@@ -2,6 +2,7 @@
 #include "MenuResources.h"
 #include "../Font.h"
 #include "../../PreferencesCache.h"
+#include "../../Rendering/UpscaleRenderPass.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -34,6 +35,12 @@ namespace Jazz2::UI::Menu
 		bool IsCompactLayout(Vector2i viewSize)
 		{
 			return (viewSize.Y < 300);
+		}
+
+		/** @brief Whether the view is at most half the default width, the same threshold as @ref Rendering::PlayerViewport::IsSmallView() */
+		bool IsSmallView(Vector2i viewSize)
+		{
+			return (viewSize.X <= Rendering::UpscaleRenderPass::DefaultViewWidth / 2);
 		}
 
 		float GetHeaderOffsetFor(Vector2i viewSize)
@@ -153,7 +160,9 @@ namespace Jazz2::UI::Menu
 			};
 			item->OnActivate = [this, reforged]() {
 				PreferencesCache::EnableReforgedGameplay = reforged;
-				PreferencesCache::EnableReforgedCamera = reforged;
+				// The reforged camera is tuned for small views (see PlayerViewport::IsSmallView()), which the original's
+				// camera handles poorly, so it's enabled even with the legacy preset when the view is that small
+				PreferencesCache::EnableReforgedCamera = (reforged || IsSmallView(_root->GetViewSize()));
 				PreferencesCache::EnableReforgedHUD = reforged;
 				PreferencesCache::EnableLedgeClimb = reforged;
 				PreferencesCache::Save();

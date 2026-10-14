@@ -251,7 +251,14 @@ namespace Jazz2::UI::Menu
 		textPtr += length;
 		textSize -= length;
 
-		// Search both "Content/Translations/" and "Cache/Translations/" for translators
+		// Search user "Content/Translations/", "Content/Translations/" and "Cache/Translations/" for translators
+		StringView userContentPath = resolver.GetUserContentPath();
+		if (!userContentPath.empty()) {
+			for (auto item : fs::Directory(fs::CombinePath(userContentPath, "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
+				AddTranslator(item, textPtr, textSize);
+			}
+		}
+
 		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
 			AddTranslator(item, textPtr, textSize);
 		}

@@ -181,7 +181,7 @@ if(EMSCRIPTEN)
 		"SHELL:-s MAXIMUM_MEMORY=4GB"
 		"SHELL:-s STACK_SIZE=8MB"
 		"SHELL:-s FORCE_FILESYSTEM=1"
-		"SHELL:-s EXPORTED_RUNTIME_METHODS=callMain,FS"
+		"SHELL:-s EXPORTED_RUNTIME_METHODS=callMain,FS,UTF8ToString"
 		"-fexceptions"
 		"-lworkerfs.js"
 		"-lnodefs.js"

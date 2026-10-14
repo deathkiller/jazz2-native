@@ -468,6 +468,17 @@ namespace Jazz2::Events
 		return Vector2f(-1.0f, -1.0f);
 	}
 
+	bool EventMap::IsNearWarpTarget(std::uint32_t id, Vector2f pos, float distance) const
+	{
+		float distanceSqr = distance * distance;
+		for (auto& target : _warpTargets) {
+			if (target.Id == id && (target.Pos - pos).SqrLength() <= distanceSqr) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	void EventMap::ReadEvents(Stream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
 	{
 		if (!_eventLayout.Allocate(std::size_t(_layoutSize.X) * std::size_t(_layoutSize.Y))) {

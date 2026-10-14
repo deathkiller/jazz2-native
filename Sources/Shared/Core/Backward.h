@@ -4618,8 +4618,11 @@ namespace Death { namespace Backward {
 		IO::Stream* Destination;
 		/** @brief Feature flags */
 		Flags FeatureFlags;
-		/** @brief Custom directory for memory dumps -- if empty, a `CrashDumps` subdirectory next to the executable is used
-			@partialsupport Memory dumps are currently written only on @ref DEATH_TARGET_WINDOWS "Windows" */
+		/**
+		 * @brief Custom directory for memory dumps -- if empty, a `CrashDumps` subdirectory next to the executable is used
+		 * 
+		 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+		 */
 		Containers::String DumpDirectory;
 
 		ExceptionHandling(Flags flags = Flags::None)

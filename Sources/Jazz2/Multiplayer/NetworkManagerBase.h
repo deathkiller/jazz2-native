@@ -204,11 +204,7 @@ namespace Jazz2::Multiplayer
 		/**
 		 * @brief Switches the transport between Wi-Fi (infrastructure) and ad hoc (local wireless) mode
 		 *
-		 * @partialsupport Available only on @ref DEATH_TARGET_PSP "PlayStation Portable" platform, a no-op that
-		 *   returns `false` elsewhere. In ad hoc mode an endpoint is `GROUP/AA:BB:CC:DD:EE:FF` - the ad hoc
-		 *   group to join and the MAC address of the console hosting the server in it - and no access point
-		 *   is used; the server list discovers groups in reach instead of broadcasting (see
-		 *   @ref ServerDiscovery). Switching brings the console's WLAN into the corresponding mode.
+		 * @partialsupport Available only on @ref DEATH_TARGET_PSP "PlayStation Portable" platform.
 		 */
 		static bool SetAdhocMode(bool enabled);
 		/** @brief Whether the transport is in ad hoc mode (see @ref SetAdhocMode()) */

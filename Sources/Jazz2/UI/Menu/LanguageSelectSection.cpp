@@ -53,7 +53,7 @@ namespace Jazz2::UI::Menu
 		std::int32_t nextIndex = 1;
 		HashMap<String, bool> foundLanguages;
 
-		auto addLanguage = [&](StringView languageFile, bool fromCache) {
+		auto addLanguage = [&](StringView languageFile, bool isCustom) {
 			if (fs::GetExtension(languageFile) != "mo"_s) {
 				return;
 			}
@@ -62,12 +62,12 @@ namespace Jazz2::UI::Menu
 			if (language.empty() || language.size() >= sizeof(PreferencesCache::Language)) {
 				return;
 			}
-			// Add each language only once (cache directory takes precedence over content)
+			// Add each language only once (user content and cache directories take precedence over content)
 			if (!foundLanguages.try_emplace(language, true).second) {
 				return;
 			}
 
-			String displayName = fromCache
+			String displayName = isCustom
 				? String{I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language + "⁺"_s}
 				: String{I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language};
 			if (language == StringView(PreferencesCache::Language)) {
@@ -79,7 +79,13 @@ namespace Jazz2::UI::Menu
 			nextIndex++;
 		};
 
-		// Search first "Cache/Translations/" and then "Content/Translations/"
+		// Search first user "Content/Translations/", then "Cache/Translations/" and "Content/Translations/"
+		StringView userContentPath = resolver.GetUserContentPath();
+		if (!userContentPath.empty()) {
+			for (auto item : fs::Directory(fs::CombinePath(userContentPath, "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
+				addLanguage(item, true);
+			}
+		}
 		for (auto item : fs::Directory(fs::CombinePath(resolver.GetCachePath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
 			addLanguage(item, true);
 		}

@@ -242,6 +242,41 @@ namespace Jazz2
 #endif
 	}
 
+	StringView ContentResolver::GetUserContentPath() const
+	{
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || \
+		defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+		return _userContentPath;
+#else
+		// "Content" is already where the user can reach it, or nothing next to it is writable
+		return {};
+#endif
+	}
+
+	String ContentResolver::FindContentFile(StringView path) const
+	{
+		String fullPath;
+		StringView userContentPath = GetUserContentPath();
+		if (!userContentPath.empty()) {
+			fullPath = fs::CombinePath(userContentPath, path);
+			if (fs::IsReadableFile(fullPath)) {
+				return fullPath;
+			}
+		}
+
+		fullPath = fs::CombinePath(GetContentPath(), path);
+		if (fs::IsReadableFile(fullPath)) {
+			return fullPath;
+		}
+
+		fullPath = fs::CombinePath(GetCachePath(), path);
+		if (fs::IsReadableFile(fullPath)) {
+			return fullPath;
+		}
+
+		return {};
+	}
+
 	StringView ContentResolver::GetCachePath() const
 	{
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
@@ -336,6 +371,7 @@ namespace Jazz2
 		_sourcePath = sourcePath;
 		_cachePath = cachePath;
 		DetectPrebakedContent();
+		DetectUserContent();
 		// The constructor already mounted .paks from the default paths, remount from the new ones
 		RemountPaks();
 	}
@@ -650,6 +686,7 @@ namespace Jazz2
 #endif
 
 		DetectPrebakedContent();
+		DetectUserContent();
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		RemountPaks();
@@ -666,61 +703,111 @@ namespace Jazz2
 		}
 	}
 
+	void ContentResolver::DetectUserContent()
+	{
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || \
+		defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+		// "Content" is packed inside the application on these platforms (APK assets, app bundle, AppImage mount, system
+		// prefix, UWP package, RomFS, VPK), so nothing can be added to it or replaced in it. The directory with "Cache"
+		// is the one place the user can always reach, so custom content goes to "Content" next to it, which then has
+		// priority over everything. Except on iOS, where "Cache" is in "Library/Caches", and "Documents" with "Source"
+		// is what the Files app exposes instead.
+#	if defined(DEATH_TARGET_IOS)
+		StringView userBase = fs::GetDirectoryName(GetSourcePath());
+#	else
+		StringView userBase = fs::GetDirectoryName(GetCachePath());
+#	endif
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		String userContentPath = fs::CombinePath(userBase, "Content\\"_s);
+#	else
+		String userContentPath = fs::CombinePath(userBase, "Content/"_s);
+#	endif
+		// A portable Linux copy (or relative fallback paths) already has "Content" next to "Cache", so it's the same one
+		if (userContentPath != GetContentPath() && fs::DirectoryExists(userContentPath)) {
+			LOGI("Using also user content from \"{}\"", userContentPath);
+			_userContentPath = Death::move(userContentPath);
+		} else {
+			_userContentPath = {};
+		}
+#endif
+	}
+
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void ContentResolver::RemountPaks()
 	{
 		// Unload all already loaded .paks
 		_mountedPaks.clear();
 
-		// Load all .paks from `Content` and `Cache` directory
-		for (auto item : fs::Directory(GetContentPath(), fs::EnumerationOptions::SkipDirectories)) {
-			auto extension = fs::GetExtension(item);
-			if (extension != "pak"_s) {
-				continue;
-			}
+		// Load all .paks from user `Content`, `Content` and `Cache` directory, in order of priority
+		auto mountPaksIn = [this](StringView path) {
+			for (auto item : fs::Directory(path, fs::EnumerationOptions::SkipDirectories)) {
+				auto extension = fs::GetExtension(item);
+				if (extension != "pak"_s) {
+					continue;
+				}
 
-			auto& pak = _mountedPaks.emplace_back(std::make_unique<PakFile>(item));
-			if (pak->IsValid()) {
-				LOGI("File \"{}\" mounted successfully", item);
-			} else {
-				LOGE("Failed to mount file \"{}\"", item);
-				_mountedPaks.pop_back();
+				auto& pak = _mountedPaks.emplace_back(std::make_unique<PakFile>(item));
+				if (pak->IsValid()) {
+					LOGI("File \"{}\" mounted successfully", item);
+				} else {
+					LOGE("Failed to mount file \"{}\"", item);
+					_mountedPaks.pop_back();
+				}
 			}
+		};
+
+		StringView userContentPath = GetUserContentPath();
+		if (!userContentPath.empty()) {
+			mountPaksIn(userContentPath);
 		}
-
-		for (auto item : fs::Directory(GetCachePath(), fs::EnumerationOptions::SkipDirectories)) {
-			auto extension = fs::GetExtension(item);
-			if (extension != "pak"_s) {
-				continue;
-			}
-
-			auto& pak = _mountedPaks.emplace_back(std::make_unique<PakFile>(item));
-			if (pak->IsValid()) {
-				LOGI("File \"{}\" mounted successfully", item);
-			} else {
-				LOGE("Failed to mount file \"{}\"", item);
-				_mountedPaks.pop_back();
-			}
-		}
+		_userPakCount = _mountedPaks.size();
+		mountPaksIn(GetContentPath());
+		mountPaksIn(GetCachePath());
 	}
 #endif
 
 	std::unique_ptr<Stream> ContentResolver::OpenContentFile(StringView path, std::int32_t bufferSize)
 	{
-		// Search .paks first, then Content directory and Cache directory
+		// The user Content directory (its .paks, then its files) has priority over everything, so it can replace
+		// any shipped file. Then the remaining .paks are searched, then Content directory and Cache directory.
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		for (std::size_t i = 0; i < _mountedPaks.size(); i++) {
-			auto mountPoint = _mountedPaks[i]->GetMountPoint();
-			if (path.hasPrefix(mountPoint)) {
-				auto packedFile = _mountedPaks[i]->OpenFile(path.exceptPrefix(mountPoint.size()), bufferSize);
-				if (packedFile != nullptr && packedFile->IsValid()) {
-					return packedFile;
+		auto openFromPaks = [&](std::size_t from, std::size_t to) -> std::unique_ptr<Stream> {
+			for (std::size_t i = from; i < to; i++) {
+				auto mountPoint = _mountedPaks[i]->GetMountPoint();
+				if (path.hasPrefix(mountPoint)) {
+					auto packedFile = _mountedPaks[i]->OpenFile(path.exceptPrefix(mountPoint.size()), bufferSize);
+					if (packedFile != nullptr && packedFile->IsValid()) {
+						return packedFile;
+					}
 				}
 			}
+			return nullptr;
+		};
+
+		if (auto packedFile = openFromPaks(0, _userPakCount)) {
+			return packedFile;
 		}
 #endif
 
-		String fullPath = fs::CombinePath(GetContentPath(), path);
+		String fullPath;
+		StringView userContentPath = GetUserContentPath();
+		if (!userContentPath.empty()) {
+			fullPath = fs::CombinePath(userContentPath, path);
+			if (fs::IsReadableFile(fullPath)) {
+				auto realFile = fs::Open(fullPath, FileAccess::Read, bufferSize);
+				if (realFile->IsValid()) {
+					return realFile;
+				}
+			}
+		}
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (auto packedFile = openFromPaks(_userPakCount, _mountedPaks.size())) {
+			return packedFile;
+		}
+#endif
+
+		fullPath = fs::CombinePath(GetContentPath(), path);
 		if (fs::IsReadableFile(fullPath)) {
 			auto realFile = fs::Open(fullPath, FileAccess::Read, bufferSize);
 			if (realFile->IsValid()) {
@@ -1822,15 +1909,15 @@ namespace Jazz2
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping,
 		const BitArray* usedTiles, bool withDiffuse)
 	{
-		// Try "Content" directory first, then "Cache" directory
+		// Try user "Content" directory first, then "Content" directory and "Cache" directory
 		String fullPath;
 		if (_pathHandler) {
 			fullPath = _pathHandler(String(path + ".j2t"_s));
 		}
 		if (fullPath.empty()) {
-			fullPath = fs::CombinePath({ GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
-			if (!fs::IsReadableFile(fullPath)) {
-				fullPath = fs::CombinePath({ GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
+			fullPath = FindContentFile(fs::CombinePath("Tilesets"_s, String(path + ".j2t"_s)));
+			if (fullPath.empty()) {
+				return nullptr;
 			}
 		}
 
@@ -2398,24 +2485,23 @@ namespace Jazz2
 
 	bool ContentResolver::LevelExists(StringView levelName)
 	{
-		// Try "Content" directory first, then "Cache" directory
+		// Try user "Content" directory first, then "Content" directory and "Cache" directory
 		auto pathNormalized = fs::ToNativeSeparators(levelName);
-		return (fs::IsReadableFile(fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) })) ||
-				fs::IsReadableFile(fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) })));
+		return !FindContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s))).empty();
 	}
 
 	bool ContentResolver::TryGetNextLevelName(StringView path, String& nextLevel)
 	{
-		// Try "Content" directory first, then "Cache" directory, the same way as TryLoadLevel()
+		// Try user "Content" directory first, then "Content" directory and "Cache" directory, the same way as TryLoadLevel()
 		auto pathNormalized = fs::ToNativeSeparators(path);
 		String fullPath;
 		if (_pathHandler) {
 			fullPath = _pathHandler(String(pathNormalized + ".j2l"_s));
 		}
 		if (fullPath.empty()) {
-			fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-			if (!fs::IsReadableFile(fullPath)) {
-				fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+			fullPath = FindContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s)));
+			if (fullPath.empty()) {
+				return false;
 			}
 		}
 
@@ -2445,15 +2531,15 @@ namespace Jazz2
 
 	bool ContentResolver::TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor)
 	{
-		// Try "Content" directory first, then "Cache" directory
+		// Try user "Content" directory first, then "Content" directory and "Cache" directory
 		auto pathNormalized = fs::ToNativeSeparators(path);
 		if (_pathHandler) {
 			descriptor.FullPath = _pathHandler(String(pathNormalized + ".j2l"_s));
 		}
 		if (descriptor.FullPath.empty()) {
-			descriptor.FullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-			if (!fs::IsReadableFile(descriptor.FullPath)) {
-				descriptor.FullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+			descriptor.FullPath = FindContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s)));
+			if (descriptor.FullPath.empty()) {
+				return false;
 			}
 		}
 
@@ -2695,9 +2781,9 @@ namespace Jazz2
 
 	std::optional<Episode> ContentResolver::GetEpisode(StringView name, bool withImages)
 	{
-		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(name + ".j2e"_s) });
-		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(name + ".j2e"_s) });
+		String fullPath = FindContentFile(fs::CombinePath("Episodes"_s, String(name + ".j2e"_s)));
+		if (fullPath.empty()) {
+			return std::nullopt;
 		}
 		return GetEpisodeByPath(fullPath, withImages);
 	}
@@ -2834,7 +2920,13 @@ namespace Jazz2
 				}
 			}
 #	else
-			fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
+			StringView userContentPath = GetUserContentPath();
+			if (!userContentPath.empty()) {
+				fullPath = fs::CombinePath({ userContentPath, "Music"_s, path });
+			}
+			if (!fs::IsReadableFile(fullPath)) {
+				fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
+			}
 			if (!fs::IsReadableFile(fullPath)) {
 				// "Source" directory must be case in-sensitive
 				fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));

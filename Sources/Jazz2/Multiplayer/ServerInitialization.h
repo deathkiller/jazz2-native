@@ -164,6 +164,9 @@ namespace Jazz2::Multiplayer
 		-   @cpp "AllowCheats" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether cheats can be used on the server (default is **false**)
 			-   Admins can use cheats in any game mode, other players only in Cooperation
 			-   Cheats are applied only to the player that invoked them
+		-   @cpp "AntiCheatKick" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the anti-cheat may kick players who keep sending implausible movement (default is **true**)
+			-   Suspicious players are always logged and reported to the server console and admins first, only a sustained pattern leads to a kick
+			-   Admins are never kicked by the anti-cheat
 		-   @cpp "AdminUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of admin player IDs
 			-   Key specifies player ID, value contains privileges
 		-   @cpp "WhitelistedUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of whitelisted player IDs
@@ -318,6 +321,8 @@ namespace Jazz2::Multiplayer
 		std::int32_t ReconnectWindowSecs;
 		/** @brief Whether cheats can be used, admins in any game mode, other players only in Cooperation */
 		bool AllowCheats;
+		/** @brief Whether the anti-cheat may kick players, otherwise it only logs them and notifies the console and admins */
+		bool AntiCheatKick;
 		/** @brief List of unique player IDs with admin rights, value contains list of privileges, or `*` for all privileges */
 		HashMap<String, String> AdminUniquePlayerIDs;
 		/** @brief List of whitelisted unique player IDs, value can contain user-defined comment */
@@ -438,8 +443,7 @@ namespace Jazz2::Multiplayer
 		 *
 		 * Chosen in the menu when the server is created, not read from the configuration file.
 		 *
-		 * @partialsupport Available only on @ref DEATH_TARGET_PSP "PlayStation Portable" platform, see
-		 *   @ref NetworkManagerBase::SetAdhocMode(). The group other consoles see is named after the server.
+		 * @partialsupport Available only on @ref DEATH_TARGET_PSP "PlayStation Portable" platform.
 		 */
 		bool AdhocMode = false;
 

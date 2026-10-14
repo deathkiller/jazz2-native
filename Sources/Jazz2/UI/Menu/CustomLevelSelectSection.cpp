@@ -353,19 +353,27 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 
-		// Search both "Content/Episodes/" and "Cache/Episodes/"
-		for (auto item : fs::Directory(fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories)) {
-			if (_selectedIndex < 0) {
-				return;
+		// Search user "Content/Episodes/", "Content/Episodes/" and "Cache/Episodes/", the first file with a given name
+		// wins, the same way as ContentResolver::TryLoadLevel() resolves it
+		HashMap<String, bool> foundLevels;
+		auto addLevelsIn = [&](StringView path) {
+			for (auto item : fs::Directory(fs::CombinePath({ path, "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories)) {
+				if (_selectedIndex < 0) {
+					return false;
+				}
+				if (foundLevels.try_emplace(String(fs::GetFileName(item)), true).second) {
+					AddLevel(item);
+				}
 			}
-			AddLevel(item);
-		}
+			return true;
+		};
 
-		for (auto item : fs::Directory(fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories)) {
-			if (_selectedIndex < 0) {
-				return;
-			}
-			AddLevel(item);
+		StringView userContentPath = resolver.GetUserContentPath();
+		if (!userContentPath.empty() && !addLevelsIn(userContentPath)) {
+			return;
+		}
+		if (!addLevelsIn(resolver.GetContentPath()) || !addLevelsIn(resolver.GetCachePath())) {
+			return;
 		}
 
 		nCine::sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {

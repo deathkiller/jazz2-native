@@ -303,6 +303,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 		serverConfig.IdleKickTimeSecs = -1;
 		serverConfig.ReconnectWindowSecs = 300;
+		serverConfig.AntiCheatKick = true;
 		serverConfig.MinPlayerCount = 1;
 		serverConfig.ReforgedGameplay = PreferencesCache::EnableReforgedGameplay;
 		serverConfig.AllowLedgeClimb = serverConfig.ReforgedGameplay;
@@ -528,6 +529,11 @@ namespace Jazz2::Multiplayer
 				bool allowCheats;
 				if (doc["AllowCheats"].get(allowCheats) == Json::SUCCESS) {
 					serverConfig.AllowCheats = allowCheats;
+				}
+
+				bool antiCheatKick;
+				if (doc["AntiCheatKick"].get(antiCheatKick) == Json::SUCCESS) {
+					serverConfig.AntiCheatKick = antiCheatKick;
 				}
 
 				Json::Value& adminUniquePlayerIDs = doc["AdminUniquePlayerIDs"];

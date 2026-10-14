@@ -263,6 +263,8 @@ namespace Jazz2::Multiplayer
 				for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 					peerDesc->LevelState = PeerLevelState::ValidatingAssets;
 					peerDesc->LastUpdated = 0;
+					// The suspicion is kept across levels (it decays on its own), only the movement history is from the old level
+					peerDesc->AntiCheat.ResetMovement();
 					if (peerDesc->RemotePeer) {
 						peerDesc->Player = nullptr;
 					}
@@ -2847,6 +2849,21 @@ namespace Jazz2::Multiplayer
 					std::size_t length = formatInto(infoBuffer, "Cheats set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]", serverConfig.AllowCheats ? "Enabled"_s : "Disabled"_s);
 					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 					return true;
+				} else if (variableName == "anticheatkick"_s) {
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+
+					auto boolValue = StringUtils::lowercase(value.trimmed());
+					if (boolValue == "false"_s || boolValue == "off"_s || boolValue == "0"_s) {
+						serverConfig.AntiCheatKick = false;
+					} else if (boolValue == "true"_s || boolValue == "on"_s || boolValue == "1"_s) {
+						serverConfig.AntiCheatKick = true;
+					} else {
+						return false;
+					}
+
+					std::size_t length = formatInto(infoBuffer, "Anti-cheat kicking set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]", serverConfig.AntiCheatKick ? "Enabled"_s : "Disabled"_s);
+					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
+					return true;
 				} else if (variableName == "kills"_s) {
 					value = value.trimmed();
 					auto intValue = stou32(value.data(), value.size());
@@ -4466,62 +4483,111 @@ namespace Jazz2::Multiplayer
 				return;
 			}
 
-			// Anti-cheat: reject client-reported movement that is physically impossible (speedhack /
-			// teleport). Bounds are intentionally generous so latency, springs, sugar rush and similar
-			// legitimate bursts never trip them; only gross violations are corrected - a correction snaps the
-			// client back, so a bound below what the physics really produces rubber-bands honest players.
-			// Per axis, and it depends on the physics: Reforged clamps the speed to 16 and boosted states stay well
-			// under 32. Outside Reforged, both axes are clamped to the original's own limit (37.33, which a blue
-			// spring reaches on either axis), a pole assigns its launch bonus on top of what the player arrived with
-			// for the one tick before that clamp, and Lori's sidekick (49.29) is exempt from it but stays under both.
-			constexpr float MaxPlausibleSpeedReforged = 32.0f;
-			constexpr float MaxPlausibleSpeedLegacy = Actors::Player::LegacyVerticalSpeedLimit + Actors::Player::LegacyPoleLaunchBonus + 1.0f;
-			constexpr float MaxPlausibleStep = 600.0f;	// Base accepted position change for a single update (px)
-			const float maxPlausibleSpeed = (IsReforged() ? MaxPlausibleSpeedReforged : MaxPlausibleSpeedLegacy);
-
-			// Scale the accepted step by the time actually elapsed since the last accepted update, so a
-			// network stall or packet-loss burst (which arrives as one large jump) isn't mistaken for a
-			// teleport. Capped so an unusually large gap can't grant an unbounded budget.
-			std::uint64_t deltaMs = (now > peerDesc->LastUpdated ? now - peerDesc->LastUpdated : 0);
-			if (deltaMs > 2000) {
-				deltaMs = 2000;
-			}
-			float maxStep = MaxPlausibleStep + maxPlausibleSpeed * FrameTimer::FramesPerSecond * (deltaMs / 1000.0f);
+			// Anti-cheat: both the client and the server simulate this player, and their views of it always deviate a
+			// little (latency, jitter, a different frame rate), so nothing here is treated as cheating on its own -
+			// a violation only adds to a suspicion score that decays over time, see ReportCheatViolation(). Only a clear
+			// violation is also corrected, because a correction snaps the client back, and a bound below what the
+			// physics really produces would rubber-band honest players.
+			constexpr float MaxPlausibleStep = 600.0f;	// Base movement budget on top of the speed-based one (px)
+			const float maxPlausibleSpeed = GetMaxPlausibleSpeed();
+			std::uint64_t serverNowMs = GetAntiCheatTimeMs();
+			auto& antiCheat = peerDesc->AntiCheat;
 
 			peerDesc->LastUpdated = now;
 
-			float acceptedX = posX, acceptedY = posY;
+			CheckClientClockDrift(peer, *peerDesc, now, serverNowMs);
+
+			// A spectator's position is just its camera - it isn't simulated, isn't sent to anyone else and jumps across
+			// the level every time they lock onto another player, so there is nothing to cheat and nothing to check.
+			// A dead player isn't synced at all (see SyncWithServer()).
+			bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
+			bool checkMovement = (!isSpectating && remotePlayerOnServer->_health > 0);
+
+			Vector2f reportedPos = Vector2f(posX, posY);
+			Vector2f acceptedPos = reportedPos;
 			float acceptedSpeedX = speedX, acceptedSpeedY = speedY;
 			bool corrected = false;
+
 			if (std::abs(acceptedSpeedX) > maxPlausibleSpeed || std::abs(acceptedSpeedY) > maxPlausibleSpeed) {
-				LOGW("Clamped implausible speed from player {} \"{}\" ({:.1f}, {:.1f})", playerIndex, peerDesc->PlayerName, acceptedSpeedX, acceptedSpeedY);
+				// The speed only drives the server-side simulation of this player until the next update, so clamping it
+				// is enough and the client isn't corrected. It's sent in every update, so it's counted once per second.
+				if (checkMovement && serverNowMs - antiCheat.SpeedViolationMs >= 1000) {
+					antiCheat.SpeedViolationMs = serverNowMs;
+					char details[64];
+					std::size_t length = formatInto(details, "speed {:.1f}, {:.1f}", acceptedSpeedX, acceptedSpeedY);
+					ReportCheatViolation(peer, *peerDesc, CheatViolation::ImplausibleSpeed, 0.5f, { details, length });
+				}
 				acceptedSpeedX = std::clamp(acceptedSpeedX, -maxPlausibleSpeed, maxPlausibleSpeed);
 				acceptedSpeedY = std::clamp(acceptedSpeedY, -maxPlausibleSpeed, maxPlausibleSpeed);
-				corrected = true;
 			}
 
-			// Belt-and-suspenders: stale pre-warp updates are already dropped via the LastUpdated grace, so
-			// this only guards against desyncs after a warp was acknowledged. A spectator's position is just its
-			// camera - it isn't simulated, isn't sent to anyone else and jumps across the level every time they
-			// lock onto another player, so there is nothing to cheat and nothing to check.
-			bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
-			if (!remotePlayerOnServer->_justWarped && !isSpectating) {
-				float stepDistSqr = (Vector2f(acceptedX, acceptedY) - remotePlayerOnServer->_pos).SqrLength();
-				if (stepDistSqr > maxStep * maxStep) {
-					LOGW("Rejected implausible teleport from player {} \"{}\" ({} px in one update, budget {} px)",
-						playerIndex, peerDesc->PlayerName, (std::int32_t)std::sqrt(stepDistSqr), (std::int32_t)maxStep);
-					acceptedX = remotePlayerOnServer->_pos.X;
-					acceptedY = remotePlayerOnServer->_pos.Y;
-					corrected = true;
+			if (!checkMovement) {
+				antiCheat.ResetMovement(reportedPos);
+			} else {
+				// The movement budget is refilled by the time elapsed on the server, not by the timestamps of the client,
+				// so a client can't earn a larger budget by lying about its clock. Unused budget accumulates (up to a
+				// limit), so a burst of updates after a network stall, which arrives as one large jump, is covered too.
+				float budgetPerSec = maxPlausibleSpeed * FrameTimer::FramesPerSecond;
+				float maxBudget = MaxPlausibleStep + budgetPerSec * AntiCheatBurstSecs;
+				if (antiCheat.MoveBudgetUpdatedMs == 0) {
+					antiCheat.MoveBudget = maxBudget;
+				} else {
+					float elapsedSecs = (serverNowMs - antiCheat.MoveBudgetUpdatedMs) / 1000.0f;
+					antiCheat.MoveBudget = std::min(antiCheat.MoveBudget + budgetPerSec * elapsedSecs, maxBudget);
+				}
+				antiCheat.MoveBudgetUpdatedMs = serverNowMs;
+
+				// Either the last position the client reported or the server's view of the player (simulated further
+				// between the updates, and possibly pushed by the server) can explain the move, whichever is closer
+				Vector2f serverPos = remotePlayerOnServer->_pos;
+				float step = (reportedPos - serverPos).Length();
+				if (antiCheat.HasLastAcceptedPos) {
+					step = std::min(step, (reportedPos - antiCheat.LastAcceptedPos).Length());
+				}
+
+				if (step <= antiCheat.MoveBudget) {
+					antiCheat.MoveBudget -= step;
+				} else {
+					// The client takes warps on its own, so it may take a fast warp a moment before the server does - the
+					// server then performs the same warp instead, so a lap is counted and the other peers see a teleport.
+					// The warp parks the updates of this player until the client acknowledges it.
+					WarpFlags warpFlags;
+					Vector2f fromPos = (antiCheat.HasLastAcceptedPos ? antiCheat.LastAcceptedPos : serverPos);
+					if (IsPlausibleClientWarp(fromPos, reportedPos, antiCheat.MoveBudget, warpFlags)) {
+						LOGD("[MP] Player {} \"{}\" took a warp on the client first, warping on the server too", playerIndex, peerDesc->PlayerName);
+						remotePlayerOnServer->WarpToPosition(reportedPos, warpFlags | WarpFlags::Fast);
+						return;
+					}
+
+					float budget = antiCheat.MoveBudget;
+					float excess = step - budget;
+					antiCheat.MoveBudget = 0.0f;
+
+					char details[64];
+					std::size_t length = formatInto(details, "moved {} px, budget {} px", (std::int32_t)step, (std::int32_t)budget);
+					ReportCheatViolation(peer, *peerDesc, CheatViolation::ImplausibleMovement, 1.0f + std::min(excess / 256.0f, 3.0f), { details, length });
+
+					if (excess > AntiCheatMaxUncorrectedExcess) {
+						acceptedPos = serverPos;
+						corrected = true;
+					}
 				}
 			}
 
-			if (corrected) {
-				// Snap the offending client back to the accepted authoritative state
+			if (!corrected) {
+				antiCheat.LastAcceptedPos = acceptedPos;
+				antiCheat.HasLastAcceptedPos = true;
+			} else {
+				// Snap the client back to the server position. Its updates that are already in flight still carry the
+				// rejected position, so they're dropped until it acknowledges the correction (the same grace as for
+				// a warp) - otherwise each of them would count as another violation.
+				peerDesc->LastUpdated = UINT64_MAX;
+				antiCheat.ResetMovement(acceptedPos);
+
 				MemoryStream packet2(20);
 				packet2.WriteVariableUint32(remotePlayerOnServer->_playerIndex);
-				packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedX * 512.0f));
-				packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedY * 512.0f));
+				packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedPos.X * 512.0f));
+				packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedPos.Y * 512.0f));
 				packet2.WriteValue<std::int16_t>((std::int16_t)(acceptedSpeedX * 512.0f));
 				packet2.WriteValue<std::int16_t>((std::int16_t)(acceptedSpeedY * 512.0f));
 				packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.X * 512.0f));
@@ -4533,7 +4599,7 @@ namespace Jazz2::Multiplayer
 			bool wasIdle = (remotePlayerOnServer->Flags & IdleFlags) != RemotePlayerOnServer::PlayerFlags::None;
 			bool isIdle = (flags & IdleFlags) != RemotePlayerOnServer::PlayerFlags::None;
 
-			remotePlayerOnServer->SyncWithServer(Vector2f(acceptedX, acceptedY), Vector2f(acceptedSpeedX, acceptedSpeedY), flags);
+			remotePlayerOnServer->SyncWithServer(acceptedPos, Vector2f(acceptedSpeedX, acceptedSpeedY), flags);
 
 			if (wasIdle != isIdle) {
 				// Broadcast idle state to all other players
@@ -4751,22 +4817,43 @@ namespace Jazz2::Multiplayer
 				return;
 			}
 
-			// The client should acknowledge at (approximately) the position the server warped/respawned it
-			// to, which is the shadow's current authoritative position; if it reports somewhere else, keep
-			// the server position instead of trusting the client value.
-			constexpr float MaxAckDeviation = 200.0f;
+			// The client should acknowledge at (approximately) the position the server warped/respawned it to, which is
+			// the shadow's current authoritative position. The shadow is still simulated in the meantime (it may be
+			// falling), so the tolerance grows with the round-trip time.
+			std::uint32_t rttMs = _networkManager->GetRoundTripTimeMs(peer);
+			float maxAckDeviation = std::min(200.0f + GetMaxPlausibleSpeed() * FrameTimer::FramesPerSecond * (rttMs / 1000.0f), 800.0f);
 			Vector2f ackPos(posX, posY);
-			Vector2f acceptedPos = ackPos;
-			if ((ackPos - mpPlayer->_pos).SqrLength() > MaxAckDeviation * MaxAckDeviation) {
-				LOGW("Player {} \"{}\" acknowledged a warp at an unexpected position, keeping the authoritative one", playerIndex, peerDesc->PlayerName);
-				acceptedPos = mpPlayer->_pos;
+			float ackDeviation = (ackPos - mpPlayer->_pos).Length();
+			if (ackDeviation > maxAckDeviation && mpPlayer->_health <= 0) {
+				// A dead player is not synced from the client at all and its respawn is acknowledged separately, so just
+				// keep the server position
+				ackPos = mpPlayer->_pos;
+			} else if (ackDeviation > maxAckDeviation) {
+				// Keep the warp pending and move the client to the authoritative position once more, it acknowledges
+				// that one again - the client value is never trusted
+				char details[64];
+				std::size_t length = formatInto(details, "acknowledged {} px away", (std::int32_t)ackDeviation);
+				ReportCheatViolation(peer, *peerDesc, CheatViolation::WarpMismatch, 1.0f, { details, length });
+
+				MemoryStream packet2(20);
+				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
+				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
+				packet2.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
+				packet2.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
+				packet2.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
+				packet2.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet2);
+				return;
 			}
 
 			LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - playerIndex: {}, seqNum: {}, x: {}, y: {}",
-				peer, playerIndex, seqNum, acceptedPos.X, acceptedPos.Y);
+				peer, playerIndex, seqNum, ackPos.X, ackPos.Y);
 
 			peerDesc->LastUpdated = seqNum;
-			mpPlayer->ForceResyncWithServer(acceptedPos, Vector2f(speedX, speedY));
+			// The movement check continues from the acknowledged position with a full budget
+			peerDesc->AntiCheat.ResetMovement(ackPos);
+			mpPlayer->ForceResyncWithServer(ackPos, Vector2f(speedX, speedY));
 			mpPlayer->_canTakeDamage = true;
 			mpPlayer->_justWarped = true;
 		});
@@ -6762,13 +6849,7 @@ namespace Jazz2::Multiplayer
 						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2l"_s)) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
-					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-					if (!fs::IsReadableFile(fullPath)) {
-						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-						if (!fs::IsReadableFile(fullPath)) {
-							fullPath = {};
-						}
-					}
+					fullPath = resolver.FindContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s)));
 				}
 				return fullPath;
 			}
@@ -6779,13 +6860,7 @@ namespace Jazz2::Multiplayer
 						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2t"_s)) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
-					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
-					if (!fs::IsReadableFile(fullPath)) {
-						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
-						if (!fs::IsReadableFile(fullPath)) {
-							fullPath = {};
-						}
-					}
+					fullPath = resolver.FindContentFile(fs::CombinePath("Tilesets"_s, String(path + ".j2t"_s)));
 				}
 				return fullPath;
 			}
@@ -6796,7 +6871,13 @@ namespace Jazz2::Multiplayer
 						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(path) });
 				}
 				if (!forWrite && !fs::IsReadableFile(fullPath)) {
-					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Music"_s, path });
+					StringView userContentPath = resolver.GetUserContentPath();
+					if (!userContentPath.empty()) {
+						fullPath = fs::CombinePath({ userContentPath, "Music"_s, path });
+					}
+					if (!fs::IsReadableFile(fullPath)) {
+						fullPath = fs::CombinePath({ resolver.GetContentPath(), "Music"_s, path });
+					}
 					if (!fs::IsReadableFile(fullPath)) {
 						// "Source" directory must be case in-sensitive
 						fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), path));
@@ -7088,6 +7169,193 @@ namespace Jazz2::Multiplayer
 		}
 
 		return (serverConfig.GameMode == MpGameMode::Cooperation);
+	}
+
+	std::uint64_t MpLevelHandler::GetAntiCheatTimeMs()
+	{
+		Clock& c = nCine::clock();
+		return c.now() * 1000 / c.frequency();
+	}
+
+	float MpLevelHandler::GetMaxPlausibleSpeed() const
+	{
+		// Per axis, and it depends on the physics: Reforged clamps the speed to 16 and boosted states stay well under 32.
+		// Outside Reforged, both axes are clamped to the original's own limit (37.33, which a blue spring reaches on either
+		// axis), a pole assigns its launch bonus on top of what the player arrived with for the one tick before that
+		// clamp, and Lori's sidekick (49.29) is exempt from it but stays under both.
+		constexpr float MaxPlausibleSpeedReforged = 32.0f;
+		constexpr float MaxPlausibleSpeedLegacy = Actors::Player::LegacyVerticalSpeedLimit + Actors::Player::LegacyPoleLaunchBonus + 1.0f;
+		return (IsReforged() ? MaxPlausibleSpeedReforged : MaxPlausibleSpeedLegacy);
+	}
+
+	void MpLevelHandler::ReportCheatViolation(const Peer& peer, PeerDescriptor& peerDesc, CheatViolation type, float weight, StringView details)
+	{
+		auto& antiCheat = peerDesc.AntiCheat;
+		if (antiCheat.Kicked) {
+			return;
+		}
+
+		std::uint64_t nowMs = GetAntiCheatTimeMs();
+		if (antiCheat.SuspicionUpdatedMs != 0) {
+			float elapsedSecs = (nowMs - antiCheat.SuspicionUpdatedMs) / 1000.0f;
+			antiCheat.Suspicion = std::max(antiCheat.Suspicion - elapsedSecs * AntiCheatDecayPerSec, 0.0f);
+		}
+		antiCheat.SuspicionUpdatedMs = nowMs;
+
+		if (antiCheat.Suspicion <= 0.0f) {
+			// Everything before has been forgiven, so a new incident starts
+			antiCheat.IncidentStartMs = nowMs;
+			antiCheat.IncidentViolations = 0;
+			antiCheat.Notified = false;
+		}
+
+		// Updates of a player with a slow connection are the most likely to look implausible, so they weigh in less
+		std::uint32_t rttMs = _networkManager->GetRoundTripTimeMs(peer);
+		if (rttMs >= 400) {
+			weight *= 0.5f;
+		} else if (rttMs >= 200) {
+			weight *= 0.75f;
+		}
+
+		antiCheat.Suspicion += weight;
+		antiCheat.IncidentViolations++;
+
+		StringView typeName;
+		switch (type) {
+			case CheatViolation::ImplausibleSpeed: typeName = "Implausible speed"_s; break;
+			case CheatViolation::ImplausibleMovement: typeName = "Implausible movement"_s; break;
+			case CheatViolation::ClockSpeedup: typeName = "Sped up game clock"_s; break;
+			case CheatViolation::WarpMismatch: typeName = "Warp acknowledged at a wrong position"_s; break;
+			default: typeName = "Unknown violation"_s; break;
+		}
+
+		std::uint64_t incidentMs = nowMs - antiCheat.IncidentStartMs;
+		std::int32_t playerIndex = (peerDesc.Player != nullptr ? (std::int32_t)peerDesc.Player->_playerIndex : -1);
+
+		// Stage 1: Every violation is logged, nothing else happens until there is more evidence
+		LOGW("[AC] {} from player {} \"{}\" [{}] ({}) - suspicion {:.1f}, {} violation(s) in {} s, ping {} ms",
+			typeName, playerIndex, peerDesc.PlayerName, peer, details, antiCheat.Suspicion, antiCheat.IncidentViolations,
+			incidentMs / 1000, rttMs);
+
+		auto notifyConsoleAndAdmins = [this, &peer](StringView message) {
+			SendMessage(Peer{}, UI::MessageLevel::Warning, message);
+			for (auto& [otherPeer, otherPeerDesc] : *_networkManager->GetPeers()) {
+				if (otherPeerDesc->IsAdmin && otherPeerDesc->RemotePeer && otherPeerDesc->RemotePeer != peer) {
+					SendMessage(otherPeerDesc->RemotePeer, UI::MessageLevel::Warning, message);
+				}
+			}
+		};
+
+		char message[256];
+
+		// Stage 3: Only sustained evidence gets the player kicked - a high suspicion made of several violations over
+		// a longer time, so neither a single huge desync nor a short burst of them is enough
+		if (antiCheat.Suspicion >= AntiCheatKickThreshold && antiCheat.IncidentViolations >= AntiCheatKickMinViolations &&
+			incidentMs >= AntiCheatKickMinIncidentMs) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			if (serverConfig.AntiCheatKick && !peerDesc.IsAdmin && peer.IsValid()) {
+				antiCheat.Kicked = true;
+
+				LOGW("[AC] Player {} \"{}\" [{}] kicked - cheating detected ({}, suspicion {:.1f})",
+					playerIndex, peerDesc.PlayerName, peer, typeName, antiCheat.Suspicion);
+
+				std::size_t length = formatInto(message, "\f[c:#d0705d]{}\f[/c] was kicked by the anti-cheat ({})", peerDesc.PlayerName, typeName);
+				notifyConsoleAndAdmins({ message, length });
+
+				_networkManager->Kick(peer, Reason::CheatingDetected);
+				return;
+			}
+		}
+
+		// Stage 2: A high suspicion is reported to the server console and the admins, repeated while it lasts
+		if (antiCheat.Suspicion >= AntiCheatNotifyThreshold && (!antiCheat.Notified || nowMs - antiCheat.NotifiedMs >= AntiCheatNotifyIntervalMs)) {
+			antiCheat.Notified = true;
+			antiCheat.NotifiedMs = nowMs;
+
+			std::size_t length = formatInto(message, "\f[c:#d0705d]{}\f[/c] is suspected of cheating ({}, {} violations in {} s)",
+				peerDesc.PlayerName, typeName, antiCheat.IncidentViolations, incidentMs / 1000);
+			notifyConsoleAndAdmins({ message, length });
+		}
+	}
+
+	void MpLevelHandler::CheckClientClockDrift(const Peer& peer, PeerDescriptor& peerDesc, std::uint64_t clientNowMs, std::uint64_t serverNowMs)
+	{
+		// A speed hack usually speeds up the whole clock of the game, the timestamps it sends included, so they progress
+		// faster than the time on the server. The difference of both clocks is taken as the minimum over a window, which
+		// filters out the latency and jitter, and compared with the previous window - it stays the same for an honest
+		// client (a slower one only raises it), but a sped up client lowers it by the time it gained.
+		auto& antiCheat = peerDesc.AntiCheat;
+		std::int64_t offset = (std::int64_t)serverNowMs - (std::int64_t)clientNowMs;
+
+		if (antiCheat.ClockWindowStartMs == 0) {
+			antiCheat.ClockWindowStartMs = serverNowMs;
+			antiCheat.ClockWindowMinOffset = offset;
+			return;
+		}
+
+		antiCheat.ClockWindowMinOffset = std::min(antiCheat.ClockWindowMinOffset, offset);
+		if (serverNowMs - antiCheat.ClockWindowStartMs < AntiCheatClockWindowMs) {
+			return;
+		}
+
+		if (antiCheat.ClockPrevMinOffset != INT64_MAX) {
+			std::int64_t driftMs = antiCheat.ClockPrevMinOffset - antiCheat.ClockWindowMinOffset;
+			if (driftMs > AntiCheatClockDriftToleranceMs) {
+				char details[64];
+				std::size_t length = formatInto(details, "client clock gained {} ms in {} s", driftMs, AntiCheatClockWindowMs / 1000);
+				ReportCheatViolation(peer, peerDesc, CheatViolation::ClockSpeedup, std::clamp(driftMs / 1000.0f, 1.0f, 4.0f), { details, length });
+			}
+		}
+
+		antiCheat.ClockPrevMinOffset = antiCheat.ClockWindowMinOffset;
+		antiCheat.ClockWindowMinOffset = INT64_MAX;
+		antiCheat.ClockWindowStartMs = serverNowMs;
+	}
+
+	bool MpLevelHandler::IsPlausibleClientWarp(Vector2f from, Vector2f to, float reach, WarpFlags& flags)
+	{
+		if (_eventMap == nullptr) {
+			return false;
+		}
+
+		// The warp origin may lie anywhere the client could have reached since the last accepted update, but it's
+		// limited, so this stays a short scan of the event map around the position
+		constexpr float TileSize = (float)Tiles::TileSet::DefaultTileSize;
+		reach = std::clamp(reach, 64.0f, 640.0f);
+
+		Vector2i layoutSize = _eventMap->GetSize();
+		std::int32_t tx1 = std::max((std::int32_t)((from.X - reach) / TileSize), 0);
+		std::int32_t ty1 = std::max((std::int32_t)((from.Y - reach) / TileSize), 0);
+		std::int32_t tx2 = std::min((std::int32_t)((from.X + reach) / TileSize), layoutSize.X - 1);
+		std::int32_t ty2 = std::min((std::int32_t)((from.Y + reach) / TileSize), layoutSize.Y - 1);
+
+		for (std::int32_t ty = ty1; ty <= ty2; ty++) {
+			for (std::int32_t tx = tx1; tx <= tx2; tx++) {
+				std::uint8_t* eventParams;
+				if (_eventMap->GetEventByPosition(tx, ty, &eventParams) != EventType::WarpOrigin) {
+					continue;
+				}
+
+				// Distance to the nearest point of the tile
+				float nearestX = std::clamp(from.X, tx * TileSize, (tx + 1) * TileSize);
+				float nearestY = std::clamp(from.Y, ty * TileSize, (ty + 1) * TileSize);
+				if ((Vector2f(nearestX, nearestY) - from).SqrLength() > reach * reach) {
+					continue;
+				}
+
+				if (!_eventMap->IsNearWarpTarget(eventParams[0], to, AntiCheatWarpTargetDistance)) {
+					continue;
+				}
+
+				flags = WarpFlags::Default;
+				if (eventParams[2] != 0) {
+					flags |= WarpFlags::IncrementLaps;
+				}
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	bool MpLevelHandler::IsPlayerAdmin(Actors::Player* player) const

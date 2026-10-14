@@ -34,28 +34,20 @@ matches the current implementation.
 - **Web** (WebAssembly) using [Emscripten](https://kripken.github.io/emscripten-site/)
 - **Nintendo Switch** using [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman),
   see @ref consoles-switch
-- **Nintendo Wii** and **Nintendo GameCube** using devkitPro toolchain and a fixed-function GX
-  rendering backend, see @ref consoles-wii and @ref consoles-gamecube
-- **Nintendo 3DS** using devkitPro toolchain with **libctru** and **citro3d** and a fixed-function
-  PICA200 rendering backend, see @ref consoles-3ds
-- **Nintendo 64** using [libdragon](https://github.com/DragonMinded/libdragon) and a fixed-function
-  RDP rendering backend, see @ref consoles-n64 @m_span{m-text m-dim} (experimental --- it is by far
-  the smallest machine here and does not hold a steady frame rate) @m_endspan
-- **Sega Dreamcast** using [KallistiOS](https://github.com/KallistiOS/KallistiOS) and a
-  fixed-function PowerVR rendering backend, see @ref consoles-dreamcast
-- **PlayStation Portable** using [pspdev](https://github.com/pspdev/pspdev) and a fixed-function
-  GU rendering backend, see @ref consoles-psp
-- **PlayStation 2** using [ps2dev](https://github.com/ps2dev/ps2dev) and a fixed-function
-  Graphics Synthesizer rendering backend, see @ref consoles-ps2
-- **PlayStation 3** using [ps3toolchain](https://github.com/ps3dev/ps3toolchain) with **PSL1GHT**
-  and a native **libgcm** rendering backend for the RSX, see @ref consoles-ps3
-- **PlayStation Vita** using [VitaSDK](https://vitasdk.org/) and a native **sceGxm** rendering
-  backend, or OpenGL|ES 2.0 through vitaGL, see @ref consoles-vita
+- **Nintendo Wii** and **Nintendo GameCube** using fixed-function GX rendering backend,
+  see @ref consoles-wii and @ref consoles-gamecube
+- **Nintendo 3DS** using fixed-function PICA200 rendering backend, see @ref consoles-3ds
+- **Nintendo 64** using fixed-function RDP rendering backend, see @ref consoles-n64
+- **Sega Dreamcast** using fixed-function PowerVR rendering backend, see @ref consoles-dreamcast
+- **PlayStation Portable** using fixed-function GU rendering backend, see @ref consoles-psp
+- **PlayStation 2** using fixed-function Graphics Synthesizer rendering backend, see @ref consoles-ps2
+- **PlayStation 3** using native **libgcm** rendering backend for the RSX, see @ref consoles-ps3
+- **PlayStation Vita** using native **sceGxm** rendering backend, or OpenGL|ES 2.0 through vitaGL, see @ref consoles-vita
 - **libretro** core for RetroArch, see @ref consoles-libretro
-- **AmigaOS 3.x** on 68040/68060, PiStorm and Vampire machines, using a bespoke
-  Intuition/RTG window backend and the CPU software rasterizer, see @ref amiga-classic
-- **AmigaOS 4.1** and **MorphOS** on PowerPC, using their own SDKs through SDL2 and the
-  fixed-function `LegacyGL` rendering backend on the OpenGL 1.x each of them provides
+- **AmigaOS 3.x** on 68040/68060, PiStorm and Vampire machines, using
+  Intuition/RTG window backend and CPU software rasterizer, see @ref amiga-classic
+- **AmigaOS 4.1** and **MorphOS** on PowerPC, using fixed-function `LegacyGL`
+  rendering backend on the OpenGL 1.x each of them provides
   @m_span{m-text m-dim} (MiniGL over Warp3D, resp. TinyGL) @m_endspan, see @ref amiga-os4 and
   @ref amiga-morphos
 
@@ -67,8 +59,7 @@ platform. The platforms above are where that stops being a free choice: seven of
 programmable shaders at all and are driven by one of six rendering backends written for their
 fixed-function graphics hardware @m_span{m-text m-dim} (the Wii and the GameCube share one)
 @m_endspan, a seventh such backend drives the fixed-function OpenGL 1.x of the two PowerPC Amigas, while
-the PlayStation Vita and the
-PlayStation 3 have real shaders and drive their native APIs --- **sceGxm** and **libgcm** ---
+the PlayStation Vita and the PlayStation 3 have real shaders and drive their native APIs --- **sceGxm** and **libgcm** ---
 directly. The classic Amiga has no usable graphics hardware at all, so there the software rasterizer
 is the renderer rather than a fallback. See also @ref consoles-common-features "the list of features each console supports",
 which is where the platform differences are the largest.

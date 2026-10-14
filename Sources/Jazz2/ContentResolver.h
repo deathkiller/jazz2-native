@@ -148,6 +148,24 @@ namespace Jazz2
 
 		/** @brief Returns path to `"Content"` directory */
 		StringView GetContentPath() const;
+		/**
+		 * @brief Returns path to the user-accessible `"Content"` directory, or an empty view if there is none
+		 *
+		 * On the platforms where `"Content"` is a part of the read-only application package (Android, Apple, AppImage
+		 * and installed Linux packages, UWP, Switch, Vita), custom content can be placed into another `"Content"`
+		 * directory next to `"Cache"` instead (next to `"Source"` on iOS, because `"Cache"` isn't reachable there).
+		 * It's searched before everything else, so it can also replace any shipped file. Only assets streamed from
+		 * a multiplayer server take precedence over it. The view is empty if the directory didn't exist at startup
+		 * or if it's the packaged one.
+		 */
+		StringView GetUserContentPath() const;
+		/**
+		 * @brief Returns full path to a file in the user `"Content"`, `"Content"` or `"Cache"` directory
+		 *
+		 * The directories are searched in this order, @p path is relative to them. Returns an empty string if the
+		 * file wasn't found in any of them. Files in mounted `.pak` files aren't considered.
+		 */
+		String FindContentFile(StringView path) const;
 		/** @brief Returns path to `"Cache"` directory */
 		StringView GetCachePath() const;
 		/** @brief Returns path to `"Source"` directory */
@@ -174,7 +192,7 @@ namespace Jazz2
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		/** @brief Scans the `"Content"` and `"Cache"` directories for `.pak` files and mounts them  */
+		/** @brief Scans the user `"Content"`, `"Content"` and `"Cache"` directories for `.pak` files and mounts them  */
 		void RemountPaks();
 #endif
 		/** @brief Tries to find and open a file specified by the path */
@@ -446,6 +464,8 @@ namespace Jazz2
 		void InitializePaths();
 		// Looks for the package that marks a prepared content tree, has to run again if the paths change
 		void DetectPrebakedContent();
+		// Looks for the user-accessible "Content" directory (see GetUserContentPath()), has to run again if the paths change
+		void DetectUserContent();
 
 		// Cache key offset for indexed graphics (palette indices kept in the texture instead of baked), distinct
 		// from any real paletteOffset so indexed and baked variants of the same sprite are cached separately
@@ -540,6 +560,8 @@ namespace Jazz2
 		std::unique_ptr<Shader> _precompiledShaders[(std::int32_t)PrecompiledShader::Count];
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		SmallVector<std::unique_ptr<PakFile>> _mountedPaks;
+		// Number of leading entries in _mountedPaks that come from the user "Content" directory
+		std::size_t _userPakCount = 0;
 #endif
 		Function<String(StringView)> _pathHandler;
 
@@ -554,6 +576,11 @@ namespace Jazz2
 		defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_GAMECUBE)
 		String _cachePath;
 		String _sourcePath;
+#endif
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || \
+		defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+		// Set only when the directory exists - see GetUserContentPath()
+		String _userContentPath;
 #endif
 #if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_GAMECUBE)
 		/** @brief Set only when the content was found on writable storage - see @ref GetWritablePath() */

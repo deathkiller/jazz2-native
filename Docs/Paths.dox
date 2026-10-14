@@ -1,0 +1,165 @@
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+/** @page paths File locations
+@brief Where the game reads its files from and where it writes them, on every supported platform
+
+@tableofcontents
+
+@section paths-overview Overview
+
+Every platform uses the same set of directories and files, only their locations differ:
+
+Name | What it holds | Written by the game
+---- | ------------- | -------------------
+`Content/` | The game's own assets --- sprites, shaders, fonts, translations, bundled episodes | No
+User `Content/` | Your own or modded content, see @ref paths-user-content | No
+`Source/` | Original <em>Jazz Jackrabbit 2</em> files you copy there --- `Anims.j2a`, levels, tilesets, music | No
+`Cache/` | `Source/` files converted on the first start, the shader cache and assets downloaded from multiplayer servers. Safe to delete, it's rebuilt on the next start | Yes
+`Jazz2.config` | Settings and episode progress | Yes
+`Jazz2.resume` | Saved state for continuing an interrupted level, next to `Jazz2.config` | Yes
+`Jazz2.log` | Log of the current session, earlier sessions are kept in `Jazz2.log.gz` next to it | Yes
+
+@m_class{m-noindent}
+
+Below, the <b>config directory</b> means the directory with `Jazz2.config`, the resume file and the log
+always sit there together @m_span{m-text m-dim} (only iOS keeps the log elsewhere) @m_endspan. A
+`gamecontrollerdb.txt` with extra gamepad mappings is read from there and from `Content/` on most platforms. A log file is only written by builds with tracing enabled @m_span{m-text m-dim} (`DEATH_TRACE`) @m_endspan.
+
+@subsection paths-user-content User Content directory
+
+On platforms where `Content/` is packed inside the application @m_span{m-text m-dim} (APK, app bundle,
+AppImage, system-wide package, UWP package, `.nro`, VPK) @m_endspan nothing can be added to it, so the game
+also reads a second `Content/` directory the user can reach --- usually next to `Cache/`. It's only used if
+it already exists when the game starts. Files are searched in this order:
+
+1.  User `Content/` --- a file here replaces the file with the same path anywhere below
+2.  `Content/`
+3.  `Cache/`
+
+@m_class{m-noindent}
+
+Translations are the exception: their order is user `Content/`, `Cache/`, `Content/`. While connected to a
+multiplayer server, the level, its tilesets and music downloaded from the server take precedence over all of
+the above.
+
+@section paths-desktop Desktop
+
+@subsection paths-windows Windows
+
+What | Location
+---- | --------
+`Content/`, `Source/`, `Cache/` | Next to `Jazz2.exe`
+Config directory | `C:\Users\<user>\Saved Games\Jazz² Resurrection\` @m_span{m-text m-dim} (or `AppData\Roaming\Jazz² Resurrection\` if there is no <em>Saved Games</em> folder) @m_endspan, or next to `Jazz2.exe` if a `Jazz2.config` already exists there @m_span{m-text m-dim} (portable mode) @m_endspan
+Log | Only with `/log:file`, `/log` opens a console window instead
+
+@subsection paths-linux Linux
+
+What | Location
+---- | --------
+Portable @m_span{m-text m-dim} (`Content/` next to the executable) @m_endspan | `Content/`, `Source/` and `Cache/` next to the executable
+Installed package @m_span{m-text m-dim} (DEB, RPM, distribution packages) @m_endspan | `Content/` in `/usr/share/jazz2/` @m_span{m-text m-dim} (install prefix and package name) @m_endspan, `Source/` and `Cache/` in `~/.local/share/jazz2/` @m_span{m-text m-dim} (`$XDG_DATA_HOME`; `~/.local/share/Jazz² Resurrection/` is used instead if it has a `Cache/`) @m_endspan. A `Source/` in `/usr/share/jazz2/` is used if the per-user one doesn't contain the game files
+AppImage | `Content/` inside the image, `Source/` and `Cache/` next to the `.AppImage` file if `Source/` there contains the game files, otherwise in `~/.local/share/jazz2/`
+Flatpak | `Content/` in `/app/share/Jazz² Resurrection/`, everything else under `~/.var/app/dev.de4th.jazz2/`
+User `Content/` | Next to `Cache/`, if it isn't the same as `Content/`
+Config directory | `~/.config/Jazz² Resurrection/` @m_span{m-text m-dim} (`$XDG_CONFIG_HOME`; `~/.config/jazz2/` for AppImage) @m_endspan, or the working directory if a `Jazz2.config` already exists there
+Log | Only with `/log:file`
+
+@subsection paths-macos macOS
+
+What | Location
+---- | --------
+`Content/` | Inside the application bundle
+`Source/`, `Cache/`, user `Content/` | `~/Library/Application Support/Jazz² Resurrection/`
+Config directory | `~/Library/Application Support/Jazz² Resurrection/`, or the working directory if a `Jazz2.config` already exists there
+Log | Only with `/log:file`
+
+@subsection paths-cmdline Command-line options
+
+These work on Windows, Linux and macOS:
+
+-   `/config <path>` --- use this configuration file, its directory becomes the config directory
+-   `/reset-config` --- start with the default settings
+-   `/log:file` --- write `Jazz2.log` into the config directory, `/log:file:<name>` uses another name
+    @m_span{m-text m-dim} (relative to the config directory, the earlier sessions aren't archived then) @m_endspan
+-   `/log` --- Windows only, opens a console window with the log
+
+@m_class{m-noindent}
+
+A build configured with `DEATH_TRACE_LOG_PATH` always writes the log under that name into the config directory.
+
+@section paths-mobile Mobile
+
+@subsection paths-android Android
+
+What | Location
+---- | --------
+`Content/` | Inside the APK
+`Source/`, `Cache/`, user `Content/` | With <em>All files access</em> granted: the first existing of `Games/Jazz² Resurrection/`, `Games/Jazz2 Resurrection/`, `Download/Jazz² Resurrection/` and `Download/Jazz2 Resurrection/` on the internal storage, `Games/Jazz² Resurrection/` if none exists. Otherwise `Android/data/jazz2.resurrection/files/`
+Config directory | Next to `Source/` @m_span{m-text m-dim} (a `Jazz2.config` from older versions in the app's private storage is kept until one exists next to `Source/`) @m_endspan
+Log | `Jazz2.log` in the config directory, always
+
+@subsection paths-ios iOS
+
+What | Location
+---- | --------
+`Content/` | Inside the application bundle
+`Source/`, user `Content/` | The app's `Documents/` folder, visible in the <em>Files</em> app
+`Cache/` | `Library/Caches/` @m_span{m-text m-dim} (not visible, may be purged by the system) @m_endspan
+Config directory | `Library/Application Support/Jazz² Resurrection/`
+Log | `Documents/Jazz2.log`, always
+
+@section paths-other Other platforms
+
+@subsection paths-uwp Windows RT (UWP, Xbox)
+
+What | Location
+---- | --------
+`Content/` | Inside the application package
+`Source/`, `Cache/`, user `Content/` | On Xbox the first of `D:` to `G:` drives with `Games\Jazz² Resurrection\Source\` @m_span{m-text m-dim} (or `Jazz2 Resurrection`) @m_endspan, otherwise the app's `LocalState\` folder
+Config directory | Next to `Source/` if writable, otherwise `LocalState\`
+Log | None
+
+@subsection paths-web Web (Emscripten)
+
+Everything lives in the browser. `Content/` is preloaded with the page, the config directory is
+`/Persistent/` @m_span{m-text m-dim} (stored in the browser's IndexedDB) @m_endspan, and the log only goes to
+the browser console.
+
+@subsection paths-libretro Libretro core
+
+`Content/`, `Source/` and `Cache/` are looked up in the frontend's <em>system</em> directory
+@m_span{m-text m-dim} (directly or in its `jazz2/` subdirectory) @m_endspan, the config directory is `jazz2/`
+in the frontend's <em>save</em> directory.
+
+@subsection paths-amiga Amiga
+
+Everything --- `Content/`, `Source/`, `Cache/` and `Jazz2.config` --- sits in the game's own directory. No
+log file is written.
+
+@subsection paths-server Dedicated server
+
+Uses the same directories as the game on the same platform. Its configuration is `Jazz2.Server.config` in the
+working directory, or the path given after `/server`, see @ref multiplayer-config.
+
+@section paths-consoles Consoles
+
+The config directory is next to `Source/`, and `Jazz2.log` is written there, unless stated otherwise.
+See also @ref consoles for how each build is packaged.
+
+Console | `Content/` | `Source/`, `Cache/`, config directory | Notes
+------- | ---------- | ------------------------------------- | -----
+Nintendo Switch | `romfs:/` @m_span{m-text m-dim} (inside the `.nro`) @m_endspan | `sdmc:/Games/Jazz2/` | User `Content/` in `sdmc:/Games/Jazz2/Content/`
+Nintendo 3DS | `sdmc:/3ds/Jazz2/Content/` | `sdmc:/3ds/Jazz2/` | ---
+Nintendo Wii | `sd:/apps/Jazz2/Content/` | `sd:/apps/Jazz2/` | ---
+Nintendo GameCube | `Jazz2/Content/` on an SD card, or `dvd:/Content/` | Next to `Content/` | From the disc, `Jazz2.config` and `Jazz2.resume` go to a memory card @m_span{m-text m-dim} (`mca:/`, or `mcb:/`) @m_endspan and no log is written
+Nintendo 64 | `rom:/Content/` | `rom:/Cache/`, read-only | Settings go to the cartridge EEPROM @m_span{m-text m-dim} (`eeprom:/JAZZ2CFG`) @m_endspan, no resume file and no log
+PlayStation Vita | `app0:/Content/` @m_span{m-text m-dim} (inside the VPK) @m_endspan | `ux0:/data/jazz2/` | User `Content/` in `ux0:/data/jazz2/Content/`
+PlayStation Portable | `ms0:/PSP/GAME/Jazz2/Content/` | `ms0:/PSP/GAME/Jazz2/` | ---
+PlayStation 3 | `/app_home/Content/` @m_span{m-text m-dim} (next to `EBOOT.BIN`) @m_endspan | `Source/` in `/app_home/`, `Cache/` in `/dev_hdd0/game/<APPID>/USRDIR/` | `Jazz2.config` in the working directory, no log
+PlayStation 2 | `Content/` next to the executable, in `Games/Jazz2/` on a USB stick or MX4SIO SD card, or `cdfs:/Content/` | Next to `Content/` | From the disc, `Jazz2.config` goes to a memory card @m_span{m-text m-dim} (`mc0:/Jazz2/`, or `mc1:/Jazz2/`) @m_endspan and no log is written
+Sega Dreamcast | `/cd/Content/` | `/cd/`, read-only | `Jazz2.config` and `Jazz2.resume` go to the first VMU @m_span{m-text m-dim} (`/vmu/a1/Jazz2` for port A, unit 1) @m_endspan, no log
+
+*/
+
+}

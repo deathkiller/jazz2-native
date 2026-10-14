@@ -8,74 +8,60 @@ namespace Death {
 
 @m_class{m-noindent}
 
-Three Amiga systems are supported, and one thing they share decides the shape of all of them: none of
-them has graphics hardware the game's *shader* pipeline can use. The classic machines have no texturing
-or blending at all @m_span{m-text m-dim} (RTG cards accelerate blits and fills, nothing that helps here)
-@m_endspan, so there the CPU software rasterizer @m_span{m-text m-dim} (`Software` RHI, which the
-desktop and Vita builds already ship) @m_endspan is not a fallback but the renderer.
-
-The two PowerPC systems do have 3D hardware, and what each of them offers the game is a **fixed-function
-OpenGL 1.x** - TinyGL on MorphOS, MiniGL over Warp3D on AmigaOS 4. That is exactly the shape the game's
-console backends target, so both are driven by the `LegacyGL` rendering backend
-@m_span{m-text m-dim} (see @ref amiga-morphos-gl) @m_endspan, which is the default on both -- `Software`
-stays selectable for a machine whose card has no 3D driver. Everything below that differs:
+None of the three supported Amiga systems has graphics hardware the game's shader pipeline can use.
+Classic machines render with the CPU `Software` rasterizer; the two PowerPC systems use the
+fixed-function `LegacyGL` backend @m_span{m-text m-dim} (TinyGL on MorphOS, MiniGL over Warp3D on
+AmigaOS 4, see @ref amiga-morphos-gl) @m_endspan by default, with `Software` still selectable for a
+card without a 3D driver.
 
 System | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Renderer | Window/input | Audio | Details
 ------ | -------------------------------------------------------------- | -------- | ------------ | ----- | -------
 AmigaOS 3.x @m_span{m-text m-dim} (m68k) @m_endspan | AmigaPorts' m68k-amigaos-gcc @m_span{m-text m-dim} (`amiga.cmake`) @m_endspan | `Software` | own backend @m_span{m-text m-dim} (Intuition + RTG) @m_endspan | `AHI` | @ref amiga-classic
-AmigaOS 4.1 @m_span{m-text m-dim} (PowerPC) @m_endspan | adtools @m_span{m-text m-dim} (`os4.cmake`) @m_endspan | `LegacyGL` @m_span{m-text m-dim} (MiniGL) @m_endspan | SDL2 | `SDL` | @ref amiga-os4
-MorphOS @m_span{m-text m-dim} (PowerPC) @m_endspan | MorphOS SDK @m_span{m-text m-dim} (`morphos.cmake`) @m_endspan | `LegacyGL` @m_span{m-text m-dim} (TinyGL) @m_endspan | SDL2 | `SDL` | @ref amiga-morphos
+AmigaOS 4.1 @m_span{m-text m-dim} (PowerPC) @m_endspan | adtools @m_span{m-text m-dim} (`os4.cmake`) @m_endspan | `LegacyGL` @m_span{m-text m-dim} (MiniGL) @m_endspan | SDL2 | OpenAL or `SDL` | @ref amiga-os4
+MorphOS @m_span{m-text m-dim} (PowerPC) @m_endspan | MorphOS SDK @m_span{m-text m-dim} (`morphos.cmake`) @m_endspan | `LegacyGL` @m_span{m-text m-dim} (TinyGL) @m_endspan | SDL2 | `SDL` @m_span{m-text m-dim} (OpenAL if built) @m_endspan | @ref amiga-morphos
 
 @m_class{m-noindent}
 
-The design document behind all three, including the hardware research the classic port is based on, is
-`Docs/AmigaPortDesign.md` in the repository.
+The design document, including the hardware research behind the classic port, is
+`Docs/AmigaPortDesign.md`.
 
 @section amiga-classic AmigaOS 3.x (m68k)
 
-The classic Amiga build is a native **AmigaOS 3.x/m68k** port that covers the whole fast-Amiga spectrum
-from a single executable: PiStorm/Emu68 accelerators, Apollo Vampire boards and accelerated 68060
-machines with an RTG graphics card. The rasterizer presents into a Picasso96/CyberGraphX chunky
-framebuffer, and what differs between machines is not the code path but the *size* of the work, which
-is chosen at startup by measuring the machine — see @ref amiga-presets.
+One executable covers PiStorm/Emu68, Apollo Vampire and 68060 machines with an RTG card. It presents
+into a Picasso96/CyberGraphX chunky framebuffer; the amount of work is chosen at startup by measuring
+the machine, see @ref amiga-presets.
 
 Property | Value
 -------- | -----
-Toolchain | AmigaPorts' **m68k-amigaos-gcc** @m_span{m-text m-dim} (GCC 16.2, prebuilt release; `cmake/toolchains/amiga.cmake`) @m_endspan
+Toolchain | AmigaPorts' <b>m68k-amigaos-gcc</b> @m_span{m-text m-dim} (GCC 16.2 prebuilt; `cmake/toolchains/amiga.cmake`) @m_endspan
 C runtime | libnix @m_span{m-text m-dim} (`-mcrt=nix20`) @m_endspan
-Rendering backend | `Software` @m_span{m-text m-dim} (pinned -- any other value is a configure error) @m_endspan, forced to 16-bit surfaces
-Window/input backend | `Amiga` @m_span{m-text m-dim} (`Sources/nCine/Backends/Amiga/`) @m_endspan — Intuition screen, IDCMP input, lowlevel.library gamepads
-Audio backend | `AHI` @m_span{m-text m-dim} (`Sources/nCine/Audio/Backends/Amiga/`) @m_endspan — software mixer into `ahi.device`
-Music | **libxmp** @m_span{m-text m-dim} (`NCINE_WITH_XMP`, downloaded and built by the CMake configure) @m_endspan, reads the original `.j2b` modules directly
-Build artifact | `build/amiga/dist/` — the `Jazz2` executable next to its `Content/` tree
+Rendering backend | `Software`, 16-bit surfaces @m_span{m-text m-dim} (any other value is a configure error) @m_endspan
+Window/input backend | `Amiga` @m_span{m-text m-dim} (`Sources/nCine/Backends/Amiga/`) @m_endspan: Intuition screen, IDCMP input, lowlevel.library gamepads
+Audio backend | `AHI` @m_span{m-text m-dim} (`Sources/nCine/Audio/Backends/Amiga/`) @m_endspan: software mixer into `ahi.device`
+Music | libxmp @m_span{m-text m-dim} (`NCINE_WITH_XMP`, downloaded and built by CMake configure) @m_endspan, reads `.j2b` directly
+Build artifact | `build/amiga/dist/`: `Jazz2` executable + `Content/`
 
 @subsection amiga-hardware What it runs on
 
-The port targets machines that are, in CPU terms, at or above the consoles the game already runs on.
-The table below is the honest picture, not a compatibility list.
-
 Machine | Verdict
 ------- | -------
-PiStorm / Emu68 @m_span{m-text m-dim} (Pi3A+, CM4, Pi4) @m_endspan | **The primary target.** Dreamcast-class or better, RTG framebuffer only — exactly what the software renderer wants.
-Apollo Vampire V4 / V1200 @m_span{m-text m-dim} (68080 + SAGA) @m_endspan | Supported, with the AMMX scanline kernels enabled automatically. Expect reductions rather than a full-resolution game.
-68060 + RTG card @m_span{m-text m-dim} (Picasso IV, ZZ9000, …) @m_endspan | The floor. This is the `Low` preset — heavily reduced and experimental.
-68030/68040, or any machine without an FPU | No. The build refuses to start without an FPU, and the update loop is floating point throughout.
-Stock AGA machines @m_span{m-text m-dim} (no RTG) @m_endspan | Not supported. A chunky-to-planar demake tier is discussed in the design document as a stretch goal, and is not part of this build.
+PiStorm / Emu68 @m_span{m-text m-dim} (Pi3A+, CM4, Pi4) @m_endspan | <b>Primary target.</b>
+Apollo Vampire V4 / V1200 @m_span{m-text m-dim} (68080 + SAGA) @m_endspan | Supported, AMMX kernels enabled automatically; expect reduced settings.
+68060 + RTG card @m_span{m-text m-dim} (Picasso IV, ZZ9000, …) @m_endspan | The floor: `Low` preset, experimental.
+68030/68040, or no FPU | Not supported; refuses to start without an FPU.
+Stock AGA @m_span{m-text m-dim} (no RTG) @m_endspan | Not supported.
 
 @m_class{m-noindent}
 
-An RTG screen mode is required: the port opens a CyberGraphX/Picasso96 screen and presents into it.
-@m_span{m-text m-dim} At least 8 MB of fast RAM is realistic -- the game itself asks for far more than
-a stock machine has. @m_endspan
+An RTG screen mode is required. Plan for at least 8 MB of fast RAM.
 
 @subsection amiga-toolchain Toolchain
 
-The cross-compiler is [AmigaPorts/m68k-amigaos-gcc](https://github.com/AmigaPorts/m68k-amigaos-gcc),
-which is **published as a prebuilt release** for Linux x86_64 and macOS arm64 -- so no cross-compiler
-has to be built. The releases are GCC 16.2; GCC 13 is the floor, this codebase being C++17 throughout.
+Use the prebuilt, relocatable [AmigaPorts/m68k-amigaos-gcc](https://github.com/AmigaPorts/m68k-amigaos-gcc)
+release @m_span{m-text m-dim} (Linux x86_64, macOS arm64) @m_endspan. GCC 13 is the minimum.
 
 @code{.sh}
-# The archive's own directory IS the prefix - the toolchain is relocatable, so unpack it anywhere
+# The archive's directory is the prefix; unpack it anywhere
 curl -fsSLO https://github.com/AmigaPorts/m68k-amigaos-gcc/releases/download/v16.2-rc10/m68k-amigaos-gcc-16.2-rc10-x86_64-linux.tar.xz
 tar xJf m68k-amigaos-gcc-16.2-rc10-x86_64-linux.tar.xz -C /opt
 export AMIGA_INST=/opt/m68k-amigaos-gcc-16.2
@@ -83,72 +69,43 @@ export AMIGA_INST=/opt/m68k-amigaos-gcc-16.2
 
 @m_class{m-noindent}
 
-The release carries everything this port compiles against, so nothing has to be cross-compiled by
-hand. **NDK 3.2**, the <b>CyberGraphX and AHI headers</b> @m_span{m-text m-dim} (which the NDK itself
-does not include) @m_endspan, **vasm** @m_span{m-text m-dim} (`vasmm68k_mot`, needed only for
-`NCINE_WITH_AMMX` -- the AMMX kernels are hand-written assembly that no GCC can emit) @m_endspan and
-**zlib** @m_span{m-text m-dim} (1.3.2, prebuilt for every multilib) @m_endspan are all in the archive.
+The release already contains everything needed: NDK 3.2, the CyberGraphX and AHI headers, vasm
+@m_span{m-text m-dim} (`vasmm68k_mot`, needed only for `NCINE_WITH_AMMX`) @m_endspan and zlib 1.3.2 for
+every multilib.
 
 @m_class{m-block m-info}
 
-@par zlib used to be built from source here
-Earlier releases of the toolchain shipped no zlib, and these instructions cross-compiled it into
-`$AMIGA_INST/m68k-amigaos`. That is no longer necessary, and no longer possible without patching:
-upstream zlib 1.3.2's `configure` probes `-fPIC` unconditionally, and `m68k-amigaos-gcc` rejects
-that flag outright @m_span{m-text m-dim} (*"'-fpic', '-fPIC' and '-fpie' are not supported on this
-target, use '-fbaserel' instead"*) @m_endspan, so `configure` aborts before it writes a makefile.
-If you do build a replacement anyway, name `AR` and `RANLIB` explicitly -- left at their defaults
-the **host** `ranlib` writes an ELF-shaped symbol index into the Amiga-format archive that
-`m68k-amigaos-ld` cannot read, so `libz.a` contributes no symbols at all and the link fails on
-`crc32`, `inflate*` and `deflate*` with the archive sitting right there on the command line.
+@par Don't rebuild zlib
+zlib 1.3.2's `configure` aborts because `m68k-amigaos-gcc` rejects `-fPIC`. If you build a replacement
+anyway, set `AR` and `RANLIB` explicitly: the host `ranlib` writes an index `m68k-amigaos-ld` can't
+read, and the link then fails on `crc32`, `inflate*` and `deflate*`.
 
-@subsubsection amiga-toolchain-flags What the toolchain file sets, and why
-
-`cmake/toolchains/amiga.cmake` is small, but three of its flags are load-bearing and must not be
-"cleaned up":
+@subsubsection amiga-toolchain-flags Flags in the toolchain file that must stay
 
 <ul>
-<li>`-mcpu=68060` **with** an explicit `-m68881`. The CPU flag alone does *not* imply the FPU ---
-`m68k-amigaos-gcc -mcpu=68060 -Q --help=target` reports `-msoft-float [enabled]` --- so without
-`-m68881` every floating-point operation in the update loop compiles into a libgcc call. Measured
-under an emulated 68040: **1550 ns** per multiply-add soft, **300 ns** with the FPU, the integer
-side of the same benchmark unchanged. It is also an ABI trap, because the libnix `libm` the link
-resolves to @m_span{m-text m-dim} (`libm020/libm881/libm.a`) @m_endspan is the hard-float one either
-way: it returns floating point in `fp0`, and soft-float code reads the return value from `d0`. That
-mismatch is what made `fminf()`, `fmaxf()`, `rint()` and `nearbyint()` return garbage
-@m_span{m-text m-dim} (`round()` and `trunc()` appeared to work only because their result bits are
-left in `d0` as well) @m_endspan. `-print-multi-directory` reports `.` for this flag combination,
-which looks alarming, but the link resolves the `libm020/libm881` variant of every library --- which
-is what actually matters.</li>
-<li>`-fno-optimize-sibling-calls` — this is **correctness, not tuning**. The m68k-amigaos binutils
-resolves a sibling call @m_span{m-text m-dim} (`bra.l`, and `ld`'s own `60FF`/`61FF` → `4EB9`
-conversion) @m_endspan to a *weak* symbol against the wrong address, so any tail call into an inline
-or template function jumps into garbage. Ordinary `jsr` calls to the same symbols are fine, which is
-why the mitigation is this narrow. `-fno-weak` is **not** an alternative: it also removes weak
-<em>data</em>, and template statics such as `Vector2f::Zero` then fail to link.</li>
-<li>`-std=gnu++17`, pinned rather than left to CMake. `target_compile_features(cxx_std_17)` is a
-<em>minimum</em>, so on a compiler that already defaults higher -- GCC 16 defaults to `gnu++20` -- CMake
-adds no `-std` flag at all and this target alone would build as C++20. Beyond the inconsistency, the
-toolchain's `<math.h>` pulls `using std::lerp;` into the global namespace under C++20, which is
-ambiguous against the engine's own `nCine::lerp` at every call site.</li>
+<li>`-mcpu=68060` <b>with</b> `-m68881`: the CPU flag alone means soft-float, which makes all float
+math libgcc calls and makes the hard-float libnix `libm` @m_span{m-text m-dim}
+(`libm020/libm881/libm.a`) @m_endspan return garbage from `fminf()`, `fmaxf()`, `rint()`,
+`nearbyint()`. @m_span{m-text m-dim} `-print-multi-directory` printing `.` for this combination is
+harmless. @m_endspan</li>
+<li>`-fno-optimize-sibling-calls` is required for correctness: binutils resolves tail calls to weak
+symbols to the wrong address. `-fno-weak` is not an alternative, it breaks linking of template statics
+such as `Vector2f::Zero`.</li>
+<li>`-std=gnu++17` is pinned because GCC 16 defaults to C++20, where `<math.h>` brings `std::lerp`
+into the global namespace and clashes with `nCine::lerp`.</li>
 </ul>
 
 @m_class{m-noindent}
 
-The toolchain also force-includes `cmake/toolchains/amiga-libstdc++-c99.h` into every C++ translation
-unit, the same arrangement the PlayStation 3 build uses: the m68k-amigaos libstdc++ is configured
-without `_GLIBCXX_USE_C99_MATH_TR1`, so `<cmath>` declares none of the C99 maths set inside `std::`
-even though the library provides it globally.
+It also force-includes `cmake/toolchains/amiga-libstdc++-c99.h` @m_span{m-text m-dim} (as on PS3)
+@m_endspan, because this libstdc++ lacks `_GLIBCXX_USE_C99_MATH_TR1` and `<cmath>` declares no C99 math
+in `std::`.
 
 @subsection amiga-content Preparing the content tree
 
-Unlike the consoles that play from read-only media, an Amiga has somewhere to write: `Source` and
-`Cache` are resolved next to the executable, so an original *Jazz Jackrabbit 2* installation copied
-into `Source` is converted on the machine on the first start, exactly as on the desktop. It is only
-<em>slow</em> --- the conversion decodes every animation, tileset and level and writes a compressed package
-out of them, which is minutes of work on a desktop CPU and a great deal more on a 68060 --- so the
-build is normally pointed at a **prebaked** tree produced once on the host with
-@ref asset-packer "AssetPacker" instead:
+`Source` and `Cache` sit next to the executable, so an original <em>Jazz Jackrabbit 2</em> copied into
+`Source` is converted on first start, but that is very slow on a 68060. Normally point the build at a
+tree prebaked on the host with @ref asset-packer "AssetPacker":
 
 @code{.sh}
 cmake -B ./build/amiga/ -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/amiga.cmake \
@@ -157,9 +114,8 @@ cmake -B ./build/amiga/ -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/amiga.cmake \
 
 @m_class{m-noindent}
 
-Point `NCINE_CONTENT_DIR` at the repository's `Content` directory instead and the build carries only
-the base assets --- the game then starts and shows the "content missing" message until an original
-installation is placed in `Source` next to it. Neither route has been timed on real hardware yet.
+With `NCINE_CONTENT_DIR` pointing at the repository's `Content` instead, only base assets are included
+and the game shows "content missing" until an original installation is placed in `Source`.
 
 @subsection amiga-build Building
 
@@ -174,34 +130,29 @@ cmake --build ./build/amiga/ --parallel $(nproc)
 
 @m_class{m-noindent}
 
-`AMIGA_INST` is the toolchain prefix, and it is checked before anything is configured: the toolchain
-file wants `$AMIGA_INST/bin/m68k-amigaos-gcc` and the NDK headers to be there, with zlib installed
-beside them @m_span{m-text m-dim} (see @ref amiga-toolchain) @m_endspan. The
-`AmigaOS 3.x` job in `.github/workflows/amiga.yml` is the same recipe end to end -- download the
-release, cross-compile zlib, configure, build -- if an unattended one is what is wanted.
+`AMIGA_INST` is the toolchain prefix; configure fails unless `$AMIGA_INST/bin/m68k-amigaos-gcc`, the
+NDK headers and zlib are there @m_span{m-text m-dim} (see @ref amiga-toolchain) @m_endspan. The
+`AmigaOS 3.x` job in `.github/workflows/amiga.yml` runs the same recipe unattended.
 
-The build stages `build/amiga/dist/`, which is the directory to copy to the Amiga: the `Jazz2`
-executable with its `Content/` tree next to it. `Jazz2.config` is written into that same directory,
-which is the conventional home of a program's settings on AmigaOS.
+Copy `build/amiga/dist/` to the Amiga. `Jazz2.config` is written into the same directory.
 
-Two notes specific to this target. **Link-time optimization is off** @m_span{m-text m-dim}
-(`NCINE_LINKTIME_OPTIMIZATION`) @m_endspan and Release compiles at `-O2` rather than `-O3`, for
-the same reason as the consoles: this is the least-tested compiler in the project and code size
-matters. And **threads are off** — there is no `std::thread` on m68k-amigaos — so everything,
-including audio decoding, runs on the main thread.
+<ul>
+<li>Link-time optimization is off @m_span{m-text m-dim} (`NCINE_LINKTIME_OPTIMIZATION`) @m_endspan and
+Release uses `-O2`, not `-O3`.</li>
+<li>Threads are off @m_span{m-text m-dim} (no `std::thread` on m68k-amigaos) @m_endspan: everything,
+including audio decoding, runs on the main thread.</li>
+</ul>
 
 @subsection amiga-deploy Deploying and running
 
-On real hardware, copy `dist/` anywhere on a hard drive and run the executable from a Shell or its
-icon. It opens its own screen and closes it on exit. The stack is set from the executable's own
-`__stack` cookie @m_span{m-text m-dim} (1 MB) @m_endspan, so no `Stack` command is needed, but a
-`Stack 1048576` before it does no harm if you start it from a script.
+Copy `dist/` anywhere on a hard drive and run it from a Shell or its icon; it opens its own screen. The
+1 MB stack comes from the executable's `__stack` cookie, so `Stack` isn't needed
+@m_span{m-text m-dim} (`Stack 1048576` in a script does no harm) @m_endspan.
 
-For development the port is exercised under **FS-UAE with AROS 68k**, whose open-source Kickstart
-replacement ships CyberGraphX and AHI:
+For development, use <b>FS-UAE with AROS 68k</b> (ships CyberGraphX and AHI):
 
 @code{.ini}
-# jazz2.fs-uae - AROS boots to Workbench in about ten seconds like this
+# jazz2.fs-uae
 amiga_model = A4000
 cpu = 68040
 jit_compiler = 0
@@ -212,40 +163,31 @@ hard_drive_1 = /path/to/jazz2/build/amiga/dist
 
 @m_class{m-block m-warning}
 
-@par AROS specifics that cost an afternoon each
-The AROS 68k ROM **hangs before video** with `cpu = 68060` and with the JIT enabled — use an
-emulated 68040 and `jit_compiler = 0`. Its `Startup-Sequence` never runs `AddAudioModes`, so the AHI
-mode database is empty and *nothing on the system can make a sound* until you add
-`C:AddAudioModes DEVS:AudioModes/PAULA` to `S/User-Startup` @m_span{m-text m-dim} (AmigaDOS patterns
-like `DEVS:AudioModes/#?` are not expanded for this command) @m_endspan. And FS-UAE's built-in
-`kickstart_file = internal` AROS is far too old for a current AROS installation to boot on.
+@par AROS pitfalls
+<ul>
+<li>The ROM hangs before video with `cpu = 68060` or the JIT on: use 68040 and `jit_compiler = 0`.</li>
+<li>No sound at all until you add `C:AddAudioModes DEVS:AudioModes/PAULA` to `S/User-Startup`
+@m_span{m-text m-dim} (patterns like `#?` don't work here) @m_endspan.</li>
+<li>FS-UAE's `kickstart_file = internal` AROS is too old to boot a current AROS installation.</li>
+</ul>
 
 @m_class{m-noindent}
 
-The game writes its log to standard output unbuffered, so redirecting it to a file on the emulated
-disk gives a complete trace even after a crash:
+The log goes to stdout unbuffered, so redirect it to keep a full trace across crashes. A
+`-DDEATH_DEBUG=ON` build also accepts `/level <episode>/<level>` to boot straight into a level:
 
 @code
 Jazz2:Jazz2 >Jazz2:jazz2-log.txt
-@endcode
-
-@m_class{m-noindent}
-
-A build configured with `-DDEATH_DEBUG=ON` also accepts `/level <episode>/<level>`, which boots
-straight into a level and is by far the fastest way to exercise the renderer:
-
-@code
 Jazz2:Jazz2 /level prince/01_castle1 >Jazz2:jazz2-log.txt
 @endcode
 
 @subsection amiga-presets Performance presets and autodetection
 
-There is no configuration to get right before the game starts. `AmigaPlatform::RunPerformanceProbe()`
-times a 16-bit blend loop and an FPU dependency chain at startup and picks one of four presets, which
-then drive the screen mode and the audio mixing rate:
+At startup `AmigaPlatform::RunPerformanceProbe()` times a 16-bit blend loop and an FPU chain and picks
+a preset:
 
-Preset | Pixel budget @m_span{m-text m-dim} (screen mode is chosen to fit) @m_endspan | Mixing rate
------- | ------------------------------------------------------------------------- | -----------
+Preset | Pixel budget | Mixing rate
+------ | ------------ | -----------
 `Ultra` | 640×512 | 44100 Hz
 `High` | 640×360 | 44100 Hz
 `Medium` | 384×300 | 22050 Hz
@@ -253,110 +195,70 @@ Preset | Pixel budget @m_span{m-text m-dim} (screen mode is chosen to fit) @m_en
 
 @m_class{m-noindent}
 
-The screen mode is not requested by number: the display database is searched for the RTG mode whose
-<em>logical</em> resolution @m_span{m-text m-dim} (the 720×405-clamped aspect fit the game renders at)
-@m_endspan is largest within the preset's pixel budget. That is why a 640×400 mode is chosen over a
-640×480 one where both exist — it yields more logical pixels for less work.
-
-Two environment variables override what the machine reports, which is what you want when bringing the
-port up on a new accelerator:
+The RTG mode chosen is the one with the largest <em>logical</em> resolution @m_span{m-text m-dim}
+(720×405-clamped aspect fit) @m_endspan within the budget, so 640×400 can win over 640×480. The probe
+prints `… ns/composited pixel, … ns/FPU multiply-add` to the log on every boot; under emulation use it
+only to compare two builds, never as an absolute figure.
 
 Variable | Effect
 -------- | ------
-`NCINE_PRESET` | `low`, `medium`, `high` or `ultra` — forces the preset instead of measuring it.
-`NCINE_NO_AMMX` | Set to anything to keep the scalar scanline kernels on an Apollo 68080. The AMMX kernels are written to be bit-identical to the scalar ones @m_span{m-text m-dim} (`SwBackendHarness` verifies that on hardware) @m_endspan, so this is a diagnostic, not a workaround anyone should need.
+`NCINE_PRESET` | `low`, `medium`, `high` or `ultra`: forces the preset.
+`NCINE_NO_AMMX` | Any value: use the scalar kernels on an Apollo 68080 @m_span{m-text m-dim} (diagnostic only; output is bit-identical) @m_endspan.
 
 @subsection amiga-limits Limits and known issues
 
 <ul>
-<li>**An FPU is required, and on a 68040/68060 so is its support library.** The binary is compiled
-for hardware floating point @m_span{m-text m-dim} (`-mcpu=68060 -m68881`) @m_endspan and the game's
-update loop is floating point throughout, so it exits with a message rather than trapping on a
-machine without an FPU at all. Neither the 68040 nor the 68060 implements the whole 68881 set in
-silicon, though --- `FMOVECR` and the extended-precision forms GCC emits are left to Motorola's FPSP
---- so `Libs:68040.library` @m_span{m-text m-dim} (resp. `68060.library`) @m_endspan has to be
-installed for `SetPatch` to load. Every accelerator ships it and Workbench 3.5/3.9 include it, but a
-bare Workbench 3.1 does **not**, and the symptom there is an immediate `Recoverable Alert
-0006 8881` rather than anything the game gets to report. The Apollo 68080 and Emu68 implement the
-instructions natively and need nothing.</li>
-<li>**RTG only.** There is no chunky-to-planar path, so an AGA-only machine cannot run this build.</li>
-<li>**No threads.** `WITH_THREADS` is off, so audio streaming decodes synchronously on the main
-thread and the multiplayer client/server are not built.</li>
-<li>**Music is libxmp, not libopenmpt.** libopenmpt's mixer is written for machines two orders of
-magnitude faster than a 68060. libxmp reads the original `.j2b` Galaxy modules directly, so the
-soundtrack needs no conversion - what it cannot read is **MO3**, so the four `.mo3` tracks are
-silent here @m_span{m-text m-dim} (the PSP shares both facts, see @ref consoles-psp-limits)
-@m_endspan. The library is downloaded and built by the CMake configure
-@m_span{m-text m-dim} (`cmake/Findlibxmp.cmake`) @m_endspan rather than vendored.</li>
-<li>**`ahi.device` implementations disagree about queueing.** The AHI autodocs describe a queue in
-which a request carrying `ahir_Link` starts the moment the one before it finishes -- AROS 68k's device
-accepts such a request and then never plays or replies to it, and it also stops servicing a queue
-that has run dry — which one long level-loading frame is enough to cause. The backend therefore
-measures linking at startup with two throwaway requests of its own and restarts a queue that has not
-retired anything for a second. Both mechanisms are inert on a device that behaves as documented -- the
-log line `Audio device initialized: …` states which mode is in use.</li>
-<li>**libnix does not ship every C99 function.** `exp2`, `exp2f`, `log2f`, `strnlen` and `wcstoul`
-are missing entirely and are defined in `Sources/nCine/Backends/Amiga/AmigaLibcCompat.c`, along with
-the POSIX entry points AmigaOS has no equivalent for @m_span{m-text m-dim} (`flock`, `fchmod`,
-`getpwuid`, `realpath`, `gethostname`) @m_endspan and `__xpg_strerror_r`, which libstdc++ references
-by name. What is *not* in that file any more is a replacement for `round`, `trunc`, `fmin`, `fmax`,
-`rint` or `nearbyint`: those returned garbage under the old soft-float flags and are correct as
-libnix ships them once the build is hard-float @m_span{m-text m-dim} (see @ref
-amiga-toolchain-flags) @m_endspan.</li>
-<li>**Emulator timings are worth exactly one thing: A/B comparisons.** FS-UAE interpreting a 68040
-runs gameplay at well under one frame per second, and its *absolute* numbers say nothing about a
-PiStorm --- but they are stable and they scale with the code, which is enough to compare two builds
-of the same thing. The startup probe is the instrument: it prints `… ns/composited pixel, …
-ns/FPU multiply-add` into the log on every boot, and the soft-float regression above was found by
-reading the second of those two numbers. Note that the integer figure it reports under emulation
-@m_span{m-text m-dim} (around 330 ns/pixel here) @m_endspan happens to land in the same band as a
-real 68060/50, while the emulated FPU does not --- so the two halves of that line are not comparable
-with each other. Anything that is not a comparison between two builds belongs on hardware.</li>
+<li><b>FPU required.</b> Without one the game exits with a message. On a 68040/68060 `Libs:68040.library`
+@m_span{m-text m-dim} (resp. `68060.library`) @m_endspan must be installed for `SetPatch`; bare
+Workbench 3.1 lacks it and fails with `Recoverable Alert 0006 8881`. The 68080 and Emu68 need
+nothing.</li>
+<li><b>RTG only</b>, no chunky-to-planar path.</li>
+<li><b>No threads</b> (`WITH_THREADS` off): audio streaming decodes on the main thread and multiplayer
+client/server aren't built.</li>
+<li><b>Music is libxmp</b> @m_span{m-text m-dim} (`cmake/Findlibxmp.cmake`) @m_endspan: it can't read
+MO3, so the four `.mo3` tracks are silent @m_span{m-text m-dim} (as on PSP, see
+@ref consoles-psp-limits) @m_endspan.</li>
+<li><b>`ahi.device` queueing differs</b> between implementations @m_span{m-text m-dim} (AROS 68k never
+plays `ahir_Link` requests and stalls a drained queue) @m_endspan. The backend detects linking at
+startup and restarts a queue idle for a second; the `Audio device initialized: …` log line shows the
+mode.</li>
+<li><b>libnix gaps</b>: `exp2`, `exp2f`, `log2f`, `strnlen`, `wcstoul`, `flock`, `fchmod`, `getpwuid`,
+`realpath`, `gethostname` and `__xpg_strerror_r` are provided by
+`Sources/nCine/Backends/Amiga/AmigaLibcCompat.c`. Don't add replacements for `round`, `trunc`, `fmin`,
+`fmax`, `rint` or `nearbyint`; libnix's are correct with hard-float
+@m_span{m-text m-dim} (see @ref amiga-toolchain-flags) @m_endspan.</li>
 </ul>
 
 @section amiga-os4 AmigaOS 4.1 (PowerPC)
 
-AmigaOS 4 needs no backend of its own: it has a maintained SDL2, so the window and input side is the
-SDL2 backend the desktop builds use. Audio is the engine's OpenAL backend, on the OpenAL Soft (with an
-AHI backend) that the toolchain image carries since October 2026 - linked statically like everything
-else, the SDK also has a `libopenal.so` that the build deliberately ignores. With an older image there
-is no OpenAL, and audio falls back to the `SDL` backend @m_span{m-text m-dim}
-(`Sources/nCine/Audio/Backends/SDL/`) @m_endspan - the same software mixer as the classic Amiga's,
-handing its blocks to `SDL_QueueAudio()` instead of to `ahi.device`. Configuring with
-`-D CMAKE_DISABLE_FIND_PACKAGE_OpenAL=ON` selects that fallback with the new image as well.
+Window and input use the desktop SDL2 backend. Audio is OpenAL Soft @m_span{m-text m-dim} (AHI
+backend, linked statically; the SDK's `libopenal.so` is ignored) @m_endspan when the toolchain image
+carries it @m_span{m-text m-dim} (images from October 2026 on) @m_endspan, otherwise the `SDL` backend
+@m_span{m-text m-dim} (`Sources/nCine/Audio/Backends/SDL/`, software mixer into `SDL_QueueAudio()`)
+@m_endspan. `-D CMAKE_DISABLE_FIND_PACKAGE_OpenAL=ON` forces the `SDL` fallback.
 
 @subsection amiga-os4-gl Hardware rendering through MiniGL
 
-The renderer is the `LegacyGL` backend on **MiniGL**, the SDK's fixed-function OpenGL over Warp3D
-@m_span{m-text m-dim} (`libGL.a` plus `minigl.library` -- SDL2's own `SDL_opengl.h` includes its headers
-on this platform) @m_endspan. It is the same backend MorphOS uses for TinyGL, so
-@ref amiga-morphos-gl describes what it does -- two things differ here:
+The renderer is `LegacyGL` on <b>MiniGL</b> @m_span{m-text m-dim} (`libGL.a` + `minigl.library`)
+@m_endspan, the same backend as MorphOS (see @ref amiga-morphos-gl), with two differences:
 
 <ul>
-<li>**MiniGL has the texture combiners** it needs - it advertises `GL_EXT_texture_env_combine`, whose
-enumerants are the ARB ones under `_EXT` names @m_span{m-text m-dim} (`GL_COMBINE_EXT` is `GL_COMBINE`
-is `0x8570`) @m_endspan - but it has **no framebuffer objects at all**, not even entry points to call.
-So the render-target path is not probed here the way it is on TinyGL: the copy-back form is compiled
-in and the framebuffer-object one is compiled out (`RHI_LEGACYGL_HAS_FBO` in `LegacyGlApi.h`).</li>
-<li>**Mirrored repeat is not offered**, so that wrap mode degrades to a plain repeat rather than being
-sent to a driver that would answer `GL_INVALID_ENUM` and leave the sampler as it was.</li>
+<li>MiniGL has `GL_EXT_texture_env_combine` but <b>no framebuffer objects</b>, so the copy-back
+render-target path is compiled in and FBOs compiled out @m_span{m-text m-dim}
+(`RHI_LEGACYGL_HAS_FBO` in `LegacyGlApi.h`) @m_endspan.</li>
+<li>No mirrored repeat: that wrap mode degrades to plain repeat.</li>
 </ul>
 
 @m_class{m-noindent}
 
-The other road to this hardware is Warp3D Nova's **ogles2.library**, which the engine's ES2 profile
-@m_span{m-text m-dim} (`NCINE_RHI_GL_PROFILE=ES2` - the one the PS Vita's vitaGL build uses) @m_endspan
-would match - that would be the *shader* pipeline rather than this fixed-function one. What is missing
-is not engine support but the SDK: it carries no GLES2 headers or link library for it. `Software`
-remains selectable @m_span{m-text m-dim} (`-D NCINE_PREFERRED_RHI=Software`) @m_endspan for a machine
-with no 3D driver installed -- the CPU on these machines is PC-class, so it is a real option rather than
-a compromise.
+Warp3D Nova's `ogles2.library` would fit the ES2 profile @m_span{m-text m-dim}
+(`NCINE_RHI_GL_PROFILE=ES2`) @m_endspan, but the SDK has no GLES2 headers or link library for it. Use
+`-D NCINE_PREFERRED_RHI=Software` on a machine with no 3D driver.
 
 @subsection amiga-os4-build Toolchain and building
 
-The cross-compiler is **adtools** @m_span{m-text m-dim} (`ppc-amigaos-gcc` 11.5) @m_endspan together
-with the AmigaOS 4.1 SDK. Both come in one maintained container image, so nothing has to be
-installed - run the build inside it with the repository mounted at its own path:
+adtools @m_span{m-text m-dim} (`ppc-amigaos-gcc` 11.5) @m_endspan and the AmigaOS 4.1 SDK come in one
+container image; mount the repository at its own path:
 
 @code{.sh}
 docker run --rm -v "$PWD:$PWD" -w "$PWD" docker.io/walkero/amigagccondocker:os4-gcc11 bash -lc '
@@ -367,49 +269,35 @@ docker run --rm -v "$PWD:$PWD" -w "$PWD" docker.io/walkero/amigagccondocker:os4-
 
 @m_class{m-noindent}
 
-@m_span{m-text m-dim} (Podman takes the same arguments -- add `--security-opt label=disable` where
-SELinux is enforcing.) @m_endspan The toolchain file expects the adtools prefix at the container's
-`/opt/ppc-amigaos` -- set `OS4_INST` to build against a host installation instead. Either way the
-result is staged into `build/os4/dist/` - the `Jazz2` executable next to its `Content/` tree, copied
-to the machine as it is. The executable is stripped on the way: this toolchain leaves DWARF in even
-in a Release build, which is two thirds of its size.
-
-The same two commands run in CI, in the container job of `.github/workflows/amiga.yml`.
+<ul>
+<li>Podman takes the same arguments; add `--security-opt label=disable` under enforcing SELinux.</li>
+<li>The adtools prefix defaults to `/opt/ppc-amigaos`; set `OS4_INST` to use a host installation.</li>
+<li>Output: `build/os4/dist/` @m_span{m-text m-dim} (`Jazz2` + `Content/`, stripped) @m_endspan.</li>
+<li>CI: the container job in `.github/workflows/amiga.yml`.</li>
+</ul>
 
 @subsection amiga-os4-limits What differs from a desktop build
 
 <ul>
-<li>**No online multiplayer.** The bsdsocket stack here is IPv4-only - there is no `<netinet/in6.h>`
-and no `struct in6_addr` in the SDK - while the bundled ENet is built around IPv6 addresses with
-IPv4-mapped ones inside them. The WebSocket transport is out for a smaller reason: IXWebSocket
-includes `<poll.h>`, and the SDK has none @m_span{m-text m-dim} (the OS offers `select()` and
-`WaitSelect()`) @m_endspan. Local splitscreen is unaffected.</li>
-<li>**Threads are on**, unlike the classic Amiga and MorphOS, but the engine's synchronisation layer
-calls the pthread API directly and this toolchain's `-athread=pthread` flavour cannot be used - its
-`gthr-amigaos-pthread.o` is not shipped. The build therefore uses `-athread=native` for the compiler's
-gthreads and links the SDK's own `libpthread`. Thread affinity, thread names, barriers and
-`pthread_kill()` are all missing from that library, so those paths are compiled out.</li>
-<li>**`libatomic` is linked explicitly**: this is a 32-bit PowerPC, so a 64-bit atomic load is a
-library call rather than an instruction.</li>
-<li>**`-Uamiga`** is part of the machine flags. The compiler predefines both `AMIGA` and a lowercase
-`amiga`, the way ancient compilers predefined `unix`, and the lowercase one breaks any C++ with an
-identifier of that name - libopenmpt has `common_encoding::amiga`.</li>
+<li><b>No online multiplayer</b>: the SDK's bsdsocket has no IPv6 (ENet needs it) and no `<poll.h>`
+(IXWebSocket needs it). Local splitscreen works.</li>
+<li><b>Threads are on</b>, using `-athread=native` + the SDK's `libpthread`
+@m_span{m-text m-dim} (`-athread=pthread` can't be used: `gthr-amigaos-pthread.o` isn't shipped)
+@m_endspan. Thread affinity, names, barriers and `pthread_kill()` are compiled out.</li>
+<li>`libatomic` is linked explicitly for 64-bit atomics on 32-bit PowerPC.</li>
+<li>Keep `-Uamiga` in the machine flags: the predefined lowercase `amiga` macro breaks identifiers such
+as libopenmpt's `common_encoding::amiga`.</li>
 </ul>
 
 @section amiga-morphos MorphOS (PowerPC)
 
-MorphOS is built the same way as AmigaOS 4 - SDL2 for window and input, the `SDL` audio backend (its
-SDK has no OpenAL), and
-the same `LegacyGL` renderer on the system's own fixed-function OpenGL @m_span{m-text m-dim}
-(@ref amiga-morphos-gl) @m_endspan - with a different toolchain and a different set of system quirks.
-What TinyGL does not have is shaders, which is why that backend is a fixed-function one rather than the
-engine's OpenGL backend.
+Same setup as AmigaOS 4: SDL2 window/input, `SDL` audio and `LegacyGL` on TinyGL
+@m_span{m-text m-dim} (@ref amiga-morphos-gl) @m_endspan, with a different toolchain and its own quirks.
 
 @subsection amiga-morphos-build Toolchain and building
 
-The MorphOS SDK @m_span{m-text m-dim} (`ppc-morphos-gcc` 11.3, at `/gg`) @m_endspan comes as a
-container image as well. One thing has to be built before the game itself: the SDK ships **no zlib**,
-and the game cannot run without it @m_span{m-text m-dim} (`PakFile`) @m_endspan.
+The MorphOS SDK @m_span{m-text m-dim} (`ppc-morphos-gcc` 11.3, at `/gg`) @m_endspan is a container
+image too. It ships <b>no zlib</b>, which the game requires, so build it first:
 
 @code{.sh}
 docker run --rm -v "$PWD:$PWD" -w "$PWD" -e MORPHOS_DEPS=/tmp/morphos-deps \
@@ -427,31 +315,21 @@ docker run --rm -v "$PWD:$PWD" -w "$PWD" -e MORPHOS_DEPS=/tmp/morphos-deps \
 
 @m_class{m-noindent}
 
-`MORPHOS_DEPS` is where the toolchain file looks for cross-compiled dependencies -- `MORPHOS_SDK`
-points at an SDK somewhere other than `/gg`. The result is staged into `build/morphos/dist/`, and
-`.github/workflows/amiga.yml` runs these same steps in CI.
+`MORPHOS_DEPS` is where the toolchain file finds cross-compiled dependencies; `MORPHOS_SDK` points at
+an SDK outside `/gg`. Output goes to `build/morphos/dist/`; CI runs the same steps in
+`.github/workflows/amiga.yml`.
 
-@m_class{m-block m-info}
+For OpenAL audio, cross-compile BSzili's openal-soft port @m_span{m-text m-dim} (from its sources on
+MorphOS Storage, not the prebuilt library, which targets an older C runtime) @m_endspan into
+`MORPHOS_DEPS` before configuring; otherwise the `SDL` backend is used.
 
-@par Audio: OpenAL where it is installed, SDL otherwise
-The MorphOS SDK ships no OpenAL, and unlike zlib it is optional: the build looks for one and falls
-back to the `SDL` audio backend @m_span{m-text m-dim} (the software mixer feeding `SDL_QueueAudio()`)
-@m_endspan when there is none, which is what the CI build gets. To use OpenAL instead, cross-compile
-BSzili's port of openal-soft @m_span{m-text m-dim} (its AHI backend -- on MorphOS Storage, and its own
-sources rather than the prebuilt library, which was linked against an older C runtime) @m_endspan
-into the same `MORPHOS_DEPS` prefix before configuring.
+@subsection amiga-morphos-run Running it
 
-@subsection amiga-morphos-run Running it, and what has to be installed first
+Install <b>`sdl2.library`</b> into `LIBS:` @m_span{m-text m-dim} ("SDL 2.32.11 Libraries" on MorphOS
+Storage) @m_endspan; the SDK's `libSDL2.a` is only a stub and without the library the loader stops the
+game before `main()`. No TCP/IP stack is needed.
 
-MorphOS ships no SDL2 - the SDK's `libSDL2.a` is a stub that opens **`sdl2.library`** at load time, and
-that library is a separate download @m_span{m-text m-dim} ("SDL 2.32.11 Libraries" on MorphOS Storage,
-which also carries sdl2_image/mixer/ttf) @m_endspan. Without it in `LIBS:` the game does not start at
-all: the loader puts up a requester before `main()` runs. Nothing else has to be installed - the port
-deliberately does not depend on a TCP/IP stack @m_span{m-text m-dim} (see the note about
-bsdsocket.library below) @m_endspan.
-
-The port can be tested without MorphOS hardware, because QEMU emulates the Pegasos II that MorphOS
-runs on, and its built-in open firmware boots the MorphOS ISO directly:
+Without hardware, QEMU's Pegasos II boots the MorphOS ISO:
 
 @code{.sh}
 # boot.img is extracted from the top level of the MorphOS ISO
@@ -461,26 +339,18 @@ qemu-system-ppc -machine pegasos2 -m 1024 -rtc base=localtime     -device ati-vg
 @m_class{m-block m-info}
 
 @par Driving it headlessly
-Add `-display none -serial file:serial.log -qmp unix:qmp.sock,server,nowait` and the machine can be
-run entirely from scripts: `screendump` over QMP takes screenshots, and the game's own log reaches
-`serial.log` if it is started with its output redirected to `DEBUG:`, which MorphOS routes to the
-serial port. Two things are worth knowing before trying it. The live CD stops at a first-boot
-language requester that is put up by `IPrefs`, and *nothing after that point in the startup-sequence
-runs until it is answered* - so an automated test has to hook itself in **before** `IPrefs`, where
-`LIBS:` and `FONTS:` are not assigned yet and have to be assigned by hand. And a remastered ISO is
-only recognised as bootable if its **System Id** is `MORPHOS` @m_span{m-text m-dim} (`xorriso -as
-mkisofs -sysid MORPHOS -V MorphOSBoot …`) @m_endspan.
+Add `-display none -serial file:serial.log -qmp unix:qmp.sock,server,nowait`; take screenshots with
+QMP `screendump`, and start the game with output redirected to `DEBUG:` to get its log in
+`serial.log`. The live CD blocks on an `IPrefs` language requester, so automation must hook in before
+`IPrefs` and assign `LIBS:` and `FONTS:` by hand. A remastered ISO only boots with System Id `MORPHOS`
+@m_span{m-text m-dim} (`xorriso -as mkisofs -sysid MORPHOS -V MorphOSBoot …`) @m_endspan.
 
 @subsection amiga-morphos-gl Hardware rendering through TinyGL
 
-MorphOS' 3D interface is **TinyGL** @m_span{m-text m-dim} (`tinygl.library`, part of the system on
-machines whose graphics card it supports - Radeon, Voodoo, Permedia) @m_endspan. It is an OpenGL 1.x
-with the 1.3 texture combiners, framebuffer objects and vertex arrays, and no programmable stage at
-all. That is exactly the shape the game's console backends target, so it is served by a backend of the
-same family rather than by the engine's OpenGL one:
-
-It is the default on both PowerPC Amigas, so an ordinary build already uses it -- the CPU rasterizer is
-one option away for a machine whose graphics card has no 3D driver:
+<b>TinyGL</b> @m_span{m-text m-dim} (`tinygl.library`, on Radeon, Voodoo and Permedia cards) @m_endspan
+is OpenGL 1.x with 1.3 combiners, FBOs and vertex arrays but no shaders. `LegacyGL`
+@m_span{m-text m-dim} (`Sources/nCine/Graphics/RHI/LegacyGL/`) @m_endspan is the default on both
+PowerPC Amigas; for a card without a 3D driver use the CPU rasterizer:
 
 @code{.sh}
 cmake -B ./build/morphos/ -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/morphos.cmake \
@@ -489,104 +359,61 @@ cmake -B ./build/morphos/ -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/morphos.cma
 
 @m_class{m-noindent}
 
-`LegacyGL` @m_span{m-text m-dim} (`Sources/nCine/Graphics/RHI/LegacyGL/`) @m_endspan is a
-fixed-function backend in the same sense as the Dreamcast's PowerVR or the PSP's GE one: it consumes
-the same transpiled `fixed_function` effect tables @m_span{m-text m-dim}
-(`Shaders/Generated/LegacyGlGeneratedEffects.h`) @m_endspan and expresses each effect's texture stage
-as a `GL_COMBINE` program, so the game runs the *direct tier* - the scene goes straight to the display
-at the logical resolution and the CPU lightmap is composited by the device instead of a shader pass.
-Three things about it are worth knowing:
+Like the Dreamcast and PSP backends, it uses the transpiled `fixed_function` effects
+@m_span{m-text m-dim} (`Shaders/Generated/LegacyGlGeneratedEffects.h`) @m_endspan as `GL_COMBINE`
+programs and runs the <em>direct tier</em>: the scene goes straight to the display at logical
+resolution with the CPU lightmap composited by the device.
 
 <ul>
-<li>**Indexed textures are baked, not palettised.** The consoles resolve an index through hardware
-@m_span{m-text m-dim} (CLUT, TLUT, palette bank) @m_endspan -- legacy GL has no such thing left
-@m_span{m-text m-dim} (`GL_EXT_paletted_texture` is gone from every driver and TinyGL never had it)
-@m_endspan, so every indexed image is baked through its palette row into RGBA8 before it is
-uploaded.</li>
-<li>**Textures are padded to powers of two where the GL insists on them.** Sampling a
-non-power-of-two texture is a GL 2.0 feature, so both that and `GL_MAX_TEXTURE_SIZE` are probed at
-startup @m_span{m-text m-dim} (the reported limit is capped at 2048 - a desktop driver answers 16384,
-which is not a size anything here should build) @m_endspan. Tileset atlases are laid out 15 tiles to a
-row and chunked 512 texels tall, exactly as on the fixed-function consoles, so a chunk is one texture
-whether or not the padding applies -- anything larger that is prebaked is split into pages internally
-rather than rejected. `NCINE_NO_NPOT` in the environment forces the padded path.</li>
-<li>**Render targets prefer a framebuffer object and fall back to copying.** Whether FBOs work is
-probed at startup rather than assumed - TinyGL declares the entry points unconditionally - and where
-they do not, an off-screen pass is drawn into the back buffer and lifted into its texture with
-`glCopyTexSubImage2D()`, which is a GL 1.1 operation. Setting `NCINE_NO_FBO` in the environment forces
-that path, which is how it can be exercised on a desktop.</li>
+<li><b>Indexed textures are baked</b> through their palette row into RGBA8 before upload
+@m_span{m-text m-dim} (no `GL_EXT_paletted_texture`) @m_endspan.</li>
+<li><b>Power-of-two padding</b> is used where NPOT isn't supported; NPOT support and
+`GL_MAX_TEXTURE_SIZE` @m_span{m-text m-dim} (capped at 2048) @m_endspan are probed at startup. Tileset
+atlases are 15 tiles wide in 512-texel chunks; larger prebaked textures are split into pages.
+`NCINE_NO_NPOT` forces padding.</li>
+<li><b>Render targets</b> use an FBO if one works at startup, otherwise draw into the back buffer and
+copy with `glCopyTexSubImage2D()`. `NCINE_NO_FBO` forces the copy path.</li>
 </ul>
 
 @m_class{m-block m-warning}
 
 @par Not runnable under emulation
-The `LegacyGL` build does **not** start under the QEMU setup described above, and cannot be made to:
-QEMU's ATI card fails its DMA/CCE initialization @m_span{m-text m-dim} (`Radeon: Failed to initialise
-Radeon DMA` on the boot console) @m_endspan and `tinygl.library` is then not available at all - a
-program that needs it is stopped by the loader with a requester before `main()`. So the default build
-cannot be tested there: **build with `-D NCINE_PREFERRED_RHI=Software` for the emulator**, which is
-also the configuration that has actually been run on this system. The `LegacyGL` backend itself is
-developed and verified against a desktop OpenGL, where a compatibility context runs the very same 1.3
-combiner pipeline @m_span{m-text m-dim} (`cmake -DNCINE_PREFERRED_RHI=LegacyGL` on Linux/Windows)
-@m_endspan.
+`LegacyGL` can't start under QEMU: the emulated ATI card fails `Radeon DMA` init, so `tinygl.library`
+is unavailable and the loader stops the program. <b>Build with `-D NCINE_PREFERRED_RHI=Software` for
+the emulator.</b> To develop `LegacyGL` itself, use `cmake -DNCINE_PREFERRED_RHI=LegacyGL` on desktop
+Linux/Windows, which runs the same combiner pipeline.
 
 @subsection amiga-morphos-limits What differs from a desktop build
 
-The MorphOS SDK's headers are the C-era Amiga ones, and three of their habits collide with a modern
-C++ codebase. All three are handled in `cmake/toolchains/morphos.cmake` and
-`cmake/toolchains/morphos-compat.h`, and they are worth knowing before touching that file:
+The SDK's old Amiga headers clash with C++; the workarounds live in `cmake/toolchains/morphos.cmake`
+and `cmake/toolchains/morphos-compat.h`:
 
 <ul>
-<li>**The `ppcinline` headers turn OS calls into function-like macros**, and some of those names are
-ordinary C++ identifiers. `bind` is the fatal one: `<unistd.h>` pulls in `proto/socket.h`
-@m_span{m-text m-dim} (zlib.h includes `<unistd.h>`, so this reaches almost every file) @m_endspan and
-the macro then rewrites `std::bind` inside libstdc++'s own `<functional>`. The build defines
-`_NO_PPCINLINE`, which keeps the prototypes and drops the macros, and force-includes
-`morphos-compat.h` for what that leaves undeclared @m_span{m-text m-dim} (`FD_ZERO` expands to
-`bzero`) @m_endspan.</li>
-<li>**`proto/exec.h` and `proto/usergroup.h` put `struct Task` in the global namespace**, which is
-also the name of the engine's coroutine type - every unqualified `Task<...>` in the game then becomes
-ambiguous. Both are skipped by defining their include guards -- `FindTask()`, which `getpid()` is a
-macro over, is declared by hand in `morphos-compat.h` with an opaque return type so that `Task` stays
-out of the global namespace.</li>
-<li>**Threads are off** for the same reason, and this one cannot be worked around: MorphOS's
-`<pthread.h>` includes `<exec/semaphores.h>`, so merely using pthreads brings `struct Task` back. The
-port runs single-threaded, exactly like the classic Amiga - SDL2's own headers are clean, so nothing
-else is affected.</li>
-<li>**`INT32_MIN` and friends** are still behind `__STDC_LIMIT_MACROS` here, the pre-C++11 rule, so
-the toolchain asks for them explicitly.</li>
-<li>`realpath()`, `fsync()`, `flock()` and `wcstoul()` are declared by the C library and implemented
-by none of it -- the first three are compiled out and `wcstoul` is provided in
-`Sources/nCine/Backends/MorphOS/MorphOSLibcCompat.cpp`, along with a definition of libstdc++'s
-`__throw_bad_array_new_length` @m_span{m-text m-dim} (GCC 11 emits calls to it, the SDK's libstdc++
-predates it) @m_endspan.</li>
-<li>**TinyGL is reached through two globals in the program**, `TinyGLBase` and `__tglContext`, because
-the SDK's `gl*` names are macros that read them @m_span{m-text m-dim} (`GLFoo(__tglContext, …)`, the
-library base supplying the call vector) @m_endspan. sdl2.library cannot fill them in - it is a shared
-library and they live in the program - so the `LegacyGL` build does it: the link asks for the SDK's
-own TinyGL initializer by name @m_span{m-text m-dim} (`-u _CSTP_init_TinyGLBase`, which nothing would
-otherwise pull out of `libGL.a` because SDL2's glue already declares the same global) @m_endspan, and
-`Sources/nCine/Backends/MorphOS/MorphOSTinyGl.cpp` points `__tglContext` at the context
-`SDL_GL_CreateContext()` returned.</li>
-<li>**`gethostname()` and `getpwuid()` are not called here**, and neither is libcurl linked. All three
-reach `bsdsocket.library` or `usergroup.library`, and a *reference* to one of those is enough for the
-loader to open it before the program starts - so a machine with no TCP/IP stack running would refuse
-to start the game, over a host name that only decorates a log line. The update check goes with them --
-online multiplayer is off here anyway.</li>
+<li><b>`_NO_PPCINLINE` is defined</b> because the `ppcinline` macros (e.g. `bind`) rewrite
+`std::bind` in libstdc++; `morphos-compat.h` declares what that leaves out @m_span{m-text m-dim}
+(e.g. `bzero` for `FD_ZERO`) @m_endspan.</li>
+<li><b>`proto/exec.h` and `proto/usergroup.h` are skipped</b> via their include guards, since their
+global `struct Task` makes the engine's `Task<...>` ambiguous; `FindTask()` (for `getpid()`) is
+declared by hand with an opaque return type.</li>
+<li><b>Threads are off</b>: `<pthread.h>` brings `struct Task` back, so the port is single-threaded.</li>
+<li>`__STDC_LIMIT_MACROS` is defined to get `INT32_MIN` and friends.</li>
+<li>`realpath()`, `fsync()` and `flock()` are compiled out; `wcstoul` and
+`__throw_bad_array_new_length` are provided in `Sources/nCine/Backends/MorphOS/MorphOSLibcCompat.cpp`.</li>
+<li><b>TinyGL globals</b> `TinyGLBase` and `__tglContext` must live in the program: the link forces
+`-u _CSTP_init_TinyGLBase`, and `Sources/nCine/Backends/MorphOS/MorphOSTinyGl.cpp` points
+`__tglContext` at the `SDL_GL_CreateContext()` context.</li>
+<li><b>No `gethostname()`, `getpwuid()` or libcurl</b>: any reference to `bsdsocket.library` or
+`usergroup.library` would stop the game from starting without a TCP/IP stack. So there is no update
+check, and no online multiplayer.</li>
 </ul>
 
 @m_class{m-block m-warning}
 
-@par What has been run, and what has not
-<b>MorphOS has been run</b>: under QEMU as described above it boots, loads its content from the CD, opens
-its SDL2 window, initializes the SDL audio backend at 44.1 kHz and renders the menu correctly - all of
-that with the `Software` renderer, which is what the emulator can run. `LegacyGL`, the default on both
-PowerPC Amigas, builds and links for both and is verified against a desktop OpenGL, but **neither
-system has run it**: MorphOS cannot start it under emulation at all @m_span{m-text m-dim} (see
-@ref amiga-morphos-gl) @m_endspan, and **AmigaOS 4 has not been run at all** - that needs AmigaOS 4.1
-itself, which is commercial software that is not available here @m_span{m-text m-dim} (QEMU's
-`sam460ex` and `amigaone` machines can run it, given the install media) @m_endspan. Treat both
-PowerPC halves as ready to test rather than tested.
+@par Test status
+MorphOS with `Software` runs under QEMU @m_span{m-text m-dim} (content, SDL2 window, 44.1 kHz audio,
+menu) @m_endspan. `LegacyGL` builds for both PowerPC systems and is verified on desktop OpenGL, but has
+not run on either. AmigaOS 4 has not been run at all @m_span{m-text m-dim} (QEMU's `sam460ex`/`amigaone`
+can, given the commercial install media) @m_endspan. Treat both PowerPC ports as untested.
 
 */
 

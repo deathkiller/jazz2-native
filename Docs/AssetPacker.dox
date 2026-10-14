@@ -8,32 +8,27 @@ namespace Jazz2 {
 
 @m_class{m-noindent}
 
-AssetPacker is a standalone command-line tool in @cpp "Sources/Utilities/AssetPacker" @ce that
-converts original Jazz Jackrabbit 2 data into the layout a given platform loads. The game
-performs the same conversion on its first run @m_span{m-text m-dim} (see
-`GameEventHandler::RefreshCache`, which forwards to the shared
-@ref Jazz2::Compatibility::AssetConverter driver) @m_endspan, and that stays the second,
-in-game way of doing it. This tool exists so the data can be prepared **ahead of time** ---
-for the platforms that cannot convert anything themselves @m_span{m-text m-dim} (the consoles
-and the web build) @m_endspan, and for build pipelines.
+AssetPacker (@cpp "Sources/Utilities/AssetPacker" @ce) is a standalone command-line tool that converts
+the original Jazz Jackrabbit 2 data into the layout a given platform loads. The game does the same
+conversion on its first run @m_span{m-text m-dim} (`GameEventHandler::RefreshCache`, which forwards to
+@ref Jazz2::Compatibility::AssetConverter) @m_endspan; the tool prepares the data <b>ahead of time</b>
+for platforms that cannot convert it themselves (the consoles and the web build) and for build pipelines.
 
-Beside the full conversion it offers several single-file commands: packing and unpacking
-bitmap fonts (see @ref Jazz2::UI::FontFormat), making the indexed font images editable, and
-re-encoding `.j2v` cinematics into the game's own @ref Jazz2::VideoFormat container.
+It also packs and unpacks bitmap fonts (@ref Jazz2::UI::FontFormat), makes indexed font images
+editable, and re-encodes `.j2v` cinematics into the game's own @ref Jazz2::VideoFormat.
 
 @section asset-packer-building Building the tool
 
-The tool is built by default as part of the desktop CMake build (`NCINE_BUILD_ASSET_PACKER`,
-default @cpp ON @ce) and skipped for cross-compiled targets, except for its web version below.
-It links only the base layer and the original-data converters, deliberately not the engine, so it
-has no renderer, no window backend and no networking. After a regular @ref building "desktop build"
-the binary is at @cpp "build/Utilities/AssetPacker/AssetPacker" @ce. With `NCINE_BUILD_GAME` turned
-off, the game is left out and only the offline tools are built.
-
-With Emscripten, that builds the tool's web version: a WebAssembly module with the repository's
-`Content` baked in, and a page that swaps the content of a Nintendo 64, Dreamcast, PlayStation 2 or
-GameCube image in the browser from the user's own copy of the original game (`swap-content --source=`,
-see @ref asset-packer-swap-content):
+-   Built by default with the desktop CMake build (`NCINE_BUILD_ASSET_PACKER`, default @cpp ON @ce),
+    skipped for cross-compiled targets except the web version below. It links only the base layer and
+    the converters --- no renderer, window backend or networking.
+-   After a regular @ref building "desktop build" the binary is
+    @cpp "build/Utilities/AssetPacker/AssetPacker" @ce. `NCINE_BUILD_GAME=OFF` builds only the
+    offline tools.
+-   With Emscripten it builds the web version: a WebAssembly module with the repository's `Content`
+    baked in and a page that swaps the content of a Nintendo 64, Dreamcast, PlayStation 2 or GameCube
+    image in the browser, using the user's own copy of the original game
+    (`swap-content --source=`, see @ref asset-packer-swap-content):
 
 @code{.sh}
 emcmake cmake -S . -B build/assetpacker-web -G Ninja -D CMAKE_BUILD_TYPE=Release -D NCINE_BUILD_GAME=OFF
@@ -42,9 +37,9 @@ cmake --build build/assetpacker-web
 
 @m_class{m-noindent}
 
-The build directory's `Utilities/AssetPacker` then holds the whole site, see
-@cpp "Sources/Utilities/AssetPacker/Web/README.md" @ce for how it is deployed. The Emscripten
-workflow builds it as well and publishes the site as the `Jazz2_AssetPacker_Web` artifact.
+The build directory's `Utilities/AssetPacker` then holds the whole site; deployment is described in
+@cpp "Sources/Utilities/AssetPacker/Web/README.md" @ce. The Emscripten workflow publishes it as the
+`Jazz2_AssetPacker_Web` artifact.
 
 @section asset-packer-usage Command-line reference
 
@@ -54,309 +49,199 @@ AssetPacker [<command>] [<source>] <target> [options]
 
 @m_class{m-noindent}
 
-The command may be omitted, in which case `convert` is assumed:
+Without a command, `convert` is assumed.
 
 -   `convert [<source directory>] <target directory>` --- Converts the original game data
-    -   `<source directory>` --- Directory containing the original game files (`Anims.j2a`,
-        `*.j2l`, `*.j2t`, ...), or a game installation that keeps them in a `Source`
-        subdirectory --- in which case its `Content` is copied to the target as well. May be
-        given as `--source=` instead, which leaves `<target directory>` the only positional
-        argument
-    -   `<target directory>` --- Directory the converted data is written to (created if needed)
-    -   `--source=<dir>` --- The same directory as `<source directory>`, named explicitly.
-        Giving both is an error rather than an override, since they name the same thing
-    -   `--content=<dir>` --- Directory holding the game's own content --- the fonts,
-        `Animations`, `Metadata` and translations that are not derived from the original data,
-        which is the repository's `Content`. Overrides one found beside the originals, and is
-        what makes a console or web tree self-contained when the two halves are not kept
-        together @m_span{m-text m-dim} (which outside a game installation they usually are
-        not) @m_endspan
-    -   `--target=<profile>` --- `desktop` (default) | `console` | `dreamcast` | `wii` |
-        `gamecube` | `psp` | `ps2` | `n64` | `emscripten` (or `web`)
-    -   `--n64-tools=<dir>` --- Where libdragon's host tools are (the toolchain prefix or its `bin`),
-        for `--target=n64`; defaults to `$N64_INST`, and without them the encoders built into the tool
-        are used. `builtin` uses those even where libdragon's tools are installed. See
-        @ref asset-packer-n64
-    -   `--video-downscale=N` --- Downscale cinematics by N (1--4), 1 keeps them at their
-        original size. Cinematics are re-encoded for `dreamcast`, `gamecube` and `ps2` (or any N > 1) and
-        otherwise copied unchanged, `desktop` gets none, as the game reads the originals.
-        A smaller video is filtered down and gets palettes of its own (see
-        @ref asset-packer-cinematics-format). Defaults to what the profile asks for --- 2 for
-        `ps2`, which draws it smoothly upscaled --- and to 1 everywhere else
+    -   `<source directory>` --- The original game files (`Anims.j2a`, `*.j2l`, `*.j2t`, ...), or a
+        game installation keeping them in a `Source` subdirectory, in which case its `Content` is
+        copied too
+    -   `<target directory>` --- Output directory, created if needed
+    -   `--source=<dir>` --- Same as `<source directory>`; giving both is an error
+    -   `--content=<dir>` --- The game's own content (fonts, `Animations`, `Metadata`, translations ---
+        the repository's `Content`). Overrides a `Content` found beside the originals; needed for a
+        self-contained console or web tree when the two are not kept together
+    -   `--target=<profile>` --- `desktop` (default) \| `console` \| `dreamcast` \| `wii` \|
+        `gamecube` \| `psp` \| `ps2` \| `n64` \| `emscripten` (or `web`)
+    -   `--n64-tools=<dir>` --- libdragon's host tools (the toolchain prefix or its `bin`) for
+        `--target=n64`; defaults to `$N64_INST`, falls back to the built-in encoders, and `builtin`
+        forces them. See @ref asset-packer-n64
+    -   `--video-downscale=N` --- Downscale cinematics by N (1--4, 1 keeps the original size).
+        Defaults to 2 for `ps2` and 1 elsewhere. See @ref asset-packer-cinematics
     -   `--originals-only` --- Convert only the episodes and levels the original game shipped
     -   `--shareware-only` --- Convert only what the Shareware Demo shipped
         @m_span{m-text m-dim} (implies `--originals-only`) @m_endspan
     -   `--all-videos` --- Deploy every cinematic found, not just the two the game plays
     -   `--skip-non-episode-levels` --- Convert only levels that belong to an episode
--   `pack-font <source .png> <target .font>` --- Packs a grid image and the character list
-    next to it into a single file. The list is read from `<source .png>.json`, or from the
-    binary `<source .png>.font` if there is no JSON next to the image
--   `unpack-font <source .font> <target .png>` --- Unpacks a font back into a grid image and
-    a character list, ready to be edited and packed again. The list is written both as
-    `<target .png>.json`, which is the one to edit, and as the binary `<target .png>.font`
--   `apply-palette <source .png> <target .png>` --- Replaces the palette indices of an image
-    with the colors they stand for, so it can be edited
--   `to-indices <source .png> <target .png>` --- Resolves the colors of an edited image back
-    to the nearest palette indices
+-   `pack-font <source .png> <target .font>` --- Packs a grid image and its character list (read
+    from `<source .png>.json`, or from the binary `<source .png>.font` if there is no JSON)
+-   `unpack-font <source .font> <target .png>` --- Unpacks a font into a grid image plus
+    `<target .png>.json` (the one to edit) and the binary `<target .png>.font`
+-   `apply-palette <source .png> <target .png>` --- Replaces palette indices with their colors, for
+    editing
+-   `to-indices <source .png> <target .png>` --- Resolves an edited image back to the nearest palette
+    indices
 -   `recompress-video <source .j2v> <target .j2v> [--video-downscale=N] [--target=<profile>]` ---
-    Re-encodes one cinematic on its own, N defaults to 1, which keeps the original resolution, or
-    to what the profile asks for, which also decides whether the frames are written in LZ4 (see
-    @ref asset-packer-cinematics-format)
--   `convert-music <source .j2b> <target .xm>` --- Translates one of the game's Galaxy Music System
-    modules into a FastTracker II module, the first half of what `--target=n64` does to the music
--   `swap-content <source image> [<target image>] --content=<dir>` --- Replaces the `Content`
-    directory of an already built console image --- a Dreamcast `.cdi`, a PlayStation 2 `.iso`, a
-    GameCube `.iso` or a Nintendo 64 `.z64` --- keeping its bootstrap and its executable exactly as they
-    are. The image is rewritten in place when no target is given
--   `swap-content <source image> [<target image>] --source=<dir> [--content=<dir>] [options]` --- The
-    same, converting the original game files first, for the console the image is for (a `.z64` is
-    `n64`, a DiscJuggler `.cdi` `dreamcast`, an image that starts with a GameCube disc header
-    `gamecube`, anything else `ps2`, unless `--target=` names another profile). `--content=` is then the
-    game's own content, as for `convert`, whose options apply
+    Re-encodes one cinematic; N defaults to 1 or to the profile's value, and the profile also decides
+    LZ4 frames (see @ref asset-packer-cinematics-format)
+-   `convert-music <source .j2b> <target .xm>` --- Translates a Galaxy Music System module into a
+    FastTracker II module (the first half of what `--target=n64` does to music)
+-   `swap-content <source image> [<target image>] --content=<dir>` --- Replaces the `Content` of a
+    built Dreamcast `.cdi`, PlayStation 2 `.iso`, GameCube `.iso` or Nintendo 64 `.z64`, keeping its
+    bootstrap and executable. Without a target the image is rewritten in place
+-   `swap-content <source image> [<target image>] --source=<dir> [--content=<dir>] [options]` ---
+    The same, converting the original files first for the image's console: `.z64` is `n64`, a
+    DiscJuggler `.cdi` `dreamcast`, an image with a GameCube disc header `gamecube`, anything else
+    `ps2`, unless `--target=` says otherwise. `--content=` and the `convert` options apply as for
+    `convert`
 -   `create-image <executable .dol> <target .iso> --content=<dir> --apploader=<file> [--target=gamecube]
-    [--game-id=<id>] [--title=<name>]` --- Makes a bootable GameCube disc image out of the executable,
-    the apploader the GameCube target builds and a content directory (see @ref asset-packer-gamecube).
-    `--game-id=` is the six characters of the game code and the maker code, `GJJEJR` by default, and
-    `--title=` the name the disc header carries. The GameCube build runs it itself when it is told where
-    the tool is
+    [--game-id=<id>] [--title=<name>]` --- Makes a bootable GameCube disc image (see
+    @ref asset-packer-gamecube). `--game-id=` is the six-character game + maker code (default
+    `GJJEJR`), `--title=` the name in the disc header
 
-Progress and warnings are printed to stdout, errors to stderr, and the exit code is non-zero
-on failure.
+Progress and warnings go to stdout, errors to stderr; the exit code is non-zero on failure.
 
 @section asset-packer-convert Converting the game data
 
-The source can be either a directory of original game files or a whole game installation,
-which keeps them in a `Source` subdirectory next to the `Content` the game ships and the
-`Cache` it converts into. Pointing the tool at the installation is the convenient thing to
-do, so it looks for both layouts --- and when the source turns out to be an installation and
-the target is not the desktop profile, the installation's own `Content` (fonts, animations,
-metadata, translations --- nothing of which is derived from the original data) is carried over
-as well, which is what makes the output a complete self-contained tree. The tool
-requires `Anims.j2a` (or the shareware `AnimsSw.j2a`) to be present, sprites and sounds are
-converted from it into a package --- `Source.pak` for the desktop profile, `Prebaked.pak` for the
-others, which is what tells the game the tree needs no conversion --- and the levels, tilesets,
-episodes and music follow via @ref Jazz2::Compatibility::AssetConverter.
-
-A conversion therefore has **two inputs**, and an installation is simply the case where they
-happen to sit together. Working from a checkout they do not: the repository has the game's own
-`Content` and no original data, and a copy of the original game is the other way round. Naming
-them separately is what that case wants, and it needs nothing staged:
+A conversion has <b>two inputs</b>: the original game files and the game's own `Content`. A game
+installation keeps both together (originals in `Source`, beside `Content` and `Cache`); when the source
+is an installation and the target is not `desktop`, its `Content` is copied as well. From a repository
+checkout, name them separately:
 
 @code{.sh}
 AssetPacker ./build/ConsoleContent --source=<original Jazz Jackrabbit 2> --content=./Content --target=console
 @endcode
 
-@m_class{m-noindent}
-
-`--source=` names exactly what the positional argument does, so both go through the same
-resolution and an installation is still recognized through either; giving both is an error
-rather than an override. `--content=` wins over a `Content` found beside the originals, which is
-the one way the two can disagree. With `--source=` given, the target is the only positional
-argument left --- which is why a lone one is read as the target and not as the source.
+-   `Anims.j2a` (or the shareware `AnimsSw.j2a`) is required. Sprites and sounds go into a package
+    (`Source.pak` for `desktop`, `Prebaked.pak` otherwise); levels, tilesets, episodes and music follow
+    via @ref Jazz2::Compatibility::AssetConverter.
+-   `--source=` and the positional source resolve the same way; with `--source=` a lone positional
+    argument is the target.
+-   `--content=` wins over a `Content` found beside the originals.
 
 @subsection asset-packer-convert-profiles Target profiles
 
-What the output directory is going to be loaded by decides its layout:
+Profile     | Output
+----------- | ------
+`desktop`   | A `Cache` subdirectory plus the `Source.idx` index the game checks on startup (see @ref asset-packer-pitfalls). No music (the game reads its `Content/Music`) and no cinematics (read from the originals)
+`console`, `dreamcast`, `wii`, `gamecube`, `psp`, `ps2` | A staged `Content` tree written directly into the target, with `Prebaked.pak` and no index. The target name only decides the cinematics and LZ4 images
+`emscripten` | The same kind of prepared tree for the web build
+`n64`       | A console tree with sound, music and cinematics in libdragon's formats, see @ref asset-packer-n64
 
--   **desktop** --- The converted data goes into a `Cache` subdirectory of the target, and an
-    index file (`Source.idx`) is written alongside --- the descriptor the game checks on
-    startup before deciding to reconvert. It must stay identical to what
-    `GameEventHandler::WriteCacheDescriptor` writes, field for field (signature, file type,
-    cache version, flags, the modification time of `Anims.j2a`, the event count and the build
-    version) --- the game compares every one of them and reconverts everything if any
-    disagrees. Music is not copied, because the desktop game reads it from its own
-    `Content/Music`, and cinematics are left alone, because the game reads the originals
-    where they are.
--   **console** (also selected by `dreamcast`, `wii`, `gamecube`, `psp` and `ps2`) --- A staged
-    `Content` tree written directly into the target, holding everything the console loads. The consoles
-    all consume the same staged tree, so they share one profile --- only the cinematics are decided per
-    platform, which is why `dreamcast` and `ps2` are tracked separately (see below). The sprite and sound package
-    is named `Prebaked.pak` here, and that name is the marker: a console that *can* convert (the PSP,
-    the Wii and the PlayStation 3, whose content is on writable storage) finds it and skips the
-    conversion instead of looking for original files that were never deployed --- see
-    @ref Jazz2::ContentResolver::IsContentPrebaked(). No index is written, deliberately: a prepared
-    tree is never rewritten, and an index there would only invite the game to try. That also means a
-    prepared tree does not follow the game's formats by itself: the converted levels carry a version
-    of their own @m_span{m-text m-dim} (see @ref Jazz2::LevelFormat) @m_endspan and the game reads only
-    its own, so a tree from an older tool has to be converted again --- see the warning in
-    @ref consoles-common-content for the levels that can only be upgraded in place.
--   **emscripten** --- Likewise a tree prepared entirely ahead of time for the web build,
-    with `Prebaked.pak` and without an index.
+Non-desktop trees:
 
-@m_class{m-noindent}
-
-Both non-desktop profiles also put the game's own `Animations` and `Metadata` **inside**
-`Prebaked.pak` instead of next to it --- a few hundred small files become part of one, which is what
-a console pays for on a memory card, a memory stick or a disc. They are the two directories the game
-reads through the package layer, everything else the tree carries @m_span{m-text m-dim} (the
-translations, the levels, the tilesets, the music and the cinematics) @m_endspan is read as a loose
-file and stays one. The conversion writes its own files first, so an asset the original data provides
-is what a path present in both resolves to, exactly as when the two are kept apart. The desktop
-profile is untouched by this: its `Source.pak` holds only what was converted, and the game reads its
-`Content` from where it is installed.
-
-A hand-made sprite sheet from `Content/Animations` that is a grid of more than one frame and wider or
-taller than 512 pixels is **re-laid out** on its way into the package
-@m_span{m-text m-dim} (@ref Jazz2::AssetPacker::SpriteRepacker) @m_endspan: every frame is trimmed to
-the pixels it covers and packed the way the converted sheets are, keeping its place within its cell. A
-grid of that size puts frames across the 512-pixel page line of the PSP, which draws them cut off;
-the water shield @m_span{m-text m-dim} (528×69) @m_endspan and Lori's end-of-level animation
-@m_span{m-text m-dim} (657×464) @m_endspan are the ones this applies to today. Smaller grids are copied
-as they are, because some of them are sampled as a whole texture rather than frame by frame.
-
-They also leave the `.po` files of a `Translations` directory behind. Those are the sources the `.mo`
-the game reads are compiled from and nothing loads one at run time --- both the language list and the
-About section's translator credits require the `.mo` extension --- while being about twice the size of
-the `.mo` they produce. That is a megabyte and a half of a tree that will be burnt onto a disc or
-packed into a cartridge, so it is not carried. The desktop profile copies no `Content` at all and is
-again unaffected.
+-   The name `Prebaked.pak` marks the tree as converted, so consoles that can convert (PSP, Wii,
+    PlayStation 3) skip the conversion --- see @ref Jazz2::ContentResolver::IsContentPrebaked(). No
+    index is written because a prepared tree is never rewritten.
+-   Converted levels carry their own version (@ref Jazz2::LevelFormat) and the game reads only its own,
+    so a tree from an older tool must be converted again --- see the warning in
+    @ref consoles-common-content.
+-   The game's own `Animations` and `Metadata` go <b>inside</b> `Prebaked.pak`; translations, levels,
+    tilesets, music and cinematics stay loose files. Converted files are written first, so on a path
+    present in both, the asset from the original data wins.
+-   A hand-made multi-frame sprite sheet in `Content/Animations` wider or taller than 512 pixels is
+    re-laid out @m_span{m-text m-dim} (@ref Jazz2::AssetPacker::SpriteRepacker) @m_endspan: frames are
+    trimmed and packed so none crosses the PSP's 512-pixel texture page line. Smaller grids are copied
+    as they are, since some are sampled as a whole texture.
+-   `.po` files in `Translations` are left out; the game loads only `.mo`.
 
 @subsection asset-packer-convert-filters Level filters
 
-`--originals-only` keeps the episodes the original game shipped plus every level reachable
-from one of them, `--shareware-only` narrows that to the Shareware Demo content, and
-`--skip-non-episode-levels` drops the levels that belong to no episode. Whatever is skipped
-is listed by name rather than only counted --- the list of levels the original game shipped
-is maintained by hand, and this is how a name missing from it shows up.
-
-Music follows the same rule with one addition: a track is carried if a level that survived the filter
-asks for it, **plus** the five the game plays outside any level --- `menu`, `bonus2` and `bonus3` for
-the main menu, and `intro` and `ending` for the cinematics. Those appear in no `.j2l`, so a tree built
-only from what the levels name left the menu and both cinematics silent on every console
-@m_span{m-text m-dim} (the desktop build never noticed, because it reads the originals in place)
-@m_endspan.
+-   `--originals-only` keeps the original episodes plus every level reachable from them;
+    `--shareware-only` narrows that to the Shareware Demo; `--skip-non-episode-levels` drops levels
+    that belong to no episode.
+-   Skipped levels are listed by name --- the list of original levels is maintained by hand, so check
+    it for levels that should have been kept.
+-   Music: a track is kept if a surviving level uses it, plus `menu`, `bonus2`, `bonus3` (main menu),
+    `intro` and `ending` (cinematics), which no `.j2l` names.
 
 @section asset-packer-cinematics Cinematics
 
-Only two cinematics are ever played by the game (`Intro` and `Ending`), `Logo` is present in
-the original data but nothing asks for it, so it is deployed only with `--all-videos`. The
-files land in a `Cinematics` subdirectory under lowercase names, which is how the player
-looks them up. What happens to them depends on the target:
+The game plays only `Intro` and `Ending`; `Logo` is deployed only with `--all-videos`. Files go to a
+`Cinematics` subdirectory under lowercase names.
 
--   **Nothing** for the desktop profile --- the game reads the original files where they are
--   **Copied unchanged** for every target but the Dreamcast, the GameCube and the PlayStation 2 ---
-    they decode the original format perfectly well and are better off with the smaller file
--   **Re-encoded** for `dreamcast`, `gamecube` and `ps2`, or whenever `--video-downscale` is greater
-    than 1 (on any profile), since downscaling means re-encoding either way
+Target          | Cinematics
+--------------- | ----------
+`desktop`       | Nothing --- the game reads the originals in place
+`dreamcast`, `gamecube`, `ps2`, or any profile with `--video-downscale` above 1 | Re-encoded into @ref Jazz2::VideoFormat
+Everything else | Copied unchanged
 
-Three consoles need the re-encoding: inflating the original container costs the Dreamcast
-55--115 ms per frame against a 42 ms budget, where the re-encoded one costs under one millisecond,
-and the PlayStation 2 is in the same position. The GameCube inflates it fast enough, but the four
-interleaved streams have to be read from the disc as they are consumed, which made the intro take
-61 seconds instead of 34 there; the re-encoded file is read sequentially, on a thread of its own. The
-Dreamcast and the GameCube keep the original 640×480, which is what they display. The PS2 defaults
-to `--video-downscale=2`: it reads the disc (or a USB drive, through a loader) on the thread that
-draws, in small pieces between the frames, and a quarter of the pixels is a quarter of the data to
-read. The player draws that 320×240 smoothly upscaled.
+Inflating the original format is too slow on the Dreamcast and PlayStation 2, and on the GameCube its
+four interleaved streams make disc reads too slow; the re-encoded file is read sequentially. The
+Dreamcast and GameCube keep 640×480; the PS2 defaults to `--video-downscale=2` (320×240, drawn smoothly
+upscaled) to keep disc reads small. The player picks its runtime downscale from the actual frame width,
+so a pre-downscaled file is not halved again.
 
 @subsection asset-packer-cinematics-format The .j2v recompression
 
-The original `.j2v` videos (`CineFeed` signature) are 640×480 in four interleaved zlib
-streams --- opcodes, the offset and row parts of copy-from-previous-frame runs, and the
-literal pixels plus palettes --- and the decoder has to inflate every frame at playback time.
-@ref Jazz2::Compatibility::J2vRecompressor decodes the video exactly the way the player does
-@m_span{m-text m-dim} (including decoding into one reused frame buffer, so pixels no run
-covers keep the previous frame's value) @m_endspan, optionally downscales it, and re-encodes it
-into the game's own @ref Jazz2::VideoFormat container. The player detects the format by its
-signature and accepts both.
+The original `.j2v` (`CineFeed` signature) is 640×480 in four interleaved zlib streams.
+@ref Jazz2::Compatibility::J2vRecompressor decodes it exactly as the player does, optionally downscales
+it, and re-encodes it into @ref Jazz2::VideoFormat. The player detects either format by its signature.
 
-At the original size the frames are taken over exactly, indices and palettes alike. A smaller
-picture is *not* made by picking every n-th pixel, which is what the player used to do at runtime:
-the cinematics are heavily dithered, and point sampling turns the dithering into noise and every
-edge into stairs. Each output pixel is the average of the area it covers, in linear light, and the
-resulting colors --- which the original palette does not have --- get a palette of their own for
-every stretch of frames that shares one palette in the original: a median cut over all the colors
-of that stretch, refined by a few rounds of k-means, onto which the frames are then mapped. Against
-the same downscale in true color that is about 45 dB PSNR on the intro, where picking pixels was
-26 dB; the file comes out about a fifth larger, because the smooth gradients repeat less than the
-dithering did. It takes two decodes of the original --- about 2 seconds for the intro.
+-   <b>At the original size</b> frames are taken over exactly, indices and palettes alike.
+-   <b>Downscaled</b>, each pixel is the area average in linear light, and every stretch of frames sharing
+    one original palette gets a new palette (median cut refined by k-means).
 
-The output container keeps the same idea --- 8-bit indexed frames encoded as changes against
-the previous one --- but replaces the entropy coding with a byte-oriented delta-RLE codec
-whose decoder is nothing but @cpp memcpy @ce and @cpp memset @ce over a reused frame buffer.
-A file starts with the same signature and type/version fields every other file the game
-writes uses, followed by width, height, frame delay, frame count, pixel format, codec and an
-extension area older players skip, then one size-prefixed payload per frame. Each frame is a
-flag byte @m_span{m-text m-dim} (bit 0 --- a 256-entry BGRA palette follows) @m_endspan and
-then commands until the end-of-frame marker: *literal* spans stored as they are, *runs* of
-one repeated byte, and *skips* that leave the previous frame's pixels in place --- which is
-what makes an unchanged region nearly free. Each command has a short single-byte form and a
-long form with a 16-bit count, the exact opcode ranges are documented on
-@ref Jazz2::VideoFormat.
+The container: the game's usual signature/type/version fields, then width, height, frame delay, frame
+count, pixel format, codec and an extension area older players skip, then one size-prefixed payload per
+frame. A frame is a flag byte @m_span{m-text m-dim} (bit 0 --- a 256-entry BGRA palette follows)
+@m_endspan and commands up to an end-of-frame marker:
 
-Note the recompressed file is substantially larger than the zlib-compressed original at the
-same resolution --- that is the deliberate trade: entropy coding is exchanged for a decoder
-that fits the weakest platform's frame budget. Platforms that can afford the inflation get
-the original file copied instead. `recompress-video` re-encodes a single file outside a full
-conversion, which is the way to experiment with resolutions per target.
+-   <b>literal</b> --- bytes stored as they are
+-   <b>run</b> --- one repeated byte
+-   <b>skip</b> --- keep the previous frame's pixels
 
-`dreamcast`, `gamecube` and `ps2` additionally get every frame's payload compressed as an LZ4 block
-(LZ4HC at its highest level, codec @ref Jazz2::VideoFormat::CodecDeltaRleLz4 in the header): at
-640×480 the busiest five seconds of the ending need 1.8 MB a second of plain commands, more than the
-disc drives deliver, and in LZ4 they need 1.2 MB. The intro shrinks from 15.9 to 8.8 MB and the ending
-from 31.6 to 19.5 MB at 640×480, from 5.8 to 4.6 MB and from 10.8 to 8.3 MB at 320×240. Decompressing a
-block is close to a plain copy, and the builds of those consoles carry the decoder for the LZ4 images
-anyway. A player without it refuses such a file rather than misreading it, which is why `swap-content`
-writes LZ4 frames onto a disc only if the cinematics already on it have them (see
-@ref asset-packer-swap-content).
+Each command has a single-byte short form and a long form with a 16-bit count; opcode ranges are on
+@ref Jazz2::VideoFormat. Decoding is only @cpp memcpy @ce and @cpp memset @ce over a reused frame buffer.
+
+-   The re-encoded file is substantially larger than the zlib original, so re-encode only where the
+    platform needs it (the per-target defaults already do). Use `recompress-video` to experiment.
+-   `dreamcast`, `gamecube` and `ps2` also compress every frame payload as an LZ4HC block (codec
+    @ref Jazz2::VideoFormat::CodecDeltaRleLz4), because the plain stream exceeds what their drives
+    deliver. A player without LZ4 refuses such a file, so `swap-content` writes LZ4 frames only onto a
+    disc whose cinematics already have them (see @ref asset-packer-swap-content).
 
 @section asset-packer-fonts Font packing
 
-A font is authored as a grid image --- one equally sized cell per character --- next to a
-sidecar description listing the cell size, the character set and how far the pen moves for
-each character. The game instead loads a single self-contained `.font` file (version 2,
-described by @ref Jazz2::UI::FontFormat) in which every glyph has been measured down to the
-pixels it actually inks, packed against its neighbours and stored as palette indices.
-`pack-font` and `unpack-font` are the two directions of that conversion, so a shipped font can
-be opened up, changed and packed again without the grid form having to be kept around in the
-repository.
+A font is authored as a grid image (one equal cell per character) plus a description of the cell size,
+character set and advances. The game loads a single `.font` file (version 2,
+@ref Jazz2::UI::FontFormat) with every glyph trimmed, packed and stored as palette indices.
 
-The description comes in two interchangeable forms. `<image>.png.json` is the one meant to be
-edited, `<image>.png.font` is the binary form the sidecar has always been kept in, holding the
-same fields packed into a few bytes with the characters outside the ASCII range spelled out in
-UTF-8. `unpack-font` writes both, and `pack-font` reads the JSON wherever it finds one next to
-the image and falls back to the binary form only when there is none --- so editing the JSON is
-enough, and a font unpacked by an older build still packs. Which one was used is printed.
+The description exists as `<image>.png.json` (the one to edit) and the binary `<image>.png.font` (same
+fields, non-ASCII characters in UTF-8). `unpack-font` writes both; `pack-font` uses the JSON if present,
+otherwise the binary, and prints which one it used.
 
-What `pack-font` does:
+`pack-font` does:
 
--   **Trimming** --- Every glyph is reduced to its inked bounding box, what is left of the
-    cell is recorded as the glyph's bearing, so drawing it at the trimmed size in the trimmed
-    place puts every pixel exactly where the full cell used to put it. A glyph with no inked
-    pixels at all (a space) has zero size and is only advanced over.
--   **Index normalization** --- A font is entirely index based: every pixel either names a
-    palette color or is index 0 and draws nothing, there is no per-pixel coverage. Pixels
-    that say otherwise (transparent in one channel but not the other, or partially covered)
-    are resolved to one of the two, with a warning listing how many were touched.
--   **Packing** --- The same layout the converted sprite sheets get
+-   <b>Trimming</b> --- Each glyph is reduced to its inked bounding box; the rest of the cell becomes its
+    bearing, so it draws exactly where the cell did. A glyph with no inked pixels (a space) has zero size.
+-   <b>Index normalization</b> --- Every pixel is either a palette index or index 0 (nothing). Ambiguous
+    pixels (transparent in one channel only, partially covered) are resolved, with a warning giving the
+    count.
+-   <b>Packing</b> --- As for converted sprite sheets
     @m_span{m-text m-dim} (@ref Jazz2::Compatibility::JJ2Anims::PackRectangles()) @m_endspan, with a
-    margin of @cpp FontFormat::GlyphMargin @ce (one pixel) on each side of every glyph, so neighbours
-    are two pixels apart --- enough that a bilinear sample taken at the very edge of one glyph cannot
-    reach the next. Every atlas width is tried and the one chosen minimizes the *padded* area first
-    (which is what the console backends that need power-of-two textures pay), then keeps the atlas
-    within one 512×512 page if it can, then minimizes the exact area (which is what everyone else
-    pays), and the atlas is stored at its exact size. No glyph is placed across a multiple of 512 on
-    either axis, because the PSP splits a larger texture into pages of that size and draws every
-    primitive from one of them. The atlas may not exceed 1024×1024, a glyph may not exceed 255 pixels
-    in either direction and a bearing may not exceed 127 --- exceeding any of these is an error.
--   **Encoding** --- Everything except the few identifying bytes (signature, file type,
-    version, flags, compressed size) is one deflate block: the atlas size, line height, base
-    spacing and character counts, then a 9-byte glyph record per character
-    @m_span{m-text m-dim} (position, size, bearings, advance --- with a 32-bit codepoint
-    prefix for the non-ASCII ones) @m_endspan, then the atlas itself as one palette index per
-    pixel in the same QOI-based encoding every other image asset uses. The ASCII range is
-    described by two bytes (where it starts and how long it is) and everything else by a 16-bit
-    count, so a font may have at most 255 characters in the range and 65535 outside it ---
-    exceeding either is an error.
+    @cpp FontFormat::GlyphMargin @ce (1 px) margin around each glyph. The chosen atlas minimizes the
+    power-of-two-padded area, then stays within one 512×512 page if possible, then minimizes the exact
+    area; it is stored at its exact size. No glyph crosses a multiple of 512 on either axis (PSP texture
+    pages).
+-   <b>Encoding</b> --- After the identifying bytes (signature, file type, version, flags, compressed
+    size), one deflate block holds the atlas size, line height, base spacing, character counts, a 9-byte
+    glyph record per character @m_span{m-text m-dim} (position, size, bearings, advance; plus a 32-bit
+    codepoint for non-ASCII) @m_endspan, and the atlas as palette indices in the QOI-based image encoding.
 
-`unpack-font` rebuilds the grid image and both sidecars from a packed font --- the glyphs are
-placed back into cells at their bearings, so packing the result again measures the pixels
-afresh and arrives back at the same font. Because the unpacked atlas holds palette indices,
-it looks like near-black noise in an image editor, `apply-palette` and `to-indices` are the
-two halves of making it editable --- the first replaces the indices with the colors they
-stand for, the second resolves an edited image back to the nearest palette entries (warning
-when a color had no exact match). The tool carries its own minimal PNG codec
-(@ref Jazz2::AssetPacker::PngCodec) precisely because it does not link the renderer.
+Limits (exceeding any is an error):
+
+Item                          | Maximum
+----------------------------- | -------
+Atlas                         | 1024×1024
+Glyph size                    | 255 px in either direction
+Bearing                       | 127
+Characters in the ASCII range | 255
+Characters outside it         | 65535
+
+`unpack-font` places glyphs back into cells at their bearings, so repacking gives the same font. The
+unpacked atlas holds palette indices (it looks like near-black noise): run `apply-palette` before
+editing and `to-indices` after, which warns when a color has no exact match. The tool has its own PNG
+codec (@ref Jazz2::AssetPacker::PngCodec) since it does not link the renderer.
 
 @subsection asset-packer-fonts-json The JSON description
 
@@ -380,59 +265,36 @@ when a color had no exact match). The tool carries its own minimal PNG codec
 }
 @endcode
 
--   **`CellWidth`, `CellHeight`, `Columns`** --- The grid the image is read as: the size of one
-    cell and how many of them sit in a row. Required, as is `Characters`, everything else has
-    a default.
--   **`LineHeight`** --- How far one line of text sits below the previous one. Belongs to the
-    font rather than to the grid it is authored in, so it can be set on its own, defaults to
-    the cell height, which is what it almost always is.
--   **`BaseSpacing`** --- Pixels added between characters on top of each advance, negative to
-    tighten. Defaults to none.
--   **`AsciiFirst`, `AsciiCount`** --- Where the contiguous run the packed font indexes
-    directly starts and how far it reaches. Both are worked out from the list itself when
-    omitted --- the leading run of consecutive characters, which is how one is written out ---
-    and the first `AsciiCount` characters have to be exactly that run, since that is the order
-    the packed file stores them in. The run is described by two bytes, so it has to end by
-    `U+00FF`, and the game keeps only the part of it below `U+0080`.
--   **`Characters`** --- One entry per cell, **in the order the cells are laid out in the
-    image**, and at least one. `Char` names the character as itself, `Codepoint` as a bare
-    number for the ones without a spelling that survives a text file, and `Fallback` marks the
-    single entry drawn in place of anything the font doesn't have @m_span{m-text m-dim} (the
-    same thing as @cpp "Codepoint": 0 @ce) @m_endspan. `Advance` is how far the pen moves after
-    drawing the character and is required, the glyph's size and bearings are not listed at all,
-    being measured from the image every time it is packed.
+Field                                 | Meaning
+------------------------------------- | -------
+`CellWidth`, `CellHeight`, `Columns`  | Required. Cell size (up to 65535) and cells per row (up to 255)
+`LineHeight`                          | Distance between lines; defaults to the cell height
+`BaseSpacing`                         | Pixels added between characters, negative to tighten (signed 16-bit); default 0
+`AsciiFirst`, `AsciiCount`            | The contiguous directly-indexed run; derived from the leading run of consecutive characters if omitted. The first `AsciiCount` entries must be exactly that run, it must end by `U+00FF`, and the game keeps only the part below `U+0080`
+`Characters`                          | Required, at least one entry, <b>in the order of the cells in the image</b>. `Char` gives the character, `Codepoint` a number, `Fallback` marks the single glyph drawn for missing characters (same as @cpp "Codepoint": 0 @ce). `Advance` (required, up to 255) is the pen movement; size and bearings are measured from the image
 
-Every field is checked against what the packed file can hold --- the cell up to 65535 pixels in
-either direction, `Columns` and every `Advance` up to 255, `BaseSpacing` a signed 16-bit value ---
-and one that is out of range, missing where it is required, or not the type it should be is an
-error naming the field and, inside the list, the position. So is a list that doesn't begin with the
-ASCII range it claims, which is also how a character repeated *inside* that range is caught:
+A field out of range, missing or of the wrong type is an error naming it (and the list position), as is a
+list not starting with its claimed ASCII range --- which also catches a duplicate inside it:
 
 @code{.shell-session}
 Error: "font_small.png.json" has to list the ASCII range first, one character after another
 from U+0020, but the character at position 34 is U+0041 where U+0042 was expected
 @endcode
 
-What still describes a loadable font is a warning rather than an error --- a codepoint listed
-twice outside the ASCII range @m_span{m-text m-dim} (only one of the two is ever drawn)
-@m_endspan, and a character below `U+0080` left out of the range, where the game never looks for
-it. Both cost a glyph quietly, so they are worth reading:
+A codepoint listed twice outside the range, or a character below `U+0080` left out of it, is only a
+warning, but the game never draws that glyph:
 
 @code{.shell-session}
 Warning: "font_small.png.json" lists U+0104 more than once
 @endcode
 
-The file is otherwise read leniently: comments, trailing commas and a byte order mark are all
-tolerated, so it can be annotated while it is worked on and saved by any editor. It is written
-as UTF-8 without one.
+Comments, trailing commas and a byte order mark are tolerated; the tool writes UTF-8 without a BOM.
 
 @section asset-packer-n64 Preparing content for the Nintendo 64
 
-The Nintendo 64 has a profile that goes further than the others: `--target=n64` converts the sound,
-the music and the cinematics into libdragon's own formats, which is what lets the console play music
-at all and fit everything on a 64 MB cartridge. Where libdragon's host tools are installed it runs
-them --- `audioconv64`, and `videoconv64` with **ffmpeg** and **ffprobe** on the `PATH` for the
-cinematics:
+`--target=n64` converts sound, music and cinematics into libdragon's formats, so the console can play
+music and everything fits a 64 MB cartridge. If libdragon's host tools are available it runs
+`audioconv64`, and `videoconv64` with <b>ffmpeg</b> and <b>ffprobe</b> on the `PATH`:
 
 @code{.sh}
 AssetPacker convert ./build/ConsoleContentN64 --source=<original Jazz Jackrabbit 2> --content=./Content \
@@ -441,75 +303,47 @@ AssetPacker convert ./build/ConsoleContentN64 --source=<original Jazz Jackrabbit
 
 @m_class{m-noindent}
 
-Without them (or with `--n64-tools=builtin`) the encoders built into the tool are used instead, which
-need nothing installed and are all the web version has. They are libdragon's own codecs, vendored in
-`Sources/Dependencies` --- VADPCM, ULC and libxm --- driven the way `audioconv64` drives them
-(`Wav64Writer`, `Xm64Converter`), and an MPEG-1 encoder of the tool's own for the cinematics
-(`Mpeg1Encoder`), so a tree made either way plays the same: the sound effects and the pre-rendered music
-come out byte for byte what `audioconv64` writes, and the modules differ only in how their patterns and
-structure are LZ4-compressed. The cinematic soundtracks are encoded at the console's 32 kHz straight
-from the mix, where `videoconv64` takes them through 48 kHz and back. The built-in encoders are compiled
-wherever the vendored C compiles (GCC, Clang, Emscripten), so an MSVC build of the tool still needs
-libdragon's tools for this profile.
+Otherwise (or with `--n64-tools=builtin`) it uses built-in encoders, the only option in the web
+version: libdragon's own codecs vendored in `Sources/Dependencies` (VADPCM, ULC, libxm, driven by
+`Wav64Writer` and `Xm64Converter`) and its own `Mpeg1Encoder`. The output plays the same --- sound effects
+and pre-rendered music are byte-identical to `audioconv64`'s. The built-in encoders compile only with
+GCC, Clang and Emscripten, so an MSVC build of the tool needs libdragon's tools for this profile.
 
-What differs from a `console` tree:
+Differences from a `console` tree:
 
--   **Sound effects** are taken out of the package and written beside it, one `.wav64` for each
-    @m_span{m-text m-dim} (`Animations/<path>.wav64`) @m_endspan, which the console streams from the
-    cartridge while they play instead of holding them decoded in its 8 MB. They are VADPCM, which the
-    mixer decodes on the RSP, without the Huffman stage the CPU would have to undo. Not raw PCM, which
-    looks cheaper but is not: libdragon's mixer fetches at most about 120 samples of a raw stream at a
-    time, so while a single raw effect played every mixing round of the frame was cut that short, and
-    every playing channel - the sixteen of a module included - pays for every round. Music and effects
-    together cost 6.4 ms a frame that way, against 3.1 ms now. The originals are not kept: the console
-    decodes no audio at all, so a sound without its `.wav64` stays silent.
--   **Music**: the game's modules are Galaxy Music System `.j2b` files no console decoder reads. They are
-    translated into FastTracker II modules (the same translation `convert-music` does, with every
-    effect, sample tuning and channel panning carried over) and those into libdragon's `.xm64`, which
-    the console plays with its RSP mixer and its instruments streamed from the cartridge. A track in any
-    other format is pre-rendered through libopenmpt into a compressed `.wav64` recording that loops
-    where the module does --- which needs a packer built with libopenmpt.
--   **Cinematics** become MPEG-1 video (`<name>.m1v`, 320×240 at 24 fps) with a `.wav64` soundtrack
-    beside it, which libdragon's player decodes with the RSP's help. The soundtrack mixes the
-    cinematic's music and its sound effects into one recording. Without `videoconv64` or ffmpeg the
-    cinematics are re-encoded the `console` way instead, at half size.
-
-The sprite sheets and tilesets are written in LZ4, like those of the other consoles that need a
-prepared tree (see @ref asset-packer-lz4). The result is about 38 MB for the full game, both
-cinematics and the whole soundtrack included.
+-   <b>Sound effects</b> --- written beside the package as one VADPCM `.wav64` each
+    @m_span{m-text m-dim} (`Animations/<path>.wav64`) @m_endspan, streamed from the cartridge. VADPCM is
+    used rather than raw PCM, which costs the mixer more per frame. The originals are not kept: a sound
+    without its `.wav64` is silent.
+-   <b>Music</b> --- `.j2b` modules are translated to FastTracker II modules (as `convert-music`) and then
+    to `.xm64`. Other formats are pre-rendered through libopenmpt into a looping `.wav64`, which needs a
+    packer built with libopenmpt.
+-   <b>Cinematics</b> --- MPEG-1 video (`<name>.m1v`, 320×240, 24 fps) with a `.wav64` soundtrack mixing
+    music and sound effects. Without `videoconv64` or ffmpeg they are re-encoded the `console` way at half
+    size.
+-   Sprite sheets and tilesets are written in LZ4 (see @ref asset-packer-lz4). The full game comes to
+    about 38 MB.
 
 @section asset-packer-lz4 LZ4 sprite sheets and tilesets
 
-The consoles that cannot convert the game data on the device at all --- the Nintendo 64, the Dreamcast,
-the PlayStation 2 and the GameCube --- only ever get a tree this tool made, so their trees can carry
-the images in a form made for them: `--target=n64`, `dreamcast`, `ps2` and `gamecube` write the image
-content of every sprite sheet and tileset as LZ4 blocks of the raw pixels (compressed at the highest
-ratio, which costs the converter time and not the console), where every other target keeps the game's
-own format. Their builds decode it (`NCINE_WITH_LZ4`, on by default for exactly these four).
+`--target=n64`, `dreamcast`, `ps2` and `gamecube` write every sprite sheet and tileset as LZ4HC blocks of
+raw pixels; other targets keep the game's own format. These four builds decode it with `NCINE_WITH_LZ4`
+(on by default for exactly them).
 
--   A **tileset** gets one block per band of 32 rows, one row of tiles, which is the unit the game
-    builds its atlas in - it never holds the whole sheet decoded. Measured on the Nintendo 64, castle1's
-    tileset decodes in 179 ms from LZ4 against 290 ms from the game's format, and its compressed pixels
-    are read in 29 ms instead of 70; the tilesets of the whole game take 8.2 MB instead of 14.5.
--   A **sprite sheet** is one block, and its entry in the package is stored rather than compressed again
-    (a second pass would only put an inflate in front of the decoder). The package grows a little for
-    it --- 2.9 MB against 2.2 for the Nintendo 64 --- while every sheet reads without an inflate.
--   The hand-made sheets of the game's own `Content` are converted on the way in, so a tree is decoded one
-    way throughout. The fonts and the episode images keep the game's format; they are few and small.
+-   A <b>tileset</b> gets one block per 32-row band (one row of tiles), the unit the game builds its atlas
+    in.
+-   A <b>sprite sheet</b> is one block, stored in the package without further compression.
+-   Hand-made sheets from `Content` are converted too; fonts and episode images keep the game's format.
 
-Both headers mark it with a flag (`JJ2Anims::ImageContentLz4Flag`), so a build that has no LZ4 reports
-such a file instead of drawing garbage from it --- rebuild the tree for a target, or the target with
-`NCINE_WITH_LZ4`, when the two do not match.
+Both headers carry `JJ2Anims::ImageContentLz4Flag`, so a build without LZ4 reports the file instead of
+drawing garbage --- rebuild the tree for that target, or the target with `NCINE_WITH_LZ4`.
 
 @section asset-packer-swap-content Replacing the content of a disc image
 
-The consoles that boot from a read-only disc --- the Dreamcast, the PlayStation 2 and the GameCube ---
-bake their content into the image at build time @m_span{m-text m-dim} (see
-@ref consoles-dreamcast-content, @ref consoles-ps2-content and @ref consoles-gamecube-disc) @m_endspan,
-which is the only way a disc can be given anything: the game cannot write to it. The price is that changing what is on the disc used to mean building the whole image
-again, with the console toolchain and an image authoring tool at hand. `swap-content` is the
-other half of that: it opens a finished image, keeps everything on it except `Content`, and
-writes it back out around a different one.
+The Dreamcast, PlayStation 2 and GameCube boot from read-only discs whose content is baked in at build
+time @m_span{m-text m-dim} (see @ref consoles-dreamcast-content, @ref consoles-ps2-content and
+@ref consoles-gamecube-disc) @m_endspan. `swap-content` opens a finished image (or Nintendo 64 ROM),
+keeps everything except `Content`, and writes it back around a new one --- no console toolchain needed.
 
 @code{.sh}
 AssetPacker convert ./build/DreamcastContent --source=<original Jazz Jackrabbit 2> --content=./Content --target=dreamcast
@@ -527,224 +361,126 @@ AssetPacker swap-content ./Jazz2.iso --content=./build/ConsoleContentGameCube
 
 @m_class{m-noindent}
 
-With `--source=` instead, the two steps are one: the original game files are converted into a
-temporary tree for the console the image is for, which then becomes its `Content` --- this is what the
-web version runs:
+With `--source=` both steps are one (this is what the web version runs):
 
 @code{.sh}
 AssetPacker swap-content ./jazz2.z64 ./jazz2-new.z64 --source=<original Jazz Jackrabbit 2> --content=./Content
 @endcode
 
-@m_class{m-noindent}
+-   The `--content=` directory becomes `Content` whatever its name, so it must be a conversion for that
+    console's target.
+-   With `--source=`, LZ4 images (@ref asset-packer-lz4) and LZ4 cinematic frames
+    (@ref asset-packer-cinematics-format) are written only if the content already on the disc has them,
+    since older game builds draw garbage from LZ4 images or refuse LZ4 videos. GameCube discs and
+    Nintendo 64 cartridges always get LZ4 images.
+-   Without a target image the source is rewritten in place via a `.tmp` beside it, which replaces it only
+    once fully written.
 
-Converted that way, a disc gets the LZ4 content of its profile only if the content already on it has
-it: a build of the game older than the LZ4 sprite sheets and tilesets (see @ref asset-packer-lz4) draws
-garbage from them, and one older than the LZ4 frames of the cinematics (see
-@ref asset-packer-cinematics-format) refuses to play those, so the new tree keeps the game's own format
-for whichever of the two the disc did not have yet. A GameCube disc always gets the images, since no
-build older than them was ever made into one; a cartridge always gets them as well.
+What is kept unchanged:
 
-@m_class{m-noindent}
+Image                | Kept
+-------------------- | ----
+Dreamcast `.cdi`     | `IP.BIN` (32 KB: bootstrap, licence screen, serial number, title) and `1ST_READ.BIN`, still scrambled
+PlayStation 2 `.iso` | `SYSTEM.CNF`, the executable it names, the `.IRX` modules
+GameCube `.iso`      | Disc header and apploader (first 32 KB) and `Jazz2.dol` --- which moves, and the header's pointer to it is updated
+Nintendo 64 `.z64`   | Header (save type, accessories), bootcode, executable and its symbol table
 
-The directory named by `--content=` becomes `Content` on the disc whatever it is called here,
-so it is exactly what a `--target=dreamcast` conversion produces. With no target image given the
-source is rewritten in place @m_span{m-text m-dim} (through a `.tmp` beside it, which only takes
-its place once the whole image is written, so an interrupted run cannot leave half a disc
-behind) @m_endspan; naming one leaves the original alone.
-
-Nothing else on the disc is touched. On a Dreamcast disc that is `IP.BIN` --- the bootstrap, the
-licence screen, the serial number and the title --- carried over as the 32 KB it occupies, and
-`1ST_READ.BIN`, copied across still scrambled exactly as it was written; on a PlayStation 2 one
-it is `SYSTEM.CNF`, the executable it names and the `.IRX` modules beside them. The tool
-therefore needs neither the toolchain the image was built with nor the executable it was built
-from, and runs on any platform the packer itself does. A GameCube disc keeps its disc header and its
-apploader, which sit in the first 32 KB of the volume, and its executable, `Jazz2.dol` in the root ---
-which is the one file that moves on purpose: the header names the sector it starts at, so that is
-rewritten to wherever the new layout puts it.
-
-A Nintendo 64 cartridge is not a disc, but the same applies: the game content is the DragonFS image
-at the end of the ROM, found at boot through the table of contents libdragon's `n64tool` writes after
-the bootcode. It is built again from the directory the way `mkdfs` builds it --- byte for byte, so a
-ROM given back the tree it was built from comes out identical except for the table's cookie --- and
-staged the way the build stages it @m_span{m-text m-dim} (`cmake/n64_stage_content.cmake`: the
-original music formats and a cinematic that has a video are left out, and a `Source.pak` becomes
-`Prebaked.pak`) @m_endspan. The header, with the save type and accessories marked in it, the bootcode,
-the executable and its symbol table are kept as they are, and the ROM is refused if it would outgrow
-the 64 MB the cartridge address space maps.
+On a Nintendo 64 ROM the content is the DragonFS image at the end, found via the table of contents
+`n64tool` writes after the bootcode. It is rebuilt like `mkdfs` does (the same tree gives an identical ROM
+except the table's cookie) and staged like the build does @m_span{m-text m-dim}
+(`cmake/n64_stage_content.cmake`: original music formats and cinematics that have a video are left out,
+`Source.pak` becomes `Prebaked.pak`) @m_endspan. A ROM that would exceed 64 MB is refused.
 
 @subsection asset-packer-swap-content-how What it actually does
 
-A disc cannot be patched in place: the files of a directory are laid out one after another at
-fixed addresses, so anything that changes a single size moves everything that follows. The file
-system is therefore generated again from scratch (@ref Jazz2::AssetPacker::Iso9660Builder), and
-only the container around it is carried over byte for byte from the image that was opened. For
-a DiscJuggler `.cdi` that container is the audio track of the first session, the pregap, the
-track layout and the descriptor the file ends with; a plain `.iso` has no container at all ---
-the file *is* the data track, one 2048-byte sector after another --- so there the generated
-volume is the whole of the output. Which of the two an image is, is read off the last eight
-bytes of the file, where a DiscJuggler image names its layout.
+The file system is generated from scratch (@ref Jazz2::AssetPacker::Iso9660Builder), since any size change
+moves every following file; only the container is copied byte for byte. For a DiscJuggler `.cdi` that is
+the first session's audio track, the pregap, the track layout and the trailing descriptor; a plain `.iso`
+is just the data track of 2048-byte sectors. The type is read from the file's last eight bytes.
 
-The generated volume is the same shape as the one `mkdcdisc` writes, because that is what the
-console reads:
+The volume matches what `mkdcdisc` writes:
 
--   **Two hierarchies.** The plain ISO 9660 one is what the bootstrap of the Dreamcast looks
-    `1ST_READ.BIN` up in, and it can spell names only in upper case out of a very small
-    alphabet --- it turns `christmas-x-core_jj2.it` into `CHRISTMAS_X_CORE_JJ2.IT`, which is not
-    a name the game asks for. A Joliet hierarchy beside it carries the names as they really
-    are, and that is the one KallistiOS uses whenever a disc has one @m_span{m-text m-dim}
-    (see `fs_iso9660.c`, which looks for the supplementary descriptor in sectors 17 to 19 and
-    ignores the plain hierarchy the moment it finds one) @m_endspan.
--   **Files at the outer edge.** A CD passes the most data per rotation under the head at its
-    outer edge, so the file data is placed at the *end* of the volume and the space in front of
-    it is left empty. That is what makes the image of a 110 MB game 740 MB, and it is the
-    default `mkdcdisc` ships @m_span{m-text m-dim} (`-N` turns it off) @m_endspan, so a disc
-    that goes through this tool keeps it.
--   **Mode 2 Form 1 sectors**, for a DiscJuggler image. It stores 2336 bytes of every sector, so
-    the error detection code and both Reed-Solomon parities are generated for each one --- a
-    disc whose parity is wrong is a disc a drive reports read errors on. A plain `.iso` stores
-    the 2048 bytes of user data and nothing else, and needs none of it.
+-   <b>Two hierarchies</b> --- plain ISO 9660 (where the Dreamcast bootstrap finds `1ST_READ.BIN`, with
+    upper-case restricted names) plus Joliet with the real names, which KallistiOS uses whenever present
+    @m_span{m-text m-dim} (`fs_iso9660.c`) @m_endspan.
+-   <b>Files at the outer edge</b> --- file data is placed at the end of the volume for faster reads
+    (`mkdcdisc`'s default, `-N` turns it off), which is why the image is far larger than its content.
+-   <b>Mode 2 Form 1 sectors</b> for a `.cdi` (2336 bytes stored per sector), with the error detection code
+    and both Reed-Solomon parities generated --- wrong parity means read errors. A plain `.iso` stores 2048
+    bytes per sector and needs none of it.
 
-A `.cdi` is left exactly as long as it was whenever the new content fits, which is almost
-always: the image is mostly the empty space above, so the whole disc comes back the same size
-with only the data track rewritten. Content that does not fit grows the track, and the three
-length fields of the descriptor and the length of the disc are adjusted to match; a disc that
-outgrows an 80 minute CD is still written, with a warning, because what it is going to be
-burned onto is not something the tool can know. A plain `.iso` has no geometry to keep --- it
-is a file as long as what is on it --- so it is always sized to what it now holds.
+A `.cdi` keeps its length when the new content fits; otherwise the track grows and the descriptor's three
+length fields and the disc length are adjusted. A disc exceeding an 80-minute CD is still written, with a
+warning. A plain `.iso` is always sized to its content.
 
 @m_class{m-block m-info}
 
-@par The PlayStation 2 disc gains a Joliet hierarchy it did not have
-The build authors that image with `mkisofs`, which writes the real names into *Rock Ridge*
-entries --- and ps2sdk's `cdfs.irx`, the driver the game reads the disc through, does not look
-at those. It reads a Joliet hierarchy when the disc has one and the plain names otherwise,
-which is why the build now passes `-J` as well @m_span{m-text m-dim} (before it did not, and the
-42 files the game names with a space or a dash --- `xmas 1 feaw.j2t`, `christmas-x-core_jj2.it`
---- were on the disc as `XMAS_1_FEAW.J2T` and could not be opened) @m_endspan. An image that
-went through `swap-content` always comes back with one, so it is reachable either way.
+@par The PlayStation 2 disc gains a Joliet hierarchy
+ps2sdk's `cdfs.irx` ignores the <em>Rock Ridge</em> names `mkisofs` writes and reads Joliet if present,
+otherwise the plain names --- so the build passes `-J`, and names with a space or dash
+(`xmas 1 feaw.j2t`, `christmas-x-core_jj2.it`) stay reachable. Images from `swap-content` always have
+Joliet.
 
 @section asset-packer-gamecube The GameCube disc image
 
-No image authoring tool knows the GameCube disc format, so the tool writes that image itself, with
-`create-image`, which the GameCube build runs when it is given the path of a host build of the tool
-(`GAMECUBE_ASSETPACKER_EXECUTABLE`, see @ref consoles-gamecube-disc). The image is an ordinary ISO 9660
-volume, written by the same @ref Jazz2::AssetPacker::Iso9660Builder as everything above, whose first
-32 KB --- the system area, which a file system leaves alone --- hold exactly what a GameCube disc holds
-there:
+`create-image` writes the GameCube disc image; the GameCube build runs it when given a host build of the
+tool (`GAMECUBE_ASSETPACKER_EXECUTABLE`, see @ref consoles-gamecube-disc). It is an ordinary ISO 9660
+volume (@ref Jazz2::AssetPacker::Iso9660Builder) whose first 32 KB (the system area) hold:
 
--   the **disc header** (`boot.bin`): the game ID, the magic word that makes it a GameCube disc to the
-    console and to Dolphin, the title, and the offset of the executable,
--   **`bi2.bin`**: the memory the game may assume and the region, which the boot ROM compares with the
-    console's own,
--   the **apploader**: the small program the boot ROM loads from every disc and runs to bring the
-    executable into memory. Nintendo's own is part of every retail disc and cannot be redistributed, and
-    the devkitPro toolchain ships none, so the GameCube target builds a minimal one from
-    @cpp "Sources/nCine/Backends/Ogc/GameCubeApploader.c" @ce, with the bare compiler.
+-   the <b>disc header</b> (`boot.bin`): game ID, GameCube magic word, title and executable offset,
+-   <b>`bi2.bin`</b>: the assumed memory size and the region, which the boot ROM checks,
+-   the <b>apploader</b>, which loads the executable. Nintendo's cannot be redistributed and devkitPro
+    ships none, so the GameCube target builds a minimal one from
+    @cpp "Sources/nCine/Backends/Ogc/GameCubeApploader.c" @ce.
 
-The executable and `Content` are files of the volume, with the Joliet names beside the plain ones, so a
-computer opens the image as the ISO it is, while the console and Dolphin boot it as the disc it also
-is, and the game reads its content through the ISO 9660 hierarchy (see `OgcDvd.h`). The volume is
-followed by 32 KB of zeros: the console's readers fetch more than they are asked for, and a read past
-the end of an image is a read error to Dolphin. There is no GameCube file system table --- nothing on
-the console needs one --- so tools that list a GameCube disc by its table show no files.
+The executable and `Content` are ordinary files with Joliet names; the game reads them through ISO 9660
+(see `OgcDvd.h`). The volume is followed by 32 KB of zeros, because a read past the image end is an error
+in Dolphin. There is no GameCube file system table, so tools that list a disc by it show no files.
 
 @section asset-packer-platforms Platform notes
 
--   **Desktop** builds do not need the tool at all --- the game converts on first run.
-    Running it is still useful to prepare the cache in a build pipeline, or to pre-downscale
-    cinematics with `--video-downscale`.
--   **Dreamcast, PlayStation Portable, Wii and GameCube** all consume a tree prepared with
-    `--target=dreamcast` / `psp` / `wii` / `gamecube`. All four share the same layout, the target name
-    only decides the cinematics --- the Dreamcast and the GameCube get them re-encoded into
-    @ref Jazz2::VideoFormat, the others get the smaller originals copied. Where each console expects that tree, and how it gets
-    there, is described in @ref consoles-common-content "Building for consoles". The Dreamcast and the
-    GameCube have no conversion compiled in at all and *require* the prepared tree --- which is why
-    `dreamcast` and `gamecube` also write their images in LZ4 (see @ref asset-packer-lz4) --- the PSP and the
-    Wii would convert an installation left in their `Source` directory, which is slow on both and is
-    why they are given a prepared tree as well. The Dreamcast and the GameCube additionally author the
-    tree into a read-only disc image at build time, which is a procedure of its own ---
-    see @ref consoles-dreamcast-content and @ref consoles-gamecube-disc; the content of a finished image
-    can be replaced afterwards without building it again, see @ref asset-packer-swap-content.
--   **PlayStation 2** has a profile of its own, `--target=ps2`, which differs from the generic
-    `console` one only in the cinematics --- re-encoded into @ref Jazz2::VideoFormat *and* filtered
-    down to 320×240, which keeps the disc reads small --- and its images in LZ4 (see @ref asset-packer-lz4). A
-    `console` tree still plays, it is just the slow way round. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as the
-    Dreamcast does @m_span{m-text m-dim} (and authors it into an ISO at build time, see
-    @ref consoles-ps2-content, whose content can likewise be replaced afterwards with
-    @ref asset-packer-swap-content) @m_endspan; it can equally be run from an SD card in an MX4SIO adapter,
-    which consumes the same tree @m_span{m-text m-dim} (see @ref consoles-ps2-storage) @m_endspan.
--   **Nintendo 64** has a profile of its own, `--target=n64`, which needs libdragon's host tools and
-    converts the sound, the music and the cinematics into the console's formats --- see
-    @ref asset-packer-n64. A `console` tree still boots, without music. The tree is authored into the
-    ROM at build time @m_span{m-text m-dim} (see @ref consoles-n64-content) @m_endspan, and the content
-    of a finished ROM can be replaced afterwards with @ref asset-packer-swap-content.
--   **PlayStation 3** consumes the generic `--target=console` tree --- it needs nothing the profile
-    does not already do. It has a writable hard disk and could in principle convert, but is given a
-    prepared tree for the same reason the PSP is: doing it on the console is slow.
--   **PS Vita** and **Nintendo Switch** do convert the data themselves on first run, so the tool is
-    only a way to skip that wait there.
--   **Emscripten** likewise ships a fully prepared tree (`--target=emscripten`), typically
-    with `--shareware-only` for the public demo.
--   The packed `.font` files are what all platforms load, but the consoles benefit the most:
-    one palette index per pixel instead of expanded RGBA cuts both the file size and the
-    texture memory, and the tightly packed atlas minimizes the power-of-two padding the PVR, the
-    GX and the PSP's GE all have to pay.
+Where each console expects its tree is described in @ref consoles-common-content "Building for consoles".
+
+Platform           | Profile                  | Notes
+------------------ | ------------------------ | -----
+Desktop            | `desktop`                | Optional --- the game converts on first run. Useful for build pipelines or pre-downscaling cinematics
+Dreamcast, GameCube | `dreamcast`, `gamecube` | <b>Required</b> (no conversion compiled in). Re-encoded cinematics, LZ4 images. Baked into a disc image, see @ref consoles-dreamcast-content and @ref consoles-gamecube-disc; replace later with @ref asset-packer-swap-content
+PSP, Wii           | `psp`, `wii`             | Could convert an installation in `Source`, but slowly, so a prepared tree is used. Original cinematics copied
+PlayStation 2      | `ps2`                    | <b>Required</b>. Cinematics re-encoded at 320×240, LZ4 images; a `console` tree plays, but slower. Baked into an ISO (@ref consoles-ps2-content), or run from an SD card in an MX4SIO adapter (@ref consoles-ps2-storage)
+Nintendo 64        | `n64`                    | See @ref asset-packer-n64; a `console` tree boots without music. Baked into the ROM (@ref consoles-n64-content)
+PlayStation 3      | `console`                | Could convert, but slowly
+PS Vita, Switch    | none                     | Convert on first run; the tool only skips the wait
+Web                | `emscripten`             | Typically with `--shareware-only` for the public demo
+
+Packed `.font` files are loaded on all platforms; consoles gain the most (one index per pixel and less
+power-of-two padding).
 
 @section asset-packer-pitfalls Pitfalls
 
--   **The desktop cache descriptor must match the game exactly.** `Source.idx` is compared
-    field for field against what the running game would write --- including the event count
-    and the build version --- and the game silently reconverts everything on startup when any
-    field disagrees. Prepare the cache with a tool built from the same sources as the game.
--   **Never write an index for the console or web profiles.** The tool deliberately omits it
-    there, a prepared tree is never rewritten, and an index would only invite the game to try.
--   **Do not rename `Prebaked.pak` in a prepared tree.** Its name is what marks the tree as already
-    converted, so a renamed package leaves the game looking for original files it does not have --- and
-    finding none, showing a main menu with nothing to play.
--   **The source must contain a supported version of the game data.** The tool looks for
-    `Anims.j2a` (or `AnimsSw.j2a`) at the top of the source directory or in its `Source`
-    subdirectory and refuses to run without it.
--   **A non-desktop tree is self-contained only if it got the game's own content from somewhere.**
-    That is either a `Content` beside the originals or an explicit `--content=`. Without one the
-    tool still converts and exits successfully, and the tree then holds the sprites and sounds of
-    the original data and none of the game's own: no `.font` files, no `Metadata` at all, none of
-    the UI graphics and no translations --- which presents on the target as a game that cannot draw
-    its own menu. Nothing downstream can catch it, so the conversion **warns** about it instead,
-    naming the option to fix it; the `Copying "…"` line is what a run that did get the content
-    prints.
--   **Skipped levels are listed on purpose.** The list of original levels is maintained by
-    hand, so read the skipped-levels output after a `--originals-only` conversion --- a level
-    that should have been kept shows up there by name.
--   **Recompressed cinematics are larger than the originals.** Only re-encode where the
-    platform needs it (the tool's per-target defaults already do the right thing), everything
-    else wants the original file.
--   **`swap-content` reads the kinds of image the game's own builds produce.** A plain `.iso`,
-    which is what the PlayStation 2 and the GameCube discs are, a DiscJuggler `.cdi` whose data track stores 2048 or
-    2336 bytes per sector, which is what `mkdcdisc` writes, and a `.z64` ROM that ends with its
-    DragonFS image, which is how the Nintendo 64 build lays it out. A `.cdi` that stores whole
-    2352-byte sectors is refused rather than written back in a form that was never checked, a
-    byte-swapped `.v64` or `.n64` ROM has to be converted to `.z64` first, and no other container
-    @m_span{m-text m-dim} (`.mds`, `.nrg`, `.gdi`) @m_endspan is read at all.
--   **A module's memory sizes are worked out as a 64-bit host would.** libdragon's player reads from an
-    `.xm64` how much memory its context takes, which libxm computes with `sizeof` of structures that
-    hold pointers. A 64-bit `audioconv64` declares more than the console needs; a 32-bit build --- the
-    web version is one --- would declare less, and the player refuses a module that does not fit.
-    `Xm64Converter` always declares the 64-bit sizes.
--   **`--target=n64` runs one `audioconv64` per module on purpose.** In one run over several XM files
-    the tool writes every module after the first with the first one's internal offsets, which the
-    console then hangs or crashes on when it opens them. The packer works around it; converting
-    modules by hand with libdragon's tool, do the same.
--   **Identical samples keep only the first instrument's seek points in an `.xm64`.** audioconv64
-    stores a sample once however many instruments carry it, with the points a compressed sample can
-    be started from (one per `9xx` offset it is played with) collected for the first of them only. An
-    instrument that shares the data and is played from an offset the first never uses makes the
-    console assert ("invalid VADPCM seeking point") on that note. The translated modules carry copies
-    of instruments at other pannings, so the packer makes the copies that need it differ inaudibly
-    @m_span{m-text m-dim} (`ModuleConverter.cpp`, about 1 MB of cartridge for the whole soundtrack)
-    @m_endspan.
--   The game plays pre-downscaled cinematics as they are --- the player picks its runtime
-    downscale from the actual frame width, so a file reduced by the tool is not halved a
-    second time.
+-   <b>`Source.idx` must match the game exactly.</b> It is compared field for field with what
+    `GameEventHandler::WriteCacheDescriptor` writes (signature, file type, cache version, flags,
+    `Anims.j2a` modification time, event count, build version); any mismatch makes the game silently
+    reconvert everything. Use a tool built from the same sources as the game.
+-   <b>Never add an index to a console or web tree</b>, and <b>never rename `Prebaked.pak`</b> --- the game
+    would look for original files it does not have and show a menu with nothing to play.
+-   <b>Missing `Anims.j2a`</b> (or `AnimsSw.j2a`) at the top of the source or in its `Source` subdirectory
+    makes the tool refuse to run.
+-   <b>A non-desktop tree needs the game's own content</b> --- a `Content` beside the originals or
+    `--content=`. Without it the conversion still succeeds but the game cannot draw its menu (no fonts,
+    `Metadata`, UI graphics or translations); the tool warns. A run that got it prints `Copying "…"`.
+-   <b>`swap-content` reads only what the game's builds produce</b>: a plain `.iso`, a DiscJuggler `.cdi`
+    with 2048 or 2336 bytes per sector (`mkdcdisc`), and a `.z64` ending with its DragonFS image. A
+    2352-byte-sector `.cdi` is refused, a byte-swapped `.v64`/`.n64` must be converted to `.z64` first,
+    and other containers @m_span{m-text m-dim} (`.mds`, `.nrg`, `.gdi`) @m_endspan are not supported.
+-   <b>`.xm64` memory sizes are always the 64-bit ones.</b> libxm computes them with `sizeof` of
+    pointer-holding structures; a 32-bit build (the web version is one) would declare too little and the
+    player refuses the module. `Xm64Converter` always declares the 64-bit sizes.
+-   <b>Run one `audioconv64` per module.</b> Over several XM files in one run it writes later modules with
+    the first one's offsets, which hangs or crashes the console. The packer does this; do the same by hand.
+-   <b>Identical samples keep only the first instrument's seek points in an `.xm64`.</b> Another instrument
+    sharing the data and played from a different `9xx` offset asserts on the console ("invalid VADPCM
+    seeking point"), so the packer makes such copies differ inaudibly
+    @m_span{m-text m-dim} (`ModuleConverter.cpp`) @m_endspan.
 
 */
 
