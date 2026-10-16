@@ -7,6 +7,9 @@
 #if defined(WITH_MULTIPLAYER)
 #	include "Multiplayer/ServerInitialization.h"
 #endif
+#if defined(WITH_EDITOR)
+#	include "Editor/EditorInitialization.h"
+#endif
 
 #include <Containers/Function.h>
 
@@ -61,12 +64,27 @@ namespace Jazz2
 		virtual void ResumeSavedState() = 0;
 		/** @brief Saves current state if it's resumable */
 		virtual bool SaveCurrentStateIfAny() = 0;
+		/**
+		 * @brief Shows or hides the mouse cursor as the current state handler wants
+		 *
+		 * The cursor follows @ref IStateHandler::GetCursorPolicy(), which is asked again here --- a state handler
+		 * calls this when what it wants changes.
+		 */
+		virtual void ApplyCursorPolicy() = 0;
 
 #if defined(WITH_MULTIPLAYER)
 		/** @brief Connects to a multiplayer server asynchronously */
 		virtual void ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password = {}) = 0;
 		/** @brief Creates a multiplayer server */
 		virtual bool CreateServer(Multiplayer::ServerInitialization&& serverInit) = 0;
+#endif
+#if defined(WITH_EDITOR)
+		/**
+		 * @brief Opens the level editor asynchronously
+		 *
+		 * Goes back to the main menu with a message if the level can't be opened.
+		 */
+		virtual void OpenEditor(Editor::EditorInitialization&& editorInit) = 0;
 #endif
 
 		/** @brief Returns current state flags */

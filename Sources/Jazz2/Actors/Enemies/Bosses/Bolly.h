@@ -23,6 +23,27 @@ namespace Jazz2::Actors::Bosses
 		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
+		/** @brief Animation of the part below the body */
+		static constexpr std::uint32_t BottomAnimation = 1;
+		/** @brief Animation of a ball of the chain */
+		static constexpr std::uint32_t ChainBallAnimation = 3;
+		/** @brief Animation of a small piece of the chain between the balls */
+		static constexpr std::uint32_t ChainPieceAnimation = 4;
+		/** @brief Number of entries of the chain on difficulties below Hard */
+		static constexpr std::int32_t NormalChainLength = 5 * 3;
+
+		/** @brief Returns whether an entry of the chain is a ball, the others are the small pieces between them */
+		static constexpr bool IsChainBall(std::int32_t index) {
+			return (index % 3) == 2;
+		}
+		/**
+		 * @brief Appends where the entries of a whole chain are, from the position of the boss
+		 *
+		 * @p chainPhase is how far the chain has swung, it starts at 0 and grows by 0.06 a frame. The level
+		 * editor shows the boss this way, with its chain swinging.
+		 */
+		static void GetChainOffsets(float chainPhase, std::int32_t chainLength, SmallVectorImpl<Vector2f>& offsets);
+
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnActivatedBoss() override;
@@ -37,8 +58,11 @@ namespace Jazz2::Actors::Bosses
 		static constexpr std::int32_t StatePrepairingToAttack = 3;
 		static constexpr std::int32_t StateAttacking = 4;
 
-		static constexpr std::int32_t NormalChainLength = 5 * 3;
 		static constexpr std::int32_t HardChainLength = 6 * 3;
+		// Distance from the start of the chain, and from an entry of the chain to the next one, in pixels
+		static constexpr float ChainStartDistance = 30.0f;
+		static constexpr float ChainBallSize = 14.0f;
+		static constexpr float ChainPieceSize = 7.0f;
 		static constexpr std::int32_t MaxChainLength = HardChainLength;
 		/** @brief Entries of @ref _chain one segment occupies --- two small pieces and the ball that ends it */
 		static constexpr std::int32_t ChainPiecesPerSegment = 3;
@@ -110,6 +134,7 @@ namespace Jazz2::Actors::Bosses
 		std::int32_t _rocketsLeft;
 		float _chainPhase;
 
+		static Vector2f GetChainDirection(float chainPhase, std::int32_t index);
 		//void UpdateTurret(float timeMult);
 		void FollowNearestPlayer(std::int32_t newState, float time);
 		void FireRocket();

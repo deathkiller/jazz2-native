@@ -372,7 +372,8 @@ namespace Jazz2::Resources
 		None = 0x00,						/**< None */
 
 		Referenced = 0x01,					/**< The metadata is referenced and should not be released */
-		AsyncFinalizingRequired = 0x02		/**< The metadata still requires asynchronous finalization */
+		AsyncFinalizingRequired = 0x02,		/**< The metadata still requires asynchronous finalization */
+		Pinned = 0x04						/**< The metadata stays loaded even when nothing requests it, see @ref ContentResolver::PinMetadata() */
 	};
 
 	DEATH_ENUM_FLAGS(MetadataFlags);

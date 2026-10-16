@@ -248,7 +248,7 @@ Joining goes through these steps:
 
 1.  Protocol version check --- by default the client's version must match the server's exactly, patch
     included (see @ref NCINE_PROTOCOL_VERSION_MIN and @ref NCINE_PROTOCOL_VERSION_MAX). Converted levels
-    are versioned per build too (see @ref Jazz2::LevelFormat).
+    are versioned per build too (see @ref Jazz2::Formats::LevelFile).
 2.  Authentication against the whitelist, ban lists and password; a connection not authenticated within
     20 seconds is dropped.
 3.  Missing assets (levels, tilesets, music) are downloaded if @cpp "AllowAssetStreaming" @ce is on;

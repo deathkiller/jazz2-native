@@ -288,6 +288,15 @@ namespace nCine::RHI::GL
 			RenderResources::GetVaoPool().BindVao(_vertexFormat);
 #endif
 		}
+#if !defined(WITH_RHI_SOFTWARE)
+		else {
+			// Nothing is read from a buffer then. The VAO of the draw before would stay bound otherwise, with its arrays
+			// enabled, and a buffer deleted since it was set up is unbound from it, so a driver that reads them reads
+			// from address 0 on.
+			static const GLVertexFormat NoAttributes;
+			RenderResources::GetVaoPool().BindVao(NoAttributes);
+		}
+#endif
 #endif
 	}
 

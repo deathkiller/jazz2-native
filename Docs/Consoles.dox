@@ -194,7 +194,7 @@ A prepared tree is never rebuilt, and data from an older AssetPacker is not reje
 a freshly built tool after pulling data-format changes.
 @par
 Converted levels carry their own version after the file type byte @m_span{m-text m-dim} (see
-@ref Jazz2::LevelFormat) @m_endspan, and any other version is refused with a log line. A level that
+@ref Jazz2::Formats::LevelFile) @m_endspan, and any other version is refused with a log line. A level that
 can't be reconverted can be upgraded from the unversioned layout to version 1 by inserting a
 @cpp u16 @ce `1` right after the file type byte.
 

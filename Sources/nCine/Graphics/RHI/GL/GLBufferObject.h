@@ -37,6 +37,10 @@ namespace nCine::RHI::GL
 		inline GLuint GetGLHandle() const {
 			return _glHandle;
 		}
+		/** @brief Returns a number no other buffer object of this run has had, unlike its address or its handle */
+		inline std::uint64_t GetUniqueId() const {
+			return _uniqueId;
+		}
 		/** @brief Returns the target this buffer is bound to (e.g., `GL_ARRAY_BUFFER`) */
 		inline GLenum GetTarget() const {
 			return _target;
@@ -128,6 +132,7 @@ namespace nCine::RHI::GL
 #endif
 
 		GLuint _glHandle;
+		std::uint64_t _uniqueId;
 		GLenum _target;
 		GLsizeiptr _size;
 		bool _mapped;

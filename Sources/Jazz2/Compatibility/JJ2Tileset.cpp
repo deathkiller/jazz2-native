@@ -1,13 +1,11 @@
 ﻿#include "JJ2Tileset.h"
 #include "JJ2Anims.h"
 #include "JJ2Block.h"
+#include "../Formats/TileSetFile.h"
 
 #include <IO/FileSystem.h>
-#include <IO/MemoryStream.h>
-#include <IO/Compression/DeflateStream.h>
 
 using namespace Death::IO;
-using namespace Death::IO::Compression;
 
 namespace Jazz2::Compatibility
 {
@@ -207,178 +205,44 @@ namespace Jazz2::Compatibility
 
 	void JJ2Tileset::Convert(StringView targetPath) const
 	{
-		std::int32_t tileCount = _tileCount;
-
-		// Rearrange the tiles from the original '10 tiles per row' into the row count whose sheet wastes the
-		// least space once rounded up to power-of-two dimensions, within 1024x1024 where the tiles fit into it.
-		// No texture is decided by this, though: the sheet is never uploaded as it is. The runtime copies every
-		// tile into an atlas of its own with a pixel of padding around each (ContentResolver::BuildTilesetDiffuse)
-		// - on the consoles 15 tiles (510 px) per row and chunks of at most 512 rows, so each chunk is one page
-		// even on the PSP and no tile ever lies across a page line; elsewhere with this row count, split into
-		// textures the device can hold. It derives the row count back from the width, so this is free to change,
-		// and a tileset with more tiles than 1024x1024 holds is just as fine.
-		constexpr std::int32_t MaxTextureSize = 1024;
-		std::int32_t TilesPerRow = std::max<std::int32_t>(1, MaxTextureSize / BlockSize);
-		{
-			std::int64_t bestCost = INT64_MAX;
-			for (std::int32_t columns = 1; columns <= tileCount; columns++) {
-				const std::int32_t candidateWidth = columns * BlockSize;
-				const std::int32_t candidateHeight = ((tileCount - 1) / columns + 1) * BlockSize;
-				if (candidateWidth > MaxTextureSize || candidateHeight > MaxTextureSize) {
-					continue;
-				}
-
-				std::int32_t paddedWidth = 1, paddedHeight = 1;
-				while (paddedWidth < candidateWidth) { paddedWidth <<= 1; }
-				while (paddedHeight < candidateHeight) { paddedHeight <<= 1; }
-
-				// Among layouts that pad to the same texture, prefer the one with fewer unused cells
-				const std::int64_t emptyCells = std::int64_t(columns) * ((tileCount - 1) / columns + 1) - tileCount;
-				const std::int64_t cost = std::int64_t(paddedWidth) * paddedHeight * 1024 + emptyCells;
-				if (cost < bestCost) {
-					bestCost = cost;
-					TilesPerRow = columns;
-				}
-			}
-		}
-
-		std::int32_t width = TilesPerRow * BlockSize;
-		std::int32_t height = ((tileCount - 1) / TilesPerRow + 1) * BlockSize;
-
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
-		std::uint8_t flags = 0x20 | 0x40; // Mask and palette included
-#if defined(WITH_LZ4)
-		// The image content goes in LZ4 blocks of one band of tiles each, see JJ2Anims::WriteImageContentLz4()
-		const bool lz4 = (JJ2Anims::PreferredImageCompression == JJ2Anims::ImageCompression::Lz4);
-		if (lz4) {
-			flags |= JJ2Anims::ImageContentLz4Flag;
-		}
-#endif
+		Formats::TileSetData data;
+		data.Resize(_tileCount);
 
-		so->WriteValueAsLE<std::uint64_t>(0xB8EF8498E2BFBBEF);
-		so->WriteValueAsLE<std::uint16_t>(0x208F);
-		so->WriteValue<std::uint8_t>(2); // Version 2 is reserved for sprites (or bigger images)
-		so->WriteValue<std::uint8_t>(flags); // Flags
+		// Palette
+		std::memcpy(data.Palette, _palette, sizeof(_palette));
 
-		// 8-bit palette tilesets (no 32-bit/true-color tiles) are emitted as a single index channel: the palette is
-		// stored in the file and entry 0 is fixed transparent, so the loader reproduces every color and on/off
-		// transparency from the index alone - the alpha channel is redundant. Tilesets with any 32-bit tile stay RGBA.
-		bool hasAny32bitTile = false;
-		for (std::int32_t i = 0; i < tileCount; i++) {
-			if (_tiles[i].ImageDataOffset & Is32bitTile) {
-				hasAny32bitTile = true;
+		bool hasAlphaChannel = false;
+		for (std::int32_t i = 1; i < std::int32_t(arraySize(data.Palette)); i++) {
+			if ((data.Palette[i] & 0xff000000) != 0) {
+				hasAlphaChannel = true;
 				break;
 			}
 		}
-		std::uint8_t channelCount = (hasAny32bitTile ? 4 : 1);
-		so->WriteValue<std::uint8_t>(channelCount);
-		so->WriteValueAsLE<std::uint32_t>(width);
-		so->WriteValueAsLE<std::uint32_t>(height);
-		so->WriteValueAsLE<std::uint16_t>(tileCount);
-
-		MemoryStream ms(1024 * 1024);
-		{
-			DeflateWriter co(ms);
-
-			// Palette
-			std::uint32_t palette[PaletteSize];
-			std::memcpy(palette, _palette, sizeof(_palette));
-
-			bool hasAlphaChannel = false;
-			for (std::int32_t i = 1; i < std::int32_t(arraySize(palette)); i++) {
-				if ((palette[i] & 0xff000000) != 0) {
-					hasAlphaChannel = true;
-					break;
-				}
-			}
-			if (!hasAlphaChannel) {
-				for (std::int32_t i = 1; i < std::int32_t(arraySize(palette)); i++) {
-					palette[i] |= 0xff000000;
-				}
-			}
-
-			// The first palette entry is fixed to transparent black
-			palette[0] = 0x00000000;
-
-			for (std::size_t i = 0; i < arraySize(palette); i++) {
-				co.WriteValueAsLE<std::uint32_t>(palette[i]);
-			}
-
-			// Mark individual tiles as 32-bit or 8-bit
-			for (std::int32_t i = 0; i < (tileCount + 7) / 8; i++) {
-				std::uint32_t is32bitAggregated = 0;
-				std::int32_t tilesPerByte = std::min<std::int32_t>(8, tileCount - i * 8);
-				for (std::int32_t j = 0; j < tilesPerByte; j++) {
-					const auto& tile = _tiles[i * 8 + j];
-					if (tile.ImageDataOffset & Is32bitTile) {
-						is32bitAggregated |= (1 << j);
-					}
-				}
-				co.WriteValue<std::uint8_t>(is32bitAggregated);
-			}
-
-			// Mask
-			co.WriteValueAsLE<std::uint32_t>(tileCount * sizeof(_tiles[0].Mask));
-			for (std::int32_t i = 0; i < tileCount; i++) {
-				const auto& tile = _tiles[i];
-				co.Write(tile.Mask, sizeof(tile.Mask));
+		if (!hasAlphaChannel) {
+			for (std::int32_t i = 1; i < std::int32_t(arraySize(data.Palette)); i++) {
+				data.Palette[i] |= 0xff000000;
 			}
 		}
 
-		so->WriteValueAsLE<std::int32_t>(std::int32_t(ms.GetSize()));
-		so->Write(ms.GetBuffer(), ms.GetSize());
+		// The first palette entry is fixed to transparent black
+		data.Palette[0] = 0x00000000;
 
-		// Diffuse
-		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * channelCount);
-
-		for (std::int32_t i = 0; i < tileCount; i++) {
+		for (std::int32_t i = 0; i < _tileCount; i++) {
 			const auto& tile = _tiles[i];
-
-			std::int32_t ox = (i % TilesPerRow) * BlockSize;
-			std::int32_t oy = (i / TilesPerRow) * BlockSize;
-			if (tile.ImageDataOffset & Is32bitTile) {
-				for (std::int32_t y = 0; y < BlockSize; y++) {
-					for (std::int32_t x = 0; x < BlockSize; x++) {
-						const auto* src = &tile.Image[(y * BlockSize + x) * 4];
-
-						std::int32_t pixelIdx = (width * (oy + y) + ox + x) * 4;
-						pixels[pixelIdx] = src[0];
-						pixels[pixelIdx + 1] = src[1];
-						pixels[pixelIdx + 2] = src[2];
-						pixels[pixelIdx + 3] = src[3];
-					}
-				}
-			} else if (channelCount == 1) {
-				// Single index channel; the palette (incl. fixed-transparent entry 0) is applied at load time
-				for (std::int32_t y = 0; y < BlockSize; y++) {
-					for (std::int32_t x = 0; x < BlockSize; x++) {
-						pixels[width * (oy + y) + ox + x] = tile.Image[y * BlockSize + x];
-					}
-				}
-			} else {
-				for (std::int32_t y = 0; y < BlockSize; y++) {
-					for (std::int32_t x = 0; x < BlockSize; x++) {
-						const auto& src = tile.Image[y * BlockSize + x];
-
-						std::int32_t pixelIdx = (width * (oy + y) + ox + x) * 4;
-						pixels[pixelIdx] = src;
-						pixels[pixelIdx + 1] = src;
-						pixels[pixelIdx + 2] = src;
-						pixels[pixelIdx + 3] = (src == 0 ? 0 : 255);
-					}
-				}
-			}
+			data.TrueColor[i] = ((tile.ImageDataOffset & Is32bitTile) != 0 ? 1 : 0);
+			// An 8-bit tile keeps its palette indices in the first part of the image, as TileSetData expects
+			std::memcpy(&data.Images[std::size_t(i) * Formats::TileSetData::ImageBytesPerTile], tile.Image, sizeof(tile.Image));
+			std::memcpy(&data.Masks[std::size_t(i) * Formats::TileSetData::MaskBytesPerTile], tile.Mask, sizeof(tile.Mask));
 		}
 
+		// The image content goes in LZ4 blocks of one band of tiles each, see JJ2Anims::WriteImageContentLz4()
+		bool lz4 = false;
 #if defined(WITH_LZ4)
-		if (lz4) {
-			static_assert(JJ2Anims::TilesetLz4BandRows == BlockSize, "A band has to be one row of tiles");
-			JJ2Anims::WriteImageContentLz4(*so, pixels.get(), width, height, channelCount, JJ2Anims::TilesetLz4BandRows);
-			return;
-		}
+		lz4 = (JJ2Anims::PreferredImageCompression == JJ2Anims::ImageCompression::Lz4);
 #endif
-		JJ2Anims::WriteImageContent(*so, pixels.get(), width, height, channelCount);
+		Formats::TileSetFile::Write(*so, data, lz4);
 	}
 }

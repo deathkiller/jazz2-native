@@ -80,6 +80,10 @@ namespace Jazz2::Rendering
 		Vector2f _shakeOffset;
 		float _ambientLightTarget;
 		Vector4f _ambientLight;
+		// How many view pixels a world pixel takes, 1 in the game - only the free camera of the level editor zooms
+		float _cameraScale;
+		// Whether the camera stays where it's put (see SetFreeCamera()) instead of following the target actor
+		bool _freeCamera;
 #endif
 
 		/**
@@ -130,6 +134,35 @@ namespace Jazz2::Rendering
 		void WarpCameraToTarget(bool fast);
 		/** @brief Places the look-ahead where it rests for the target actor as it stands now, instead of easing into it */
 		void ResetLookAhead();
+
+		/**
+		 * @brief Makes the camera a free one, centered at a given position of the level and zoomed by a given scale
+		 *
+		 * The camera then stays where it's put, not limited by the level bounds, and doesn't need a target actor.
+		 * A scale above 1 zooms in, one view pixel is `1 / scale` world pixels. The level editor moves its camera
+		 * this way.
+		 */
+		void SetFreeCamera(Vector2f center, float scale);
+		/** @brief Makes the camera follow the target actor again, at the scale of the game */
+		void SetFollowCamera();
+		/** @brief Returns `true` if the camera is a free one, see @ref SetFreeCamera() */
+		bool IsFreeCamera() const {
+			return _freeCamera;
+		}
+		/** @brief Returns the center of the view in the level */
+		Vector2f GetCameraCenter() const {
+			return _cameraPos;
+		}
+		/** @brief Returns how many view pixels a world pixel takes, 1 in the game */
+		float GetCameraScale() const {
+			return _cameraScale;
+		}
+		/** @brief Returns the size of the part of the level the view shows */
+		Vector2f GetWorldViewSize() const;
+		/** @brief Converts a position in the level to a position in the view, in pixels from its top left corner */
+		Vector2f WorldToView(Vector2f worldPos) const;
+		/** @brief Converts a position in the view, in pixels from its top left corner, to a position in the level */
+		Vector2f ViewToWorld(Vector2f viewPos) const;
 
 	private:
 		// Below this focus speed there is no look-ahead - the camera stays exactly on the player, so slow nudging or

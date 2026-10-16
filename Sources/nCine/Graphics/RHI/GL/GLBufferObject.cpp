@@ -12,6 +12,9 @@ namespace nCine::RHI::GL
 	GLBufferObject::GLBufferObject(GLenum target)
 		: _glHandle(0), _target(target), _size(0), _mapped(false)
 	{
+		// Buffer objects are created on the rendering thread only
+		static std::uint64_t lastUniqueId = 0;
+		_uniqueId = ++lastUniqueId;
 		glGenBuffers(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}

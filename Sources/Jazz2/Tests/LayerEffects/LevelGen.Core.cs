@@ -323,7 +323,7 @@ public static partial class LevelGen
 
 	public class Level
 	{
-		public string Name, Tileset, Music = "", Next = "", Secret = "", Bonus = "";
+		public string Name, Author = "", Tileset, Music = "", Next = "", Secret = "", Bonus = "";
 		public int Width, Height;
 		public uint AmbientLight = 0xFF000000u;		// Fully lit
 		public int Flags;							// LevelFlags, e.g. 0x03 = falling out of the bottom kills
@@ -354,6 +354,7 @@ public static partial class LevelGen
 		MemoryStream ls = new MemoryStream();
 		BinaryWriter w = new BinaryWriter(ls);
 		WStr(w, l.Name);
+		WStr(w, l.Author);
 		WStr(w, l.Next); WStr(w, l.Secret); WStr(w, l.Bonus);
 		WStr(w, l.Tileset);
 		WStr(w, l.Music);
@@ -416,7 +417,7 @@ public static partial class LevelGen
 		using (BinaryWriter lw = new BinaryWriter(File.Create(path))) {
 			lw.Write(0x2095A59FF0BFBBEFUL);
 			W8(lw, 1);								// ContentFileType::Level
-			W16(lw, 1);								// LevelFormat::CurrentVersion
+			W16(lw, 1);								// Formats::LevelFile::CurrentVersion
 			W16(lw, l.Flags);						// LevelFlags
 			lw.Write(compressedLevel.Length);
 			lw.Write(compressedLevel);

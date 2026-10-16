@@ -571,6 +571,14 @@ namespace Jazz2::UI
 		_transitionTime = 0.0f;
 	}
 
+	void HUD::CancelFadeIn()
+	{
+		if (_transitionState == TransitionState::FadeIn || _transitionState == TransitionState::WaitingForFadeIn) {
+			_transitionState = TransitionState::None;
+			_transitionTime = 1.0f;
+		}
+	}
+
 	void HUD::BeginFadeOut(float delay)
 	{
 		if (delay <= 0.0f) {

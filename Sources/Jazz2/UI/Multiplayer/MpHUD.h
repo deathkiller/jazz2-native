@@ -4,6 +4,7 @@
 
 #include "../HUD.h"
 #include "../../Multiplayer/MpLevelHandler.h"
+#include "../../Rendering/PolylineRenderer.h"
 
 namespace Jazz2::UI::Multiplayer
 {
@@ -49,8 +50,6 @@ namespace Jazz2::UI::Multiplayer
 			Alignment alignment, const Colorf& color, float scaleX, float scaleY) override;
 
 	private:
-		static constexpr std::int32_t MinimapMaxVertexFloats = 65536;
-
 		Font* _mediumFont;
 		String _countdownText;
 		float _countdownTimeLeft;
@@ -61,11 +60,7 @@ namespace Jazz2::UI::Multiplayer
 		SmallVector<Vector2f, 0> _minimapPoints;
 		SmallVector<std::int32_t, 0> _minimapRunOffsets;	// Start index of each run; the last entry is the total count
 		std::uint32_t _minimapCacheKey;
-		std::unique_ptr<float[]> _minimapVertices;			// Persistent host vertex buffer for the line mesh
-		std::int32_t _minimapVertexCount;
-		SmallVector<std::unique_ptr<RenderCommand>, 0> _minimapCommands;
-		std::int32_t _minimapCommandsCount;
-		std::unique_ptr<Texture> _minimapLineTexture;		// 1D alpha-feather texture used to antialias the line edges
+		Rendering::PolylineRenderer _minimapLine;			// Draws the line mesh, its vertices and commands are rebuilt every frame
 		// Direct rendering tier only: the whole track rasterized once into textures the size of the minimap box
 		// (the line, and its thicker shadow), drawn as two sprites a frame - see RefreshMinimapTrackTextures()
 		std::unique_ptr<Texture> _minimapTrackTexture;

@@ -21,6 +21,13 @@ namespace Jazz2
 		DEATH_RUNTIME_OBJECT();
 
 	public:
+		/** @brief How the mouse cursor is shown while a state handler is active */
+		enum class CursorPolicy {
+			Default,		/**< Shown in a window, hidden in fullscreen */
+			Visible,		/**< Always shown */
+			Hidden			/**< Always hidden */
+		};
+
 		/** @brief Creates a new instance */
 		IStateHandler() {}
 		virtual ~IStateHandler() {}
@@ -46,5 +53,24 @@ namespace Jazz2
 		virtual void OnTextInput(const nCine::TextInputEvent& event) {}
 		/** @brief Called when a touch event is triggered */
 		virtual void OnTouchEvent(const nCine::TouchEvent& event) {}
+		/**
+		 * @brief Called when a mouse button is pressed
+		 *
+		 * The position is in window coordinates, which may differ from the pixels of the drawable on a high-DPI
+		 * display. The game itself doesn't use the mouse, only the level editor does.
+		 */
+		virtual void OnMouseDown(const nCine::MouseEvent& event) {}
+		/** @brief Called when a mouse button is released */
+		virtual void OnMouseUp(const nCine::MouseEvent& event) {}
+		/** @brief Called when the mouse is moved */
+		virtual void OnMouseMove(const nCine::MouseState& state) {}
+		/** @brief Called when the mouse wheel is scrolled, or a touchpad is scrolled with two fingers */
+		virtual void OnMouseWheel(const nCine::ScrollEvent& event) {}
+
+		/** @brief Called when the application is about to be suspended, before the resumable state is saved */
+		virtual void OnSuspend() {}
+
+		/** @brief Returns how the mouse cursor should be shown while the handler is active */
+		virtual CursorPolicy GetCursorPolicy() const { return CursorPolicy::Default; }
 	};
 }

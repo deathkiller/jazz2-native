@@ -4,6 +4,7 @@
 #include "../../nCine/Graphics/RenderBatcher.h"
 #include "../../nCine/Graphics/RenderCommand.h"
 #include "../../nCine/Graphics/SceneNode.h"
+#include "../../nCine/Primitives/Rect.h"
 
 using namespace nCine;
 
@@ -42,6 +43,23 @@ namespace Jazz2::UI
 		/** @brief Tint multiplied into the color of every drawn primitive */
 		Colorf LayerColor = Colorf::White;
 
+		/**
+		 * @brief Rectangle in screen-space every drawn primitive is clipped to, one without area clips nothing
+		 *
+		 * Applied after the layer transform, on the CPU, so it doesn't stop primitives from being batched --- one
+		 * outside of it is left out, one across its edge is cut down together with its texture coordinates. Text
+		 * drawn through @ref Font is clipped glyph by glyph. A rotated primitive is only left out when all of it is
+		 * outside, it's never cut. Nothing is clipped by default.
+		 */
+		Rectf ClipRect = Rectf(0.0f, 0.0f, 0.0f, 0.0f);
+		/**
+		 * @brief Whether primitives of the same layer are drawn in the order they were drawn in
+		 *
+		 * Otherwise their order is unspecified, so overlapping primitives have to be on different layers. Off by
+		 * default, as nothing but the level editor needs it.
+		 */
+		bool OrderedDraws = false;
+
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 
@@ -69,8 +87,15 @@ namespace Jazz2::UI
 		/** @brief Draws a raw render command */
 		void DrawRenderCommand(RenderCommand* command);
 
-	protected:
-		/** @brief Multiplier of game time for canvas rendering */
+		/**
+		 * @brief Clips a rectangle to @ref ClipRect, returns `false` if nothing of it is left
+		 *
+		 * The position and size are in screen-space, after the layer transform. Texture coordinates in the layout
+		 * the sprite shaders take (horizontal scale and offset, then vertical) are cut down along with the rectangle.
+		 */
+		bool ClipQuad(Vector2f& pos, Vector2f& size, Vector4f* texCoords) const;
+
+		/** @brief Multiplier of game time for canvas rendering, @ref AnimTime grows by it a frame */
 		static constexpr float AnimTimeMultiplier = 0.014f;
 
 	private:
@@ -116,6 +141,8 @@ namespace Jazz2::UI
 		};
 
 		std::int32_t _renderCommandsCount;
+		// Visit order of the next rented command while OrderedDraws is set
+		std::uint16_t _nextVisitOrder;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		RenderQueue* _currentRenderQueue;
 		SmallVector<GlyphBatch, 0> _glyphBatches;

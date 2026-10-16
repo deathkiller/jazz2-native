@@ -42,6 +42,8 @@ set(SOURCES
 	FontPacker.h
 	Iso9660.cpp
 	Iso9660.h
+	FormatVerifier.cpp
+	FormatVerifier.h
 	ModuleConverter.cpp
 	ModuleConverter.h
 	N64Content.cpp

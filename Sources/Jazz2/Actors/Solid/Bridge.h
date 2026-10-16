@@ -23,6 +23,14 @@ namespace Jazz2::Actors::Solid
 		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
+		/**
+		 * @brief Appends where the pieces of a bridge are, from the position of the bridge
+		 *
+		 * @p bridgeType and @p bridgeWidth (in pixels) are as the event gives them. The level editor shows a bridge
+		 * this way, piece by piece, as long as it is.
+		 */
+		static void GetPieceOffsets(std::uint8_t bridgeType, std::int32_t bridgeWidth, SmallVectorImpl<std::int32_t>& offsets);
+
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
@@ -61,6 +69,9 @@ namespace Jazz2::Actors::Solid
 		static constexpr std::int32_t PieceWidthsLog[] = { 13, 13, 13 };
 		static constexpr std::int32_t PieceWidthsGem[] = { 14 };
 		static constexpr std::int32_t PieceWidthsLab[] = { 14 };
+
+		/** @brief Returns the widths of the pieces of a type of bridge, and how far they're moved in */
+		static void GetPieceWidths(BridgeType type, const std::int32_t*& widths, std::int32_t& count, std::int32_t& offset);
 
 		BridgeType _bridgeType;
 		std::int32_t _bridgeWidth;

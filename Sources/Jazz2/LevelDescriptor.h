@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../Main.h"
+#include "GameDifficulty.h"
 #include "WeatherType.h"
 
 #include "../nCine/Primitives/Vector4.h"
@@ -22,6 +23,20 @@ namespace Jazz2
 	{
 		class TileMap;
 	}
+
+	/**
+		@brief Options of loading a level
+
+		Decides which of the events of a level are added to its @ref Events::EventMap --- each event carries the
+		difficulties it's present in, and some are present only in multiplayer.
+	*/
+	struct LevelLoadOptions
+	{
+		/** @brief Difficulty of the session */
+		GameDifficulty Difficulty = GameDifficulty::Default;
+		/** @brief Whether the session is a multiplayer one, which also adds the multiplayer-only events */
+		bool Multiplayer = false;
+	};
 
 	/**
 		@brief Contains all components to fully initialize a level instance
@@ -58,5 +73,7 @@ namespace Jazz2
 		std::uint16_t WaterLevel;
 		/** @brief Level texts */
 		SmallVector<String, 0> LevelTexts;
+		/** @brief Whether the level editor can open the level, see @ref LevelFlags::NotEditable */
+		bool Editable = true;
 	};
 }

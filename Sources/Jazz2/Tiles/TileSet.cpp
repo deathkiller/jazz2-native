@@ -202,7 +202,7 @@ namespace Jazz2::Tiles
 		return result;
 	}
 
-	bool TileSet::OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, std::uint8_t> tileMask)
+	bool TileSet::OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, const std::uint8_t> tileMask)
 	{
 		if (tileId >= TileCount) {
 			return false;

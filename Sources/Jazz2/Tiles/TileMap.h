@@ -19,6 +19,13 @@ namespace Jazz2
 {
 	class LevelHandler;
 
+	namespace Formats
+	{
+		class LevelReader;
+		struct AnimatedTileRecord;
+		struct LayerRecord;
+	}
+
 #if defined(WITH_ANGELSCRIPT)
 	namespace Scripting
 	{
@@ -366,6 +373,73 @@ namespace Jazz2::Tiles
 	};
 
 	/**
+		@brief How the layers of a tile map are placed relative to the view
+	*/
+	enum class LayerPlacement : std::uint8_t
+	{
+		/** @brief As in the game, by the view that is drawn */
+		Gameplay,
+		/**
+			@brief As in the game, by a view of @ref TileMapViewOptions::ReferenceViewSize at the same center
+
+			The layers sit where the game would put them for the view of a player at the center, and are extended across
+			a view of another size --- the level editor zoomed out shows more of every layer, not layers moved apart.
+		*/
+		ReferenceView
+	};
+
+	/** @brief An image drawn in place of the tiles of a layer, see @ref ITileMapLayerOverride */
+	struct TileMapLayerImage
+	{
+		/** @brief Image, not indexed */
+		Texture* Image;
+		/** @brief Where it's drawn in the level */
+		Rectf Rect;
+	};
+
+	/**
+		@brief Draws images in place of the tiles of layers, as the level editor does for a view from far away
+	*/
+	class ITileMapLayerOverride
+	{
+	public:
+		virtual ~ITileMapLayerOverride() = default;
+
+		/**
+		 * @brief Called for each visible tile layer that is drawn, with where the tile (0, 0) of it is in the level
+		 *
+		 * Returns `true` to draw @p images at the depth of the layer instead of its tiles.
+		 */
+		virtual bool OverrideLayer(std::int32_t layerIndex, Vector2f origin, const Rectf& cullingRect, SmallVectorImpl<TileMapLayerImage>& images) = 0;
+	};
+
+	/**
+		@brief Options of how a tile map is shown
+
+		The defaults show it as the game does. The level editor changes them to look at a level in other ways.
+	*/
+	struct TileMapViewOptions
+	{
+		/** @brief Draws images in place of the tiles of layers, not owned */
+		ITileMapLayerOverride* LayerOverride = nullptr;
+		/** @brief How the layers are placed relative to the view */
+		LayerPlacement Placement = LayerPlacement::Gameplay;
+		/** @brief Size of the view the layers are placed by, see @ref LayerPlacement::ReferenceView */
+		Vector2i ReferenceViewSize;
+		/**
+			@brief How far the layers are aligned with the sprite layer instead, from 0 to 1
+
+			At 1 the tile (0, 0) of every layer is at the world position (0, 0), whatever its speed and offset, so each
+			layer can be edited in the same grid as the sprite layer.
+		*/
+		float FlatAmount = 0.0f;
+		/** @brief Whether black bars are drawn at the sides of a level narrower than the view */
+		bool DrawSideBars = true;
+		/** @brief Whether layers with an automatic speed stay where their offset puts them, instead of moving */
+		bool PauseLayerMovement = false;
+	};
+
+	/**
 		@brief Represents a renderable tile map, consists of multiple layers
 		
 		Owns the level's tile layers and tile sets and renders them as a scene node. Besides drawing, it advances
@@ -545,12 +619,33 @@ namespace Jazz2::Tiles
 
 		/** @brief Adds an additional tile set as a continuation of the previous one */
 		void AddTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
-		/** @brief Reads layer configuration from a stream */
-		void ReadLayerConfiguration(Stream& s);
+		/** @brief Adds an additional tile set read from a stream, as one stored in the level, as a continuation of the previous one */
+		void AddTileSet(Stream& s, StringView name, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
+		/** @brief Reads the next layer of a level, its description and its tiles, and adds it */
+		void LoadLayer(Formats::LevelReader& reader);
 		/** @brief Whether reading the layers ran out of memory (the level cannot be played) */
 		bool HasLoadFailed() const { return _loadFailed; }
-		/** @brief Reads description of animated tiles from a stream */
-		void ReadAnimatedTiles(Stream& s);
+		/**
+		 * @brief Sets the animated tiles of the level
+		 *
+		 * Tile IDs from @p animatedTilesOffset up refer to them, in the order they are given. An animated tile without
+		 * frames shows the empty tile, so the ones after it keep their IDs.
+		 */
+		void SetAnimatedTiles(std::uint16_t animatedTilesOffset, ArrayView<const Formats::AnimatedTileRecord> animatedTiles);
+		/** @brief Draws the textured background of the level again, after its tiles changed */
+		void InvalidateTexturedBackground();
+		/** @brief Returns the number of animated tiles */
+		std::int32_t GetAnimatedTileCount() const {
+			return std::int32_t(_animatedTiles.size());
+		}
+		/** @brief Changes the timing and the frames of an animated tile, it goes on playing from where it is */
+		void SetAnimatedTile(std::int32_t index, const Formats::AnimatedTileRecord& animatedTile);
+		/**
+		 * @brief Makes a layer tile from a tile of a level file
+		 *
+		 * The flags carry the flips in the low nibble and a modifier in the high one (see @ref Formats::TileRecord).
+		 */
+		static LayerTile MakeLayerTile(std::uint8_t fileFlags, std::uint16_t tileId);
 		/** @brief Sets tile event flags */
 		void SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams);
 		/** @brief Overrides the diffuse texture of the specified tile */
@@ -562,7 +657,7 @@ namespace Jazz2::Tiles
 		 */
 		bool IsTileSetIndexed(std::int32_t tileId);
 		/** @brief Overrides the collision mask of the specified tile */
-		bool OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask);
+		bool OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, const std::uint8_t> tileMask);
 
 		/** @brief Returns a caption tile */
 		StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, Color> GetCaptionTile() const {
@@ -671,6 +766,14 @@ namespace Jazz2::Tiles
 		std::int32_t GetLayerCount() const {
 			return (std::int32_t)_layers.size();
 		}
+		/** @brief Returns the options of how the tile map is shown */
+		const TileMapViewOptions& GetViewOptions() const {
+			return _viewOptions;
+		}
+		/** @brief Sets the options of how the tile map is shown, the defaults show it as the game does */
+		void SetViewOptions(const TileMapViewOptions& options) {
+			_viewOptions = options;
+		}
 		/** @brief Returns size of a given layer in tiles, or an empty vector if the layer doesn't exist */
 		Vector2i GetLayerSize(std::int32_t layerIndex) const;
 		/**
@@ -700,6 +803,60 @@ namespace Jazz2::Tiles
 			if the layer doesn't exist or is the sprite layer.
 		*/
 		bool SetLayerRendererType(std::int32_t layerIndex, LayerRendererType type);
+
+		/** @brief Makes the description of a layer from a layer of a level file */
+		static LayerDescription MakeLayerDescription(const Formats::LayerRecord& record);
+		/**
+		 * @brief Replaces a tile of a layer, as if it was loaded so from the level file
+		 *
+		 * Unlike @ref SetTile(), nothing of the replaced tile is kept --- neither the state it had in the game, nor
+		 * what the events of the level made of it. Meant for the level editor. Returns `false` if out of range.
+		 */
+		bool ReplaceLayerTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y, const LayerTile& tile);
+		/** @brief Returns the description of a layer, or `nullptr` if the layer doesn't exist */
+		const LayerDescription* GetLayerDescription(std::int32_t layerIndex) const;
+		/**
+		 * @brief Changes how a layer is placed and drawn, and whether it's drawn at all
+		 *
+		 * The renderer type is changed as by @ref SetLayerRendererType(). A layer that becomes a
+		 * @ref LayerRendererType::Sky or @ref LayerRendererType::Circle needs the viewport to be initialized again.
+		 * The description of the sprite layer can't be changed. Meant for the level editor. Returns `false` if the
+		 * layer doesn't exist.
+		 */
+		bool SetLayerDescription(std::int32_t layerIndex, const LayerDescription& description, bool visible);
+		/** @brief Returns `true` if a layer is drawn */
+		bool IsLayerVisible(std::int32_t layerIndex) const;
+		/**
+		 * @brief Returns the texture and texture coordinates a tile is drawn with
+		 *
+		 * The tile ID is as the level file stores it, an animated tile resolves to the frame it shows now. The
+		 * texture coordinates are in the layout the sprite shaders take (horizontal scale and offset, then vertical).
+		 * An indexed texture keeps palette indices, which are recolored by the first palette. Returns `false` if
+		 * the tile doesn't exist.
+		 */
+		bool GetTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, Vector4f& texCoords, bool& indexed);
+		/**
+		 * @brief Returns where the tile (0, 0) of a layer is drawn in the level, for a view of a given center and size
+		 *
+		 * The layer is placed as by the current view options, a position in the level then lies on the tile
+		 * @cpp (position - origin) / 32 @ce of the layer, repeated if the layer repeats.
+		 */
+		Vector2f GetLayerOrigin(std::int32_t layerIndex, Vector2f viewCenter, Vector2f viewSize) const;
+		/** @brief Returns where the tile (0, 0) of a layer is drawn in the level, as the game places it for a view, whatever the view options */
+		Vector2f GetGameplayLayerOrigin(std::int32_t layerIndex, const Rectf& view) const;
+		/** @brief Returns the number of tile sets, the default one and the extra ones */
+		std::int32_t GetTileSetCount() const;
+		/** @brief Returns the number of tiles taken from a tile set */
+		std::int32_t GetTileSetTileCount(std::int32_t index) const;
+		/** @brief Returns the number of tiles of all tile sets, which is the first tile ID of the animated tiles */
+		std::int32_t GetStaticTileCount() const {
+			return std::int32_t(_animatedTilesOffset);
+		}
+		/** @brief Returns the tile an animated tile shows now, or the tile itself if it isn't animated */
+		std::int32_t ResolveStaticTileId(std::int32_t tileId) const;
+		/** @brief Returns the packed collision mask of a tile that isn't animated (@ref TileSet::MaskBytesPerTile bytes), or `nullptr` */
+		const std::uint8_t* GetStaticTileMask(std::int32_t tileId);
+
 #if defined(TILEMAP_LAYER_EFFECTS) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns `true` if any layer is a @ref LayerRendererType::XRay layer */
 		bool HasXRayLayers() const;
@@ -735,12 +892,6 @@ namespace Jazz2::Tiles
 		void OnInitializeViewport();
 
 	private:
-		enum class LayerType {
-			Other,
-			Sky,
-			Sprite
-		};
-
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct TileSetPart {
@@ -787,6 +938,9 @@ namespace Jazz2::Tiles
 		ITileMapOwner* _owner;
 		std::int32_t _sprLayerIndex;
 		bool _loadFailed = false;
+		TileMapViewOptions _viewOptions;
+		// Images drawn in place of the layer being drawn, see TileMapViewOptions::LayerOverride
+		SmallVector<TileMapLayerImage, 0> _layerImages;
 		PitType _pitType;
 
 		SmallVector<TileSetPart, 2> _tileSets;
@@ -1026,8 +1180,14 @@ namespace Jazz2::Tiles
 		}
 #endif
 
-		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter);
+		// The layer is placed by `placementRect` (its parallax), and the tiles that cover `cullingRect` are drawn; the two
+		// are the same unless the view options say otherwise (see TileMapViewOptions)
+		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, const Rectf& placementRect, Vector2f viewCenter);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY);
+		// Returns the coordinates of a layer at the top left corner of the view it's placed by, minus HardcodedOffset
+		Vector2f GetLayerViewCoordinates(const TileMapLayer& layer, const Rectf& placementRect, Vector2f viewCenter, float loX, float loY) const;
+		// Returns the color of a tinted layer, whose description keeps a palette index in red and the strength in alpha
+		static Vector4f ResolveTintColor(const Vector4f& description);
 		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr);
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Appends one tile's two triangles (6 vertices, 8 floats each: position.xy, texcoords.xy, color.rgba) to a
@@ -1151,7 +1311,9 @@ namespace Jazz2::Tiles
 		void RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer, float x, float y);
 
 		TileSet* ResolveTileSet(std::int32_t& tileId);
+		static void FillAnimatedTile(AnimatedTile& animTile, const Formats::AnimatedTileRecord& record);
 		std::int32_t ResolveTileID(const LayerTile& tile) const;
+		bool GetStaticTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, Vector4f& texCoords, bool& indexed);
 		/** @brief Loads the whole atlas of the main tileset if it was deferred, see @ref _diffuseDeferred */
 		void LoadDeferredDiffuse();
 	};

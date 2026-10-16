@@ -1,7 +1,7 @@
 ﻿#include "CustomLevelSelectSection.h"
 #include "StartGameOptionsSection.h"
 #include "MenuResources.h"
-#include "../../LevelFormat.h"
+#include "../../Formats/LevelFile.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
@@ -25,7 +25,7 @@ namespace Jazz2::UI::Menu
 	CustomLevelSelectSection::CustomLevelSelectSection(bool multiplayer, bool privateServer, bool localGame)
 		: _multiplayer(multiplayer), _privateServer(privateServer), _localGame(localGame), _selectedIndex(0), _animation(0.0f), _y(0.0f),
 			_height(0.0f), _availableHeight(0.0f), _touchTime(0.0f), _touchSpeed(0.0f), _pressedCount(0),
-			_noiseCooldown(0.0f), _touchDirection(0)
+			_noiseCooldown(0.0f), _touchDirection(0), _previewWait(0.0f)
 	{
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		_indexingThread = Thread([](void* arg) {
@@ -84,6 +84,15 @@ namespace Jazz2::UI::Menu
 
 		if (_noiseCooldown > 0.0f) {
 			_noiseCooldown -= timeMult;
+		}
+
+		// Not while the selection is moving quickly, reading a level takes a while
+		if (_selectedIndex >= 0 && _selectedIndex < (std::int32_t)_items.size() && _items[_selectedIndex].Path != _previewPath) {
+			_previewWait += timeMult;
+			if (_previewWait > 15.0f) {
+				_previewWait = 0.0f;
+				LoadPreview(_selectedIndex);
+			}
 		}
 
 		if (_root->ActionHit(PlayerAction::Menu)) {
@@ -154,6 +163,80 @@ namespace Jazz2::UI::Menu
 		_root->DrawMenuTitle(charOffset, _("Play Custom Levels"), centerX, topLine);
 	}
 
+	void CustomLevelSelectSection::DrawPreview(float right, float centerY, float maxWidth)
+	{
+		// Where the level starts, small on the left of its name, with a soft shadow around
+		if (_preview == nullptr || _selectedIndex < 0 || _selectedIndex >= (std::int32_t)_items.size() ||
+			_items[_selectedIndex].Path != _previewPath || _previewSize.X <= 0 || _previewSize.Y <= 0) {
+			return;
+		}
+		float width = std::min(std::round(maxWidth), 96.0f);
+		if (width < 40.0f) {
+			return;
+		}
+		Vector2f size(width, std::round(width * _previewSize.Y / _previewSize.X));
+		float x = std::round(right - size.X);
+		float y = std::round(centerY - size.Y * 0.5f);
+		for (std::int32_t i = 4; i > 0; i--) {
+			float grow = i * 1.5f;
+			_root->DrawSolid(x - grow + 1.0f, y - grow + 2.0f, IMenuContainer::MainLayer - 110 + (4 - i), Alignment::TopLeft,
+				Vector2f(size.X + grow * 2.0f, size.Y + grow * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.12f));
+		}
+		_root->DrawSolid(x - 1.0f, y - 1.0f, IMenuContainer::MainLayer - 105, Alignment::TopLeft, Vector2f(size.X + 2.0f, size.Y + 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f));
+		_root->DrawTexture(*_preview, x, y, IMenuContainer::MainLayer - 100, Alignment::TopLeft, size, Colorf::White);
+	}
+
+	void CustomLevelSelectSection::LoadPreview(std::int32_t index)
+	{
+		_preview = nullptr;
+		_previewSize = Vector2i();
+		if (index < 0 || index >= (std::int32_t)_items.size()) {
+			return;
+		}
+		_previewPath = _items[index].Path;
+		if (_previewPath.empty()) {
+			return;
+		}
+
+		auto s = fs::Open(_previewPath, FileAccess::Read);
+		Formats::LevelHeader header;
+		if (!s->IsValid() || !Formats::LevelFile::ReadHeader(*s, header)) {
+			return;
+		}
+		Formats::LevelReader reader(*s, header);
+		Formats::LevelProperties properties;
+		reader.ReadProperties(properties);
+		if (!reader.SkipToChunks()) {
+			return;
+		}
+		SmallVector<Formats::ChunkRecord, 0> chunks;
+		reader.ReadChunks(chunks, false);
+		for (const Formats::ChunkRecord& chunk : chunks) {
+			if (chunk.Tag != Formats::LevelFile::PreviewChunk || chunk.Data.size() < 4) {
+				continue;
+			}
+			std::int32_t width = chunk.Data[0] | (chunk.Data[1] << 8);
+			std::int32_t height = chunk.Data[2] | (chunk.Data[3] << 8);
+			if (width <= 0 || height <= 0 || width > 1024 || height > 1024 || chunk.Data.size() < 4 + std::size_t(width) * std::size_t(height) * 3) {
+				return;
+			}
+			SmallVector<std::uint8_t, 0> texels;
+			texels.resize_for_overwrite(std::size_t(width) * std::size_t(height) * 4);
+			for (std::size_t i = 0; i < std::size_t(width) * std::size_t(height); i++) {
+				texels[i * 4] = chunk.Data[4 + i * 3];
+				texels[i * 4 + 1] = chunk.Data[4 + i * 3 + 1];
+				texels[i * 4 + 2] = chunk.Data[4 + i * 3 + 2];
+				texels[i * 4 + 3] = 255;
+			}
+			_preview = std::make_unique<Texture>("LevelPreview", Texture::Format::RGBA8, width, height);
+			_preview->LoadFromTexels(texels.data(), 0, 0, width, height);
+			_preview->SetMinFiltering(SamplerFilter::Linear);
+			_preview->SetMagFiltering(SamplerFilter::Nearest);
+			_previewSize = Vector2i(width, height);
+			return;
+		}
+	}
+
 	void CustomLevelSelectSection::OnDrawClipped(Canvas* canvas)
 	{
 		Recti contentBounds = _root->GetContentBounds();
@@ -204,6 +287,8 @@ namespace Jazz2::UI::Menu
 
 					_root->DrawStringShadow(levelName, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Left, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+					DrawPreview(column1 - 8.0f, center.Y, column1 - 8.0f - (contentBounds.X + 6.0f));
 				} else {
 					_root->DrawStringShadow(levelName, charOffset, column1, center.Y, IMenuContainer::FontLayer,
 						Alignment::Left, Font::DefaultColor, 0.7f);
@@ -390,11 +475,12 @@ namespace Jazz2::UI::Menu
 		auto s = fs::Open(levelFile, FileAccess::Read);
 		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", );
 
-		LevelFlags flags;
-		if (!LevelFormat::ReadHeader(*s, flags)) {
+		Formats::LevelHeader header;
+		if (!Formats::LevelFile::ReadHeader(*s, header)) {
 			LOGW("Level \"{}\" has invalid signature or unsupported version", levelFile);
 			return;
 		}
+		LevelFlags flags = header.Flags;
 
 #if !defined(DEATH_DEBUG)
 		// Don't show hidden levels in Release build if unlock cheat is not active, but show all levels in Debug build
@@ -406,19 +492,20 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 
-		// Read compressed data
-		std::int32_t compressedSize = s->ReadValueAsLE<std::int32_t>();
-
-		DeflateStream uc(*s, compressedSize);
-
-		// Read metadata
-		std::uint8_t nameSize = uc.ReadValue<std::uint8_t>();
-		String name{NoInit, nameSize};
-		uc.Read(name.data(), nameSize);
+		// The display name comes first, so nothing else has to be read
+		Formats::LevelReader reader(*s, header);
+		Formats::LevelProperties properties;
+		reader.ReadProperties(properties);
 
 		auto& level = _items.emplace_back();
 		level.LevelName = fs::GetFileNameWithoutExtension(levelFile);
-		level.DisplayName = std::move(name);
+		level.Path = levelFile;
+		if (!properties.Author.empty()) {
+			// TRANSLATORS: Level in the list of custom levels, with its name and the name of who made it
+			level.DisplayName = _f("{} by {}", properties.DisplayName, properties.Author);
+		} else {
+			level.DisplayName = std::move(properties.DisplayName);
+		}
 
 #if defined(DEATH_DEBUG)
 		if ((flags & LevelFlags::IsHidden) == LevelFlags::IsHidden) {

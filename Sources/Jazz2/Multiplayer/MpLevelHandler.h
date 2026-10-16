@@ -190,6 +190,9 @@ namespace Jazz2::Multiplayer
 		void PlayerExecuteRumble(Actors::Player* player, StringView rumbleEffect) override;
 
 		bool SerializeResumableToStream(Stream& dest) override;
+#if defined(WITH_EDITOR)
+		bool CanOpenInEditor() const override;
+#endif
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override;
 
@@ -323,6 +326,7 @@ namespace Jazz2::Multiplayer
 		static String GetAssetFullPath(AssetType type, StringView path, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId = {}, bool forWrite = false);
 
 	protected:
+		LevelLoadOptions GetLevelLoadOptions() const override;
 		void AttachComponents(LevelDescriptor&& descriptor) override;
 		std::unique_ptr<UI::HUD> CreateHUD() override;
 		void SpawnPlayers(const LevelInitialization& levelInit) override;

@@ -245,12 +245,8 @@ namespace Jazz2
 
 		_console = std::make_unique<UI::InGameConsole>(this);
 
-		auto p = _levelName.partition('/');
-
-		// Try to search also "unknown" directory
 		LevelDescriptor descriptor;
-		if (!resolver.TryLoadLevel(_levelName, _difficulty, descriptor) &&
-			(p[0] == "unknown"_s || !resolver.TryLoadLevel(String("unknown/"_s + p[2]), _difficulty, descriptor))) {
+		if (!LoadLevel(descriptor)) {
 			LOGE("Cannot load level \"{}\"", _levelName);
 			return false;
 		}
@@ -311,7 +307,7 @@ namespace Jazz2
 		_console = std::make_unique<UI::InGameConsole>(this);
 
 		LevelDescriptor descriptor;
-		if (!resolver.TryLoadLevel(_levelName, _difficulty, descriptor)) {
+		if (!LoadLevel(descriptor)) {
 			LOGE("Cannot load level \"{}\"", _levelName);
 			return false;
 		}
@@ -393,6 +389,17 @@ namespace Jazz2
 		UpdateRichPresence();
 
 		_console->OnInitialized();
+
+#if defined(DEATH_DEBUG)
+		// Run on the first frame, once the viewports exist (see OnBeginFrame())
+		const AppConfiguration& config = theApplication().GetAppConfiguration();
+		for (std::int32_t i = 0; i + 1 < config.argc(); i++) {
+			if (config.argv(i) == "/console"_s) {
+				_debugStartupCommands.emplace_back(config.argv(i + 1));
+				i++;
+			}
+		}
+#endif
 
 #if defined(WITH_ANGELSCRIPT)
 		if (_scripts != nullptr) {
@@ -593,6 +600,40 @@ namespace Jazz2
 		_root->InvokeAsync(weak_from_this(), std::move(callback));
 	}
 
+	LevelHandler::ViewportSetup LevelHandler::GetViewportSetup(std::int32_t width, std::int32_t height)
+	{
+		ViewportSetup setup;
+		// The logical view, bounded by DefaultWidth/Height scaled by the rendering resolution preference
+		setup.ViewSize = Rendering::UpscaleRenderPass::CalculateViewSize(width, height, DefaultWidth, DefaultHeight);
+		// When zooming out in splitscreen, each player's camera shows a full-size view but their on-screen region is
+		// only a fraction of the framebuffer, so the per-player image would be minified to roughly half resolution.
+		// Supersampling the shared framebuffer restores the per-player resolution; the logical coordinate space (and
+		// thus the HUD layout) stays unchanged.
+		setup.Supersample = (PreferencesCache::PreferZoomOut && _assignedViewports.size() >= 3 ? 2 : 1);
+		setup.NativeOutput = false;
+		return setup;
+	}
+
+	bool LevelHandler::LoadLevel(LevelDescriptor& descriptor)
+	{
+		auto& resolver = ContentResolver::Get();
+		LevelLoadOptions options = GetLevelLoadOptions();
+		if (resolver.TryLoadLevel(_levelName, options, descriptor)) {
+			return true;
+		}
+
+		// Try to search also "unknown" directory
+		auto p = _levelName.partition('/');
+		return (p[0] != "unknown"_s && resolver.TryLoadLevel(String("unknown/"_s + p[2]), options, descriptor));
+	}
+
+	LevelLoadOptions LevelHandler::GetLevelLoadOptions() const
+	{
+		LevelLoadOptions options;
+		options.Difficulty = _difficulty;
+		return options;
+	}
+
 	void LevelHandler::AttachComponents(LevelDescriptor&& descriptor)
 	{
 		ZoneScopedC(0x4876AF);
@@ -647,12 +688,26 @@ namespace Jazz2
 #endif
 
 		_levelTexts = std::move(descriptor.LevelTexts);
+#if defined(WITH_EDITOR)
+		_levelEditable = descriptor.Editable;
+#endif
 
+		LoadLevelScripts(descriptor.FullPath);
+
+#if defined(DEATH_TARGET_DREAMCAST)
+		// The heap window is the binding constraint of this console and a level is the largest thing that
+		// is ever loaded into it, so what one costs is worth a line in the log every time
+		nCine::Backends::DcPlatform::LogMemoryStatus("level loaded");
+#endif
+	}
+
+	void LevelHandler::LoadLevelScripts(StringView fullPath)
+	{
 #if defined(WITH_ANGELSCRIPT) || defined(DEATH_TRACE)
 		// TODO: Allow script signing
 		if (PreferencesCache::AllowUnsignedScripts) {
-			const StringView foundDot = descriptor.FullPath.findLastOr('.', descriptor.FullPath.end());
-			String scriptPath = (foundDot == descriptor.FullPath.end() ? StringView(descriptor.FullPath) : descriptor.FullPath.prefix(foundDot.begin())) + ".j2as"_s;
+			const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
+			String scriptPath = (foundDot == fullPath.end() ? fullPath : fullPath.prefix(foundDot.begin())) + ".j2as"_s;
 			if (auto scriptPathCaseInsensitive = fs::FindPathCaseInsensitive(scriptPath)) {
 				if (fs::IsReadableFile(scriptPathCaseInsensitive)) {
 #	if defined(WITH_ANGELSCRIPT)
@@ -663,12 +718,6 @@ namespace Jazz2
 				}
 			}
 		}
-#endif
-
-#if defined(DEATH_TARGET_DREAMCAST)
-		// The heap window is the binding constraint of this console and a level is the largest thing that
-		// is ever loaded into it, so what one costs is worth a line in the log every time
-		nCine::Backends::DcPlatform::LogMemoryStatus("level loaded");
 #endif
 	}
 
@@ -780,6 +829,16 @@ namespace Jazz2
 		ZoneScopedC(0x4876AF);
 
 		float timeMult = theApplication().GetTimeMult();
+
+#if defined(DEATH_DEBUG)
+		if DEATH_UNLIKELY(!_debugStartupCommands.empty()) {
+			auto commands = std::move(_debugStartupCommands);
+			_debugStartupCommands = {};
+			for (const String& command : commands) {
+				OnConsoleCommand(command);
+			}
+		}
+#endif
 
 #if defined(WITH_AUDIO)
 		// The level music is started only after the first frames have loaded what they load (see the level
@@ -931,8 +990,10 @@ namespace Jazz2
 					// Update audio listener position
 					IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
 					if (_assignedViewports.size() == 1) {
+						// A free camera has no target, so nothing it hears moves relative to it
+						Actors::ActorBase* listener = _assignedViewports[0]->_targetActor;
 						audioDevice.updateListener(Vector3f(_assignedViewports[0]->_cameraPos, 0.0f),
-							Vector3f(_assignedViewports[0]->_targetActor->GetSpeed(), 0.0f));
+							Vector3f(listener != nullptr ? listener->GetSpeed() : Vector2f::Zero, 0.0f));
 					} else {
 						audioDevice.updateListener(Vector3f::Zero, Vector3f::Zero);
 
@@ -993,18 +1054,13 @@ namespace Jazz2
 			return;
 		}
 
-		// The logical view, bounded by DefaultWidth/Height scaled by the rendering resolution preference
-		_viewSize = Rendering::UpscaleRenderPass::CalculateViewSize(width, height, DefaultWidth, DefaultHeight);
+		ViewportSetup setup = GetViewportSetup(width, height);
+		_viewSize = setup.ViewSize;
 		std::int32_t w = _viewSize.X;
 		std::int32_t h = _viewSize.Y;
 
-		// When zooming out in splitscreen, each player's camera shows a full-size view but their on-screen region is
-		// only a fraction of the framebuffer, so the per-player image would be minified to roughly half resolution.
-		// Supersampling the shared framebuffer restores the per-player resolution; the logical coordinate space (and
-		// thus the HUD layout) stays unchanged.
-		bool useHalfRes = (PreferencesCache::PreferZoomOut && _assignedViewports.size() >= 3);
-		std::int32_t supersample = (useHalfRes ? 2 : 1);
-		_upscalePass.Initialize(w, h, width, height, supersample);
+		bool useHalfRes = (setup.Supersample > 1);
+		_upscalePass.Initialize(w, h, width, height, setup.Supersample, false, setup.NativeOutput);
 
 		// When the scene is supersampled, the HUD and in-game menu are rendered through a separate overlay pass at the
 		// native resolution and then composited (nearest, so clean integer scaling) into the supersampled scene buffer,
@@ -1891,6 +1947,80 @@ namespace Jazz2
 		return true;
 	}
 
+#if defined(WITH_EDITOR)
+	bool LevelHandler::CanOpenInEditor() const
+	{
+		return (_levelEditable && IsLocalSession());
+	}
+
+	void LevelHandler::OpenInEditor()
+	{
+		Editor::EditorInitialization editorInit;
+		editorInit.LevelName = _levelName;
+		_root->OpenEditor(std::move(editorInit));
+	}
+
+	void LevelHandler::SuspendRendering()
+	{
+		_upscalePass.Detach();
+		_hudUpscalePass.Detach();
+	}
+
+#	if defined(WITH_AUDIO)
+	bool LevelHandler::HandOverMusic(LevelHandler& target, float lowPass)
+	{
+		if (_music == nullptr || _musicCurrentPath != target._musicCurrentPath) {
+			return false;
+		}
+		target._music = std::move(_music);
+		target._musicStartDelay = 0;
+		target._music->setLowPass(lowPass);
+		if (target._music->isStopped() || target._music->isPaused()) {
+			target._music->play();
+		}
+		_musicStartDelay = 0;
+		return true;
+	}
+
+	std::unique_ptr<AudioStreamPlayer> LevelHandler::TakeMusic(String& path)
+	{
+		path = _musicCurrentPath;
+		_musicStartDelay = 0;
+		return std::move(_music);
+	}
+
+	bool LevelHandler::ContinueMusic(std::unique_ptr<AudioStreamPlayer>& music, StringView path, float lowPass)
+	{
+		if (music == nullptr || path != _musicCurrentPath) {
+			return false;
+		}
+		_music = std::move(music);
+		_musicStartDelay = 0;
+		_music->setLowPass(lowPass);
+		if (_music->isStopped() || _music->isPaused()) {
+			_music->play();
+		}
+		return true;
+	}
+
+	void LevelHandler::SetMusicMuffling(float lowPass)
+	{
+		if (_music != nullptr) {
+			_music->setLowPass(lowPass);
+		}
+	}
+#	endif
+
+	bool LevelHandler::IsEditorPlayTest() const
+	{
+		return false;
+	}
+
+	void LevelHandler::ExitEditor()
+	{
+	}
+#endif
+
 	bool LevelHandler::CanUseLevelStateSnapshots() const
 	{
 		return IsLocalSession();
@@ -2024,7 +2154,7 @@ namespace Jazz2
 			std::shared_ptr<Actors::ActorBase> actor = _eventSpawner.SpawnEvent(eventType, eventParams, flags, spawnPos);
 			if (actor == nullptr) {
 				if ((flags & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
-					Vector2i originTile = Vector2i(spawnPos.X / Tiles::TileSet::DefaultTileSize, spawnPos.Y / Tiles::TileSet::DefaultTileSize);
+					Vector2i originTile = _eventMap->GetOriginTile(Vector2i(spawnPos.X, spawnPos.Y), eventType);
 					if ((flags & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
 						_eventMap->ResetGenerator(originTile.X, originTile.Y);
 					}
@@ -2162,11 +2292,8 @@ namespace Jazz2
 
 		_console = std::make_unique<UI::InGameConsole>(this);
 
-		auto p = _levelName.partition('/');
-
 		LevelDescriptor descriptor;
-		if (!resolver.TryLoadLevel(_levelName, _difficulty, descriptor) &&
-			(p[0] == "unknown"_s || !resolver.TryLoadLevel(String("unknown/"_s + p[2]), _difficulty, descriptor))) {
+		if (!LoadLevel(descriptor)) {
 			LOGE("Cannot load level \"{}\"", _levelName);
 			return false;
 		}
@@ -2331,7 +2458,7 @@ namespace Jazz2
 				for (auto& viewport : _assignedViewports) {
 					// `AABB` is the hitbox, which a sprite can overhang, so the rectangle is grown by a tile. That
 					// is still far inside the margin the activation box itself keeps beyond the edge of the view.
-					const Vector2i halfView = viewport->GetViewportSize() / 2;
+					const Vector2f halfView = viewport->GetWorldViewSize() * 0.5f;
 					const float slack = (float)TileSet::DefaultTileSize;
 					const Vector2f center = viewport->_cameraPos;
 					visibleRects.emplace_back(center.X - halfView.X - slack, center.Y - halfView.Y - slack,
@@ -2342,9 +2469,11 @@ namespace Jazz2
 			for (auto& actor : _actors) {
 				if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
 					Vector2i originTile = actor->_originTile;
+					// Where it was spawned, the origin tile of an off-grid event lies past the bottom of the level
+					Vector2i spawnTile(actor->_spawnPos.X / TileSet::DefaultTileSize, actor->_spawnPos.Y / TileSet::DefaultTileSize);
 					bool isInside = false;
 					for (std::size_t i = 1; i < playerZones.size(); i += 2) {
-						if (playerZones[i].Contains(originTile)) {
+						if (playerZones[i].Contains(spawnTile)) {
 							isInside = true;
 							break;
 						}
@@ -2729,7 +2858,8 @@ namespace Jazz2
 		}
 
 		viewport._cameraLastPos = viewport._cameraPos;
-		viewport._camera->SetView(viewport._cameraPos, 0.0f, 1.0f);
+		// The view is placed by its top left corner, the camera position is its center (as in PlayerViewport::UpdateCamera())
+		viewport._camera->SetView(viewport._cameraPos - halfView.As<float>(), 0.0f, 1.0f);
 		// The look-ahead of a small view starts where it rests rather than drifting into place (see ResetLookAhead())
 		viewport.ResetLookAhead();
 	}
@@ -2838,7 +2968,7 @@ namespace Jazz2
 		constexpr float MaxDistance = 800.0f;
 
 		for (auto& viewport : _assignedViewports) {
-			if ((viewport->_targetActor->_pos - pos).Length() <= MaxDistance) {
+			if (viewport->_targetActor != nullptr && (viewport->_targetActor->_pos - pos).Length() <= MaxDistance) {
 				viewport->ShakeCameraView(duration);
 
 				if (auto* player = runtime_cast<Actors::Player>(viewport->_targetActor)) {
@@ -3361,9 +3491,10 @@ namespace Jazz2
 		Vector2i originalSize = viewport._view->GetSize();
 		Vector2f upscaledSize = _upscalePass.GetTargetSize();
 		Vector2f halfView = bounds.Center();
+		const float scale = viewport.GetCameraScale();
 		return ImVec2(
-			(pos.X - viewport._cameraPos.X + halfView.X) * upscaledSize.X / originalSize.X,
-			(pos.Y - viewport._cameraPos.Y + halfView.Y) * upscaledSize.Y / originalSize.Y
+			((pos.X - viewport._cameraPos.X) * scale + halfView.X) * upscaledSize.X / originalSize.X,
+			((pos.Y - viewport._cameraPos.Y) * scale + halfView.Y) * upscaledSize.Y / originalSize.Y
 		);
 	}
 #endif

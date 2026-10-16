@@ -7,20 +7,34 @@
 namespace nCine::RHI::GL
 {
 	GLVertexFormat::Attribute::Attribute()
-		: _vbo(nullptr), _pointer(nullptr), _index(0), _size(-1), _type(GL_FLOAT), _stride(0), _baseOffset(0), _enabled(false), _normalized(GL_FALSE)
+		: _vbo(nullptr), _vboId(0), _pointer(nullptr), _index(0), _size(-1), _type(GL_FLOAT), _stride(0), _baseOffset(0), _enabled(false), _normalized(GL_FALSE)
 	{
 	}
 
 	GLVertexFormat::GLVertexFormat()
-		: _ibo(nullptr), _attributes(MaxAttributes)
+		: _ibo(nullptr), _iboId(0), _attributes(MaxAttributes)
 	{
+	}
+
+	void GLVertexFormat::Attribute::setVbo(const GLBufferObject* vbo)
+	{
+		_vbo = vbo;
+		_vboId = (vbo != nullptr ? vbo->GetUniqueId() : 0);
+	}
+
+	void GLVertexFormat::SetIbo(const GLBufferObject* ibo)
+	{
+		_ibo = ibo;
+		_iboId = (ibo != nullptr ? ibo->GetUniqueId() : 0);
 	}
 
 	bool GLVertexFormat::Attribute::operator==(const Attribute& other) const
 	{
 		return ((other._enabled == false && _enabled == false) ||
 				((other._enabled == true && _enabled == true) &&
-					(other._vbo && _vbo && other._vbo->GetGLHandle() == _vbo->GetGLHandle()) &&
+					// By the identity of the buffer object, the pool keeps formats of objects that may be gone by now, and
+					// a new one can get the address or the handle of one that was destroyed
+					(other._vboId != 0 && other._vboId == _vboId) &&
 					other._index == _index &&
 					other._size == _size &&
 					other._type == _type &&
@@ -39,6 +53,7 @@ namespace nCine::RHI::GL
 	{
 		_enabled = true;
 		_vbo = nullptr;
+		_vboId = 0;
 		_index = index;
 		_size = size;
 		_type = type;
@@ -117,6 +132,7 @@ namespace nCine::RHI::GL
 			_attributes[i]._enabled = false;
 		}
 		_ibo = nullptr;
+		_iboId = 0;
 	}
 
 	namespace
@@ -134,13 +150,14 @@ namespace nCine::RHI::GL
 	std::uint64_t GLVertexFormat::CalculateFingerprint() const
 	{
 		// Mirrors operator==(): only enabled attributes and the IBO identity contribute
-		std::uint64_t hash = std::uint64_t(std::uintptr_t(_ibo));
+		std::uint64_t hash = _iboId;
 		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
 			const Attribute& attribute = _attributes[i];
 			if (!attribute._enabled) {
 				continue;
 			}
-			hash = hashCombine(hash, (std::uint64_t(attribute._index) << 32) | (attribute._vbo != nullptr ? attribute._vbo->GetGLHandle() : 0));
+			hash = hashCombine(hash, attribute._index);
+			hash = hashCombine(hash, attribute._vboId);
 			hash = hashCombine(hash, (std::uint64_t(std::uint32_t(attribute._size)) << 32) | attribute._type);
 			hash = hashCombine(hash, (std::uint64_t(std::uint32_t(attribute._stride)) << 33) | (std::uint64_t(attribute._baseOffset) << 1) | (attribute._normalized ? 1u : 0u));
 			hash = hashCombine(hash, std::uint64_t(std::uintptr_t(attribute._pointer)));
@@ -150,7 +167,7 @@ namespace nCine::RHI::GL
 
 	bool GLVertexFormat::operator==(const GLVertexFormat& other) const
 	{
-		bool areEqual = (other._ibo == _ibo && other._attributes.size() == _attributes.size());
+		bool areEqual = (other._iboId == _iboId && other._attributes.size() == _attributes.size());
 
 		// If indices are the same then check attributes too
 		if (areEqual) {

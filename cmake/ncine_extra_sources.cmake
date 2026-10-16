@@ -1991,9 +1991,190 @@ if(WITH_PHYSICS_PROBE)
 	)
 endif()
 
+if(WITH_EDITOR)
+	message(STATUS "Building the game with the level editor")
+	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_EDITOR")
+
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/Annotations.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/CommandHistory.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/Commands.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/DocumentChanges.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/DocumentSnapshot.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/DocumentViewState.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/LevelDocument.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/TerrainSplines.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/EditorInitialization.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/EditorSelfTest.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/EditorSession.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventCatalog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventGizmos.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviewResolver.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviews.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/AutosaveService.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/ContentTileSetLibrary.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/EditorSettings.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/WebFileBridge.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/AccentColor.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/LevelThumbnail.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/PaletteFile.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/PaletteMatch.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/PngCodec.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/Quantizer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/TileImages.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Input/ActionRegistry.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Input/TouchGestures.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/EditorCamera.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/EditorLevelHandler.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/MaskOverlay.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTest.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTestLevelHandler.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTestMpLevelHandler.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTransition.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/RuntimeSync.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/TileLod.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/EditorShell.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/EventPanels.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/FindReplaceDialog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/FxTileGenerator.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/HelpDialogs.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LayerDialogs.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelDialogs.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelCheck.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelStatistics.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/Navigator.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/PaletteDialog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/PrefabsDialog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/ShellPanels.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/SmartFill.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TerrainRulesDialog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileEditor.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileSetApplyDialog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileSetImportDialog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileSetLayoutDialog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileSetsDialog.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/RulesFile.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/SmartTileModel.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/TerrainRules.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/TilePrefabs.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/TileShapes.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/EditorTool.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/EventTools.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/GroundLineTool.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/MeasureTool.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/PathTool.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/SmartBrushTool.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/TilePixelTool.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/TileStamp.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/TileTools.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/EditorIcons.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiColors.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiDialogs.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiDock.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiElement.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiKeyboard.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiMenu.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiPainter.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiRadialMenu.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSkin.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSurface.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiTheme.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiWidgets.h
+	)
+
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/Annotations.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/CommandHistory.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/Commands.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/DocumentChanges.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/DocumentSnapshot.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/DocumentViewState.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/LevelDocument.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Document/TerrainSplines.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/EditorSelfTest.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/EditorSession.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventCatalog.Area.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventCatalog.Basic.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventCatalog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventCatalog.Enemy.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventCatalog.Environment.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventCatalog.Items.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventGizmos.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviewResolver.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviews.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/AutosaveService.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/ContentTileSetLibrary.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/EditorSettings.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/WebFileBridge.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/AccentColor.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/LevelThumbnail.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/PaletteFile.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/PaletteMatch.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/PngCodec.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/Quantizer.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/TileImages.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Input/ActionRegistry.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Input/TouchGestures.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/EditorCamera.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/EditorLevelHandler.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/MaskOverlay.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTest.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTestLevelHandler.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTestMpLevelHandler.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTransition.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/RuntimeSync.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/TileLod.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/EditorShell.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/EventPanels.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/FindReplaceDialog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/FxTileGenerator.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/HelpDialogs.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LayerDialogs.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelDialogs.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelCheck.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelStatistics.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/Navigator.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/PaletteDialog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/PrefabsDialog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/ShellPanels.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/SmartFill.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TerrainRulesDialog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileEditor.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileSetApplyDialog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileSetImportDialog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileSetLayoutDialog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/TileSetsDialog.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/RulesFile.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/SmartTileModel.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/TerrainRules.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/TilePrefabs.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/TileShapes.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/EventTools.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/GroundLineTool.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/MeasureTool.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/PathTool.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/SmartBrushTool.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/TilePixelTool.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/TileStamp.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/TileTools.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/EditorIcons.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiColors.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiDialogs.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiDock.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiElement.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiKeyboard.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiMenu.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiPainter.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiRadialMenu.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSkin.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSurface.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiWidgets.cpp
+	)
+endif()
+
 if(WITH_MULTIPLAYER)
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")
-	
+
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/CtfBase.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/Flag.h

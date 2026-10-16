@@ -23,7 +23,8 @@ namespace Jazz2
 		HasLaps = 0x20,							/**< Level has laps */
 		HasCaptureTheFlag = 0x40,				/**< Level has capture the flag */
 		HasVerticalSplitscreen = 0x80,			/**< Vertical splitscreen should be used */
-		HasMultiplayerSpawnPoints = 0x100		/**< Level has multiplayer spawn points */
+		HasMultiplayerSpawnPoints = 0x100,		/**< Level has multiplayer spawn points */
+		NotEditable = 0x200						/**< Level was exported only to be played, the level editor doesn't open it */
 	};
 
 	DEATH_ENUM_FLAGS(LevelFlags);

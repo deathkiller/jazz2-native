@@ -3073,7 +3073,7 @@ namespace Death { namespace Cpu {
 				unsigned int ax, bx, cx, dx;
 			} e;
 			int data[4];
-		} cpuid{};
+		} cpuid;
 
 		Implementation::cpuid(cpuid.data, 1, 0);
 

@@ -2356,6 +2356,14 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::PlayerExecuteRumble(player, rumbleEffect);
 	}
 
+#if defined(WITH_EDITOR)
+	bool MpLevelHandler::CanOpenInEditor() const
+	{
+		// Only a level played alone can be opened, the editor plays it alone too
+		return false;
+	}
+#endif
+
 	bool MpLevelHandler::SerializeResumableToStream(Stream& dest)
 	{
 		// Online multiplayer sessions cannot be resumed. Local splitscreen cooperation can be resumed just like
@@ -5661,8 +5669,9 @@ namespace Jazz2::Multiplayer
 				}
 			}
 			
-			// TODO: Remove const_cast
-			std::shared_ptr<Actors::ActorBase> actor =_eventSpawner.SpawnEvent(eventType, const_cast<std::uint8_t*>(eventParams.data()), actorFlags, tileX, tileY, posZ);
+			// The tile of an off-grid event lies past the bottom of the level, its object is at its own position
+			Vector2i pos = (_eventMap != nullptr ? _eventMap->GetEventPosition(tileX, tileY) : Vector2i(tileX * 32 + 16, tileY * 32 + 16));
+			std::shared_ptr<Actors::ActorBase> actor = _eventSpawner.SpawnEvent(eventType, eventParams.data(), actorFlags, Vector3i(pos.X, pos.Y, posZ));
 			if DEATH_LIKELY(actor != nullptr) {
 				{
 					std::unique_lock lock(_lock);
@@ -6892,6 +6901,14 @@ namespace Jazz2::Multiplayer
 				return {};
 			}
 		}
+	}
+
+	LevelLoadOptions MpLevelHandler::GetLevelLoadOptions() const
+	{
+		// The events marked as multiplayer-only are present in every multiplayer session, local splitscreen included
+		LevelLoadOptions options = LevelHandler::GetLevelLoadOptions();
+		options.Multiplayer = true;
+		return options;
 	}
 
 	void MpLevelHandler::AttachComponents(LevelDescriptor&& descriptor)

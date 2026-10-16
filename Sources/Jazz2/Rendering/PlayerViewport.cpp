@@ -19,7 +19,7 @@ namespace Jazz2::Rendering
 			_behindCopyPass(this), _behindDownsamplePass(this), _behindBlurPass1(this), _behindBlurPass2(this),
 #endif
 			_cameraViewCenterY(0.0f), _lookAheadDirectionX(1.0f), _lookAheadTurnTime(0.0f), _centerOnTargetProgress(0.0f),
-			_shakeDuration(0.0f)
+			_shakeDuration(0.0f), _cameraScale(1.0f), _freeCamera(false)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
 		_ambientLightTarget = _ambientLight.W;
@@ -361,6 +361,19 @@ namespace Jazz2::Rendering
 			}
 		}
 
+		if (_freeCamera) {
+			// Stays where it's put, at its own scale - screen = (world - center) * scale + half of the view
+			Vector2f viewOrigin = _cameraPos * _cameraScale - GetViewportSize().As<float>() * 0.5f;
+			if (!PreferencesCache::UnalignedViewport) {
+				viewOrigin = Vector2f(floorFast(viewOrigin.X), floorFast(viewOrigin.Y));
+			}
+			_camera->SetView(viewOrigin, 0.0f, _cameraScale);
+			return;
+		}
+		if (_targetActor == nullptr) {
+			return;
+		}
+
 		// The position to focus on
 		Vector2i halfView = GetViewportSize() / 2;
 		Vector2f focusPos = _targetActor->GetPos();
@@ -581,6 +594,10 @@ namespace Jazz2::Rendering
 
 	void PlayerViewport::WarpCameraToTarget(bool fast)
 	{
+		if (_freeCamera || _targetActor == nullptr) {
+			return;
+		}
+
 		// The camera base is locked to the player, so warping just means placing it on the player and resetting the
 		// movement-tracking reference. A non-fast (hard) warp also resets the look-ahead, so it starts where it rests.
 		Vector2f focusPos = _targetActor->GetPos();
@@ -594,12 +611,49 @@ namespace Jazz2::Rendering
 
 	void PlayerViewport::ResetLookAhead()
 	{
+		if (_targetActor == nullptr) {
+			_cameraDistanceFactor = Vector2f::Zero;
+			return;
+		}
+
 		// Centred, except in a small view of the reforged camera, which rests on a lead in the direction the player
 		// faces - set straight away, so a level start or a respawn does not open with the view drifting by itself
 		_lookAheadDirectionX = (_targetActor->IsFacingLeft() ? -1.0f : 1.0f);
 		_lookAheadTurnTime = 0.0f;
 		const bool leads = (PreferencesCache::EnableReforgedCamera && IsSmallView());
 		_cameraDistanceFactor = Vector2f(leads ? _lookAheadDirectionX * (GetViewportSize().X / 2) * SmallViewIdleLeadFraction : 0.0f, 0.0f);
+	}
+
+	void PlayerViewport::SetFreeCamera(Vector2f center, float scale)
+	{
+		_freeCamera = true;
+		_cameraPos = center;
+		_cameraLastPos = center;
+		_cameraScale = (scale > 0.0f ? scale : 1.0f);
+		_shakeDuration = 0.0f;
+		_shakeOffset = Vector2f::Zero;
+	}
+
+	void PlayerViewport::SetFollowCamera()
+	{
+		_freeCamera = false;
+		_cameraScale = 1.0f;
+		WarpCameraToTarget(false);
+	}
+
+	Vector2f PlayerViewport::GetWorldViewSize() const
+	{
+		return GetViewportSize().As<float>() / _cameraScale;
+	}
+
+	Vector2f PlayerViewport::WorldToView(Vector2f worldPos) const
+	{
+		return (worldPos - _cameraPos) * _cameraScale + GetViewportSize().As<float>() * 0.5f;
+	}
+
+	Vector2f PlayerViewport::ViewToWorld(Vector2f viewPos) const
+	{
+		return (viewPos - GetViewportSize().As<float>() * 0.5f) / _cameraScale + _cameraPos;
 	}
 
 	bool PlayerViewport::IsSmallView() const

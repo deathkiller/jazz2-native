@@ -310,7 +310,9 @@ namespace nCine::Backends
 			}
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
-				if (!SdlGfxDevice::isMainWindow(event.button.windowID)) {
+				// A touch is delivered as a touch event and again as a mouse event synthesized from it, the latter is
+				// dropped so a handler of both doesn't see every tap twice
+				if (!SdlGfxDevice::isMainWindow(event.button.windowID) || event.button.which == SDL_TOUCH_MOUSEID) {
 					return;
 				}
 				// SDL3 reports mouse coordinates as float; the engine's event structures store integers
@@ -319,7 +321,7 @@ namespace nCine::Backends
 				_mouseEvent.button = sdlToNcineMouseButton(event.button.button);
 				break;
 			case SDL_MOUSEMOTION:
-				if (!SdlGfxDevice::isMainWindow(event.motion.windowID)) {
+				if (!SdlGfxDevice::isMainWindow(event.motion.windowID) || event.motion.which == SDL_TOUCH_MOUSEID) {
 					return;
 				}
 				if (_cursor != Cursor::HiddenLocked) {
@@ -332,11 +334,17 @@ namespace nCine::Backends
 				_mouseState._buttons = event.motion.state;
 				break;
 			case SDL_MOUSEWHEEL:
-				if (!SdlGfxDevice::isMainWindow(event.wheel.windowID)) {
+				if (!SdlGfxDevice::isMainWindow(event.wheel.windowID) || event.wheel.which == SDL_TOUCH_MOUSEID) {
 					return;
 				}
+#if !defined(WITH_SDL3) && SDL_VERSION_ATLEAST(2, 0, 18)
+				// The fractional amounts of a touchpad scroll, SDL3 reports them in the plain fields
+				_scrollEvent.x = event.wheel.preciseX;
+				_scrollEvent.y = event.wheel.preciseY;
+#else
 				_scrollEvent.x = static_cast<float>(event.wheel.x);
 				_scrollEvent.y = static_cast<float>(event.wheel.y);
+#endif
 				break;
 			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:

@@ -7,7 +7,7 @@
 	Whether the special tile layers - LayerRendererType::XRay and LayerRendererType::BlurBehind - are drawn with
 	their effects. Both sample a render target in the fragment stage at the pixel being drawn, which only the full
 	post-processing tier can (see RhiFwd.h), and both are built on the single-draw layer mesh. Everywhere else none
-	of this is compiled: the layers are reduced when the level is loaded instead (see TileMap::ReadLayerConfiguration()),
+	of this is compiled: the layers are reduced when the level is loaded instead (see TileMap::LoadLayer()),
 	an x-ray layer to a plain layer showing its animated tiles without their mask frames, a blur layer to a hidden one.
 */
 #if defined(RHI_CAP_POSTPROCESSING) && defined(TILEMAP_USE_SINGLE_DRAW)

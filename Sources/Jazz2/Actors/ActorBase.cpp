@@ -106,6 +106,12 @@ namespace Jazz2::Actors
 		_levelHandler = details.LevelHandler;
 		_pos = _frameStartPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_originTile = Vector2i((std::int32_t)details.Pos.X / 32, (std::int32_t)details.Pos.Y / 32);
+		if ((details.State & (ActorState::IsCreatedFromEventMap | ActorState::IsFromGenerator)) != ActorState::None) {
+			// An off-grid event has a tile of its own, the position of its object isn't in it
+			if (auto* events = _levelHandler->EventMap(); events != nullptr && events->GetOffGridEventCount() > 0) {
+				_originTile = events->GetOriginTile(Vector2i(details.Pos.X, details.Pos.Y), details.Type);
+			}
+		}
 		_spawnFrames = _levelHandler->GetElapsedFrames();
 		_spawnPos = details.Pos;
 

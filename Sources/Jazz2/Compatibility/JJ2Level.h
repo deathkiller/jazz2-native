@@ -6,6 +6,8 @@
 #include "JJ2Version.h"
 #include "EventConverter.h"
 #include "../WeatherType.h"
+#include "../Formats/LevelFile.h"
+#include "../Tiles/LayerTypes.h"
 
 #include <Containers/Function.h>
 #include <Containers/SmallVector.h>
@@ -271,7 +273,10 @@ namespace Jazz2::Compatibility
 		void LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser);
 		void CheckWaterLevelAroundStart();
 
-		static void WriteLevelName(Stream& so, MutableStringView value, Function<LevelToken(StringView)>&& levelTokenConversion = {});
+		static String ConvertLevelName(StringView value, Function<LevelToken(StringView)>& levelTokenConversion);
+		static void ExpandPalette(const std::uint8_t* colors, std::uint32_t* palette);
+		static Tiles::LayerSpeedModel ConvertSpeedModel(LayerSectionSpeedModel speedModel);
+		static Formats::EventRecord MakeEventRecord(const ConversionResult& converted, bool illuminate, std::uint8_t difficulty, std::uint8_t generatorFlags, std::int32_t generatorDelay);
 		static bool StringHasSuffixIgnoreCase(StringView value, StringView suffix);
 	};
 }

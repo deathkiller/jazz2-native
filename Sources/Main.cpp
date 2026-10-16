@@ -56,6 +56,13 @@
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
+#if defined(WITH_EDITOR)
+#	include "Jazz2/Editor/EditorSession.h"
+#	if defined(DEATH_DEBUG)
+#		include "Jazz2/Editor/EditorSelfTest.h"
+#	endif
+#endif
+
 #if defined(WITH_MULTIPLAYER)
 #	include "Jazz2/Multiplayer/NetworkManager.h"
 #	include "Jazz2/Multiplayer/INetworkHandler.h"
@@ -152,6 +159,10 @@ public:
 	void OnKeyReleased(const KeyboardEvent& event) override;
 	void OnTextInput(const TextInputEvent& event) override;
 	void OnTouchEvent(const TouchEvent& event) override;
+	void OnMouseDown(const MouseEvent& event) override;
+	void OnMouseUp(const MouseEvent& event) override;
+	void OnMouseMove(const MouseState& state) override;
+	void OnMouseWheel(const ScrollEvent& event) override;
 
 	void InvokeAsync(Function<void()>&& callback) override;
 	void InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback) override;
@@ -166,10 +177,16 @@ public:
 #endif
 	void ResumeSavedState() override;
 	bool SaveCurrentStateIfAny() override;
+	void ApplyCursorPolicy() override;
 
 #if defined(WITH_MULTIPLAYER)
 	void ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password = {}) override;
 	bool CreateServer(ServerInitialization&& serverInit) override;
+#endif
+#if defined(WITH_EDITOR)
+	void OpenEditor(Editor::EditorInitialization&& editorInit) override;
+#endif
+#if defined(WITH_MULTIPLAYER)
 
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
 	void OnPeerDisconnected(const Peer& peer, Reason reason) override;
@@ -493,6 +510,33 @@ void GameEventHandler::OnInitialize()
 #else
 #	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_AMIGAOS) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
+#		if defined(WITH_EDITOR)
+	// Checked first, because a level file given to it would otherwise be played
+	for (std::int32_t i = 0; i < config.argc(); i++) {
+		if (config.argv(i) == "/edit"_s) {
+			Editor::EditorInitialization editorInit;
+			if (i + 1 < config.argc()) {
+				StringView target = config.argv(i + 1);
+				String ext = (target.size() > 4 ? String(target.suffix(target.end() - 4)) : String());
+				StringUtils::lowercaseInPlace(ext);
+				if (ext == ".j2l"_s) {
+					editorInit.FilePath = target;
+				} else if (target.hasPrefix('/')) {
+					// Another switch, nothing to open
+				} else {
+					editorInit.LevelName = target;
+					StringUtils::lowercaseInPlace(editorInit.LevelName);
+					if (!editorInit.LevelName.contains('/')) {
+						editorInit.LevelName = "unknown/"_s + editorInit.LevelName;
+					}
+				}
+			}
+			WaitForVerify();
+			OpenEditor(std::move(editorInit));
+			return;
+		}
+	}
+#		endif
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
 		if (arg.size() > 4) {
@@ -529,6 +573,15 @@ void GameEventHandler::OnInitialize()
 				return;
 			}
 		}
+#			if defined(WITH_EDITOR)
+		if (arg == "/editor-selftest"_s) {
+			WaitForVerify();
+			bool success = Editor::EditorSelfTest::Run(i + 1 < config.argc() ? config.argv(i + 1) : StringView());
+			LOGI("Editor self-test {}", success ? "succeeded" : "FAILED");
+			theApplication().Quit();
+			return;
+		}
+#			endif
 #		endif
 #		if defined(WITH_MULTIPLAYER)
 		if ((arg == "/connect"_s || arg == "--connect"_s || arg == "-c"_s) && i + 1 < config.argc()) {
@@ -718,6 +771,10 @@ void GameEventHandler::OnShutdown()
 
 void GameEventHandler::OnSuspend()
 {
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnSuspend();
+	}
+
 #if !defined(SHAREWARE_DEMO_ONLY)
 	if (SaveCurrentStateIfAny()) {
 		PreferencesCache::ResumeOnStart = true;
@@ -777,13 +834,8 @@ void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 		}
 #	endif
 		PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
-		if (PreferencesCache::EnableFullscreen) {
-			theApplication().GetGfxDevice().setResolution(true);
-			theApplication().GetInputManager().setCursor(IInputManager::Cursor::Hidden);
-		} else {
-			theApplication().GetGfxDevice().setResolution(false);
-			theApplication().GetInputManager().setCursor(IInputManager::Cursor::Arrow);
-		}
+		theApplication().GetGfxDevice().setResolution(PreferencesCache::EnableFullscreen);
+		ApplyCursorPolicy();
 		return;
 	}
 #endif
@@ -817,6 +869,54 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 	// The platform's touch device is not played on (see `NCINE_HAS_TOUCH_CONTROLS` in "Main.h"); the input
 	// backends already drop these, this only keeps a backend that doesn't from reaching the state handlers
 	static_cast<void>(event);
+#endif
+}
+
+void GameEventHandler::OnMouseDown(const MouseEvent& event)
+{
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnMouseDown(event);
+	}
+}
+
+void GameEventHandler::OnMouseUp(const MouseEvent& event)
+{
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnMouseUp(event);
+	}
+}
+
+void GameEventHandler::OnMouseMove(const MouseState& state)
+{
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnMouseMove(state);
+	}
+}
+
+void GameEventHandler::OnMouseWheel(const ScrollEvent& event)
+{
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnMouseWheel(event);
+	}
+}
+
+void GameEventHandler::ApplyCursorPolicy()
+{
+#if defined(NCINE_HAS_WINDOWS)
+	IStateHandler::CursorPolicy policy = (_currentHandler != nullptr ? _currentHandler->GetCursorPolicy() : IStateHandler::CursorPolicy::Default);
+	bool visible;
+	switch (policy) {
+		case IStateHandler::CursorPolicy::Visible: visible = true; break;
+		case IStateHandler::CursorPolicy::Hidden: visible = false; break;
+		default: visible = !PreferencesCache::EnableFullscreen; break;
+	}
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+	// Xbox is always fullscreen and has no mouse
+	if (Environment::CurrentDeviceType == DeviceType::Xbox) {
+		visible = false;
+	}
+#	endif
+	theApplication().GetInputManager().setCursor(visible ? IInputManager::Cursor::Arrow : IInputManager::Cursor::Hidden);
 #endif
 }
 
@@ -864,6 +964,36 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 		}
 	});
 }
+
+#if defined(WITH_EDITOR)
+void GameEventHandler::OpenEditor(Editor::EditorInitialization&& editorInit)
+{
+	InvokeAsync([this, editorInit = std::move(editorInit)]() mutable {
+		ZoneScopedNC("GameEventHandler::OpenEditor", 0x888888);
+
+		LOGI("Opening level editor");
+
+#	if defined(WITH_MULTIPLAYER)
+		if (_networkManager != nullptr) {
+			_networkManager->Dispose();
+			_networkManager = nullptr;
+			_streamedAsset = nullptr;
+		}
+#	endif
+		ReleasePreviousHandler();
+		InGameConsole::Clear();
+
+		auto session = std::make_shared<Editor::EditorSession>(this);
+		if (!session->Initialize(editorInit)) {
+			auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
+			mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot open the level in the editor!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
+			SetStateHandler(std::move(mainMenu));
+			return;
+		}
+		SetStateHandler(std::move(session));
+	});
+}
+#endif
 
 void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 {
@@ -2013,8 +2143,8 @@ void GameEventHandler::OnBeginInitialize()
 	if (PreferencesCache::EnableFullscreen) {
 #	endif
 		theApplication().GetGfxDevice().setResolution(true);
-		theApplication().GetInputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
+	ApplyCursorPolicy();
 #endif
 
 	resolver.CompileShaders();
@@ -2081,6 +2211,7 @@ void GameEventHandler::SetStateHandler(std::shared_ptr<IStateHandler>&& handler)
 	Viewport::GetChain().clear();
 	Vector2i res = theApplication().GetResolution();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
+	ApplyCursorPolicy();
 
 #if defined(WITH_MULTIPLAYER)
 	// Published only once the handler is fully initialized, because the network thread can pick it up immediately

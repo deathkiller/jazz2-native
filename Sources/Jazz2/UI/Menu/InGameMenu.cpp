@@ -395,6 +395,28 @@ namespace Jazz2::UI::Menu
 		_root->ResumeGame();
 	}
 
+#if defined(WITH_EDITOR)
+	bool InGameMenu::CanOpenInEditor() const
+	{
+		return _root->CanOpenInEditor();
+	}
+
+	void InGameMenu::OpenInEditor()
+	{
+		_root->OpenInEditor();
+	}
+
+	bool InGameMenu::IsEditorPlayTest() const
+	{
+		return _root->IsEditorPlayTest();
+	}
+
+	void InGameMenu::ExitEditor()
+	{
+		_root->ExitEditor();
+	}
+#endif
+
 	void InGameMenu::GoToMainMenu()
 	{
 #if !defined(SHAREWARE_DEMO_ONLY)

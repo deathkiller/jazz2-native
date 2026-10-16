@@ -132,7 +132,8 @@ namespace nCine
 		 * @param start      Iterator to the first command to collect
 		 * @param end        Iterator past the last candidate command
 		 * @param nextStart  Receives the iterator to the first command that was not collected
-		 * @return Batched render command
+		 * @return Batched render command, or `nullptr` if the vertices of the first command alone don't fit into a
+		 *         batch, which is then drawn on its own
 		 */
 		RenderCommand* CollectCommands(SmallVectorImpl<RenderCommand*>::const_iterator start, SmallVectorImpl<RenderCommand*>::const_iterator end, SmallVectorImpl<RenderCommand*>::const_iterator& nextStart);
 

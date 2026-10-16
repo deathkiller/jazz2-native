@@ -105,6 +105,10 @@ namespace Jazz2::UI::Menu
 #	endif
 #endif
 
+#if defined(WITH_EDITOR)
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(Item::LevelEditor, _("Level Editor"));
+#endif
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(Item::Highscores, _("Highscores"));
 		// TRANSLATORS: Menu item in main menu
@@ -441,6 +445,16 @@ namespace Jazz2::UI::Menu
 			case Item::Import:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<ImportSection>();
+				break;
+#endif
+#if defined(WITH_EDITOR)
+			case Item::LevelEditor:
+				if (_isPlayable) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
+					if (auto* mainMenu = runtime_cast<MainMenu>(_root)) {
+						mainMenu->_root->OpenEditor({});
+					}
+				}
 				break;
 #endif
 			case Item::Highscores:

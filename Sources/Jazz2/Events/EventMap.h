@@ -3,6 +3,7 @@
 #include "EventSpawner.h"
 #include "../Direction.h"
 #include "../GameDifficulty.h"
+#include "../LevelDescriptor.h"
 #include "../PitType.h"
 
 #include "../../nCine/Base/BitArray.h"
@@ -17,6 +18,11 @@ namespace Jazz2::Tiles
 	class TileMap;
 }
 
+namespace Jazz2::Formats
+{
+	class LevelReader;
+}
+
 namespace Jazz2::Events
 {
 	/**
@@ -25,6 +31,13 @@ namespace Jazz2::Events
 		Owns the per-tile event layout of a level, together with spawn points, warp targets and active
 		generators. Activates, deactivates and respawns actors as the level is played, supports rollback
 		checkpoints, and can be serialized to and restored from a stream.
+
+		Off-grid events --- objects placed at any position, not aligned to the tiles --- get a tile of their own
+		in rows past the bottom of the event grid, one for each, so everything that refers to an event by its
+		tile (an object deactivated or collected, a generator, a checkpoint, a snapshot) works for them too. Their
+		object is spawned at their own position, and only queries by position in the level (@ref GetEventByPosition()
+		and the like) never see them. Starts and warp targets among them keep their exact position, tile modifiers
+		are applied to the tile they're in.
 	*/
 	class EventMap // : public IResumable
 	{
@@ -92,8 +105,25 @@ namespace Jazz2::Events
 		/** @brief Links an object restored from a snapshot to the generator on specified tile position */
 		void AttachGeneratorActor(std::int32_t tx, std::int32_t ty, std::shared_ptr<Actors::ActorBase> actor);
 
-		/** @brief Returns event description of specified tile position */
+		/** @brief Returns event description of specified tile position, or of the tile of an off-grid event */
 		const EventTile& GetEventTile(std::int32_t x, std::int32_t y) const;
+		/**
+		 * @brief Returns the position in pixels the object of the event of a tile is spawned at
+		 *
+		 * The center of the tile, or the position of an off-grid event if the tile is one of theirs.
+		 */
+		Vector2i GetEventPosition(std::int32_t x, std::int32_t y) const;
+		/**
+		 * @brief Returns the tile of the event an object spawned from the event map at a position comes from
+		 *
+		 * The tile of an off-grid event of the type at exactly that position --- or of an off-grid generator of
+		 * it --- otherwise the tile the position is in.
+		 */
+		Vector2i GetOriginTile(Vector2i pos, EventType type) const;
+		/** @brief Returns the number of off-grid events */
+		std::int32_t GetOffGridEventCount() const {
+			return (std::int32_t)_offGridPositions.size();
+		}
 		/** @brief Returns event type on specified position */
 		EventType GetEventByPosition(float x, float y, std::uint8_t** eventParams);
 		/** @overload */
@@ -113,8 +143,13 @@ namespace Jazz2::Events
 		/** @brief Returns `true` if any target of specified warp lies within @p distance of @p pos */
 		bool IsNearWarpTarget(std::uint32_t id, Vector2f pos, float distance) const;
 
-		/** @brief Reads event layer data from stream */
-		void ReadEvents(Stream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty);
+		/**
+		 * @brief Reads the events of a level
+		 *
+		 * Only the events present in the difficulty of @p options are added (and the multiplayer-only ones only in
+		 * multiplayer). The tile modifiers among them are also applied to the sprite layer of @p tileMap.
+		 */
+		void LoadEvents(Formats::LevelReader& reader, Tiles::TileMap& tileMap, const LevelLoadOptions& options);
 		/** @brief Adds target position for specified warp */
 		void AddWarpTarget(std::uint16_t id, std::int32_t x, std::int32_t y);
 		/** @brief Adds spawn position with specified player type mask */
@@ -193,6 +228,23 @@ namespace Jazz2::Events
 				}
 				return (_slots != nullptr);
 			}
+			// Adds empty cells at the end, the tiles of the cells there already stay
+			bool Grow(std::size_t count) {
+				if (count <= _count) {
+					return true;
+				}
+				std::unique_ptr<std::uint16_t[]> slots(new (std::nothrow) std::uint16_t[count]);
+				if (slots == nullptr) {
+					return false;
+				}
+				if (_count > 0) {
+					std::memcpy(slots.get(), _slots.get(), _count * sizeof(std::uint16_t));
+				}
+				std::memset(slots.get() + _count, 0, (count - _count) * sizeof(std::uint16_t));
+				_slots = std::move(slots);
+				_count = count;
+				return true;
+			}
 			std::size_t size() const { return _count; }
 			const EventTile& operator[](std::size_t i) const {
 				static const EventTile empty = {};
@@ -228,8 +280,20 @@ namespace Jazz2::Events
 		SmallVector<GeneratorInfo, 0> _generators;
 		SmallVector<SpawnPoint, 0> _spawnPoints;
 		SmallVector<WarpTarget, 0> _warpTargets;
+		/// Positions of the off-grid events in pixels, the tile of the event `i` is `_layoutSize.X * _layoutSize.Y + i`
+		SmallVector<Vector2i, 0> _offGridPositions;
+		/// Rows of the layout, those of the grid and those past it that hold the off-grid events
+		std::int32_t _layoutRows;
 
 		void SaveTileForRollback(std::uint32_t tileIndex, const EventTile& tile);
+		/** @brief Returns the number of tiles of the layout, those of the off-grid events included */
+		std::int32_t GetLayoutCount() const;
+		/** @brief Returns `true` if a tile is in the layout, a tile of an off-grid event is too */
+		bool IsInLayout(std::int32_t x, std::int32_t y) const;
+		/** @brief Activates the event of a tile, spawns its object */
+		void SpawnTileEvent(EventTile& tile, std::int32_t x, std::int32_t y, Actors::ActorState flags, std::int32_t z);
+		/** @brief Reads the off-grid events, they're appended to the layout */
+		void LoadOffGridEvents(Formats::LevelReader& reader, Tiles::TileMap& tileMap, const LevelLoadOptions& options, std::uint8_t difficultyFlag);
 
 		static void WriteEventTile(Stream& dest, const EventTile& tile);
 		static void ReadEventTile(Stream& src, EventTile& tile);

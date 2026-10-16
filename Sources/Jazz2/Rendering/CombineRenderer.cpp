@@ -274,7 +274,7 @@ namespace Jazz2::Rendering
 		// this viewport has water - on the console tiers that is not cosmetic bookkeeping but the mechanism: the
 		// water is a fixed_function block of the water program, and the plain Combine has none. The software
 		// backend keeps its own richer per-row water from the queued light either way.
-		const float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
+		const float viewWaterLevel = (_owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y) * _owner->_cameraScale + _bounds.H * 0.5f;
 		const bool viewHasWater = (viewWaterLevel < _bounds.H);
 		const bool waterProgramReady = (_owner->_levelHandler->_combineWithWaterShader != nullptr);
 		auto& command = (viewHasWater && waterProgramReady ? _renderCommandWithWater : _renderCommand);
@@ -306,14 +306,14 @@ namespace Jazz2::Rendering
 			}
 			auto* cameraPosUniform = command.GetMaterial().Uniform("uCameraPos");
 			if (cameraPosUniform != nullptr) {
-				cameraPosUniform->SetFloatVector(_owner->_cameraPos.Data());
+				cameraPosUniform->SetFloatValue(_owner->_cameraPos.X * _owner->_cameraScale, _owner->_cameraPos.Y * _owner->_cameraScale);
 			}
 		}
 
 		renderQueue.AddCommand(&command);
 		return true;
 #else
-		float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
+		float viewWaterLevel = (_owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y) * _owner->_cameraScale + _bounds.H * 0.5f;
 		bool viewHasWater = (viewWaterLevel < _bounds.H);
 		auto& command = (viewHasWater ? _renderCommandWithWater : _renderCommand);
 
@@ -344,7 +344,7 @@ namespace Jazz2::Rendering
 
 		if (viewHasWater) {
 			command.GetMaterial().Uniform("uWaterLevel")->SetFloatValue(viewWaterLevel / _bounds.H);
-			command.GetMaterial().Uniform("uCameraPos")->SetFloatVector(_owner->_cameraPos.Data());
+			command.GetMaterial().Uniform("uCameraPos")->SetFloatValue(_owner->_cameraPos.X * _owner->_cameraScale, _owner->_cameraPos.Y * _owner->_cameraScale);
 		}
 
 		renderQueue.AddCommand(&command);
@@ -361,7 +361,7 @@ namespace Jazz2::Rendering
 		// shader path uses to select the CombineWithWater variant. The waterline is passed in viewport-local
 		// pixels from the top edge (it may be negative when the whole view is underwater), together with the
 		// shader's uTime and the camera Y that anchor the wave animation to the world.
-		const float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
+		const float viewWaterLevel = (_owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y) * _owner->_cameraScale + _bounds.H * 0.5f;
 		const bool viewHasWater = (viewWaterLevel < _bounds.H);
 		const float waterTime = _owner->_levelHandler->_elapsedFrames * 0.0018f;
 
@@ -408,7 +408,7 @@ namespace Jazz2::Rendering
 		if (fullyLit) {
 			// Water-only combine: no lightmap is needed, the device applies just the per-row water effect
 			RHI::Device::SetPendingSoftwareLighting(nullptr, 0, 0, 1, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
-				true, viewWaterLevel, waterTime, _owner->_cameraPos.Y);
+				true, viewWaterLevel, waterTime, _owner->_cameraPos.Y * _owner->_cameraScale);
 			return true;
 		}
 
@@ -498,11 +498,13 @@ namespace Jazz2::Rendering
 			_swLitSpans[y * 2 + 1] = -1;
 		}
 
-		// World -> screen pixel mapping of the scene camera (orthographic, unit scale, Y flipped by the
-		// projection): col = worldX - camX + vpW/2; row = camY - worldY + vpH/2. The lightmap is viewport-local
-		// (the vp origin is dropped) and divided by Scale.
+		// World -> screen pixel mapping of the scene camera (orthographic, Y flipped by the projection):
+		// col = (worldX - camX) * cameraScale + vpW/2; row = (camY - worldY) * cameraScale + vpH/2. The camera scale
+		// is 1 in the game, only the level editor zooms. The lightmap is viewport-local (the vp origin is dropped)
+		// and divided by Scale.
 		const float camX = _owner->_cameraPos.X;
 		const float camY = _owner->_cameraPos.Y;
+		const float cameraScale = _owner->_cameraScale;
 		const float halfW = vpW * 0.5f;
 		const float halfH = vpH * 0.5f;
 
@@ -535,13 +537,13 @@ namespace Jazz2::Rendering
 			// `div.s` of about 29 cycles. These three ran per light, and the band loop below runs the setup
 			// once per band a light crosses.
 			constexpr float InvScale = 1.0f / Scale;
-			const float cx = (light.Pos.X - camX + halfW) * InvScale;
-			const float cy = (camY - light.Pos.Y + halfH) * InvScale;
-			const float rLm = radiusFar * InvScale;
+			const float cx = ((light.Pos.X - camX) * cameraScale + halfW) * InvScale;
+			const float cy = ((camY - light.Pos.Y) * cameraScale + halfH) * InvScale;
+			const float rLm = radiusFar * cameraScale * InvScale;
 			if (rLm < 0.5f) {
 				continue;
 			}
-			const float ringLm = light.RingRadius * InvScale;
+			const float ringLm = light.RingRadius * cameraScale * InvScale;
 			const float extentLm = ringLm + rLm;
 
 			// The texels a light can change are those within the bounds its splat clamps itself to, which is
@@ -690,7 +692,7 @@ namespace Jazz2::Rendering
 		// outlive this call: _swLightmap is a member reused across frames, and the device consumes the entry in
 		// the same frame's Draw phase (before the next PrepareSoftwareLighting reassigns it).
 		RHI::Device::SetPendingSoftwareLighting(_swLightmap.data(), lmW, lmH, Scale, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
-			viewHasWater, viewWaterLevel, waterTime, _owner->_cameraPos.Y);
+			viewHasWater, viewWaterLevel, waterTime, _owner->_cameraPos.Y * _owner->_cameraScale);
 #if defined(RHI_LIGHTING_LIT_SPANS)
 		// Outside the spans the lights reached this frame every texel holds exactly the reset value, which a device
 		// that keeps its converted lightmap between frames does not have to convert again (see RhiFwd.h)

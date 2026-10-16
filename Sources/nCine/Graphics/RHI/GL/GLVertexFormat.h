@@ -85,9 +85,7 @@ namespace nCine::RHI::GL
 			/** @brief Sets the stride and the byte offset of the attribute within the buffer */
 			void SetVboParameters(GLsizei stride, const GLvoid* pointer);
 			/** @brief Sets the source vertex buffer object */
-			inline void setVbo(const GLBufferObject* vbo) {
-				_vbo = vbo;
-			}
+			void setVbo(const GLBufferObject* vbo);
 			/** @brief Sets the additional base vertex byte offset */
 			inline void SetBaseOffset(std::uint32_t baseOffset) {
 				_baseOffset = baseOffset;
@@ -108,6 +106,9 @@ namespace nCine::RHI::GL
 
 		private:
 			const GLBufferObject* _vbo;
+			// Identifies the buffer object, a destroyed one can't be told from a new one at the same address or with the
+			// same handle otherwise, so a VAO of the pool still set up for it would match the new one
+			std::uint64_t _vboId;
 			const GLvoid* _pointer;
 			std::uint32_t _index;
 			GLint _size;
@@ -133,9 +134,7 @@ namespace nCine::RHI::GL
 			return _ibo;
 		}
 		/** @brief Sets the index buffer object */
-		inline void SetIbo(const GLBufferObject* ibo) {
-			_ibo = ibo;
-		}
+		void SetIbo(const GLBufferObject* ibo);
 		/** @brief Applies the vertex format to the currently bound program and VAO */
 		void Define();
 		/** @brief Disables all attributes and clears the index buffer */
@@ -164,5 +163,6 @@ namespace nCine::RHI::GL
 	private:
 		SmallVector<Attribute, MaxAttributes> _attributes;
 		const GLBufferObject* _ibo;
+		std::uint64_t _iboId;
 	};
 }

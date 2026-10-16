@@ -73,7 +73,7 @@ namespace Jazz2::Rendering
 		return Vector2i(std::max<std::int32_t>((std::int32_t)roundf(w), 1), std::max<std::int32_t>((std::int32_t)roundf(h), 1));
 	}
 
-	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay)
+	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay, bool nativeOutput)
 	{
 		_logicalSize = Vector2i(width, height);
 
@@ -139,6 +139,10 @@ namespace Jazz2::Rendering
 		// is likewise forced to 1 above, making this condition false.
 		useAntialiasing = false;
 #endif
+		if (nativeOutput) {
+			// Already at the size it's shown at, there is nothing to resolve
+			useAntialiasing = false;
+		}
 		if (!overlay && (_supersample > 1 || useAntialiasing)) {
 			float widthRatio, heightRatio;
 			float widthFrac = modff((float)targetWidth / textureWidth, &widthRatio);
@@ -230,9 +234,10 @@ namespace Jazz2::Rendering
 		// Prepare render command
 #if !defined(DISABLE_RESCALE_SHADERS)
 		_resizeAtLogicalScale = false;
-		if (overlay) {
+		if (overlay || nativeOutput) {
 			// The overlay layer is composited at the native logical resolution straight onto the screen, so it must
-			// never go through a rescale (pixel-art upscaling) shader
+			// never go through a rescale (pixel-art upscaling) shader, and neither does a view already at the size
+			// of the window
 			_resizeShader = nullptr;
 		} else {
 			switch (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) {
@@ -288,6 +293,12 @@ namespace Jazz2::Rendering
 		_antialiasing.Register();
 
 		Viewport::GetChain().push_back(_view.get());
+	}
+
+	void UpscaleRenderPass::Detach()
+	{
+		_antialiasing.setParent(nullptr);
+		setParent(nullptr);
 	}
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
@@ -353,7 +364,7 @@ namespace Jazz2::Rendering
 	{
 	}
 
-	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay)
+	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay, bool nativeOutput)
 	{
 #if defined(RHI_CAP_POSTPROCESSING)
 		if (_clippedView != nullptr) {
@@ -364,7 +375,7 @@ namespace Jazz2::Rendering
 		}
 #endif
 
-		UpscaleRenderPass::Initialize(width, height, targetWidth, targetHeight, supersample, overlay);
+		UpscaleRenderPass::Initialize(width, height, targetWidth, targetHeight, supersample, overlay, nativeOutput);
 
 #if !defined(RHI_CAP_POSTPROCESSING)
 		// Direct tier: the clipped and overlay layers are textureless viewports rendering directly into the

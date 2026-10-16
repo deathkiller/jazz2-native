@@ -79,6 +79,78 @@
     <Filter Include="Source Files\Jazz2\Events">
       <UniqueIdentifier>{14cf239c-a04a-45e5-9b98-73de29aff458}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Formats">
+      <UniqueIdentifier>{c4e8a2d7-3b91-4f56-a0d2-6e1b9f7c3a58}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Formats">
+      <UniqueIdentifier>{7a2f5c91-d84e-4b03-9e6a-1c5d8b2f4e70}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Smart">
+      <UniqueIdentifier>{53984fb6-868f-4d95-af40-6bd35693de0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Smart">
+      <UniqueIdentifier>{0bb6df5b-d7a2-48d3-99f6-3aab0dca53f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Imaging">
+      <UniqueIdentifier>{988a3c37-f586-4d90-a283-acf5d996a46a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Imaging">
+      <UniqueIdentifier>{6974ae7e-a600-442c-b45a-0a6717c7c3a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Events">
+      <UniqueIdentifier>{c47d3b65-0586-4afd-927b-7f3350e693e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Events">
+      <UniqueIdentifier>{e74fc112-2621-4754-8380-db5ebfe5ea54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Input">
+      <UniqueIdentifier>{89e78b9d-a8ab-4b91-befb-720926d6e27e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Shell">
+      <UniqueIdentifier>{15b862d1-0c0e-40c7-8dae-51f45b5c69a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Tools">
+      <UniqueIdentifier>{807c1c3a-e6cc-44f7-ae00-61159f3a14ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Input">
+      <UniqueIdentifier>{19741a6c-ad49-41df-9cd6-d45486ee8c9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Shell">
+      <UniqueIdentifier>{88992149-30c3-42c7-926e-aa0c9f6659f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Tools">
+      <UniqueIdentifier>{d9542e7a-f895-4bb5-98bd-998da0b08cde}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\UI">
+      <UniqueIdentifier>{31dbfb97-de75-4c63-98f6-2df59e1f681a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\UI">
+      <UniqueIdentifier>{9397ca50-cb43-47ff-86d7-1d6859b716f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Runtime">
+      <UniqueIdentifier>{c33b7b65-c38d-4379-97b4-0e8f85300939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Runtime">
+      <UniqueIdentifier>{fb5ac89e-bc38-4cb0-b693-c67d53edaa63}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor">
+      <UniqueIdentifier>{dc26a726-0d06-4c67-9888-b6554a02b870}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Document">
+      <UniqueIdentifier>{ab2c59ee-8f7b-4150-ac83-c46071cf463e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Editor\Files">
+      <UniqueIdentifier>{43a5a77a-cb72-4ff1-b057-134bb210b1dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor">
+      <UniqueIdentifier>{df47f7d4-3a0f-46d5-9bc4-736b38d8406d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Document">
+      <UniqueIdentifier>{71eb46aa-d0a2-4ab2-84d2-7a947713df24}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Editor\Files">
+      <UniqueIdentifier>{7dddf4ef-9abe-489b-b018-d0c23e6284d3}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\Jazz2\Tiles">
       <UniqueIdentifier>{5f2adbaa-a641-44b8-8b21-fb52eb85eddc}</UniqueIdentifier>
     </Filter>
@@ -1662,8 +1734,263 @@
     <ClInclude Include="Jazz2\LevelFlags.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\LevelFormat.h">
-      <Filter>Header Files\Jazz2</Filter>
+    <ClInclude Include="Jazz2\Formats\LevelFile.h">
+      <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Formats\TileSetFile.h">
+      <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Document\Annotations.h">
+      <Filter>Header Files\Jazz2\Editor\Document</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Document\CommandHistory.h">
+      <Filter>Header Files\Jazz2\Editor\Document</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Document\Commands.h">
+      <Filter>Header Files\Jazz2\Editor\Document</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Document\DocumentChanges.h">
+      <Filter>Header Files\Jazz2\Editor\Document</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Document\DocumentSnapshot.h">
+      <Filter>Header Files\Jazz2\Editor\Document</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Document\DocumentViewState.h">
+      <Filter>Header Files\Jazz2\Editor\Document</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Document\LevelDocument.h">
+      <Filter>Header Files\Jazz2\Editor\Document</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Document\TerrainSplines.h">
+      <Filter>Header Files\Jazz2\Editor\Document</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\EditorInitialization.h">
+      <Filter>Header Files\Jazz2\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\EditorSelfTest.h">
+      <Filter>Header Files\Jazz2\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\EditorSession.h">
+      <Filter>Header Files\Jazz2\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Events\EventCatalog.h">
+      <Filter>Header Files\Jazz2\Editor\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Events\EventGizmos.h">
+      <Filter>Header Files\Jazz2\Editor\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Events\EventPreviewResolver.h">
+      <Filter>Header Files\Jazz2\Editor\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Events\EventPreviews.h">
+      <Filter>Header Files\Jazz2\Editor\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Files\AutosaveService.h">
+      <Filter>Header Files\Jazz2\Editor\Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Files\ContentTileSetLibrary.h">
+      <Filter>Header Files\Jazz2\Editor\Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Files\EditorSettings.h">
+      <Filter>Header Files\Jazz2\Editor\Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Files\WebFileBridge.h">
+      <Filter>Header Files\Jazz2\Editor\Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Imaging\AccentColor.h">
+      <Filter>Header Files\Jazz2\Editor\Imaging</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Imaging\LevelThumbnail.h">
+      <Filter>Header Files\Jazz2\Editor\Imaging</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Imaging\PaletteFile.h">
+      <Filter>Header Files\Jazz2\Editor\Imaging</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Imaging\PaletteMatch.h">
+      <Filter>Header Files\Jazz2\Editor\Imaging</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Imaging\PngCodec.h">
+      <Filter>Header Files\Jazz2\Editor\Imaging</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Imaging\Quantizer.h">
+      <Filter>Header Files\Jazz2\Editor\Imaging</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Imaging\TileImages.h">
+      <Filter>Header Files\Jazz2\Editor\Imaging</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Input\ActionRegistry.h">
+      <Filter>Header Files\Jazz2\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Input\TouchGestures.h">
+      <Filter>Header Files\Jazz2\Editor\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\EditorCamera.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\EditorLevelHandler.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\MaskOverlay.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\PlayTest.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\PlayTestLevelHandler.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\PlayTestMpLevelHandler.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\PlayTransition.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\RuntimeSync.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Runtime\TileLod.h">
+      <Filter>Header Files\Jazz2\Editor\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\EditorShell.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\EventPanels.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\FindReplaceDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\FxTileGenerator.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\HelpDialogs.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\LayerDialogs.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\LevelDialogs.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\LevelCheck.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\LevelStatistics.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\Navigator.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\PaletteDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\PrefabsDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\ShellPanels.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\SmartFill.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\TerrainRulesDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\TileEditor.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\TileSetApplyDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\TileSetImportDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\TileSetLayoutDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\TileSetsDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Smart\RulesFile.h">
+      <Filter>Header Files\Jazz2\Editor\Smart</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Smart\SmartTileModel.h">
+      <Filter>Header Files\Jazz2\Editor\Smart</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Smart\TerrainRules.h">
+      <Filter>Header Files\Jazz2\Editor\Smart</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Smart\TilePrefabs.h">
+      <Filter>Header Files\Jazz2\Editor\Smart</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Smart\TileShapes.h">
+      <Filter>Header Files\Jazz2\Editor\Smart</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\EditorTool.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\EventTools.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\GroundLineTool.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\MeasureTool.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\PathTool.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\SmartBrushTool.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\TilePixelTool.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\TileStamp.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\TileTools.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\EditorIcons.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiColors.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiDialogs.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiDock.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiElement.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiKeyboard.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiMenu.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiPainter.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiRadialMenu.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiSkin.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiSurface.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiTheme.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiWidgets.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\HighscoresSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
@@ -1702,6 +2029,9 @@
       <Filter>Header Files\Jazz2\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Rendering\PlayerViewport.h">
+      <Filter>Header Files\Jazz2\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Rendering\PolylineRenderer.h">
       <Filter>Header Files\Jazz2\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Rendering\BlurRenderPass.h">
@@ -1882,6 +2212,270 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Events\EventSpawner.cpp">
       <Filter>Source Files\Jazz2\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Formats\LevelFile.cpp">
+      <Filter>Source Files\Jazz2\Formats</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Formats\TileSetFile.cpp">
+      <Filter>Source Files\Jazz2\Formats</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Document\Annotations.cpp">
+      <Filter>Source Files\Jazz2\Editor\Document</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Document\CommandHistory.cpp">
+      <Filter>Source Files\Jazz2\Editor\Document</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Document\Commands.cpp">
+      <Filter>Source Files\Jazz2\Editor\Document</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Document\DocumentChanges.cpp">
+      <Filter>Source Files\Jazz2\Editor\Document</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Document\DocumentSnapshot.cpp">
+      <Filter>Source Files\Jazz2\Editor\Document</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Document\DocumentViewState.cpp">
+      <Filter>Source Files\Jazz2\Editor\Document</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Document\LevelDocument.cpp">
+      <Filter>Source Files\Jazz2\Editor\Document</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Document\TerrainSplines.cpp">
+      <Filter>Source Files\Jazz2\Editor\Document</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\EditorSelfTest.cpp">
+      <Filter>Source Files\Jazz2\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\EditorSession.cpp">
+      <Filter>Source Files\Jazz2\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Area.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Basic.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Enemy.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Environment.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Items.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventGizmos.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventPreviewResolver.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Events\EventPreviews.cpp">
+      <Filter>Source Files\Jazz2\Editor\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Files\AutosaveService.cpp">
+      <Filter>Source Files\Jazz2\Editor\Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Files\ContentTileSetLibrary.cpp">
+      <Filter>Source Files\Jazz2\Editor\Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Files\EditorSettings.cpp">
+      <Filter>Source Files\Jazz2\Editor\Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Files\WebFileBridge.cpp">
+      <Filter>Source Files\Jazz2\Editor\Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Imaging\AccentColor.cpp">
+      <Filter>Source Files\Jazz2\Editor\Imaging</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Imaging\LevelThumbnail.cpp">
+      <Filter>Source Files\Jazz2\Editor\Imaging</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Imaging\PaletteFile.cpp">
+      <Filter>Source Files\Jazz2\Editor\Imaging</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Imaging\PaletteMatch.cpp">
+      <Filter>Source Files\Jazz2\Editor\Imaging</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Imaging\PngCodec.cpp">
+      <Filter>Source Files\Jazz2\Editor\Imaging</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Imaging\Quantizer.cpp">
+      <Filter>Source Files\Jazz2\Editor\Imaging</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Imaging\TileImages.cpp">
+      <Filter>Source Files\Jazz2\Editor\Imaging</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Input\ActionRegistry.cpp">
+      <Filter>Source Files\Jazz2\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Input\TouchGestures.cpp">
+      <Filter>Source Files\Jazz2\Editor\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\EditorCamera.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\EditorLevelHandler.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\MaskOverlay.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\PlayTest.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\PlayTestLevelHandler.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\PlayTestMpLevelHandler.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\PlayTransition.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\RuntimeSync.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Runtime\TileLod.cpp">
+      <Filter>Source Files\Jazz2\Editor\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\EditorShell.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\EventPanels.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\FindReplaceDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\FxTileGenerator.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\HelpDialogs.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\LayerDialogs.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\LevelDialogs.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\LevelCheck.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\LevelStatistics.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\Navigator.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\PaletteDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\PrefabsDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\ShellPanels.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\SmartFill.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\TerrainRulesDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\TileEditor.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\TileSetApplyDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\TileSetImportDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\TileSetLayoutDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\TileSetsDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Smart\RulesFile.cpp">
+      <Filter>Source Files\Jazz2\Editor\Smart</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Smart\SmartTileModel.cpp">
+      <Filter>Source Files\Jazz2\Editor\Smart</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Smart\TerrainRules.cpp">
+      <Filter>Source Files\Jazz2\Editor\Smart</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Smart\TilePrefabs.cpp">
+      <Filter>Source Files\Jazz2\Editor\Smart</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Smart\TileShapes.cpp">
+      <Filter>Source Files\Jazz2\Editor\Smart</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\EventTools.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\GroundLineTool.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\MeasureTool.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\PathTool.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\SmartBrushTool.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\TilePixelTool.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\TileStamp.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\TileTools.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\EditorIcons.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiColors.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiDialogs.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiDock.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiElement.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiKeyboard.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiMenu.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiPainter.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiRadialMenu.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiSkin.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiSurface.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiWidgets.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\LevelHandler.cpp">
       <Filter>Source Files\Jazz2</Filter>
@@ -2832,6 +3426,9 @@
       <Filter>Source Files\Jazz2\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp">
+      <Filter>Source Files\Jazz2\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Rendering\PolylineRenderer.cpp">
       <Filter>Source Files\Jazz2\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp">

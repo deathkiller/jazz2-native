@@ -70,6 +70,8 @@ namespace Jazz2::UI
 
 		/** @brief Begins a fullscreen fade-in transition */
 		void BeginFadeIn(bool skip);
+		/** @brief Shows the level at once, without fading it in from black, as the level editor reveals it in its own way */
+		void CancelFadeIn();
 		/** @brief Begins a fullscreen face-out transition */
 		void BeginFadeOut(float delay = 0.0f);
 

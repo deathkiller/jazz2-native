@@ -136,7 +136,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -160,7 +160,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -185,7 +185,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -207,7 +207,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -230,7 +230,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -256,7 +256,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -353,6 +353,7 @@
     <ClInclude Include="Jazz2\Rendering\CombineRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\LightingRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\PlayerViewport.h" />
+    <ClInclude Include="Jazz2\Rendering\PolylineRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\UpscaleRenderPass.h" />
     <ClInclude Include="Jazz2\Rendering\XRayMaskRenderer.h" />
     <ClInclude Include="Jazz2\UI\Menu\UserProfileOptionsSection.h" />
@@ -488,7 +489,92 @@
     <ClInclude Include="Jazz2\IRootController.h" />
     <ClInclude Include="Jazz2\LevelDescriptor.h" />
     <ClInclude Include="Jazz2\LevelFlags.h" />
-    <ClInclude Include="Jazz2\LevelFormat.h" />
+    <ClInclude Include="Jazz2\Formats\LevelFile.h" />
+    <ClInclude Include="Jazz2\Formats\TileSetFile.h" />
+    <ClInclude Include="Jazz2\Editor\Document\Annotations.h" />
+    <ClInclude Include="Jazz2\Editor\Document\CommandHistory.h" />
+    <ClInclude Include="Jazz2\Editor\Document\Commands.h" />
+    <ClInclude Include="Jazz2\Editor\Document\DocumentChanges.h" />
+    <ClInclude Include="Jazz2\Editor\Document\DocumentSnapshot.h" />
+    <ClInclude Include="Jazz2\Editor\Document\DocumentViewState.h" />
+    <ClInclude Include="Jazz2\Editor\Document\LevelDocument.h" />
+    <ClInclude Include="Jazz2\Editor\Document\TerrainSplines.h" />
+    <ClInclude Include="Jazz2\Editor\EditorInitialization.h" />
+    <ClInclude Include="Jazz2\Editor\EditorSelfTest.h" />
+    <ClInclude Include="Jazz2\Editor\EditorSession.h" />
+    <ClInclude Include="Jazz2\Editor\Events\EventCatalog.h" />
+    <ClInclude Include="Jazz2\Editor\Events\EventGizmos.h" />
+    <ClInclude Include="Jazz2\Editor\Events\EventPreviewResolver.h" />
+    <ClInclude Include="Jazz2\Editor\Events\EventPreviews.h" />
+    <ClInclude Include="Jazz2\Editor\Files\AutosaveService.h" />
+    <ClInclude Include="Jazz2\Editor\Files\ContentTileSetLibrary.h" />
+    <ClInclude Include="Jazz2\Editor\Files\EditorSettings.h" />
+    <ClInclude Include="Jazz2\Editor\Files\WebFileBridge.h" />
+    <ClInclude Include="Jazz2\Editor\Imaging\AccentColor.h" />
+    <ClInclude Include="Jazz2\Editor\Imaging\LevelThumbnail.h" />
+    <ClInclude Include="Jazz2\Editor\Imaging\PaletteFile.h" />
+    <ClInclude Include="Jazz2\Editor\Imaging\PaletteMatch.h" />
+    <ClInclude Include="Jazz2\Editor\Imaging\PngCodec.h" />
+    <ClInclude Include="Jazz2\Editor\Imaging\Quantizer.h" />
+    <ClInclude Include="Jazz2\Editor\Imaging\TileImages.h" />
+    <ClInclude Include="Jazz2\Editor\Input\ActionRegistry.h" />
+    <ClInclude Include="Jazz2\Editor\Input\TouchGestures.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\EditorCamera.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\EditorLevelHandler.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\MaskOverlay.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\PlayTest.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\PlayTestLevelHandler.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\PlayTestMpLevelHandler.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\PlayTransition.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\RuntimeSync.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\TileLod.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\EditorShell.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\EventPanels.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\FindReplaceDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\FxTileGenerator.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\HelpDialogs.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\LayerDialogs.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\LevelDialogs.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\LevelCheck.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\LevelStatistics.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\Navigator.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\PaletteDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\PrefabsDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\ShellPanels.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\SmartFill.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\TerrainRulesDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\TileEditor.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\TileSetApplyDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\TileSetImportDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\TileSetLayoutDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\TileSetsDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Smart\RulesFile.h" />
+    <ClInclude Include="Jazz2\Editor\Smart\SmartTileModel.h" />
+    <ClInclude Include="Jazz2\Editor\Smart\TerrainRules.h" />
+    <ClInclude Include="Jazz2\Editor\Smart\TilePrefabs.h" />
+    <ClInclude Include="Jazz2\Editor\Smart\TileShapes.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\EditorTool.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\EventTools.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\GroundLineTool.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\MeasureTool.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\PathTool.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\SmartBrushTool.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\TilePixelTool.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\TileStamp.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\TileTools.h" />
+    <ClInclude Include="Jazz2\Editor\UI\EditorIcons.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiColors.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiDialogs.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiDock.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiElement.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiKeyboard.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiMenu.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiPainter.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiRadialMenu.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiSkin.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiSurface.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiTheme.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiWidgets.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
     <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h" />
     <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h" />
@@ -957,6 +1043,7 @@
     <ClCompile Include="Jazz2\Rendering\CombineRenderer.cpp" />
     <ClCompile Include="Jazz2\Rendering\LightingRenderer.cpp" />
     <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp" />
+    <ClCompile Include="Jazz2\Rendering\PolylineRenderer.cpp" />
     <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp" />
     <ClCompile Include="Jazz2\Rendering\XRayMaskRenderer.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
@@ -1169,6 +1256,94 @@
     <ClCompile Include="Jazz2\ContentResolver.cpp" />
     <ClCompile Include="Jazz2\Events\EventMap.cpp" />
     <ClCompile Include="Jazz2\Events\EventSpawner.cpp" />
+    <ClCompile Include="Jazz2\Formats\LevelFile.cpp" />
+    <ClCompile Include="Jazz2\Formats\TileSetFile.cpp" />
+    <ClCompile Include="Jazz2\Editor\Document\Annotations.cpp" />
+    <ClCompile Include="Jazz2\Editor\Document\CommandHistory.cpp" />
+    <ClCompile Include="Jazz2\Editor\Document\Commands.cpp" />
+    <ClCompile Include="Jazz2\Editor\Document\DocumentChanges.cpp" />
+    <ClCompile Include="Jazz2\Editor\Document\DocumentSnapshot.cpp" />
+    <ClCompile Include="Jazz2\Editor\Document\DocumentViewState.cpp" />
+    <ClCompile Include="Jazz2\Editor\Document\LevelDocument.cpp" />
+    <ClCompile Include="Jazz2\Editor\Document\TerrainSplines.cpp" />
+    <ClCompile Include="Jazz2\Editor\EditorSelfTest.cpp" />
+    <ClCompile Include="Jazz2\Editor\EditorSession.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Area.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Basic.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Enemy.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Environment.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventCatalog.Items.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventGizmos.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventPreviewResolver.cpp" />
+    <ClCompile Include="Jazz2\Editor\Events\EventPreviews.cpp" />
+    <ClCompile Include="Jazz2\Editor\Files\AutosaveService.cpp" />
+    <ClCompile Include="Jazz2\Editor\Files\ContentTileSetLibrary.cpp" />
+    <ClCompile Include="Jazz2\Editor\Files\EditorSettings.cpp" />
+    <ClCompile Include="Jazz2\Editor\Files\WebFileBridge.cpp" />
+    <ClCompile Include="Jazz2\Editor\Imaging\AccentColor.cpp" />
+    <ClCompile Include="Jazz2\Editor\Imaging\LevelThumbnail.cpp" />
+    <ClCompile Include="Jazz2\Editor\Imaging\PaletteFile.cpp" />
+    <ClCompile Include="Jazz2\Editor\Imaging\PaletteMatch.cpp" />
+    <ClCompile Include="Jazz2\Editor\Imaging\PngCodec.cpp" />
+    <ClCompile Include="Jazz2\Editor\Imaging\Quantizer.cpp" />
+    <ClCompile Include="Jazz2\Editor\Imaging\TileImages.cpp" />
+    <ClCompile Include="Jazz2\Editor\Input\ActionRegistry.cpp" />
+    <ClCompile Include="Jazz2\Editor\Input\TouchGestures.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\EditorCamera.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\EditorLevelHandler.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\MaskOverlay.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\PlayTest.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\PlayTestLevelHandler.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\PlayTestMpLevelHandler.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\PlayTransition.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\RuntimeSync.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\TileLod.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\EditorShell.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\EventPanels.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\FindReplaceDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\FxTileGenerator.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\HelpDialogs.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\LayerDialogs.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\LevelDialogs.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\LevelCheck.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\LevelStatistics.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\Navigator.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\PaletteDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\PrefabsDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\ShellPanels.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\SmartFill.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\TerrainRulesDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\TileEditor.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\TileSetApplyDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\TileSetImportDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\TileSetLayoutDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\TileSetsDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Smart\RulesFile.cpp" />
+    <ClCompile Include="Jazz2\Editor\Smart\SmartTileModel.cpp" />
+    <ClCompile Include="Jazz2\Editor\Smart\TerrainRules.cpp" />
+    <ClCompile Include="Jazz2\Editor\Smart\TilePrefabs.cpp" />
+    <ClCompile Include="Jazz2\Editor\Smart\TileShapes.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\EventTools.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\GroundLineTool.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\MeasureTool.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\PathTool.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\SmartBrushTool.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\TilePixelTool.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\TileStamp.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\TileTools.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\EditorIcons.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiColors.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiDialogs.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiDock.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiElement.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiKeyboard.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiMenu.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiPainter.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiRadialMenu.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiSkin.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiSurface.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiWidgets.cpp" />
     <ClCompile Include="Jazz2\LevelHandler.cpp" />
     <ClCompile Include="Jazz2\Tests\PhysicsProbe.cpp" />
     <ClCompile Include="Jazz2\Tiles\TileMap.cpp" />

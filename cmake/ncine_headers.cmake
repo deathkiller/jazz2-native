@@ -321,7 +321,8 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/IStateHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelDescriptor.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelFlags.h
-	${NCINE_SOURCE_DIR}/Jazz2/LevelFormat.h
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelFile.h
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/TileSetFile.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelInitialization.h
 	${NCINE_SOURCE_DIR}/Jazz2/LightEmitter.h
@@ -471,6 +472,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/CombineRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.h
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PolylineRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/XRayMaskRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h

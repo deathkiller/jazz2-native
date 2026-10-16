@@ -138,6 +138,7 @@
     <ClCompile Include="DiscImage.cpp" />
     <ClCompile Include="FontPacker.cpp" />
     <ClCompile Include="Iso9660.cpp" />
+    <ClCompile Include="FormatVerifier.cpp" />
     <ClCompile Include="ModuleConverter.cpp" />
     <ClCompile Include="N64Content.cpp" />
     <ClCompile Include="PngCodec.cpp" />
@@ -154,6 +155,8 @@
     <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Level.cpp" />
     <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Strings.cpp" />
     <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Tileset.cpp" />
+    <ClCompile Include="..\..\Jazz2\Formats\LevelFile.cpp" />
+    <ClCompile Include="..\..\Jazz2\Formats\TileSetFile.cpp" />
     <ClCompile Include="..\..\nCine\Base\Algorithms.cpp" />
     <!--
       The platform-neutral base layer, shared with the game (SHARED_SOURCES in cmake/ncine_sources.cmake)
@@ -192,13 +195,15 @@
     <ClInclude Include="DiscImage.h" />
     <ClInclude Include="FontPacker.h" />
     <ClInclude Include="Iso9660.h" />
+    <ClInclude Include="FormatVerifier.h" />
     <ClInclude Include="ModuleConverter.h" />
     <ClInclude Include="N64Content.h" />
     <ClInclude Include="PngCodec.h" />
     <ClInclude Include="SpriteRepacker.h" />
     <ClInclude Include="..\..\Main.h" />
     <ClInclude Include="..\..\Jazz2\ContentFileTypes.h" />
-    <ClInclude Include="..\..\Jazz2\LevelFormat.h" />
+    <ClInclude Include="..\..\Jazz2\Formats\LevelFile.h" />
+    <ClInclude Include="..\..\Jazz2\Formats\TileSetFile.h" />
     <ClInclude Include="..\..\Jazz2\EventType.h" />
     <ClInclude Include="..\..\Jazz2\UI\FontFormat.h" />
     <ClInclude Include="..\..\Jazz2\Compatibility\AnimSetMapping.h" />

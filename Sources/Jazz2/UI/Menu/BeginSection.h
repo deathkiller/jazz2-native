@@ -36,6 +36,9 @@ namespace Jazz2::UI::Menu
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			Import,
 #endif
+#if defined(WITH_EDITOR)
+			LevelEditor,
+#endif
 			Highscores,
 			Options,
 			About,

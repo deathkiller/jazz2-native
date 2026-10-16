@@ -5669,7 +5669,8 @@ namespace Jazz2::Actors
 					break;
 				}
 				case EventType::AreaWaterBlock: {
-					areaWaterBlock = ((std::int32_t)y / 32) * 32 + p[0];
+					// The adjustment is signed, a negative one raises the water above the tile
+					areaWaterBlock = ((std::int32_t)y / 32) * 32 + (std::int8_t)p[0];
 					break;
 				}
 				default: {
@@ -6983,6 +6984,27 @@ namespace Jazz2::Actors
 		dest.Write(_inventoryCheckpoint.WeaponAmmo, sizeof(_inventoryCheckpoint.WeaponAmmo));
 		dest.Write(_inventoryCheckpoint.WeaponUpgrades, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 	}
+
+#if defined(WITH_EDITOR)
+	void Player::TakeOverPlayTestState(const Player& other)
+	{
+		_lives = other._lives;
+		_score = other._score;
+		_health = std::clamp(other._health, 1, _maxHealth);
+		_inventory = other._inventory;
+		_inventoryCheckpoint = other._inventoryCheckpoint;
+		std::memcpy(_gemsTotal, other._gemsTotal, sizeof(_gemsTotal));
+		if (other._activeShield != ShieldType::None && other._activeShieldTime > 0.0f) {
+			SetShield(other._activeShield, other._activeShieldTime);
+		}
+		// The weapon has to be one there's ammo for, as after a rollback
+		WeaponType weapon = other._currentWeapon;
+		if (_inventory.WeaponAmmo[(std::int32_t)weapon] == 0) {
+			weapon = WeaponType::Blaster;
+		}
+		SetCurrentWeapon(weapon, SetCurrentWeaponReason::Rollback);
+	}
+#endif
 
 	bool Player::Respawn(Vector2f pos)
 	{

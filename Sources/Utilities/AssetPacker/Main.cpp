@@ -7,6 +7,7 @@
 #include "CartridgeImage.h"
 #include "DiscImage.h"
 #include "FontPacker.h"
+#include "FormatVerifier.h"
 #include "ModuleConverter.h"
 #include "N64Content.h"
 #include "SpriteRepacker.h"
@@ -164,7 +165,9 @@ namespace
 		/** @brief Replace the game content of an already built console disc or ROM image */
 		SwapDiscContent,
 		/** @brief Make a bootable GameCube disc image out of the executable, its apploader and a content directory */
-		CreateImage
+		CreateImage,
+		/** @brief Check that every level and tile set in a directory is written back unchanged after being read, see @ref AssetPacker::FormatVerifier */
+		VerifyFormats
 	};
 
 	struct Options {
@@ -253,6 +256,8 @@ namespace
 			command = Command::SwapDiscContent;
 		} else if (value == "create-image"_s) {
 			command = Command::CreateImage;
+		} else if (value == "verify-formats"_s) {
+			command = Command::VerifyFormats;
 		} else {
 			return false;
 		}
@@ -408,6 +413,9 @@ namespace
 		LOGI("    with (built by the GameCube target, see GameCubeApploader.c). --game-id= is the six characters of the");
 		LOGI("    game and maker codes (default {}), --title= the name in the header (default \"{}\")",
 			DefaultGameCubeGameId, DefaultGameCubeTitle);
+		LOGI("  verify-formats <directory>");
+		LOGI("    Reads every level and tile set in the game's own format under <directory> and writes it back into");
+		LOGI("    memory, which has to give the same file byte for byte. Original JJ2 files are skipped");
 	}
 
 	/** @brief Works out everything the profile named by `--target=` implies */
@@ -527,6 +535,9 @@ namespace
 				return false;
 			}
 			return !options.SourcePath.empty() && !options.TargetPath.empty();
+		}
+		if (options.Action == Command::VerifyFormats) {
+			return !options.SourcePath.empty() && options.TargetPath.empty();
 		}
 		// The only command that rewrites what it is given, so it is also the only one whose target is optional
 		if (options.Action == Command::SwapDiscContent) {
@@ -1042,6 +1053,9 @@ namespace
 							? AssetPacker::CartridgeImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride)
 							: AssetPacker::DiscImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride));
 					}
+					break;
+				case Command::VerifyFormats:
+					success = AssetPacker::FormatVerifier::VerifyDirectory(options.SourcePath);
 					break;
 				case Command::ConvertMusic:
 					success = AssetPacker::ModuleConverter::ConvertJ2bToXm(options.SourcePath, options.TargetPath);

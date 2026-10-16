@@ -182,6 +182,12 @@ namespace nCine
 
 						// Handling early splits while collecting (not enough UBO free space)
 						RenderCommand* batchCommand = CollectCommands(start, end, start);
+						if (batchCommand == nullptr) {
+							// Too large to be batched, it goes through as it is
+							destQueue.push_back(*start);
+							lastSplit = std::uint32_t(start - srcQueue.begin()) + 1;
+							continue;
+						}
 						destQueue.push_back(batchCommand);
 						lastSplit = std::uint32_t(start - srcQueue.begin());
 					}
@@ -377,6 +383,12 @@ namespace nCine
 			instancesVertexDataSize += vertexDataSize;
 			instancesIndicesAmount += numIndices;
 			++it;
+		}
+		if (it == start) {
+			// Its vertices alone are more than a batch can hold, it has to be drawn on its own - a batch of nothing
+			// would never move past it
+			nextStart = start;
+			return nullptr;
 		}
 		nextStart = it;
 

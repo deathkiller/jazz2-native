@@ -9,7 +9,7 @@
 namespace Jazz2::UI
 {
 	Canvas::Canvas()
-		: AnimTime(0.0f), _renderCommandsCount(0), _currentRenderQueue(nullptr)
+		: AnimTime(0.0f), _renderCommandsCount(0), _nextVisitOrder(0), _currentRenderQueue(nullptr)
 	{
 		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 	}
@@ -26,6 +26,7 @@ namespace Jazz2::UI
 		SceneNode::OnDraw(renderQueue);
 
 		_renderCommandsCount = 0;
+		_nextVisitOrder = 0;
 		_currentRenderQueue = &renderQueue;
 
 		// The glyph batches start over too, each record remembering how many glyphs it took (see GlyphBatch)
@@ -52,6 +53,17 @@ namespace Jazz2::UI
 		pos = pos * LayerScale + LayerOffset;
 		size = size * LayerScale;
 		const Colorf finalColor = color * LayerColor;
+
+		Vector4f clippedTexCoords = texCoords;
+		if (std::abs(angle) > 0.01f) {
+			// A rotated rectangle can't be cut down, it's only left out if all of it is outside
+			Vector2f boundsPos = pos, boundsSize = size;
+			if (!ClipQuad(boundsPos, boundsSize, nullptr)) {
+				return;
+			}
+		} else if (!ClipQuad(pos, size, &clippedTexCoords)) {
+			return;
+		}
 
 		// An indexed texture (palette index in the red channel) is recolored at draw time through the shared palette
 		// texture; paletteOffset selects the palette region (0 = default sprite palette). -1 = a plain RGBA texture.
@@ -85,7 +97,7 @@ namespace Jazz2::UI
 
 		// Resolved once per shader change instead of looked up in the block by name on every draw
 		auto* instanceUniforms = command->GetInstanceUniforms();
-		instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
+		instanceUniforms->TexRect->SetFloatVector(clippedTexCoords.Data());
 		instanceUniforms->SpriteSize->SetFloatVector(size.Data());
 		instanceUniforms->Color->SetFloatVector(finalColor.Data());
 		if (indexed && instanceUniforms->PaletteOffset != nullptr) {
@@ -125,6 +137,11 @@ namespace Jazz2::UI
 		size = size * LayerScale;
 		const Colorf finalColor = color * LayerColor;
 
+		Vector4f clippedTexCoords = texCoords;
+		if (!ClipQuad(pos, size, &clippedTexCoords)) {
+			return;
+		}
+
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShader(shader)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
@@ -144,7 +161,7 @@ namespace Jazz2::UI
 
 		// Resolved once per shader change instead of looked up in the block by name on every draw
 		auto* instanceUniforms = command->GetInstanceUniforms();
-		instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
+		instanceUniforms->TexRect->SetFloatVector(clippedTexCoords.Data());
 		instanceUniforms->SpriteSize->SetFloatVector(size.Data());
 		instanceUniforms->Color->SetFloatVector(finalColor.Data());
 		if (instanceUniforms->PaletteOffset != nullptr) {
@@ -165,6 +182,10 @@ namespace Jazz2::UI
 		pos = pos * LayerScale + LayerOffset;
 		size = size * LayerScale;
 		const Colorf finalColor = color * LayerColor;
+
+		if (!ClipQuad(pos, size, nullptr)) {
+			return;
+		}
 
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
@@ -313,20 +334,67 @@ namespace Jazz2::UI
 
 	RenderCommand* Canvas::RentRenderCommand()
 	{
+		RenderCommand* command;
 		if (_renderCommandsCount < _renderCommands.size()) {
-			RenderCommand* command = _renderCommands[_renderCommandsCount].get();
+			command = _renderCommands[_renderCommandsCount].get();
 			command->SetType(RenderCommand::Type::Sprite);
 			// A pooled command may still reference a palette texture at unit 1 from a previous frame; that texture
 			// can have been freed since (e.g., a menu section's preview palette that was destroyed on navigating
 			// back), so clear it to avoid binding a dangling pointer. Palette draws re-bind unit 1 after renting.
 			command->GetMaterial().SetTexture(1, nullptr);
-			_renderCommandsCount++;
-			return command;
 		} else {
-			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Sprite));
+			command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Sprite)).get();
 			command->GetMaterial().SetBlendingEnabled(true);
-			_renderCommandsCount++;
-			return command.get();
 		}
+		_renderCommandsCount++;
+
+		// The render queue orders commands of the same layer by their visit order before anything else, so a number
+		// that grows with every command keeps them in the order they were drawn in (see OrderedDraws)
+		if (OrderedDraws) {
+			command->SetVisitOrder(_nextVisitOrder);
+			if (_nextVisitOrder < UINT16_MAX) {
+				_nextVisitOrder++;
+			}
+		} else {
+			command->SetVisitOrder(0);
+		}
+		return command;
+	}
+
+	bool Canvas::ClipQuad(Vector2f& pos, Vector2f& size, Vector4f* texCoords) const
+	{
+		if (ClipRect.W <= 0.0f || ClipRect.H <= 0.0f) {
+			return true;
+		}
+
+		const float x0 = pos.X, y0 = pos.Y;
+		const float x1 = pos.X + size.X, y1 = pos.Y + size.Y;
+		const float cx0 = std::max(x0, ClipRect.X);
+		const float cy0 = std::max(y0, ClipRect.Y);
+		const float cx1 = std::min(x1, ClipRect.X + ClipRect.W);
+		const float cy1 = std::min(y1, ClipRect.Y + ClipRect.H);
+		if (cx1 <= cx0 || cy1 <= cy0) {
+			return false;
+		}
+		if (cx0 == x0 && cy0 == y0 && cx1 == x1 && cy1 == y1) {
+			// Entirely inside
+			return true;
+		}
+
+		if (texCoords != nullptr && size.X > 0.0f && size.Y > 0.0f) {
+			// A texture coordinate is `t * scale + offset` for `t` running from 0 to 1 across the rectangle, so the
+			// part that is left runs from `left` to `right` of the original `t`
+			const float left = (cx0 - x0) / size.X, right = (cx1 - x0) / size.X;
+			const float top = (cy0 - y0) / size.Y, bottom = (cy1 - y0) / size.Y;
+			const Vector4f original = *texCoords;
+			texCoords->X = original.X * (right - left);
+			texCoords->Y = original.Y + original.X * left;
+			texCoords->Z = original.Z * (bottom - top);
+			texCoords->W = original.W + original.Z * top;
+		}
+
+		pos = Vector2f(cx0, cy0);
+		size = Vector2f(cx1 - cx0, cy1 - cy0);
+		return true;
 	}
 }

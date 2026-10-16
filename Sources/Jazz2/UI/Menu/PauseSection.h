@@ -29,6 +29,11 @@ namespace Jazz2::UI::Menu
 			ChangeCharacter,
 #endif
 			Options,
+#if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
+			EditLevel,
+			BackToEditor,
+			ExitEditor,
+#endif
 			Exit,
 
 			Count

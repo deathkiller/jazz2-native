@@ -41,6 +41,34 @@ namespace Jazz2::Actors::Solid
 		}
 	}
 
+	void Bridge::GetPieceWidths(BridgeType type, const std::int32_t*& widths, std::int32_t& count, std::int32_t& offset)
+	{
+		offset = 0;
+		switch (type) {
+			default:
+			case BridgeType::Rope: widths = PieceWidthsRope; count = std::int32_t(arraySize(PieceWidthsRope)); break;
+			case BridgeType::Stone: widths = PieceWidthsStone; count = std::int32_t(arraySize(PieceWidthsStone)); break;
+			case BridgeType::Vine: widths = PieceWidthsVine; count = std::int32_t(arraySize(PieceWidthsVine)); offset = 8; break;
+			case BridgeType::StoneRed: widths = PieceWidthsStoneRed; count = std::int32_t(arraySize(PieceWidthsStoneRed)); break;
+			case BridgeType::Log: widths = PieceWidthsLog; count = std::int32_t(arraySize(PieceWidthsLog)); break;
+			case BridgeType::Gem: widths = PieceWidthsGem; count = std::int32_t(arraySize(PieceWidthsGem)); break;
+			case BridgeType::Lab: widths = PieceWidthsLab; count = std::int32_t(arraySize(PieceWidthsLab)); offset = 12; break;
+		}
+	}
+
+	void Bridge::GetPieceOffsets(std::uint8_t bridgeType, std::int32_t bridgeWidth, SmallVectorImpl<std::int32_t>& offsets)
+	{
+		const std::int32_t* widths;
+		std::int32_t count, offset;
+		GetPieceWidths(bridgeType <= std::uint8_t(BridgeType::Last) ? BridgeType(bridgeType) : BridgeType::Rope, widths, count, offset);
+		// Each piece is half of its own width and half of the next one's further, the first one sticks out of the left end
+		std::int32_t widthCovered = widths[0] / 2 - offset;
+		for (std::int32_t i = 0; widthCovered <= bridgeWidth + 4; i++) {
+			offsets.push_back(widthCovered - 16);
+			widthCovered += (widths[i % count] + widths[(i + 1) % count]) / 2;
+		}
+	}
+
 	Task<bool> Bridge::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		EventParamsReader params(details);
@@ -61,23 +89,25 @@ namespace Jazz2::Actors::Solid
 
 		switch (_bridgeType) {
 			default:
-			case BridgeType::Rope: async_await RequestMetadataAsync("Bridge/Rope"_s); _widths = PieceWidthsRope; _widthsCount = std::int32_t(arraySize(PieceWidthsRope)); break;
-			case BridgeType::Stone: async_await RequestMetadataAsync("Bridge/Stone"_s); _widths = PieceWidthsStone; _widthsCount = std::int32_t(arraySize(PieceWidthsStone)); break;
-			case BridgeType::Vine: async_await RequestMetadataAsync("Bridge/Vine"_s); _widths = PieceWidthsVine; _widthsCount = std::int32_t(arraySize(PieceWidthsVine)); _widthOffset = 8; break;
-			case BridgeType::StoneRed: async_await RequestMetadataAsync("Bridge/StoneRed"_s); _widths = PieceWidthsStoneRed; _widthsCount = std::int32_t(arraySize(PieceWidthsStoneRed)); break;
-			case BridgeType::Log: async_await RequestMetadataAsync("Bridge/Log"_s); _widths = PieceWidthsLog; _widthsCount = std::int32_t(arraySize(PieceWidthsLog)); break;
-			case BridgeType::Gem: async_await RequestMetadataAsync("Bridge/Gem"_s); _widths = PieceWidthsGem; _widthsCount = std::int32_t(arraySize(PieceWidthsGem)); break;
-			case BridgeType::Lab: async_await RequestMetadataAsync("Bridge/Lab"_s); _widths = PieceWidthsLab; _widthsCount = std::int32_t(arraySize(PieceWidthsLab)); _widthOffset = 12; break;
+			case BridgeType::Rope: async_await RequestMetadataAsync("Bridge/Rope"_s); break;
+			case BridgeType::Stone: async_await RequestMetadataAsync("Bridge/Stone"_s); break;
+			case BridgeType::Vine: async_await RequestMetadataAsync("Bridge/Vine"_s); break;
+			case BridgeType::StoneRed: async_await RequestMetadataAsync("Bridge/StoneRed"_s); break;
+			case BridgeType::Log: async_await RequestMetadataAsync("Bridge/Log"_s); break;
+			case BridgeType::Gem: async_await RequestMetadataAsync("Bridge/Gem"_s); break;
+			case BridgeType::Lab: async_await RequestMetadataAsync("Bridge/Lab"_s); break;
 		}
+		GetPieceWidths(_bridgeType, _widths, _widthsCount, _widthOffset);
 
 		SetAnimation(AnimState::Default);
 
 		auto& resolver = ContentResolver::Get();
 		if (!resolver.IsHeadless()) {
-			std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
-			for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
+			SmallVector<std::int32_t, 64> offsets;
+			GetPieceOffsets(std::uint8_t(_bridgeType), _bridgeWidth, offsets);
+			for (std::int32_t offset : offsets) {
 				BridgePiece& piece = _pieces.emplace_back();
-				piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
+				piece.Pos = Vector2f(_pos.X + offset, _pos.Y);
 				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 				piece.Command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				piece.Command->GetMaterial().SetBlendingEnabled(true);
@@ -88,8 +118,6 @@ namespace Jazz2::Actors::Solid
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
-
-				widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
 			}
 		}
 

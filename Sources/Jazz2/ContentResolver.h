@@ -160,6 +160,15 @@ namespace Jazz2
 		 */
 		StringView GetUserContentPath() const;
 		/**
+		 * @brief Returns path to the `"Content"` directory files can be saved into, or an empty view if there is none
+		 *
+		 * It's the user `"Content"` directory where the platform has one (see @ref GetUserContentPath()) --- with
+		 * @p create it's created if it doesn't exist yet and searched from then on --- and the `"Content"` directory
+		 * itself elsewhere if it's writable, as it is in a portable copy of the game. The level editor saves levels
+		 * and tile sets there. Nothing can be saved on the web, a file is downloaded instead.
+		 */
+		StringView GetWritableContentPath(bool create);
+		/**
 		 * @brief Returns full path to a file in the user `"Content"`, `"Content"` or `"Cache"` directory
 		 *
 		 * The directories are searched in this order, @p path is relative to them. Returns an empty string if the
@@ -253,6 +262,13 @@ namespace Jazz2
 		 *                      time - used for the player so each player can have a custom color scheme
 		 */
 		Metadata* RequestMetadata(StringView path, bool forceIndexed = false);
+		/**
+		 * @brief Keeps a metadata loaded with everything it uses, even across loadings that don't request it
+		 *
+		 * Everything not requested while something is loaded is released at the end of it (see @ref BeginLoading()).
+		 * The level editor keeps the sprites of its previews this way while it loads a level to play it.
+		 */
+		void PinMetadata(Metadata* metadata, bool pinned);
 		/**
 		 * @brief Loads specified graphics asset (cached)
 		 *
@@ -377,10 +393,28 @@ namespace Jazz2
 		 */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr,
 			const BitArray* usedTiles = nullptr, bool withDiffuse = true);
+		/**
+		 * @brief Loads a tile set from a stream
+		 *
+		 * The same as the overload above, for a tile set that isn't a file in `Tilesets/` --- the tile set editor
+		 * hands over the one it edits this way. The @p path is what the tile set is known as.
+		 */
+		std::unique_ptr<Tiles::TileSet> RequestTileSet(Stream& s, StringView path, std::uint16_t captionTileId, bool applyPalette,
+			const std::uint8_t* paletteRemapping = nullptr, const BitArray* usedTiles = nullptr, bool withDiffuse = true);
 		/** @brief Returns `true` if specified level exists */
 		bool LevelExists(StringView levelName);
-		/** @brief Loads specified level into a level descriptor */
-		bool TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor);
+		/**
+		 * @brief Loads specified level into a level descriptor
+		 *
+		 * The level is looked up as `Episodes/<path>.j2l` in the user content, the content and the cache, in that order.
+		 */
+		bool TryLoadLevel(StringView path, const LevelLoadOptions& options, LevelDescriptor& descriptor);
+		/**
+		 * @brief Loads a level from a stream into a level descriptor
+		 *
+		 * The @p fullPath is what the level is known as, the level script is looked up next to it.
+		 */
+		bool TryLoadLevel(Stream& s, StringView fullPath, const LevelLoadOptions& options, LevelDescriptor& descriptor);
 		/** @brief Reads only the name of the next level from a given level file, without loading the level */
 		bool TryGetNextLevelName(StringView path, String& nextLevel);
 		/** @brief Loads default (sprite) palette */
@@ -393,6 +427,19 @@ namespace Jazz2
 		 * headless mode.
 		 */
 		void SetSpritePalette(ArrayView<const std::uint32_t> palette);
+		/**
+		 * @brief Overrides the pixels of a tile of a tile map by palette indices of a level, 32 × 32 of them
+		 *
+		 * An indexed tile set keeps the indices, so the tile follows the palette as it changes, otherwise the colors of
+		 * the current palette are baked in.
+		 */
+		void ApplyTileDiffuseOverride(Tiles::TileMap& tileMap, std::int32_t tileId, const std::uint8_t* indices);
+		/**
+		 * @brief Overrides the pixels of a tile of a tile map by colors, 32 × 32 of them, 4 bytes RGBA each
+		 *
+		 * Only a tile of a tile set that isn't indexed can take them, returns `false` otherwise.
+		 */
+		bool ApplyTileDiffuseOverrideRgba(Tiles::TileMap& tileMap, std::int32_t tileId, const std::uint8_t* rgba);
 
 		/** @brief Returns specified episode by name */
 		std::optional<Episode> GetEpisode(StringView name, bool withImages = false);
@@ -466,6 +513,8 @@ namespace Jazz2
 		void DetectPrebakedContent();
 		// Looks for the user-accessible "Content" directory (see GetUserContentPath()), has to run again if the paths change
 		void DetectUserContent();
+		// Returns where the user-accessible "Content" directory is or would be, empty where the platform has none
+		String GetUserContentCandidate() const;
 
 		// Cache key offset for indexed graphics (palette indices kept in the texture instead of baked), distinct
 		// from any real paletteOffset so indexed and baked variants of the same sprite are cached separately
@@ -483,6 +532,8 @@ namespace Jazz2
 		// Copies a tile's edge pixels into its 1px atlas padding (so sampling never bleeds across tiles); `bytesPerPixel`
 		// is 1 for an indexed (R8) atlas or 4 for a baked RGBA atlas
 		static void ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding, std::uint32_t bytesPerPixel);
+		// Marks a metadata and the graphics and sounds it points at as referenced, so EndLoading() keeps them
+		static void MarkReferenced(Metadata& metadata);
 
 		// Reads the tileset's 256-color palette from the decompressed stream and applies it to the live sprite palette
 		// (drops baked fonts, regenerates gem palettes); just skips the bytes when headless or `applyPalette` is false
@@ -495,7 +546,7 @@ namespace Jazz2
 		// `s` (the image content follows the compressed block). Sets `indexTiles` to the chosen mode.
 		// Returns one texture normally, or several consecutive row-band chunks when the atlas exceeds the
 		// device's texture-size limit (console targets); see TileSet::ResolveTextureDiffuse
-		SmallVector<std::unique_ptr<Texture>, 1> BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
+		SmallVector<std::unique_ptr<Texture>, 1> BuildTilesetDiffuse(Stream& s, const char* name, std::uint8_t channelCount,
 			bool lz4Content, const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 			std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 			const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,

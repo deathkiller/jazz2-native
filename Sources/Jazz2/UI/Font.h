@@ -88,6 +88,14 @@ namespace Jazz2::UI
 		static String StripFormatting(StringView text);
 
 		/**
+		 * @brief Sets how the glyphs are filtered when drawn larger than they are
+		 *
+		 * Linear by default. Nearest keeps text drawn at a whole multiple of its size crisp, which the level editor
+		 * wants for its interface. A font is loaded again when the palette changes, with the default filter.
+		 */
+		void SetMagnificationFilter(SamplerFilter filter);
+
+		/**
 		 * @brief Whether the atlas holds palette indices instead of baked colors
 		 *
 		 * A backend that samples a paletted texture keeps the atlas as the indices it was authored with and

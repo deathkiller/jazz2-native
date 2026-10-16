@@ -1,0 +1,304 @@
+﻿#include "PathTool.h"
+
+#if defined(WITH_EDITOR)
+
+#include "EventTools.h"
+#include "../Document/Commands.h"
+#include "../Events/EventPreviews.h"
+#include "../UI/UiDialogs.h"
+#include "../UI/UiSurface.h"
+
+#include "../../../nCine/I18n.h"
+
+#include <Containers/StringConcatenable.h>
+
+#include <algorithm>
+#include <cmath>
+
+using namespace Death::Containers::Literals;
+
+namespace Jazz2::Editor
+{
+	namespace
+	{
+		Vector2f CatmullRom(Vector2f p0, Vector2f p1, Vector2f p2, Vector2f p3, float t)
+		{
+			float t2 = t * t, t3 = t2 * t;
+			return (p1 * 2.0f + (p2 - p0) * t + (p0 * 2.0f - p1 * 5.0f + p2 * 4.0f - p3) * t2 + (p1 * 3.0f - p0 - p2 * 3.0f + p3) * t3) * 0.5f;
+		}
+	}
+
+	PathTool::PathTool(IToolHost& host)
+		: EditorTool(host), _options(std::make_shared<Options>()), _window(std::make_shared<UiElement*>(nullptr))
+	{
+	}
+
+	PathTool::~PathTool()
+	{
+		// The window goes with the interface, it only shares the pointer to itself
+	}
+
+	EditorToolType PathTool::GetType() const
+	{
+		return EditorToolType::Path;
+	}
+
+	void PathTool::OnActivate()
+	{
+		ShowWindow();
+	}
+
+	void PathTool::OnDeactivate()
+	{
+		// The points stay, the hand can be taken for a while in the middle of a path
+		CloseWindow();
+	}
+
+	Vector2f PathTool::GetPoint(const ToolPointer& pointer) const
+	{
+		Vector2f world = pointer.World;
+		if ((pointer.Modifiers & KeyMod::Ctrl) != 0) {
+			world = Vector2f(std::floor(world.X / 32.0f) * 32.0f + 16.0f, std::floor(world.Y / 32.0f) * 32.0f + 16.0f);
+		}
+		return Vector2f(std::round(world.X), std::round(world.Y));
+	}
+
+	void PathTool::OnPointerDown(const ToolPointer& pointer)
+	{
+		if (pointer.Button == MouseButton::Right) {
+			Place();
+			return;
+		}
+		if (pointer.Button != MouseButton::Left) {
+			return;
+		}
+		if (_host.GetEventBrush().IsEmpty()) {
+			_host.ShowMessage(_("Choose the event to place first, in the list of events"));
+			return;
+		}
+		_points.push_back(GetPoint(pointer));
+		ShowWindow();
+	}
+
+	void PathTool::Cancel()
+	{
+		_points.clear();
+	}
+
+	bool PathTool::IsBusy() const
+	{
+		return !_points.empty();
+	}
+
+	void PathTool::GetLine(ArrayView<const Vector2f> points, bool smooth, SmallVectorImpl<Vector2f>& line)
+	{
+		if (points.empty()) {
+			return;
+		}
+		// The path as a fine line, through the points smoothly if asked
+		line.push_back(points[0]);
+		for (std::size_t i = 0; i + 1 < points.size(); i++) {
+			if (!smooth || points.size() < 3) {
+				line.push_back(points[i + 1]);
+				continue;
+			}
+			Vector2f p0 = points[i > 0 ? i - 1 : i], p1 = points[i], p2 = points[i + 1], p3 = points[i + 2 < points.size() ? i + 2 : i + 1];
+			constexpr std::int32_t Subdivisions = 16;
+			for (std::int32_t s = 1; s <= Subdivisions; s++) {
+				line.push_back(CatmullRom(p0, p1, p2, p3, float(s) / float(Subdivisions)));
+			}
+		}
+	}
+
+	void PathTool::GetPlacements(ArrayView<const Vector2f> points, bool smooth, float spacing, SmallVectorImpl<Vector2f>& placements)
+	{
+		SmallVector<Vector2f, 0> line;
+		GetLine(points, smooth, line);
+		if (line.empty()) {
+			return;
+		}
+
+		// Along it at even distances
+		spacing = std::max(spacing, 4.0f);
+		placements.push_back(line[0]);
+		float carried = 0.0f;
+		for (std::size_t i = 0; i + 1 < line.size(); i++) {
+			Vector2f from = line[i], to = line[i + 1];
+			float length = (to - from).Length();
+			float position = spacing - carried;
+			while (position <= length) {
+				placements.push_back(from + (to - from) * (position / length));
+				position += spacing;
+			}
+			carried = length - (position - spacing);
+			if (placements.size() > 4096) {
+				return;
+			}
+		}
+	}
+
+	void PathTool::Place()
+	{
+		if (_points.empty()) {
+			return;
+		}
+		const EventStamp& brush = _host.GetEventBrush();
+		LevelDocument& document = _host.GetDocument();
+		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
+		if (brush.IsEmpty() || spriteLayer < 0) {
+			_points.clear();
+			return;
+		}
+		if (!_host.IsLayerEditable(spriteLayer)) {
+			_host.ShowMessage(_("The sprite layer is locked or hidden"));
+			return;
+		}
+
+		SmallVector<Vector2f, 0> placements;
+		GetPlacements(_points, _options->Smooth, _options->Spacing, placements);
+		Formats::EventRecord event = brush.Items[0].Event;
+		LevelDocument::NormalizeEvent(event);
+		Vector2i gridSize = document.GetEventGridSize();
+		std::int32_t placed = 0;
+
+		if (_options->OnGrid) {
+			// Each tile once, tiles that have an event keep it
+			auto command = std::make_unique<SetEventsCommand>(document, _("Place Events"));
+			SmallVector<std::uint32_t, 0> cells;
+			for (const Vector2f& p : placements) {
+				std::int32_t x = std::int32_t(std::floor(p.X / 32.0f)), y = std::int32_t(std::floor(p.Y / 32.0f));
+				if (x < 0 || y < 0 || x >= gridSize.X || y >= gridSize.Y || !LevelDocument::IsEmptyEvent(document.GetEvent(x, y))) {
+					continue;
+				}
+				std::uint32_t cell = std::uint32_t(x + y * gridSize.X);
+				if (std::find(cells.begin(), cells.end(), cell) != cells.end()) {
+					continue;
+				}
+				cells.push_back(cell);
+				command->Set(x, y, event);
+				placed++;
+			}
+			if (placed > 0) {
+				_host.Execute(std::move(command));
+			}
+		} else {
+			SmallVector<Formats::OffGridEventRecord, 0> events;
+			for (const Formats::OffGridEventRecord& existing : document.OffGridEvents) {
+				events.push_back(existing);
+			}
+			for (const Vector2f& p : placements) {
+				if (p.X < 0.0f || p.Y < 0.0f || p.X >= gridSize.X * 32.0f || p.Y >= gridSize.Y * 32.0f) {
+					continue;
+				}
+				Formats::OffGridEventRecord& record = events.emplace_back();
+				record.X = std::uint32_t(std::round(p.X));
+				record.Y = std::uint32_t(std::round(p.Y));
+				record.Event = event;
+				placed++;
+			}
+			if (placed > 0) {
+				_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, std::move(events), _("Place Events")));
+			}
+		}
+		_host.ShowMessage(_fn("{} event placed", "{} events placed", placed, placed));
+		_points.clear();
+	}
+
+	void PathTool::ShowWindow()
+	{
+		UiSurface* surface = _host.GetSurface();
+		if (surface == nullptr || *_window != nullptr) {
+			return;
+		}
+
+		std::shared_ptr<Options> options = _options;
+		auto dialog = std::make_unique<UiDialog>(_("Place Along Path"));
+		auto* content = dialog->GetContent();
+		{
+			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			row->Add<UiLabel>(_("Distance (px)"))->Flex = 1.0f;
+			auto* spacing = row->Add<UiNumberBox>([options]() { return options->Spacing; }, [options](float value, bool final) {
+				options->Spacing = std::clamp(value, 4.0f, 1024.0f);
+			}, 4.0f, 1024.0f, 1.0f, 0);
+			spacing->Width = 60.0f;
+			spacing->Tooltip = _("Distance between two events along the path, 32 is a tile");
+		}
+		content->Add<UiCheckBox>(_("Smooth curve"), [options]() { return options->Smooth; }, [options](bool value) { options->Smooth = value; })
+			->Tooltip = _("Through the points in a curve, otherwise straight from one to the next");
+		content->Add<UiCheckBox>(_("On the tiles"), [options]() { return options->OnGrid; }, [options](bool value) { options->OnGrid = value; })
+			->Tooltip = _("Each on the tile the path goes through, otherwise off the grid, exactly on the path");
+		content->Add<UiLabel>(_("Click to add points, the right button places"), UiTheme::TextDim);
+
+		std::shared_ptr<UiElement*> window = _window;
+		UiOverlayOptions overlayOptions;
+		overlayOptions.Position = Vector2f(1.0e6f, 1.0e6f);
+		overlayOptions.Modal = false;
+		overlayOptions.CloseOnOutsideClick = false;
+		overlayOptions.OnClosed = [window]() { *window = nullptr; };
+		*_window = surface->PushOverlay(std::move(dialog), std::move(overlayOptions));
+	}
+
+	void PathTool::CloseWindow()
+	{
+		if (*_window != nullptr) {
+			if (UiSurface* surface = _host.GetSurface()) {
+				surface->CloseOverlay(*_window);
+			}
+			*_window = nullptr;
+		}
+	}
+
+	void PathTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	{
+		std::int32_t spriteLayer = _host.GetDocument().GetSpriteLayerIndex();
+		LayerView view = _host.GetLayerView(spriteLayer >= 0 ? spriteLayer : 0);
+		float thickness = std::max(1.0f, std::round(painter.GetScale()));
+
+		// The path with where the pointer is, as it would be with another point there
+		SmallVector<Vector2f, 0> points;
+		for (const Vector2f& p : _points) {
+			points.push_back(p);
+		}
+		if (hoverValid) {
+			points.push_back(GetPoint(hover));
+		}
+		if (points.empty()) {
+			return;
+		}
+
+		SmallVector<Vector2f, 0> placements;
+		GetPlacements(points, _options->Smooth, _options->Spacing, placements);
+		const EventStamp& brush = _host.GetEventBrush();
+		EventPreviews& previews = _host.GetEventPreviews();
+		float tile = 32.0f * view.Scale;
+		for (const Vector2f& p : placements) {
+			Vector2f world = p;
+			if (_options->OnGrid) {
+				world = Vector2f(std::floor(p.X / 32.0f) * 32.0f + 16.0f, std::floor(p.Y / 32.0f) * 32.0f + 16.0f);
+			}
+			Vector2f screen = view.WorldToScreen(world);
+			Rectf rect(screen.X - tile * 0.5f, screen.Y - tile * 0.5f, tile, tile);
+			if (!brush.IsEmpty()) {
+				previews.DrawPlaced(painter, brush.Items[0].Event, rect, view.Scale, 0.6f, _host.GetAnimTime(), world);
+			}
+		}
+
+		// The path, curved as it will be, and its points
+		SmallVector<Vector2f, 0> line;
+		GetLine(points, _options->Smooth, line);
+		for (Vector2f& p : line) {
+			p = view.WorldToScreen(p);
+		}
+		painter.Polyline(line, thickness, Colorf(1.0f, 1.0f, 1.0f, 0.5f), UiLayer::Overlay);
+		for (const Vector2f& p : _points) {
+			painter.Circle(view.WorldToScreen(p), std::max(2.0f, painter.Px(2.5f)), UiTheme::Accent, UiLayer::Overlay);
+		}
+	}
+
+	StringView PathTool::GetHint() const
+	{
+		return _("Click: add a point - Ctrl: middle of a tile - Right: place the events - Esc: start again");
+	}
+}
+
+#endif

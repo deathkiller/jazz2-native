@@ -36,6 +36,24 @@ namespace Jazz2::Actors::Bosses
 		PreloadMetadataAsync("Boss/Bolly"_s);
 	}
 
+	void Bolly::GetChainOffsets(float chainPhase, std::int32_t chainLength, SmallVectorImpl<Vector2f>& offsets)
+	{
+		float distance = ChainStartDistance;
+		for (std::int32_t i = 0; i < chainLength; i++) {
+			offsets.push_back(GetChainDirection(chainPhase, i) * distance);
+			distance += (IsChainBall(i) ? ChainBallSize : ChainPieceSize);
+		}
+	}
+
+	Vector2f Bolly::GetChainDirection(float chainPhase, std::int32_t index)
+	{
+		// It hangs down and swings, the further from the boss, the later
+		float angle = sinApprox(chainPhase - index * 0.08f) * 1.2f + fPiOver2;
+		float sinAngle, cosAngle;
+		sincosApprox(angle, sinAngle, cosAngle);
+		return Vector2f(cosAngle, sinAngle);
+	}
+
 	Task<bool> Bolly::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_endText = details.Params[1];
@@ -49,7 +67,7 @@ namespace Jazz2::Actors::Bosses
 		SetAnimation(AnimState::Idle);
 
 		_bottom = std::make_shared<BollyPart>();
-		std::uint8_t bottomParams[1] = { 1 };
+		std::uint8_t bottomParams[1] = { std::uint8_t(BottomAnimation) };
 		_bottom->OnActivated(ActorActivationDetails(
 			_levelHandler,
 			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2),
@@ -69,10 +87,10 @@ namespace Jazz2::Actors::Bosses
 		std::int32_t chainLength = (_levelHandler->GetDifficulty() < GameDifficulty::Hard ? NormalChainLength : HardChainLength);
 		for (std::int32_t i = 0; i < chainLength; i++) {
 			_chain[i] = std::make_shared<BollyPart>();
-			std::uint8_t chainParams[1] = { (std::uint8_t)((i % 3) == 2 ? 3 : 4) };
+			std::uint8_t chainParams[1] = { std::uint8_t(IsChainBall(i) ? ChainBallAnimation : ChainPieceAnimation) };
 			_chain[i]->OnActivated(ActorActivationDetails(
 				_levelHandler,
-				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - ((i % 3) == 2 ? 2 : 4)),
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - (IsChainBall(i) ? 2 : 4)),
 				chainParams
 			));
 			_levelHandler->AddActor(_chain[i]);
@@ -189,16 +207,10 @@ namespace Jazz2::Actors::Bosses
 			}
 		}
 
-		float distance = 30.0f;
+		float distance = ChainStartDistance;
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(_chain)); i++) {
 			if (_chain[i] != nullptr) {
-				float angle = sinApprox(_chainPhase - i * 0.08f) * 1.2f + fPiOver2;
-
-				Vector2f piecePos = _pos;
-				float sinAngle, cosAngle;
-				sincosApprox(angle, sinAngle, cosAngle);
-				piecePos.X += cosAngle * distance;
-				piecePos.Y += sinAngle * distance;
+				Vector2f piecePos = _pos + GetChainDirection(_chainPhase, i) * distance;
 				_chain[i]->MoveInstantly(piecePos, MoveType::Absolute | MoveType::Force);
 
 				distance += _chain[i]->Size;
@@ -353,11 +365,11 @@ namespace Jazz2::Actors::Bosses
 			case 3: // Chain ball
 				CanCollideWithShots = true;
 				_health = ChainBallHealth;
-				Size = 14.0f;
+				Size = ChainBallSize;
 				break;
 			case 4: // Chain piece
 				CanCollideWithShots = false;
-				Size = 7.0f;
+				Size = ChainPieceSize;
 				break;
 		}
 

@@ -41,6 +41,16 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(Item::Resume, _("Resume"));
 
+#if defined(WITH_EDITOR)
+		// A level played from the editor goes back there instead of being saved, right after resuming it
+		auto editorMenu = runtime_cast<InGameMenu>(_root);
+		bool isEditorPlayTest = (editorMenu != nullptr && editorMenu->IsEditorPlayTest());
+		if (isEditorPlayTest) {
+			// TRANSLATORS: Menu item in pause menu of a level played from the level editor
+			_items.emplace_back(Item::BackToEditor, _("Back to Editor"));
+		}
+#endif
+
 #if defined(WITH_MULTIPLAYER)
 		if (!isLocalSession) {
 			if (isSpectating) {
@@ -60,6 +70,23 @@ namespace Jazz2::UI::Menu
 
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(Item::Options, _("Options"));
+
+#if defined(WITH_EDITOR)
+		if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
+			if (isEditorPlayTest) {
+				// TRANSLATORS: Menu item in pause menu of a level played from the level editor
+				_items.emplace_back(Item::ExitEditor, _("Exit Editor"));
+				_animation = 0.0f;
+				_touchStart = Vector2f::Zero;
+				_touchLast = Vector2f::Zero;
+				return;
+			}
+			if (inGameMenu->CanOpenInEditor()) {
+				// TRANSLATORS: Menu item in pause menu, opens the level in the level editor
+				_items.emplace_back(Item::EditLevel, _("Edit This Level"));
+			}
+		}
+#endif
 
 #if defined(WITH_MULTIPLAYER)
 		// TRANSLATORS: Menu item in main menu
@@ -241,6 +268,29 @@ namespace Jazz2::UI::Menu
 				_root->SwitchToSection<OptionsSection>();
 				break;
 			}
+#if defined(WITH_EDITOR)
+			case Item::EditLevel: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
+					inGameMenu->OpenInEditor();
+				}
+				break;
+			}
+			case Item::BackToEditor: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
+					inGameMenu->GoToMainMenu();
+				}
+				break;
+			}
+			case Item::ExitEditor: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
+					inGameMenu->ExitEditor();
+				}
+				break;
+			}
+#endif
 			case Item::Exit: {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {

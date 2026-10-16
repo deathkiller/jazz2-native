@@ -247,6 +247,39 @@ namespace Jazz2
 
 		bool SerializeResumableToStream(Stream& dest) override;
 
+#if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Returns 	rue if the level can be opened in the level editor from the pause menu */
+		virtual bool CanOpenInEditor() const;
+		/** @brief Leaves the level and opens it in the level editor */
+		void OpenInEditor();
+		/** @brief Takes the level off the screen, until its viewports are initialized again */
+		void SuspendRendering();
+#	if defined(WITH_AUDIO)
+		/**
+		 * @brief Hands the music over to another level handler of the same level, so it goes on playing
+		 *
+		 * Returns `false` if the other handler plays something else. The music is muffled by @p lowPass, 1 for not
+		 * at all.
+		 */
+		bool HandOverMusic(LevelHandler& target, float lowPass);
+		/** @brief Takes the music out of the level handler, so another one can go on playing it, see @ref ContinueMusic() */
+		std::unique_ptr<AudioStreamPlayer> TakeMusic(String& path);
+		/**
+		 * @brief Goes on playing music taken from another level handler instead of its own
+		 *
+		 * Returns `false` and leaves @p music as it is if it plays something else than @p path. The music is muffled
+		 * by @p lowPass, 1 for not at all.
+		 */
+		bool ContinueMusic(std::unique_ptr<AudioStreamPlayer>& music, StringView path, float lowPass);
+		/** @brief Muffles the music playing now by @p lowPass, 1 for not at all, as the editor fades it between its modes */
+		void SetMusicMuffling(float lowPass);
+#	endif
+		/** @brief Returns `true` if the level is played from the level editor, it returns there when it's left */
+		virtual bool IsEditorPlayTest() const;
+		/** @brief Leaves the level editor the level is played from */
+		virtual void ExitEditor();
+#endif
+
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override {}
 		void OnTileFrozen(std::int32_t x, std::int32_t y) override;
 #if defined(TILEMAP_LAYER_EFFECTS)
@@ -301,6 +334,10 @@ namespace Jazz2
 		// supersampled with the scene
 		Rendering::UpscaleRenderPassWithClipping _hudUpscalePass;
 		bool _hudOverlayActive = false;
+#if defined(DEATH_DEBUG)
+		// Console commands given on the command line by `/console <command>`, run on the first frame
+		SmallVector<String, 0> _debugStartupCommands;
+#endif
 
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Texture> _noiseTexture;
@@ -327,6 +364,10 @@ namespace Jazz2
 		bool _isReforged, _cheatsUsed;
 		bool _checkpointCreated;
 		SmallVector<String, 0> _levelTexts;
+#if defined(WITH_EDITOR)
+		// The level wasn't exported only to be played, see LevelFlags::NotEditable
+		bool _levelEditable = true;
+#endif
 
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
@@ -387,8 +428,40 @@ namespace Jazz2
 		/** @brief Invokes the specified callback asynchronously, usually at the end of current frame */
 		void InvokeAsync(Function<void()>&& callback);
 
+		/** @brief How the viewports of the level are rendered, see @ref GetViewportSetup() */
+		struct ViewportSetup {
+			/** @brief Size of the view the scene is rendered at, in pixels */
+			Vector2i ViewSize;
+			/** @brief Factor the scene is supersampled by, 1 for none */
+			std::int32_t Supersample;
+			/** @brief Whether the view is shown as it is, without the rescale shader --- for a view of the size of the window */
+			bool NativeOutput;
+		};
+
+		/**
+		 * @brief Returns how the viewports of the level are rendered for a given size of the window
+		 *
+		 * The game renders the scene at a smaller size, see @ref DefaultWidth and @ref DefaultHeight, and upscales it.
+		 * The level editor renders it at the size of the window.
+		 */
+		virtual ViewportSetup GetViewportSetup(std::int32_t width, std::int32_t height);
+		/**
+		 * @brief Loads the level of the handler into a level descriptor
+		 *
+		 * The level is looked up by its name, and in the `unknown` episode if it isn't found there.
+		 */
+		virtual bool LoadLevel(LevelDescriptor& descriptor);
+		/** @brief Returns the options the level is loaded with, which decide what events are present */
+		virtual LevelLoadOptions GetLevelLoadOptions() const;
 		/** @brief Attaches all required level components to the handler */
 		virtual void AttachComponents(LevelDescriptor&& descriptor);
+		/**
+		 * @brief Loads the scripts of the level, if there are any and they are allowed
+		 *
+		 * The script is a `.j2as` file next to the level file. The level editor doesn't run scripts while a level is
+		 * being edited.
+		 */
+		virtual void LoadLevelScripts(StringView fullPath);
 		/** @brief Creates HUD */
 		virtual std::unique_ptr<UI::HUD> CreateHUD();
 		/** @brief Spawns all players */

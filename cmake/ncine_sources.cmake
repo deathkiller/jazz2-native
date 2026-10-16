@@ -42,6 +42,8 @@ set(CONVERTER_SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Level.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Strings.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelFile.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/TileSetFile.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp
 )
 
@@ -444,6 +446,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/CombineRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PolylineRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/XRayMaskRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.cpp

@@ -10,6 +10,9 @@
     <Filter Include="Header Files\Jazz2\Compatibility">
       <UniqueIdentifier>{7dea3dd7-b36f-36f5-2e0d-c408435e5bfd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Formats">
+      <UniqueIdentifier>{a3c51e7d-6b2f-4d08-9e41-7f2c8b5d1a36}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\Jazz2\UI">
       <UniqueIdentifier>{4ff9375f-5c40-ab18-7346-2828f1e379c4}</UniqueIdentifier>
     </Filter>
@@ -21,6 +24,9 @@
     </Filter>
     <Filter Include="Source Files\Jazz2\Compatibility">
       <UniqueIdentifier>{8979723a-f095-ccaa-0c0b-258ccd6e1841}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Formats">
+      <UniqueIdentifier>{5e8d2f41-c39a-4b67-8d15-2a7e9c0b4f83}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Shared">
       <UniqueIdentifier>{b0d65e54-f642-3235-212b-a47fe26a4eff}</UniqueIdentifier>
@@ -81,6 +87,9 @@
     <ClCompile Include="FontPacker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FormatVerifier.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Iso9660.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -122,6 +131,12 @@
     </ClCompile>
     <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Level.cpp">
       <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Formats\LevelFile.cpp">
+      <Filter>Source Files\Jazz2\Formats</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Formats\TileSetFile.cpp">
+      <Filter>Source Files\Jazz2\Formats</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Strings.cpp">
       <Filter>Source Files\Jazz2\Compatibility</Filter>
@@ -221,6 +236,9 @@
     <ClInclude Include="FontPacker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FormatVerifier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Iso9660.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -242,8 +260,11 @@
     <ClInclude Include="..\..\Jazz2\ContentFileTypes.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Jazz2\LevelFormat.h">
-      <Filter>Header Files\Jazz2</Filter>
+    <ClInclude Include="..\..\Jazz2\Formats\LevelFile.h">
+      <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Formats\TileSetFile.h">
+      <Filter>Header Files\Jazz2\Formats</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Jazz2\EventType.h">
       <Filter>Header Files\Jazz2</Filter>

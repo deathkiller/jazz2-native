@@ -598,6 +598,9 @@ The platform itself is selected with CMake's own variables --- `CMAKE_SYSTEM_NAM
     -   Possible values: `OpenSSL`, `mbedTLS`, `None`
 -   `DEDICATED_SERVER` (default @cpp OFF @ce) --- Build the application as dedicated server only, `WITH_MULTIPLAYER` must be enabled
 -   `SHAREWARE_DEMO_ALLOW_MULTIPLAYER` (default @cpp ON @ce if `SHAREWARE_DEMO_ONLY`) --- Enable multiplayer support also in Shareware Demo
+-   `WITH_EDITOR` (default @cpp ON @ce) --- Enable the built-in level editor, see @ref editor
+    -   Not available on **Nintendo 64**, **Dreamcast**, **GameCube** and **PlayStation 2**, which can't save
+        anything, in a dedicated server and in the Shareware Demo
 
 */
 

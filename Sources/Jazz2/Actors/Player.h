@@ -258,6 +258,15 @@ namespace Jazz2::Actors
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version);
 		/** @brief Serializes player state to a stream */
 		void SerializeResumableToStream(Stream& dest);
+#if defined(WITH_EDITOR)
+		/**
+		 * @brief Takes what another player has now, for a play-test started again after the level was edited
+		 *
+		 * Lives, health, score, the inventory with weapons and gems, the current weapon and the shield --- as they
+		 * are, not as they were at the checkpoint, unlike @ref SerializeResumableToStream().
+		 */
+		void TakeOverPlayTestState(const Player& other);
+#endif
 
 		/** @brief Respawns the player */
 		virtual bool Respawn(Vector2f pos);

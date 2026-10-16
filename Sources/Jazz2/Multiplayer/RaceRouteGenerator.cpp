@@ -35,7 +35,7 @@ namespace Jazz2::Multiplayer
 	void GenerateRaceRouteFromGeometry(Tiles::TileMap* tileMap, Events::EventMap* eventMap, TrackRouteType routeType, float waterLevel,
 		const SmallVector<MultiplayerSpawnPoint, 0>& spawnPoints, const SmallVector<Vector2i, 0>& startMarkers,
 		SmallVector<RaceCheckpoint, 0>& orderedCheckpoints, Vector2i& outBoundsMin, Vector2i& outBoundsMax,
-		bool& outCheckpointsOrdered)
+		bool& outCheckpointsOrdered, SmallVectorImpl<std::int32_t>* outDistances)
 	{
 		// Heuristic auto-placement for original levels that don't carry JJ2+ waypoint Text events.
 		// We trace the actual walkable route the player would take. On a race track, that is from a spawn point,
@@ -1566,6 +1566,16 @@ namespace Jazz2::Multiplayer
 		std::int32_t regionSize = 0;
 		runSearch(spawnTile, nullptr, parent.get(), dist.get(), farTile, regionSize, true);
 
+		if (outDistances != nullptr) {
+			// Only where the player can get, see ComputeReachableTiles()
+			outDistances->clear();
+			outDistances->reserve((std::size_t)totalTiles);
+			for (std::int32_t i = 0; i < totalTiles; i++) {
+				outDistances->push_back(dist[i]);
+			}
+			return;
+		}
+
 		if (regionSize < 32) {
 			LOGW("Cannot auto-place minimap track: walkable region is too small ({} tiles)", regionSize);
 			return;
@@ -2153,6 +2163,21 @@ namespace Jazz2::Multiplayer
 		outCheckpointsOrdered = true;
 		LOGI("Auto-placed {} minimap track checkpoints (finish tile [{}, {}])",
 			(std::int32_t)orderedCheckpoints.size(), finishTile.X, finishTile.Y);
+	}
+
+	bool ComputeReachableTiles(Tiles::TileMap* tileMap, Events::EventMap* eventMap, float waterLevel, Vector2f startPos,
+		SmallVectorImpl<std::int32_t>& distances)
+	{
+		SmallVector<MultiplayerSpawnPoint, 0> spawnPoints;
+		spawnPoints.emplace_back(startPos, 0);
+		SmallVector<Vector2i, 0> startMarkers;
+		SmallVector<RaceCheckpoint, 0> checkpoints;
+		Vector2i boundsMin, boundsMax;
+		bool ordered = false;
+		distances.clear();
+		GenerateRaceRouteFromGeometry(tileMap, eventMap, TrackRouteType::LevelExit, waterLevel, spawnPoints, startMarkers,
+			checkpoints, boundsMin, boundsMax, ordered, &distances);
+		return !distances.empty();
 	}
 }
 

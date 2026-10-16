@@ -401,6 +401,15 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace Jazz2::Events
 	@brief Events and object spawning
 */
+/** @dir Jazz2/Formats
+	@brief Namespace @ref Jazz2::Formats
+*/
+/** @namespace Jazz2::Formats
+	@brief The game's own level and tile set formats
+
+	The only places that know the layout of a level or a tile set file --- the converter of the original files, the
+	game and the level editor all read and write them through these (see @ref editor-formats).
+*/
 /** @dir Jazz2/Input
 	@brief Namespace @ref Jazz2::Input
 */

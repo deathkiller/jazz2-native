@@ -97,6 +97,12 @@ Without a command, `convert` is assumed.
     [--game-id=<id>] [--title=<name>]` --- Makes a bootable GameCube disc image (see
     @ref asset-packer-gamecube). `--game-id=` is the six-character game + maker code (default
     `GJJEJR`), `--title=` the name in the disc header
+-   `verify-formats <directory>` --- Reads every level and tile set in the game's own format under the
+    directory (recursively) and writes it back into memory, which has to give the same file byte for
+    byte, or, for a file written by another tool, the same content once read back. Original JJ2 files
+    are skipped. It checks @ref Jazz2::Formats::LevelReader, @ref Jazz2::Formats::LevelWriter and
+    @ref Jazz2::Formats::TileSetFile against real data, which the editors rely on when they save a file
+    they opened
 
 Progress and warnings go to stdout, errors to stderr; the exit code is non-zero on failure.
 
@@ -132,7 +138,7 @@ Non-desktop trees:
 -   The name `Prebaked.pak` marks the tree as converted, so consoles that can convert (PSP, Wii,
     PlayStation 3) skip the conversion --- see @ref Jazz2::ContentResolver::IsContentPrebaked(). No
     index is written because a prepared tree is never rewritten.
--   Converted levels carry their own version (@ref Jazz2::LevelFormat) and the game reads only its own,
+-   Converted levels carry their own version (@ref Jazz2::Formats::LevelFile) and the game reads only its own,
     so a tree from an older tool must be converted again --- see the warning in
     @ref consoles-common-content.
 -   The game's own `Animations` and `Metadata` go <b>inside</b> `Prebaked.pak`; translations, levels,

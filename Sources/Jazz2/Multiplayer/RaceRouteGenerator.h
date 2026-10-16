@@ -32,11 +32,24 @@ namespace Jazz2::Multiplayer
 		On success, fills @p orderedCheckpoints, @p outBoundsMin / @p outBoundsMax (minimap extent in tiles)
 		and sets @p outCheckpointsOrdered to `true`. On failure, the outputs are left unchanged (except an
 		emptied @p orderedCheckpoints when a traced route turns out to be degenerate).
+
+		With @p outDistances, nothing is traced, it only gets how far each tile is from the start along the way the
+		player goes, row by row, -1 where the player can't get, see @ref ComputeReachableTiles().
 	*/
 	void GenerateRaceRouteFromGeometry(Tiles::TileMap* tileMap, Events::EventMap* eventMap, TrackRouteType routeType, float waterLevel,
 		const SmallVector<MultiplayerSpawnPoint, 0>& spawnPoints, const SmallVector<Vector2i, 0>& startMarkers,
 		SmallVector<RaceCheckpoint, 0>& orderedCheckpoints, Vector2i& outBoundsMin, Vector2i& outBoundsMax,
-		bool& outCheckpointsOrdered);
+		bool& outCheckpointsOrdered, SmallVectorImpl<std::int32_t>* outDistances = nullptr);
+
+	/**
+		@brief Finds every tile the player can get to from a position, with the movement model of
+		@ref GenerateRaceRouteFromGeometry()
+
+		@p distances gets how far each tile is from the start, row by row, in the cost units of the search (a walk
+		over a tile is 10), -1 where the player can't get. Returns `false` if the start isn't anywhere the player can be.
+	*/
+	bool ComputeReachableTiles(Tiles::TileMap* tileMap, Events::EventMap* eventMap, float waterLevel, Vector2f startPos,
+		SmallVectorImpl<std::int32_t>& distances);
 }
 
 #endif

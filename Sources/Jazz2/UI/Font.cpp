@@ -19,6 +19,25 @@ namespace Jazz2::UI
 {
 	namespace
 	{
+		// Whether a formatting tag that starts at the given position, right after its "\f", ends in the text. The
+		// tag is read up to its closing bracket, so one cut off --- a "\f" or "\f[c:" at the end, as a text box
+		// measures part of a text --- would be read past the end of the text.
+		bool IsFormattingTagComplete(StringView text, std::size_t pos)
+		{
+			if (pos >= text.size()) {
+				return false;
+			}
+			if (text[pos] != '[') {
+				return true;
+			}
+			for (std::size_t i = pos + 1; i < text.size(); i++) {
+				if (text[i] == ']') {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		/**
 			@brief Sine over a full turn, sampled at 1/256 of it, for the per-glyph wobble
 
@@ -176,6 +195,13 @@ namespace Jazz2::UI
 		_texture->SetMagFiltering(SamplerFilter::Linear);
 	}
 
+	void Font::SetMagnificationFilter(SamplerFilter filter)
+	{
+		if (_texture != nullptr) {
+			_texture->SetMagFiltering(filter);
+		}
+	}
+
 	std::int32_t Font::GetSizeInPixels() const
 	{
 		// TODO
@@ -229,7 +255,10 @@ namespace Jazz2::UI
 				lastWidth = 0.0f;
 				totalHeight += (_lineHeight * scale * lineSpacing);
 			} else if (cursor.first() == '\f') {
-				// Formatting
+				// Formatting, a tag that isn't closed would be read past the end of the text, so the rest is left out
+				if (!IsFormattingTagComplete(text, cursor.second())) {
+					break;
+				}
 				cursor = Utf8::NextChar(text, cursor.second());
 				if (cursor.first() == '[') {
 					idx = std::int32_t(cursor.second());
@@ -346,7 +375,10 @@ namespace Jazz2::UI
 				lastWidth = 0.0f;
 				totalHeight += (_lineHeight * scale * lineSpacing);
 			} else if (cursor.first() == '\f') {
-				// Formatting
+				// Formatting, a tag that isn't closed would be read past the end of the text, so the rest is left out
+				if (!IsFormattingTagComplete(text, cursor.second())) {
+					break;
+				}
 				cursor = Utf8::NextChar(text, cursor.second());
 				if (cursor.first() == '[') {
 					idx = std::int32_t(cursor.second());
@@ -485,7 +517,10 @@ namespace Jazz2::UI
 				}
 				originPos.Y += (_lineHeight * scale * lineSpacing);
 			} else if (cursor.first() == '\f') {
-				// Formatting
+				// Formatting, a tag that isn't closed would be read past the end of the text, so the rest is left out
+				if (!IsFormattingTagComplete(text, cursor.second())) {
+					break;
+				}
 				cursor = Utf8::NextChar(text, cursor.second());
 				if (cursor.first() == '[') {
 					idx = std::int32_t(cursor.second());
@@ -649,74 +684,78 @@ namespace Jazz2::UI
 								glyph.Y * invTexHeight
 							);
 
-							const std::uint16_t glyphLayer = std::uint16_t(z - (charOffset & 1));
-							std::int32_t& recordIndex = glyphRecords[colorizeShader != nullptr ? 1 : 0][charOffset & 1];
-							if (recordIndex < 0) {
-								recordIndex = canvas->GetGlyphBatch(*_texture.get(), colorizeShader, glyphLayer);
-							}
-							Canvas::GlyphBatch& record = canvas->_glyphBatches[recordIndex];
-
-							bool batched = false;
-							if (record.Direct) {
-								RenderBatcher::DirectBatch& batch = record.Batch;
-								if (batch.Count == batch.Capacity) {
-									// Full, or not begun yet in this frame. It asks for room for the rest of what the
-									// record took in the previous frame, or for all the glyphs of this parity that can
-									// still come in this string - at most half of the bytes left - if that is more.
-									batcher.EndDirectBatch(batch);
-									const std::uint32_t leftInString = std::uint32_t(textLength - std::size_t(idx)) / 2 + 1;
-									const std::uint32_t leftFromLastFrame = (record.LastCount > record.Count ? record.LastCount - record.Count : 0);
-									if (batcher.BeginDirectBatch(*record.StandIn, std::max(leftInString, leftFromLastFrame), batch, canvas->NextGlyphBatchCommand(record))) {
-										canvas->_currentRenderQueue->AddCommand(batch.Command);
-									} else {
-										record.Direct = false;
-									}
+							// The clip rectangle of the canvas cuts the glyph down, or leaves it out (see Canvas::ClipRect)
+							Vector2f glyphSize = Vector2f(glyph.Width * glyphScale, glyph.Height * glyphScale);
+							if (canvas->ClipQuad(pos, glyphSize, &texCoords)) {
+								const std::uint16_t glyphLayer = std::uint16_t(z - (charOffset & 1));
+								std::int32_t& recordIndex = glyphRecords[colorizeShader != nullptr ? 1 : 0][charOffset & 1];
+								if (recordIndex < 0) {
+									recordIndex = canvas->GetGlyphBatch(*_texture.get(), colorizeShader, glyphLayer);
 								}
+								Canvas::GlyphBatch& record = canvas->_glyphBatches[recordIndex];
+
+								bool batched = false;
 								if (record.Direct) {
-									// Exactly what the glyph's own command would have carried once committed: a translation
-									// with the depth of the layer (see RenderCommand::CommitNodeTransformation()). Stored
-									// element by element - building a matrix and copying it and the other members in cost
-									// about as much as everything else a glyph does.
-									// Every member is float-aligned: the offsets and the sizes the batch memory is carved
-									// from are multiples of four bytes
-									std::uint8_t* instance = batch.Instances + batch.Count * batch.Stride;
-									float* modelMatrix = static_cast<float*>(static_cast<void*>(instance + record.ModelMatrixOffset));
-									modelMatrix[0] = 1.0f; modelMatrix[1] = 0.0f; modelMatrix[2] = 0.0f; modelMatrix[3] = 0.0f;
-									modelMatrix[4] = 0.0f; modelMatrix[5] = 1.0f; modelMatrix[6] = 0.0f; modelMatrix[7] = 0.0f;
-									modelMatrix[8] = 0.0f; modelMatrix[9] = 0.0f; modelMatrix[10] = 1.0f; modelMatrix[11] = 0.0f;
-									modelMatrix[12] = pos.X; modelMatrix[13] = pos.Y; modelMatrix[14] = record.Depth; modelMatrix[15] = 1.0f;
-									float* instanceColor = static_cast<float*>(static_cast<void*>(instance + record.ColorOffset));
-									instanceColor[0] = glyphColor.R; instanceColor[1] = glyphColor.G;
-									instanceColor[2] = glyphColor.B; instanceColor[3] = glyphColor.A;
-									float* texRect = static_cast<float*>(static_cast<void*>(instance + record.TexRectOffset));
-									texRect[0] = texCoords.X; texRect[1] = texCoords.Y; texRect[2] = texCoords.Z; texRect[3] = texCoords.W;
-									float* spriteSize = static_cast<float*>(static_cast<void*>(instance + record.SpriteSizeOffset));
-									spriteSize[0] = glyph.Width * glyphScale;
-									spriteSize[1] = glyph.Height * glyphScale;
-									if (record.PaletteOffsetOffset >= 0) {
-										*static_cast<float*>(static_cast<void*>(instance + record.PaletteOffsetOffset)) = 0.0f;
+									RenderBatcher::DirectBatch& batch = record.Batch;
+									if (batch.Count == batch.Capacity) {
+										// Full, or not begun yet in this frame. It asks for room for the rest of what the
+										// record took in the previous frame, or for all the glyphs of this parity that can
+										// still come in this string - at most half of the bytes left - if that is more.
+										batcher.EndDirectBatch(batch);
+										const std::uint32_t leftInString = std::uint32_t(textLength - std::size_t(idx)) / 2 + 1;
+										const std::uint32_t leftFromLastFrame = (record.LastCount > record.Count ? record.LastCount - record.Count : 0);
+										if (batcher.BeginDirectBatch(*record.StandIn, std::max(leftInString, leftFromLastFrame), batch, canvas->NextGlyphBatchCommand(record))) {
+											canvas->_currentRenderQueue->AddCommand(batch.Command);
+										} else {
+											record.Direct = false;
+										}
 									}
-									batch.Count++;
-									record.Count++;
-									batched = true;
+									if (record.Direct) {
+										// Exactly what the glyph's own command would have carried once committed: a translation
+										// with the depth of the layer (see RenderCommand::CommitNodeTransformation()). Stored
+										// element by element - building a matrix and copying it and the other members in cost
+										// about as much as everything else a glyph does.
+										// Every member is float-aligned: the offsets and the sizes the batch memory is carved
+										// from are multiples of four bytes
+										std::uint8_t* instance = batch.Instances + batch.Count * batch.Stride;
+										float* modelMatrix = static_cast<float*>(static_cast<void*>(instance + record.ModelMatrixOffset));
+										modelMatrix[0] = 1.0f; modelMatrix[1] = 0.0f; modelMatrix[2] = 0.0f; modelMatrix[3] = 0.0f;
+										modelMatrix[4] = 0.0f; modelMatrix[5] = 1.0f; modelMatrix[6] = 0.0f; modelMatrix[7] = 0.0f;
+										modelMatrix[8] = 0.0f; modelMatrix[9] = 0.0f; modelMatrix[10] = 1.0f; modelMatrix[11] = 0.0f;
+										modelMatrix[12] = pos.X; modelMatrix[13] = pos.Y; modelMatrix[14] = record.Depth; modelMatrix[15] = 1.0f;
+										float* instanceColor = static_cast<float*>(static_cast<void*>(instance + record.ColorOffset));
+										instanceColor[0] = glyphColor.R; instanceColor[1] = glyphColor.G;
+										instanceColor[2] = glyphColor.B; instanceColor[3] = glyphColor.A;
+										float* texRect = static_cast<float*>(static_cast<void*>(instance + record.TexRectOffset));
+										texRect[0] = texCoords.X; texRect[1] = texCoords.Y; texRect[2] = texCoords.Z; texRect[3] = texCoords.W;
+										float* spriteSize = static_cast<float*>(static_cast<void*>(instance + record.SpriteSizeOffset));
+										spriteSize[0] = glyphSize.X;
+										spriteSize[1] = glyphSize.Y;
+										if (record.PaletteOffsetOffset >= 0) {
+											*static_cast<float*>(static_cast<void*>(instance + record.PaletteOffsetOffset)) = 0.0f;
+										}
+										batch.Count++;
+										record.Count++;
+										batched = true;
+									}
 								}
-							}
 
-							if (!batched) {
-								// The shader cannot be batched this way, so the glyph gets a command of its own
-								RenderCommand* command = canvas->RentGlyphCommand(*_texture.get(), colorizeShader);
+								if (!batched) {
+									// The shader cannot be batched this way, so the glyph gets a command of its own
+									RenderCommand* command = canvas->RentGlyphCommand(*_texture.get(), colorizeShader);
 
-								// The command resolves these once per shader change, so no glyph pays a by-name
-								// block lookup - the text path's dominant cost on the consoles
-								auto* instanceUniforms = command->GetInstanceUniforms();
-								instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
-								instanceUniforms->SpriteSize->SetFloatValue(glyph.Width * glyphScale, glyph.Height * glyphScale);
-								instanceUniforms->Color->SetFloatVector(glyphColor.Data());
+									// The command resolves these once per shader change, so no glyph pays a by-name
+									// block lookup - the text path's dominant cost on the consoles
+									auto* instanceUniforms = command->GetInstanceUniforms();
+									instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
+									instanceUniforms->SpriteSize->SetFloatValue(glyphSize.X, glyphSize.Y);
+									instanceUniforms->Color->SetFloatVector(glyphColor.Data());
 
-								command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
-								command->SetLayer(glyphLayer);
+									command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+									command->SetLayer(glyphLayer);
 
-								canvas->_currentRenderQueue->AddCommand(command);
+									canvas->_currentRenderQueue->AddCommand(command);
+								}
 							}
 						}
 					}

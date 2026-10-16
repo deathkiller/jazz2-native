@@ -40,7 +40,10 @@
 	is only this version unless set otherwise.
 */
 #if !defined(NCINE_PROTOCOL_VERSION)
-// 3.8.3: the converted level files a server sends to its clients carry a version (see LevelFormat), and only
+// 3.8.4: the level files a server sends have the author of the level after its name (see Formats::LevelFile), still
+// as version 1 - a 3.8.3 peer would misread them.
+//
+// 3.8.3: the converted level files a server sends to its clients carry a version (see Formats::LevelFile), and only
 // that version is read - a 3.8.2 peer cannot load a level downloaded from a 3.8.3 server and vice versa. A remoted
 // light may also be a ring now: its near radius carries a flag and its ring radius follows the far radius.
 //
@@ -57,7 +60,7 @@
 // A patch bump is enough because the accepted range is exactly this version by default (see
 // NCINE_PROTOCOL_VERSION_MIN); this number tracks the wire format, not the release it happens to ship in, so
 // it does not have to wait for the next minor.
-#	define NCINE_PROTOCOL_VERSION "3.8.3"
+#	define NCINE_PROTOCOL_VERSION "3.8.4"
 #endif
 /**
 	@brief Oldest client multiplayer protocol version the server accepts

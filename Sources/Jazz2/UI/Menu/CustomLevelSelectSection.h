@@ -5,6 +5,9 @@
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 #	include "../../../nCine/Threading/Thread.h"
 #endif
+#include "../../../nCine/Graphics/Texture.h"
+
+#include <memory>
 
 namespace Jazz2::UI::Menu
 {
@@ -42,6 +45,8 @@ namespace Jazz2::UI::Menu
 		struct ItemData {
 			String LevelName;
 			String DisplayName;
+			/** @brief Path of the level file, to read its preview from */
+			String Path;
 			float Y;
 		};
 #endif
@@ -69,8 +74,16 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		Thread _indexingThread;
 #endif
+		// The preview of the selected level, read once it stays selected for a while (see Formats::LevelFile::PreviewChunk)
+		std::unique_ptr<Texture> _preview;
+		Vector2i _previewSize;
+		// By the path, the list is sorted once all levels are found
+		String _previewPath;
+		float _previewWait;
 
 		void ExecuteSelected();
+		void LoadPreview(std::int32_t index);
+		void DrawPreview(float right, float centerY, float maxWidth);
 		void EnsureVisibleSelected(std::int32_t offset = 0);
 		void AddCustomLevels();
 		void AddLevel(StringView levelFile);

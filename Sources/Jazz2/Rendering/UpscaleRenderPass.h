@@ -94,10 +94,19 @@ namespace Jazz2::Rendering
 		 * @param overlay       If `true`, renders an RGBA layer at native resolution (transparent where nothing is
 		 *                      drawn) and composites it alpha-blended on top of everything else; used for the HUD so
 		 *                      it stays crisp regardless of the scene's supersampling
+		 * @param nativeOutput  If `true`, the input image is shown as it is, without the rescale shader and the
+		 *                      antialiasing --- for a view rendered at the size of the window, as the level editor's is
 		 */
-		virtual void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample = 1, bool overlay = false);
+		virtual void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample = 1, bool overlay = false, bool nativeOutput = false);
 		/** @brief Registers the render pass into the viewport chain */
 		virtual void Register();
+		/**
+		 * @brief Takes the result off the screen, until the pass is initialized again
+		 *
+		 * The pass shows its last image on the screen as long as it's attached to the scene, even when it's not
+		 * registered in the viewport chain anymore. The level editor keeps a level that isn't shown.
+		 */
+		void Detach();
 
 		/**
 		 * @brief Returns the logical view size for a target (drawable) of the given size
@@ -116,6 +125,11 @@ namespace Jazz2::Rendering
 		/** @brief Returns the input scene node */
 		SceneNode* GetNode() const {
 			return _node.get();
+		}
+
+		/** @brief Returns the texture the input scene is drawn into, it keeps the last image after @ref Detach() */
+		Texture* GetTargetTexture() const {
+			return _target.get();
 		}
 
 		/** @brief Returns size of the input image (the logical coordinate space, not the supersampled texture) */
@@ -199,7 +213,7 @@ namespace Jazz2::Rendering
 		/** @brief Creates a new instance */
 		UpscaleRenderPassWithClipping();
 
-		void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample = 1, bool overlay = false) override;
+		void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample = 1, bool overlay = false, bool nativeOutput = false) override;
 		void Register() override;
 
 		/** @brief Returns the clipped main layer node */

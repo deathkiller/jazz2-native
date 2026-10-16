@@ -1,6 +1,7 @@
 ﻿#include "TileMap.h"
 #include "../ContentResolver.h"
 #include "../LevelHandler.h"
+#include "../Formats/LevelFile.h"
 #include "../PreferencesCache.h"
 
 #include "../../nCine/tracy.h"
@@ -278,8 +279,11 @@ namespace Jazz2::Tiles
 			}
 		}
 
-		// Update layer scrolling
+		// Update layer scrolling, unless the editor keeps the layers still
 		for (auto& layer : _layers) {
+			if DEATH_UNLIKELY(_viewOptions.PauseLayerMovement) {
+				break;
+			}
 			if (layer.Description.SpeedModelX != LayerSpeedModel::SpeedMultipliers && std::abs(layer.Description.AutoSpeedX) > 0) {
 				layer.Description.OffsetX += layer.Description.AutoSpeedX * timeMult;
 				if (layer.Description.RepeatX) {
@@ -395,6 +399,13 @@ namespace Jazz2::Tiles
 		Rectf cullingRect = viewport->GetCullingRect();
 		Vector2f viewCenter = cullingRect.Center();
 
+		// The layers are placed by the view drawn, unless the view options name another one of the same center
+		Rectf placementRect = cullingRect;
+		if (_viewOptions.Placement == LayerPlacement::ReferenceView && _viewOptions.ReferenceViewSize.X > 0 && _viewOptions.ReferenceViewSize.Y > 0) {
+			placementRect = Rectf(viewCenter.X - _viewOptions.ReferenceViewSize.X * 0.5f, viewCenter.Y - _viewOptions.ReferenceViewSize.Y * 0.5f,
+				(float)_viewOptions.ReferenceViewSize.X, (float)_viewOptions.ReferenceViewSize.Y);
+		}
+
 #if defined(WITH_RHI_SOFTWARE) || defined(DEATH_TARGET_N64) || (defined(TILEMAP_OPAQUE_COVERAGE) && defined(WITH_ANGELSCRIPT))
 		// See DrawLayer(), which reads this for every layer - nothing can recolor the palette in between
 		_spritePaletteOpaque = true;
@@ -415,20 +426,20 @@ namespace Jazz2::Tiles
 		// commands by depth, so the emission order is unobservable
 		_opaqueCoverage.Valid = false;
 		if (_sprLayerIndex >= 0 && _sprLayerIndex < (std::int32_t)_layers.size()) {
-			DrawLayer(renderQueue, _layers[_sprLayerIndex], cullingRect, viewCenter);
+			DrawLayer(renderQueue, _layers[_sprLayerIndex], cullingRect, placementRect, viewCenter);
 		}
 		for (std::int32_t i = 0; i < (std::int32_t)_layers.size(); i++) {
 			if (i != _sprLayerIndex) {
-				DrawLayer(renderQueue, _layers[i], cullingRect, viewCenter);
+				DrawLayer(renderQueue, _layers[i], cullingRect, placementRect, viewCenter);
 			}
 		}
 #else
 		for (auto& layer : _layers) {
-			DrawLayer(renderQueue, layer, cullingRect, viewCenter);
+			DrawLayer(renderQueue, layer, cullingRect, placementRect, viewCenter);
 		}
 #endif
 
-		if (_sprLayerIndex != -1) {
+		if (_sprLayerIndex != -1 && _viewOptions.DrawSideBars) {
 			auto& spriteLayer = _layers[_sprLayerIndex];
 			// Render black bars if layout width is smaller than viewport width
 			if (spriteLayer.LayoutSize.X * TileSet::DefaultTileSize < cullingRect.W) {
@@ -1178,7 +1189,7 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter)
+	void TileMap::DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, const Rectf& placementRect, Vector2f viewCenter)
 	{
 		ZoneScopedNC("Layer", 0xA09359);
 
@@ -1190,11 +1201,14 @@ namespace Jazz2::Tiles
 
 		// Get current layer offsets and speeds
 		float loX = layer.Description.OffsetX;
-		float loY = layer.Description.OffsetY - (layer.Description.UseInherentOffset ? (cullingRect.H - 200) / 2 : 0) + 1;
+		float loY = layer.Description.OffsetY - (layer.Description.UseInherentOffset ? (placementRect.H - 200) / 2 : 0) + 1;
 
-		// Find out coordinates for a tile from outside the boundaries from topleft corner of the screen 
+		// Find out coordinates for a tile from outside the boundaries from topleft corner of the screen
 		float x1 = cullingRect.X - HardcodedOffset;
 		float y1 = cullingRect.Y - HardcodedOffset;
+		// The same for the view the layer is placed by, the same one in the game (see TileMapViewOptions)
+		const float px1 = placementRect.X - HardcodedOffset;
+		const float py1 = placementRect.Y - HardcodedOffset;
 
 		// Without the warped background pass, a sky layer is just an ordinary repeating tile layer and has to
 		// be drawn with the plain tile renderer. Leaving it on the TexturedBackground shader made every tile
@@ -1206,7 +1220,10 @@ namespace Jazz2::Tiles
 
 		LayerRendererType rendererType = layer.Description.RendererType;
 		Vector4f layerColor = layer.Description.Color;
-		if (!isProceduralLayer && rendererType >= LayerRendererType::Sky && rendererType <= LayerRendererType::Circle) {
+		if (rendererType == LayerRendererType::Tinted) {
+			// The tint is an entry of the palette, resolved every frame so it follows the palette as it changes
+			layerColor = ResolveTintColor(layer.Description.Color);
+		} else if (!isProceduralLayer && rendererType >= LayerRendererType::Sky && rendererType <= LayerRendererType::Circle) {
 			rendererType = LayerRendererType::Default;
 			// A sky layer's colour is the horizon tint the warped background shader blends towards (and its
 			// W enables the star field), not a per-tile modulation. Handing it to the plain tile renderer
@@ -1232,65 +1249,53 @@ namespace Jazz2::Tiles
 		if (isProceduralLayer && tileCount.Y == 8 && tileCount.X == 8) {
 			constexpr float PerspectiveSpeedX = 0.4f;
 			constexpr float PerspectiveSpeedY = 0.16f;
-			RenderTexturedBackground(renderQueue, cullingRect, viewCenter, layer, x1 * PerspectiveSpeedX + loX, y1 * PerspectiveSpeedY + loY);
+			RenderTexturedBackground(renderQueue, cullingRect, viewCenter, layer, px1 * PerspectiveSpeedX + loX, py1 * PerspectiveSpeedY + loY);
 		} else {
-			float xt, yt;
-			switch (layer.Description.SpeedModelX) {
-				case LayerSpeedModel::AlwaysOnTop:
-					xt = -HardcodedOffset;
-					break;
-				case LayerSpeedModel::FitLevel: {
-					float progress = (float)viewCenter.X / (_layers[_sprLayerIndex].LayoutSize.X * TileSet::DefaultTileSize);
-					xt = std::clamp(progress, 0.0f, 1.0f)
-						* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - cullingRect.W + HardcodedOffset)
-						+ loX;
-					break;
-				}
-				case LayerSpeedModel::SpeedMultipliers: {
-					float progress = (float)viewCenter.X / (_layers[_sprLayerIndex].LayoutSize.X * TileSet::DefaultTileSize);
-					progress = (layer.Description.SpeedX < layer.Description.AutoSpeedX
-						? std::clamp(progress, layer.Description.SpeedX, layer.Description.AutoSpeedX)
-						: (layer.Description.SpeedX + layer.Description.AutoSpeedX) * 0.5f);
-					xt = progress
-						* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - HardcodedOffset)
-						+ loX;
-					break;
-				}
-				default:
-					xt = TranslateCoordinate(x1, layer.Description.SpeedX, loX, cullingRect.W, false);
-					break;
-			}
-			switch (layer.Description.SpeedModelY) {
-				case LayerSpeedModel::AlwaysOnTop:
-					yt = -HardcodedOffset;
-					break;
-				case LayerSpeedModel::FitLevel: {
-					float progress = (float)viewCenter.Y / (_layers[_sprLayerIndex].LayoutSize.Y * TileSet::DefaultTileSize);
-					yt = std::clamp(progress, 0.0f, 1.0f)
-						* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - cullingRect.H + HardcodedOffset)
-						+ loY;
-					break;
-				}
-				case LayerSpeedModel::SpeedMultipliers: {
-					float progress = (float)viewCenter.Y / (_layers[_sprLayerIndex].LayoutSize.Y * TileSet::DefaultTileSize);
-					progress = (layer.Description.SpeedY < layer.Description.AutoSpeedY
-						? std::clamp(progress, layer.Description.SpeedY, layer.Description.AutoSpeedY)
-						: (layer.Description.SpeedY + layer.Description.AutoSpeedY) * 0.5f);
-					yt = progress
-						* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - HardcodedOffset)
-						+ loY;
-					break;
-				}
-				default:
-					// TODO: Some levels looks better with these adjustments
-					/*if (speedY < 1.0f) {
-						speedY = powf(speedY, 1.06f);
-					} else if (speedY > 1.0f) {
-						speedY = powf(speedY, 0.996f);
-					}*/
+			// The layer coordinate at the left/top edge of the view the layer is placed by
+			Vector2f layerCoords = GetLayerViewCoordinates(layer, placementRect, viewCenter, loX, loY);
+			float xt = layerCoords.X, yt = layerCoords.Y;
 
-					yt = TranslateCoordinate(y1, layer.Description.SpeedY, loY, cullingRect.H, true);
-					break;
+			// Moved to the edge of what is drawn, which is the same in the game; one layer pixel is one world pixel, the
+			// speed only moves the layer as a whole
+			xt += (x1 - px1);
+			yt += (y1 - py1);
+			if (_viewOptions.FlatAmount > 0.0f) {
+				// Towards the layer placed like the sprite layer, its tile (0, 0) at the world position (0, 0)
+				xt += (x1 - xt) * _viewOptions.FlatAmount;
+				yt += (y1 - yt) * _viewOptions.FlatAmount;
+			}
+
+			if (_viewOptions.LayerOverride != nullptr && rendererType != LayerRendererType::BlurBehind) {
+				// Images in place of the tiles, a layer pixel is a world pixel, so the tile (0, 0) is where its coordinate is 0
+				_layerImages.clear();
+				if (_viewOptions.LayerOverride->OverrideLayer((std::int32_t)(&layer - _layers.data()), Vector2f(x1 - xt, y1 - yt), cullingRect, _layerImages)) {
+					for (const TileMapLayerImage& image : _layerImages) {
+						if (image.Image == nullptr) {
+							continue;
+						}
+						TileCommandUniforms* commandUniforms;
+						auto command = RentRenderCommand(LayerRendererType::Default, false, &commandUniforms);
+						command->SetType(RenderCommand::Type::TileMap);
+						command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+						if (commandUniforms->TexRect != nullptr) {
+							commandUniforms->TexRect->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+						}
+						if (commandUniforms->SpriteSize != nullptr) {
+							commandUniforms->SpriteSize->SetFloatValue(image.Rect.W, image.Rect.H);
+						}
+						if (commandUniforms->Color != nullptr) {
+							commandUniforms->Color->SetFloatValue(1.0f, 1.0f, 1.0f, layerColor.W);
+						}
+						command->SetTransformation(Matrix4x4f::Translation(image.Rect.X, image.Rect.Y, 0.0f));
+						command->SetLayer(layer.Description.Depth);
+						command->GetMaterial().SetTexture(0, *image.Image);
+						renderQueue.AddCommand(command);
+					}
+#if defined(TILEMAP_LAYER_EFFECTS)
+					_effectLayer.Type = LayerRendererType::Default;
+#endif
+					return;
+				}
 			}
 
 			// Calculate the index (on the layer map) of the first tile that needs to be drawn to the position determined earlier
@@ -1822,12 +1827,19 @@ namespace Jazz2::Tiles
 					command->SetType(RenderCommand::Type::TileMap);
 					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-					commandUniforms->TexRect->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					commandUniforms->SpriteSize->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
+					// A solid color layer draws its tiles without a texture, its shader has no texture rectangle
+					if (commandUniforms->TexRect != nullptr) {
+						commandUniforms->TexRect->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					}
+					if (commandUniforms->SpriteSize != nullptr) {
+						commandUniforms->SpriteSize->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
+					}
 
 					Vector4f color = layerColor;
 					color.W *= tile.Alpha / 255.0f;
-					commandUniforms->Color->SetFloatVector(color.Data());
+					if (commandUniforms->Color != nullptr) {
+						commandUniforms->Color->SetFloatVector(color.Data());
+					}
 
 #if defined(WITH_RHI_SOFTWARE)
 					// A fully opaque, unfaded tile draws the exact same bytes with blending off (src-over of
@@ -2018,6 +2030,100 @@ namespace Jazz2::Tiles
 		}
 	}
 
+	Vector2f TileMap::GetLayerViewCoordinates(const TileMapLayer& layer, const Rectf& placementRect, Vector2f viewCenter, float loX, float loY) const
+	{
+		const float px1 = placementRect.X - HardcodedOffset;
+		const float py1 = placementRect.Y - HardcodedOffset;
+
+		float xt, yt;
+		switch (layer.Description.SpeedModelX) {
+			case LayerSpeedModel::AlwaysOnTop:
+				xt = -HardcodedOffset;
+				break;
+			case LayerSpeedModel::FitLevel: {
+				float progress = (float)viewCenter.X / (_layers[_sprLayerIndex].LayoutSize.X * TileSet::DefaultTileSize);
+				xt = std::clamp(progress, 0.0f, 1.0f)
+					* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - placementRect.W + HardcodedOffset)
+					+ loX;
+				break;
+			}
+			case LayerSpeedModel::SpeedMultipliers: {
+				float progress = (float)viewCenter.X / (_layers[_sprLayerIndex].LayoutSize.X * TileSet::DefaultTileSize);
+				progress = (layer.Description.SpeedX < layer.Description.AutoSpeedX
+					? std::clamp(progress, layer.Description.SpeedX, layer.Description.AutoSpeedX)
+					: (layer.Description.SpeedX + layer.Description.AutoSpeedX) * 0.5f);
+				xt = progress
+					* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - HardcodedOffset)
+					+ loX;
+				break;
+			}
+			default:
+				xt = TranslateCoordinate(px1, layer.Description.SpeedX, loX, placementRect.W, false);
+				break;
+		}
+		switch (layer.Description.SpeedModelY) {
+			case LayerSpeedModel::AlwaysOnTop:
+				yt = -HardcodedOffset;
+				break;
+			case LayerSpeedModel::FitLevel: {
+				float progress = (float)viewCenter.Y / (_layers[_sprLayerIndex].LayoutSize.Y * TileSet::DefaultTileSize);
+				yt = std::clamp(progress, 0.0f, 1.0f)
+					* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - placementRect.H + HardcodedOffset)
+					+ loY;
+				break;
+			}
+			case LayerSpeedModel::SpeedMultipliers: {
+				float progress = (float)viewCenter.Y / (_layers[_sprLayerIndex].LayoutSize.Y * TileSet::DefaultTileSize);
+				progress = (layer.Description.SpeedY < layer.Description.AutoSpeedY
+					? std::clamp(progress, layer.Description.SpeedY, layer.Description.AutoSpeedY)
+					: (layer.Description.SpeedY + layer.Description.AutoSpeedY) * 0.5f);
+				yt = progress
+					* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - HardcodedOffset)
+					+ loY;
+				break;
+			}
+			default:
+				// TODO: Some levels looks better with these adjustments
+				/*if (speedY < 1.0f) {
+					speedY = powf(speedY, 1.06f);
+				} else if (speedY > 1.0f) {
+					speedY = powf(speedY, 0.996f);
+				}*/
+
+				yt = TranslateCoordinate(py1, layer.Description.SpeedY, loY, placementRect.H, true);
+				break;
+		}
+
+		return Vector2f(xt, yt);
+	}
+
+	Vector2f TileMap::GetLayerOrigin(std::int32_t layerIndex, Vector2f viewCenter, Vector2f viewSize) const
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size() || _sprLayerIndex < 0) {
+			return Vector2f::Zero;
+		}
+
+		// The same placement as in OnDraw() and DrawLayer()
+		Rectf placementRect(viewCenter.X - viewSize.X * 0.5f, viewCenter.Y - viewSize.Y * 0.5f, viewSize.X, viewSize.Y);
+		if (_viewOptions.Placement == LayerPlacement::ReferenceView && _viewOptions.ReferenceViewSize.X > 0 && _viewOptions.ReferenceViewSize.Y > 0) {
+			placementRect = Rectf(viewCenter.X - _viewOptions.ReferenceViewSize.X * 0.5f, viewCenter.Y - _viewOptions.ReferenceViewSize.Y * 0.5f,
+				(float)_viewOptions.ReferenceViewSize.X, (float)_viewOptions.ReferenceViewSize.Y);
+		}
+		return GetGameplayLayerOrigin(layerIndex, placementRect) * (1.0f - _viewOptions.FlatAmount);
+	}
+
+	Vector2f TileMap::GetGameplayLayerOrigin(std::int32_t layerIndex, const Rectf& view) const
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size() || _sprLayerIndex < 0) {
+			return Vector2f::Zero;
+		}
+
+		const TileMapLayer& layer = _layers[layerIndex];
+		float loX = layer.Description.OffsetX;
+		float loY = layer.Description.OffsetY - (layer.Description.UseInherentOffset ? (view.H - 200) / 2 : 0) + 1;
+		Vector2f coords = GetLayerViewCoordinates(layer, view, view.Center(), loX, loY);
+		return Vector2f(view.X - HardcodedOffset - coords.X, view.Y - HardcodedOffset - coords.Y);
+	}
 	float TileMap::TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY)
 	{
 		std::int32_t alignment = ((isY ? (viewSize - 200) : (viewSize - 320)) / 2) + HardcodedOffset;
@@ -2790,143 +2896,58 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::ReadLayerConfiguration(Stream& s)
+	void TileMap::AddTileSet(Stream& s, StringView name, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping)
 	{
-		LayerType layerType = (LayerType)s.ReadValue<std::uint8_t>();
-		std::uint16_t layerFlags = s.ReadValueAsLE<std::uint16_t>();
+		LoadDeferredDiffuse();
 
-		if (layerType == LayerType::Sprite) {
+		auto& tileSetPart = _tileSets.emplace_back();
+		tileSetPart.Data = ContentResolver::Get().RequestTileSet(s, name, 0, false, paletteRemapping);
+		tileSetPart.Offset = offset;
+		tileSetPart.Count = count;
+
+		if (tileSetPart.Data == nullptr) {
+			LOGE("Cannot load tileset \"{}\" of the level", name);
+		}
+	}
+
+	void TileMap::LoadLayer(Formats::LevelReader& reader)
+	{
+		Formats::LayerRecord record;
+		reader.ReadLayerHeader(record);
+
+		bool isSprite = (record.Kind == Formats::LayerKind::Sprite);
+		if (isSprite) {
 			_sprLayerIndex = (std::int32_t)_layers.size();
 		}
 
 		TileMapLayer& newLayer = _layers.emplace_back();
+		newLayer.LayoutSize = Vector2i(record.Width, record.Height);
+		newLayer.Visible = ((record.Flags & Formats::LayerRecord::Visible) != 0);
+		newLayer.Description = MakeLayerDescription(record);
 
-		std::int32_t width = s.ReadValueAsLE<std::int32_t>();
-		std::int32_t height = s.ReadValueAsLE<std::int32_t>();
-		newLayer.LayoutSize = Vector2i(width, height);
-		newLayer.Visible = ((layerFlags & 0x08) == 0x08);
-
-		if (layerType != LayerType::Sprite) {
-			std::uint8_t combinedSpeedModels = s.ReadValue<std::uint8_t>();
-			newLayer.Description.SpeedModelX = (LayerSpeedModel)(combinedSpeedModels & 0x0f);
-			newLayer.Description.SpeedModelY = (LayerSpeedModel)((combinedSpeedModels >> 4) & 0x0f);
-
-			newLayer.Description.OffsetX = s.ReadValueAsLE<float>();
-			newLayer.Description.OffsetY = s.ReadValueAsLE<float>();
-			newLayer.Description.SpeedX = s.ReadValueAsLE<float>();
-			newLayer.Description.SpeedY = s.ReadValueAsLE<float>();
-			newLayer.Description.AutoSpeedX = s.ReadValueAsLE<float>();
-			newLayer.Description.AutoSpeedY = s.ReadValueAsLE<float>();
-			newLayer.Description.RepeatX = ((layerFlags & 0x01) == 0x01);
-			newLayer.Description.RepeatY = ((layerFlags & 0x02) == 0x02);
-			std::int16_t depth = s.ReadValueAsLE<std::int16_t>();
-			newLayer.Description.Depth = (std::uint16_t)(ILevelHandler::MainPlaneZ - depth);
-			newLayer.Description.UseInherentOffset = ((layerFlags & 0x04) == 0x04);
-
-			newLayer.Description.RendererType = (LayerRendererType)s.ReadValue<std::uint8_t>();
-			switch (newLayer.Description.RendererType) {
-				case LayerRendererType::Default:
-				case LayerRendererType::Solid:
-				case LayerRendererType::Tinted:
-				case LayerRendererType::XRay:
-				case LayerRendererType::BlurBehind:
-				case LayerRendererType::Sky:
-				case LayerRendererType::Circle:
-					break;
-				default:
-					// A renderer this version of the game doesn't know is drawn as an ordinary layer
-					newLayer.Description.RendererType = LayerRendererType::Default;
-					break;
-			}
-			std::uint8_t r = s.ReadValue<std::uint8_t>();
-			std::uint8_t g = s.ReadValue<std::uint8_t>();
-			std::uint8_t b = s.ReadValue<std::uint8_t>();
-			std::uint8_t a = s.ReadValue<std::uint8_t>();
-
-			if (newLayer.Description.RendererType == LayerRendererType::Tinted) {
-				// TODO: Tinted color is precomputed from palette here
-				const std::uint32_t* palettes = ContentResolver::Get().GetPalettes();
-				std::uint32_t color = palettes[r];
-				newLayer.Description.Color = Vector4f((color & 0x000000ff) / 255.0f, ((color >> 8) & 0x000000ff) / 255.0f, ((color >> 16) & 0x000000ff) / 255.0f, a * ((color >> 24) & 0x000000ff) / (255.0f * 255.0f));
-			} else {
-				newLayer.Description.Color = Vector4f(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
-
-				if (newLayer.Description.RendererType >= LayerRendererType::Sky) {
-					_texturedBackgroundLayer = (std::int32_t)_layers.size() - 1;
-				}
-			}
-		} else {
-			newLayer.Description.OffsetX = 0.0f;
-			newLayer.Description.OffsetY = 0.0f;
-			newLayer.Description.SpeedX = 1.0f;
-			newLayer.Description.SpeedY = 1.0f;
-			newLayer.Description.AutoSpeedX = 0.0f;
-			newLayer.Description.AutoSpeedY = 0.0f;
-			newLayer.Description.RepeatX = false;
-			newLayer.Description.RepeatY = false;
-			newLayer.Description.Depth = (std::uint16_t)(ILevelHandler::MainPlaneZ - 50);
-			newLayer.Description.UseInherentOffset = false;
-			newLayer.Description.SpeedModelX = LayerSpeedModel::Default;
-			newLayer.Description.SpeedModelY = LayerSpeedModel::Default;
-
-			newLayer.Description.RendererType = LayerRendererType::Default;
-			newLayer.Description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+		if (!isSprite && newLayer.Description.RendererType >= LayerRendererType::Sky) {
+			_texturedBackgroundLayer = (std::int32_t)_layers.size() - 1;
 		}
 
-		// Each tile is stored as 3 bytes (flags, then the tile index as a little-endian word). They are read
-		// a block at a time: two stream reads per tile - virtual calls into the decompressing stream - were
-		// the largest single cost of loading a level on the Nintendo 64, about a second for castle1's layers
-		static constexpr std::int32_t TileRecordSize = 3;
-		static constexpr std::int32_t TilesPerBlock = 512;
-		std::uint8_t block[TilesPerBlock * TileRecordSize];
-		const std::int32_t tileCount = width * height;
-		const auto readBlock = [&s, &block](std::int32_t count) {
-			const std::int64_t bytes = std::int64_t(count) * TileRecordSize;
-			const std::int64_t bytesRead = s.Read(block, bytes);
-			if DEATH_UNLIKELY(bytesRead < bytes) {
-				// A truncated stream reads as empty tiles; the caller rejects it by the stream state
-				std::memset(block + std::max<std::int64_t>(bytesRead, 0), 0, std::size_t(bytes - std::max<std::int64_t>(bytesRead, 0)));
-			}
-		};
-
-		if (!newLayer.Layout.Allocate(std::size_t(width) * std::size_t(height), LayerLayout::CompactDrawOnlyLayers && layerType != LayerType::Sprite)) {
-			LOGE("Cannot allocate the layout of a {}x{} layer", width, height);
+		if (!newLayer.Layout.Allocate(std::size_t(record.Width) * std::size_t(record.Height), LayerLayout::CompactDrawOnlyLayers && !isSprite)) {
+			LOGE("Cannot allocate the layout of a {}x{} layer", record.Width, record.Height);
 			_loadFailed = true;
 			newLayer.Visible = false;
 			// The tile data still has to be consumed for the layers after it
-			for (std::int32_t i = 0; i < tileCount; i += TilesPerBlock) {
-				readBlock(std::min(TilesPerBlock, tileCount - i));
-			}
+			reader.ReadLayerTiles(record, nullptr);
 			return;
 		}
-		for (std::int32_t i = 0; i < tileCount; i += TilesPerBlock) {
-			const std::int32_t count = std::min(TilesPerBlock, tileCount - i);
-			readBlock(count);
 
-			for (std::int32_t j = 0; j < count; j++) {
-				const std::uint8_t* record = &block[j * TileRecordSize];
-				std::uint8_t tileFlags = record[0];
+		// The reader hands the tiles over a block at a time, out of its own buffer - two stream reads per tile,
+		// virtual calls into the decompressing stream, were the largest single cost of loading a level on the
+		// Nintendo 64, about a second for castle1's layers
+		LayerLayout& layout = newLayer.Layout;
+		reader.ReadLayerTiles(record, [&layout](std::int32_t first, ArrayView<const Formats::TileRecord> tiles) {
+			for (std::size_t j = 0; j < tiles.size(); j++) {
 				// A tile index is masked down to the tile set bound by the converter, so it always fits LayerTile::TileID
-				std::uint16_t tileIdx = std::uint16_t(record[1] | (record[2] << 8));
-
-				std::uint8_t tileModifier = (std::uint8_t)(tileFlags >> 4);
-
-				LayerTile tile = {};
-				tile.TileID = tileIdx;
-				tile.DestructAnimation = -1;
-
-				tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
-
-				if (tileModifier == 1 /*Translucent*/) {
-					tile.Alpha = 192;
-				} else if (tileModifier == 2 /*Invisible*/) {
-					tile.Alpha = 0;
-				} else {
-					tile.Alpha = 255;
-				}
-				newLayer.Layout.Set(i + j, tile);
+				layout.Set(std::size_t(first) + j, MakeLayerTile(tiles[j].Flags, tiles[j].TileId));
 			}
-		}
+		});
 
 #if defined(TILEMAP_LAYER_EFFECTS)
 		if (newLayer.Description.RendererType == LayerRendererType::XRay) {
@@ -2945,36 +2966,268 @@ namespace Jazz2::Tiles
 #endif
 	}
 
-	void TileMap::ReadAnimatedTiles(Stream& s)
+	LayerDescription TileMap::MakeLayerDescription(const Formats::LayerRecord& record)
 	{
-		_animatedTilesOffset = s.ReadValueAsLE<std::uint16_t>();
+		LayerDescription description;
+		if (record.Kind == Formats::LayerKind::Sprite) {
+			// The sprite layer is always drawn with its defaults
+			description.OffsetX = 0.0f;
+			description.OffsetY = 0.0f;
+			description.SpeedX = 1.0f;
+			description.SpeedY = 1.0f;
+			description.AutoSpeedX = 0.0f;
+			description.AutoSpeedY = 0.0f;
+			description.RepeatX = false;
+			description.RepeatY = false;
+			description.Depth = (std::uint16_t)(ILevelHandler::MainPlaneZ - 50);
+			description.UseInherentOffset = false;
+			description.SpeedModelX = LayerSpeedModel::Default;
+			description.SpeedModelY = LayerSpeedModel::Default;
+			description.RendererType = LayerRendererType::Default;
+			description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+			return description;
+		}
 
-		std::int32_t count = s.ReadValueAsLE<std::uint16_t>();
+		description.SpeedModelX = (LayerSpeedModel)(record.SpeedModels & 0x0f);
+		description.SpeedModelY = (LayerSpeedModel)((record.SpeedModels >> 4) & 0x0f);
 
-		_animatedTiles.reserve(count);
+		description.OffsetX = record.OffsetX;
+		description.OffsetY = record.OffsetY;
+		description.SpeedX = record.SpeedX;
+		description.SpeedY = record.SpeedY;
+		description.AutoSpeedX = record.AutoSpeedX;
+		description.AutoSpeedY = record.AutoSpeedY;
+		description.RepeatX = ((record.Flags & Formats::LayerRecord::RepeatX) != 0);
+		description.RepeatY = ((record.Flags & Formats::LayerRecord::RepeatY) != 0);
+		description.Depth = (std::uint16_t)(ILevelHandler::MainPlaneZ - record.Depth);
+		description.UseInherentOffset = ((record.Flags & Formats::LayerRecord::UseInherentOffset) != 0);
 
-		for (std::int32_t i = 0; i < count; i++) {
-			std::uint8_t frameCount = s.ReadValue<std::uint8_t>();
-			if (frameCount == 0) {
-				continue;
+		description.RendererType = (LayerRendererType)record.RendererType;
+		switch (description.RendererType) {
+			case LayerRendererType::Default:
+			case LayerRendererType::Solid:
+			case LayerRendererType::Tinted:
+			case LayerRendererType::XRay:
+			case LayerRendererType::BlurBehind:
+			case LayerRendererType::Sky:
+			case LayerRendererType::Circle:
+				break;
+			default:
+				// A renderer this version of the game doesn't know is drawn as an ordinary layer
+				description.RendererType = LayerRendererType::Default;
+				break;
+		}
+
+		// A tinted layer keeps its palette index in red, it's resolved from the live palette when the layer is drawn
+		description.Color = Vector4f(record.Color[0] / 255.0f, record.Color[1] / 255.0f, record.Color[2] / 255.0f, record.Color[3] / 255.0f);
+		return description;
+	}
+
+	bool TileMap::ReplaceLayerTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y, const LayerTile& tile)
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
+			return false;
+		}
+
+		TileMapLayer& layer = _layers[layerIndex];
+		if (x < 0 || y < 0 || x >= layer.LayoutSize.X || y >= layer.LayoutSize.Y) {
+			return false;
+		}
+
+		layer.Layout.Set(std::size_t(y) * std::size_t(layer.LayoutSize.X) + std::size_t(x), tile);
+		return true;
+	}
+
+	const LayerDescription* TileMap::GetLayerDescription(std::int32_t layerIndex) const
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
+			return nullptr;
+		}
+		return &_layers[layerIndex].Description;
+	}
+
+	bool TileMap::SetLayerDescription(std::int32_t layerIndex, const LayerDescription& description, bool visible)
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
+			return false;
+		}
+
+		TileMapLayer& layer = _layers[layerIndex];
+		layer.Visible = visible;
+		if (layerIndex == _sprLayerIndex) {
+			// The sprite layer is always drawn with its defaults
+			return true;
+		}
+
+		LayerRendererType rendererType = layer.Description.RendererType;
+		layer.Description = description;
+		layer.Description.RendererType = rendererType;
+		SetLayerRendererType(layerIndex, description.RendererType);
+
+		_texturedBackgroundLayer = -1;
+		for (std::int32_t i = 0; i < (std::int32_t)_layers.size(); i++) {
+			if (i != _sprLayerIndex && _layers[i].Description.RendererType >= LayerRendererType::Sky) {
+				_texturedBackgroundLayer = i;
 			}
+		}
+		return true;
+	}
 
-			AnimatedTile& animTile = _animatedTiles.emplace_back();
+	bool TileMap::IsLayerVisible(std::int32_t layerIndex) const
+	{
+		return (layerIndex >= 0 && layerIndex < (std::int32_t)_layers.size() && _layers[layerIndex].Visible);
+	}
 
-			// FrameDuration is multiplied by 16 before saving, so divide it here back
-			animTile.FrameDuration = s.ReadValueAsLE<std::uint16_t>() / 16.0f;
-			animTile.Delay = s.ReadValueAsLE<std::uint16_t>();
-			animTile.DelayJitter = s.ReadValueAsLE<std::uint16_t>();
-
-			animTile.IsPingPong = s.ReadValue<std::uint8_t>();
-			animTile.PingPongDelay = s.ReadValueAsLE<std::uint16_t>();
-
-			for (std::int32_t j = 0; j < frameCount; j++) {
-				auto& frame = animTile.Tiles.emplace_back();
-				// TODO: flags
-				/*std::uint8_t flag =*/ s.ReadValue<std::uint8_t>();
-				frame.TileID = s.ReadValueAsLE<std::uint16_t>();
+	bool TileMap::GetTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, Vector4f& texCoords, bool& indexed)
+	{
+		if (tileId >= std::int32_t(_animatedTilesOffset)) {
+			// The frame the animated tile shows now
+			std::int32_t animIndex = tileId - std::int32_t(_animatedTilesOffset);
+			if (animIndex >= std::int32_t(_animatedTiles.size()) || _animatedTiles[animIndex].Tiles.empty()) {
+				return false;
 			}
+			const AnimatedTile& animTile = _animatedTiles[animIndex];
+			tileId = animTile.Tiles[std::clamp(animTile.CurrentTileIdx, 0, std::int32_t(animTile.Tiles.size()) - 1)].TileID;
+			if (tileId >= std::int32_t(_animatedTilesOffset)) {
+				return false;
+			}
+		}
+		return GetStaticTileQuad(tileId, flags, texture, texCoords, indexed);
+	}
+
+	std::int32_t TileMap::ResolveStaticTileId(std::int32_t tileId) const
+	{
+		if (tileId < std::int32_t(_animatedTilesOffset)) {
+			return tileId;
+		}
+		std::int32_t animIndex = tileId - std::int32_t(_animatedTilesOffset);
+		if (animIndex >= std::int32_t(_animatedTiles.size()) || _animatedTiles[animIndex].Tiles.empty()) {
+			return -1;
+		}
+		const AnimatedTile& animTile = _animatedTiles[animIndex];
+		std::int32_t frameTileId = animTile.Tiles[std::clamp(animTile.CurrentTileIdx, 0, std::int32_t(animTile.Tiles.size()) - 1)].TileID;
+		return (frameTileId < std::int32_t(_animatedTilesOffset) ? frameTileId : -1);
+	}
+
+	const std::uint8_t* TileMap::GetStaticTileMask(std::int32_t tileId)
+	{
+		if (tileId < 0 || tileId >= std::int32_t(_animatedTilesOffset)) {
+			return nullptr;
+		}
+		TileSet* tileSet = ResolveTileSet(tileId);
+		return (tileSet != nullptr ? tileSet->GetTileMask(tileId) : nullptr);
+	}
+
+	bool TileMap::GetStaticTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, Vector4f& texCoords, bool& indexed)
+	{
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr) {
+			return false;
+		}
+		indexed = tileSet->IsIndexed;
+		// Rebases the ID into its texture chunk
+		texture = tileSet->ResolveTextureDiffuse(tileId);
+		if (texture == nullptr) {
+			return false;
+		}
+
+		const Vector2i texSize = texture->GetSize();
+		const float texInvW = (texSize.X > 0 ? 1.0f / float(texSize.X) : 0.0f);
+		const float texInvH = (texSize.Y > 0 ? 1.0f / float(texSize.Y) : 0.0f);
+		const std::int32_t tileRow = tileId / tileSet->TilesPerRow;
+		const std::int32_t tileCol = tileId - tileRow * tileSet->TilesPerRow;
+		float texScaleX = TileSet::DefaultTileSize * texInvW;
+		float texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * texInvW;
+		float texScaleY = TileSet::DefaultTileSize * texInvH;
+		float texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * texInvH;
+		if ((flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+			texBiasX += texScaleX;
+			texScaleX *= -1;
+		}
+		if ((flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+			texBiasY += texScaleY;
+			texScaleY *= -1;
+		}
+		texCoords = Vector4f(texScaleX, texBiasX, texScaleY, texBiasY);
+		return true;
+	}
+
+	std::int32_t TileMap::GetTileSetCount() const
+	{
+		return std::int32_t(_tileSets.size());
+	}
+
+	std::int32_t TileMap::GetTileSetTileCount(std::int32_t index) const
+	{
+		return (index >= 0 && index < std::int32_t(_tileSets.size()) ? _tileSets[index].Count : 0);
+	}
+	Vector4f TileMap::ResolveTintColor(const Vector4f& description)
+	{
+		// Red is the palette index, alpha the strength of the tint
+		const std::uint32_t* palettes = ContentResolver::Get().GetPalettes();
+		std::uint32_t color = palettes[std::uint8_t(description.X * 255.0f + 0.5f)];
+		return Vector4f((color & 0x000000ff) / 255.0f, ((color >> 8) & 0x000000ff) / 255.0f, ((color >> 16) & 0x000000ff) / 255.0f,
+			description.W * (((color >> 24) & 0x000000ff) / 255.0f));
+	}
+
+	LayerTile TileMap::MakeLayerTile(std::uint8_t fileFlags, std::uint16_t tileId)
+	{
+		LayerTile tile = {};
+		tile.TileID = tileId;
+		tile.DestructAnimation = -1;
+		tile.Flags = (LayerTileFlags)(fileFlags & 0x0f);
+
+		switch (fileFlags & Formats::TileRecord::ModifierMask) {
+			case Formats::TileRecord::ModifierTranslucent: tile.Alpha = 192; break;
+			case Formats::TileRecord::ModifierInvisible: tile.Alpha = 0; break;
+			default: tile.Alpha = 255; break;
+		}
+		return tile;
+	}
+
+	void TileMap::SetAnimatedTiles(std::uint16_t animatedTilesOffset, ArrayView<const Formats::AnimatedTileRecord> animatedTiles)
+	{
+		_animatedTilesOffset = animatedTilesOffset;
+		_animatedTiles.clear();
+		_animatedTiles.reserve(animatedTiles.size());
+
+		for (const Formats::AnimatedTileRecord& record : animatedTiles) {
+			FillAnimatedTile(_animatedTiles.emplace_back(), record);
+		}
+	}
+
+	void TileMap::SetAnimatedTile(std::int32_t index, const Formats::AnimatedTileRecord& animatedTile)
+	{
+		if (index < 0 || index >= std::int32_t(_animatedTiles.size())) {
+			return;
+		}
+		AnimatedTile& animTile = _animatedTiles[index];
+		std::int32_t currentFrame = animTile.CurrentTileIdx;
+		animTile.Tiles.clear();
+		FillAnimatedTile(animTile, animatedTile);
+		animTile.CurrentTileIdx = std::clamp(currentFrame, 0, std::int32_t(animTile.Tiles.size()) - 1);
+		animTile.FramesLeft = std::min(animTile.FramesLeft, animTile.FrameDuration);
+	}
+
+	void TileMap::FillAnimatedTile(AnimatedTile& animTile, const Formats::AnimatedTileRecord& record)
+	{
+		// FrameDuration is multiplied by 16 before saving, so divide it here back
+		animTile.FrameDuration = record.FrameDuration16 / 16.0f;
+		animTile.Delay = (std::int16_t)record.Delay;
+		animTile.DelayJitter = (std::int16_t)record.DelayJitter;
+		animTile.IsPingPong = (record.IsPingPong != 0);
+		animTile.PingPongDelay = record.PingPongDelay;
+
+		if (record.Frames.empty()) {
+			// It's still added, so the animated tiles after it keep their IDs
+			animTile.Tiles.emplace_back().TileID = 0;
+			return;
+		}
+
+		animTile.Tiles.reserve(record.Frames.size());
+		for (const Formats::TileRecord& frame : record.Frames) {
+			// TODO: Frame flags (flips and modifiers) are not applied yet
+			animTile.Tiles.emplace_back().TileID = frame.TileId;
 		}
 	}
 
@@ -3005,8 +3258,9 @@ namespace Jazz2::Tiles
 				SetTileDestructibleEventParams(tile, TileDestructType::Speed, tileParams[0]);
 				break;
 			case EventType::SceneryCollapse:
-				// TODO: Framerate (tileParams[1]) not used
-				SetTileDestructibleEventParams(tile, TileDestructType::Collapse, tileParams[0]);
+				// The delay takes 16 bits, a wait of the original longer than 10 would wrap around in one byte
+				// TODO: Framerate (tileParams[2]) not used
+				SetTileDestructibleEventParams(tile, TileDestructType::Collapse, std::uint16_t(tileParams[0] | (tileParams[1] << 8)));
 				break;
 		}
 	}
@@ -3037,7 +3291,7 @@ namespace Jazz2::Tiles
 	}
 
 	/** @brief Overrides the collision mask of the specified tile */
-	bool TileMap::OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask)
+	bool TileMap::OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, const std::uint8_t> tileMask)
 	{
 		// Loading the atlas later would replace the tileset and with it the patched mask
 		LoadDeferredDiffuse();
@@ -3706,7 +3960,7 @@ namespace Jazz2::Tiles
 			_owner->OnLayerEffectsChanged();
 		}
 #else
-		// Reduced right away, as when a level is loaded (see ReadLayerConfiguration())
+		// Reduced right away, as when a level is loaded (see LoadLayer())
 		if (type == LayerRendererType::XRay) {
 			ReduceXRayLayer(layer);
 			type = LayerRendererType::Default;
@@ -4120,34 +4374,14 @@ namespace Jazz2::Tiles
 	bool TileMap::ResolveTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, bool& indexed,
 		float& texScaleX, float& texBiasX, float& texScaleY, float& texBiasY)
 	{
-		TileSet* tileSet = ResolveTileSet(tileId);
-		if (tileSet == nullptr) {
+		Vector4f texCoords;
+		if (!GetStaticTileQuad(tileId, flags, texture, texCoords, indexed)) {
 			return false;
 		}
-		indexed = tileSet->IsIndexed;
-		// Rebases the ID into its texture chunk
-		texture = tileSet->ResolveTextureDiffuse(tileId);
-		if (texture == nullptr) {
-			return false;
-		}
-
-		const Vector2i texSize = texture->GetSize();
-		const float texInvW = (texSize.X > 0 ? 1.0f / float(texSize.X) : 0.0f);
-		const float texInvH = (texSize.Y > 0 ? 1.0f / float(texSize.Y) : 0.0f);
-		const std::int32_t tileRow = tileId / tileSet->TilesPerRow;
-		const std::int32_t tileCol = tileId - tileRow * tileSet->TilesPerRow;
-		texScaleX = TileSet::DefaultTileSize * texInvW;
-		texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * texInvW;
-		texScaleY = TileSet::DefaultTileSize * texInvH;
-		texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * texInvH;
-		if ((flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
-			texBiasX += texScaleX;
-			texScaleX *= -1;
-		}
-		if ((flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
-			texBiasY += texScaleY;
-			texScaleY *= -1;
-		}
+		texScaleX = texCoords.X;
+		texBiasX = texCoords.Y;
+		texScaleY = texCoords.Z;
+		texBiasY = texCoords.W;
 		return true;
 	}
 
@@ -4622,6 +4856,22 @@ namespace Jazz2::Tiles
 		}
 	}
 
+	void TileMap::InvalidateTexturedBackground()
+	{
+		if (!(SupportsTexturedBackground || SupportsTexturedBackgroundCircle) || _texturedBackgroundLayer == -1 ||
+			_texturedBackgroundPass._view == nullptr) {
+			return;
+		}
+		// The pass leaves the chain once it has drawn a background that isn't animated, it's put back to draw it again
+		for (Viewport* view : Viewport::GetChain()) {
+			if (view == _texturedBackgroundPass._view.get()) {
+				return;
+			}
+		}
+		_texturedBackgroundPass._alreadyRendered = false;
+		_texturedBackgroundPass.Initialize();
+	}
+
 	void TileMap::LoadDeferredDiffuse()
 	{
 		if (!_diffuseDeferred) {
@@ -4715,6 +4965,10 @@ namespace Jazz2::Tiles
 
 	bool TileMap::TexturedBackgroundPass::OnDraw(RenderQueue& renderQueue)
 	{
+		if (_owner->_texturedBackgroundLayer < 0) {
+			// The layer isn't drawn as a textured background anymore, such as while it's edited
+			return false;
+		}
 		TileMapLayer& layer = _owner->_layers[_owner->_texturedBackgroundLayer];
 		Vector2i layoutSize = layer.LayoutSize;
 
