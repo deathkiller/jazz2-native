@@ -239,11 +239,11 @@ namespace Jazz2::Editor
 		{
 			auto* row = addRow(_("Size (tiles)"));
 			row->Add<UiNumberBox>([state]() { return float(state->Width); }, [state](float value, bool final) {
-				state->Width = std::clamp(std::int32_t(std::round(value)), 1, 16);
+				state->Width = std::clamp<std::int32_t>(std::int32_t(std::round(value)), 1, 16);
 			}, 1.0f, 16.0f, 1.0f, 0)->Width = 48.0f;
 			row->Add<UiLabel>("x"_s, UiTheme::TextDim);
 			row->Add<UiNumberBox>([state]() { return float(state->Height); }, [state](float value, bool final) {
-				state->Height = std::clamp(std::int32_t(std::round(value)), 1, 16);
+				state->Height = std::clamp<std::int32_t>(std::int32_t(std::round(value)), 1, 16);
 			}, 1.0f, 16.0f, 1.0f, 0)->Width = 48.0f;
 		}
 		{

@@ -23,7 +23,7 @@ namespace Jazz2::Editor
 
 		std::uint8_t ToByte(float value)
 		{
-			return std::uint8_t(std::clamp(std::int32_t(std::round(value * 255.0f)), 0, 255));
+			return std::uint8_t(std::clamp<std::int32_t>(std::int32_t(std::round(value * 255.0f)), 0, 255));
 		}
 
 		std::uint32_t ToBytes(const Colorf& color)
@@ -51,7 +51,7 @@ namespace Jazz2::Editor
 		Colorf HsvToRgb(float h, float s, float v, float a)
 		{
 			float sector = std::clamp(h, 0.0f, 1.0f) * 6.0f;
-			std::int32_t i = std::min(std::int32_t(sector), 5);
+			std::int32_t i = std::min<std::int32_t>(std::int32_t(sector), 5);
 			float f = sector - float(i);
 			float p = v * (1.0f - s), q = v * (1.0f - s * f), t = v * (1.0f - s * (1.0f - f));
 			switch (i) {

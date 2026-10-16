@@ -52,7 +52,7 @@ namespace Jazz2::Editor
 		for (std::int32_t i = 0; i < 3; i++) {
 			float c = std::clamp(rgb[i], 0.0f, 1.0f);
 			c = (c <= 0.0031308f ? c * 12.92f : 1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f);
-			entry |= std::uint32_t(std::clamp(std::int32_t(std::round(c * 255.0f)), 0, 255)) << (i * 8);
+			entry |= std::uint32_t(std::clamp<std::int32_t>(std::int32_t(std::round(c * 255.0f)), 0, 255)) << (i * 8);
 		}
 		return entry;
 	}

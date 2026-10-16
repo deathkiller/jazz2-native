@@ -106,7 +106,7 @@ namespace Jazz2::Editor
 				case 4: r = t; g = p; b = v; break;
 				default: r = v; g = p; b = q; break;
 			}
-			auto toByte = [](float c) { return std::uint32_t(std::clamp(std::int32_t(std::round(c * 255.0f)), 0, 255)); };
+			auto toByte = [](float c) { return std::uint32_t(std::clamp<std::int32_t>(std::int32_t(std::round(c * 255.0f)), 0, 255)); };
 			return toByte(r) | (toByte(g) << 8) | (toByte(b) << 16) | (alpha & 0xFF000000u);
 		}
 
@@ -439,7 +439,7 @@ namespace Jazz2::Editor
 				AddChannel(row, session, selection, Names[channel], 255.0f, [shift](std::uint32_t entry) {
 					return float((entry >> shift) & 0xFF);
 				}, [shift](std::uint32_t entry, float value) {
-					std::uint32_t byte = std::uint32_t(std::clamp(std::int32_t(std::round(value)), 0, 255));
+					std::uint32_t byte = std::uint32_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 255));
 					return (entry & ~(0xFFu << shift)) | (byte << shift);
 				});
 			}

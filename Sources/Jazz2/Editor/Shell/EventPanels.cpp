@@ -579,7 +579,7 @@ namespace Jazz2::Editor
 				return (self->GetPrimary(event) ? float(event.GeneratorDelay) : 0.0f);
 			}, [self](float value, bool final) {
 				self->Change(N_("Generator delay"), [value](Formats::EventRecord& event) {
-					event.GeneratorDelay = std::uint8_t(std::clamp(std::int32_t(std::round(value)), 0, 255));
+					event.GeneratorDelay = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 255));
 				}, false);
 			}, 0.0f, 255.0f, 1.0f, 0);
 			number->Flex = 1.0f;

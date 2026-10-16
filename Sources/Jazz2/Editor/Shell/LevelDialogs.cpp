@@ -256,7 +256,7 @@ namespace Jazz2::Editor
 			auto* number = row->Add<UiNumberBox>([s, shift]() {
 				return float((s->GetDocument().Properties.AmbientColor >> shift) & 0xFF);
 			}, [s, shift](float value, bool final) {
-				std::uint32_t byte = std::uint32_t(std::clamp(std::int32_t(std::round(value)), 0, 255));
+				std::uint32_t byte = std::uint32_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 255));
 				ChangeProperties(*s, [shift, byte](LevelFlags&, Formats::LevelProperties& properties) {
 					properties.AmbientColor = (properties.AmbientColor & ~(0xFFu << shift)) | (byte << shift);
 				});
@@ -505,7 +505,7 @@ namespace Jazz2::Editor
 				const auto& animations = s->GetDocument().Animations;
 				return (selection->Animation < std::int32_t(animations.size()) ? float(animations[selection->Animation].Timing.*member) / divisor : 0.0f);
 			}, [s, selection, member, divisor](float value, bool final) {
-				std::uint16_t stored = std::uint16_t(std::clamp(std::int32_t(std::round(value * divisor)), 0, 65535));
+				std::uint16_t stored = std::uint16_t(std::clamp<std::int32_t>(std::int32_t(std::round(value * divisor)), 0, 65535));
 				ChangeAnimation(*s, selection->Animation, N_("Animation timing"), [member, stored](DocumentAnimation& animation) {
 					animation.Timing.*member = stored;
 				});
@@ -842,7 +842,7 @@ namespace Jazz2::Editor
 			auto* intensity = row->Add<UiNumberBox>([s]() {
 				return float(s->GetDocument().Properties.WeatherIntensity);
 			}, [s](float value, bool final) {
-				std::uint8_t intensity = std::uint8_t(std::clamp(std::int32_t(std::round(value)), 0, 255));
+				std::uint8_t intensity = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 255));
 				ChangeProperties(*s, [intensity](LevelFlags&, Formats::LevelProperties& properties) { properties.WeatherIntensity = intensity; });
 			}, 0.0f, 255.0f, 1.0f, 0);
 			intensity->Width = 40.0f;
@@ -860,7 +860,7 @@ namespace Jazz2::Editor
 			auto* number = row->Add<UiNumberBox>([s]() {
 				return float(s->GetDocument().Properties.WaterLevel);
 			}, [s](float value, bool final) {
-				std::uint16_t level = std::uint16_t(std::clamp(std::int32_t(std::round(value)), 0, 65535));
+				std::uint16_t level = std::uint16_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 65535));
 				ChangeProperties(*s, [level](LevelFlags&, Formats::LevelProperties& properties) { properties.WaterLevel = level; });
 			}, 0.0f, 65535.0f, 4.0f, 0);
 			number->Width = 60.0f;
@@ -872,7 +872,7 @@ namespace Jazz2::Editor
 			auto* number = row->Add<UiNumberBox>([s]() {
 				return float(s->GetDocument().Properties.CaptionTileId);
 			}, [s](float value, bool final) {
-				std::uint16_t tileId = std::uint16_t(std::clamp(std::int32_t(std::round(value)), 0, 65535));
+				std::uint16_t tileId = std::uint16_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 65535));
 				ChangeProperties(*s, [tileId](LevelFlags&, Formats::LevelProperties& properties) { properties.CaptionTileId = tileId; });
 			}, 0.0f, 65535.0f, 1.0f, 0);
 			number->Width = 60.0f;

@@ -326,7 +326,7 @@ namespace Jazz2::Editor
 
 		std::uint32_t ColorToRgba(const Colorf& color)
 		{
-			auto channel = [](float value) { return std::uint32_t(std::clamp(std::int32_t(std::round(value * 255.0f)), 0, 255)); };
+			auto channel = [](float value) { return std::uint32_t(std::clamp<std::int32_t>(std::int32_t(std::round(value * 255.0f)), 0, 255)); };
 			return channel(color.R) | (channel(color.G) << 8) | (channel(color.B) << 16) | (channel(color.A) << 24);
 		}
 

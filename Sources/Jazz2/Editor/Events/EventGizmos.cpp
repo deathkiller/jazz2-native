@@ -127,7 +127,7 @@ namespace Jazz2::Editor
 				EventCatalog::WriteField(event, *field, std::int32_t(std::round((world - gizmo.Anchor).Length() / ChainLinkSize)));
 				break;
 			case EventGizmoKind::BridgeWidth:
-				EventCatalog::WriteField(event, *field, std::max(std::int32_t(std::round((world.X - center.X) / BridgeStep)), 1));
+				EventCatalog::WriteField(event, *field, std::max<std::int32_t>(std::int32_t(std::round((world.X - center.X) / BridgeStep)), 1));
 				break;
 			case EventGizmoKind::Offset: {
 				const EventParamField* second = GetField(descriptor, gizmo.SecondField);
@@ -138,7 +138,7 @@ namespace Jazz2::Editor
 				break;
 			}
 			case EventGizmoKind::WaterLevel:
-				EventCatalog::WriteField(event, *field, std::max(std::int32_t(std::round(world.Y)), 0));
+				EventCatalog::WriteField(event, *field, std::max<std::int32_t>(std::int32_t(std::round(world.Y)), 0));
 				break;
 			case EventGizmoKind::CameraLeft:
 			case EventGizmoKind::CameraWidth: {
@@ -153,7 +153,7 @@ namespace Jazz2::Editor
 				std::int32_t rightColumn = std::int32_t((left + width) / TileSize);
 				bool toLevelEdge = (EventCatalog::ReadField(event, *widthField) == 0);
 				std::int32_t levelColumns = std::int32_t(std::ceil(levelWidth / TileSize));
-				std::int32_t column = std::clamp(std::int32_t(std::round(world.X / TileSize)), 0, levelColumns);
+				std::int32_t column = std::clamp<std::int32_t>(std::int32_t(std::round(world.X / TileSize)), 0, levelColumns);
 
 				if (gizmo.Kind == EventGizmoKind::CameraLeft) {
 					// The right edge stays where it is

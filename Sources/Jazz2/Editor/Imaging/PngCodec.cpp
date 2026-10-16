@@ -296,7 +296,7 @@ namespace Jazz2::Editor
 				}
 				hasHeader = true;
 			} else if (type == ChunkTag('P', 'L', 'T', 'E')) {
-				paletteSize = std::min(std::int32_t(length / 3), 256);
+				paletteSize = std::min<std::int32_t>(std::int32_t(length / 3), 256);
 				for (std::int32_t i = 0; i < paletteSize; i++) {
 					palette[i] = std::uint32_t(data[i * 3]) | (std::uint32_t(data[i * 3 + 1]) << 8) | (std::uint32_t(data[i * 3 + 2]) << 16) | 0xFF000000u;
 				}

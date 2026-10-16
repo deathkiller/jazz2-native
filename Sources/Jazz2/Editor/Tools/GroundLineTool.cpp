@@ -562,7 +562,7 @@ namespace Jazz2::Editor
 		line.push_back(points[0]);
 		for (std::size_t i = 0; i < segments; i++) {
 			Vector2f p0 = at(std::ptrdiff_t(i) - 1), p1 = at(std::ptrdiff_t(i)), p2 = at(std::ptrdiff_t(i) + 1), p3 = at(std::ptrdiff_t(i) + 2);
-			std::int32_t steps = std::clamp(std::int32_t((p2 - p1).Length() / 4.0f), 2, 64);
+			std::int32_t steps = std::clamp<std::int32_t>(std::int32_t((p2 - p1).Length() / 4.0f), 2, 64);
 			for (std::int32_t s = 1; s <= steps; s++) {
 				Vector2f p = CatmullRom(p0, p1, p2, p3, float(s) / float(steps));
 				if (!closed) {
@@ -1040,7 +1040,7 @@ namespace Jazz2::Editor
 			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 			row->Add<UiLabel>(_("Depth (tiles)"))->Flex = 1.0f;
 			auto* depth = row->Add<UiNumberBox>([options]() { return float(options->Depth); }, [this, options](float value, bool final) {
-				options->Depth = std::clamp(std::int32_t(value), 1, 32);
+				options->Depth = std::clamp<std::int32_t>(std::int32_t(value), 1, 32);
 				if (final) {
 					ApplyOptionsToSelected();
 				}

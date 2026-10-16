@@ -842,7 +842,7 @@ namespace Jazz2::Editor
 		if (changes.HasAny(DocumentChangeKind::LayerStructure)) {
 			_selection.Clear();
 			_eventSelection.Clear();
-			_currentLayer = std::clamp(_currentLayer, 0, std::max(std::int32_t(_document.Layers.size()) - 1, 0));
+			_currentLayer = std::clamp(_currentLayer, 0, std::max<std::int32_t>(std::int32_t(_document.Layers.size()) - 1, 0));
 		}
 
 		if (changes.HasAny(DocumentChangeKind::Events)) {
@@ -4250,8 +4250,8 @@ namespace Jazz2::Editor
 			}
 			if (command == "/fxtiles"_s) {
 				Formats::TileSetData tiles;
-				std::int32_t width = std::clamp(std::int32_t(parseFloat(3, 2.0f)), 1, 16), height = std::clamp(std::int32_t(parseFloat(4, 2.0f)), 1, 16);
-				GenerateFxTiles(FxTileKind(std::clamp(std::int32_t(parseFloat(2, 0.0f)), 0, std::int32_t(FxTileKind::Count) - 1)), width, height, 1.0f, tiles);
+				std::int32_t width = std::clamp<std::int32_t>(std::int32_t(parseFloat(3, 2.0f)), 1, 16), height = std::clamp<std::int32_t>(std::int32_t(parseFloat(4, 2.0f)), 1, 16);
+				GenerateFxTiles(FxTileKind(std::clamp<std::int32_t>(std::int32_t(parseFloat(2, 0.0f)), 0, std::int32_t(FxTileKind::Count) - 1)), width, height, 1.0f, tiles);
 				TileRef first;
 				if (!AppendTiles(*this, target, tiles, first)) {
 					return false;

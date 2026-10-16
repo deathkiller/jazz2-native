@@ -55,7 +55,7 @@ namespace Jazz2::Rendering
 	{
 		// 4 floats a vertex, and the index of the mesh when batched, a few less to be sure
 		const std::uint32_t maxBytes = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).maxSize;
-		return std::max(std::int32_t(maxBytes / ((4 + 1) * sizeof(float))) - 8, 16);
+		return std::max<std::int32_t>(std::int32_t(maxBytes / ((4 + 1) * sizeof(float))) - 8, 16);
 	}
 
 	RenderCommand* PolylineRenderer::Draw(ArrayView<const Vector2f> points, Vector2f offset, float halfThickness, std::uint16_t z, const Colorf& color)

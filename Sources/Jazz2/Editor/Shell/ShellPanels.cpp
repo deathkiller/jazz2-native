@@ -363,7 +363,7 @@ namespace Jazz2::Editor
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr ? float(layer->Record.Color[i]) : 0.0f);
 			}, [s, i](float value, bool final) {
-				std::uint8_t byte = std::uint8_t(std::clamp(std::int32_t(std::round(value)), 0, 255));
+				std::uint8_t byte = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 255));
 				ChangeLayer(*s, [i, byte](Formats::LayerRecord& record, String&) { record.Color[i] = byte; });
 			}, 0.0f, 255.0f, 1.0f, 0);
 			number->Flex = 1.0f;
