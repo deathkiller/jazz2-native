@@ -2000,8 +2000,12 @@ namespace Jazz2
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(Stream& s, StringView path, std::uint16_t captionTileId, bool applyPalette,
 		const std::uint8_t* paletteRemapping, const BitArray* usedTiles, bool withDiffuse)
 	{
+		// Read outside of an assert, which isn't evaluated at all in builds without them
 		Formats::TileSetHeader header;
-		DEATH_ASSERT(Formats::TileSetFile::ReadHeader(s, header), ("Tile set \"{}\" has invalid signature", path), nullptr);
+		if (!Formats::TileSetFile::ReadHeader(s, header)) {
+			LOGE("Tile set \"{}\" has invalid signature", path);
+			return nullptr;
+		}
 
 		const std::uint8_t flags = header.Flags;
 		std::uint8_t channelCount = header.ChannelCount;
