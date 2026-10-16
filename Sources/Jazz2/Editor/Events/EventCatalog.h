@@ -16,9 +16,11 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::ArrayView;
 	using Death::Containers::String;
 	using Death::Containers::StringView;
+#endif
 
 	/** @brief Category of an event, the picker groups events by it */
 	enum class EventCategory : std::uint8_t

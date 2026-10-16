@@ -13,8 +13,10 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using nCine::Texture;
+#endif
 
 	class DocumentChanges;
 	class EditorSession;

@@ -17,9 +17,11 @@ namespace Jazz2::Rendering
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using nCine::RenderCommand;
 	using nCine::Texture;
+#endif
 
 	/**
 		@brief Reveals the level being played from the editor in a growing ring

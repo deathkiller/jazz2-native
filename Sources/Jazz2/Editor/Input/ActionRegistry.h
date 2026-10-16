@@ -16,10 +16,12 @@ using namespace nCine;
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::Function;
 	using Death::Containers::SmallVector;
 	using Death::Containers::String;
 	using Death::Containers::StringView;
+#endif
 
 	/** @brief Key and modifiers that run an action */
 	struct Shortcut

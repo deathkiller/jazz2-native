@@ -24,9 +24,11 @@ namespace Jazz2::UI
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::String;
 	using Resources::GraphicResource;
 	using Resources::Metadata;
+#endif
 
 	/**
 		@brief Draws events as the level editor shows them

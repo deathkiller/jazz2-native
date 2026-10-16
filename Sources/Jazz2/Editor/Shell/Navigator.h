@@ -10,8 +10,10 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::StringView;
 	using nCine::Vector2f;
+#endif
 
 	class EditorSession;
 

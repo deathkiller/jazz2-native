@@ -13,8 +13,10 @@ using namespace nCine;
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::Function;
 	using Death::Containers::SmallVector;
+#endif
 
 	/**
 		@brief Tells what the fingers on a touch screen do in the level editor

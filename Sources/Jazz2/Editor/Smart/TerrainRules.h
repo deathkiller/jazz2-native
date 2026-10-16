@@ -9,8 +9,10 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using Death::Containers::String;
+#endif
 
 	/**
 		@brief Tiles chosen by hand for ground with given neighbors, instead of those learned from levels

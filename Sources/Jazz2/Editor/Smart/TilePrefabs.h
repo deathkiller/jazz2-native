@@ -9,8 +9,10 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using Death::Containers::String;
+#endif
 
 	/**
 		@brief A stamp of tiles kept with a tile set under a name, to paint it in any level of the tile set

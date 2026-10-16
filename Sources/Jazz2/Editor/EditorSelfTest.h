@@ -8,7 +8,9 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::StringView;
+#endif
 
 	/**
 		@brief Self-test of the level editor, run by the `/editor-selftest [directory]` command-line switch

@@ -17,6 +17,7 @@
 
 namespace Jazz2::Formats
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::ArrayView;
 	using Death::Containers::Function;
 	using Death::Containers::SmallVector;
@@ -25,6 +26,7 @@ namespace Jazz2::Formats
 	using Death::Containers::StringView;
 	using Death::IO::MemoryStream;
 	using Death::IO::Stream;
+#endif
 
 	/**
 		@brief Uncompressed header of a level file

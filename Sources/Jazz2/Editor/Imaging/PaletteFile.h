@@ -9,8 +9,10 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::String;
 	using Death::Containers::StringView;
+#endif
 
 	/**
 		@brief Reads and writes palettes in the files other programs use, by their extension

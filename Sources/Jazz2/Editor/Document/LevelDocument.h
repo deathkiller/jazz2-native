@@ -15,6 +15,7 @@ using namespace nCine;
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::ArrayView;
 	using Death::Containers::Function;
 	using Death::Containers::SmallVector;
@@ -22,6 +23,7 @@ namespace Jazz2::Editor
 	using Death::Containers::String;
 	using Death::Containers::StringView;
 	using Death::IO::Stream;
+#endif
 
 	/**
 		@brief Provides information about tile sets to a level being edited

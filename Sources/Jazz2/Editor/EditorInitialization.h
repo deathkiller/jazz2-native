@@ -8,7 +8,9 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::String;
+#endif
 
 	/**
 		@brief Tells the level editor what to open

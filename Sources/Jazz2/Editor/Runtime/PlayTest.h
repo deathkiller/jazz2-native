@@ -14,7 +14,9 @@ namespace Jazz2::Tiles
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::Function;
+#endif
 
 	/**
 		@brief Path the player took in a play-test, for the editor to show

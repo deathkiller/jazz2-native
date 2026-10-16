@@ -6990,7 +6990,7 @@ namespace Jazz2::Actors
 	{
 		_lives = other._lives;
 		_score = other._score;
-		_health = std::clamp(other._health, 1, _maxHealth);
+		_health = std::clamp<std::int32_t>(other._health, 1, _maxHealth);
 		_inventory = other._inventory;
 		_inventoryCheckpoint = other._inventoryCheckpoint;
 		std::memcpy(_gemsTotal, other._gemsTotal, sizeof(_gemsTotal));

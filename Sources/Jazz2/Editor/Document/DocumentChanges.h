@@ -12,8 +12,10 @@ using namespace nCine;
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::ArrayView;
 	using Death::Containers::SmallVector;
+#endif
 
 	/** @brief Kind of a change of a level being edited, supports a bitwise combination of its member values */
 	enum class DocumentChangeKind : std::uint32_t

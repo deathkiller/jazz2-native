@@ -3087,7 +3087,7 @@ namespace Jazz2::Tiles
 				return false;
 			}
 			const AnimatedTile& animTile = _animatedTiles[animIndex];
-			tileId = animTile.Tiles[std::clamp(animTile.CurrentTileIdx, 0, std::int32_t(animTile.Tiles.size()) - 1)].TileID;
+			tileId = animTile.Tiles[std::clamp<std::int32_t>(animTile.CurrentTileIdx, 0, std::int32_t(animTile.Tiles.size()) - 1)].TileID;
 			if (tileId >= std::int32_t(_animatedTilesOffset)) {
 				return false;
 			}
@@ -3105,7 +3105,7 @@ namespace Jazz2::Tiles
 			return -1;
 		}
 		const AnimatedTile& animTile = _animatedTiles[animIndex];
-		std::int32_t frameTileId = animTile.Tiles[std::clamp(animTile.CurrentTileIdx, 0, std::int32_t(animTile.Tiles.size()) - 1)].TileID;
+		std::int32_t frameTileId = animTile.Tiles[std::clamp<std::int32_t>(animTile.CurrentTileIdx, 0, std::int32_t(animTile.Tiles.size()) - 1)].TileID;
 		return (frameTileId < std::int32_t(_animatedTilesOffset) ? frameTileId : -1);
 	}
 
@@ -3205,7 +3205,7 @@ namespace Jazz2::Tiles
 		std::int32_t currentFrame = animTile.CurrentTileIdx;
 		animTile.Tiles.clear();
 		FillAnimatedTile(animTile, animatedTile);
-		animTile.CurrentTileIdx = std::clamp(currentFrame, 0, std::int32_t(animTile.Tiles.size()) - 1);
+		animTile.CurrentTileIdx = std::clamp<std::int32_t>(currentFrame, 0, std::int32_t(animTile.Tiles.size()) - 1);
 		animTile.FramesLeft = std::min(animTile.FramesLeft, animTile.FrameDuration);
 	}
 

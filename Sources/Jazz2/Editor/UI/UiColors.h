@@ -9,7 +9,9 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using nCine::Texture;
+#endif
 
 	/**
 		@brief Shows a color, a translucent one over a checkerboard

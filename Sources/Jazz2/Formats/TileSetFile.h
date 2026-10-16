@@ -7,8 +7,10 @@
 
 namespace Jazz2::Formats
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using Death::IO::Stream;
+#endif
 
 	/**
 		@brief Uncompressed header of a tile set file

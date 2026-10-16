@@ -12,8 +12,10 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using Death::Containers::String;
+#endif
 
 	/**
 		@brief Learns how the tiles of a tile set fit together, from the levels that use it

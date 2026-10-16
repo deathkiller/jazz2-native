@@ -18,9 +18,11 @@ namespace Jazz2::Formats
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::Function;
 	using Death::Containers::String;
 	using Death::Containers::StringView;
+#endif
 
 	class EditorSession;
 	class UiStack;

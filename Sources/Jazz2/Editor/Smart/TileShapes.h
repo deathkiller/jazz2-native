@@ -15,8 +15,10 @@ namespace Jazz2::Formats
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using Death::Containers::String;
+#endif
 
 	/**
 		@brief Shapes of the collision masks of the tiles of a tile set

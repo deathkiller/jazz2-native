@@ -10,9 +10,11 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using Death::Containers::String;
 	using Death::IO::Stream;
+#endif
 
 	/**
 		@brief An image as @ref PngCodec reads and writes it

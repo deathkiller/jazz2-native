@@ -8,7 +8,9 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::StringView;
+#endif
 
 	/**
 		@brief The rules of a tile set, `Tilesets/<name>.rules`

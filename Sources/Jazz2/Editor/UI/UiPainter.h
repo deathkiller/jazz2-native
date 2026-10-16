@@ -23,9 +23,11 @@ namespace Jazz2::Rendering
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using Death::Containers::StringView;
 	using UI::Alignment;
+#endif
 
 	/** @brief Layer of a slot, things of a later layer are drawn over those of an earlier one */
 	enum class UiLayer : std::uint8_t

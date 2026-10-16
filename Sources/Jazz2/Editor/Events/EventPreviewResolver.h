@@ -7,7 +7,9 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using nCine::Vector2f;
+#endif
 
 	/**
 		@brief How an event is drawn, as the object it spawns looks with its parameters

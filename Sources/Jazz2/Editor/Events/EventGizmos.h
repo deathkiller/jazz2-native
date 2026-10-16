@@ -9,9 +9,11 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVectorImpl;
 	using nCine::Vector2f;
 	using nCine::Vector2i;
+#endif
 
 	/** @brief What a handle of an event changes */
 	enum class EventGizmoKind : std::uint8_t

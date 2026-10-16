@@ -10,9 +10,11 @@
 
 namespace Jazz2::Editor
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::ArrayView;
 	using Death::Containers::SmallVector;
 	using Death::Containers::SmallVectorImpl;
+#endif
 
 	/** @brief What is laid along a line */
 	enum class SplineKind : std::uint8_t
