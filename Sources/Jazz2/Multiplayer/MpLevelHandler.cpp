@@ -249,9 +249,10 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		InitializeRequiredAssets();
-
 		if (_isServer) {
+			// Only the server validates the assets of its peers, a client would only checksum its own copies for nothing
+			InitializeRequiredAssets();
+
 			// Reserve first 255 indices for players
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 			_lastSpawnedActorId = UINT8_MAX;
@@ -8201,24 +8202,24 @@ namespace Jazz2::Multiplayer
 		_requiredAssets.clear();
 
 		auto levelFullPath = GetAssetFullPath(AssetType::Level, _levelName);
-		auto s = fs::Open(levelFullPath, FileAccess::Read);
-		if (s->IsValid()) {
+		auto s = (!levelFullPath.empty() ? fs::Open(levelFullPath, FileAccess::Read) : nullptr);
+		if (s != nullptr && s->IsValid()) {
 			_requiredAssets.emplace_back(AssetType::Level, _levelName, levelFullPath, s->GetSize(), nCine::crc32(*s));
 		}
 
 		auto usedTileSetPaths = _tileMap->GetUsedTileSetPaths();
 		for (const auto& tileSetPath : usedTileSetPaths) {
 			auto tileSetFullPath = GetAssetFullPath(AssetType::TileSet, tileSetPath);
-			auto s = fs::Open(tileSetFullPath, FileAccess::Read);
-			if (s->IsValid()) {
+			auto s = (!tileSetFullPath.empty() ? fs::Open(tileSetFullPath, FileAccess::Read) : nullptr);
+			if (s != nullptr && s->IsValid()) {
 				_requiredAssets.emplace_back(AssetType::TileSet, tileSetPath, tileSetFullPath, s->GetSize(), nCine::crc32(*s));
 			}
 		}
 
 		if (!_musicDefaultPath.empty()) {
 			auto musicFullPath = GetAssetFullPath(AssetType::Music, _musicDefaultPath);
-			auto s = fs::Open(musicFullPath, FileAccess::Read);
-			if (s->IsValid()) {
+			auto s = (!musicFullPath.empty() ? fs::Open(musicFullPath, FileAccess::Read) : nullptr);
+			if (s != nullptr && s->IsValid()) {
 				_requiredAssets.emplace_back(AssetType::Music, _musicDefaultPath, musicFullPath, s->GetSize(), nCine::crc32(*s));
 			}
 		}

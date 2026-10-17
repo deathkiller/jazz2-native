@@ -200,10 +200,8 @@ namespace Jazz2
 		void OverridePaths(StringView contentPath, StringView sourcePath, StringView cachePath);
 #endif
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		/** @brief Scans the user `"Content"`, `"Content"` and `"Cache"` directories for `.pak` files and mounts them  */
 		void RemountPaks();
-#endif
 		/** @brief Tries to find and open a file specified by the path */
 		std::unique_ptr<Stream> OpenContentFile(StringView path, std::int32_t bufferSize = 8192);
 		/**
@@ -609,11 +607,9 @@ namespace Jazz2
 #endif
 		std::unique_ptr<UI::Font> _fonts[(std::int32_t)FontType::Count];
 		std::unique_ptr<Shader> _precompiledShaders[(std::int32_t)PrecompiledShader::Count];
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		SmallVector<std::unique_ptr<PakFile>> _mountedPaks;
 		// Number of leading entries in _mountedPaks that come from the user "Content" directory
 		std::size_t _userPakCount = 0;
-#endif
 		Function<String(StringView)> _pathHandler;
 
 		/** @brief Drops the cached fonts whose atlas baked the palette, leaving the palette-indexed ones alone */

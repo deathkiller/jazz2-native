@@ -689,9 +689,7 @@ namespace Jazz2
 		DetectPrebakedContent();
 		DetectUserContent();
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		RemountPaks();
-#endif
 	}
 
 	void ContentResolver::DetectPrebakedContent()
@@ -777,7 +775,6 @@ namespace Jazz2
 #endif
 	}
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void ContentResolver::RemountPaks()
 	{
 		// Unload all already loaded .paks
@@ -809,13 +806,11 @@ namespace Jazz2
 		mountPaksIn(GetContentPath());
 		mountPaksIn(GetCachePath());
 	}
-#endif
 
 	std::unique_ptr<Stream> ContentResolver::OpenContentFile(StringView path, std::int32_t bufferSize)
 	{
 		// The user Content directory (its .paks, then its files) has priority over everything, so it can replace
 		// any shipped file. Then the remaining .paks are searched, then Content directory and Cache directory.
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		auto openFromPaks = [&](std::size_t from, std::size_t to) -> std::unique_ptr<Stream> {
 			for (std::size_t i = from; i < to; i++) {
 				auto mountPoint = _mountedPaks[i]->GetMountPoint();
@@ -832,7 +827,6 @@ namespace Jazz2
 		if (auto packedFile = openFromPaks(0, _userPakCount)) {
 			return packedFile;
 		}
-#endif
 
 		String fullPath;
 		StringView userContentPath = GetUserContentPath();
@@ -846,11 +840,9 @@ namespace Jazz2
 			}
 		}
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (auto packedFile = openFromPaks(_userPakCount, _mountedPaks.size())) {
 			return packedFile;
 		}
-#endif
 
 		fullPath = fs::CombinePath(GetContentPath(), path);
 		if (fs::IsReadableFile(fullPath)) {

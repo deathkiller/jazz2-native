@@ -5,10 +5,28 @@
 #include "../../../ServiceLocator.h"
 #include "../../../../Main.h"
 
+#include <algorithm>
 #include <cstring> // for memcpy()
 
 namespace nCine::RHI::GL
 {
+	namespace
+	{
+		/** @brief Size of the buffer range a block is bound with */
+		inline GLint GetBoundSize(const GLUniformBlockCache& uniformBlockCache)
+		{
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			// WebGL rejects a draw whose bound range is smaller than the block the program declares, although a
+			// batch shorter than its shader's instance array reads only the instances it holds - so the range
+			// always spans the whole block there, and the rest of it is whatever follows in the buffer
+			const GLint declaredSize = uniformBlockCache.uniformBlock()->GetSize() - uniformBlockCache.uniformBlock()->GetAlignAmount();
+			return std::max(uniformBlockCache.usedSize(), declaredSize);
+#else
+			return uniformBlockCache.usedSize();
+#endif
+		}
+	}
+
 	GLShaderUniformBlocks::UniformRangeAllocator GLShaderUniformBlocks::_uniformRangeAllocator = nullptr;
 
 	void GLShaderUniformBlocks::SetUniformRangeAllocator(UniformRangeAllocator allocator)
@@ -56,7 +74,7 @@ namespace nCine::RHI::GL
 #if defined(DEATH_DEBUG)
 				DEATH_DEBUG_ASSERT(offset % offsetAlignment == 0);
 #endif
-				_uboParams.object->BindBufferRange(uniformBlockCache.GetBindingIndex(), offset, uniformBlockCache.usedSize());
+				_uboParams.object->BindBufferRange(uniformBlockCache.GetBindingIndex(), offset, GetBoundSize(uniformBlockCache));
 				moreOffset += uniformBlockCache.usedSize();
 			}
 		}
@@ -114,18 +132,21 @@ namespace nCine::RHI::GL
 		if (_shaderProgram != nullptr) {
 			if (_shaderProgram->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 				std::int32_t totalUsedSize = 0;
+				// Where Bind() makes a range reach past the data of its block, the allocation has to cover it too
+				std::int32_t totalBoundSize = 0;
 				bool hasMemoryGaps = false;
 				for (GLUniformBlockCache& uniformBlockCache : _uniformBlockCaches) {
 					// There is a gap if at least one block cache (not in last position) uses less memory than its size
 					if (uniformBlockCache.GetDataPointer() != _dataPointer + totalUsedSize) {
 						hasMemoryGaps = true;
 					}
+					totalBoundSize = std::max(totalBoundSize, totalUsedSize + GetBoundSize(uniformBlockCache));
 					totalUsedSize += uniformBlockCache.usedSize();
 				}
 
 				if (totalUsedSize > 0) {
 					DEATH_ASSERT(_uniformRangeAllocator != nullptr);
-					_uboParams = _uniformRangeAllocator(std::uint32_t(totalUsedSize));
+					_uboParams = _uniformRangeAllocator(std::uint32_t(totalBoundSize));
 					if (_uboParams.mapBase != nullptr) {
 						if (hasMemoryGaps) {
 							std::int32_t offset = 0;
