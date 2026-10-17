@@ -11,8 +11,9 @@
 #endif
 /** @brief Application version */
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "3.8.0"
+#	define NCINE_VERSION "3.9.0"
 #endif
+
 /**
 	@brief Game ID of the GameCube disc image
 
@@ -25,6 +26,7 @@
 #if !defined(NCINE_GAMECUBE_GAME_ID)
 #	define NCINE_GAMECUBE_GAME_ID "GJJEJR"
 #endif
+
 /**
 	@brief Application multiplayer protocol version
 
@@ -40,27 +42,7 @@
 	is only this version unless set otherwise.
 */
 #if !defined(NCINE_PROTOCOL_VERSION)
-// 3.8.4: the level files a server sends have the author of the level after its name (see Formats::LevelFile), still
-// as version 1 - a 3.8.3 peer would misread them.
-//
-// 3.8.3: the converted level files a server sends to its clients carry a version (see Formats::LevelFile), and only
-// that version is read - a 3.8.2 peer cannot load a level downloaded from a 3.8.3 server and vice versa. A remoted
-// light may also be a ring now: its near radius carries a flag and its ring radius follows the far radius.
-//
-// 3.8.2:`ServerPacketType::PlaySfx` gained a flags byte right after the actor id (see SfxFlags), and the new
-// `ServerPacketType::StopSfx` took the free slot after `CreateDebris`. A 3.8.1 peer would read the flags as the
-// first byte of the gain and misparse every sound that follows.
-//
-// 3.8.1, past the released 3.8.0: `ServerPacketType::UpdateAllActors` gained a variable-length light block
-// behind flag bit 0x80 and `CreateRemoteActor` gained a blending-preset byte plus a light block, so the field
-// layout no longer matches what a 3.8.0 peer parses. A player always emits at least one remoted light, so the
-// flag is set on the very first update - an unbumped 3.8.0 client reads the light bytes as the next entry's
-// actor id and every remote actor after the first one in the packet gets a garbage id, flags and position.
-//
-// A patch bump is enough because the accepted range is exactly this version by default (see
-// NCINE_PROTOCOL_VERSION_MIN); this number tracks the wire format, not the release it happens to ship in, so
-// it does not have to wait for the next minor.
-#	define NCINE_PROTOCOL_VERSION "3.8.4"
+#	define NCINE_PROTOCOL_VERSION "3.9.0"
 #endif
 /**
 	@brief Oldest client multiplayer protocol version the server accepts
@@ -86,6 +68,7 @@
 #if !defined(NCINE_PROTOCOL_VERSION_MAX)
 #	define NCINE_PROTOCOL_VERSION_MAX NCINE_PROTOCOL_VERSION
 #endif
+
 /** @brief Application build year */
 #if !defined(NCINE_BUILD_YEAR)
 #	define NCINE_BUILD_YEAR "2026"
