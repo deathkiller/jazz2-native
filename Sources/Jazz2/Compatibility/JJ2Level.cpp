@@ -2,6 +2,7 @@
 #include "JJ2Strings.h"
 #include "EventConverter.h"
 #include "../Formats/LevelFile.h"
+#include "../Formats/LevelPreview.h"
 #include "../Tiles/LayerTypes.h"
 
 #include "../../nCine/Base/Algorithms.h"
@@ -13,6 +14,7 @@
 #include <IO/Compression/DeflateStream.h>
 
 #include <algorithm>
+#include <cmath>
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
@@ -20,6 +22,17 @@ using namespace Death::IO::Compression;
 
 namespace Jazz2::Compatibility
 {
+	namespace
+	{
+		// The floats of the MLLE stream are taken as they are written, so one that isn't finite (a damaged or crafted
+		// level) is read as 0 rather than passed on to the converted level, whose writer refuses it
+		float ReadFiniteFloat(JJ2Block& block)
+		{
+			float value = block.ReadFloat();
+			return (std::isfinite(value) ? value : 0.0f);
+		}
+	}
+
 	bool JJ2Level::Open(StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccess::Read);	
@@ -248,14 +261,15 @@ namespace Jazz2::Compatibility
 			_layers[i].SpeedY = block.ReadFloatEncoded();
 		}
 
+		// The speed models are the defaults of JJ2+ unless the MLLE stream has its own, layer 8 is tied to the screen
 		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].AutoSpeedX = block.ReadFloatEncoded();
-			_layers[i].SpeedModelX = LayerSectionSpeedModel::Normal;
+			_layers[i].SpeedModelX = (i == 7 ? LayerSectionSpeedModel::Legacy : LayerSectionSpeedModel::Normal);
 		}
 
 		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].AutoSpeedY = block.ReadFloatEncoded();
-			_layers[i].SpeedModelY = LayerSectionSpeedModel::Normal;
+			_layers[i].SpeedModelY = (i == 7 ? LayerSectionSpeedModel::Legacy : LayerSectionSpeedModel::Normal);
 		}
 
 		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
@@ -422,13 +436,14 @@ namespace Jazz2::Compatibility
 		std::uint32_t darknessColorBgra = block.ReadUInt32();
 		_darknessColor = ((darknessColorBgra >> 16) & 0xff) | (darknessColorBgra & 0x0000ff00) | ((darknessColorBgra << 16) & 0x00ff0000);
 		// TODO: Water level change speed
-		float waterChangeSpeed = block.ReadFloat();
+		float waterChangeSpeed = ReadFiniteFloat(block);
 		// TODO: How player should react to being underwater (PositionBased, Swim, LowGravity)
 		std::uint8_t waterInteraction = block.ReadByte();
 		std::int32_t waterLayer = block.ReadInt32();
 		// TODO: How water and ambient lighting should interact in the level (None, Global, Lagunicus)
 		std::uint8_t waterLighting = block.ReadByte();
-		_waterLevel = (std::uint16_t)block.ReadFloat();
+		// Clamped first, a float outside of the range of the integer it's converted to is undefined behavior
+		_waterLevel = (std::uint16_t)std::clamp(ReadFiniteFloat(block), 0.0f, 65535.0f);
 		std::uint32_t waterGradientStart = block.ReadUInt32();
 		std::uint32_t waterGradientStop = block.ReadUInt32();
 
@@ -507,7 +522,10 @@ namespace Jazz2::Compatibility
 				JJ2Level extraLayersFile;
 				if (extraLayersFile.Open(extraLayersPath, strictParser)) {
 					for (std::int32_t j = 0; j < 8 && (i + j) < layerCount; j++) {
-						_layers.push_back(std::move(extraLayersFile._layers[j]));
+						auto& extraLayer = _layers.emplace_back(Death::move(extraLayersFile._layers[j]));
+						// Only layer 8 of the level itself is tied to the screen unless said otherwise, as in JJ2+
+						extraLayer.SpeedModelX = LayerSectionSpeedModel::Normal;
+						extraLayer.SpeedModelY = LayerSectionSpeedModel::Normal;
 					}
 				} else {
 					for (std::int32_t j = 0; j < 8 && (i + j) < layerCount; j++) {
@@ -546,22 +564,24 @@ namespace Jazz2::Compatibility
 				if (version >= 0x106) {
 					layer.SpeedModelX = (LayerSectionSpeedModel)block.ReadByte();
 					layer.SpeedModelY = (LayerSectionSpeedModel)block.ReadByte();
-					// TODO: Texture surface effect (Untextured, Legacy, Fullscreen, InnerWindow, InnerLayer)
-					//layer.TextureSurface = block.ReadByte();
-					//layer.Fade = block.ReadByte();
-					//layer.FadeX = block.ReadFloat();
-					//layer.FadeY = block.ReadFloat();
-					//layer.InnerSpeedX = block.ReadFloat();
-					//layer.InnerSpeedY = block.ReadFloat();
-					//layer.InnerAutoSpeedX = block.ReadFloat();
-					//layer.InnerAutoSpeedY = block.ReadFloat();
-					block.DiscardBytes(26);
+					// Texture surface (Untextured, Legacy, Fullscreen, InnerWindow, InnerLayer), then the fade - or the tint
+					// color of a reflection - and the fade position - the horizontal one and the top of a reflection
+					layer.TextureSurface = block.ReadByte();
+					layer.TextureFade = block.ReadByte();
+					layer.TextureFadeX = ReadFiniteFloat(block);
+					layer.TextureFadeY = ReadFiniteFloat(block);
+					// How the texture moves inside the layer drawn only where it is, as the speeds of the layer move it otherwise
+					layer.InnerSpeedX = ReadFiniteFloat(block);
+					layer.InnerSpeedY = ReadFiniteFloat(block);
+					layer.InnerAutoSpeedX = ReadFiniteFloat(block);
+					layer.InnerAutoSpeedY = ReadFiniteFloat(block);
 
-					std::int8_t texture = (std::int8_t)block.ReadByte();
-					if (texture < 0) {
-						//layer.TextureImage = block.ReadBytes(256 * 256);
-						block.DiscardBytes(256 * 256);
-
+					// A texture of JJ2+ by its number, or an image of its own, 256x256 palette indices, which follow
+					layer.TextureSource = (std::int8_t)block.ReadByte();
+					if (layer.TextureSource < 0) {
+						constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+						layer.TextureImage = std::make_unique<std::uint8_t[]>(TextureBytes);
+						block.ReadRawBytes(layer.TextureImage.get(), TextureBytes);
 					}
 				}
 			}
@@ -652,7 +672,8 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Level::Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion)
+	void JJ2Level::Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion,
+		Function<std::shared_ptr<const Formats::TileSetData>(StringView)>&& tilesetLookup, Function<bool(std::int32_t, std::uint8_t*)>&& textureLookup)
 	{
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
@@ -774,7 +795,7 @@ namespace Jazz2::Compatibility
 		StringUtils::lowercaseInPlace(Music);
 		if (Music.find('.') == nullptr) {
 			String music = Music + ".j2b"_s;
-			properties.Music = std::move(music);
+			properties.Music = Death::move(music);
 		} else {
 			properties.Music = Music;
 		}
@@ -892,7 +913,7 @@ namespace Jazz2::Compatibility
 					}
 					adjustedText += token.Level;
 				}
-				texts.push_back(std::move(adjustedText));
+				texts.push_back(Death::move(adjustedText));
 			} else {
 				texts.push_back(JJ2Strings::RecodeString(text));
 			}
@@ -952,6 +973,8 @@ namespace Jazz2::Compatibility
 						tileFlags |= Formats::TileRecord::ModifierTranslucent; // Legacy Translucent
 					} else if (_staticTiles[tileIdx].Type == 3) {
 						tileFlags |= Formats::TileRecord::ModifierInvisible;
+					} else if (_staticTiles[tileIdx].Type == TileTypeHeatEffect) {
+						tileFlags |= Formats::TileRecord::ModifierHeat;
 					}
 				}
 
@@ -977,6 +1000,15 @@ namespace Jazz2::Compatibility
 
 		writer.WriteLayerCount(layerCount);
 
+		// The preview needs the converted layers whole
+		const bool makePreview = bool(tilesetLookup);
+		SmallVector<Formats::LevelPreview::RecordSource::Layer, JJ2LayerCount> previewLayers;
+		SmallVector<SmallVector<Formats::TileRecord, 0>, JJ2LayerCount> previewTiles;
+
+		SmallVector<Formats::TexturedLayerChunk::Entry, JJ2LayerCount> texturedLayers;
+		SmallVector<std::uint8_t, 0> spriteLayerChunkData;
+		std::int32_t writtenLayers = 0;
+
 		SmallVector<Formats::TileRecord, 0> layerRow;
 		for (std::int32_t i = 0; i < (std::int32_t)_layers.size(); i++) {
 			auto& layer = _layers[i];
@@ -989,6 +1021,8 @@ namespace Jazz2::Compatibility
 
 			Formats::LayerRecord record = {};
 			record.Kind = (isSprite ? Formats::LayerKind::Sprite : (isSky ? Formats::LayerKind::Sky : Formats::LayerKind::Other));
+			// The texture of its own of a textured layer, empty if its tiles are
+			SmallVector<std::uint8_t, 0> texture;
 			// RepeatX, RepeatY, UseInherentOffset are mapped 1:1
 			record.Flags = (std::uint16_t)(layer.Flags & (Formats::LayerRecord::RepeatX | Formats::LayerRecord::RepeatY | Formats::LayerRecord::UseInherentOffset));
 			if (layer.Visible) {
@@ -1003,24 +1037,27 @@ namespace Jazz2::Compatibility
 				record.SpeedModels = (std::uint8_t)(((std::int32_t)speedModelX & 0x0f) | (((std::int32_t)speedModelY & 0x0f) << 4));
 
 				bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
-				if (isSky && !hasTexturedBackground && layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && layer.SpeedModelY <= LayerSectionSpeedModel::Legacy) {
-					record.OffsetX = 180.0f;
-					record.OffsetY = -300.0f;
-				} else {
-					record.OffsetX = layer.OffsetX;
-					record.OffsetY = layer.OffsetY;
-				}
+				// The type is TEXTURE::Style of JJ2+, the textured background of the sky layer is drawn in it, and a reflection of
+				// any other layer too. JJ2+ draws one of an inner surface of MLLE only where the layer is, placed as an ordinary one.
+				const bool isReflection = (hasTexturedBackground && layer.TexturedBackgroundType == TexturedStyleReflection);
+				const bool isInnerReflection = (isReflection && layer.TextureSurface >= 3);
+				const bool hasTexturedSpeeds = (hasTexturedBackground && !isInnerReflection);
+				record.OffsetX = layer.OffsetX;
+				record.OffsetY = layer.OffsetY;
 
+				// NORMAL of JJ2+ moves a layer by its auto speed, if it has one, or by its speed otherwise, which is the
+				// default model without the speed; BOTHSPEEDS moves it by both and a textured layer has its auto speed
+				// added to wherever the model places it. FITLEVEL ignores both.
 				float speedX = layer.SpeedX;
 				float speedY = layer.SpeedY;
 				float autoSpeedX = layer.AutoSpeedX;
 				float autoSpeedY = layer.AutoSpeedY;
 				if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel ||
-					(layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && !hasTexturedBackground && std::abs(autoSpeedX) > 0.0f)) {
+					(layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && !hasTexturedSpeeds && std::abs(autoSpeedX) > 0.0f)) {
 					speedX = 0.0f;
 				}
 				if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel ||
-					(layer.SpeedModelY <= LayerSectionSpeedModel::Legacy && !hasTexturedBackground && std::abs(autoSpeedY) > 0.0f)) {
+					(layer.SpeedModelY <= LayerSectionSpeedModel::Legacy && !hasTexturedSpeeds && std::abs(autoSpeedY) > 0.0f)) {
 					speedY = 0.0f;
 				}
 				if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel) {
@@ -1036,28 +1073,87 @@ namespace Jazz2::Compatibility
 				record.AutoSpeedY = autoSpeedY;
 				record.Depth = (std::int16_t)layer.Depth;
 
-				if (isSky && hasTexturedBackground) {
+				if (hasTexturedBackground && !isSky && !isReflection) {
+					LOGW("Layer {} of level \"{}\" has a textured background, only the sky layer can be drawn so, it's drawn as tiles", i, LevelName);
+				}
+				if ((isSky && hasTexturedBackground) || isReflection) {
 					record.RendererType = layer.TexturedBackgroundType + (std::uint8_t)Tiles::LayerRendererType::Sky;
+					// The fade color of a sky, a tunnel or a cylinder, the wavelengths and the speed of a wave, the tint opacity,
+					// distance and distortion of a reflection
 					record.Color[0] = layer.TexturedParams1;
 					record.Color[1] = layer.TexturedParams2;
 					record.Color[2] = layer.TexturedParams3;
-					record.Color[3] = ((layer.Flags & 0x10) == 0x10 ? 255 : 0);	// ParallaxStarsEnabled
-				} else if (layer.SpriteMode == 2) {
-					record.RendererType = (std::uint8_t)Tiles::LayerRendererType::Tinted;
-					record.Color[0] = layer.SpriteParam;
-					record.Color[1] = 0;
-					record.Color[2] = 0;
-					record.Color[3] = 255;
+					// ParallaxStarsEnabled, which JJ2+ takes as the blur of a reflection
+					record.Color[3] = ((layer.Flags & 0x10) == 0x10 ? 255 : 0);
+					if (layer.TexturedBackgroundType == TexturedStyleTunnel || layer.TexturedBackgroundType == TexturedStyleWave ||
+						layer.TexturedBackgroundType == TexturedStyleCylinder || layer.TexturedBackgroundType == TexturedStyleReflection) {
+						if (layer.TexturedBackgroundType == TexturedStyleTunnel) {
+							// JJ2+ takes the stars as the spiral of a tunnel, which has no stars
+							record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::Spiral : 0);
+							record.Color[3] = 0;
+						} else if (layer.TexturedBackgroundType == TexturedStyleWave) {
+							// As the way the vertical waves of a wave move, which has no stars either
+							record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::DistortionAngle : 0);
+							record.Color[3] = 0;
+						} else if (layer.TexturedBackgroundType == TexturedStyleCylinder) {
+							// And as the half size of a cylinder, which has none either
+							record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::HalfSize : 0);
+							record.Color[3] = 0;
+						}
+						// A wave has no fade, the position of the fade is where JJ2+ keeps its amplitudes
+						if (layer.TexturedBackgroundType != TexturedStyleWave) {
+							record.Textured.Fade = layer.TextureFade;
+						}
+						record.Textured.FadeX = layer.TextureFadeX;
+						record.Textured.FadeY = layer.TextureFadeY;
+						if (isInnerReflection) {
+							// SURFACE::INNERWINDOW or SURFACE::INNERLAYER, the speeds place the layer then and the inner speeds
+							// move its texture inside it
+							record.Textured.Flags = std::uint8_t(record.Textured.Flags | (layer.TextureSurface == 3
+								? Formats::TexturedLayerParams::InnerWindow : Formats::TexturedLayerParams::InnerLayer));
+							// All of them finite already, see ReadFiniteFloat()
+							record.Textured.InnerSpeedX = layer.InnerSpeedX;
+							record.Textured.InnerSpeedY = layer.InnerSpeedY;
+							record.Textured.InnerAutoSpeedX = layer.InnerAutoSpeedX;
+							record.Textured.InnerAutoSpeedY = layer.InnerAutoSpeedY;
+						}
+					}
+					if (layer.TextureSource != 0) {
+						// A texture of JJ2+ (TEXTURE::Texture) instead of the tiles of the layer, or an image of its own made by MLLE
+						constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+						texture.resize_for_overwrite(TextureBytes);
+						if (layer.TextureSource < 0 && layer.TextureImage != nullptr) {
+							std::memcpy(texture.data(), layer.TextureImage.get(), TextureBytes);
+						} else if (layer.TextureSource < 0 || !textureLookup || !textureLookup(layer.TextureSource, texture.data())) {
+							// The textures of JJ2+ come with it, not with the game, one that ripples a reflection alike is made up
+							LOGW("Layer {} of level \"{}\" has texture {} of JJ2+, which isn't available, a texture is made up instead", i, LevelName, layer.TextureSource);
+							MakeRippleTexture(texture.data());
+						}
+					}
 				} else {
-					record.RendererType = (std::uint8_t)Tiles::LayerRendererType::Default;
-					record.Color[0] = 255;
-					record.Color[1] = 255;
-					record.Color[2] = 255;
-					record.Color[3] = 255;
+					ConvertSpriteMode(layer.SpriteMode, layer.SpriteParam, record);
 				}
+			} else {
+				// How the sprite layer is drawn isn't in its record, it goes into a chunk, see Formats::SpriteLayerChunk - none
+				// for one drawn as ordinary tiles
+				ConvertSpriteMode(layer.SpriteMode, layer.SpriteParam, record);
+				Formats::SpriteLayerChunk::Write(record, spriteLayerChunkData);
 			}
 
 			writer.WriteLayerHeader(record);
+			// The parameters the record has no room for go into a chunk, by the index of the layer in the file, and the texture too
+			Formats::TexturedLayerChunk::Entry& texturedLayer = texturedLayers.emplace_back();
+			texturedLayer.Layer = std::uint32_t(writtenLayers);
+			texturedLayer.Params = record.Textured;
+			texturedLayer.Texture = Death::move(texture);
+			writtenLayers++;
+
+			SmallVector<Formats::TileRecord, 0>* previewLayerTiles = nullptr;
+			if (makePreview) {
+				previewLayers.push_back({ record, {} });
+				previewLayerTiles = &previewTiles.emplace_back();
+				previewLayerTiles->reserve(std::size_t(layer.Width) * std::size_t(layer.Height));
+			}
 
 			layerRow.resize_for_overwrite(layer.Width);
 			for (std::int32_t y = 0; y < layer.Height; y++) {
@@ -1086,9 +1182,11 @@ namespace Jazz2::Compatibility
 
 					bool legacyTranslucent = false;
 					bool invisible = false;
+					bool heat = false;
 					if (tileIdx < lastTilesetTileIndex) {
 						legacyTranslucent = (_staticTiles[tileIdx].Type == 1);
 						invisible = (_staticTiles[tileIdx].Type == 3);
+						heat = (_staticTiles[tileIdx].Type == TileTypeHeatEffect);
 					}
 
 					std::uint8_t tileFlags = 0;
@@ -1103,21 +1201,29 @@ namespace Jazz2::Compatibility
 						tileFlags |= Formats::TileRecord::ModifierTranslucent;
 					} else if (invisible) {
 						tileFlags |= Formats::TileRecord::ModifierInvisible;
+					} else if (heat) {
+						tileFlags |= Formats::TileRecord::ModifierHeat;
 					}
 
 					layerRow[x].Flags = tileFlags;
 					layerRow[x].TileId = tileIdx;
 				}
 				writer.WriteLayerTiles(layerRow);
+				if (previewLayerTiles != nullptr) {
+					previewLayerTiles->append(layerRow.begin(), layerRow.end());
+				}
 			}
 		}
 
 		// Events
+		Formats::LevelPreview::StartPicker previewStart;
 		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
 			for (std::int32_t x = 0; x < _layers[3].Width; x++) {
 				const auto& tileEvent = _events[x + y * _layers[3].Width];
-				writer.WriteEvent(MakeEventRecord(tileEvent.Converted, tileEvent.Illuminate, tileEvent.Difficulty,
-					tileEvent.GeneratorFlags, tileEvent.GeneratorDelay));
+				Formats::EventRecord record = MakeEventRecord(tileEvent.Converted, tileEvent.Illuminate, tileEvent.Difficulty,
+					tileEvent.GeneratorFlags, tileEvent.GeneratorDelay);
+				writer.WriteEvent(record);
+				previewStart.Add(record, x, y);
 			}
 		}
 
@@ -1132,7 +1238,59 @@ namespace Jazz2::Compatibility
 		}
 		writer.WriteOffGridEvents(offGridEvents);
 
-		writer.Finish();
+		SmallVector<Formats::ChunkRecord, 2> chunks;
+		Formats::ChunkRecord texturedLayersChunk;
+		texturedLayersChunk.Tag = Formats::TexturedLayerChunk::Tag;
+		Formats::TexturedLayerChunk::Write(texturedLayers, texturedLayersChunk.Data);
+		if (!texturedLayersChunk.Data.empty()) {
+			chunks.push_back(Death::move(texturedLayersChunk));
+		}
+		if (!spriteLayerChunkData.empty()) {
+			Formats::ChunkRecord& spriteLayerChunk = chunks.emplace_back();
+			spriteLayerChunk.Tag = Formats::SpriteLayerChunk::Tag;
+			spriteLayerChunk.Data = Death::move(spriteLayerChunkData);
+		}
+
+		// Preview, drawn with the original tile sets, the level can't be shown without its default one
+		std::shared_ptr<const Formats::TileSetData> defaultTileSet = (makePreview ? tilesetLookup(properties.DefaultTileSet) : nullptr);
+		if (defaultTileSet != nullptr) {
+			SmallVector<std::shared_ptr<const Formats::TileSetData>, 4> extraTileSetData;
+			SmallVector<Formats::LevelPreview::RecordSource::TileSet, 4> previewTileSets;
+			previewTileSets.push_back({ defaultTileSet.get(), 0, defaultTileSet->TileCount, nullptr });
+			for (const auto& extraTileSet : extraTileSets) {
+				const auto& data = extraTileSetData.emplace_back(tilesetLookup(extraTileSet.Name));
+				// A tile set of true color tiles isn't matched to the palette of the level
+				constexpr std::uint8_t RemapFlags = Formats::ExtraTileSetRecord::Remapped | Formats::ExtraTileSetRecord::TrueColor;
+				bool remapped = ((extraTileSet.Flags & RemapFlags) == Formats::ExtraTileSetRecord::Remapped);
+				previewTileSets.push_back({ data.get(), extraTileSet.Offset, extraTileSet.Count, remapped ? extraTileSet.Remapping : nullptr });
+			}
+			for (std::size_t i = 0; i < previewLayers.size(); i++) {
+				previewLayers[i].Tiles = previewTiles[i];
+			}
+
+			Formats::LevelPreview::RecordSource source;
+			source.Layers = previewLayers;
+			source.TileSets = previewTileSets;
+			source.AnimatedTilesOffset = lastTilesetTileIndex;
+			source.AnimatedTiles = animatedTiles;
+			source.DiffuseOverrides = diffuseOverrides;
+
+			Formats::ChunkRecord preview;
+			preview.Tag = Formats::LevelFile::PreviewChunk;
+			Formats::LevelPreview::Make(source, previewStart.GetPosition(_layers[3].Width, _layers[3].Height),
+				_useLevelPalette ? levelPalette : defaultTileSet->Palette, preview.Data);
+			if (!preview.Data.empty()) {
+				chunks.push_back(Death::move(preview));
+			}
+		}
+
+		if (!chunks.empty()) {
+			writer.WriteChunks(chunks, false);
+		}
+
+		if (!writer.Finish()) {
+			LOGE("Level \"{}\" cannot be written to \"{}\"", LevelName, targetPath);
+		}
 
 #if defined(DEATH_DEBUG)
 		/*auto episodeName = fs::GetFileName(fs::GetDirectoryName(targetPath));
@@ -1301,7 +1459,7 @@ namespace Jazz2::Compatibility
 			String fullName = token.Episode + '/' + token.Level;
 			return fullName;
 		}
-		return std::move(token.Level);
+		return Death::move(token.Level);
 	}
 
 	void JJ2Level::ExpandPalette(const std::uint8_t* colors, std::uint32_t* palette)
@@ -1315,11 +1473,96 @@ namespace Jazz2::Compatibility
 
 	Tiles::LayerSpeedModel JJ2Level::ConvertSpeedModel(LayerSectionSpeedModel speedModel)
 	{
+		// NORMAL is the default model too, without the speed of a layer that has an auto speed (see Convert())
 		switch (speedModel) {
 			case LayerSectionSpeedModel::Legacy: return Tiles::LayerSpeedModel::AlwaysOnTop;
+			case LayerSectionSpeedModel::FromStart: return Tiles::LayerSpeedModel::FromStart;
 			case LayerSectionSpeedModel::FitLevel: return Tiles::LayerSpeedModel::FitLevel;
 			case LayerSectionSpeedModel::SpeedMultipliers: return Tiles::LayerSpeedModel::SpeedMultipliers;
 			default: return Tiles::LayerSpeedModel::Default;
+		}
+	}
+
+	void JJ2Level::ConvertSpriteMode(std::uint8_t spriteMode, std::uint8_t spriteParam, Formats::LayerRecord& record)
+	{
+		// The modes the renderers can draw, any other is drawn as ordinary tiles. Translucent is as opaque as translucent
+		// tiles are (see TileMap::MakeLayerTile()), an invisible layer is there and solid, but not drawn at all.
+		record.RendererType = (std::uint8_t)Tiles::LayerRendererType::Default;
+		record.Color[0] = 255;
+		record.Color[1] = 255;
+		record.Color[2] = 255;
+		record.Color[3] = 255;
+
+		switch (spriteMode) {
+			case 1:		// SPRITE::TRANSLUCENT
+				record.Color[3] = 192;
+				break;
+			case 2:		// SPRITE::TINTED
+				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::Tinted;
+				record.Color[0] = spriteParam;
+				record.Color[1] = 0;
+				record.Color[2] = 0;
+				break;
+			case 4:		// SPRITE::INVISIBLE
+				record.Color[3] = 0;
+				break;
+			case 10:	// SPRITE::PALSHIFT
+			case 16:	// SPRITE::TRANSLUCENTPALSHIFT
+				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::PaletteShift;
+				record.Color[0] = spriteParam;
+				record.Color[3] = (spriteMode == 16 ? 192 : 255);
+				break;
+		}
+	}
+
+	void JJ2Level::MakeRippleTexture(std::uint8_t* pixels)
+	{
+		// Value noise of four octaves, each of them on a lattice that fits the texture a whole number of times, so the
+		// texture repeats without a seam, as the textures of JJ2+ do; always the same, the level is converted the same
+		constexpr std::int32_t Size = Formats::TexturedLayerChunk::TextureSize;
+		constexpr std::int32_t Octaves = 4;
+		constexpr std::uint8_t FirstColor = 176;
+		constexpr std::int32_t ColorCount = 32;
+
+		auto lattice = [](std::int32_t x, std::int32_t y, std::int32_t octave) {
+			std::uint32_t h = std::uint32_t(x) * 0x8DA6B343u ^ std::uint32_t(y) * 0xD8163841u ^ std::uint32_t(octave + 1) * 0xCB1AB31Fu;
+			h ^= h >> 13;
+			h *= 0x5BD1E995u;
+			h ^= h >> 15;
+			return float(h & 0xFFFFu) / 65535.0f;
+		};
+
+		SmallVector<float, 0> values;
+		values.resize_for_overwrite(std::size_t(Size) * Size);
+		float min = 1.0f, max = 0.0f;
+		for (std::int32_t y = 0; y < Size; y++) {
+			for (std::int32_t x = 0; x < Size; x++) {
+				float value = 0.0f, weight = 1.0f;
+				for (std::int32_t octave = 0; octave < Octaves; octave++) {
+					const std::int32_t cells = (4 << octave);
+					const float fx = float(x * cells) / Size;
+					const float fy = float(y * cells) / Size;
+					const std::int32_t x0 = std::int32_t(fx), y0 = std::int32_t(fy);
+					const std::int32_t x1 = (x0 + 1) % cells, y1 = (y0 + 1) % cells;
+					// Smoothly between the points of the lattice, the ripples have no edges
+					float tx = fx - float(x0), ty = fy - float(y0);
+					tx = tx * tx * (3.0f - 2.0f * tx);
+					ty = ty * ty * (3.0f - 2.0f * ty);
+					const float top = lattice(x0, y0, octave) + (lattice(x1, y0, octave) - lattice(x0, y0, octave)) * tx;
+					const float bottom = lattice(x0, y1, octave) + (lattice(x1, y1, octave) - lattice(x0, y1, octave)) * tx;
+					value += (top + (bottom - top) * ty) * weight;
+					weight *= 0.5f;
+				}
+				values[std::size_t(y) * Size + x] = value;
+				min = std::min(min, value);
+				max = std::max(max, value);
+			}
+		}
+
+		// Over the whole gradient, as the textures of JJ2+ are
+		const float scale = (max > min ? float(ColorCount) / (max - min) : 0.0f);
+		for (std::size_t i = 0; i < values.size(); i++) {
+			pixels[i] = std::uint8_t(FirstColor + std::clamp<std::int32_t>(std::int32_t((values[i] - min) * scale), 0, ColorCount - 1));
 		}
 	}
 

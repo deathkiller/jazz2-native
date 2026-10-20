@@ -137,8 +137,8 @@ namespace Jazz2::Scripting
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct RawMetadataDeclaration {
 			RawMetadataDeclaration(SmallVectorImpl<String>&& m, String n, String d, MetadataType t, String c, String ns)
-				: Metadata(std::move(m)), Name(std::move(n)), Declaration(std::move(d)),
-					Type(t), ParentClass(std::move(c)), Namespace(std::move(ns)) {}
+				: Metadata(Death::move(m)), Name(Death::move(n)), Declaration(Death::move(d)),
+					Type(t), ParentClass(Death::move(c)), Namespace(Death::move(ns)) {}
 
 			SmallVector<String, 0> Metadata;
 			String Name;

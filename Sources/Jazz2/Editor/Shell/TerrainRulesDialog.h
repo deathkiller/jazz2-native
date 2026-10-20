@@ -4,7 +4,7 @@
 
 namespace Jazz2::Editor
 {
-	class EditorSession;
+	class IEditorContext;
 
 	/**
 		@brief Shows the tiles ground gets by its neighbors, and lets them be chosen by hand, see @ref TerrainRules
@@ -14,7 +14,7 @@ namespace Jazz2::Editor
 		of them are taken in turns, the right button returns it to the learned one. The window stays open while the
 		level is edited.
 	*/
-	void ShowTerrainRulesDialog(EditorSession& session);
+	void ShowTerrainRulesDialog(IEditorContext& session);
 }
 
 #endif

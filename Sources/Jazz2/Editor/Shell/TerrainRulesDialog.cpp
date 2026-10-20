@@ -2,7 +2,13 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../EditorSession.h"
+#include "TerrainCoverageView.h"
+#include "TextPrompt.h"
+#include "../Tools/EditorContext.h"
+#include "../Common/TileStamp.h"
+#include "../Document/CommandHistory.h"
+#include "../Document/LevelDocument.h"
+#include "../Runtime/TileDrawing.h"
 #include "../Smart/SmartTileModel.h"
 #include "../Smart/TileShapes.h"
 #include "../UI/UiDialogs.h"
@@ -18,11 +24,15 @@
 #include <cmath>
 #include <memory>
 
+#if !defined(N_)
+#	define N_(text) text
+#endif
+
 namespace Jazz2::Editor
 {
 	namespace
 	{
-		enum class RulesPage : std::uint8_t { Rules, Slopes, Try };
+		enum class RulesPage : std::uint8_t { Rules, Slopes, Try, Coverage };
 
 		struct RulesState
 		{
@@ -31,15 +41,37 @@ namespace Jazz2::Editor
 			float SlopeRight = 16.0f;
 		};
 
-		void SaveRules(EditorSession& session)
+		void SaveRules(IEditorContext& session)
 		{
 			if (!session.GetSmartTiles().GetRules().Save(session.GetDocument().Properties.DefaultTileSet)) {
 				session.ShowMessage(_("The rules couldn't be saved"));
 			}
 		}
 
+		// What the tiles picked by the rules depend on, they're picked again only when it changes, not every frame
+		struct PickKey
+		{
+			std::uint32_t Rules = ~0u;
+			std::uint32_t Revision = ~0u;
+			std::int32_t Levels = -1;
+			std::int32_t Progress = -1;
+
+			bool Update(IEditorContext& session)
+			{
+				SmartTileModel& model = session.GetSmartTiles();
+				PickKey current;
+				current.Rules = model.GetRules().GetRevision();
+				current.Revision = session.GetHistory().GetRevision();
+				current.Levels = model.GetLevelCount();
+				current.Progress = (model.IsReady() ? 1000 : std::int32_t(model.GetProgress() * 100.0f));
+				bool changed = (current.Rules != Rules || current.Revision != Revision || current.Levels != Levels || current.Progress != Progress);
+				*this = current;
+				return changed;
+			}
+		};
+
 		// The first tile of the brush that can be in a rule, `false` if there's none
-		bool GetBrushTile(EditorSession& session, TileRef& tile)
+		bool GetBrushTile(IEditorContext& session, TileRef& tile)
 		{
 			const TileStamp& stamp = session.GetStamp();
 			for (std::size_t i = 0; i < stamp.Tiles.size(); i++) {
@@ -58,7 +90,7 @@ namespace Jazz2::Editor
 			static constexpr std::int32_t Columns = 8;
 			static constexpr float CellUnits = 40.0f;
 
-			explicit PatternGrid(EditorSession& session)
+			explicit PatternGrid(IEditorContext& session)
 				: _session(session)
 			{
 				TerrainRules::GetPatterns(_patterns);
@@ -85,6 +117,13 @@ namespace Jazz2::Editor
 				const LevelDocument& document = _session.GetDocument();
 				float cell = _cell;
 				std::int32_t hovered = (_hovered && GetSurface() != nullptr ? GetIndexAt(GetSurface()->GetPointerPos()) : -1);
+				if (_key.Update(_session)) {
+					_learned.resize(_patterns.size());
+					_hasLearned.resize(_patterns.size());
+					for (std::size_t i = 0; i < _patterns.size(); i++) {
+						_hasLearned[i] = model.Pick(_patterns[i], true, nullptr, nullptr, nullptr, nullptr, 0, _learned[i]);
+					}
+				}
 
 				for (std::int32_t i = 0; i < std::int32_t(_patterns.size()); i++) {
 					std::uint8_t pattern = _patterns[i];
@@ -112,12 +151,13 @@ namespace Jazz2::Editor
 					if (hasTile) {
 						tile = (*ruled)[0];
 					} else {
-						hasTile = model.Pick(pattern, true, nullptr, nullptr, nullptr, nullptr, 0, tile);
+						hasTile = _hasLearned[i];
+						tile = _learned[i];
 					}
 					float size = std::floor(cell * 0.6f);
 					Rectf tileRect(rect.X + rect.W - size - 3.0f, rect.Y + rect.H - size - 3.0f, size, size);
 					if (hasTile && tileMap != nullptr) {
-						painter.Tile(*tileMap, document.ToTileId(tile), tile.Flags, tileRect, ruled != nullptr ? 1.0f : 0.7f, UiLayer::Content);
+						DrawTile(painter, *tileMap, document, tile, tile.Flags, tileRect, ruled != nullptr ? 1.0f : 0.7f, UiLayer::Content);
 					}
 					if (ruled != nullptr) {
 						float thickness = std::max(1.0f, std::round(painter.GetScale()));
@@ -182,10 +222,14 @@ namespace Jazz2::Editor
 			}
 
 		private:
-			EditorSession& _session;
+			IEditorContext& _session;
 			SmallVector<std::uint8_t, 0> _patterns;
 			mutable String _tooltip;
 			float _cell = 0.0f;
+			// The tiles learned for each pattern, picked again only when anything they depend on changes
+			PickKey _key;
+			SmallVector<TileRef, 0> _learned;
+			SmallVector<bool, 0> _hasLearned;
 
 			Rectf GetCellRect(std::int32_t index, float cell) const
 			{
@@ -211,7 +255,7 @@ namespace Jazz2::Editor
 			static constexpr std::int32_t Rows = 7;
 			static constexpr float CellUnits = 22.0f;
 
-			explicit TryCanvas(EditorSession& session)
+			explicit TryCanvas(IEditorContext& session)
 				: _session(session), _painting(false), _paintValue(true)
 			{
 				// A hill to start with
@@ -242,13 +286,26 @@ namespace Jazz2::Editor
 				const LevelDocument& document = _session.GetDocument();
 				painter.FillRect(Rectf(Bounds.X, Bounds.Y, _cell * Columns, _cell * Rows), Colorf(0.06f, 0.06f, 0.14f, 1.0f), UiLayer::Fill);
 
-				// Row by row as the tools go, each cell knows the tiles left of it and above it
-				TileRef picked[Columns * Rows];
-				bool hasPicked[Columns * Rows] = {};
+				// Row by row as the tools go, each cell knows the tiles left of it and above it, picked again only when
+				// the cells or the rules change
+				bool repick = (_key.Update(_session) || _gridChanged);
+				_gridChanged = false;
+				TileRef* picked = _picked;
+				bool* hasPicked = _hasPicked;
 				for (std::int32_t y = 0; y < Rows; y++) {
 					for (std::int32_t x = 0; x < Columns; x++) {
 						std::int32_t i = y * Columns + x;
 						if (!_solid[i]) {
+							hasPicked[i] = false;
+							continue;
+						}
+						Rectf rect(Bounds.X + x * _cell, Bounds.Y + y * _cell, _cell, _cell);
+						if (!repick) {
+							if (hasPicked[i] && tileMap != nullptr) {
+								DrawTile(painter, *tileMap, document, picked[i], picked[i].Flags, rect, 1.0f, UiLayer::Content);
+							} else {
+								painter.FillRect(rect, Colorf(0.5f, 0.4f, 0.3f, 1.0f), UiLayer::Content);
+							}
 							continue;
 						}
 						std::uint8_t neighbors = 0;
@@ -272,9 +329,8 @@ namespace Jazz2::Editor
 						const TileRef* up = (y > 0 && hasPicked[i - Columns] ? &picked[i - Columns] : nullptr);
 						std::uint32_t hash = std::uint32_t(x) * 73856093u ^ std::uint32_t(y) * 19349663u;
 						hasPicked[i] = model.Pick(neighbors, true, left, up, nullptr, nullptr, hash, picked[i]);
-						Rectf rect(Bounds.X + x * _cell, Bounds.Y + y * _cell, _cell, _cell);
 						if (hasPicked[i] && tileMap != nullptr) {
-							painter.Tile(*tileMap, document.ToTileId(picked[i]), picked[i].Flags, rect, 1.0f, UiLayer::Content);
+							DrawTile(painter, *tileMap, document, picked[i], picked[i].Flags, rect, 1.0f, UiLayer::Content);
 						} else {
 							painter.FillRect(rect, Colorf(0.5f, 0.4f, 0.3f, 1.0f), UiLayer::Content);
 						}
@@ -305,14 +361,16 @@ namespace Jazz2::Editor
 				_paintValue = !_solid[index];
 				_solid[index] = _paintValue;
 				_painting = true;
+				_gridChanged = true;
 				return true;
 			}
 
 			void OnPointerMove(const UiPointerEvent& event) override
 			{
 				std::int32_t index = GetIndexAt(event.Pos);
-				if (_painting && index >= 0) {
+				if (_painting && index >= 0 && _solid[index] != _paintValue) {
 					_solid[index] = _paintValue;
+					_gridChanged = true;
 				}
 			}
 
@@ -327,11 +385,16 @@ namespace Jazz2::Editor
 			}
 
 		private:
-			EditorSession& _session;
+			IEditorContext& _session;
 			bool _solid[Columns * Rows];
 			float _cell = 0.0f;
 			bool _painting;
 			bool _paintValue;
+			// The tiles picked for the cells, picked again only when the cells or the rules change
+			PickKey _key;
+			bool _gridChanged = true;
+			TileRef _picked[Columns * Rows];
+			bool _hasPicked[Columns * Rows] = {};
 
 			std::int32_t GetIndexAt(Vector2f pos) const
 			{
@@ -344,7 +407,7 @@ namespace Jazz2::Editor
 		};
 
 		// The surface the masks give a tile, or `false` if they don't make it ground
-		bool FindDetectedSurface(EditorSession& session, const TileRef& tile, float& left, float& right)
+		bool FindDetectedSurface(IEditorContext& session, const TileRef& tile, float& left, float& right)
 		{
 			for (const TileShapes::Surface& surface : session.GetTileShapes().GetSurfaces()) {
 				if (surface.Tile.Index == tile.Index && surface.Tile.Source == tile.Source && surface.Tile.Flags == 0) {
@@ -357,16 +420,17 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void ShowTerrainRulesDialog(EditorSession& session)
+	void ShowTerrainRulesDialog(IEditorContext& session)
 	{
 		UiSurface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
 
-		EditorSession* s = &session;
+		IEditorContext* s = &session;
 		auto state = std::make_shared<RulesState>();
-		auto dialog = std::make_unique<UiDialog>(_("Terrain Rules"));
+		// On a small screen the pages scroll inside of it, the title and the buttons stay
+		auto dialog = std::make_unique<UiDialog>(_("Terrain Rules"), true);
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
 
@@ -375,7 +439,7 @@ namespace Jazz2::Editor
 			auto* tabs = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 			struct PageOption { const char* Label; RulesPage Page; };
 			static const PageOption Pages[] = {
-				{ N_("Rules"), RulesPage::Rules }, { N_("Slopes"), RulesPage::Slopes }, { N_("Try It"), RulesPage::Try },
+				{ N_("Rules"), RulesPage::Rules }, { N_("Slopes"), RulesPage::Slopes }, { N_("Try It"), RulesPage::Try }, { N_("Coverage"), RulesPage::Coverage },
 			};
 			for (const PageOption& option : Pages) {
 				RulesPage page = option.Page;
@@ -412,7 +476,7 @@ namespace Jazz2::Editor
 					entry.Label = rules.GetTerrainName(i);
 					entry.Execute = [s, i]() { s->GetSmartTiles().GetRules().SetCurrentTerrain(i); };
 					entry.IsChecked = [s, i]() { return (s->GetSmartTiles().GetRules().GetCurrentTerrain() == i); };
-					entries.push_back(std::move(entry));
+					entries.push_back(Death::move(entry));
 				}
 			});
 			terrains->Flex = 1.0f;
@@ -499,7 +563,7 @@ namespace Jazz2::Editor
 
 			auto* actions = page->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 			auto withBrushTile = [s](Function<void(TerrainRules&, std::uint16_t)>&& action) {
-				auto shared = std::make_shared<Function<void(TerrainRules&, std::uint16_t)>>(std::move(action));
+				auto shared = std::make_shared<Function<void(TerrainRules&, std::uint16_t)>>(Death::move(action));
 				return [s, shared]() {
 					TileRef tile;
 					if (!GetBrushTile(*s, tile) || tile.Source != TileRef::DefaultTileSet) {
@@ -551,6 +615,20 @@ namespace Jazz2::Editor
 			page->Add<TryCanvas>(session);
 		}
 
+		// Which of the 47 patterns have tiles to choose, see TerrainCoverageView
+		{
+			auto* page = content->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+			page->IsVisibleFunc = [state]() { return (state->Page == RulesPage::Coverage); };
+			// What the colors mean is drawn under the patterns, a row each, so the page is no wider than they are
+			auto* coverage = page->Add<TerrainCoverageView>(session);
+			auto* missing = page->Add<UiLabel>(StringView(), UiTheme::Text);
+			missing->TextFunc = [coverage]() {
+				std::int32_t count = coverage->GetMissingCount();
+				return (count == 0 ? String(_("Every pattern has tiles to choose from"))
+					: String(_fn("{} pattern has no tile to choose from", "{} patterns have no tile to choose from", count, count)));
+			};
+		}
+
 		dialog->AddButton(_("Clear All"), [s]() {
 			TerrainRules& rules = s->GetSmartTiles().GetRules();
 			if (rules.GetCount() == 0) {
@@ -559,13 +637,10 @@ namespace Jazz2::Editor
 			rules.Clear();
 			SaveRules(*s);
 		})->IsVisibleFunc = [state]() { return (state->Page == RulesPage::Rules); };
-		dialog->AddButton(_("Close"), [dialogPtr]() { dialogPtr->Close(); }, true);
+		// Closed by its cross or Escape, clearing the rules isn't what they do
+		dialog->OnCancel = [dialogPtr]() { dialogPtr->Close(); };
 
-		UiOverlayOptions options;
-		options.Centered = true;
-		options.Modal = false;
-		options.CloseOnOutsideClick = false;
-		surface->PushOverlay(std::move(dialog), std::move(options));
+		ShowModeless(*surface, Death::move(dialog));
 	}
 }
 

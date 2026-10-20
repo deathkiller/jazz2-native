@@ -137,7 +137,7 @@ namespace nCine
 			Node(K kk, const T& vv)
 				: key(kk), value(vv) {}
 			Node(K kk, T&& vv)
-				: key(kk), value(std::move(vv)) {}
+				: key(kk), value(Death::move(vv)) {}
 			template <typename... Args>
 			Node(K kk, Args &&... args)
 				: key(kk), value(std::forward<Args>(args)...) {}
@@ -247,7 +247,7 @@ namespace nCine
 	{
 		for (std::uint32_t i = 0; i < Capacity; i++) {
 			if (other._hashes[i] != NullHash) {
-				new (_nodes + i) Node(std::move(other._nodes[i]));
+				new (_nodes + i) Node(Death::move(other._nodes[i]));
 			}
 			_delta1[i] = other._delta1[i];
 			_delta2[i] = other._delta2[i];
@@ -284,9 +284,9 @@ namespace nCine
 		for (std::uint32_t i = 0; i < Capacity; i++) {
 			if (other._hashes[i] != NullHash) {
 				if (_hashes[i] != NullHash) {
-					_nodes[i] = std::move(other._nodes[i]);
+					_nodes[i] = Death::move(other._nodes[i]);
 				} else {
-					new (_nodes + i) Node(std::move(other._nodes[i]));
+					new (_nodes + i) Node(Death::move(other._nodes[i]));
 				}
 			} else if (_hashes[i] != NullHash) {
 				destructObject(_nodes + i);
@@ -411,7 +411,7 @@ namespace nCine
 					// Adding at ideal index + delta1 + (n * delta2)
 					const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 					_delta2[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
-					insertNode(newIndex, hash, key, std::move(value));
+					insertNode(newIndex, hash, key, Death::move(value));
 					return true;
 				} else {
 					// Found at ideal index + delta1
@@ -421,13 +421,13 @@ namespace nCine
 				// Adding at ideal index + delta1
 				const std::uint32_t newIndex = linearSearch(bucketIndex + 1, hash, key);
 				_delta1[bucketIndex] = calcNewDelta(bucketIndex, newIndex);
-				insertNode(newIndex, hash, key, std::move(value));
+				insertNode(newIndex, hash, key, Death::move(value));
 				return true;
 			}
 		} else {
 			// Using the ideal bucket index for the node
 			if (_hashes[bucketIndex] == NullHash) {
-				insertNode(bucketIndex, hash, key, std::move(value));
+				insertNode(bucketIndex, hash, key, Death::move(value));
 				return true;
 			} else {
 				return false;
@@ -564,8 +564,8 @@ namespace nCine
 					_delta1[bucketIndex] = 0;
 				}
 				if (bucketIndex != lastBucketIndex) {
-					_nodes[bucketIndex].key = std::move(_nodes[lastBucketIndex].key);
-					_nodes[bucketIndex].value = std::move(_nodes[lastBucketIndex].value);
+					_nodes[bucketIndex].key = Death::move(_nodes[lastBucketIndex].key);
+					_nodes[bucketIndex].value = Death::move(_nodes[lastBucketIndex].value);
 					_hashes[bucketIndex] = _hashes[lastBucketIndex];
 				}
 
@@ -748,7 +748,7 @@ namespace nCine
 
 		_size++;
 		_hashes[index] = hash;
-		new (_nodes + index) Node(key, std::move(value));
+		new (_nodes + index) Node(key, Death::move(value));
 	}
 
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>

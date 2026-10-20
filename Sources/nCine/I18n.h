@@ -4,6 +4,7 @@
 
 #include <optional>
 
+#include <Base/Format.h>
 #include <Containers/Array.h>
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
@@ -134,7 +135,7 @@ namespace nCine
 	{
 		I18n& i18n = I18n::Get();
 		StringView translated = i18n.LookupTranslation(text);
-		return format(translated ? translated.data() : text, args...);
+		return Death::format(translated ? translated.data() : text, args...);
 	}
 
 	/**
@@ -152,6 +153,6 @@ namespace nCine
 		} else {
 			fmt = (n == 1 ? textSingular : textPlural);
 		}
-		return format(fmt, args...);
+		return Death::format(fmt, args...);
 	}
 }

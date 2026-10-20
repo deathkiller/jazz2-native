@@ -136,7 +136,13 @@ namespace Jazz2::Editor
 		T* Add(Args&&... args) {
 			return static_cast<T*>(AddChild(std::make_unique<T>(std::forward<Args>(args)...)));
 		}
-		/** @brief Removes all children */
+		/**
+		 * @brief Removes all children
+		 *
+		 * They're taken out of the interface at once, but destroyed only at the start of the next frame (see
+		 * @ref UiSurface::Retire()), so a callback of a child may rebuild what the child is in and the child still
+		 * finishes what it was doing.
+		 */
 		void ClearChildren();
 		/** @brief Returns the surface the element is shown on, or `nullptr` */
 		UiSurface* GetSurface() const;
@@ -168,6 +174,16 @@ namespace Jazz2::Editor
 		 * The available size is what the parent can give, a size without limit is a very large number.
 		 */
 		virtual Vector2f Measure(const UiContext& context, Vector2f available);
+		/**
+		 * @brief Returns the size the element wants as @ref Measure() does, measured at most once a frame for the same space
+		 *
+		 * The layout of a frame asks for the size of an element again and again, once by each of its parents. While
+		 * the surface lays out the interface, the size is kept for the rest of the frame, nothing changes then.
+		 * Parents should measure their children by this.
+		 */
+		Vector2f MeasureCached(const UiContext& context, Vector2f available);
+		/** @brief Returns `false` if what @ref Measure() returns doesn't depend on the available size, it's measured once a frame then */
+		virtual bool MeasureDependsOnAvailable() const;
 		/** @brief Places the element and its children */
 		virtual void Arrange(const UiContext& context, const Rectf& bounds);
 		/** @brief Draws the element and its children */
@@ -177,6 +193,8 @@ namespace Jazz2::Editor
 
 		/** @brief Returns the element under a position that takes the pointer, or `nullptr` */
 		virtual UiElement* HitTest(Vector2f pos);
+		/** @brief Returns the area the element takes the pointer in, its bounds unless it's grabbed a little outside of them, as a window by its edges */
+		virtual Rectf GetHitBounds() const;
 		/** @brief Returns `true` if the element takes the pointer itself */
 		virtual bool AcceptsPointer() const;
 		/** @brief Called when the pointer is pressed over the element, returns `true` to keep getting it until released */
@@ -187,6 +205,15 @@ namespace Jazz2::Editor
 		virtual void OnPointerMove(const UiPointerEvent& event);
 		/** @brief Called when the pointer is released, `inside` tells whether it's still over the element */
 		virtual void OnPointerUp(const UiPointerEvent& event, bool inside);
+		/** @brief Called instead of @ref OnPointerUp() when the press was taken away, such as by a finger scrolling the list it's in */
+		virtual void OnPointerCancel();
+		/**
+		 * @brief Returns `true` if a press on the element may become scrolling of the list it's in
+		 *
+		 * A finger dragged over a button scrolls the list then, the button isn't clicked. Elements that are dragged
+		 * themselves keep the press.
+		 */
+		virtual bool YieldsToScroll() const;
 		/** @brief Called when the pointer is scrolled over the element, returns `true` if it was used */
 		virtual bool OnWheel(const UiPointerEvent& event);
 		/** @brief Called when a key is pressed while the element has the focus, returns `true` if it was used */
@@ -195,12 +222,28 @@ namespace Jazz2::Editor
 		virtual bool OnTextInput(const TextInputEvent& event);
 		/** @brief Returns `true` if the element can take the keyboard focus */
 		virtual bool IsFocusable() const;
+		/**
+		 * @brief Returns `true` if <kbd>Tab</kbd> can give the element the keyboard focus
+		 *
+		 * Buttons and other controls are reached by <kbd>Tab</kbd> too, though a click doesn't focus them. Every
+		 * element that can take the focus can, by default.
+		 */
+		virtual bool IsTabStop() const;
 		/** @brief Returns `true` if a click on the element, or inside of it, leaves the focus where it is, as the keys of a keyboard on the screen */
 		virtual bool KeepsFocus() const;
 		/** @brief Called when the element gets or loses the keyboard focus */
 		virtual void OnFocusChanged(bool focused);
 		/** @brief Returns the tooltip at a position */
 		virtual StringView GetTooltip(Vector2f pos) const;
+
+		/** @brief Starts a frame of layout, sizes measured until @ref EndLayout() are kept for it */
+		static void BeginLayout();
+		/** @brief Ends a frame of layout */
+		static void EndLayout();
+		/** @brief Returns a number of the current frame of layout, 0 outside of it */
+		static std::uint32_t GetLayoutFrame() {
+			return _layoutActive ? _layoutFrame : 0;
+		}
 
 	protected:
 		SmallVector<std::unique_ptr<UiElement>, 0> _children;
@@ -213,6 +256,17 @@ namespace Jazz2::Editor
 
 		/** @brief Returns the fixed size in pixels, or a negative value for @ref Auto */
 		Vector2f GetFixedSize(const UiContext& context) const;
+
+	private:
+		static std::uint32_t _layoutFrame;
+		static bool _layoutActive;
+
+		// The size measured last, for the frame of layout, the scale and the space it was measured for
+		std::uint32_t _measureFrame;
+		float _measureScale;
+		Vector2f _measureAvailable;
+		Vector2f _measureFixed;
+		Vector2f _measureSize;
 	};
 
 	/**
@@ -235,6 +289,15 @@ namespace Jazz2::Editor
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
 		void Arrange(const UiContext& context, const Rectf& bounds) override;
+
+	private:
+		// The space the children were measured in by Measure(), the room they took together and the frame of layout of
+		// it, Arrange() measures them in the same space if it gives the same sizes, so they aren't measured again
+		Vector2f _childAvailable;
+		Vector2f _childContent;
+		std::uint32_t _childAvailableFrame = 0;
+		// Sizes of the children along the stack, kept so they aren't allocated every frame
+		SmallVector<float, 16> _childSizes;
 	};
 
 	/** @brief How a panel is drawn */

@@ -7,6 +7,8 @@
 #include "JJ2Strings.h"
 #include "JJ2Tileset.h"
 
+#include "../../nCine/Base/Algorithms.h"
+
 #include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
@@ -110,7 +112,7 @@ namespace Jazz2::Compatibility
 			pending.push_back(NormalizeLevelToken(firstLevel));
 
 			while (!pending.empty()) {
-				String current = std::move(pending.back());
+				String current = Death::move(pending.back());
 				pending.pop_back();
 				// A token starting with ':' is an instruction to the game ("end of episode", "credits"), not a level
 				if (current.empty() || current[0] == ':' || reachable.contains(current)) {
@@ -134,6 +136,145 @@ namespace Jazz2::Compatibility
 				}
 			}
 		}
+
+		/**
+			@brief Original tile sets converted into memory for the previews of the levels, see JJ2Level::Convert()
+
+			Many levels share a tile set, and reading one takes longer than converting a level, so the ones used last
+			are kept for the levels after, as many as fit into a budget - a tile set of a few thousand tiles takes
+			megabytes. A tile set that isn't there is remembered as such.
+		*/
+		class PreviewTilesetCache
+		{
+		public:
+			explicit PreviewTilesetCache(StringView sourcePath)
+				: _sourcePath(sourcePath), _size(0), _lastUse(0)
+			{
+			}
+
+			/** @brief Returns the tile set of a name, or `nullptr` if the source directory doesn't have it */
+			std::shared_ptr<const Formats::TileSetData> Get(StringView name)
+			{
+				_lastUse++;
+				for (Entry& entry : _entries) {
+					if (entry.Name == name) {
+						entry.LastUse = _lastUse;
+						return entry.Data;
+					}
+				}
+
+				std::shared_ptr<Formats::TileSetData> data;
+				auto adjustedPath = fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, String(name + ".j2t"_s)));
+				if (fs::IsReadableFile(adjustedPath)) {
+					JJ2Tileset tileset;
+					if (tileset.Open(adjustedPath, false)) {
+						data = std::make_shared<Formats::TileSetData>();
+						tileset.Convert(*data);
+					}
+				}
+
+				// One that doesn't fit into the budget on its own isn't kept at all, it would only push out all the others
+				// and then stay behind once the level that asked for it is done (with no budget, every one of them)
+				std::size_t size = GetDataSize(data.get());
+				if (size > Budget) {
+					return data;
+				}
+
+				// The ones used longest ago make room, a level still holds those it's drawn with
+				while (!_entries.empty() && _size + size > Budget) {
+					std::size_t oldest = 0;
+					for (std::size_t i = 1; i < _entries.size(); i++) {
+						if (_entries[i].LastUse < _entries[oldest].LastUse) {
+							oldest = i;
+						}
+					}
+					_size -= GetDataSize(_entries[oldest].Data.get());
+					_entries.erase(_entries.begin() + oldest);
+				}
+				_entries.push_back({ String(name), data, _lastUse });
+				_size += size;
+				return data;
+			}
+
+		private:
+			// The memory a tile set takes, its masks and the flags of its true color tiles included
+			static std::size_t GetDataSize(const Formats::TileSetData* data)
+			{
+				return (data != nullptr ? data->Images.size() + data->TrueColor.size() + data->Masks.size() : 0);
+			}
+
+			struct Entry
+			{
+				String Name;
+				std::shared_ptr<Formats::TileSetData> Data;
+				std::uint32_t LastUse;
+			};
+
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
+			static constexpr std::size_t Budget = 0;
+#else
+			static constexpr std::size_t Budget = 64 * 1024 * 1024;
+#endif
+
+			String _sourcePath;
+			SmallVector<Entry, 0> _entries;
+			std::size_t _size;
+			std::uint32_t _lastUse;
+		};
+
+		/**
+			@brief Textures of the textured layers of JJ2+, see JJ2Level::Convert()
+
+			`Plus.j2d` of a JJ2+ installation has them as `TextureBG.<n>`, 256×256 palette indices each, `n` being the
+			value of `TEXTURE::Texture` that names it. The file is read only once a level asks for one of them, few levels
+			do, and only the textures are kept of it.
+		*/
+		class PlusTextureCache
+		{
+		public:
+			explicit PlusTextureCache(StringView sourcePath)
+				: _sourcePath(sourcePath), _loaded(false)
+			{
+			}
+
+			/** @brief Fills the pixels of a texture of a number, returns `false` if the source directory doesn't have it */
+			bool Get(std::int32_t index, std::uint8_t* pixels)
+			{
+				if (!_loaded) {
+					_loaded = true;
+					auto path = fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, "Plus.j2d"_s));
+					JJ2Data data;
+					if (fs::IsReadableFile(path) && data.Open(path, false)) {
+						for (JJ2Data::Item& item : data.Items) {
+							if (item.Filename.hasPrefix("TextureBG."_s) && item.Size == TextureBytes) {
+								StringView number = item.Filename.exceptPrefix("TextureBG."_s);
+								_textures.push_back({ stou32(number.data(), number.size()), Death::move(item.Blob) });
+							}
+						}
+					}
+				}
+				for (const Entry& entry : _textures) {
+					if (entry.Index == std::uint32_t(index)) {
+						std::memcpy(pixels, entry.Pixels.get(), TextureBytes);
+						return true;
+					}
+				}
+				return false;
+			}
+
+		private:
+			static constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+
+			struct Entry
+			{
+				std::uint32_t Index;
+				std::unique_ptr<std::uint8_t[]> Pixels;
+			};
+
+			String _sourcePath;
+			SmallVector<Entry, 0> _textures;
+			bool _loaded;
+		};
 	}
 
 	AssetConverter::Result AssetConverter::ConvertSourceAssets(StringView animsPath, StringView sourcePath, StringView targetPath,
@@ -328,6 +469,11 @@ namespace Jazz2::Compatibility
 		}
 
 		HashMap<String, bool> usedTilesets, usedMusic;
+		PreviewTilesetCache previewTilesets(sourcePath);
+		PlusTextureCache plusTextures(sourcePath);
+		auto textureLookup = [&plusTextures](std::int32_t index, std::uint8_t* pixels) {
+			return plusTextures.Get(index, pixels);
+		};
 
 		// What the filter allows through is decided up front, because it depends on the directory as a whole:
 		// which levels each episode can reach can only be answered once every level's file is known
@@ -432,7 +578,7 @@ namespace Jazz2::Compatibility
 					}
 
 					String fullPath = fs::CombinePath(episodesPath, String((episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s));
-					episode.Convert(fullPath, std::move(LevelTokenConversion), std::move(EpisodeNameConversion), std::move(EpisodePrevNext));
+					episode.Convert(fullPath, Death::move(LevelTokenConversion), Death::move(EpisodeNameConversion), Death::move(EpisodePrevNext));
 				}
 			} else if (extension == "j2l"_s) {
 				// Level
@@ -446,7 +592,7 @@ namespace Jazz2::Compatibility
 							&& (!options.SkipNonEpisodeLevels || episodeLevels.contains(token));
 						if (!allowed) {
 							if (options.SkippedLevels != nullptr) {
-								options.SkippedLevels->push_back(std::move(token));
+								options.SkippedLevels->push_back(Death::move(token));
 							}
 							continue;
 						}
@@ -487,7 +633,14 @@ namespace Jazz2::Compatibility
 						}
 
 						fs::CreateDirectories(fs::GetDirectoryName(fullPath));
-						level.Convert(fullPath, eventConverter, LevelTokenConversion);
+						if (it == knownLevels.end()) {
+							// The list of custom levels shows the levels of no episode, each with its preview
+							level.Convert(fullPath, eventConverter, LevelTokenConversion, [&previewTilesets](StringView name) {
+								return previewTilesets.Get(name);
+							}, textureLookup);
+						} else {
+							level.Convert(fullPath, eventConverter, LevelTokenConversion, {}, textureLookup);
+						}
 
 						usedTilesets.emplace(level.Tileset, true);
 						for (auto& extraTileset : level.ExtraTilesets) {
@@ -500,7 +653,7 @@ namespace Jazz2::Compatibility
 							if (music.find('.') == nullptr) {
 								music += ".j2b"_s;
 							}
-							usedMusic.emplace(std::move(music), true);
+							usedMusic.emplace(Death::move(music), true);
 						}
 						// The track a boss fight switches to is named only by the event that starts it
 						for (const String& eventMusic : level.GetEventMusic()) {

@@ -42,7 +42,7 @@ const int ScenarioTicks = 250;
 // ground speed first, which is what makes the speed-dependent launch boost measurable.
 const int J = 45;
 
-const int ScenarioCount = 465;
+const int ScenarioCount = 539;
 // Only scenarios from here on are run. Set to 0 for a full sweep; raise it to re-measure just the newest
 // ones, which turns a seven-minute run into half a minute while iterating.
 //
@@ -278,6 +278,27 @@ void LogRow(jjPLAYER@ play, string name) {
 		play.curAnim + "," + play.curFrame + "\n");
 }
 
+// What the bird set needs on top of a row, written as lines that start with '#' so that ExtractTrace.ps1, which
+// keeps only lines shaped like a row, passes them by and the CSV is unchanged. Read straight from the .asdat.
+//   #pl  - the player's idle counter (what decides the perched pose), the frame within the current animation,
+//          the facing, health, blinking and xAcc, none of which any column carries
+//   #obj - every live object the player created, because whether Fire makes a bird shoot, and what, is the
+//          question bd_fire could not answer from the player alone
+void LogBirdDetail(jjPLAYER@ play, string name) {
+	Log.write("#pl," + name + "," + Tick + "," + play.idle + "," + play.frameID + "," + play.direction + "," +
+		play.health + "," + play.blink + "," + formatFloat(play.xAcc, "", 0, 5) + "\n");
+	for (int i = 1; i < jjObjectCount; i++) {
+		jjOBJ@ o = jjObjects[i];
+		if (!o.isActive || o.creatorType != CREATOR::PLAYER || o.creatorID != uint16(play.playerID)) {
+			continue;
+		}
+		Log.write("#obj," + name + "," + Tick + "," + i + "," + o.eventID + "," +
+			formatFloat(o.xPos, "", 0, 3) + "," + formatFloat(o.yPos, "", 0, 3) + "," +
+			formatFloat(o.xSpeed, "", 0, 4) + "," + formatFloat(o.ySpeed, "", 0, 4) + "," +
+			o.animSpeed + "," + o.curAnim + "," + o.state + "," + o.counter + "," + o.direction + "\n");
+	}
+}
+
 // Poles are slow - about 140 ticks from grab to launch - so anything involving them needs a much longer
 // window than the rest, while giving every scenario that window would make a full sweep take 17 minutes
 int ScenarioTicksFor(int s) {
@@ -308,6 +329,23 @@ int ScenarioTicksFor(int s) {
 	// them. Kept identical to GetScenarioTicks() in this engine's probe.
 	if (s >= 429 && s <= 436) {
 		return 2000;
+	}
+	// The bird set reaches its cap in well under a hundred ticks and has nothing to wait for after it, so the
+	// default window is plenty - except the two that only watch a perched bird, whose idle poses take a few
+	// hundred ticks to come round. Kept identical to GetScenarioTicks() in this engine's probe.
+	if (s == 478 || s == 504) {
+		return 600;
+	}
+	if (s >= 465 && s <= 507) {
+		return ScenarioTicks;
+	}
+	// The beak charge set likewise, except the one in front that only takes the morph. Kept identical to
+	// GetScenarioTicks() in this engine's probe.
+	if (s == 508) {
+		return 100;
+	}
+	if (s >= 509 && s <= 538) {
+		return ScenarioTicks;
 	}
 	if (s == 52 || s == 53 || s >= 82) {
 		return 800;
@@ -945,6 +983,116 @@ string ScenarioName(int i) {
 		// are 64 shots and 22.
 		case 463: return "sp_lori_fire_tap";
 		case 464: return "sp_lori_kick_tap";
+		// The bird morph, which flies on both axes with no gravity. Reported from play in the engine as too fast
+		// and quick to get there, and nothing had ever measured the original's: only its clamp of both speeds to
+		// 4 px/tick was known, not how it steers up to that or what it does with nothing held. SetupCharacter()
+		// morphs the player with morphTo(CHAR::BIRD), so each starts as a bird hovering at the resting spot.
+		// _idle comes first on purpose - it is the scenario the morph lands in front of, and it accelerates
+		// nothing, so a morph that contaminates what follows it has nothing here to contaminate.
+		case 465: return "bd_idle";
+		case 466: return "bd_right";		// acceleration and cap
+		case 467: return "bd_right_rel";	// let go at the cap: is the slowdown linear or a fraction a tick?
+		case 468: return "bd_right_rev";	// reverse at the cap
+		case 469: return "bd_right_run";	// does Run change either?
+		case 470: return "bd_up";
+		case 471: return "bd_up_rel";		// up, then nothing in mid-air: the vertical slowdown, and any sinking
+		case 472: return "bd_down";			// from the floor, so a control: Down with nowhere to go
+		case 473: return "bd_up_down";		// up, then down: the vertical reversal and the downward cap
+		case 474: return "bd_diag";			// both axes at once: clamped per axis, or normalised?
+		case 475: return "bd_jump";
+		case 476: return "bd_jump_tap";		// tapped, in case it is a flap that needs fresh presses
+		case 477: return "bd_fire";
+		// The second round. _idle2 is the perched bird read at its real rate - _idle runs straight after the
+		// morph and its poses come out more than twice as fast. _clamp writes 10 px/tick onto both speeds in
+		// mid-air, which is the only way to see the flight cap on the vertical axis: nothing the bird does by
+		// itself gets near 4 going down. _rev_tap lets go for two ticks and presses again, which tells an eased
+		// direction that winds back down while released from one that starts over.
+		case 478: return "bd_idle2";
+		case 479: return "bd_clamp";
+		case 480: return "bd_rev_tap";
+		case 481: return "bd_left";
+		// What Fire does. bd_fire held it on the floor and nothing happened - no shot, no ammo spent, no pose -
+		// so these try it with each direction, tapped, from a perch, and against the level's own turtle, since
+		// a beak attack may want something to aim at
+		case 482: return "bd_fire_r";
+		case 483: return "bd_fire_u";
+		case 484: return "bd_fire_d";
+		case 485: return "bd_fire_tap";
+		case 486: return "bd_perch_fire";
+		case 487: return "bd_fire_turtle";
+		// Last of the bird's own, because a hurt may well take the bird away and morph whatever follows
+		case 488: return "bd_hurt";
+		// The second bird, CHAR::BIRD2 - the last stop of the JJMORPH cycle. The same flight, then the same
+		// questions about its attack. _idle again comes first to take the morph.
+		case 489: return "b2_idle";
+		case 490: return "b2_right";
+		case 491: return "b2_right_rel";
+		case 492: return "b2_right_rev";
+		case 493: return "b2_up";
+		case 494: return "b2_up_rel";
+		case 495: return "b2_up_down";
+		case 496: return "b2_diag";
+		case 497: return "b2_jump";
+		case 498: return "b2_fire";
+		case 499: return "b2_fire_r";
+		case 500: return "b2_fire_u";
+		case 501: return "b2_fire_d";
+		case 502: return "b2_fire_tap";
+		case 503: return "b2_perch_fire";
+		case 504: return "b2_idle2";
+		case 505: return "b2_clamp";
+		case 506: return "b2_fire_turtle";
+		case 507: return "b2_hurt";
+		// The first bird's beak charge, which bd_fire_r only ever met at the cap on the floor. Reported from play as
+		// needing some minimum speed to start and as impossible to slow down once started. _idle only takes the
+		// morph - it follows b2_hurt in a sweep - so that nothing measured here is the scenario after one.
+		case 508: return "bd_ch_idle";
+		// Fire and a direction together from rest, and Fire held first: a speed threshold shows as the tick the pose
+		// changes on, and a charge that needs Fire to go down at speed shows as one that never comes
+		case 509: return "bd_ch_rest";
+		case 510: return "bd_ch_fire_first";
+		// The direction first, then Fire pressed at a known speed: 0.56, 1.06, 1.56, 2.06, 2.56, 3.06, 3.56 and 4.0
+		// px/tick. The number is the tick of the press
+		case 511: return "bd_ch_f06";
+		case 512: return "bd_ch_f10";
+		case 513: return "bd_ch_f14";
+		case 514: return "bd_ch_f18";
+		case 515: return "bd_ch_f22";
+		case 516: return "bd_ch_f26";
+		case 517: return "bd_ch_f30";
+		case 518: return "bd_ch_f34";
+		// In mid-air: from rest, and at the cap while still rising off the climb
+		case 519: return "bd_ch_air";
+		case 520: return "bd_ch_air_f";
+		// Fire with speed but no direction - a rule on the speed alone would charge here
+		case 521: return "bd_ch_coast";
+		// Leftwards, in case a threshold is tested on the signed speed
+		case 522: return "bd_ch_left";
+		// Once charging, at the cap from tick 40: the direction let go, reversed, Fire let go, Up, Down, the direction
+		// let go and then Fire, and Fire let go and pressed again two ticks later
+		case 523: return "bd_ch_rel";
+		case 524: return "bd_ch_rev";
+		case 525: return "bd_ch_frel";
+		case 526: return "bd_ch_up";
+		case 527: return "bd_ch_down";
+		case 528: return "bd_ch_retap";
+		case 529: return "bd_ch_rel_frel";
+		// Into the wall at the end of the upper floor, in mid-air, held there for the rest of the window
+		case 530: return "bd_ch_wall";
+		// The threshold's edge, from a coast: the brake takes 1/16 a tick off 4.0, so Fire pressed at 70, 71 and 72 is
+		// tested against 2.0625, exactly 2.0 and 1.9375 after that tick's brake (2.125, 2.0625 and 2.0 before it)
+		case 531: return "bd_ch_c70";
+		case 532: return "bd_ch_c71";
+		case 533: return "bd_ch_c72";
+		// Jump during a charge, Up already held when it starts, the threshold leftwards from rest, and the direction
+		// reversed during a charge that Fire then ends - when does the bird turn round?
+		case 534: return "bd_ch_jump";
+		case 535: return "bd_ch_up_first";
+		case 536: return "bd_ch_left_rest";
+		case 537: return "bd_ch_rev_frel";
+		// Fire pressed while turning round: facing left from tick 40 but still flying right at 3.97 px/tick, so a charge
+		// that takes its direction from the speed and one that takes it from the facing go opposite ways
+		case 538: return "bd_ch_turn";
 		case 347: return "an_dj_len";
 		case 348: return "an_side_cancel";
 		case 349: return "an_slide_stop";
@@ -1207,6 +1355,12 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		// The three sp_lori_turn* scenarios, which are about her kick and so are hers
 		(s >= 457 && s <= 460) || (s >= 462 && s <= 464)) {
 		wanted = CHAR::LORI;
+	} else if ((s >= 465 && s <= 488) || (s >= 508 && s <= 538)) {
+		// The bird set. objx carries play.charCurr on every row of it, so a scenario that never really morphed
+		// says so instead of measuring a rabbit walking.
+		wanted = CHAR::BIRD;
+	} else if (s >= 489 && s <= 507) {
+		wanted = CHAR::BIRD2;
 	}
 	if (play.charCurr != wanted) {
 		play.morphTo(wanted, false);
@@ -1415,7 +1569,8 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		play.yPos = 26 * 32;
 		play.ammo[weapon] = 50;
 		play.currWeapon = weapon;
-	} else if (s == 385 || s == 386 || s == 460 || s == 461 || (s >= 462 && s <= 464)) {
+	} else if (s == 385 || s == 386 || s == 460 || s == 461 || (s >= 462 && s <= 464) || s == 477 ||
+		(s >= 482 && s <= 487) || (s >= 498 && s <= 503) || s == 506) {
 		// Left where they start - the point is the *standstill*, and the sliding one needs only enough floor
 		// to reach the dash cap and skid, which the default start has. A finite weapon so the ammo shows a shot
 		play.ammo[WEAPON::SEEKER] = 50;
@@ -1765,6 +1920,26 @@ void SetupProps(jjPLAYER@ play, int s) {
 				play.xSpeed = 0;
 				play.ySpeed = 0;
 			}
+			break;
+		// A bird three tiles short of the same turtle, level with it, so a beak attack has something in front of
+		// it to go for. Placed at the run start for the same reason as the stomps: the turtle is the level's own
+		// and only becomes an object once the player is near it.
+		case 487: case 506:
+			if (TurtleX > 0) {
+				play.xPos = TurtleX - 96;
+				play.yPos = TurtleY;
+				play.xSpeed = 0;
+				play.ySpeed = 0;
+			}
+			break;
+		// A bird 400 px short of the wall at the right end of the upper floor (face at tile 234) and 50 px above that
+		// floor, so a charge at the cap meets the wall in mid-air about 75 ticks after it starts. At the run start
+		// because the settle would put it down on the floor first.
+		case 530:
+			play.xPos = 234 * 32 - 400;
+			play.yPos = 26 * 32;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
 			break;
 		case 78: case 79:
 			// The level's own vine spans tiles (241,50) to (254,50); come in just above it so the player grabs on
@@ -2175,6 +2350,92 @@ void ApplyInput(jjPLAYER@ play, int s, int t) {
 		case 462: fire = (t >= 30); break;
 		case 463: fire = (t >= 30 && ((t - 30) % 12) < 2); break;
 		case 464: right = (t < 2); down = (t >= 20); jump = (t >= 40); fire = (t >= 30 && ((t - 30) % 12) < 2); break;
+		// The bird set - see ScenarioName(). The release and the reversal come at 100, well after the cap, so the
+		// slowdown is read from a known speed.
+		case 465: break;
+		case 466: right = true; break;
+		case 467: right = (t < 100); break;
+		case 468: right = (t < 100); left = (t >= 100); break;
+		case 469: right = true; run = true; break;
+		case 470: up = true; break;
+		case 471: up = (t < 40); break;
+		case 472: down = true; break;
+		case 473: up = (t < 50); down = (t >= 50); break;
+		case 474: right = true; up = true; break;
+		case 475: jump = (t >= 20); break;
+		case 476: jump = (t >= 20 && ((t - 20) % 12) < 2); break;
+		case 477: fire = (t >= 20); break;
+		case 478: case 489: case 504: break;
+		// Written straight onto the speeds, before this tick's movement, so the next row shows whatever the
+		// flight did with them
+		case 479: case 505:
+			up = (t < 60);
+			if (t == 60) {
+				play.xSpeed = 10;
+				play.ySpeed = 10;
+			}
+			break;
+		case 480: right = (t < 100 || t >= 102); break;
+		case 481: left = true; break;
+		case 482: right = true; fire = (t >= 40); break;
+		case 483: up = true; fire = (t >= 40); break;
+		case 484: up = (t < 40); down = (t >= 60); fire = (t >= 60); break;
+		case 485: up = (t < 120); fire = (t >= 40 && ((t - 40) % 12) < 2); break;
+		// Nothing until the perch is well established (it comes 36 ticks after the bird is still), then Fire
+		case 486: case 503: fire = (t >= 100); break;
+		// Two ticks of Right to face the turtle - the reset does not restore the facing
+		case 487: case 506: right = (t < 2); fire = (t >= 30); break;
+		case 488: case 507:
+			up = (t < 40);
+			if (t == 60) {
+				play.hurt(1, true);
+			}
+			break;
+		case 490: right = true; break;
+		case 491: right = (t < 100); break;
+		case 492: right = (t < 100); left = (t >= 100); break;
+		case 493: up = true; break;
+		case 494: up = (t < 40); break;
+		case 495: up = (t < 50); down = (t >= 50); break;
+		case 496: right = true; up = true; break;
+		case 497: jump = (t >= 20); break;
+		case 498: fire = (t >= 20); break;
+		case 499: right = true; fire = (t >= 40); break;
+		case 500: up = true; fire = (t >= 40); break;
+		case 501: up = (t < 40); down = (t >= 60); fire = (t >= 60); break;
+		case 502: up = (t < 120); fire = (t >= 40 && ((t - 40) % 12) < 2); break;
+		// The beak charge set - see ScenarioName()
+		case 508: break;
+		case 509: right = true; fire = true; break;
+		case 510: fire = true; right = (t >= 30); break;
+		case 511: right = true; fire = (t >= 6); break;
+		case 512: right = true; fire = (t >= 10); break;
+		case 513: right = true; fire = (t >= 14); break;
+		case 514: right = true; fire = (t >= 18); break;
+		case 515: right = true; fire = (t >= 22); break;
+		case 516: right = true; fire = (t >= 26); break;
+		case 517: right = true; fire = (t >= 30); break;
+		case 518: right = true; fire = (t >= 34); break;
+		case 519: up = (t < 30); right = (t >= 30); fire = (t >= 30); break;
+		case 520: up = (t < 30); right = (t >= 30); fire = (t >= 70); break;
+		case 521: right = (t < 40); fire = (t >= 42); break;
+		case 522: left = true; fire = (t >= 40); break;
+		case 523: right = (t < 70); fire = (t >= 40); break;
+		case 524: right = (t < 70); left = (t >= 70); fire = (t >= 40); break;
+		case 525: right = true; fire = (t >= 40 && t < 70); break;
+		case 526: right = true; fire = (t >= 40); up = (t >= 70 && t < 100); break;
+		case 527: right = true; fire = (t >= 40); down = (t >= 70 && t < 100); break;
+		case 528: right = true; fire = (t >= 40 && t < 70) || (t >= 72); break;
+		case 529: right = (t < 70); fire = (t >= 40 && t < 130); break;
+		case 530: right = true; fire = (t >= 40); break;
+		case 531: right = (t < 40); fire = (t >= 70); break;
+		case 532: right = (t < 40); fire = (t >= 71); break;
+		case 533: right = (t < 40); fire = (t >= 72); break;
+		case 534: right = true; fire = (t >= 40); jump = (t >= 70 && t < 100); break;
+		case 535: up = true; right = true; fire = true; break;
+		case 536: left = true; fire = true; break;
+		case 537: right = (t < 70); left = (t >= 70); fire = (t >= 40 && t < 100); break;
+		case 538: right = (t < 40); left = (t >= 40); fire = (t >= 44); break;
 		case 347: jump = (t >= 20 && t < 50) || (t >= 62 && t < 66); break;
 		case 348: right = true; run = true; down = (t >= 80 && t < 84); jump = (t >= 80 && t < 84); break;
 		case 349: right = (t < 90); run = (t < 90); break;
@@ -2594,6 +2855,24 @@ void onPlayerInput(jjPLAYER@ play) {
 				ObjY = o.state;
 			}
 		}
+	} else if (Scenario == 487 || Scenario == 506) {
+		// The turtle a beak attack is aimed at: where it is and how much energy it has left. -2 rather than -1
+		// when it is not there, so the pushable fallback below does not claim the columns for something else.
+		ObjX = ObjY = -2;
+		for (int i = 1; i < jjObjectCount; i++) {
+			jjOBJ@ o = jjObjects[i];
+			if (o.isActive && o.eventID == EV_TURTLETUBE) {
+				ObjX = o.xPos;
+				ObjY = o.energy;
+				break;
+			}
+		}
+	} else if (Scenario >= 465 && Scenario <= 538) {
+		// The bird set: the character, which is the proof the morph took - a trace of a rabbit walking right
+		// would otherwise read as a bird that flies at the walk cap - and the ammo, which is the only thing that
+		// says whether bd_fire shot anything. Ahead of the open-ended weapon branch below, which would claim it.
+		ObjX = play.charCurr;
+		ObjY = play.ammo[play.currWeapon];
 	} else if ((Scenario >= 133 && Scenario <= 143) || (Scenario >= 146 && !(Scenario >= 378 && Scenario <= 381))) {
 		// Same again for the per-weapon sweep, reporting whichever weapon that scenario selected.
 		//
@@ -2630,6 +2909,9 @@ void onPlayerInput(jjPLAYER@ play) {
 	}
 
 	LogRow(play, ScenarioName(Scenario));
+	if (Scenario >= 465 && Scenario <= 538) {
+		LogBirdDetail(play, ScenarioName(Scenario));
+	}
 
 	Tick++;
 	if (Tick >= ScenarioTicksFor(Scenario)) {

@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStl.h>
 #include <Containers/StringUtils.h>
@@ -1318,6 +1319,10 @@ namespace
 
 		ControlScheme::Reset();
 
+		// Version of a config file written by an older release, so a copy of it can be kept before
+		// the next Save() rewrites it in the current format
+		DEATH_UNUSED std::uint8_t upgradedFromVersion = 0;
+
 		// Try to read config file
 		if (!resetConfig) {
 			auto s = fs::Open(_configPath, FileAccess::Read);
@@ -1327,6 +1332,10 @@ namespace
 				std::uint8_t version = s->ReadValue<std::uint8_t>();
 
 				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentFileType::Config && version <= FileVersion) {
+					if (version < FileVersion) {
+						upgradedFromVersion = version;
+					}
+
 					if (version == 1) {
 						// Version 1 included compressedSize and decompressedSize, it's not needed anymore
 						/*std::int32_t compressedSize =*/ s->ReadValue<std::int32_t>();
@@ -1537,7 +1546,7 @@ namespace
 							state.Flags = EpisodeContinuationFlags::IsCompleted;
 						}
 
-						_episodeEnd.emplace(std::move(episodeName), std::move(state));
+						_episodeEnd.emplace(Death::move(episodeName), Death::move(state));
 					}
 
 					// Episode Continue
@@ -1556,7 +1565,7 @@ namespace
 							uc.Read(stateWithLevel.LevelName.data(), nameLength);
 
 							ReadEpisodeContinuationState(uc, stateWithLevel.State);
-							_episodeContinue.emplace(std::move(episodeName), std::move(stateWithLevel));
+							_episodeContinue.emplace(Death::move(episodeName), Death::move(stateWithLevel));
 						} else {
 							// Struct has different size, so it's better to skip it
 							nameLength = uc.ReadValue<std::uint8_t>();
@@ -1600,7 +1609,61 @@ namespace
 				resetConfig = true;
 			}
 		}
-		
+
+#if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64)
+		// Done once the stream above is closed. Not overwritten, so the copy stays the one written by the last
+		// release of that version. Skipped on a memory card (or the EEPROM), which has room for a single file.
+		if (upgradedFromVersion != 0) {
+			StringView configPath = _configPath;
+			bool isMemoryCard = configPath.hasPrefix("mc0:"_s) || configPath.hasPrefix("mc1:"_s) ||
+				configPath.hasPrefix("mca:"_s) || configPath.hasPrefix("mcb:"_s);
+			if (!isMemoryCard) {
+				String backupPath = format("{}.v{}.bak", configPath, std::int32_t(upgradedFromVersion));
+				if (fs::Copy(configPath, backupPath, false)) {
+					LOGI("Config file upgraded from version {}, backup saved to \"{}\"", std::int32_t(upgradedFromVersion), backupPath);
+				}
+
+				// Only the two most recent backups are kept, ordered by the version that wrote them
+				constexpr std::size_t MaxConfigBackups = 2;
+				String backupPrefix = fs::GetFileName(configPath) + ".v"_s;
+				StringView backupDir = fs::GetDirectoryName(backupPath);
+				SmallVector<std::pair<std::int32_t, String>, 4> backups;
+				for (auto item : fs::Directory(backupDir.empty() ? "."_s : backupDir, fs::EnumerationOptions::SkipDirectories)) {
+					StringView fileName = fs::GetFileName(item);
+					if (fileName.size() <= backupPrefix.size() + ".bak"_s.size() ||
+						!fileName.hasPrefix(backupPrefix) || !fileName.hasSuffix(".bak"_s)) {
+						continue;
+					}
+					StringView number = fileName.exceptPrefix(backupPrefix).exceptSuffix(".bak"_s);
+					if (number.size() > 3) {
+						continue;
+					}
+					std::int32_t backupVersion = 0;
+					for (char c : number) {
+						if (c < '0' || c > '9') {
+							backupVersion = -1;
+							break;
+						}
+						backupVersion = backupVersion * 10 + (c - '0');
+					}
+					if (backupVersion > 0) {
+						backups.emplace_back(backupVersion, String(item));
+					}
+				}
+				if (backups.size() > MaxConfigBackups) {
+					std::sort(backups.begin(), backups.end(), [](const auto& a, const auto& b) {
+						return a.first > b.first;
+					});
+					for (std::size_t i = MaxConfigBackups; i < backups.size(); i++) {
+						if (fs::RemoveFile(backups[i].second)) {
+							LOGI("Removed old config backup \"{}\"", backups[i].second);
+						}
+					}
+				}
+			}
+		}
+#endif
+
 		if (resetConfig) {
 			// Config file doesn't exist or reset is requested
 			FirstRun = true;

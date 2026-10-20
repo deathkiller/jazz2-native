@@ -16,7 +16,7 @@ namespace Jazz2::Editor
 	}
 
 	TouchGestures::TouchGestures()
-		: _mode(Mode::None), _time(0.0f), _slop(Slop), _maxFingers(0), _maxMove(0.0f), _lastSpread(0.0f)
+		: _mode(Mode::None), _time(0.0f), _slop(Slop), _maxFingers(0), _maxMove(0.0f), _lastSpread(0.0f), _pointerId(-1)
 	{
 	}
 
@@ -49,13 +49,15 @@ namespace Jazz2::Editor
 		}
 		Vector2f lastPosition = (!_fingers.empty() ? _fingers[0].Position : Vector2f());
 		std::size_t count = next.size();
-		_fingers = std::move(next);
+		_fingers = Death::move(next);
 
 		switch (_mode) {
 			case Mode::None: {
 				if (count == 1) {
 					if (IsOverInterface && IsOverInterface(_fingers[0].Position)) {
 						Begin(Mode::Interface);
+						_pointerId = _fingers[0].Id;
+						_pointerPosition = _fingers[0].Position;
 						if (PointerDown) {
 							PointerDown(_fingers[0].Position);
 						}
@@ -103,13 +105,25 @@ namespace Jazz2::Editor
 				break;
 			}
 			case Mode::Interface: {
-				if (count == 0) {
-					if (PointerUp) {
-						PointerUp(lastPosition);
+				// Only the finger that pressed is the pointer, another one that comes doesn't move it, and it doesn't take
+				// over when the first one is lifted, the pointer would jump there
+				const Finger* pointer = nullptr;
+				for (const Finger& finger : _fingers) {
+					if (finger.Id == _pointerId) {
+						pointer = &finger;
+						break;
 					}
-					Begin(Mode::None);
-				} else if (PointerMove) {
-					PointerMove(_fingers[0].Position);
+				}
+				if (pointer == nullptr) {
+					if (PointerUp) {
+						PointerUp(_pointerPosition);
+					}
+					Begin(count == 0 ? Mode::None : Mode::Ignored);
+				} else if (pointer->Position != _pointerPosition) {
+					_pointerPosition = pointer->Position;
+					if (PointerMove) {
+						PointerMove(_pointerPosition);
+					}
 				}
 				break;
 			}
@@ -158,9 +172,20 @@ namespace Jazz2::Editor
 		_time += timeMult;
 		if (_mode == Mode::Pending && _time >= LongPressFrames && !_fingers.empty()) {
 			Vector2f position = _fingers[0].Position;
+			std::int32_t fingerId = _fingers[0].Id;
 			Begin(Mode::Ignored);
 			if (LongPress) {
 				LongPress(position);
+			}
+			// What it opened, such as a menu around the finger, is pressed by the same finger, which can slide to an item
+			// and let go there
+			if (_mode == Mode::Ignored && IsOverInterface && IsOverInterface(position)) {
+				Begin(Mode::Interface);
+				_pointerId = fingerId;
+				_pointerPosition = position;
+				if (PointerDown) {
+					PointerDown(position);
+				}
 			}
 		}
 	}

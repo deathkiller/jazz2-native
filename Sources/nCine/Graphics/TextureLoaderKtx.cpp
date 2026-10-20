@@ -71,7 +71,7 @@ namespace nCine
 	}; // "«KTX 11»\r\n\x1A\n"};
 
 	TextureLoaderKtx::TextureLoaderKtx(std::unique_ptr<Stream> fileHandle)
-		: ITextureLoader(std::move(fileHandle))
+		: ITextureLoader(Death::move(fileHandle))
 	{
 		KtxHeader header;
 

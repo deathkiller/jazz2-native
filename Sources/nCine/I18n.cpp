@@ -644,7 +644,7 @@ namespace nCine
 		String langId = Backends::AndroidJniWrap_Activity::getPreferredLanguage();
 		if (!langId.empty()) {
 			StringUtils::lowercaseInPlace(langId);
-			arrayAppend(preferred, std::move(langId));
+			arrayAppend(preferred, Death::move(langId));
 		}
 #elif defined(DEATH_TARGET_APPLE)
 		CFTypeRef preferences = CFPreferencesCopyAppValue(CFSTR("AppleLanguages"), kCFPreferencesCurrentApplication);
@@ -660,7 +660,7 @@ namespace nCine
 				}
 				String langId = String(buffer);
 				StringUtils::lowercaseInPlace(langId);
-				arrayAppend(preferred, std::move(langId));
+				arrayAppend(preferred, Death::move(langId));
 			}
 		}
 #elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX)
@@ -684,7 +684,7 @@ namespace nCine
 		if (::strcasecmp(langId.data(), "C") != 0) {
 			StringUtils::replaceAllInPlace(langId, '_', '-');
 			StringUtils::lowercaseInPlace(langId);
-			arrayAppend(preferred, std::move(langId));
+			arrayAppend(preferred, Death::move(langId));
 		}
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Get list of all preferred UI languages
@@ -697,7 +697,7 @@ namespace nCine
 				for (ULONG i = 0; i < numberOfLanguages; i++) {
 					String langId = Utf8::FromUtf16(buffer);
 					StringUtils::lowercaseInPlace(langId);
-					arrayAppend(preferred, std::move(langId));
+					arrayAppend(preferred, Death::move(langId));
 
 					while (*buffer != L'\0') {
 						buffer++;

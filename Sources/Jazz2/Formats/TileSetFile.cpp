@@ -34,6 +34,14 @@ namespace Jazz2::Formats
 
 	bool TileSetFile::ReadHeader(Stream& s, TileSetHeader& header)
 	{
+		// A header cut short would read as zeroes, which can make a valid-looking header of nothing
+		constexpr std::int64_t HeaderSize = 8 + 2 + 1 + 1 + 1 + 4 + 4 + 2 + 4;
+		const std::int64_t start = s.GetPosition();
+		const std::int64_t size = s.GetSize();
+		if (start >= 0 && size >= 0 && size - start < HeaderSize) {
+			return false;
+		}
+
 		std::uint64_t signature = s.ReadValueAsLE<std::uint64_t>();
 		std::uint16_t signature2 = s.ReadValueAsLE<std::uint16_t>();
 		std::uint8_t version = s.ReadValue<std::uint8_t>();
@@ -47,7 +55,33 @@ namespace Jazz2::Formats
 		header.Height = s.ReadValueAsLE<std::uint32_t>();
 		header.TileCount = s.ReadValueAsLE<std::uint16_t>();
 		header.BodySize = s.ReadValueAsLE<std::int32_t>();
-		return (header.BodySize >= 0);
+
+		const std::int64_t position = s.GetPosition();
+		return Validate(header, size >= 0 && position >= 0 ? size - position : -1);
+	}
+
+	bool TileSetFile::Validate(const TileSetHeader& header, std::int64_t remainingBytes)
+	{
+		// The image content is decoded into buffers of the declared size, and the atlas is cut from it by whole tiles
+		if (header.ChannelCount != 1 && header.ChannelCount != 4) {
+			return false;
+		}
+		if (header.Width < std::uint32_t(TileSize) || header.Width > MaxImageWidth || (header.Width % TileSize) != 0 ||
+			header.Height < std::uint32_t(TileSize) || (header.Height % TileSize) != 0) {
+			return false;
+		}
+		// At least a tile (no writer makes a tile set of none), a cell for each, and at most a partly filled row more
+		// than the count can hold
+		const std::uint64_t columns = header.Width / TileSize;
+		const std::uint64_t cells = columns * (header.Height / TileSize);
+		if (header.TileCount == 0 || cells < header.TileCount || cells > std::uint64_t(UINT16_MAX) + 1 + columns) {
+			return false;
+		}
+		// The deflated block always holds at least the palette
+		if (header.BodySize <= 0 || (remainingBytes >= 0 && header.BodySize > remainingBytes)) {
+			return false;
+		}
+		return true;
 	}
 
 	std::int32_t TileSetFile::GetBestColumnCount(std::int32_t tileCount)
@@ -97,27 +131,56 @@ namespace Jazz2::Formats
 		}
 #endif
 
+		// The whole image is decoded at once, so a few bytes must not claim a huge one: an operation of the image content
+		// gives 64 pixels at most, and a block of LZ4 (one for a row of tiles) takes 5 bytes at least
+		const std::int64_t size = s.GetSize();
+		const std::int64_t position = s.GetPosition();
+		if (size >= 0 && position >= 0) {
+			const std::uint64_t imageBytesLeft = std::uint64_t(size - position - header.BodySize);
+			const std::uint64_t imageBytesNeeded = ((header.Flags & ImageLz4) != 0
+				? std::uint64_t(header.Height / TileSize) * 5
+				: (std::uint64_t(header.Width) * header.Height + 63) / 64);
+			if (imageBytesLeft < imageBytesNeeded) {
+				return false;
+			}
+		}
+
 		const std::int32_t tileCount = header.TileCount;
 		const std::int32_t columns = std::int32_t(header.Width / TileSize);
 		data.Resize(tileCount);
 		data.Columns = columns;
 
 		{
+			// Every part of the block is checked to come whole, a damaged one would read as zeroes otherwise
 			DeflateStream uc(s, header.BodySize);
+			std::uint8_t paletteBytes[256 * 4];
+			if (uc.Read(paletteBytes, sizeof(paletteBytes)) != std::int64_t(sizeof(paletteBytes))) {
+				return false;
+			}
 			for (std::int32_t i = 0; i < 256; i++) {
-				data.Palette[i] = uc.ReadValueAsLE<std::uint32_t>();
+				data.Palette[i] = std::uint32_t(paletteBytes[i * 4]) | (std::uint32_t(paletteBytes[i * 4 + 1]) << 8) |
+					(std::uint32_t(paletteBytes[i * 4 + 2]) << 16) | (std::uint32_t(paletteBytes[i * 4 + 3]) << 24);
 			}
 
 			SmallVector<std::uint8_t, 0> is32bit;
 			is32bit.resize((tileCount + 7) / 8);
-			uc.Read(is32bit.data(), std::int64_t(is32bit.size()));
+			if (uc.Read(is32bit.data(), std::int64_t(is32bit.size())) != std::int64_t(is32bit.size())) {
+				return false;
+			}
 			for (std::int32_t i = 0; i < tileCount; i++) {
 				data.TrueColor[i] = ((is32bit[i / 8] >> (i % 8)) & 0x01);
 			}
 
-			std::uint32_t maskSize = uc.ReadValueAsLE<std::uint32_t>();
+			std::uint8_t maskSizeBytes[4];
+			if (uc.Read(maskSizeBytes, sizeof(maskSizeBytes)) != std::int64_t(sizeof(maskSizeBytes))) {
+				return false;
+			}
+			std::uint32_t maskSize = std::uint32_t(maskSizeBytes[0]) | (std::uint32_t(maskSizeBytes[1]) << 8) |
+				(std::uint32_t(maskSizeBytes[2]) << 16) | (std::uint32_t(maskSizeBytes[3]) << 24);
 			std::uint32_t maskBytes = std::min(maskSize, std::uint32_t(data.Masks.size()));
-			uc.Read(data.Masks.data(), maskBytes);
+			if (uc.Read(data.Masks.data(), maskBytes) != std::int64_t(maskBytes)) {
+				return false;
+			}
 
 			if (!uc.IsValid()) {
 				return false;
@@ -175,14 +238,19 @@ namespace Jazz2::Formats
 		return true;
 	}
 
-	bool TileSetFile::Write(Stream& so, const TileSetData& data, bool lz4)
+	bool TileSetFile::Write(Stream& target, const TileSetData& data, bool lz4)
 	{
 		const std::int32_t tileCount = data.TileCount;
 		if (tileCount <= 0 || tileCount > UINT16_MAX) {
 			return false;
 		}
 
-		const std::int32_t columns = (data.Columns > 0 ? data.Columns : GetBestColumnCount(tileCount));
+		// Put together in memory and written to the target at once, so a failed write (such as on a full disk) is noticed
+		MemoryStream so(1024 * 1024);
+
+		// No reader takes a wider image (see Validate())
+		const std::int32_t columns = std::min<std::int32_t>(data.Columns > 0 ? data.Columns : GetBestColumnCount(tileCount),
+			std::int32_t(MaxImageWidth / TileSize));
 		const std::int32_t width = columns * TileSize;
 		const std::int32_t height = ((tileCount - 1) / columns + 1) * TileSize;
 
@@ -280,10 +348,13 @@ namespace Jazz2::Formats
 		if (lz4) {
 			static_assert(Compatibility::JJ2Anims::TilesetLz4BandRows == TileSize, "A band has to be one row of tiles");
 			Compatibility::JJ2Anims::WriteImageContentLz4(so, pixels.get(), width, height, channelCount, Compatibility::JJ2Anims::TilesetLz4BandRows);
-			return so.IsValid();
-		}
+		} else
 #endif
-		Compatibility::JJ2Anims::WriteImageContent(so, pixels.get(), width, height, channelCount);
-		return so.IsValid();
+		{
+			Compatibility::JJ2Anims::WriteImageContent(so, pixels.get(), width, height, channelCount);
+		}
+
+		const std::int64_t size = so.GetSize();
+		return (target.Write(so.GetBuffer(), size) == size && target.Flush() && target.IsValid());
 	}
 }

@@ -2,9 +2,13 @@
 
 #if defined(WITH_EDITOR)
 
+#include "RuntimeSync.h"
+#include "../Common/ToolMath.h"
+#include "../UI/UiPainter.h"
 #include "../../Rendering/PolylineRenderer.h"
 #include "../../Tiles/TileMap.h"
 #include "../../Tiles/TileSet.h"
+#include "../../../nCine/Base/TimeStamp.h"
 
 #include <algorithm>
 #include <cstring>
@@ -16,15 +20,25 @@ namespace Jazz2::Editor
 {
 	namespace
 	{
-		// Most chunks kept, those drawn the longest time ago go first, fewer where memory is short. Most chunks made in
-		// one frame, the others follow in the next frames, so moving the view doesn't stall.
+		// Most memory the chunks take, those drawn the longest time ago go first, less where memory is short; a chunk
+		// is 512 KB close up and 8 KB from far away. Chunks are made for some time of a frame, at least one, the others
+		// follow in the next frames, so moving the view doesn't stall; the chunks are small from far away, a few hundred
+		// of them are in view, so many are made in that time then.
 #if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
-		constexpr std::size_t MaxChunks = 32;
+		constexpr std::size_t MaxBytes = 4 * 1024 * 1024;
 		constexpr std::int32_t MaxBuildsPerFrame = 2;
+		constexpr float MaxBuildMilliseconds = 2.0f;
 #else
-		constexpr std::size_t MaxChunks = 192;
-		constexpr std::int32_t MaxBuildsPerFrame = 6;
+#	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_WINDOWS_RT)
+		constexpr std::size_t MaxBytes = 8 * 1024 * 1024;
+#	else
+		constexpr std::size_t MaxBytes = 32 * 1024 * 1024;
+#	endif
+		constexpr std::int32_t MaxBuildsPerFrame = 128;
+		constexpr float MaxBuildMilliseconds = 4.0f;
 #endif
+		// Pixels a tile takes on the screen at least for the outline to be drawn, it'd only hide the fill below that
+		constexpr float MinOutlineCellPixels = 8.0f;
 		// How solid parts look, as luminance and opacity, and their outline
 		constexpr std::uint8_t InsideLuminance = 0;
 		constexpr std::uint8_t InsideOpacity = 120;
@@ -34,10 +48,8 @@ namespace Jazz2::Editor
 		// Floats of vertices of the outlines drawn in a frame
 		constexpr std::int32_t MaxOutlineFloats = 1 << 20;
 
-		std::int32_t FloorDiv(std::int32_t value, std::int32_t divisor)
-		{
-			return (value >= 0 ? value / divisor : -((-value + divisor - 1) / divisor));
-		}
+		using ToolMath::FloorDivide;
+		using ToolMath::PositiveModulo;
 
 		// Edges of a cell between the middles of four pixels, which the outline crosses
 		enum CellEdge : std::uint8_t { EdgeTop, EdgeRight, EdgeBottom, EdgeLeft, EdgeNone };
@@ -65,7 +77,7 @@ namespace Jazz2::Editor
 	}
 
 	MaskOverlay::MaskOverlay()
-		: _layer(-1), _layerRepeats(false), _frame(0)
+		: _bytes(0), _outlineValid(false), _outlineStep(0), _outlineScale(0.0f), _layer(-1), _repeatX(false), _repeatY(false), _frame(0)
 	{
 	}
 
@@ -76,7 +88,22 @@ namespace Jazz2::Editor
 	void MaskOverlay::Invalidate()
 	{
 		_chunks.clear();
+		_bytes = 0;
 		_layer = -1;
+		_outlineValid = false;
+	}
+
+	void MaskOverlay::Release()
+	{
+		Invalidate();
+		_outlineRenderer = nullptr;
+		_solid = {};
+		_pixels = {};
+		_edgeLinks = {};
+		_segments = {};
+		_traced = {};
+		_screenOutline = {};
+		_screenOutlineEnds = {};
 	}
 
 	void MaskOverlay::InvalidateTiles(std::int32_t layer, const Recti& area)
@@ -84,76 +111,145 @@ namespace Jazz2::Editor
 		if (layer != _layer) {
 			return;
 		}
-		if (_layerRepeats) {
+		if (_repeatX || _repeatY) {
 			// A tile of a repeated layer is in many chunks
-			_chunks.clear();
+			Invalidate();
 			return;
 		}
 		// The outline of a chunk depends on the tiles next to it too
-		std::int32_t x1 = FloorDiv(area.X - 1, ChunkTiles), y1 = FloorDiv(area.Y - 1, ChunkTiles);
-		std::int32_t x2 = FloorDiv(area.X + area.W, ChunkTiles), y2 = FloorDiv(area.Y + area.H, ChunkTiles);
-		std::size_t target = 0;
-		for (std::size_t i = 0; i < _chunks.size(); i++) {
-			const Vector2i& pos = _chunks[i].Pos;
-			if (pos.X >= x1 && pos.X <= x2 && pos.Y >= y1 && pos.Y <= y2) {
-				continue;
+		for (auto it = _chunks.begin(); it != _chunks.end(); ) {
+			const Vector2i& start = it->second.Start;
+			if (start.X - 1 < area.X + area.W && start.X + ChunkTiles >= area.X && start.Y - 1 < area.Y + area.H && start.Y + ChunkTiles >= area.Y) {
+				_bytes -= it->second.Bytes;
+				it = _chunks.erase(it);
+				_outlineValid = false;
+			} else {
+				++it;
 			}
-			if (target != i) {
-				_chunks[target] = std::move(_chunks[i]);
-			}
-			target++;
 		}
-		_chunks.erase(_chunks.begin() + target, _chunks.end());
+	}
+
+	void MaskOverlay::InvalidateTileIds(const LevelDocument& document, ArrayView<const std::uint16_t> sortedTileIds)
+	{
+		if (_chunks.empty() || sortedTileIds.empty()) {
+			return;
+		}
+		if (_layer < 0 || _layer >= std::int32_t(document.Layers.size())) {
+			Invalidate();
+			return;
+		}
+		const DocumentLayer& layer = document.Layers[_layer];
+		std::int32_t width = layer.GetWidth(), height = layer.GetHeight();
+		auto showsAny = [&](const Chunk& chunk) {
+			// With the tiles around, which the outline depends on
+			for (std::int32_t ty = -1; ty <= ChunkTiles; ty++) {
+				std::int32_t y = chunk.Start.Y + ty;
+				if (_repeatY) {
+					y = PositiveModulo(y, height);
+				} else if (y < 0 || y >= height) {
+					continue;
+				}
+				for (std::int32_t tx = -1; tx <= ChunkTiles; tx++) {
+					std::int32_t x = chunk.Start.X + tx;
+					if (_repeatX) {
+						x = PositiveModulo(x, width);
+					} else if (x < 0 || x >= width) {
+						continue;
+					}
+					if (RuntimeSync::ShowsAnyTile(document, layer.GetTile(x, y), sortedTileIds)) {
+						return true;
+					}
+				}
+			}
+			return false;
+		};
+		if (width <= 0 || height <= 0) {
+			return;
+		}
+		for (auto it = _chunks.begin(); it != _chunks.end(); ) {
+			if (showsAny(it->second)) {
+				_bytes -= it->second.Bytes;
+				it = _chunks.erase(it);
+				_outlineValid = false;
+			} else {
+				++it;
+			}
+		}
+	}
+
+	std::uint64_t MaskOverlay::MakeKey(Vector2i start, std::int32_t step)
+	{
+		// The start is never negative, see Draw()
+		return (std::uint64_t(std::uint32_t(start.X)) << 32) | (std::uint64_t(std::uint32_t(start.Y) & 0xFFFFFFu) << 8) | std::uint64_t(step & 0xFF);
 	}
 
 	void MaskOverlay::Draw(UiPainter& painter, TileMap& tileMap, const LevelDocument& document, std::int32_t layer,
 		const LayerView& view, const Rectf& viewRect, bool alone)
 	{
 		_frame++;
-		if (layer != _layer) {
-			_chunks.clear();
+		if (layer != _layer || view.RepeatX != _repeatX || view.RepeatY != _repeatY) {
+			// The chunks of a repeated layer are known by where in its pattern they start
+			Invalidate();
 			_layer = layer;
+			_repeatX = view.RepeatX;
+			_repeatY = view.RepeatY;
 		}
-		_layerRepeats = (view.RepeatX || view.RepeatY);
 
 		if (alone) {
 			// The masks only, the level is only hinted behind them
 			painter.FillRect(viewRect, Colorf(0.42f, 0.42f, 0.48f, 0.94f), UiLayer::Back);
 		}
 		float cellSize = TileSet::DefaultTileSize * view.Scale;
-		if (cellSize < 4.0f || layer < 0 || layer >= std::int32_t(document.Layers.size())) {
+		if (cellSize < 4.0f || layer < 0 || layer >= std::int32_t(document.Layers.size()) || view.Size.X <= 0 || view.Size.Y <= 0) {
 			return;
 		}
 
-		// Fewer pixels of a chunk when the view is far
-		std::int32_t step = (view.Scale >= 0.75f ? 1 : (view.Scale >= 0.375f ? 2 : 4));
+		// Fewer pixels of a chunk when the view is far, about as many as the screen shows of it
+		std::int32_t step = (view.Scale >= 0.75f ? 1 : (view.Scale >= 0.375f ? 2 : (view.Scale >= 0.1875f ? 4 : 8)));
 		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(viewRect.X, viewRect.Y)));
 		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(viewRect.X + viewRect.W, viewRect.Y + viewRect.H)));
 		if (!view.RepeatX) {
-			from.X = std::max(from.X, 0);
-			to.X = std::min(to.X, view.Size.X - 1);
+			from.X = std::max<std::int32_t>(from.X, 0);
+			to.X = std::min<std::int32_t>(to.X, view.Size.X - 1);
 		}
 		if (!view.RepeatY) {
-			from.Y = std::max(from.Y, 0);
-			to.Y = std::min(to.Y, view.Size.Y - 1);
+			from.Y = std::max<std::int32_t>(from.Y, 0);
+			to.Y = std::min<std::int32_t>(to.Y, view.Size.Y - 1);
 		}
 
-		_screenOutline.clear();
-		_screenOutlineEnds.clear();
+		// The outlines on the screen are the same as in the last frame while the view and the chunks in it stay the same,
+		// they're far more points than chunks from far away; none when a tile is small on the screen
+		const bool drawsOutline = (cellSize >= MinOutlineCellPixels);
+		const Rectf origin = view.CellToScreen(Vector2i(0, 0));
+		const bool reuseOutline = (_outlineValid && _outlineStep == step && _outlineScale == view.Scale && _outlineOrigin == Vector2f(origin.X, origin.Y) &&
+			_outlineViewRect.X == viewRect.X && _outlineViewRect.Y == viewRect.Y && _outlineViewRect.W == viewRect.W && _outlineViewRect.H == viewRect.H);
+		if (!reuseOutline) {
+			_screenOutline.clear();
+			_screenOutlineEnds.clear();
+		}
 		std::int32_t builds = 0;
-		for (std::int32_t cy = FloorDiv(from.Y, ChunkTiles); cy <= FloorDiv(to.Y, ChunkTiles); cy++) {
-			for (std::int32_t cx = FloorDiv(from.X, ChunkTiles); cx <= FloorDiv(to.X, ChunkTiles); cx++) {
-				Vector2i pos(cx, cy);
-				Chunk* chunk = FindChunk(pos, step);
-				if (chunk == nullptr) {
-					if (builds >= MaxBuildsPerFrame) {
+		bool skipped = false;
+		TimeStamp buildStart = TimeStamp::now();
+		for (std::int32_t cy = FloorDivide(from.Y, ChunkTiles); cy <= FloorDivide(to.Y, ChunkTiles); cy++) {
+			for (std::int32_t cx = FloorDivide(from.X, ChunkTiles); cx <= FloorDivide(to.X, ChunkTiles); cx++) {
+				// Where the pattern of a layer that repeats is at the start of the chunk, the chunk is the same there
+				Vector2i chunkStart(_repeatX ? PositiveModulo(cx * ChunkTiles, view.Size.X) : cx * ChunkTiles, _repeatY ? PositiveModulo(cy * ChunkTiles, view.Size.Y) : cy * ChunkTiles);
+				std::uint64_t key = MakeKey(chunkStart, step);
+				auto it = _chunks.find(key);
+				Chunk* chunk;
+				if (it != _chunks.end()) {
+					chunk = &it->second;
+				} else {
+					if (builds >= MaxBuildsPerFrame || (builds > 0 && buildStart.millisecondsSince() >= MaxBuildMilliseconds)) {
+						skipped = true;
 						continue;
 					}
 					builds++;
-					chunk = &_chunks.emplace_back();
-					chunk->Pos = pos;
+					chunk = &_chunks[key];
+					chunk->Start = chunkStart;
 					chunk->Step = step;
 					BuildChunk(*chunk, tileMap, document, view);
+					_bytes += chunk->Bytes;
 				}
 				chunk->LastUsed = _frame;
 				if (chunk->Empty) {
@@ -164,6 +260,9 @@ namespace Jazz2::Editor
 				Rectf rect(first.X, first.Y, last.X + last.W - first.X, last.Y + last.H - first.Y);
 				if (chunk->Image != nullptr) {
 					painter.Image(*chunk->Image, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Fill);
+				}
+				if (reuseOutline || !drawsOutline) {
+					continue;
 				}
 
 				// The outline of all chunks is drawn at once, over the fill
@@ -179,6 +278,12 @@ namespace Jazz2::Editor
 				}
 			}
 		}
+		// A chunk made while the outlines were kept isn't in them yet, nor is one left for the next frames
+		_outlineValid = (reuseOutline ? builds == 0 : !skipped);
+		_outlineStep = step;
+		_outlineScale = view.Scale;
+		_outlineOrigin = Vector2f(origin.X, origin.Y);
+		_outlineViewRect = viewRect;
 
 		if (!_screenOutlineEnds.empty()) {
 			if (_outlineRenderer == nullptr) {
@@ -189,22 +294,13 @@ namespace Jazz2::Editor
 			float halfThickness = std::max(1.0f, painter.GetScale()) * std::clamp(0.5f + 0.35f * view.Scale, 0.75f, 1.5f);
 			// Far away, all the outlines are more than one command can draw
 			SmallVector<RenderCommand*, 8> commands;
-			_outlineRenderer->DrawMany(_screenOutline, _screenOutlineEnds, halfThickness, painter.GetDepth(UiLayer::Content), OutlineColor, commands);			for (RenderCommand* command : commands) {
+			_outlineRenderer->DrawMany(_screenOutline, _screenOutlineEnds, halfThickness, painter.GetDepth(UiLayer::Content), OutlineColor, commands);
+			for (RenderCommand* command : commands) {
 				painter.Command(command);
 			}
 		}
 
 		DropOldChunks();
-	}
-
-	MaskOverlay::Chunk* MaskOverlay::FindChunk(Vector2i pos, std::int32_t step)
-	{
-		for (Chunk& chunk : _chunks) {
-			if (chunk.Pos == pos && chunk.Step == step) {
-				return &chunk;
-			}
-		}
-		return nullptr;
 	}
 
 	void MaskOverlay::BuildChunk(Chunk& chunk, TileMap& tileMap, const LevelDocument& document, const LayerView& view)
@@ -224,7 +320,7 @@ namespace Jazz2::Editor
 		for (std::int32_t ty = -1; ty <= ChunkTiles; ty++) {
 			for (std::int32_t tx = -1; tx <= ChunkTiles; tx++) {
 				Vector2i tile;
-				if (!view.Wrap(Vector2i(chunk.Pos.X * ChunkTiles + tx, chunk.Pos.Y * ChunkTiles + ty), tile)) {
+				if (!view.Wrap(Vector2i(chunk.Start.X + tx, chunk.Start.Y + ty), tile)) {
 					continue;
 				}
 				const TileRef& ref = layer.GetTile(tile.X, tile.Y);
@@ -275,11 +371,15 @@ namespace Jazz2::Editor
 		chunk.OutlineEnds.clear();
 		// The outline of the edge of a chunk can come from the solid pixels of the chunk next to it
 		TraceOutline(chunk, size, stride, apron);
+		chunk.Bytes = sizeof(Chunk) + chunk.Outline.size() * sizeof(Vector2f) + chunk.OutlineEnds.size() * sizeof(std::int32_t);
 		if (!any) {
 			chunk.Image = nullptr;
 			chunk.Empty = chunk.OutlineEnds.empty();
 			return;
 		}
+		chunk.Bytes += std::size_t(size) * std::size_t(size) * 2;
+		// The luminance is the same everywhere, but RG8 is the only format sampled as gray with an opacity everywhere,
+		// OpenGL|ES 2.0 and WebGL can't swizzle another one, see Texture::SetSwizzle()
 		chunk.Image = std::make_unique<Texture>("EditorMaskChunk", Texture::Format::RG8, size, size);
 		chunk.Image->LoadFromTexels(_pixels.data(), 0, 0, size, size);
 		// Gray of the luminance, see-through by the opacity, smooth edges that the outline goes along
@@ -376,13 +476,25 @@ namespace Jazz2::Editor
 
 	void MaskOverlay::DropOldChunks()
 	{
-		if (_chunks.size() <= MaxChunks) {
+		if (_bytes <= MaxBytes) {
 			return;
 		}
-		std::sort(_chunks.begin(), _chunks.end(), [](const Chunk& a, const Chunk& b) {
-			return (a.LastUsed > b.LastUsed);
-		});
-		_chunks.erase(_chunks.begin() + MaxChunks, _chunks.end());
+		// Those drawn in this frame stay even if there are more of them, their images are still to be drawn
+		SmallVector<std::pair<std::uint32_t, std::uint64_t>, 0> candidates;
+		for (const auto& entry : _chunks) {
+			if (entry.second.LastUsed != _frame) {
+				candidates.emplace_back(entry.second.LastUsed, entry.first);
+			}
+		}
+		std::sort(candidates.begin(), candidates.end());
+		for (const auto& candidate : candidates) {
+			if (_bytes <= MaxBytes) {
+				break;
+			}
+			auto it = _chunks.find(candidate.second);
+			_bytes -= it->second.Bytes;
+			_chunks.erase(it);
+		}
 	}
 }
 

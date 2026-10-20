@@ -98,14 +98,14 @@ namespace ShaderCompiler
 						t.Text = String{&c, 1};
 						i++;
 					}
-					out.push_back(std::move(t));
+					out.push_back(Death::move(t));
 				}
 			}
 			Tok end;
 			end.Type = TokType::End;
 			end.Text = {};
 			end.Line = lastLine;
-			out.push_back(std::move(end));
+			out.push_back(Death::move(end));
 		}
 
 		bool ParseDecimalU32(StringView s, std::uint32_t& value)
@@ -449,7 +449,7 @@ namespace ShaderCompiler
 					if (!Expect(";")) {
 						return false;
 					}
-					members.push_back(std::move(m));
+					members.push_back(Death::move(m));
 				}
 			}
 
@@ -527,7 +527,7 @@ namespace ShaderCompiler
 				if (!ComputeStd140(info.Fields, false, info.Size, info.Align, unusedStride, structTok.Line)) {
 					return false;
 				}
-				_result.Structs.push_back(std::move(info));
+				_result.Structs.push_back(Death::move(info));
 				return true;
 			}
 
@@ -617,7 +617,7 @@ namespace ShaderCompiler
 				if (!ComputeStd140(block.Members, true, block.BaseSize, align, block.InstanceStride, nameTok.Line)) {
 					return false;
 				}
-				_result.Blocks.push_back(std::move(block));
+				_result.Blocks.push_back(Death::move(block));
 				return true;
 			}
 
@@ -670,14 +670,14 @@ namespace ShaderCompiler
 						texture.Name = nameTok.Text;
 						texture.Type = type;
 						texture.Unit = -1;
-						_result.Textures.push_back(std::move(texture));
+						_result.Textures.push_back(Death::move(texture));
 					} else {
 						UniformInfo uniform;
 						uniform.Name = nameTok.Text;
 						uniform.Type = type;
 						uniform.TypeName = typeTok.Text;
 						uniform.ArraySize = decl.ArraySize;
-						_result.Uniforms.push_back(std::move(uniform));
+						_result.Uniforms.push_back(Death::move(uniform));
 					}
 					if (Accept("=")) {
 						if (!SkipInitializer()) {
@@ -723,7 +723,7 @@ namespace ShaderCompiler
 				attribute.Type = type;
 				attribute.TypeName = typeTok.Text;
 				attribute.Location = location;
-				_result.Attributes.push_back(std::move(attribute));
+				_result.Attributes.push_back(Death::move(attribute));
 				return true;
 			}
 		};

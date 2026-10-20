@@ -55,11 +55,11 @@ namespace Jazz2::Editor
 		void Suspend() override;
 		void Resume() override;
 
-		bool CanOpenInEditor() const override;
 		bool IsEditorPlayTest() const override;
 		void ExitEditor() override;
 		bool SerializeResumableToStream(Stream& dest) override;
 		void OnEndFrame() override;
+		void HandleLevelChange(LevelInitialization&& levelInit) override;
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
 

@@ -124,6 +124,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ParticleAffectors.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ParticleInitializer.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ParticleSystem.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/PngCodec.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RectAnimation.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RenderBatcher.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RenderBuffersManager.h
@@ -322,7 +323,10 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/LevelDescriptor.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelFlags.h
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelFile.h
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelPreview.h
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelTextsChunk.h
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/TileSetFile.h
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/VarUint.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelInitialization.h
 	${NCINE_SOURCE_DIR}/Jazz2/LightEmitter.h
@@ -488,6 +492,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptPlayerWrapper.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/ITileMapOwner.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/LayerEffects.h
+	${NCINE_SOURCE_DIR}/Jazz2/Tiles/LayerTypes.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileCollisionParams.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileDestructType.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.h

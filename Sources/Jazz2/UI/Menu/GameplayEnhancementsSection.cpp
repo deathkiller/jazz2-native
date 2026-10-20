@@ -92,7 +92,7 @@ namespace Jazz2::UI::Menu
 			[]() -> StringView { return (PreferencesCache::ShowAllWeaponWheelSlots ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::ShowAllWeaponWheelSlots = !PreferencesCache::ShowAllWeaponWheelSlots; _isDirty = true; })->ArrowSpacing = WideArrowSpacing;
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void GameplayEnhancementsSection::OnUpdate(float timeMult)

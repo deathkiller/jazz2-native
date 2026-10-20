@@ -12,7 +12,7 @@ using namespace Death::Memory;
 namespace nCine
 {
 	AudioLoaderWav::AudioLoaderWav(std::unique_ptr<Stream> fileHandle)
-		: IAudioLoader(std::move(fileHandle))
+		: IAudioLoader(Death::move(fileHandle))
 	{
 		if (!_fileHandle->IsValid()) {
 			return;
@@ -40,6 +40,6 @@ namespace nCine
 
 	std::unique_ptr<IAudioReader> AudioLoaderWav::createReader()
 	{
-		return std::make_unique<AudioReaderWav>(std::move(_fileHandle), _bytesPerSample);
+		return std::make_unique<AudioReaderWav>(Death::move(_fileHandle), _bytesPerSample);
 	}
 }

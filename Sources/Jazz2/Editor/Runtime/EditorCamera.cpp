@@ -2,6 +2,8 @@
 
 #if defined(WITH_EDITOR)
 
+#include "../UI/UiTheme.h"
+
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
@@ -49,7 +51,7 @@ namespace Jazz2::Editor
 
 	void EditorCamera::SetView(Vector2i viewSize, float gameplayScale)
 	{
-		_viewSize = Vector2i(std::max(viewSize.X, 1), std::max(viewSize.Y, 1));
+		_viewSize = Vector2i(std::max<std::int32_t>(viewSize.X, 1), std::max<std::int32_t>(viewSize.Y, 1));
 		_gameplayScale = (gameplayScale > 0.0f ? gameplayScale : 1.0f);
 		_scale = std::clamp(_scale, GetMinScale(), GetMaxScale());
 		_targetScale = std::clamp(_targetScale, GetMinScale(), GetMaxScale());
@@ -128,6 +130,12 @@ namespace Jazz2::Editor
 			// The dragged point stays under the pointer, it's the one zoomed at
 			_dragAnchorWorld = ViewToWorld(_dragLastView);
 		}
+		if (_zooming && UiTheme::ReducedMotion) {
+			// With reduced motion, at once
+			_scale = _targetScale;
+			_zooming = false;
+			ApplyZoomAnchor();
+		}
 	}
 
 	void EditorCamera::ZoomBy(Vector2f viewPos, float factor)
@@ -190,8 +198,8 @@ namespace Jazz2::Editor
 			return;
 		}
 		_dragging = false;
-		// The pointer stood still before it was let go, so the view stays where it is
-		if (_dragFrames > 4.0f) {
+		// The pointer stood still before it was let go, so the view stays where it is, with reduced motion always
+		if (_dragFrames > 4.0f || UiTheme::ReducedMotion) {
 			_velocity = Vector2f::Zero;
 		}
 	}
@@ -199,6 +207,11 @@ namespace Jazz2::Editor
 	void EditorCamera::FlyTo(Vector2f center, float scale)
 	{
 		scale = std::clamp(scale, GetMinScale(), GetMaxScale());
+		if (UiTheme::ReducedMotion) {
+			// With reduced motion, the view is there at once
+			JumpTo(center, scale);
+			return;
+		}
 
 		_zooming = false;
 		_dragging = false;
@@ -223,8 +236,9 @@ namespace Jazz2::Editor
 			float w0 = _flyWidth0, w1 = _flyWidth1, u1 = _flyDistance;
 			float b0 = (w1 * w1 - w0 * w0 + rho4 * u1 * u1) / (2.0f * w0 * rho2 * u1);
 			float b1 = (w1 * w1 - w0 * w0 - rho4 * u1 * u1) / (2.0f * w1 * rho2 * u1);
-			_flyR0 = std::log(-b0 + std::sqrt(b0 * b0 + 1.0f));
-			float r1 = std::log(-b1 + std::sqrt(b1 * b1 + 1.0f));
+			// log(-b + sqrt(b² + 1)) of the paper is -asinh(b), which doesn't lose the precision for a long flight from close up
+			_flyR0 = -std::asinh(b0);
+			float r1 = -std::asinh(b1);
 			_flyLength = (r1 - _flyR0) / rho;
 		}
 

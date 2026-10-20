@@ -13,7 +13,7 @@ namespace Jazz2::UI::Menu
 	}
 
 	SimpleMessageSection::SimpleMessageSection(String&& message, bool withTransition)
-		: _message(std::move(message)), _transitionTime(withTransition ? 0.0f : 1.0f)
+		: _message(Death::move(message)), _transitionTime(withTransition ? 0.0f : 1.0f)
 	{
 	}
 

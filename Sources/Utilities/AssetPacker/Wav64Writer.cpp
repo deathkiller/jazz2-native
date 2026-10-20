@@ -534,7 +534,7 @@ namespace Jazz2::AssetPacker
 						unrolled[std::size_t(keep + i) * channels + c] = audio.Samples[std::size_t(last - i) * channels + c];
 					}
 				}
-				audio.Samples = std::move(unrolled);
+				audio.Samples = Death::move(unrolled);
 				audio.Frames = keep + loopLength;
 				audio.LoopOffset = keep;
 				audio.LoopEnd = audio.Frames;

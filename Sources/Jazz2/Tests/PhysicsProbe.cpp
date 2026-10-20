@@ -27,7 +27,7 @@ namespace Jazz2::Tests
 {
 	PhysicsProbe::PhysicsProbe(LevelHandler* levelHandler)
 		: _levelHandler(levelHandler), _state(StatePrime), _scenario(FirstScenario), _tick(0.0f), _waited(0.0f),
-			_groundX(0.0f), _groundY(0.0f), _lastY(0.0f), _startFrames(0.0f), _still(0), _copterAttachTick(-1), _onCopter(false), _defaultWaterLevel(0.0f), _waterRaised(false), _copterEndTick(-1),
+			_groundX(0.0f), _groundY(0.0f), _lastY(0.0f), _startFrames(0.0f), _still(0), _copterAttachTick(-1), _onCopter(false), _scenarioActionDone(false), _defaultWaterLevel(0.0f), _waterRaised(false), _copterEndTick(-1),
 			_pushable(0.0f, 0.0f), _turtle(0.0f, 0.0f)
 	{
 	}
@@ -110,13 +110,30 @@ namespace Jazz2::Tests
 		// `dm_chain`, 15 seconds. This tracks the scenario's INDEX, so it moves whenever anything is appended
 		// ahead of it - it was 334 until the slope, run-tap and vine families went in, at which point it was
 		// quietly giving `sl_up_jhold` a long window and `dm_chain` the 800-tick default instead.
-		if (s == 476) {
+		if (s == 549) {
 			return 1100.0f;
 		}
 		// `cn_chain`, which has three poles to climb where Diamondus has one - each holds the player about
 		// 140 ticks before it launches, so the climb alone is over 400 before any of the rises are counted
-		if (s == 475) {
+		if (s == 548) {
 			return 1200.0f;
+		}
+		// The beak charge set likewise, except the one in front that only takes the morph. Kept identical to
+		// ScenarioTicksFor() in the original game's probe.
+		if (s == 517) {
+			return 100.0f;
+		}
+		if (s >= 518 && s <= 547) {
+			return 250.0f;
+		}
+		// The bird set reaches its cap in well under a hundred ticks and has nothing to wait for after it, so the
+		// default window is plenty - except the two that only watch a perched bird, whose poses take a few hundred
+		// ticks to come round. Kept identical to ScenarioTicksFor() in the original game's probe.
+		if (s == 487 || s == 513) {
+			return 600.0f;
+		}
+		if (s >= 474 && s <= 516) {
+			return 250.0f;
 		}
 		// The copter set. Its generator cycles, and the player has to hop up to the thing's height to catch
 		// one - they land two and a half tiles below it - so most of this window is the approach, and how
@@ -1549,12 +1566,119 @@ namespace Jazz2::Tests
 			// the two answers are 64 shots and 22.
 			case 472: name = "sp_lori_fire_tap"_s; fire = (t >= 30 && ((t - 30) % 12) < 2); break;
 			case 473: name = "sp_lori_kick_tap"_s; right = (t < 2); down = (t >= 20); jump = (t >= 40); fire = (t >= 30 && ((t - 30) % 12) < 2); break;
+			// The bird morph, which flies on both axes under a pull of its own instead of gravity. Reported from play
+			// as too fast and too quick to get there, and nothing had measured the original's flight: only its clamp
+			// of both speeds to 4 px/tick was known. SetupCharacter() morphs the player, so each starts as a bird at
+			// the resting spot. `_idle` comes first on purpose - it is the scenario a morph lands in front of, and it
+			// accelerates nothing, so a morph that contaminates what follows it has nothing there to contaminate. The
+			// release and the reversal come at 100, well after the cap, so the slowdown is read from a known speed.
+			case 474: name = "bd_idle"_s; break;
+			case 475: name = "bd_right"_s; right = true; break;
+			case 476: name = "bd_right_rel"_s; right = (t < 100); break;
+			case 477: name = "bd_right_rev"_s; right = (t < 100); left = (t >= 100); break;
+			case 478: name = "bd_right_run"_s; right = true; run = true; break;
+			case 479: name = "bd_up"_s; up = true; break;
+			case 480: name = "bd_up_rel"_s; up = (t < 40); break;
+			case 481: name = "bd_down"_s; down = true; break;
+			case 482: name = "bd_up_down"_s; up = (t < 50); down = (t >= 50); break;
+			case 483: name = "bd_diag"_s; right = true; up = true; break;
+			case 484: name = "bd_jump"_s; jump = (t >= 20); break;
+			case 485: name = "bd_jump_tap"_s; jump = (t >= 20 && ((t - 20) % 12) < 2); break;
+			case 486: name = "bd_fire"_s; fire = (t >= 20); break;
+			// The second round. `_idle2` is the perched bird read at its real rate - the original's `_idle` runs
+			// straight after the morph and its poses come out more than twice as fast. `_clamp` writes 10 px/tick
+			// onto both speeds in mid-air (see below), the only way to see the cap on the vertical axis. `_rev_tap`
+			// lets go for two ticks and presses again, which tells an eased acceleration that is reset on letting go
+			// from one that winds back down.
+			case 487: name = "bd_idle2"_s; break;
+			case 488: name = "bd_clamp"_s; up = (t < 60); break;
+			case 489: name = "bd_rev_tap"_s; right = (t < 100 || t >= 102); break;
+			case 490: name = "bd_left"_s; left = true; break;
+			// What Fire does, with each direction, tapped, from a perch, and against the level's own turtle
+			case 491: name = "bd_fire_r"_s; right = true; fire = (t >= 40); break;
+			case 492: name = "bd_fire_u"_s; up = true; fire = (t >= 40); break;
+			case 493: name = "bd_fire_d"_s; up = (t < 40); down = (t >= 60); fire = (t >= 60); break;
+			case 494: name = "bd_fire_tap"_s; up = (t < 120); fire = (t >= 40 && ((t - 40) % 12) < 2); break;
+			case 495: name = "bd_perch_fire"_s; fire = (t >= 100); break;
+			case 496: name = "bd_fire_turtle"_s; right = (t < 2); fire = (t >= 30); break;
+			// Last of the first bird's, because a hurt may take the bird away and morph whatever follows
+			case 497: name = "bd_hurt"_s; up = (t < 40); break;
+			// The second bird, the last stop of the character cycle: the same flight, then the same questions about
+			// its attack, which is where the two differ
+			case 498: name = "b2_idle"_s; break;
+			case 499: name = "b2_right"_s; right = true; break;
+			case 500: name = "b2_right_rel"_s; right = (t < 100); break;
+			case 501: name = "b2_right_rev"_s; right = (t < 100); left = (t >= 100); break;
+			case 502: name = "b2_up"_s; up = true; break;
+			case 503: name = "b2_up_rel"_s; up = (t < 40); break;
+			case 504: name = "b2_up_down"_s; up = (t < 50); down = (t >= 50); break;
+			case 505: name = "b2_diag"_s; right = true; up = true; break;
+			case 506: name = "b2_jump"_s; jump = (t >= 20); break;
+			case 507: name = "b2_fire"_s; fire = (t >= 20); break;
+			case 508: name = "b2_fire_r"_s; right = true; fire = (t >= 40); break;
+			case 509: name = "b2_fire_u"_s; up = true; fire = (t >= 40); break;
+			case 510: name = "b2_fire_d"_s; up = (t < 40); down = (t >= 60); fire = (t >= 60); break;
+			case 511: name = "b2_fire_tap"_s; up = (t < 120); fire = (t >= 40 && ((t - 40) % 12) < 2); break;
+			case 512: name = "b2_perch_fire"_s; fire = (t >= 100); break;
+			case 513: name = "b2_idle2"_s; break;
+			case 514: name = "b2_clamp"_s; up = (t < 60); break;
+			case 515: name = "b2_fire_turtle"_s; right = (t < 2); fire = (t >= 30); break;
+			case 516: name = "b2_hurt"_s; up = (t < 40); break;
+			// The first bird's beak charge, which `bd_fire_r` only ever met at the cap on the floor. Reported from play as
+			// needing some minimum speed to start and as impossible to slow down once started. `_idle` only takes the
+			// morph - it follows `b2_hurt` in a sweep - so that nothing measured here is the scenario after one.
+			case 517: name = "bd_ch_idle"_s; break;
+			// Fire and a direction together from rest, and Fire held first: a speed threshold shows as the tick the pose
+			// changes on, and a charge that needs Fire to go down at speed as one that never comes
+			case 518: name = "bd_ch_rest"_s; right = true; fire = true; break;
+			case 519: name = "bd_ch_fire_first"_s; fire = true; right = (t >= 30); break;
+			// The direction first, then Fire pressed at a known speed: 0.56, 1.06, 1.56, 2.06, 2.56, 3.06, 3.56 and 4.0
+			// px/tick. The number is the tick of the press
+			case 520: name = "bd_ch_f06"_s; right = true; fire = (t >= 6); break;
+			case 521: name = "bd_ch_f10"_s; right = true; fire = (t >= 10); break;
+			case 522: name = "bd_ch_f14"_s; right = true; fire = (t >= 14); break;
+			case 523: name = "bd_ch_f18"_s; right = true; fire = (t >= 18); break;
+			case 524: name = "bd_ch_f22"_s; right = true; fire = (t >= 22); break;
+			case 525: name = "bd_ch_f26"_s; right = true; fire = (t >= 26); break;
+			case 526: name = "bd_ch_f30"_s; right = true; fire = (t >= 30); break;
+			case 527: name = "bd_ch_f34"_s; right = true; fire = (t >= 34); break;
+			// In mid-air: from rest, and at the cap while still rising off the climb
+			case 528: name = "bd_ch_air"_s; up = (t < 30); right = (t >= 30); fire = (t >= 30); break;
+			case 529: name = "bd_ch_air_f"_s; up = (t < 30); right = (t >= 30); fire = (t >= 70); break;
+			// Fire with speed but no direction - which the original charges on, the speed alone decides
+			case 530: name = "bd_ch_coast"_s; right = (t < 40); fire = (t >= 42); break;
+			case 531: name = "bd_ch_left"_s; left = true; fire = (t >= 40); break;
+			// Once charging, at the cap from tick 40: the direction let go, reversed, Fire let go, Up, Down, the direction
+			// let go and then Fire, and Fire let go and pressed again two ticks later
+			case 532: name = "bd_ch_rel"_s; right = (t < 70); fire = (t >= 40); break;
+			case 533: name = "bd_ch_rev"_s; right = (t < 70); left = (t >= 70); fire = (t >= 40); break;
+			case 534: name = "bd_ch_frel"_s; right = true; fire = (t >= 40 && t < 70); break;
+			case 535: name = "bd_ch_up"_s; right = true; fire = (t >= 40); up = (t >= 70 && t < 100); break;
+			case 536: name = "bd_ch_down"_s; right = true; fire = (t >= 40); down = (t >= 70 && t < 100); break;
+			case 537: name = "bd_ch_retap"_s; right = true; fire = (t >= 40 && t < 70) || (t >= 72); break;
+			case 538: name = "bd_ch_rel_frel"_s; right = (t < 70); fire = (t >= 40 && t < 130); break;
+			// Into the wall at the end of the upper floor, in mid-air (see SetupProps()), held there for the rest of the window
+			case 539: name = "bd_ch_wall"_s; right = true; fire = (t >= 40); break;
+			// The threshold's edge, from a coast: the brake takes 1/16 a tick off 4.0, so Fire pressed at 70, 71 and 72 is
+			// tested against 2.0625, exactly 2.0 and 1.9375 after that tick's brake. The original charges on the first only.
+			case 540: name = "bd_ch_c70"_s; right = (t < 40); fire = (t >= 70); break;
+			case 541: name = "bd_ch_c71"_s; right = (t < 40); fire = (t >= 71); break;
+			case 542: name = "bd_ch_c72"_s; right = (t < 40); fire = (t >= 72); break;
+			// Jump during a charge, Up already held when it starts, the threshold leftwards from rest, and the direction
+			// reversed during a charge that Fire then ends
+			case 543: name = "bd_ch_jump"_s; right = true; fire = (t >= 40); jump = (t >= 70 && t < 100); break;
+			case 544: name = "bd_ch_up_first"_s; up = true; right = true; fire = true; break;
+			case 545: name = "bd_ch_left_rest"_s; left = true; fire = true; break;
+			case 546: name = "bd_ch_rev_frel"_s; right = (t < 70); left = (t >= 70); fire = (t >= 40 && t < 100); break;
+			// Fire pressed while turning round: facing left from tick 40 but still flying right at 3.97 px/tick. The
+			// original charges on rightwards and turns the bird back to face it.
+			case 547: name = "bd_ch_turn"_s; right = (t < 40); left = (t >= 40); fire = (t >= 44); break;
 			// Castle 1 Night's own spring-and-pole climb, reported from play as not reaching the height the
 			// original does: a green spring at (129,52) under three *rows* of vertical poles at y=46, 41 and
 			// 36, each five or six tiles wide. Shipped geometry again, and a chain nobody built for a test -
 			// the same reason `dm_chain` exists, except that this one is a **reported defect** rather than an
 			// independent check. Nothing is pressed; the spring and the poles do all of it.
-			case 475:
+			case 548:
 				if (!_levelHandler->GetLevelName().contains("castle1n"_s)) {
 					return false;
 				}
@@ -1565,7 +1689,7 @@ namespace Jazz2::Tests
 			// To run either of these, load the level it names - with an **empty** filter every scenario counts
 			// as selected, so the first guarded one ends the sweep and nothing after it is reached; with a
 			// filter naming this one, the other is skipped and this runs. See `Tests/README.md`.
-			case 476:
+			case 549:
 				if (!_levelHandler->GetLevelName().contains("diam3"_s)) {
 					return false;
 				}
@@ -1590,6 +1714,19 @@ namespace Jazz2::Tests
 		}
 
 		auto& input = _levelHandler->_playerInputs[playerIndex];
+
+		// The one-off actions two pairs of bird scenarios take at tick 60, as the original's probe does at the same
+		// tick: `_clamp` writes 10 px/tick onto both speeds, which the flight's cap should cut back to 4 on the next
+		// tick, and `_hurt` hurts the bird with nothing to push it, so it is thrown away from where it faces
+		if (!_scenarioActionDone && t >= 60) {
+			if (scenario == 488 || scenario == 514) {
+				player->_speed = Vector2f(10.0f, 10.0f) * Actors::Player::LegacyFrameRateScale;
+				_scenarioActionDone = true;
+			} else if (scenario == 497 || scenario == 516) {
+				player->TakeDamage(1, 0.0f);
+				_scenarioActionDone = true;
+			}
+		}
 
 		if (FreeRunMode) {
 			// Recording mode: read what is really being pressed instead of writing anything, so the game plays
@@ -1714,6 +1851,25 @@ namespace Jazz2::Tests
 				}
 			}
 		} else
+		if (scenario == 496 || scenario == 515) {
+			// The turtle a beak attack or a pair of shots is aimed at: where it is and how much health it has left, or
+			// -2 once it is gone, the same as the original's probe logs
+			objX = objY = -2.0f;
+			for (auto& actor : _levelHandler->_actors) {
+				if (auto* turtle = runtime_cast<Actors::Enemies::TurtleTube>(actor.get())) {
+					objX = turtle->GetPos().X;
+					objY = (float)turtle->GetHealth();
+					break;
+				}
+			}
+		} else
+		if (scenario >= 474 && scenario <= 547) {
+			// The bird set: the character, which is the proof the morph took - a trace of a rabbit walking right would
+			// otherwise read as a bird that flies at the walk cap - and the ammo, the only thing that says whether Fire
+			// shot anything. Ahead of the open-ended weapon branch below, which would claim it.
+			objX = (float)(std::int32_t)player->GetPlayerType();
+			objY = (float)player->GetWeaponAmmo()[(std::int32_t)player->_currentWeapon];
+		} else
 		if (scenario >= 438 && scenario <= 445) {
 			// The copter set, in the same two columns the original's probe uses for it: the on-copter
 			// decision itself, and the nearest copter's own y as the evidence for it. `mod` says the same
@@ -1829,6 +1985,12 @@ namespace Jazz2::Tests
 			// The four `sp_lori_*` scenarios above, which are about her kick and so are hers
 			(s >= 466 && s <= 469) || (s >= 471 && s <= 473)) {
 			wanted = PlayerType::Lori;
+		} else if ((s >= 474 && s <= 497) || (s >= 517 && s <= 547)) {
+			// The bird set. `objx` carries the player type on every row of it, so a scenario that never really morphed
+			// says so instead of measuring a rabbit walking.
+			wanted = PlayerType::Bird;
+		} else if (s >= 498 && s <= 516) {
+			wanted = PlayerType::Bird2;
 		}
 		if (player->GetPlayerType() != wanted) {
 			player->MorphTo(wanted);
@@ -1947,7 +2109,8 @@ namespace Jazz2::Tests
 				player->AddAmmo(WeaponType::RF, 50);
 				player->SetCurrentWeapon(WeaponType::RF, Actors::Player::SetCurrentWeaponReason::User);
 			}
-		} else if (s == 390 || s == 391 || s == 469 || s == 470 || (s >= 471 && s <= 473)) {
+		} else if (s == 390 || s == 391 || s == 469 || s == 470 || (s >= 471 && s <= 473) ||
+			s == 486 || (s >= 491 && s <= 496) || (s >= 507 && s <= 512) || s == 515) {
 			// Left where they start - the point is the *standstill*, and the sliding one needs only enough
 			// floor to reach the dash cap and skid, which the default start has. A finite weapon so the ammo
 			// column shows whether a shot happened; Seeker rather than RF, whose blast moves the player and
@@ -2349,6 +2512,22 @@ namespace Jazz2::Tests
 					player->_speed = Vector2f::Zero;
 				}
 				break;
+			// A bird three tiles short of the same turtle and level with it, so its attack has something in front of
+			// it. At the run start for the same reason as the stomps: the turtle is the level's own.
+			case 496:
+			case 515:
+				if (_turtle.X > 0.0f) {
+					player->MoveInstantly(Vector2f(_turtle.X - 96.0f, _turtle.Y), Actors::MoveType::Absolute | Actors::MoveType::Force);
+					player->_speed = Vector2f::Zero;
+				}
+				break;
+			// A bird 400 px short of the wall at the right end of the upper floor (face at tile 234) and 50 px above that
+			// floor, so a charge at the cap meets the wall in mid-air about 75 ticks after it starts. At the run start
+			// because the settle would put it down on the floor first.
+			case 539:
+				player->MoveInstantly(Vector2f(234 * 32 - 400, 26 * 32), Actors::MoveType::Absolute | Actors::MoveType::Force);
+				player->_speed = Vector2f::Zero;
+				break;
 			case 72:
 			case 80:
 			case 81:
@@ -2394,13 +2573,13 @@ namespace Jazz2::Tests
 			// scenario's INDEX and has to move with it whenever anything is appended ahead - it was left at 366
 			// when the `ow_*` family went in, which teleported `ow_jump` into Diamondus 3's coordinates and
 			// dropped it out of the test level.
-			case 476:
+			case 549:
 				// Diamondus 3's own chain: the top of the one-tile shaft at tile (1,36), which drops onto the
 				// horizontal blue spring at (1,45)
 				player->MoveInstantly(Vector2f(1 * 32 + 16, 36 * 32 + 16), Actors::MoveType::Absolute | Actors::MoveType::Force);
 				player->_speed = Vector2f::Zero;
 				break;
-			case 475:
+			case 548:
 				// Castle 1 Night: three tiles above the green spring at (129,52), so the player falls onto it
 				// and the chain runs from there. Above the lowest pole row at y=46, deliberately - entering the
 				// climb from below the first pole is what the level itself does.
@@ -2684,6 +2863,7 @@ namespace Jazz2::Tests
 				_copterAttachTick = -1;
 				_onCopter = false;
 				_copterEndTick = -1;
+				_scenarioActionDone = false;
 				_state = StateSettle;
 				return;
 			}

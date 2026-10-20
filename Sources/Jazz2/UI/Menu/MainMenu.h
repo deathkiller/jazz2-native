@@ -82,6 +82,7 @@ namespace Jazz2::UI::Menu
 		bool CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit) override;
 #endif
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
+		void ApplyCursorPolicy() override;
 
 		// Overridden to add the logo intro wobble on top of the shared implementation
 		void DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color,

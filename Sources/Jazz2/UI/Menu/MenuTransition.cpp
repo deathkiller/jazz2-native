@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 		Finalize();
 
 		_state = State::Backward;
-		_outgoingOwned = std::move(outgoing);
+		_outgoingOwned = Death::move(outgoing);
 		_progress = 0.0f;
 		_info = info;
 

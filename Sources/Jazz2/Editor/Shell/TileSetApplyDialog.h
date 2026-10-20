@@ -12,7 +12,7 @@ namespace Jazz2::Editor
 	using Death::Containers::StringView;
 #endif
 
-	class EditorSession;
+	class IEditorContext;
 
 	/**
 		@brief Shows a window to save the tiles changed in this level into their tile set
@@ -23,7 +23,7 @@ namespace Jazz2::Editor
 		takes its place. @p source is the tile set chosen first, as @ref TileRef::Source, or @cpp -1 @ce for the
 		first one with changed tiles.
 	*/
-	void ShowApplyTileChangesDialog(EditorSession& session, std::int32_t source = -1);
+	void ShowApplyTileChangesDialog(IEditorContext& session, std::int32_t source = -1);
 
 	/**
 		@brief Saves the tiles of a tile set changed in this level into a tile set, as an undoable step
@@ -33,10 +33,10 @@ namespace Jazz2::Editor
 		palette of the level becomes the palette of the default tile set, and the level doesn't have its own then.
 		Returns `false` if nothing was saved. Undo puts the changes back into the level, but doesn't change the saved file back.
 	*/
-	bool ApplyTileChanges(EditorSession& session, std::uint8_t source, StringView newName, bool withPalette = false);
+	bool ApplyTileChanges(IEditorContext& session, std::uint8_t source, StringView newName, bool withPalette = false);
 
 	/** @brief Returns how many tiles of a tile set, as @ref TileRef::Source, the level changes */
-	std::int32_t CountChangedTiles(EditorSession& session, std::uint8_t source);
+	std::int32_t CountChangedTiles(IEditorContext& session, std::uint8_t source);
 }
 
 #endif

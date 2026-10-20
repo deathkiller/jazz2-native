@@ -4,54 +4,86 @@
 
 #include "../UI/UiWidgets.h"
 
+#include <memory>
+
+namespace nCine
+{
+	class Texture;
+}
+
 namespace Jazz2::Editor
 {
-	class EditorSession;
+	class DocumentChanges;
+	class IEditorContext;
+	class LevelDocument;
+	class LevelThumbnail;
 	struct DocumentLayer;
 
 	/** @brief Adds the tabs that switch what the panel with the tiles and the events shows */
-	void AddPickerPanelTabs(UiElement* header, EditorSession& session);
+	void AddPickerPanelTabs(UiElement* header, IEditorContext& session);
 	/**
 	 * @brief Returns a name for a layer that has none, by what it is
 	 *
-	 * The renderer tells a textured background, effects or a masked layer, otherwise how the layer moves compared to
-	 * the sprite layer tells a foreground or a background. A layer that moves with the sprite layer is known by its
-	 * number, @p index is its index.
+	 * The renderer tells a textured background, effects or a masked layer. A layer that moves with the sprite layer is
+	 * known by its number, others are a foreground or a background by whether they're drawn in front of the sprite layer
+	 * or behind it. @p index is the index of the layer in @p document.
 	 */
-	String GetAutoLayerName(const DocumentLayer& layer, std::int32_t index = -1);
+	String GetAutoLayerName(const LevelDocument& document, std::int32_t index);
 	/** @brief Returns the name of a layer, or the name it gets by what it is if it has none */
-	String GetLayerTitle(const DocumentLayer& layer, std::int32_t index = -1);
+	String GetLayerTitle(const LevelDocument& document, std::int32_t index);
 
 	/**
 		@brief List of the layers of the level, with their visibility and lock
 
-		A layer is renamed by a double click on it, and moved in the list by dragging it.
+		A layer is renamed by a double click on it, and moved in the list by dragging it. Alt+click on the eye shows
+		only that layer. Each row has a small picture of its layer.
 	*/
 	class LayersPanel : public UiPanel
 	{
 		DEATH_RUNTIME_OBJECT(UiPanel);
 
 	public:
-		explicit LayersPanel(EditorSession& session);
+		explicit LayersPanel(IEditorContext& session);
+		~LayersPanel() override;
 
 		/** @brief Shows where a dragged layer would go, the pointer is in pixels of the screen */
 		void UpdateLayerDrag(std::int32_t from, Vector2f pos);
 		/** @brief Ends dragging a layer, @p drop moves it where it was shown to go */
 		void EndLayerDrag(bool drop);
+		/** @brief Returns a small picture of a layer, `nullptr` if there's none yet */
+		nCine::Texture* GetThumbnail(std::int32_t index) const;
 
 		void Update(float timeMult) override;
 		void Draw(UiPainter& painter) override;
 
 	private:
-		EditorSession& _session;
+		// A small picture of a layer, found by its identity, made again a while after its tiles change
+		struct Thumbnail
+		{
+			std::uint32_t LayerId;
+			std::unique_ptr<nCine::Texture> Image;
+			Vector2i Size;
+			bool Dirty;
+			float Cooldown;
+		};
+
+		IEditorContext& _session;
 		UiScrollView* _list;
 		std::int32_t _shownCount;
 		// Layer being dragged and the gap between the rows it would go into, or -1
 		std::int32_t _dragFrom;
 		std::int32_t _dropSlot;
+		// Identity of the layer being dragged, the one moved when it's dropped
+		std::uint32_t _dragLayerId = 0;
+		SmallVector<Thumbnail, 0> _thumbnails;
+		std::unique_ptr<LevelThumbnail> _thumbnailColors;
+		std::shared_ptr<Function<void(const DocumentChanges&)>> _changeObserver;
+		bool _revalidateColors;
 
 		void Rebuild();
 		Rectf GetSlotLine(std::int32_t slot) const;
+		void UpdateThumbnails(float timeMult);
+		void DrawThumbnail(Thumbnail& thumbnail, const DocumentLayer& layer);
 	};
 
 	/**
@@ -62,10 +94,10 @@ namespace Jazz2::Editor
 		DEATH_RUNTIME_OBJECT(UiPanel);
 
 	public:
-		explicit InspectorPanel(EditorSession& session);
+		explicit InspectorPanel(IEditorContext& session);
 
 	private:
-		EditorSession& _session;
+		IEditorContext& _session;
 	};
 
 	/**
@@ -76,7 +108,7 @@ namespace Jazz2::Editor
 		DEATH_RUNTIME_OBJECT(UiElement);
 
 	public:
-		explicit TileGrid(EditorSession& session);
+		explicit TileGrid(IEditorContext& session);
 
 		/** @brief Returns the source of the tiles, see @ref TileRef::Source */
 		std::uint8_t GetSource() const {
@@ -95,6 +127,7 @@ namespace Jazz2::Editor
 		bool ShowUsage;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		void Update(float timeMult) override;
 		void Draw(UiPainter& painter) override;
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
@@ -104,15 +137,18 @@ namespace Jazz2::Editor
 		StringView GetTooltip(Vector2f pos) const override;
 
 	private:
-		// How many times each tile of the source is used in all layers and animations, counted again when the level changes
+		// How many times each tile of the source is used in all layers and animations, counted again when the tiles
+		// change, but not more often than a few times a second, every tile of the level is looked at
 		mutable SmallVector<std::int32_t, 0> _usage;
 		mutable std::int32_t _usageMax;
-		mutable std::uint32_t _usageRevision;
+		mutable bool _usageDirty;
+		mutable float _usageCooldown;
 		mutable std::uint8_t _usageSource;
+		std::shared_ptr<Function<void(const DocumentChanges&)>> _changeObserver;
 
 		void UpdateUsage() const;
 
-		EditorSession& _session;
+		IEditorContext& _session;
 		std::uint8_t _source;
 		float _tileSize;
 		bool _dragging;
@@ -132,12 +168,12 @@ namespace Jazz2::Editor
 		DEATH_RUNTIME_OBJECT(UiPanel);
 
 	public:
-		explicit TilePickerPanel(EditorSession& session);
+		explicit TilePickerPanel(IEditorContext& session);
 
 		void Update(float timeMult) override;
 
 	private:
-		EditorSession& _session;
+		IEditorContext& _session;
 		TileGrid* _grid;
 
 		String GetSourceName() const;
@@ -152,7 +188,7 @@ namespace Jazz2::Editor
 		DEATH_RUNTIME_OBJECT(UiElement);
 
 	public:
-		explicit StampPreview(EditorSession& session);
+		explicit StampPreview(IEditorContext& session);
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
 		void Draw(UiPainter& painter) override;
@@ -160,7 +196,7 @@ namespace Jazz2::Editor
 		StringView GetTooltip(Vector2f pos) const override;
 
 	private:
-		EditorSession& _session;
+		IEditorContext& _session;
 		mutable String _tooltip;
 	};
 
@@ -172,14 +208,14 @@ namespace Jazz2::Editor
 		DEATH_RUNTIME_OBJECT(UiElement);
 
 	public:
-		explicit StatusBar(EditorSession& session);
+		explicit StatusBar(IEditorContext& session);
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
 		void Draw(UiPainter& painter) override;
 		bool AcceptsPointer() const override;
 
 	private:
-		EditorSession& _session;
+		IEditorContext& _session;
 	};
 }
 

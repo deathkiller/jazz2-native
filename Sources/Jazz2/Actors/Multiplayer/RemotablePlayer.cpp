@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Multiplayer
 	RemotablePlayer::RemotablePlayer(std::shared_ptr<PeerDescriptor> peerDesc)
 		: ChangingWeaponFromServer(false), RespawnPending(false), _warpPending(false)
 	{
-		_peerDesc = std::move(peerDesc);
+		_peerDesc = Death::move(peerDesc);
 		_peerDesc->Player = this;
 	}
 

@@ -60,7 +60,8 @@ namespace Jazz2::Actors
 		
 		The player-controlled rabbit character (Jazz, Spaz or Lori in JJ2) that runs, jumps, fires weapons,
 		collects items and takes damage. Each character has its own special move (e.g., buttstomp, uppercut or
-		sidekick), can enter a temporary Sugar Rush and may be morphed into other forms such as the Frog.
+		sidekick), can enter a temporary Sugar Rush and may be morphed into other forms such as the Frog or the Bird,
+		which flies freely.
 	*/
 	class Player : public ActorBase
 	{
@@ -177,11 +178,45 @@ namespace Jazz2::Actors
 			return _playerType;
 		}
 
+		/** @brief Returns `true` while morphed into either of the two birds */
+		bool IsBird() const {
+			return (_playerType == PlayerType::Bird || _playerType == PlayerType::Bird2);
+		}
+
+		/** @brief Returns `true` for the forms that last only until they are reverted - the frog and both birds */
+		static bool IsTemporaryForm(PlayerType type) {
+			return (type == PlayerType::Frog || type == PlayerType::Bird || type == PlayerType::Bird2);
+		}
+
+		/**
+		 * @brief Returns the player type to carry over to the next level or to store
+		 *
+		 * The character the bird was taken from while morphed into a bird, which lasts only until a Fly Off or Revert
+		 * Morph area, a death or the end of the level, so it's never carried over or saved. Any other type as it is.
+		 */
+		PlayerType GetPersistentPlayerType() const {
+			return (IsBird() ? _playerTypeBeforeMorph : _playerType);
+		}
+
+		/**
+		 * @brief Returns the character a temporary form (the frog or a bird) was taken from
+		 *
+		 * The current type when the player isn't in a temporary form.
+		 */
+		PlayerType GetPlayerTypeBeforeMorph() const {
+			return (IsTemporaryForm(_playerType) ? _playerTypeBeforeMorph : _playerType);
+		}
+
+		/** @brief Returns the character the player started the level with */
+		PlayerType GetOriginalPlayerType() const {
+			return _playerTypeOriginal;
+		}
+
 		/**
 		 * @brief Returns the fur color to actually use for this player
 		 *
 		 * The configured color, or 0 = none when the "Apply Colors" preference disables recoloring in the current
-		 * session (or for this player index).
+		 * session (or for this player index), and always while morphed into a bird, whose sprites aren't a rabbit's.
 		 */
 		std::uint32_t GetEffectiveFurColor() const;
 		/**
@@ -346,16 +381,33 @@ namespace Jazz2::Actors
 		virtual void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade);
 		/** @brief Adds fast fire */
 		bool AddFastFire(std::int32_t count);
-		/** @brief Morphs to a given player type */
+		/**
+		 * @brief Returns `true` if the player can morph to a given player type
+		 *
+		 * `false` if the character's sprites aren't available, e.g., the bird with the shareware data.
+		 */
+		bool CanMorphTo(PlayerType type);
+		/**
+		 * @brief Morphs to a given player type
+		 *
+		 * Returns `false` and leaves the player as it was if it already has the specified type or the character's
+		 * sprites aren't available.
+		 */
 		virtual bool MorphTo(PlayerType type);
 		/**
 		 * @brief Changes the player type immediately, without any transition or effect
 		 *
 		 * Used where the player isn't supposed to be seen morphing, e.g., when the type is restored after
-		 * respawning at a checkpoint. Returns `false` if the player already has the specified type.
+		 * respawning at a checkpoint. Returns `false` and leaves the player as it was if it already has the
+		 * specified type or the character's sprites aren't available.
 		 */
 		virtual bool MorphToInstantly(PlayerType type);
-		/** @brief Reverts morpth to the original player type */
+		/**
+		 * @brief Reverts a morph
+		 *
+		 * A temporary form (the frog or a bird) turns back into the character it was taken from, any other
+		 * character into the one the level started with.
+		 */
 		void MorphRevert();
 		/** @brief Sets duration of dizziness */
 		virtual bool SetDizzy(float timeLeft);
@@ -1433,6 +1485,9 @@ namespace Jazz2::Actors
 		PlayerType _playerType, _playerTypeOriginal;
 		// Player type at the last checkpoint, restored when the player respawns there
 		PlayerType _checkpointPlayerType;
+		// The character a temporary form (the frog or a bird) was taken from, see IsTemporaryForm(); kept equal to the
+		// current type otherwise
+		PlayerType _playerTypeBeforeMorph;
 		SpecialMoveType _currentSpecialMove;
 		LevelExitingState _levelExiting;
 		Modifier _activeModifier;
@@ -1618,6 +1673,21 @@ namespace Jazz2::Actors
 		float _weaponFlareTime;
 		std::int32_t _weaponFlareFrame;
 		float _weaponCooldown;
+		// The acceleration a bird steers with, which a held direction winds towards BirdAcceleration a step per tick
+		// and letting go zeroes - see HandleBirdMovement()
+		float _birdAccelX = 0.0f;
+		// How long a bird has been sitting still on the floor, which is what perches it (see BirdPerchTime), and how
+		// long the perched pose on screen has left before the next one is picked (see UpdateBirdPerchPose())
+		float _birdIdleTime = 0.0f;
+		float _birdPoseTime = 0.0f;
+		// Which perched pose is on screen, an index into the table in UpdateBirdPerchPose(), or 0 for none yet
+		std::uint8_t _birdPose = 0;
+		// Which way the first bird's beak charge flies vertically, -1 up, 1 down or 0 level. Decided along with the charge
+		// at the end of a frame and carried out at the start of the next one (see HandleBirdMovement()).
+		std::int8_t _birdChargeDirY = 0;
+		// The enemy the first bird's beak charge hit last and how long until it can be hit again, see BirdChargeHitInterval
+		std::weak_ptr<ActorBase> _birdChargeLastHit;
+		float _birdChargeHitCooldown = 0.0f;
 
 		SuspendType _suspendType;
 		ShieldType _activeShield;
@@ -1659,6 +1729,13 @@ namespace Jazz2::Actors
 		 */
 		bool _crouchHeldBefore;
 		bool _weaponAllowed;
+		// Whether a bird is perched, and whether it stands on the taller box a perch puts under it - the lift onto that
+		// box is refused under a low ceiling, which leaves the pose without the box (see EnterBirdPerch())
+		bool _birdPerched = false;
+		bool _birdStanding = false;
+		// Whether the first bird's beak charge is under way, Fire held while flying along faster than half the cap (see
+		// HandleBirdMovement())
+		bool _birdCharging = false;
 		// Set when the player is restored standing on the exit the level was left through, the exit is ignored
 		// until the player steps off it, otherwise it would be taken again immediately
 		bool _levelExitSuppressed = false;
@@ -2175,6 +2252,50 @@ namespace Jazz2::Actors
 		 */
 		static constexpr float RevUpLightMidTime = 10.0f;
 
+		// Fastest a bird flies outside Reforged, on either axis (original 4 px/tick). The original clamps both speeds of a
+		// bird to this every tick, whatever assigned them - `bd_clamp` writes 10 onto both and reads 4.0 on the next tick.
+		// It's also that game's walk cap, which is why Reforged flies at its own walk cap instead, see GetBirdMaxSpeed().
+		static constexpr float LegacyBirdSpeed = 4.0f * LegacyFrameRateScale;
+		// The flight below is the original's own, measured with the probe's `bd_*` and `b2_*` sets and identical for both
+		// birds to the last tick. It's used in both modes, Reforged included, since nothing else describes a bird at all.
+		//
+		// What a held direction accelerates a bird at once it has wound up (original 0.125 px/tick², 8192/65536). Run
+		// makes no difference to it or to the cap: `bd_right_run` matches `bd_right` on every tick.
+		static constexpr float BirdAcceleration = (8192.0f / 65536.0f) * LegacyFrameRateScaleSqr;
+		// How long the acceleration takes to wind up to that from nothing, or over to the other side when the direction
+		// is reversed (original 4 ticks, 1/32 px/tick² a tick). It's reset by letting go, not wound back down.
+		static constexpr float BirdAccelRampTime = 4.0f / LegacyFrameRateScale;
+		// What slows a bird with no direction held (original 0.0625 px/tick², 4096/65536) - linear, so the cap takes 64
+		// ticks to lose
+		static constexpr float BirdBrake = (4096.0f / 65536.0f) * LegacyFrameRateScaleSqr;
+		// The vertical speed Up or Jump gives a bird (original 1 px/tick). Assigned rather than accelerated towards, on
+		// the very first tick, and the same from rest, from a fall or from a dive.
+		static constexpr float BirdClimbSpeed = 1.0f * LegacyFrameRateScale;
+		// What pulls a bird down with nothing vertical held (original 1/64 px/tick², 1024/65536), and with Down held
+		// (original 3/128 px/tick², 1536/65536). Down is only half as much again, not a dive at a speed of its own.
+		static constexpr float BirdSinkGravity = (1024.0f / 65536.0f) * LegacyFrameRateScaleSqr;
+		static constexpr float BirdDiveGravity = (1536.0f / 65536.0f) * LegacyFrameRateScaleSqr;
+		// How hard a hurt bird is thrown, away from where it faces and upwards (original 4 px/tick on both axes, so the
+		// cap), and the extra it decelerates at while still rising from it (original 0.25 px/tick², 16384/65536)
+		static constexpr float BirdHurtKick = 4.0f * LegacyFrameRateScale;
+		static constexpr float BirdHurtRiseGravity = (16384.0f / 65536.0f) * LegacyFrameRateScaleSqr;
+		// How long a bird has to sit still on the floor before it perches (original 37 ticks)
+		static constexpr float BirdPerchTime = 37.0f / LegacyFrameRateScale;
+		// How fast the first bird has to be flying along for Fire to start its beak charge, as a share of the flight cap
+		// (original 2 px/tick of its 4, and strictly faster: `bd_ch_c71` reaches exactly 2.0 after that tick's brake and
+		// doesn't charge, `bd_ch_c70` at 2.0625 does). A share rather than a speed, so Reforged keeps the same relation to
+		// its own cap.
+		static constexpr float BirdChargeMinSpeedRatio = 0.5f;
+		// How long the first bird's beak charge leaves an enemy it hit before hurting it again (Reforged only, the original's
+		// beak does no damage). Nothing ends the charge on a hit the way it ends a special move, so it would hurt the same
+		// enemy on every frame of the overlap otherwise - a boss melted in a moment.
+		static constexpr float BirdChargeHitInterval = 30.0f;
+		// How much further down a perched bird stands than its flying box reaches: the perched sprites' coldspot is 20 px
+		// under the hotspot, where a rabbit stands too, and the flying box ends at 12 (see OnUpdateHitbox())
+		static constexpr float BirdStandingDrop = 8.0f;
+		// How far below the first the second shot of the second bird's pair leaves, in radians (measured 1.957 / 0.398)
+		static constexpr float BirdShotSpread = 0.2f;
+
 		void UpdateAnimation(float timeMult);
 		// Which of the three sliding-to-a-halt poses the current speed calls for, 0 for none
 		bool IsSlidingToHalt();
@@ -2195,6 +2316,31 @@ namespace Jazz2::Actors
 		void OnUpdateTimers(float timeMult);
 		void OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev);
 		void HandleHorizontalMovement(float timeMult);
+		// The whole movement of a bird: its own flight on both axes, its own pull instead of gravity, and no jump or
+		// special move
+		void HandleBirdMovement(float timeMult);
+		// The bird's flight cap on either axis in the current mode
+		float GetBirdMaxSpeed() const;
+		// Puts a bird that has sat still long enough on its perch: the standing box, the lift onto it and the first pose
+		void EnterBirdPerch();
+		// Takes a perched bird off its perch, back to the flying box
+		void LeaveBirdPerch();
+		// Plays the perched poses one after another, see the table inside
+		void UpdateBirdPerchPose(float timeMult);
+		// Fires the second bird's pair of shots, for one round of ammo - only ever from FireCurrentWeapon(), which is what the
+		// multiplayer players override to keep the shots and the ammo on the server
+		void FireBirdShots();
+		template<typename T, WeaponType weaponType>
+		void FireBirdShotPair(float spread);
+		// Puts the flight in place when the player has just turned into a bird, or takes it away again when it has just
+		// stopped being one - shared by MorphTo() and MorphToInstantly()
+		void ApplyBirdMorph(PlayerType playerTypePrevious);
+		// Returns the metadata the player would have as the given type, or nullptr if it has nothing to show it with -
+		// nothing about the player changes either way
+		Metadata* RequestMorphMetadata(PlayerType type);
+		// Switches the player type and its metadata to the ones RequestMorphMetadata() returned and remembers the
+		// character a temporary form is taken from - shared by MorphTo() and MorphToInstantly()
+		void ApplyMorphType(PlayerType type, Metadata* metadata);
 		// Arms Lori's kick. Separate because she has no wind-up outside Reforged and it fires at the trigger
 		void BeginLoriKick();
 		// The whole trigger - pose, transition and kick - shared by the press and the timed repeat so the two

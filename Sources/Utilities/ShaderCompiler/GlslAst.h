@@ -88,7 +88,7 @@ namespace ShaderCompiler
 	{
 		auto e = std::make_unique<Expr>();
 		e->Kind = kind;
-		e->Text = std::move(text);
+		e->Text = Death::move(text);
 		return e;
 	}
 
@@ -117,7 +117,7 @@ namespace ShaderCompiler
 		}
 		GlslToken end;
 		end.Type = GlslTokenType::End;
-		tokens.push_back(std::move(end));
+		tokens.push_back(Death::move(end));
 		return true;
 	}
 }

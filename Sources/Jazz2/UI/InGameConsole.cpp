@@ -523,7 +523,7 @@ namespace Jazz2::UI
 			case MessageLevel::Fatal: __DEATH_TRACE(TraceLevel::Fatal, {}, "< │ {}", Font::StripFormatting(line)); break;
 		}
 #endif
-		_logHistory.emplace_back(level, std::move(line), _smallFont);
+		_logHistory.emplace_back(level, Death::move(line), _smallFont);
 		_scrollPos = 0;
 	}
 
@@ -609,7 +609,7 @@ namespace Jazz2::UI
 	LogLine::LogLine(MessageLevel level, String&& message, Font* font)
 		: Level(level), TimeLeft(5.0f * FrameTimer::FramesPerSecond)
 	{
-		Message.SetText(std::move(message));
+		Message.SetText(Death::move(message));
 		Message.SetScale(0.8f);
 		Message.SetFont(font);
 		Message.SetMultiline(true);

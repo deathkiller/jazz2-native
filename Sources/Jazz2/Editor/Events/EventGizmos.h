@@ -31,7 +31,10 @@ namespace Jazz2::Editor
 		/** The left edge of the view in tiles, 0 is the column of the event */
 		CameraLeft,
 		/** The width of the view in tiles from its left edge, 0 reaches to the right edge of the level */
-		CameraWidth
+		CameraWidth,
+		/** The values of a group of directions, the tip of its arrow, as of the speed of a tube or a belt, see
+			@ref EventParamField::Direction and @ref EventPreviews::GetDirectionTip() */
+		Direction
 	};
 
 	/**
@@ -44,7 +47,8 @@ namespace Jazz2::Editor
 	{
 		/** @brief What it changes */
 		EventGizmoKind Kind;
-		/** @brief The parameter, an index to the fields of the event in the catalog */
+		/** @brief The parameter, an index to the fields of the event in the catalog, the first field of the group of
+			@ref EventGizmoKind::Direction */
 		std::uint8_t Field;
 		/** @brief The second parameter of @ref EventGizmoKind::Offset, the vertical one */
 		std::uint8_t SecondField;
@@ -72,9 +76,18 @@ namespace Jazz2::Editor
 		/**
 		 * @brief Changes the parameter of a handle of an event so the handle is at a position in the level
 		 *
-		 * Returns `false` if the event doesn't change.
+		 * With @p snap, a direction (see @ref EventGizmoKind::Direction) goes only horizontally, vertically or
+		 * diagonally, as long as it's dragged. Returns `false` if the event doesn't change.
 		 */
-		static bool Apply(Formats::EventRecord& event, Vector2i cell, std::int32_t levelWidth, const EventGizmo& gizmo, Vector2f world);
+		static bool Apply(Formats::EventRecord& event, Vector2i cell, std::int32_t levelWidth, const EventGizmo& gizmo, Vector2f world, bool snap = false);
+
+		/**
+		 * @brief Returns which way a handle of an event is dragged, as arrows by the pointer show it
+		 *
+		 * A unit vector along the line the handle moves on, X to the right and Y down, or a zero vector for a handle
+		 * dragged any way, as an offset or the arrow of a tube.
+		 */
+		static Vector2f GetDragDirection(const Formats::EventRecord& event, const EventGizmo& gizmo);
 	};
 }
 

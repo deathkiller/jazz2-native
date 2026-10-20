@@ -10,8 +10,8 @@ written as `.csv` when only the `.gz` is present, so nothing needs to know which
 
 | Path | Captured from | Settings |
 |---|---|---|
-| `original/` | Original Jazz Jackrabbit 2 with JJ2+ Beta v6.6h, driven by `Level/_pt.j2as` | Its own fixed tick rate, measured at 70.021 Hz. 418 scenarios, 275 600 rows across 21 category files. |
-| `engine/` | This engine, driven by `PhysicsProbe.cpp` | **`/max-fps:144`**, Debug x64. 423 scenarios, 574 536 rows across 22 category files. |
+| `original/` | Original Jazz Jackrabbit 2 with JJ2+ Beta v6.6h, driven by `Level/_pt.j2as` | Its own fixed tick rate, measured at 70.021 Hz. 539 scenarios, 341 850 rows across 23 category files (counted 2026-10-18). |
+| `engine/` | This engine, driven by `PhysicsProbe.cpp` | **`/max-fps:60`**, Debug x64 (see below for when it was 144). 548 scenarios, 299 187 rows across 24 category files (counted 2026-10-18). |
 | `diam3-original.csv.gz`, `diam3-engine.csv.gz` | The same two probes in a **different level** — the original game's own Diamondus 3 — for the single `dm_chain` scenario | Kept apart from the pair above on purpose: a trace holds one level's geometry, and merging two would make the level-version caveat below meaningless. See *Running it in another level* in `../README.md`. |
 
 **Split by category, one file per category on each side.** A full sweep is about eighty minutes a side, so
@@ -31,13 +31,30 @@ whether the categories are redrawn later.
 Both sides were re-swept whole on 2026-09-18, after the movement rework described in
 `Docs/MovementAccuracyReference.dox`. The engine run is the reference for that document's "Now" column.
 
+**The `bird` category (`bd_*`, `b2_*`, 43 scenarios) was added on 2026-10-18** from one filtered capture a side,
+with the category's own filter, so both files hold the whole category. It was taken at **60 FPS**, the rate every
+other engine category turned out to be at by then (see below), and it touches nothing else: both birds are gated
+on their own player type, and a 60 FPS re-run of `g_*` and `a_*` from the same build matched the committed
+`ground` and `air` files.
+
+**The beak charge set (`bd_ch_*`, 31 scenarios) was added to it later the same day.** The original's side came from
+three short filtered captures merged scenario by scenario, so its 43 older bird scenarios are still the first capture's;
+the engine's side is one capture of the **whole** category (`bd_,b2_`) at 60 FPS, because the charge change reaches every
+`bd_*` scenario on this side. Against the previous engine file the 43 older scenarios kept a speed-distribution error of
+0 px/s each. Their `AnimSame` drops are the renumbered bird poses (the charge was `0x20000048` and is `0x20900000`) and
+the charge now carrying the wing frame over, not a change of movement.
+
 Six scenarios were added after that sweep — `an_crouch_hold`, `an_crouch_hold_walk`, `an_crouch_carry`,
 `an_crouch_spring`, `an_crouch_pole_e` and `an_crouch_spring_l` — and the pole, spring and rev-up families
 were re-measured behind the carry-exit clamp and the spring carry's refusal of the crouch. All of them were merged into the affected category file of each
 side from their own captures rather than by re-sweeping, the engine's at the same `/max-fps:144` as the sweep
 — which is the one thing that has to be kept true when a category is topped up instead of re-run.
 
-**The engine side is captured at 144 FPS, not the 60 this file claimed until 2026-09-17, and the difference
+**Since 2026-09-29 the whole engine set is a 60 FPS capture again** — every category file's `ms` column steps
+16.5–16.8 ms, read on 2026-10-18 — so the 144 FPS figures in the next three paragraphs describe the set as it was
+on 2026-09-17 and are kept for the reasoning. Check the rate of a file the same way before topping it up.
+
+**The engine side was captured at 144 FPS, not the 60 this file claimed until 2026-09-17, and the difference
 is not cosmetic.** It was found by re-running four categories with `/max-fps:60` as documented and having
 eleven scenarios drop out of the 25 px/s band with no physics change capable of reaching them — nine of them
 moving from *exactly* 12.5 to *exactly* 29.9, which is a sampling artefact rather than a movement one. The

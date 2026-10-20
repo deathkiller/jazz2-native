@@ -60,6 +60,7 @@ namespace Jazz2::UI::Menu
 		bool CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit) override;
 #endif
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
+		void ApplyCursorPolicy() override;
 
 		Vector2i GetViewSize() const override {
 			return _canvasBackground->ViewSize;
@@ -72,10 +73,6 @@ namespace Jazz2::UI::Menu
 		/** @brief Leaves the paused game and switches back to the main menu */
 		void GoToMainMenu();
 #if defined(WITH_EDITOR)
-		/** @brief Returns 	rue if the level can be opened in the level editor */
-		bool CanOpenInEditor() const;
-		/** @brief Leaves the level and opens it in the level editor */
-		void OpenInEditor();
 		/** @brief Returns `true` if the level is played from the level editor */
 		bool IsEditorPlayTest() const;
 		/** @brief Leaves the level editor the level is played from */

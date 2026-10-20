@@ -40,19 +40,27 @@ namespace Jazz2::Editor::EventCatalogParts
 			{ N_("Science Noise"), 2 }
 		};
 
+		// Mirrored, each force to the left swaps with the one to the right; the arrows are the belt (0), the accelerating
+		// belt (1) and the wind (2), the strengths to both sides summed, see Player::OnHandleAreaEvents()
 		constexpr EventParamField AreaHForceFields[] = {
 			UIntField(N_("Belt Left"), 0, 8, 0, 255)
-				.WithDescription(N_("Moves a player standing on the tile to the left, 1 is 1 pixel per tick of the original")),
+				.WithDescription(N_("Moves a player standing on the tile to the left, 1 is 1 pixel per tick of the original"))
+				.MirroredX(MirrorMode::SwapField, 1).WithDirection(DirectionAxis::X, true, 0),
 			UIntField(N_("Belt Right"), 1, 8, 0, 255, 2)
-				.WithDescription(N_("Moves a player standing on the tile to the right, 1 is 1 pixel per tick of the original")),
+				.WithDescription(N_("Moves a player standing on the tile to the right, 1 is 1 pixel per tick of the original"))
+				.MirroredX(MirrorMode::SwapField, 0).WithDirection(DirectionAxis::X, false, 0),
 			UIntField(N_("Acc. Belt Left"), 2, 8, 0, 255)
-				.WithDescription(N_("Accelerates a player standing on the tile to the left")),
+				.WithDescription(N_("Accelerates a player standing on the tile to the left"))
+				.MirroredX(MirrorMode::SwapField, 3).WithDirection(DirectionAxis::X, true, 1),
 			UIntField(N_("Acc. Belt Right"), 3, 8, 0, 255)
-				.WithDescription(N_("Accelerates a player standing on the tile to the right")),
+				.WithDescription(N_("Accelerates a player standing on the tile to the right"))
+				.MirroredX(MirrorMode::SwapField, 2).WithDirection(DirectionAxis::X, false, 1),
 			UIntField(N_("Wind Left"), 4, 8, 0, 255)
-				.WithDescription(N_("Blows a player inside the tile to the left, at half the speed of a belt")),
+				.WithDescription(N_("Blows a player inside the tile to the left, at half the speed of a belt"))
+				.MirroredX(MirrorMode::SwapField, 5).WithDirection(DirectionAxis::X, true, 2),
 			UIntField(N_("Wind Right"), 5, 8, 0, 255)
 				.WithDescription(N_("Blows a player inside the tile to the right, at half the speed of a belt"))
+				.MirroredX(MirrorMode::SwapField, 4).WithDirection(DirectionAxis::X, false, 2)
 		};
 
 		constexpr EventParamField AreaTextFields[] = {
@@ -71,8 +79,10 @@ namespace Jazz2::Editor::EventCatalogParts
 				.WithDescription(N_("Changes the level without the fade-out")),
 			TextIdField(N_("Next Level"), 2)
 				.WithDescription(N_("Text with the name of the next level, 0 goes to the default next level")),
+			// Only of a text, see Player::HandleAreaEventAt()
 			UIntField(N_("Part"), 3, 8, 0, 255)
-				.WithDescription(N_("Part of the text split by | that is the name, 0 is the first one")),
+				.WithDescription(N_("Part of the text split by | that is the name, 0 is the first one"))
+				.ShowIfNot(3, 0),
 			UIntField(N_("Coins"), 4, 16, 0, 65535)
 				.WithDescription(N_("Coins needed to take the exit, they are spent"))
 		};
@@ -105,10 +115,13 @@ namespace Jazz2::Editor::EventCatalogParts
 		constexpr EventParamField AreaWeatherFields[] = {
 			EnumField(N_("Weather"), 0, 7, WeatherOptions, 1)
 				.WithDescription(N_("Flowers and leaves are shown as snow")),
+			// Nothing to say of no weather
 			BoolField(N_("Outdoors Only"), 0, 7)
-				.WithDescription(N_("No particles appear inside tiles and all of them vanish when they hit one")),
+				.WithDescription(N_("No particles appear inside tiles and all of them vanish when they hit one"))
+				.ShowIfNot(0, 0),
 			UIntField(N_("Intensity"), 1, 8, 0, 255, 5)
 				.WithDescription(N_("Particles spawned each frame"))
+				.ShowIfNot(0, 0)
 		};
 
 		constexpr EventParamField AreaAmbientSoundFields[] = {
@@ -122,34 +135,49 @@ namespace Jazz2::Editor::EventCatalogParts
 				.WithDescription(N_("Bubbles released every 20 frames"))
 		};
 
+		// Crates and zones set triggers, the tiles of trigger areas change by them; warp origins lead to warp targets.
+		// The editor links them by lines, see EventPreviews::CollectLinks().
+		constexpr const char* TriggerChannel = "trigger";
+		constexpr const char* WarpChannel = "warp";
+
 		constexpr EventParamField TriggerCrateFields[] = {
-			TriggerIdField(N_("Trigger"), 0),
+			TriggerIdField(N_("Trigger"), 0)
+				.WithLink(TriggerChannel, EventLinkRole::Source),
+			// Ignored when it toggles, see TriggerCrate::OnActivatedAsync()
 			BoolField(N_("Turn On"), 1, 0, true)
-				.WithDescription(N_("Turns the trigger on when the crate breaks, otherwise off")),
+				.WithDescription(N_("Turns the trigger on when the crate breaks, otherwise off"))
+				.ShowIf(2, 0),
 			BoolField(N_("Toggle"), 2)
 				.WithDescription(N_("Switches the trigger instead, Turn On is ignored"))
 		};
 
 		constexpr EventParamField TriggerAreaFields[] = {
 			TriggerIdField(N_("Trigger"), 0)
+				.WithLink(TriggerChannel, EventLinkRole::Target)
 		};
 
 		constexpr EventParamField TriggerZoneFields[] = {
-			TriggerIdField(N_("Trigger"), 0),
+			TriggerIdField(N_("Trigger"), 0)
+				.WithLink(TriggerChannel, EventLinkRole::Source),
 			BoolField(N_("Turn On"), 1, 0, true)
 				.WithDescription(N_("Turns the trigger on, otherwise off"))
 		};
 
 		constexpr EventParamField WarpCoinBonusFields[] = {
-			WarpIdField(N_("Warp"), 0),
+			WarpIdField(N_("Warp"), 0)
+				.WithLink(WarpChannel, EventLinkRole::Source),
 			BoolField(N_("Fast"), 1)
 				.WithDescription(N_("Moves the player instantly, without the warp animation")),
+			// BonusWarp::Activate() counts the lap as WarpOrigin does
+			BoolField(N_("Set Lap"), 2)
+				.WithDescription(N_("Counts a lap, it's the finish line of a race")),
 			UIntField(N_("Coins"), 3, 8, 0, 255, 10)
 				.WithDescription(N_("Coins needed, the remaining ones turn into gems"))
 		};
 
 		constexpr EventParamField WarpOriginFields[] = {
-			WarpIdField(N_("Warp"), 0),
+			WarpIdField(N_("Warp"), 0)
+				.WithLink(WarpChannel, EventLinkRole::Source),
 			BoolField(N_("Fast"), 1)
 				.WithDescription(N_("Moves the player instantly, without the warp animation")),
 			BoolField(N_("Set Lap"), 2)
@@ -158,6 +186,16 @@ namespace Jazz2::Editor::EventCatalogParts
 
 		constexpr EventParamField WarpTargetFields[] = {
 			WarpIdField(N_("Warp"), 0)
+				.WithLink(WarpChannel, EventLinkRole::Target)
+		};
+
+		// BonusWarp has a sign only for these costs, anything else shows the plain one
+		constexpr EventPreviewCase WarpCoinBonusPreview[] = {
+			{ 10, "Object/BonusWarp", 10 },
+			{ 20, "Object/BonusWarp", 20 },
+			{ 50, "Object/BonusWarp", 50 },
+			{ 100, "Object/BonusWarp", 100 },
+			{ EventPreviewCase::AnyValue, "Object/BonusWarp", std::uint32_t(AnimState::Default) }
 		};
 
 		constexpr EventDescriptor Events[] = {
@@ -177,7 +215,7 @@ namespace Jazz2::Editor::EventCatalogParts
 			DescribeEvent(EventType::AreaActivateBoss, "AreaActivateBoss", N_("Activate Boss"), EventCategory::Area,
 				N_("Starts the fight with the boss of the level."), AreaActivateBossFields, nullptr, 0, EventTraits::Area),
 			DescribeEvent(EventType::AreaFlyOff, "AreaFlyOff", N_("Fly Off"), EventCategory::Area,
-				N_("Takes away the airboard and the flying carrot."), nullptr, 0, EventTraits::Area),
+				N_("Takes away the airboard and the flying carrot, and turns a bird back into its character."), nullptr, 0, EventTraits::Area),
 			DescribeEvent(EventType::AreaRevertMorph, "AreaRevertMorph", N_("Revert Morph"), EventCategory::Area,
 				N_("Turns a morphed player back into their character."), nullptr, 0, EventTraits::Area),
 			DescribeEvent(EventType::AreaMorphToFrog, "AreaMorphToFrog", N_("Morph to Frog"), EventCategory::Area,
@@ -203,7 +241,8 @@ namespace Jazz2::Editor::EventCatalogParts
 
 			// Warp
 			DescribeEvent(EventType::WarpCoinBonus, "WarpCoinBonus", N_("Bonus Warp"), EventCategory::Warp,
-				N_("Warp that costs coins."), WarpCoinBonusFields, "Object/BonusWarp", 10 /* Bonus10, the default cost */, EventTraits::Object),
+				N_("Warp that costs coins."), WarpCoinBonusFields, "Object/BonusWarp", 10 /* Bonus10, the default cost */, EventTraits::Object)
+				.WithPreviewCases(3, WarpCoinBonusPreview),
 			DescribeEvent(EventType::WarpOrigin, "WarpOrigin", N_("Warp Origin"), EventCategory::Warp,
 				N_("Warps the player to a warp target with the same identifier."), WarpOriginFields, nullptr, 0, EventTraits::Area),
 			DescribeEvent(EventType::WarpTarget, "WarpTarget", N_("Warp Target"), EventCategory::Warp,

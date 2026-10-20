@@ -135,7 +135,7 @@ namespace Jazz2::Input
 	}
 
 	RumbleProcessor::ActiveRumble::ActiveRumble(std::int32_t joyId, std::shared_ptr<RumbleDescription> desc)
-		: Desc(std::move(desc)), JoyId(joyId), Progress(0.0f)
+		: Desc(Death::move(desc)), JoyId(joyId), Progress(0.0f)
 	{
 	}
 }

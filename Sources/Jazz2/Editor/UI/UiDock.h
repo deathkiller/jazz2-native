@@ -91,6 +91,8 @@ namespace Jazz2::Editor
 		void Draw(UiPainter& painter) override;
 		void Update(float timeMult) override;
 		UiElement* HitTest(Vector2f pos) override;
+		/** @brief With the edges a floating panel is resized by, which reach a little outside of it */
+		Rectf GetHitBounds() const override;
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerDownInside(const UiPointerEvent& event) override;
@@ -98,14 +100,6 @@ namespace Jazz2::Editor
 		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
 
 	private:
-		enum Edge : std::uint8_t
-		{
-			EdgeLeft = 0x01,
-			EdgeTop = 0x02,
-			EdgeRight = 0x04,
-			EdgeBottom = 0x08
-		};
-
 		UiDockSide _side;
 		UiPanel* _panel;
 		UiDragBar* _header;
@@ -139,6 +133,8 @@ namespace Jazz2::Editor
 		Rectf GetFloatingRect(float scale, const Rectf& dockBounds) const;
 		Rectf GetDefaultFloatingBounds(float scale, const Rectf& dockBounds) const;
 		std::uint8_t GetEdgesAt(Vector2f pos) const;
+		// Whether it floats where it's resized by its edges, it's not on its way and not being moved
+		bool IsResizable() const;
 		bool IsInDockZone(Vector2f pos) const;
 		void BeginMove(Vector2f pos);
 		void Move(Vector2f offset, Vector2f pos);

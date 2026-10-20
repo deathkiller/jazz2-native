@@ -48,6 +48,47 @@ namespace Jazz2::Editor
 			rect.Y = center.Y - rect.H * 0.5f;
 			return float(quarterTurns) * fPiOver2;
 		}
+
+		// How the game spawns its own events is known here, by their parameters as the game reads them. An event the
+		// game knows that a level or an event pack describes in its own way may mean something else by them, it's
+		// shown only as its description says then.
+		bool HasBuiltInLayout(std::uint16_t type)
+		{
+			return !EventCatalog::IsExtension(EventCatalog::Find(EventType(type)));
+		}
+
+		// Lines of a label of a box can be closer to each other than lines of a text, there are no accents above them
+		constexpr float BoxLabelLineStep = 0.8f;
+
+		// The translated name of an event type, or its number in the buffer if it isn't known
+		StringView GetEventNameView(std::uint16_t type, char (&buffer)[16])
+		{
+			if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(type))) {
+				return _(descriptor->Name);
+			}
+			std::int32_t length = std::snprintf(buffer, sizeof(buffer), "#%u", std::uint32_t(type));
+			return StringView(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
+		}
+
+		// Sprites often reach over other tiles, a square in the corner tells which tile the event is at. An event off the grid is
+		// at no tile, it has a triangle there instead, a quarter longer on each side.
+		void DrawCornerMark(UiPainter& painter, const Rectf& tileRect, Colorf color, float alpha, bool offGrid)
+		{
+			if (tileRect.W < 10.0f) {
+				return;
+			}
+			float size = std::max(2.0f, std::round(tileRect.W / 8.0f));
+			color.A *= alpha;
+			if (!offGrid) {
+				painter.FillRect(Rectf(tileRect.X, tileRect.Y, size, size), color, UiLayer::Overlay);
+				return;
+			}
+			float corner = std::round(size * 1.25f);
+			float x = std::round(tileRect.X), y = std::round(tileRect.Y);
+			for (float row = 0.0f; row < corner; row += 1.0f) {
+				painter.FillRect(Rectf(x, y + row, corner - row, 1.0f), color, UiLayer::Overlay);
+			}
+		}
 	}
 
 	EventPreviews::EventPreviews()
@@ -70,16 +111,31 @@ namespace Jazz2::Editor
 			spec.Animation = std::uint32_t(AnimState::Fall);
 			return true;
 		}
-		if (ResolveEventPreview(event, spec)) {
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+		bool builtIn = !EventCatalog::IsExtension(descriptor);
+		if (builtIn && ResolveEventPreview(event, spec)) {
 			return (spec.Metadata != nullptr);
 		}
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
-		if (descriptor == nullptr || descriptor->PreviewMetadata == nullptr) {
+		if (descriptor == nullptr) {
 			return false;
 		}
-		spec.Metadata = descriptor->PreviewMetadata;
-		spec.Animation = descriptor->PreviewAnimation;
-		if (EventType(event.Type) == EventType::BossUterus) {
+		// By the value of a parameter, as the catalog says, or as the type looks
+		if (const EventPreviewCase* previewCase = EventCatalog::FindPreviewCase(*descriptor, event)) {
+			if (previewCase->Metadata == nullptr) {
+				return false;
+			}
+			spec.Metadata = previewCase->Metadata;
+			spec.Animation = previewCase->Animation;
+			spec.FlipX = previewCase->FlipX;
+			spec.Offset = Vector2f(float(previewCase->OffsetX), float(previewCase->OffsetY));
+		} else {
+			if (descriptor->PreviewMetadata == nullptr) {
+				return false;
+			}
+			spec.Metadata = descriptor->PreviewMetadata;
+			spec.Animation = descriptor->PreviewAnimation;
+		}
+		if (builtIn && EventType(event.Type) == EventType::BossUterus) {
 			// Its sprite lies on its side, Uterus::OnUpdate() stands it up by a quarter turn
 			spec.QuarterTurns = 1;
 		}
@@ -122,6 +178,9 @@ namespace Jazz2::Editor
 	{
 		if (!GetPreview(event, spec)) {
 			return false;
+		}
+		if (!HasBuiltInLayout(event.Type)) {
+			return true;
 		}
 		switch (EventType(event.Type)) {
 			case EventType::Ammo:
@@ -183,7 +242,7 @@ namespace Jazz2::Editor
 	void EventPreviews::DrawPlacedSprite(const DrawTarget& target, const Formats::EventRecord& event, GraphicResource* resource, const EventPreviewSpec& spec,
 		Vector2f spawnPos, float alpha, float animTime)
 	{
-		if (EventType(event.Type) == EventType::Bridge) {
+		if (EventType(event.Type) == EventType::Bridge && HasBuiltInLayout(event.Type)) {
 			// All of its pieces, as long as it is, each a frame of its own in turn, see Bridge::OnDraw()
 			SmallVector<std::int32_t, 64> offsets;
 			std::int32_t width = std::int32_t(event.Params[0] | (event.Params[1] << 8)) * 16;
@@ -211,6 +270,9 @@ namespace Jazz2::Editor
 
 	void EventPreviews::GetExtraParts(const Formats::EventRecord& event, const EventPreviewSpec& spec, float animTime, SmallVectorImpl<ExtraPart>& parts)
 	{
+		if (!HasBuiltInLayout(event.Type)) {
+			return;
+		}
 		switch (EventType(event.Type)) {
 			case EventType::EnemyLizardFloat: {
 				// Its copter, see LizardFloat::OnActivatedAsync() and OnUpdate()
@@ -261,15 +323,15 @@ namespace Jazz2::Editor
 		}
 		DrawTarget partTarget = target;
 		if (partTarget.Canvas != nullptr) {
-			partTarget.Z = std::uint16_t(std::clamp(std::int32_t(target.Z) + part.Depth, 0, 0xFFFF));
+			partTarget.Z = std::uint16_t(std::clamp<std::int32_t>(std::int32_t(target.Z) + part.Depth, 0, 0xFFFF));
 		}
 		DrawSprite(partTarget, resource, part.Spec, spawnPos + part.Spec.Offset, alpha, animTime);
 	}
 
 	void EventPreviews::DrawPlaced(UiPainter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime,
-		Vector2f spawnPos, bool inScene)
+		Vector2f spawnPos, bool inScene, bool offGrid)
 	{
-		if (DrawStart(painter, event, tileRect, scale, alpha, animTime)) {
+		if (DrawStart(painter, event, tileRect, scale, alpha, animTime, offGrid)) {
 			return;
 		}
 
@@ -285,23 +347,22 @@ namespace Jazz2::Editor
 					DrawPlacedSprite(target, event, resource, spec, spawnPos, alpha, animTime);
 				}
 
-				// Sprites often reach over other tiles, a mark in the corner tells which tile the event is at
-				if (tileRect.W >= 10.0f) {
-					const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
-					float size = std::max(2.0f, std::round(tileRect.W / 8.0f));
-					Colorf color = GetCategoryColor(descriptor != nullptr ? descriptor->Category : EventCategory::Other);
-					color.A *= alpha;
-					painter.FillRect(Rectf(tileRect.X, tileRect.Y, size, size), color, UiLayer::Overlay);
-				}
+				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+				DrawCornerMark(painter, tileRect, GetCategoryColor(descriptor != nullptr ? descriptor->Category : EventCategory::Other), alpha, offGrid);
 				return;
 			}
 		}
 
 		float inset = std::max(1.0f, std::round(tileRect.W / 16.0f));
 		DrawBox(painter, event.Type, Rectf(tileRect.X + inset, tileRect.Y + inset, tileRect.W - inset * 2.0f, tileRect.H - inset * 2.0f), alpha, true);
+		// The box itself shows the tile, only one off the grid needs the mark
+		if (offGrid) {
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+			DrawCornerMark(painter, tileRect, GetCategoryColor(descriptor != nullptr ? descriptor->Category : EventCategory::Other), alpha, true);
+		}
 	}
 
-	bool EventPreviews::DrawStart(UiPainter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime)
+	bool EventPreviews::DrawStart(UiPainter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime, bool offGrid)
 	{
 		// The characters that start there, next to each other
 		std::uint8_t players;
@@ -346,12 +407,7 @@ namespace Jazz2::Editor
 		}
 
 		// Which tile the start is at
-		if (tileRect.W >= 10.0f) {
-			float size = std::max(2.0f, std::round(tileRect.W / 8.0f));
-			Colorf color = GetCategoryColor(EventCategory::Basic);
-			color.A *= alpha;
-			painter.FillRect(Rectf(tileRect.X, tileRect.Y, size, size), color, UiLayer::Overlay);
-		}
+		DrawCornerMark(painter, tileRect, GetCategoryColor(EventCategory::Basic), alpha, offGrid);
 		return true;
 	}
 
@@ -472,6 +528,9 @@ namespace Jazz2::Editor
 
 	void EventPreviews::Clear()
 	{
+		// Its samples can go away with the metadata
+		StopSound();
+
 		ContentResolver& resolver = ContentResolver::Get();
 		for (Metadata* metadata : _pinned) {
 			resolver.PinMetadata(metadata, false);
@@ -481,6 +540,7 @@ namespace Jazz2::Editor
 		for (auto& entries : _sprites) {
 			entries.clear();
 		}
+		_boxLabels.clear();
 	}
 
 	Colorf EventPreviews::GetCategoryColor(EventCategory category)
@@ -504,12 +564,8 @@ namespace Jazz2::Editor
 
 	String EventPreviews::GetEventName(std::uint16_t type)
 	{
-		if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(type))) {
-			return _(descriptor->Name);
-		}
 		char buffer[16];
-		std::int32_t length = std::snprintf(buffer, sizeof(buffer), "#%u", std::uint32_t(type));
-		return String(buffer, std::size_t(std::max(length, 0)));
+		return GetEventNameView(type, buffer);
 	}
 
 	void EventPreviews::DrawSprite(const DrawTarget& drawTarget, GraphicResource* resource, const EventPreviewSpec& spec, Vector2f pos, float alpha,
@@ -571,9 +627,14 @@ namespace Jazz2::Editor
 		Colorf color = (descriptor != nullptr ? GetCategoryColor(descriptor->Category) : Colorf(0.5f, 0.5f, 0.5f, 1.0f));
 		Colorf fill(color.R * 0.6f, color.G * 0.6f, color.B * 0.6f, 0.55f * alpha);
 		Colorf border(color.R, color.G, color.B, 0.95f * alpha);
-		if (rect.W >= 12.0f) {
+		// Many boxes are drawn when the view is far, a rounded one is 18 rectangles, a plain one with a border 5 and one
+		// without 1, as small as they are then, they look the same
+		if (rect.W >= 20.0f) {
 			painter.RoundRect(rect, fill, UiLayer::Content);
 			painter.RoundRectBorder(rect, border, UiLayer::Content);
+		} else if (rect.W >= 12.0f) {
+			painter.FillRect(rect, fill, UiLayer::Content);
+			painter.Frame(rect, border, 1.0f, UiLayer::Content);
 		} else {
 			painter.FillRect(rect, border, UiLayer::Content);
 		}
@@ -582,21 +643,78 @@ namespace Jazz2::Editor
 			return;
 		}
 
+		// Measuring the text is what takes the time, and boxes are drawn for many events in every frame, so the layout
+		// of a label is kept for the type and the size of the box. The name is compared too, the language can change.
+		// Zooming changes the size of the boxes in every frame, so a layout is made for sizes a few percent apart, for
+		// the size in the middle of them, and its text is scaled with the box, it gets smaller and larger with it.
+		char numberBuffer[16];
+		StringView name = GetEventNameView(type, numberBuffer);
+		auto getPadding = [](float width) {
+			return std::max(1.0f, std::round(width / 20.0f));
+		};
+		float padding = getPadding(rect.W);
+		Rectf inner(rect.X + padding, rect.Y + padding, rect.W - padding * 2.0f, rect.H - padding * 2.0f);
+		constexpr float StepsPerOctave = 16.0f;
+		std::int32_t widthStep = std::int32_t(std::round(std::log2(rect.W) * StepsPerOctave));
+		std::int32_t heightStep = std::int32_t(std::round(std::log2(rect.H) * StepsPerOctave));
+		float layoutWidth = std::exp2(float(widthStep) / StepsPerOctave);
+		float layoutHeight = std::exp2(float(heightStep) / StepsPerOctave);
+		std::uint64_t key = std::uint64_t(type) |
+			(std::uint64_t(std::clamp<std::int32_t>(widthStep + 0x8000, 0, 0xFFFF)) << 16) |
+			(std::uint64_t(std::clamp<std::int32_t>(heightStep + 0x8000, 0, 0xFFFF)) << 32) |
+			(std::uint64_t(std::clamp<std::int32_t>(std::int32_t(std::round(painter.GetScale() * 64.0f)), 0, 0xFFFF)) << 48);
+		BoxLabel* label;
+		auto it = _boxLabels.find(key);
+		if (it != _boxLabels.end() && it->second.Name == name) {
+			label = &it->second;
+		} else {
+			if (it == _boxLabels.end() && _boxLabels.size() >= MaxBoxLabels) {
+				_boxLabels.clear();
+			}
+			label = &_boxLabels[key];
+			float layoutPadding = getPadding(layoutWidth);
+			Rectf layoutInner(0.0f, 0.0f, layoutWidth - layoutPadding * 2.0f, layoutHeight - layoutPadding * 2.0f);
+			LayoutBoxLabel(painter, name, layoutInner, layoutWidth, *label);
+		}
+		if (label->Size <= 0.0f) {
+			return;
+		}
+		// The text is never larger than at the size of the interface, see LayoutBoxLabel()
+		float textSize = std::min(label->Size * rect.W / layoutWidth, 1.0f);
+
+		Colorf textColor = UiTheme::Text;
+		textColor.A *= alpha;
+		float originalSize = painter.GetTextSize();
+		painter.SetTextSize(textSize);
+		float lineHeight = painter.GetTextHeight();
+		float lineStep = std::round(lineHeight * BoxLabelLineStep);
+		painter.PushClip(inner);
+		float height = (label->Second.empty() ? lineHeight : lineHeight + lineStep);
+		float y = std::round(inner.Y + (inner.H - height) * 0.5f);
+		painter.Text(label->First, Vector2f(std::round(inner.X + inner.W * 0.5f), y), textColor, Alignment::Top, UiLayer::OverlayText);
+		if (!label->Second.empty()) {
+			painter.Text(label->Second, Vector2f(std::round(inner.X + inner.W * 0.5f), y + lineStep), textColor, Alignment::Top, UiLayer::OverlayText);
+		}
+		painter.PopClip();
+		painter.SetTextSize(originalSize);
+	}
+
+	void EventPreviews::LayoutBoxLabel(UiPainter& painter, StringView name, const Rectf& inner, float boxWidth, BoxLabel& label)
+	{
 		// The text gets smaller with the box, a box smaller than a tile at the size of the interface has a smaller one
 		// too. If it doesn't fit even at the smallest size, it's broken into two lines, or only the initials are left.
 		constexpr float MinTextSize = 0.75f;
 		constexpr float MinInitialsSize = 0.5f;
-		String name = GetEventName(type);
-		float padding = std::max(1.0f, std::round(rect.W / 20.0f));
-		Rectf inner(rect.X + padding, rect.Y + padding, rect.W - padding * 2.0f, rect.H - padding * 2.0f);
+		label.Name = name;
+		label.First = {};
+		label.Second = {};
+		label.Size = 0.0f;
+
 		float originalSize = painter.GetTextSize();
-		float maxSize = std::min(1.0f, rect.W / (32.0f * painter.GetScale()));
+		float maxSize = std::min(1.0f, boxWidth / (32.0f * painter.GetScale()));
 		painter.SetTextSize(1.0f);
 		float lineHeight = painter.GetTextHeight();
-		// Lines of a label can be closer to each other than lines of a text, there are no accents above them
-		constexpr float LineStep = 0.8f;
-		Colorf textColor = UiTheme::Text;
-		textColor.A *= alpha;
+		constexpr float LineStep = BoxLabelLineStep;
 
 		StringView first = name;
 		StringView second;
@@ -655,6 +773,7 @@ namespace Jazz2::Editor
 				}
 				size = std::min({ maxSize, inner.W / std::max(painter.MeasureText(initials), 1.0f), inner.H / lineHeight });
 				if (size < MinInitialsSize) {
+					// Nothing fits, the box stays without a label
 					painter.SetTextSize(originalSize);
 					return;
 				}
@@ -663,18 +782,11 @@ namespace Jazz2::Editor
 			}
 		}
 
-		painter.SetTextSize(size);
-		lineHeight = painter.GetTextHeight();
-		float lineStep = std::round(lineHeight * LineStep);
-		painter.PushClip(inner);
-		float height = (second.empty() ? lineHeight : lineHeight + lineStep);
-		float y = std::round(inner.Y + (inner.H - height) * 0.5f);
-		painter.Text(first, Vector2f(std::round(inner.X + inner.W * 0.5f), y), textColor, Alignment::Top, UiLayer::OverlayText);
-		if (!second.empty()) {
-			painter.Text(second, Vector2f(std::round(inner.X + inner.W * 0.5f), y + lineStep), textColor, Alignment::Top, UiLayer::OverlayText);
-		}
-		painter.PopClip();
 		painter.SetTextSize(originalSize);
+		// Copied, the views point into the name and the initials, which don't outlive this
+		label.First = first;
+		label.Second = second;
+		label.Size = size;
 	}
 }
 

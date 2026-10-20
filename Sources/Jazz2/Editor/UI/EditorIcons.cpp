@@ -1174,6 +1174,387 @@ namespace Jazz2::Editor
 			"................",
 			"................",
 		};
+
+		// An arrow around, clockwise
+		const char* const IconRotateCW[16] = {
+			"................",
+			"................",
+			"......####......",
+			"....##+..+##....",
+			"...#+......+#...",
+			"..#+........+#..",
+			"..#..........#..",
+			"..#..........#..",
+			"..#........#####",
+			"..#+........###.",
+			"...#+........#..",
+			"....##+.........",
+			"......####......",
+			"................",
+			"................",
+			"................",
+		};
+
+		// An arrow around, counter-clockwise
+		const char* const IconRotateCCW[16] = {
+			"................",
+			"................",
+			"......####......",
+			"....##+..+##....",
+			"...#+......+#...",
+			"..#+........+#..",
+			"..#..........#..",
+			"..#..........#..",
+			"#####........#..",
+			".###........+#..",
+			"..#........+#...",
+			".........+##....",
+			"......####......",
+			"................",
+			"................",
+			"................",
+		};
+
+		// A die, at random
+		const char* const IconDice[16] = {
+			"................",
+			".+############+.",
+			".#............#.",
+			".#.##......##.#.",
+			".#.##......##.#.",
+			".#............#.",
+			".#............#.",
+			".#.....##.....#.",
+			".#.....##.....#.",
+			".#............#.",
+			".#............#.",
+			".#.##......##.#.",
+			".#.##......##.#.",
+			".#............#.",
+			".+############+.",
+			"................",
+		};
+
+		// Arrows crossing, shuffled
+		const char* const IconShuffle[16] = {
+			"................",
+			"................",
+			"............#...",
+			"............##..",
+			"###.......######",
+			"+##+.....##+##..",
+			"..+##...##..#...",
+			"....##.##.......",
+			".....###........",
+			"....##.##.......",
+			"..+##...##..#...",
+			"+##+.....##+##..",
+			"###.......######",
+			"............##..",
+			"............#...",
+			"................",
+		};
+
+		// A die over arrows to both sides, flipped horizontally at random
+		const char* const IconRandomFlipX[16] = {
+			"................",
+			".....######.....",
+			".....#....#.....",
+			".....#.##.#.....",
+			".....#.##.#.....",
+			".....#....#.....",
+			".....######.....",
+			"................",
+			"..+..........+..",
+			".+#..........#+.",
+			"+##############+",
+			"+##############+",
+			".+#..........#+.",
+			"..+..........+..",
+			"................",
+			"................",
+		};
+
+		// A die next to arrows up and down, flipped vertically at random
+		const char* const IconRandomFlipY[16] = {
+			"................",
+			"...........++...",
+			"..........+##+..",
+			".........+####+.",
+			"...........##...",
+			".######....##...",
+			".#....#....##...",
+			".#.##.#....##...",
+			".#.##.#....##...",
+			".#....#....##...",
+			".######....##...",
+			"...........##...",
+			".........+####+.",
+			"..........+##+..",
+			"...........++...",
+			"................",
+		};
+
+		// A straight line
+		const char* const IconShapeLine[16] = {
+			"................",
+			"................",
+			".............##.",
+			"............###.",
+			"...........###..",
+			"..........###...",
+			".........###....",
+			"........###.....",
+			".......###......",
+			"......###.......",
+			".....###........",
+			"....###.........",
+			"...###..........",
+			"..###...........",
+			"..##............",
+			"................",
+		};
+
+		// The outline of an ellipse
+		const char* const IconEllipse[16] = {
+			"................",
+			"................",
+			"................",
+			".....######.....",
+			"...##+....+##...",
+			"..#+........+#..",
+			".#+..........+#.",
+			".#............#.",
+			".#............#.",
+			".#+..........+#.",
+			"..#+........+#..",
+			"...##+....+##...",
+			".....######.....",
+			"................",
+			"................",
+			"................",
+		};
+
+		// A filled ellipse
+		const char* const IconFilledEllipse[16] = {
+			"................",
+			"................",
+			"................",
+			".....######.....",
+			"...##########...",
+			"..############..",
+			".##############.",
+			".##############.",
+			".##############.",
+			".##############.",
+			"..############..",
+			"...##########...",
+			".....######.....",
+			"................",
+			"................",
+			"................",
+		};
+
+		// Three dots, more of something
+		const char* const IconMore[16] = {
+			"................",
+			"................",
+			"................",
+			"................",
+			"................",
+			"................",
+			"..##...##...##..",
+			"..##...##...##..",
+			"..##...##...##..",
+			"................",
+			"................",
+			"................",
+			"................",
+			"................",
+			"................",
+			"................",
+		};
+
+		// A beetle, the debug tools
+		// A magnifying glass in the colors of the game, a closer look at the level played, with an outline, see
+		// EditorIcons::GetPixelColor()
+		const char* const IconDebug[16] = {
+			"....oooo........",
+			"...owwwGoo......",
+			"..owggggwGo.....",
+			".owgbbbbggGo....",
+			"owgbwwbbBgGo....",
+			"owgbwwbbBBGo....",
+			"owgbbbbbBBGo....",
+			"oGgbbbbbBgGo....",
+			".owgBBBBBgGo....",
+			".oGggBBgggrRo...",
+			"..oGGGGGGrrrRo..",
+			"...ooooooRrrrRo.",
+			".........oRrrrRo",
+			"..........oRrrRo",
+			"...........oRRRo",
+			"............ooo.",
+		};
+
+		// An arrow going into a frame, back into the editor
+		// A pencil in the colors of the game, the level is edited again, with an outline, see EditorIcons::GetPixelColor()
+		const char* const IconEnterEditor[16] = {
+			"................",
+			"...........ooo..",
+			"..........owpPo.",
+			".........oppPPo.",
+			"........ogpPPo..",
+			".......owggGo...",
+			"......owyGGo....",
+			".....owyYYo.....",
+			"....oyyYYo......",
+			"...otyYYo.......",
+			"...ottYo........",
+			"..oGtTo.........",
+			"..oGGo..........",
+			".oGoo...........",
+			".oo.............",
+			"................",
+		};
+
+		// A square and a circle over it, shapes
+		const char* const IconShapes[16] = {
+			"................",
+			".########.......",
+			".#++++++#.......",
+			".#++++++#.......",
+			".#++++++#.......",
+			".#++++++#.......",
+			".#++++++#####...",
+			".#+++++##++++##.",
+			".########....+#.",
+			"......#+......+#",
+			"......#+......+#",
+			"......#+......+#",
+			"......#+......+#",
+			".......#+....+#.",
+			".......##++++##.",
+			".........####...",
+		};
+
+		// A clock with the arrow of turning back around it, as the rotation to the left has it
+		const char* const IconHistory[16] = {
+			"................",
+			"................",
+			"......####......",
+			"....##+..+##....",
+			"...#+......+#...",
+			"..#+...#....+#..",
+			"..#....#.....#..",
+			"..#....###+..#..",
+			"#####........#..",
+			".###........+#..",
+			"..#........+#...",
+			".........+##....",
+			"......####......",
+			"................",
+			"................",
+			"................",
+		};
+
+		// Shown by the pointer while an edge or a corner is pointed at or dragged, with a shaft a pixel thin and heads as
+		// large as those of the diagonal ones, so all of them look alike - the diagonal ones span 9 pixels on each axis,
+		// which makes them as long as the straight ones
+		const char* const IconCursorResizeHorizontal[16] = {
+			"................",
+			"................",
+			"................",
+			"................",
+			"....#......#....",
+			"...##......##...",
+			"..###......###..",
+			".##############.",
+			"..###......###..",
+			"...##......##...",
+			"....#......#....",
+			"................",
+			"................",
+			"................",
+			"................",
+			"................",
+		};
+
+		const char* const IconCursorResizeVertical[16] = {
+			"................",
+			".......#........",
+			"......###.......",
+			".....#####......",
+			"....#######.....",
+			".......#........",
+			".......#........",
+			".......#........",
+			".......#........",
+			".......#........",
+			".......#........",
+			"....#######.....",
+			".....#####......",
+			"......###.......",
+			".......#........",
+			"................",
+		};
+
+		const char* const IconCursorResizeNWSE[16] = {
+			"................",
+			"................",
+			"................",
+			"...####.........",
+			"...###..........",
+			"...###+.........",
+			"...#.+#+........",
+			"......+#+.......",
+			".......+#+......",
+			"........+#+.#...",
+			".........+###...",
+			"..........###...",
+			".........####...",
+			"................",
+			"................",
+			"................",
+		};
+
+		const char* const IconCursorResizeNESW[16] = {
+			"................",
+			"................",
+			"................",
+			".........####...",
+			"..........###...",
+			".........+###...",
+			"........+#+.#...",
+			".......+#+......",
+			"......+#+.......",
+			"...#.+#+........",
+			"...###+.........",
+			"...###..........",
+			"...####.........",
+			"................",
+			"................",
+			"................",
+		};
+
+		const char* const IconCursorMove[16] = {
+			"................",
+			".......#........",
+			"......###.......",
+			".....#####......",
+			".......#........",
+			"...#...#...#....",
+			"..##...#...##...",
+			".#############..",
+			"..##...#...##...",
+			"...#...#...#....",
+			".......#........",
+			".....#####......",
+			"......###.......",
+			".......#........",
+			"................",
+			"................",
+		};
 	}
 
 	const char* const* EditorIcons::GetRows(EditorIcon icon)
@@ -1240,7 +1621,55 @@ namespace Jazz2::Editor
 			case EditorIcon::Usage: return IconUsage;
 			case EditorIcon::EventPath: return IconEventPath;
 			case EditorIcon::Map: return IconMap;
+			case EditorIcon::RotateCW: return IconRotateCW;
+			case EditorIcon::RotateCCW: return IconRotateCCW;
+			case EditorIcon::Dice: return IconDice;
+			case EditorIcon::Shuffle: return IconShuffle;
+			case EditorIcon::RandomFlipX: return IconRandomFlipX;
+			case EditorIcon::RandomFlipY: return IconRandomFlipY;
+			case EditorIcon::ShapeLine: return IconShapeLine;
+			case EditorIcon::Ellipse: return IconEllipse;
+			case EditorIcon::FilledEllipse: return IconFilledEllipse;
+			case EditorIcon::More: return IconMore;
+			case EditorIcon::Debug: return IconDebug;
+			case EditorIcon::EnterEditor: return IconEnterEditor;
+			case EditorIcon::Shapes: return IconShapes;
+			case EditorIcon::History: return IconHistory;
+			case EditorIcon::CursorResizeHorizontal: return IconCursorResizeHorizontal;
+			case EditorIcon::CursorResizeVertical: return IconCursorResizeVertical;
+			case EditorIcon::CursorResizeNWSE: return IconCursorResizeNWSE;
+			case EditorIcon::CursorResizeNESW: return IconCursorResizeNESW;
+			case EditorIcon::CursorMove: return IconCursorMove;
 			default: return IconNone;
+		}
+	}
+
+	std::uint32_t EditorIcons::GetPixelColor(char pixel)
+	{
+		constexpr auto rgba = [](std::uint32_t r, std::uint32_t g, std::uint32_t b, std::uint32_t a = 255) {
+			return (r | (g << 8) | (b << 16) | (a << 24));
+		};
+		switch (pixel) {
+			case '#': return rgba(255, 255, 255);
+			case '+': return rgba(255, 255, 255, 128);
+			// Dark, but not quite black, as the outlines of the sprites of the game
+			case 'o': return rgba(20, 14, 28);
+			case 'w': return rgba(255, 255, 255);
+			case 'y': return rgba(255, 222, 70);
+			case 'Y': return rgba(226, 148, 30);
+			case 'r': return rgba(236, 52, 48);
+			case 'R': return rgba(150, 22, 40);
+			case 'p': return rgba(255, 150, 176);
+			case 'P': return rgba(208, 90, 128);
+			case 'g': return rgba(196, 200, 214);
+			case 'G': return rgba(110, 112, 134);
+			case 't': return rgba(246, 206, 150);
+			case 'T': return rgba(196, 142, 92);
+			case 'n': return rgba(110, 220, 80);
+			case 'N': return rgba(36, 132, 56);
+			case 'b': return rgba(90, 170, 255);
+			case 'B': return rgba(40, 80, 190);
+			default: return 0;
 		}
 	}
 }

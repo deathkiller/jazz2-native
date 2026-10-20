@@ -120,6 +120,22 @@ namespace nCine
 #endif
 	}
 
+	void RenderVaoPool::BindEmptyVao()
+	{
+		if (_emptyVao == nullptr) {
+			_emptyVao = std::make_unique<RHI::VertexArray>();
+		}
+		if (_emptyVao->Bind()) {
+			// Binding a VAO restores the element array buffer recorded in it, which may have been rewritten while it
+			// was bound (see BindVao()), so the cached handle is dropped and the VAO left with no index buffer
+			RHI::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), UnknownBufferHandle);
+			RHI::Buffer::BindHandle(std::uint32_t(BufferTarget::Index), 0);
+#if defined(NCINE_PROFILING)
+			RenderStatistics::AddVaoPoolBinding();
+#endif
+		}
+	}
+
 	void RenderVaoPool::InsertGLDebugMessage(const VaoBinding& binding)
 	{
 #if defined(DEATH_DEBUG)

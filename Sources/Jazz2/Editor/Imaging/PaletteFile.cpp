@@ -3,6 +3,7 @@
 #if defined(WITH_EDITOR)
 
 #include "PngCodec.h"
+#include "../Files/AtomicFile.h"
 #include "../../../nCine/I18n.h"
 
 #include <Containers/StaticArray.h>
@@ -40,12 +41,8 @@ namespace Jazz2::Editor
 		// The palette of an indexed image, or the colors of a grid of 16 × 16 cells, or of up to 256 pixels in a row
 		std::int32_t ReadPng(StringView path, std::uint32_t (&palette)[256], String* error)
 		{
-			auto s = fs::Open(path, FileAccess::Read);
 			PngImage image;
-			if (!s->IsValid() || !PngCodec::Decode(*s, image, error)) {
-				if (error != nullptr && error->empty()) {
-					*error = _("The file can't be read");
-				}
+			if (!PngCodec::Load(path, image, error)) {
 				return 0;
 			}
 			if (image.Indexed) {
@@ -96,9 +93,12 @@ namespace Jazz2::Editor
 				if (p >= end || *p < '0' || *p > '9') {
 					break;
 				}
+				// Stops growing at a value no palette has, a long run of digits can't overflow it
 				std::int32_t value = 0;
 				while (p < end && *p >= '0' && *p <= '9') {
-					value = value * 10 + (*p - '0');
+					if (value < 100000) {
+						value = value * 10 + (*p - '0');
+					}
 					p++;
 				}
 				values[count++] = value;
@@ -133,7 +133,12 @@ namespace Jazz2::Editor
 			return 0;
 		}
 		String data{NoInit, std::size_t(size)};
-		s->Read(data.data(), size);
+		if (s->Read(data.data(), size) != size) {
+			if (error != nullptr) {
+				*error = _("The file can't be read");
+			}
+			return 0;
+		}
 
 		if (format == Format::Act) {
 			if (size < 768) {
@@ -182,9 +187,10 @@ namespace Jazz2::Editor
 					continue;
 				}
 				if (lineIndex == 3) {
+					// A count of none is taken as no count at all, the colors that follow are read
 					std::int32_t values[3];
-					if (ReadNumbers(line, values) >= 1) {
-						expected = std::min(values[0], 256);
+					if (ReadNumbers(line, values) >= 1 && values[0] > 0) {
+						expected = std::min<std::int32_t>(values[0], 256);
 					}
 					continue;
 				}
@@ -223,11 +229,7 @@ namespace Jazz2::Editor
 		if (format == Format::None) {
 			return false;
 		}
-		auto s = fs::Open(path, FileAccess::Write);
-		if (!s->IsValid()) {
-			return false;
-		}
-
+		// Each format is written through a temporary file, a failed write doesn't damage the palette that was there
 		if (format == Format::Png) {
 			// Indexed, so it's read back exactly, and other programs show it as a grid of the colors
 			PngImage image;
@@ -241,7 +243,7 @@ namespace Jazz2::Editor
 				image.Palette[i] = palette[i] | 0xFF000000u;
 			}
 			image.PaletteSize = 256;
-			return PngCodec::Encode(*s, image);
+			return AtomicFile::Write(path, [&image](Stream& s) { return PngCodec::Encode(s, image); });
 		}
 
 		if (format == Format::Act) {
@@ -254,25 +256,29 @@ namespace Jazz2::Editor
 			// All 256 used, the first one transparent, as it is in the game
 			data[768] = 0x01; data[769] = 0x00;
 			data[770] = 0x00; data[771] = 0x00;
-			return (s->Write(data, sizeof(data)) == std::int64_t(sizeof(data)));
+			return AtomicFile::Write(path, data, std::int64_t(sizeof(data)));
 		}
 
 		String text;
 		char line[64];
+		// Cast for the format, std::uint32_t isn't unsigned int everywhere
+		auto channel = [&palette](std::int32_t i, std::int32_t shift) {
+			return unsigned((palette[i] >> shift) & 0xFF);
+		};
 		if (format == Format::Jasc) {
 			text = "JASC-PAL\r\n0100\r\n256\r\n"_s;
 			for (std::int32_t i = 0; i < 256; i++) {
-				std::int32_t length = std::snprintf(line, sizeof(line), "%u %u %u\r\n", palette[i] & 0xFF, (palette[i] >> 8) & 0xFF, (palette[i] >> 16) & 0xFF);
+				std::int32_t length = std::snprintf(line, sizeof(line), "%u %u %u\r\n", channel(i, 0), channel(i, 8), channel(i, 16));
 				text += StringView(line, std::size_t(length));
 			}
 		} else {
 			text = "GIMP Palette\nName: "_s + (name.empty() ? "Jazz2 Resurrection"_s : name) + "\nColumns: 16\n#\n"_s;
 			for (std::int32_t i = 0; i < 256; i++) {
-				std::int32_t length = std::snprintf(line, sizeof(line), "%3u %3u %3u\tIndex %d\n", palette[i] & 0xFF, (palette[i] >> 8) & 0xFF, (palette[i] >> 16) & 0xFF, i);
+				std::int32_t length = std::snprintf(line, sizeof(line), "%3u %3u %3u\tIndex %d\n", channel(i, 0), channel(i, 8), channel(i, 16), int(i));
 				text += StringView(line, std::size_t(length));
 			}
 		}
-		return (s->Write(text.data(), std::int64_t(text.size())) == std::int64_t(text.size()));
+		return AtomicFile::Write(path, text.data(), std::int64_t(text.size()));
 	}
 }
 

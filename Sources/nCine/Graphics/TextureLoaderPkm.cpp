@@ -12,7 +12,7 @@ using namespace Death::Memory;
 namespace nCine
 {
 	TextureLoaderPkm::TextureLoaderPkm(std::unique_ptr<Stream> fileHandle)
-		: ITextureLoader(std::move(fileHandle))
+		: ITextureLoader(Death::move(fileHandle))
 	{
 		if (!_fileHandle->IsValid()) {
 			return;

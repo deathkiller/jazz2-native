@@ -5,27 +5,28 @@
 #include "../IStateHandler.h"
 #include "../IRootController.h"
 #include "EditorInitialization.h"
+#include "Files/TileSetDataCache.h"
 #include "Document/CommandHistory.h"
+#include "Document/DocumentSnapshot.h"
 #include "Document/LevelDocument.h"
 #include "Events/EventPreviews.h"
-#include "Files/AutosaveService.h"
 #include "Files/ContentTileSetLibrary.h"
 #include "Files/EditorSettings.h"
 #include "Input/ActionRegistry.h"
-#include "Input/TouchGestures.h"
-#include "Runtime/MaskOverlay.h"
+#include "Runtime/PlayTestTypes.h"
+#include "Session/DocumentFiles.h"
+#include "Session/EditorInputRouter.h"
 #include "Smart/SmartTileModel.h"
 #include "Smart/TileShapes.h"
-#include "Runtime/TileLod.h"
-#include "Runtime/PlayTransition.h"
-#include "Runtime/PlayTestLevelHandler.h"
-#if defined(WITH_MULTIPLAYER)
-#	include "Runtime/PlayTestMpLevelHandler.h"
-#endif
-#include "Tools/EditorTool.h"
+#include "Tools/EditorContext.h"
 #include "Tools/EventTools.h"
 
 #include <memory>
+
+namespace Jazz2
+{
+	class LevelHandler;
+}
 
 namespace Jazz2::Formats
 {
@@ -34,34 +35,17 @@ namespace Jazz2::Formats
 
 namespace Jazz2::Editor
 {
+	class EditorDebugConsole;
 	class EditorLevelHandler;
 	class EditorShell;
-
-	/** @brief Where a play-test starts */
-	enum class PlayStartMode : std::uint8_t
-	{
-		Resume,			/**< Where the last play-test was left, as it was if the level wasn't changed since */
-		Here,			/**< At the pointer, or at the center of the view */
-		FromStart,		/**< At the start of the level */
-		Marker			/**< At the play-start marker, see @ref DocumentViewState::PlayStart */
-	};
-
-	/** @brief What the editor was used with last */
-	enum class InputModality : std::uint8_t
-	{
-		KeyboardMouse,		/**< Keyboard and mouse */
-		Gamepad,			/**< Gamepad, with a cursor of its own */
-		Touch				/**< Fingers on a touch screen, see @ref TouchGestures */
-	};
-
-	/** @brief What the panel with the tiles and the events shows */
-	enum class PickerPanel : std::uint8_t
-	{
-		Tiles,			/**< Tiles to paint with */
-		Events			/**< Events to place */
-	};
-
-	class UiRadialMenu;
+	class MaskOverlay;
+	class PlayOverlays;
+	class PlayTestController;
+	class PlayTransition;
+	class SavedComparison;
+	class TileLod;
+	class ToolManager;
+	class UiPainter;
 	class UiSurface;
 	struct UiFileRoot;
 
@@ -72,8 +56,14 @@ namespace Jazz2::Editor
 		hosts the level handler that shows it (see @ref EditorLevelHandler) and the interface around it. The hosted
 		handler gets the session as its root controller, so whatever it would do to the game as a whole --- going to
 		another level or to the main menu, saving a state to resume --- is decided by the session.
+
+		The session coordinates what keeps state of its own: the file of the level with its recovery copy, lock and
+		script (see @ref DocumentFiles), the input (see @ref EditorInputRouter), the play-tests (see
+		@ref PlayTestController), the comparison with the saved file (see @ref SavedComparison) and what is shown of how
+		the level is played (see @ref PlayOverlays).
 	*/
-	class EditorSession : public IStateHandler, public IRootController, public IToolHost
+	class EditorSession : public IStateHandler, public IRootController, public IEditorContext, private IPlayTestHost,
+		private IDocumentFilesHost, private IInputRouterHost
 	{
 		DEATH_RUNTIME_OBJECT(IStateHandler);
 
@@ -86,21 +76,17 @@ namespace Jazz2::Editor
 		bool Initialize(const EditorInitialization& editorInit);
 
 		/** @brief Returns the history of the level being edited */
-		CommandHistory& GetHistory() {
+		CommandHistory& GetHistory() override {
 			return *_history;
 		}
 		/** @brief Returns the actions */
-		ActionRegistry& GetActions() {
+		ActionRegistry& GetActions() override {
 			return _actions;
 		}
-		/** @brief Returns the path of the shortcuts the user changed, `Jazz2.EditorHotkeys.json` in the configuration directory */
-		static String GetHotkeysPath();
 		/** @brief Returns the tools */
-		ToolManager& GetTools() {
-			return *_tools;
-		}
+		ToolManager& GetTools() override;
 		/** @brief Returns the level handler that shows the level, or `nullptr` */
-		EditorLevelHandler* GetEditHandler() const {
+		EditorLevelHandler* GetEditHandler() const override {
 			return _editHandler.get();
 		}
 		/** @brief Returns the surface of the interface */
@@ -108,97 +94,84 @@ namespace Jazz2::Editor
 			return _surface.get();
 		}
 		/** @brief Returns the settings */
-		EditorSettings& GetSettings() {
+		EditorSettings& GetSettings() override {
 			return _settings;
 		}
 		/** @brief Returns what is known about the tile sets of the game */
-		ContentTileSetLibrary& GetTileSetLibrary() {
+		ContentTileSetLibrary& GetTileSetLibrary() override {
 			return _tileSets;
 		}
 		/** @brief Opens a level file in the editor, asking about unsaved changes first */
-		void OpenFile(StringView path);
+		void OpenFile(StringView path) override;
+		/**
+		 * @brief Restores a recovery copy into the editor, asking about unsaved changes first
+		 *
+		 * The level is edited as the file the copy belongs to, if that file still exists, as a new level otherwise.
+		 */
+		void OpenRecoveryCopy(StringView recoveryPath) override;
 		/** @brief Returns the path of the level file, may be empty */
-		StringView GetFilePath() const {
-			return _filePath;
-		}
+		StringView GetFilePath() const override;
 		/** @brief Returns the name of the level as episode/level, may be empty */
-		StringView GetLevelName() const {
-			return _levelName;
-		}
+		StringView GetLevelName() const override;
 		/** @brief Returns the places levels are opened from or saved to */
-		void GetFileRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots);
+		void GetFileRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots) override;
 		/** @brief Returns the places images are opened from or saved to, outside of the content of the game too */
-		void GetImageRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots);
-		/** @brief Shows a dialog to save the default tile set as images, of its tiles and of their masks */
-		void ShowExportTileSetImageDialog();
-		/** @brief Returns the name of a level as episode/level from the path of its file */
-		static String MakeLevelName(StringView path);
+		void GetImageRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots) override;
 
 		/** @brief Starts playing the level */
-		void StartPlayTest(PlayStartMode mode);
+		void StartPlayTest(PlayStartMode mode) override;
 		/** @brief Stops playing the level and returns to editing, @p keep keeps the play-test to resume later */
-		void StopPlayTest(bool keep);
+		void StopPlayTest(bool keep) override;
 		/** @brief Returns `true` while the level is played, or is about to be */
-		bool IsPlaying() const {
-			return (_mode != SessionMode::Edit);
-		}
-		/** @brief Returns `true` for the frame before the level is played */
-		bool IsEnteringPlay() const {
-			return (_mode == SessionMode::EnteringPlay);
-		}
+		bool IsPlaying() const override;
+		/** @brief Returns what plays the level being edited */
+		PlayTestController& GetPlayTest();
 		/** @brief Returns the color the tile set of the level is known by, see @ref FindAccentColor() */
-		Colorf GetAccentColor();
+		Colorf GetAccentColor() override;
 		/** @brief Returns a whole tile set with the pixels and masks of its tiles, read once, or `nullptr` if it can't be read */
-		const Formats::TileSetData* GetTileSetData(StringView name);
+		const Formats::TileSetData* GetTileSetData(StringView name) override;
+		/** @brief Returns the tile sets read whole for the level being edited, see @ref GetTileSetData() */
+		TileSetDataCache& GetTileSetDataCache() override {
+			return _tileSetData;
+		}
 		/** @brief Forgets what was read of a tile set, after its file was written */
-		void InvalidateTileSet(StringView name);
+		void InvalidateTileSet(StringView name) override;
 		/** @brief Returns the path the player took in the last play-test */
-		const PlayPath& GetLastPlayPath() const {
-			return _lastPlayPath;
-		}
+		const PlayPath& GetLastPlayPath() const;
+		/** @brief Returns the paths of the last play-tests, kept in the level */
+		const PlayPathHistory& GetPlayPathHistory() const override;
 		/** @brief Returns `true` if the panels are shown, while the level is edited and while the ring into the game grows over them */
-		bool ArePanelsShown() const {
-			return (_mode != SessionMode::Play || (_playTransition.IsActive() && _playTransition.HasInside()));
-		}
+		bool ArePanelsShown() const override;
 		/** @brief Returns the transition into the level being played */
-		PlayTransition& GetPlayTransition() {
-			return _playTransition;
-		}
+		PlayTransition& GetPlayTransition();
 		/** @brief Returns `true` if the path of the last play-test is shown */
 		bool IsPlayPathShown() const {
 			return _showPlayPath;
 		}
-		/** @brief Returns `true` if the play-start marker is placed, with its position in the level in pixels */
-		bool GetPlayStart(Vector2i& pos) const {
-			pos = _playStart;
-			return _hasPlayStart;
-		}
-		/** @brief Places the play-start marker at a position in the level in pixels, or removes it, see @ref PlayStartMode::Marker */
-		void SetPlayStart(bool placed, Vector2i pos = {});
-		/**
-		 * @brief Returns how far each tile of the sprite layer is from the start, for the player, row by row
-		 *
-		 * -1 where the player can't get. Empty while it's not shown, see the action `view.reachability`.
-		 */
-		ArrayView<const std::int32_t> GetReachability() const {
-			return _reachability;
-		}
+		/** @brief Returns what is shown over the level of how it's played, where the player can get and where it died */
+		PlayOverlays& GetPlayOverlays();
 		/**
 		 * @brief Finds where the player can get from the start of the play character, as the level is loaded now
 		 *
-		 * Returns `false` if it can't be found out, as without the start or without multiplayer compiled in, whose
-		 * route tracer it uses.
+		 * With the moves of any character, see @ref PlayOverlays::ComputeReachability(). Returns `false` if it can't be
+		 * found out, as without the start or without multiplayer compiled in, whose route tracer it uses.
 		 */
-		bool ComputeReachability(SmallVectorImpl<std::int32_t>& distances);
+		bool ComputeReachability(SmallVectorImpl<std::int32_t>& distances) override;
+		/** @brief Draws what is shown over the level of the editor, the differences from the saved file and the deaths in the last play-tests */
+		void DrawSessionOverlays(UiPainter& painter, const Rectf& viewRect);
+		/** @brief Loads the level again from the document, so the events in the game are as they are now, see @ref ComputeReachability() */
+		void ReloadRuntime() override {
+			RebuildRuntime();
+		}
 
 		/** @brief Changes the layer being edited */
-		void SetCurrentLayer(std::int32_t layer);
+		void SetCurrentLayer(std::int32_t layer) override;
 		/** @brief Returns `true` if the grid is shown */
 		bool IsGridShown() const {
 			return _showGrid;
 		}
 		/** @brief Returns `true` if events are shown over the level */
-		bool AreEventsShown() const {
+		bool AreEventsShown() const override {
 			return _showEvents;
 		}
 		/** @brief Returns how collision masks are shown, 0 not at all, 1 over the tiles, 2 instead of the tiles */
@@ -206,54 +179,96 @@ namespace Jazz2::Editor
 			return _maskMode;
 		}
 		/** @brief Returns what shows the collision masks over the level */
-		MaskOverlay& GetMaskOverlay() {
-			return _maskOverlay;
-		}
+		MaskOverlay& GetMaskOverlay();
 		/** @brief Returns what the panel with the tiles and the events shows */
-		PickerPanel GetPickerPanel() const {
+		PickerPanel GetPickerPanel() const override {
 			return _pickerPanel;
 		}
 		/** @brief Changes what the panel with the tiles and the events shows */
-		void SetPickerPanel(PickerPanel panel) {
+		void SetPickerPanel(PickerPanel panel) override {
 			_pickerPanel = panel;
 		}
 		/** @brief Chooses the events the event tool places, and the tool */
 		void SetEventBrush(EventStamp&& brush);
 		/** @brief Lets the next event chosen in the list go to a callback, instead of becoming the one to place */
-		void PickEventFromList(Function<void(EventType)>&& callback);
+		void PickEventFromList(Function<void(EventType)>&& callback) override;
 		/** @brief Returns `true` if the next event chosen in the list goes to a callback */
-		bool IsPickingEvent() const {
+		bool IsPickingEvent() const override {
 			return (bool)_eventPick;
 		}
+		/** @brief Lets the next event chosen in the list become the one to place again, see @ref PickEventFromList() */
+		void CancelEventPick() override {
+			_eventPick = {};
+		}
 		/** @brief Called when an event is chosen in the list */
-		void OnEventChosen(EventType type);
+		void OnEventChosen(EventType type) override;
 		/** @brief Returns what the editor was used with last */
-		InputModality GetInputModality() const {
-			return _inputModality;
-		}
-		/** @brief Returns the cursor moved by a gamepad, in pixels of the screen */
-		Vector2f GetGamepadCursor() const {
-			return _gamepadCursor;
-		}
+		InputModality GetInputModality() const override;
 		/** @brief Returns `true` if the editing actions work on events, not on tiles */
-		bool IsEditingEvents() const;
-		/** @brief Returns `true` if something is selected, that can be copied or deleted */
-		bool HasSelection() const;
+		bool IsEditingEvents() const override;
 		/** @brief Returns the pointer over the view, `false` if it's not over the view */
-		bool GetHoverPointer(ToolPointer& pointer);
+		bool GetHoverPointer(ToolPointer& pointer) override;
 
 		/** @brief Undoes the last change */
-		bool Undo();
+		bool Undo() override;
 		/** @brief Redoes the last undone change */
-		bool Redo();
+		bool Redo() override;
 		/** @brief Shows changes of the level being edited */
 		void OnDocumentChanged(const DocumentChanges& changes);
-		/** @brief Saves the level to a file, with @p exportOnly without the data only the editor uses */
-		bool SaveTo(StringView path, bool exportOnly);
+		/**
+		 * @brief Tells a function about every change of the level being edited, all of it changes when another level is opened
+		 *
+		 * Only a weak reference is kept, the function is called as long as its owner keeps it.
+		 */
+		void AddChangeObserver(const std::shared_ptr<ChangeObserver>& observer) override;
+		/**
+		 * @brief Saves the level into another file and edits that one from then on, as Save As does
+		 *
+		 * See @ref DocumentFiles::SaveAsFile(), the script of the level goes along, and with @p move the file the level
+		 * was in is removed. Returns `false` if the level couldn't be saved, nothing is changed then.
+		 */
+		bool SaveAsFile(StringView path, bool move) override;
+		/** @brief Returns `true` if the level can be saved to its file */
+		bool CanSaveInPlace() const override;
+		/** @brief Shows a dialog to save the level as a new file, or to export it, @p onSaved is called once it's saved */
+		void ShowSaveAsDialog(bool exportOnly, Function<void()>&& onSaved = {}) override;
+		/**
+		 * @brief Tells that a level file was moved or renamed outside of Save As, its place among the recent files goes along
+		 *
+		 * @ref SaveAsFile() does it itself for the level being edited.
+		 */
+		void NoteLevelFileMoved(StringView from, StringView to) override;
+		/**
+		 * @brief Ends what the pointer is in the middle of, before something else changes the level
+		 *
+		 * The stroke of a tool that follows the pointer is cancelled, as by <kbd>Esc</kbd>, and with @p releasePointer
+		 * also what the interface holds by the pointer, as a handle of the layer dragged. Called before an action, an
+		 * undoable step that doesn't come from the tool itself, saving, undoing and playing, so a step of a tool
+		 * started before them never takes what they changed as its own. Commands the tool runs itself aren't
+		 * affected.
+		 */
+		void CancelInteractions(bool releasePointer = true);
+		/**
+		 * @brief Makes a change directly on the level and records it as an undoable step, kept as snapshots of @p parts
+		 *
+		 * For changes no dedicated command makes, see @ref SnapshotCommand. As with @ref Execute(), a stroke of the tool
+		 * going on is cancelled first, unless the tool makes the change itself. @p change returns `false` if it changed
+		 * nothing, nothing is recorded then. @p kinds and @p layer are as in @ref SnapshotCommand::Begin(). Returns
+		 * `true` if the step was recorded.
+		 */
+		bool RecordSnapshotStep(String name, SnapshotParts parts, Function<bool(LevelDocument&)>&& change,
+			DocumentChangeKind kinds = DocumentChangeKind::None, std::int32_t layer = -1) override;
+		/**
+		 * @brief Changes the editor state of the level, such as which layers are hidden or locked and how opaque they are shown
+		 *
+		 * It's saved with the level, but isn't a change to undo, so no step is recorded --- the level counts as changed
+		 * since it was saved, so it's autosaved and asked about when it's closed.
+		 */
+		void SetEditorState(Function<void(LevelDocument&)>&& change) override;
 		/** @brief Toggles the editor state of a layer, such as whether it's hidden */
-		void ToggleLayerFlag(std::int32_t layer, std::uint8_t flag);
+		void ToggleLayerFlag(std::int32_t layer, std::uint8_t flag) override;
 		/** @brief Moves a layer to another position in the list of layers, as an undoable step */
-		void MoveLayerTo(std::int32_t from, std::int32_t to);
+		void MoveLayerTo(std::int32_t from, std::int32_t to) override;
 
 		// IToolHost
 		LevelDocument& GetDocument() override;
@@ -264,6 +279,8 @@ namespace Jazz2::Editor
 		void SetStamp(TileStamp&& stamp) override;
 		TileSelection& GetSelection() override;
 		void Execute(std::unique_ptr<EditCommand> command, bool allowMerge = false) override;
+		void BeginChanges(String name) override;
+		void EndChanges() override;
 		void PreviewTile(std::int32_t layer, std::int32_t x, std::int32_t y, const TileRef& tile) override;
 		void RevertPreview(std::int32_t layer, const Recti& area) override;
 		Tiles::TileMap* GetTileMap() override;
@@ -312,13 +329,6 @@ namespace Jazz2::Editor
 		void RefreshCacheLevels(bool recreateAll, Compatibility::ConversionProgress progress = {}) override;
 
 	private:
-		enum class SessionMode : std::uint8_t
-		{
-			Edit,
-			EnteringPlay,
-			Play
-		};
-
 		IRootController* _root;
 		ContentTileSetLibrary _tileSets;
 		LevelDocument _document;
@@ -328,58 +338,27 @@ namespace Jazz2::Editor
 		EditorShell* _shell;
 		ActionRegistry _actions;
 		EditorSettings _settings;
-		AutosaveService _autosave;
+		// The file of the level, its recovery copy, its lock and its script, see DocumentFiles
+		std::unique_ptr<DocumentFiles> _files;
 		std::unique_ptr<ToolManager> _tools;
-		String _levelName;
-		String _filePath;
 
-		SessionMode _mode;
-		// Alone or in local splitscreen, see PlayTestLevelHandler and PlayTestMpLevelHandler
-		std::shared_ptr<IPlayTest> _playHandler;
-		// A play-test that was left, kept only for its last frame while the ring back into the editor is shown
-		std::shared_ptr<IPlayTest> _closingPlayHandler;
-		std::uint32_t _playRevision;
-		PlayTestOptions _playOptions;
-		// How the play-test kept was started
-		PlayTestOptions _playedOptions;
-		bool _resumePlay;
-		Vector2f _editCameraCenter;
-		float _editCameraScale;
-		PlayPath _lastPlayPath;
-		PlayTransition _playTransition;
+		// Plays the level, owns the play-tests and the rings into the level and back
+		std::unique_ptr<PlayTestController> _playTest;
+		// Where the level differs from the file saved on disk, while it's shown
+		std::unique_ptr<SavedComparison> _comparison;
+		// Where the player can get and where it died in the last play-tests
+		std::unique_ptr<PlayOverlays> _playOverlays;
 		bool _showPlayPath;
-		// See SetPlayStart()
-		bool _hasPlayStart = false;
-		Vector2i _playStart;
-		// The music opens up when the level is played and is muffled again in the editor, over a while, see UpdateMusicFade()
-		float _musicFadeFrom = 1.0f;
-		float _musicFadeTo = 1.0f;
-		float _musicFadeTime = -1.0f;
-		// The sprite layer and the events when the kept play-test was left, so it's known what was edited since
-		SmallVector<TileRef, 0> _suspendedSpriteTiles;
-		Vector2i _suspendedSpriteSize;
-		SmallVector<DocumentEvent, 0> _suspendedEvents;
-		SmallVector<Formats::OffGridEventRecord, 0> _suspendedOffGridEvents;
-		// The kept play-test, after the level was edited, until the new one took what it can from it
-		std::shared_ptr<IPlayTest> _restoreFrom;
-		// Where the player was, where memory is too short to keep the play-test
-		Vector2f _resumePosition;
-		bool _hasResumePosition = false;
-		// See GetReachability(), empty while it's not shown
-		SmallVector<std::int32_t, 0> _reachability;
-		bool _enteringPlayFrameShown = false;
-		// Export marks the level so the editor doesn't open it, see LevelFlags::NotEditable
-		bool _exportNotEditable = false;
+		// Changes not shown yet, during a transaction or while the level is played, see OnDocumentChanged()
+		DocumentChanges _pendingChanges;
+		// See GetAccentColor()
+		Colorf _accentColor;
+		std::uint32_t _accentRevision = 0;
+		std::uint64_t _accentKey = 0;
+		// See GetSmartTiles()
+		std::uint32_t _smartTilesRevision = 0;
 		// Tile sets read whole, for the pixels of their tiles, see GetTileSetData()
-		struct CachedTileSet
-		{
-			String Name;
-			std::unique_ptr<Formats::TileSetData> Data;
-			// Bytes it was read from, for a tile set the level stores in itself, it's read again when they change
-			const std::uint8_t* Bytes = nullptr;
-			std::size_t ByteCount = 0;
-		};
-		SmallVector<CachedTileSet, 0> _tileSetData;
+		TileSetDataCache _tileSetData;
 
 		std::int32_t _currentLayer;
 		TileStamp _stamp;
@@ -391,7 +370,9 @@ namespace Jazz2::Editor
 		EventStamp _eventClipboard;
 		EventSelection _eventSelection;
 		Function<void(EventType)> _eventPick;
-		MaskOverlay _maskOverlay;
+		// See AddChangeObserver(), the expired ones are dropped as they're found
+		SmallVector<std::weak_ptr<ChangeObserver>, 4> _changeObservers;
+		std::unique_ptr<MaskOverlay> _maskOverlay;
 		// How the tiles of the default tile set fit together, learned from levels once it's asked for
 		SmartTileModel _smartTiles;
 		bool _smartTilesUsed = false;
@@ -401,129 +382,154 @@ namespace Jazz2::Editor
 		std::int32_t _maskMode;
 		// Layer drawn differently while it's edited, see UpdateLayerOverride()
 		std::int32_t _overriddenLayer = -1;
-		// Tiles the shown level overrides, see ApplyTileOverrides()
-		SmallVector<std::uint16_t, 0> _appliedDiffuseOverrides;
-		SmallVector<std::uint16_t, 0> _appliedMaskOverrides;
+		// Tiles the shown level overrides, and the tiles of the tile sets it stores in itself, each with a hash of what
+		// it shows, sorted by the tile ID, see ApplyTileOverrides()
+		struct AppliedTile
+		{
+			std::uint16_t TileId;
+			std::uint64_t Hash;
+		};
+		SmallVector<AppliedTile, 0> _appliedDiffuseOverrides;
+		SmallVector<AppliedTile, 0> _appliedMaskOverrides;
+		SmallVector<AppliedTile, 0> _appliedLevelTiles;
+		std::uint32_t _appliedLevelTilesGeneration = 0;
 		bool _showEvents;
 		PickerPanel _pickerPanel;
 
-		// Last position of the pointer in pixels of the drawable, which may differ from the window on a high-DPI display
-		Vector2f _pointerPos;
-		bool _pointerKnown;
-		bool _panning;
-		bool _toolPointerDown;
-		MouseButton _toolButton;
-		std::int32_t _modifiers;
-		// An action is run by its key, not chosen from a menu or by a button
-		bool _handlingShortcut = false;
-
-		// What the editor was used with last, and the state of the gamepad
-		InputModality _inputModality = InputModality::KeyboardMouse;
-		Vector2f _mousePos;
-		Vector2f _gamepadCursor;
-		std::uint32_t _gamepadButtons = 0;
-		float _gamepadRepeat = 0.0f;
-		// How long Y has been held, held long it opens the menu of tools around the cursor
-		float _gamepadYTime = -1.0f;
-		UiRadialMenu* _radialMenu = nullptr;
-		TouchGestures _touch;
-		// Frames the sticks have been held for, they move faster then
-		float _gamepadCursorHold = 0.0f;
-		float _gamepadPanHold = 0.0f;
-		bool _gamepadPicking = false;
-
-		/** @brief Presses the pointer at a position on the screen, by the mouse or a gamepad */
-		void PointerDown(Vector2f pos, MouseButton button);
-		/** @brief Releases the pointer at a position on the screen */
-		void PointerUp(Vector2f pos, MouseButton button);
-		/** @brief Moves the pointer to a position on the screen */
-		void PointerMove(Vector2f pos);
-		/** @brief Switches what the editor is used with, the hints follow */
-		void SetInputModality(InputModality modality);
-		/** @brief Reads the gamepad and uses the editor by it */
-		void UpdateGamepad(float timeMult);
-		/** @brief Sets up what the fingers on a touch screen do */
-		void SetupTouchGestures();
-		/** @brief Shows the menu of tools in a ring around a position on the screen */
-		void ShowToolMenu(Vector2f pos);
+		// The keyboard, the mouse, the touch screen and the gamepad, see EditorInputRouter
+		std::unique_ptr<EditorInputRouter> _input;
+		// How many times the level shown was loaded again, see OnPlayTestReturned()
+		std::uint32_t _runtimeBuildCount = 0;
 
 #if defined(DEATH_DEBUG)
-		// Commands given on the command line by `/console <command>`, run once the view exists
-		SmallVector<String, 0> _debugStartupCommands;
-		std::int32_t _debugFrame = 0;
-		std::int32_t _debugWaitFrames = 0;
-
-		/** @brief Runs a debug command, used to test the editor without input */
-		bool ExecuteDebugCommand(StringView line);
+		// Commands to test the editor without input, see EditorDebugConsole
+		std::unique_ptr<EditorDebugConsole> _debugConsole;
 #endif
 
 		/** @brief Puts how the level is seen and played into it, see @ref DocumentViewState */
-		void StoreViewState();
+		void StoreViewState() override;
 		/** @brief Shows the level as it was seen when it was saved, once the level handler exists but before its view does */
 		void ApplyViewState();
-		/** @brief Starts muffling the music, or opening it up, over a while */
-		void StartMusicFade(float from, float to);
-		/** @brief Advances the fade of the music */
-		void UpdateMusicFade(float timeMult);
-		/** @brief Remembers the sprite layer and the events when a play-test is kept, see @ref RestorePlayState() */
-		void RememberSuspendedLevel();
-		/**
-		 * @brief Takes what the player had and what was collected or destroyed from a play-test into a new one
-		 *
-		 * Cells of the sprite layer and events edited since the old play-test was left start as new, the rest of
-		 * the level is as it was left, if the sprite layer has the same size.
-		 */
-		void RestorePlayState(IPlayTest& from, IPlayTest& to);
+
+		// IDocumentFilesHost
+		void PrepareForSave() override;
+		void ReplaceDocument(LevelDocument&& document, StringView path, StringView levelName) override;
+		void OnScriptChanged() override;
+		void ReloadTileSet(StringView name) override;
+
+		// IInputRouterHost
+		Rectf GetViewRect() const override;
+		void ClearSelection() override;
+		void ChangeUiScale(std::int32_t direction) override;
+
+		// IPlayTestHost
+		std::uint32_t GetDocumentRevision() const override;
+		IRootController& GetPlayTestRoot() override;
+		std::weak_ptr<void> GetPlayTestHostReference() override;
+		void OnPlayTestViewChanged() override;
+		bool OnPlayTestReturned() override;
+		void ExitEditor() override;
 
 		/** @brief Creates all actions */
 		void CreateActions();
+		// The actions of CreateActions() by menu or area, called in the order the actions are added, which is the order
+		// of the command palette and the one that decides which of two actions with the same key runs
+		void CreateFileActions();
+		void CreateEditActions();
+		void CreateHelpActions();
+		void CreateNavigationActions();
+		void CreateEventActions();
+		void CreateStampActions();
+		void CreateToolActions();
+		void CreateViewActions();
+		void CreateLayerActions();
+		void CreateLevelActions();
+		void CreateLayerSelectActions();
+		void CreatePlayActions();
+		void CreatePlayTestDebugActions();
+		void CreateReachabilityActions();
+		void CreateScriptAndCompareActions();
+		// Makes every action except those of the view and the help end what the pointer is in the middle of first
+		void CancelInteractionsBeforeActions();
 		/** @brief Creates the interface */
 		void CreateInterface();
 		/** @brief Loads the shown level again from the document, keeping the camera */
 		void RebuildRuntime();
+		// Tells the functions added by AddChangeObserver()
+		void NotifyChangeObservers(const DocumentChanges& changes);
 		// Gives the level being edited what is drawn among its layers
 		void AttachSceneContent();
-		/** @brief Shows the tiles the level overrides as it has them now, returns `false` if the level has to be loaded again */
-		bool ApplyTileOverrides();
+		/**
+		 * @brief Shows the tiles the level overrides as it has them now, returns `false` if the level has to be loaded again
+		 *
+		 * Only the tiles that changed since are given to the shown level, with @p palette also those whose colors
+		 * were taken from the palette when they were given, after it changed.
+		 */
+		bool ApplyTileOverrides(bool palette = false);
 		/** @brief Remembers which tiles the shown level overrides, after it was loaded */
 		void RememberAppliedOverrides();
+		// Collects what the overrides of the level and the tiles it stores in itself show, sorted by the tile ID
+		void CollectAppliedTiles(SmallVectorImpl<AppliedTile>& diffuse, SmallVectorImpl<AppliedTile>& masks);
+		// Hashes the tiles of the tile sets the level stores in itself into _appliedLevelTiles, those that changed since
+		// are given to the tile map unless it's nullptr, and added to changed, returns `false` if the level has to be
+		// loaded again
+		bool SyncLevelTiles(Tiles::TileMap* tileMap, bool palette, SmallVectorImpl<std::uint16_t>& changed);
+		// Shows changes collected by OnDocumentChanged(), unless a transaction is in progress or the level is played
+		void FlushDocumentChanges();
+		// Brings everything that shows the level up to date with changes of it
+		void ApplyDocumentChanges(const DocumentChanges& changes);
+		// Makes a new history of the level being edited
+		void CreateHistory();
+		// Forgets the play-tests, their path and what depends on the level being edited, before another one is
+		void ResetPlayState();
+		// Plays the ambient sound of the event selected alone while events are edited, see EventPreviews::UpdateSound()
+		void UpdateEventSound();
+		// Gives the play-tests the debug toggles of the settings, see PlayTestDebugOptions
+		void ApplyPlayTestDebugOptions();
+		// Turns a debug toggle of play-tests on or off, told while the level is played
+		void TogglePlayTestDebug(bool EditorSettings::PlayTestSettings::*option, StringView onMessage, StringView offMessage);
+		// Goes through the speeds of the time of the level played, normal, half, a quarter
+		void CyclePlayTestTimeScale();
+		// Stops the time of the level played, or lets it go on
+		void TogglePlayTestPause();
+		// Moves the player of the level played to the pointer
+		void TeleportPlayTestPlayer();
+		// Returns the file of a level that follows the one being edited, as the game names it, or an empty string
+		String FindNextLevelFile(StringView levelName);
+		// Offers to edit or play the level that follows, once the level being edited was finished in a play-test
+		void OfferNextLevel(const std::shared_ptr<LevelInitialization>& next, StringView levelName);
+		// Sets the size of the interface by the settings and the window
+		void UpdateUiScale();
 		/**
 		 * @brief Draws the layer being edited so it can be painted on
 		 *
-		 * A sky or a circle is a picture made of the tiles of the layer, its tiles couldn't be told apart in it, so it's
-		 * drawn as plain tiles. A layer with an automatic speed stays where its offset puts it. With @p restore the
+		 * A sky or a tunnel is a picture made of the tiles of the layer, its tiles couldn't be told apart in it, and a
+		 * reflection doesn't show its tiles at all, so they're drawn as plain tiles --- but not those of a reflection with
+		 * an image of its own, which is shown as it is, as its tiles aren't any part of it. A layer with an automatic
+		 * speed stays where its offset puts it. With @p restore the
 		 * layer is drawn as the game draws it again whichever layer is edited. Layers are kept still as a whole too if
-		 * the settings say so.
+		 * the settings say so. If the layers of the document were moved since, but not those of the shown level yet,
+		 * @p layerOrder tells where they went (see @ref DocumentChanges::GetLayerOrder()).
 		 */
-		void UpdateLayerOverride(bool restore = false);
+		void UpdateLayerOverride(bool restore = false, ArrayView<const std::int32_t> layerOrder = {});
 		void UpdateTileLod();
-		void SetPlayTestExit(IPlayTest& handler);
 		// Chooses the selected tiles again by their neighbors, see SmartTileModel
 		void RetileSelection();
 		// Fills the empty cells right of the one under the pointer with the tiles the levels have there the most
 		void ContinueRow();
 		// Cuts ground to the ground line chosen last into tiles of this level, so the collision follows it exactly
 		void BakeGroundLine();
-		// Describes the events of event packs, when asked, and of the script of the level, see EventCatalog::LoadExtensions()
-		void LoadEventExtensions(bool packs);
 		/** @brief Returns `true` if a layer is drawn differently while it's edited, see @ref UpdateLayerOverride() */
 		static bool NeedsLayerOverride(const DocumentLayer& layer);
-		/** @brief Switches to the play-test once the view flew into the level */
-		void FinishStartPlayTest();
-		/** @brief Returns to editing after the level was left, with a message */
-		void ReturnFromPlayTest(StringView message);
 		/** @brief Returns the handler that gets the frames and the input */
 		LevelHandler* GetActiveHandler() const;
-		/** @brief Makes a pointer for a tool from a position on the screen */
-		ToolPointer MakeToolPointer(Vector2f pos, MouseButton button);
-		/** @brief Returns the view of the level on the screen, what the panels don't cover */
-		Rectf GetViewRect() const;
 
+		// Returns `true` if something is selected, that can be copied or deleted
+		bool HasSelection() const;
 		void CopySelection(bool cut);
 		void DeleteSelection();
 		void Paste();
 		void SelectAll();
-		void ClearSelection();
 		void AddLayer();
 		void RemoveLayer();
 		// Moves the events off the grid onto the tiles they're in, those whose tile has an event already stay off it
@@ -533,38 +539,6 @@ namespace Jazz2::Editor
 		// Places the selected event on every tile of the sprite layer that shows the same tile as its own, and has no event
 		void CopyEventToMatchingTiles();
 		void MoveLayer(std::int32_t direction);
-		void Save();
-		void ExitEditor();
-
-		/** @brief Asks whether to save unsaved changes, then proceeds unless cancelled */
-		void ConfirmDiscard(Function<void()>&& proceed);
-		/** @brief Shows a dialog to open a level */
-		void ShowOpenDialog();
-		/** @brief Shows a dialog to save the level as a new file, or to export it */
-		void ShowSaveAsDialog(bool exportOnly, Function<void()>&& onSaved = {});
-		/** @brief Saves the level to a file chosen by the user */
-		void SaveAsConfirmed(StringView path, bool exportOnly, const std::shared_ptr<Function<void()>>& onSaved);
-		/** @brief Checks the level and shows a dialog to export it */
-		void ShowExportDialog();
-		/** @brief Collects problems that don't keep the level from being saved, but from being played as intended */
-		void CollectExportWarnings(SmallVectorImpl<String>& warnings);
-		/** @brief Shows a dialog to make a new level */
-		void ShowNewLevelDialog();
-		/** @brief Replaces the level being edited */
-		void ReplaceDocument(LevelDocument&& document, StringView path, StringView levelName);
-		/** @brief Returns `true` if the level can be saved to its file */
-		bool CanSaveInPlace() const;
-		/** @brief Makes the interface larger or smaller by a step, or chooses its size by the window */
-		void ChangeUiScale(std::int32_t direction);
-		/** @brief Offers to restore a recovery copy of the level, returns `false` if there is none */
-		bool OfferRecovery();
-		/** @brief Returns a tile set to make a new level with */
-		String FindDefaultTileSet();
-
-		/** @brief Converts a position of the mouse from the window to the drawable */
-		static Vector2f ToDrawable(std::int32_t x, std::int32_t y);
-		/** @brief Updates the title of the window */
-		void UpdateWindowTitle();
 	};
 }
 

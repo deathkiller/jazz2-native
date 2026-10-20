@@ -28,9 +28,20 @@ namespace Jazz2::Actors::Multiplayer
 				return PlayerType::Spaz;
 			} else if (fileName == "PlayerFrog"_s) {
 				return PlayerType::Frog;
+			} else if (fileName == "PlayerBird"_s) {
+				return PlayerType::Bird;
+			} else if (fileName == "PlayerBird2"_s) {
+				return PlayerType::Bird2;
 			} else {
 				return PlayerType::Jazz;
 			}
+		}
+
+		// A bird keeps its own colors, as on the owner's side (see Player::GetEffectiveFurColor()), so it's loaded
+		// as the owner loads it - not indexed - and drawn with no palette
+		bool IsRecolored(PlayerType playerType, std::uint32_t furColor)
+		{
+			return (furColor != 0 && playerType != PlayerType::Bird && playerType != PlayerType::Bird2);
 		}
 	}
 
@@ -75,7 +86,7 @@ namespace Jazz2::Actors::Multiplayer
 		// Acquire the new (shared, reference-counted) palette before releasing the old one, so an unchanged fur color
 		// keeps its slot; players with the same color and character share a single palette
 		PlayerType playerType = (_metadata != nullptr ? GetPlayerTypeFromMetadataPath(_metadata->Path) : PlayerType::Jazz);
-		std::int32_t newOffset = (_furColor != 0 ? resolver.AcquirePaletteOffset(_furColor, playerType) : -1);
+		std::int32_t newOffset = (IsRecolored(playerType, _furColor) ? resolver.AcquirePaletteOffset(_furColor, playerType) : -1);
 		if (_paletteOffset >= 0) {
 			resolver.ReleasePaletteOffset(_paletteOffset);
 		}
@@ -211,7 +222,7 @@ namespace Jazz2::Actors::Multiplayer
 			ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjectsBelow | ActorState::ExcludeSimilar;
 
 		// Load indexed sprites when this remote player has a custom color, so they can be recolored at draw time
-		RequestMetadata(path, _furColor != 0);
+		RequestMetadata(path, IsRecolored(GetPlayerTypeFromMetadataPath(path), _furColor));
 		SetAnimation(anim);
 		// Track the assigned animation so the first SyncAnimationWithServer() for the same state isn't skipped as
 		// "unchanged", which would otherwise leave the actor stuck in its spawn animation
@@ -251,7 +262,7 @@ namespace Jazz2::Actors::Multiplayer
 		// changes), then (re)apply or clear the palette
 		String path = _metadata->Path;
 		AnimState currentState = (_currentAnimation != nullptr ? _currentAnimation->State : _lastAnim);
-		RequestMetadata(path, furColor != 0);
+		RequestMetadata(path, IsRecolored(GetPlayerTypeFromMetadataPath(path), furColor));
 		_currentAnimation = nullptr;
 		SetAnimation(currentState);
 
@@ -261,7 +272,17 @@ namespace Jazz2::Actors::Multiplayer
 	void RemoteActor::ChangeMetadata(StringView path)
 	{
 		// Keep the recolor: load indexed when colored, and (re)apply or clear the palette
-		RequestMetadata(path, _furColor != 0);
+		AnimState currentState = (_currentAnimation != nullptr ? _currentAnimation->State : _lastAnim);
+		RequestMetadata(path, IsRecolored(GetPlayerTypeFromMetadataPath(path), _furColor));
+		// The animation still points into the previous metadata, and the server sends the state again only once it
+		// changes - so a morph that keeps the state (a standing rabbit turning into a bird, which is drawn in the idle
+		// state too and has no transition to announce it) went on being drawn as the previous character until then.
+		// A state the new character lacks falls back to its idle, and the old animation stays only if neither exists.
+		GraphicResource* previousAnimation = _currentAnimation;
+		_currentAnimation = nullptr;
+		if (!SetAnimation(currentState) && !SetAnimation(AnimState::Idle)) {
+			_currentAnimation = previousAnimation;
+		}
 		RefreshColorPalette();
 	}
 
@@ -328,7 +349,7 @@ namespace Jazz2::Actors::Multiplayer
 			prevDecor->OnDetach(this);
 		}
 
-		_modifierDecor = std::move(decor);
+		_modifierDecor = Death::move(decor);
 
 		if (auto* newDecor = runtime_cast<RemoteActor>(_modifierDecor.get())) {
 			newDecor->OnAttach(this);

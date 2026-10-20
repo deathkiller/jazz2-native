@@ -44,14 +44,20 @@ set(SOURCES
 	Iso9660.h
 	FormatVerifier.cpp
 	FormatVerifier.h
+	LevelText.cpp
+	LevelText.h
 	ModuleConverter.cpp
 	ModuleConverter.h
 	N64Content.cpp
 	N64Content.h
-	PngCodec.cpp
-	PngCodec.h
 	SpriteRepacker.cpp
 	SpriteRepacker.h
+	# Reads and writes the images of the fonts, the PNG codec of the engine, which depends on nothing but the base layer
+	${NCINE_SOURCE_DIR}/nCine/Graphics/PngCodec.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/PngCodec.h
+	# The translated level texts, a chunk only the game reads, but the formats verifier and fuzzer check it too
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelTextsChunk.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelTextsChunk.h
 	# The base layer and the original-data converters, both shared with the game; the engine itself is
 	# deliberately not linked, so the tool has no renderer and no window backend
 	${ASSET_PACKER_SHARED_SOURCES}
@@ -116,6 +122,8 @@ target_sources(AssetPacker PRIVATE ${SOURCES})
 # unless others are named.
 target_compile_definitions(AssetPacker PRIVATE "CMAKE_BUILD" "DEATH_NO_THREADS" "DEATH_TRACE" "NCINE_VERSION=\"${NCINE_VERSION}\""
 	"NCINE_APP_NAME=\"${NCINE_APP_NAME}\"" "NCINE_GAMECUBE_GAME_ID=\"${GAMECUBE_GAME_ID}\"")
+# The PNG codec writes images only where asked to, the game itself never does (see nCine/Graphics/PngCodec.h)
+target_compile_definitions(AssetPacker PRIVATE "WITH_PNG_ENCODER")
 
 if(WIN32)
 	# Not going through ncine_apply_compiler_options() also means missing the Unicode switch it sets for the game.

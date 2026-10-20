@@ -370,7 +370,7 @@ namespace nCine::RHI::PVR
 			raw.resize_for_overwrite(rawSize);
 			RlePixelReader reader(_pixels.data());
 			reader.Read(raw.data(), rawSize);
-			_pixels = std::move(raw);
+			_pixels = Death::move(raw);
 			_pixelsCompressed = false;
 		} else if (_pixels.empty()) {
 			// A compressible texture defers its store until the first upload; a partial first upload
@@ -388,7 +388,7 @@ namespace nCine::RHI::PVR
 		SmallVector<std::uint8_t, 0> compressed;
 		EncodePackBits(_pixels.data(), rawSize, compressed);
 		if (compressed.size() < rawSize) {
-			_pixels = std::move(compressed);
+			_pixels = Death::move(compressed);
 			_pixelsCompressed = true;
 		}
 	}

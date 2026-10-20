@@ -161,7 +161,7 @@ namespace nCine
 				newCameraUniformData.shaderUniforms.GetUniform(Material::ViewMatrixUniformName)->SetDirty(true);
 				newCameraUniformData.shaderUniforms.CommitUniforms();
 
-				RenderResources::InsertCameraUniformData(_material._shaderProgram, std::move(newCameraUniformData));
+				RenderResources::InsertCameraUniformData(_material._shaderProgram, Death::move(newCameraUniformData));
 			}
 		} else {
 			cameraUniformData->shaderUniforms.CommitUniforms();

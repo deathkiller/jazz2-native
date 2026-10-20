@@ -32,7 +32,7 @@ namespace Jazz2::UI::Menu
 #endif
 		// TRANSLATORS: Menu item in Multiplayer section (local splitscreen multiplayer)
 		list->Add<ListItem>(_("Create Local Splitscreen Game"), [root]() { root->SwitchToSection<EpisodeSelectSection>(EpisodeSelectMode::LocalMultiplayer); });
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 }
 

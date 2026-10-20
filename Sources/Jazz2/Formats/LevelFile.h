@@ -78,11 +78,39 @@ namespace Jazz2::Formats
 		Chunks carry anything the fixed sections above don't, tagged by a four-character code. A reader skips
 		the chunks it doesn't know, so new ones can be added without changing the version. A tag whose first
 		letter is lowercase is editor-only data (see @ref IsEditorOnlyChunk()), dropped when a level is exported.
+		A tag whose first letter is uppercase and second lowercase is a critical chunk (see @ref IsCriticalChunk()),
+		data the level can't be played correctly without --- a reader that doesn't know one refuses the level instead
+		of skipping it. Readers before 3.9.1 skip even those, so a critical chunk is only for data whose absence
+		breaks nothing worse than the look of the level there.
+
+		@par Evolving the layout
+		Only the chunks and the bits of the header flags the readers ignore can be added without a new version.
+		The bits of the record flags that aren't defined are reserved: they change the layout of a record, so
+		a reader refuses a level with any of them set (since 3.9.1) rather than misreading the rest of it, and
+		a writer never sets them. The same holds for a layer kind that isn't defined. The only exception is
+		@ref EventRecord::Reserved, which 3.9.0 wrote as it was given --- a reader drops it, so it can't be given
+		a meaning in this version of the layout. An offset or a speed of a layer, or a parameter of a textured layer,
+		that isn't a finite number is replaced by its default, by the writer as well as by the reader.
+
+		@par Limits
+		A reader refuses a level beyond the limits below (@ref MaxLayerSize, @ref MaxLayerTiles, @ref MaxTotalLayerTiles, @ref MaxOffGridEvents,
+		@ref MaxTileOverrides, @ref MaxBlobSize, @ref MaxBodySize), such a level can't come from any editor and would
+		only exhaust the memory.
 
 		@par Version history
 		- 1 --- first versioned layout; a layer may use @ref Tiles::LayerRendererType::XRay and
 		  @ref Tiles::LayerRendererType::BlurBehind; optional chunks at the end of the body; @ref LevelProperties::Author
-		  after the display name
+		  after the display name. Since 3.9.1 a layer may also use @ref Tiles::LayerRendererType::PaletteShift, which
+		  3.9.0 draws as an ordinary layer modulated by the layer's color (see @ref LayerRecord::Color), and the
+		  sprite layer may be drawn otherwise than as ordinary tiles (see @ref SpriteLayerChunk), which 3.9.0 doesn't.
+		  Since 3.9.1 a layer may also be a reflection (@ref Tiles::LayerRendererType::Reflection), which 3.9.0 draws as
+		  an ordinary layer of its tiles modulated by its color, and a tunnel or a reflection may have parameters its
+		  color has no room for (see @ref TexturedLayerChunk), which 3.9.0 ignores. Since 3.9.1 a layer may also be a
+		  cylinder (@ref Tiles::LayerRendererType::Cylinder), with parameters in the same chunk, which 3.9.0 draws as an
+		  ordinary layer of its tiles modulated by its color. Since 3.9.1 a layer may also be a wave
+		  (@ref Tiles::LayerRendererType::Wave), with parameters in the same chunk, which 3.9.0 draws as an ordinary
+		  layer of its tiles, and a tile may have the heat modifier (@ref TileRecord::ModifierHeat), which 3.9.0 draws
+		  as an ordinary tile
 	*/
 	struct LevelFile
 	{
@@ -97,13 +125,29 @@ namespace Jazz2::Formats
 		/** @brief Size of a tile in pixels */
 		static constexpr std::int32_t TileSize = 32;
 
+		/** @brief Largest width and height of a layer in tiles, as large as 3.9.0 lets the editor make a layer */
+		static constexpr std::int32_t MaxLayerSize = 65535;
+		/** @brief Largest number of tiles of a single layer */
+		static constexpr std::int64_t MaxLayerTiles = std::int64_t(1) << 26;
+		/** @brief Largest number of tiles of all layers together */
+		static constexpr std::int64_t MaxTotalLayerTiles = std::int64_t(1) << 27;
+		/** @brief Largest number of off-grid events, each of them takes a tile of the event map of its own */
+		static constexpr std::uint32_t MaxOffGridEvents = 65535;
+		/** @brief Largest number of overridden tile diffuses, and of overridden tile masks */
+		static constexpr std::uint32_t MaxTileOverrides = 65536;
+		/** @brief Largest size of an embedded tile set or of the payload of a chunk in bytes */
+		static constexpr std::uint32_t MaxBlobSize = 256 * 1024 * 1024;
+		/** @brief Largest size of the decompressed body in bytes */
+		static constexpr std::int64_t MaxBodySize = std::int64_t(1) << 30;
+
 		/** @brief Layer names (one @cpp str8 @ce per layer, in file order), only the editor uses them */
 		static constexpr std::uint32_t LayerNamesChunk = 0x6D616E6C;		// "lnam"
 		/**
 		 * @brief Small image of the level shown in the list of custom levels, kept when the level is exported
 		 *
-		 * @cpp u16 @ce width and height, then @cpp R, G, B @ce bytes for each pixel, row by row. Written by the level
-		 * editor whenever it saves a level, a pixel for one or more tiles of the sprite layer.
+		 * @cpp u16 @ce width and height, then @cpp R, G, B @ce bytes for each pixel, row by row. Made by
+		 * @ref LevelPreview, written by the level editor whenever it saves a level, and by the converter of the
+		 * original levels for those of no episode, the ones the list shows.
 		 */
 		static constexpr std::uint32_t PreviewChunk = 0x57565250;			// "PRVW"
 
@@ -125,6 +169,24 @@ namespace Jazz2::Formats
 		static constexpr bool IsEditorOnlyChunk(std::uint32_t tag) {
 			return ((tag & 0xFF) >= 'a' && (tag & 0xFF) <= 'z');
 		}
+
+		/**
+		 * @brief Returns `true` if a chunk tag marks data the level can't be played without
+		 *
+		 * The first letter uppercase and the second lowercase, such as `Gscr`. A reader that doesn't know such
+		 * a chunk refuses the level. Editor-only chunks and the preview (`PRVW`) are never critical.
+		 */
+		static constexpr bool IsCriticalChunk(std::uint32_t tag) {
+			return ((tag & 0xFF) >= 'A' && (tag & 0xFF) <= 'Z' && ((tag >> 8) & 0xFF) >= 'a' && ((tag >> 8) & 0xFF) <= 'z');
+		}
+
+		/**
+		 * @brief Returns `true` if a tile set path of a level is safe to look up in `Tilesets/`
+		 *
+		 * A path may have directories, but it must stay relative and must not go up from where it starts. A part of it
+		 * must not end with a dot or a space, nor be a name of a device of Windows, which would resolve to something else there.
+		 */
+		static bool IsSafeTileSetPath(StringView path);
 	};
 
 	/**
@@ -183,6 +245,8 @@ namespace Jazz2::Formats
 		static constexpr std::uint8_t TrueColor = 0x02;
 		/** @brief The tile set is stored in the level itself, in @ref Data, its tiles aren't in any tile set file */
 		static constexpr std::uint8_t Embedded = 0x04;
+		/** @brief All the flags defined, any other one makes the level unreadable (see @ref LevelFile) */
+		static constexpr std::uint8_t KnownFlags = Remapped | TrueColor | Embedded;
 
 		/** @brief Combination of @ref Remapped, @ref TrueColor and @ref Embedded */
 		std::uint8_t Flags;
@@ -237,6 +301,14 @@ namespace Jazz2::Formats
 		static constexpr std::uint8_t ModifierTranslucent = 0x10;
 		/** @brief Modifier of an invisible tile */
 		static constexpr std::uint8_t ModifierInvisible = 0x20;
+		/**
+		 * @brief Modifier of a tile whose rows of pixels are drawn wavily, as if seen through heat (the heat effect tile type of JJ2+)
+		 *
+		 * See @ref Tiles::LayerTileFlags::Heat. Readers before 3.9.1 draw such a tile as an ordinary one.
+		 */
+		static constexpr std::uint8_t ModifierHeat = 0x30;
+		/** @brief The flip flags defined, the record has a fixed size, so the other bits are only ignored */
+		static constexpr std::uint8_t KnownFlipFlags = FlipX | FlipY;
 
 		/** @brief Flip flags in the low nibble, a modifier in the high nibble */
 		std::uint8_t Flags;
@@ -274,11 +346,90 @@ namespace Jazz2::Formats
 	};
 
 	/**
+		@brief Parameters of a textured layer that the color of its record has no room for
+
+		Taken by a tunnel (@ref Tiles::LayerRendererType::Tunnel), a wave (@ref Tiles::LayerRendererType::Wave), a cylinder
+		(@ref Tiles::LayerRendererType::Cylinder) and a reflection (@ref Tiles::LayerRendererType::Reflection), as the same
+		fields of a layer of JJ2+ (`jjLAYER.tunnel`, `jjLAYER.wave`, `jjLAYER.cylinder` and `jjLAYER.reflection`), which
+		share them there too. They aren't a part of @ref LayerRecord in the file, they're stored in @ref TexturedLayerChunk
+		--- a layer without it has the defaults.
+	*/
+	struct TexturedLayerParams
+	{
+		/** @brief The circles of a tunnel spiral inwards into the distance */
+		static constexpr std::uint8_t Spiral = 0x01;
+		/** @brief A cylinder is drawn at half size, four times across the view instead of once and more curved (`jjLAYER.cylinder.halfSize` of JJ2+) */
+		static constexpr std::uint8_t HalfSize = 0x08;
+		/**
+		 * @brief The vertical waves of a wave move the other way, so both move up and right, or down and left (`jjLAYER.wave.distortionAngle` of JJ2+)
+		 *
+		 * Without it, a positive speed moves the horizontal waves up and the vertical ones left.
+		 */
+		static constexpr std::uint8_t DistortionAngle = 0x10;
+		/**
+		 * @brief A reflection is drawn only where the layer is, as a window into one of the whole view (`SURFACE::INNERWINDOW` of JJ2+)
+		 *
+		 * The layer is placed as an ordinary one, the horizon and the vanishing point are still a fraction of the view.
+		 */
+		static constexpr std::uint8_t InnerWindow = 0x02;
+		/**
+		 * @brief A reflection is drawn only where the layer is, the horizon and the vanishing point a fraction of the layer (`SURFACE::INNERLAYER` of JJ2+)
+		 *
+		 * A dimension in which the layer repeats is that of the view. Takes precedence over @ref InnerWindow.
+		 */
+		static constexpr std::uint8_t InnerLayer = 0x04;
+
+		/** @brief Default of @ref Fade, a tunnel fades out into its center and a cylinder into its horizon, a reflection is tinted with the middle of the gradient of the textures of the original game */
+		static constexpr std::uint8_t DefaultFade = 192;
+
+		/**
+		 * @brief Horizontal position of the center of a tunnel or of the horizon of a cylinder, or of the vanishing point of a reflection, as a fraction of the view (or of the layer, see @ref InnerLayer)
+		 *
+		 * For a wave, how far its horizontal waves move the texture, in units of 128 pixels (`jjLAYER.wave.amplitudeX` of JJ2+).
+		 */
+		float FadeX = 0.5f;
+		/**
+		 * @brief Vertical position of the center of a tunnel or of the horizon of a cylinder, or of the horizon of a reflection, as a fraction of the view (or of the layer, see @ref InnerLayer)
+		 *
+		 * For a wave, how far its vertical waves move the texture, in units of 128 pixels (`jjLAYER.wave.amplitudeY` of JJ2+).
+		 */
+		float FadeY = 0.5f;
+		/** @brief Non-zero if a tunnel fades out into its center or a cylinder into its horizon, the palette entry a reflection is tinted with */
+		std::uint8_t Fade = DefaultFade;
+		/** @brief Combination of @ref Spiral, @ref HalfSize, @ref DistortionAngle, @ref InnerWindow and @ref InnerLayer */
+		std::uint8_t Flags = 0;
+		/**
+		 * @brief Horizontal speed of the texture of a reflection drawn only where the layer is, against the view (`jjLAYER.xInnerSpeed` of JJ2+)
+		 *
+		 * The speeds of the layer place it as an ordinary one then (see @ref InnerWindow and @ref InnerLayer), the inner
+		 * speeds move its texture inside it, as the speeds of a reflection over the whole view move its texture.
+		 */
+		float InnerSpeedX = 0.0f;
+		/** @brief Vertical speed of the texture of a reflection drawn only where the layer is, against the view (`jjLAYER.yInnerSpeed` of JJ2+) */
+		float InnerSpeedY = 0.0f;
+		/** @brief Horizontal speed the texture of a reflection drawn only where the layer is moves at by itself (`jjLAYER.xInnerAutoSpeed` of JJ2+) */
+		float InnerAutoSpeedX = 0.0f;
+		/** @brief Vertical speed the texture of a reflection drawn only where the layer is moves at by itself (`jjLAYER.yInnerAutoSpeed` of JJ2+) */
+		float InnerAutoSpeedY = 0.0f;
+
+		/** @brief Returns `true` if all the parameters are the defaults */
+		bool IsDefault() const {
+			return (FadeX == 0.5f && FadeY == 0.5f && Fade == DefaultFade && Flags == 0 && HasDefaultInnerSpeeds());
+		}
+
+		/** @brief Returns `true` if all the inner speeds are zero */
+		bool HasDefaultInnerSpeeds() const {
+			return (InnerSpeedX == 0.0f && InnerSpeedY == 0.0f && InnerAutoSpeedX == 0.0f && InnerAutoSpeedY == 0.0f);
+		}
+	};
+
+	/**
 		@brief Description of a layer
 
-		Everything after @ref Height is stored only for layers other than the sprite one, which is always drawn
-		with its defaults. The speed models and the renderer type are kept as raw values, so a level saved again
-		keeps even values this version of the game doesn't know.
+		Everything after @ref Height is stored only for layers other than the sprite one, which is always placed
+		with its defaults --- how it's drawn is stored apart from the record, see @ref SpriteLayerChunk. The speed
+		models and the renderer type are kept as raw values, so a level saved again keeps even values this version
+		of the game doesn't know.
 	*/
 	struct LayerRecord
 	{
@@ -286,7 +437,13 @@ namespace Jazz2::Formats
 		static constexpr std::uint16_t RepeatX = 0x01;
 		/** @brief The layer repeats vertically */
 		static constexpr std::uint16_t RepeatY = 0x02;
-		/** @brief The layer uses the inherent offset of the original game */
+		/**
+		 * @brief The layer uses the inherent offset of the original game
+		 *
+		 * `limitVisibleRegion` of JJ2+ --- the layer is moved down by half of how much taller the view is than 200
+		 * pixels. Since 3.9.1 only a layer that doesn't repeat vertically and whose vertical speed model is
+		 * @ref Tiles::LayerSpeedModel::Default is moved, as in JJ2+; 3.9.0 moves any layer that has the flag.
+		 */
 		static constexpr std::uint16_t UseInherentOffset = 0x04;
 		/** @brief The layer is visible */
 		static constexpr std::uint16_t Visible = 0x08;
@@ -299,7 +456,14 @@ namespace Jazz2::Formats
 		std::int32_t Width;
 		/** @brief Height in tiles */
 		std::int32_t Height;
-		/** @brief Speed model (see @ref Tiles::LayerSpeedModel), horizontal in the low nibble, vertical in the high one */
+		/**
+		 * @brief Speed model (see @ref Tiles::LayerSpeedModel), horizontal in the low nibble, vertical in the high one
+		 *
+		 * @ref Tiles::LayerSpeedModel::FromStart (4) is written since 3.9.1. 3.9.0 places a layer of a value it doesn't
+		 * know as one of @ref Tiles::LayerSpeedModel::Default, and so a layer of that model too, and places a layer of
+		 * @ref Tiles::LayerSpeedModel::FitLevel and @ref Tiles::LayerSpeedModel::SpeedMultipliers differently, by the
+		 * center of the view and the size of the level instead of the range the view moves in.
+		 */
 		std::uint8_t SpeedModels;
 		/** @brief Horizontal offset */
 		float OffsetX;
@@ -317,8 +481,24 @@ namespace Jazz2::Formats
 		std::int16_t Depth;
 		/** @brief Renderer type (see @ref Tiles::LayerRendererType) */
 		std::uint8_t RendererType;
-		/** @brief Color whose meaning depends on the renderer type --- for a tinted layer, red is a palette index */
+		/**
+		 * @brief Color whose meaning depends on the renderer type
+		 *
+		 * For a tinted layer, red is a palette index. For a palette-shifted layer, red is the shift and alpha the
+		 * opacity; green and blue are written as 255, so a reader that doesn't know the renderer (it draws an
+		 * ordinary layer modulated by the color) only lowers the red of the tiles. For a sky or a tunnel, red, green
+		 * and blue are the color it fades into and non-zero alpha shows stars, for a cylinder the same without the
+		 * stars. For a wave, red and green are the wavelengths of its horizontal and vertical waves (0 for none), blue
+		 * its speed as a signed byte, and alpha is 0. For a reflection, red is the opacity of its tint, green the
+		 * distance of its plane, blue its distortion and non-zero alpha blurs it.
+		 */
 		std::uint8_t Color[4];
+		/**
+		 * @brief Parameters of a tunnel, a wave, a cylinder or a reflection that @ref Color has no room for
+		 *
+		 * Not stored in the record itself but in @ref TexturedLayerChunk, the reader of the record leaves the defaults.
+		 */
+		TexturedLayerParams Textured;
 	};
 
 	/**
@@ -332,6 +512,8 @@ namespace Jazz2::Formats
 		static constexpr std::uint8_t Generator = 0x02;
 		/** @brief The object is illuminated */
 		static constexpr std::uint8_t Illuminated = 0x04;
+		/** @brief Reserved, 3.9.0 could write it with any meaning, so a reader drops it and a writer never sets it (see @ref LevelFile) */
+		static constexpr std::uint8_t Reserved = 0x08;
 		/** @brief The event is present in the easy difficulty */
 		static constexpr std::uint8_t Easy = 0x10;
 		/** @brief The event is present in the normal difficulty */
@@ -383,6 +565,91 @@ namespace Jazz2::Formats
 	};
 
 	/**
+		@brief Chunk with how the sprite layer is drawn, which its @ref LayerRecord doesn't store
+
+		The record of the sprite layer ends after its size, so the layer would always be drawn as ordinary tiles. This
+		ancillary chunk gives it a renderer type and a color, which mean what @ref LayerRecord::RendererType and
+		@ref LayerRecord::Color of any other layer do --- but only the renderer types that keep the tiles where they
+		are take effect (see @ref Tiles::LayerDescription::IsSpriteLayerRenderer()), and the layer is still placed as
+		it always is. A reader that doesn't know the chunk --- the game before 3.9.1 --- draws the sprite layer as
+		ordinary tiles. It's written only when the sprite layer isn't drawn so, and kept when the level is exported.
+
+		The payload is @cpp u8 @ce renderer type and the 4 bytes of the color. A newer version may add bytes after
+		them, a reader skips those it doesn't know.
+	*/
+	struct SpriteLayerChunk
+	{
+		/** @brief Tag of the chunk */
+		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('S', 'P', 'R', 'L');
+
+		SpriteLayerChunk() = delete;
+
+		/** @brief Reads the payload into the renderer type and the color of a record, returns `false` if it's damaged and the record stays as it was */
+		static bool Read(ArrayView<const std::uint8_t> data, LayerRecord& record);
+		/** @brief Writes the payload of the record of the sprite layer, nothing if the layer is drawn as ordinary tiles */
+		static void Write(const LayerRecord& record, SmallVectorImpl<std::uint8_t>& data);
+	};
+
+	/**
+		@brief Chunk with the parameters of tunnels, cylinders and reflections, which their @ref LayerRecord doesn't store
+
+		A tunnel, a cylinder and a reflection take more parameters than the 4 bytes of @ref LayerRecord::Color, the rest of
+		them is in @ref LayerRecord::Textured. This ancillary chunk stores them for the layers where they aren't the defaults,
+		and the texture of a textured layer that has one of its own instead of its tiles.
+		A reader that doesn't know the chunk --- the game before 3.9.1 --- draws every tunnel centered on the view, fading
+		out into its center and not spiralling, and doesn't know cylinders and reflections at all. It's kept when the level
+		is exported.
+
+		The payload is @cpp varuint @ce count × (@cpp varuint @ce index of the layer in file order, @cpp varuint @ce size,
+		then @cpp f32 @ce @ref TexturedLayerParams::FadeX, @cpp f32 @ce @ref TexturedLayerParams::FadeY, @cpp u8 @ce
+		@ref TexturedLayerParams::Fade and @cpp u8 @ce @ref TexturedLayerParams::Flags). A newer version may add bytes
+		at the end of an entry, a reader skips those it doesn't know.
+
+		An entry of a layer with inner speeds or a texture of its own goes on with @cpp f32 @ce
+		@ref TexturedLayerParams::InnerSpeedX, @cpp f32 @ce @ref TexturedLayerParams::InnerSpeedY, @cpp f32 @ce
+		@ref TexturedLayerParams::InnerAutoSpeedX, @cpp f32 @ce @ref TexturedLayerParams::InnerAutoSpeedY and @cpp u8 @ce
+		texture --- 0 for the tiles of the layer, 1 for an image of its own, @ref TextureSize × @ref TextureSize palette
+		indices row by row, which follow. An entry without them, the only one before, has the defaults: no inner speeds
+		and the tiles of the layer. A texture of another kind is of a newer version, the tiles of the layer are taken then.
+	*/
+	struct TexturedLayerChunk
+	{
+		/** @brief Tag of the chunk */
+		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('T', 'X', 'L', 'P');
+		/** @brief Width and height of a texture of its own in pixels, as the textures of JJ2+ and of 8×8 tiles */
+		static constexpr std::int32_t TextureSize = 256;
+
+		/** @brief Parameters of one layer */
+		struct Entry
+		{
+			/** @brief Index of the layer in file order */
+			std::uint32_t Layer;
+			/** @brief Parameters of the layer */
+			TexturedLayerParams Params;
+			/**
+			 * @brief Texture of its own, @ref TextureSize × @ref TextureSize palette indices row by row
+			 *
+			 * The 8×8 tiles at the top left of the layer are its texture if it's empty, as `TEXTURE::FROMTILES` of JJ2+. A
+			 * layer of JJ2+ with one of its own textures, or with an image of its own made by MLLE, has it here. It stays
+			 * indexed, so it follows changes of the palette as the tiles do.
+			 */
+			SmallVector<std::uint8_t, 0> Texture;
+		};
+
+		TexturedLayerChunk() = delete;
+
+		/** @brief Reads the payload, returns `false` if it's damaged and @p layers is left empty then */
+		static bool Read(ArrayView<const std::uint8_t> data, SmallVectorImpl<Entry>& layers);
+		/**
+		 * @brief Writes the payload of the layers whose parameters aren't the defaults or that have a texture of their own, nothing if there are none
+		 *
+		 * An entry ends after the flags if the layer has neither inner speeds nor a texture of its own. A texture of another
+		 * size than @ref TextureSize × @ref TextureSize isn't written.
+		 */
+		static void Write(ArrayView<const Entry> layers, SmallVectorImpl<std::uint8_t>& data);
+	};
+
+	/**
 		@brief Reads the body of a level, section by section
 
 		The sections have to be read in the order they are declared in, every one of them, because the body is
@@ -402,6 +669,9 @@ namespace Jazz2::Formats
 		bool IsValid() const {
 			return !_failed;
 		}
+
+		/** @brief Returns why the body couldn't be read, empty if it could */
+		StringView GetError() const;
 
 		/** @brief Returns the header the body belongs to */
 		const LevelHeader& GetHeader() const {
@@ -449,16 +719,33 @@ namespace Jazz2::Formats
 		/**
 		 * @brief Skips all sections after the level properties, so @ref ReadChunks() can be called next
 		 *
-		 * For a reader that needs only the properties and the chunks, as a preview of the level. Returns `false` if
-		 * the body is truncated or corrupted.
+		 * For a reader that needs only the properties and the chunks, as a preview of the level. The data of
+		 * embedded tile sets is skipped without being kept. Returns `false` if the body is truncated or corrupted.
 		 */
 		bool SkipToChunks();
 		/**
 		 * @brief Reads the optional chunks at the end of the body
 		 *
 		 * Editor-only chunks (see @ref LevelFile::IsEditorOnlyChunk()) are skipped unless @p includeEditorOnly is set.
+		 * A critical chunk (see @ref LevelFile::IsCriticalChunk()) not listed in @p knownCriticalChunks makes the body
+		 * invalid, the level must not be used then.
 		 */
-		void ReadChunks(SmallVectorImpl<ChunkRecord>& chunks, bool includeEditorOnly);
+		void ReadChunks(SmallVectorImpl<ChunkRecord>& chunks, bool includeEditorOnly, ArrayView<const std::uint32_t> knownCriticalChunks = {});
+		/**
+		 * @brief Reads only the chunks @p select returns `true` for, skipping the others without keeping their payload
+		 *
+		 * @p select gets the tag and the size of the payload of each chunk, editor-only ones too. Critical chunks are checked
+		 * as by @ref ReadChunks().
+		 */
+		void ReadSelectedChunks(SmallVectorImpl<ChunkRecord>& chunks, Function<bool(std::uint32_t, std::uint32_t)>&& select,
+			ArrayView<const std::uint32_t> knownCriticalChunks = {});
+		/**
+		 * @brief Skips the optional chunks at the end of the body, only checking them
+		 *
+		 * For a reader that needs none of them. Returns `false` if the body is truncated or corrupted, or if it has
+		 * a critical chunk not listed in @p knownCriticalChunks.
+		 */
+		bool SkipChunks(ArrayView<const std::uint32_t> knownCriticalChunks = {});
 
 	private:
 #if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
@@ -469,14 +756,26 @@ namespace Jazz2::Formats
 
 		LevelHeader _header;
 		Death::IO::Compression::DeflateStream _input;
+		std::int64_t _totalRead;
+		std::int64_t _totalLayerTiles;
+		const char* _error;
 		std::int32_t _bufferPos;
 		std::int32_t _bufferLength;
 		bool _failed;
 		std::uint8_t _buffer[BufferSize];
 
+		// Marks the body as invalid, the first reason is kept
+		void Fail(const char* reason);
 		bool Refill();
 		bool ReadBytes(void* destination, std::int32_t size);
 		bool SkipBytes(std::int64_t size);
+		// Reads a blob of a size read from the body, growing the buffer only as the data really comes
+		bool ReadBlob(SmallVectorImpl<std::uint8_t>& data, std::uint32_t size);
+		// Reads an extra tile set, the data of an embedded one is only skipped without `keepData`
+		void ReadExtraTileSet(ExtraTileSetRecord& tileSet, bool keepData);
+		// Reads the chunks, keeping them in `chunks` if it isn't `nullptr` and `select` takes them if there's any
+		void ReadChunksInternal(SmallVectorImpl<ChunkRecord>* chunks, bool includeEditorOnly, ArrayView<const std::uint32_t> knownCriticalChunks,
+			Function<bool(std::uint32_t, std::uint32_t)>* select = nullptr);
 		std::uint8_t ReadUint8();
 		std::uint16_t ReadUint16();
 		std::int16_t ReadInt16();
@@ -493,7 +792,10 @@ namespace Jazz2::Formats
 		@brief Writes a level, section by section
 
 		The sections have to be written in the order they are declared in, every one of them, then the level is
-		completed by @ref Finish(). The header is written right away.
+		completed by @ref Finish(), which writes the whole level to the target and checks every write. Nothing
+		reaches the target before. @ref LevelFlags::HasPreview is derived from the chunks written, whatever its value
+		in the flags given. A string, a list or a count that doesn't fit its field is cut with a warning
+		logged, a string never in the middle of a UTF-8 sequence. The reserved bits of the records are never written.
 	*/
 	class LevelWriter
 	{
@@ -542,7 +844,14 @@ namespace Jazz2::Formats
 		 * Nothing at all is written if there are no chunks left after editor-only ones were dropped as requested.
 		 */
 		void WriteChunks(ArrayView<const ChunkRecord> chunks, bool stripEditorOnly);
-		/** @brief Completes the level, returns `false` on failure */
+		/** @brief Writes the optional chunks of two lists as a single one, those of @p first first, so neither has to be copied into the other */
+		void WriteChunks(ArrayView<const ChunkRecord> first, ArrayView<const ChunkRecord> second, bool stripEditorOnly);
+		/**
+		 * @brief Completes the level and writes it to the target
+		 *
+		 * Returns `false` if the level couldn't be compressed, or if any write to the target or flushing it failed,
+		 * such as on a full disk.
+		 */
 		bool Finish();
 
 	private:
@@ -551,10 +860,19 @@ namespace Jazz2::Formats
 		MemoryStream _body;
 		std::unique_ptr<Death::IO::Compression::DeflateWriter> _deflate;
 		std::int64_t _layerTilesLeft;
+		std::int64_t _totalLayerTiles;
 		std::int64_t _eventsLeft;
 		bool _finished;
+		// Something was given that no reader would accept, the level can't be completed
+		bool _failed;
+		// A preview chunk was written, see LevelFlags::HasPreview
+		bool _hasPreview;
 
 		void WriteString8(StringView value);
 		void WriteEventFields(const EventRecord& event);
+		// Returns how many items of a list fit a count of at most `max`, warns if not all of them
+		static std::size_t FitCount(std::size_t count, std::size_t max, const char* what);
+		// Returns how many bytes of a UTF-8 string fit `max` bytes, without cutting a sequence in two
+		static std::size_t FitUtf8(StringView value, std::size_t max);
 	};
 }

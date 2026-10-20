@@ -1,5 +1,5 @@
 #include "FontPacker.h"
-#include "PngCodec.h"
+#include "../../nCine/Graphics/PngCodec.h"
 
 #include "../../Jazz2/ContentFileTypes.h"
 #include "../../Jazz2/UI/FontFormat.h"
@@ -36,6 +36,53 @@ namespace Jazz2::AssetPacker
 {
 	namespace
 	{
+		/**
+			@brief A decoded image, always four bytes per pixel
+
+			The fonts keep a palette index in the red channel and coverage in the alpha channel, which is what the
+			rest of the tool works with; the two other channels are only carried so an ordinary image editor shows
+			something recognisable once a palette is applied.
+		*/
+		using Image = nCine::PngRgbaImage;
+
+		/** @brief Reads and writes the images of the fonts through the PNG codec of the engine, logging what failed */
+		struct PngFile
+		{
+			/** @brief Reads an image, expanding whatever it holds to RGBA */
+			static bool Read(StringView path, Image& image)
+			{
+				FileStream s(path, FileAccess::Read);
+				if (!s.IsValid()) {
+					LOGE("Cannot open \"{}\" for reading", path);
+					return false;
+				}
+				nCine::PngError error = nCine::PngCodec::DecodeRgba(s, image);
+				if (error != nCine::PngError::None) {
+					LOGE("\"{}\" cannot be read: {}", path, nCine::PngCodec::GetErrorText(error));
+					return false;
+				}
+				return true;
+			}
+
+			/** @brief Writes an RGBA image */
+			static bool Write(StringView path, const Image& image)
+			{
+				if (!image || image.Width <= 0 || image.Height <= 0) {
+					return false;
+				}
+				FileStream s(path, FileAccess::Write);
+				if (!s.IsValid()) {
+					LOGE("Cannot open \"{}\" for writing", path);
+					return false;
+				}
+				if (!nCine::PngCodec::EncodeRgba(s, image.Width, image.Height, image.Pixels.get())) {
+					LOGE("Cannot write \"{}\"", path);
+					return false;
+				}
+				return true;
+			}
+		};
+
 		/** @brief One character of a font, as it is being converted */
 		struct Glyph
 		{
@@ -629,7 +676,7 @@ namespace Jazz2::AssetPacker
 	bool FontPacker::Pack(StringView sourcePath, StringView targetPath)
 	{
 		Image image;
-		if (!PngCodec::Read(sourcePath, image)) {
+		if (!PngFile::Read(sourcePath, image)) {
 			return false;
 		}
 
@@ -904,7 +951,7 @@ namespace Jazz2::AssetPacker
 			}
 		}
 
-		if (!PngCodec::Write(targetPath, image)) {
+		if (!PngFile::Write(targetPath, image)) {
 			return false;
 		}
 		// Both forms of the character list are written: the JSON one to edit, which is also what packing the
@@ -923,7 +970,7 @@ namespace Jazz2::AssetPacker
 	bool FontPacker::ApplyPalette(StringView sourcePath, StringView targetPath)
 	{
 		Image image;
-		if (!PngCodec::Read(sourcePath, image)) {
+		if (!PngFile::Read(sourcePath, image)) {
 			return false;
 		}
 
@@ -936,7 +983,7 @@ namespace Jazz2::AssetPacker
 			pixel[2] = color.B;
 		}
 
-		if (!PngCodec::Write(targetPath, image)) {
+		if (!PngFile::Write(targetPath, image)) {
 			return false;
 		}
 
@@ -947,7 +994,7 @@ namespace Jazz2::AssetPacker
 	bool FontPacker::ConvertToIndices(StringView sourcePath, StringView targetPath)
 	{
 		Image image;
-		if (!PngCodec::Read(sourcePath, image)) {
+		if (!PngFile::Read(sourcePath, image)) {
 			return false;
 		}
 
@@ -989,7 +1036,7 @@ namespace Jazz2::AssetPacker
 			pixel[0] = pixel[1] = pixel[2] = std::uint8_t(bestIndex);
 		}
 
-		if (!PngCodec::Write(targetPath, image)) {
+		if (!PngFile::Write(targetPath, image)) {
 			return false;
 		}
 

@@ -26,11 +26,54 @@ namespace Jazz2::Editor
 		/** @brief Horizontal alignment */
 		Alignment Align;
 
+		/** @brief Returns the text shown, @ref TextFunc is called at most once a frame of layout */
+		StringView GetText();
+
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
 		void Draw(UiPainter& painter) override;
 
-	protected:
-		String GetText();
+	private:
+		String _frameText;
+		std::uint32_t _frameTextLayout = 0;
+	};
+
+	/**
+		@brief Text on as many lines as it needs in the width it gets
+
+		A label would be cut off. Lines are broken at spaces and new lines, a word wider than the width gets a line of
+		its own. It's always aligned to the left.
+	*/
+	class UiWrappedLabel : public UiLabel
+	{
+		DEATH_RUNTIME_OBJECT(UiLabel);
+
+	public:
+		/** @brief Creates a new instance */
+		explicit UiWrappedLabel(StringView text = {}, const Colorf& color = UiTheme::Text);
+
+		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
+		void Draw(UiPainter& painter) override;
+
+	private:
+		// Lines of a text broken in a width, as byte ranges of the text, kept until the text, the width or the size of
+		// the text changes
+		struct WrappedLines
+		{
+			String Text;
+			float Width = -1.0f;
+			float TextHeight = -1.0f;
+			SmallVector<std::pair<std::uint32_t, std::uint32_t>, 4> Lines;
+			float Widest = 0.0f;
+		};
+
+		// One for measuring and one for drawing, they may be in other widths
+		WrappedLines _measured;
+		WrappedLines _drawn;
+
+		template<class TMeasurer>
+		const WrappedLines& GetLines(WrappedLines& cache, const TMeasurer& measurer, float width);
 	};
 
 	/** @brief How a button is drawn */
@@ -66,19 +109,49 @@ namespace Jazz2::Editor
 		Colorf IconColor;
 		/** @brief Smallest width in units */
 		float MinWidth;
-		/** @brief Where the text and the icon are in a button wider than them, centered or at the left */
+		/** @brief Where the text and the icon are in a button wider than them, centered, at the left or at the right */
 		Alignment TextAlign;
 		/** @brief Color of the text instead of the usual one, a text color (see @ref UiTheme::Text), unused if its alpha is 0 */
 		Colorf TextColor;
+		/**
+		 * @brief Returns whether only the icon is shown, instead of when the text doesn't fit (see @ref IsTextCut())
+		 *
+		 * So buttons next to each other show their texts or only their icons all alike.
+		 */
+		Function<bool()> IconOnlyFunc;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
+		/** @brief Shows only the icon of a button with both that is narrower than them, centered, the text is its tooltip then */
 		void Draw(UiPainter& painter) override;
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		bool YieldsToScroll() const override;
+		/** @brief Reached by <kbd>Tab</kbd>, <kbd>Enter</kbd> or <kbd>Space</kbd> clicks it then */
+		bool IsTabStop() const override;
+		bool OnKeyPressed(const KeyboardEvent& event) override;
+		StringView GetTooltip(Vector2f pos) const override;
 
 		/** @brief Returns `true` if the button is shown checked */
 		bool IsChecked();
+		/** @brief Returns `true` if the icon and the text didn't fit into the button when it was drawn last */
+		bool IsTextCut() const {
+			return (_neededWidth > Bounds.W + 0.5f);
+		}
+
+	private:
+		// Only the icon was shown when the button was drawn last
+		bool _textHidden;
+		// How wide the icon and the text are with the padding, as of the last time the button was drawn
+		float _neededWidth;
+		// Width of the text, for the text and the size of text it was measured for, it's measured and drawn every frame
+		String _measuredText;
+		float _measuredTextHeight = -1.0f;
+		float _measuredTextWidth = 0.0f;
+
+		template<class TMeasurer>
+		float GetTextWidth(const TMeasurer& measurer);
 	};
 
 	/**
@@ -100,10 +173,15 @@ namespace Jazz2::Editor
 		Function<void(bool)> Setter;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
 		void Draw(UiPainter& painter) override;
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		bool YieldsToScroll() const override;
+		/** @brief Reached by <kbd>Tab</kbd>, <kbd>Space</kbd> checks or unchecks it then */
+		bool IsTabStop() const override;
+		bool OnKeyPressed(const KeyboardEvent& event) override;
 	};
 
 	/**
@@ -121,6 +199,7 @@ namespace Jazz2::Editor
 		UiOrientation Orientation;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
 		void Draw(UiPainter& painter) override;
 	};
 
@@ -147,8 +226,24 @@ namespace Jazz2::Editor
 		float GetScroll() const {
 			return _scroll;
 		}
+		/** @brief Returns `true` if the content is larger than what is shown of it */
+		bool IsScrollable() const {
+			return (_contentHeight > Bounds.H);
+		}
 		/** @brief Scrolls so that a part of the content in pixels from its top is visible */
 		void ScrollIntoView(float top, float bottom);
+		/** @brief Scrolls to a distance from the top in pixels, at once or gliding there */
+		void ScrollTo(float scroll, bool immediate);
+		/** @brief Goes on scrolling at a speed in pixels a frame, slowing down by itself, as after a flick of a finger, nothing with reduced motion */
+		void Fling(float velocity);
+
+		/**
+		 * @brief Whether the view stays at the end of the content while it grows, as a log does
+		 *
+		 * It starts at the end, and follows the content only while it's scrolled to the end, so a part scrolled back to
+		 * stays in view.
+		 */
+		bool FollowEnd = false;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
 		void Arrange(const UiContext& context, const Rectf& bounds) override;
@@ -158,17 +253,27 @@ namespace Jazz2::Editor
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerMove(const UiPointerEvent& event) override;
+		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		void OnPointerCancel() override;
 		bool OnWheel(const UiPointerEvent& event) override;
 
 	private:
 		float _scroll;
 		float _targetScroll;
+		// Speed of a flick in pixels a frame, toward the start of the content when positive
+		float _velocity = 0.0f;
 		float _contentHeight;
 		float _dragOffset;
 		bool _draggingThumb;
+		// The width the content was measured in by Measure(), its height then and the frame of layout of it
+		float _measuredWidth = 0.0f;
+		float _measuredHeight = 0.0f;
+		std::uint32_t _measuredFrame = 0;
 
 		Rectf GetThumbRect() const;
 		float GetMaxScroll() const;
+		// Width of the edge that takes the thumb, wider for a finger
+		float GetThumbZoneWidth() const;
 	};
 
 	/**
@@ -194,6 +299,7 @@ namespace Jazz2::Editor
 		bool ShowLine = false;
 
 		void Draw(UiPainter& painter) override;
+		void Update(float timeMult) override;
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerMove(const UiPointerEvent& event) override;
@@ -230,9 +336,12 @@ namespace Jazz2::Editor
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerMove(const UiPointerEvent& event) override;
 		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		void Update(float timeMult) override;
 
 	private:
 		Vector2f _startPos;
+		// Whether it was dragged since it was pressed, the arrows of moving are shown by the pointer then
+		bool _moved = false;
 	};
 
 	class UiFormRow;
@@ -297,6 +406,8 @@ namespace Jazz2::Editor
 		UiStack* GetContent() const {
 			return _content;
 		}
+		/** @brief Returns the width of the label in whole pixels */
+		float GetLabelWidth(const UiContext& context) const;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
 		void Arrange(const UiContext& context, const Rectf& bounds) override;
@@ -305,6 +416,10 @@ namespace Jazz2::Editor
 		UiForm& _form;
 		UiLabel* _label;
 		UiStack* _content;
+		// The width of the label, measured once a frame of layout
+		mutable float _labelWidth = 0.0f;
+		mutable float _labelWidthScale = 0.0f;
+		mutable std::uint32_t _labelWidthLayout = 0;
 
 		bool IsStacked(const UiContext& context) const;
 	};
@@ -319,6 +434,7 @@ namespace Jazz2::Editor
 	public:
 		/** @brief Creates a new instance */
 		explicit UiTextBox(StringView text = {});
+		~UiTextBox() override;
 
 		/** @brief Text */
 		String Text;
@@ -328,10 +444,12 @@ namespace Jazz2::Editor
 		Function<String()> PlaceholderFunc;
 		/** @brief Returns the text to show while it's not being edited, replaces @ref Text then */
 		Function<String()> TextFunc;
-		/** @brief Called when the edit is confirmed, by Enter or by leaving it */
+		/** @brief Called when the edit is confirmed, by Enter or by leaving it, only if something was typed since the edit started */
 		Function<void(StringView)> OnCommit;
 		/** @brief Called whenever the text changes while it's edited */
 		Function<void(StringView)> OnChanged;
+		/** @brief Gets the keys first while it's edited, returns `true` for a key it used, such as a dialog moving through a list by <kbd>Up</kbd> */
+		Function<bool(const KeyboardEvent&)> OnKeyPreview;
 		/** @brief Longest text in bytes */
 		std::int32_t MaxLength;
 		/** @brief Whether the text can have more lines, it grows with them --- Enter breaks a line then, Ctrl+Enter confirms */
@@ -348,6 +466,7 @@ namespace Jazz2::Editor
 		bool ShowScreenKeyboard();
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
 		void Draw(UiPainter& painter) override;
 		void Update(float timeMult) override;
 		bool AcceptsPointer() const override;
@@ -364,6 +483,14 @@ namespace Jazz2::Editor
 		float _scrollX;
 		float _blinkTime;
 		bool _cancelled;
+		// The text when the edit started, the edit is confirmed only if the text is another one when it ends
+		String _editStartText;
+		// The text from TextFunc for the frame of layout, see GetShownText()
+		String _shownText;
+		std::uint32_t _shownTextLayout = 0;
+
+		/** @brief Returns the text shown, the one being edited, or the one from @ref TextFunc made at most once a frame of layout */
+		StringView GetShownText();
 
 		/** @brief Returns the byte offset in the text closest to a position */
 		std::int32_t GetOffsetAt(Vector2f pos) const;
@@ -379,12 +506,45 @@ namespace Jazz2::Editor
 		void GetLineLayout(const UiContext& context, std::int32_t lineCount, float& lineHeight, float& top) const;
 		/** @brief Deletes the selection, returns `false` if nothing was selected */
 		bool DeleteSelection();
-		/** @brief Inserts a text at the caret */
+		/** @brief Inserts a text at the caret, characters a text can't have are left out */
 		void Insert(StringView text);
 		/** @brief Called after the text changed */
 		void NotifyChanged();
+		/** @brief Keeps the caret and the start of the selection inside of the text, it may have been replaced */
+		void ClampCaret();
+		/** @brief Returns the byte offset of the start of the next word, or of the word before */
+		std::int32_t FindWordBoundary(std::int32_t offset, bool forward) const;
 
 		mutable UiContext _lastContext;
+
+	private:
+		// What an edit does, edits of the same kind in a row are undone together
+		enum class EditKind : std::uint8_t
+		{
+			None,
+			Typing,
+			Deleting,
+			Other
+		};
+
+		struct EditState
+		{
+			String Text;
+			std::int32_t Caret;
+			std::int32_t SelectionStart;
+		};
+
+		static constexpr std::size_t MaxUndoSteps = 100;
+
+		SmallVector<EditState, 0> _undo;
+		SmallVector<EditState, 0> _redo;
+		EditKind _lastEdit = EditKind::None;
+
+		void RecordUndo(EditKind kind);
+		bool Undo();
+		bool Redo();
+		// Cleared when the box is destroyed, what finishes later --- a keyboard of the system --- tells by it
+		std::shared_ptr<bool> _alive;
 	};
 
 	/**
@@ -415,7 +575,13 @@ namespace Jazz2::Editor
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerMove(const UiPointerEvent& event) override;
 		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		void OnPointerCancel() override;
 		bool OnWheel(const UiPointerEvent& event) override;
+		/** @brief A click doesn't type into it, the number is dragged or stepped then, it's typed into by a click without moving, see @ref BeginEdit() */
+		bool IsFocusable() const override;
+		/** @brief Reached by <kbd>Tab</kbd> to type the number, <kbd>Up</kbd> and <kbd>Down</kbd> step it then */
+		bool IsTabStop() const override;
+		bool OnKeyPressed(const KeyboardEvent& event) override;
 
 		/** @brief Changes the value by a number of steps, as the arrows at its edge do */
 		void StepBy(float steps) {
@@ -432,6 +598,37 @@ namespace Jazz2::Editor
 		Rectf GetSpinRect() const;
 		void StepValue(float steps);
 	};
+
+	/**
+		@brief Edges a window is resized by, for the windows that can be
+
+		An edge is grabbed a little outside of the window too, by half of its width. The corner at the bottom right,
+		which has the dots, is easier to grab. A corner is two edges.
+	*/
+	struct UiResizeEdges
+	{
+		enum : std::uint8_t {
+			Left = 0x01,		/**< Left edge */
+			Top = 0x02,			/**< Top edge */
+			Right = 0x04,		/**< Right edge */
+			Bottom = 0x08		/**< Bottom edge */
+		};
+
+		/** @brief Width of an edge in units */
+		static constexpr float GripWidth = 5.0f;
+
+		/** @brief Returns the area a window takes the pointer in with its edges, a little larger than it */
+		static Rectf GetHitBounds(const Rectf& bounds, float scale);
+		/** @brief Returns the edges of a window at a position, @p cornerSize is how far the corner reaches, in widths of an edge */
+		static std::uint8_t GetAt(const Rectf& bounds, float scale, Vector2f pos, float cornerSize);
+		/** @brief Draws the edges being pointed at or dragged lit up, and the dots in the corner */
+		static void Draw(UiPainter& painter, const Rectf& bounds, std::uint8_t edges);
+		/** @brief Shows the arrows of resizing by the pointer for the edges being pointed at or dragged, nothing for none */
+		static void ShowCursor(UiSurface& surface, std::uint8_t edges);
+	};
+
+	/** @brief Returns a color between two others, 0 for the first and 1 for the second */
+	Colorf UiLerpColor(const Colorf& a, const Colorf& b, float t);
 }
 
 #endif

@@ -34,8 +34,9 @@ namespace Jazz2::Editor
 	 * @brief Finds how an event is drawn with its parameters
 	 *
 	 * Mirrors what the object the event spawns chooses when it's activated --- its metadata, animation, which way
-	 * it faces and where it moves itself. Returns `false` for an event whose look doesn't depend on its parameters,
-	 * it's drawn as the catalog says then (see @ref EventDescriptor::PreviewMetadata).
+	 * it faces and where it moves itself. Only the events whose look depends on more than the value of one of their
+	 * parameters are here, the others are described by their @ref EventDescriptor::PreviewCases. Returns `false` for
+	 * any other event, it's drawn as the catalog says then (see @ref EventDescriptor::PreviewMetadata).
 	 */
 	bool ResolveEventPreview(const Formats::EventRecord& event, EventPreviewSpec& spec);
 }

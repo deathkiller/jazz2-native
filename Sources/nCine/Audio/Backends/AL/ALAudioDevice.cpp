@@ -766,7 +766,7 @@ namespace nCine
 		String newDeviceId = Utf8::FromUtf16(pwstrDefaultDeviceId);
 		if (now - _lastDeviceChangeTime > DeviceChangeLimitMs || newDeviceId != _lastDeviceId) {
 			_lastDeviceChangeTime = now;
-			_lastDeviceId = std::move(newDeviceId);
+			_lastDeviceId = Death::move(newDeviceId);
 			_shouldRecreate = true;
 		}
 

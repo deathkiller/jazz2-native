@@ -343,7 +343,7 @@ namespace nCine
 		{
 			std::lock_guard<std::mutex> lock(_deferredInputLock);
 			if (!_deferredInput.empty()) {
-				events = std::move(_deferredInput);
+				events = Death::move(_deferredInput);
 				_deferredInput.clear();
 			}
 		}

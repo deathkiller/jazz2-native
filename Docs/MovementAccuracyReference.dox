@@ -347,6 +347,132 @@ PowerShell 5.1, so sorting by `tick` shuffles rows within a tick and fakes a saw
 `y` alternating +1.675 / −5.004). It is not trace-sink reordering under @cpp DEATH_TRACE_ASYNC @ce (file
 order has zero out-of-order `ms` steps in 676,872). Sort by `ms`, unique per row, or keep file order.
 
+@section movement-accuracy-bird The two birds
+
+The original has two birds, JJ2+'s `CHAR::BIRD` (@ref Jazz2::PlayerType::Bird) and `CHAR::BIRD2`
+(@ref Jazz2::PlayerType::Bird2), and only its JJMORPH cycle (Jazz - Spaz - Lori - Bird - Frog - Bird2) or a script
+reaches either; `jjmorph` cycles the same way. Here the Bird morph monitor gives the second one, the bird that shoots,
+and the first one is drawn with the yellow bird's sprites to tell them apart. Measured with the `bd_*` and `b2_*` sets,
+<b>the two fly identically</b> --- `xs` and `ys` agree on every tick of all ten paired scenarios --- and differ only
+in what Fire does. The flight is used in both modes; Reforged keeps its own walk cap as the bird's cap, which is the
+relation the original's figure has to its own walk.
+
+Quantity | First version (legacy / Reforged) | Original (70 Hz) | Now (60 Hz, legacy / Reforged)
+-------- | --------------------------------- | ---------------- | ------------------------------
+Cap, both axes | 4.6667 / 4.0 | <b>4.0</b>, clamped every tick | 4.6667 / 4.0
+Horizontal acceleration | the walk's, 0.2492 / 0.2 | <b>0.125</b> @m_span{m-text m-dim} (`8192/65536`) @m_endspan, wound up over 4 ticks | 0.1701
+Brake, no direction held | the walk's, 0.1662 / 0.22 | <b>0.0625</b> @m_span{m-text m-dim} (`4096/65536`) @m_endspan, linear | 0.0851
+Turning round | acceleration plus brake | <b>no braking of its own</b> | as the original
+Up or Jump | accelerated to the cap | <b>−1.0 assigned</b>, flat from the first tick | −1.1667
+Nothing vertical held | braked to a stop | <b>pulled down at 1/64</b> @m_span{m-text m-dim} (`1024/65536`) @m_endspan, unbraked | 0.0213
+Down | accelerated to the cap | <b>pulled down at 3/128</b> @m_span{m-text m-dim} (`1536/65536`) @m_endspan | 0.0319
+Run | nothing | nothing | nothing
+
+@m_class{m-noindent}
+
+So the cap was right and everything about getting there was not: the original takes 34 ticks to reach it from rest
+(0.49 s, ours 0.31) and 64 to lose it (0.91 s, ours 0.47), and it climbs at a quarter of the cap where ours flew
+vertically as fast as horizontally --- 70 px/s against 280.
+
+@subsection movement-accuracy-bird-steer The acceleration is eased, and letting go resets it
+
+JJ2+ exposes the acceleration as `xAcc`, and it moves <b>1/32 px/tick² a tick</b> towards ±1/8: `bd_right` reads
+1/32, 1/16, 3/32, then 1/8 to the cap at tick 34. Reversing at the cap winds it over through zero the same way, so
+the speed holds at 4.0 for four ticks and then comes down on the same ramp (`bd_right_rev`, −4.0 at tick 170).
+Letting go zeroes it at once: `bd_rev_tap` releases for two ticks and the re-press starts again at 1/32. With no
+direction held the speed falls a flat 1/16 a tick.
+
+@subsection movement-accuracy-bird-pull The vertical axis is a pull, not steering
+
+Up assigns −1.0 on its first tick whatever the speed was, and Jump is the same key (`bd_jump` is `bd_up` to the last
+tick). With nothing held the bird is pulled down at 1/64 px/tick² with no brake, so letting go of Up is a fall that
+only a floor ends --- `bd_up_rel` lands at 1.47 px/tick --- and Down only adds another 1/128. A bird on the floor
+keeps pressing into it: the original's `y` creeps down 1/64 px a tick and is put back every 32. `bd_clamp` writes 10
+onto both speeds in mid-air and reads 4.0 and 4.0 on the next tick; landing at 4.0 zeroes `ys` with no bounce.
+
+@subsection movement-accuracy-bird-perch A bird perches on its own
+
+There is no landing as such. A bird still on the floor perches <b>37 ticks</b> after its last movement --- JJ2+'s
+`idle` counts them --- in `bd_idle2`, `bd_right_rel`, `bd_up_rel` and `bd_up_down` alike. Moving takes it off on the
+same tick; Down, which cannot move it, does not (`bd_down`). The perched poses play at 7 ticks a frame, one whole
+animation at a time: idle, a look to the left or right (turn, look a few times, turn back), the worm, idle again. How
+often each repeats varies between runs, so @cpp UpdateBirdPerchPose() @ce fits its odds to the counts. A perched bird
+stands where a rabbit does --- every bird sprite's coldspot is 20 px under its hotspot --- while the flying box ends
+12 px down, so @cpp EnterBirdPerch() @ce lifts it 8 px as the pose changes.
+
+@subsection movement-accuracy-bird-attack The two attacks
+
+Bird | Fire does | Measured on
+---- | --------- | -----------
+`BIRD` | <b>No shot</b>, no round spent. Held while flying faster than 2 px/tick, the beak charge (below). Held at all, it keeps the bird from perching. JJ2+'s `canHurt` defaults to false for birds, so the beak does no damage; ours hurts in Reforged only. | `bd_fire*`, `bd_perch_fire`, `bd_ch_*`
+`BIRD2` | <b>Two shots of the current weapon per press</b>, none while held: straight and 0.2 rad below (1.957 / 0.398 for a Seeker), with the bird's horizontal speed added, <b>one round</b> for the pair. A press wakes a perched bird, holding does not keep it awake. | `b2_fire*`, `b2_perch_fire`, `b2_fire_turtle`
+
+@m_class{m-noindent}
+
+Hurt is the same for both: a heart lost and the bird kept, thrown at the cap away from its facing and 4 upwards on top
+of its own `ys`, the rise then decaying at 17/64 px/tick² until it turns. The hurt pose lasts 70 ticks, 11 frames.
+
+@subsection movement-accuracy-bird-charge The beak charge needs speed, and cannot be slowed down
+
+Reported from play as needing some minimum speed and as impossible to slow down once started. Both are true. Measured
+with the `bd_ch_*` set: Fire pressed at known speeds, from rest, in mid-air, coasting, leftwards, and then everything
+that can be done to a charge already under way.
+
+Quantity | First version | Original (70 Hz) | Now (60 Hz, legacy / Reforged)
+-------- | ------------- | ---------------- | ------------------------------
+Starts when | Fire held with a direction | <b>Fire held and the speed above 2 px/tick</b>, strictly, with or without a direction | above 2.3333 / 2.0, half the cap either way
+Speed from then on | the speed it had | <b>the cap</b>, put back every tick, so 2.06 becomes 4.0 in one tick | 4.6667 / 4.0
+Vertical speed | 0 | <b>0</b>, or <b>−4 / +4</b> with Up (or Jump) / Down held, assigned | the cap, up or down
+Direction let go, or reversed | braked, or turned round | <b>no braking</b>: each tick's move comes up 1/16 px short, or up to 1/8 reversed, and the speed reads 4.0 throughout | as the original
+Facing | turned with the direction | <b>the way it flies</b>, even with the other direction held | as the original
+Ends | Fire or the direction let go | <b>Fire let go</b>, or the speed no longer above 2 --- which only a wall does | as the original
+Cooldown | none | <b>none</b>, a re-press two ticks later charges at once | none
+
+@m_class{m-noindent}
+
+The threshold is tested on the speed the tick's own steering leaves, not the one the tick started with: a coast passes
+through 2.0625, exactly 2.0 and 1.9375 after the brake on three consecutive ticks, and Fire pressed on each charges on
+the first only (`bd_ch_c70`, `bd_ch_c71`, `bd_ch_c72`). It is a level and not an edge: Fire held from rest charges on
+the tick the speed passes 2 whether Fire or the direction went down first (`bd_ch_rest`, `bd_ch_fire_first`,
+`bd_ch_f06`..`bd_ch_f14` all on tick 18), on the floor or in mid-air (`bd_ch_air`), and with no direction at all once
+the bird is fast enough (`bd_ch_coast`). Leftwards is the exact mirror (`bd_ch_left_rest`).
+
+What makes it impossible to slow down is the order. The original steers and brakes as usual, moves the bird, and only
+then puts the charge's speeds back --- so the brake and the reversed acceleration get one tick's say over each move and
+are then undone, and the climb and the pull never apply at all: Up pressed during a charge moves 0 px that tick and 4
+the next (`bd_ch_up`, `bd_ch_jump`, `bd_ch_down`). @cpp HandleBirdMovement() @ce does the same across two frames, deciding
+the charge at the end of one and carrying it out at the start of the next, once that frame's move has happened. The
+shortfall the steering leaves is converted as the speed it is, one tick's worth, rather than as the rate it is everywhere
+else, which would have flown a released charge at 3.926 instead of 3.9375 and made it depend on the frame length. The
+charge flies the way the bird is going rather than the way it faces: Fire pressed while turning round charges on in the
+old direction and turns the bird back to it (`bd_ch_turn`).
+
+Against a wall the speed drops to 0, which ends the charge, and the original zeroes JJ2+'s `xAcc` there as well, held
+at 0 with the direction still pressed (`bd_ch_wall`). Our collision only reports a wall in @cpp OnHitWall() @ce when
+nothing else was hit that frame, and a bird pressing into the floor hits that every frame, so in a floor-level corner
+the speed used to wind up against the wall --- past the threshold, and a charge diving into such a corner never ended.
+The bird now looks a pixel ahead for a wall tile itself and takes both away.
+
+The three poses are the set's first three animations, `charge_diag_downright`, `charge_ver` and `charge_diag_upright`
+(332, 333 and 334 in JJ2+'s numbering), and they share the flight pose's frame counter: JJ2+'s `frameID` carries
+straight across every switch between the four, so a charge starts on whichever frame the wings were on.
+
+@m_class{m-block m-warning}
+
+@par `bd_ch_c71` is a knife edge, not a difference
+Fire goes down on the tick the coasting speed is exactly 2.0, which the original refuses. Our 60 Hz frame falls
+between two of its ticks, where the bird is still at 2.03, so ours charges and flies 664 px further. The ticks either
+side, `bd_ch_c70` and `bd_ch_c72`, agree.
+
+Not measured: whether the charge changes the hitbox, and what it does to an enemy when a script turns `canHurt` on.
+
+@subsection movement-accuracy-bird-anim The wings beat at one rate
+
+The flight pose is a flat <b>7 ticks a frame</b> at the cap, climbing, falling, braking and sitting with Fire held
+--- there is no speed-dependent beat. Outside Reforged ours is that flat rate (`"FrameRate": 6.25`, from
+@cpp 5 * 70.021 / (8 * 7) @ce); Reforged keeps a slower beat at rest, as asked for from play, up to that rate at the
+cap. The three charge poses, the perched poses and the hurt run at 7 ticks a frame too.
+
 @section movement-accuracy-objects Objects
 
 Quantity | 3.8.0 | Original (70 Hz) | Now (60 Hz) | How far 3.8.0 was off | How far Now is off
@@ -1807,12 +1933,14 @@ A monitor above the player rests on their head | A monitor at rest sits 6 px hig
 Animation structure across the two games | The @cpp CompareTraces.ps1 @ce animation pass finds <b>71 of 355</b> scenarios passing through a materially different number of poses. The largest are `fu_col_none` and `fu_col_rel` (46 against 75), `tb_gap5` (22/7), `tb_up` (42/29) and `sp_side_run` (8/25). All of them match on travel. | Read which poses differ by hand, one family at a time, as was done for the stop chain. Two comparison rules apply. Fold the playing transition into our `anim` before comparing it with the original's `curAnim` (`g_dash_rel` reads 4 against 7 without this, 7/7 with it). Drop poses shorter than 4 ticks, because the two traces have different row counts. With both rules, plain scenarios agree exactly (`g_walk` 1/1, `g_dash` 3/3, `a_jump` 7/7).
 Sidekick stalls after breaking a row of monitors | Reported from play as about 3 s in the sidekick pose at zero speed. <b>Not reproduced.</b> `pu_side_chain` (Spaz kicking right through all six monitors, Down only, no Run, a second kick to finish the row) agrees to about a pixel. The original's @cpp sm @ce runs from t = 201 to 399 over x 528.9 → 1470.6; ours from t = 202 to 403 over 529.3 → 1471.5. From on top of the first monitor: 68 against 71 ticks, 508.5 against 504.1 px. | The candidate mechanism is in @ref Jazz2::Actors::Player::CheckEndOfSpecialMoves(), which bills the kick against distance <b>actually travelled</b>. Anything that holds the player at zero speed without setting @cpp _kickPushedThisFrame @ce freezes the budget. Scenario traps: the monitors are events on row <b>59</b> and fall to row 61, so delay the kick (to tick 200) or it passes under them. Log their positions with @cpp objx @ce; the column walks 528, 624, 720, 848, 976, 1136 and then −1. An internal freeze is also ruled out: the probe clock runs off @cpp timeMult @ce, and the worst @cpp ms @ce frame is 24.5 ms against a 16.7 ms median.
 No pose for riding a tube or a pole | `tb_down` holds animation <b>58</b> (the original's curled ball) for all 800 ticks; ours shows @cpp 7 @ce (Walk, Run and Jump together) for all 1641 rows. `tb_right` runs 66/37/36 against our 0/7, `ob_vpole` 82/58/16 against 8/4/0, and `tb_row` 36. | Judged acceptable in play; nothing is planned unless it is reported. Implementing it would need an @ref Jazz2::AnimState, metadata for all three characters, and a measured rule for which pose each tube gets. The id readings are in the harness `README.md`. The pinball paddle should hold the same ball.
+What the bird scenarios did not reach | The second bird was measured with a Seeker only, and nothing pressed Up and Down together or reversed below the cap. The beak charge is measured (`bd_ch_*`, see @ref movement-accuracy-bird-charge) except for its hitbox and what it does with `canHurt` turned on. | Assumed rather than measured: weapons other than the five bullet ones fire a pair of blaster shots, Up wins over Down when both are held (in a charge as in ordinary flight), and a reversal below the cap carries on accelerating the old way until the eased acceleration turns over (what `xAcc` predicts). The perched poses' odds are fitted to the loop counts. See @ref movement-accuracy-bird.
 Boosting a player standing on you | Cannot be measured here, because both probes drive a single player. | Changed from a report. Reforged bumps the lower player sideways. Non-Reforged hands the rise upward at @ref Jazz2::Actors::Player::LegacyJumpSpeed, with the rise gravity stated explicitly (see @ref movement-accuracy-objects-poleascent). Stacking is Cooperation-only and unaffected.
 
 <b>Not gaps: read before chasing</b>
 
 Item | Finding
 ---- | -------
+A flying bird sits 8 px lower than the original's | Deliberate. The flying box ends 12 px under the hotspot so the wings beat through the floor, where the original's bird always stands on its sprites' coldspot at 20, as a rabbit does. So in flight ours rests and skims 8 px lower, lands a frame or so apart (the `bd_up_rel` family's 3.9 px/s), and a bird morphed in mid-air sinks the 8 px before its 37 perch ticks start. A perched bird stands at the original's height (@cpp EnterBirdPerch() @ce). Compare the bird scenarios by speed and by steps, not by @cpp y @ce.
 Scripted input lands about two ticks late | Not fixable in the model, but scenario design has to allow for it. This engine's probe writes input on the frame its tick counter reaches the step, about two original ticks behind the original probe (`ow_jump` launches at tick 22 against 21, and every later event carries that offset). A release tick near a key-decided event can flip the outcome: one `ow_jump` released at 50 with the original crossing a platform at 49 and ours at 52, which read as a 50 px error. Keep key edges several ticks clear of the event, or hold the key throughout as `ow_hold` does.
 Reported versus travelled speed | Three places report a speed that does not match the distance moved: the uppercut by a constant 0.84, the RF blast fired against a wall by 1.6875, and a pole launch by 4.5%. No single mechanism explains them. All three are matched on <b>travel</b>.
 Pole grab timing | The reported launch is −22.25 against −21.25 (4.5%), but the travel matches: `ob_vpole` 270.6 px against 270.2, `ob_vpole_adjx` 270.6 against 270.4, `ob_vpole_x2` 442.8 against 440.5, `ob_hpole` 3636.9 against 3636.8, and `ob_hpole_x3` exactly. The rise cap of 8 governs the ascent. The two probes capture the entry speed on opposite sides of the step into the tile.

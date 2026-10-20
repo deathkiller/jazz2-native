@@ -13,6 +13,9 @@
     <Filter Include="Header Files\Jazz2\Formats">
       <UniqueIdentifier>{a3c51e7d-6b2f-4d08-9e41-7f2c8b5d1a36}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Tiles">
+      <UniqueIdentifier>{6f1d2c84-93a7-4e5b-b0c1-58e2d47a9f13}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\Jazz2\UI">
       <UniqueIdentifier>{4ff9375f-5c40-ab18-7346-2828f1e379c4}</UniqueIdentifier>
     </Filter>
@@ -27,6 +30,9 @@
     </Filter>
     <Filter Include="Source Files\Jazz2\Formats">
       <UniqueIdentifier>{5e8d2f41-c39a-4b67-8d15-2a7e9c0b4f83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Tiles">
+      <UniqueIdentifier>{c27a9e15-4d38-4f6b-8a90-3b1e6d5c7f24}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Shared">
       <UniqueIdentifier>{b0d65e54-f642-3235-212b-a47fe26a4eff}</UniqueIdentifier>
@@ -61,6 +67,15 @@
     <Filter Include="Source Files\nCine\Base">
       <UniqueIdentifier>{7e648915-b10d-a8a5-ff79-687fc3cc8de5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\nCine\Graphics">
+      <UniqueIdentifier>{3c9a5e17-8b42-4f6d-a1c3-6e0b2d7f9a45}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine">
+      <UniqueIdentifier>{9d1f7b38-2e64-4a05-b8c7-4f3e6a1d0c92}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics">
+      <UniqueIdentifier>{e6b4c2a9-5d13-47f8-9e0a-1b7c3f5d8e26}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\Dependencies">
       <UniqueIdentifier>{6d3e5a02-1c47-4b8f-9a1e-3f7c5d9b2e64}</UniqueIdentifier>
     </Filter>
@@ -90,6 +105,9 @@
     <ClCompile Include="FormatVerifier.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LevelText.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Iso9660.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -99,8 +117,8 @@
     <ClCompile Include="N64Content.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PngCodec.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\nCine\Graphics\PngCodec.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="SpriteRepacker.cpp">
       <Filter>Source Files</Filter>
@@ -135,8 +153,17 @@
     <ClCompile Include="..\..\Jazz2\Formats\LevelFile.cpp">
       <Filter>Source Files\Jazz2\Formats</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Formats\LevelPreview.cpp">
+      <Filter>Source Files\Jazz2\Formats</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Formats\LevelTextsChunk.cpp">
+      <Filter>Source Files\Jazz2\Formats</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Jazz2\Formats\TileSetFile.cpp">
       <Filter>Source Files\Jazz2\Formats</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Tiles\LayerTypes.cpp">
+      <Filter>Source Files\Jazz2\Tiles</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Strings.cpp">
       <Filter>Source Files\Jazz2\Compatibility</Filter>
@@ -239,6 +266,9 @@
     <ClInclude Include="FormatVerifier.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LevelText.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Iso9660.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -248,8 +278,8 @@
     <ClInclude Include="N64Content.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PngCodec.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\nCine\Graphics\PngCodec.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="SpriteRepacker.h">
       <Filter>Header Files</Filter>
@@ -263,8 +293,17 @@
     <ClInclude Include="..\..\Jazz2\Formats\LevelFile.h">
       <Filter>Header Files\Jazz2\Formats</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Formats\LevelPreview.h">
+      <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Formats\LevelTextsChunk.h">
+      <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Jazz2\Formats\TileSetFile.h">
       <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Tiles\LayerTypes.h">
+      <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Jazz2\EventType.h">
       <Filter>Header Files\Jazz2</Filter>

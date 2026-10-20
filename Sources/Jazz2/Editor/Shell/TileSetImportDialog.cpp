@@ -2,16 +2,21 @@
 
 #if defined(WITH_EDITOR)
 
+#include "ProgressDialog.h"
+#include "ShellCommon.h"
+#include "TextPrompt.h"
 #include "TileSetsDialog.h"
-#include "../EditorSession.h"
+#include "../Tools/EditorContext.h"
+#include "../Files/AtomicFile.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Imaging/PaletteMatch.h"
+#include "../Imaging/PngCodec.h"
 #include "../Imaging/TileImages.h"
+#include "../UI/UiColors.h"
 #include "../UI/UiDialogs.h"
 #include "../UI/UiMenu.h"
 #include "../UI/UiSurface.h"
 #include "../../ContentResolver.h"
-#include "../../Compatibility/JJ2Anims.Palettes.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -32,6 +37,42 @@ namespace Jazz2::Editor
 	namespace
 	{
 		enum class ImportUse : std::uint8_t { Extra, Default, SaveOnly };
+		enum class DitherMode : std::uint8_t { None, Pattern, ErrorDiffusion };
+
+		// What is chosen for the import, compared to tell whether a preview is still what would be made
+		struct ImportSettings
+		{
+			TileImportColors Colors = TileImportColors::OwnPalette;
+			DitherMode Dither = DitherMode::None;
+			bool SkipDuplicates = false;
+			bool UseMasks = true;
+			std::int32_t OffsetX = 0;
+			std::int32_t OffsetY = 0;
+			std::int32_t SpacingX = 0;
+			std::int32_t SpacingY = 0;
+			bool UseColorKey = false;
+			std::uint32_t ColorKey = 0x00FF00FFu;
+			std::int32_t AlphaThreshold = 128;
+
+			bool operator==(const ImportSettings& other) const
+			{
+				return (Colors == other.Colors && Dither == other.Dither && SkipDuplicates == other.SkipDuplicates && UseMasks == other.UseMasks &&
+					OffsetX == other.OffsetX && OffsetY == other.OffsetY && SpacingX == other.SpacingX && SpacingY == other.SpacingY &&
+					UseColorKey == other.UseColorKey && ColorKey == other.ColorKey && AlphaThreshold == other.AlphaThreshold);
+			}
+		};
+
+		// A tile set made of the image, with what it's made with, so it can be made off the user interface
+		struct SlicedTileSet
+		{
+			ImportSettings Settings;
+			std::uint32_t Palette[256];
+			bool Locked[256];
+			bool HasMasks = false;
+			Formats::TileSetData TileSet;
+			TileImportResult Result;
+			bool Success = false;
+		};
 
 		struct ImportState
 		{
@@ -39,83 +80,141 @@ namespace Jazz2::Editor
 			PngImage Image;
 			PngImage Masks;
 			bool HasMasks = false;
-			bool UseMasks = true;
-			TileImportColors Colors = TileImportColors::OwnPalette;
-			bool Dither = false;
-			bool SkipDuplicates = false;
+			ImportSettings Settings;
 			ImportUse Use = ImportUse::Extra;
+			// The tile set made last to see what it would be, it's saved as it is if nothing was changed since
+			std::shared_ptr<SlicedTileSet> Preview;
 		};
 
-		// Lowercase letters, digits, dashes and underscores, as the tile sets of the game are named
-		String MakeTileSetName(StringView fileName)
+		void ApplySettings(const ImportSettings& settings, TileImportOptions& options)
 		{
-			String name = StringUtils::lowercase(fs::GetFileNameWithoutExtension(fileName));
-			String result;
-			for (char c : name) {
-				if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
-					result += StringView(&c, 1);
-				} else if (c == ' ' || c == '.') {
-					result += "_"_s;
-				}
-			}
-			return result;
+			options.Colors = settings.Colors;
+			options.Dither = (settings.Dither == DitherMode::Pattern);
+			options.ErrorDiffusion = (settings.Dither == DitherMode::ErrorDiffusion);
+			options.SkipDuplicates = settings.SkipDuplicates;
+			options.OffsetX = settings.OffsetX;
+			options.OffsetY = settings.OffsetY;
+			options.SpacingX = settings.SpacingX;
+			options.SpacingY = settings.SpacingY;
+			options.UseColorKey = settings.UseColorKey;
+			options.ColorKey = settings.ColorKey;
+			options.AlphaThreshold = std::uint8_t(std::clamp<std::int32_t>(settings.AlphaThreshold, 1, 255));
 		}
 
-		void Import(EditorSession& session, ImportState& state, StringView name)
+		// What making the tile set needs from the editor, taken on the main thread
+		std::shared_ptr<SlicedTileSet> PrepareSlice(const ImportState& state)
+		{
+			auto job = std::make_shared<SlicedTileSet>();
+			job->Settings = state.Settings;
+			job->HasMasks = (state.HasMasks && state.Settings.UseMasks);
+			// The entries the palette of the level shares with the sprites stay, a new palette of the default tile set
+			// is the palette of the sprites too. Tile sets often tweak the colors of the sprites a little, so an entry
+			// close to the color of the sprites counts too, and it keeps the color the level has, as the sprites look now.
+			std::memcpy(job->Palette, ContentResolver::Get().GetPalettes().data(), sizeof(job->Palette));
+			for (std::int32_t i = 0; i < 256; i++) {
+				job->Locked[i] = IsSpriteColor(i, job->Palette[i]);
+			}
+			return job;
+		}
+
+		// Makes the tile set, on any thread, it only reads the image
+		void SliceInto(const ImportState& state, SlicedTileSet& job, JobProgress* progress)
+		{
+			TileImportOptions options;
+			ApplySettings(job.Settings, options);
+			options.Palette = job.Palette;
+			options.Locked = job.Locked;
+			options.Masks = (job.HasMasks ? &state.Masks : nullptr);
+			if (progress != nullptr) {
+				options.Progress = [progress](float value) {
+					return progress->Report(value);
+				};
+			}
+			job.Success = SliceTileSet(state.Image, options, job.TileSet, job.Result);
+		}
+
+		// Tells why the tile set couldn't be made, returns `false` then
+		bool CheckSliced(IEditorContext& session, const SlicedTileSet& job)
+		{
+			if (job.Success) {
+				return true;
+			}
+			switch (job.Result.Error) {
+				case TileImportError::TooManyTiles:
+					session.ShowMessage(job.Settings.SkipDuplicates
+						? String(_f("The image has more than {} different tiles, a tile set can't hold them", MaxImportedTiles))
+						: String(_f("The image has more than {} tiles, a tile set can't hold them - skipping the same tiles may help", MaxImportedTiles)));
+					break;
+				case TileImportError::Cancelled:
+					session.ShowMessage(_("Making the tile set was stopped"));
+					break;
+				default:
+					session.ShowMessage(_("The image has no tile in it, it's smaller than a tile with the margin and gutters"));
+					break;
+			}
+			return false;
+		}
+
+		// Makes the tile set off the user interface, with how far it is shown, then passes it on
+		void SliceAsync(IEditorContext& session, std::shared_ptr<ImportState> state, Function<void(std::shared_ptr<SlicedTileSet>)>&& onSliced)
+		{
+			std::shared_ptr<SlicedTileSet> job = PrepareSlice(*state);
+			IEditorContext* s = &session;
+			auto callback = std::make_shared<Function<void(std::shared_ptr<SlicedTileSet>)>>(Death::move(onSliced));
+			RunWithProgress(session, _("Making Tile Set"), [state, job](JobProgress& progress) {
+				SliceInto(*state, *job, &progress);
+			}, [s, job, callback](bool cancelled) {
+				if (cancelled && job->Success) {
+					// Stopped right when it was done, it's taken anyway
+					cancelled = false;
+				}
+				if (cancelled) {
+					s->ShowMessage(_("Making the tile set was stopped"));
+					return;
+				}
+				if (CheckSliced(*s, *job)) {
+					(*callback)(job);
+				}
+			});
+		}
+
+		// Whether a name can be given to a new tile set, shows why not otherwise
+		bool CheckNewName(IEditorContext& session, StringView name)
 		{
 			if (!ContentTileSetLibrary::IsValidName(name)) {
 				session.ShowMessage(_("A tile set is named by lowercase letters, digits, dashes and underscores"));
-				return;
+				return false;
 			}
 			// A new name, a tile set of the game or of another level isn't replaced by mistake
 			if (!ContentTileSetLibrary::FindTileSetFile(name).empty()) {
 				session.ShowMessage(_("A tile set of this name exists already"));
-				return;
+				return false;
+			}
+			return true;
+		}
+
+		// Saves a tile set made of the image and uses it in the level as chosen
+		bool FinishImport(IEditorContext& session, const ImportState& state, StringView name, const SlicedTileSet& job)
+		{
+			if (!CheckNewName(session, name)) {
+				return false;
 			}
 			String path = ContentTileSetLibrary::GetWritablePath(name, true);
 			if (path.empty()) {
 				session.ShowMessage(_("There's no place to save tile sets to"));
-				return;
+				return false;
 			}
+			const Formats::TileSetData& tileSet = job.TileSet;
+			const TileImportResult& result = job.Result;
 
-			// The entries the palette of the level shares with the sprites stay, a new palette of the default tile set
-			// is the palette of the sprites too. Tile sets often tweak the colors of the sprites a little, so an entry
-			// close to the color of the sprites counts too, and it keeps the color the level has, as the sprites look now.
-			constexpr float SpriteColorDistance = 0.06f;
-			const std::uint32_t* levelPalette = ContentResolver::Get().GetPalettes().data();
-			bool locked[256] = {};
-			for (std::int32_t i = 1; i < 256; i++) {
-				const Color& sprite = SpritePalette[i];
-				std::uint32_t spriteColor = std::uint32_t(sprite.R) | (std::uint32_t(sprite.G) << 8) | (std::uint32_t(sprite.B) << 16);
-				locked[i] = (OkLab::FromPaletteEntry(levelPalette[i]).DistanceSquared(OkLab::FromPaletteEntry(spriteColor)) <= SpriteColorDistance * SpriteColorDistance);
-			}
-
-			TileImportOptions options;
-			options.Colors = state.Colors;
-			options.Palette = levelPalette;
-			options.Locked = locked;
-			options.Dither = state.Dither;
-			options.SkipDuplicates = state.SkipDuplicates;
-			options.Masks = (state.HasMasks && state.UseMasks ? &state.Masks : nullptr);
-			Formats::TileSetData tileSet;
-			TileImportResult result;
-			if (!SliceTileSet(state.Image, options, tileSet, result)) {
-				session.ShowMessage(_("The image is smaller than a tile"));
-				return;
-			}
-
-			{
-				auto s = fs::Open(path, FileAccess::Write);
-				if (!s->IsValid() || !Formats::TileSetFile::Write(*s, tileSet)) {
-					s = nullptr;
-					fs::RemoveFile(path);
-					session.ShowMessage(_("The tile set couldn't be saved"));
-					return;
-				}
+			// A file that isn't written whole isn't left there, it would take the name
+			if (!AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
+				session.ShowMessage(_("The tile set couldn't be saved"));
+				return false;
 			}
 			session.InvalidateTileSet(name);
 			LOGI("Tile set \"{}\" with {} tiles made from \"{}\" ({} colors added, {} entries kept for sprites, {} same tiles left out)", path, result.TileCount, state.Path,
-				result.ColorsAdded, std::count(std::begin(locked), std::end(locked), true), result.DuplicateTiles);
+				result.ColorsAdded, std::count(std::begin(job.Locked), std::end(job.Locked), true), result.DuplicateTiles);
 
 			switch (state.Use) {
 				case ImportUse::Extra: AddExtraTileSet(session, name); break;
@@ -136,26 +235,66 @@ namespace Jazz2::Editor
 				message += " "_s + _fn("- {} tile was the same as another one", "- {} tiles were the same as others", result.DuplicateTiles, result.DuplicateTiles);
 			}
 			session.ShowMessage(message);
+			return true;
 		}
 
-		void ShowOptions(EditorSession& session, std::shared_ptr<ImportState> state)
+		// Makes and saves the tile set right away, waiting for it, as the console command does
+		bool Import(IEditorContext& session, const ImportState& state, StringView name)
+		{
+			if (!CheckNewName(session, name)) {
+				return false;
+			}
+			std::shared_ptr<SlicedTileSet> job = PrepareSlice(state);
+			SliceInto(state, *job, nullptr);
+			return (CheckSliced(session, *job) && FinishImport(session, state, name, *job));
+		}
+
+		/** The palette of the tile set as the preview made it, with what it found */
+		String DescribePreview(const ImportState& state)
+		{
+			const SlicedTileSet* preview = state.Preview.get();
+			if (preview == nullptr) {
+				return _("Preview shows the palette and the tiles the tile set would have before it's saved");
+			}
+			String text = _fn("{} tile", "{} tiles", preview->Result.TileCount, preview->Result.TileCount);
+			if (preview->Result.ColorsAdded > 0) {
+				text += ", "_s + _fn("{} color made for it", "{} colors made for it", preview->Result.ColorsAdded, preview->Result.ColorsAdded);
+			} else if (preview->Result.ColorsChanged) {
+				text += ", "_s + _("some colors became the closest ones");
+			}
+			if (preview->Result.DuplicateTiles > 0) {
+				text += ", "_s + _fn("{} same tile left out", "{} same tiles left out", preview->Result.DuplicateTiles, preview->Result.DuplicateTiles);
+			}
+			if (!(preview->Settings == state.Settings)) {
+				text += " - "_s + _("changed since, it's made again when it's saved");
+			}
+			return text;
+		}
+
+		void ShowOptions(IEditorContext& session, std::shared_ptr<ImportState> state)
 		{
 			UiSurface* surface = session.GetSurface();
-			EditorSession* s = &session;
+			IEditorContext* s = &session;
 			auto dialog = std::make_unique<UiDialog>(_("New Tile Set from Image"));
 			UiDialog* dialogPtr = dialog.get();
 			auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
 
-			std::int32_t tiles = (state->Image.Width / 32) * (state->Image.Height / 32);
 			{
 				auto* row = content->AddRow(_("Image"));
-				row->Add<UiLabel>(_f("{} × {} pixels, {} tiles, {}", state->Image.Width, state->Image.Height, tiles,
-					state->Image.Indexed ? _("indexed") : _("true color")), UiTheme::TextDim);
+				auto* info = row->Add<UiLabel>(StringView(), UiTheme::TextDim);
+				info->TextFunc = [state]() {
+					// The tiles as the margin and the gutters lay them out
+					TileImportOptions options;
+					ApplySettings(state->Settings, options);
+					Vector2i grid = GetTileGrid(state->Image, options);
+					return String(_f("{} x {} pixels, {} x {} tiles, {}", state->Image.Width, state->Image.Height, grid.X, grid.Y,
+						state->Image.Indexed ? _("indexed") : _("true color")));
+				};
 			}
 			UiTextBox* nameBox;
 			{
 				auto* row = content->AddRow(_("Name"));
-				nameBox = row->Add<UiTextBox>(MakeTileSetName(fs::GetFileName(state->Path)));
+				nameBox = row->Add<UiTextBox>(SuggestTileSetName(fs::GetFileNameWithoutExtension(state->Path), {}));
 				nameBox->Width = 140.0f;
 				nameBox->MaxLength = 32;
 				nameBox->Tooltip = _("The tile set is saved in the user content, Tilesets/<name>.j2t");
@@ -168,11 +307,11 @@ namespace Jazz2::Editor
 					{ N_("Closest colors of the level palette"), TileImportColors::MatchPalette, false },
 					{ N_("A palette made for it"), TileImportColors::Reduce, false },
 				};
-				state->Colors = (state->Image.Indexed ? TileImportColors::OwnPalette : TileImportColors::TrueColor);
+				state->Settings.Colors = (state->Image.Indexed ? TileImportColors::OwnPalette : TileImportColors::TrueColor);
 				auto* row = content->AddRow(_("Colors"));
 				auto* dropdown = row->Add<UiDropdown>([state]() {
 					for (const ColorOption& option : ColorOptions) {
-						if (option.Colors == state->Colors) {
+						if (option.Colors == state->Settings.Colors) {
 							return String(_(option.Label));
 						}
 					}
@@ -185,22 +324,94 @@ namespace Jazz2::Editor
 						TileImportColors colors = option.Colors;
 						UiMenuEntry entry;
 						entry.Label = _(option.Label);
-						entry.IsChecked = [state, colors]() { return (state->Colors == colors); };
-						entry.Execute = [state, colors]() { state->Colors = colors; };
-						entries.push_back(std::move(entry));
+						entry.IsChecked = [state, colors]() { return (state->Settings.Colors == colors); };
+						entry.Execute = [state, colors]() { state->Settings.Colors = colors; };
+						entries.push_back(Death::move(entry));
 					}
 				});
 				dropdown->Width = 170.0f;
 				row->Tooltip = _("True color keeps the colors as they are, but they don't change with the palette of a level - a palette made for it keeps the colors of the sprites");
-				auto* dither = content->Add<UiCheckBox>(_("Mix colors between two of the palette (dither)"), [state]() { return state->Dither; }, [state](bool value) { state->Dither = value; });
-				dither->IsEnabledFunc = [state]() { return (state->Colors == TileImportColors::MatchPalette || state->Colors == TileImportColors::Reduce); };
-				content->Add<UiCheckBox>(_("Skip tiles that are the same as another"), [state]() { return state->SkipDuplicates; }, [state](bool value) { state->SkipDuplicates = value; });
+
+				struct DitherOption { const char* Label; DitherMode Mode; };
+				static const DitherOption DitherOptions[] = {
+					{ N_("None"), DitherMode::None },
+					{ N_("Pattern"), DitherMode::Pattern },
+					{ N_("Error diffusion"), DitherMode::ErrorDiffusion },
+				};
+				auto* ditherRow = content->AddRow(_("Dither"));
+				auto* dither = ditherRow->Add<UiDropdown>([state]() {
+					for (const DitherOption& option : DitherOptions) {
+						if (option.Mode == state->Settings.Dither) {
+							return String(_(option.Label));
+						}
+					}
+					return String();
+				}, [state](SmallVectorImpl<UiMenuEntry>& entries) {
+					for (const DitherOption& option : DitherOptions) {
+						DitherMode mode = option.Mode;
+						UiMenuEntry entry;
+						entry.Label = _(option.Label);
+						entry.IsChecked = [state, mode]() { return (state->Settings.Dither == mode); };
+						entry.Execute = [state, mode]() { state->Settings.Dither = mode; };
+						entries.push_back(Death::move(entry));
+					}
+				});
+				dither->Width = 170.0f;
+				dither->Tooltip = _("Colors between two of the palette are mixed - by a regular pattern, or by spreading what each pixel misses to the next ones (Floyd-Steinberg)");
+				dither->IsEnabledFunc = [state]() { return (state->Settings.Colors == TileImportColors::MatchPalette || state->Settings.Colors == TileImportColors::Reduce); };
+				content->Add<UiCheckBox>(_("Skip tiles that are the same as another"), [state]() { return state->Settings.SkipDuplicates; },
+					[state](bool value) { state->Settings.SkipDuplicates = value; });
 			}
 			if (state->HasMasks) {
-				content->Add<UiCheckBox>(_("Masks from the image of masks next to it"), [state]() { return state->UseMasks; },
-					[state](bool value) { state->UseMasks = value; })->Tooltip = _("Otherwise the tiles are solid where they aren't transparent");
+				content->Add<UiCheckBox>(_("Masks from the image of masks next to it"), [state]() { return state->Settings.UseMasks; },
+					[state](bool value) { state->Settings.UseMasks = value; })->Tooltip = _("Otherwise the tiles are solid where they aren't transparent");
 			} else {
 				content->Add<UiLabel>(_("The tiles are solid where they aren't transparent"), UiTheme::TextDim);
+			}
+
+			// Sprite sheets have a margin around the tiles and gutters between them
+			auto addNumber = [](UiStack* row, Function<std::int32_t&()>&& value, float max, StringView tooltip) {
+				auto shared = std::make_shared<Function<std::int32_t&()>>(Death::move(value));
+				auto* number = row->Add<UiNumberBox>([shared]() { return float((*shared)()); }, [shared](float v, bool) {
+					(*shared)() = std::int32_t(std::round(v));
+				}, 0.0f, max, 1.0f, 0);
+				number->Width = 48.0f;
+				number->Tooltip = tooltip;
+			};
+			{
+				auto* row = content->AddRow(_("Margin"));
+				addNumber(row, [state]() -> std::int32_t& { return state->Settings.OffsetX; }, 1024.0f, _("Pixels left of the first column of tiles"));
+				addNumber(row, [state]() -> std::int32_t& { return state->Settings.OffsetY; }, 1024.0f, _("Pixels above the first row of tiles"));
+				auto* gutterRow = content->AddRow(_("Gutters"));
+				addNumber(gutterRow, [state]() -> std::int32_t& { return state->Settings.SpacingX; }, 256.0f, _("Pixels between two tiles next to each other"));
+				addNumber(gutterRow, [state]() -> std::int32_t& { return state->Settings.SpacingY; }, 256.0f, _("Pixels between two rows of tiles"));
+			}
+
+			// What is transparent, a color that stands for it in images without alpha, and how opaque a pixel has to be
+			{
+				auto* row = content->AddRow(_("Transparent"));
+				row->Add<UiCheckBox>(_("Color"), [state]() { return state->Settings.UseColorKey; }, [state](bool value) { state->Settings.UseColorKey = value; })
+					->Tooltip = _("Pixels of this color are transparent, magenta in many sprite sheets");
+				UiColorSwatch* swatch = row->Add<UiColorSwatch>([state]() {
+					std::uint32_t key = state->Settings.ColorKey;
+					return Colorf((key & 0xFF) / 255.0f, ((key >> 8) & 0xFF) / 255.0f, ((key >> 16) & 0xFF) / 255.0f, 1.0f);
+				});
+				swatch->Width = 24.0f;
+				swatch->Height = 16.0f;
+				swatch->OnClick = [s, state, swatch]() {
+					UiColorPicker::ShowPopup(*s->GetSurface(), Vector2f(swatch->Bounds.X, swatch->Bounds.Y + swatch->Bounds.H), [state]() {
+						std::uint32_t key = state->Settings.ColorKey;
+						return Colorf((key & 0xFF) / 255.0f, ((key >> 8) & 0xFF) / 255.0f, ((key >> 16) & 0xFF) / 255.0f, 1.0f);
+					}, [state](const Colorf& color) {
+						auto channel = [](float value) { return std::uint32_t(std::clamp<std::int32_t>(std::int32_t(std::round(value * 255.0f)), 0, 255)); };
+						state->Settings.ColorKey = channel(color.R) | (channel(color.G) << 8) | (channel(color.B) << 16);
+						state->Settings.UseColorKey = true;
+					});
+				};
+				swatch->IsEnabledFunc = [state]() { return state->Settings.UseColorKey; };
+				row->Add<UiLabel>(_("Alpha"), UiTheme::TextDim);
+				addNumber(row, [state]() -> std::int32_t& { return state->Settings.AlphaThreshold; }, 255.0f,
+					_("How opaque a pixel has to be to be seen, and a pixel of the masks to be solid, from 1 to 255"));
 			}
 			{
 				struct UseOption { const char* Label; ImportUse Use; };
@@ -224,70 +435,91 @@ namespace Jazz2::Editor
 						entry.Label = _(option.Label);
 						entry.IsChecked = [state, use]() { return (state->Use == use); };
 						entry.Execute = [state, use]() { state->Use = use; };
-						entries.push_back(std::move(entry));
+						entries.push_back(Death::move(entry));
 					}
 				});
 				dropdown->Width = 170.0f;
 			}
 
+			// What the tile set would be, before it's saved
+			{
+				auto* previewRow = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* previewButton = previewRow->Add<UiButton>(_("Preview"), EditorIcon::Search, [s, state]() {
+					SliceAsync(*s, state, [state](std::shared_ptr<SlicedTileSet> job) {
+						state->Preview = Death::move(job);
+					});
+				});
+				previewButton->Tooltip = _("Make the tile set to see its palette and how many tiles it has, without saving it");
+				auto* previewInfo = previewRow->Add<UiLabel>(StringView(), UiTheme::TextDim);
+				previewInfo->Flex = 1.0f;
+				previewInfo->TextFunc = [state]() { return DescribePreview(*state); };
+				auto* palette = content->Add<UiPaletteGrid>([state]() -> const std::uint32_t* {
+					return (state->Preview != nullptr ? state->Preview->TileSet.Palette : ContentResolver::Get().GetPalettes().data());
+				}, []() { return -1; }, [](std::int32_t, bool) {});
+				palette->CellSize = 8.0f;
+				palette->Tooltip = _("The palette the tile set would have");
+				palette->IsVisibleFunc = [state]() {
+					return (state->Preview != nullptr && state->Preview->Settings.Colors != TileImportColors::TrueColor);
+				};
+			}
+
 			dialog->AddButton(_("Make Tile Set"), [s, state, nameBox, dialogPtr]() {
+				// The options stay as they were chosen if the name has to be changed
 				String name = nameBox->Text.trimmed();
-				dialogPtr->Close();
-				Import(*s, *state, name);
+				if (!CheckNewName(*s, name)) {
+					return;
+				}
+				// What was previewed is saved as it is if nothing was changed since
+				if (state->Preview != nullptr && state->Preview->Settings == state->Settings) {
+					if (FinishImport(*s, *state, name, *state->Preview)) {
+						dialogPtr->Close();
+					}
+					return;
+				}
+				SliceAsync(*s, state, [s, state, name, dialogPtr](std::shared_ptr<SlicedTileSet> job) {
+					state->Preview = job;
+					if (FinishImport(*s, *state, name, *job)) {
+						dialogPtr->Close();
+					}
+				});
 			}, true);
 			dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
-			UiOverlayOptions options;
-			options.Centered = true;
-			options.Modal = true;
-			options.CloseOnOutsideClick = false;
-			surface->PushOverlay(std::move(dialog), std::move(options));
+			ShowModal(*surface, Death::move(dialog));
 		}
 	}
 
-	void ImportTileSetImage(EditorSession& session, StringView path, StringView name, bool addToLevel, bool asDefault, StringView colors, bool dither)
+	void ImportTileSetImage(IEditorContext& session, StringView path, StringView name, bool addToLevel, bool asDefault, StringView colors, bool dither)
 	{
 		ImportState state;
 		state.Path = path;
-		auto file = fs::Open(path, FileAccess::Read);
 		String error;
-		if (!file->IsValid() || !PngCodec::Decode(*file, state.Image, &error)) {
+		if (!PngCodec::LoadWithMasks(path, state.Image, state.Masks, state.HasMasks, &error)) {
 			session.ShowMessage(_f("The image can't be read: {}", error));
 			return;
 		}
-		String maskPath = String(path.exceptSuffix(std::size_t(4))) + ".mask.png"_s;
-		if (fs::IsReadableFile(maskPath)) {
-			auto maskFile = fs::Open(maskPath, FileAccess::Read);
-			state.HasMasks = (maskFile->IsValid() && PngCodec::Decode(*maskFile, state.Masks));
-		}
-		state.Colors = (state.Image.Indexed ? TileImportColors::OwnPalette : TileImportColors::TrueColor);
+		state.Settings.Colors = (state.Image.Indexed ? TileImportColors::OwnPalette : TileImportColors::TrueColor);
 		if (colors == "true"_s) {
-			state.Colors = TileImportColors::TrueColor;
+			state.Settings.Colors = TileImportColors::TrueColor;
 		} else if (colors == "match"_s) {
-			state.Colors = TileImportColors::MatchPalette;
+			state.Settings.Colors = TileImportColors::MatchPalette;
 		} else if (colors == "reduce"_s) {
-			state.Colors = TileImportColors::Reduce;
+			state.Settings.Colors = TileImportColors::Reduce;
 		}
-		state.Dither = dither;
+		state.Settings.Dither = (dither ? DitherMode::Pattern : DitherMode::None);
 		state.Use = (!addToLevel ? ImportUse::SaveOnly : (asDefault ? ImportUse::Default : ImportUse::Extra));
 		Import(session, state, name);
 	}
 
-	void ShowImportTileSetDialog(EditorSession& session)
+	void ShowImportTileSetDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
-		if (surface == nullptr) {
-			return;
-		}
-		EditorSession* s = &session;
-		SmallVector<UiFileRoot, 4> roots;
-		session.GetImageRoots(false, roots);
-		UiFileDialog::Show(*surface, _("New Tile Set from Image"), UiFileDialogMode::Open, std::move(roots), ".png"_s, {}, {}, [s](StringView path) {
+		IEditorContext* s = &session;
+		ShowOpenImageDialog(session, _("New Tile Set from Image"), [s](StringView path) {
 			auto state = std::make_shared<ImportState>();
 			state->Path = path;
-			auto file = fs::Open(path, FileAccess::Read);
+			// The masks next to it, as the editor exports them
 			String error;
-			if (!file->IsValid() || !PngCodec::Decode(*file, state->Image, &error)) {
+			if (!PngCodec::LoadWithMasks(path, state->Image, state->Masks, state->HasMasks, &error)) {
 				s->ShowMessage(_f("The image can't be read: {}", error));
 				return;
 			}
@@ -295,24 +527,13 @@ namespace Jazz2::Editor
 				s->ShowMessage(_("The image is smaller than a tile"));
 				return;
 			}
-			// The masks next to it, as the editor exports them
-			String maskPath = String(path.exceptSuffix(std::size_t(4))) + ".mask.png"_s;
-			if (fs::IsReadableFile(maskPath)) {
-				auto maskFile = fs::Open(maskPath, FileAccess::Read);
-				state->HasMasks = (maskFile->IsValid() && PngCodec::Decode(*maskFile, state->Masks));
-			}
-			ShowOptions(*s, std::move(state));
+			ShowOptions(*s, Death::move(state));
 		});
 	}
 
-	bool CreateEmptyTileSet(EditorSession& session, StringView name, std::int32_t tileCount, bool addToLevel, bool asDefault)
+	bool CreateEmptyTileSet(IEditorContext& session, StringView name, std::int32_t tileCount, bool addToLevel, bool asDefault)
 	{
-		if (!ContentTileSetLibrary::IsValidName(name)) {
-			session.ShowMessage(_("A tile set is named by lowercase letters, digits, dashes and underscores"));
-			return false;
-		}
-		if (!ContentTileSetLibrary::FindTileSetFile(name).empty()) {
-			session.ShowMessage(_("A tile set of this name exists already"));
+		if (!CheckNewName(session, name)) {
 			return false;
 		}
 		String path = ContentTileSetLibrary::GetWritablePath(name, true);
@@ -323,18 +544,13 @@ namespace Jazz2::Editor
 
 		// Empty tiles, the first one stays empty, in the palette the level is shown in
 		Formats::TileSetData tileSet;
-		tileSet.Resize(std::clamp(tileCount, 1, std::int32_t(UINT16_MAX)));
-		std::memcpy(tileSet.Palette, ContentResolver::Get().GetPalettes().data(), sizeof(tileSet.Palette));
-		tileSet.Palette[0] &= 0x00FFFFFFu;
+		tileSet.Resize(std::clamp<std::int32_t>(tileCount, 1, UINT16_MAX));
+		GetLevelPalette(session, tileSet.Palette);
 		tileSet.Columns = 0;
-		{
-			auto s = fs::Open(path, FileAccess::Write);
-			if (!s->IsValid() || !Formats::TileSetFile::Write(*s, tileSet)) {
-				s = nullptr;
-				fs::RemoveFile(path);
-				session.ShowMessage(_("The tile set couldn't be saved"));
-				return false;
-			}
+		// A file that isn't written whole isn't left there, it would take the name
+		if (!AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
+			session.ShowMessage(_("The tile set couldn't be saved"));
+			return false;
 		}
 		session.InvalidateTileSet(name);
 		LOGI("Empty tile set \"{}\" with {} tiles made", path, tileSet.TileCount);
@@ -350,7 +566,7 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	void ShowNewTileSetDialog(EditorSession& session)
+	void ShowNewTileSetDialog(IEditorContext& session)
 	{
 		UiSurface* surface = session.GetSurface();
 		if (surface == nullptr) {
@@ -363,7 +579,7 @@ namespace Jazz2::Editor
 			ImportUse Use = ImportUse::Extra;
 		};
 		auto state = std::make_shared<NewTileSetState>();
-		EditorSession* s = &session;
+		IEditorContext* s = &session;
 		auto dialog = std::make_unique<UiDialog>(_("New Tile Set"));
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
@@ -372,10 +588,7 @@ namespace Jazz2::Editor
 		UiTextBox* nameBox;
 		{
 			// A name that isn't taken yet
-			String name = "new-tiles"_s;
-			for (std::int32_t i = 2; !ContentTileSetLibrary::FindTileSetFile(name).empty() && i < 100; i++) {
-				name = "new-tiles-"_s + String(std::to_string(i).c_str());
-			}
+			String name = SuggestTileSetName("new"_s, "-tiles"_s);
 			auto* row = content->AddRow(_("Name"));
 			nameBox = row->Add<UiTextBox>(name);
 			nameBox->Width = 140.0f;
@@ -412,7 +625,7 @@ namespace Jazz2::Editor
 					entry.Label = _(option.Label);
 					entry.IsChecked = [state, use]() { return (state->Use == use); };
 					entry.Execute = [state, use]() { state->Use = use; };
-					entries.push_back(std::move(entry));
+					entries.push_back(Death::move(entry));
 				}
 			});
 			dropdown->Width = 170.0f;
@@ -426,11 +639,7 @@ namespace Jazz2::Editor
 		}, true);
 		dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
-		UiOverlayOptions options;
-		options.Centered = true;
-		options.Modal = true;
-		options.CloseOnOutsideClick = false;
-		surface->PushOverlay(std::move(dialog), std::move(options));
+		ShowModal(*surface, Death::move(dialog));
 	}
 }
 

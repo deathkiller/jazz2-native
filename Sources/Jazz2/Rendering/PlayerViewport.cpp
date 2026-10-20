@@ -236,9 +236,9 @@ namespace Jazz2::Rendering
 		bool needsMask = (tileMap != nullptr && tileMap->HasXRayLayers());
 		const bool hasBlurLayers = (tileMap != nullptr && tileMap->HasBlurBehindLayers());
 		// Blurring what is behind a layer follows the blur effects option, a reflection or displacement of it is always
-		// shown - a blur layer with neither isn't drawn at all
+		// shown - a blur layer with neither isn't drawn at all. A reflection layer mirrors the same sharp copy.
 		bool needsBehindBlur = (hasBlurLayers && PreferencesCache::BlurEffects);
-		bool needsBehindCopy = (hasBlurLayers && tileMap->BlurBehindLayersNeedSharpCopy());
+		bool needsBehindCopy = ((hasBlurLayers && tileMap->BlurBehindLayersNeedSharpCopy()) || (tileMap != nullptr && tileMap->HasReflectionLayers()));
 		if ((needsMask || needsBehindBlur || needsBehindCopy) && !ContentResolver::Get().CompileLayerEffectShaders()) {
 			LOGW("Shaders of the special tile layers are not available, the layers are drawn without their effects");
 			needsMask = false;

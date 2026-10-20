@@ -142,7 +142,7 @@ public:
 	static constexpr StringView StateFileName = "Jazz2.resume"_s;
 
 #if defined(WITH_MULTIPLAYER)
-	static constexpr std::uint32_t MultiplayerProtocolVersion = 1;
+	static constexpr std::uint32_t MultiplayerProtocolVersion = NetworkManager::TransportProtocolVersion;
 #endif
 
 	void OnPreInitialize(AppConfiguration& config) override;
@@ -218,7 +218,9 @@ public:
 #endif
 
 private:
-	constexpr static std::uint32_t MaxPlayerNameLength = 32;
+#if defined(WITH_MULTIPLAYER)
+	constexpr static std::uint32_t MaxPlayerNameLength = NetworkManager::MaxPlayerNameLength;
+#endif
 
 	Flags _flags = Flags::None;
 	// Written by the conversion (on the parallel initialization thread) and read by the loading screen, in
@@ -302,7 +304,7 @@ static String FindGameRoot(const Backends::LibretroApplication::HostPaths& hostP
 			}
 			// `GetDirectoryName()` returns a view into its argument, so it can't be assigned in place
 			String parent = fs::GetDirectoryName(baseDir);
-			baseDir = std::move(parent);
+			baseDir = Death::move(parent);
 		}
 	}
 	// Frontends that separate engine data from the user's game files keep Content/ (and the
@@ -532,7 +534,7 @@ void GameEventHandler::OnInitialize()
 				}
 			}
 			WaitForVerify();
-			OpenEditor(std::move(editorInit));
+			OpenEditor(Death::move(editorInit));
 			return;
 		}
 	}
@@ -552,7 +554,7 @@ void GameEventHandler::OnInitialize()
 					LevelInitialization levelInit(levelName, (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
 						PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
 
-					ChangeLevel(std::move(levelInit));
+					ChangeLevel(Death::move(levelInit));
 					return;
 				}
 			}
@@ -569,14 +571,16 @@ void GameEventHandler::OnInitialize()
 					PreferencesCache::EnableReforgedGameplay, true, PlayerType::Jazz);
 
 				WaitForVerify();
-				ChangeLevel(std::move(levelInit));
+				ChangeLevel(Death::move(levelInit));
 				return;
 			}
 		}
 #			if defined(WITH_EDITOR)
 		if (arg == "/editor-selftest"_s) {
 			WaitForVerify();
-			bool success = Editor::EditorSelfTest::Run(i + 1 < config.argc() ? config.argv(i + 1) : StringView());
+			// With "--unit" only the tests that need no game data, otherwise the levels of a directory too
+			StringView option = (i + 1 < config.argc() ? config.argv(i + 1) : StringView());
+			bool success = (option == "--unit"_s ? Editor::EditorSelfTest::RunUnit() : Editor::EditorSelfTest::Run(option));
 			LOGI("Editor self-test {}", success ? "succeeded" : "FAILED");
 			theApplication().Quit();
 			return;
@@ -927,7 +931,7 @@ void GameEventHandler::InvokeAsync(Function<void()>&& callback)
 #if defined(WITH_THREADS)
 	std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
 #endif
-	_pendingCallbacks.emplace_back(std::weak_ptr<void>{}, std::move(callback));
+	_pendingCallbacks.emplace_back(std::weak_ptr<void>{}, Death::move(callback));
 }
 
 void GameEventHandler::InvokeAsync(std::weak_ptr<void> reference, Function<void()>&& callback)
@@ -937,7 +941,7 @@ void GameEventHandler::InvokeAsync(std::weak_ptr<void> reference, Function<void(
 #if defined(WITH_THREADS)
 	std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
 #endif
-	_pendingCallbacks.emplace_back(std::move(reference), std::move(callback));
+	_pendingCallbacks.emplace_back(Death::move(reference), Death::move(callback));
 }
 
 void GameEventHandler::GoToMainMenu(bool afterIntro)
@@ -968,7 +972,7 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 #if defined(WITH_EDITOR)
 void GameEventHandler::OpenEditor(Editor::EditorInitialization&& editorInit)
 {
-	InvokeAsync([this, editorInit = std::move(editorInit)]() mutable {
+	InvokeAsync([this, editorInit = Death::move(editorInit)]() mutable {
 		ZoneScopedNC("GameEventHandler::OpenEditor", 0x888888);
 
 		LOGI("Opening level editor");
@@ -987,17 +991,17 @@ void GameEventHandler::OpenEditor(Editor::EditorInitialization&& editorInit)
 		if (!session->Initialize(editorInit)) {
 			auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 			mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot open the level in the editor!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
-			SetStateHandler(std::move(mainMenu));
+			SetStateHandler(Death::move(mainMenu));
 			return;
 		}
-		SetStateHandler(std::move(session));
+		SetStateHandler(Death::move(session));
 	});
 }
 #endif
 
 void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 {
-	InvokeAsync([this, levelInit = std::move(levelInit)]() mutable {
+	InvokeAsync([this, levelInit = Death::move(levelInit)]() mutable {
 		ZoneScopedNC("GameEventHandler::ChangeLevel", 0x888888);
 
 		// Release the outgoing handler, and everything it was the last owner of, BEFORE the incoming one
@@ -1057,7 +1061,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 					InGameConsole::Clear();
 					auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
-					newHandler = std::move(mainMenu);
+					newHandler = Death::move(mainMenu);
 #if defined(WITH_MULTIPLAYER)
 					// TODO: This should show some server console instead of exiting
 					if (_networkManager != nullptr) {
@@ -1091,9 +1095,9 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			// End of game
 			SaveEpisodeEnd(levelInit);
 
-			newHandler = std::make_shared<Cinematics>(this, "ending"_s, [levelInit = std::move(levelInit)](IRootController* root, bool endOfStream) mutable {
+			newHandler = std::make_shared<Cinematics>(this, "ending"_s, [levelInit = Death::move(levelInit)](IRootController* root, bool endOfStream) mutable {
 				auto* _this = static_cast<GameEventHandler*>(root);
-				_this->InvokeAsync([_this, levelInit = std::move(levelInit)]() {
+				_this->InvokeAsync([_this, levelInit = Death::move(levelInit)]() {
 					_this->HandleEndOfGame(levelInit, false);
 				});
 				return true;
@@ -1138,7 +1142,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 					InGameConsole::Clear();
 					auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
-					newHandler = std::move(mainMenu);
+					newHandler = Death::move(mainMenu);
 #if defined(WITH_MULTIPLAYER)
 					// TODO: This should show some server console instead of exiting
 					if (_networkManager != nullptr) {
@@ -1154,7 +1158,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		}
 
 		if (newHandler != nullptr) {
-			SetStateHandler(std::move(newHandler));
+			SetStateHandler(Death::move(newHandler));
 		}
 	});
 }
@@ -1181,7 +1185,7 @@ void GameEventHandler::ResumeSavedState()
 
 void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
 {
-	InvokeAsync([this, src = std::move(src)]() {
+	InvokeAsync([this, src = Death::move(src)]() {
 		ZoneScopedNC("GameEventHandler::ResumeSavedState", 0x888888);
 
 		LOGI("Resuming saved state...");
@@ -1221,7 +1225,7 @@ void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
 				serverConfig.AllowLedgeClimb = PreferencesCache::EnableLedgeClimb;
 
 				_networkManager = std::make_unique<NetworkManager>();
-				_networkManager->CreateLocalServer(this, std::move(serverConfig));
+				_networkManager->CreateLocalServer(this, Death::move(serverConfig));
 
 				levelHandler = std::make_shared<MpLevelHandler>(this,
 					_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending);
@@ -1232,7 +1236,7 @@ void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
 			}
 
 			if (levelHandler->Initialize(uc, version)) {
-				SetStateHandler(std::move(levelHandler));
+				SetStateHandler(Death::move(levelHandler));
 				return;
 			}
 		}
@@ -1240,7 +1244,7 @@ void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
 		InGameConsole::Clear();
 		auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot resume saved state!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
-		SetStateHandler(std::move(mainMenu));
+		SetStateHandler(Death::move(mainMenu));
 	});
 }
 
@@ -1296,7 +1300,7 @@ bool GameEventHandler::OnLoadState(std::shared_ptr<Stream> src)
 	}
 	src->Seek(0, SeekOrigin::Begin);
 
-	ResumeStateFromStream(std::move(src));
+	ResumeStateFromStream(Death::move(src));
 	return true;
 }
 #endif
@@ -1396,7 +1400,7 @@ void GameEventHandler::RunDedicatedServer(StringView configPath)
 	}
 
 	WaitForVerify();
-	if (!CreateServer(std::move(serverInit))) {
+	if (!CreateServer(Death::move(serverInit))) {
 		LOGE("Server cannot be started because of invalid configuration");
 		theApplication().Quit();
 		return;
@@ -1559,14 +1563,14 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 	serverInit.InitialLevel.IsReforged = serverInit.Configuration.ReforgedGameplay;
 
-	if (!_networkManager->CreateServer(this, std::move(serverInit.Configuration))) {
+	if (!_networkManager->CreateServer(this, Death::move(serverInit.Configuration))) {
 		return false;
 	}
 
 	auto& serverConfig = _networkManager->GetServerConfiguration();
 	LOGI("Creating {} server \"{}\" on port {}...", serverConfig.IsPrivate ? "private"_s : "public"_s, serverConfig.ServerName, serverConfig.ServerPort);
 
-	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
+	InvokeAsync([this, serverInit = Death::move(serverInit)]() mutable {
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
 			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending);
 		if (!levelHandler->Initialize(serverInit.InitialLevel)) {
@@ -1574,7 +1578,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 			theApplication().Quit();
 			return;
 		}
-		SetStateHandler(std::move(levelHandler));
+		SetStateHandler(Death::move(levelHandler));
 	});
 
 	return true;
@@ -1586,19 +1590,10 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 	LOGI("Peer connected ({}) [{}]", _networkManager->AddressToString(peer), peer);
 
 	if (_networkManager->GetState() == NetworkState::Listening) {
-		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
-			// Connected client is newer than server, reject it
-			LOGI("Peer kicked ({}) [{}]: Incompatible protocol version", _networkManager->AddressToString(peer), peer);
-			return Reason::IncompatibleVersion;
-		}
-
-		const auto& serverConfig = _networkManager->GetServerConfiguration();
-		std::uint32_t peerCount = _networkManager->GetPeerCount();
-		if (peerCount >= serverConfig.MaxPlayerCount) {
-			// The connecting peer is not counted yet, so reject already when the count reaches the limit
-			LOGI("Peer kicked ({}) [{}]: Server is full ({}/{} players)", _networkManager->AddressToString(peer),
-				peer, peerCount, serverConfig.MaxPlayerCount);
-			return Reason::ServerIsFull;
+		// The same for every server, the level editor hosts one too
+		ConnectionResult result = _networkManager->AcceptServerPeer(peer, clientData);
+		if (!result) {
+			return result;
 		}
 	} else {
 		MemoryStream packet(64 + MaxPlayerNameLength);
@@ -1684,7 +1679,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 			} else {
 				auto newHandler = std::make_shared<Menu::MainMenu>(this, false);
 				mainMenu = newHandler.get();
-				SetStateHandler(std::move(newHandler));
+				SetStateHandler(Death::move(newHandler));
 			}
 
 			switch (reason) {
@@ -1722,137 +1717,9 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		return;
 	}
 	if (isServer) {
-		switch ((ClientPacketType)packetType) {
-			case ClientPacketType::Ping: {
-				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::Pong, {});
-				return;
-			}
-			case ClientPacketType::Auth: {
-				MemoryStream packet(data);
-				char gameID[4];
-				packet.Read(gameID, 4);
-				std::uint64_t protocolVersion = packet.ReadVariableUint64();
-
-				constexpr std::uint64_t minVersion = parseVersion(NCINE_PROTOCOL_VERSION_MIN_s);
-				constexpr std::uint64_t maxVersion = parseVersion(NCINE_PROTOCOL_VERSION_MAX_s);
-
-				// Compared in full, patch included. `NCINE_PROTOCOL_VERSION` is a hand-maintained literal that
-				// moves only when the wire format does (it is never derived from the build or from Git), so any
-				// version outside the range the server was built to talk to is a genuine incompatibility.
-				// Masking the patch out meant a wire change could only be announced by moving the *minor*, which
-				// tied protocol versioning to release numbering and left no way to express "the protocol changed
-				// in a patch release".
-				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || protocolVersion < minVersion || protocolVersion > maxVersion) {
-					LOGI("Peer kicked ({}) [{}]: Incompatible protocol version", _networkManager->AddressToString(peer), peer);
-					_networkManager->Kick(peer, Reason::IncompatibleVersion);
-					return;
-				}
-
-				Uuid uuid;
-				packet.Read(uuid.data(), uuid.size());
-				String uniquePlayerId = NetworkManager::UuidToString(uuid);
-
-				LOGD("[MP] ClientPacketType::Auth [{}] - gameID: \"{}\", protocolVersion: 0x{:x}, uuid: \"{}\"",
-					peer, StringView(gameID, 4), protocolVersion, uniquePlayerId);
-
-				std::uint32_t passwordLength = packet.ReadVariableUint32();
-				String password{NoInit, passwordLength};
-				packet.Read(password.data(), passwordLength);
-
-				std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
-
-				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
-				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
-					LOGI("Peer kicked ({}) [{}]: Invalid player name", _networkManager->AddressToString(peer), peer);
-					_networkManager->Kick(peer, Reason::InvalidPlayerName);
-					return;
-				}
-
-				String playerName{NoInit, playerNameLength};
-				packet.Read(playerName.data(), playerNameLength);
-
-				const auto& serverConfig = _networkManager->GetServerConfiguration();
-				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("Peer kicked \"{}\" ({}) [{}]: Banned by unique player ID", playerName, _networkManager->AddressToString(peer), peer);
-					_networkManager->Kick(peer, Reason::Banned);
-					return;
-				}
-				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("Peer kicked \"{}\" ({}) [{}]: Not in whitelist", playerName, _networkManager->AddressToString(peer), peer);
-					_networkManager->Kick(peer, Reason::NotInWhitelist);
-					return;
-				}
-
-				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
-					LOGI("Peer kicked \"{}\" ({}) [{}]: Invalid password", playerName, _networkManager->AddressToString(peer), peer);
-					_networkManager->Kick(peer, Reason::InvalidPassword);
-					return;
-				}
-
-				std::uint8_t deviceIdLength = packet.ReadValue<std::uint8_t>();
-				String deviceId{NoInit, deviceIdLength};
-				packet.Read(deviceId.data(), deviceIdLength);
-
-				std::uint64_t playerUserId = packet.ReadVariableUint64();
-				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
-					LOGI("Peer kicked \"{}\" ({}) [{}]: Discord authentication is required", playerName, _networkManager->AddressToString(peer), peer);
-					_networkManager->Kick(peer, Reason::Requires3rdPartyAuthProvider);
-					return;
-				}
-				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist)
-
-				std::uint32_t furColor = packet.ReadValueAsLE<std::uint32_t>();
-
-				if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
-					peerDesc->UniquePlayerID = std::move(uuid);
-					peerDesc->PlayerName = std::move(playerName);
-					peerDesc->FurColor = furColor;
-					peerDesc->IsAuthenticated = true;
-
-					if (serverConfig.AdminUniquePlayerIDs.contains(uniquePlayerId)) {
-						peerDesc->IsAdmin = true;
-					}
-
-					// Reconnect: if this player disconnected recently (and no new round invalidated it), restore
-					// their progression (weapons, lives, score, gems) and championship points so they resume
-					if (auto previous = _networkManager->ReclaimDisconnectedPeer(peerDesc->UniquePlayerID)) {
-						if (previous->HasCarryOver) {
-							peerDesc->CarryOver = previous->CarryOver;
-							peerDesc->HasCarryOver = true;
-							peerDesc->Points = previous->Points;
-							peerDesc->Team = previous->Team;
-							// A player who left while spectating carries the spectator actor's type in the snapshot,
-							// which is not a character: spawning it as one produced a player that looked like a
-							// spectator while neither side had it marked as one (the pause menu offered "Spectate"
-							// to someone already spectating). The character is the one chosen before spectating,
-							// and the spectate state itself is restored so the join spawns a spectator again.
-							if (previous->CarryOver.Type != PlayerType::Spectate) {
-								peerDesc->PreferredPlayerType = previous->CarryOver.Type;
-							} else if (previous->PreferredPlayerType != PlayerType::Spectate) {
-								peerDesc->PreferredPlayerType = previous->PreferredPlayerType;
-							}
-							peerDesc->IsSpectating = previous->IsSpectating;
-							LOGI("Peer \"{}\" [{}] reconnected, restoring progression{}", peerDesc->PlayerName, peer,
-								(peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None ? " (as spectator)" : "");
-						}
-					}
-
-					LOGI("Peer authenticated as \"{}\" ({}){} [{}]", peerDesc->PlayerName, _networkManager->AddressToString(peer),
-						peerDesc->IsAdmin ? " [Admin]" : "", peer);
-
-					MemoryStream packet(37);
-					packet.WriteValue<std::uint8_t>(0x01);	// Flags (0x01 = accepted protocol version range follows)
-					packet.Write(PreferencesCache::UniqueServerID, PreferencesCache::UniqueServerID.size() - sizeof(std::uint16_t));
-					packet.WriteValue<std::uint16_t>(_networkManager->GetServerPort());	// Server port is part of Unique Server ID
-					// Appended, so older clients that read only the fields above are not affected
-					packet.WriteVariableUint64(minVersion);
-					packet.WriteVariableUint64(maxVersion);
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::AuthResponse, packet);
-				} else {
-					DEATH_ASSERT_UNREACHABLE();
-				}
-				break;
-			}
+		// A ping is answered and a peer authenticated the same for every server, the level editor hosts one too
+		if (_networkManager->HandleServerPacket(peer, packetType, data)) {
+			return;
 		}
 	} else {
 		switch ((ServerPacketType)packetType) {
@@ -1991,7 +1858,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				LOGI("Server requested to load level \"{}\" - flags: 0x{:.2x}, gameMode: {}", levelName, flags, gameMode);
 
-				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected, allowedPlayerTypes]() {
+				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = Death::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected, allowedPlayerTypes]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
 					bool elimination = (flags & 0x04) != 0;
@@ -2020,7 +1887,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					auto levelHandler = std::make_shared<MpLevelHandler>(this,
 						_networkManager.get(), levelState);
 					if (levelHandler->Initialize(levelInit)) {
-						SetStateHandler(std::move(levelHandler));
+						SetStateHandler(Death::move(levelHandler));
 						return;
 					}
 
@@ -2038,7 +1905,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					} else {
 						auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
 						mainMenu = newHandler.get();
-						SetStateHandler(std::move(newHandler));
+						SetStateHandler(Death::move(newHandler));
 					}
 
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_f("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain level \"{}\".\nPlease download the required files and try it again.", levelInit.LevelName), true);
@@ -2479,13 +2346,18 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 {
 #if defined(WITH_MULTIPLAYER)
 	if (!levelInit.IsLocalSession) {
+		if (_networkManager == nullptr) {
+			// Only a session that is connected or hosted goes on with another level of it
+			LOGE("Level \"{}\" cannot be continued in multiplayer without a session", levelInit.LevelName);
+			return false;
+		}
 		// TODO: Set proper game mode
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
 			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}
-		SetStateHandler(std::move(levelHandler));
+		SetStateHandler(Death::move(levelHandler));
 		return true;
 	} else if ((MpGameMode)levelInit.LocalMultiplayerGameMode != MpGameMode::Unknown) {
 		// Local splitscreen multiplayer: create a socket-less local server running the chosen game mode, so all the
@@ -2499,14 +2371,14 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 		serverConfig.AllowLedgeClimb = PreferencesCache::EnableLedgeClimb;
 
 		_networkManager = std::make_unique<NetworkManager>();
-		_networkManager->CreateLocalServer(this, std::move(serverConfig));
+		_networkManager->CreateLocalServer(this, Death::move(serverConfig));
 
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
 			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}
-		SetStateHandler(std::move(levelHandler));
+		SetStateHandler(Death::move(levelHandler));
 
 #if !defined(SHAREWARE_DEMO_ONLY)
 		// Starting a fresh local game invalidates any previous resumable state; a cooperative session saves its own
@@ -2529,7 +2401,7 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 	if (!levelHandler->Initialize(levelInit)) {
 		return false;
 	}
-	SetStateHandler(std::move(levelHandler));
+	SetStateHandler(Death::move(levelHandler));
 
 #if !defined(SHAREWARE_DEMO_ONLY)
 	if (levelInit.IsLocalSession) {
@@ -2573,7 +2445,7 @@ void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, boo
 		}
 	}
 
-	SetStateHandler(std::move(mainMenu));
+	SetStateHandler(Death::move(mainMenu));
 }
 
 void GameEventHandler::WriteCacheDescriptor(StringView path, std::uint64_t currentVersion, std::int64_t animsModified)

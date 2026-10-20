@@ -25,8 +25,6 @@ namespace Jazz2::Editor
 		constexpr float DockZoneWidth = 40.0f;
 		// How far from the floating panel to the edge
 		constexpr float FloatingInset = 24.0f;
-		// Width of the edges a floating panel is resized by, in units
-		constexpr float ResizeGrip = 5.0f;
 
 		float EaseInOut(float t)
 		{
@@ -183,33 +181,17 @@ namespace Jazz2::Editor
 
 	std::uint8_t UiDockFrame::GetEdgesAt(Vector2f pos) const
 	{
-		if (_drawer || !_floating || _floatAmount < 1.0f || _moving) {
-			return 0;
-		}
-		float grip = std::max(3.0f, std::round(_scale * ResizeGrip));
-		float half = std::round(grip * 0.5f);
-		Rectf outer(Bounds.X - half, Bounds.Y - half, Bounds.W + half * 2.0f, Bounds.H + half * 2.0f);
-		if (!outer.Contains(pos)) {
-			return 0;
-		}
-		float right = Bounds.X + Bounds.W, bottom = Bounds.Y + Bounds.H;
-		// The corner with the grip is easier to grab
-		float corner = grip * 2.5f;
-		if (pos.X >= right - corner && pos.Y >= bottom - corner) {
-			return EdgeRight | EdgeBottom;
-		}
-		std::uint8_t edges = 0;
-		if (pos.X < Bounds.X + half) {
-			edges |= EdgeLeft;
-		} else if (pos.X >= right - half) {
-			edges |= EdgeRight;
-		}
-		if (pos.Y < Bounds.Y + half) {
-			edges |= EdgeTop;
-		} else if (pos.Y >= bottom - half) {
-			edges |= EdgeBottom;
-		}
-		return edges;
+		return (IsResizable() ? UiResizeEdges::GetAt(Bounds, _scale, pos, 2.5f) : 0);
+	}
+
+	bool UiDockFrame::IsResizable() const
+	{
+		return (!_drawer && _floating && _floatAmount >= 1.0f && !_moving);
+	}
+
+	Rectf UiDockFrame::GetHitBounds() const
+	{
+		return (IsResizable() ? UiResizeEdges::GetHitBounds(Bounds, _scale) : Bounds);
 	}
 
 	bool UiDockFrame::IsInDockZone(Vector2f pos) const
@@ -345,46 +327,15 @@ namespace Jazz2::Editor
 		if (!_floating || _floatAmount < 1.0f) {
 			return;
 		}
-
-		// The edges it's resized by light up when pointed at
-		std::uint8_t edges = (_resizeEdges != 0 ? _resizeEdges : _hoverEdges);
-		float thickness = std::max(1.0f, std::round(painter.GetScale()));
-		if (edges != 0) {
-			Colorf color = UiTheme::Accent;
-			color.A = 0.8f;
-			float right = Bounds.X + Bounds.W, bottom = Bounds.Y + Bounds.H;
-			if (edges & EdgeLeft) {
-				painter.FillRect(Rectf(Bounds.X, Bounds.Y, thickness, Bounds.H), color, UiLayer::Overlay);
-			}
-			if (edges & EdgeRight) {
-				painter.FillRect(Rectf(right - thickness, Bounds.Y, thickness, Bounds.H), color, UiLayer::Overlay);
-			}
-			if (edges & EdgeTop) {
-				painter.FillRect(Rectf(Bounds.X, Bounds.Y, Bounds.W, thickness), color, UiLayer::Overlay);
-			}
-			if (edges & EdgeBottom) {
-				painter.FillRect(Rectf(Bounds.X, bottom - thickness, Bounds.W, thickness), color, UiLayer::Overlay);
-			}
-		}
-
-		// Dots in the corner it's resized by
-		float dot = thickness;
-		float step = dot * 2.0f;
-		Colorf gripColor = UiTheme::IconColor;
-		gripColor.A = ((edges & (EdgeRight | EdgeBottom)) == (EdgeRight | EdgeBottom) ? 0.9f : 0.45f);
-		float cornerX = Bounds.X + Bounds.W - step - dot, cornerY = Bounds.Y + Bounds.H - step - dot;
-		for (std::int32_t row = 0; row < 3; row++) {
-			for (std::int32_t column = 2 - row; column < 3; column++) {
-				painter.FillRect(Rectf(cornerX - (2 - column) * step, cornerY - (2 - row) * step, dot, dot), gripColor, UiLayer::Overlay);
-			}
-		}
+		UiResizeEdges::Draw(painter, Bounds, _resizeEdges != 0 ? _resizeEdges : _hoverEdges);
 	}
 
 	void UiDockFrame::Update(float timeMult)
 	{
+		// With reduced motion, everything gets where it goes at once
 		float target = (_floating ? 1.0f : 0.0f);
 		if (_floatAmount != target) {
-			float step = timeMult / GlideFrames;
+			float step = UiTheme::GetAnimationStep(timeMult, GlideFrames);
 			_floatAmount = (_floatAmount < target ? std::min(_floatAmount + step, target) : std::max(_floatAmount - step, target));
 			if (_floatAmount <= 0.0f && _restoreBounds) {
 				_restoreBounds = false;
@@ -395,18 +346,21 @@ namespace Jazz2::Editor
 
 		float drawerTarget = (_drawer && _drawerOpen ? 1.0f : 0.0f);
 		if (_drawerAmount != drawerTarget) {
-			float step = timeMult / DrawerFrames;
+			float step = UiTheme::GetAnimationStep(timeMult, DrawerFrames);
 			_drawerAmount = (_drawerAmount < drawerTarget ? std::min(_drawerAmount + step, drawerTarget) : std::max(_drawerAmount - step, drawerTarget));
 		}
 
 		float previewTarget = (_moving && _floating && _overDockZone ? 1.0f : 0.0f);
 		if (_previewAmount != previewTarget) {
-			float step = timeMult / PreviewFrames;
+			float step = UiTheme::GetAnimationStep(timeMult, PreviewFrames);
 			_previewAmount = (_previewAmount < previewTarget ? std::min(_previewAmount + step, previewTarget) : std::max(_previewAmount - step, previewTarget));
 		}
 
 		UiSurface* surface = GetSurface();
 		_hoverEdges = (_hovered && surface != nullptr ? GetEdgesAt(surface->GetPointerPos()) : 0);
+		if (surface != nullptr) {
+			UiResizeEdges::ShowCursor(*surface, _resizeEdges != 0 ? _resizeEdges : _hoverEdges);
+		}
 
 		if (_drawer) {
 			if (_dockButton->Icon != EditorIcon::Close) {
@@ -478,16 +432,16 @@ namespace Jazz2::Editor
 		Vector2f offset = (event.Pos - _resizeStart) / _scale;
 		const Rectf& start = _resizeStartBounds;
 		Rectf bounds = start;
-		if (_resizeEdges & EdgeLeft) {
+		if (_resizeEdges & UiResizeEdges::Left) {
 			bounds.X = std::min(start.X + offset.X, start.X + start.W - MinFloatingWidth);
 			bounds.W = start.X + start.W - bounds.X;
-		} else if (_resizeEdges & EdgeRight) {
+		} else if (_resizeEdges & UiResizeEdges::Right) {
 			bounds.W = std::max(MinFloatingWidth, start.W + offset.X);
 		}
-		if (_resizeEdges & EdgeTop) {
+		if (_resizeEdges & UiResizeEdges::Top) {
 			bounds.Y = std::min(start.Y + offset.Y, start.Y + start.H - MinFloatingHeight);
 			bounds.H = start.Y + start.H - bounds.Y;
-		} else if (_resizeEdges & EdgeBottom) {
+		} else if (_resizeEdges & UiResizeEdges::Bottom) {
 			bounds.H = std::max(MinFloatingHeight, start.H + offset.Y);
 		}
 		FloatingBounds = bounds;

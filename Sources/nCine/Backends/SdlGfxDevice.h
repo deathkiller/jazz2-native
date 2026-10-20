@@ -89,6 +89,14 @@ namespace nCine::Backends
 		 */
 		static void queryDrawableSize(SDL_Window* windowHandle, int fallbackWidth, int fallbackHeight, int& width, int& height);
 
+		/**
+		 * @brief Follows a fullscreen change of the main window that the window system reports
+		 *
+		 * Only a change of the reported state is taken over, so a request still pending in the window system
+		 * is not undone by an event that arrives before it was confirmed.
+		 */
+		void syncFullscreenState();
+
 	protected:
 		void setResolutionInternal(int width, int height) override;
 
@@ -103,6 +111,8 @@ namespace nCine::Backends
 		/** @brief Color renderbuffer of SDL's GL view, which must be bound when a frame is presented (see @ref update()) */
 		static unsigned int _iosColorRenderbuffer;
 #endif
+		/** @brief Fullscreen state of the main window as the window system last reported it (see @ref syncFullscreenState()) */
+		bool _isWindowFullscreen = false;
 
 		/** @brief Deleted copy constructor */
 		SdlGfxDevice(const SdlGfxDevice&) = delete;

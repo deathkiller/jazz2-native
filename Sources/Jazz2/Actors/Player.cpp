@@ -46,6 +46,23 @@ namespace Jazz2::Actors
 	static constexpr AnimState ShieldWater = (AnimState)536870930;
 	static constexpr AnimState SugarRush = (AnimState)536870913;
 	static constexpr AnimState WeaponFlare = (AnimState)536870950;
+	// The feathers a hurt bird loses, as the original's companion bird does
+	static constexpr AnimState BirdFeathers = (AnimState)536870960;
+	// A perched bird's poses, which UpdateBirdPerchPose() plays one after another, and the first bird's beak attack.
+	// They're the current animation of the player, so none of the bits that describe a pose may be set in them - the
+	// low ones made a perched bird look up and shoot straight up, see GetFirePointAndAngle().
+	static constexpr AnimState BirdPerch = (AnimState)0x20100000;
+	static constexpr AnimState BirdPerchTurnLeft = (AnimState)0x20200000;
+	static constexpr AnimState BirdPerchLookLeft = (AnimState)0x20300000;
+	static constexpr AnimState BirdPerchTurnLeftBack = (AnimState)0x20400000;
+	static constexpr AnimState BirdPerchTurnRight = (AnimState)0x20500000;
+	static constexpr AnimState BirdPerchLookRight = (AnimState)0x20600000;
+	static constexpr AnimState BirdPerchTurnRightBack = (AnimState)0x20700000;
+	static constexpr AnimState BirdPerchWorm = (AnimState)0x20800000;
+	static constexpr AnimState BirdCharge = (AnimState)0x20900000;
+	// The beak charge with Up or Down held, which flies diagonally at the cap on both axes
+	static constexpr AnimState BirdChargeUp = (AnimState)0x20A00000;
+	static constexpr AnimState BirdChargeDown = (AnimState)0x20B00000;
 	// Which bits survive into the next frame's animation state. Bits 16-18 - Freefall, Lift and Spring - are
 	// deliberately *outside* it because each is decided fresh every frame, and bit 19, @ref AnimState::RevUp,
 	// belongs with them for the same reason. It was inside the mask when the bit was unused, which meant the
@@ -60,6 +77,7 @@ namespace Jazz2::Actors
 		:
 		_playerIndex(0),
 		_playerType(PlayerType::Jazz), _playerTypeOriginal(PlayerType::Jazz), _checkpointPlayerType(PlayerType::Jazz),
+		_playerTypeBeforeMorph(PlayerType::Jazz),
 		_isActivelyPushing(false),
 		_wasActivelyPushing(false),
 		_pushContactThisFrame(false),
@@ -163,6 +181,8 @@ namespace Jazz2::Actors
 			{ "Interactive/PlayerSpaz"_s, 1.6f, 4 },
 			{ "Interactive/PlayerLori"_s, 1.3f, 3 },
 			{ "Interactive/PlayerFrog"_s, 1.0f, 0 },
+			{ "Interactive/PlayerBird"_s, 1.0f, 0 },
+			{ "Interactive/PlayerBird2"_s, 1.0f, 0 },
 			// Spectate mode and unknown types fall back to Jazz metadata, the player is invisible anyway
 			{ "Interactive/PlayerJazz"_s, 1.0f, 0 }
 		};
@@ -172,12 +192,20 @@ namespace Jazz2::Actors
 			case PlayerType::Spaz: return Traits[1];
 			case PlayerType::Lori: return Traits[2];
 			case PlayerType::Frog: return Traits[3];
-			default: return Traits[4];
+			case PlayerType::Bird: return Traits[4];
+			case PlayerType::Bird2: return Traits[5];
+			default: return Traits[6];
 		}
 	}
 
 	std::uint32_t Player::GetEffectiveFurColor() const
 	{
+		// The bird is a creature of its own rather than a rabbit, and none of the fur ranges the recolor schemes rewrite
+		// belong to its feathers - so it keeps its own colors, and the corpse it leaves does too
+		if (IsBird()) {
+			return 0;
+		}
+
 		// The level handler may force a color (multiplayer team modes recolor players to their team color); this
 		// applies even when the player picked no custom color of their own.
 		std::uint32_t furColor = _levelHandler->GetPlayerFurColor(this, _furColor);
@@ -258,6 +286,7 @@ namespace Jazz2::Actors
 		_playerTypeOriginal = (PlayerType)details.Params[0];
 		_playerType = _playerTypeOriginal;
 		_checkpointPlayerType = _playerTypeOriginal;
+		_playerTypeBeforeMorph = _playerTypeOriginal;
 		_playerIndex = details.Params[1];
 
 		// Load the anim set as indexed ONLY when this player is actually being recolored, so it can be recolored at
@@ -392,7 +421,7 @@ namespace Jazz2::Actors
 
 	bool Player::CanMoveVertically() const
 	{
-		return (_inWater || _activeModifier != Modifier::None);
+		return (_inWater || _activeModifier != Modifier::None || IsBird());
 	}
 
 	bool Player::IsInWater() const
@@ -518,8 +547,9 @@ namespace Jazz2::Actors
 		}
 #endif
 
-		// Handle weapon switching
-		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog) {
+		// Handle weapon switching. The frog and the first bird have no weapon to switch, the second bird shoots the ones
+		// the player has (see FireBirdShots()).
+		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog && _playerType != PlayerType::Bird) {
 			bool isGamepad;
 			if (_levelHandler->PlayerActionHit(this, PlayerAction::ChangeWeapon, true, isGamepad)) {
 				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
@@ -717,6 +747,21 @@ namespace Jazz2::Actors
 			_horizontalSpeedLimit = std::max(_horizontalSpeedLimit, LegacyVerticalSpeedLimit);
 			if (_maxAppliedSpeedX > 0.0f) {
 				_maxAppliedSpeedX = std::max(_maxAppliedSpeedX, std::abs(_speed.X));
+			}
+		}
+
+		// A bird has no gravity of its own (HandleBirdMovement() applies its much weaker pull), and it's taken away here
+		// every frame rather than once when the morph happens, because too much hands it back on the way - a warp, a
+		// hurt, the end of a tube or of a modifier. The original also clamps both of its speeds to the flight cap every
+		// tick, whatever assigned them, which is what keeps a spring, a bumper or a blast from throwing it any faster
+		// than it can fly by itself. A tube is the one exception, it drives the player directly and both modes have to
+		// deliver the speed the level asked for.
+		if (IsBird()) {
+			SetState(ActorState::ApplyGravitation, false);
+			if (_inTubeTime <= 0.0f) {
+				float maxSpeed = GetBirdMaxSpeed();
+				_speed.X = std::clamp(_speed.X, -maxSpeed, maxSpeed);
+				_speed.Y = std::clamp(_speed.Y, -maxSpeed, maxSpeed);
 			}
 		}
 
@@ -1275,7 +1320,11 @@ namespace Jazz2::Actors
 		// separate rule. So gap-clearing needs no code at all: the applied speed cap and the fall gravity
 		// already produce it, and both are measured exactly.
 
-		HandleHorizontalMovement(timeMult);
+		if (IsBird()) {
+			HandleBirdMovement(timeMult);
+		} else {
+			HandleHorizontalMovement(timeMult);
+		}
 
 		if (_hitFloorTime > 0.0f) {
 			_hitFloorTime -= timeMult;
@@ -1310,7 +1359,10 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		if (_inWater || _activeModifier != Modifier::None) {
+		if (IsBird()) {
+			// The flight is the whole of a bird's movement and HandleBirdMovement() already did it, there's no jump,
+			// crouch, special move or swimming to go with it
+		} else if (_inWater || _activeModifier != Modifier::None) {
 			HandleWaterAndModifierMovement(timeMult);
 		} else {
 			// Captured before the crouch can be set this frame - HandleLookupAndCrouch() sets it and
@@ -1813,7 +1865,9 @@ namespace Jazz2::Actors
 		if (_revUpCarry && _keepRunningTime > 0.0f && movement * _speed.X < 0.0f) {
 			return 0.0f;
 		}
-		return (movement < 0.0f ? -1.0f : 1.0f) * (IsDashActive() ? LegacyCameraDashLead : LegacyCameraWalkLead);
+		// A bird has no dash, Run doesn't make it any faster
+		bool dashLead = (IsDashActive() && !IsBird());
+		return (movement < 0.0f ? -1.0f : 1.0f) * (dashLead ? LegacyCameraDashLead : LegacyCameraWalkLead);
 	}
 
 	float Player::GetCameraVerticalOffset() const
@@ -2229,6 +2283,259 @@ namespace Jazz2::Actors
 			}
 		}
 
+	}
+
+	void Player::HandleBirdMovement(float timeMult)
+	{
+		if (_birdChargeHitCooldown > 0.0f) {
+			_birdChargeHitCooldown -= timeMult;
+		}
+
+		// A sucker tube drives the player directly, the bird included
+		if (_inTubeTime > 0.0f) {
+			_birdAccelX = 0.0f;
+			_birdCharging = false;
+			_birdChargeDirY = 0;
+			return;
+		}
+
+		// Steering is refused while control is gone (hurt, frozen, leaving the level), so the bird brakes and sinks
+		// instead of carrying on at whatever speed it had
+		bool canFly = (_controllable && _controllableExternal);
+		float horizontalMovement = (canFly ? _levelHandler->PlayerHorizontalMovement(this) : 0.0f);
+		float verticalMovement = (canFly ? _levelHandler->PlayerVerticalMovement(this) : 0.0f);
+		// Jump is a second Up key and nothing more - `bd_jump` is `bd_up` to the last tick, and tapped it climbs only for
+		// as long as it's down (`bd_jump_tap`). The same deadzones the walk and the swim use on these two axes.
+		bool climbing = (canFly && (verticalMovement < -0.3f || _levelHandler->PlayerActionPressed(this, PlayerAction::Jump)));
+		bool diving = (canFly && !climbing && verticalMovement > 0.3f);
+		bool steering = (std::abs(horizontalMovement) > 0.4f);
+		bool fireHeld = (canFly && _weaponAllowed && _levelHandler->PlayerActionPressed(this, PlayerAction::Fire));
+		float maxSpeed = GetBirdMaxSpeed();
+		float chargeMinSpeed = maxSpeed * BirdChargeMinSpeedRatio;
+
+		// Against a wall the original's bird has no speed along it and no acceleration either - JJ2+'s `xAcc` drops to 0 on
+		// the tick `bd_ch_wall` meets one and stays there with the direction still held. The collision only zeroes the speed
+		// in OnHitWall() when nothing else was hit that frame, and a bird pressing into the floor hits that every frame, so
+		// one down in the corner of a wall wound its speed up against it - past where Fire starts a charge, and a charge
+		// diving into such a corner never ended. So the bird looks for itself, a pixel ahead, a couple of pixels clear of
+		// the floor and the ceiling so that neither they nor a gentle slope count. Tiles only, a pushable isn't a wall.
+		float wallDirection = (_speed.X != 0.0f ? _speed.X : (steering ? horizontalMovement : 0.0f));
+		if (wallDirection != 0.0f) {
+			if (auto* tiles = _levelHandler->TileMap()) {
+				AABBf ahead = AABBInner;
+				float step = (wallDirection < 0.0f ? -1.0f : 1.0f);
+				ahead.L += step;
+				ahead.R += step;
+				ahead.T += 2.0f;
+				ahead.B -= 2.0f;
+				TileCollisionParams wallParams = { TileDestructType::None, false };
+				if (!tiles->IsTileEmpty(ahead, wallParams)) {
+					_speed.X = 0.0f;
+					_birdAccelX = 0.0f;
+				}
+			}
+		}
+
+		// The first bird's beak attack, the charge: Fire held while it's flying along faster than half the cap, however it
+		// got that fast and whether a direction is held or not - coasting with Fire pressed starts one (`bd_ch_coast`). It
+		// starts on the first tick that's true, Fire pressed first or last, on the floor or in mid-air (`bd_ch_rest`,
+		// `bd_ch_fire_first`, `bd_ch_f06`..`bd_ch_f34`, `bd_ch_air`), and flies at the cap from then on - not faster, but
+		// from 2.06 px/tick straight to 4 - held level, or at the cap upwards or downwards as well with Up (or Jump) or
+		// Down held (`bd_ch_up`, `bd_ch_jump`, `bd_ch_down`). Slower than that, Fire does nothing but keep the bird from
+		// perching (`bd_fire`, `bd_fire_u`, `bd_ch_c72`).
+		//
+		// The original assigns those speeds *after* it moves the bird, so the steering below still has its say over each
+		// move and is then undone: letting go of the direction costs 1/16 px a tick and reversing it 1/8 once the
+		// acceleration has wound over, while the speed reads the cap throughout and never comes down (`bd_ch_rel`,
+		// `bd_ch_rev`). So the decision the last frame made is carried out here, now that its move has happened. A charge
+		// that a wall has stopped in the meantime ends here instead (`bd_ch_wall`), and so does one that control was taken
+		// from - a hurt's knock isn't overwritten.
+		float chargeDirection = 0.0f;
+		if (_birdCharging) {
+			if (canFly && _currentTransition == nullptr && std::abs(_speed.X) > chargeMinSpeed) {
+				chargeDirection = (_speed.X < 0.0f ? -1.0f : 1.0f);
+				_speed.X = maxSpeed * chargeDirection;
+				_speed.Y = (float)_birdChargeDirY * maxSpeed;
+			} else {
+				_birdCharging = false;
+			}
+		}
+		// With Fire still held it goes on: its vertical speed is then the only one, and it keeps the bird facing the way it
+		// flies. Letting go of Fire ends it at once, at the speed it had (`bd_ch_frel`, `bd_ch_rel_frel`), and pressing it
+		// again starts it again at once - there's no cooldown (`bd_ch_retap`).
+		bool charging = (_birdCharging && fireHeld);
+
+		// Horizontally, a held direction winds the acceleration up to BirdAcceleration over four ticks instead of applying
+		// it at once - `bd_right` reads 1/32, 1/16, 3/32 and then 1/8 px/tick² off JJ2+'s `xAcc` - and turning round winds
+		// it over to the other side the same way, through zero, with no braking of its own: from the cap the speed just
+		// holds for four ticks and then comes down as it went up (`bd_right_rev`). Letting go zeroes it on the spot, so a
+		// press two ticks later starts over from 1/32 (`bd_rev_tap`), and the speed comes down linearly at BirdBrake.
+		if (steering) {
+			float direction = (horizontalMovement < 0.0f ? -1.0f : 1.0f);
+			float target = BirdAcceleration * direction;
+			float rampStep = (BirdAcceleration / BirdAccelRampTime) * timeMult;
+			_birdAccelX = (_birdAccelX < target ? std::min(_birdAccelX + rampStep, target) : std::max(_birdAccelX - rampStep, target));
+			_speed.X = std::clamp(_speed.X + _birdAccelX * timeMult, -maxSpeed, maxSpeed);
+
+			// The facing turns on the first tick of a reversal, long before the speed does - except during a charge, which
+			// keeps facing the way it flies until Fire is let go (`bd_ch_rev`, `bd_ch_rev_frel`)
+			bool isFacingLeft = (direction < 0.0f);
+			if (!charging && isFacingLeft != IsFacingLeft()) {
+				SetFacingLeft(isFacingLeft);
+			}
+		} else {
+			_birdAccelX = 0.0f;
+			_speed.X = std::max(std::abs(_speed.X) - BirdBrake * timeMult, 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
+		}
+
+		// During a charge the steering only ever acts for one of the original's ticks before the cap is put back, so what it
+		// takes off is a speed short of the cap rather than a rate: 1/16 px/tick let go, 1/8 reversed. Taken as the rate it
+		// is everywhere else it'd come out 17% too big here and grow with the length of the frame.
+		if (charging && timeMult > 0.0f) {
+			float shortfall = std::max(maxSpeed - _speed.X * chargeDirection, 0.0f) / (timeMult * LegacyFrameRateScale);
+			_speed.X = (maxSpeed - std::min(shortfall, maxSpeed)) * chargeDirection;
+		}
+
+		// Vertically it isn't steering at all. Up assigns a flat climb on the first tick, and otherwise the bird is pulled
+		// down, at 1/64 px/tick² or half as much again with Down held. There's no brake, so letting go of Up becomes a fall
+		// that only the floor ends - `bd_up_rel` is past 1.47 px/tick when it lands - and a bird sitting on the floor
+		// keeps pressing into it, which is the 1/64 px a tick the original's probe sees it sink by between corrections.
+		if (charging) {
+			// Only the charge's own vertical speed, assigned above - Up neither climbs at its usual 1 px/tick for the tick
+			// it's pressed on nor stops the diagonal for the tick it's let go on (`bd_ch_up`)
+		} else if (climbing) {
+			_speed.Y = -BirdClimbSpeed;
+		} else {
+			float pull = (diving ? BirdDiveGravity : BirdSinkGravity);
+			// The knock of a hurt decays much faster for as long as it's still carrying the bird upwards - 17/64 px/tick²
+			// in `bd_hurt` until `ys` turns over, and only the ordinary pull after that (see TakeDamage())
+			if (_speed.Y < 0.0f && _currentTransition != nullptr && _currentTransition->State == AnimState::Hurt) {
+				pull += BirdHurtRiseGravity;
+			}
+			_speed.Y += pull * timeMult;
+		}
+		_speed.Y = std::clamp(_speed.Y, -maxSpeed, maxSpeed);
+
+		// Whether the charge goes on into the next frame, decided on the speed the steering has just left, which is the
+		// speed of the coming move - that's the one the original tests, not the speed the tick started with: exactly 2.0
+		// px/tick after the tick's brake doesn't charge where 2.0625 does (`bd_ch_c71`, `bd_ch_c70`). It flies the way
+		// the bird is going rather than the way it faces: Fire pressed while turning round charges on in the old
+		// direction and turns the bird back round to it (`bd_ch_turn`). Mirrored exactly leftwards (`bd_ch_left_rest`).
+		_birdCharging = (_playerType == PlayerType::Bird && fireHeld && _currentTransition == nullptr && std::abs(_speed.X) > chargeMinSpeed);
+		if (_birdCharging) {
+			_birdChargeDirY = (climbing ? -1 : (diving ? 1 : 0));
+			bool isFacingLeft = (_speed.X < 0.0f);
+			if (isFacingLeft != IsFacingLeft()) {
+				SetFacingLeft(isFacingLeft);
+			}
+		} else {
+			_birdChargeDirY = 0;
+		}
+
+		// Perching. A bird sitting still on the floor perches after BirdPerchTime - 37 ticks after the last movement in
+		// `bd_idle2`, `bd_right_rel`, `bd_up_rel` and `bd_up_down` alike, whether it coasted to a stop or fell there - and
+		// anything that moves it takes it off again on the same tick. Down, which can't move a bird that's already on
+		// the floor, leaves it perched (`bd_down`). Fire keeps the first bird awake for as long as it's held, the second
+		// one only for the shot, which HandleWeaponFire() takes care of. There's no landing as such: the pull and the floor
+		// are all it takes to be sitting on one.
+		AABBf below = AABBInner;
+		below.T = below.B;
+		below.B += CollisionCheckStep;
+		TileCollisionParams params = { TileDestructType::None, true };
+		bool onFloor = !_levelHandler->IsPositionEmpty(this, below, params);
+		bool still = (onFloor && !climbing && _speed.X == 0.0f && _speed.Y >= 0.0f &&
+			!(_playerType == PlayerType::Bird && fireHeld));
+		if (still) {
+			_birdIdleTime += timeMult;
+			if (!_birdPerched && _birdIdleTime >= BirdPerchTime) {
+				EnterBirdPerch();
+			}
+		} else {
+			_birdIdleTime = 0.0f;
+			if (_birdPerched || _birdStanding) {
+				LeaveBirdPerch();
+			}
+		}
+
+		// A push the bird was given (a pinball bumper, for instance) wears off the way its own speed does - an airborne
+		// push otherwise decays only at a trickle, see OnUpdatePhysics(). A jump's internal force has no business here.
+		_externalForce.Y = std::max(std::abs(_externalForce.Y) - BirdBrake * timeMult, 0.0f) * (_externalForce.Y < 0.0f ? -1.0f : 1.0f);
+		_internalForceY = 0.0f;
+	}
+
+	float Player::GetBirdMaxSpeed() const
+	{
+		// Reforged flies at its own walk cap, which is the relation to walking the original's figure has - the measured
+		// cap is that game's walk cap too, and Reforged's walk is slower than it
+		return (_levelHandler->IsReforged() ? MaxRunningSpeed : LegacyBirdSpeed);
+	}
+
+	void Player::EnterBirdPerch()
+	{
+		_birdPerched = true;
+		_birdPose = 0;
+		_birdPoseTime = 0.0f;
+
+		// The perched sprites stand on their coldspot, BirdStandingDrop lower than the flying box reaches - where the
+		// original's bird sits, at exactly the height a rabbit stands at. So the bird is lifted onto the taller box as the
+		// pose changes, which hides the step. Under a ceiling too low for that it keeps the flying box, pose and all. A
+		// bird just made out of a rabbit on the floor is already standing there (see ApplyBirdMorph()).
+		if (!_birdStanding) {
+			TileCollisionParams params = { TileDestructType::None, true };
+			_birdStanding = MoveInstantly(Vector2f(0.0f, -BirdStandingDrop), MoveType::Relative, params);
+			OnUpdateHitbox();
+		}
+	}
+
+	void Player::LeaveBirdPerch()
+	{
+		// Back to the flying box, which only shrinks from below, so nothing can end up inside a wall
+		_birdPerched = false;
+		_birdStanding = false;
+		_birdPose = 0;
+		OnUpdateHitbox();
+	}
+
+	void Player::UpdateBirdPerchPose(float timeMult)
+	{
+		// The original plays the perched poses one whole animation at a time and picks the next as each one ends: idle,
+		// then a look to the left or to the right (turn, look a few times over, turn back), the worm, or idle again. Read
+		// off `bd_idle2`, `b2_idle2`, `bd_down` and the tails of several others, all at 7 ticks a frame. Which pose comes
+		// next and how often one repeats differs from run to run - the idle 1 to 5 times, a look 2 to 6 - so these odds
+		// are fitted to those counts rather than measured.
+		static constexpr AnimState Poses[] = {
+			AnimState::Idle, BirdPerch, BirdPerchTurnLeft, BirdPerchLookLeft, BirdPerchTurnLeftBack,
+			BirdPerchTurnRight, BirdPerchLookRight, BirdPerchTurnRightBack, BirdPerchWorm
+		};
+
+		_birdPoseTime -= timeMult;
+		if (_birdPose != 0 && _birdPoseTime > 0.0f) {
+			return;
+		}
+
+		std::uint8_t next;
+		switch (_birdPose) {
+			case 2: next = 3; break;
+			case 3: next = (Random().NextFloat() < 0.67f ? 3 : 4); break;
+			case 5: next = 6; break;
+			case 6: next = (Random().NextFloat() < 0.67f ? 6 : 7); break;
+			case 4: case 7: case 8: next = 1; break;
+			default: {
+				// From the idle, and also as the first pose - the perch has opened on the idle and on a look in the traces
+				float r = Random().NextFloat();
+				next = (r < 0.5f ? 1 : (r < 0.67f ? 2 : (r < 0.83f ? 5 : 8)));
+				break;
+			}
+		}
+
+		_birdPose = next;
+		if (!SetAnimation(Poses[next])) {
+			SetAnimation(AnimState::Idle);
+		}
+		// One whole cycle of the pose, so the next is picked as it ends. Repeating a pose leaves its animation looping on.
+		_birdPoseTime = (_currentAnimation != nullptr && _currentAnimation->AnimDuration > 0.0f
+			? _currentAnimation->AnimDuration / FrameTimer::SecondsPerFrame
+			: FrameTimer::FramesPerSecond);
 	}
 
 	void Player::TriggerLoriKick()
@@ -2921,6 +3228,11 @@ namespace Jazz2::Actors
 							_externalForce.Y = 0.0f;
 							_uppercutTimeLeft = LegacyUppercutTicks;
 						}
+						// Leave whatever is carrying the player, as BeginStandardJump() does. A moving platform keeps
+						// carrying a player who still has gravity on (which the uppercut does), and while it does the
+						// carried player's vertical speed is zeroed every frame - so the launch above was thrown away
+						// and the uppercut never left the platform. The wind-up stays carried, only the rise leaves.
+						_carryingObject = nullptr;
 						SetState(ActorState::CanJump, false);
 						SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 					});
@@ -3162,7 +3474,28 @@ namespace Jazz2::Actors
 		if (_weaponAllowed && areaWeaponAllowed && !onPinballPaddle && !loriKickShotSpent &&
 			_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)) {
 			if (!_isLifting && _suspendType != SuspendType::SwingingVine && !_canPushFurther) {
-				if (_playerType == PlayerType::Frog) {
+				if (_playerType == PlayerType::Bird) {
+					// The first bird has no shot at all: Fire is its beak attack, which HandleBirdMovement() runs. Not one of
+					// the `bd_fire*` scenarios spawns anything or spends a round.
+				} else if (_playerType == PlayerType::Bird2) {
+					// The second bird shoots on the press, not for as long as the key is held - one pair for a held key in
+					// `b2_fire`, a pair for every tap in `b2_fire_tap` - so it has no use for the weapon's cooldown
+					if (_levelHandler->PlayerActionHit(this, PlayerAction::Fire) && _inventory.WeaponAmmo[(std::int32_t)_currentWeapon] != 0) {
+						// A shot wakes a perched bird, but holding the key doesn't keep it awake - `b2_perch_fire` takes off at the
+						// press and perches again 37 ticks later with Fire still down, where the first bird never perches while it's
+						// held. It takes off first and shoots from its flying pose, the muzzle is on its beak there.
+						_birdIdleTime = 0.0f;
+						if (_birdPerched || _birdStanding) {
+							LeaveBirdPerch();
+							SetAnimation(AnimState::Idle);
+						}
+						// The shots themselves go through the virtual FireCurrentWeapon(), so a multiplayer client leaves them to the
+						// server and the server tells the client about the ammo, the same as any other weapon
+						if (FireCurrentWeapon(_currentWeapon)) {
+							_levelHandler->PlayerExecuteRumble(this, "Fire"_s);
+						}
+					}
+				} else if (_playerType == PlayerType::Frog) {
 					if (_currentTransition == nullptr && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && std::abs(_externalForce.X) < 0.1f && std::abs(_externalForce.Y) < 0.1f) {
 						PlayPlayerSfx("Tongue"_s, 0.8f);
 
@@ -3658,18 +3991,20 @@ namespace Jazz2::Actors
 
 		ForceCancelTransition();
 
-		if (_playerType == PlayerType::Frog) {
-			_playerType = _playerTypeOriginal;
-
-			// Load original metadata, indexed only when recolored (must match the renderer's current palette state)
-			bool useIndexed = (GetEffectiveFurColor() != 0);
-			RequestMetadata(GetCharacterTraits(_playerType).Metadata, useIndexed);
+		Metadata* metadataBeforeMorph = (_playerType == PlayerType::Frog ? RequestMorphMetadata(_playerTypeBeforeMorph) : nullptr);
+		if (metadataBeforeMorph != nullptr) {
+			// Back to the character the frog was taken from
+			ApplyMorphType(_playerTypeBeforeMorph, metadataBeforeMorph);
+			// The recolor scheme is per character, see MorphTo()
+			RefreshColorPalette();
 
 			// Refresh animation state
-			AnimState prevState = _currentAnimation->State;
+			AnimState prevState = (_currentAnimation != nullptr ? _currentAnimation->State : AnimState::Idle);
 			_currentSpecialMove = SpecialMoveType::None;
 			_currentAnimation = nullptr;
-			SetAnimation(prevState);
+			if (!SetAnimation(prevState)) {
+				SetAnimation(AnimState::Idle);
+			}
 
 			// Morph to original type with animation and then trigger death
 			SetPlayerTransition(AnimState::TransitionFromFrog, false, true, SpecialMoveType::None, [this]() {
@@ -3694,7 +4029,14 @@ namespace Jazz2::Actors
 		// but for falling sprites for some reason somewhere above the hotspot instead.
 		// It is absolutely important that the position of the hitbox stays constant
 		// to the hotspot, though; otherwise getting stuck at walls happens all the time.
-		if (_levelHandler->IsReforged()) {
+		if (IsBird()) {
+			// Only the body of the bird, which is centered on the hotspot rather than standing on the coldspot, as wide
+			// as a rabbit but shorter - the wings beat through what is above and below it. A perched bird stands on its
+			// coldspot instead, as low as a rabbit does, see EnterBirdPerch().
+			float halfWidth = (_levelHandler->IsReforged() ? 11.0f : 10.0f);
+			float bottom = (_birdStanding ? 12.0f + BirdStandingDrop : 12.0f);
+			AABBInner = AABBf(_pos.X - halfWidth, _pos.Y - 8.0f, _pos.X + halfWidth, _pos.Y + bottom);
+		} else if (_levelHandler->IsReforged()) {
 			AABBInner = AABBf(_pos.X - 11.0f, _pos.Y + 8.0f - 18.0f, _pos.X + 11.0f, _pos.Y + 8.0f + 12.0f);
 		} else {
 			AABBInner = AABBf(_pos.X - 10.0f, _pos.Y + 8.0f - 16.0f, _pos.X + 10.0f, _pos.Y + 8.0f + 12.0f);
@@ -3721,12 +4063,25 @@ namespace Jazz2::Actors
 				}
 			}
 		} else if (auto* enemy = runtime_cast<Enemies::EnemyBase>(other)) {
+			// The first bird's beak attack hurts only in Reforged. The original has the attack, but its damage is off
+			// unless a script turns it on: JJ2+'s `canHurt`, which it documents as covering this beak, defaults to
+			// false for both birds.
+			bool birdCharge = (_birdCharging && _levelHandler->IsReforged());
+			bool otherAttack = (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || (enemy->IsFrozen() && _speed.Length() >= 9.0f));
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
 				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush or shield is active
-			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || (enemy->IsFrozen() && _speed.Length() >= 9.0f)) {
-				if (!enemy->IsInvulnerable()) {
+			} else if (otherAttack || birdCharge) {
+				// The charge alone hurts the same enemy only once per BirdChargeHitInterval, the bird goes through it
+				// unharmed in between
+				bool canHit = (otherAttack || _birdChargeHitCooldown <= 0.0f || _birdChargeLastHit.lock().get() != enemy);
+				if (!enemy->IsInvulnerable() && canHit) {
 					enemy->DecreaseHealth(4, this);
 					handled = true;
+
+					if (birdCharge) {
+						_birdChargeLastHit = enemy->shared_from_this();
+						_birdChargeHitCooldown = BirdChargeHitInterval;
+					}
 
 					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::Small);
 
@@ -3878,7 +4233,7 @@ namespace Jazz2::Actors
 					TakeDamage(1, _speed.X * 0.25f);
 				}
 			}
-		} else if (!_inWater && _activeModifier == Modifier::None) {
+		} else if (!_inWater && _activeModifier == Modifier::None && !IsBird()) {
 			if (_hitFloorTime <= 0.0f && !CanJump()) {
 				_hitFloorTime = 30.0f;
 				PlaySfx("Land"_s, 0.8f);
@@ -3892,7 +4247,8 @@ namespace Jazz2::Actors
 				}
 			}
 		} else {
-			// Prevent stucking with water/airboard
+			// Prevent stucking with water/airboard. A bird doesn't land either, it never gets to stand without gravity
+			// (so the landing above would repeat every time its timer ran out) - it only stops against the floor.
 			SetState(ActorState::CanJump, false);
 			if (_speed.Y > 0.0f) {
 				_speed.Y = 0.0f;
@@ -4129,6 +4485,23 @@ namespace Jazz2::Actors
 
 	void Player::OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
 	{
+		if (IsBird()) {
+			// A spring only nudges a bird. The original clamps its speed to the flight cap on the very next tick, so the
+			// launch is spent the moment it's given, and none of the carry, the lost control or the launch poses below
+			// belong to something that flies anyway.
+			float maxSpeed = GetBirdMaxSpeed();
+			if (std::abs(force.X) > 0.0f) {
+				_speed.X = std::copysign(maxSpeed, force.X);
+			} else if (std::abs(force.Y) > 0.0f) {
+				_speed.Y = std::copysign(maxSpeed, force.Y);
+			} else {
+				return;
+			}
+			_springCooldown = 10.0f;
+			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);
+			return;
+		}
+
 		std::int32_t sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
 		if (std::abs(force.X) > 0.0f) {
 			// Reforged pulls the player halfway towards the spring's own centre. The original does not move
@@ -4319,6 +4692,47 @@ namespace Jazz2::Actors
 			// controllable path already does, and it only fires when a stop pose was actually showing, so
 			// transitions that belong to something else - an uppercut's wind-up, a warp - are untouched.
 			ApplyStopAnimation(false);
+			return;
+		}
+
+		if (IsBird()) {
+			// A perched bird plays its own poses, see UpdateBirdPerchPose()
+			if (_birdPerched) {
+				UpdateBirdPerchPose(timeMult);
+				return;
+			}
+			// In flight it has one pose, which is also the one with a muzzle on its beak - it has no shooting pose to
+			// switch to, so the second bird's shots leave from there (see SetShootingAnimation()). The first bird's beak
+			// attack has poses of its own instead, level, upwards and downwards. Nothing below, about running, landing,
+			// ledges or sliding to a halt, applies to either.
+			AnimState flightPose = AnimState::Idle;
+			// A charge that a wall has just stopped is already over, HandleBirdMovement() only gets to say so after this
+			if (_birdCharging && std::abs(_speed.X) > GetBirdMaxSpeed() * BirdChargeMinSpeedRatio) {
+				flightPose = (_birdChargeDirY < 0 ? BirdChargeUp : (_birdChargeDirY > 0 ? BirdChargeDown : BirdCharge));
+			}
+			AnimState currentState = _currentAnimation->State;
+			if (currentState != flightPose) {
+				// The original runs the flight and all three charge poses off one frame counter, so switching between them
+				// carries on from the frame the wings were on instead of starting the new pose over (JJ2+'s `frameID`
+				// across every switch in the `bd_ch_*` set)
+				bool carryFrame = (_currentTransition == nullptr && _renderer.AnimDuration > 0.0f &&
+					(currentState == AnimState::Idle || currentState == BirdCharge || currentState == BirdChargeUp || currentState == BirdChargeDown));
+				float phase = (carryFrame ? _renderer.AnimTime / _renderer.AnimDuration : 0.0f);
+				// Metadata without the two diagonal poses falls back to the level one
+				if (!SetAnimation(flightPose) && flightPose != BirdCharge && flightPose != AnimState::Idle) {
+					SetAnimation(BirdCharge);
+				}
+				if (carryFrame && _currentTransition == nullptr && _renderer.AnimDuration > 0.0f) {
+					_renderer.AnimTime = (phase < 1.0f ? phase : 0.0f) * _renderer.AnimDuration;
+				}
+			}
+			// The original beats its wings at a flat 7 ticks a frame whatever the bird is doing - at the cap, climbing,
+			// falling, braking, or sitting on the floor with Fire held - so the metadata's own rate is the measured one.
+			// Reforged slows the beat while it hovers, as asked for from play, up to that same rate at full speed.
+			if (_levelHandler->IsReforged() && _currentTransition == nullptr) {
+				float speedRatio = std::min(_speed.Length() / GetBirdMaxSpeed(), 1.0f);
+				_renderer.AnimDuration = _currentAnimation->AnimDuration * (1.8f - 0.8f * speedRatio);
+			}
 			return;
 		}
 
@@ -5237,7 +5651,8 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		if (_suspendType == SuspendType::SwingingVine || _activeModifier != Modifier::None) {
+		// A bird flies past vines and hooks rather than grabbing them
+		if (_suspendType == SuspendType::SwingingVine || _activeModifier != Modifier::None || IsBird()) {
 			return;
 		}
 
@@ -5360,6 +5775,11 @@ namespace Jazz2::Actors
 
 	void Player::OnHandleWater()
 	{
+		// A bird goes on flying under water, it doesn't swim
+		if (IsBird()) {
+			return;
+		}
+
 		if (_inWater) {
 			if (_pos.Y >= _levelHandler->GetWaterLevel()) {
 				SetState(ActorState::ApplyGravitation, false);
@@ -5872,11 +6292,18 @@ namespace Jazz2::Actors
 				if ((_activeModifier == Modifier::Airboard || _activeModifier == Modifier::Copter) && !IsFlyCheatActive()) {
 					SetModifier(Modifier::None);
 				}
+				// ...and so does a bird, which turns back into the character it was, exactly as at a Revert Morph area
+				if (IsBird()) {
+					MorphRevert();
+					return true;
+				}
 				break;
 			}
 			case EventType::AreaRevertMorph: {
+				// Straight back to the character the level started with, even from a temporary form that was taken from
+				// another one - the area keeps triggering while the player is inside, so it would end there a frame later
 				if (_playerType != _playerTypeOriginal) {
-					MorphRevert();
+					MorphTo(_playerTypeOriginal);
 					return true;
 				}
 				break;
@@ -5970,7 +6397,7 @@ namespace Jazz2::Actors
 		}
 
 		_currentSpecialMove = specialMove;
-		return SetTransition(state, cancellable, std::move(callback));
+		return SetTransition(state, cancellable, Death::move(callback));
 	}
 
 	bool Player::CanFreefall()
@@ -6151,6 +6578,68 @@ namespace Jazz2::Actors
 		}
 	}
 
+	template<typename T, WeaponType weaponType>
+	void Player::FireBirdShotPair(float spread)
+	{
+		Vector3i initialPos;
+		Vector2f gunspotPos;
+		float angle;
+		GetFirePointAndAngle(initialPos, gunspotPos, angle);
+
+		std::uint8_t shotParams[1] = { _inventory.WeaponUpgrades[(std::int32_t)weaponType] };
+		const float offsets[] = { 0.0f, spread };
+		for (float offset : offsets) {
+			std::shared_ptr<T> shot = std::make_shared<T>();
+			shot->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				initialPos,
+				shotParams
+			));
+			shot->OnFire(shared_from_this(), gunspotPos, _speed, angle + offset, IsFacingLeft());
+			_levelHandler->AddActor(shot);
+		}
+
+		EmitWeaponFlare();
+	}
+
+	void Player::FireBirdShots()
+	{
+		// The second bird shoots the weapon it has, two at a time: one straight ahead and one BirdShotSpread below it, for
+		// a single round between them - `b2_fire_tap` presses 18 times and spends 18 Seeker rounds on 36 Seekers, which
+		// home and hit as hard as a rabbit's (the turtle in `b2_fire_turtle` dies of them). The pair also carries the
+		// bird's own horizontal speed. A weapon with no bullet to double - RF, the toaster, TNT, pepper, the thunderbolt
+		// - gives a pair of blaster shots instead, the way the companion bird does; nothing measured those.
+		float spread = (IsFacingLeft() ? -BirdShotSpread : BirdShotSpread);
+		std::uint16_t ammoDecrease = 256;
+		switch (_currentWeapon) {
+			case WeaponType::Bouncer: FireBirdShotPair<Weapons::BouncerShot, WeaponType::Bouncer>(spread); break;
+			case WeaponType::Freezer: FireBirdShotPair<Weapons::FreezerShot, WeaponType::Freezer>(spread); break;
+			case WeaponType::Seeker: FireBirdShotPair<Weapons::SeekerShot, WeaponType::Seeker>(spread); break;
+			case WeaponType::Electro: FireBirdShotPair<Weapons::ElectroShot, WeaponType::Electro>(spread); break;
+			default: {
+				FireBirdShotPair<Weapons::BlasterShot, WeaponType::Blaster>(spread);
+				PlayPlayerSfx("WeaponBlaster"_s);
+				ammoDecrease = 0;
+				break;
+			}
+		}
+
+		if (ammoDecrease > 0) {
+			auto& currentAmmo = _inventory.WeaponAmmo[(std::int32_t)_currentWeapon];
+			if (ammoDecrease > currentAmmo) {
+				ammoDecrease = currentAmmo;
+			}
+			currentAmmo -= ammoDecrease;
+
+			// No ammo, switch weapons - the same as the other weapons do in FireCurrentWeapon()
+			if (currentAmmo == 0) {
+				_inventory.WeaponUpgrades[(std::int32_t)_currentWeapon] &= ~0x01;
+				SwitchToNextWeapon();
+				PlayPlayerSfx("ChangeWeapon"_s);
+			}
+		}
+	}
+
 	void Player::FireWeaponRF()
 	{
 		Vector3i initialPos;
@@ -6313,6 +6802,12 @@ namespace Jazz2::Actors
 
 	bool Player::FireCurrentWeapon(WeaponType weaponType)
 	{
+		if (_playerType == PlayerType::Bird2) {
+			// The second bird fires on the press only, so the weapon's cooldown doesn't apply to it
+			FireBirdShots();
+			return true;
+		}
+
 		if (_weaponCooldown > 0.0f) {
 			return (weaponType != WeaponType::TNT);
 		}
@@ -6557,7 +7052,9 @@ namespace Jazz2::Actors
 
 		switch (_levelExiting) {
 			case LevelExitingState::Waiting: {
-				if (CanJump() && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
+				// A bird never lands, so it ends the level once it has slowed to a hover rather than waiting out the
+				// timeout below for a floor it will never stand on
+				if ((CanJump() || IsBird()) && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
 					_levelExiting = LevelExitingState::Transition;
 
 					ForceCancelTransition();
@@ -6767,7 +7264,7 @@ namespace Jazz2::Actors
 	PlayerCarryOver Player::PrepareLevelCarryOver()
 	{
 		PlayerCarryOver carryOver;
-		carryOver.Type = _playerType;
+		carryOver.Type = GetPersistentPlayerType();
 		carryOver.Lives = (_lives > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_lives);
 		carryOver.Score = _score;
 		carryOver.FoodEaten = (_inventory.FoodEaten > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_inventory.FoodEaten);
@@ -6845,10 +7342,10 @@ namespace Jazz2::Actors
 	void Player::OnSerializeState(Stream& dest)
 	{
 		// Only the persistent state is stored, the player is restored when returning from another level, and
-		// temporary effects (shield, sugar rush, airboard, dizziness, companion bird) end with the level anyway
+		// temporary effects (shield, sugar rush, airboard, dizziness, companion bird, the bird morph) end with the level anyway
 		ActorBase::OnSerializeState(dest);
 
-		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerType);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)GetPersistentPlayerType());
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerTypeOriginal);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_checkpointPlayerType);
 		dest.WriteVariableInt32(_lives);
@@ -6863,6 +7360,9 @@ namespace Jazz2::Actors
 		dest.WriteValueAsLE<float>(_checkpointLight);
 		dest.WriteValueAsLE<float>(_currentAmbientLight);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_currentWeapon);
+		// The character the frog was taken from goes last, the state is stored with its size, so a build that doesn't
+		// know it stops before it and a state of such a build ends without it
+		dest.WriteValue<std::uint8_t>((std::uint8_t)GetPlayerTypeBeforeMorph());
 	}
 
 	void Player::OnDeserializeState(Stream& src)
@@ -6898,6 +7398,22 @@ namespace Jazz2::Actors
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(_inventory.WeaponAmmo)); i++) {
 			if (_inventory.WeaponAmmo[i] != 0) {
 				PreloadMetadataAsync(String("Weapon/"_s + WeaponNames[i]));
+			}
+		}
+
+		if (IsTemporaryForm(_playerType)) {
+			// The player was spawned as the frog already, so the frog would be what it turns back into. The state
+			// says which character it was, one stored without that is taken as the character of the checkpoint, or
+			// the one the level was started with.
+			auto isCharacter = [](PlayerType type) {
+				return (type == PlayerType::Jazz || type == PlayerType::Spaz || type == PlayerType::Lori);
+			};
+			PlayerType beforeMorph = (src.GetPosition() < src.GetSize() ? (PlayerType)src.ReadValue<std::uint8_t>() : PlayerType::None);
+			if (!isCharacter(beforeMorph)) {
+				beforeMorph = (isCharacter(_checkpointPlayerType) ? _checkpointPlayerType : _playerTypeOriginal);
+			}
+			if (isCharacter(beforeMorph)) {
+				_playerTypeBeforeMorph = beforeMorph;
 			}
 		}
 	}
@@ -7141,7 +7657,8 @@ namespace Jazz2::Actors
 
 	bool Player::InitialPoleStage(bool horizontal, Vector2f eventPos)
 	{
-		if (_isAttachedToPole || _playerType == PlayerType::Frog || _activeModifier == Modifier::Copter || _activeModifier == Modifier::Airboard) {
+		if (_isAttachedToPole || _playerType == PlayerType::Frog || IsBird() ||
+			_activeModifier == Modifier::Copter || _activeModifier == Modifier::Airboard) {
 			return false;
 		}
 
@@ -7371,6 +7888,11 @@ namespace Jazz2::Actors
 		if (_activeModifier == modifier) {
 			return false;
 		}
+		// A bird flies on its own wings and has nothing to hold an airboard or a copter with, so the pickup stays where
+		// it is for someone else
+		if (IsBird() && modifier != Modifier::None) {
+			return false;
+		}
 
 		if (_activeModifierDecor != nullptr) {
 			_activeModifierDecor->OnDetach(this);
@@ -7522,7 +8044,20 @@ namespace Jazz2::Actors
 		if (_health > 0) {
 			_externalForce.X = pushForce;
 
-			if (!_inWater && _activeModifier == Modifier::None) {
+			if (IsBird()) {
+				// Measured on `bd_hurt` and `b2_hurt`, identical for both: a heart is lost and the bird is kept, and it's
+				// thrown at the cap away from where it was facing - or from what hit it - and upwards by as much again on
+				// top of whatever it was doing, then clamped. HandleBirdMovement() decays that rise far faster than its
+				// ordinary pull for as long as the hurt lasts. It loses a few feathers too, the way the companion bird does,
+				// which settle where they fall instead of bouncing off the floor.
+				float direction = (pushForce != 0.0f ? (pushForce < 0.0f ? -1.0f : 1.0f) : (IsFacingLeft() ? 1.0f : -1.0f));
+				float maxSpeed = GetBirdMaxSpeed();
+				_externalForce.X = 0.0f;
+				_speed.X = std::min(BirdHurtKick, maxSpeed) * direction;
+				_speed.Y = std::max(_speed.Y - BirdHurtKick, -maxSpeed);
+				_birdAccelX = 0.0f;
+				CreateSpriteDebris(BirdFeathers, 8, 0.05f);
+			} else if (!_inWater && _activeModifier == Modifier::None) {
 				_speed.Y = -6.5f;
 
 				SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, true);
@@ -7880,7 +8415,17 @@ namespace Jazz2::Actors
 			return false;
 		}
 
+		// Nothing changes unless the new character can be shown, the bird's sprites come only with the full version
+		Metadata* metadata = RequestMorphMetadata(type);
+		if (metadata == nullptr) {
+			return false;
+		}
+
 		PlayerType playerTypePrevious = _playerType;
+		// The birds have no transformation of their own in either direction, so it's shown as a puff of smoke the way two
+		// rabbits swap, and the frog's transformation is never asked to cover it
+		bool isBirdMorph = (type == PlayerType::Bird || type == PlayerType::Bird2 ||
+			playerTypePrevious == PlayerType::Bird || playerTypePrevious == PlayerType::Bird2);
 
 		// The stopping chain issues its next pose from the transition's callback and reads the current animation
 		// there. The animation is cleared below so it's re-resolved from the new metadata, and SetAnimation()
@@ -7889,26 +8434,29 @@ namespace Jazz2::Actors
 		// again on its own if the player is still sliding.
 		ApplyStopAnimation(false);
 
-		_playerType = type;
+		ApplyMorphType(type, metadata);
+		// The recolor scheme is per character, and the bird isn't recolored at all, so the palette the previous
+		// character had would put the wrong colors on this one
+		RefreshColorPalette();
 
-		// Load new metadata, indexed only when recolored (must match the renderer's current palette state)
-		bool useIndexed = (GetEffectiveFurColor() != 0);
-		RequestMetadata(GetCharacterTraits(type).Metadata, useIndexed);
-
-		// Refresh animation state
+		// Refresh animation state, RequestMorphMetadata() made sure the new metadata has at least the idle pose
 		if ((_currentSpecialMove == SpecialMoveType::None) ||
 			(_currentSpecialMove == SpecialMoveType::Buttstomp && (type == PlayerType::Jazz || type == PlayerType::Spaz || type == PlayerType::Lori))) {
-			AnimState prevAnim = _currentAnimation->State;
+			AnimState prevAnim = (_currentAnimation != nullptr ? _currentAnimation->State : AnimState::Idle);
 			_currentAnimation = nullptr;
 			if (!SetAnimation(prevAnim)) {
-				if (!SetAnimation(AnimState::Idle)) {
-					return false;
-				}
+				SetAnimation(AnimState::Idle);
 			}
 		} else {
 			_currentAnimation = nullptr;
 			if (!SetAnimation(AnimState::Fall)) {
-				return false;
+				SetAnimation(AnimState::Idle);
+			}
+
+			// The move's own transitions go with it into or out of a bird, their callbacks would only carry on
+			// with a move the other character has no animations for
+			if (isBirdMorph) {
+				ForceCancelTransition();
 			}
 
 			SetState(ActorState::ApplyGravitation, true);
@@ -7921,8 +8469,10 @@ namespace Jazz2::Actors
 			_currentSpecialMove = SpecialMoveType::None;
 		}
 
+		ApplyBirdMorph(playerTypePrevious);
+
 		// Set transition
-		if (type == PlayerType::Frog) {
+		if (type == PlayerType::Frog && !isBirdMorph) {
 			PlayPlayerSfx("Transform");
 
 			_controllable = false;
@@ -7948,7 +8498,7 @@ namespace Jazz2::Actors
 					});
 					break;
 			}
-		} else if (playerTypePrevious == PlayerType::Frog) {
+		} else if (playerTypePrevious == PlayerType::Frog && !isBirdMorph) {
 			_controllable = false;
 			_controllableTimeout = 120.0f;
 
@@ -7957,6 +8507,16 @@ namespace Jazz2::Actors
 				_controllableTimeout = 0.0f;
 			});
 		} else {
+			if (isBirdMorph) {
+				// Neither character has the other's transitions. The cancellable ones were already ended by the new
+				// animation above, and a shot's ending is only for show, so it's dropped too instead of being drawn
+				// over the new character until it runs out. One that something depends on, like a hurt or a warp,
+				// plays out.
+				if (ShouldCancelTransitionOnFire()) {
+					ForceCancelTransition();
+				}
+			}
+
 			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X - 12.0f), (std::int32_t)(_pos.Y - 6.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
 			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X - 8.0f), (std::int32_t)(_pos.Y + 28.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
 			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + 12.0f), (std::int32_t)(_pos.Y + 10.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
@@ -7973,14 +8533,20 @@ namespace Jazz2::Actors
 			return false;
 		}
 
+		// Same as in MorphTo(), nothing changes unless the new character can be shown
+		Metadata* metadata = RequestMorphMetadata(type);
+		if (metadata == nullptr) {
+			return false;
+		}
+
+		PlayerType playerTypePrevious = _playerType;
+
 		// Same as in MorphTo(), the stopping chain's callback must not see the cleared animation
 		ApplyStopAnimation(false);
 
-		_playerType = type;
-
-		// Load new metadata, indexed only when recolored (must match the renderer's current palette state)
-		bool useIndexed = (GetEffectiveFurColor() != 0);
-		RequestMetadata(GetCharacterTraits(type).Metadata, useIndexed);
+		ApplyMorphType(type, metadata);
+		// Same as in MorphTo(), the palette belongs to the character
+		RefreshColorPalette();
 
 		// Refresh animation state, special moves of the previous type cannot continue
 		AnimState prevState = (_currentAnimation != nullptr ? _currentAnimation->State : AnimState::Idle);
@@ -7990,12 +8556,120 @@ namespace Jazz2::Actors
 			SetAnimation(AnimState::Idle);
 		}
 
+		ApplyBirdMorph(playerTypePrevious);
+
 		return true;
 	}
 
 	void Player::MorphRevert()
 	{
-		MorphTo(_playerTypeOriginal);
+		MorphTo(IsTemporaryForm(_playerType) ? _playerTypeBeforeMorph : _playerTypeOriginal);
+	}
+
+	bool Player::CanMorphTo(PlayerType type)
+	{
+		return (_playerType == type || RequestMorphMetadata(type) != nullptr);
+	}
+
+	Metadata* Player::RequestMorphMetadata(PlayerType type)
+	{
+		// The fur color depends on the type (a bird is never recolored), so it's resolved as the new type would have it
+		PlayerType playerTypePrevious = _playerType;
+		_playerType = type;
+		// Indexed only when recolored (must match the renderer's current palette state)
+		bool useIndexed = (GetEffectiveFurColor() != 0);
+		_playerType = playerTypePrevious;
+
+		Metadata* metadata = ContentResolver::Get().RequestMetadata(GetCharacterTraits(type).Metadata, useIndexed);
+		if (metadata == nullptr || metadata->FindAnimation(AnimState::Idle) == nullptr) {
+			LOGW("Cannot morph to player type {}, its sprites are not available", (std::int32_t)type);
+			return nullptr;
+		}
+		return metadata;
+	}
+
+	void Player::ApplyMorphType(PlayerType type, Metadata* metadata)
+	{
+		// The first temporary form remembers the character it was taken from, one into another (a bird into the frog)
+		// keeps it, and any other character replaces it
+		if (!IsTemporaryForm(type)) {
+			_playerTypeBeforeMorph = type;
+		} else if (!IsTemporaryForm(_playerType)) {
+			_playerTypeBeforeMorph = _playerType;
+		}
+
+		_playerType = type;
+		_metadata = metadata;
+	}
+
+	void Player::ApplyBirdMorph(PlayerType playerTypePrevious)
+	{
+		// One bird into the other keeps the flight exactly as it is, they fly alike - only the attack differs
+		bool wasBird = (playerTypePrevious == PlayerType::Bird || playerTypePrevious == PlayerType::Bird2);
+		_birdCharging = false;
+		_birdChargeDirY = 0;
+
+		if (IsBird() && !wasBird) {
+			// Whatever kept the player on the ground, in the water or on a vine is over now that it has wings. Gravity
+			// itself is taken away every frame in OnUpdatePhysics(), too much else would hand it back otherwise.
+			if (_activeModifier != Modifier::None) {
+				SetModifier(Modifier::None);
+			}
+			if (_suspendType == SuspendType::SwingingVine) {
+				CancelCarryingObject();
+			}
+			_suspendType = SuspendType::None;
+			_inWater = false;
+			_renderer.setRotation(0.0f);
+			_isFreefall = false;
+			_keepRunningTime = 0.0f;
+			_externalForce.Y = 0.0f;
+			_internalForceY = 0.0f;
+			CancelRevUp();
+			ResetLegacyMovementState();
+
+			_birdAccelX = 0.0f;
+			_birdIdleTime = 0.0f;
+			_birdPerched = false;
+			_birdPose = 0;
+			// A bird made out of a rabbit standing on the floor stands where the rabbit did, which is where the original's
+			// bird sits too, instead of sinking into the floor by BirdStandingDrop and being lifted out of it again once
+			// it perches. Anywhere else it starts on the flying box.
+			_birdStanding = true;
+			OnUpdateHitbox();
+			AABBf below = AABBInner;
+			below.T = below.B;
+			below.B += CollisionCheckStep;
+			TileCollisionParams params = { TileDestructType::None, true };
+			if (_levelHandler->IsPositionEmpty(this, below, params)) {
+				_birdStanding = false;
+				OnUpdateHitbox();
+			}
+		} else if (!IsBird() && wasBird) {
+			_birdAccelX = 0.0f;
+			_birdIdleTime = 0.0f;
+			_birdPerched = false;
+			_birdStanding = false;
+			_birdPose = 0;
+
+			// The character reaches further down than the body of a flying bird did, see OnUpdateHitbox(), so one that
+			// changes back just above the floor is lifted onto it rather than left standing in it
+			OnUpdateHitbox();
+			TileCollisionParams params = { TileDestructType::None, true };
+			if (!_levelHandler->IsPositionEmpty(this, AABBInner, params)) {
+				for (std::int32_t lift = 1; lift <= 8; lift++) {
+					if (MoveInstantly(Vector2f(0.0f, -float(lift)), MoveType::Relative, params)) {
+						break;
+					}
+				}
+			}
+
+			// Gravity comes back with the old character, unless a tube is still carrying the player - the tube
+			// hands it back itself when the ride ends
+			if (_inTubeTime <= 0.0f) {
+				SetState(ActorState::ApplyGravitation, true);
+			}
+		}
 	}
 
 	bool Player::SetDizzy(float timeLeft)
@@ -8127,8 +8801,8 @@ namespace Jazz2::Actors
 	{
 		_checkpointPos = Vector2f(pos.X, pos.Y - 20.0f);
 		_checkpointLight = ambientLight;
-		// Frog is only a temporary form, dying as a frog reverts it too (see OnPerish())
-		_checkpointPlayerType = (_playerType == PlayerType::Frog ? _playerTypeOriginal : _playerType);
+		// Frog and Bird are only temporary forms, dying as either of them reverts it too (see OnPerish())
+		_checkpointPlayerType = GetPlayerTypeBeforeMorph();
 		
 		_inventoryCheckpoint = _inventory;
 	}
@@ -8153,6 +8827,10 @@ namespace Jazz2::Actors
 		DEATH_DEBUG_ASSERT(actor != nullptr);
 
 		if (_carryingObject != nullptr && _carryingObject != actor) {
+			return;
+		}
+		// A bird flies past a swinging vine just like past any other vine (see CheckSuspendState())
+		if (suspendType == SuspendType::SwingingVine && IsBird()) {
 			return;
 		}
 
@@ -8220,7 +8898,8 @@ namespace Jazz2::Actors
 
 	void Player::UpdatePlayerStacking(float timeMult, bool snap)
 	{
-		ActorBase* ground = _levelHandler->FindPlayerToStandOn(this, timeMult);
+		// A bird flies over another player instead of perching on its head, the carry would pin it there
+		ActorBase* ground = (!IsBird() ? _levelHandler->FindPlayerToStandOn(this, timeMult) : nullptr);
 		if (ground != nullptr) {
 			if (snap) {
 				// Reposition so our feet rest on the other player's head, re-snapping each frame so we ride its

@@ -601,6 +601,8 @@ The platform itself is selected with CMake's own variables --- `CMAKE_SYSTEM_NAM
 -   `WITH_EDITOR` (default @cpp ON @ce) --- Enable the built-in level editor, see @ref editor
     -   Not available on **Nintendo 64**, **Dreamcast**, **GameCube** and **PlayStation 2**, which can't save
         anything, in a dedicated server and in the Shareware Demo
+    -   Also defines `WITH_PNG_ENCODER`, which compiles in the encoder of @ref nCine::PngCodec --- the game itself
+        only reads PNG images, so a build without the editor leaves it out. AssetPacker defines it on its own
 
 */
 

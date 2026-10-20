@@ -86,6 +86,8 @@ namespace Jazz2::Editor
 		void PopClip();
 		/** @brief Returns the current clipping, empty if nothing is clipped */
 		const Rectf& GetClip() const;
+		/** @brief Returns `false` if nothing drawn in a rectangle, or a little around it, would be seen inside of the clipping */
+		bool IsVisible(const Rectf& rect) const;
 		/** @brief Makes everything drawn more transparent */
 		void PushOpacity(float opacity);
 		/** @brief Ends the last transparency */
@@ -101,6 +103,8 @@ namespace Jazz2::Editor
 		void RoundRectBorder(const Rectf& rect, const Colorf& color, UiLayer layer = UiLayer::Fill);
 		/** @brief Draws a soft shadow of a rectangle */
 		void Shadow(const Rectf& rect, float opacity = 1.0f);
+		/** @brief Draws the ring around an element that has the keyboard focus */
+		void FocusRing(const Rectf& rect);
 		/** @brief Draws a panel, its shadow, background and border */
 		void Panel(const Rectf& rect, bool shadow = true, const Colorf& fill = UiTheme::PanelFill, const Colorf& border = UiTheme::PanelBorderDim);
 		/** @brief Draws a line, antialiased unless it's horizontal or vertical */
@@ -109,7 +113,7 @@ namespace Jazz2::Editor
 		void Polyline(ArrayView<const Vector2f> points, float thickness, const Colorf& color, UiLayer layer = UiLayer::Overlay);
 		/** @brief Draws a filled circle */
 		void Circle(Vector2f center, float radius, const Colorf& color, UiLayer layer = UiLayer::Content);
-		/** @brief Draws an icon centered in a rectangle, at a whole multiple of its size */
+		/** @brief Draws an icon centered in a rectangle, at the size of an icon at the scale of the interface */
 		void Icon(EditorIcon icon, const Rectf& rect, const Colorf& color, UiLayer layer = UiLayer::Content);
 
 		/** @brief Returns the size of text relative to the usual size of the interface */
@@ -155,8 +159,10 @@ namespace Jazz2::Editor
 		float _opacity;
 		Rendering::PolylineRenderer* _lines;
 
-		void DrawNineSlice(const UiSkin::NineSlice& slice, const Rectf& rect, const Colorf& color, UiLayer layer);
+		void DrawNineSlice(const UiSkin::NineSlice& slice, const Rectf& rect, const Colorf& color, UiLayer layer, bool withMiddle = true);
 		Colorf ApplyOpacity(const Colorf& color) const;
+		// Cuts a segment to the clipping made smaller by an inset, returns false if nothing of it is left
+		static bool ClipSegment(const Rectf& clip, float inset, Vector2f& from, Vector2f& to);
 	};
 }
 

@@ -3,11 +3,19 @@
 #if defined(WITH_EDITOR)
 
 #include "EventPanels.h"
+#include "LayerResizeHandles.h"
 #include "ShellPanels.h"
+#include "ToolOptionsBar.h"
 #include "../EditorSession.h"
 #include "../Document/Annotations.h"
+#include "../Document/DocumentChanges.h"
 #include "../Runtime/EditorCamera.h"
 #include "../Runtime/EditorLevelHandler.h"
+#include "../Runtime/MaskOverlay.h"
+#include "../Runtime/PlayTransition.h"
+#include "../Session/PlayOverlays.h"
+#include "../Tools/TileTools.h"
+#include "../UI/UiMenu.h"
 #include "../UI/UiSurface.h"
 #include "../../Rendering/PolylineRenderer.h"
 #include "../../ILevelHandler.h"
@@ -46,17 +54,48 @@ namespace Jazz2::Editor
 		constexpr float NarrowWidth = 420.0f;
 		// Most of the screen a drawer takes
 		constexpr float DrawerMaxFraction = 0.85f;
+		// What's shown over the level is drawn in slot 0 and what the tool shows in slot 1, the bubbles with texts go over
+		// both, so no mark, sprite or link of an event covers them, still under the panels (see UiSurface::RootSlots)
+		constexpr std::int32_t BubbleSlot = 2;
 
 		// Tools and commands only experts are offered, see EditorSettings::Expert
 		const char* const ExpertActions[] = {
-			"tool.rectangle", "tool.eyedropper", "tool.wand", "tool.path", "tool.measure", "tool.ground",
-			"edit.history", "edit.findReplace", "edit.smartRetile", "edit.beautify", "edit.terrainRules", "edit.traceGround", "edit.bakeGround",
-			"edit.continueRow", "events.selectSameType", "events.copyToMatchingTiles", "stamp.random", "stamp.reroll", "edit.prefabs",
-			"view.flat", "view.pauseLayers", "view.reachability", "view.addNote",
-			"layer.resize", "level.snapOffGrid", "level.reloadEvents", "level.animations", "level.tilesets", "level.palette", "level.editTile",
-			"level.applyTileChanges", "level.rearrangeTileSet", "level.newTileSet", "level.importTileSet", "level.addTiles", "level.fxTiles",
-			"level.exportTileSet", "play.setMarker", "play.clearMarker", "play.marker"
+			ActionIds::ToolRectangle, ActionIds::ToolEyedropper, ActionIds::ToolWand, ActionIds::ToolPath, ActionIds::ToolMeasure, ActionIds::ToolGround,
+			ActionIds::EditHistory, ActionIds::EditFindReplace, ActionIds::EditSmartRetile, ActionIds::EditBeautify, ActionIds::EditTerrainRules, ActionIds::EditTraceGround, ActionIds::EditBakeGround,
+			ActionIds::EditContinueRow, ActionIds::EventsSelectSameType, ActionIds::EventsCopyToMatchingTiles, ActionIds::StampRandom, ActionIds::StampReroll, ActionIds::EditPrefabs,
+			ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewReachability, ActionIds::ViewAddNote,
+			ActionIds::LayerResize, ActionIds::LevelSnapOffGrid, ActionIds::LevelReloadEvents, ActionIds::LevelEpisode, ActionIds::LevelAnimations, ActionIds::LevelTileSets, ActionIds::LevelPalette, ActionIds::LevelEditTile,
+			ActionIds::LevelApplyTileChanges, ActionIds::LevelRearrangeTileSet, ActionIds::LevelNewTileSet, ActionIds::LevelImportTileSet, ActionIds::LevelAddTiles, ActionIds::LevelFxTiles,
+			ActionIds::LevelExportTileSet,
+			ActionIds::ToolShape, ActionIds::ShapeLine, ActionIds::ShapeRectangle, ActionIds::ShapeEllipse, ActionIds::ShapeFilledEllipse, ActionIds::StampRotate, ActionIds::StampRotateCCW, ActionIds::StampRandomFlipX,
+			ActionIds::StampRandomFlipY, ActionIds::StampWeights, ActionIds::ToolsModifierKeep, ActionIds::ToolsModifierNormal, ActionIds::ToolsModifierTranslucent, ActionIds::ToolsModifierInvisible,
+			ActionIds::ToolsModifierHeat, ActionIds::ToolsModifierOnly, ActionIds::ToolsAcrossSeams, ActionIds::ToolsIgnoreFlips, ActionIds::ToolsOnlyEmpty, ActionIds::ToolsWandGlobal, ActionIds::EventsModeRectangle,
+			ActionIds::EventsModeFill, ActionIds::MeasureWalk, ActionIds::MeasureDash, ActionIds::MeasureDoubleJump, ActionIds::MeasureCopter, ActionIds::MeasureCollisions,
+			ActionIds::SelectGrow, ActionIds::SelectShrink, ActionIds::SelectSameTiles, ActionIds::EditMirrorSwapTeams, ActionIds::EditCopyLayers, ActionIds::EditPasteLayers, ActionIds::EditModifierNormal,
+			ActionIds::EditModifierTranslucent, ActionIds::EditModifierInvisible, ActionIds::EditModifierHeat, ActionIds::EventsFillSelection
 		};
+
+		// Button whose tooltip is made when it's shown, the shortcuts in it may have been changed meanwhile
+		class LiveTooltipButton : public UiButton
+		{
+		public:
+			using UiButton::UiButton;
+
+			mutable Function<String()> TooltipFunc;
+
+			StringView GetTooltip(Vector2f pos) const override
+			{
+				if (!TooltipFunc) {
+					return UiButton::GetTooltip(pos);
+				}
+				_liveTooltip = TooltipFunc();
+				return _liveTooltip;
+			}
+
+		private:
+			mutable String _liveTooltip;
+		};
+
 		// The grid fades out when its cells get smaller than this, in pixels
 		constexpr float GridMinCellSize = 6.0f;
 		constexpr float GridFadeRange = 14.0f;
@@ -103,6 +142,70 @@ namespace Jazz2::Editor
 				}
 			}
 		}
+
+		// Takes events of the same identifier on tiles next to each other together, as the tiles of a warp. The items
+		// are sorted by the tile, each gets the index of its group, the groups get the tiles they cover.
+		template<class TItem, class TGroup>
+		void GroupNeighbors(SmallVectorImpl<TItem>& items, std::int32_t gridWidth, SmallVectorImpl<TGroup>& groups)
+		{
+			std::int32_t count = std::int32_t(items.size());
+			if (count == 0 || gridWidth <= 0) {
+				return;
+			}
+			SmallVector<std::int32_t, 0> parents;
+			parents.resize_for_overwrite(std::size_t(count));
+			for (std::int32_t i = 0; i < count; i++) {
+				parents[i] = i;
+			}
+			auto findRoot = [&parents](std::int32_t i) {
+				while (parents[i] != i) {
+					parents[i] = parents[parents[i]];
+					i = parents[i];
+				}
+				return i;
+			};
+			auto indexOf = [&items](std::int64_t cell) -> std::int32_t {
+				auto it = std::lower_bound(items.begin(), items.end(), cell, [](const TItem& item, std::int64_t c) { return std::int64_t(item.Cell) < c; });
+				return (it != items.end() && std::int64_t(it->Cell) == cell ? std::int32_t(it - items.begin()) : -1);
+			};
+			// Only the neighbors after a tile, those before it looked at it already
+			static const std::int32_t Offsets[4][2] = { { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 } };
+			for (std::int32_t i = 0; i < count; i++) {
+				std::int32_t x = std::int32_t(items[i].Cell % std::uint32_t(gridWidth));
+				for (const auto& offset : Offsets) {
+					if (x + offset[0] < 0 || x + offset[0] >= gridWidth) {
+						continue;
+					}
+					std::int32_t j = indexOf(std::int64_t(items[i].Cell) + std::int64_t(offset[1]) * gridWidth + offset[0]);
+					if (j >= 0 && items[j].Id == items[i].Id) {
+						std::int32_t a = findRoot(i), b = findRoot(j);
+						if (a != b) {
+							parents[b] = a;
+						}
+					}
+				}
+			}
+			SmallVector<std::int32_t, 0> groupOfRoot;
+			groupOfRoot.resize(std::size_t(count), -1);
+			for (std::int32_t i = 0; i < count; i++) {
+				std::int32_t root = findRoot(i);
+				std::int32_t x = std::int32_t(items[i].Cell % std::uint32_t(gridWidth)), y = std::int32_t(items[i].Cell / std::uint32_t(gridWidth));
+				if (groupOfRoot[root] < 0) {
+					groupOfRoot[root] = std::int32_t(groups.size());
+					TGroup& group = groups.emplace_back();
+					group.Cells = Recti(x, y, 1, 1);
+					group.Id = items[i].Id;
+				} else {
+					Recti& cells = groups[groupOfRoot[root]].Cells;
+					std::int32_t right = std::max(cells.X + cells.W, x + 1), bottom = std::max(cells.Y + cells.H, y + 1);
+					cells.X = std::min(cells.X, x);
+					cells.Y = std::min(cells.Y, y);
+					cells.W = right - cells.X;
+					cells.H = bottom - cells.Y;
+				}
+				items[i].Group = groupOfRoot[root];
+			}
+		}
 	}
 
 	EditorShell::EditorShell(EditorSession& session)
@@ -114,6 +217,17 @@ namespace Jazz2::Editor
 		CreateMenuBar();
 		CreateToolbar();
 		CreateToolStrip();
+		// Before the panels, which are drawn over the handles and get the pointer first
+		_resizeHandles = Add<LayerResizeHandles>(session, [this]() { return _viewRect; }, [this](const LayerView& view) { return GetLayerFrame(view); });
+		{
+			EditorSession* sessionPtr = &session;
+			_resizeHandles->IsVisibleFunc = [sessionPtr]() { return sessionPtr->ArePanelsShown(); };
+		}
+
+		_changeObserver = std::make_shared<Function<void(const DocumentChanges&)>>([this](const DocumentChanges& changes) {
+			OnDocumentChanged(changes);
+		});
+		session.AddChangeObserver(_changeObserver);
 
 		_rightFrame = Add<UiDockFrame>(UiDockSide::Right, _("Drag to move the panel, to the edge of the screen to dock it again"));
 		_rightDock = _rightFrame->GetPanel();
@@ -205,15 +319,51 @@ namespace Jazz2::Editor
 
 		_playBar = Add<UiPanel>(UiPanelStyle::Floating, UiOrientation::Horizontal, UiTheme::Spacing, UiThickness(3.0f));
 		_playBar->IsVisibleFunc = [s]() { return !s->ArePanelsShown(); };
-		auto* back = _playBar->Add<UiButton>(_("Back to Editor"), EditorIcon::Stop, [s]() { s->StopPlayTest(true); });
+		auto* back = _playBar->Add<LiveTooltipButton>(_("Back to Editor"), EditorIcon::EnterEditor, [s]() { s->StopPlayTest(true); });
 		back->Style = UiButtonStyle::Accent;
-		back->Tooltip = _("Back to Editor (F5)");
+		// The icons over the game are in its style, in colors of their own, white shows them as they are
+		back->IconColor = Colorf::White;
+		back->TooltipFunc = [s]() {
+			EditorAction* stop = s->GetActions().Find(ActionIds::PlayStop);
+			return (stop != nullptr ? stop->GetTooltip() : String(_("Back to Editor")));
+		};
 		auto* restart = _playBar->Add<UiButton>(_("Restart"), EditorIcon::Play, [s]() {
 			s->StopPlayTest(false);
 			s->StartPlayTest(PlayStartMode::FromStart);
 		});
 		restart->Style = UiButtonStyle::Flat;
 		restart->IconColor = UiTheme::Play;
+		// The debug toggles of the play-test, their keys work while the level is played
+		LiveTooltipButton* debug = _playBar->Add<LiveTooltipButton>(_("Debug"), EditorIcon::Debug);
+		debug->Style = UiButtonStyle::Flat;
+		debug->IconColor = Colorf::White;
+		debug->TooltipFunc = [s]() {
+			// The shortcuts as they are now, those without one are left out
+			String text;
+			for (const char* id : { ActionIds::PlayTeleport, ActionIds::PlayPause, ActionIds::PlayStep, ActionIds::PlaySlowMotion }) {
+				EditorAction* action = s->GetActions().Find(StringView(id));
+				String key = (action != nullptr ? action->Key.ToString() : String());
+				if (!key.empty()) {
+					text = (text.empty() ? String(action->Label + " - "_s + key) : String(text + "\n"_s + action->Label + " - "_s + key));
+				}
+			}
+			return (text.empty() ? String(_("Debug tools of the play-test")) : text);
+		};
+		debug->OnClick = [s, debug]() {
+			static const char* const DebugActions[] = { ActionIds::PlayPause, ActionIds::PlayStep, ActionIds::PlaySlowMotion, ActionIds::PlayTeleport, nullptr,
+				ActionIds::PlayHitboxes, ActionIds::PlayEventZones };
+			SmallVector<UiMenuEntry, 0> entries;
+			for (const char* id : DebugActions) {
+				if (id == nullptr) {
+					entries.push_back(UiMenuEntry::Separator());
+				} else if (EditorAction* action = s->GetActions().Find(id)) {
+					entries.push_back(MakeMenuEntry(*action));
+				}
+			}
+			if (UiSurface* surface = s->GetSurface()) {
+				UiPopupMenu::Show(*surface, Death::move(entries), Vector2f(debug->Bounds.X, debug->Bounds.Y + debug->Bounds.H));
+			}
+		};
 	}
 
 	EditorShell::~EditorShell()
@@ -228,6 +378,64 @@ namespace Jazz2::Editor
 			}
 		}
 		return false;
+	}
+
+	UiElement* EditorShell::FindDialog(StringView id) const
+	{
+		for (const ShownDialog& dialog : _shownDialogs) {
+			if (dialog.Id == id) {
+				return dialog.Element;
+			}
+		}
+		return nullptr;
+	}
+
+	void EditorShell::TrackDialog(StringView id, UiElement* dialog, Function<void()>&& onShownAgain)
+	{
+		ShownDialog& shown = _shownDialogs.emplace_back();
+		shown.Id = id;
+		shown.Element = dialog;
+		shown.OnShownAgain = Death::move(onShownAgain);
+	}
+
+	void EditorShell::ForgetDialog(UiElement* dialog)
+	{
+		for (std::size_t i = 0; i < _shownDialogs.size(); i++) {
+			if (_shownDialogs[i].Element == dialog) {
+				_shownDialogs.erase(_shownDialogs.begin() + i);
+				return;
+			}
+		}
+	}
+
+	void EditorShell::ShowDialogAgain(UiElement* dialog)
+	{
+		// Taken out while it runs, it may close the dialog, which forgets it
+		Function<void()> onShownAgain;
+		for (ShownDialog& shown : _shownDialogs) {
+			if (shown.Element == dialog) {
+				onShownAgain = Death::move(shown.OnShownAgain);
+				break;
+			}
+		}
+		if (!onShownAgain) {
+			return;
+		}
+		onShownAgain();
+		for (ShownDialog& shown : _shownDialogs) {
+			if (shown.Element == dialog) {
+				shown.OnShownAgain = Death::move(onShownAgain);
+				break;
+			}
+		}
+	}
+
+	void EditorShell::OnDocumentChanged(const DocumentChanges& changes)
+	{
+		if (changes.HasAny(DocumentChangeKind::Events | DocumentChangeKind::LayerStructure)) {
+			_linksDirty = true;
+			_eventsSerial++;
+		}
 	}
 
 	void EditorShell::ToggleDrawer(bool picker)
@@ -267,7 +475,7 @@ namespace Jazz2::Editor
 				} else if (!settings->Expert && IsExpertAction(id)) {
 					continue;
 				} else if (EditorAction* action = actions.Find(id)) {
-					entries.push_back(UiMenuEntry::FromAction(*action));
+					entries.push_back(MakeMenuEntry(*action));
 				}
 			}
 			if (!entries.empty() && entries.back().IsSeparator()) {
@@ -277,7 +485,7 @@ namespace Jazz2::Editor
 
 		EditorSession* session = &_session;
 		_menuBar->AddMenu(_("File"), [addActions, session](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { "file.new", "file.open" });
+			addActions(entries, { ActionIds::FileNew, ActionIds::FileOpen });
 			// Recent files, except the one open now
 			const auto& recentFiles = session->GetSettings().RecentFiles;
 			std::int32_t shown = 0;
@@ -293,40 +501,58 @@ namespace Jazz2::Editor
 				entry.Icon = EditorIcon::File;
 				String pathCopy = path;
 				entry.Execute = [session, pathCopy]() { session->OpenFile(pathCopy); };
-				entries.push_back(std::move(entry));
+				entries.push_back(Death::move(entry));
 				shown++;
 			}
-			addActions(entries, { nullptr, "file.save", "file.saveAs", "file.export", nullptr, "file.exit" });
+			addActions(entries, { nullptr, ActionIds::FileSave, ActionIds::FileSaveAs, ActionIds::FileExport, ActionIds::FileExportPackage, nullptr, ActionIds::FileRecovery, nullptr, ActionIds::FileExit });
 		});
 		_menuBar->AddMenu(_("Edit"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { "edit.undo", "edit.redo", "edit.history", nullptr, "edit.cut", "edit.copy", "edit.paste", "edit.delete", nullptr,
-				"edit.selectAll", "edit.deselect", "edit.findReplace", nullptr, "edit.fillGround", "edit.smartRetile", "edit.beautify", "edit.continueRow", "edit.terrainRules", "edit.traceGround", "edit.bakeGround", nullptr, "events.selectSameType", "events.copyToMatchingTiles", nullptr, "stamp.flipX", "stamp.flipY", "stamp.random", "stamp.reroll", "edit.prefabs" });
+			addActions(entries, { ActionIds::EditUndo, ActionIds::EditRedo, ActionIds::EditHistory, nullptr, ActionIds::EditCut, ActionIds::EditCopy, ActionIds::EditPaste, ActionIds::EditDelete, nullptr,
+				ActionIds::EditSelectAll, ActionIds::EditDeselect, ActionIds::EditFindReplace, nullptr, ActionIds::EditFillGround, ActionIds::EditSmartRetile, ActionIds::EditBeautify, ActionIds::EditContinueRow, ActionIds::EditTerrainRules, ActionIds::EditTraceGround, ActionIds::EditBakeGround, nullptr, ActionIds::EventsSelectSameType, ActionIds::EventsCopyToMatchingTiles, nullptr, ActionIds::EditPrefabs });
 		});
+		// The camera and the interface, what's drawn over the level is in "Show"
 		_menuBar->AddMenu(_("View"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { "view.grid", "view.flat", "view.pauseLayers", "view.masks", "view.events", "view.playPath", "view.reachability", nullptr, "view.navigator", "view.addNote", nullptr, "view.zoomIn", "view.zoomOut", "view.zoomGame", "view.fit", nullptr, "view.uiLarger", "view.uiSmaller", "view.uiAuto",
-				nullptr, "view.layoutAuto", "view.layoutDesktop", "view.layoutCompact", nullptr, "view.expert" });
+			addActions(entries, { ActionIds::ViewZoomIn, ActionIds::ViewZoomOut, ActionIds::ViewZoomGame, ActionIds::ViewFit, nullptr, ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, nullptr,
+				ActionIds::ViewNavigator, ActionIds::ViewAddNote, nullptr, ActionIds::ViewUiLarger, ActionIds::ViewUiSmaller, ActionIds::ViewUiAuto, nullptr, ActionIds::ViewLayoutAuto, ActionIds::ViewLayoutDesktop, ActionIds::ViewLayoutCompact,
+				nullptr, ActionIds::ViewExpert, nullptr, ActionIds::ViewHighContrast, ActionIds::ViewReducedMotion });
+		});
+		_menuBar->AddMenu(_("Show"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+			addActions(entries, { ActionIds::ViewMasks, ActionIds::ViewEvents, ActionIds::ViewPlayPath, nullptr, ActionIds::ViewReachability, ActionIds::ViewReachAny, ActionIds::ViewReachJazz, ActionIds::ViewReachSpaz, ActionIds::ViewReachLori,
+				ActionIds::ViewReachFromMpStarts, nullptr, ActionIds::ViewCompareSaved, nullptr, ActionIds::ViewScreenFrame, ActionIds::ViewScreenFrameGame, ActionIds::ViewScreenFrame4x3,
+				ActionIds::ViewScreenFrame16x9, ActionIds::ViewScreenFrameSplit });
+		});
+		_menuBar->AddMenu(_("Select"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+			addActions(entries, { ActionIds::EditSelectAll, ActionIds::EditDeselect, ActionIds::SelectInvert, ActionIds::SelectGrow, ActionIds::SelectShrink, ActionIds::SelectSameTiles, nullptr,
+				ActionIds::SelectMoveLeft, ActionIds::SelectMoveRight, ActionIds::SelectMoveUp, ActionIds::SelectMoveDown, nullptr, ActionIds::EditMirrorH, ActionIds::EditMirrorV, ActionIds::EditMirrorSwapTeams, nullptr,
+				ActionIds::EditCopyLayers, ActionIds::EditPasteLayers, nullptr, ActionIds::EditModifierNormal, ActionIds::EditModifierTranslucent, ActionIds::EditModifierInvisible,
+				ActionIds::EditModifierHeat, nullptr, ActionIds::EventsFillSelection });
 		});
 		_menuBar->AddMenu(_("Tools"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { "tool.brush", "tool.eraser", "tool.rectangle", "tool.fill", "tool.smart", "tool.ground", "tool.eyedropper", nullptr,
-				"tool.select", "tool.wand", nullptr, "tool.event", "tool.path", nullptr, "tool.measure", "tool.hand" });
+			// Only the tools, the options of the chosen one are in the toolbar; in the order of the tool strip
+			addActions(entries, { ActionIds::ToolSelect, ActionIds::ToolBrush, ActionIds::ToolEraser, ActionIds::ToolRectangle, ActionIds::ToolFill, ActionIds::ToolEyedropper,
+				ActionIds::ToolWand, ActionIds::ToolShape, ActionIds::ToolSmart, ActionIds::ToolGround, nullptr, ActionIds::ToolEvent, ActionIds::ToolPath, nullptr,
+				ActionIds::ToolHand, ActionIds::ToolMeasure });
 		});
 		_menuBar->AddMenu(_("Layer"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { "layer.add", "layer.remove", "layer.resize", nullptr, "layer.up", "layer.down", nullptr, "layer.previous", "layer.next" });
+			// Going to the previous or the next layer is left to its shortcuts and the layer list
+			addActions(entries, { ActionIds::LayerAdd, ActionIds::LayerDuplicate, ActionIds::LayerRemove, ActionIds::LayerResize, nullptr, ActionIds::LayerUp, ActionIds::LayerDown });
 		});
 		_menuBar->AddMenu(_("Level"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { "level.properties", "level.texts", "level.statistics", "level.check", "level.snapOffGrid", "level.reloadEvents", nullptr, "level.animations", "level.tilesets", "level.palette", "level.editTile", "level.applyTileChanges", "level.rearrangeTileSet", nullptr, "level.newTileSet", "level.importTileSet", "level.addTiles", "level.fxTiles", "level.exportTileSet" });
+			addActions(entries, { ActionIds::LevelProperties, ActionIds::LevelTexts, ActionIds::LevelEpisode, ActionIds::LevelStatistics, ActionIds::LevelCheck, ActionIds::EventsList, ActionIds::LevelSnapOffGrid, ActionIds::LevelReloadEvents, ActionIds::LevelEditScript, nullptr, ActionIds::LevelAnimations, ActionIds::LevelTileSets, ActionIds::LevelPalette, ActionIds::LevelEditTile, ActionIds::LevelApplyTileChanges, ActionIds::LevelRearrangeTileSet, nullptr, ActionIds::LevelNewTileSet, ActionIds::LevelImportTileSet, ActionIds::LevelAddTiles, ActionIds::LevelFxTiles, ActionIds::LevelExportTileSet });
 		});
 		_menuBar->AddMenu(_("Play"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { "play.resume", "play.here", "play.start", "play.marker", nullptr, "play.setMarker", "play.clearMarker", nullptr, "play.jazz", "play.spaz", "play.lori", nullptr,
-				"play.easy", "play.normal", "play.hard", nullptr, "view.playPath" });
+			// The debug toggles of a running play-test are in its play bar only
+			addActions(entries, { ActionIds::PlayResume, ActionIds::PlayHere, ActionIds::PlayStart, nullptr, ActionIds::PlayJazz, ActionIds::PlaySpaz, ActionIds::PlayLori, nullptr,
+				ActionIds::PlayEasy, ActionIds::PlayNormal, ActionIds::PlayHard, nullptr, ActionIds::ViewPlayPath, ActionIds::ViewDeaths, ActionIds::PlayClearPaths });
 #if defined(WITH_MULTIPLAYER)
 			// Multiplayer in local splitscreen
-			addActions(entries, { nullptr, "play.alone", "play.cooperation", "play.battle", "play.teamBattle", "play.race", "play.treasureHunt",
-				"play.captureTheFlag", nullptr, "play.players1", "play.players2", "play.players3", "play.players4" });
+			addActions(entries, { nullptr, ActionIds::PlayAlone, ActionIds::PlayCooperation, ActionIds::PlayBattle, ActionIds::PlayTeamBattle, ActionIds::PlayRace, ActionIds::PlayTreasureHunt,
+				ActionIds::PlayCaptureTheFlag, nullptr, ActionIds::PlayPlayers1, ActionIds::PlayPlayers2, ActionIds::PlayPlayers3, ActionIds::PlayPlayers4 });
 #endif
 		});
 		_menuBar->AddMenu(_("Help"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { "help.commands", "help.shortcuts" });
+			// Presets of the shortcuts are chosen in the shortcuts dialog
+			addActions(entries, { ActionIds::HelpCommands, ActionIds::HelpShortcuts });
 		});
 	}
 
@@ -335,39 +561,40 @@ namespace Jazz2::Editor
 		_toolbar = Add<UiPanel>(UiPanelStyle::Header, UiOrientation::Horizontal, 1.0f, UiThickness(UiTheme::Padding, 2.0f));
 		_toolbar->ClipContent = true;
 		// The panels in drawers on a small screen
-		for (const char* id : { "view.drawerTiles", "view.drawerLayers" }) {
+		for (const char* id : { ActionIds::ViewDrawerTiles, ActionIds::ViewDrawerLayers }) {
 			if (UiButton* button = AddActionButton(_toolbar, id)) {
 				button->IsVisibleFunc = [this]() { return _compact; };
 			}
 		}
-		AddActionButton(_toolbar, "file.new"_s);
-		AddActionButton(_toolbar, "file.open"_s);
-		AddActionButton(_toolbar, "file.save"_s);
+		AddActionButton(_toolbar, ActionIds::FileNew);
+		AddActionButton(_toolbar, ActionIds::FileOpen);
+		AddActionButton(_toolbar, ActionIds::FileSave);
 		_toolbar->Add<UiSeparator>(UiOrientation::Vertical);
-		AddActionButton(_toolbar, "edit.undo"_s);
-		AddActionButton(_toolbar, "edit.redo"_s);
+		AddActionButton(_toolbar, ActionIds::EditUndo);
+		AddActionButton(_toolbar, ActionIds::EditRedo);
 		// A narrow window leaves out what the menus have too
 		auto notNarrow = [this]() { return !_narrow; };
 		_toolbar->Add<UiSeparator>(UiOrientation::Vertical)->IsVisibleFunc = notNarrow;
-		for (const char* id : { "edit.cut", "edit.copy", "edit.paste" }) {
+		for (const char* id : { ActionIds::EditCut, ActionIds::EditCopy, ActionIds::EditPaste }) {
 			if (UiButton* button = AddActionButton(_toolbar, id)) {
 				button->IsVisibleFunc = notNarrow;
 			}
 		}
 		_toolbar->Add<UiSeparator>(UiOrientation::Vertical)->IsVisibleFunc = notNarrow;
 		EditorSettings* settings = &_session.GetSettings();
-		for (const char* id : { "view.grid", "view.flat", "view.pauseLayers", "view.masks", "view.events", "view.playPath", "view.reachability" }) {
+		for (const char* id : { ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewMasks, ActionIds::ViewEvents, ActionIds::ViewPlayPath, ActionIds::ViewReachability }) {
 			if (UiButton* button = AddActionButton(_toolbar, id)) {
 				bool expert = IsExpertAction(id);
 				button->IsVisibleFunc = [this, settings, expert]() { return (!_narrow && (!expert || settings->Expert)); };
 			}
 		}
 		_toolbar->Add<UiSeparator>(UiOrientation::Vertical);
-		AddActionButton(_toolbar, "view.zoomOut"_s);
-		AddActionButton(_toolbar, "view.zoomIn"_s);
-		AddActionButton(_toolbar, "view.fit"_s);
-		_toolbar->Add<UiElement>()->Flex = 1.0f;
-		if (UiButton* play = AddActionButton(_toolbar, "play.resume"_s, true)) {
+		AddActionButton(_toolbar, ActionIds::ViewZoomOut);
+		AddActionButton(_toolbar, ActionIds::ViewZoomIn);
+		AddActionButton(_toolbar, ActionIds::ViewFit);
+		// The options of the tool chosen take the rest, as many as fit, see ToolOptionsBar
+		_toolbar->Add<ToolOptionsBar>(_session)->Flex = 1.0f;
+		if (UiButton* play = AddActionButton(_toolbar, ActionIds::PlayResume, true)) {
 			play->Style = UiButtonStyle::Accent;
 			play->IconColor = UiTheme::Play;
 		}
@@ -378,12 +605,19 @@ namespace Jazz2::Editor
 		_toolStrip = Add<UiPanel>(UiPanelStyle::Panel, UiOrientation::Vertical, 2.0f, UiThickness(3.0f));
 		// A short window cuts off the buttons that don't fit, they'd show under the status bar otherwise
 		_toolStrip->ClipContent = true;
-		for (const char* id : { "tool.brush", "tool.eraser", "tool.rectangle", "tool.fill", "tool.smart", "tool.ground", "tool.eyedropper", "tool.select", "tool.wand", "tool.event", "tool.path", "tool.measure", "tool.hand" }) {
-			AddActionButton(_toolStrip, id);
+		// Selecting first, then the tools that paint tiles, those that make them up by themselves, apart from them those of
+		// events, and the ones that change nothing last (a separator where the ID is null)
+		static const char* const ToolStripItems[] = { ActionIds::ToolSelect, ActionIds::ToolBrush, ActionIds::ToolEraser, ActionIds::ToolRectangle,
+			ActionIds::ToolFill, ActionIds::ToolEyedropper, ActionIds::ToolWand, ActionIds::ToolShape, ActionIds::ToolSmart, ActionIds::ToolGround, nullptr,
+			ActionIds::ToolEvent, ActionIds::ToolPath, nullptr, ActionIds::ToolHand, ActionIds::ToolMeasure };
+		for (const char* id : ToolStripItems) {
+			if (id == nullptr) {
+				_toolStrip->Add<UiSeparator>();
+			} else {
+				AddActionButton(_toolStrip, id);
+			}
 		}
-		_toolStrip->Add<UiSeparator>();
-		AddActionButton(_toolStrip, "stamp.flipX"_s);
-		AddActionButton(_toolStrip, "stamp.flipY"_s);
+		// Flipping and turning the stamp is among the options of the tools that paint it, in the toolbar
 		_toolStrip->Add<UiSeparator>();
 		_toolStrip->Add<StampPreview>(_session);
 	}
@@ -394,13 +628,16 @@ namespace Jazz2::Editor
 		if (action == nullptr) {
 			return nullptr;
 		}
-		auto* button = parent->Add<UiButton>(showText ? StringView(action->Label) : StringView(), action->Icon, [action]() {
+		auto* button = parent->Add<LiveTooltipButton>(showText ? StringView(action->Label) : StringView(), action->Icon, [action]() {
 			if (action->CanExecute()) {
 				action->Execute();
 			}
 		});
 		button->Style = UiButtonStyle::Flat;
-		button->Tooltip = action->GetTooltip();
+		// With the shortcut it has when it's shown, it can be changed meanwhile
+		button->TooltipFunc = [action]() {
+			return action->GetTooltip();
+		};
 		button->IsEnabledFunc = [action]() {
 			return action->CanExecute();
 		};
@@ -490,6 +727,7 @@ namespace Jazz2::Editor
 		_rightFrame->Arrange(context, rightDockBounds);
 
 		_viewRect = Rectf(left, top, right - left, bottom - top);
+		_resizeHandles->Arrange(context, _viewRect);
 
 		float grip = context.Px(SplitterGrip);
 		_rightSplitter->Arrange(context, Rectf(std::round(right - grip * 0.5f), top, grip, bottom - top));
@@ -509,7 +747,7 @@ namespace Jazz2::Editor
 	{
 		// The bar of the level being played comes in when the panels are gone, in about a third of a second
 		constexpr float PlayBarAppearFrames = 20.0f;
-		_playBarAppear = (_session.ArePanelsShown() ? 0.0f : std::min(_playBarAppear + timeMult / PlayBarAppearFrames, 1.0f));
+		_playBarAppear = (_session.ArePanelsShown() ? 0.0f : std::min(_playBarAppear + UiTheme::GetAnimationStep(timeMult, PlayBarAppearFrames), 1.0f));
 		UiElement::Update(timeMult);
 	}
 
@@ -563,7 +801,12 @@ namespace Jazz2::Editor
 			if (_session.IsPlayPathShown()) {
 				DrawPlayPath(painter);
 			}
+			// The deaths in the last play-tests, see the Play menu
+			_session.DrawSessionOverlays(painter, _viewRect);
 			DrawAnnotations(painter);
+			if (_session.GetSettings().ShowScreenFrame) {
+				DrawScreenFrame(painter);
+			}
 
 			// What the tool shows goes over the labels of events
 			ToolPointer hover;
@@ -672,59 +915,175 @@ namespace Jazz2::Editor
 			return;
 		}
 
+		// The selection is of the cells of the layer itself, a layer that repeats shows it in every copy of it the same way -
+		// the tiles of a copy are its tiles - so on an axis it repeats in, the cells seen are wrapped into the layer
+		const bool repeatX = (view.RepeatX && view.Size.X > 0);
+		const bool repeatY = (view.RepeatY && view.Size.Y > 0);
 		const Recti& bounds = selection.GetBounds();
 		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X, _viewRect.Y)));
 		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X + _viewRect.W, _viewRect.Y + _viewRect.H)));
-		from.X = std::max(from.X, bounds.X);
-		from.Y = std::max(from.Y, bounds.Y);
-		to.X = std::min(to.X, bounds.X + bounds.W - 1);
-		to.Y = std::min(to.Y, bounds.Y + bounds.H - 1);
+		if (!repeatX) {
+			from.X = std::max(from.X, bounds.X);
+			to.X = std::min(to.X, bounds.X + bounds.W - 1);
+		}
+		if (!repeatY) {
+			from.Y = std::max(from.Y, bounds.Y);
+			to.Y = std::min(to.Y, bounds.Y + bounds.H - 1);
+		}
+		if (from.X > to.X || from.Y > to.Y) {
+			return;
+		}
 
-		// The edges between selected and unselected tiles are marching ants of short dashes, as a bitmap editor has them,
-		// the dashes follow the diagonal of the screen so they continue around corners
-		float thickness = std::max(1.0f, std::round(painter.GetScale()));
-		float dash = 2.0f * thickness;
-		float period = dash * 2.0f;
-		UiSurface* surface = GetSurface();
-		float offset = std::fmod((surface != nullptr ? surface->AnimTime : 0.0f) * dash * 4.0f, period);
-		Colorf edgeA = UiTheme::Accent;
-		Colorf edgeB = Colorf(0.1f, 0.08f, 0.2f, 1.0f);
-		auto drawEdge = [&](float x, float y, float length, bool horizontal) {
-			Rectf line = (horizontal ? Rectf(x, y, length, thickness) : Rectf(x, y, thickness, length));
-			painter.FillRect(line, edgeB, UiLayer::Content);
-			float from = (horizontal ? x : y);
-			float across = (horizontal ? y : x);
-			float to = from + length;
-			// The first dash that starts at or before the edge
-			float start = std::floor((from + across - offset) / period) * period + offset - across;
-			for (float pos = start; pos < to; pos += period) {
-				float a = std::max(pos, from), b = std::min(pos + dash, to);
-				if (b > a) {
-					painter.FillRect(horizontal ? Rectf(a, y, b - a, thickness) : Rectf(x, a, thickness, b - a), edgeA, UiLayer::Overlay);
+		// Floor division, the cells of the copies before the layer are negative
+		auto floorDiv = [](std::int32_t a, std::int32_t b) {
+			return (a >= 0 ? a / b : -((-a + b - 1) / b));
+		};
+		auto wrap = [](std::int32_t value, std::int32_t size) {
+			value %= size;
+			return (value < 0 ? value + size : value);
+		};
+
+		// Selected tiles next to each other in a row are one rectangle, and so are the edges along them. Zoomed out
+		// far, tiles of a few pixels are taken a few at a time, as selected as the tile in the middle of them, so
+		// there are never more rectangles than such blocks seen.
+		std::int32_t unit = GetCellUnit(view);
+		Vector2i fromUnit(floorDiv(from.X, unit), floorDiv(from.Y, unit)), toUnit(floorDiv(to.X, unit), floorDiv(to.Y, unit));
+		Recti units(fromUnit.X, fromUnit.Y, toUnit.X - fromUnit.X + 1, toUnit.Y - fromUnit.Y + 1);
+		const std::int32_t repeats = (repeatX ? 1 : 0) | (repeatY ? 2 : 0);
+		if (selection.GetRevision() != _selectionRevision || selection.GetLayer() != _selectionLayer || unit != _selectionUnit ||
+			units.X != _selectionUnits.X || units.Y != _selectionUnits.Y || units.W != _selectionUnits.W || units.H != _selectionUnits.H ||
+			view.Size != _selectionLayerSize || repeats != _selectionRepeats) {
+			_selectionRevision = selection.GetRevision();
+			_selectionLayer = selection.GetLayer();
+			_selectionUnit = unit;
+			_selectionUnits = units;
+			_selectionLayerSize = view.Size;
+			_selectionRepeats = repeats;
+			_selectionRuns.clear();
+			_selectionEdges.clear();
+
+			auto isSelected = [&](std::int32_t ux, std::int32_t uy) {
+				std::int32_t x = ux * unit + unit / 2;
+				std::int32_t y = uy * unit + unit / 2;
+				return selection.Contains(repeatX ? wrap(x, view.Size.X) : x, repeatY ? wrap(y, view.Size.Y) : y);
+			};
+
+			// The blocks of a row whose middles fall in a copy of the selected columns, only those can be selected - so a
+			// view of many copies doesn't look up every block it shows
+			SmallVector<Vector2i, 8> spans;
+			if (!repeatX) {
+				spans.push_back(Vector2i(fromUnit.X, toUnit.X));
+			} else {
+				const std::int32_t size = view.Size.X;
+				const std::int32_t firstMiddle = fromUnit.X * unit + unit / 2;
+				const std::int32_t lastMiddle = toUnit.X * unit + unit / 2;
+				for (std::int32_t k = floorDiv(firstMiddle - (bounds.X + bounds.W - 1), size); ; k++) {
+					const std::int32_t first = bounds.X + k * size;
+					const std::int32_t last = first + bounds.W - 1;
+					if (first > lastMiddle) {
+						break;
+					}
+					// The blocks with their middle in [first, last]
+					std::int32_t u0 = std::max(-floorDiv(-(first - unit / 2), unit), fromUnit.X);
+					std::int32_t u1 = std::min(floorDiv(last - unit / 2, unit), toUnit.X);
+					if (u0 > u1) {
+						continue;
+					}
+					if (!spans.empty() && spans.back().Y + 1 >= u0) {
+						spans.back().Y = std::max(spans.back().Y, u1);
+					} else {
+						spans.push_back(Vector2i(u0, u1));
+					}
 				}
 			}
-		};
-		for (std::int32_t y = from.Y; y <= to.Y; y++) {
-			for (std::int32_t x = from.X; x <= to.X; x++) {
-				if (!selection.Contains(x, y)) {
+
+			for (std::int32_t uy = fromUnit.Y; uy <= toUnit.Y; uy++) {
+				// Not a row of the selection at all
+				std::int32_t middleY = uy * unit + unit / 2;
+				if (repeatY) {
+					middleY = wrap(middleY, view.Size.Y);
+				}
+				if (middleY < bounds.Y || middleY >= bounds.Y + bounds.H) {
 					continue;
 				}
-				Rectf rect = view.CellToScreen(Vector2i(x, y));
-				painter.FillRect(rect, UiTheme::Selection, UiLayer::Fill);
-				if (!selection.Contains(x, y - 1)) {
-					drawEdge(rect.X, rect.Y, rect.W, true);
-				}
-				if (!selection.Contains(x, y + 1)) {
-					drawEdge(rect.X, rect.Y + rect.H - thickness, rect.W, true);
-				}
-				if (!selection.Contains(x - 1, y)) {
-					drawEdge(rect.X, rect.Y, rect.H, false);
-				}
-				if (!selection.Contains(x + 1, y)) {
-					drawEdge(rect.X + rect.W - thickness, rect.Y, rect.H, false);
+				for (const Vector2i& span : spans) {
+					std::int32_t ux = span.X;
+					while (ux <= span.Y) {
+						if (!isSelected(ux, uy)) {
+							ux++;
+							continue;
+						}
+						std::int32_t start = ux;
+						while (ux <= span.Y && isSelected(ux, uy)) {
+							ux++;
+						}
+						std::int32_t end = ux;
+						_selectionRuns.push_back({ uy, start, end });
+						// Across the seam of copies too, a selection that goes on in the next copy has no edge there
+						if (!isSelected(start - 1, uy)) {
+							_selectionEdges.push_back({ uy, start, start, 0 });
+						}
+						if (!isSelected(end, uy)) {
+							_selectionEdges.push_back({ uy, end, end, 1 });
+						}
+						// Above and below, along the parts of the run next to tiles that aren't selected
+						for (std::int32_t side = 0; side < 2; side++) {
+							std::int32_t ny = (side == 0 ? uy - 1 : uy + 1);
+							std::int32_t x = start;
+							while (x < end) {
+								if (isSelected(x, ny)) {
+									x++;
+									continue;
+								}
+								std::int32_t edgeStart = x;
+								while (x < end && !isSelected(x, ny)) {
+									x++;
+								}
+								_selectionEdges.push_back({ uy, edgeStart, x, std::uint8_t(side == 0 ? 2 : 3) });
+							}
+						}
+					}
 				}
 			}
 		}
+
+		auto unitX = [&](std::int32_t ux) {
+			return view.CellToScreen(Vector2i(ux * unit, 0)).X;
+		};
+		auto unitY = [&](std::int32_t uy) {
+			return view.CellToScreen(Vector2i(0, uy * unit)).Y;
+		};
+		for (const SelectionRun& run : _selectionRuns) {
+			float top = unitY(run.Y), bottom = unitY(run.Y + 1);
+			float left = unitX(run.Start), right = unitX(run.End);
+			painter.FillRect(Rectf(left, top, right - left, bottom - top), UiTheme::Selection, UiLayer::Fill);
+		}
+		// The edges between selected and unselected tiles are marching ants
+		float thickness = std::max(1.0f, std::round(painter.GetScale()));
+		float animTime = _session.GetAnimTime();
+		for (const SelectionEdge& edge : _selectionEdges) {
+			float top = unitY(edge.Y), bottom = unitY(edge.Y + 1);
+			switch (edge.Side) {
+				case 0: DrawSelectionEdge(painter, unitX(edge.Start), top, bottom - top, false, animTime); break;
+				case 1: DrawSelectionEdge(painter, unitX(edge.Start) - thickness, top, bottom - top, false, animTime); break;
+				default: {
+					float left = unitX(edge.Start);
+					DrawSelectionEdge(painter, left, edge.Side == 2 ? top : bottom - thickness, unitX(edge.End) - left, true, animTime);
+					break;
+				}
+			}
+		}
+	}
+
+	std::int32_t EditorShell::GetCellUnit(const LayerView& view)
+	{
+		// Tiles drawn one by one at least this large on the screen
+		constexpr float MinUnitSize = 3.0f;
+		float cellSize = view.CellToScreen(Vector2i(1, 1)).X - view.CellToScreen(Vector2i(0, 0)).X;
+		if (cellSize >= MinUnitSize) {
+			return 1;
+		}
+		return std::max<std::int32_t>(std::int32_t(std::ceil(MinUnitSize / std::max(cellSize, 0.001f))), 1);
 	}
 
 	void EditorShell::DrawPlayPath(UiPainter& painter)
@@ -891,11 +1250,14 @@ namespace Jazz2::Editor
 		if (layerIndex == document.GetSpriteLayerIndex()) {
 			DrawMaskGlyphs(painter, view);
 		}
+		// Translucent and invisible tiles, solid as any other, but drawn otherwise or not at all
+		DrawTileModifiers(painter, document.Layers[layerIndex], view, _viewRect);
 	}
 
 	void EditorShell::DrawReachability(UiPainter& painter)
 	{
-		ArrayView<const std::int32_t> distances = _session.GetReachability();
+		const PlayOverlays& playOverlays = _session.GetPlayOverlays();
+		ArrayView<const std::int32_t> distances = playOverlays.GetReachability();
 		LevelDocument& document = _session.GetDocument();
 		Vector2i gridSize = document.GetEventGridSize();
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
@@ -910,56 +1272,56 @@ namespace Jazz2::Editor
 		to.X = std::min(to.X, gridSize.X - 1);
 		to.Y = std::min(to.Y, gridSize.Y - 1);
 
-		// Brighter near the start, further away it fades, so the way through the level can be read
-		std::int32_t maxDistance = 1;
-		for (std::int32_t distance : distances) {
-			maxDistance = std::max(maxDistance, distance);
+		if (from.X > to.X || from.Y > to.Y) {
+			return;
 		}
-		for (std::int32_t y = from.Y; y <= to.Y; y++) {
-			for (std::int32_t x = from.X; x <= to.X; x++) {
-				std::int32_t distance = distances[std::size_t(y) * std::size_t(gridSize.X) + std::size_t(x)];
-				if (distance < 0) {
+
+		// Brighter near the start, further away it fades, so the way through the level can be read; in a few steps, so
+		// tiles next to each other in a row of the same step are one rectangle, and zoomed out far, tiles of a few pixels
+		// are taken a few at a time, as the tile in the middle of them, see DrawSelection()
+		constexpr std::int32_t Steps = 16;
+		std::int32_t maxDistance = std::max<std::int32_t>(playOverlays.GetReachabilityMaxDistance(), 1);
+		std::int32_t unit = GetCellUnit(view);
+		auto getStep = [&](std::int32_t ux, std::int32_t uy) -> std::int32_t {
+			std::int32_t x = std::min<std::int32_t>(ux * unit + unit / 2, gridSize.X - 1);
+			std::int32_t y = std::min<std::int32_t>(uy * unit + unit / 2, gridSize.Y - 1);
+			std::int32_t distance = distances[std::size_t(y) * std::size_t(gridSize.X) + std::size_t(x)];
+			if (distance < 0) {
+				return -1;
+			}
+			float near = std::clamp(1.0f - float(distance) / float(maxDistance), 0.0f, 1.0f);
+			return std::int32_t(std::round(near * float(Steps)));
+		};
+		Vector2i fromUnit(from.X / unit, from.Y / unit), toUnit(to.X / unit, to.Y / unit);
+		for (std::int32_t uy = fromUnit.Y; uy <= toUnit.Y; uy++) {
+			float top = view.CellToScreen(Vector2i(0, uy * unit)).Y;
+			float bottom = view.CellToScreen(Vector2i(0, std::min<std::int32_t>((uy + 1) * unit, gridSize.Y))).Y;
+			std::int32_t ux = fromUnit.X;
+			while (ux <= toUnit.X) {
+				std::int32_t step = getStep(ux, uy);
+				std::int32_t start = ux;
+				do {
+					ux++;
+				} while (ux <= toUnit.X && getStep(ux, uy) == step);
+				if (step < 0) {
 					continue;
 				}
-				float near = 1.0f - float(distance) / float(maxDistance);
-				painter.FillRect(view.CellToScreen(Vector2i(x, y)), Colorf(0.3f + 0.4f * near, 1.0f, 0.4f, 0.14f + 0.18f * near), UiLayer::Fill);
+				// The color of reached places, as the theme has it
+				Colorf color = UiTheme::OverlayGood;
+				color.A = 0.14f + 0.18f * (float(step) / float(Steps));
+				float left = view.CellToScreen(Vector2i(start * unit, 0)).X;
+				float right = view.CellToScreen(Vector2i(std::min<std::int32_t>(ux * unit, gridSize.X), 0)).X;
+				painter.FillRect(Rectf(left, top, right - left, bottom - top), color, UiLayer::Fill);
 			}
 		}
 	}
 
 	void EditorShell::DrawAnnotations(UiPainter& painter)
 	{
-		// The play-start marker, a flag on a pole standing where the player starts
-		Vector2i playStart;
-		if (_session.GetPlayStart(playStart)) {
-			std::int32_t spriteLayer = _session.GetDocument().GetSpriteLayerIndex();
-			LayerView view = _session.GetLayerView(spriteLayer >= 0 ? spriteLayer : 0);
-			Vector2f pos = view.WorldToScreen(Vector2f(float(playStart.X), float(playStart.Y)));
-			pos = Vector2f(std::round(pos.X), std::round(pos.Y));
-			if (_viewRect.Contains(pos)) {
-				float unit = std::max(1.0f, std::round(painter.GetScale()));
-				float pole = painter.Px(18.0f);
-				painter.Circle(pos, painter.Px(3.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), UiLayer::Overlay);
-				painter.FillRect(Rectf(pos.X - std::floor(unit * 0.5f), pos.Y - pole, unit, pole), Colorf(0.9f, 0.9f, 0.9f, 1.0f), UiLayer::Overlay);
-				// A pennant, row by row, the painter has no triangles
-				float flagHeight = painter.Px(8.0f), flagWidth = painter.Px(10.0f);
-				for (float y = 0.0f; y < flagHeight; y += unit) {
-					float width = std::round(flagWidth * (1.0f - std::abs(y + unit * 0.5f - flagHeight * 0.5f) / (flagHeight * 0.5f)));
-					if (width > 0.0f) {
-						painter.FillRect(Rectf(pos.X, pos.Y - pole + y, width, unit), UiTheme::Play, UiLayer::Overlay);
-					}
-				}
-				// TRANSLATORS: Label of the flag in the level where play-tests from the marker start
-				painter.Text(_("Play start"), Vector2f(pos.X + flagWidth + painter.Px(2.0f), pos.Y - pole), UiTheme::TextPlay, Alignment::TopLeft, UiLayer::OverlayText);
-			}
-		}
-
-		const Formats::ChunkRecord* chunk = _session.GetDocument().FindChunk(Annotation::Chunk);
-		if (chunk == nullptr) {
+		const SmallVectorImpl<Annotation>& annotations = _annotations.Get(_session.GetDocument());
+		if (annotations.empty()) {
 			return;
 		}
-		SmallVector<Annotation, 0> annotations;
-		Annotation::Read(_session.GetDocument(), annotations);
 		std::int32_t spriteLayer = _session.GetDocument().GetSpriteLayerIndex();
 		LayerView view = _session.GetLayerView(spriteLayer >= 0 ? spriteLayer : 0);
 		float size = std::round(painter.Px(5.0f));
@@ -970,28 +1332,50 @@ namespace Jazz2::Editor
 				continue;
 			}
 			pos = Vector2f(std::round(pos.X), std::round(pos.Y));
+			// In the color it was given, a note that was done is dimmer
+			Colorf ownColor((annotation.Color & 0xFF) / 255.0f, ((annotation.Color >> 8) & 0xFF) / 255.0f, ((annotation.Color >> 16) & 0xFF) / 255.0f, 1.0f);
+			float alpha = (annotation.Resolved ? 0.45f : 1.0f);
+			painter.PushOpacity(alpha);
 			if (annotation.IsBookmark()) {
-				// A diamond with its number
+				// A diamond with its number, and its name next to it
 				Vector2f diamond[5] = { pos + Vector2f(0.0f, -size * 1.6f), pos + Vector2f(size * 1.6f, 0.0f), pos + Vector2f(0.0f, size * 1.6f),
 					pos + Vector2f(-size * 1.6f, 0.0f), pos + Vector2f(0.0f, -size * 1.6f) };
-				painter.Circle(pos, size * 1.3f, Colorf(0.15f, 0.35f, 0.55f, 0.9f), UiLayer::Overlay);
-				painter.Polyline(diamond, std::max(1.0f, painter.Px(1.0f)), Colorf(0.4f, 0.8f, 1.0f, 1.0f), UiLayer::Overlay);
+				Colorf color = (annotation.Color != 0 ? ownColor : Colorf(0.4f, 0.8f, 1.0f, 1.0f));
+				painter.Circle(pos, size * 1.3f, Colorf(color.R * 0.4f, color.G * 0.4f, color.B * 0.4f, 0.9f), UiLayer::Overlay);
+				painter.Polyline(diamond, std::max(1.0f, painter.Px(1.0f)), color, UiLayer::Overlay);
 				char number[2] = { char('0' + annotation.Slot), '\0' };
 				painter.TextInRect(StringView(number, 1), Rectf(pos.X - size * 2.0f, pos.Y - size * 2.0f, size * 4.0f, size * 4.0f),
 					UiTheme::Text, Alignment::Center, UiLayer::OverlayText);
+				if (!annotation.Text.empty()) {
+					String text = EventCatalog::MakeTextPreview(annotation.Text, 32);
+					float height = painter.Px(UiTheme::RowHeight);
+					std::int32_t previousSlot = painter.GetSlot();
+					painter.SetSlot(BubbleSlot);
+					painter.TextInRect(text, Rectf(pos.X + size * 2.0f, pos.Y - height * 0.5f, painter.MeasureText(text) + padding, height),
+						UiTheme::Text, Alignment::Left, UiLayer::OverlayText);
+					painter.SetSlot(previousSlot);
+				}
 			} else {
-				// A pin with the text next to it
-				painter.Circle(pos, size, Colorf(1.0f, 0.85f, 0.35f, 1.0f), UiLayer::Overlay);
-				painter.Circle(pos, size * 0.45f, Colorf(0.4f, 0.3f, 0.1f, 1.0f), UiLayer::Overlay);
+				// A pin with the text next to it, and how many replies it has
+				Colorf color = (annotation.Color != 0 ? ownColor : Colorf(1.0f, 0.85f, 0.35f, 1.0f));
+				painter.Circle(pos, size, color, UiLayer::Overlay);
+				painter.Circle(pos, size * 0.45f, Colorf(color.R * 0.4f, color.G * 0.35f, color.B * 0.3f, 1.0f), UiLayer::Overlay);
 				String text = EventCatalog::MakeTextPreview(annotation.Text, 40);
+				if (!annotation.Replies.empty()) {
+					text += _f(" ({})", std::int32_t(annotation.Replies.size()));
+				}
 				if (!text.empty()) {
 					float width = painter.MeasureText(text) + padding * 2.0f;
 					float height = painter.Px(UiTheme::RowHeight);
 					Rectf bubble(pos.X + size * 1.5f, pos.Y - height * 0.5f, width, height);
+					std::int32_t previousSlot = painter.GetSlot();
+					painter.SetSlot(BubbleSlot);
 					painter.FillRect(bubble, Colorf(0.25f, 0.2f, 0.08f, 0.85f), UiLayer::Overlay);
 					painter.TextInRect(text, Rectf(bubble.X + padding, bubble.Y, bubble.W - padding * 2.0f, bubble.H), UiTheme::TextAccent, Alignment::Left, UiLayer::OverlayText);
+					painter.SetSlot(previousSlot);
 				}
 			}
+			painter.PopOpacity();
 		}
 	}
 
@@ -1059,6 +1443,8 @@ namespace Jazz2::Editor
 		const Colorf breakColor(1.0f, 0.68f, 0.32f, 1.0f);
 		const Colorf dangerColor(1.0f, 0.42f, 0.42f, 1.0f);
 		const Colorf otherColor(0.5f, 0.88f, 1.0f, 1.0f);
+		// A muted brown, light enough to be seen over the masks
+		const Colorf ricochetColor(0.78f, 0.62f, 0.46f, 1.0f);
 
 		for (std::int32_t y = from.Y; y <= to.Y; y++) {
 			std::uint32_t rowEnd = std::uint32_t(y) * std::uint32_t(gridSize.X) + std::uint32_t(to.X);
@@ -1130,7 +1516,7 @@ namespace Jazz2::Editor
 						stroke({ Vector2f(0.45f, 0.4f), Vector2f(0.7f, 0.45f) }, breakColor);
 						break;
 					case EventType::ModifierRicochet:
-						stroke({ Vector2f(0.5f, 0.2f), Vector2f(0.8f, 0.5f), Vector2f(0.5f, 0.8f), Vector2f(0.2f, 0.5f), Vector2f(0.5f, 0.2f) }, otherColor);
+						stroke({ Vector2f(0.5f, 0.2f), Vector2f(0.8f, 0.5f), Vector2f(0.5f, 0.8f), Vector2f(0.2f, 0.5f), Vector2f(0.5f, 0.2f) }, ricochetColor);
 						break;
 					case EventType::ModifierSlide:
 						stroke({ Vector2f(0.1f, 0.85f), Vector2f(0.9f, 0.85f) }, otherColor);
@@ -1184,10 +1570,8 @@ namespace Jazz2::Editor
 		EventPreviews& previews = _session.GetEventPreviews();
 		const EventSelection& selection = _session.GetEventSelection();
 		float animTime = _session.GetAnimTime();
-		bool moving = (editingEvents && _session.GetTools().GetActive()->IsBusy() && _session.GetTools().GetActiveType() == EditorToolType::Event);
-		std::int32_t playDifficulty = _session.GetSettings().PlayDifficulty;
-		std::uint8_t difficultyBit = (playDifficulty >= std::int32_t(GameDifficulty::Easy) && playDifficulty <= std::int32_t(GameDifficulty::Hard)
-			? std::uint8_t(Formats::EventRecord::Easy << (playDifficulty - std::int32_t(GameDifficulty::Easy))) : 0);
+		bool moving = (editingEvents && IsMovingEvents());
+		std::uint8_t difficultyBit = GetDifficultyFlag(_session.GetSettings().PlayDifficulty);
 		constexpr std::uint16_t Z = std::uint16_t(ILevelHandler::MainPlaneZ);
 
 		if (to.X >= from.X && to.Y >= from.Y) {
@@ -1209,10 +1593,18 @@ namespace Jazz2::Editor
 			}
 		}
 
-		// Events off the grid, at their own position
-		for (const Formats::OffGridEventRecord& event : document.OffGridEvents) {
-			previews.DrawInScene(canvas, event.Event, Vector2f(float(event.X), float(event.Y)), alpha * 0.6f, animTime, Z);
+		// Events off the grid, at their own position, those being moved faded as those on the grid
+		for (std::size_t i = 0; i < document.OffGridEvents.size(); i++) {
+			const Formats::OffGridEventRecord& event = document.OffGridEvents[i];
+			float eventAlpha = (moving && selection.ContainsOffGrid(std::int32_t(i)) ? alpha * 0.35f : alpha);
+			previews.DrawInScene(canvas, event.Event, Vector2f(float(event.X), float(event.Y)), eventAlpha, animTime, Z);
 		}
+	}
+
+	bool EditorShell::IsMovingEvents() const
+	{
+		ToolManager& tools = _session.GetTools();
+		return (tools.GetActiveType() == EditorToolType::Event && static_cast<const EventTool*>(tools.GetActive())->IsMovingEvents());
 	}
 
 	void EditorShell::DrawEvents(UiPainter& painter, const Rectf& area, Vector2f holeCenter, float holeRadius)
@@ -1260,10 +1652,8 @@ namespace Jazz2::Editor
 		float animTime = _session.GetAnimTime();
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
 		float badge = std::max(2.0f, std::round(tileSize / 8.0f));
-		bool moving = (editingEvents && _session.GetTools().GetActive()->IsBusy() && _session.GetTools().GetActiveType() == EditorToolType::Event);
-		std::int32_t playDifficulty = _session.GetSettings().PlayDifficulty;
-		std::uint8_t difficultyBit = (playDifficulty >= std::int32_t(GameDifficulty::Easy) && playDifficulty <= std::int32_t(GameDifficulty::Hard)
-			? std::uint8_t(Formats::EventRecord::Easy << (playDifficulty - std::int32_t(GameDifficulty::Easy))) : 0);
+		bool moving = (editingEvents && IsMovingEvents());
+		std::uint8_t difficultyBit = GetDifficultyFlag(_session.GetSettings().PlayDifficulty);
 		// See DrawMaskGlyphs()
 		bool maskGlyphs = (_session.GetMaskMode() != 0 && _session.GetCurrentLayer() == spriteLayer && tileSize >= 8.0f);
 
@@ -1305,6 +1695,35 @@ namespace Jazz2::Editor
 						painter.FillRect(Rectf(rect.X, rect.Y + rect.H - badge, badge, badge), Colorf(0.85f, 0.4f, 1.0f, alpha), UiLayer::Overlay);
 					}
 				}
+				// Which way it pushes or rolls, an arrow for each group of values, longer for a stronger one; of the selected
+				// event even zoomed far out, its handles are at the tips at any zoom
+				if (tileSize >= 16.0f || selected) {
+					EventDirection directions[4];
+					std::int32_t directionCount = EventPreviews::CollectDirections(event.Record, directions);
+					// From the position of the event, not the middle of its tile, the sprite layer is shown a pixel higher than
+					// the level, to the tip the selected event is dragged by (see EventGizmos::Collect()), both in whole pixels
+					// as the handle is drawn, see EventTool::DrawOverlay()
+					Vector2f center(cell.X * 32.0f + 16.0f, cell.Y * 32.0f + 16.0f);
+					Vector2f tail = view.WorldToScreen(center);
+					tail = Vector2f(std::round(tail.X), std::round(tail.Y));
+					for (std::int32_t d = 0; d < directionCount; d++) {
+						Vector2f tip = view.WorldToScreen(EventPreviews::GetDirectionTip(center, directions[d].Vector));
+						tip = Vector2f(std::round(tip.X), std::round(tip.Y));
+						float length = (tip - tail).Length();
+						if (length < 1.0f) {
+							continue;
+						}
+						Vector2f unit = (tip - tail) / length;
+						Colorf arrowColor = UiTheme::OverlaySeries[directions[d].Group % 4];
+						arrowColor.A = 0.9f * alpha;
+						float arrowThickness = std::max(1.0f, std::round(painter.GetScale() * 1.5f));
+						painter.Line(tail, tip, arrowThickness, arrowColor, UiLayer::Overlay);
+						Vector2f side(-unit.Y, unit.X);
+						float head = std::max(4.0f, length * 0.3f);
+						painter.Line(tip, tip - unit * head + side * head * 0.5f, arrowThickness, arrowColor, UiLayer::Overlay);
+						painter.Line(tip, tip - unit * head - side * head * 0.5f, arrowThickness, arrowColor, UiLayer::Overlay);
+					}
+				}
 				if (selected) {
 					painter.Frame(rect, UiTheme::Accent, thickness, UiLayer::Overlay);
 				}
@@ -1318,15 +1737,18 @@ namespace Jazz2::Editor
 			DrawSelectedEventDetails(painter, view);
 		}
 
-		// Events off the grid, at their own position
-		for (const Formats::OffGridEventRecord& event : document.OffGridEvents) {
+		// Events off the grid, at their own position, those being moved faded as those on the grid
+		for (std::size_t i = 0; i < document.OffGridEvents.size(); i++) {
+			const Formats::OffGridEventRecord& event = document.OffGridEvents[i];
 			Vector2f pos = view.WorldToScreen(Vector2f(float(event.X), float(event.Y)));
 			float half = tileSize * 0.5f;
 			Rectf rect(pos.X - half, pos.Y - half, tileSize, tileSize);
 			if (rect.X > area.X + area.W || rect.Y > area.Y + area.H || rect.X + rect.W < area.X || rect.Y + rect.H < area.Y || reachesHole(rect)) {
 				continue;
 			}
-			previews.DrawPlaced(painter, event.Event, rect, view.Scale, alpha * 0.6f, animTime, Vector2f(float(event.X), float(event.Y)), true);
+			float eventAlpha = (moving && selection.ContainsOffGrid(std::int32_t(i)) ? alpha * 0.35f : alpha);
+			// Drawn as those on the grid, told apart by the mark in the corner
+			previews.DrawPlaced(painter, event.Event, rect, view.Scale, eventAlpha, animTime, Vector2f(float(event.X), float(event.Y)), true, true);
 		}
 	}
 
@@ -1336,8 +1758,19 @@ namespace Jazz2::Editor
 		Vector2i gridSize = document.GetEventGridSize();
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
 		Colorf detailColor(1.0f, 0.95f, 0.55f, 0.85f);
+		if (gridSize.X <= 0) {
+			return;
+		}
+		// Only around the view and not too many, all events of a large level can be selected
+		constexpr std::int32_t MaxDetails = 256;
+		float reach = painter.Px(200.0f);
+		Rectf nearView(_viewRect.X - reach, _viewRect.Y - reach, _viewRect.W + reach * 2.0f, _viewRect.H + reach * 2.0f);
+		std::int32_t drawn = 0;
 
 		for (std::uint32_t cell : _session.GetEventSelection().GetCells()) {
+			if (drawn >= MaxDetails) {
+				break;
+			}
 			Vector2i pos(std::int32_t(cell % std::uint32_t(gridSize.X)), std::int32_t(cell / std::uint32_t(gridSize.X)));
 			const Formats::EventRecord& event = document.GetEvent(pos.X, pos.Y);
 			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
@@ -1345,15 +1778,80 @@ namespace Jazz2::Editor
 				continue;
 			}
 			Vector2f center = view.WorldToScreen(Vector2f(pos.X * 32.0f + 16.0f, pos.Y * 32.0f + 16.0f));
+			bool isNearView = nearView.Contains(center);
+
+			// How a light lights up its surroundings, as the game's shader falls off: fully lit inside, rings where half and a
+			// tenth of its light is left, and where it ends
+			EventLightShape light;
+			bool isLight = EventPreviews::GetLight(event, light) && light.RadiusFar > 0.0f;
+			if (isLight) {
+				// A pulsing light grows and shrinks as the game pulses it, both radii by the same; with motion reduced, the rings
+				// stay in the middle of the pulse. It's seen as far as it reaches at its largest, so the rings don't come and go
+				// at the edge of the view.
+				bool pulsing = (!UiTheme::ReducedMotion && light.Pulse > 0.0f && light.PulseSpeed > 0.0f);
+				float pulse = (pulsing ? EventPreviews::GetLightPulse(light, _session.GetAnimTime()) : 0.0f);
+				float largest = (light.RadiusFar + (pulsing ? light.Pulse : 0.0f)) * view.Scale;
+				if (largest >= 2.0f && center.X + largest >= _viewRect.X && center.X - largest <= _viewRect.X + _viewRect.W &&
+					center.Y + largest >= _viewRect.Y && center.Y - largest <= _viewRect.Y + _viewRect.H) {
+					drawn++;
+					auto drawRing = [&painter, center](float radius, float lineThickness, const Colorf& color) {
+						// A pulsing light can shrink so far that nothing is left of a ring
+						if (radius <= 0.0f) {
+							return;
+						}
+						constexpr std::int32_t Segments = 48;
+						Vector2f last = center + Vector2f(radius, 0.0f);
+						for (std::int32_t s = 1; s <= Segments; s++) {
+							float angle = 6.2831853f * float(s) / float(Segments);
+							Vector2f next = center + Vector2f(std::cos(angle) * radius, std::sin(angle) * radius);
+							painter.Line(last, next, lineThickness, color, UiLayer::Overlay);
+							last = next;
+						}
+					};
+					// The distance where the light is left at a strength, found by halving the range
+					auto distanceAt = [&light](float strength) {
+						float low = light.RadiusNear, high = light.RadiusFar;
+						for (std::int32_t i = 0; i < 16; i++) {
+							float middle = (low + high) * 0.5f;
+							if (EventPreviews::GetLightStrength(middle, light.RadiusNear, light.RadiusFar) > strength) {
+								low = middle;
+							} else {
+								high = middle;
+							}
+						}
+						return (low + high) * 0.5f;
+					};
+					Colorf lightColor(1.0f, 0.95f, 0.55f, 0.9f);
+					if (pulsing) {
+						// The middle of the pulse stays, the handle of the near radius is on it
+						drawRing(light.RadiusNear * view.Scale, std::max(1.0f, thickness * 0.5f), Colorf(lightColor.R, lightColor.G, lightColor.B, 0.25f));
+					}
+					light.RadiusNear += pulse;
+					light.RadiusFar += pulse;
+					float far = light.RadiusFar * view.Scale;
+					if (far >= 2.0f) {
+						drawRing(light.RadiusNear * view.Scale, thickness, lightColor);
+						drawRing(distanceAt(0.5f) * view.Scale, thickness, Colorf(lightColor.R, lightColor.G, lightColor.B, 0.6f));
+						drawRing(distanceAt(0.1f) * view.Scale, thickness, Colorf(lightColor.R, lightColor.G, lightColor.B, 0.35f));
+						drawRing(far, std::max(1.0f, thickness * 0.5f), Colorf(lightColor.R, lightColor.G, lightColor.B, 0.2f));
+					}
+				}
+			}
+
+			// The texts the event refers to, drawn above it once all of them are known
+			struct TextBubble { const EventParamField* Field; String Text; };
+			SmallVector<TextBubble, 2> bubbles;
 
 			for (std::uint8_t i = 0; i < descriptor->FieldCount; i++) {
 				const EventParamField& field = descriptor->Fields[i];
-				if (field.Unit == ParamUnit::Pixels && StringView(field.Name).contains("Radius"_s)) {
+				if (field.Unit == ParamUnit::Pixels && StringView(field.Name).contains("Radius"_s) && !isLight) {
 					// How far a light reaches
 					float radius = float(EventCatalog::ReadField(event, field)) * view.Scale;
-					if (radius < 2.0f) {
+					if (radius < 2.0f || center.X + radius < _viewRect.X || center.X - radius > _viewRect.X + _viewRect.W ||
+						center.Y + radius < _viewRect.Y || center.Y - radius > _viewRect.Y + _viewRect.H) {
 						continue;
 					}
+					drawn++;
 					constexpr std::int32_t Segments = 48;
 					Vector2f last = center + Vector2f(radius, 0.0f);
 					for (std::int32_t s = 1; s <= Segments; s++) {
@@ -1362,34 +1860,58 @@ namespace Jazz2::Editor
 						painter.Line(last, next, thickness, detailColor, UiLayer::Overlay);
 						last = next;
 					}
-				} else if (field.Type == ParamType::TextId) {
-					// The text the event refers to, above it
-					std::int32_t index = EventCatalog::ReadField(event, field);
-					if (index < 0 || index >= std::int32_t(document.Texts.size()) || document.Texts[index].empty()) {
-						continue;
+				} else if (field.Type == ParamType::TextId && isNearView) {
+					// The text the event refers to, above it, or the level an exit without one goes to
+					String text;
+					if (!EventPreviews::DescribeDefaultLevel(document, event, field, text)) {
+						std::int32_t index = EventCatalog::ReadField(event, field);
+						if (index < 0 || index >= std::int32_t(document.Texts.size()) || document.Texts[index].empty()) {
+							continue;
+						}
+						text = EventCatalog::MakeTextPreview(document.Texts[index], 48);
 					}
-					String text = EventCatalog::MakeTextPreview(document.Texts[index], 48);
 					if (text.empty()) {
 						continue;
 					}
-					// As high as a row of the interface, the text is centered in it as in a label
-					// Well above the event, so its mark and what's around it can still be seen
-					float padding = painter.Px(UiTheme::Padding * 2.0f);
-					float width = painter.MeasureText(text) + padding * 2.0f;
-					float height = painter.Px(UiTheme::RowHeight) + painter.Px(6.0f);
-					Rectf bubble(std::round(center.X - width * 0.5f), std::round(center.Y - 16.0f * view.Scale - height - painter.Px(14.0f)), width, height);
-					painter.Panel(bubble, false);
-					painter.TextInRect(text, Rectf(bubble.X + padding, bubble.Y, bubble.W - padding * 2.0f, bubble.H), UiTheme::Text, Alignment::Left, UiLayer::OverlayText);
+					drawn++;
+					bubbles.push_back({ &field, Death::move(text) });
 				}
 			}
 
-			if (EventType(event.Type) == EventType::ModifierSetWater && descriptor->FieldCount > 0) {
+			// As high as a row of the interface, the text is centered in it as in a label, well above the event, so its mark and
+			// what's around it can still be seen. A boss has a text when it shows up and one when it's beaten, they're stacked
+			// in the order of the fields from the top, and each says which one it is.
+			if (!bubbles.empty()) {
+				float padding = painter.Px(UiTheme::Padding * 2.0f);
+				float height = painter.Px(UiTheme::RowHeight) + painter.Px(6.0f);
+				float gap = painter.Px(4.0f);
+				float bottom = center.Y - 16.0f * view.Scale - painter.Px(14.0f);
+				std::int32_t previousSlot = painter.GetSlot();
+				painter.SetSlot(BubbleSlot);
+				for (std::size_t i = bubbles.size(); i-- > 0; ) {
+					String label = (bubbles.size() > 1 ? _f("{}: ", _(bubbles[i].Field->Name)) : String());
+					float labelWidth = (label.empty() ? 0.0f : painter.MeasureText(label));
+					float width = labelWidth + painter.MeasureText(bubbles[i].Text) + padding * 2.0f;
+					Rectf bubble(std::round(center.X - width * 0.5f), std::round(bottom - height), width, height);
+					bottom = bubble.Y - gap;
+					painter.Panel(bubble, false);
+					if (!label.empty()) {
+						painter.TextInRect(label, Rectf(bubble.X + padding, bubble.Y, labelWidth, bubble.H), UiTheme::TextDim, Alignment::Left, UiLayer::OverlayText);
+					}
+					painter.TextInRect(bubbles[i].Text, Rectf(bubble.X + padding + labelWidth, bubble.Y, bubble.W - padding * 2.0f - labelWidth, bubble.H), UiTheme::Text, Alignment::Left, UiLayer::OverlayText);
+				}
+				painter.SetSlot(previousSlot);
+			}
+
+			if (EventType(event.Type) == EventType::ModifierSetWater && descriptor->FieldCount > 0 && isNearView) {
 				// The new water level across the view
+				drawn++;
 				float y = std::round(view.WorldToScreen(Vector2f(0.0f, float(EventCatalog::ReadField(event, descriptor->Fields[0])))).Y);
 				painter.FillRect(Rectf(_viewRect.X, y, _viewRect.W, std::max(thickness, 2.0f)), Colorf(0.3f, 0.6f, 1.0f, 0.8f), UiLayer::Overlay);
 				painter.Line(center, Vector2f(center.X, y), thickness, Colorf(0.3f, 0.6f, 1.0f, 0.6f), UiLayer::Overlay);
-			} else if (EventType(event.Type) == EventType::ModifierLimitCameraView && descriptor->FieldCount > 1) {
+			} else if (EventType(event.Type) == EventType::ModifierLimitCameraView && descriptor->FieldCount > 1 && isNearView) {
 				// Where the camera is kept, darker outside of it, see Player::HandleAreaEventAt()
+				drawn++;
 				std::int32_t leftTiles = EventCatalog::ReadField(event, descriptor->Fields[0]);
 				std::int32_t widthTiles = EventCatalog::ReadField(event, descriptor->Fields[1]);
 				float left = (leftTiles == 0 ? pos.X : leftTiles) * 32.0f;
@@ -1431,27 +1953,86 @@ namespace Jazz2::Editor
 		}
 	}
 
+	void EditorShell::UpdateEventLinks()
+	{
+		LevelDocument& document = _session.GetDocument();
+		// Events painted while a stroke goes on aren't told about until it ends, their number changes meanwhile
+		if (!_linksDirty && _linksCatalogRevision == EventCatalog::GetRevision() && _linksEventCount == document.Events.size()) {
+			return;
+		}
+		_linksDirty = false;
+		_linksCatalogRevision = EventCatalog::GetRevision();
+		_linksEventCount = document.Events.size();
+		_warpGroups.clear();
+		_warpTargets.clear();
+		_triggerGroups.clear();
+		_triggerEvents.clear();
+		_raceLinks.clear();
+
+		Vector2i gridSize = document.GetEventGridSize();
+		if (gridSize.X <= 0) {
+			return;
+		}
+		SmallVector<LinkEvent, 0> origins;
+		for (const DocumentEvent& event : document.Events) {
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Record.Type));
+			if (descriptor == nullptr) {
+				continue;
+			}
+			if (const EventParamField* field = FindEventField(descriptor, ParamType::WarpId)) {
+				LinkEvent link{ EventCatalog::ReadField(event.Record, *field), event.Cell, -1 };
+				if (EventType(event.Record.Type) == EventType::WarpTarget) {
+					_warpTargets.push_back(link);
+				} else {
+					origins.push_back(link);
+				}
+			}
+			if (const EventParamField* field = FindEventField(descriptor, ParamType::TriggerId)) {
+				_triggerEvents.push_back(LinkEvent{ EventCatalog::ReadField(event.Record, *field), event.Cell, -1 });
+			}
+		}
+		// The events are sorted by the tile, so these are too
+		GroupNeighbors(origins, gridSize.X, _warpGroups);
+		GroupNeighbors(_triggerEvents, gridSize.X, _triggerGroups);
+		auto byId = [](const LinkEvent& a, const LinkEvent& b) { return (a.Id < b.Id); };
+		std::stable_sort(_warpTargets.begin(), _warpTargets.end(), byId);
+		std::stable_sort(_triggerEvents.begin(), _triggerEvents.end(), byId);
+		EventPreviews::CollectRaceTrack(document, _raceLinks);
+	}
+
 	void EditorShell::DrawEventLinks(UiPainter& painter, const LayerView& view, float alpha)
 	{
 		LevelDocument& document = _session.GetDocument();
 		Vector2i gridSize = document.GetEventGridSize();
+		if (gridSize.X <= 0) {
+			return;
+		}
+		UpdateEventLinks();
 		float thickness = std::max(1.0f, std::round(painter.GetScale() * 1.5f));
 		float tileSize = 32.0f * view.Scale;
 
-		auto findField = [](std::uint16_t type, ParamType paramType) -> const EventParamField* {
-			if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(type))) {
-				for (std::uint8_t i = 0; i < descriptor->FieldCount; i++) {
-					if (descriptor->Fields[i].Type == paramType) {
-						return &descriptor->Fields[i];
-					}
-				}
-			}
-			return nullptr;
+		auto cellsRect = [&view](const Recti& cells) {
+			Vector2f topLeft = view.WorldToScreen(Vector2f(cells.X * 32.0f, cells.Y * 32.0f));
+			return Rectf(topLeft.X, topLeft.Y, cells.W * 32.0f * view.Scale, cells.H * 32.0f * view.Scale);
+		};
+		// Lines that can't cross the view aren't drawn
+		Rectf viewRect = _viewRect;
+		auto crossesView = [viewRect](const Rectf& a, const Rectf& b) {
+			float left = std::min(a.X, b.X), right = std::max(a.X + a.W, b.X + b.W);
+			float top = std::min(a.Y, b.Y), bottom = std::max(a.Y + a.H, b.Y + b.H);
+			return (right >= viewRect.X && left <= viewRect.X + viewRect.W && bottom >= viewRect.Y && top <= viewRect.Y + viewRect.H);
+		};
+		auto findId = [](const SmallVectorImpl<LinkEvent>& events, std::int32_t id) {
+			return std::equal_range(events.begin(), events.end(), LinkEvent{ id, 0, -1 }, [](const LinkEvent& a, const LinkEvent& b) { return (a.Id < b.Id); });
 		};
 		auto cellRect = [&view, gridSize](std::uint32_t cell) {
 			Vector2f world(float(cell % std::uint32_t(gridSize.X)) * 32.0f, float(cell / std::uint32_t(gridSize.X)) * 32.0f);
 			Vector2f topLeft = view.WorldToScreen(world);
 			return Rectf(topLeft.X, topLeft.Y, 32.0f * view.Scale, 32.0f * view.Scale);
+		};
+		auto levelRect = [&view](const Rectf& rect) {
+			Vector2f topLeft = view.WorldToScreen(Vector2f(rect.X, rect.Y));
+			return Rectf(topLeft.X, topLeft.Y, rect.W * view.Scale, rect.H * view.Scale);
 		};
 		// How far from the middle of a rectangle a line in a direction leaves it
 		auto exitDistance = [](const Rectf& rect, Vector2f direction) {
@@ -1488,109 +2069,125 @@ namespace Jazz2::Editor
 		};
 
 		// Warps lead to all targets of the same identifier, tiles of a warp next to each other are taken together
-		struct Endpoint
-		{
-			std::uint32_t Cell;
-			std::int32_t Id;
-			std::int32_t Group;
-		};
-		SmallVector<Endpoint, 0> origins;
-		SmallVector<Endpoint, 0> targets;
-		for (const DocumentEvent& event : document.Events) {
-			const EventParamField* field = findField(event.Record.Type, ParamType::WarpId);
-			if (field == nullptr) {
+		Colorf linkColor(0.45f, 0.65f, 1.0f, 0.85f * alpha);
+		for (const LinkGroup& group : _warpGroups) {
+			Rectf fromRect = cellsRect(group.Cells);
+			auto targets = findId(_warpTargets, group.Id);
+			if (targets.first == targets.second) {
+				// A warp to nowhere
+				float size = std::max(tileSize * 0.3f, 6.0f);
+				Vector2f from(fromRect.X + fromRect.W * 0.5f, fromRect.Y + fromRect.H * 0.5f);
+				if (crossesView(fromRect, Rectf(from.X - size, from.Y - size, size * 2.0f, size * 2.0f))) {
+					painter.Line(from - Vector2f(size, size), from + Vector2f(size, size), thickness * 1.5f, UiTheme::OverlayBad, UiLayer::Overlay);
+					painter.Line(from - Vector2f(size, -size), from + Vector2f(size, -size), thickness * 1.5f, UiTheme::OverlayBad, UiLayer::Overlay);
+				}
 				continue;
 			}
-			std::int32_t id = EventCatalog::ReadField(event.Record, *field);
-			if (EventType(event.Record.Type) == EventType::WarpTarget) {
-				targets.push_back(Endpoint{ event.Cell, id, -1 });
-			} else {
-				origins.push_back(Endpoint{ event.Cell, id, std::int32_t(origins.size()) });
-			}
-		}
-		if (!origins.empty()) {
-			// Groups by repeated merging of neighbors, there are a few dozens of warp tiles in a level at most
-			auto findGroup = [&origins](std::int32_t i) {
-				while (origins[i].Group != i) {
-					i = origins[i].Group;
-				}
-				return i;
-			};
-			for (std::size_t i = 0; i < origins.size(); i++) {
-				for (std::size_t j = i + 1; j < origins.size(); j++) {
-					if (origins[i].Id != origins[j].Id) {
-						continue;
-					}
-					std::int32_t dx = std::abs(std::int32_t(origins[i].Cell % std::uint32_t(gridSize.X)) - std::int32_t(origins[j].Cell % std::uint32_t(gridSize.X)));
-					std::int32_t dy = std::abs(std::int32_t(origins[i].Cell / std::uint32_t(gridSize.X)) - std::int32_t(origins[j].Cell / std::uint32_t(gridSize.X)));
-					if (dx <= 1 && dy <= 1) {
-						origins[findGroup(std::int32_t(j))].Group = findGroup(std::int32_t(i));
-					}
-				}
-			}
-
-			Colorf linkColor(0.45f, 0.65f, 1.0f, 0.85f * alpha);
-			for (std::size_t i = 0; i < origins.size(); i++) {
-				if (findGroup(std::int32_t(i)) != std::int32_t(i)) {
-					continue;
-				}
-				// The tiles of the warp together, their bounding rectangle
-				Rectf fromRect;
-				bool first = true;
-				for (std::size_t j = 0; j < origins.size(); j++) {
-					if (findGroup(std::int32_t(j)) == std::int32_t(i)) {
-						Rectf rect = cellRect(origins[j].Cell);
-						if (first) {
-							fromRect = rect;
-							first = false;
-						} else {
-							float right = std::max(fromRect.X + fromRect.W, rect.X + rect.W), bottom = std::max(fromRect.Y + fromRect.H, rect.Y + rect.H);
-							fromRect.X = std::min(fromRect.X, rect.X);
-							fromRect.Y = std::min(fromRect.Y, rect.Y);
-							fromRect.W = right - fromRect.X;
-							fromRect.H = bottom - fromRect.Y;
-						}
-					}
-				}
-				Vector2f from(fromRect.X + fromRect.W * 0.5f, fromRect.Y + fromRect.H * 0.5f);
-				bool hasTarget = false;
-				for (const Endpoint& target : targets) {
-					if (target.Id == origins[i].Id) {
-						drawLink(fromRect, cellRect(target.Cell), thickness, linkColor, true);
-						hasTarget = true;
-					}
-				}
-				if (!hasTarget) {
-					// A warp to nowhere
-					float size = std::max(tileSize * 0.3f, 6.0f);
-					painter.Line(from - Vector2f(size, size), from + Vector2f(size, size), thickness * 1.5f, UiTheme::Danger, UiLayer::Overlay);
-					painter.Line(from - Vector2f(size, -size), from + Vector2f(size, -size), thickness * 1.5f, UiTheme::Danger, UiLayer::Overlay);
+			for (auto it = targets.first; it != targets.second; ++it) {
+				Rectf toRect = cellRect(it->Cell);
+				if (crossesView(fromRect, toRect)) {
+					drawLink(fromRect, toRect, thickness, linkColor, true);
 				}
 			}
 		}
 
-		// Selected events show which events share their trigger
-		if (!_session.IsEditingEvents()) {
+		// The track of a race goes from waypoint to waypoint and on to what ends a lap, shown always as the warps are
+		Colorf raceColor(0.7f, 0.95f, 0.3f, 0.85f * alpha);
+		for (const EventLink& link : _raceLinks) {
+			Rectf fromRect = levelRect(link.From), toRect = levelRect(link.To);
+			if (crossesView(fromRect, toRect)) {
+				drawLink(fromRect, toRect, thickness, raceColor, true);
+			}
+		}
+
+		// Other links of the selected events, as a rolling rock and its trigger or links of events described by event packs,
+		// found again only when the selection or the events change, see EventPreviews::CollectLinks()
+		const EventSelection& selection = _session.GetEventSelection();
+		if (!_session.IsEditingEvents() || !selection.HasCells()) {
 			return;
 		}
-		Colorf triggerColor(1.0f, 0.62f, 0.25f, 0.9f * alpha);
-		for (std::uint32_t selected : _session.GetEventSelection().GetCells()) {
-			const Formats::EventRecord& event = document.GetEvent(std::int32_t(selected % std::uint32_t(gridSize.X)), std::int32_t(selected / std::uint32_t(gridSize.X)));
-			const EventParamField* field = findField(event.Type, ParamType::TriggerId);
-			if (field == nullptr) {
-				continue;
+		{
+			std::uint32_t key = 2166136261u ^ _eventsSerial;
+			for (std::uint32_t cell : selection.GetCells()) {
+				key = (key ^ cell) * 16777619u;
 			}
-			std::int32_t id = EventCatalog::ReadField(event, *field);
-			Rectf fromRect = cellRect(selected);
-			for (const DocumentEvent& other : document.Events) {
-				if (other.Cell == selected) {
-					continue;
+			if (key != _selectedLinksKey) {
+				_selectedLinksKey = key;
+				SmallVector<EventLink, 0> links;
+				EventPreviews::CollectLinks(document, links, selection.GetCells(), 1024);
+				_selectedLinks.clear();
+				for (const EventLink& link : links) {
+					// Warps are shown always, triggers below with tiles of the same trigger taken together
+					StringView channel = (link.Channel != nullptr ? StringView(link.Channel) : StringView());
+					if (!link.Missing && channel != "warp"_s && channel != "trigger"_s) {
+						_selectedLinks.push_back(link);
+					}
 				}
-				const EventParamField* otherField = findField(other.Record.Type, ParamType::TriggerId);
-				if (otherField != nullptr && EventCatalog::ReadField(other.Record, *otherField) == id) {
-					Rectf rect = cellRect(other.Cell);
-					drawLink(fromRect, rect, std::max(1.0f, thickness * 0.67f), triggerColor, false);
-					painter.Frame(rect, triggerColor, std::max(1.0f, std::round(painter.GetScale())), UiLayer::Overlay);
+			}
+			Colorf otherColor = UiTheme::OverlayInfo;
+			otherColor.A *= 0.9f * alpha;
+			float frameThickness = std::max(1.0f, std::round(painter.GetScale()));
+			for (const EventLink& link : _selectedLinks) {
+				Rectf fromRect = levelRect(link.From), toRect = levelRect(link.To);
+				if (crossesView(fromRect, toRect)) {
+					drawLink(fromRect, toRect, std::max(1.0f, thickness * 0.67f), otherColor, link.Directed);
+					painter.Frame(toRect, otherColor, frameThickness, UiLayer::Overlay);
+				}
+			}
+		}
+
+		// Selected events show which events share their trigger, tiles next to each other are taken together here too
+		if (_triggerEvents.empty()) {
+			return;
+		}
+		SmallVector<bool, 0> selectedGroups;
+		selectedGroups.resize(_triggerGroups.size(), false);
+		SmallVector<std::int32_t, 8> selectedIds;
+		for (const LinkEvent& event : _triggerEvents) {
+			if (event.Group >= 0 && !selectedGroups[event.Group] && selection.Contains(event.Cell)) {
+				selectedGroups[event.Group] = true;
+				if (std::find(selectedIds.begin(), selectedIds.end(), event.Id) == selectedIds.end()) {
+					selectedIds.push_back(event.Id);
+				}
+			}
+		}
+
+		// Not too many lines, a large selection could link everything to everything
+		constexpr std::int32_t MaxLinkChecks = 4096;
+		std::int32_t linkChecks = 0;
+		Colorf triggerColor(1.0f, 0.62f, 0.25f, 0.9f * alpha);
+		float frameThickness = std::max(1.0f, std::round(painter.GetScale()));
+		SmallVector<std::int32_t, 16> fromGroups;
+		SmallVector<std::int32_t, 16> toGroups;
+		SmallVector<std::int32_t, 0> groupSeen;
+		groupSeen.resize(_triggerGroups.size(), -1);
+		for (std::int32_t k = 0; k < std::int32_t(selectedIds.size()); k++) {
+			auto members = findId(_triggerEvents, selectedIds[k]);
+			fromGroups.clear();
+			toGroups.clear();
+			for (auto it = members.first; it != members.second; ++it) {
+				if (groupSeen[it->Group] != k) {
+					groupSeen[it->Group] = k;
+					(selectedGroups[it->Group] ? fromGroups : toGroups).push_back(it->Group);
+				}
+				// The other events are framed
+				if (!selectedGroups[it->Group]) {
+					Rectf rect = cellRect(it->Cell);
+					if (crossesView(rect, rect)) {
+						painter.Frame(rect, triggerColor, frameThickness, UiLayer::Overlay);
+					}
+				}
+			}
+			for (std::int32_t from : fromGroups) {
+				Rectf fromRect = cellsRect(_triggerGroups[from].Cells);
+				for (std::int32_t to : toGroups) {
+					if (++linkChecks > MaxLinkChecks) {
+						return;
+					}
+					Rectf toRect = cellsRect(_triggerGroups[to].Cells);
+					if (crossesView(fromRect, toRect)) {
+						drawLink(fromRect, toRect, std::max(1.0f, thickness * 0.67f), triggerColor, false);
+					}
 				}
 			}
 		}
@@ -1623,6 +2220,48 @@ namespace Jazz2::Editor
 		if (view.RepeatX || view.RepeatY) {
 			DrawRepeatedLayerBounds(painter, view, topLeft, bottomRight);
 		}
+
+		// The frame of the layer, the edges it's resized by, of the copy seen whole nearest the middle if it repeats; dark
+		// under light, so it's seen on bright and dark layers alike
+		Rectf copy = GetLayerFrame(view);
+		float width = std::max(1.0f, std::round(painter.GetScale()));
+		Rectf frame(std::round(copy.X) - width, std::round(copy.Y) - width, std::round(copy.W) + width * 2.0f, std::round(copy.H) + width * 2.0f);
+		painter.Frame(Rectf(frame.X - width, frame.Y - width, frame.W + width * 2.0f, frame.H + width * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.45f), width, UiLayer::Overlay);
+		painter.Frame(frame, Colorf(1.0f, 1.0f, 1.0f, 0.85f), width, UiLayer::Overlay);
+	}
+
+	Rectf EditorShell::GetLayerFrame(const LayerView& view) const
+	{
+		Rectf topLeft = view.CellToScreen(Vector2i(0, 0));
+		Rectf bottomRight = view.CellToScreen(Vector2i(view.Size.X - 1, view.Size.Y - 1));
+		Rectf layer(topLeft.X, topLeft.Y, bottomRight.X + bottomRight.W - topLeft.X, bottomRight.Y + bottomRight.H - topLeft.Y);
+		if (layer.W <= 0.0f || layer.H <= 0.0f) {
+			return layer;
+		}
+
+		// The copy that is framed is one seen whole, the nearest to the middle of the view - or the one in the middle if
+		// none fits - as the layer itself (where its first tile is) can be far off the screen when it repeats. The copies
+		// are the same, and the axes don't depend on each other, so this is also the copy seen the most.
+		auto pickCopy = [](float start, float size, float viewStart, float viewSize) {
+			float viewCenter = viewStart + viewSize * 0.5f;
+			if (size <= viewSize) {
+				float first = start + std::ceil((viewStart - start) / size) * size;
+				float last = start + std::floor((viewStart + viewSize - size - start) / size) * size;
+				if (first <= last) {
+					float nearest = start + std::round((viewCenter - size * 0.5f - start) / size) * size;
+					return std::clamp(nearest, first, last);
+				}
+			}
+			return start + std::floor((viewCenter - start) / size) * size;
+		};
+		Rectf copy = layer;
+		if (view.RepeatX) {
+			copy.X = pickCopy(layer.X, layer.W, _viewRect.X, _viewRect.W);
+		}
+		if (view.RepeatY) {
+			copy.Y = pickCopy(layer.Y, layer.H, _viewRect.Y, _viewRect.H);
+		}
+		return copy;
 	}
 
 	void EditorShell::DrawRepeatedLayerBounds(UiPainter& painter, const LayerView& view, const Rectf& topLeft, const Rectf& bottomRight)
@@ -1655,11 +2294,60 @@ namespace Jazz2::Editor
 				}
 			}
 		}
+	}
 
-		// Dark under light, so it's seen on bright and dark layers alike
-		Rectf frame(std::round(layer.X) - width, std::round(layer.Y) - width, std::round(layer.W) + width * 2.0f, std::round(layer.H) + width * 2.0f);
-		painter.Frame(Rectf(frame.X - width, frame.Y - width, frame.W + width * 2.0f, frame.H + width * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.45f), width, UiLayer::Overlay);
-		painter.Frame(frame, Colorf(1.0f, 1.0f, 1.0f, 0.85f), width, UiLayer::Overlay);
+	void EditorShell::DrawScreenFrame(UiPainter& painter)
+	{
+		EditorLevelHandler* editHandler = _session.GetEditHandler();
+		if (editHandler == nullptr) {
+			return;
+		}
+		// Around the pointer over the level, or the middle of the view
+		Vector2f center = editHandler->GetCamera().GetCenter();
+		ToolPointer hover;
+		if (_session.GetHoverPointer(hover) && _viewRect.Contains(hover.Screen)) {
+			center = hover.World;
+		}
+
+		// The view of the game, the others as high as it is, a half of a split screen for two players
+		Vector2i reference = editHandler->GetReferenceViewSize();
+		Vector2f size(float(reference.X), float(reference.Y));
+		String label;
+		switch (_session.GetSettings().ScreenFrameKind) {
+			default:
+				label = _f("Game view, {} x {}", reference.X, reference.Y);
+				break;
+			case 1:
+				size.X = std::round(size.Y * 4.0f / 3.0f);
+				label = _f("4:3, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				break;
+			case 2:
+				size.X = std::round(size.Y * 16.0f / 9.0f);
+				label = _f("16:9, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				break;
+			case 3:
+				size.Y = std::round(size.Y * 0.5f);
+				label = _f("Split screen, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				break;
+		}
+		if (size.X <= 0.0f || size.Y <= 0.0f) {
+			return;
+		}
+
+		std::int32_t spriteLayer = _session.GetDocument().GetSpriteLayerIndex();
+		LayerView view = _session.GetLayerView(spriteLayer >= 0 ? spriteLayer : 0);
+		Vector2f topLeft = view.WorldToScreen(center - size * 0.5f);
+		Vector2f bottomRight = view.WorldToScreen(center + size * 0.5f);
+		Rectf frame(std::round(topLeft.X), std::round(topLeft.Y), std::round(bottomRight.X - topLeft.X), std::round(bottomRight.Y - topLeft.Y));
+		float width = std::max(1.0f, std::round(painter.GetScale()));
+		// Dark under light, so it's seen on bright and dark tiles alike
+		painter.Frame(Rectf(frame.X - width, frame.Y - width, frame.W + width * 2.0f, frame.H + width * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), width, UiLayer::Overlay);
+		painter.Frame(frame, Colorf(1.0f, 1.0f, 1.0f, 0.8f), width, UiLayer::Overlay);
+		float labelHeight = painter.Px(UiTheme::RowHeight);
+		float labelWidth = painter.MeasureText(label) + painter.Px(UiTheme::Padding * 2.0f);
+		Rectf labelRect(frame.X, frame.Y - labelHeight, labelWidth, labelHeight);
+		painter.FillRect(labelRect, Colorf(0.0f, 0.0f, 0.0f, 0.55f), UiLayer::Overlay);
+		painter.TextInRect(label, Rectf(labelRect.X + painter.Px(UiTheme::Padding), labelRect.Y, labelRect.W, labelRect.H), UiTheme::Text, Alignment::Left, UiLayer::OverlayText);
 	}
 }
 

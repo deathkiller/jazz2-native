@@ -1,26 +1,45 @@
 ﻿#include "PaletteMatch.h"
+#include "../../Compatibility/JJ2Anims.Palettes.h"
 
 #if defined(WITH_EDITOR)
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
+#include <limits>
 
 namespace Jazz2::Editor
 {
 	namespace
 	{
-		float ToLinear(std::uint8_t value)
+		// Linear values of the 256 levels of sRGB, a conversion is done for each color of an image, std::pow() for
+		// each of its channels was most of the time it took
+		struct LinearTable
 		{
-			float c = value / 255.0f;
-			return (c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f));
+			float Values[256];
+
+			LinearTable()
+			{
+				for (std::int32_t i = 0; i < 256; i++) {
+					float c = i / 255.0f;
+					Values[i] = (c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f));
+				}
+			}
+		};
+
+		const float* GetLinearTable()
+		{
+			static const LinearTable table;
+			return table.Values;
 		}
 	}
 
 	OkLab OkLab::FromPaletteEntry(std::uint32_t entry)
 	{
-		float r = ToLinear(std::uint8_t(entry & 0xFF));
-		float g = ToLinear(std::uint8_t((entry >> 8) & 0xFF));
-		float b = ToLinear(std::uint8_t((entry >> 16) & 0xFF));
+		const float* linear = GetLinearTable();
+		float r = linear[entry & 0xFF];
+		float g = linear[(entry >> 8) & 0xFF];
+		float b = linear[(entry >> 16) & 0xFF];
 
 		// From linear sRGB as Björn Ottosson defines it
 		float l = std::cbrt(0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b);
@@ -57,26 +76,83 @@ namespace Jazz2::Editor
 		return entry;
 	}
 
-	void MatchPalette(const std::uint32_t (&from)[256], const std::uint32_t (&to)[256], std::uint8_t (&table)[256])
+	PaletteSearch::PaletteSearch(const std::uint32_t* palette)
 	{
-		OkLab target[256];
-		for (std::int32_t i = 1; i < 256; i++) {
-			target[i] = OkLab::FromPaletteEntry(to[i]);
-		}
+		Reset(palette);
+	}
 
-		table[0] = 0;
+	void PaletteSearch::Reset(const std::uint32_t* palette)
+	{
 		for (std::int32_t i = 1; i < 256; i++) {
-			OkLab color = OkLab::FromPaletteEntry(from[i]);
-			std::int32_t best = 1;
-			float bestDistance = color.DistanceSquared(target[1]);
-			for (std::int32_t j = 2; j < 256; j++) {
-				float distance = color.DistanceSquared(target[j]);
-				if (distance < bestDistance) {
-					bestDistance = distance;
-					best = j;
+			_entries[i - 1].Color = OkLab::FromPaletteEntry(palette[i]);
+			_entries[i - 1].Index = std::uint8_t(i);
+		}
+		std::sort(std::begin(_entries), std::end(_entries), [](const Entry& a, const Entry& b) {
+			return (a.Color.L < b.Color.L || (a.Color.L == b.Color.L && a.Index < b.Index));
+		});
+	}
+
+	std::uint8_t PaletteSearch::FindNearest(const OkLab& color) const
+	{
+		// Not std::size() of the member, older MSVC doesn't take it as a constant inside a member function
+		constexpr std::int32_t Count = std::int32_t(sizeof(_entries) / sizeof(_entries[0]));
+
+		// From the entries of the same lightness both ways, until the difference of lightness alone is further than
+		// the closest entry found. The squared difference of lightness is never more than the whole distance, even
+		// as rounded, so no entry left out could be closer. Equally close ones are all looked at, the lowest wins.
+		std::int32_t right = std::int32_t(std::lower_bound(std::begin(_entries), std::end(_entries), color.L, [](const Entry& entry, float l) {
+			return entry.Color.L < l;
+		}) - std::begin(_entries));
+		std::int32_t left = right - 1;
+		float bestDistance = std::numeric_limits<float>::infinity();
+		std::uint8_t best = 0;
+		auto consider = [&](const Entry& entry) {
+			float distance = color.DistanceSquared(entry.Color);
+			if (distance < bestDistance || (distance == bestDistance && entry.Index < best)) {
+				bestDistance = distance;
+				best = entry.Index;
+			}
+		};
+		while (left >= 0 || right < Count) {
+			if (right < Count) {
+				float dl = color.L - _entries[right].Color.L;
+				if (dl * dl > bestDistance) {
+					right = Count;
+				} else {
+					consider(_entries[right]);
+					right++;
 				}
 			}
-			table[i] = std::uint8_t(best);
+			if (left >= 0) {
+				float dl = color.L - _entries[left].Color.L;
+				if (dl * dl > bestDistance) {
+					left = -1;
+				} else {
+					consider(_entries[left]);
+					left--;
+				}
+			}
+		}
+		return best;
+	}
+
+	bool IsSpriteColor(std::int32_t index, std::uint32_t entry)
+	{
+		constexpr float SpriteColorDistance = 0.06f;
+		if (index <= 0 || index >= 256) {
+			return false;
+		}
+		const Color& sprite = SpritePalette[index];
+		std::uint32_t spriteColor = std::uint32_t(sprite.R) | (std::uint32_t(sprite.G) << 8) | (std::uint32_t(sprite.B) << 16);
+		return (OkLab::FromPaletteEntry(entry).DistanceSquared(OkLab::FromPaletteEntry(spriteColor)) <= SpriteColorDistance * SpriteColorDistance);
+	}
+
+	void MatchPalette(const std::uint32_t (&from)[256], const std::uint32_t (&to)[256], std::uint8_t (&table)[256])
+	{
+		PaletteSearch search(to);
+		table[0] = 0;
+		for (std::int32_t i = 1; i < 256; i++) {
+			table[i] = search.FindNearest(OkLab::FromPaletteEntry(from[i]));
 		}
 	}
 }

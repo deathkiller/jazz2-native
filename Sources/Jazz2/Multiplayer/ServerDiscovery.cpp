@@ -282,7 +282,7 @@ namespace Jazz2::Multiplayer
 						discoveredServer.WsSecure = wsSecure;
 
 						LOGD("-\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
-						observer->OnServerFound(std::move(discoveredServer));
+						observer->OnServerFound(Death::move(discoveredServer));
 					}
 				}
 			} else {
@@ -669,7 +669,7 @@ namespace Jazz2::Multiplayer
 						discoveredServer.WsSecure = wsSecure;
 #	endif
 						LOGD("-\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
-						observer->OnServerFound(std::move(discoveredServer));
+						observer->OnServerFound(Death::move(discoveredServer));
 					}
 				}
 			} else {
@@ -1105,7 +1105,7 @@ namespace Jazz2::Multiplayer
 					desc.EndpointString = String(groups[i].Name) + "/"_s + mac;
 					desc.Flags = 0x80000000u;	// Local
 					desc.IsCompatible = true;
-					adhocObserver->OnServerFound(std::move(desc));
+					adhocObserver->OnServerFound(Death::move(desc));
 				}
 				for (std::int32_t waited = 0; waited < 5000 && _this->_observer != nullptr; waited += 250) {
 					Thread::Sleep(250);
@@ -1158,7 +1158,7 @@ namespace Jazz2::Multiplayer
 			}
 #	endif
 			if (found) {
-				observer->OnServerFound(std::move(discoveredServer));
+				observer->OnServerFound(Death::move(discoveredServer));
 			} else {
 				// No responses, sleep for a while
 				Thread::Sleep(500);

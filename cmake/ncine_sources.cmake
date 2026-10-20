@@ -43,11 +43,18 @@ set(CONVERTER_SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Strings.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelFile.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelPreview.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/TileSetFile.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Tiles/LayerTypes.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp
 )
 
 list(APPEND SOURCES ${CONVERTER_SOURCES})
+
+# Formats only the game reads, not the converters
+list(APPEND SOURCES
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelTextsChunk.cpp
+)
 
 list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/reader.cpp
@@ -86,6 +93,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Material.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/MeshSprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Particle.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/PngCodec.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ParticleAffectors.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ParticleInitializer.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ParticleSystem.cpp

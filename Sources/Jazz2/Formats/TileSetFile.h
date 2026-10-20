@@ -103,14 +103,29 @@ namespace Jazz2::Formats
 
 		/** @brief Size of a tile in pixels */
 		static constexpr std::int32_t TileSize = 32;
+		/** @brief Size of the collision mask of a tile in bytes */
+		static constexpr std::int32_t MaskBytesPerTile = TileSize * TileSize / 8;
+		/** @brief Largest width of the image content in pixels */
+		static constexpr std::uint32_t MaxImageWidth = 32768;
 
 		/**
 		 * @brief Reads the uncompressed header of a tile set
 		 *
 		 * Leaves the stream at the start of the deflated block. Returns `false` if the stream doesn't hold a tile set
-		 * of @ref CurrentVersion.
+		 * of @ref CurrentVersion, or if the header isn't valid (see @ref Validate()).
 		 */
 		static bool ReadHeader(Stream& s, TileSetHeader& header);
+
+		/**
+		 * @brief Returns `true` if a header describes a tile set every reader can take
+		 *
+		 * One or four channels, the image a whole number of tiles in both directions and not wider than
+		 * @ref MaxImageWidth, at least one tile with a cell for every tile and not much more than the tiles the count
+		 * can hold. With
+		 * @p remainingBytes not negative, the deflated block also has to fit into them. Everything that reads
+		 * a tile set relies on it, a tile set can come from a level, which can come from anywhere.
+		 */
+		static bool Validate(const TileSetHeader& header, std::int64_t remainingBytes = -1);
 
 		/**
 		 * @brief Returns how many tiles a row of the image content should hold

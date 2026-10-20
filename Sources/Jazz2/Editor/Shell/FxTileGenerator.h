@@ -11,7 +11,7 @@ namespace Jazz2::Formats
 
 namespace Jazz2::Editor
 {
-	class EditorSession;
+	class IEditorContext;
 
 	/** @brief Effect the tiles of a blur behind layer are made with, see @ref GenerateFxTiles() */
 	enum class FxTileKind : std::uint8_t
@@ -47,7 +47,7 @@ namespace Jazz2::Editor
 		@brief Asks for an effect and a size, adds the tiles of it to the tile set shown in the tile picker and makes
 		them the brush, to paint them on a layer drawn as blur behind
 	*/
-	void ShowFxTileGeneratorDialog(EditorSession& session);
+	void ShowFxTileGeneratorDialog(IEditorContext& session);
 }
 
 #endif

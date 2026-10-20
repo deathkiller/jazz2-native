@@ -1,213 +1,35 @@
 #include "TextureLoaderPng.h"
+#include "PngCodec.h"
 
-#include <Base/Memory.h>
-#include <Containers/SmallVector.h>
-#include <IO/MemoryStream.h>
-#include <IO/Compression/DeflateStream.h>
-
-using namespace Death::Containers;
 using namespace Death::IO;
-using namespace Death::IO::Compression;
-using namespace Death::Memory;
 
 namespace nCine
 {
 	TextureLoaderPng::TextureLoaderPng(std::unique_ptr<Stream> fileHandle)
-		: ITextureLoader(std::move(fileHandle))
+		: ITextureLoader(Death::move(fileHandle))
 	{
-		constexpr std::uint8_t PngSignature[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
-		constexpr std::uint8_t PngTypeIndexed = 1;
-		constexpr std::uint8_t PngTypeColor = 2;
-
 		if (!_fileHandle->IsValid()) {
 			return;
 		}
 
-		// Check header signature
-		std::uint8_t internalBuffer[sizeof(PngSignature)];
-		_fileHandle->Read(internalBuffer, sizeof(PngSignature));
-		if (std::memcmp(internalBuffer, PngSignature, sizeof(PngSignature)) != 0) {
-			LOGE("Invalid PNG signature");
+		// Always 8-bit RGBA, an indexed image with the colors of its palette, gray and 16-bit images too. It's inflated a
+		// row at a time straight into the pixels of the texture, only the data of the file is held besides them.
+		// No texture of the game comes near 8192 × 8192 and many devices can't create one that large, so a damaged or
+		// hostile file doesn't get to allocate more than that
+		PngDecodeOptions options;
+		options.MaxPixels = std::int64_t(8192) * 8192;
+		PngRgbaImage image;
+		PngError error = PngCodec::DecodeRgba(*_fileHandle, image, options);
+		if (error != PngError::None) {
+			LOGE("PNG file cannot be loaded: {}", PngCodec::GetErrorText(error));
 			return;
 		}
 
-		// Load image
-		bool headerParsed = false;
-		bool isPaletted = false;
-		bool is24Bit = false;
-
-		SmallVector<std::uint8_t, 0> data;
-
-		while (true) {
-			std::int32_t length = ReadInt32BigEndian(_fileHandle);
-			std::uint32_t type = ReadInt32BigEndian(_fileHandle);
-
-			if (!headerParsed && type != 'IHDR') {
-				// Header does not appear first
-				LOGE("Invalid IHDR signature");
-				return;
-			}
-
-			std::int32_t blockEndPosition = std::int32_t(_fileHandle->GetPosition()) + length;
-
-			switch (type) {
-				case 'IHDR': {
-					DEATH_ASSERT(!headerParsed, "PNG file is corrupted", );
-
-					_width = ReadInt32BigEndian(_fileHandle);
-					_height = ReadInt32BigEndian(_fileHandle);
-
-					std::uint8_t bitDepth;
-					_fileHandle->Read(&bitDepth, sizeof(bitDepth));
-					std::uint8_t colorType;
-					_fileHandle->Read(&colorType, sizeof(colorType));
-
-					if (bitDepth == 8 && colorType == (PngTypeIndexed | PngTypeColor)) {
-						isPaletted = true;
-					}
-					is24Bit = (colorType == PngTypeColor);
-
-					std::int32_t dataLength = _width * _height;
-					if (!isPaletted) {
-						dataLength *= 4;
-					}
-
-					_pixels = std::make_unique<std::uint8_t[]>(dataLength);
-
-					std::uint8_t compression;
-					_fileHandle->Read(&compression, sizeof(compression));
-					std::uint8_t filter;
-					_fileHandle->Read(&filter, sizeof(filter));
-					std::uint8_t interlace;
-					_fileHandle->Read(&interlace, sizeof(interlace));
-
-					if (compression != 0) {
-						// Compression method is not supported
-						LOGE("PNG file is not supported");
-						return;
-					}
-					if (interlace != 0) {
-						// Interlacing is not supported
-						LOGE("PNG file is not supported");
-						return;
-					}
-
-					headerParsed = true;
-					break;
-				}
-
-				case 'IDAT': {
-					std::int32_t prevlength = std::int32_t(data.size());
-					std::int32_t newLength = prevlength + length;
-					data.resize_for_overwrite(newLength);
-					_fileHandle->Read(data.data() + prevlength, length);
-					break;
-				}
-
-				case 'IEND': {
-					// The decode loop below consumes exactly one filter byte per row plus that row's samples,
-					// which is all this staging buffer has to hold. Sizing it at 5 bytes per pixel regardless
-					// asked for five times what a paletted image needs (and a quarter more than an RGBA one) -
-					// a megabyte-sized contiguous block for a font atlas, which is the kind of request that
-					// fails on a console heap long before it is actually out of memory.
-					const std::int32_t pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
-					std::size_t dataLength = 16 + std::size_t(_height) * (1 + std::size_t(_width) * pxStride);
-					auto buffer = std::make_unique<std::uint8_t[]>(dataLength);
-
-					MemoryStream ms(data.data() + 2, data.size() - 2);
-					DeflateStream uc(ms, std::int32_t(dataLength));
-					uc.Read(buffer.get(), dataLength);
-					DEATH_ASSERT(uc.IsValid(), "PNG file cannot be decompressed", );
-
-					std::int32_t o = 0;
-					std::int32_t srcStride = _width * pxStride;
-					std::int32_t dstStride = _width * (isPaletted ? 1 : 4);
-
-					auto bufferPrev = std::make_unique<std::uint8_t[]>(srcStride);
-
-					for (std::int32_t y = 0; y < _height; y++) {
-						// Read filter
-						std::uint8_t filter = buffer[o++];
-
-						// Read data
-						std::uint8_t* bufferRow = &buffer[o];
-						o += srcStride;
-
-						for (std::int32_t i = 0; i < srcStride; i++) {
-							if (i < pxStride) {
-								bufferRow[i] = UnapplyFilter(filter, bufferRow[i], 0, bufferPrev[i], 0);
-							} else {
-								bufferRow[i] = UnapplyFilter(filter, bufferRow[i], bufferRow[i - pxStride], bufferPrev[i], bufferPrev[i - pxStride]);
-							}
-						}
-
-						if (is24Bit) {
-							for (std::int32_t i = 0; i < srcStride; i++) {
-								std::memcpy(&_pixels[y * dstStride + 4 * i], &bufferRow[3 * i], 3);
-								_pixels[y * dstStride + 4 * i + 3] = 255;
-							}
-						} else {
-							std::memcpy(&_pixels[y * dstStride], bufferRow, srcStride);
-						}
-
-						std::memcpy(bufferPrev.get(), bufferRow, srcStride);
-					}
-
-					_mipMapCount = 1;
-					_texFormat = TextureFormat(PixelFormat::RGBA8);
-					_hasLoaded = true;
-					return;
-				}
-
-				default: {
-					_fileHandle->Seek(length, SeekOrigin::Current);
-					break;
-				}
-			}
-
-			if (_fileHandle->GetPosition() != blockEndPosition) {
-				// Block has incorrect length
-				LOGE("PNG file is corrupted");
-				return;
-			}
-
-			// Skip CRC
-			_fileHandle->Seek(4, SeekOrigin::Current);
-		}
-
-		LOGE("PNG file is corrupted");
-	}
-
-	std::int32_t TextureLoaderPng::ReadInt32BigEndian(const std::unique_ptr<Stream>& s)
-	{
-		std::uint32_t value;
-		s->Read(&value, sizeof(value));
-		return AsBE(value);
-	}
-
-	std::uint8_t TextureLoaderPng::UnapplyFilter(std::uint8_t filter, std::uint8_t x, std::uint8_t a, std::uint8_t b, std::uint8_t c)
-	{
-		constexpr std::uint8_t PngFilterNone = 0;
-		constexpr std::uint8_t PngFilterSub = 1;
-		constexpr std::uint8_t PngFilterUp = 2;
-		constexpr std::uint8_t PngFilterAverage = 3;
-		constexpr std::uint8_t PngFilterPaeth = 4;
-
-		switch (filter) {
-			case PngFilterNone: return x;
-			case PngFilterSub: return std::uint8_t(x + a);
-			case PngFilterUp: return std::uint8_t(x + b);
-			case PngFilterAverage: return std::uint8_t(x + (a + b) / 2);
-			case PngFilterPaeth: {
-				std::int32_t p = a + b - c;
-				std::int32_t pa = std::abs(p - a);
-				std::int32_t pb = std::abs(p - b);
-				std::int32_t pc = std::abs(p - c);
-				return (std::uint8_t)(x + ((pa <= pb && pa <= pc) ? a : (pb <= pc) ? b : c));
-			}
-
-			// Unsupported filter specified
-			default: return 0;
-		}
+		_width = image.Width;
+		_height = image.Height;
+		_pixels = Death::move(image.Pixels);
+		_mipMapCount = 1;
+		_texFormat = TextureFormat(PixelFormat::RGBA8);
+		_hasLoaded = true;
 	}
 }

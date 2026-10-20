@@ -8,7 +8,7 @@ using namespace Death::Memory;
 namespace nCine
 {
 	TextureLoaderDds::TextureLoaderDds(std::unique_ptr<Stream> fileHandle)
-		: ITextureLoader(std::move(fileHandle))
+		: ITextureLoader(Death::move(fileHandle))
 	{
 		DdsHeader header;
 

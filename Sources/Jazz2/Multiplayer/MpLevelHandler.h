@@ -171,7 +171,7 @@ namespace Jazz2::Multiplayer
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void HandleActivateSugarRush(Actors::Player* player) override;
 		void HandleCreateParticleDebrisOnPerish(const Actors::ActorBase* self, Actors::ParticleDebrisEffect effect, Vector2f speed) override;
-		void HandleCreateSpriteDebris(const Actors::ActorBase* self, AnimState state, std::int32_t count) override;
+		void HandleCreateSpriteDebris(const Actors::ActorBase* self, AnimState state, std::int32_t count, float elasticity) override;
 		void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, StringView value) override;
@@ -190,9 +190,6 @@ namespace Jazz2::Multiplayer
 		void PlayerExecuteRumble(Actors::Player* player, StringView rumbleEffect) override;
 
 		bool SerializeResumableToStream(Stream& dest) override;
-#if defined(WITH_EDITOR)
-		bool CanOpenInEditor() const override;
-#endif
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override;
 
@@ -486,7 +483,7 @@ namespace Jazz2::Multiplayer
 			SfxFlags Flags;
 
 			PendingSfx(Actors::ActorBase* actor, String identifier, std::uint16_t gain, std::uint16_t pitch, SfxFlags flags)
-				: Actor(actor), Identifier(std::move(identifier)), Gain(gain), Pitch(pitch), Flags(flags) {}
+				: Actor(actor), Identifier(Death::move(identifier)), Gain(gain), Pitch(pitch), Flags(flags) {}
 		};
 
 #if defined(WITH_AUDIO)

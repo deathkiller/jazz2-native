@@ -106,7 +106,7 @@ namespace Jazz2::UI::Menu
 		}
 		_list = list.get();
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void EpisodeSelectSection::OnUpdate(float timeMult)
@@ -568,7 +568,7 @@ namespace Jazz2::UI::Menu
 		std::memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(firstPlayer.Ammo));
 		std::memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(firstPlayer.WeaponUpgrades));
 
-		_root->ChangeLevel(std::move(levelInit));
+		_root->ChangeLevel(Death::move(levelInit));
 	}
 
 	std::int32_t EpisodeSelectSection::GetSelectedRow() const
@@ -596,7 +596,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 			auto& episode = _episodes.emplace_back();
-			episode.Description = std::move(*description);
+			episode.Description = Death::move(*description);
 			episode.Flags = EpisodeDataFlags::None;
 
 			if (episode.Description.FirstLevel == ":custom-levels"_s) {

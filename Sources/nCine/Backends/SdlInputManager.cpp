@@ -106,6 +106,22 @@ namespace nCine
 
 namespace nCine::Backends
 {
+	namespace
+	{
+		// A touch is delivered as a touch event and again as a mouse event synthesized from it, the latter is dropped
+		// so a handler of both doesn't see every tap twice. Where finger events aren't dispatched (see below), the
+		// synthesized mouse events are the only thing a touch produces, so they're kept there.
+		inline bool IsMouseEventFromTouch(std::uint32_t which)
+		{
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
+			return (which == std::uint32_t(SDL_TOUCH_MOUSEID));
+#else
+			static_cast<void>(which);
+			return false;
+#endif
+		}
+	}
+
 	TouchEvent SdlInputManager::_touchEvent;
 	SdlMouseState SdlInputManager::_mouseState;
 	MouseEvent SdlInputManager::_mouseEvent;
@@ -310,9 +326,7 @@ namespace nCine::Backends
 			}
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
-				// A touch is delivered as a touch event and again as a mouse event synthesized from it, the latter is
-				// dropped so a handler of both doesn't see every tap twice
-				if (!SdlGfxDevice::isMainWindow(event.button.windowID) || event.button.which == SDL_TOUCH_MOUSEID) {
+				if (!SdlGfxDevice::isMainWindow(event.button.windowID) || IsMouseEventFromTouch(event.button.which)) {
 					return;
 				}
 				// SDL3 reports mouse coordinates as float; the engine's event structures store integers
@@ -321,7 +335,7 @@ namespace nCine::Backends
 				_mouseEvent.button = sdlToNcineMouseButton(event.button.button);
 				break;
 			case SDL_MOUSEMOTION:
-				if (!SdlGfxDevice::isMainWindow(event.motion.windowID) || event.motion.which == SDL_TOUCH_MOUSEID) {
+				if (!SdlGfxDevice::isMainWindow(event.motion.windowID) || IsMouseEventFromTouch(event.motion.which)) {
 					return;
 				}
 				if (_cursor != Cursor::HiddenLocked) {
@@ -334,7 +348,7 @@ namespace nCine::Backends
 				_mouseState._buttons = event.motion.state;
 				break;
 			case SDL_MOUSEWHEEL:
-				if (!SdlGfxDevice::isMainWindow(event.wheel.windowID) || event.wheel.which == SDL_TOUCH_MOUSEID) {
+				if (!SdlGfxDevice::isMainWindow(event.wheel.windowID) || IsMouseEventFromTouch(event.wheel.which)) {
 					return;
 				}
 #if !defined(WITH_SDL3) && SDL_VERSION_ATLEAST(2, 0, 18)

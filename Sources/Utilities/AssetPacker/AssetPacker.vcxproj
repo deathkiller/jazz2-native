@@ -107,7 +107,7 @@
         reports progress through the logging macros) but deliberately WITHOUT DEATH_TRACE_VERBOSE_IO,
         since a conversion touches thousands of files and logging each one buries the output.
       -->
-      <PreprocessorDefinitions>CMAKE_BUILD;DEATH_NO_THREADS;DEATH_TRACE;WITH_ZLIB;WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CMAKE_BUILD;DEATH_NO_THREADS;DEATH_TRACE;WITH_ZLIB;WITH_PNG_ENCODER;WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,10 +139,12 @@
     <ClCompile Include="FontPacker.cpp" />
     <ClCompile Include="Iso9660.cpp" />
     <ClCompile Include="FormatVerifier.cpp" />
+    <ClCompile Include="LevelText.cpp" />
     <ClCompile Include="ModuleConverter.cpp" />
     <ClCompile Include="N64Content.cpp" />
-    <ClCompile Include="PngCodec.cpp" />
     <ClCompile Include="SpriteRepacker.cpp" />
+    <!-- Reads and writes the images of the fonts, the PNG codec of the engine, which depends on nothing but the base layer -->
+    <ClCompile Include="..\..\nCine\Graphics\PngCodec.cpp" />
     <!-- The original-data converters, shared with the game (CONVERTER_SOURCES in cmake/ncine_sources.cmake) -->
     <ClCompile Include="..\..\Jazz2\Compatibility\AnimSetMapping.cpp" />
     <ClCompile Include="..\..\Jazz2\Compatibility\AssetConverter.cpp" />
@@ -156,7 +158,10 @@
     <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Strings.cpp" />
     <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Tileset.cpp" />
     <ClCompile Include="..\..\Jazz2\Formats\LevelFile.cpp" />
+    <ClCompile Include="..\..\Jazz2\Formats\LevelPreview.cpp" />
+    <ClCompile Include="..\..\Jazz2\Formats\LevelTextsChunk.cpp" />
     <ClCompile Include="..\..\Jazz2\Formats\TileSetFile.cpp" />
+    <ClCompile Include="..\..\Jazz2\Tiles\LayerTypes.cpp" />
     <ClCompile Include="..\..\nCine\Base\Algorithms.cpp" />
     <!--
       The platform-neutral base layer, shared with the game (SHARED_SOURCES in cmake/ncine_sources.cmake)
@@ -196,14 +201,18 @@
     <ClInclude Include="FontPacker.h" />
     <ClInclude Include="Iso9660.h" />
     <ClInclude Include="FormatVerifier.h" />
+    <ClInclude Include="LevelText.h" />
     <ClInclude Include="ModuleConverter.h" />
     <ClInclude Include="N64Content.h" />
-    <ClInclude Include="PngCodec.h" />
     <ClInclude Include="SpriteRepacker.h" />
+    <ClInclude Include="..\..\nCine\Graphics\PngCodec.h" />
     <ClInclude Include="..\..\Main.h" />
     <ClInclude Include="..\..\Jazz2\ContentFileTypes.h" />
     <ClInclude Include="..\..\Jazz2\Formats\LevelFile.h" />
+    <ClInclude Include="..\..\Jazz2\Formats\LevelPreview.h" />
+    <ClInclude Include="..\..\Jazz2\Formats\LevelTextsChunk.h" />
     <ClInclude Include="..\..\Jazz2\Formats\TileSetFile.h" />
+    <ClInclude Include="..\..\Jazz2\Tiles\LayerTypes.h" />
     <ClInclude Include="..\..\Jazz2\EventType.h" />
     <ClInclude Include="..\..\Jazz2\UI\FontFormat.h" />
     <ClInclude Include="..\..\Jazz2\Compatibility\AnimSetMapping.h" />

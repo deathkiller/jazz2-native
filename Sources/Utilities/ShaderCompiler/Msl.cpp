@@ -384,7 +384,7 @@ namespace ShaderCompiler
 			bool _inEntryMain = false;
 			std::int32_t _padCounter = 0;
 
-			void Fail(String why) { if (_ok) { _ok = false; _reason = std::move(why); } }
+			void Fail(String why) { if (_ok) { _ok = false; _reason = Death::move(why); } }
 
 			bool HasConstGlobals() const
 			{
@@ -589,7 +589,7 @@ namespace ShaderCompiler
 					lm.SymbolicArray = f.SymbolicArray;
 					lm.Offset = mi->Offset;
 					lm.ArrayStride = mi->ArrayStride;
-					members.push_back(std::move(lm));
+					members.push_back(Death::move(lm));
 				}
 				return EmitAggregate(s.Name, members, info->Size);
 			}
@@ -611,7 +611,7 @@ namespace ShaderCompiler
 					lm.SymbolicArray = f.SymbolicArray;
 					lm.Offset = mi->Offset;
 					lm.ArrayStride = (f.SymbolicArray ? info->InstanceStride : mi->ArrayStride);
-					members.push_back(std::move(lm));
+					members.push_back(Death::move(lm));
 				}
 				return EmitAggregate(b.Name, members, 0);
 			}
@@ -637,7 +637,7 @@ namespace ShaderCompiler
 					offset = RoundUp(offset, align);
 					lm.Offset = offset;
 					offset += size;
-					members.push_back(std::move(lm));
+					members.push_back(Death::move(lm));
 				}
 				return EmitAggregate("_Globals"_s, members, RoundUp(offset, 16));
 			}
@@ -1437,7 +1437,7 @@ namespace ShaderCompiler
 		SmallVector<GlslToken, 0> tokens;
 		String reason;
 		if (!TokenizeStage(modernSource, tokens, reason)) {
-			diag.Message = std::move(reason);
+			diag.Message = Death::move(reason);
 			diag.Line = 1;
 			return false;
 		}
@@ -1455,7 +1455,7 @@ namespace ShaderCompiler
 			diag.Line = 1;
 			return false;
 		}
-		out = std::move(code);
+		out = Death::move(code);
 		return true;
 	}
 }

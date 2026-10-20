@@ -21,7 +21,7 @@ namespace Jazz2::Editor
 		{
 		public:
 			KeyButton(StringView text, EditorIcon icon, Function<void()>&& onClick)
-				: UiButton(text, icon, std::move(onClick))
+				: UiButton(text, icon, Death::move(onClick))
 			{
 			}
 
@@ -68,7 +68,7 @@ namespace Jazz2::Editor
 		line->Add<KeyButton>(StringView(), EditorIcon::ChevronRight, [this]() { Press(Keys::Right); })->Tooltip = _("Move right");
 		line->Add<KeyButton>(StringView(), EditorIcon::Delete, [this]() { Press(Keys::Backspace); })->Tooltip = _("Delete the character before");
 		auto* done = line->Add<KeyButton>(_("Done"), EditorIcon::Check, [this]() {
-			Press(Keys::Return);
+			// Taking the focus away confirms the text, Enter would break a line in a box of more lines first
 			if (UiSurface* surface = GetSurface()) {
 				surface->SetFocus(nullptr);
 				surface->CloseOverlay(this);
@@ -94,7 +94,7 @@ namespace Jazz2::Editor
 		options.Position = Vector2f(surface.GetScreenSize().X * 0.5f - surface.GetScale() * 120.0f, 1.0e6f);
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;
-		surface.PushOverlay(std::make_unique<UiOnScreenKeyboard>(), std::move(options));
+		surface.PushOverlay(std::make_unique<UiOnScreenKeyboard>(), Death::move(options));
 	}
 
 	bool UiOnScreenKeyboard::IsShown(const UiSurface& surface)

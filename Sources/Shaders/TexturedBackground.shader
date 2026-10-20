@@ -114,7 +114,7 @@ void fragment() {
 }
 
 void fixed_function(pvr, gs) {
-	// Banded trapezoid rebuild of the warp (shared with TexturedBackgroundCircle.shader). These consoles
+	// Banded trapezoid rebuild of the warp (shared with the tunnel and the cylinder). These consoles
 	// take the include exactly as it is, with both macros left UNDEFINED. The PVR and the GS cannot lerp
 	// a texel toward a colour at all (the PVR only modulates and adds), so the horizon tint stays a second
 	// gradient pass over the bands, which is the include's default delivery. And the textured bands are

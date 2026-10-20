@@ -278,7 +278,7 @@ namespace ShaderCompiler
 				while (!AtEnd() && _ok) {
 					if (IsOp(";")) { Next(); continue; }
 					StmtPtr s = ParseStatement();
-					if (s != nullptr) block->Body.push_back(std::move(s));
+					if (s != nullptr) block->Body.push_back(Death::move(s));
 				}
 				return block;
 			}
@@ -310,7 +310,7 @@ namespace ShaderCompiler
 				return (_pos > 0 ? static_cast<std::int32_t>(At(_pos - 1).Index) : 0);
 			}
 
-			void Fail(String why) { if (_ok) { _ok = false; _reason = std::move(why); _errLine = CurLine(); } }
+			void Fail(String why) { if (_ok) { _ok = false; _reason = Death::move(why); _errLine = CurLine(); } }
 
 			bool Expect(const char* op)
 			{
@@ -334,7 +334,7 @@ namespace ShaderCompiler
 				StmtPtr block = MakeStmt(StmtKind::Block, line);
 				while (!IsOp("}") && !AtEnd() && _ok) {
 					StmtPtr s = ParseStatement();
-					if (s != nullptr) block->Body.push_back(std::move(s));
+					if (s != nullptr) block->Body.push_back(Death::move(s));
 				}
 				Expect("}");
 				return block;
@@ -357,7 +357,7 @@ namespace ShaderCompiler
 				if (!_ok) return nullptr;
 				Expect(";");
 				StmtPtr s = MakeStmt(StmtKind::ExprStmt, line);
-				s->E = std::move(e);
+				s->E = Death::move(e);
 				return s;
 			}
 
@@ -397,7 +397,7 @@ namespace ShaderCompiler
 					if (IsOp("[")) { Fail("array declarations are not part of the fixed_function grammar"_s); return nullptr; }
 					ExprPtr init;
 					if (IsOp("=")) { Next(); init = ParseExpression(1); if (!_ok) return nullptr; }
-					s->ExtraDecls.emplace_back(std::move(name), std::move(init));
+					s->ExtraDecls.emplace_back(Death::move(name), Death::move(init));
 				}
 				Expect(";");
 				return s;
@@ -414,9 +414,9 @@ namespace ShaderCompiler
 				StmtPtr el;
 				if (IsKw("else")) { Next(); el = ParseStatement(); }
 				StmtPtr s = MakeStmt(StmtKind::If, line);
-				s->Cond = std::move(cond);
-				s->Then = std::move(th);
-				s->Else = std::move(el);
+				s->Cond = Death::move(cond);
+				s->Then = Death::move(th);
+				s->Else = Death::move(el);
 				return s;
 			}
 
@@ -433,7 +433,7 @@ namespace ShaderCompiler
 					ExprPtr e = ParseExpression(0);
 					Expect(";");
 					init = MakeStmt(StmtKind::ExprStmt, initLine);
-					init->E = std::move(e);
+					init->E = Death::move(e);
 				}
 				ExprPtr cond;
 				if (!IsOp(";")) cond = ParseExpression(0);
@@ -443,10 +443,10 @@ namespace ShaderCompiler
 				Expect(")");
 				StmtPtr body = ParseStatement();
 				StmtPtr s = MakeStmt(StmtKind::For, line);
-				s->ForInit = std::move(init);
-				s->ForCond = std::move(cond);
-				s->ForUpdate = std::move(upd);
-				s->ForBody = std::move(body);
+				s->ForInit = Death::move(init);
+				s->ForCond = Death::move(cond);
+				s->ForUpdate = Death::move(upd);
+				s->ForBody = Death::move(body);
 				return s;
 			}
 
@@ -463,10 +463,10 @@ namespace ShaderCompiler
 						Expect(":");
 						ExprPtr rhs = ParseExpression(2);
 						ExprPtr cond = MakeExpr(ExprKind::Conditional);
-						cond->A = std::move(lhs);
-						cond->B = std::move(mid);
-						cond->C = std::move(rhs);
-						lhs = std::move(cond);
+						cond->A = Death::move(lhs);
+						cond->B = Death::move(mid);
+						cond->C = Death::move(rhs);
+						lhs = Death::move(cond);
 						continue;
 					}
 					std::int32_t prec = BinPrec(op);
@@ -476,10 +476,10 @@ namespace ShaderCompiler
 					bool assign = (prec == 1);
 					ExprPtr rhs = ParseExpression(assign ? prec : prec + 1);
 					if (!_ok) return lhs;
-					ExprPtr node = MakeExpr(assign ? ExprKind::Assign : ExprKind::Binary, std::move(opText));
-					node->A = std::move(lhs);
-					node->B = std::move(rhs);
-					lhs = std::move(node);
+					ExprPtr node = MakeExpr(assign ? ExprKind::Assign : ExprKind::Binary, Death::move(opText));
+					node->A = Death::move(lhs);
+					node->B = Death::move(rhs);
+					lhs = Death::move(node);
 				}
 				return lhs;
 			}
@@ -493,8 +493,8 @@ namespace ShaderCompiler
 						String o = Cur().Text;
 						Next();
 						ExprPtr v = ParseUnary();
-						ExprPtr node = MakeExpr(ExprKind::Unary, std::move(o));
-						node->A = std::move(v);
+						ExprPtr node = MakeExpr(ExprKind::Unary, Death::move(o));
+						node->A = Death::move(v);
 						return node;
 					}
 					if (op == "~") { Fail("unary '~' is not part of the fixed_function grammar"_s); return nullptr; }
@@ -512,17 +512,17 @@ namespace ShaderCompiler
 						if (!Is(GlslTokenType::Identifier)) { Fail("expected a member name after '.'"_s); return e; }
 						ExprPtr m = MakeExpr(ExprKind::Member, Cur().Text);
 						Next();
-						m->A = std::move(e);
-						e = std::move(m);
+						m->A = Death::move(e);
+						e = Death::move(m);
 					} else if (IsOp("[")) {
 						Fail("indexing/arrays are not part of the fixed_function grammar"_s);
 						return e;
 					} else if (IsOp("++") || IsOp("--")) {
 						ExprPtr node = MakeExpr(ExprKind::Unary, Cur().Text);
 						node->Postfix = true;
-						node->A = std::move(e);
+						node->A = Death::move(e);
 						Next();
-						e = std::move(node);
+						e = Death::move(node);
 					} else {
 						break;
 					}
@@ -545,7 +545,7 @@ namespace ShaderCompiler
 						while (!text.empty() && (text[text.size() - 1] == 'u' || text[text.size() - 1] == 'U')) {
 							text = String{text.prefix(text.size() - 1)};
 						}
-						ExprPtr e = MakeExpr(ExprKind::IntLit, std::move(text));
+						ExprPtr e = MakeExpr(ExprKind::IntLit, Death::move(text));
 						Next();
 						return e;
 					}
@@ -564,7 +564,7 @@ namespace ShaderCompiler
 						Next();
 						if (IsOp("(")) {
 							Next();
-							ExprPtr call = MakeExpr(ExprKind::Call, std::move(name));
+							ExprPtr call = MakeExpr(ExprKind::Call, Death::move(name));
 							if (!IsOp(")")) {
 								for (;;) {
 									call->Args.push_back(ParseExpression(0));
@@ -576,7 +576,7 @@ namespace ShaderCompiler
 							Expect(")");
 							return call;
 						}
-						return MakeExpr(ExprKind::Ident, std::move(name));
+						return MakeExpr(ExprKind::Ident, Death::move(name));
 					}
 					case GlslTokenType::Operator:
 						if (IsOp("(")) {
@@ -652,7 +652,7 @@ namespace ShaderCompiler
 
 			void Fail(String why)
 			{
-				if (_ok) { _ok = false; _reason = std::move(why); _errLine = _stmtLine; }
+				if (_ok) { _ok = false; _reason = Death::move(why); _errLine = _stmtLine; }
 			}
 
 			// Records that the emitted code calls one of the optional context facilities; the bits
@@ -718,7 +718,7 @@ namespace ShaderCompiler
 					// The list form: say which of the block's own targets is the one that cannot have it
 					why += ", not in one that also targets "_s + OtherTargets(FixedFunctionTarget::Gx);
 				}
-				Fail(std::move(why));
+				Fail(Death::move(why));
 				return false;
 			}
 
@@ -766,7 +766,7 @@ namespace ShaderCompiler
 					why += ", which this block also names"_s;
 				}
 				why += " (write the boost as passes in a fixed_function("_s + name + ") block, e.g. an additive one)"_s;
-				Fail(std::move(why));
+				Fail(Death::move(why));
 				return false;
 			}
 
@@ -809,7 +809,7 @@ namespace ShaderCompiler
 					why += ", which this block also names"_s;
 				}
 				why += " (keep TINT_MIX in a fixed_function block that only targets gx, rdp, legacygl and/or pica, and give the other backends their own block)"_s;
-				Fail(std::move(why));
+				Fail(Death::move(why));
 				return false;
 			}
 
@@ -853,7 +853,7 @@ namespace ShaderCompiler
 						// The list form: name why THAT target's capacity is the one that applies
 						why += " (the smallest capacity among the block's targets)"_s;
 					}
-					Fail(std::move(why));
+					Fail(Death::move(why));
 					return false;
 				}
 				return true;
@@ -1781,7 +1781,7 @@ namespace ShaderCompiler
 			GlslToken end;
 			end.Type = GlslTokenType::End;
 			end.Index = static_cast<std::size_t>(preprocessed.empty() ? block.Line : preprocessed.back().Line);
-			tokens.push_back(std::move(end));
+			tokens.push_back(Death::move(end));
 		}
 
 		// "pipeline <name>;" — binds the program to a backend pipeline stage that consumes an engine
@@ -1861,7 +1861,7 @@ namespace ShaderCompiler
 		out += body;
 
 		result.Ok = true;
-		result.Body = std::move(out);
+		result.Body = Death::move(out);
 		result.UsesOffsetColor = emitter.UsesOffsetColor();
 		result.Requirements = emitter.Requirements();
 		return result;

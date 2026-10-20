@@ -446,7 +446,7 @@ namespace Jazz2::AssetPacker
 						s->loop_length = loopLength / bps;
 						s->loop_end = loopEnd / bps;
 						s->data8 = reinterpret_cast<std::int8_t*>(data.data());
-						SampleData.push_back(std::move(data));
+						SampleData.push_back(Death::move(data));
 					}
 				}
 				return true;

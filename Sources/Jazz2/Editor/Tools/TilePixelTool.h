@@ -24,12 +24,13 @@ namespace Jazz2::Editor
 	{
 	public:
 		/**
-		 * @brief Paints a pixel of the tile
+		 * @brief Paints a line of pixels of the tile
 		 *
-		 * Gets the pixel of the tile, the button and whether the stroke goes on --- the first pixel of a stroke is a
-		 * new step of the history, the others merge into it.
+		 * Gets the first and the last pixel of the line, the same one for a single pixel, the button and whether the
+		 * stroke goes on --- the first line of a stroke is a new step of the history, the others merge into it. A
+		 * pointer moved fast over the same cell gives a line, so the stroke has no gaps.
 		 */
-		using PaintFunction = Function<void(Vector2i, MouseButton, bool)>;
+		using PaintFunction = Function<void(Vector2i, Vector2i, MouseButton, bool)>;
 
 		explicit TilePixelTool(IToolHost& host);
 
@@ -55,6 +56,8 @@ namespace Jazz2::Editor
 		bool _painting;
 		MouseButton _button;
 		Vector2i _lastPixel;
+		// The cell the last pixel was painted in, a line to the next one is drawn only within the same cell
+		Vector2i _lastCell;
 
 		// The pixel of the tile under a point of the level, `false` if the cell doesn't show the tile
 		bool GetPixel(const ToolPointer& pointer, Vector2i& pixel) const;

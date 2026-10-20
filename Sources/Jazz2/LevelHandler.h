@@ -70,6 +70,13 @@ namespace Jazz2
 	}
 #endif
 
+#if defined(WITH_EDITOR)
+	namespace Editor
+	{
+		class PlayTestDebug;
+	}
+#endif
+
 	/**
 		@brief Level handler of a local game session
 		
@@ -92,6 +99,9 @@ namespace Jazz2
 		friend class UI::Menu::InGameMenu;
 #if defined(WITH_PHYSICS_PROBE)
 		friend class Tests::PhysicsProbe;
+#endif
+#if defined(WITH_EDITOR)
+		friend class Editor::PlayTestDebug;
 #endif
 
 	public:
@@ -223,7 +233,7 @@ namespace Jazz2
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void HandleActivateSugarRush(Actors::Player* player) override;
 		void HandleCreateParticleDebrisOnPerish(const Actors::ActorBase* self, Actors::ParticleDebrisEffect effect, Vector2f speed) override;
-		void HandleCreateSpriteDebris(const Actors::ActorBase* self, AnimState state, std::int32_t count) override;
+		void HandleCreateSpriteDebris(const Actors::ActorBase* self, AnimState state, std::int32_t count, float elasticity) override;
 		void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, StringView value) override;
@@ -247,11 +257,23 @@ namespace Jazz2
 
 		bool SerializeResumableToStream(Stream& dest) override;
 
+		/**
+		 * @brief Returns how far the time of the level goes in this frame, in frames at 60 FPS
+		 *
+		 * The time of the application, unless a play-test of the level editor slows the level down or stops it, see
+		 * @ref GetPlayTestDebug().
+		 */
+		float GetLevelTimeMult() const;
+		/**
+		 * @brief Takes which keys are held from the keyboard again, or lets all of them go
+		 *
+		 * For a level that didn't get the keyboard for a while, as one played from the level editor, the keys
+		 * pressed and released meanwhile went elsewhere. With @p fromKeyboard the keys held now are held in the
+		 * level too, otherwise none is.
+		 */
+		void ResetPressedKeys(bool fromKeyboard);
+
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
-		/** @brief Returns 	rue if the level can be opened in the level editor from the pause menu */
-		virtual bool CanOpenInEditor() const;
-		/** @brief Leaves the level and opens it in the level editor */
-		void OpenInEditor();
 		/** @brief Takes the level off the screen, until its viewports are initialized again */
 		void SuspendRendering();
 #	if defined(WITH_AUDIO)
@@ -278,6 +300,10 @@ namespace Jazz2
 		virtual bool IsEditorPlayTest() const;
 		/** @brief Leaves the level editor the level is played from */
 		virtual void ExitEditor();
+		/** @brief Returns the debug tools of a level played from the level editor, or `nullptr` in a game */
+		Editor::PlayTestDebug* GetPlayTestDebug() const {
+			return _playTestDebug.get();
+		}
 #endif
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override {}
@@ -339,6 +365,11 @@ namespace Jazz2
 		SmallVector<String, 0> _debugStartupCommands;
 #endif
 
+#if defined(WITH_EDITOR)
+		// Created by the play-tests of the level editor before the level is initialized, see GetPlayTestDebug(); the root
+		// node refers to it, so it's declared before it and outlives it
+		std::unique_ptr<Editor::PlayTestDebug> _playTestDebug;
+#endif
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Texture> _noiseTexture;
 		SmallVector<std::unique_ptr<Rendering::PlayerViewport>, 0> _assignedViewports;
@@ -364,10 +395,8 @@ namespace Jazz2
 		bool _isReforged, _cheatsUsed;
 		bool _checkpointCreated;
 		SmallVector<String, 0> _levelTexts;
-#if defined(WITH_EDITOR)
-		// The level wasn't exported only to be played, see LevelFlags::NotEditable
-		bool _levelEditable = true;
-#endif
+		// Translations of the level texts the level carries, see Formats::LevelTextsChunk
+		SmallVector<LocalizedLevelTexts, 0> _localizedLevelTexts;
 
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
@@ -549,6 +578,10 @@ namespace Jazz2
 		virtual void PauseGame();
 		/** @brief Resumes the paused game */
 		virtual void ResumeGame();
+		/** @brief Pauses all sound effects that are playing, see @ref ResumeAllSfx() */
+		void PauseAllSfx();
+		/** @brief Plays all paused sound effects again */
+		void ResumeAllSfx();
 		/** @brief Shows the in-game console */
 		virtual void ShowConsole();
 		/** @brief Hides the in-game console */
@@ -593,5 +626,8 @@ namespace Jazz2
 		void CheatMorph(ArrayView<Actors::Player* const> targets);
 		void CheatShield(ArrayView<Actors::Player* const> targets);
 		void CheatFly(ArrayView<Actors::Player* const> targets);
+
+		// Creates the node every object of the level is under, it runs on the time of the play-test with the level editor
+		std::unique_ptr<SceneNode> CreateRootNode();
 	};
 }

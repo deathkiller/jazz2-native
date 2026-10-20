@@ -565,7 +565,7 @@ namespace ShaderCompiler
 				SourceLine l;
 				l.Text = String{current.data(), current.size()};
 				l.Line = lineNumber;
-				raw.push_back(std::move(l));
+				raw.push_back(Death::move(l));
 				arrayResize(current, 0);
 				lineNumber++;
 			} else {
@@ -576,7 +576,7 @@ namespace ShaderCompiler
 		SourceLine last;
 		last.Text = String{current.data(), current.size()};
 		last.Line = lineNumber;
-		raw.push_back(std::move(last));
+		raw.push_back(Death::move(last));
 
 		// Join backslash-newline continuations (origin = first physical line)
 		std::size_t j = 0;
@@ -587,7 +587,7 @@ namespace ShaderCompiler
 				j++;
 				merged.Text = merged.Text + raw[j].Text;
 			}
-			lines.push_back(std::move(merged));
+			lines.push_back(Death::move(merged));
 			j++;
 		}
 	}
@@ -817,7 +817,7 @@ R"GLSL(void main()
 			}
 			for (SourceLine& line : lines) {
 				line.Line = 0;
-				target.push_back(std::move(line));
+				target.push_back(Death::move(line));
 			}
 		}
 
@@ -849,7 +849,7 @@ R"GLSL(void main()
 			if (closed) {
 				String prefix = TrimRight(Substr(text, bodyBegin, pos - bodyBegin));
 				if (!Trim(prefix).empty()) {
-					body.push_back({ std::move(prefix), lineNumber });
+					body.push_back({ Death::move(prefix), lineNumber });
 				}
 				if (FindFirstNotOf(bare, " \t", pos + 1) != Npos) {
 					return Fail(diag, "unexpected text after the closing '}'", lineNumber);
@@ -862,7 +862,7 @@ R"GLSL(void main()
 			} else {
 				String rest = TrimRight(Substr(text, bodyBegin));
 				if (!Trim(rest).empty()) {
-					body.push_back({ std::move(rest), lineNumber });
+					body.push_back({ Death::move(rest), lineNumber });
 				}
 			}
 			done = false;
@@ -900,7 +900,7 @@ R"GLSL(void main()
 				if (!ExpectSemicolon(bare, cursor, "program <Name>", lineNumber, diag)) {
 					return false;
 				}
-				src.ProgramName = std::move(name);
+				src.ProgramName = Death::move(name);
 				seenProgram = true;
 			} else if (kind == "batched") {
 				if (!src.BatchedName.empty()) {
@@ -916,7 +916,7 @@ R"GLSL(void main()
 				if (name == src.ProgramName) {
 					return Fail(diag, "the batched twin must have a different name than the program", lineNumber);
 				}
-				src.BatchedName = std::move(name);
+				src.BatchedName = Death::move(name);
 				src.BatchedLine = lineNumber;
 			} else {	// "variant"
 				String name = WordAt(bare, cursor);
@@ -931,7 +931,7 @@ R"GLSL(void main()
 						return Fail(diag, "duplicate variant \""_s + name + "\""_s, lineNumber);
 					}
 				}
-				src.Variants.push_back(std::move(name));
+				src.Variants.push_back(Death::move(name));
 			}
 			return true;
 		}
@@ -975,7 +975,7 @@ R"GLSL(void main()
 					directive.Name = uniformName;
 					directive.Unit = static_cast<std::int32_t>(unit);
 					directive.Line = lineNumber;
-					src.Textures.push_back(std::move(directive));
+					src.Textures.push_back(Death::move(directive));
 				} else if (hint == "source_color" || hint == "filter_nearest" || hint == "filter_linear" ||
 					hint == "repeat_enable" || hint == "repeat_disable" || StartsWithWord(hint, "hint_range")) {
 					// Accepted hints without an equivalent here - parsed and silently dropped
@@ -1131,7 +1131,7 @@ R"GLSL(void main()
 						if (directive == "ifdef" || directive == "ifndef") {
 							String name = FirstIdentifier(Substr(bare, p));
 							if (isVaryingBackendMacro(name)) {
-								macro = std::move(name);
+								macro = Death::move(name);
 								defined = (directive == "ifdef");
 							}
 						} else if (directive == "if") {
@@ -1141,7 +1141,7 @@ R"GLSL(void main()
 								expression = Trim(Substr(expression, 1));
 							}
 							if (isVaryingBackendMacro(expression)) {
-								macro = std::move(expression);
+								macro = Death::move(expression);
 								defined = !negated;
 							}
 						}
@@ -1149,7 +1149,7 @@ R"GLSL(void main()
 							if (!backendVaryingMacro.empty()) {
 								return Fail(diag, "nested "_s + backendVaryingMacro + "/"_s + macro + " conditionals are not supported at global scope"_s, line.Line);
 							}
-							backendVaryingMacro = std::move(macro);
+							backendVaryingMacro = Death::move(macro);
 							backendVaryingDefined = defined;
 							backendVaryingSeenElse = false;
 							backendVaryingLine = line.Line;
@@ -1243,7 +1243,7 @@ R"GLSL(void main()
 						if (qualifier != "mediump" && qualifier != "highp") {
 							return Fail(diag, "unsupported precision \""_s + qualifier + "\" (expected mediump or highp)"_s, line.Line);
 						}
-						src.FragmentPrecision = std::move(qualifier);
+						src.FragmentPrecision = Death::move(qualifier);
 						seenPrecision = true;
 						continue;
 					}
@@ -1264,11 +1264,11 @@ R"GLSL(void main()
 					if (decl.empty()) {
 						return Fail(diag, "usage: varying [flat] [precision] <type> <name>;", line.Line);
 					}
-					varying.Declaration = std::move(decl);
+					varying.Declaration = Death::move(decl);
 					varying.Line = line.Line;
 					varying.BackendMacro = backendVaryingMacro;
 					varying.BackendDefined = backendVaryingDefined;
-					src.Varyings.push_back(std::move(varying));
+					src.Varyings.push_back(Death::move(varying));
 					continue;
 				}
 
@@ -1282,9 +1282,9 @@ R"GLSL(void main()
 						return Fail(diag, "usage: attribute [layout(location = N)] <type> <name>;", line.Line);
 					}
 					AttributeDecl attribute;
-					attribute.Declaration = std::move(decl);
+					attribute.Declaration = Death::move(decl);
 					attribute.Line = line.Line;
-					src.Attributes.push_back(std::move(attribute));
+					src.Attributes.push_back(Death::move(attribute));
 					continue;
 				}
 
@@ -1394,9 +1394,9 @@ R"GLSL(void main()
 					}
 					{
 						FixedFunctionBlock block;
-						block.Targets = std::move(targets);
+						block.Targets = Death::move(targets);
 						block.Line = line.Line;
-						src.FixedFunctionBlocks.push_back(std::move(block));
+						src.FixedFunctionBlocks.push_back(Death::move(block));
 					}
 					while (cursor < bare.size() && IsSpace(bare[cursor])) {
 						cursor++;
@@ -2058,7 +2058,7 @@ R"GLSL(void main()
 				if (!IsIdentifier(name)) {
 					return false;
 				}
-				decl.Names.push_back(std::move(name));
+				decl.Names.push_back(Death::move(name));
 				while (pos < bare.size() && IsSpace(bare[pos])) {
 					pos++;
 				}
@@ -2095,7 +2095,7 @@ R"GLSL(void main()
 					InterfaceDecl decl;
 					if (ParseInterfaceDeclLine(text, direction, decl)) {
 						decl.LineIndex = i;
-						decls.push_back(std::move(decl));
+						decls.push_back(Death::move(decl));
 						continue;	// A matched declaration line contains no braces
 					}
 				}
@@ -2784,7 +2784,7 @@ R"GLSL(void main()
 					}
 					firstChunk = false;
 				}
-				names.push_back(std::move(name));
+				names.push_back(Death::move(name));
 				if (pos >= list.size()) {
 					return true;
 				}
@@ -2868,10 +2868,10 @@ R"GLSL(void main()
 							if (IsIdentifier(guard) && IsDefineOfName(stripped[i + 1].Text, guard) && IsEndifLine(stripped[i + 2].Text)) {
 								GlobalDecl decl;
 								decl.Kind = GlobalDeclKind::DefineTrio;
-								decl.ReferenceNames.push_back(std::move(guard));
+								decl.ReferenceNames.push_back(Death::move(guard));
 								decl.StartLine = i;
 								decl.EndLine = i + 2;
-								decls.push_back(std::move(decl));
+								decls.push_back(Death::move(decl));
 								i += 3;
 								continue;
 							}
@@ -2888,10 +2888,10 @@ R"GLSL(void main()
 							if (IsIdentifier(macro)) {
 								GlobalDecl decl;
 								decl.Kind = GlobalDeclKind::Define;
-								decl.ReferenceNames.push_back(std::move(macro));
+								decl.ReferenceNames.push_back(Death::move(macro));
 								decl.StartLine = i;
 								decl.EndLine = i;
-								decls.push_back(std::move(decl));
+								decls.push_back(Death::move(decl));
 							}
 						}
 					}
@@ -2916,10 +2916,10 @@ R"GLSL(void main()
 								FindFirstNotOf(endText, " \t"_s, after + 1) == Npos) {
 								GlobalDecl decl;
 								decl.Kind = GlobalDeclKind::Struct;
-								decl.ReferenceNames.push_back(std::move(structName));
+								decl.ReferenceNames.push_back(Death::move(structName));
 								decl.StartLine = i;
 								decl.EndLine = endLine;
-								decls.push_back(std::move(decl));
+								decls.push_back(Death::move(decl));
 								i = endLine + 1;
 								continue;
 							}
@@ -3006,7 +3006,7 @@ R"GLSL(void main()
 											if (membersOk) {
 												decl.StartLine = i;
 												decl.EndLine = endLine;
-												decls.push_back(std::move(decl));
+												decls.push_back(Death::move(decl));
 												i = endLine + 1;
 												parsed = true;
 											}
@@ -3030,7 +3030,7 @@ R"GLSL(void main()
 								decl.ReferenceNames = decl.DeclaredNames;
 								decl.StartLine = i;
 								decl.EndLine = i;
-								decls.push_back(std::move(decl));
+								decls.push_back(Death::move(decl));
 								i++;
 								continue;
 							}
@@ -3543,7 +3543,7 @@ R"GLSL(void main()
 					return FoldedCondition::Untouched;
 				}
 				if (!ContainsCompileTimeMacro(text, macros)) {
-					kept.push_back(std::move(text));
+					kept.push_back(Death::move(text));
 					continue;
 				}
 				if (IsSelfContainedCondition(text, macros)) {
@@ -3567,7 +3567,7 @@ R"GLSL(void main()
 			for (std::size_t i = 1; i < kept.size(); i++) {
 				joined = joined + " && "_s + kept[i];
 			}
-			rewritten = std::move(joined);
+			rewritten = Death::move(joined);
 			return FoldedCondition::Rewritten;
 		}
 
@@ -3845,16 +3845,16 @@ R"GLSL(void main()
 				}
 				removed = false;
 				if (replaced) {
-					output.push_back({ std::move(replacement), lineNumber });
+					output.push_back({ Death::move(replacement), lineNumber });
 				} else {
-					output.push_back(std::move(lines[index]));
+					output.push_back(Death::move(lines[index]));
 				}
 			}
 
 			if (!stack.empty()) {
 				return Fail(diag, "unterminated #if/#ifdef/#ifndef", stack.back().Line);
 			}
-			lines = std::move(output);
+			lines = Death::move(output);
 			return true;
 		}
 
@@ -4005,7 +4005,7 @@ R"GLSL(void main()
 				}
 				removed = false;
 				if (replaced) {
-					output.push_back({ std::move(replacement), lines[index].Line });
+					output.push_back({ Death::move(replacement), lines[index].Line });
 				} else {
 					output.push_back(lines[index]);	// A copy - a malformed stream must leave "lines" fully intact
 				}
@@ -4014,7 +4014,7 @@ R"GLSL(void main()
 			if (!stack.empty()) {
 				return;					// Unterminated conditional - leave untouched
 			}
-			lines = std::move(output);
+			lines = Death::move(output);
 		}
 
 		// ── Lowering the Conditionals That Survive into an Emitted Source ────────────────────────
@@ -4132,7 +4132,7 @@ R"GLSL(void main()
 				}
 				if (IsIdentifier(text) && isFlag(text)) {
 					loweredDirective = (negated ? "ifndef"_s : "ifdef"_s);
-					loweredExpression = std::move(text);
+					loweredExpression = Death::move(text);
 					return true;
 				}
 			}
@@ -4692,7 +4692,7 @@ R"GLSL(void main()
 				TextureDirective directive;
 				directive.Name = "uTexture";
 				directive.Unit = 0;
-				src.Textures.push_back(std::move(directive));
+				src.Textures.push_back(Death::move(directive));
 			}
 		}
 
@@ -4725,7 +4725,7 @@ R"GLSL(void main()
 		Macro m;
 		m.Body = body;
 		m.FunctionLike = false;
-		_macros[name] = std::move(m);
+		_macros[name] = Death::move(m);
 	}
 
 	bool Preprocessor::IsDefined(StringView name) const
@@ -4914,7 +4914,7 @@ R"GLSL(void main()
 							m.FunctionLike = false;
 							m.Body = Trim(Substr(rest, q));
 						}
-						_macros[macroName] = std::move(m);
+						_macros[macroName] = Death::move(m);
 					}
 				} else if (name == "undef") {
 					if (allTaken(stack, stack.size())) {
@@ -4934,7 +4934,7 @@ R"GLSL(void main()
 				SourceLine expanded;
 				expanded.Text = ExpandMacros(line.Text);
 				expanded.Line = line.Line;
-				output.push_back(std::move(expanded));
+				output.push_back(Death::move(expanded));
 			}
 		}
 

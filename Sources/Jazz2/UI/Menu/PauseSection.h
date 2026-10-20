@@ -30,7 +30,6 @@ namespace Jazz2::UI::Menu
 #endif
 			Options,
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
-			EditLevel,
 			BackToEditor,
 			ExitEditor,
 #endif

@@ -106,7 +106,7 @@ namespace Jazz2::UI::Menu
 		}
 		_list = list.get();
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void RemapControlsSection::OnUpdate(float timeMult)

@@ -152,6 +152,10 @@ namespace nCine::Backends
 		initGraphics(windowMode.hasWindowScaling);
 		updateMonitors();
 		initDevice(windowMode.windowPositionX, windowMode.windowPositionY, windowMode.isResizable);
+
+		if (_windowHandle != nullptr) {
+			_isWindowFullscreen = (SDL_GetWindowFlags(_windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+		}
 	}
 
 	SdlGfxDevice::~SdlGfxDevice()
@@ -317,6 +321,17 @@ namespace nCine::Backends
 #if defined(WITH_RHI_SOFTWARE)
 		resizeSoftwareTarget(_drawableWidth, _drawableHeight);
 #endif
+	}
+
+	void SdlGfxDevice::syncFullscreenState()
+	{
+		// Fullscreen is asynchronous on SDL3 (incl. `sdl2-compat`), so the flag can lag behind the request
+		// or never be set at all - only its changes are followed, otherwise a resize would undo the request
+		const bool isWindowFullscreen = (SDL_GetWindowFlags(_windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+		if (_isWindowFullscreen != isWindowFullscreen) {
+			_isWindowFullscreen = isWindowFullscreen;
+			_isFullscreen = isWindowFullscreen;
+		}
 	}
 
 	void SdlGfxDevice::update()

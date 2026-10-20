@@ -40,8 +40,11 @@ namespace nCine::RHI::Software
 			{ "CombineWithWaterLow", SwEffect::Combine, false },
 			{ "TexturedBackground", SwEffect::TexturedBackground, false },
 			{ "TexturedBackgroundDither", SwEffect::TexturedBackground, true },
-			{ "TexturedBackgroundCircle", SwEffect::TexturedBackgroundCircle, false },
-			{ "TexturedBackgroundCircleDither", SwEffect::TexturedBackgroundCircle, true },
+			{ "TexturedBackgroundTunnel", SwEffect::TexturedBackgroundTunnel, false },
+			{ "TexturedBackgroundTunnelDither", SwEffect::TexturedBackgroundTunnel, true },
+			{ "TexturedBackgroundCylinder", SwEffect::TexturedBackgroundCylinder, false },
+			{ "TexturedBackgroundCylinderDither", SwEffect::TexturedBackgroundCylinder, true },
+			{ "TexturedBackgroundWave", SwEffect::TexturedBackgroundWave, false },
 			{ "PaletteRemap", SwEffect::PaletteRemap, false },
 			{ "BatchedPaletteRemap", SwEffect::BatchedPaletteRemap, false },
 		};
@@ -73,9 +76,11 @@ namespace nCine::RHI::Software
 			if (Contains(label, "PaletteRemap")) {
 				return Contains(label, "Batched") ? SwEffect::BatchedPaletteRemap : SwEffect::PaletteRemap;
 			}
-			// Animated background (planar tunnel and its circular variant)
+			// Animated background (planar sky and its tunnel, cylinder and wave variants)
 			if (Contains(label, "TexturedBackground")) {
-				return Contains(label, "Circle") ? SwEffect::TexturedBackgroundCircle : SwEffect::TexturedBackground;
+				return Contains(label, "Tunnel") ? SwEffect::TexturedBackgroundTunnel
+					: (Contains(label, "Cylinder") ? SwEffect::TexturedBackgroundCylinder
+						: (Contains(label, "Wave") ? SwEffect::TexturedBackgroundWave : SwEffect::TexturedBackground));
 			}
 			// Viewport compositor (the plain and water variants share the base composite in C++)
 			if (Contains(label, "Combine")) {

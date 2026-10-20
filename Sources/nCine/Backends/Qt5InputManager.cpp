@@ -434,7 +434,8 @@ namespace nCine::Backends
 			return;
 		}
 
-		_scrollEvent.x = event->angleDelta().x() / 60.0f;
+		// Qt reports the horizontal angle positive to the left, the opposite of the other backends
+		_scrollEvent.x = event->angleDelta().x() / -60.0f;
 		_scrollEvent.y = event->angleDelta().y() / 60.0f;
 		_inputEventHandler->OnMouseWheel(_scrollEvent);
 	}

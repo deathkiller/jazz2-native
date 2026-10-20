@@ -2,6 +2,7 @@
 
 #if defined(WITH_EDITOR)
 
+#include "../../ContentResolver.h"
 #include "../../Tiles/TileMap.h"
 
 #include <IO/MemoryStream.h>
@@ -24,6 +25,8 @@ namespace Jazz2::Editor
 	void PlayPath::Clear()
 	{
 		Segments.clear();
+		Duration = 0.0f;
+		_pointCount = 0;
 	}
 
 	std::int32_t PlayPath::GetPointCount() const
@@ -35,6 +38,25 @@ namespace Jazz2::Editor
 		return count;
 	}
 
+	std::int32_t PlayPath::GetDeathCount() const
+	{
+		std::int32_t count = 0;
+		for (const Segment& segment : Segments) {
+			count += (segment.End == Break::Died ? 1 : 0);
+		}
+		return count;
+	}
+
+	bool PlayPath::HasExited() const
+	{
+		for (const Segment& segment : Segments) {
+			if (segment.End == Break::Exited) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	void PlayPath::Record(Vector2f pos, float speed, float timeMult)
 	{
 		if (Segments.empty()) {
@@ -42,6 +64,7 @@ namespace Jazz2::Editor
 		}
 		auto& points = Segments.back().Points;
 		_time += timeMult;
+		Duration += timeMult;
 		if (!points.empty() && (pos - points.back()).Length() < PathMinDistance && _time < PathMaxInterval) {
 			return;
 		}
@@ -51,10 +74,32 @@ namespace Jazz2::Editor
 		Segments.back().Points.push_back(pos);
 		Segments.back().Speeds.push_back(speed);
 		_time = 0.0f;
+		_pointCount++;
 
-		// The oldest points go first when there are too many
-		while (GetPointCount() > MaxPoints && Segments.size() > 1) {
-			Segments.erase(Segments.begin());
+		// The oldest points go first when there are too many, a quarter of them at once so it isn't done for every point,
+		// also of a single long segment
+		if (_pointCount > MaxPoints) {
+			constexpr std::int32_t KeptPoints = MaxPoints - MaxPoints / 4;
+			_pointCount = GetPointCount();
+			while (_pointCount > KeptPoints) {
+				Segment& oldest = Segments.front();
+				std::int32_t excess = _pointCount - KeptPoints;
+				std::int32_t size = std::int32_t(oldest.Points.size());
+				if (Segments.size() > 1 && size <= excess) {
+					_pointCount -= size;
+					Segments.erase(Segments.begin());
+					continue;
+				}
+				// The segment being recorded keeps its last point
+				std::int32_t drop = std::min<std::int32_t>(excess, size - 1);
+				if (drop <= 0) {
+					break;
+				}
+				oldest.Points.erase(oldest.Points.begin(), oldest.Points.begin() + drop);
+				std::int32_t speedDrop = std::min<std::int32_t>(drop, std::int32_t(oldest.Speeds.size()));
+				oldest.Speeds.erase(oldest.Speeds.begin(), oldest.Speeds.begin() + speedDrop);
+				_pointCount -= drop;
+			}
 		}
 	}
 
@@ -67,37 +112,20 @@ namespace Jazz2::Editor
 		Segments.emplace_back();
 	}
 
-	bool IPlayTest::FindSpawnPositionNear(Tiles::TileMap* tileMap, Vector2f pos, float radius, Vector2f& result)
+	IPlayTest::~IPlayTest()
 	{
-		if (tileMap == nullptr) {
-			return false;
+		// Released by the next loading that doesn't use them, not here
+		if (_resourcesRetained) {
+			ContentResolver::Get().ReleaseLoadedResources();
 		}
+	}
 
-		Vector2i bounds = tileMap->GetLevelBounds();
-		auto fits = [tileMap](Vector2f candidate) {
-			// The hitbox of the player, see LevelHandler::FindClearSpawnPosition()
-			AABBf aabb = AABBf(candidate.X - 11.0f, candidate.Y + 8.0f - 26.0f, candidate.X + 11.0f, candidate.Y + 8.0f + 12.0f);
-			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
-			return tileMap->IsTileEmpty(aabb, params);
-		};
-
-		// In growing rings around the position, up first, because the player falls down from there
-		constexpr float Step = 8.0f;
-		for (float distance = 0.0f; distance <= radius; distance += Step) {
-			std::int32_t count = std::max(1, std::int32_t(distance * 6.2832f / Step));
-			for (std::int32_t i = 0; i < count; i++) {
-				float angle = -1.5708f + 6.2832f * i / count;
-				Vector2f candidate(pos.X + std::cos(angle) * distance, pos.Y + std::sin(angle) * distance);
-				if (candidate.X < 16.0f || candidate.Y < 16.0f || candidate.X > bounds.X - 16.0f || candidate.Y > bounds.Y - 16.0f) {
-					continue;
-				}
-				if (fits(candidate)) {
-					result = candidate;
-					return true;
-				}
-			}
+	void IPlayTest::RetainResources()
+	{
+		if (!_resourcesRetained) {
+			_resourcesRetained = true;
+			ContentResolver::Get().RetainLoadedResources();
 		}
-		return false;
 	}
 
 	bool IPlayTest::SaveLevel(const LevelDocument& document, StringView levelName, SmallVectorImpl<std::uint8_t>& data)

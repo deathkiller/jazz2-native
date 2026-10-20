@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 		}
 		/** @brief Sets the root widget that fills the clipped content area */
 		void SetContent(std::unique_ptr<Widget> content) {
-			_content = std::move(content);
+			_content = Death::move(content);
 		}
 		/** @brief Returns the root widget, or `nullptr` */
 		Widget* GetContent() const {

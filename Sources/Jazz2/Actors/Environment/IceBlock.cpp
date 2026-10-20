@@ -36,9 +36,11 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnUpdate(timeMult);
 
+		// The tile of the spawn position, the origin tile only names the event (an off-grid one has its tile past the grid)
+		const Vector2i tile(_spawnPos.X / 32, _spawnPos.Y / 32);
 		auto tileMap = _levelHandler->TileMap();
 		if (tileMap != nullptr) {
-			if (tileMap->IsTileEmpty(_originTile.X, _originTile.Y)) {
+			if (tileMap->IsTileEmpty(tile.X, tile.Y)) {
 				DecreaseHealth(INT32_MAX);
 				return;
 			}
@@ -49,17 +51,17 @@ namespace Jazz2::Actors::Environment
 			DecreaseHealth(INT32_MAX);
 
 			if (tileMap != nullptr) {
-				if (tileMap->IsTileEmpty(_originTile.X - 1, _originTile.Y)) {
+				if (tileMap->IsTileEmpty(tile.X - 1, tile.Y)) {
 					for (int i = 0; i < 5; i++) {
 						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 24, (std::int32_t)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
-				if (tileMap->IsTileEmpty(_originTile.X + 1, _originTile.Y)) {
+				if (tileMap->IsTileEmpty(tile.X + 1, tile.Y)) {
 					for (int i = 0; i < 5; i++) {
 						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X + 24, (std::int32_t)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
-				if (tileMap->IsTileEmpty(_originTile.X, _originTile.Y + 1)) {
+				if (tileMap->IsTileEmpty(tile.X, tile.Y + 1)) {
 					for (int i = 0; i < 5; i++) {
 						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 16 + Random().Fast(0, 32), (std::int32_t)_pos.Y + 24, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
 					}

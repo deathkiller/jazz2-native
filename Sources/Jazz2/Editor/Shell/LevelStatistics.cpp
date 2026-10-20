@@ -2,7 +2,13 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../EditorSession.h"
+#include "ShellCommon.h"
+#include "../Tools/EditorContext.h"
+#include "../Document/LevelDocument.h"
+#include "../Input/ActionRegistry.h"
+#include "../Runtime/PlayPathHistory.h"
+#include "../Tools/EventTools.h"
+#include "../Document/DocumentChanges.h"
 #include "../Events/EventCatalog.h"
 #include "../UI/UiDialogs.h"
 #include "../UI/UiSurface.h"
@@ -12,6 +18,7 @@
 #include <Containers/StringConcatenable.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <string>
 
 using namespace Death::Containers::Literals;
@@ -139,78 +146,227 @@ namespace Jazz2::Editor
 		return stats;
 	}
 
-	void ShowLevelStatisticsDialog(EditorSession& session)
+	namespace
+	{
+		const std::uint8_t DifficultyBits[3] = { Formats::EventRecord::Easy, Formats::EventRecord::Normal, Formats::EventRecord::Hard };
+
+		// Selects the events in a difficulty that a count of the statistics counts, on the grid and off it, each event
+		// counted by itself, as a crate counts its contents
+		void SelectCounted(IEditorContext& session, std::uint8_t difficultyBit, Function<bool(const LevelStatistics&)>&& counted)
+		{
+			const LevelDocument& document = session.GetDocument();
+			SmallVector<std::uint32_t, 0> cells;
+			for (const DocumentEvent& event : document.Events) {
+				if (IsPresent(event.Record, difficultyBit)) {
+					LevelStatistics single;
+					CountEvent(single, event.Record);
+					if (counted(single)) {
+						cells.push_back(event.Cell);
+					}
+				}
+			}
+			SmallVector<std::int32_t, 0> offGrid;
+			for (std::size_t i = 0; i < document.OffGridEvents.size(); i++) {
+				const Formats::EventRecord& event = document.OffGridEvents[i].Event;
+				if (IsPresent(event, difficultyBit)) {
+					LevelStatistics single;
+					CountEvent(single, event);
+					if (counted(single)) {
+						offGrid.push_back(std::int32_t(i));
+					}
+				}
+			}
+			if (!session.IsEditingEvents()) {
+				session.GetActions().Execute(ActionIds::ToolEvent);
+			}
+			std::int32_t count = std::int32_t(cells.size() + offGrid.size());
+			EventSelection& selection = session.GetEventSelection();
+			selection.Assign(Death::move(cells));
+			selection.AssignOffGrid(Death::move(offGrid));
+			session.ShowMessage(_fn("{} event selected", "{} events selected", count, count));
+		}
+
+		void FillStatistics(UiStack* content, IEditorContext& session)
+		{
+			const LevelDocument& document = session.GetDocument();
+			LevelStatistics stats[3] = {
+				LevelStatistics::Compute(document, Formats::EventRecord::Easy),
+				LevelStatistics::Compute(document, Formats::EventRecord::Normal),
+				LevelStatistics::Compute(document, Formats::EventRecord::Hard)
+			};
+			content->ClearChildren();
+
+			// All rows first, so the columns can be as wide as their widest text, the header included
+			struct CountRow
+			{
+				String Label;
+				String Values[3];
+				Colorf Color;
+				String Tooltip;
+				std::shared_ptr<Function<bool(const LevelStatistics&)>> Counted;
+			};
+			SmallVector<CountRow, 0> rows;
+			auto addCount = [&rows, &stats](String label, std::int32_t LevelStatistics::*member, String tooltip = {}) {
+				CountRow& row = rows.emplace_back();
+				row.Label = Death::move(label);
+				for (std::int32_t i = 0; i < 3; i++) {
+					row.Values[i] = FormatInteger(stats[i].*member);
+				}
+				row.Color = UiTheme::Text;
+				row.Tooltip = Death::move(tooltip);
+				row.Counted = std::make_shared<Function<bool(const LevelStatistics&)>>([member](const LevelStatistics& single) { return (single.*member > 0); });
+			};
+			addCount(_("Enemies"), &LevelStatistics::Enemies);
+			addCount(_("Bosses"), &LevelStatistics::Bosses);
+			addCount(_("Gems"), &LevelStatistics::Gems, _("By their value, red ones are worth 1, green 5, blue 10, those in crates and barrels too"));
+			addCount(_("Giant gems"), &LevelStatistics::GiantGems, _("Each breaks into 5 to 12 red gems, which aren't counted in the gems"));
+			addCount(_("Coins"), &LevelStatistics::Coins, _("By their value, silver ones are worth 1, gold 5"));
+			addCount(_("Food"), &LevelStatistics::Food);
+			addCount(_("Carrots"), &LevelStatistics::Carrots);
+			addCount(_("Extra lives"), &LevelStatistics::ExtraLives);
+			addCount(_("Ammo"), &LevelStatistics::Ammo);
+			addCount(_("Containers"), &LevelStatistics::Containers, _("Crates, barrels and monitors"));
+			addCount(_("Checkpoints"), &LevelStatistics::Checkpoints);
+			addCount(_("Warp tiles"), &LevelStatistics::Warps);
+			addCount(_("Exit tiles"), &LevelStatistics::Exits);
+			addCount(_("Generators"), &LevelStatistics::Generators, _("What they spawn isn't counted above, there's no end to it"));
+			{
+				static const char* const Characters[] = { N_("Starts of Jazz"), N_("Starts of Spaz"), N_("Starts of Lori") };
+				for (std::int32_t c = 0; c < 3; c++) {
+					CountRow& row = rows.emplace_back();
+					row.Label = _(Characters[c]);
+					for (std::int32_t i = 0; i < 3; i++) {
+						row.Values[i] = FormatInteger(stats[i].Starts[c]);
+					}
+					row.Color = (stats[1].Starts[c] == 0 ? UiTheme::TextDanger : UiTheme::Text);
+					row.Counted = std::make_shared<Function<bool(const LevelStatistics&)>>([c](const LevelStatistics& single) { return (single.Starts[c] > 0); });
+				}
+			}
+			addCount(_("Events"), &LevelStatistics::Events, _("All events in the difficulty, only those in multiplayer are left out"));
+			String header[3] = { _("Easy"), _("Normal"), _("Hard") };
+
+			// A count is a flat button, its text is this far from its right edge, the header above it is placed the same
+			const float inset = UiTheme::Padding * 1.5f;
+			float labelWidth = LabelWidth;
+			float valueWidth = ValueWidth;
+			if (UiSurface* surface = session.GetSurface()) {
+				// In units, with a little to spare, as the text is scaled in steps
+				UiContext context = surface->GetContext();
+				auto measure = [&context](StringView text) {
+					return (context.Scale > 0.0f ? context.MeasureText(text) / context.Scale + 2.0f : 0.0f);
+				};
+				float widestLabel = 0.0f, widestValue = 0.0f;
+				for (const String& text : header) {
+					widestValue = std::max(widestValue, measure(text));
+				}
+				for (const CountRow& row : rows) {
+					widestLabel = std::max(widestLabel, measure(row.Label));
+					for (const String& value : row.Values) {
+						widestValue = std::max(widestValue, measure(value));
+					}
+				}
+				labelWidth = std::max(widestLabel + UiTheme::Spacing, 60.0f);
+				valueWidth = std::max(widestValue + inset * 2.0f, 36.0f);
+			}
+
+			{
+				auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+				row->Add<UiLabel>(StringView(), UiTheme::TextHeader)->Width = labelWidth;
+				for (const String& text : header) {
+					// As wide as the buttons below, so the columns don't drift apart by rounding
+					auto* cell = row->Add<UiStack>(UiOrientation::Horizontal, 0.0f, UiThickness(0.0f, 0.0f, inset, 0.0f));
+					cell->Width = valueWidth;
+					cell->Add<UiLabel>(text, UiTheme::TextHeader, Alignment::Right)->Width = valueWidth - inset;
+				}
+			}
+			IEditorContext* s = &session;
+			for (CountRow& countRow : rows) {
+				auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+				row->Add<UiLabel>(countRow.Label, countRow.Color)->Width = labelWidth;
+				if (!countRow.Tooltip.empty()) {
+					row->Tooltip = countRow.Tooltip;
+				}
+				for (std::int32_t i = 0; i < 3; i++) {
+					std::uint8_t bit = DifficultyBits[i];
+					auto counted = countRow.Counted;
+					auto* button = row->Add<UiButton>(countRow.Values[i], EditorIcon::None, [s, bit, counted]() {
+						SelectCounted(*s, bit, [counted](const LevelStatistics& single) { return (*counted)(single); });
+					});
+					button->Style = UiButtonStyle::Flat;
+					button->TextAlign = Alignment::Right;
+					button->TextColor = countRow.Color;
+					button->Width = valueWidth;
+					button->Tooltip = _("Select the events counted here");
+				}
+			}
+			content->Add<UiLabel>(_("Events only in multiplayer aren't counted"), UiTheme::TextDim);
+		}
+	}
+
+	void ShowLevelStatisticsDialog(IEditorContext& session)
 	{
 		UiSurface* surface = session.GetSurface();
-		if (surface == nullptr) {
+		if (surface == nullptr || ReuseSingleDialog(session, "statistics")) {
 			return;
 		}
 
-		const LevelDocument& document = session.GetDocument();
-		LevelStatistics stats[3] = {
-			LevelStatistics::Compute(document, Formats::EventRecord::Easy),
-			LevelStatistics::Compute(document, Formats::EventRecord::Normal),
-			LevelStatistics::Compute(document, Formats::EventRecord::Hard)
-		};
+		IEditorContext* s = &session;
+		// Scrolled if it's taller than the screen, the title stays
+		auto dialog = std::make_unique<UiDialog>(_("Statistics"), true);
+		auto* table = dialog->GetContent()->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+		FillStatistics(table, session);
 
-		auto dialog = std::make_unique<UiDialog>(_("Statistics"));
-		UiDialog* dialogPtr = dialog.get();
-		auto* content = dialog->GetContent();
-
-		auto addRow = [content](StringView label, const String (&values)[3], const Colorf& color) {
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			row->Add<UiLabel>(label, color)->Width = LabelWidth;
-			for (const String& value : values) {
-				row->Add<UiLabel>(value, color, Alignment::Right)->Width = ValueWidth;
-			}
-			return row;
-		};
-		auto addCount = [&addRow, &stats](StringView label, std::int32_t LevelStatistics::*member) {
-			String values[3];
-			for (std::int32_t i = 0; i < 3; i++) {
-				values[i] = String(std::to_string(stats[i].*member).c_str());
-			}
-			return addRow(label, values, UiTheme::Text);
-		};
-
-		{
-			String header[3] = { _("Easy"), _("Normal"), _("Hard") };
-			addRow({}, header, UiTheme::TextHeader);
+		// The play-tests kept with the level, how fast it was finished and how often the player died
+		const PlayPathHistory& history = session.GetPlayPathHistory();
+		if (!history.IsEmpty()) {
+			auto formatTime = [](float frames) {
+				std::int32_t hundredths = std::int32_t(frames * 100.0f / 60.0f);
+				char buffer[32];
+				std::snprintf(buffer, sizeof(buffer), "%d:%02d.%02d", hundredths / 6000, (hundredths / 100) % 60, hundredths % 100);
+				return String(buffer);
+			};
+			const PlayPath& last = history.GetPaths().back();
+			UiStack* playTests = dialog->GetContent()->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+			playTests->Add<UiLabel>(_fn("Last {} play-test", "Last {} play-tests", std::int32_t(history.GetPaths().size()), std::int32_t(history.GetPaths().size())), UiTheme::TextHeader);
+			float best = history.GetBestExitTime();
+			playTests->Add<UiLabel>(best >= 0.0f ? String(_f("Finished in {} at best", formatTime(best))) : String(_("Not finished yet")), UiTheme::Text);
+			playTests->Add<UiLabel>(_f("{} deaths in them", history.GetTotalDeaths()), UiTheme::Text);
+			playTests->Add<UiLabel>(_f("The last one took {}, {} deaths", formatTime(last.Duration), last.GetDeathCount()), UiTheme::TextDim);
 		}
-		addCount(_("Enemies"), &LevelStatistics::Enemies);
-		addCount(_("Bosses"), &LevelStatistics::Bosses);
-		addCount(_("Gems"), &LevelStatistics::Gems)->Tooltip = _("By their value, red ones are worth 1, green 5, blue 10, those in crates and barrels too");
-		addCount(_("Giant gems"), &LevelStatistics::GiantGems)->Tooltip = _("Each breaks into 5 to 12 red gems, which aren't counted in the gems");
-		addCount(_("Coins"), &LevelStatistics::Coins)->Tooltip = _("By their value, silver ones are worth 1, gold 5");
-		addCount(_("Food"), &LevelStatistics::Food);
-		addCount(_("Carrots"), &LevelStatistics::Carrots);
-		addCount(_("Extra lives"), &LevelStatistics::ExtraLives);
-		addCount(_("Ammo"), &LevelStatistics::Ammo);
-		addCount(_("Containers"), &LevelStatistics::Containers)->Tooltip = _("Crates, barrels and monitors");
-		addCount(_("Checkpoints"), &LevelStatistics::Checkpoints);
-		addCount(_("Warp tiles"), &LevelStatistics::Warps);
-		addCount(_("Exit tiles"), &LevelStatistics::Exits);
-		addCount(_("Generators"), &LevelStatistics::Generators)->Tooltip = _("What they spawn isn't counted above, there's no end to it");
+
+		// Counted again once the events stop changing for a moment, the counts are always those of the level as it is
+		struct RefreshState
 		{
-			static const char* const Characters[] = { N_("Starts of Jazz"), N_("Starts of Spaz"), N_("Starts of Lori") };
-			for (std::int32_t c = 0; c < 3; c++) {
-				String values[3];
-				for (std::int32_t i = 0; i < 3; i++) {
-					values[i] = String(std::to_string(stats[i].Starts[c]).c_str());
+			bool Dirty = false;
+			float Wait = 0.0f;
+			std::shared_ptr<Function<void(const DocumentChanges&)>> Observer;
+		};
+		auto state = std::make_shared<RefreshState>();
+		std::weak_ptr<RefreshState> weakState = state;
+		state->Observer = std::make_shared<Function<void(const DocumentChanges&)>>([weakState](const DocumentChanges& changes) {
+			std::shared_ptr<RefreshState> state = weakState.lock();
+			if (state != nullptr && changes.HasAny(DocumentChangeKind::Events)) {
+				state->Dirty = true;
+				state->Wait = 20.0f;
+			}
+		});
+		session.AddChangeObserver(state->Observer);
+		dialog->GetContent()->Add<UiUpdateWatcher>([s, state, table](float timeMult) {
+			if (state->Dirty) {
+				state->Wait -= timeMult;
+				if (state->Wait <= 0.0f) {
+					state->Dirty = false;
+					FillStatistics(table, *s);
 				}
-				addRow(_(Characters[c]), values, stats[1].Starts[c] == 0 ? UiTheme::TextDanger : UiTheme::Text);
 			}
-		}
-		addCount(_("Events"), &LevelStatistics::Events)->Tooltip = _("All events in the difficulty, only those in multiplayer are left out");
-		content->Add<UiLabel>(_("Events only in multiplayer aren't counted"), UiTheme::TextDim);
+		});
 
-		dialog->AddButton(_("Close"), [dialogPtr]() { dialogPtr->Close(); }, true);
-
+		// Closed by its cross or Escape, a window that stays while the level is changed, not a popup
 		UiOverlayOptions options;
 		options.Centered = true;
 		options.Modal = false;
-		options.CloseOnOutsideClick = true;
-		surface->PushOverlay(std::move(dialog), std::move(options));
+		options.CloseOnOutsideClick = false;
+		ShowSingleDialog(session, "statistics", Death::move(dialog), Death::move(options));
 	}
 }
 

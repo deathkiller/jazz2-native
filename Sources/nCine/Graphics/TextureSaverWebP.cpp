@@ -16,7 +16,7 @@
 //
 //bool TextureSaverWebP::saveToFile(const Properties &properties, std::unique_ptr<IFile> fileHandle)
 //{
-//	return saveToFile(properties, WebPProperties(), std::move(fileHandle));
+//	return saveToFile(properties, WebPProperties(), Death::move(fileHandle));
 //}
 //
 //bool TextureSaverWebP::saveToFile(const Properties &properties, const WebPProperties &webpProperties, const char *filename)

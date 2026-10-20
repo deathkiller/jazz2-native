@@ -18,6 +18,11 @@ Multiplayer comes in two flavors, both optional at build time:
 
 @m_class{m-noindent}
 
+Events a level marks as multiplayer-only are present in every multiplayer session, local splitscreen included, and
+in no single-player game.
+
+@m_class{m-noindent}
+
 Online sessions are <b>server-authoritative</b>: the server runs the whole game (damage, collectibles,
 scores, rounds) and clients send input, so the level has to be present on the server. The same executable is
 both game and server unless built with `DEDICATED_SERVER`. Multiplayer requires threads
@@ -37,7 +42,8 @@ In the main menu choose <b>Play Multiplayer</b> and then:
 
 Then pick the level (or the configured playlist) and the game mode. The host plays as a normal player but
 must be reachable (see @ref multiplayer-visibility for the port to forward). All other settings come from
-@cpp "Jazz2.Server.config" @ce (see @ref multiplayer-config), the same file a dedicated server reads.
+@cpp "Jazz2.Server.config" @ce (see @ref multiplayer-config), the same file a dedicated server reads. A port that is
+taken already, such as by another server on the same machine, makes creating the server fail.
 
 @subsection multiplayer-hosting-dedicated Running a dedicated server
 

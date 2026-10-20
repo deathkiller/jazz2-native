@@ -2,8 +2,10 @@
 
 #if defined(WITH_EDITOR)
 
+#include "ShellCommon.h"
 #include "ShellPanels.h"
-#include "../EditorSession.h"
+#include "TextPrompt.h"
+#include "../Tools/EditorContext.h"
 #include "../Document/Annotations.h"
 #include "../Document/Commands.h"
 #include "../Document/DocumentSnapshot.h"
@@ -48,7 +50,7 @@ namespace Jazz2::Editor
 		{
 		public:
 			AnchorButton(std::shared_ptr<ResizeState> state, Vector2i anchor)
-				: _state(std::move(state)), _anchor(anchor)
+				: _state(Death::move(state)), _anchor(anchor)
 			{
 			}
 
@@ -101,12 +103,42 @@ namespace Jazz2::Editor
 		};
 	}
 
-	void ShowResizeLayerDialog(EditorSession& session)
+	bool ResizeLayerAsStep(IEditorContext& session, std::int32_t layer, Vector2i size, Vector2i offset, LevelDocument::ResizeFill fill)
+	{
+		LevelDocument& document = session.GetDocument();
+		if (layer < 0 || layer >= std::int32_t(document.Layers.size())) {
+			return false;
+		}
+		bool spriteLayer = document.Layers[layer].IsSpriteLayer();
+		// Only the resized layer is kept, the ground lines go with the layers, the water level is a property of the level
+		// and the bookmarks and notes are in a chunk, both move with the sprite layer
+		SnapshotParts parts = (spriteLayer ? (SnapshotParts::Layers | SnapshotParts::Properties | SnapshotParts::Chunks) : SnapshotParts::Layers);
+		return session.RecordSnapshotStep(_("Resize layer"), parts, [&session, layer, size, offset, fill, spriteLayer](LevelDocument& document) {
+			if (!document.ResizeLayer(layer, size, offset, fill)) {
+				session.ShowMessage(_("The layer can't be that large"));
+				return false;
+			}
+			// Ground lines of the layer move with its tiles, and bookmarks and notes with the sprite layer
+			TerrainSpline::ResizeLayer(document, layer, size, offset);
+			if (spriteLayer && offset != Vector2i(0, 0)) {
+				SmallVector<Annotation, 0> annotations;
+				Annotation::Read(document, annotations);
+				for (Annotation& annotation : annotations) {
+					annotation.X += offset.X * 32;
+					annotation.Y += offset.Y * 32;
+				}
+				Annotation::Write(document, annotations);
+			}
+			return true;
+		}, DocumentChangeKind::None, layer);
+	}
+
+	void ShowResizeLayerDialog(IEditorContext& session)
 	{
 		UiSurface* surface = session.GetSurface();
 		LevelDocument& document = session.GetDocument();
 		std::int32_t layerIndex = session.GetCurrentLayer();
-		if (surface == nullptr || layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size())) {
+		if (surface == nullptr || layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size()) || !CheckLayerUnlocked(session, layerIndex)) {
 			return;
 		}
 
@@ -119,14 +151,14 @@ namespace Jazz2::Editor
 		bool repeats = (layer.Record.Flags & (Formats::LayerRecord::RepeatX | Formats::LayerRecord::RepeatY)) != 0;
 		state->Fill = (repeats ? LevelDocument::ResizeFill::Repeat : LevelDocument::ResizeFill::Empty);
 
-		EditorSession* s = &session;
-		auto dialog = std::make_unique<UiDialog>(_f("Resize Layer - {}", GetLayerTitle(layer, layerIndex)));
+		IEditorContext* s = &session;
+		auto dialog = std::make_unique<UiDialog>(_f("Resize Layer - {}", GetLayerTitle(document, layerIndex)));
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
 
 		{
 			auto* row = content->AddRow(_("Now"));
-			row->Add<UiLabel>(_f("{} × {} tiles", state->OldSize.X, state->OldSize.Y), UiTheme::TextDim);
+			row->Add<UiLabel>(_f("{} x {} tiles", state->OldSize.X, state->OldSize.Y), UiTheme::TextDim);
 		}
 		for (std::int32_t axis = 0; axis < 2; axis++) {
 			auto* row = content->AddRow(axis == 0 ? _("Width") : _("Height"));
@@ -176,7 +208,7 @@ namespace Jazz2::Editor
 					entry.Label = _(option.Label);
 					entry.IsChecked = [state, fill]() { return (state->Fill == fill); };
 					entry.Execute = [state, fill]() { state->Fill = fill; };
-					entries.push_back(std::move(entry));
+					entries.push_back(Death::move(entry));
 				}
 			});
 			dropdown->Width = 130.0f;
@@ -196,42 +228,13 @@ namespace Jazz2::Editor
 				dialogPtr->Close();
 				return;
 			}
-			bool spriteLayer = document.Layers[state->Layer].IsSpriteLayer();
-			// The water level is a property of the level
-			auto command = SnapshotCommand::Begin(document, (spriteLayer ? (SnapshotParts::Layers | SnapshotParts::Properties) : SnapshotParts::Layers) | SnapshotParts::Chunks, _("Resize layer"));
-			if (!document.ResizeLayer(state->Layer, state->Size, state->GetOffset(), state->Fill)) {
-				s->ShowMessage(_("The layer can't be that large"));
-				return;
+			if (ResizeLayerAsStep(*s, state->Layer, state->Size, state->GetOffset(), state->Fill)) {
+				dialogPtr->Close();
 			}
-			// Ground lines of the layer move with its tiles, and bookmarks and notes with the sprite layer
-			Vector2i offset = state->GetOffset();
-			TerrainSpline::ResizeLayer(document, state->Layer, state->Size, offset);
-			if (spriteLayer && offset != Vector2i(0, 0)) {
-				SmallVector<Annotation, 0> annotations;
-				Annotation::Read(document, annotations);
-				for (Annotation& annotation : annotations) {
-					annotation.X += offset.X * 32;
-					annotation.Y += offset.Y * 32;
-				}
-				Annotation::Write(document, annotations);
-				// The play-start marker too, it's not undone with the resize, as it isn't by itself either
-				Vector2i playStart;
-				if (s->GetPlayStart(playStart)) {
-					s->SetPlayStart(true, playStart + offset * 32);
-				}
-			}
-			DocumentChanges changes;
-			command->End(document, changes);
-			s->Execute(std::move(command));
-			dialogPtr->Close();
 		}, true);
 		dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
-		UiOverlayOptions options;
-		options.Centered = true;
-		options.Modal = true;
-		options.CloseOnOutsideClick = false;
-		surface->PushOverlay(std::move(dialog), std::move(options));
+		ShowModal(*surface, Death::move(dialog));
 	}
 }
 

@@ -5,6 +5,7 @@
 #include "PaletteMatch.h"
 
 #include <Containers/ArrayView.h>
+#include <Containers/Function.h>
 
 namespace Jazz2::Editor
 {
@@ -14,10 +15,14 @@ namespace Jazz2::Editor
 		@p colors are RGB colors as `R | G << 8 | B << 16`, alpha is ignored, each counts as many times as it's there.
 		Entries for which @p locked is `true` keep their colors, and colors of the image are mapped to them too. Entry
 		0 is transparent, it's always locked. Colors are compared in @ref OkLab --- the boxes of a median cut give the
-		first colors, which then move to the middles of the colors closest to them for a few rounds (k-means). Returns
-		the number of entries that were given a color.
+		first colors, which then move to the middles of the colors closest to them for a few rounds (k-means). With
+		too many different colors for that to be quick, colors that differ only in the lowest 3 bits of each channel
+		are taken together first. Returns the number of entries that were given a color. @p progress, if set, gets how
+		far it is from 0 to 1 now and then, and stops it by returning `false`, -1 is returned then and the palette is
+		left as it was.
 	*/
-	std::int32_t BuildPalette(Death::Containers::ArrayView<const std::uint32_t> colors, std::uint32_t (&palette)[256], const bool (&locked)[256]);
+	std::int32_t BuildPalette(Death::Containers::ArrayView<const std::uint32_t> colors, std::uint32_t (&palette)[256], const bool (&locked)[256],
+		Death::Containers::Function<bool(float)>&& progress = {});
 
 	/**
 		@brief Finds the entries of a palette closest to colors, and remembers them
@@ -36,8 +41,7 @@ namespace Jazz2::Editor
 		std::uint8_t Map(std::uint32_t color, std::int32_t x, std::int32_t y);
 
 	private:
-		OkLab _colors[256];
-		std::uint32_t _palette[256];
+		PaletteSearch _search;
 		bool _dither;
 		// Colors looked up already, by color and the cell of the pattern
 		struct CacheEntry
@@ -48,8 +52,6 @@ namespace Jazz2::Editor
 		};
 		static constexpr std::int32_t CacheSize = 1 << 14;
 		CacheEntry _cache[CacheSize];
-
-		std::uint8_t FindNearest(const OkLab& color) const;
 	};
 }
 

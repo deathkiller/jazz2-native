@@ -33,6 +33,7 @@ namespace Jazz2::Editor::EventCatalogParts
 		constexpr EventParamField LevelStartMultiplayerFields[] = {
 			EnumField(N_("Team"), 0, 8, TeamOptions, 0)
 				.WithDescription(N_("Team that starts here in team modes, other modes ignore it"))
+				.AsTeam()
 		};
 
 		// Checkpoint::OnActivatedAsync()
@@ -85,16 +86,23 @@ namespace Jazz2::Editor::EventCatalogParts
 			{ N_("Right"), 0x08 }
 		};
 
+		// Mirrored, the left side becomes the right one and the top the bottom
+		constexpr std::int32_t HurtSidesMirrorX[] = { 0x04, 0x08 };
+		constexpr std::int32_t HurtSidesMirrorY[] = { 0x01, 0x02 };
+
 		constexpr EventParamField ModifierHurtFields[] = {
 			FlagsField(N_("Sides"), 0, 8, HurtSideOptions, 0x01)
 				.WithDescription(N_("Sides of the tile that hurt a player touching them"))
+				.MirroredXPairs(HurtSidesMirrorX).MirroredYPairs(HurtSidesMirrorY)
 		};
 
 		constexpr EventParamField ModifierTubeFields[] = {
 			IntField(N_("X Speed"), 0, 8, -128, 127, 8)
-				.WithDescription(N_("Horizontal speed in pixels per tick of the original (70 ticks per second), positive is to the right")),
+				.WithDescription(N_("Horizontal speed in pixels per tick of the original (70 ticks per second), positive is to the right"))
+				.MirroredX(MirrorMode::Negate).WithDirection(DirectionAxis::X),
 			IntField(N_("Y Speed"), 1, 8, -128, 127)
-				.WithDescription(N_("Vertical speed in pixels per tick of the original (70 ticks per second), positive is down")),
+				.WithDescription(N_("Vertical speed in pixels per tick of the original (70 ticks per second), positive is down"))
+				.MirroredY(MirrorMode::Negate).WithDirection(DirectionAxis::Y),
 			BoolField(N_("Become Noclip"), 4)
 				.WithDescription(N_("The player goes through walls until a tube without it")),
 			BoolField(N_("Noclip Only"), 5)

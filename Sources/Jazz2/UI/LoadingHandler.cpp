@@ -182,7 +182,7 @@ namespace Jazz2::UI
 	LoadingHandler::LoadingHandler(IRootController* root, bool darkMode, Function<bool(IRootController*)>&& callback)
 		: LoadingHandler(root, darkMode)
 	{
-		_callback = std::move(callback);
+		_callback = Death::move(callback);
 	}
 
 	LoadingHandler::~LoadingHandler()
@@ -290,7 +290,7 @@ namespace Jazz2::UI
 				float(frameRect.Y) / float(texSize.Y)
 			);
 
-			Colorf color = Colorf(1.0f, 1.0f, 1.0f, lerp(1.0f, 0.8f, darkness) * _owner->_transition);
+			Colorf color = Colorf(1.0f, 1.0f, 1.0f, lerp(1.0f, 0.7f, darkness) * _owner->_transition);
 			std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? loadingRes->PaletteOffset : -1);
 			DrawTexture(*base->TextureDiffuse.get(), pos, IndicatorLayer, size, texCoords, color, false, 0.0f, paletteOffset);
 

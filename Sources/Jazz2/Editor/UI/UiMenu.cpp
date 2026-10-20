@@ -4,46 +4,46 @@
 
 #include "UiSurface.h"
 
+#include "../../../nCine/Application.h"
+#include "../../../nCine/Input/IInputManager.h"
+
 #include <algorithm>
 
 namespace Jazz2::Editor
 {
-	UiMenuEntry UiMenuEntry::FromAction(EditorAction& action)
-	{
-		UiMenuEntry entry;
-		entry.Label = action.Label;
-		entry.Icon = action.Icon;
-		entry.ShortcutText = action.Key.ToString();
-		EditorAction* actionPtr = &action;
-		entry.Execute = [actionPtr]() {
-			if (actionPtr->CanExecute()) {
-				actionPtr->Execute();
-			}
-		};
-		entry.IsEnabled = [actionPtr]() {
-			return actionPtr->CanExecute();
-		};
-		if (action.IsChecked) {
-			entry.IsChecked = [actionPtr]() {
-				return actionPtr->IsChecked();
-			};
-		}
-		return entry;
-	}
-
 	UiMenuEntry UiMenuEntry::Separator()
 	{
 		return UiMenuEntry();
 	}
 
-	UiPopupMenu::UiPopupMenu(SmallVectorImpl<UiMenuEntry>&& entries)
-		: UiPanel(UiPanelStyle::Floating, UiOrientation::Vertical, 0.0f, UiThickness(2.0f))
+	namespace
 	{
+		// The first letter of a text in small letters, only ASCII letters are told apart for the keys
+		char FirstLetter(StringView text)
+		{
+			for (char c : text) {
+				if (c >= 'A' && c <= 'Z') {
+					return char(c - 'A' + 'a');
+				}
+				if (c >= 'a' && c <= 'z') {
+					return c;
+				}
+			}
+			return '\0';
+		}
+	}
+
+	UiPopupMenu::UiPopupMenu(SmallVectorImpl<UiMenuEntry>&& entries)
+		: UiPanel(UiPanelStyle::Floating, UiOrientation::Vertical, 0.0f, UiThickness(2.0f)), _highlight(-1), _revealHighlight(false)
+	{
+		// A menu taller than the screen scrolls, it's never larger than the screen (see UiSurface::OnDraw())
+		_scroll = Add<UiScrollView>();
+		_rows = _scroll->SetContent<UiStack>(UiOrientation::Vertical, 0.0f);
 		for (UiMenuEntry& entry : entries) {
 			if (entry.IsSeparator()) {
-				Add<UiSeparator>();
+				_rows->Add<UiSeparator>();
 			} else {
-				Add<UiMenuRow>(std::move(entry));
+				_rows->Add<UiMenuRow>(Death::move(entry));
 			}
 		}
 	}
@@ -52,18 +52,182 @@ namespace Jazz2::Editor
 	{
 		UiOverlayOptions options;
 		options.Position = pos;
-		options.OnClosed = std::move(onClosed);
-		return static_cast<UiPopupMenu*>(surface.PushOverlay(std::make_unique<UiPopupMenu>(std::move(entries)), std::move(options)));
+		options.OnClosed = Death::move(onClosed);
+		return static_cast<UiPopupMenu*>(surface.PushOverlay(std::make_unique<UiPopupMenu>(Death::move(entries)), Death::move(options)));
+	}
+
+	void UiPopupMenu::GetRows(SmallVectorImpl<UiMenuRow*>& rows) const
+	{
+		for (std::int32_t i = 0; i < _rows->GetChildCount(); i++) {
+			if (UiMenuRow* row = runtime_cast<UiMenuRow>(_rows->GetChild(i))) {
+				rows.push_back(row);
+			}
+		}
+	}
+
+	void UiPopupMenu::SetHighlight(std::int32_t index, bool reveal)
+	{
+		SmallVector<UiMenuRow*, 16> rows;
+		GetRows(rows);
+		_highlight = index;
+		for (std::int32_t i = 0; i < std::int32_t(rows.size()); i++) {
+			rows[i]->Highlighted = (i == index);
+		}
+		if (reveal && index >= 0) {
+			// Scrolled to once the rows are placed, a menu just shown isn't yet
+			_revealHighlight = true;
+		}
+	}
+
+	void UiPopupMenu::Arrange(const UiContext& context, const Rectf& bounds)
+	{
+		UiPanel::Arrange(context, bounds);
+		if (_revealHighlight) {
+			_revealHighlight = false;
+			SmallVector<UiMenuRow*, 16> rows;
+			GetRows(rows);
+			if (_highlight >= 0 && _highlight < std::int32_t(rows.size())) {
+				float top = rows[_highlight]->Bounds.Y - _rows->Bounds.Y;
+				_scroll->ScrollIntoView(top, top + rows[_highlight]->Bounds.H);
+			}
+		}
+	}
+
+	void UiPopupMenu::HighlightFirst()
+	{
+		SmallVector<UiMenuRow*, 16> rows;
+		GetRows(rows);
+		std::int32_t first = -1;
+		for (std::int32_t i = 0; i < std::int32_t(rows.size()); i++) {
+			if (!rows[i]->IsEntryEnabled()) {
+				continue;
+			}
+			if (rows[i]->Entry.IsChecked && rows[i]->Entry.IsChecked()) {
+				first = i;
+				break;
+			}
+			if (first < 0) {
+				first = i;
+			}
+		}
+		SetHighlight(first, true);
+	}
+
+	void UiPopupMenu::Update(float timeMult)
+	{
+		UiPanel::Update(timeMult);
+		// The pointer moves the highlight too, the keys go on from where it is
+		SmallVector<UiMenuRow*, 16> rows;
+		GetRows(rows);
+		for (std::int32_t i = 0; i < std::int32_t(rows.size()); i++) {
+			if (rows[i]->IsHovered() && i != _highlight) {
+				SetHighlight(i, false);
+				break;
+			}
+		}
+	}
+
+	bool UiPopupMenu::OnWheel(const UiPointerEvent& event)
+	{
+		// Anywhere over the menu, also over its border
+		return _scroll->OnWheel(event);
+	}
+
+	bool UiPopupMenu::OnKeyPressed(const KeyboardEvent& event)
+	{
+		SmallVector<UiMenuRow*, 16> rows;
+		GetRows(rows);
+		std::int32_t count = std::int32_t(rows.size());
+		if (count == 0) {
+			return false;
+		}
+		auto step = [&](std::int32_t from, std::int32_t direction) {
+			// To the next item that can be used, around the end
+			std::int32_t index = from;
+			for (std::int32_t i = 0; i < count; i++) {
+				index = (index + direction + count) % count;
+				if (rows[index]->IsEntryEnabled()) {
+					return index;
+				}
+			}
+			return from;
+		};
+		switch (event.sym) {
+			case Keys::Down:
+				SetHighlight(step(_highlight < 0 ? -1 : _highlight, 1), true);
+				return true;
+			case Keys::Up:
+				SetHighlight(step(_highlight < 0 ? 0 : _highlight, -1), true);
+				return true;
+			case Keys::Home:
+				SetHighlight(step(-1, 1), true);
+				return true;
+			case Keys::End:
+				SetHighlight(step(0, -1), true);
+				return true;
+			case Keys::Return:
+			case Keys::NumPadEnter:
+			case Keys::Space:
+				if (_highlight >= 0 && _highlight < count && rows[_highlight]->IsEntryEnabled()) {
+					rows[_highlight]->Run();
+				}
+				return true;
+			case Keys::Left:
+			case Keys::Right:
+				if (OnSwitchMenu) {
+					// Closes this menu, which is destroyed only in the next frame
+					OnSwitchMenu(event.sym == Keys::Left ? -1 : 1);
+					return true;
+				}
+				return false;
+			default:
+				return false;
+		}
+	}
+
+	bool UiPopupMenu::OnTextInput(const TextInputEvent& event)
+	{
+		// A letter goes to the next item that starts with it
+		char letter = FirstLetter(StringView(event.text, std::size_t(event.length)));
+		if (letter == '\0') {
+			return false;
+		}
+		SmallVector<UiMenuRow*, 16> rows;
+		GetRows(rows);
+		std::int32_t count = std::int32_t(rows.size());
+		for (std::int32_t i = 1; i <= count; i++) {
+			std::int32_t index = ((_highlight < 0 ? -1 : _highlight) + i + count) % count;
+			if (rows[index]->IsEntryEnabled() && FirstLetter(rows[index]->Entry.Label) == letter) {
+				SetHighlight(index, true);
+				return true;
+			}
+		}
+		return true;
 	}
 
 	UiMenuRow::UiMenuRow(UiMenuEntry&& entry)
-		: Entry(std::move(entry))
+		: Entry(Death::move(entry))
 	{
 	}
 
 	bool UiMenuRow::IsEntryEnabled()
 	{
 		return (!Entry.IsEnabled || Entry.IsEnabled());
+	}
+
+	void UiMenuRow::Run()
+	{
+		if (!IsEntryEnabled()) {
+			return;
+		}
+		// The menu goes first, what the item does may show something else over the interface
+		Function<void()> execute = Death::move(Entry.Execute);
+		if (UiSurface* surface = GetSurface()) {
+			surface->ClosePopups();
+		}
+		if (execute) {
+			execute();
+		}
 	}
 
 	Vector2f UiMenuRow::Measure(const UiContext& context, Vector2f available)
@@ -76,13 +240,25 @@ namespace Jazz2::Editor
 		return Vector2f(std::max(width, context.Px(110.0f)), context.Px(UiTheme::RowHeight + 3.0f));
 	}
 
+	bool UiMenuRow::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
+	bool UiMenuRow::YieldsToScroll() const
+	{
+		return true;
+	}
+
 	void UiMenuRow::Draw(UiPainter& painter)
 	{
 		bool enabled = IsEntryEnabled();
 		bool checked = (Entry.IsChecked && Entry.IsChecked());
-		if (enabled && _hoverAmount > 0.0f) {
+		float amount = (Highlighted ? 1.0f : _hoverAmount);
+		if (enabled && amount > 0.0f) {
+			// Faded in, it keeps the color of the theme, see UiTheme::Resolve()
 			Colorf highlight = UiTheme::Selection;
-			highlight.A *= _hoverAmount;
+			highlight.A *= amount;
 			painter.RoundRect(Bounds, highlight);
 		}
 
@@ -115,21 +291,13 @@ namespace Jazz2::Editor
 
 	void UiMenuRow::OnPointerUp(const UiPointerEvent& event, bool inside)
 	{
-		if (!inside || !IsEntryEnabled()) {
-			return;
-		}
-		// The menu goes first, what the item does may show something else over the interface
-		Function<void()> execute = std::move(Entry.Execute);
-		if (UiSurface* surface = GetSurface()) {
-			surface->ClosePopups();
-		}
-		if (execute) {
-			execute();
+		if (inside) {
+			Run();
 		}
 	}
 
 	UiDropdown::UiDropdown(Function<String()>&& textFunc, Function<void(SmallVectorImpl<UiMenuEntry>&)>&& builder)
-		: TextFunc(std::move(textFunc)), Builder(std::move(builder)), _justClosed(std::make_shared<bool>(false)), _skipOpen(false)
+		: TextFunc(Death::move(textFunc)), Builder(Death::move(builder)), _justClosed(std::make_shared<bool>(false)), _skipOpen(false)
 	{
 	}
 
@@ -152,13 +320,20 @@ namespace Jazz2::Editor
 		return size;
 	}
 
+	bool UiDropdown::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
+	bool UiDropdown::YieldsToScroll() const
+	{
+		return true;
+	}
+
 	void UiDropdown::Draw(UiPainter& painter)
 	{
 		bool usable = IsUsable();
-		float t = (usable ? _hoverAmount * 0.6f : 0.0f);
-		const Colorf& from = UiTheme::InputFill;
-		const Colorf& to = UiTheme::ButtonPressed;
-		painter.RoundRect(Bounds, Colorf(from.R + (to.R - from.R) * t, from.G + (to.G - from.G) * t, from.B + (to.B - from.B) * t, from.A + (to.A - from.A) * t));
+		painter.RoundRect(Bounds, UiLerpColor(UiTheme::InputFill, UiTheme::ButtonPressed, usable ? _hoverAmount * 0.6f : 0.0f));
 		painter.RoundRectBorder(Bounds, (_pressed && usable) ? UiTheme::FocusRing : UiTheme::InputBorder);
 
 		float padding = painter.Px(UiTheme::Padding);
@@ -169,6 +344,102 @@ namespace Jazz2::Editor
 		painter.PopClip();
 		painter.Icon(EditorIcon::ChevronDown, Rectf(Bounds.X + Bounds.W - iconSize - padding * 0.5f, Bounds.Y, iconSize, Bounds.H),
 			usable ? UiTheme::IconColor : UiTheme::IconDisabled);
+		if (_focused) {
+			painter.FocusRing(Bounds);
+		}
+	}
+
+	bool UiDropdown::IsTabStop() const
+	{
+		return true;
+	}
+
+	bool UiDropdown::OnKeyPressed(const KeyboardEvent& event)
+	{
+		if (!IsUsable()) {
+			return false;
+		}
+		bool alt = (event.mod & KeyMod::Alt) != 0;
+		switch (event.sym) {
+			case Keys::Return:
+			case Keys::NumPadEnter:
+			case Keys::Space:
+			case Keys::F4:
+				Open(true);
+				return true;
+			case Keys::Up:
+			case Keys::Down: {
+				// The next choice or the one before, as the list would choose it, without opening it, the list is opened
+				// only if none is shown checked
+				if (alt || !StepChoice(event.sym == Keys::Down ? 1 : -1)) {
+					Open(true);
+				}
+				return true;
+			}
+			default:
+				return false;
+		}
+	}
+
+	bool UiDropdown::OnWheel(const UiPointerEvent& event)
+	{
+		// The control under the pointer gets the wheel, the list it's in scrolls only where there's none
+		if (!IsUsable() || event.Wheel.Y == 0.0f || !Bounds.Contains(event.Pos)) {
+			return false;
+		}
+		// Up goes to the choice before, as Up on the keyboard does; a list that doesn't show which choice is the current
+		// one can't be stepped, the wheel scrolls then
+		return StepChoice(event.Wheel.Y > 0.0f ? -1 : 1);
+	}
+
+	bool UiDropdown::StepChoice(std::int32_t direction)
+	{
+		if (!Builder) {
+			return false;
+		}
+		SmallVector<UiMenuEntry, 0> entries;
+		Builder(entries);
+		std::int32_t checked = -1;
+		for (std::int32_t i = 0; i < std::int32_t(entries.size()); i++) {
+			if (!entries[i].IsSeparator() && entries[i].IsChecked && entries[i].IsChecked()) {
+				checked = i;
+				break;
+			}
+		}
+		if (checked < 0) {
+			return false;
+		}
+		for (std::int32_t i = checked + direction; i >= 0 && i < std::int32_t(entries.size()); i += direction) {
+			UiMenuEntry& entry = entries[i];
+			if (entry.IsSeparator() || (entry.IsEnabled && !entry.IsEnabled())) {
+				continue;
+			}
+			// The same as picking it in the list
+			if (entry.Execute) {
+				entry.Execute();
+			}
+			break;
+		}
+		return true;
+	}
+
+	void UiDropdown::Open(bool fromKeyboard)
+	{
+		UiSurface* surface = GetSurface();
+		if (surface == nullptr || !Builder) {
+			return;
+		}
+		SmallVector<UiMenuEntry, 0> entries;
+		Builder(entries);
+		if (!entries.empty()) {
+			std::shared_ptr<bool> justClosed = _justClosed;
+			UiPopupMenu* menu = UiPopupMenu::Show(*surface, Death::move(entries), Vector2f(Bounds.X, Bounds.Y + Bounds.H), [justClosed]() {
+				*justClosed = true;
+			});
+			if (fromKeyboard && menu != nullptr) {
+				menu->HighlightFirst();
+			}
+		}
 	}
 
 	bool UiDropdown::AcceptsPointer() const
@@ -185,27 +456,19 @@ namespace Jazz2::Editor
 
 	void UiDropdown::OnPointerUp(const UiPointerEvent& event, bool inside)
 	{
-		UiSurface* surface = GetSurface();
-		if (!inside || surface == nullptr || !Builder || _skipOpen) {
+		if (!inside || _skipOpen) {
 			_skipOpen = false;
 			return;
 		}
-		SmallVector<UiMenuEntry, 0> entries;
-		Builder(entries);
-		if (!entries.empty()) {
-			std::shared_ptr<bool> justClosed = _justClosed;
-			UiPopupMenu::Show(*surface, std::move(entries), Vector2f(Bounds.X, Bounds.Y + Bounds.H), [justClosed]() {
-				*justClosed = true;
-			});
-		}
+		Open(false);
 	}
 
 	UiMenuBarItem::UiMenuBarItem(UiMenuBar* bar, StringView label, Function<void(SmallVectorImpl<UiMenuEntry>&)>&& builder)
-		: Label(label), Builder(std::move(builder)), _bar(bar)
+		: Label(label), Builder(Death::move(builder)), _bar(bar)
 	{
 	}
 
-	void UiMenuBarItem::Open()
+	void UiMenuBarItem::Open(bool fromKeyboard)
 	{
 		UiSurface* surface = GetSurface();
 		if (surface == nullptr) {
@@ -222,18 +485,32 @@ namespace Jazz2::Editor
 		UiMenuBar* bar = _bar;
 		UiMenuBarItem* self = this;
 		_bar->_openItem = this;
-		_bar->_openMenu = UiPopupMenu::Show(*surface, std::move(entries), Vector2f(Bounds.X, Bounds.Y + Bounds.H), [bar, self]() {
+		_bar->_openMenu = UiPopupMenu::Show(*surface, Death::move(entries), Vector2f(Bounds.X, Bounds.Y + Bounds.H), [bar, self]() {
 			if (bar->_openItem == self) {
 				bar->_openItem = nullptr;
 				bar->_openMenu = nullptr;
 				bar->_justClosedItem = self;
 			}
 		});
+		if (_bar->_openMenu != nullptr) {
+			// Left and Right go to the menus next to it
+			_bar->_openMenu->OnSwitchMenu = [bar, self](std::int32_t direction) {
+				bar->SwitchMenu(self, direction);
+			};
+			if (fromKeyboard) {
+				_bar->_openMenu->HighlightFirst();
+			}
+		}
 	}
 
 	Vector2f UiMenuBarItem::Measure(const UiContext& context, Vector2f available)
 	{
 		return Vector2f(context.MeasureText(Label) + context.Px(UiTheme::Padding * 3.0f), context.Px(UiTheme::MenuBarHeight));
+	}
+
+	bool UiMenuBarItem::MeasureDependsOnAvailable() const
+	{
+		return false;
 	}
 
 	void UiMenuBarItem::Draw(UiPainter& painter)
@@ -247,6 +524,21 @@ namespace Jazz2::Editor
 			painter.RoundRect(Bounds, highlight);
 		}
 		painter.TextInRect(Label, Bounds, open ? UiTheme::TextOnAccent : UiTheme::Text, Alignment::Center);
+
+		// While Alt is held, the letter that opens the menu with it is underlined
+		if (_mnemonic >= 0 && std::size_t(_mnemonic) < Label.size()) {
+			const auto& keyboard = theApplication().GetInputManager().keyboardState();
+			if (keyboard.isKeyDown(Keys::LAlt) || keyboard.isKeyDown(Keys::RAlt)) {
+				float textWidth = painter.MeasureText(Label);
+				float left = std::round(Bounds.X + (Bounds.W - textWidth) * 0.5f);
+				float before = painter.MeasureText(Label.prefix(std::size_t(_mnemonic)));
+				float letter = painter.MeasureText(Label.slice(std::size_t(_mnemonic), std::size_t(_mnemonic) + 1));
+				float thickness = std::max(1.0f, std::round(painter.GetScale() * 0.5f));
+				float y = std::round(Bounds.Y + (Bounds.H + painter.GetTextHeight() * 0.6f) * 0.5f);
+				painter.FillRect(Rectf(std::round(left + before), y, std::max(letter - thickness, thickness), thickness),
+					open ? UiTheme::TextOnAccent : UiTheme::IconColor, UiLayer::Overlay);
+			}
+		}
 	}
 
 	void UiMenuBarItem::Update(float timeMult)
@@ -290,7 +582,67 @@ namespace Jazz2::Editor
 
 	UiMenuBarItem* UiMenuBar::AddMenu(StringView label, Function<void(SmallVectorImpl<UiMenuEntry>&)>&& builder)
 	{
-		return Add<UiMenuBarItem>(this, label, std::move(builder));
+		UiMenuBarItem* item = Add<UiMenuBarItem>(this, label, Death::move(builder));
+		AssignMnemonics();
+		return item;
+	}
+
+	void UiMenuBar::AssignMnemonics()
+	{
+		// The first letter of each label that no menu before it has, the labels are translated, so it can't be fixed
+		bool used[26] = {};
+		for (auto& child : _children) {
+			UiMenuBarItem* item = runtime_cast<UiMenuBarItem>(child.get());
+			if (item == nullptr) {
+				continue;
+			}
+			item->_mnemonic = -1;
+			for (std::size_t i = 0; i < item->Label.size(); i++) {
+				char c = item->Label[i];
+				char lower = (c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c);
+				if (lower >= 'a' && lower <= 'z' && !used[lower - 'a']) {
+					used[lower - 'a'] = true;
+					item->_mnemonic = std::int32_t(i);
+					break;
+				}
+			}
+		}
+	}
+
+	bool UiMenuBar::OpenByMnemonic(char letter)
+	{
+		for (auto& child : _children) {
+			UiMenuBarItem* item = runtime_cast<UiMenuBarItem>(child.get());
+			if (item == nullptr || item->_mnemonic < 0 || !item->IsShown()) {
+				continue;
+			}
+			char c = item->Label[std::size_t(item->_mnemonic)];
+			char lower = (c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c);
+			if (lower == letter) {
+				item->Open(true);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void UiMenuBar::SwitchMenu(UiMenuBarItem* from, std::int32_t direction)
+	{
+		SmallVector<UiMenuBarItem*, 16> items;
+		for (auto& child : _children) {
+			if (UiMenuBarItem* item = runtime_cast<UiMenuBarItem>(child.get())) {
+				if (item->IsShown()) {
+					items.push_back(item);
+				}
+			}
+		}
+		for (std::int32_t i = 0; i < std::int32_t(items.size()); i++) {
+			if (items[i] == from) {
+				std::int32_t count = std::int32_t(items.size());
+				items[(i + direction + count) % count]->Open(true);
+				return;
+			}
+		}
 	}
 
 	void UiMenuBar::Draw(UiPainter& painter)

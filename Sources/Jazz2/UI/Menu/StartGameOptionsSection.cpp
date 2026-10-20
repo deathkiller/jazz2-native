@@ -379,7 +379,7 @@ namespace Jazz2::UI::Menu
 			levelInit.CheatsUsed = true;
 		}
 
-		_root->ChangeLevel(std::move(levelInit));
+		_root->ChangeLevel(Death::move(levelInit));
 	}
 
 	void StartGameOptionsSection::StartImageTransition()

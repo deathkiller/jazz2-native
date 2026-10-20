@@ -103,47 +103,19 @@ namespace Jazz2
 #	define TILEMAP_CACHE_LAYER_WINDOW
 #endif
 
+/*
+	Whether the tiles of the heat effect (see LayerTileFlags::Heat) are drawn as such. Each one is a single quad of a mesh
+	of their own, drawn after the layer by a shader that moves its rows, so it costs one draw call more for a layer that
+	shows any, and nothing for one that doesn't. Only on the stream of the single-draw tile mesh, the packed tile records
+	and the grouped emission have no room for it; a backend without the shader (the fixed-function tiers) draws them as
+	ordinary tiles.
+*/
+#if defined(TILEMAP_USE_SINGLE_DRAW) && !defined(TILEMAP_GROUP_MESH_BY_TILE) && !defined(TILEMAP_PACKED_TILE_RECORDS)
+#	define TILEMAP_HEAT_TILES
+#endif
+
 namespace Jazz2::Tiles
 {
-	/**
-		@brief Describes the configuration of a tile map layer
-		
-		Holds the parallax and rendering properties of a single layer --- its depth, per-axis scroll and auto-scroll
-		speeds, scroll offsets, repeat flags, speed models and the renderer type with its color parameter. One is
-		stored in each @ref TileMapLayer and drives how that layer is positioned and drawn relative to the camera.
-	*/
-	struct LayerDescription {
-		/** @brief Layer depth (Z position) */
-		std::uint16_t Depth;
-		/** @brief Horizontal speed */
-		float SpeedX;
-		/** @brief Vertical speed */
-		float SpeedY;
-		/** @brief Horizontal auto speed */
-		float AutoSpeedX;
-		/** @brief Vertical auto speed */
-		float AutoSpeedY;
-		/** @brief Horizontal scroll offset */
-		float OffsetX;
-		/** @brief Vertical scroll offset */
-		float OffsetY;
-		/** @brief Whether layer should repeat horizontally */
-		bool RepeatX;
-		/** @brief Whether layer should repeat vertically */
-		bool RepeatY;
-		/** @brief Whether inherent offset should be used */
-		bool UseInherentOffset;
-		/** @brief Horizontal speed model */
-		LayerSpeedModel SpeedModelX;
-		/** @brief Vertical speed model */
-		LayerSpeedModel SpeedModelY;
-
-		/** @brief Layer renderer type */
-		LayerRendererType RendererType;
-		/** @brief Layer color parameter */
-		Vector4f Color;
-	};
-
 	/**
 		@brief Per-tile state flags of a tile placed in a layer
 		
@@ -156,6 +128,13 @@ namespace Jazz2::Tiles
 
 		FlipX = 0x01,			/**< Flipped horizontally */
 		FlipY = 0x02,			/**< Flipped vertically */
+		/**
+			Heat effect, as the tile type of JJ2+ --- every row of pixels of the tile is drawn moved left or right by up to
+			2 pixels, into the tiles next to it, by a fixed table of the 32 rows of a tile that scrolls up a row every 4 game
+			ticks of the original (70 a second), measured in the original. Drawn so only in an ordinary layer and where the
+			shader of it is available, as an ordinary tile otherwise.
+		*/
+		Heat = 0x04,
 
 		OneWay = 0x10,			/**< One-way collision */
 
@@ -175,11 +154,11 @@ namespace Jazz2::Tiles
 		// The struct is a dense per-tile grid (layoutWidth * layoutHeight entries per layer), so it is packed
 		// to 12 bytes: every field is 16-bit or smaller. The three enums carry explicit 8-bit bases, the two
 		// destruct fields are 16-bit (an animated-tile ID fits comfortably, -1 stays the "none" sentinel; the
-		// frame index is a small frame/delay/trigger number) and the ID is 16-bit because a tile ID is bounded
-		// by the tile set size plus the animated tiles behind it: a J2L level stores it in 16 bits and the
-		// converter masks it down to JJ2Tileset::GetMaxSupportedTiles() (at most 4096), animated tiles start at
-		// that same bound, and the only other writer - SetTile() from scripting - adds a 12-bit index to it. So
-		// the highest reachable value is under 8192 and there is no negative sentinel (tile #0 means "empty").
+		// frame index is a small frame/delay/trigger number) and the ID is 16-bit because the level format stores
+		// it in 16 bits. A converted J2L level keeps it under 8192, but a level of the game's own format (from the
+		// editor, or from a server) can use the whole range, so an ID that doesn't fit the signed destruct field,
+		// or names an animated tile the level doesn't have, is never made destructible (see
+		// SetTileDestructibleEventParams()). There is no negative sentinel of the ID (tile #0 means "empty").
 
 		/** @brief Tile ID */
 		std::uint16_t TileID;
@@ -331,6 +310,21 @@ namespace Jazz2::Tiles
 		LayerDescription Description;
 		/** @brief Layer visibility */
 		bool Visible;
+		/**
+		 * @brief Texture of its own of a textured layer, palette indices row by row, or empty
+		 *
+		 * @ref Formats::TexturedLayerChunk::TextureSize pixels wide and high, taken instead of the tiles at the top
+		 * left of the layer (see @ref Formats::TexturedLayerChunk::Entry::Texture).
+		 */
+		SmallVector<std::uint8_t, 0> TexturePixels;
+		/** @brief Changes with @ref TexturePixels, unique among the layers, so the texture made of them is made again */
+		std::uint32_t TextureRevision = 0;
+		/**
+		 * @brief How far the texture of a reflection drawn only where the layer is has moved by its inner auto speeds, in its pixels
+		 *
+		 * For a wave, X is how far its waves have moved, in periods, from 0 to 1.
+		 */
+		Vector2f TextureOffset;
 	};
 
 	/**
@@ -342,6 +336,8 @@ namespace Jazz2::Tiles
 	struct AnimatedTileFrame {
 		/** @brief Tile ID */
 		std::uint16_t TileID;
+		/** @brief Only @ref LayerTileFlags::Heat of the frame, the other flags of frames aren't applied */
+		LayerTileFlags Flags = LayerTileFlags::None;
 	};
 
 	/**
@@ -395,6 +391,8 @@ namespace Jazz2::Tiles
 		Texture* Image;
 		/** @brief Where it's drawn in the level */
 		Rectf Rect;
+		/** @brief Part of the image drawn there, from its top left corner, all of it by default */
+		Vector2f TexScale = Vector2f(1.0f, 1.0f);
 	};
 
 	/**
@@ -408,9 +406,12 @@ namespace Jazz2::Tiles
 		/**
 		 * @brief Called for each visible tile layer that is drawn, with where the tile (0, 0) of it is in the level
 		 *
-		 * Returns `true` to draw @p images at the depth of the layer instead of its tiles.
+		 * Returns `true` to draw @p images at the depth of the layer instead of its tiles. The tiles of @p tileAreas
+		 * are drawn as usual with them, where there's no image yet --- in tiles of the layer from its tile (0, 0),
+		 * past its size where it repeats, not overlapping any image.
 		 */
-		virtual bool OverrideLayer(std::int32_t layerIndex, Vector2f origin, const Rectf& cullingRect, SmallVectorImpl<TileMapLayerImage>& images) = 0;
+		virtual bool OverrideLayer(std::int32_t layerIndex, Vector2f origin, const Rectf& cullingRect, SmallVectorImpl<TileMapLayerImage>& images,
+			SmallVectorImpl<Recti>& tileAreas) = 0;
 	};
 
 	/**
@@ -458,7 +459,7 @@ namespace Jazz2::Tiles
 		/** @brief Maximum number of triggers */
 		static constexpr std::int32_t TriggerCount = 32;
 		/** @brief Hardcoded offset for layer positioning */
-		static constexpr std::int32_t HardcodedOffset = 70;
+		static constexpr std::int32_t HardcodedOffset = LayerDescription::HardcodedOffset;
 
 		/** @brief Mask of the tile index inside a packed tile value (see @ref GetTile()) */
 		static constexpr std::uint16_t TileIndexMask = 0x0FFF;
@@ -468,6 +469,8 @@ namespace Jazz2::Tiles
 		static constexpr std::uint16_t TileFlagFlipY = 0x2000;
 		/** @brief Flag of a packed tile value that refers to an animated tile (index is relative to the first animated tile) */
 		static constexpr std::uint16_t TileFlagAnimated = 0x4000;
+		/** @brief Alpha of a tile the file marks as translucent, anything that shows the tiles otherwise uses it too */
+		static constexpr std::uint8_t TranslucentTileAlpha = 192;
 
 		/** @} */
 
@@ -754,8 +757,13 @@ namespace Jazz2::Tiles
 		void CreateTileDebris(std::int32_t tileId, std::int32_t x, std::int32_t y);
 		/** @brief Creates a particle debris from a sprite */
 		void CreateParticleDebris(const GraphicResource* res, Vector3f pos, Vector2f force, std::int32_t currentFrame, bool isFacingLeft);
-		/** @brief Creates a sprite debris */
-		void CreateSpriteDebris(const GraphicResource* res, Vector3f pos, std::int32_t count);
+		/**
+		 * @brief Creates a sprite debris
+		 *
+		 * The pieces keep @p elasticity of their speed when they bounce off a solid tile, see
+		 * @ref DestructibleDebris::Elasticity.
+		 */
+		void CreateSpriteDebris(const GraphicResource* res, Vector3f pos, std::int32_t count, float elasticity = 0.8f);
 
 		/** @brief Returns state of a given trigger */
 		bool GetTrigger(std::uint8_t triggerId);
@@ -796,11 +804,11 @@ namespace Jazz2::Tiles
 		/**
 			@brief Changes the renderer type of a given layer
 
-			Meant for tools such as an editor. A layer switched to @ref LayerRendererType::XRay or
-			@ref LayerRendererType::BlurBehind can need render passes the level didn't need so far, which the
-			owner is told about (see @ref ITileMapOwner::OnLayerEffectsChanged()). Where the backend can't show
-			those layers, they are reduced as when a level is loaded, an x-ray layer irreversibly. Returns `false`
-			if the layer doesn't exist or is the sprite layer.
+			Meant for tools such as an editor. A layer switched to @ref LayerRendererType::XRay,
+			@ref LayerRendererType::BlurBehind or @ref LayerRendererType::Reflection can need render passes the level
+			didn't need so far, which the owner is told about (see @ref ITileMapOwner::OnLayerEffectsChanged()). Where
+			the backend can't show those layers, they are reduced as when a level is loaded, an x-ray layer
+			irreversibly. Returns `false` if the layer doesn't exist or is the sprite layer.
 		*/
 		bool SetLayerRendererType(std::int32_t layerIndex, LayerRendererType type);
 
@@ -818,12 +826,43 @@ namespace Jazz2::Tiles
 		/**
 		 * @brief Changes how a layer is placed and drawn, and whether it's drawn at all
 		 *
-		 * The renderer type is changed as by @ref SetLayerRendererType(). A layer that becomes a
-		 * @ref LayerRendererType::Sky or @ref LayerRendererType::Circle needs the viewport to be initialized again.
-		 * The description of the sprite layer can't be changed. Meant for the level editor. Returns `false` if the
-		 * layer doesn't exist.
+		 * The renderer type is changed as by @ref SetLayerRendererType(). A layer that becomes a @ref LayerRendererType::Sky,
+		 * a @ref LayerRendererType::Tunnel, a @ref LayerRendererType::Cylinder or a @ref LayerRendererType::Reflection needs
+		 * the viewport to be initialized again.
+		 * The description of the sprite layer can't be changed, only how it's drawn by @ref SetSpriteLayerRenderer().
+		 * Meant for the level editor. Returns `false` if the layer doesn't exist.
 		 */
 		bool SetLayerDescription(std::int32_t layerIndex, const LayerDescription& description, bool visible);
+		/**
+		 * @brief Gives a textured layer a texture of its own, taken instead of the tiles at its top left
+		 *
+		 * @p pixels are @ref Formats::TexturedLayerChunk::TextureSize × @ref Formats::TexturedLayerChunk::TextureSize
+		 * palette indices row by row, they stay indexed, so the texture follows the palette as the tiles do. Empty
+		 * @p pixels take the tiles again. Called before the viewport is initialized, as when the level is loaded, the
+		 * texture is drawn of its own size. Returns `false` if the layer doesn't exist or the pixels are of another size.
+		 */
+		bool SetLayerTexture(std::int32_t layerIndex, ArrayView<const std::uint8_t> pixels);
+		/** @brief Returns the texture of its own of a layer (see @ref SetLayerTexture()), empty if it has none or the layer doesn't exist */
+		ArrayView<const std::uint8_t> GetLayerTexture(std::int32_t layerIndex) const {
+			return (layerIndex >= 0 && layerIndex < (std::int32_t)_layers.size() ? ArrayView<const std::uint8_t>(_layers[layerIndex].TexturePixels) : nullptr);
+		}
+		/**
+		 * @brief Changes how the sprite layer is drawn, it's still placed as always
+		 *
+		 * Only a renderer type the sprite layer can be drawn with is taken (see
+		 * @ref LayerDescription::IsSpriteLayerRenderer()), with any other one the layer is drawn as ordinary tiles. The
+		 * color means what it does for any other layer. Set by the loader from @ref Formats::SpriteLayerChunk, and by the
+		 * level editor. Returns `false` if there's no sprite layer.
+		 */
+		bool SetSpriteLayerRenderer(LayerRendererType type, const Vector4f& color);
+		/**
+		 * @brief Puts the layers in another order, as they are with all their state
+		 *
+		 * @p order has the index each layer had before, for each new index, and has to have every index once. Only the
+		 * order of the layers changes, the depths they're drawn at stay. Meant for the level editor. Returns `false`
+		 * and changes nothing if @p order isn't such a list.
+		 */
+		bool ReorderLayers(ArrayView<const std::int32_t> order);
 		/** @brief Returns `true` if a layer is drawn */
 		bool IsLayerVisible(std::int32_t layerIndex) const;
 		/**
@@ -835,6 +874,14 @@ namespace Jazz2::Tiles
 		 * the tile doesn't exist.
 		 */
 		bool GetTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, Vector4f& texCoords, bool& indexed);
+		/**
+		 * @brief Returns the texture and texture coordinates a tile of the tile sets is drawn with
+		 *
+		 * As @ref GetTileQuad(), but the tile ID always counts the tiles of the default tile set and then the extra ones,
+		 * even past the first animated tile, so a tile the level can't address yet is drawn as itself, never as an
+		 * animated tile. Returns `false` if no tile set has the tile.
+		 */
+		bool GetStaticTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, Vector4f& texCoords, bool& indexed);
 		/**
 		 * @brief Returns where the tile (0, 0) of a layer is drawn in the level, for a view of a given center and size
 		 *
@@ -864,6 +911,10 @@ namespace Jazz2::Tiles
 		bool HasBlurBehindLayers() const;
 		/** @brief Returns `true` if a @ref LayerRendererType::BlurBehind layer has a tile that reflects or displaces, which needs a sharp copy of the scene behind it */
 		bool BlurBehindLayersNeedSharpCopy();
+		/** @brief Returns `true` if any layer is a @ref LayerRendererType::Reflection layer, which needs a sharp copy of the scene behind it */
+		bool HasReflectionLayers() const {
+			return (_reflectionLayer >= 0);
+		}
 #endif
 
 		/** @brief Creates a checkpoint for eventual rollback */
@@ -871,8 +922,13 @@ namespace Jazz2::Tiles
 		/** @brief Rolls back to the last checkpoint */
 		void RollbackToCheckpoint();
 
-		/** @brief Initializes tile map state from a stream */
-		void InitializeFromStream(Stream& src);
+		/**
+		 * @brief Initializes tile map state from a stream
+		 *
+		 * Returns `false` if the state belongs to a sprite layer of another size, such as of a level changed since,
+		 * nothing is changed then and the rest of the state in the stream can't be read either.
+		 */
+		bool InitializeFromStream(Stream& src);
 		/** @brief Serializes tile map state to a stream */
 		void SerializeResumableToStream(Stream& dest, bool fromCheckpoint = false);
 		/** @brief Restores complete live state of the sprite layer (including the last checkpoint) from a snapshot */
@@ -898,6 +954,10 @@ namespace Jazz2::Tiles
 			std::unique_ptr<TileSet> Data;
 			std::int32_t Offset;
 			std::int32_t Count;
+			// First mesh slot of the texture chunks of its atlas, see _meshSlots
+			std::int32_t MeshSlotBase = 0;
+			// Stored in the level itself, its name isn't a file in "Tilesets/"
+			bool Embedded = false;
 		};
 
 		// One sprite-layer tile as it looked when the last checkpoint was taken. The checkpoint used to be a
@@ -911,26 +971,36 @@ namespace Jazz2::Tiles
 			LayerTile Tile;
 		};
 
+		// Renders the tiles at the top left of a layer, or its texture of its own, into a texture, the layer of the index
+		// it's given, which the tile map keeps up to date (-1 if there's none). With `drawsIndices`, the palette indices
+		// of the indexed tiles are rendered instead of their colors, as the ripples of a reflection take them.
 		class TexturedBackgroundPass : public SceneNode
 		{
 			friend class TileMap;
 
 		public:
-			TexturedBackgroundPass(TileMap* owner)
-				: _owner(owner), _alreadyRendered(false)
+			TexturedBackgroundPass(TileMap* owner, const std::int32_t& layerIndex, bool drawsIndices)
+				: _owner(owner), _layerIndex(layerIndex), _imageRevision(0), _drawsIndices(drawsIndices), _alreadyRendered(false)
 			{
 			}
 
 			void Initialize();
+			// Draws the texture again, after the tiles of the layer changed
+			void Invalidate();
 
 			bool OnDraw(RenderQueue& renderQueue) override;
 
 		private:
 			TileMap* _owner;
+			const std::int32_t& _layerIndex;
 			std::unique_ptr<Texture> _target;
 			std::unique_ptr<Viewport> _view;
 			std::unique_ptr<Camera> _camera;
 			SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
+			// The texture of its own of the layer, still indexed, and the revision of the pixels it was made of
+			std::unique_ptr<Texture> _image;
+			std::uint32_t _imageRevision;
+			bool _drawsIndices;
 			bool _alreadyRendered;
 		};
 #endif
@@ -939,8 +1009,10 @@ namespace Jazz2::Tiles
 		std::int32_t _sprLayerIndex;
 		bool _loadFailed = false;
 		TileMapViewOptions _viewOptions;
-		// Images drawn in place of the layer being drawn, see TileMapViewOptions::LayerOverride
+		// Images drawn in place of the layer being drawn, see TileMapViewOptions::LayerOverride, and the areas of it drawn
+		// as tiles with them
 		SmallVector<TileMapLayerImage, 0> _layerImages;
+		SmallVector<Recti, 0> _layerTileAreas;
 		PitType _pitType;
 
 		SmallVector<TileSetPart, 2> _tileSets;
@@ -988,6 +1060,14 @@ namespace Jazz2::Tiles
 		/// ago that was. Only the memory-constrained consoles trim (see @ref OnEndFrame()).
 		std::int32_t _renderCommandsPeak;
 		std::int32_t _renderCommandsPeakAge;
+		/// A row of the shared palette that the palette-shifted layers are drawn through, and the frame it was last used in
+		struct ShiftedPaletteRow
+		{
+			std::int32_t PaletteOffset;
+			std::uint32_t LastUsedFrame;
+			std::uint8_t Shift;
+		};
+		SmallVector<ShiftedPaletteRow, 0> _shiftedPaletteRows;
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Per-frame pools for aggregated meshes, replacing the per-tile and per-particle commands. One vertex buffer
@@ -997,6 +1077,20 @@ namespace Jazz2::Tiles
 		// queue is flushed, so a buffer is never reused within a frame (across viewports the counts simply keep growing).
 		SmallVector<SmallVector<float, 0>, 0> _meshVertices;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _meshCommands;
+
+		/// One texture chunk of the atlas of a tile set. The chunks of all tile sets are numbered one after another, the
+		/// first one of each at its @ref TileSetPart::MeshSlotBase, a layer mesh has a vertex buffer for each it uses.
+		struct MeshSlot
+		{
+			TileSet* Set;
+			std::int32_t Chunk;
+
+			Texture* GetTexture() const {
+				return Set->TextureDiffuse[Chunk].get();
+			}
+		};
+		SmallVector<MeshSlot, 8> _meshSlots;
+
 		std::int32_t _meshVerticesCount = 0;
 		std::int32_t _meshCommandCount = 0;
 		/// Highest number of vertex buffers rented in one frame since the pool was last trimmed. Shares the age
@@ -1053,6 +1147,11 @@ namespace Jazz2::Tiles
 
 		std::int32_t _texturedBackgroundLayer;
 		TexturedBackgroundPass _texturedBackgroundPass;
+		// The reflection layer and its texture, apart from the textured background, as the two are often in a level together
+		std::int32_t _reflectionLayer;
+		TexturedBackgroundPass _reflectionPass;
+		// The last revision given to a texture of its own of a layer, see TileMapLayer::TextureRevision
+		std::uint32_t _lastTextureRevision = 0;
 
 #if defined(TILEMAP_OPAQUE_COVERAGE)
 		/**
@@ -1137,13 +1236,20 @@ namespace Jazz2::Tiles
 				std::uint16_t Xo, Yo;
 				std::int32_t LayoutIndex;
 			};
-			struct Chunk {
+			// A part of a chunk no longer than one draw, with a VBO of its own, a window seen from far away has more
+			// quads of a chunk than one draw takes
+			struct Piece {
 				std::unique_ptr<RenderCommand> Command;
-				// Host copy the command's own VBO is uploaded from. Kept as long as the VBO itself, because
-				// without buffer mapping the whole VBO is uploaded from it (see Geometry::CommitVertices())
+				std::uint32_t CapacityQuads = 0;
+				std::uint32_t QuadCount = 0;
+			};
+			// The quads of one mesh slot, see TileMap::MeshSlot
+			struct Chunk {
+				SmallVector<Piece, 1> Pieces;
+				// Host copy the VBOs of the pieces are uploaded from, one after another. Kept as long as the VBOs
+				// themselves, because without buffer mapping a whole VBO is uploaded from it (see Geometry::CommitVertices())
 				SmallVector<float, 0> Vertices;
 				const Texture* DiffuseTexture = nullptr;
-				std::uint32_t CapacityQuads = 0;
 				std::uint32_t QuadCount = 0;
 			};
 			const Viewport* Owner = nullptr;
@@ -1168,10 +1274,10 @@ namespace Jazz2::Tiles
 		/** @brief Returns `true` if the tiles under the window are the ones the cache was built from */
 		bool LayerWindowUnchanged(const TileMapLayer& layer, const LayerWindowCache& cache, std::int32_t tileAbsY,
 			std::int32_t tileXs, std::int32_t tileYs) const;
-		/** @brief Uploads the window's quads collected in @ref LayerWindowCache::Chunk::Vertices, returns `false` if a chunk is too large for one draw */
-		bool UploadLayerWindowCache(LayerWindowCache& cache, TileSet& tileSet);
-		/** @brief Appends the current frame of the window's animated tiles to the streamed chunk meshes */
-		void AppendAnimatedWindowTiles(const TileMapLayer& layer, const LayerWindowCache& cache, TileSet& tileSet,
+		/** @brief Uploads the window's quads collected in @ref LayerWindowCache::Chunk::Vertices, in pieces of one draw each */
+		void UploadLayerWindowCache(LayerWindowCache& cache);
+		/** @brief Appends the current frame of the window's animated tiles to the streamed meshes of the mesh slots */
+		void AppendAnimatedWindowTiles(const TileMapLayer& layer, const LayerWindowCache& cache,
 			float originX, float originY, SmallVectorImpl<std::int32_t>& chunkVertices);
 
 		/** @brief Packs the parts of a layer tile its appearance depends on, for @ref LayerWindowCache::Window */
@@ -1183,11 +1289,13 @@ namespace Jazz2::Tiles
 		// The layer is placed by `placementRect` (its parallax), and the tiles that cover `cullingRect` are drawn; the two
 		// are the same unless the view options say otherwise (see TileMapViewOptions)
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, const Rectf& placementRect, Vector2f viewCenter);
-		static float TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY);
-		// Returns the coordinates of a layer at the top left corner of the view it's placed by, minus HardcodedOffset
-		Vector2f GetLayerViewCoordinates(const TileMapLayer& layer, const Rectf& placementRect, Vector2f viewCenter, float loX, float loY) const;
 		// Returns the color of a tinted layer, whose description keeps a palette index in red and the strength in alpha
 		static Vector4f ResolveTintColor(const Vector4f& description);
+		// Returns the palette offset of the sprite palette shifted by `shift` entries for a palette-shifted layer drawn now,
+		// 0 for no shift or if no row of the palette is free (see LayerRendererType::PaletteShift)
+		std::int32_t AcquireShiftedPalette(std::uint8_t shift);
+		// Gives back the rows of the shifted palettes no layer was drawn with in this frame or the one before, all of them with `all`
+		void ReleaseShiftedPalettes(bool all);
 		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr);
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Appends one tile's two triangles (6 vertices, 8 floats each: position.xy, texcoords.xy, color.rgba) to a
@@ -1205,6 +1313,28 @@ namespace Jazz2::Tiles
 		void EmitMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
 			std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending,
 			Vector2f translation = Vector2f(0.0f, 0.0f));
+#endif
+#if defined(TILEMAP_HEAT_TILES)
+		/** @brief Tiles of the heat effect of the layer being drawn, accumulated into one mesh per texture */
+		struct HeatMeshGroup {
+			const Texture* DiffuseTexture;
+			bool Indexed;
+			std::int32_t VerticesIndex;
+		};
+
+		SmallVector<HeatMeshGroup, 2> _heatMeshGroups;
+		/// A pool of their own, so the commands of the ordinary layers never get the shader of the heat
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _heatMeshCommands;
+		std::int32_t _heatMeshCommandCount = 0;
+		/// Game ticks of the original (70 a second) the heat has run for, modulo a whole turn of its table (128)
+		float _heatTicks = 0.0f;
+
+		/** @brief Returns `true` if a tile is drawn with the heat effect, an animated one by the frame it shows now */
+		bool IsHeatTile(const LayerTile& tile) const;
+		/** @brief Appends a tile of the heat effect (resolved to a single frame) to the heat mesh, returns `false` if it can't be drawn so */
+		bool AppendHeatTile(std::int32_t tileId, LayerTileFlags flags, float alpha, float x, float y);
+		/** @brief Emits the heat meshes accumulated for the layer being drawn */
+		void EmitHeatMeshes(RenderQueue& renderQueue, const Vector4f& color, std::uint16_t depth);
 #endif
 #if defined(TILEMAP_LAYER_EFFECTS)
 		/** @brief What a group of the tiles of a special layer is drawn as */
@@ -1242,6 +1372,9 @@ namespace Jazz2::Tiles
 		/// A pool of their own, so the commands of the ordinary layers never see the third texture these bind
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _effectMeshCommands;
 		std::int32_t _effectMeshCommandCount = 0;
+		/// The same for the reflection, one command for each viewport it's drawn in
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _reflectionCommands;
+		std::int32_t _reflectionCommandCount = 0;
 
 		/** @brief Prepares drawing of a special layer, returns `false` if it can't be drawn in the current viewport at all */
 		bool BeginEffectLayer(const TileMapLayer& layer, LayerRendererType type);
@@ -1275,6 +1408,8 @@ namespace Jazz2::Tiles
 			float& texScaleX, float& texBiasX, float& texScaleY, float& texBiasY);
 		/** @brief Derives the animations the x-ray tiles of a layer show outside the mask, see @ref GetXRayUnmaskedAnimation() */
 		void PrepareXRayLayer(const TileMapLayer& layer);
+		/** @brief Draws the reflection layer below its horizon, inside @p area of the view, with its texture moved by @p shift of its pixels */
+		void DrawReflection(RenderQueue& renderQueue, const Rectf& cullingRect, const Rectf& area, const TileMapLayer& layer, Vector2f shift);
 #else
 		/** @brief Turns the animated tiles of an x-ray layer into what they show outside the mask, see @ref LayerRendererType::XRay */
 		void ReduceXRayLayer(TileMapLayer& layer);
@@ -1309,11 +1444,20 @@ namespace Jazz2::Tiles
 		void DrawDebris(RenderQueue& renderQueue);
 
 		void RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer, float x, float y);
+		// Finds the layers the textured background pass and the reflection pass draw again, after a renderer type changed
+		void UpdateTexturedLayers();
+		// Size of the texture a textured layer is drawn with in pixels, its own or the tiles at its top left
+		static Vector2i GetLayerTextureSize(const TileMapLayer& layer);
 
 		TileSet* ResolveTileSet(std::int32_t& tileId);
+		// The same, with the first mesh slot of the tile set, see MeshSlot
+		TileSet* ResolveTileSet(std::int32_t& tileId, std::int32_t& meshSlotBase);
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		// Numbers the texture chunks of the tile sets, see MeshSlot
+		void UpdateMeshSlots();
+#endif
 		static void FillAnimatedTile(AnimatedTile& animTile, const Formats::AnimatedTileRecord& record);
 		std::int32_t ResolveTileID(const LayerTile& tile) const;
-		bool GetStaticTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, Vector4f& texCoords, bool& indexed);
 		/** @brief Loads the whole atlas of the main tileset if it was deferred, see @ref _diffuseDeferred */
 		void LoadDeferredDiffuse();
 	};

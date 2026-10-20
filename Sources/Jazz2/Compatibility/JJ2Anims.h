@@ -31,7 +31,7 @@ namespace Jazz2::Compatibility
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// 40: converted levels carry a version (see Formats::LevelFile), the unversioned ones are no longer read
 		// 41: the converted levels have the author of the level after its name
-		static constexpr std::uint16_t CacheVersion = 41;
+		static constexpr std::uint16_t CacheVersion = 42;
 #endif
 
 		/**
@@ -255,6 +255,10 @@ namespace Jazz2::Compatibility
 			SmallVector<PackedFrame, 0>& packed, std::int32_t& sheetWidth, std::int32_t& sheetHeight);
 
 		static void ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims, ConversionProgress progress);
+		// Works out the normalized hotspot and the size of the logical cell of an animation from the spots of its frames
+		static void NormalizeAnimation(AnimSection& anim);
+		// Puts the spots the original data of the yellow bird left out or misplaced where the green bird has them
+		static void FixYellowBirdSpots(AnimSection& anim, const AnimSetMapping::Entry& entry, SmallVectorImpl<AnimSection>& anims, AnimSetMapping& animMapping);
 		static void ImportAudioSamples(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<SampleSection>& samples, ConversionProgress progress);
 
 		static void WriteImageToFile(StringView targetPath, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry);

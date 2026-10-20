@@ -417,7 +417,7 @@ namespace nCine::RHI::RDP
 		}
 
 		// TexturedBackground - from TexturedBackground.shader:fixed_function(rdp)
-		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(rdp)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(rdp)]
+		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCylinder [TexturedBackgroundCylinder.shader:fixed_function(rdp)], TexturedBackgroundCylinder (DITHER) [TexturedBackgroundCylinder.shader:fixed_function(rdp)], TexturedBackgroundTunnel [TexturedBackgroundTunnel.shader:fixed_function(rdp)], TexturedBackgroundTunnel (DITHER) [TexturedBackgroundTunnel.shader:fixed_function(rdp)]
 		void TexturedBackground_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
@@ -603,8 +603,10 @@ namespace nCine::RHI::RDP
 			{ "ShieldLightning", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
 			{ "TexturedBackground", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
 			{ "TexturedBackground", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
-			{ "TexturedBackgroundCircle", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
-			{ "TexturedBackgroundCircle", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackgroundCylinder", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackgroundCylinder", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackgroundTunnel", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackgroundTunnel", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
 			{ "TileMapMesh", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::TileMapMesh, nullptr },
 			{ "TileMapMeshPalette", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::TileMapMesh, nullptr },
 			{ "Transition", "", false, FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &Transition_Effect },

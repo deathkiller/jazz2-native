@@ -405,7 +405,7 @@ namespace Jazz2::AssetPacker
 		child->IsDirectory = isDirectory;
 		child->Parent = &parent;
 		Node* result = child.get();
-		parent.Children.push_back(std::move(child));
+		parent.Children.push_back(Death::move(child));
 		return result;
 	}
 

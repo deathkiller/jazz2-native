@@ -48,6 +48,10 @@ namespace Jazz2::Editor
 		float _appear;
 		float _radius;
 		float _itemRadius;
+		// Whether the press started in the middle, a finger sliding out then picks by direction at any distance
+		bool _pressFromCenter = false;
+		// Whether the press went out of the middle, letting go in the middle without that keeps the menu open
+		bool _movedOut = false;
 
 		Vector2f GetItemCenter(std::int32_t index) const;
 		std::int32_t GetItemAt(Vector2f pos);

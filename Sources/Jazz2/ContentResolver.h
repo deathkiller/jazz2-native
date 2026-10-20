@@ -264,9 +264,20 @@ namespace Jazz2
 		 * @brief Keeps a metadata loaded with everything it uses, even across loadings that don't request it
 		 *
 		 * Everything not requested while something is loaded is released at the end of it (see @ref BeginLoading()).
-		 * The level editor keeps the sprites of its previews this way while it loads a level to play it.
+		 * The level editor keeps the sprites of its previews this way while it loads a level to play it. Pins are
+		 * counted, the metadata stays pinned until it was unpinned as many times as it was pinned.
 		 */
 		void PinMetadata(Metadata* metadata, bool pinned);
+		/**
+		 * @brief Keeps everything loaded across the loadings that follow, until @ref ReleaseLoadedResources()
+		 *
+		 * Nothing is released at the end of a loading while any is held, also what was loaded since, see
+		 * @ref BeginLoading(). Calls are counted, each is paired with @ref ReleaseLoadedResources(). The level editor
+		 * keeps the level played this way while it loads the level it shows, or another one to play.
+		 */
+		void RetainLoadedResources();
+		/** @brief Lets the resources go again after @ref RetainLoadedResources(), they're released by the next loading that doesn't request them */
+		void ReleaseLoadedResources();
 		/**
 		 * @brief Loads specified graphics asset (cached)
 		 *
@@ -352,7 +363,17 @@ namespace Jazz2
 		 */
 		std::int32_t AcquirePaletteOffset(std::uint32_t furColor, PlayerType playerType);
 		/**
-		 * @brief Releases one reference to a palette offset from @ref AcquirePaletteOffset
+		 * @brief Acquires a reference-counted palette offset of the sprite palette shifted by @p shift entries
+		 *
+		 * Index `i` of the row is the color of index `(i + shift) & 255` of the sprite palette, index 0 stays the
+		 * transparent one, and a pixel moved onto index 0 gets its color fully opaque, as `SPRITE::PALSHIFT` of JJ2+
+		 * draws it (see @ref Tiles::LayerRendererType::PaletteShift). The row is built again whenever the sprite
+		 * palette changes. Callers with the same shift share one row. Returns 0 (the sprite palette itself) for a
+		 * shift of 0, otherwise the offset, or -1 if no row is free. Release it with @ref ReleasePaletteOffset.
+		 */
+		std::int32_t AcquireShiftedPaletteOffset(std::uint8_t shift);
+		/**
+		 * @brief Releases one reference to a palette offset from @ref AcquirePaletteOffset or @ref AcquireShiftedPaletteOffset
 		 *
 		 * The underlying palette is returned to the pool only when the last holder releases it.
 		 */
@@ -455,9 +476,10 @@ namespace Jazz2
 		/**
 			@brief Compiles the shaders of the special tile layers, if they aren't compiled yet
 
-			Called once a level that has an x-ray or a blur-behind layer is loaded, so a game that never plays one
-			never spends the startup time or the memory on them. Returns `false` if they couldn't be compiled,
-			the layers are then drawn as on the backends that can't show the effects.
+			Called once a level that has an x-ray, a blur-behind or a reflection layer is loaded, so a game that never
+			plays one never spends the startup time or the memory on them. Returns `false` if they couldn't be
+			compiled, the layers are then drawn as on the backends that can't show the effects. The shader of the
+			reflection layers isn't required, without it only they aren't drawn.
 		*/
 		bool CompileLayerEffectShaders();
 #endif
@@ -537,8 +559,9 @@ namespace Jazz2
 		// (drops baked fonts, regenerates gem palettes); just skips the bytes when headless or `applyPalette` is false
 		void ReadTilesetPalette(Stream& uc, bool applyPalette);
 		// Reads the tileset's packed collision mask from the decompressed stream (kept in the cache's 1-bit-per-pixel
-		// form, see TileSet::MaskBytesPerTile); `maskSize` receives its size in bytes
-		static std::unique_ptr<std::uint8_t[]> ReadTilesetMask(Stream& uc, std::uint32_t& maskSize);
+		// form, see TileSet::MaskBytesPerTile); it always has the size of `tileCount` masks, whatever the file says,
+		// which `maskSize` receives in bytes
+		static std::unique_ptr<std::uint8_t[]> ReadTilesetMask(Stream& uc, std::uint16_t tileCount, std::uint32_t& maskSize);
 		// Builds the padded tileset diffuse atlas (R8 indexed for all-8-bit tilesets, RGBA8 baked when any tile is
 		// 32-bit), the per-tile fully-opaque flags and the optional caption thumbnail. Reads pixels from the raw stream
 		// `s` (the image content follows the compressed block). Sets `indexTiles` to the chosen mode.
@@ -576,6 +599,8 @@ namespace Jazz2
 		static std::int32_t GetFurSchemeIndex(PlayerType playerType);
 		// Core recolor builder, keyed by the scheme index stored on each dynamic palette row
 		void BuildPlayerColorPaletteForScheme(std::uint32_t furColor, std::int32_t schemeIndex, std::uint32_t* outPalette) const;
+		// Builds the sprite palette shifted by the given number of entries, see AcquireShiftedPaletteOffset()
+		void BuildShiftedPalette(std::uint8_t shift, std::uint32_t* outPalette) const;
 #if defined(DEATH_DEBUG)
 		void MigrateGraphics(StringView path);
 #endif
@@ -588,6 +613,7 @@ namespace Jazz2
 		// the dirty range below and re-uploaded lazily. Dynamically allocated per-player rows are reference-counted
 		// (_paletteRowRefCount > 0 = in use) and keyed by both fur color (_paletteRowColor) and recolor scheme
 		// (_paletteRowScheme) so identical recolors share a row (a character's scheme decides which blocks it recolors).
+		// A row of the shifted sprite palette has ShiftedPaletteScheme as its scheme and the shift as its color.
 		std::unique_ptr<Texture> _paletteTexture;
 		std::int32_t _paletteDirtyFirstRow;
 		std::int32_t _paletteDirtyLastRow;
@@ -605,6 +631,9 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;
 #endif
+		// How many times each metadata is pinned, see PinMetadata(), and how many retains are held, see RetainLoadedResources()
+		SmallVector<Pair<Metadata*, std::int32_t>, 0> _pinnedMetadata;
+		std::int32_t _retainedResources = 0;
 		std::unique_ptr<UI::Font> _fonts[(std::int32_t)FontType::Count];
 		std::unique_ptr<Shader> _precompiledShaders[(std::int32_t)PrecompiledShader::Count];
 		SmallVector<std::unique_ptr<PakFile>> _mountedPaks;

@@ -66,7 +66,7 @@ namespace nCine::Backends
 		}
 		/** @brief Sets the directories advertised by the frontend, must be called before @ref Init() */
 		inline void SetHostPaths(HostPaths&& hostPaths) {
-			_hostPaths = std::move(hostPaths);
+			_hostPaths = Death::move(hostPaths);
 		}
 
 	private:

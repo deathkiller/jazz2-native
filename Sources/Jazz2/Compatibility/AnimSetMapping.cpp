@@ -1964,7 +1964,7 @@ namespace Jazz2::Compatibility
 				entry.Category = Discard;
 
 				std::int32_t key = (_currentSet << 16) | _currentItem;
-				_entries.emplace(key, std::move(entry));
+				_entries.emplace(key, Death::move(entry));
 
 				_currentItem++;
 				_currentOrdinal++;
@@ -1998,7 +1998,7 @@ namespace Jazz2::Compatibility
 			entry.AllowRealtimePalette = allowRealtimePalette;
 
 			std::uint32_t key = (_currentSet << 16) | _currentItem;
-			_entries.emplace(key, std::move(entry));
+			_entries.emplace(key, Death::move(entry));
 
 			_currentItem++;
 			_currentOrdinal++;
@@ -2016,7 +2016,7 @@ namespace Jazz2::Compatibility
 		entry.AllowRealtimePalette = allowRealtimePalette;
 
 		std::uint32_t key = (_currentSet << 16) | _currentItem;
-		_entries.emplace(key, std::move(entry));
+		_entries.emplace(key, Death::move(entry));
 
 		_currentItem++;
 		_currentOrdinal++;

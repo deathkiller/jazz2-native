@@ -65,6 +65,13 @@ namespace Jazz2::Tests
 }
 #endif
 
+#if defined(WITH_EDITOR)
+namespace Jazz2::Editor
+{
+	class PlayTestDebug;
+}
+#endif
+
 namespace Jazz2::Actors
 {
 	class Player;
@@ -341,6 +348,10 @@ namespace Jazz2::Actors
 #if defined(WITH_PHYSICS_PROBE)
 		// Reads the position and speed it logs, and puts the player back on its mark between scenarios
 		friend class Jazz2::Tests::PhysicsProbe;
+#endif
+#if defined(WITH_EDITOR)
+		// Stops a player moved by hand, and destroys the objects of events changed while the level is played
+		friend class Jazz2::Editor::PlayTestDebug;
 #endif
 
 	public:
@@ -751,8 +762,8 @@ namespace Jazz2::Actors
 		void CreateParticleDebrisOnPerish(ActorBase* collider);
 		/** @overload */
 		void CreateParticleDebrisOnPerish(ParticleDebrisEffect effect, Vector2f speed);
-		/** @brief Creates a sprite debris */
-		void CreateSpriteDebris(AnimState state, std::int32_t count);
+		/** @brief Creates a sprite debris, whose pieces keep @p elasticity of their speed when they bounce off a solid tile */
+		void CreateSpriteDebris(AnimState state, std::int32_t count, float elasticity = 0.8f);
 		/** @brief Returns scale of ice shrapnels */
 		virtual float GetIceShrapnelScale() const;
 

@@ -10,7 +10,8 @@
 namespace Jazz2::Events
 {
 	EventMap::EventMap(Vector2i layoutSize)
-		: _levelHandler(nullptr), _layoutSize(layoutSize), _pitType(PitType::FallForever), _hasRollbackCheckpoint(false), _layoutRows(layoutSize.Y)
+		: _levelHandler(nullptr), _layoutSize(layoutSize), _pitType(PitType::FallForever), _hasRollbackCheckpoint(false), _layoutRows(layoutSize.Y),
+			_spawningTile(-1, -1), _spawningPos(0, 0), _spawningType(EventType::Empty)
 	{
 	}
 
@@ -37,26 +38,60 @@ namespace Jazz2::Events
 			y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
 	}
 
-	Vector2i EventMap::GetOriginTile(Vector2i pos, EventType type) const
+	Vector2i EventMap::GetOriginTile(Vector2i pos, EventType type)
 	{
-		// By the type too, an object of an event of the grid can be spawned at the same position, the center of a tile
-		const std::int32_t gridCount = _layoutSize.X * _layoutSize.Y;
-		for (std::size_t i = 0; i < _offGridPositions.size(); i++) {
-			if (_offGridPositions[i] != pos) {
-				continue;
-			}
-			const EventTile& tile = _eventLayout[gridCount + i];
-			bool matches = (tile.Event == type);
-			if (!matches && tile.Event == EventType::Generator) {
-				std::uint32_t generatorIdx = Actors::EventParamsReader(tile.EventParams).GetUint32(0);
-				matches = (generatorIdx < _generators.size() && _generators[generatorIdx].Event == type);
-			}
-			if (matches) {
-				std::int32_t index = (std::int32_t)i;
-				return Vector2i(index % _layoutSize.X, _layoutSize.Y + index / _layoutSize.X);
+		// The tile whose object is being spawned right now is known exactly, a grid event and an off-grid one of the
+		// same type can share a position (the center of a tile). The object asks first, before its own activation
+		// runs, so whatever it spawns there while activating mustn't get the tile too (it would reset its event).
+		if (_spawningTile.X >= 0 && _spawningPos == pos && _spawningType == type) {
+			Vector2i tile = _spawningTile;
+			_spawningTile = Vector2i(-1, -1);
+			return tile;
+		}
+
+		// Otherwise by the position and the type, among the off-grid events in the tile of the position only
+		if (pos.X >= 0 && pos.Y >= 0) {
+			const std::int32_t column = pos.X / Tiles::TileSet::DefaultTileSize;
+			const std::int32_t gridCount = _layoutSize.X * _layoutSize.Y;
+			auto range = FindOffGridEvents(pos.Y / Tiles::TileSet::DefaultTileSize, column);
+			for (const std::uint16_t* it = range.first; it != range.second; ++it) {
+				const std::int32_t index = *it;
+				if (_offGridPositions[index].X / Tiles::TileSet::DefaultTileSize != column) {
+					break;
+				}
+				if (_offGridPositions[index] != pos) {
+					continue;
+				}
+				const EventTile& tile = _eventLayout[gridCount + index];
+				bool matches = (tile.Event == type);
+				if (!matches && tile.Event == EventType::Generator) {
+					std::uint32_t generatorIdx = Actors::EventParamsReader(tile.EventParams).GetUint32(0);
+					matches = (generatorIdx < _generators.size() && _generators[generatorIdx].Event == type);
+				}
+				if (matches) {
+					return Vector2i(index % _layoutSize.X, _layoutSize.Y + index / _layoutSize.X);
+				}
 			}
 		}
 		return Vector2i(pos.X / Tiles::TileSet::DefaultTileSize, pos.Y / Tiles::TileSet::DefaultTileSize);
+	}
+
+	std::shared_ptr<Actors::ActorBase> EventMap::SpawnFromTile(EventType type, std::uint8_t* params, Actors::ActorState flags, Vector2i tile, Vector2i pos, std::int32_t z)
+	{
+		// Kept for GetOriginTile(), which the object asks while it's being activated; restored afterwards, an object
+		// can spawn others while it's being activated
+		Vector2i prevTile = _spawningTile, prevPos = _spawningPos;
+		EventType prevType = _spawningType;
+		_spawningTile = tile;
+		_spawningPos = pos;
+		_spawningType = type;
+
+		std::shared_ptr<Actors::ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(type, params, flags, Vector3i(pos.X, pos.Y, z));
+
+		_spawningTile = prevTile;
+		_spawningPos = prevPos;
+		_spawningType = prevType;
+		return actor;
 	}
 
 	void EventMap::SpawnTileEvent(EventTile& tile, std::int32_t x, std::int32_t y, Actors::ActorState flags, std::int32_t z)
@@ -67,8 +102,9 @@ namespace Jazz2::Events
 			_levelHandler->SetWeather((WeatherType)tile.EventParams[0], tile.EventParams[1]);
 		} else if (tile.Event != EventType::Generator) {
 			Vector2i pos = GetEventPosition(x, y);
-			std::shared_ptr<Actors::ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.Event, tile.EventParams,
-				Actors::ActorState::IsCreatedFromEventMap | tile.EventFlags | flags, Vector3i(pos.X, pos.Y, z));			if (actor != nullptr) {
+			std::shared_ptr<Actors::ActorBase> actor = SpawnFromTile(tile.Event, tile.EventParams,
+				Actors::ActorState::IsCreatedFromEventMap | tile.EventFlags | flags, Vector2i(x, y), pos, z);
+			if (actor != nullptr) {
 				_levelHandler->AddActor(actor);
 			}
 		}
@@ -194,7 +230,7 @@ namespace Jazz2::Events
 
 		// Moved aside for the walk below, which spawns actors and so runs game code that could consume an event
 		// tile and insert into the very list being iterated
-		SmallVector<RollbackTile, 0> saved = std::move(_eventLayoutForRollback);
+		SmallVector<RollbackTile, 0> saved = Death::move(_eventLayoutForRollback);
 
 		// The saved tiles are merged into this walk of the grid rather than restored up front, so that an actor
 		// spawned below observes exactly the same partially rolled back grid as it did with the full copy
@@ -237,8 +273,8 @@ namespace Jazz2::Events
 
 		// The checkpoint stays valid, it can be rolled back to again, so the list goes back where it was. Its own
 		// values win over anything the walk consumed, whose tile was restored right afterwards.
-		SmallVector<RollbackTile, 0> consumedWhileRollingBack = std::move(_eventLayoutForRollback);
-		_eventLayoutForRollback = std::move(saved);
+		SmallVector<RollbackTile, 0> consumedWhileRollingBack = Death::move(_eventLayoutForRollback);
+		_eventLayoutForRollback = Death::move(saved);
 		for (const auto& entry : consumedWhileRollingBack) {
 			SaveTileForRollback(entry.TileIndex, entry.Tile);
 		}
@@ -325,8 +361,8 @@ namespace Jazz2::Events
 					std::int32_t y = generator.EventPos / _layoutSize.X;
 					Vector2i pos = GetEventPosition(x, y);
 
-					generator.SpawnedActor = _levelHandler->EventSpawner()->SpawnEvent(generator.Event,
-						generator.EventParams, Actors::ActorState::IsFromGenerator, Vector3i(pos.X, pos.Y, ILevelHandler::SpritePlaneZ));
+					generator.SpawnedActor = SpawnFromTile(generator.Event, generator.EventParams, Actors::ActorState::IsFromGenerator,
+						Vector2i(x, y), pos, ILevelHandler::SpritePlaneZ);
 					if (generator.SpawnedActor != nullptr) {
 						_levelHandler->AddActor(generator.SpawnedActor);
 					}
@@ -369,21 +405,88 @@ namespace Jazz2::Events
 			}
 		}
 
-		// Off-grid events by the tile their position is in, the zone isn't limited to the grid for them, they can lie outside
-		const std::int32_t gridCount = _layoutSize.X * _layoutSize.Y;
+		// Off-grid events by the tile their position is in, the zone isn't limited to the grid for them, they can lie
+		// outside. Only the rows of the zone are visited, and only the part of each row from its first column on, so
+		// the cost follows the events around the zone rather than all of them in the level.
+		if (!_offGridOrder.empty()) {
+			const std::int32_t gridCount = _layoutSize.X * _layoutSize.Y;
+			const std::int32_t firstRow = std::max<std::int32_t>(ty1, 0);
+			const std::int32_t lastRow = std::min<std::int32_t>(ty2, std::int32_t(_offGridRowStart.size()) - 2);
+			for (std::int32_t row = firstRow; row <= lastRow; row++) {
+				auto range = FindOffGridEvents(row, tx1);
+				for (const std::uint16_t* it = range.first; it != range.second; ++it) {
+					const std::int32_t index = *it;
+					if (_offGridPositions[index].X / Tiles::TileSet::DefaultTileSize > tx2) {
+						break;
+					}
+					EventTile* tilePtr = _eventLayout.Find(gridCount + index);
+					if (tilePtr != nullptr && !tilePtr->IsEventActive && tilePtr->Event != EventType::Empty) {
+						SpawnTileEvent(*tilePtr, index % _layoutSize.X, _layoutSize.Y + index / _layoutSize.X,
+							allowAsync ? Actors::ActorState::Async : Actors::ActorState::None, ILevelHandler::SpritePlaneZ);
+					}
+				}
+			}
+		}
+	}
+
+	std::pair<const std::uint16_t*, const std::uint16_t*> EventMap::FindOffGridEvents(std::int32_t row, std::int32_t firstColumn) const
+	{
+		if (row < 0 || row >= std::int32_t(_offGridRowStart.size()) - 1) {
+			return { nullptr, nullptr };
+		}
+		const std::uint16_t* begin = _offGridOrder.data() + _offGridRowStart[row];
+		const std::uint16_t* end = _offGridOrder.data() + _offGridRowStart[row + 1];
+		// The row is ordered by the column, so the first event of the column is found by halving
+		begin = std::lower_bound(begin, end, firstColumn, [this](std::uint16_t index, std::int32_t column) {
+			return (_offGridPositions[index].X / Tiles::TileSet::DefaultTileSize < column);
+		});
+		return { begin, end };
+	}
+
+	void EventMap::BuildOffGridIndex()
+	{
+		_offGridOrder.clear();
+		_offGridRowStart.clear();
+		if (_offGridPositions.empty()) {
+			return;
+		}
+
+		// The positions were limited to the level and a margin around it when they were read, so none is negative and
+		// the rows are few
+		std::int32_t rowCount = 0;
+		for (const Vector2i& pos : _offGridPositions) {
+			rowCount = std::max<std::int32_t>(rowCount, pos.Y / Tiles::TileSet::DefaultTileSize + 1);
+		}
+
+		// A reader refuses a level with more off-grid events than the 16-bit indices hold, they're counted there before
+		// any is left out
+		static_assert(Formats::LevelFile::MaxOffGridEvents <= std::uint32_t(UINT16_MAX) + 1, "Off-grid event indices are 16-bit");
+		
+		_offGridOrder.resize_for_overwrite(_offGridPositions.size());
 		for (std::size_t i = 0; i < _offGridPositions.size(); i++) {
-			const Vector2i& pos = _offGridPositions[i];
-			std::int32_t tx = pos.X / Tiles::TileSet::DefaultTileSize;
-			std::int32_t ty = pos.Y / Tiles::TileSet::DefaultTileSize;
-			if (tx < tx1 || tx > tx2 || ty < ty1 || ty > ty2) {
-				continue;
+			_offGridOrder[i] = std::uint16_t(i);
+		}
+		std::sort(_offGridOrder.begin(), _offGridOrder.end(), [this](std::uint16_t a, std::uint16_t b) {
+			const std::int32_t rowA = _offGridPositions[a].Y / Tiles::TileSet::DefaultTileSize;
+			const std::int32_t rowB = _offGridPositions[b].Y / Tiles::TileSet::DefaultTileSize;
+			if (rowA != rowB) {
+				return (rowA < rowB);
 			}
-			EventTile* tilePtr = _eventLayout.Find(gridCount + i);
-			if (tilePtr != nullptr && !tilePtr->IsEventActive && tilePtr->Event != EventType::Empty) {
-				std::int32_t index = (std::int32_t)i;
-				SpawnTileEvent(*tilePtr, index % _layoutSize.X, _layoutSize.Y + index / _layoutSize.X,
-					allowAsync ? Actors::ActorState::Async : Actors::ActorState::None, ILevelHandler::SpritePlaneZ);
+			const std::int32_t columnA = _offGridPositions[a].X / Tiles::TileSet::DefaultTileSize;
+			const std::int32_t columnB = _offGridPositions[b].X / Tiles::TileSet::DefaultTileSize;
+			if (columnA != columnB) {
+				return (columnA < columnB);
 			}
+			return (a < b);
+		});
+
+		_offGridRowStart.resize_for_overwrite(std::size_t(rowCount) + 1);
+		std::size_t next = 0;
+		for (std::int32_t row = 0; row <= rowCount; row++) {
+			while (next < _offGridOrder.size() && _offGridPositions[_offGridOrder[next]].Y / Tiles::TileSet::DefaultTileSize < row) {
+				next++;
+			}
+			_offGridRowStart[row] = std::int32_t(next);
 		}
 	}
 
@@ -444,7 +547,7 @@ namespace Jazz2::Events
 		}
 
 		tile->IsEventActive = true;
-		_generators[generatorIdx].SpawnedActor = std::move(actor);
+		_generators[generatorIdx].SpawnedActor = Death::move(actor);
 	}
 
 	const EventMap::EventTile& EventMap::GetEventTile(std::int32_t x, std::int32_t y) const
@@ -477,7 +580,7 @@ namespace Jazz2::Events
 			_eventLayout[x + y * _layoutSize.X].Event != EventType::Empty);
 	}
 
-	void EventMap::ForEachEvent(Function<bool(EventTile&, std::int32_t, std::int32_t)>&& forEachCallback) const
+	void EventMap::ForEachEvent(Function<bool(EventTile&, std::int32_t, std::int32_t)>&& forEachCallback, bool includeOffGrid) const
 	{
 		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
 			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
@@ -486,6 +589,67 @@ namespace Jazz2::Events
 					return;
 				}
 			}
+		}
+
+		if (includeOffGrid) {
+			const std::int32_t gridCount = _layoutSize.X * _layoutSize.Y;
+			for (std::size_t i = 0; i < _offGridPositions.size(); i++) {
+				EventTile* event = _eventLayout.Find(gridCount + i);
+				if (event != nullptr && event->Event != EventType::Empty) {
+					const Vector2i& pos = _offGridPositions[i];
+					if (!forEachCallback(*event, pos.X / Tiles::TileSet::DefaultTileSize, pos.Y / Tiles::TileSet::DefaultTileSize)) {
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	bool EventMap::IsTileEffectEvent(EventType type)
+	{
+		switch (type) {
+			// What the tile is
+			case EventType::SceneryDestruct:
+			case EventType::SceneryDestructButtstomp:
+			case EventType::SceneryDestructSpeed:
+			case EventType::SceneryCollapse:
+			case EventType::ModifierVine:
+			case EventType::ModifierOneWay:
+			case EventType::ModifierHook:
+			case EventType::ModifierHPole:
+			case EventType::ModifierVPole:
+			case EventType::ModifierHurt:
+			case EventType::ModifierTube:
+			case EventType::ModifierRicochet:
+			case EventType::ModifierSlide:
+			case EventType::ModifierDeath:
+			case EventType::ModifierSetWater:
+			case EventType::ModifierLimitCameraView:
+			case EventType::ModifierNoClimb:
+			// What happens to whoever is in it
+			case EventType::AreaStopEnemy:
+			case EventType::AreaFloatUp:
+			case EventType::AreaHForce:
+			case EventType::AreaText:
+			case EventType::AreaEndOfLevel:
+			case EventType::AreaCallback:
+			case EventType::AreaActivateBoss:
+			case EventType::AreaFlyOff:
+			case EventType::AreaRevertMorph:
+			case EventType::AreaMorphToFrog:
+			case EventType::AreaNoFire:
+			case EventType::AreaWaterBlock:
+			case EventType::TriggerArea:
+			case EventType::TriggerZone:
+			case EventType::RollingRockTrigger:
+			case EventType::WarpOrigin:
+			case EventType::LightAmbient:
+			case EventType::GemStomp:
+			// Found on the grid by others
+			case EventType::LevelStartMultiplayer:
+				return true;
+			default:
+				return false;
 		}
 	}
 
@@ -570,7 +734,17 @@ namespace Jazz2::Events
 				break;
 		}
 
-		reader.ReadEvents(_layoutSize.X, _layoutSize.Y, [this, &tileMap, &options, difficultyFlag](std::int32_t x, std::int32_t y, const Formats::EventRecord& event) {
+		// Which tiles of the grid hold an event in any difficulty, an off-grid event that acts through its tile isn't
+		// applied to them, whatever the difficulty (see LoadOffGridEvents())
+		BitArray occupiedTiles(ValueInit, std::size_t(_layoutSize.X) * std::size_t(_layoutSize.Y));
+
+		reader.ReadEvents(_layoutSize.X, _layoutSize.Y, [this, &tileMap, &options, difficultyFlag, &occupiedTiles](std::int32_t x, std::int32_t y, const Formats::EventRecord& event) {
+			// Starts and warp targets aren't kept in the tiles
+			if (event.Type != std::uint16_t(EventType::Empty) && ((event.Flags & Formats::EventRecord::Generator) != 0 ||
+				(event.Type != std::uint16_t(EventType::LevelStart) && event.Type != std::uint16_t(EventType::WarpTarget)))) {
+				occupiedTiles.set(std::size_t(x) + std::size_t(y) * std::size_t(_layoutSize.X));
+			}
+
 			// An event of no difficulty at all is present in all of them, and a multiplayer-only event only in multiplayer
 			if ((event.Flags & Formats::EventRecord::DifficultyMask) != 0 && (event.Flags & difficultyFlag) == 0) {
 				return;
@@ -636,10 +810,17 @@ namespace Jazz2::Events
 			}
 		});
 
-		LoadOffGridEvents(reader, tileMap, options, difficultyFlag);
+		LoadOffGridEvents(reader, tileMap, options, difficultyFlag, occupiedTiles);
+
+		if (_eventLayout.HasOverflowed()) {
+			// Every event that isn't a start or a warp target takes a tile of its own, and there can't be more of them
+			LOGE("Level has too many events");
+			_loadFailed = true;
+		}
 	}
 
-	void EventMap::LoadOffGridEvents(Formats::LevelReader& reader, Tiles::TileMap& tileMap, const LevelLoadOptions& options, std::uint8_t difficultyFlag)
+	void EventMap::LoadOffGridEvents(Formats::LevelReader& reader, Tiles::TileMap& tileMap, const LevelLoadOptions& options, std::uint8_t difficultyFlag,
+		BitArray& occupiedTiles)
 	{
 		SmallVector<Formats::OffGridEventRecord, 0> offGridEvents;
 		reader.ReadOffGridEvents(offGridEvents);
@@ -667,6 +848,7 @@ namespace Jazz2::Events
 			_layoutRows = _layoutSize.Y;
 			return;
 		}
+		BuildOffGridIndex();
 
 		std::int32_t index = 0;
 		for (const Formats::OffGridEventRecord& record : offGridEvents) {
@@ -679,6 +861,21 @@ namespace Jazz2::Events
 			std::int32_t y = _layoutSize.Y + index / _layoutSize.X;
 			index++;
 
+			// The tile the position is in, for what acts through its tile rather than through an object. Claimed before
+			// the difficulty decides, so the same events get the same tiles in any difficulty, on a server and its clients.
+			EventType eventType = (EventType)event.Type;
+			std::int32_t tx = pos.X / Tiles::TileSet::DefaultTileSize;
+			std::int32_t ty = pos.Y / Tiles::TileSet::DefaultTileSize;
+			bool claimsTile = false;
+			if ((event.Flags & Formats::EventRecord::Generator) == 0 && IsTileEffectEvent(eventType) &&
+				tx >= 0 && ty >= 0 && tx < _layoutSize.X && ty < _layoutSize.Y) {
+				const std::size_t cell = std::size_t(tx) + std::size_t(ty) * std::size_t(_layoutSize.X);
+				if (!occupiedTiles[cell]) {
+					occupiedTiles.set(cell);
+					claimsTile = true;
+				}
+			}
+
 			if ((event.Flags & Formats::EventRecord::DifficultyMask) != 0 && (event.Flags & difficultyFlag) == 0) {
 				continue;
 			}
@@ -686,7 +883,6 @@ namespace Jazz2::Events
 				continue;
 			}
 
-			EventType eventType = (EventType)event.Type;
 			Actors::ActorState actorFlags = (Actors::ActorState)(event.Flags & Formats::EventRecord::Illuminated);
 			std::uint8_t eventParams[EventSpawner::SpawnParamsSize];
 			std::memcpy(eventParams, event.Params, sizeof(eventParams));
@@ -707,11 +903,6 @@ namespace Jazz2::Events
 				}
 				continue;
 			}
-
-			// The tile the position is in, for what isn't an object
-			std::int32_t tx = pos.X / Tiles::TileSet::DefaultTileSize;
-			std::int32_t ty = pos.Y / Tiles::TileSet::DefaultTileSize;
-			bool inGrid = (tx >= 0 && ty >= 0 && tx < _layoutSize.X && ty < _layoutSize.Y);
 
 			switch (eventType) {
 				case EventType::Empty:
@@ -734,31 +925,20 @@ namespace Jazz2::Events
 					break;
 				}
 
-				case EventType::ModifierOneWay:
-				case EventType::ModifierVine:
-				case EventType::ModifierHook:
-				case EventType::SceneryDestruct:
-				case EventType::SceneryDestructButtstomp:
-				case EventType::TriggerArea:
-				case EventType::SceneryDestructSpeed:
-				case EventType::SceneryCollapse:
-				case EventType::ModifierHPole:
-				case EventType::ModifierVPole:
-				case EventType::LevelStartMultiplayer: {
-					// What the tile does, or found on the grid by others, an event there already stays
-					if (inGrid && !HasEventByPosition(tx, ty)) {
-						StoreTileEvent(tx, ty, eventType, actorFlags, eventParams);
-						if (eventType != EventType::LevelStartMultiplayer) {
-							tileMap.SetTileEventFlags(tx, ty, eventType, eventParams);
+				default:
+					if (IsTileEffectEvent(eventType)) {
+						// What the tile does, or found on the grid by others, an event there already stays
+						if (claimsTile) {
+							StoreTileEvent(tx, ty, eventType, actorFlags, eventParams);
+							if (eventType != EventType::LevelStartMultiplayer) {
+								tileMap.SetTileEventFlags(tx, ty, eventType, eventParams);
+							}
+						} else {
+							LOGW("Off-grid event {} at [{}, {}] has no free tile to be applied to", (std::uint32_t)eventType, pos.X, pos.Y);
 						}
 					} else {
-						LOGW("Off-grid event {} at [{}, {}] has no free tile to be applied to", (std::uint32_t)eventType, pos.X, pos.Y);
+						StoreTileEvent(x, y, eventType, actorFlags, eventParams);
 					}
-					break;
-				}
-
-				default:
-					StoreTileEvent(x, y, eventType, actorFlags, eventParams);
 					break;
 			}
 		}
@@ -782,11 +962,17 @@ namespace Jazz2::Events
 		target.Pos = Vector2f((float)x * Tiles::TileSet::DefaultTileSize, (float)y * Tiles::TileSet::DefaultTileSize - 8.0f);
 	}
 
-	void EventMap::InitializeFromStream(Stream& src)
+	bool EventMap::InitializeFromStream(Stream& src)
 	{
-		// A state saved before off-grid events were spawned has the grid only, their tiles stay as they're loaded then
+		// A state saved before off-grid events were spawned has the grid only, their tiles stay as they're loaded then.
+		// The state can come from a save of a level changed since (the user content shadows the shipped levels), so the
+		// size is a real check rather than an assumption.
 		std::int32_t layoutSize = src.ReadVariableInt32();
-		DEATH_ASSERT(layoutSize == GetLayoutCount() || layoutSize == _layoutSize.X * _layoutSize.Y, "Layout size mismatch", );
+		if ((layoutSize != GetLayoutCount() && layoutSize != _layoutSize.X * _layoutSize.Y) || layoutSize < 0 ||
+			std::size_t(layoutSize) > _eventLayout.size()) {
+			LOGE("Layout size mismatch ({} != {})", layoutSize, GetLayoutCount());
+			return false;
+		}
 
 		for (std::int32_t i = 0; i < layoutSize; i++) {
 			EventTile read = {};
@@ -800,6 +986,7 @@ namespace Jazz2::Events
 				std::memcpy(tile->EventParams, read.EventParams, sizeof(tile->EventParams));
 			}
 		}
+		return true;
 	}
 
 	void EventMap::SerializeResumableToStream(Stream& dest, bool fromCheckpoint)
@@ -825,10 +1012,14 @@ namespace Jazz2::Events
 		}
 	}
 
-	void EventMap::InitializeActiveStateFromStream(Stream& src)
+	bool EventMap::InitializeActiveStateFromStream(Stream& src)
 	{
 		std::int32_t layoutSize = src.ReadVariableInt32();
-		DEATH_ASSERT(layoutSize == GetLayoutCount() || layoutSize == _layoutSize.X * _layoutSize.Y, "Layout size mismatch", );
+		if ((layoutSize != GetLayoutCount() && layoutSize != _layoutSize.X * _layoutSize.Y) || layoutSize < 0 ||
+			std::size_t(layoutSize) > _eventLayout.size()) {
+			LOGE("Layout size mismatch ({} != {})", layoutSize, GetLayoutCount());
+			return false;
+		}
 
 		std::uint8_t bits = 0;
 		for (std::int32_t i = 0; i < layoutSize; i++) {
@@ -839,6 +1030,7 @@ namespace Jazz2::Events
 				tile->IsEventActive = ((bits & (1 << (i & 7))) != 0);
 			}
 		}
+		return true;
 	}
 
 	void EventMap::SerializeActiveStateToStream(Stream& dest, bool fromCheckpoint)
@@ -871,7 +1063,12 @@ namespace Jazz2::Events
 
 		// Only cells that hold a tile of their own are stored, the level is loaded from the same file, so it
 		// cannot have any cell the snapshot doesn't know about
+		// The counts are checked against the layout, a damaged snapshot could otherwise keep the reading going for long
 		std::uint32_t tileCount = src.ReadVariableUint32();
+		if (tileCount > std::uint32_t(realLayoutSize)) {
+			LOGE("Snapshot has more tiles than the layout ({} > {})", tileCount, realLayoutSize);
+			return false;
+		}
 		for (std::uint32_t i = 0; i < tileCount; i++) {
 			std::uint32_t tileIndex = src.ReadVariableUint32();
 			EventTile tile;
@@ -882,6 +1079,10 @@ namespace Jazz2::Events
 		}
 
 		std::uint32_t generatorCount = src.ReadVariableUint32();
+		if (generatorCount > std::uint32_t(realLayoutSize)) {
+			LOGE("Snapshot has more generators than the layout has tiles ({} > {})", generatorCount, realLayoutSize);
+			return false;
+		}
 		for (std::uint32_t i = 0; i < generatorCount; i++) {
 			float timeLeft = src.ReadValueAsLE<float>();
 			if (i < _generators.size()) {
@@ -903,15 +1104,25 @@ namespace Jazz2::Events
 			}
 
 			std::uint32_t rollbackCount = src.ReadVariableUint32();
+			if (rollbackCount > std::uint32_t(realLayoutSize)) {
+				LOGE("Snapshot has more saved tiles than the layout ({} > {})", rollbackCount, realLayoutSize);
+				_hasRollbackCheckpoint = false;
+				return false;
+			}
 			_eventLayoutForRollback.reserve(rollbackCount);
 			for (std::uint32_t i = 0; i < rollbackCount; i++) {
-				RollbackTile& entry = _eventLayoutForRollback.emplace_back();
+				RollbackTile entry;
 				entry.TileIndex = src.ReadVariableUint32();
 				ReadEventTile(src, entry.Tile);
+				// The rollback writes the tile back by this index, and the list has to stay sorted by it
+				if (entry.TileIndex < std::uint32_t(realLayoutSize) &&
+					(_eventLayoutForRollback.empty() || _eventLayoutForRollback.back().TileIndex < entry.TileIndex)) {
+					_eventLayoutForRollback.push_back(entry);
+				}
 			}
 		}
 
-		return true;
+		return !_eventLayout.HasOverflowed();
 	}
 
 	void EventMap::SerializeSnapshotToStream(Stream& dest)

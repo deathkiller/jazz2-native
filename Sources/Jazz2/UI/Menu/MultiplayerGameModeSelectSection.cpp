@@ -68,7 +68,7 @@ namespace Jazz2::UI::Menu
 		add(MpGameMode::Cooperation, _("Cooperation"));
 
 		list->SetSelectedIndex(selectedIndex);
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 }
 

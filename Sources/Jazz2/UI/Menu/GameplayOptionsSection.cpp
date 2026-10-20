@@ -127,6 +127,6 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 }

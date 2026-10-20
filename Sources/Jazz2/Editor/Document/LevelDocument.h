@@ -91,6 +91,9 @@ namespace Jazz2::Editor
 		SmallVector<TileRef, 0> Frames;
 	};
 
+	/** @brief Returns a new identity of a layer, unique while the editor runs, see @ref DocumentLayer::Id, it may be called on any thread */
+	std::uint32_t MakeLayerId();
+
 	/**
 		@brief A layer of a level being edited
 	*/
@@ -101,14 +104,37 @@ namespace Jazz2::Editor
 		/** @brief The editor doesn't let the layer be changed */
 		static constexpr std::uint8_t EditorLocked = 0x02;
 
-		/** @brief Description of the layer as the file stores it, including its size */
+		/**
+		 * @brief Description of the layer as the file stores it, including its size
+		 *
+		 * The renderer type and the color of the sprite layer are stored apart from its record, in
+		 * @ref Formats::SpriteLayerChunk, they're kept here as those of any other layer. So are the parameters of
+		 * a tunnel or a reflection (@ref Formats::LayerRecord::Textured), stored in @ref Formats::TexturedLayerChunk.
+		 */
 		Formats::LayerRecord Record;
 		/** @brief Name of the layer, may be empty */
 		String Name;
 		/** @brief Tiles of the layer, row by row */
 		SmallVector<TileRef, 0> Tiles;
+		/**
+		 * @brief Texture of its own of a textured layer, taken instead of the 8×8 tiles at its top left, or empty
+		 *
+		 * Palette indices row by row, stored with the parameters of the layer in @ref Formats::TexturedLayerChunk (see
+		 * @ref Formats::TexturedLayerChunk::Entry::Texture), such as a texture of JJ2+ a converted level has.
+		 */
+		SmallVector<std::uint8_t, 0> Texture;
 		/** @brief Combination of @ref EditorHidden and @ref EditorLocked, saved with the level but not part of it */
 		std::uint8_t EditorFlags = 0;
+		/** @brief How opaque the editor shows the layer, 255 fully, saved with the level but not part of it */
+		std::uint8_t EditorOpacity = 255;
+		/**
+		 * @brief Identity of the layer while the editor runs, it's not saved
+		 *
+		 * A layer keeps it however it moves, so the editor state of a layer that is still there is kept when
+		 * a snapshot of the layers is restored (see @ref DocumentSnapshot). The snapshots kept in a recovery copy
+		 * give their layers new ones when they're read (see @ref LayerIdRemap).
+		 */
+		std::uint32_t Id = MakeLayerId();
 
 		/** @brief Returns `true` if it's the sprite layer */
 		bool IsSpriteLayer() const {
@@ -168,10 +194,21 @@ namespace Jazz2::Editor
 		static constexpr std::int32_t DefaultTileIdSpace = 4096;
 		/** @brief Most tile IDs the scripting API can address */
 		static constexpr std::int32_t ScriptTileIdLimit = 4096;
-		/** @brief Chunk with the editor state of the layers */
-		static constexpr std::uint32_t LayerStateChunk = Formats::LevelFile::MakeChunkTag('e', 'l', 'a', 'y');
+		/**
+		 * @brief Chunk with the editor state of the layers
+		 *
+		 * @cpp u8 @ce version (1), @cpp varuint @ce number of layers, @cpp varuint @ce bytes of each layer (at
+		 * least 1), then the bytes of each layer in file order, the first being @ref DocumentLayer::EditorFlags, the
+		 * second, if there are 2 at least, @ref DocumentLayer::EditorOpacity. A newer version may add bytes to each
+		 * layer, a reader skips those it doesn't know.
+		 */
+		static constexpr std::uint32_t LayerStateChunk = Formats::LevelFile::MakeChunkTag('e', 'l', 'a', '2');
+		/** @brief Chunk with the editor state of the layers written by 3.9.0, a byte for each layer, only read */
+		static constexpr std::uint32_t LegacyLayerStateChunk = Formats::LevelFile::MakeChunkTag('e', 'l', 'a', 'y');
+		/** @brief Level flags the events decide, the level is saved with them as @ref GetFlagsFromEvents() has them */
+		static constexpr LevelFlags EventFlags = LevelFlags::HasLaps | LevelFlags::HasCaptureTheFlag | LevelFlags::HasMultiplayerSpawnPoints;
 
-		/** @brief Level flags */
+		/** @brief Level flags, those of @ref EventFlags as the level was loaded, they follow the events once it's saved */
 		LevelFlags Flags;
 		/** @brief Level properties */
 		Formats::LevelProperties Properties;
@@ -296,11 +333,36 @@ namespace Jazz2::Editor
 		std::int32_t GetStaticTileCount() const;
 		/** @brief Makes the tile ID space larger if the tiles of the tile sets would reach the animated tiles */
 		void FitTileIdSpace();
+		/**
+		 * @brief Returns the flags of @ref EventFlags the events of the level decide
+		 *
+		 * As the converter of the original levels decides them: a race with laps has a warp with "Set Lap", Capture
+		 * the Flag has a base, both only in a level for multiplayer, and a multiplayer start makes multiplayer spawn
+		 * points. Events a generator makes don't count.
+		 */
+		LevelFlags GetFlagsFromEvents() const;
+		/** @brief Returns the flags the level is saved with, @ref Flags with those the events decide */
+		LevelFlags GetSavedFlags() const;
+		/**
+		 * @brief Returns `true` if the level can save a tile by its ID
+		 *
+		 * A tile of the tile sets at or past the first animated tile can't be, its ID would be read as an animated tile
+		 * or wouldn't fit (see @ref GetAnimatedTilesOffset()), the space has to grow first. The empty tile, animated
+		 * tiles and raw tile IDs always can be.
+		 */
+		bool IsTileAddressable(const TileRef& tile) const;
 
 		/** @brief Returns the event at a tile of the grid, an empty one if there is none */
 		const Formats::EventRecord& GetEvent(std::int32_t x, std::int32_t y) const;
 		/** @brief Sets the event at a tile of the grid, an empty event removes it */
 		void SetEvent(std::int32_t x, std::int32_t y, const Formats::EventRecord& event);
+		/**
+		 * @brief Sets events at many tiles of the grid at once, an empty event removes the one there
+		 *
+		 * @p events have to be sorted by their tile, each tile at most once. They're merged into @ref Events in a single
+		 * pass, which is much faster than setting them one by one when there are many.
+		 */
+		void SetEvents(ArrayView<const DocumentEvent> events);
 		/** @brief Returns the position of the event of a tile in @ref Events, or where it would be inserted */
 		std::size_t FindEvent(std::uint32_t cell) const;
 
@@ -317,6 +379,8 @@ namespace Jazz2::Editor
 		const Formats::ChunkRecord* FindChunk(std::uint32_t tag) const;
 		/** @brief Sets the payload of a chunk, the chunk is added if it doesn't exist, and removed if the payload is empty */
 		void SetChunk(std::uint32_t tag, ArrayView<const std::uint8_t> data);
+		/** @brief Sets the payload of a chunk as @ref SetChunk() does, taking the data instead of copying it */
+		void ReplaceChunk(std::uint32_t tag, SmallVector<std::uint8_t, 0>&& data);
 
 		/**
 		 * @brief Checks the document for problems that would make the level unloadable
@@ -327,7 +391,8 @@ namespace Jazz2::Editor
 
 	private:
 		void LoadLayerNames(const Formats::ChunkRecord& chunk);
-		void LoadLayerStates(const Formats::ChunkRecord& chunk);
+		bool LoadLayerStates(const Formats::ChunkRecord& chunk);
+		void LoadLegacyLayerStates(const Formats::ChunkRecord& chunk);
 		void WriteLayerNames(SmallVectorImpl<std::uint8_t>& data) const;
 		void WriteLayerStates(SmallVectorImpl<std::uint8_t>& data) const;
 	};

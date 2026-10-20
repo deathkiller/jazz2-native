@@ -2480,8 +2480,10 @@ namespace Jazz2::Scripting
 			/** @brief Returns the player's current character */
 			std::uint32_t get_charCurr() const;
 
-			/** @brief The player's original character */
-			std::uint32_t charOrig = 0;
+			/** @brief Returns the player's original character, the one @ref revertMorph() turns it back into */
+			std::uint32_t get_charOrig() const;
+			/** @brief Sets the player's original character */
+			void set_charOrig(std::uint32_t value);
 
 			/** @brief Kills the player */
 			void kill();
@@ -2902,6 +2904,10 @@ namespace Jazz2::Scripting
 			// itself): if the proxy value still equals this, the engine's value is authoritative; otherwise the script changed it.
 			float _syncedOffsetX = 0.0f;
 			float _syncedOffsetY = 0.0f;
+			// The sprite mode of a standalone layer, and the parameter of any layer - it's kept even while the mode doesn't use it,
+			// as in JJ2+. The mode of a level layer is its renderer type, see get_spriteMode().
+			std::uint32_t _spriteMode = 0;
+			std::uint8_t _spriteParam = 0;
 
 			friend class LevelScriptLoader;
 		};

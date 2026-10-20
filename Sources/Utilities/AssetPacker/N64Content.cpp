@@ -445,7 +445,7 @@ namespace Jazz2::AssetPacker
 			if (audioConv.empty()) {
 				continue;
 			}
-			tools.AudioConv = std::move(audioConv);
+			tools.AudioConv = Death::move(audioConv);
 			tools.VideoConv = FindExecutable(dir, "videoconv64"_s);
 			tools.Root = (fs::GetFileName(dir) == "bin"_s ? String(fs::GetDirectoryName(dir)) : String(dir));
 			break;
@@ -497,7 +497,7 @@ namespace Jazz2::AssetPacker
 			for (StringView entry : PakFile::Directory(source, directory)) {
 				String path = fs::ToNativeSeparators(entry);
 				if (source.DirectoryExists(path)) {
-					pending.push_back(std::move(path));
+					pending.push_back(Death::move(path));
 					continue;
 				}
 				auto file = source.OpenFile(path);

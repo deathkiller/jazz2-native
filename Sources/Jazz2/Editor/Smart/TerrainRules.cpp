@@ -4,18 +4,43 @@
 
 #include "RulesFile.h"
 #include "SmartTileModel.h"
+#include "../Files/JsonAccess.h"
+#include "../Common/StampClipboard.h"
 
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
+#include <Cryptography/xxHash.h>
 
 #include <algorithm>
+#include <cerrno>
+#include <cstdlib>
 #include <string>
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
+using Death::Cryptography::xxHash3;
 
 namespace Jazz2::Editor
 {
+	namespace
+	{
+		// A key of the rules that's a number, `false` if it's anything else or out of the range, it's written by hand
+		bool ParseNumberKey(const std::string& text, long min, long max, std::int32_t& value)
+		{
+			if (text.empty() || text[0] < '0' || text[0] > '9') {
+				return false;
+			}
+			char* end = nullptr;
+			errno = 0;
+			long number = std::strtol(text.c_str(), &end, 10);
+			if (errno != 0 || end != text.c_str() + text.size() || number < min || number > max) {
+				return false;
+			}
+			value = std::int32_t(number);
+			return true;
+		}
+	}
+
 	std::uint8_t TerrainRules::Reduce(std::uint8_t neighbors)
 	{
 		using N = SmartTileModel::Neighbor;
@@ -83,51 +108,68 @@ namespace Jazz2::Editor
 		_slopes.clear();
 		_current = 0;
 		_revision++;
+		_slopeRevision++;
 
+		// The file can be written by hand or come with a tile set, a value of another type than expected is left out
 		Json::Value doc;
 		if (RulesFile::Read(tileSet, doc)) {
-			const Json::Value& terrains = doc["terrains"];
+			const Json::Value& terrains = JsonAccess::Member(doc, "terrains");
 			if (terrains.isArray()) {
 				for (const Json::Value& value : terrains) {
 					if (!value.isObject()) {
 						continue;
 					}
-					std::int32_t index = AddTerrain(StringView(value.get("name", "Ground").asCString()));
+					String name = JsonAccess::GetString(value, "name", "Ground"_s);
+					std::int32_t index = AddTerrain(name.empty() ? "Ground"_s : StringView(name));
 					Terrain& terrain = _terrains[index];
-					const Json::Value& patterns = value["patterns"];
+					const Json::Value& patterns = JsonAccess::Member(value, "patterns");
 					if (!patterns.isObject()) {
 						continue;
 					}
-					for (const std::string& name : patterns.getMemberNames()) {
-						std::int32_t pattern = std::atoi(name.c_str());
-						if (pattern < 0 || pattern > 255) {
+					for (const std::string& patternName : patterns.getMemberNames()) {
+						std::int32_t pattern;
+						if (!ParseNumberKey(patternName, 0, 255, pattern)) {
+							LOGW("Rules of tile set \"{}\" have a pattern \"{}\" that isn't a number from 0 to 255, it's left out", tileSet, patternName.c_str());
+							continue;
+						}
+						const Json::Value& list = JsonAccess::Member(patterns, patternName.c_str());
+						if (!list.isArray()) {
 							continue;
 						}
 						auto& tiles = terrain.ByPattern[Reduce(std::uint8_t(pattern))];
-						for (const Json::Value& tile : patterns[name]) {
-							if (tile.isObject()) {
-								RuleTile rule;
-								rule.TileSet = String(tile.get("s", "").asCString());
-								rule.Index = std::uint16_t(tile.get("i", 0).asUInt());
-								rule.Flags = std::uint8_t(tile.get("f", 0).asUInt() & 0x03);
-								tiles.push_back(std::move(rule));
+						for (const Json::Value& tile : list) {
+							if (!tile.isObject()) {
+								continue;
 							}
+							std::uint32_t tileIndex = JsonAccess::GetUInt(tile, "i", 0);
+							if (tileIndex > UINT16_MAX) {
+								continue;
+							}
+							RuleTile rule;
+							rule.TileSet = JsonAccess::GetString(tile, "s");
+							rule.Index = std::uint16_t(tileIndex);
+							rule.Flags = std::uint8_t(JsonAccess::GetUInt(tile, "f", 0) & 0x03);
+							tiles.push_back(Death::move(rule));
 						}
 					}
 				}
 			}
-			const Json::Value& slopes = doc["slopes"];
+			const Json::Value& slopes = JsonAccess::Member(doc, "slopes");
 			if (slopes.isObject()) {
-				for (const std::string& name : slopes.getMemberNames()) {
-					std::int32_t index = std::atoi(name.c_str());
-					const Json::Value& value = slopes[name];
-					if (index <= 0 || index > UINT16_MAX || !value.isObject()) {
+				for (const std::string& slopeName : slopes.getMemberNames()) {
+					std::int32_t index;
+					if (!ParseNumberKey(slopeName, 1, UINT16_MAX, index)) {
+						LOGW("Rules of tile set \"{}\" have a slope \"{}\" that isn't a tile from 1 to 65535, it's left out", tileSet, slopeName.c_str());
+						continue;
+					}
+					const Json::Value& value = JsonAccess::Member(slopes, slopeName.c_str());
+					if (!value.isObject()) {
 						continue;
 					}
 					SlopeTag tag;
-					tag.Excluded = value.get("x", false).asBool();
-					tag.Left = std::clamp(value.get("l", 0.0).asFloat(), 0.0f, 32.0f);
-					tag.Right = std::clamp(value.get("r", 0.0).asFloat(), 0.0f, 32.0f);
+					tag.Excluded = JsonAccess::GetBool(value, "x", false);
+					tag.Left = std::clamp(JsonAccess::GetFloat(value, "l", 0.0f), 0.0f, 32.0f);
+					tag.Right = std::clamp(JsonAccess::GetFloat(value, "r", 0.0f), 0.0f, 32.0f);
 					SetSlope(std::uint16_t(index), &tag);
 				}
 			}
@@ -135,7 +177,7 @@ namespace Jazz2::Editor
 		if (_terrains.empty()) {
 			AddTerrain("Ground"_s);
 		}
-		_resolvedFor = {};
+		_resolved = false;
 		if (_document != nullptr) {
 			Resolve(*_document);
 		}
@@ -143,9 +185,12 @@ namespace Jazz2::Editor
 
 	bool TerrainRules::Save(StringView tileSet) const
 	{
-		// The other parts of the rules stay as they are
+		// The other parts of the rules stay as they are, rules that can't be read aren't written over, all would be lost
 		Json::Value doc;
-		RulesFile::Read(tileSet, doc);
+		if (RulesFile::TryRead(tileSet, doc) == RulesFile::ReadResult::Unreadable) {
+			LOGW("Terrain rules of tile set \"{}\" aren't saved, the rules there can't be read, fix or remove the file first", tileSet);
+			return false;
+		}
 		doc.removeMember("terrain");
 
 		Json::Value terrains(Json::arrayValue);
@@ -202,24 +247,40 @@ namespace Jazz2::Editor
 		return RulesFile::Write(tileSet, doc);
 	}
 
-	String TerrainRules::GetExtraTileSetsKey(const LevelDocument& document)
+	std::uint64_t TerrainRules::GetExtraTileSetsKey(const LevelDocument& document)
 	{
-		String key;
+		// Called whenever the rules are used, several times a frame, so nothing is allocated for it
+		std::uint64_t hash = 0;
 		for (const Formats::ExtraTileSetRecord& tileSet : document.ExtraTileSets) {
-			key += StringUtils::lowercase(tileSet.Name) + "|"_s + String(std::to_string(tileSet.Offset).c_str()) + "|"_s +
-				String(std::to_string(tileSet.Count).c_str()) + ((tileSet.Flags & Formats::ExtraTileSetRecord::Embedded) != 0 ? ":e;"_s : ";"_s);
+			// The name in any case, lowercased in pieces
+			char name[64];
+			std::size_t length = 0;
+			for (char c : tileSet.Name) {
+				name[length++] = (c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c);
+				if (length == sizeof(name)) {
+					hash = xxHash3(name, length, hash);
+					length = 0;
+				}
+			}
+			hash = xxHash3(name, length, hash);
+			const std::uint32_t values[] = { std::uint32_t(tileSet.Name.size()), std::uint32_t(tileSet.Offset), std::uint32_t(tileSet.Count),
+				(tileSet.Flags & Formats::ExtraTileSetRecord::Embedded) != 0 ? 1u : 0u };
+			hash = xxHash3(values, sizeof(values), hash);
 		}
-		return key;
+		return hash;
 	}
 
 	void TerrainRules::Resolve(const LevelDocument& document)
 	{
 		_document = &document;
-		String key = GetExtraTileSetsKey(document);
-		if (key == _resolvedFor && !_resolvedFor.empty()) {
+		// The tile set imported again with fewer tiles leaves tiles of the rules out too
+		std::int32_t defaultTileCount = document.DefaultTileCount;
+		std::uint64_t key = xxHash3(&defaultTileCount, sizeof(defaultTileCount), GetExtraTileSetsKey(document));
+		if (_resolved && key == _resolvedFor) {
 			return;
 		}
-		_resolvedFor = (key.empty() ? String(";"_s) : key);
+		_resolved = true;
+		_resolvedFor = key;
 		for (Terrain& terrain : _terrains) {
 			ResolveTerrain(terrain);
 		}
@@ -233,7 +294,11 @@ namespace Jazz2::Editor
 		for (std::int32_t pattern = 0; pattern < 256; pattern++) {
 			for (const RuleTile& tile : terrain.ByPattern[pattern]) {
 				if (tile.TileSet.empty()) {
-					terrain.Resolved[pattern].push_back(TileRef{ tile.Index, TileRef::DefaultTileSet, tile.Flags });
+					// A tile past the end of the tile set would be saved as another tile, it's kept but not used
+					TileRef ref{ tile.Index, TileRef::DefaultTileSet, tile.Flags };
+					if (_document == nullptr || StampClipboard::HasTile(*_document, ref)) {
+						terrain.Resolved[pattern].push_back(ref);
+					}
 					continue;
 				}
 				if (_document == nullptr) {
@@ -364,6 +429,7 @@ namespace Jazz2::Editor
 			_slopes.insert(it, { index, *tag });
 		}
 		_revision++;
+		_slopeRevision++;
 	}
 
 	void TerrainRules::GetSlopeTiles(SmallVectorImpl<std::uint16_t>& tiles) const

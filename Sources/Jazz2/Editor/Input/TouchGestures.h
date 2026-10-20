@@ -90,6 +90,9 @@ namespace Jazz2::Editor
 		float _maxMove;
 		Vector2f _lastCenter;
 		float _lastSpread;
+		// The finger that presses the interface, and where it was last
+		std::int32_t _pointerId;
+		Vector2f _pointerPosition;
 
 		void Begin(Mode mode);
 		void StartPointer();

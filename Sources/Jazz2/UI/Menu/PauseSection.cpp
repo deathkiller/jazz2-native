@@ -72,19 +72,13 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(Item::Options, _("Options"));
 
 #if defined(WITH_EDITOR)
-		if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
-			if (isEditorPlayTest) {
-				// TRANSLATORS: Menu item in pause menu of a level played from the level editor
-				_items.emplace_back(Item::ExitEditor, _("Exit Editor"));
-				_animation = 0.0f;
-				_touchStart = Vector2f::Zero;
-				_touchLast = Vector2f::Zero;
-				return;
-			}
-			if (inGameMenu->CanOpenInEditor()) {
-				// TRANSLATORS: Menu item in pause menu, opens the level in the level editor
-				_items.emplace_back(Item::EditLevel, _("Edit This Level"));
-			}
+		if (isEditorPlayTest) {
+			// TRANSLATORS: Menu item in pause menu of a level played from the level editor
+			_items.emplace_back(Item::ExitEditor, _("Exit Editor"));
+			_animation = 0.0f;
+			_touchStart = Vector2f::Zero;
+			_touchLast = Vector2f::Zero;
+			return;
 		}
 #endif
 
@@ -269,13 +263,6 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 #if defined(WITH_EDITOR)
-			case Item::EditLevel: {
-				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
-					inGameMenu->OpenInEditor();
-				}
-				break;
-			}
 			case Item::BackToEditor: {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {

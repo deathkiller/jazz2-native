@@ -20,15 +20,19 @@ namespace Jazz2::Editor
 		down to the ground that's there, at most a few tiles deep, and those tiles and the ones around are chosen by their
 		neighbors (see @ref SmartTileModel).
 
-		What is laid is chosen in the window of the tool (see @ref SplineKind): ground below the line, a ceiling above
+		What is laid is chosen in the options of the tool (see @ref SplineKind): ground below the line, a ceiling above
 		it, a floating band, or a closed shape whose points go around it. The line is straight between its points or a
 		smooth curve through them.
 
 		The line is kept with the level (see @ref TerrainSpline): its points can be dragged --- the ground follows while
 		dragged, laid for good when let go ---, a click on the line adds one, <kbd>Shift</kbd>+click removes one, and the
 		right button on the line removes the ground. Every change lays the ground again --- tiles it wrote get back what
-		was there before, tiles changed by hand since stay as they are. Where the collision of the ground laid misses the
-		line, its surface is drawn red.
+		was there before, tiles changed by hand since stay as they are. Lines can overlap: a tile a line laid later wrote
+		over stays as it is, owned by the line below still, and shows again once the line above is taken away. Where the
+		collision of the ground laid misses the line, its surface is drawn red.
+
+		The points of a new line stay while the view is moved by the hand for a while (<kbd>Space</kbd>) between the
+		clicks.
 	*/
 	class GroundLineTool : public EditorTool
 	{
@@ -37,7 +41,6 @@ namespace Jazz2::Editor
 		static constexpr std::int32_t MaxDepth = 6;
 
 		explicit GroundLineTool(IToolHost& host);
-		~GroundLineTool() override;
 
 		EditorToolType GetType() const override;
 		void OnActivate() override;
@@ -47,13 +50,13 @@ namespace Jazz2::Editor
 		void OnPointerUp(const ToolPointer& pointer) override;
 		void Cancel() override;
 		bool IsBusy() const override;
+		bool HasPointerCapture() const override;
 		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
+		void BuildOptions(ToolOptionsBuilder& builder) override;
 
-		/** @brief Returns the line last clicked or laid, of the lines of the level, or -1 */
-		std::int32_t GetSelectedSpline() const {
-			return _selectedSpline;
-		}
+		/** @brief Returns the line last clicked or laid, of the lines of the level, or -1 if it's not there anymore */
+		std::int32_t GetSelectedSpline() const;
 
 		/**
 		 * @brief Lays ground along a line again, or for the first time, or removes it, as one step
@@ -93,25 +96,52 @@ namespace Jazz2::Editor
 		// The point dragged is a new one, added to the line at _dragPoint
 		bool _dragInsert;
 		Vector2f _dragPos;
-		// The line clicked last, which the options in the window change
+		// The line clicked last, which the options of the tool change, by its index and by itself, so an undo that
+		// changes the lines doesn't make another one selected
 		std::int32_t _selectedSpline;
+		std::int32_t _selectedLayer;
+		SmallVector<Vector2f, 0> _selectedPoints;
+		// Shared with the options in the toolbar
 		std::shared_ptr<Options> _options;
-		std::shared_ptr<UiElement*> _window;
-		// Tiles shown while a point is dragged, before the ground is laid for good
+		// Tiles shown while a point is dragged, before the ground is laid for good, made at most once a frame
 		std::int32_t _previewLayer;
 		Recti _previewArea;
 		Vector2f _previewPos;
+		bool _previewPending;
+
+		// What the overlay draws of a tile a line owns, where its collision is, a miss below 0 if it's not ground or ceiling
+		struct OwnedOverlay
+		{
+			float GroundLeft, GroundRight, GroundMiss;
+			float CeilingLeft, CeilingRight, CeilingMiss;
+		};
+		// What the overlay draws of a line, the line as fine points and its tiles
+		struct SplineOverlay
+		{
+			SmallVector<Vector2f, 0> Fine;
+			SmallVector<OwnedOverlay, 0> Owned;
+		};
+		// The lines of the level as they were read last, read again only when they change, see GetSplines()
+		SmallVector<std::uint8_t, 0> _cachedChunk;
+		bool _cacheValid;
+		SmallVector<TerrainSpline, 0> _cachedSplines;
+		SmallVector<SplineOverlay, 0> _overlays;
+		std::uint32_t _overlayShapesRevision;
 
 		Vector2f GetPoint(const ToolPointer& pointer) const;
 		bool HitTest(const SmallVectorImpl<TerrainSpline>& splines, const LayerView& view, Vector2f screen, std::int32_t& spline, std::int32_t& point, std::int32_t& segment) const;
 		void Lay();
-		void ShowWindow();
-		void CloseWindow();
 		// The line being dragged as it is with the dragged point
 		bool GetDraggedSpline(const SmallVectorImpl<TerrainSpline>& splines, TerrainSpline& spline) const;
 		void UpdatePreview();
 		void ClearPreview();
 		void ApplyOptionsToSelected();
+		// The lines of the level, read again only when they changed
+		const SmallVectorImpl<TerrainSpline>& GetSplines();
+		// What the overlay draws of the lines, made again when they or the shapes of the tiles changed
+		void UpdateOverlays(const SmallVectorImpl<TerrainSpline>& splines, const TileShapes& shapes);
+		void Select(const SmallVectorImpl<TerrainSpline>& splines, std::int32_t index);
+		std::int32_t FindSelected(const SmallVectorImpl<TerrainSpline>& splines) const;
 	};
 }
 

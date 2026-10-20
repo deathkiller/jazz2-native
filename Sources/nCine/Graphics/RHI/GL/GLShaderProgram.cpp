@@ -171,7 +171,7 @@ namespace nCine::RHI::GL
 		const bool hasCompiled = shader->Compile(errorChecking, _shouldLogOnErrors);
 
 		if (hasCompiled) {
-			_attachedShaders.push_back(std::move(shader));
+			_attachedShaders.push_back(Death::move(shader));
 		} else {
 			_status = Status::CompilationFailed;
 		}
@@ -292,9 +292,8 @@ namespace nCine::RHI::GL
 		else {
 			// Nothing is read from a buffer then. The VAO of the draw before would stay bound otherwise, with its arrays
 			// enabled, and a buffer deleted since it was set up is unbound from it, so a driver that reads them reads
-			// from address 0 on.
-			static const GLVertexFormat NoAttributes;
-			RenderResources::GetVaoPool().BindVao(NoAttributes);
+			// from address 0 on. Most draws are like this, so it's a VAO of its own rather than a search of the pool.
+			RenderResources::GetVaoPool().BindEmptyVao();
 		}
 #endif
 #endif

@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 using namespace Death::Containers::Literals;
 using namespace nCine;
@@ -106,7 +107,7 @@ namespace Jazz2::Editor
 	}
 
 	UiColorSwatch::UiColorSwatch(Function<Colorf()>&& color, Function<void()>&& onClick)
-		: ColorFunc(std::move(color)), OnClick(std::move(onClick))
+		: ColorFunc(Death::move(color)), OnClick(Death::move(onClick))
 	{
 	}
 
@@ -128,6 +129,34 @@ namespace Jazz2::Editor
 			DrawChecker(painter, inner);
 		}
 		painter.FillRect(inner, color, UiLayer::Content);
+		if (_focused) {
+			painter.FocusRing(Bounds);
+		}
+	}
+
+	bool UiColorSwatch::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
+	bool UiColorSwatch::YieldsToScroll() const
+	{
+		return true;
+	}
+
+	bool UiColorSwatch::IsTabStop() const
+	{
+		// Only one that can be clicked
+		return (bool)OnClick;
+	}
+
+	bool UiColorSwatch::OnKeyPressed(const KeyboardEvent& event)
+	{
+		if ((event.sym == Keys::Return || event.sym == Keys::NumPadEnter || event.sym == Keys::Space) && OnClick && IsUsable()) {
+			OnClick();
+			return true;
+		}
+		return false;
 	}
 
 	bool UiColorSwatch::AcceptsPointer() const
@@ -148,7 +177,8 @@ namespace Jazz2::Editor
 	}
 
 	UiPaletteGrid::UiPaletteGrid(Function<const std::uint32_t*()>&& palette, Function<std::int32_t()>&& selected, Function<void(std::int32_t, bool)>&& onPick)
-		: CellSize(DefaultCellSize), _palette(std::move(palette)), _selected(std::move(selected)), _onPick(std::move(onPick)), _dragIndex(-1)
+		: CellSize(DefaultCellSize), _palette(Death::move(palette)), _selected(Death::move(selected)), _onPick(Death::move(onPick)), _tooltipIndex(-1),
+			_tooltipEntry(0), _dragIndex(-1), _shownEntries{}
 	{
 	}
 
@@ -158,13 +188,13 @@ namespace Jazz2::Editor
 		auto panel = std::make_unique<UiPanel>(UiPanelStyle::Floating);
 		UiPanel* panelPtr = panel.get();
 		UiSurface* surfacePtr = &surface;
-		panel->Add<UiPaletteGrid>(std::move(palette), std::move(selected), [surfacePtr, panelPtr, onPick = std::move(onPick)](std::int32_t index, bool extend) mutable {
+		panel->Add<UiPaletteGrid>(Death::move(palette), Death::move(selected), [surfacePtr, panelPtr, onPick = Death::move(onPick)](std::int32_t index, bool extend) mutable {
 			onPick(index);
 			surfacePtr->CloseOverlay(panelPtr);
 		});
 		UiOverlayOptions options;
 		options.Position = pos;
-		surface.PushOverlay(std::move(panel), std::move(options));
+		surface.PushOverlay(Death::move(panel), Death::move(options));
 	}
 
 	float UiPaletteGrid::GetCellPixels() const
@@ -184,6 +214,38 @@ namespace Jazz2::Editor
 		return Vector2f(size, size);
 	}
 
+	bool UiPaletteGrid::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
+	void UiPaletteGrid::UpdateTexture(const std::uint32_t* palette)
+	{
+		bool created = false;
+		if (_texture == nullptr) {
+			_texture = std::make_unique<Texture>("EditorPaletteGrid", Texture::Format::RGBA8, 16, 16);
+			// Every entry is a square of one color
+			_texture->SetMinFiltering(SamplerFilter::Nearest);
+			_texture->SetMagFiltering(SamplerFilter::Nearest);
+			_texture->SetWrap(SamplerWrapping::ClampToEdge);
+			created = true;
+		}
+		if (!created && std::memcmp(_shownEntries, palette, sizeof(_shownEntries)) == 0) {
+			return;
+		}
+		std::memcpy(_shownEntries, palette, sizeof(_shownEntries));
+		std::uint8_t texels[256 * 4];
+		for (std::int32_t i = 0; i < 256; i++) {
+			std::uint32_t entry = palette[i];
+			texels[i * 4 + 0] = std::uint8_t(entry & 0xFF);
+			texels[i * 4 + 1] = std::uint8_t((entry >> 8) & 0xFF);
+			texels[i * 4 + 2] = std::uint8_t((entry >> 16) & 0xFF);
+			// Alpha isn't what the entry is picked by, it would only hide the color
+			texels[i * 4 + 3] = 255;
+		}
+		_texture->LoadFromTexels(texels, 0, 0, 16, 16);
+	}
+
 	void UiPaletteGrid::Draw(UiPainter& painter)
 	{
 		const std::uint32_t* palette = (_palette ? _palette() : nullptr);
@@ -191,13 +253,9 @@ namespace Jazz2::Editor
 			return;
 		}
 		float cell = GetCellPixels();
-		for (std::int32_t i = 0; i < 256; i++) {
-			Rectf rect(Bounds.X + (i % 16) * cell, Bounds.Y + (i / 16) * cell, cell, cell);
-			Colorf color = ToColor(palette[i]);
-			// Alpha isn't what the entry is picked by, it would only hide the color
-			color.A = 1.0f;
-			painter.FillRect(rect, color, UiLayer::Content);
-		}
+		// All of the entries at once, a texture with a pixel for each
+		UpdateTexture(palette);
+		painter.Image(*_texture, Rectf(Bounds.X, Bounds.Y, cell * 16.0f, cell * 16.0f), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Content);
 		if (IsCrossedFunc) {
 			// A diagonal line in a contrasting color through each entry crossed out
 			float thickness = std::max(1.0f, std::round(painter.GetScale()));
@@ -269,9 +327,14 @@ namespace Jazz2::Editor
 			return {};
 		}
 		std::uint32_t entry = palette[index];
-		char buffer[32];
-		std::int32_t length = std::snprintf(buffer, sizeof(buffer), "%d: #%02X%02X%02X", index, entry & 0xFF, (entry >> 8) & 0xFF, (entry >> 16) & 0xFF);
-		_tooltip = String(buffer, std::size_t(std::max(length, 0)));
+		if (index != _tooltipIndex || entry != _tooltipEntry || _tooltip.empty()) {
+			// It's asked for every frame while it's shown, made again only when it changed
+			char buffer[32];
+			std::int32_t length = std::snprintf(buffer, sizeof(buffer), "%d: #%02X%02X%02X", index, entry & 0xFF, (entry >> 8) & 0xFF, (entry >> 16) & 0xFF);
+			_tooltip = String(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
+			_tooltipIndex = index;
+			_tooltipEntry = entry;
+		}
 		return _tooltip;
 	}
 
@@ -287,7 +350,7 @@ namespace Jazz2::Editor
 	}
 
 	UiColorPicker::UiColorPicker(Function<Colorf()>&& color, Function<void(const Colorf&)>&& onChange, bool withAlpha)
-		: _color(std::move(color)), _onChange(std::move(onChange)), _withAlpha(withAlpha), _hue(0.0f), _saturation(0.0f),
+		: _color(Death::move(color)), _onChange(Death::move(onChange)), _withAlpha(withAlpha), _hue(0.0f), _saturation(0.0f),
 			_value(0.0f), _alpha(1.0f), _knownColor(0), _dragPart(Part::None), _squareHue(-1.0f)
 	{
 		Colorf current = (_color ? _color() : Colorf::White);
@@ -302,8 +365,8 @@ namespace Jazz2::Editor
 
 	void UiColorPicker::ShowPopup(UiSurface& surface, Vector2f pos, Function<Colorf()>&& color, Function<void(const Colorf&)>&& onChange, bool withAlpha)
 	{
-		auto shared = std::make_shared<Function<Colorf()>>(std::move(color));
-		auto change = std::make_shared<Function<void(const Colorf&)>>(std::move(onChange));
+		auto shared = std::make_shared<Function<Colorf()>>(Death::move(color));
+		auto change = std::make_shared<Function<void(const Colorf&)>>(Death::move(onChange));
 		Colorf original = (*shared ? (*shared)() : Colorf::White);
 
 		auto panel = std::make_unique<UiPanel>(UiPanelStyle::Floating);
@@ -330,14 +393,14 @@ namespace Jazz2::Editor
 
 		UiOverlayOptions options;
 		options.Position = pos;
-		surface.PushOverlay(std::move(panel), std::move(options));
+		surface.PushOverlay(Death::move(panel), Death::move(options));
 	}
 
 	String UiColorPicker::ToHex(const Colorf& color)
 	{
 		char buffer[16];
 		std::int32_t length = std::snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", ToByte(color.R), ToByte(color.G), ToByte(color.B));
-		return String(buffer, std::size_t(std::max(length, 0)));
+		return String(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
 	}
 
 	bool UiColorPicker::FromHex(StringView text, Colorf& color)
@@ -371,6 +434,11 @@ namespace Jazz2::Editor
 			width += spacing + bar;
 		}
 		return Vector2f(width, square);
+	}
+
+	bool UiColorPicker::MeasureDependsOnAvailable() const
+	{
+		return false;
 	}
 
 	Rectf UiColorPicker::GetSquareRect() const

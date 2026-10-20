@@ -11,6 +11,7 @@
 #include <Base/Format.h>
 #include <Containers/DateTime.h>
 #include <IO/WebRequest.h>
+#include <Utf8.h>
 #include "../PlatformWebRequest.h"
 
 using namespace Death;
@@ -163,14 +164,8 @@ namespace Jazz2::Multiplayer
 
 		StringView TruncateUtf8(StringView text, std::size_t maxLength)
 		{
-			if (text.size() <= maxLength) {
-				return text;
-			}
 			// Don't cut a multi-byte UTF-8 sequence in half
-			while (maxLength > 0 && ((unsigned char)text[maxLength] & 0xC0) == 0x80) {
-				maxLength--;
-			}
-			return text.prefix(maxLength);
+			return text.prefix(Death::Utf8::FitPrefix(text, maxLength));
 		}
 	}
 
@@ -210,8 +205,8 @@ namespace Jazz2::Multiplayer
 		String url = serverConfig.WebhookUrl;
 
 		_queueMutex.Lock();
-		_url = std::move(url);
-		_serverIdentity = std::move(trimmedIdentity);
+		_url = Death::move(url);
+		_serverIdentity = Death::move(trimmedIdentity);
 		_queueMutex.Unlock();
 	}
 
@@ -567,7 +562,7 @@ namespace Jazz2::Multiplayer
 			LOGW("Webhook event queue is full, dropping the oldest event");
 			_queue.erase(_queue.begin());
 		}
-		_queue.push_back(std::move(embed));
+		_queue.push_back(Death::move(embed));
 		_queueMutex.Unlock();
 		_queueRefreshed.Signal();
 	}
@@ -708,7 +703,7 @@ namespace Jazz2::Multiplayer
 				count = MaxEmbedsPerMessage;
 			}
 			for (std::size_t i = 0; i < count; i++) {
-				batch.push_back(std::move(_this->_queue[i]));
+				batch.push_back(Death::move(_this->_queue[i]));
 			}
 			_this->_queue.erase(_this->_queue.begin(), _this->_queue.begin() + count);
 			bool drained = _this->_queue.empty();

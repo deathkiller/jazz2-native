@@ -31,6 +31,12 @@ namespace Jazz2::Editor
 	}
 }
 
+// The functions of the runtime the scripts below use, they would be left out of the build otherwise, as nothing
+// else refers to them
+#if defined(EM_JS_DEPS)
+EM_JS_DEPS(jazz2EditorWebFileBridge, "$stringToNewUTF8,$UTF8ToString,malloc,free");
+#endif
+
 // A hidden <input type="file">, the file read whole is handed to the game by the exported function below
 EM_JS(void, __jazz2EditorPickFile, (const char* accept, int requestId), {
 	var input = document.createElement('input');
@@ -46,9 +52,18 @@ EM_JS(void, __jazz2EditorPickFile, (const char* accept, int requestId), {
 		var reader = new FileReader();
 		reader.onload = function() {
 			var bytes = new Uint8Array(reader.result);
+			// A file larger than the memory of the game can take isn't picked at all
 			var data = _malloc(bytes.length > 0 ? bytes.length : 1);
+			if (!data) {
+				console.error('File "' + file.name + '" is too large to be opened');
+				return;
+			}
 			HEAPU8.set(bytes, data);
 			var name = stringToNewUTF8(file.name);
+			if (!name) {
+				_free(data);
+				return;
+			}
 			_jazz2EditorFilePicked(requestId, name, data, bytes.length);
 			_free(name);
 			_free(data);
@@ -77,6 +92,9 @@ EM_JS(void, __jazz2EditorDownload, (const char* name, const unsigned char* data,
 extern "C" EMSCRIPTEN_KEEPALIVE void jazz2EditorFilePicked(int requestId, const char* name, const unsigned char* data, int size)
 {
 	using namespace Jazz2::Editor;
+	if (name == nullptr || (data == nullptr && size > 0)) {
+		return;
+	}
 	for (PendingPick& pick : _pending) {
 		if (pick.Id != requestId) {
 			continue;
@@ -89,8 +107,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE void jazz2EditorFilePicked(int requestId, const 
 			fs::RemoveFile(path);
 		}
 		auto s = fs::Open(path, FileAccess::Write);
-		if (s->IsValid()) {
-			s->Write(data, std::int64_t(size));
+		// Flushed and checked, a file cut short by a full memory would be opened as damaged
+		if (s->IsValid() && (size <= 0 || s->Write(data, std::int64_t(size)) == std::int64_t(size)) && s->Flush()) {
 			pick.Path = path;
 			pick.Picked = true;
 		}
@@ -108,7 +126,7 @@ namespace Jazz2::Editor
 		}
 		PendingPick& pick = _pending.emplace_back();
 		pick.Id = _nextId++;
-		pick.OnPicked = std::move(onPicked);
+		pick.OnPicked = Death::move(onPicked);
 		// The extensions as the browser takes them, separated by commas
 		String accept = extensions;
 		for (char& c : accept) {
@@ -140,7 +158,7 @@ namespace Jazz2::Editor
 				i++;
 				continue;
 			}
-			PendingPick pick = std::move(_pending[i]);
+			PendingPick pick = Death::move(_pending[i]);
 			_pending.erase(_pending.begin() + i);
 			if (pick.OnPicked) {
 				pick.OnPicked(pick.Path);

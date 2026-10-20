@@ -176,7 +176,7 @@ namespace Jazz2::UI::Menu
 
 		list->SetSelectedIndex(PreferencesCache::EnableReforgedGameplay ? 1 : 0);
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void FirstRunSection::OnDraw(Canvas* canvas)

@@ -1,4 +1,4 @@
-program TexturedBackgroundCircle;
+program TexturedBackgroundTunnel;
 variant DITHER;
 
 shader_type canvas_item;
@@ -9,6 +9,7 @@ uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
+uniform vec4 uTunnel;
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -53,21 +54,24 @@ float addStarField(vec2 samplePosition, float threshold) {
 }
 
 void fragment() {
-	// Position of pixel on screen (between -1 and 1)
-	vec2 targetCoord = vec2(2.0) * UV - vec2(1.0);
+	// Position of pixel relative to the center of the tunnel (between -1 and 1 across the screen for the center in the middle)
+	vec2 targetCoord = vec2(2.0) * UV - vec2(2.0) * uTunnel.xy;
 
 	// Aspect ratio correction, so display circle instead of ellipse
 	targetCoord.x *= uViewSize.x / uViewSize.y;
 
-	// Distance to center of screen
+	// Distance to center of the tunnel
 	float distance = length(targetCoord);
 
 	// x-coordinate of tunnel
 	float xShift = (targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan(targetCoord.y, targetCoord.x) * INV_PI);
 
+	// A spiral turns further around the deeper it goes, by a quarter of a turn each time the texture repeats into the
+	// distance; chosen rather than multiplied, the depth is infinite in the very center
+	float depth = (1.0 / distance) * 1.4;
 	vec2 texturePos = vec2(
-		(xShift)         * 1.0 + (uShift.x * 0.01),
-		(1.0 / distance) * 1.4 + (uShift.y * 0.002)
+		(xShift)         * 1.0 + (uShift.x * 0.01) + (uTunnel.w > 0.0 ? depth * 0.5 : 0.0),
+		depth                  + (uShift.y * 0.002)
 	);
 
 	vec4 texColor = texture(TEXTURE, texturePos);
@@ -102,12 +106,13 @@ void fragment() {
 	}
 #endif
 
-	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
+	// Without the fade, the circles go on into the center
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
 	COLOR.a = 1.0;
 }
 
 void fixed_function(pvr, gs) {
-	// The circular ("tube") variant keeps the same planar geometry rebuild on this tier (shared
+	// The tunnel keeps the same planar geometry rebuild on this tier (shared
 	// with TexturedBackground.shader), with the include taken exactly as it is for the same reasons as
 	// there: the PVR and the GS have no combiner stage to fold the horizon tint into, so it is the
 	// include's own second gradient pass, and the bands are cut into pieces at the texture's edges.
@@ -143,7 +148,7 @@ void fixed_function(pica) {
 }
 
 void fixed_function(gx, legacygl) {
-	// The circular ("tube") variant borrows the same planar rebuild on this tier as well, with the
+	// The tunnel borrows the same planar rebuild on this tier as well, with the
 	// horizon tint folded into the band pieces' own draw (see the include)
 #define WARP_TINT_IN_VERTEX_COLOR
 #include "Include/TexturedBackgroundWarp.inc"

@@ -20,7 +20,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 [![Build Status](https://img.shields.io/github/actions/workflow/status/deathkiller/jazz2-native/linux.yml?branch=master&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI0IDIuNXYxOUwxOCAyNCAwIDE4LjV2LS41NjFsMTggMS41NDVWMHpNMSAxMy4xMTFMNC4zODUgMTAgMSA2Ljg4OWwxLjQxOC0uODI3TDUuODUzIDguNjUgMTIgM2wzIDEuNDU2djExLjA4OEwxMiAxN2wtNi4xNDctNS42NS0zLjQzNCAyLjU4OXpNNy42NDQgMTBMMTIgMTMuMjgzVjYuNzE3eiI+PC9wYXRoPjwvc3ZnPg==)](https://github.com/deathkiller/jazz2-native/actions)
 [![Latest Release](https://img.shields.io/github/v/tag/deathkiller/jazz2?label=release)](https://github.com/deathkiller/jazz2/releases/latest)
 [![All Downloads](https://img.shields.io/github/downloads/deathkiller/jazz2/total.svg?color=blueviolet)](https://github.com/deathkiller/jazz2/releases)
-[![Code Quality](https://img.shields.io/codacy/grade/64eb3ca12bd04c64bf3f3515744b591a.svg?logo=codacy&logoColor=ffffff)](https://www.codacy.com/app/deathkiller/jazz2-native)
+[![Code Quality](https://img.shields.io/codacy/grade/64eb3ca12bd04c64bf3f3515744b591a.svg?logo=codacy&logoColor=ffffff)](https://app.codacy.com/gh/deathkiller/jazz2-native/dashboard)
 [![License](https://img.shields.io/github/license/deathkiller/jazz2-native.svg)](https://github.com/deathkiller/jazz2-native/blob/master/LICENSE)
 [![Discord](https://img.shields.io/discord/355651795390955520.svg?color=839ef7&label=chat&logo=discord&logoColor=ffffff&labelColor=586eb5)](https://discord.gg/Y7SBvkD)
 
@@ -74,7 +74,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shields.io/badge/brew-grey?logo=homebrew&logoColor=ffffff&label=Home&color=b56b2b)](https://formulae.brew.sh/cask/jazz2-resurrection)</sub></sub> `brew trust deathkiller/jazz2` and `brew install deathkiller/jazz2/jazz2`
 
 ### iOS
-* The game is not on the App Store, build the application bundle from source (see [below](#ios-1)) and install it on the device from **Xcode**, or sideload the built `jazz2.app`
+* The game is not on the App Store, build the application bundle from source and install it on the device from **Xcode**, or sideload the built `jazz2.app`
 * Copy contents of original *Jazz Jackrabbit 2* directory to `Jazz² Resurrection/Source/` in the **Files** app (under *On My iPhone* / *On My iPad*), or through file sharing in *Finder* (or *iTunes*)
 * Run the newly installed application
 
@@ -100,20 +100,18 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 *Cache is recreated during the intro cinematics on the first startup, so it can't be skipped. It may take more time, so white screen could be shown longer than expected. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up.*
 
 ### Nintendo 64
-* The game plays from a cartridge ROM, which has to carry the game content converted from an original *Jazz Jackrabbit 2* installation – such ROM image can't be distributed, so it has to be built first, as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-n64)
+* The game plays from a cartridge ROM, which has to carry the game content converted from an original *Jazz Jackrabbit 2* installation
+  * Use [Content Swapper](https://de4th.dev/jazz2/swap/) to create your customized ROM, otherwise ROM is empty and unplayable
 * Copy the resulting `jazz2.z64` image onto an *EverDrive-64* or *SC64* flashcart
   * The image also boots directly in *ares* or *simple64*
 * Run the ROM – the console must have an **Expansion Pak** installed
 
-*The game runs in 320×240 and the ROM is read-only, so nothing is ever converted or written on the console – the content has to be complete in the image, and the settings are saved to the cartridge EEPROM. The RDP has no programmable shading, so there is no post-processing tier and no rescale filters, there is no module music (sound effects only), and threads are unavailable, so local splitscreen is not available either. **This port is experimental**: the Nintendo 64 is by far the smallest machine the game runs on, it has not been performance-tuned for it, so the frame rate is well below the other consoles' and varies with what is on screen. The port has not been tested on real hardware yet.*
-
 ### Sega Dreamcast
-* The game plays from a disc, which has to carry the game content converted from an original *Jazz Jackrabbit 2* installation – such disc image can't be distributed, so it has to be built first, as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-dreamcast)
+* The game plays from a disc, which has to carry the game content converted from an original *Jazz Jackrabbit 2* installation
+  * Use [Content Swapper](https://de4th.dev/jazz2/swap/) to create your customized disc, otherwise disc is empty and unplayable
 * Burn the resulting `jazz2.cdi` image with a tool that understands the Dreamcast's multi-session layout, or serve it from an optical-drive emulator such as GDEMU/MODE
   * The image also boots directly in *Flycast*, *lxdream* or *redream*
 * Run the disc
-
-*The game runs in 640×480 and the disc is read-only, so nothing is ever converted or written on the console – the content has to be complete in the image. The PowerVR has no programmable shading, so there is no post-processing tier and no rescale filters. Module music plays through _libxmp_, which leaves the larger levels enough of the console's small heap to load in – the four `.mo3` tracks are silent, everything else plays. The port has not been tested on real hardware yet.*
 
 ### Nintendo Wii
 * Download the game
@@ -122,14 +120,10 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-wii) to skip the conversion
 * Run *Jazz² Resurrection* from the **Homebrew Channel**
 
-*The game reads its content from `sd:/apps/Jazz2/Content/`, so the storage device has to stay present – otherwise the game stops at _Cannot access the SD card_. The Hollywood GPU is fixed-function, so there is no post-processing tier and no rescale filters. Module music plays through _libxmp_, which costs a fraction of the memory _libopenmpt_ needs on a console of this size – the four `.mo3` tracks are silent, everything else plays. The port has not been tested on real hardware yet.*
-
 ### Nintendo GameCube
-* The console can't convert the game data itself, so the content has to be prepared in advance from an original *Jazz Jackrabbit 2* installation and can't be distributed – see [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-gamecube)
-* Copy the resulting `sd` directory contents to an SD card in an **SD Gecko** (memory-card slot A) or an **SD2SP2** adapter
+* The console can't convert the game data itself, so the content has to be prepared in advance from an original *Jazz Jackrabbit 2* installation and can't be distributed
+  * Use [Content Swapper](https://de4th.dev/jazz2/swap/) to create your customized disc, otherwise disc is empty and unplayable
 * Start `Jazz2/Jazz2.dol` from **Swiss**
-
-*The game reads its content from `carda:/Jazz2/Content/`, which is slot A by definition. The console has 24 MB of memory and no second pool, which makes it the tightest of the two PowerPC targets – and the reason module music plays through _libxmp_ here as well – and only GameCube controllers are read. Everything noted for the Wii applies here as well, including that the port has not been tested on real hardware yet.*
 
 ### Nintendo 3DS
 * The console can't convert the game data itself in any reasonable time, so the content has to be prepared in advance from an original *Jazz Jackrabbit 2* installation and can't be distributed – see [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-3ds)
@@ -137,7 +131,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * For *Azahar*, copy them into the emulator's configured SD card directory instead
 * Start `Jazz2` from the **Homebrew Launcher**
 
-*The game runs on the top screen in its native 400×240 and reads its content from `sdmc:/3ds/Jazz2/Content/`; the bottom screen shows the startup log. Sound needs the DSP firmware that every console running homebrew has at `sdmc:/3ds/dspfirm.cdc` (dump it with **DSP1** once), without it the game runs silently. **New 3DS** runs the game at its full 804 MHz clock, on an **Old 3DS** the frame rate drops in busy scenes. The port has been tested in the *Azahar* emulator only, not on real hardware yet.*
+*Sound needs the DSP firmware that every console running homebrew has at `sdmc:/3ds/dspfirm.cdc` (dump it with **DSP1** once), without it the game runs silently. **New 3DS** runs the game at its full 804 MHz clock, on an **Old 3DS** the frame rate drops in busy scenes.*
 
 ### PlayStation Portable
 * Download the game
@@ -147,14 +141,11 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-psp) to skip the conversion
 * Run the newly installed application
 
-*The game runs in the native 480×272 and reads its content from `ms0:/PSP/GAME/Jazz2/Content/`. Module music plays through _libxmp_ rather than _libopenmpt_, which is too heavy for this CPU – the four `.mo3` tracks are silent, everything else plays – and everything is mixed at 22 kHz by default, which can be lowered to 11 kHz with the *Sample Rate* option in Options > Sounds. Online multiplayer, the public server list and text entry through the console's on-screen keyboard work; the network connection is joined on the first use of the network. Besides Wi-Fi, the game also plays over the console's **ad hoc** (local wireless) mode between PSPs in reach – pick *Ad hoc* in the *Connection* row when creating a server, and switch the *Connect To Server* list to ad hoc with Left/Right to find it. The port has been tested under *Adrenaline* on a PlayStation Vita, not on a PlayStation Portable itself yet.*
-
 ### PlayStation 2
-* As on the Dreamcast, the game plays from a disc that has to carry the converted game content, so the `jazz2.iso` image can't be distributed either and has to be built first – see [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-ps2)
+* As on the Dreamcast, the game plays from a disc that has to carry the converted game content
+  * Use [Content Swapper](https://de4th.dev/jazz2/swap/) to create your customized disc, otherwise disc is empty and unplayable
 * Burn the resulting image to a disc, or load it in *PCSX2*
 * It can equally be run from an SD card in an **MX4SIO** adapter: copy the ELF and the content tree to `mass0:/Games/Jazz2/`, and the game reads *and saves* there (a card is shared storage, so the game keeps to a directory of its own – the same layout it uses on the Switch)
-
-*The game runs in NTSC 640×448, which a television shows as 4:3, and the picture is composed for that ratio rather than for the framebuffer's own. Sound plays through `audsrv` on the SPU2, with module music through _libxmp_ rather than _libopenmpt_, which doesn't compile for this toolchain – the four `.mo3` tracks are silent, everything else plays – mixed at 22 kHz by default, which the *Sample Rate* option in Options > Sounds can change. Settings and progress are saved to a memory card, or to the SD card when the game runs from one. Threads are unavailable, so local splitscreen is not available, and the Graphics Synthesizer is fixed-function, so there are no rescale filters.*
 
 ### PlayStation 3
 * Download the game
@@ -164,8 +155,6 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-ps3) to skip the conversion
 * Run the newly installed application
 
-*Cache and save data are written to `/dev_hdd0/game/JAZZ20000/USRDIR/`. Unlike the older consoles the RSX is a programmable part, so the whole post-processing chain is available – except three of the heavier rescale filters, which are hidden in the options. Threads are unavailable, so local splitscreen is not available either. The port has not been tested on real hardware yet.*
-
 ### PlayStation Vita
 * Download the game
 * Install `Jazz2.vpk` package with **VitaShell** or over FTP (custom firmware is needed)
@@ -173,16 +162,12 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 * Copy contents of original *Jazz Jackrabbit 2* directory to `ux0:/data/jazz2/Source/`
 * Run the newly installed application
 
-*The `Content` directory is included directly in the VPK file, no action is needed. Cache is recreated in `ux0:/data/jazz2/Cache/` during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up. The frame is rendered at half of the panel's resolution by default, which keeps the pixel art crisp and the frame rate up – the *Rendering Resolution* option in Options > Graphics offers 60% and 75% as well. See [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-vita) for details.*
-
 ### Amiga
 * Download the game for the particular system – **AmigaOS 3.x**, **AmigaOS 4.1** or **MorphOS**
 * Copy contents of the archive – the `Jazz2` executable next to `Content/` – onto the Amiga's hard disk, or mount the directory as a hard drive in an emulator
 * Copy contents of original *Jazz Jackrabbit 2* directory to `Source/` next to the executable
   * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/amiga.html#amiga-content) to skip the conversion, which takes far longer on these machines than on a desktop
 * Run `Jazz2`
-
-*Three systems are supported from three separate builds. **AmigaOS 3.x** needs a 68040/68060 with an FPU and an RTG graphics card (Picasso96 or CyberGraphX) – PiStorm/Emu68 and Apollo Vampire machines are the practical targets – and picks a performance preset by measuring the machine at startup; it has no usable graphics hardware, so it renders on the CPU. **AmigaOS 4.1** and **MorphOS** are PowerPC builds that reach the display through SDL2, which on MorphOS means [sdl2.library](https://www.morphos-storage.net/) has to be installed first. Both render in hardware through the fixed-function OpenGL each system provides – MiniGL over Warp3D on AmigaOS 4, TinyGL on MorphOS – so a 3D driver for the graphics card has to be installed; a build made with `-D NCINE_PREFERRED_RHI=Software` renders on the CPU instead. There are no graphics shaders on any of these systems, so the post-processing tier and the rescale filters are unavailable. Only the classic Amiga and MorphOS builds have been run so far, both under emulation and both on the CPU renderer; none of the three has been tested on real hardware.*
 
 ### Web (Emscripten)
 * Go to https://de4th.dev/jazz2/wasm/
@@ -195,8 +180,6 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 * Copy the `Content/` directory next to the game files, then copy contents of original *Jazz Jackrabbit 2* directory to `Source/` beside it – `Cache/` is generated next to them
   * Alternatively, place both in the frontend's *system* directory as `‹System›/jazz2/Content/` and `‹System›/jazz2/Source/`
 * Load any file from `Source/` (for example `Anims.j2a`) as content, or start the core without content if `‹System›/jazz2/Content/` exists
-
-*Settings, progress, highscores and the resumable state are written to `‹Saves›/jazz2/` in the frontend's *saves* directory. The core exposes the RetroPad as a gamepad (up to 4 players, local splitscreen included) and renders at 720×405, the native logical resolution of the game, which the frontend scales to the screen – so its video shaders and scaling options replace the in-game *Rescale Mode*. Save states use the game's own level-resume snapshot, so they are not frame-exact – netplay, run-ahead, rewind and reset are not supported. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped.*
 
 ### Xbox (Universal Windows Platform)
 * Download the game

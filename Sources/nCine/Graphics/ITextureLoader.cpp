@@ -29,7 +29,7 @@ namespace nCine
 	}
 
 	ITextureLoader::ITextureLoader(std::unique_ptr<Stream> fileHandle)
-		: _hasLoaded(false), _fileHandle(std::move(fileHandle)), _width(0), _height(0), _headerSize(0), _dataSize(0), _mipMapCount(1)
+		: _hasLoaded(false), _fileHandle(Death::move(fileHandle)), _width(0), _height(0), _headerSize(0), _dataSize(0), _mipMapCount(1)
 	{
 	}
 
@@ -73,43 +73,43 @@ namespace nCine
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromStream(std::unique_ptr<Stream> fileHandle, const StringView path)
 	{
-		return createLoader(std::move(fileHandle), path);
+		return createLoader(Death::move(fileHandle), path);
 	}
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView path)
 	{
 		auto extension = fs::GetExtension(path);
 		if (extension == "dds"_s) {
-			return std::make_unique<TextureLoaderDds>(std::move(fileHandle));
+			return std::make_unique<TextureLoaderDds>(Death::move(fileHandle));
 		}
 		if (extension == "pvr"_s) {
-			return std::make_unique<TextureLoaderPvr>(std::move(fileHandle));
+			return std::make_unique<TextureLoaderPvr>(Death::move(fileHandle));
 		}
 		if (extension == "ktx"_s) {
-			return std::make_unique<TextureLoaderKtx>(std::move(fileHandle));
+			return std::make_unique<TextureLoaderKtx>(Death::move(fileHandle));
 		}
 		if (extension == "png"_s) {
-			return std::make_unique<TextureLoaderPng>(std::move(fileHandle));
+			return std::make_unique<TextureLoaderPng>(Death::move(fileHandle));
 		}
 /*#if defined(WITH_WEBP)
 		if (extension == "webp"_s) {
-			return std::make_unique<TextureLoaderWebP>(std::move(fileHandle));
+			return std::make_unique<TextureLoaderWebP>(Death::move(fileHandle));
 		}
 #endif*/
 #if defined(DEATH_TARGET_ANDROID) && defined(RHI_GL_PROFILE_ES)
 		if (extension == "pkm"_s) {
-			return std::make_unique<TextureLoaderPkm>(std::move(fileHandle));
+			return std::make_unique<TextureLoaderPkm>(Death::move(fileHandle));
 		}
 #endif
 #if defined(WITH_QOI)
 		if (extension == "qoi"_s) {
-			return std::make_unique<TextureLoaderQoi>(std::move(fileHandle));
+			return std::make_unique<TextureLoaderQoi>(Death::move(fileHandle));
 		}
 #endif
 
 		LOGF("Unknown extension: {}", extension);
 		fileHandle.reset(nullptr);
-		return std::make_unique<InvalidTextureLoader>(std::move(fileHandle));
+		return std::make_unique<InvalidTextureLoader>(Death::move(fileHandle));
 	}
 
 	void ITextureLoader::loadPixels(PixelFormat format)

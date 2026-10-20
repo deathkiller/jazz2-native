@@ -293,7 +293,7 @@ namespace nCine::Backends
 				}
 			}
 
-			_listings.push_back(std::move(listing));
+			_listings.push_back(Death::move(listing));
 			return _listings.back().get();
 		}
 

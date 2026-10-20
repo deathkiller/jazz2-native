@@ -2,12 +2,18 @@
 
 #if defined(WITH_EDITOR)
 
+#include "../Files/JsonAccess.h"
+#include "../Files/JsonFile.h"
+// Before I18n.h, its _f() formats through Death::format()
+#include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/I18n.h"
 
 #include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
+#include <Utf8.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <iterator>
 #include <memory>
@@ -32,6 +38,9 @@ namespace Jazz2::Editor
 			SmallVector<String, 0> Texts;
 			SmallVector<EventParamField, 0> Fields;
 			SmallVector<SmallVector<ParamOption, 0>, 0> Options;
+			// Pairs of values swapped by mirroring, FieldMirror::Pairs points into them
+			SmallVector<SmallVector<std::int32_t, 0>, 0> MirrorPairs;
+			SmallVector<EventPreviewCase, 0> PreviewCases;
 		};
 
 		struct CatalogIndex
@@ -40,17 +49,24 @@ namespace Jazz2::Editor
 			SmallVector<std::unique_ptr<ExtensionEvent>, 0> Extensions;
 			SmallVector<const EventDescriptor*, 0> All;
 			const EventDescriptor* ByType[std::size_t(EventType::Count)];
+			// The descriptions of the game itself, whether something replaces them or not
+			const EventDescriptor* BuiltInByType[std::size_t(EventType::Count)];
 			// Extensions of types the game doesn't know
 			std::unordered_map<std::uint16_t, const EventDescriptor*> Others;
+			SmallVector<EventExtensionError, 0> Errors;
 			std::uint32_t Revision;
 
 			CatalogIndex()
 				: Revision(0)
 			{
+				std::fill(std::begin(BuiltInByType), std::end(BuiltInByType), nullptr);
 				for (auto part : { EventCatalogParts::GetBasicEvents(), EventCatalogParts::GetAreaEvents(), EventCatalogParts::GetEnvironmentEvents(),
 						EventCatalogParts::GetEnemyEvents(), EventCatalogParts::GetItemEvents() }) {
 					for (const EventDescriptor& descriptor : part) {
 						BuiltIn.push_back(&descriptor);
+						if (std::size_t(descriptor.Type) < std::size_t(EventType::Count)) {
+							BuiltInByType[std::size_t(descriptor.Type)] = &descriptor;
+						}
 					}
 				}
 				Rebuild();
@@ -104,7 +120,7 @@ namespace Jazz2::Editor
 			return index;
 		}
 
-		bool ParseCategory(const std::string& name, EventCategory& category)
+		bool ParseCategory(StringView name, EventCategory& category)
 		{
 			static const char* const Names[] = { "basic", "scenery", "modifier", "area", "trigger", "warp", "light",
 				"environment", "enemy", "boss", "collectible", "container", "other" };
@@ -118,12 +134,13 @@ namespace Jazz2::Editor
 			return false;
 		}
 
-		bool ParseParamType(const std::string& name, ParamType& type)
+		bool ParseParamType(StringView name, ParamType& type)
 		{
 			static const std::pair<const char*, ParamType> Types[] = {
 				{ "uint", ParamType::UInt }, { "int", ParamType::Int }, { "bool", ParamType::Bool }, { "enum", ParamType::Enum },
 				{ "flags", ParamType::Flags }, { "event", ParamType::EventType }, { "text", ParamType::TextId },
-				{ "trigger", ParamType::TriggerId }, { "warp", ParamType::WarpId }, { "string", ParamType::String }
+				{ "trigger", ParamType::TriggerId }, { "warp", ParamType::WarpId }, { "string", ParamType::String },
+				{ "contents", ParamType::Contents }
 			};
 			for (const auto& entry : Types) {
 				if (name == entry.first) {
@@ -134,7 +151,7 @@ namespace Jazz2::Editor
 			return false;
 		}
 
-		ParamUnit ParseUnit(const std::string& name)
+		ParamUnit ParseUnit(StringView name)
 		{
 			static const std::pair<const char*, ParamUnit> Units[] = {
 				{ "pixels", ParamUnit::Pixels }, { "tiles", ParamUnit::Tiles }, { "frames", ParamUnit::Frames },
@@ -148,21 +165,54 @@ namespace Jazz2::Editor
 			return ParamUnit::None;
 		}
 
-		// Reads one event, returns nullptr if it can't be used, why is logged
+		// Keeps what's wrong with a description, so the editor can show it, and logs it
+		void ReportError(EventExtensionScope scope, StringView source, String message)
+		{
+			LOGW("Event descriptions in \"{}\": {}", source, message);
+			CatalogIndex& catalog = GetIndex();
+			// A broken file shouldn't fill the list with the same complaint over and over
+			if (catalog.Errors.size() < 256) {
+				catalog.Errors.push_back(EventExtensionError{ scope, String(source), Death::move(message) });
+			}
+			catalog.Revision++;
+		}
+
+		// A path of metadata in the content, names of letters, digits, dashes and underscores separated by slashes, so a
+		// description that came with a level can't reach outside of the content
+		bool IsValidMetadataPath(StringView path)
+		{
+			if (path.empty() || path[0] == '/' || path[path.size() - 1] == '/') {
+				return false;
+			}
+			char prev = '\0';
+			for (char c : path) {
+				bool valid = ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '/');
+				if (!valid || (c == '/' && prev == '/')) {
+					return false;
+				}
+				prev = c;
+			}
+			return true;
+		}
+
+		// Reads one event, returns nullptr if it can't be used, why is logged and kept. The JSON comes from files and
+		// level scripts of anyone, so every value is read through JsonAccess, a value of another type is taken as missing.
 		std::unique_ptr<ExtensionEvent> ParseExtension(const Json::Value& value, StringView source, EventExtensionScope scope)
 		{
+			using namespace JsonAccess;
+
 			if (!value.isObject()) {
-				LOGW("Event description in \"{}\" isn't an object", source);
+				ReportError(scope, source, _("An event description isn't an object"));
 				return nullptr;
 			}
-			const Json::Value& typeValue = value["type"];
-			if (!typeValue.isInt() || typeValue.asInt() <= 0 || typeValue.asInt() > 0xFFFF) {
-				LOGW("Event description in \"{}\" has no valid \"type\"", source);
+			std::int32_t type = GetInt(value, "type", 0);
+			if (type <= 0 || type > 0xFFFF) {
+				ReportError(scope, source, _("An event description has no valid \"type\""));
 				return nullptr;
 			}
-			std::string name = value.get("name", "").asString();
+			String name = GetString(value, "name");
 			if (name.empty()) {
-				LOGW("Event {} in \"{}\" has no \"name\"", typeValue.asInt(), source);
+				ReportError(scope, source, _f("Event {} has no \"name\"", type));
 				return nullptr;
 			}
 
@@ -170,24 +220,25 @@ namespace Jazz2::Editor
 			extension->Scope = scope;
 			EventDescriptor& descriptor = extension->Descriptor;
 			descriptor = {};
-			descriptor.Type = EventType(typeValue.asInt());
+			descriptor.Type = EventType(type);
 			descriptor.Category = EventCategory::Other;
 			descriptor.Traits = EventTraits::Object;
-			std::string category = value.get("category", "other").asString();
+			String category = GetString(value, "category", "other"_s);
 			if (!ParseCategory(category, descriptor.Category)) {
-				LOGW("Event \"{}\" in \"{}\" has unknown category \"{}\"", name.c_str(), source, category.c_str());
+				ReportError(scope, source, _f("Event \"{}\" has an unknown category \"{}\"", name, category));
 			}
-			if (value["traits"].isArray()) {
+			const Json::Value& traits = Member(value, "traits");
+			if (traits.isArray()) {
 				descriptor.Traits = EventTraits::None;
-				for (const Json::Value& trait : value["traits"]) {
-					std::string traitName = trait.asString();
-					if (traitName == "object") {
+				for (const Json::Value& trait : traits) {
+					String traitName = ToString(trait);
+					if (traitName == "object"_s) {
 						descriptor.Traits |= EventTraits::Object;
-					} else if (traitName == "tileModifier") {
+					} else if (traitName == "tileModifier"_s) {
 						descriptor.Traits |= EventTraits::TileModifier;
-					} else if (traitName == "area") {
+					} else if (traitName == "area"_s) {
 						descriptor.Traits |= EventTraits::Area;
-					} else if (traitName == "multiplayerOnly") {
+					} else if (traitName == "multiplayerOnly"_s) {
 						descriptor.Traits |= EventTraits::MultiplayerOnly;
 					}
 				}
@@ -195,17 +246,82 @@ namespace Jazz2::Editor
 
 			// All texts first, the description points into them once they don't move anymore
 			auto& texts = extension->Texts;
-			std::string key = value.get("key", "").asString();
+			String key = GetString(value, "key");
 			if (key.empty()) {
-				key = "Ext" + std::to_string(typeValue.asInt());
+				char buffer[16];
+				std::int32_t length = std::snprintf(buffer, sizeof(buffer), "Ext%i", type);
+				key = String(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
 			}
-			texts.emplace_back(key.data(), key.size());												// 0: key
-			texts.emplace_back(name.data(), name.size());											// 1: name
-			std::string description = value.get("description", "").asString();
-			texts.emplace_back(description.data(), description.size());								// 2: description
-			std::string metadata = (value["preview"].isObject() ? value["preview"].get("metadata", "").asString() : std::string());
-			texts.emplace_back(metadata.data(), metadata.size());									// 3: preview
-			descriptor.PreviewAnimation = (value["preview"].isObject() ? value["preview"].get("animation", 0).asUInt() : 0);
+			texts.push_back(Death::move(key));														// 0: key
+			texts.push_back(name);																	// 1: name
+			texts.push_back(GetString(value, "description"));										// 2: description
+			const Json::Value& preview = Member(value, "preview");
+			String metadata = GetString(preview, "metadata");
+			if (!metadata.empty() && !IsValidMetadataPath(metadata)) {
+				ReportError(scope, source, _f("Event \"{}\" has an invalid preview \"{}\", it's shown as a box", name, metadata));
+				metadata = {};
+			}
+			bool hasPreviewMetadata = !metadata.empty();
+			texts.push_back(Death::move(metadata));													// 3: preview
+			descriptor.PreviewAnimation = GetUInt(preview, "animation", 0);
+
+			// Looks by the value of a parameter, "previewByParam", and a mirrored or moved sprite of "preview" itself
+			struct PendingCase
+			{
+				EventPreviewCase Case;
+				std::size_t MetadataText;
+			};
+			SmallVector<PendingCase, 0> pendingCases;
+			bool hasAnyValueCase = false;
+			auto addCase = [&](const Json::Value& item, std::int32_t caseValue, std::size_t metadataText) {
+				if (pendingCases.size() >= UINT8_MAX) {
+					return;
+				}
+				PendingCase& pendingCase = pendingCases.emplace_back();
+				pendingCase.Case.Value = caseValue;
+				pendingCase.Case.Metadata = nullptr;
+				pendingCase.Case.Animation = GetUInt(item, "animation", 0);
+				pendingCase.Case.FlipX = GetBool(item, "flipX", false);
+				const Json::Value& offsetValue = Member(item, "offset");
+				if (offsetValue.isArray() && offsetValue.size() >= 2) {
+					pendingCase.Case.OffsetX = std::int16_t(std::clamp<std::int32_t>(ToInt(offsetValue[0], 0), -1024, 1024));
+					pendingCase.Case.OffsetY = std::int16_t(std::clamp<std::int32_t>(ToInt(offsetValue[1], 0), -1024, 1024));
+				}
+				pendingCase.MetadataText = metadataText;
+				hasAnyValueCase |= (caseValue == EventPreviewCase::AnyValue);
+			};
+			const Json::Value* previewFieldRef = nullptr;
+			const Json::Value& previewByParam = Member(value, "previewByParam");
+			if (previewByParam.isObject()) {
+				previewFieldRef = &Member(previewByParam, "param");
+				const Json::Value& cases = Member(previewByParam, "cases");
+				if (cases.isArray()) {
+					for (const Json::Value& item : cases) {
+						if (!item.isObject()) {
+							continue;
+						}
+						const Json::Value& caseValue = Member(item, "value");
+						bool isDefault = (caseValue.isString() && ToString(caseValue) == "default"_s);
+						if (!isDefault && !caseValue.isNumeric()) {
+							ReportError(scope, source, _f("A preview case of event \"{}\" has no \"value\", it's left out", name));
+							continue;
+						}
+						String caseMetadata = GetString(item, "metadata");
+						if (!caseMetadata.empty() && !IsValidMetadataPath(caseMetadata)) {
+							ReportError(scope, source, _f("Event \"{}\" has an invalid preview \"{}\", it's shown as a box", name, caseMetadata));
+							caseMetadata = {};
+						}
+						std::size_t metadataText = (caseMetadata.empty() ? SIZE_MAX : texts.size());
+						if (!caseMetadata.empty()) {
+							texts.push_back(Death::move(caseMetadata));
+						}
+						addCase(item, isDefault ? EventPreviewCase::AnyValue : ToInt(caseValue, 0), metadataText);
+					}
+				}
+			}
+			if (hasPreviewMetadata && !hasAnyValueCase && (Member(preview, "flipX").isBool() || Member(preview, "offset").isArray())) {
+				addCase(preview, EventPreviewCase::AnyValue, 3);
+			}
 
 			struct PendingField
 			{
@@ -214,74 +330,284 @@ namespace Jazz2::Editor
 				std::size_t DescriptionText;
 				std::size_t OptionsIndex;
 				SmallVector<std::size_t, 0> OptionTexts;
+				// Other parameters referred to by their names or indices, found once all of them are known
+				const Json::Value* VisibleIfRef = nullptr;
+				const Json::Value* MirrorXRef = nullptr;
+				const Json::Value* MirrorYRef = nullptr;
+				const Json::Value* ContentsTypeRef = nullptr;
+				std::size_t MirrorXPairs = SIZE_MAX;
+				std::size_t MirrorYPairs = SIZE_MAX;
+				std::size_t LinkChannelText = SIZE_MAX;
 			};
 			SmallVector<PendingField, 0> pending;
-			const Json::Value& params = value["params"];
+			const Json::Value& params = Member(value, "params");
 			if (params.isArray()) {
 				for (const Json::Value& param : params) {
-					std::string paramName = param.get("name", "").asString();
+					String paramName = GetString(param, "name");
 					ParamType paramType = ParamType::UInt;
-					if (paramName.empty() || !ParseParamType(param.get("type", "uint").asString(), paramType)) {
-						LOGW("Parameter of event \"{}\" in \"{}\" has no name or an unknown type, it's left out", name.c_str(), source);
+					if (paramName.empty() || !ParseParamType(GetString(param, "type", "uint"_s), paramType)) {
+						ReportError(scope, source, _f("A parameter of event \"{}\" has no name or an unknown type, it's left out", name));
 						continue;
 					}
+					std::int32_t offset = GetInt(param, "offset", -1);
+					std::int32_t bits = GetInt(param, "bits", paramType == ParamType::Bool ? 1 : (paramType == ParamType::EventType ? 16 : 8));
+					std::int32_t shift = GetInt(param, "shift", 0);
+					// Texts and the parameters of an event inside take whole bytes
+					bool isBytes = (paramType == ParamType::String || paramType == ParamType::Contents);
+					if (isBytes) {
+						std::int32_t length = GetInt(param, "length", paramType == ParamType::Contents ? Formats::LevelFile::EventParamsSize - offset : bits / 8);
+						bits = (length > 0 && length <= Formats::LevelFile::EventParamsSize ? length * 8 : 0);
+						shift = 0;
+					}
+					// Each part checked on its own first, the sum of two huge values wouldn't fit
+					bool fits = (offset >= 0 && offset < Formats::LevelFile::EventParamsSize && bits > 0 && shift >= 0 &&
+						(isBytes || (bits <= 32 && shift < 32 && shift + bits <= 32)));
+					if (fits) {
+						std::int32_t storage = (isBytes ? bits / 8 : ((shift + bits) <= 8 ? 1 : ((shift + bits) <= 16 ? 2 : 4)));
+						fits = (offset + storage <= Formats::LevelFile::EventParamsSize);
+					}
+					if (!fits) {
+						ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" doesn't fit into the parameters, it's left out", paramName, name));
+						continue;
+					}
+
+					// The values a field of the bits can hold, within the 32-bit numbers the editor works with, an
+					// unsigned field of 32 bits can't go higher than the largest signed one then
+					bool isSigned = (paramType == ParamType::Int);
+					std::int64_t lowest = 0, highest = 0;
+					if (!isBytes) {
+						if (isSigned) {
+							lowest = -(std::int64_t(1) << (bits - 1));
+							highest = (std::int64_t(1) << (bits - 1)) - 1;
+						} else {
+							highest = std::min<std::int64_t>((std::int64_t(1) << bits) - 1, INT32_MAX);
+						}
+					}
+					std::int32_t minValue = std::clamp<std::int32_t>(GetInt(param, "min", std::int32_t(lowest)), std::int32_t(lowest), std::int32_t(highest));
+					std::int32_t maxValue = std::clamp<std::int32_t>(GetInt(param, "max", std::int32_t(highest)), std::int32_t(lowest), std::int32_t(highest));
+					if (minValue > maxValue) {
+						ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" has \"min\" above \"max\", the whole range is used", paramName, name));
+						minValue = std::int32_t(lowest);
+						maxValue = std::int32_t(highest);
+					}
+					// A number is edited as a float, which holds whole numbers exactly only up to 2^24, a wider one would be
+					// changed by just being shown, so the range is cut to that; only one asked for is worth a word
+					bool isNumber = (paramType == ParamType::UInt || paramType == ParamType::Int || paramType == ParamType::TextId ||
+						paramType == ParamType::TriggerId || paramType == ParamType::WarpId);
+					constexpr std::int32_t ExactLimit = (1 << 24);
+					if (isNumber && (minValue < -ExactLimit || maxValue > ExactLimit)) {
+						minValue = std::clamp<std::int32_t>(minValue, -ExactLimit, ExactLimit);
+						maxValue = std::clamp<std::int32_t>(maxValue, -ExactLimit, ExactLimit);
+						if (Member(param, "min").isNumeric() || Member(param, "max").isNumeric()) {
+							ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" can be edited only from {} to {}", paramName, name, minValue, maxValue));
+						}
+					}
+
 					PendingField& field = pending.emplace_back();
 					field.Field = {};
 					field.Field.Type = paramType;
-					std::int32_t offset = param.get("offset", -1).asInt();
-					std::int32_t bits = param.get("bits", paramType == ParamType::Bool ? 1 : (paramType == ParamType::EventType ? 16 : 8)).asInt();
-					std::int32_t shift = param.get("shift", 0).asInt();
-					if (paramType == ParamType::String) {
-						bits = param.get("length", bits / 8).asInt() * 8;
-						shift = 0;
-					}
-					std::int32_t storage = (paramType == ParamType::String ? bits / 8 : ((shift + bits) <= 8 ? 1 : ((shift + bits) <= 16 ? 2 : 4)));
-					if (offset < 0 || bits <= 0 || shift < 0 || (paramType != ParamType::String && shift + bits > 32) ||
-						offset + storage > Formats::LevelFile::EventParamsSize) {
-						LOGW("Parameter \"{}\" of event \"{}\" in \"{}\" doesn't fit into the parameters, it's left out", paramName.c_str(), name.c_str(), source);
-						pending.pop_back();
-						continue;
-					}
-					bool isSigned = (paramType == ParamType::Int);
 					field.Field.Offset = std::uint8_t(offset);
 					field.Field.Bits = std::uint8_t(bits);
 					field.Field.Shift = std::uint8_t(shift);
 					field.Field.Signed = isSigned;
-					std::int64_t range = (bits >= 31 ? INT32_MAX : (std::int64_t(1) << bits) - 1);
-					field.Field.Min = param.get("min", isSigned ? std::int32_t(-(range + 1) / 2) : 0).asInt();
-					field.Field.Max = param.get("max", isSigned ? std::int32_t(range / 2) : std::int32_t(range)).asInt();
-					field.Field.Default = param.get("default", 0).asInt();
-					field.Field.Unit = ParseUnit(param.get("unit", "").asString());
+					field.Field.Min = minValue;
+					field.Field.Max = maxValue;
+					field.Field.Default = GetInt(param, "default", 0);
+					field.Field.Unit = ParseUnit(GetString(param, "unit"));
 					field.NameText = texts.size();
-					texts.emplace_back(paramName.data(), paramName.size());
-					std::string paramDescription = param.get("description", "").asString();
+					texts.push_back(Death::move(paramName));
+					String paramDescription = GetString(param, "description");
 					field.DescriptionText = (paramDescription.empty() ? SIZE_MAX : texts.size());
 					if (!paramDescription.empty()) {
-						texts.emplace_back(paramDescription.data(), paramDescription.size());
+						texts.push_back(Death::move(paramDescription));
 					}
 					field.OptionsIndex = SIZE_MAX;
-					const Json::Value& options = param["options"];
+					const Json::Value& options = Member(param, "options");
 					if (options.isArray() && (paramType == ParamType::Enum || paramType == ParamType::Flags)) {
 						field.OptionsIndex = extension->Options.size();
 						auto& list = extension->Options.emplace_back();
-						std::int32_t nextValue = (paramType == ParamType::Flags ? 1 : 0);
+						std::uint32_t nextValue = (paramType == ParamType::Flags ? 1 : 0);
 						for (const Json::Value& option : options) {
-							std::string label;
-							std::int32_t optionValue = nextValue;
-							if (option.isObject()) {
-								label = option.get("label", "").asString();
-								optionValue = option.get("value", nextValue).asInt();
-							} else {
-								label = option.asString();
+							// The number of options is kept in a byte
+							if (list.size() >= UINT8_MAX) {
+								break;
 							}
-							nextValue = (paramType == ParamType::Flags ? optionValue << 1 : optionValue + 1);
+							String label;
+							std::int32_t optionValue = std::int32_t(nextValue);
+							if (option.isObject()) {
+								label = GetString(option, "label");
+								optionValue = GetInt(option, "value", optionValue);
+							} else {
+								label = ToString(option);
+							}
+							if (label.empty()) {
+								char buffer[16];
+								std::int32_t length = std::snprintf(buffer, sizeof(buffer), "%i", optionValue);
+								label = String(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
+							}
+							// Unsigned, so the bit of the next flag can't overflow into undefined behavior
+							nextValue = (paramType == ParamType::Flags ? std::uint32_t(optionValue) << 1 : std::uint32_t(optionValue) + 1);
 							field.OptionTexts.push_back(texts.size());
-							texts.emplace_back(label.data(), label.size());
+							texts.push_back(Death::move(label));
 							list.push_back(ParamOption{ nullptr, optionValue });
+						}
+					}
+
+					// Shown only while another parameter has a value, or never
+					const Json::Value& showIf = Member(param, "showIf");
+					if (showIf.isObject()) {
+						field.VisibleIfRef = &Member(showIf, "param");
+						if (Member(showIf, "notEquals").isNumeric()) {
+							field.Field.VisibleIfMode = FieldCondition::NotEquals;
+							field.Field.VisibleIfValue = GetInt(showIf, "notEquals", 0);
+						} else if (Member(showIf, "anyBits").isNumeric()) {
+							field.Field.VisibleIfMode = FieldCondition::AnyBits;
+							field.Field.VisibleIfValue = GetInt(showIf, "anyBits", 0);
+						} else {
+							field.Field.VisibleIfMode = FieldCondition::Equals;
+							field.Field.VisibleIfValue = GetInt(showIf, "equals", 0);
+						}
+					}
+					field.Field.Hidden = GetBool(param, "hidden", false);
+					field.Field.DisplayScale = std::clamp<std::int32_t>(GetInt(param, "scale", 1), 1, 65536);
+
+					// What mirroring the event does to the value, a name or a table of pairs to swap
+					auto parseMirror = [&](const char* key, FieldMirror& mirror, const Json::Value*& fieldRef, std::size_t& pairsIndex) {
+						const Json::Value& mirrorValue = Member(param, key);
+						if (mirrorValue.isString()) {
+							String mode = ToString(mirrorValue);
+							if (mode == "negate"_s) {
+								mirror.Mode = MirrorMode::Negate;
+							} else if (mode == "toggle"_s) {
+								mirror.Mode = MirrorMode::Toggle;
+							}
+						} else if (mirrorValue.isObject()) {
+							const Json::Value& pairs = Member(mirrorValue, "swap");
+							if (pairs.isArray() && pairs.size() >= 2) {
+								mirror.Mode = MirrorMode::Swap;
+								pairsIndex = extension->MirrorPairs.size();
+								auto& list = extension->MirrorPairs.emplace_back();
+								for (const Json::Value& pairValue : pairs) {
+									if (list.size() >= UINT8_MAX - 1) {
+										break;
+									}
+									list.push_back(ToInt(pairValue, 0));
+								}
+								// Only whole pairs
+								if ((list.size() & 1) != 0) {
+									list.pop_back();
+								}
+							} else if (!Member(mirrorValue, "swapWith").isNull()) {
+								mirror.Mode = MirrorMode::SwapField;
+								fieldRef = &Member(mirrorValue, "swapWith");
+							}
+						}
+					};
+					parseMirror("mirrorX", field.Field.MirrorX, field.MirrorXRef, field.MirrorXPairs);
+					parseMirror("mirrorY", field.Field.MirrorY, field.MirrorYRef, field.MirrorYPairs);
+					field.Field.IsTeam = GetBool(param, "team", false);
+
+					// A handle in the level
+					String gizmo = GetString(param, "gizmo");
+					if (!gizmo.empty()) {
+						if (gizmo == "radius"_s) {
+							field.Field.Gizmo = FieldGizmo::Radius;
+						} else if (gizmo == "length"_s) {
+							field.Field.Gizmo = FieldGizmo::LengthDown;
+						} else if (gizmo == "width"_s) {
+							field.Field.Gizmo = FieldGizmo::WidthRight;
+						} else if (gizmo == "offsetX"_s) {
+							field.Field.Gizmo = FieldGizmo::OffsetX;
+						} else if (gizmo == "offsetY"_s) {
+							field.Field.Gizmo = FieldGizmo::OffsetY;
+						} else {
+							ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" has an unknown \"gizmo\" \"{}\"", texts[field.NameText], name, gizmo));
+						}
+						field.Field.GizmoStep = std::int16_t(std::clamp<std::int32_t>(GetInt(param, "gizmoStep", 1), 1, 1024));
+					}
+
+					// Events with the same value in the same channel are linked by lines
+					const Json::Value& link = Member(param, "link");
+					if (link.isObject()) {
+						String channel = GetString(link, "channel");
+						String role = GetString(link, "role", "peer"_s);
+						if (!channel.empty()) {
+							field.Field.LinkRole = (role == "source"_s ? EventLinkRole::Source : (role == "target"_s ? EventLinkRole::Target : EventLinkRole::Peer));
+							field.LinkChannelText = texts.size();
+							texts.push_back(Death::move(channel));
+						}
+					}
+
+					// An arrow, the values of a group summed along their axes
+					const Json::Value& direction = Member(param, "direction");
+					if (direction.isObject()) {
+						String axis = GetString(direction, "axis");
+						field.Field.Direction = (axis == "x"_s ? DirectionAxis::X : (axis == "y"_s ? DirectionAxis::Y : DirectionAxis::None));
+						field.Field.DirectionNegative = GetBool(direction, "negative", false);
+						field.Field.DirectionGroup = std::uint8_t(std::clamp<std::int32_t>(GetInt(direction, "group", 0), 0, 3));
+					}
+
+					if (paramType == ParamType::Contents) {
+						field.ContentsTypeRef = &Member(param, "typeParam");
+					}
+				}
+			}
+
+			// Parameters referred to by others, by their name or index
+			auto resolveField = [&](const Json::Value* ref, const char* what, const String& owner) -> std::int8_t {
+				if (ref == nullptr || ref->isNull()) {
+					return -1;
+				}
+				if (ref->isString()) {
+					String target = ToString(*ref);
+					for (std::size_t i = 0; i < pending.size() && i < 128; i++) {
+						if (texts[pending[i].NameText] == target) {
+							return std::int8_t(i);
+						}
+					}
+				} else {
+					std::int32_t index = ToInt(*ref, -1);
+					if (index >= 0 && index < std::int32_t(pending.size()) && index < 128) {
+						return std::int8_t(index);
+					}
+				}
+				ReportError(scope, source, _f("\"{}\" of \"{}\" in event \"{}\" refers to no parameter", what, owner, name));
+				return -1;
+			};
+			for (PendingField& field : pending) {
+				const String& paramName = texts[field.NameText];
+				field.Field.VisibleIfField = resolveField(field.VisibleIfRef, "showIf", paramName);
+				if (field.Field.MirrorX.Mode == MirrorMode::SwapField) {
+					field.Field.MirrorX.Field = resolveField(field.MirrorXRef, "mirrorX", paramName);
+					if (field.Field.MirrorX.Field < 0) {
+						field.Field.MirrorX.Mode = MirrorMode::None;
+					}
+				}
+				if (field.Field.MirrorY.Mode == MirrorMode::SwapField) {
+					field.Field.MirrorY.Field = resolveField(field.MirrorYRef, "mirrorY", paramName);
+					if (field.Field.MirrorY.Field < 0) {
+						field.Field.MirrorY.Mode = MirrorMode::None;
+					}
+				}
+				if (field.Field.Type == ParamType::Contents) {
+					field.Field.ContentsTypeField = resolveField(field.ContentsTypeRef, "typeParam", paramName);
+					if (field.Field.ContentsTypeField >= 0) {
+						// The type of the event inside can't be among its own parameters, it would be inside of itself
+						const EventParamField& typeField = pending[field.Field.ContentsTypeField].Field;
+						bool typeIsBytes = (typeField.Type == ParamType::String || typeField.Type == ParamType::Contents);
+						std::uint32_t typeLastBit = std::uint32_t(typeField.Shift) + typeField.Bits;
+						std::uint32_t typeStart = typeField.Offset;
+						std::uint32_t typeEnd = typeStart + (typeIsBytes ? typeField.Bits / 8u : (typeLastBit <= 8 ? 1u : (typeLastBit <= 16 ? 2u : 4u)));
+						std::uint32_t contentsStart = field.Field.Offset;
+						std::uint32_t contentsEnd = contentsStart + field.Field.Bits / 8u;
+						if (typeStart < contentsEnd && contentsStart < typeEnd) {
+							ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" contains its own \"typeParam\", the event inside is left out", paramName, name));
+							field.Field.ContentsTypeField = -1;
 						}
 					}
 				}
 			}
+			descriptor.PreviewField = resolveField(previewFieldRef, "previewByParam", String(name));
 
 			// The texts don't move anymore
 			descriptor.Key = texts[0].data();
@@ -300,9 +626,28 @@ namespace Jazz2::Editor
 					result.Options = list.data();
 					result.OptionCount = std::uint8_t(std::min<std::size_t>(list.size(), UINT8_MAX));
 				}
+				if (field.MirrorXPairs != SIZE_MAX) {
+					const auto& pairs = extension->MirrorPairs[field.MirrorXPairs];
+					result.MirrorX.Pairs = pairs.data();
+					result.MirrorX.PairCount = std::uint8_t(pairs.size());
+				}
+				if (field.MirrorYPairs != SIZE_MAX) {
+					const auto& pairs = extension->MirrorPairs[field.MirrorYPairs];
+					result.MirrorY.Pairs = pairs.data();
+					result.MirrorY.PairCount = std::uint8_t(pairs.size());
+				}
+				result.LinkChannel = (field.LinkChannelText != SIZE_MAX ? texts[field.LinkChannelText].data() : nullptr);
 			}
 			descriptor.Fields = extension->Fields.data();
 			descriptor.FieldCount = std::uint8_t(std::min<std::size_t>(extension->Fields.size(), UINT8_MAX));
+			for (PendingCase& pendingCase : pendingCases) {
+				EventPreviewCase& result = extension->PreviewCases.emplace_back(pendingCase.Case);
+				result.Metadata = (pendingCase.MetadataText != SIZE_MAX && !texts[pendingCase.MetadataText].empty() ? texts[pendingCase.MetadataText].data() : nullptr);
+			}
+			if (!extension->PreviewCases.empty()) {
+				descriptor.PreviewCases = extension->PreviewCases.data();
+				descriptor.PreviewCaseCount = std::uint8_t(extension->PreviewCases.size());
+			}
 			return extension;
 		}
 
@@ -345,16 +690,15 @@ namespace Jazz2::Editor
 
 	std::int32_t EventCatalog::LoadExtensions(StringView json, StringView source, EventExtensionScope scope)
 	{
-		Json::CharReaderBuilder builder;
-		auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 		Json::Value doc; std::string errors;
-		if (!reader->parse(json.data(), json.data() + json.size(), &doc, &errors)) {
-			LOGW("Event descriptions in \"{}\" cannot be read: {}", source, errors.c_str());
+		if (!JsonFile::Parse(json, doc, &errors)) {
+			ReportError(scope, source, _f("The event descriptions can't be read - {}", StringView(errors.data(), errors.size()).trimmed()));
 			return 0;
 		}
 		const Json::Value* list = &doc;
-		if (doc.isObject() && doc["events"].isArray()) {
-			list = &doc["events"];
+		const Json::Value& events = JsonAccess::Member(doc, "events");
+		if (events.isArray()) {
+			list = &events;
 		}
 
 		CatalogIndex& catalog = GetIndex();
@@ -368,7 +712,7 @@ namespace Jazz2::Editor
 						break;
 					}
 				}
-				catalog.Extensions.push_back(std::move(extension));
+				catalog.Extensions.push_back(Death::move(extension));
 				added++;
 			}
 		};
@@ -388,12 +732,23 @@ namespace Jazz2::Editor
 	void EventCatalog::ClearExtensions(EventExtensionScope scope)
 	{
 		CatalogIndex& catalog = GetIndex();
+		std::size_t errorCount = catalog.Errors.size();
+		catalog.Errors.erase(std::remove_if(catalog.Errors.begin(), catalog.Errors.end(),
+			[scope](const EventExtensionError& error) { return error.Scope == scope; }), catalog.Errors.end());
 		std::size_t count = catalog.Extensions.size();
 		catalog.Extensions.erase(std::remove_if(catalog.Extensions.begin(), catalog.Extensions.end(),
 			[scope](const std::unique_ptr<ExtensionEvent>& extension) { return extension->Scope == scope; }), catalog.Extensions.end());
 		if (catalog.Extensions.size() != count) {
 			catalog.Rebuild();
+		} else if (catalog.Errors.size() != errorCount) {
+			catalog.Revision++;
 		}
+	}
+
+	ArrayView<const EventExtensionError> EventCatalog::GetExtensionErrors()
+	{
+		const auto& errors = GetIndex().Errors;
+		return ArrayView<const EventExtensionError>(errors.data(), errors.size());
 	}
 
 	std::uint32_t EventCatalog::GetRevision()
@@ -403,12 +758,12 @@ namespace Jazz2::Editor
 
 	bool EventCatalog::IsExtension(const EventDescriptor* descriptor)
 	{
-		for (const auto& extension : GetIndex().Extensions) {
-			if (&extension->Descriptor == descriptor) {
-				return true;
-			}
+		// The descriptions of the game are all known by their type, anything else came from outside of the game
+		if (descriptor == nullptr) {
+			return false;
 		}
-		return false;
+		std::size_t type = std::size_t(descriptor->Type);
+		return (type >= std::size_t(EventType::Count) || GetIndex().BuiltInByType[type] != descriptor);
 	}
 
 	const EventDescriptor* EventCatalog::FindByKey(StringView key)
@@ -435,11 +790,7 @@ namespace Jazz2::Editor
 		}
 		if (result.size() > maxLength) {
 			// Not in the middle of a character of UTF-8
-			std::size_t length = maxLength;
-			while (length > 0 && (std::uint8_t(result[length]) & 0xC0) == 0x80) {
-				length--;
-			}
-			result = result.prefix(length) + "..."_s;
+			result = result.prefix(Death::Utf8::FitPrefix(result, maxLength)) + "..."_s;
 		}
 		return result;
 	}
@@ -471,7 +822,7 @@ namespace Jazz2::Editor
 
 	std::int32_t EventCatalog::ReadField(const Formats::EventRecord& event, const EventParamField& field)
 	{
-		if (field.Type == ParamType::String || field.Type == ParamType::Raw) {
+		if (field.Type == ParamType::String || field.Type == ParamType::Raw || field.Type == ParamType::Contents) {
 			return 0;
 		}
 		std::uint32_t raw = ReadBytes(event.Params, field.Offset, GetStorageBytes(field));
@@ -486,7 +837,7 @@ namespace Jazz2::Editor
 
 	void EventCatalog::WriteField(Formats::EventRecord& event, const EventParamField& field, std::int32_t value)
 	{
-		if (field.Type == ParamType::String || field.Type == ParamType::Raw) {
+		if (field.Type == ParamType::String || field.Type == ParamType::Raw || field.Type == ParamType::Contents) {
 			return;
 		}
 		if (field.Type != ParamType::Flags && field.Max > field.Min) {
@@ -526,6 +877,261 @@ namespace Jazz2::Editor
 			buffer[i] = char(event.Params[field.Offset + i]);
 		}
 		return StringView(buffer, i);
+	}
+
+	const EventPreviewCase* EventCatalog::FindPreviewCase(const EventDescriptor& descriptor, const Formats::EventRecord& event)
+	{
+		if (descriptor.PreviewCases == nullptr) {
+			return nullptr;
+		}
+		const EventPreviewCase* anyValue = nullptr;
+		bool hasField = (descriptor.PreviewField >= 0 && std::size_t(descriptor.PreviewField) < descriptor.FieldCount);
+		std::int32_t value = (hasField ? ReadField(event, descriptor.Fields[descriptor.PreviewField]) : 0);
+		for (std::uint8_t i = 0; i < descriptor.PreviewCaseCount; i++) {
+			const EventPreviewCase& previewCase = descriptor.PreviewCases[i];
+			if (previewCase.Value == EventPreviewCase::AnyValue) {
+				anyValue = &previewCase;
+			} else if (hasField && previewCase.Value == value) {
+				return &previewCase;
+			}
+		}
+		return anyValue;
+	}
+
+	bool EventCatalog::IsFieldVisible(const EventDescriptor& descriptor, std::size_t fieldIndex, const Formats::EventRecord& event)
+	{
+		if (fieldIndex >= descriptor.FieldCount) {
+			return false;
+		}
+		const EventParamField& field = descriptor.Fields[fieldIndex];
+		if (field.Hidden) {
+			return false;
+		}
+		// A condition on a field that isn't there, or on itself, is no condition
+		if (field.VisibleIfField < 0 || std::size_t(field.VisibleIfField) >= descriptor.FieldCount || std::size_t(field.VisibleIfField) == fieldIndex) {
+			return true;
+		}
+		std::int32_t value = ReadField(event, descriptor.Fields[field.VisibleIfField]);
+		switch (field.VisibleIfMode) {
+			case FieldCondition::NotEquals: return (value != field.VisibleIfValue);
+			case FieldCondition::AnyBits: return ((value & field.VisibleIfValue) != 0);
+			default: return (value == field.VisibleIfValue);
+		}
+	}
+
+	std::int32_t EventCatalog::ToDisplayValue(const EventParamField& field, std::int32_t value)
+	{
+		std::int64_t shown = std::int64_t(value) * std::max<std::int32_t>(field.DisplayScale, 1);
+		return std::int32_t(std::clamp<std::int64_t>(shown, INT32_MIN, INT32_MAX));
+	}
+
+	std::int32_t EventCatalog::FromDisplayValue(const EventParamField& field, std::int32_t displayValue)
+	{
+		std::int64_t scale = std::max<std::int32_t>(field.DisplayScale, 1);
+		std::int64_t shown = displayValue;
+		// To the nearest step, halves away from zero
+		std::int64_t value = (shown >= 0 ? (shown + scale / 2) / scale : -((-shown + scale / 2) / scale));
+		return std::int32_t(std::clamp<std::int64_t>(value, INT32_MIN, INT32_MAX));
+	}
+
+	const EventDescriptor* EventCatalog::GetContentsDescriptor(const EventDescriptor& descriptor, const EventParamField& contentsField, const Formats::EventRecord& event)
+	{
+		if (contentsField.Type != ParamType::Contents || contentsField.ContentsTypeField < 0 || std::size_t(contentsField.ContentsTypeField) >= descriptor.FieldCount) {
+			return nullptr;
+		}
+		std::int32_t type = ReadField(event, descriptor.Fields[contentsField.ContentsTypeField]);
+		return (type > 0 && type <= 0xFFFF ? Find(EventType(type)) : nullptr);
+	}
+
+	Formats::EventRecord EventCatalog::GetContents(const EventDescriptor& descriptor, const EventParamField& contentsField, const Formats::EventRecord& event)
+	{
+		Formats::EventRecord contents;
+		std::memset(&contents, 0, sizeof(contents));
+		contents.Flags = event.Flags;
+		if (contentsField.Type != ParamType::Contents) {
+			return contents;
+		}
+		if (contentsField.ContentsTypeField >= 0 && std::size_t(contentsField.ContentsTypeField) < descriptor.FieldCount) {
+			contents.Type = std::uint16_t(ReadField(event, descriptor.Fields[contentsField.ContentsTypeField]));
+		}
+		std::size_t length = std::min<std::size_t>(contentsField.Bits / 8, std::size_t(Formats::LevelFile::EventParamsSize - std::min<std::size_t>(contentsField.Offset, Formats::LevelFile::EventParamsSize)));
+		std::memcpy(contents.Params, &event.Params[contentsField.Offset], length);
+		return contents;
+	}
+
+	void EventCatalog::SetContents(const EventParamField& contentsField, Formats::EventRecord& event, const Formats::EventRecord& contents)
+	{
+		if (contentsField.Type != ParamType::Contents || contentsField.Offset >= Formats::LevelFile::EventParamsSize) {
+			return;
+		}
+		std::size_t length = std::min<std::size_t>(contentsField.Bits / 8, std::size_t(Formats::LevelFile::EventParamsSize - contentsField.Offset));
+		std::memcpy(&event.Params[contentsField.Offset], contents.Params, length);
+	}
+
+	bool EventCatalog::FitsInContents(const EventParamField& contentsField, const EventParamField& innerField)
+	{
+		std::size_t length = contentsField.Bits / 8;
+		bool isBytes = (innerField.Type == ParamType::String || innerField.Type == ParamType::Raw || innerField.Type == ParamType::Contents);
+		std::size_t storage = (isBytes ? std::size_t(innerField.Bits / 8) : std::size_t(GetStorageBytes(innerField)));
+		return (std::size_t(innerField.Offset) + storage <= length);
+	}
+
+	void EventCatalog::SetContentsType(const EventDescriptor& descriptor, const EventParamField& typeField, Formats::EventRecord& event, std::uint16_t type)
+	{
+		std::int32_t previous = ReadField(event, typeField);
+		WriteField(event, typeField, std::int32_t(type));
+		if (previous == std::int32_t(type)) {
+			return;
+		}
+		for (std::uint8_t i = 0; i < descriptor.FieldCount; i++) {
+			const EventParamField& field = descriptor.Fields[i];
+			if (field.Type == ParamType::Contents && field.ContentsTypeField >= 0 && std::size_t(field.ContentsTypeField) < descriptor.FieldCount &&
+				&descriptor.Fields[field.ContentsTypeField] == &typeField) {
+				// What a new event of the type has, the parameters of the old one would mean something else
+				Formats::EventRecord contents;
+				if (type != 0) {
+					contents = MakeDefault(EventType(type));
+				} else {
+					std::memset(&contents, 0, sizeof(contents));
+				}
+				SetContents(field, event, contents);
+			}
+		}
+	}
+
+	namespace
+	{
+		// Returns the value a field gets by mirroring
+		std::int32_t MirrorValue(const EventDescriptor& descriptor, const EventParamField& field, const FieldMirror& mirror, const Formats::EventRecord& original)
+		{
+			std::int32_t value = EventCatalog::ReadField(original, field);
+			switch (mirror.Mode) {
+				case MirrorMode::Negate: {
+					// The lowest value of a signed field has no positive counterpart, clamping it would make mirroring
+					// twice lose it, so a value whose negation doesn't fit stays as it is
+					std::int64_t negated = -std::int64_t(value);
+					bool hasRange = (field.Max > field.Min);
+					if (negated > INT32_MAX || (hasRange && (negated < field.Min || negated > field.Max))) {
+						return value;
+					}
+					return std::int32_t(negated);
+				}
+				case MirrorMode::Toggle:
+					return (value != 0 ? 0 : 1);
+				case MirrorMode::Swap: {
+					if (mirror.Pairs == nullptr) {
+						return value;
+					}
+					if (field.Type == ParamType::Flags) {
+						// Bits of flags, each one of a pair takes the other's place
+						std::int32_t result = value;
+						for (std::uint8_t i = 0; i + 1 < mirror.PairCount; i += 2) {
+							std::int32_t a = mirror.Pairs[i], b = mirror.Pairs[i + 1];
+							result &= ~(a | b);
+							result |= ((value & a) != 0 ? b : 0) | ((value & b) != 0 ? a : 0);
+						}
+						return result;
+					}
+					for (std::uint8_t i = 0; i + 1 < mirror.PairCount; i += 2) {
+						if (value == mirror.Pairs[i]) {
+							return mirror.Pairs[i + 1];
+						}
+						if (value == mirror.Pairs[i + 1]) {
+							return mirror.Pairs[i];
+						}
+					}
+					return value;
+				}
+				case MirrorMode::SwapField:
+					if (mirror.Field >= 0 && std::size_t(mirror.Field) < descriptor.FieldCount) {
+						return EventCatalog::ReadField(original, descriptor.Fields[mirror.Field]);
+					}
+					return value;
+				default:
+					return value;
+			}
+		}
+	}
+
+	bool EventCatalog::MirrorParams(const EventDescriptor* descriptor, std::uint8_t* params, bool horizontal)
+	{
+		if (descriptor == nullptr || params == nullptr) {
+			return false;
+		}
+		Formats::EventRecord event;
+		std::memset(&event, 0, sizeof(event));
+		event.Type = std::uint16_t(descriptor->Type);
+		std::memcpy(event.Params, params, sizeof(event.Params));
+		bool changed = MirrorParams(descriptor, event, horizontal);
+		std::memcpy(params, event.Params, sizeof(event.Params));
+		return changed;
+	}
+
+	bool EventCatalog::MirrorParams(const EventDescriptor* descriptor, Formats::EventRecord& event, bool horizontal)
+	{
+		if (descriptor == nullptr) {
+			return false;
+		}
+		Formats::EventRecord original = event;
+		// The event inside comes out of the crate mirrored as well
+		ForEachContents(*descriptor, event, [horizontal](const EventDescriptor& d, Formats::EventRecord& e) {
+			// Values are read from the event as it was, so two fields swapped with each other don't swap back
+			Formats::EventRecord before = e;
+			for (std::uint8_t i = 0; i < d.FieldCount; i++) {
+				const EventParamField& field = d.Fields[i];
+				if (field.Type == ParamType::Contents) {
+					continue;
+				}
+				const FieldMirror& mirror = (horizontal ? field.MirrorX : field.MirrorY);
+				if (mirror.Mode != MirrorMode::None) {
+					WriteField(e, field, MirrorValue(d, field, mirror, before));
+				}
+			}
+			return (std::memcmp(before.Params, e.Params, sizeof(e.Params)) != 0);
+		});
+		return (std::memcmp(original.Params, event.Params, sizeof(event.Params)) != 0);
+	}
+
+	bool EventCatalog::CanMirror(const EventDescriptor* descriptor)
+	{
+		if (descriptor == nullptr) {
+			return false;
+		}
+		for (std::uint8_t i = 0; i < descriptor->FieldCount; i++) {
+			const EventParamField& field = descriptor->Fields[i];
+			if (field.MirrorX.Mode != MirrorMode::None || field.MirrorY.Mode != MirrorMode::None || field.Type == ParamType::Contents) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool EventCatalog::SwapTeamParams(const EventDescriptor* descriptor, std::uint8_t* params, std::int32_t first, std::int32_t second)
+	{
+		if (descriptor == nullptr || params == nullptr || first == second) {
+			return false;
+		}
+		Formats::EventRecord event;
+		std::memset(&event, 0, sizeof(event));
+		event.Type = std::uint16_t(descriptor->Type);
+		std::memcpy(event.Params, params, sizeof(event.Params));
+		bool changed = ForEachContents(*descriptor, event, [first, second](const EventDescriptor& d, Formats::EventRecord& e) {
+			bool swapped = false;
+			for (std::uint8_t i = 0; i < d.FieldCount; i++) {
+				const EventParamField& field = d.Fields[i];
+				if (!field.IsTeam || field.Type == ParamType::Contents) {
+					continue;
+				}
+				std::int32_t value = ReadField(e, field);
+				if (value == first || value == second) {
+					WriteField(e, field, value == first ? second : first);
+					swapped = true;
+				}
+			}
+			return swapped;
+		});
+		std::memcpy(params, event.Params, sizeof(event.Params));
+		return changed;
 	}
 }
 

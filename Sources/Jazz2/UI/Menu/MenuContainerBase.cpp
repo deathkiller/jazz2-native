@@ -45,7 +45,7 @@ namespace Jazz2::UI::Menu
 			outgoing->OnHide();
 		}
 
-		auto& currentSection = _sections.emplace_back(std::move(section));
+		auto& currentSection = _sections.emplace_back(Death::move(section));
 		currentSection->OnShow(this);
 
 		if (animate) {
@@ -70,7 +70,7 @@ namespace Jazz2::UI::Menu
 		// reveal (a forward transition's outgoing section is the one LeaveSection re-shows), leaving _root null
 		_transition.Skip();
 
-		std::unique_ptr<MenuSection> outgoing = std::move(_sections.back());
+		std::unique_ptr<MenuSection> outgoing = Death::move(_sections.back());
 		_sections.pop_back();
 
 		MenuSection* revealed = (_sections.empty() ? nullptr : _sections.back().get());
@@ -84,7 +84,7 @@ namespace Jazz2::UI::Menu
 		if (animate) {
 			GetUpscalePass().SetClipRectangle(MenuTransition::CombineClip(outgoing->GetClipRectangle(_contentBounds),
 				revealed->GetClipRectangle(_contentBounds), GetUpscalePass().GetViewSize()));
-			_transition.BeginBackward(std::move(outgoing), transition);
+			_transition.BeginBackward(Death::move(outgoing), transition);
 		} else if (revealed != nullptr && _contentBounds != Recti::Empty) {
 			// outgoing is destroyed here (legacy behavior)
 			GetUpscalePass().SetClipRectangle(revealed->GetClipRectangle(_contentBounds));

@@ -11,6 +11,11 @@
 
 using namespace Death::Containers;
 
+namespace Jazz2::Formats
+{
+	struct TileSetData;
+}
+
 namespace Jazz2::Compatibility
 {
 	/**
@@ -37,6 +42,8 @@ namespace Jazz2::Compatibility
 
 		/** @brief Converts the tile set and writes the result to the specified target path */
 		void Convert(StringView targetPath) const;
+		/** @brief Converts the tile set into memory, the same data the overload above writes */
+		void Convert(Formats::TileSetData& data) const;
 
 		/** @brief Returns maximum number of supported tiles */
 		std::int32_t GetMaxSupportedTiles() const {

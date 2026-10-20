@@ -12,6 +12,8 @@
 #	endif
 #endif
 
+#include <Base/Move.h>
+
 using namespace Death::IO;
 
 namespace nCine
@@ -29,7 +31,7 @@ namespace nCine
 #endif
 
 	AudioReaderOgg::AudioReaderOgg(std::unique_ptr<Stream> fileHandle, const OggVorbis_File& oggFile)
-		: _fileHandle(std::move(fileHandle)), _oggFile(oggFile)
+		: _fileHandle(Death::move(fileHandle)), _oggFile(oggFile)
 	{
 		DEATH_ASSERT(_fileHandle->IsValid());
 	}

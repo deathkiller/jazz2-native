@@ -1,6 +1,6 @@
 // Console rebuild of the TexturedBackground warp out of geometry, shared by every
-// void fixed_function block of TexturedBackground.shader and TexturedBackgroundCircle.shader (the tunnel keeps the same planar
-// approximation on this tier, exactly as the handwritten backend code did).
+// void fixed_function block of TexturedBackground.shader, TexturedBackgroundTunnel.shader and TexturedBackgroundCylinder.shader
+// (the tunnel and the cylinder keep the same planar approximation on this tier, exactly as the handwritten backend code did).
 //
 // Everything below is portable extended vocabulary (the strip builder, the pre-clip quad axes and
 // resolved uniforms), so the band geometry is literally the same code on every console. The one

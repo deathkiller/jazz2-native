@@ -403,7 +403,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::ChangeLevel(LevelInitialization&& levelInit)
 	{
-		_root->ChangeLevel(std::move(levelInit));
+		_root->ChangeLevel(Death::move(levelInit));
 	}
 
 	bool MainMenu::HasResumableState() const
@@ -424,7 +424,7 @@ namespace Jazz2::UI::Menu
 
 	bool MainMenu::CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit)
 	{
-		return _root->CreateServer(std::move(serverInit));
+		return _root->CreateServer(Death::move(serverInit));
 	}
 #endif
 
@@ -464,6 +464,11 @@ namespace Jazz2::UI::Menu
 		if ((type & ChangedPreferencesType::MainMenu) == ChangedPreferencesType::MainMenu) {
 			PlayMenuMusic();
 		}
+	}
+
+	void MainMenu::ApplyCursorPolicy()
+	{
+		_root->ApplyCursorPolicy();
 	}
 
 	void MainMenu::DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,

@@ -291,7 +291,7 @@ namespace nCine
 	}
 
 #if defined(WITH_ZLIB)
-	std::uint32_t crc32(Containers::ArrayView<std::uint8_t> data)
+	std::uint32_t crc32(Containers::ArrayView<const std::uint8_t> data)
 	{
 		return ::crc32(0L, data.data(), static_cast<std::uint32_t>(data.size()));
 	}

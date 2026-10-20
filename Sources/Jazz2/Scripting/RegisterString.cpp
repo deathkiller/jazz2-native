@@ -56,7 +56,7 @@ namespace Jazz2::Scripting
 			} else {
 				auto data = std::make_unique<String>(stringView);
 				it = _stringCache.emplace(*data.get(), 1).first;
-				it->second.Data = std::move(data);
+				it->second.Data = Death::move(data);
 				//LOGD("Allocated \"{}\" string", it->second.Data.get());
 			}
 			asReleaseExclusiveLock();

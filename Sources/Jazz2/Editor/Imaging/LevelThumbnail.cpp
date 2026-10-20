@@ -2,24 +2,124 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../EditorSession.h"
+#include "../Common/TileSource.h"
+#include "../Files/TileSetDataCache.h"
 #include "../../ContentResolver.h"
-#include "../../EventType.h"
 #include "../../Formats/TileSetFile.h"
 #include "../../Tiles/TileMap.h"
 
 #include <algorithm>
+#include <cstring>
+
+#include <Cryptography/xxHash.h>
 
 namespace Jazz2::Editor
 {
-	LevelThumbnail::LevelThumbnail(EditorSession& session)
-		: _session(session)
+	namespace
+	{
+		// The level as the document has it, its layers placed as the tile map has them
+		class DocumentPreviewSource : public Formats::LevelPreview::ISource
+		{
+		public:
+			DocumentPreviewSource(const LevelDocument& document, Tiles::TileMap* tileMap, TileSetDataCache& tileSets)
+				: _document(document), _tileMap(tileMap), _tileSets(tileSets)
+			{
+			}
+
+			std::int32_t GetLayerCount() override
+			{
+				return std::int32_t(_document.Layers.size());
+			}
+
+			const Formats::LayerRecord& GetLayer(std::int32_t index) override
+			{
+				return _document.Layers[index].Record;
+			}
+
+			Tiles::LayerDescription GetLayerDescription(std::int32_t index) override
+			{
+				const Tiles::LayerDescription* description = (_tileMap != nullptr ? _tileMap->GetLayerDescription(index) : nullptr);
+				return (description != nullptr ? *description : ISource::GetLayerDescription(index));
+			}
+
+			bool GetTilePixels(std::int32_t layer, std::int32_t x, std::int32_t y, LevelThumbnail::TilePixels& result) override
+			{
+				return LevelThumbnail::GetTilePixels(_document, _tileSets, _document.Layers[layer].GetTile(x, y), result);
+			}
+
+		private:
+			const LevelDocument& _document;
+			Tiles::TileMap* _tileMap;
+			TileSetDataCache& _tileSets;
+		};
+	}
+
+	LevelThumbnail::LevelThumbnail(const LevelDocument& document, TileSetDataCache& tileSets)
+		: _document(document), _tileSets(tileSets)
 	{
 	}
 
 	void LevelThumbnail::Clear()
 	{
 		_colors.clear();
+	}
+
+	bool LevelThumbnail::Revalidate()
+	{
+		std::uint64_t hash = GetSourceHash(_document, _tileSets);
+		if (hash == _sourceHash) {
+			return false;
+		}
+		_sourceHash = hash;
+		_colors.clear();
+		return true;
+	}
+
+	std::uint64_t LevelThumbnail::GetSourceHash(const LevelDocument& document, TileSetDataCache& tileSets)
+	{
+
+		// The tiles stored in a level can be a few megabytes
+		std::uint64_t hash = 0;
+		auto addBytes = [&hash](const void* data, std::size_t size) {
+			hash = Death::Cryptography::xxHash3(data, size, hash);
+		};
+		auto addValue = [&addBytes](std::uint64_t value) {
+			addBytes(&value, sizeof(value));
+		};
+
+		addBytes(ContentResolver::Get().GetPalettes().data(), 256 * sizeof(std::uint32_t));
+
+		// A tile set read again from its file, as after it's imported anew under the same name, is other data
+		auto addTileSet = [&document, &tileSets, &addBytes, &addValue](StringView name) {
+			addBytes(name.data(), name.size());
+			const Formats::TileSetData* data = tileSets.Get(document, name);
+			addValue(std::uint64_t(reinterpret_cast<std::uintptr_t>(data)));
+			addValue(data != nullptr ? std::uint64_t(data->TileCount) : 0);
+		};
+		addTileSet(document.Properties.DefaultTileSet);
+		for (const Formats::ExtraTileSetRecord& extra : document.ExtraTileSets) {
+			addTileSet(extra.Name);
+			addValue(std::uint64_t(extra.Offset) | (std::uint64_t(extra.Count) << 16) | (std::uint64_t(extra.Flags) << 32));
+			if ((extra.Flags & Formats::ExtraTileSetRecord::Remapped) != 0) {
+				addBytes(extra.Remapping, sizeof(extra.Remapping));
+			}
+			// The tiles stored in the level are changed in place
+			if ((extra.Flags & Formats::ExtraTileSetRecord::Embedded) != 0) {
+				addBytes(extra.Data.data(), extra.Data.size());
+			}
+		}
+
+		// An animated tile stands for its first frame
+		addValue(document.Animations.size());
+		for (const DocumentAnimation& animation : document.Animations) {
+			if (animation.Frames.empty()) {
+				addValue(UINT64_MAX);
+			} else {
+				const TileRef& frame = animation.Frames[0];
+				addValue(std::uint64_t(frame.Index) | (std::uint64_t(frame.Source) << 16) | (std::uint64_t(frame.Flags) << 24));
+			}
+		}
+		return hash;
 	}
 
 	std::uint32_t LevelThumbnail::GetTileColor(TileRef tile)
@@ -32,9 +132,8 @@ namespace Jazz2::Editor
 		return it->second;
 	}
 
-	bool LevelThumbnail::GetTilePixels(EditorSession& session, TileRef tile, TilePixels& result)
+	bool LevelThumbnail::GetTilePixels(const LevelDocument& document, TileSetDataCache& tileSets, TileRef tile, TilePixels& result)
 	{
-		const LevelDocument& document = session.GetDocument();
 		if (tile.IsAnimated()) {
 			// The first frame stands for the animation
 			if (tile.Index >= document.Animations.size() || document.Animations[tile.Index].Frames.empty()) {
@@ -43,6 +142,10 @@ namespace Jazz2::Editor
 			std::uint8_t flags = tile.Flags;
 			tile = document.Animations[tile.Index].Frames[0];
 			tile.Flags ^= (flags & (Formats::TileRecord::FlipX | Formats::TileRecord::FlipY));
+			// A modifier of the tile in the layer, translucent or invisible, is what the layer shows the animation with
+			if ((flags & Formats::TileRecord::ModifierMask) != 0) {
+				tile.Flags = std::uint8_t((tile.Flags & ~Formats::TileRecord::ModifierMask) | (flags & Formats::TileRecord::ModifierMask));
+			}
 			if (tile.IsAnimated()) {
 				return false;
 			}
@@ -51,55 +154,27 @@ namespace Jazz2::Editor
 			return false;
 		}
 
-		StringView name;
-		std::int32_t offset = 0;
-		const Formats::ExtraTileSetRecord* extra = nullptr;
-		if (tile.Source == TileRef::DefaultTileSet) {
-			name = document.Properties.DefaultTileSet;
-		} else if (std::size_t(tile.Source) - 1 < document.ExtraTileSets.size()) {
-			extra = &document.ExtraTileSets[tile.Source - 1];
-			name = extra->Name;
-			offset = extra->Offset;
-		} else {
+		TileSource source;
+		if (!ResolveTileSource(document, tile.Source, source)) {
 			return false;
 		}
-		const Formats::TileSetData* tileSet = session.GetTileSetData(name);
-		std::int32_t index = offset + tile.Index;
+		const Formats::TileSetData* tileSet = tileSets.Get(document, source.Name);
+		std::int32_t index = source.Offset + tile.Index;
 		if (tileSet == nullptr || index >= tileSet->TileCount) {
 			return false;
 		}
 
 		result.Pixels = &tileSet->Images[std::size_t(index) * Formats::TileSetData::ImageBytesPerTile];
 		result.TrueColor = (tileSet->TrueColor[index] != 0);
-		result.Remapping = (extra != nullptr && (extra->Flags & Formats::ExtraTileSetRecord::Remapped) != 0 &&
-			(extra->Flags & Formats::ExtraTileSetRecord::TrueColor) == 0 ? extra->Remapping : nullptr);
+		result.Remapping = source.Remapping;
 		result.Flags = tile.Flags;
 		return true;
-	}
-
-	std::uint32_t LevelThumbnail::TilePixels::GetPixel(std::int32_t x, std::int32_t y, const std::uint32_t* palette) const
-	{
-		if ((Flags & Formats::TileRecord::FlipX) != 0) {
-			x = 31 - x;
-		}
-		if ((Flags & Formats::TileRecord::FlipY) != 0) {
-			y = 31 - y;
-		}
-		std::int32_t i = y * 32 + x;
-		if (TrueColor) {
-			return Pixels[i * 4] | (Pixels[i * 4 + 1] << 8) | (Pixels[i * 4 + 2] << 16) | (std::uint32_t(Pixels[i * 4 + 3]) << 24);
-		}
-		std::uint8_t entry = Pixels[i];
-		if (entry == 0) {
-			return 0;
-		}
-		return palette[Remapping != nullptr ? Remapping[entry] : entry];
 	}
 
 	std::uint32_t LevelThumbnail::ComputeTileColor(TileRef tile)
 	{
 		TilePixels source;
-		if (!GetTilePixels(_session, tile, source)) {
+		if (!GetTilePixels(_document, _tileSets, tile, source)) {
 			return 0;
 		}
 
@@ -125,7 +200,7 @@ namespace Jazz2::Editor
 
 	void LevelThumbnail::DrawLayer(std::int32_t layerIndex, SmallVectorImpl<std::uint32_t>& pixels)
 	{
-		const LevelDocument& document = _session.GetDocument();
+		const LevelDocument& document = _document;
 		pixels.clear();
 		if (layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size())) {
 			return;
@@ -137,158 +212,24 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void LevelThumbnail::MakePreview(EditorSession& session, SmallVectorImpl<std::uint8_t>& data)
+	void LevelThumbnail::MakePreview(const LevelDocument& document, Tiles::TileMap* tileMap, TileSetDataCache& tileSets, SmallVectorImpl<std::uint8_t>& data)
 	{
 		data.clear();
-		const LevelDocument& document = session.GetDocument();
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
 		if (spriteLayer < 0) {
 			return;
 		}
+
+		Formats::LevelPreview::StartPicker start;
+		std::int32_t gridWidth = std::max<std::int32_t>(document.GetEventGridSize().X, 1);
+		for (const DocumentEvent& event : document.Events) {
+			start.Add(event.Record, std::int32_t(event.Cell % std::uint32_t(gridWidth)), std::int32_t(event.Cell / std::uint32_t(gridWidth)));
+		}
+
+		DocumentPreviewSource source(document, tileMap, tileSets);
 		const DocumentLayer& spriteLayerData = document.Layers[spriteLayer];
-		std::int32_t width = spriteLayerData.GetWidth(), height = spriteLayerData.GetHeight();
-		if (width <= 0 || height <= 0) {
-			return;
-		}
-
-		// Where the level starts, Jazz first, then anyone, then a start of multiplayer, else the middle of the level
-		Vector2f start(width * 16.0f, height * 16.0f);
-		{
-			std::int32_t gridWidth = std::max(document.GetEventGridSize().X, 1);
-			std::int32_t best = INT32_MAX;
-			for (const DocumentEvent& event : document.Events) {
-				std::int32_t rank;
-				if (EventType(event.Record.Type) == EventType::LevelStart) {
-					rank = ((event.Record.Params[0] & 0x01) != 0 ? 0 : 1);
-				} else if (EventType(event.Record.Type) == EventType::LevelStartMultiplayer) {
-					rank = 2;
-				} else {
-					continue;
-				}
-				if (rank < best) {
-					best = rank;
-					start = Vector2f(float(event.Cell % std::uint32_t(gridWidth)) * 32.0f + 16.0f,
-						float(event.Cell / std::uint32_t(gridWidth)) * 32.0f + 8.0f);
-				}
-			}
-		}
-
-		// The view of the game there, kept within the level as the camera is
-		constexpr float ViewW = float(PreviewMaxWidth * PreviewScale), ViewH = float(PreviewMaxHeight * PreviewScale);
-		float levelW = width * 32.0f, levelH = height * 32.0f;
-		Vector2f center(levelW > ViewW ? std::clamp(start.X, ViewW * 0.5f, levelW - ViewW * 0.5f) : levelW * 0.5f,
-			levelH > ViewH ? std::clamp(start.Y, ViewH * 0.5f, levelH - ViewH * 0.5f) : levelH * 0.5f);
-		Rectf view(std::round(center.X - ViewW * 0.5f), std::round(center.Y - ViewH * 0.5f), ViewW, ViewH);
-
-		// Each pixel the average of a few points of the level, all layers from the farthest one on, at the parallax
-		// of the game; just the color of a layer of solid color, and nothing of layers of effects
-		constexpr std::int32_t Samples = PreviewScale;
-		SmallVector<std::uint32_t, 0> accum;
-		accum.resize(std::size_t(PreviewMaxWidth * PreviewMaxHeight * Samples * Samples), 0xFF201810u);
-		const std::uint32_t* palette = ContentResolver::Get().GetPalettes().data();
-		Tiles::TileMap* tileMap = session.GetTileMap();
-		constexpr std::int32_t SampleW = PreviewMaxWidth * Samples, SampleH = PreviewMaxHeight * Samples;
-		constexpr float SampleStep = float(PreviewScale) / Samples;
-
-		for (std::int32_t l = std::int32_t(document.Layers.size()) - 1; l >= 0; l--) {
-			const DocumentLayer& layer = document.Layers[l];
-			if ((layer.Record.Flags & Formats::LayerRecord::Visible) == 0) {
-				continue;
-			}
-			auto rendererType = Tiles::LayerRendererType(layer.Record.RendererType);
-			if (rendererType == Tiles::LayerRendererType::XRay || rendererType == Tiles::LayerRendererType::BlurBehind) {
-				continue;
-			}
-			if (rendererType == Tiles::LayerRendererType::Solid) {
-				std::uint32_t color = layer.Record.Color[0] | (layer.Record.Color[1] << 8) | (layer.Record.Color[2] << 16) | (std::uint32_t(layer.Record.Color[3]) << 24);
-				for (std::uint32_t& pixel : accum) {
-					pixel = Blend(pixel, color);
-				}
-				continue;
-			}
-
-			std::int32_t layerW = layer.GetWidth(), layerH = layer.GetHeight();
-			if (layerW <= 0 || layerH <= 0) {
-				continue;
-			}
-			bool repeatX = !layer.IsSpriteLayer() && (layer.Record.Flags & Formats::LayerRecord::RepeatX) != 0;
-			bool repeatY = !layer.IsSpriteLayer() && (layer.Record.Flags & Formats::LayerRecord::RepeatY) != 0;
-			Vector2f origin = (tileMap != nullptr ? tileMap->GetGameplayLayerOrigin(l, view) : Vector2f::Zero);
-
-			std::int32_t lastTileIndex = -1;
-			TilePixels tilePixels;
-			bool tileValid = false;
-			for (std::int32_t sy = 0; sy < SampleH; sy++) {
-				std::int32_t py = std::int32_t(std::floor(view.Y + (sy + 0.5f) * SampleStep - origin.Y));
-				std::int32_t ty = (py >= 0 ? py / 32 : -1 - (-1 - py) / 32);
-				if (repeatY) {
-					ty = ((ty % layerH) + layerH) % layerH;
-				} else if (ty < 0 || ty >= layerH) {
-					continue;
-				}
-				for (std::int32_t sx = 0; sx < SampleW; sx++) {
-					std::int32_t px = std::int32_t(std::floor(view.X + (sx + 0.5f) * SampleStep - origin.X));
-					std::int32_t tx = (px >= 0 ? px / 32 : -1 - (-1 - px) / 32);
-					if (repeatX) {
-						tx = ((tx % layerW) + layerW) % layerW;
-					} else if (tx < 0 || tx >= layerW) {
-						continue;
-					}
-					std::int32_t tileIndex = ty * layerW + tx;
-					if (tileIndex != lastTileIndex) {
-						lastTileIndex = tileIndex;
-						const TileRef& tile = layer.Tiles[std::size_t(tileIndex)];
-						tileValid = ((tile.Flags & Formats::TileRecord::ModifierMask) != Formats::TileRecord::ModifierInvisible &&
-							GetTilePixels(session, tile, tilePixels));
-					}
-					if (!tileValid) {
-						continue;
-					}
-					std::uint32_t color = tilePixels.GetPixel(((px % 32) + 32) % 32, ((py % 32) + 32) % 32, palette);
-					if ((tilePixels.Flags & Formats::TileRecord::ModifierMask) == Formats::TileRecord::ModifierTranslucent) {
-						color = (color & 0x00FFFFFFu) | (((color >> 24) * 180 / 255) << 24);
-					}
-					std::uint32_t& pixel = accum[std::size_t(sy) * SampleW + std::size_t(sx)];
-					pixel = Blend(pixel, color);
-				}
-			}
-		}
-
-		data.push_back(std::uint8_t(PreviewMaxWidth));
-		data.push_back(std::uint8_t(PreviewMaxWidth >> 8));
-		data.push_back(std::uint8_t(PreviewMaxHeight));
-		data.push_back(std::uint8_t(PreviewMaxHeight >> 8));
-		for (std::int32_t y = 0; y < PreviewMaxHeight; y++) {
-			for (std::int32_t x = 0; x < PreviewMaxWidth; x++) {
-				std::uint32_t r = 0, g = 0, b = 0;
-				for (std::int32_t j = 0; j < Samples; j++) {
-					for (std::int32_t i = 0; i < Samples; i++) {
-						std::uint32_t color = accum[std::size_t(y * Samples + j) * SampleW + std::size_t(x * Samples + i)];
-						r += color & 0xFF;
-						g += (color >> 8) & 0xFF;
-						b += (color >> 16) & 0xFF;
-					}
-				}
-				data.push_back(std::uint8_t(r / (Samples * Samples)));
-				data.push_back(std::uint8_t(g / (Samples * Samples)));
-				data.push_back(std::uint8_t(b / (Samples * Samples)));
-			}
-		}
-	}
-
-	std::uint32_t LevelThumbnail::Blend(std::uint32_t dst, std::uint32_t src)
-	{
-		std::uint32_t a = src >> 24;
-		if (a == 0) {
-			return dst;
-		}
-		if (a == 255) {
-			return src;
-		}
-		std::uint32_t r = ((src & 0xFF) * a + (dst & 0xFF) * (255 - a)) / 255;
-		std::uint32_t g = (((src >> 8) & 0xFF) * a + ((dst >> 8) & 0xFF) * (255 - a)) / 255;
-		std::uint32_t b = (((src >> 16) & 0xFF) * a + ((dst >> 16) & 0xFF) * (255 - a)) / 255;
-		return r | (g << 8) | (b << 16) | 0xFF000000u;
+		Formats::LevelPreview::Make(source, start.GetPosition(spriteLayerData.GetWidth(), spriteLayerData.GetHeight()),
+			ContentResolver::Get().GetPalettes().data(), data);
 	}
 }
 

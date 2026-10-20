@@ -71,6 +71,16 @@ namespace Jazz2::UI
 		 */
 		void DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false, float angle = 0.0f, std::int32_t paletteOffset = -1);
 		/**
+		 * @brief Draws a textured rectangle into one batch with the rectangles drawn right before it on the same layer
+		 *
+		 * Draws the same as @ref DrawTexture() without rotation, palette and additive blending, but rectangles drawn one
+		 * after another on a layer with the same texture share a single command, written straight into its batch, as
+		 * the glyphs of @ref Font are. Anything else drawn on the layer in between --- by @ref DrawTexture(),
+		 * @ref DrawSolid(), @ref DrawRenderCommand() or a text --- ends the batch, the next rectangle starts another one,
+		 * so everything is drawn in the order it was drawn in as before. Meant for an interface of many small shapes.
+		 */
+		void DrawTextureBatched(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color);
+		/**
 		 * @brief Draws an indexed textured rectangle recolored through a palette texture (PaletteRemap shader)
 		 *
 		 * The palette offset is the flat index of the first color in the palette texture (0 = the first row/palette).
@@ -93,7 +103,13 @@ namespace Jazz2::UI
 		 * The position and size are in screen-space, after the layer transform. Texture coordinates in the layout
 		 * the sprite shaders take (horizontal scale and offset, then vertical) are cut down along with the rectangle.
 		 */
-		bool ClipQuad(Vector2f& pos, Vector2f& size, Vector4f* texCoords) const;
+		bool ClipQuad(Vector2f& pos, Vector2f& size, Vector4f* texCoords) const {
+			// Nothing is clipped by default, only that is inline, as it's checked for every glyph of every text
+			if (ClipRect.W <= 0.0f || ClipRect.H <= 0.0f) {
+				return true;
+			}
+			return ClipQuadToRect(pos, size, texCoords);
+		}
 
 		/** @brief Multiplier of game time for canvas rendering, @ref AnimTime grows by it a frame */
 		static constexpr float AnimTimeMultiplier = 0.014f;
@@ -140,12 +156,51 @@ namespace Jazz2::UI
 			std::int32_t PaletteOffsetOffset = -1;
 		};
 
+		/**
+			@brief Rectangles of one layer drawn one after another, written straight into batched commands
+
+			See @ref DrawTextureBatched(). A record is kept from frame to frame with the commands of its batches. A run
+			is the rectangles drawn in a row on the layer, each run gets a visit order of its own, so what was drawn on
+			the layer between two runs stays between them.
+		*/
+		struct QuadBatch
+		{
+			/** @brief Layer of the rectangles */
+			std::uint16_t Layer = 0;
+			/** @brief Texture of the current run */
+			const Texture* QuadTexture = nullptr;
+			/** @brief Whether a run is open, the next rectangle on the layer joins it */
+			bool Open = false;
+			/** @brief Whether the rectangles can be batched in this frame, otherwise each one is drawn by a command of its own */
+			bool Direct = true;
+			/** @brief Pooled command that carries the material of the batches, it is never queued itself */
+			RenderCommand* StandIn = nullptr;
+			/** @brief Batch the rectangles of the run are written into */
+			RenderBatcher::DirectBatch Batch;
+			/** @brief Room asked for when the batch of the run is begun, it grows with every batch the run fills */
+			std::uint32_t RunCapacity = 0;
+			/** @brief Commands that draw the batches, kept from frame to frame with their material set up */
+			SmallVector<std::unique_ptr<RenderCommand>, 0> BatchCommands;
+			/** @brief Number of the batch commands in use in this frame */
+			std::uint32_t BatchCommandsUsed = 0;
+			/** @brief Depth of the layer, the z translation of every rectangle */
+			float Depth = 0.0f;
+			/** @brief Offsets of the instance block members in an instance */
+			std::uint32_t ModelMatrixOffset = 0, ColorOffset = 0, TexRectOffset = 0, SpriteSizeOffset = 0;
+			/** @brief Offset of the palette offset member, or -1 if the shader has none */
+			std::int32_t PaletteOffsetOffset = -1;
+		};
+
 		std::int32_t _renderCommandsCount;
 		// Visit order of the next rented command while OrderedDraws is set
 		std::uint16_t _nextVisitOrder;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		RenderQueue* _currentRenderQueue;
 		SmallVector<GlyphBatch, 0> _glyphBatches;
+		SmallVector<QuadBatch, 0> _quadBatches;
+		// Record that took the last rectangle, it most likely takes the next one too, and how many runs are open
+		std::int32_t _lastQuadBatch = -1;
+		std::int32_t _openQuadRuns = 0;
 
 		/** @brief Rents a render command and gives it the material of a glyph of @p fontTexture */
 		RenderCommand* RentGlyphCommand(const Texture& fontTexture, Shader* colorizeShader);
@@ -155,5 +210,24 @@ namespace Jazz2::UI
 		RenderCommand* NextGlyphBatchCommand(GlyphBatch& glyphBatch);
 		/** @brief Finishes the batches of the records in use for the glyphs written so far */
 		void FinishGlyphBatches();
+		/** @brief The part of @ref ClipQuad() that runs only with a clip rectangle set */
+		bool ClipQuadToRect(Vector2f& pos, Vector2f& size, Vector4f* texCoords) const;
+		/** @brief Returns the visit order of the next command while @ref OrderedDraws is set, 0 otherwise */
+		std::uint16_t TakeVisitOrder();
+		/** @brief Draws a rectangle already moved by the layer transform and clipped, by a command of its own */
+		void DrawTransformedTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords,
+			const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset);
+		/** @brief Returns the record of a layer with a run open for a texture, opening one, or `nullptr` if rectangles can't be batched */
+		QuadBatch* GetQuadRun(const Texture& texture, std::uint16_t layer);
+		/** @brief Begins the next batch of the run of a record, returns `false` if it can't be batched */
+		bool BeginQuadBatch(QuadBatch& record);
+		/** @brief Ends the run of rectangles open on a layer, something else is drawn there */
+		void EndQuadRun(std::uint16_t layer) {
+			if (_openQuadRuns > 0) {
+				EndQuadRunOnLayer(layer);
+			}
+		}
+		/** @brief The part of @ref EndQuadRun() that runs only with a run open */
+		void EndQuadRunOnLayer(std::uint16_t layer);
 	};
 }

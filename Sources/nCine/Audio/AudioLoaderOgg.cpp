@@ -39,7 +39,7 @@ namespace nCine
 	}
 
 	AudioLoaderOgg::AudioLoaderOgg(std::unique_ptr<Stream> fileHandle)
-		: IAudioLoader(std::move(fileHandle))
+		: IAudioLoader(Death::move(fileHandle))
 	{
 #if defined(WITH_VORBIS_DYNAMIC)
 		if (!AudioReaderOgg::TryLoadLibrary()) {
@@ -96,7 +96,7 @@ namespace nCine
 
 	std::unique_ptr<IAudioReader> AudioLoaderOgg::createReader()
 	{
-		return std::make_unique<AudioReaderOgg>(std::move(_fileHandle), _oggFile);
+		return std::make_unique<AudioReaderOgg>(Death::move(_fileHandle), _oggFile);
 	}
 }
 

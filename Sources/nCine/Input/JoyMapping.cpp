@@ -186,7 +186,7 @@ namespace nCine
 			DEATH_DEBUG_ASSERT(parsed);
 
 			if (parsed) {
-				_mappings.push_back(std::move(mapping));
+				_mappings.push_back(Death::move(mapping));
 			}
 		}
 
@@ -240,9 +240,9 @@ namespace nCine
 				std::int32_t index = FindMappingByGuid(newMapping.guid);
 				// if GUID is not found then mapping has to be added, not replaced
 				if (index < 0) {
-					_mappings.push_back(std::move(newMapping));
+					_mappings.push_back(Death::move(newMapping));
 				} else {
-					_mappings[index] = std::move(newMapping);
+					_mappings[index] = Death::move(newMapping);
 				}
 				parsedMappings++;
 			}

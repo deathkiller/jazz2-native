@@ -69,7 +69,7 @@ namespace Jazz2::UI::Menu
 		}, 36.0f);
 
 		_list = list.get();
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void SafeAreaOptionsSection::AddEdgeRow(ScrollView* list, SafeAreaEdge edge, StringView label)

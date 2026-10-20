@@ -2,6 +2,7 @@
 
 #if defined(WITH_EDITOR)
 
+#include "PlayTestDebug.h"
 #include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
 #include "../../Actors/Player.h"
@@ -28,10 +29,18 @@ namespace Jazz2::Editor
 	PlayTestLevelHandler::PlayTestLevelHandler(IRootController* root)
 		: LevelHandler(root)
 	{
+		// Before the level is initialized, it makes the node the objects are under
+		_playTestDebug = std::make_unique<PlayTestDebug>(*this);
 	}
 
 	PlayTestLevelHandler::~PlayTestLevelHandler()
 	{
+#if defined(WITH_AUDIO)
+		// A play-test that isn't kept anymore takes its sounds with it, also the paused ones and those an actor still holds
+		for (auto& sound : _playingSounds) {
+			sound->stop();
+		}
+#endif
 	}
 
 	bool PlayTestLevelHandler::Initialize(const LevelDocument& document, StringView levelName, StringView fullPath, const PlayTestOptions& options)
@@ -45,11 +54,15 @@ namespace Jazz2::Editor
 		LevelInitialization levelInit(levelName, options.Difficulty, PreferencesCache::EnableReforgedGameplay, false, options.Player);
 		bool result = LevelHandler::Initialize(levelInit);
 		_levelData = SmallVector<std::uint8_t, 0>();
-		if (result && _hud != nullptr) {
+		if (!result) {
+			return false;
+		}
+		RetainResources();
+		if (_hud != nullptr) {
 			// The editor reveals the level in its own way, not from black
 			_hud->CancelFadeIn();
 		}
-		return result;
+		return true;
 	}
 
 	LevelHandler& PlayTestLevelHandler::GetLevelHandler()
@@ -78,10 +91,12 @@ namespace Jazz2::Editor
 		if (_music != nullptr) {
 			_music->pause();
 		}
-		for (auto& sound : _playingSounds) {
-			sound->stop();
+		// The sound effects wait for the play-test to go on, as in the pause menu. The music of Sugar Rush ends, the music
+		// of the level comes back instead, as it always did.
+		if (_sugarRushMusic != nullptr) {
+			_sugarRushMusic->stop();
 		}
-		_playingSounds.clear();
+		PauseAllSfx();
 #endif
 	}
 
@@ -91,15 +106,13 @@ namespace Jazz2::Editor
 		if (_music != nullptr && _musicStartDelay == 0) {
 			_music->play();
 		}
+		// Under the pause menu they go on once it's closed
+		if (!IsPausable() || _pauseMenu == nullptr) {
+			ResumeAllSfx();
+		}
 #endif
 		// A resumed run is a new part of the path
 		_playPath.BreakSegment(PlayPath::Break::None);
-	}
-
-	bool PlayTestLevelHandler::CanOpenInEditor() const
-	{
-		// It's in the editor already
-		return false;
 	}
 
 	bool PlayTestLevelHandler::IsEditorPlayTest() const
@@ -124,8 +137,11 @@ namespace Jazz2::Editor
 	{
 		LevelHandler::OnEndFrame();
 
-		if (Actors::Player* player = GetPlayer()) {
-			_playPath.Record(player->GetPos(), player->GetSpeed().Length(), theApplication().GetTimeMult());
+		// By the time of the level, which stands still while it's paused, see PlayTestDebug
+		float timeMult = GetLevelTimeMult();
+		Actors::Player* player = GetPlayer();
+		if (player != nullptr && timeMult > 0.0f) {
+			_playPath.Record(player->GetPos(), player->GetSpeed().Length(), timeMult);
 		}
 	}
 
@@ -161,7 +177,7 @@ namespace Jazz2::Editor
 	void PlayTestLevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
 	{
 		Vector2f spawnPosition;
-		if (!_options.HasSpawnPosition || !FindSpawnPositionNear(_tileMap.get(), _options.SpawnPosition, 160.0f, spawnPosition)) {
+		if (!_options.HasSpawnPosition || !_playTestDebug->FindClearPlayerPosition(_options.SpawnPosition, 160.0f, spawnPosition)) {
 			_spawnFellBack = _options.HasSpawnPosition;
 			LevelHandler::SpawnPlayers(levelInit);
 			return;

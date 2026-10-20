@@ -76,9 +76,10 @@ extern "C"
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
+#include <Utf8.h>
 
 #if defined(DEATH_TARGET_WINDOWS)
-#	include <Utf8.h>
+	// Nothing more, but not <unistd.h> below either
 #elif defined(DEATH_TARGET_ANDROID)
 #	include "Backends/Android/AndroidJniHelper.h"
 #elif defined(DEATH_TARGET_SWITCH)
@@ -1310,7 +1311,7 @@ namespace nCine
 		InitializeTrace();
 #endif
 
-		_appEventHandler = std::move(appEventHandler);
+		_appEventHandler = Death::move(appEventHandler);
 		_appEventHandler->OnPreInitialize(_appCfg);
 		LOGB("IAppEventHandler::OnPreInitialize() invoked");
 
@@ -2752,7 +2753,7 @@ namespace nCine
 
 			// The sink appends to the history up to this store and writes to the file from it on, with the
 			// history closed only afterwards - in that order, so that no entry falls in between the two
-			__logFileOwner = std::move(logFile);
+			__logFileOwner = Death::move(logFile);
 			__logFile.store(__logFileOwner.get(), std::memory_order_release);
 			DiscardLogHistory();
 
@@ -3253,11 +3254,8 @@ namespace nCine
 			std::int64_t available = ms.GetSize() - ms.GetPosition() - reserve - 4;
 			std::int64_t length = (std::int64_t)value.size();
 			if (length > available) {
-				length = (available > 0 ? available : 0);
 				// Don't cut in the middle of a multi-byte UTF-8 sequence
-				while (length > 0 && (value[length] & 0xC0) == 0x80) {
-					length--;
-				}
+				length = (std::int64_t)Death::Utf8::FitPrefix(value, std::size_t(available > 0 ? available : 0));
 			}
 
 			MetadataStringEncoding encoding = MetadataStringEncoding::Raw;

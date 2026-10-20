@@ -21,23 +21,23 @@ namespace Jazz2::Editor
 	}
 
 	UiRadialMenu::UiRadialMenu(SmallVectorImpl<UiMenuEntry>&& entries, Vector2f center)
-		: _entries(std::move(entries)), _center(center), _selected(-1), _appear(0.0f), _radius(0.0f), _itemRadius(0.0f)
+		: _entries(Death::move(entries)), _center(center), _selected(-1), _appear(0.0f), _radius(0.0f), _itemRadius(0.0f)
 	{
 	}
 
 	UiRadialMenu* UiRadialMenu::Show(UiSurface& surface, Vector2f center, SmallVectorImpl<UiMenuEntry>&& entries, Function<void()>&& onClosed)
 	{
-		auto menu = std::make_unique<UiRadialMenu>(std::move(entries), center);
+		auto menu = std::make_unique<UiRadialMenu>(Death::move(entries), center);
 		UiRadialMenu* menuPtr = menu.get();
 		UiOverlayOptions options;
-		options.OnClosed = std::move(onClosed);
+		options.OnClosed = Death::move(onClosed);
 		// It covers the screen, a tap anywhere outside of its items closes it
 		options.Position = Vector2f(0.0f, 0.0f);
 		options.Modal = true;
 		options.CloseOnOutsideClick = false;
 		// The stick points at an item, the cursor would only cover the name in the middle
 		options.HidesVirtualCursor = true;
-		surface.PushOverlay(std::move(menu), std::move(options));
+		surface.PushOverlay(Death::move(menu), Death::move(options));
 		return menuPtr;
 	}
 
@@ -68,7 +68,12 @@ namespace Jazz2::Editor
 	std::int32_t UiRadialMenu::GetItemAt(Vector2f pos)
 	{
 		Vector2f offset = pos - _center;
-		if (offset.Length() < _radius * 0.45f || _entries.empty()) {
+		if (_radius <= 0.0f || offset.Length() < _radius * 0.45f || _entries.empty()) {
+			return -1;
+		}
+		// A finger slid out of the middle picks by its direction however far it went, a tap only on the ring, a tap
+		// farther away closes the menu
+		if (!_pressFromCenter && offset.Length() > _radius + _itemRadius * 1.6f) {
 			return -1;
 		}
 		// The item whose direction is the closest, the ring is split evenly among them
@@ -88,7 +93,7 @@ namespace Jazz2::Editor
 	{
 		Function<void()> execute;
 		if (_selected >= 0 && _selected < std::int32_t(_entries.size())) {
-			execute = std::move(_entries[_selected].Execute);
+			execute = Death::move(_entries[_selected].Execute);
 		}
 		if (UiSurface* surface = GetSurface()) {
 			surface->CloseOverlay(this);
@@ -145,13 +150,14 @@ namespace Jazz2::Editor
 
 	void UiRadialMenu::Update(float timeMult)
 	{
-		_appear = std::min(_appear + timeMult / AppearFrames, 1.0f);
+		_appear = std::min(_appear + UiTheme::GetAnimationStep(timeMult, AppearFrames), 1.0f);
 		UiElement::Update(timeMult);
 	}
 
 	UiElement* UiRadialMenu::HitTest(Vector2f pos)
 	{
-		return (Bounds.Contains(pos) ? this : nullptr);
+		// It covers the screen, also in the frame it was opened in, before it's laid out
+		return this;
 	}
 
 	bool UiRadialMenu::AcceptsPointer() const
@@ -161,6 +167,10 @@ namespace Jazz2::Editor
 
 	bool UiRadialMenu::OnPointerDown(const UiPointerEvent& event)
 	{
+		// The finger that held still to open it may stay down and slide to an item, let go there it picks it
+		// Pressed by the finger that opened it before it was even laid out, that's in its middle
+		_pressFromCenter = (_radius <= 0.0f || (event.Pos - _center).Length() < _radius * 0.45f);
+		_movedOut = !_pressFromCenter;
 		_selected = GetItemAt(event.Pos);
 		return true;
 	}
@@ -168,11 +178,18 @@ namespace Jazz2::Editor
 	void UiRadialMenu::OnPointerMove(const UiPointerEvent& event)
 	{
 		_selected = GetItemAt(event.Pos);
+		if ((event.Pos - _center).Length() >= _radius * 0.45f) {
+			_movedOut = true;
+		}
 	}
 
 	void UiRadialMenu::OnPointerUp(const UiPointerEvent& event, bool inside)
 	{
 		_selected = GetItemAt(event.Pos);
+		if (_selected < 0 && !_movedOut) {
+			// Let go in the middle without going anywhere, it stays open for a tap
+			return;
+		}
 		Confirm();
 	}
 }

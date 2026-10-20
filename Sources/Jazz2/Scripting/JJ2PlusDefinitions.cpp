@@ -98,6 +98,47 @@ namespace Jazz2::Scripting
 		return !tileMap->IsTileEmpty(aabb, params);
 	}
 
+	// LAYERSPEEDMODEL of JJ2+ for a speed model of the engine, they have other values. NORMAL and BOTHSPEEDS are both
+	// the default model - NORMAL only ignores the speed of a layer that has an auto speed, which the converter does - so
+	// a layer of the default model is NORMAL to a script.
+	static std::int32_t ToScriptSpeedModel(Tiles::LayerSpeedModel model) {
+		switch (model) {
+			case Tiles::LayerSpeedModel::AlwaysOnTop: return 1;			// LAYER8
+			case Tiles::LayerSpeedModel::FromStart: return 3;			// FROMSTART
+			case Tiles::LayerSpeedModel::FitLevel: return 4;			// FITLEVEL
+			case Tiles::LayerSpeedModel::SpeedMultipliers: return 5;	// SPEEDMULTIPLIERS
+			default: return 0;											// NORMAL
+		}
+	}
+
+	static Tiles::LayerSpeedModel FromScriptSpeedModel(std::int32_t model) {
+		switch (model) {
+			case 1: return Tiles::LayerSpeedModel::AlwaysOnTop;
+			case 3: return Tiles::LayerSpeedModel::FromStart;
+			case 4: return Tiles::LayerSpeedModel::FitLevel;
+			case 5: return Tiles::LayerSpeedModel::SpeedMultipliers;
+			default: return Tiles::LayerSpeedModel::Default;
+		}
+	}
+
+	// Where a layer of the level is drawn for the view of a player - the layer coordinate at the top left corner of the
+	// view, as jjLAYER::getXPosition() and getYPosition() of JJ2+ return it, so without the pixel every layer that moves
+	// with the level is drawn higher here (see Tiles::LayerDescription::GetDrawOffsets()). The view is the whole one, the
+	// view of a player in a split screen is smaller.
+	static bool GetLayerPositionInView(LevelHandler* levelHandler, Actors::Player* player, std::int32_t layerIndex, Vector2f& result) {
+		auto tileMap = levelHandler->TileMap();
+		const Tiles::LayerDescription* description = (tileMap != nullptr ? tileMap->GetLayerDescription(layerIndex) : nullptr);
+		if (description == nullptr) {
+			return false;
+		}
+		Vector2f center = levelHandler->GetCameraPos(player);
+		Vector2i viewSize = levelHandler->GetViewSize();
+		Rectf view(center.X - viewSize.X * 0.5f, center.Y - viewSize.Y * 0.5f, float(viewSize.X), float(viewSize.Y));
+		Vector2f origin = tileMap->GetGameplayLayerOrigin(layerIndex, view);
+		result = Vector2f(view.X - origin.X, view.Y - origin.Y - (description->SpeedModelY != Tiles::LayerSpeedModel::AlwaysOnTop ? 1.0f : 0.0f));
+		return true;
+	}
+
 	namespace Legacy
 	{
 		namespace
@@ -246,6 +287,33 @@ namespace Jazz2::Scripting
 				std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? 0 : -1);
 				hud->DrawTexture(*base->TextureDiffuse.get(), pos, z, size, texCoords, color,
 					mode == spriteType_BLENDLIGHTEN, angleRad, paletteOffset);
+			}
+
+			// JJ2+ names a character by its animation set (CHAR::Char), not by a player type - CHAR::BIRD is the set's
+			// own and CHAR::BIRD2 borrows Chuck's. Returns PlayerType::None for a set that isn't a character.
+			static PlayerType CharToPlayerType(std::uint32_t character) {
+				switch (character) {
+					case mJAZZ: return PlayerType::Jazz;
+					case mSPAZ: return PlayerType::Spaz;
+					case mLORI: return PlayerType::Lori;
+					case mFROG: return PlayerType::Frog;
+					case mBIRD: return PlayerType::Bird;
+					case mCHUCK: return PlayerType::Bird2;
+					default: return PlayerType::None;
+				}
+			}
+
+			// The other direction, for what a script reads back
+			static std::uint32_t PlayerTypeToChar(PlayerType playerType) {
+				switch (playerType) {
+					default:
+					case PlayerType::Jazz: return mJAZZ;
+					case PlayerType::Spaz: return mSPAZ;
+					case PlayerType::Lori: return mLORI;
+					case PlayerType::Frog: return mFROG;
+					case PlayerType::Bird: return mBIRD;
+					case PlayerType::Bird2: return mCHUCK;
+				}
 			}
 		}
 
@@ -2239,17 +2307,32 @@ namespace Jazz2::Scripting
 		std::uint32_t jjPLAYER::morphTo(std::uint32_t charNew, bool morphEffect) {
 			noop();
 			// TODO: morphEffect
-			_player->MorphTo((PlayerType)charNew);
-			return (std::uint32_t)_player->_playerType;
+			PlayerType playerType = CharToPlayerType(charNew);
+			// MorphTo() leaves the player as it is if the character's sprites aren't available (the bird in the shareware data)
+			if (playerType != PlayerType::None) {
+				_player->MorphTo(playerType);
+			}
+			return PlayerTypeToChar(_player->_playerType);
 		}
 		std::uint32_t jjPLAYER::revertMorph(bool morphEffect) {
 			noop();
 			// TODO: morphEffect
-			_player->MorphRevert();
-			return (std::uint32_t)_player->_playerType;
+			// JJ2+ reverts to charOrig, the same as a Revert Morph area does
+			_player->MorphTo(_player->_playerTypeOriginal);
+			return PlayerTypeToChar(_player->_playerType);
 		}
 		std::uint32_t jjPLAYER::get_charCurr() const {
-			return (std::uint32_t)_player->_playerType;
+			return PlayerTypeToChar(_player->_playerType);
+		}
+		std::uint32_t jjPLAYER::get_charOrig() const {
+			return PlayerTypeToChar(_player->_playerTypeOriginal);
+		}
+		void jjPLAYER::set_charOrig(std::uint32_t value) {
+			PlayerType playerType = CharToPlayerType(value);
+			// Only a rabbit can be what the player reverts to, a temporary form is never anyone's original character
+			if (playerType == PlayerType::Jazz || playerType == PlayerType::Spaz || playerType == PlayerType::Lori) {
+				_player->_playerTypeOriginal = playerType;
+			}
 		}
 
 		void jjPLAYER::kill() {
@@ -2673,6 +2756,8 @@ namespace Jazz2::Scripting
 			tileHeight = o.tileHeight; tileWidth = o.tileWidth; limitVisibleRegion = o.limitVisibleRegion;
 			hasTileMap = o.hasTileMap; hasTiles = o.hasTiles;
 			SpeedModeX = o.SpeedModeX; SpeedModeY = o.SpeedModeY;
+			// A level layer's proxy doesn't keep the mode itself, it's read off the layer
+			_spriteMode = o.get_spriteMode(); _spriteParam = o._spriteParam;
 			return *this;
 		}
 
@@ -2689,21 +2774,88 @@ namespace Jazz2::Scripting
 			return layer;
 		}
 
+		// How translucent a layer of SPRITE::TRANSLUCENT and SPRITE::TRANSLUCENTPALSHIFT is, as the translucent tiles are
+		static constexpr float TranslucentLayerAlpha = 192.0f / 255.0f;
+
 		std::uint32_t jjLAYER::get_spriteMode() const {
-			noop();
-			return 0;
+			if (_layerIndex < 0) {
+				return _spriteMode;
+			}
+			// The mode of a level layer is what it's drawn as
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto tileMap = owner->GetLevelHandler()->TileMap();
+			const Tiles::LayerDescription* description = (tileMap != nullptr ? tileMap->GetLayerDescription(_layerIndex) : nullptr);
+			if (description == nullptr) {
+				return spriteType_NORMAL;
+			}
+			const bool translucent = (description->Color.W < 1.0f);
+			switch (description->RendererType) {
+				// SPRITE::INVISIBLE is converted to an ordinary layer of no alpha
+				case Tiles::LayerRendererType::Default: return (description->Color.W <= 0.0f ? spriteType_INVISIBLE : (translucent ? spriteType_TRANSLUCENT : spriteType_NORMAL));
+				case Tiles::LayerRendererType::Tinted: return spriteType_TINTED;
+				case Tiles::LayerRendererType::PaletteShift: return (translucent ? spriteType_TRANSLUCENTPALSHIFT : spriteType_PALSHIFT);
+				default: return spriteType_NORMAL;
+			}
 		}
 		std::uint32_t jjLAYER::set_spriteMode(std::uint32_t value) const {
-			noop();
-			return 0;
+			jjLAYER* self = const_cast<jjLAYER*>(this);
+			if (_layerIndex < 0) {
+				self->_spriteMode = value;
+				return value;
+			}
+
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto tileMap = owner->GetLevelHandler()->TileMap();
+			const Tiles::LayerDescription* current = (tileMap != nullptr ? tileMap->GetLayerDescription(_layerIndex) : nullptr);
+			if (current == nullptr) {
+				return value;
+			}
+
+			// Only a layer drawn as tiles takes a mode. The others (textured backgrounds, x-ray, blur behind) are drawn by
+			// renderers of their own that read the color their own way, so a mode would turn them into plain tiles.
+			if (current->RendererType != Tiles::LayerRendererType::Default && current->RendererType != Tiles::LayerRendererType::Tinted &&
+				current->RendererType != Tiles::LayerRendererType::PaletteShift) {
+				LOGW("Sprite mode {} isn't supported for layer {}, it isn't drawn as tiles", value, _layerIndex);
+				return value;
+			}
+
+			// The modes a layer can be drawn with, the rest of them aren't supported for layers
+			Tiles::LayerDescription description = *current;
+			const float param = _spriteParam / 255.0f;
+			switch (value) {
+				case spriteType_NORMAL: description.RendererType = Tiles::LayerRendererType::Default; description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f); break;
+				case spriteType_TRANSLUCENT: description.RendererType = Tiles::LayerRendererType::Default; description.Color = Vector4f(1.0f, 1.0f, 1.0f, TranslucentLayerAlpha); break;
+				case spriteType_INVISIBLE: description.RendererType = Tiles::LayerRendererType::Default; description.Color = Vector4f(1.0f, 1.0f, 1.0f, 0.0f); break;
+				case spriteType_TINTED: description.RendererType = Tiles::LayerRendererType::Tinted; description.Color = Vector4f(param, 0.0f, 0.0f, 1.0f); break;
+				case spriteType_PALSHIFT: description.RendererType = Tiles::LayerRendererType::PaletteShift; description.Color = Vector4f(param, 1.0f, 1.0f, 1.0f); break;
+				case spriteType_TRANSLUCENTPALSHIFT: description.RendererType = Tiles::LayerRendererType::PaletteShift; description.Color = Vector4f(param, 1.0f, 1.0f, TranslucentLayerAlpha); break;
+				default:
+					LOGW("Sprite mode {} isn't supported for layers", value);
+					return value;
+			}
+			tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+			return value;
 		}
 		std::uint8_t jjLAYER::get_spriteParam() const {
-			noop();
-			return 0;
+			return _spriteParam;
 		}
 		std::uint8_t jjLAYER::set_spriteParam(std::uint8_t value) const {
-			noop();
-			return 0;
+			jjLAYER* self = const_cast<jjLAYER*>(this);
+			self->_spriteParam = value;
+			if (_layerIndex < 0) {
+				return value;
+			}
+
+			// Only the modes with a parameter take it right away, the others when they're switched to one of them
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto tileMap = owner->GetLevelHandler()->TileMap();
+			const Tiles::LayerDescription* current = (tileMap != nullptr ? tileMap->GetLayerDescription(_layerIndex) : nullptr);
+			if (current != nullptr && (current->RendererType == Tiles::LayerRendererType::Tinted || current->RendererType == Tiles::LayerRendererType::PaletteShift)) {
+				Tiles::LayerDescription description = *current;
+				description.Color.X = value / 255.0f;
+				tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+			}
+			return value;
 		}
 
 		void jjLAYER::setXSpeed(float newspeed, bool newSpeedIsAnAutoSpeed) const {
@@ -2724,16 +2876,23 @@ namespace Jazz2::Scripting
 			}
 		}
 		float jjLAYER::getXPosition(const jjPLAYER* play) const {
-			// Approximate the layer's scrolled pixel position: parallax = camera * speed, plus the static offset.
-			// (Auto-speed accumulation is tracked inside the engine and isn't reflected here.)
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			Actors::Player* player = (play != nullptr ? play->_player : nullptr);
+			Vector2f position;
+			if (GetLayerPositionInView(owner->GetLevelHandler(), player, _layerIndex, position)) {
+				return position.X;
+			}
+			// A layer that isn't part of the level is approximated by its parallax and its offset alone
 			float cameraX = owner->GetLevelHandler()->GetCameraPos(player).X;
 			return cameraX * xSpeed + xOffset;
 		}
 		float jjLAYER::getYPosition(const jjPLAYER* play) const {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			Actors::Player* player = (play != nullptr ? play->_player : nullptr);
+			Vector2f position;
+			if (GetLayerPositionInView(owner->GetLevelHandler(), player, _layerIndex, position)) {
+				return position.Y;
+			}
 			float cameraY = owner->GetLevelHandler()->GetCameraPos(player).Y;
 			return cameraY * ySpeed + yOffset;
 		}
@@ -3740,10 +3899,13 @@ namespace Jazz2::Scripting
 			layer->yOffset = layer->_syncedOffsetY = src.Description.OffsetY;
 			layer->tileWidth = src.Description.RepeatX;
 			layer->tileHeight = src.Description.RepeatY;
-			layer->SpeedModeX = (std::int32_t)src.Description.SpeedModelX;
-			layer->SpeedModeY = (std::int32_t)src.Description.SpeedModelY;
+			layer->SpeedModeX = ToScriptSpeedModel(src.Description.SpeedModelX);
+			layer->SpeedModeY = ToScriptSpeedModel(src.Description.SpeedModelY);
 			layer->hasTileMap = true;
 			layer->hasTiles = !src.Layout.empty();
+			if (src.Description.RendererType == Tiles::LayerRendererType::Tinted || src.Description.RendererType == Tiles::LayerRendererType::PaletteShift) {
+				layer->_spriteParam = std::uint8_t(src.Description.Color.X * 255.0f + 0.5f);
+			}
 
 			_layerProxies.emplace(index, layer);
 			// The map keeps one reference; AddRef again below for the one we hand to the script
@@ -3776,8 +3938,8 @@ namespace Jazz2::Scripting
 			desc.AutoSpeedY = layer->yAutoSpeed;
 			desc.RepeatX = layer->tileWidth;
 			desc.RepeatY = layer->tileHeight;
-			desc.SpeedModelX = (Tiles::LayerSpeedModel)layer->SpeedModeX;
-			desc.SpeedModelY = (Tiles::LayerSpeedModel)layer->SpeedModeY;
+			desc.SpeedModelX = FromScriptSpeedModel(layer->SpeedModeX);
+			desc.SpeedModelY = FromScriptSpeedModel(layer->SpeedModeY);
 
 			// The engine advances OffsetX/Y itself for auto-scrolling layers (TileMap::OnUpdate), so only push when the
 			// script actually changed the proxy; otherwise pull the engine's current value so reads stay live
@@ -3818,12 +3980,12 @@ namespace Jazz2::Scripting
 			String path = String("Animations/"_s) + entry->Category + '/' + entry->Name + ".wav"_s;
 			auto stream = ContentResolver::Get().OpenContentFile(path);
 			if (stream->IsValid()) {
-				buffer = std::make_unique<AudioBuffer>(std::move(stream), path);
+				buffer = std::make_unique<AudioBuffer>(Death::move(stream), path);
 			}
 		}
 
 		AudioBuffer* result = buffer.get();
-		_scriptSamples.emplace(sampleId, std::move(buffer));
+		_scriptSamples.emplace(sampleId, Death::move(buffer));
 		return result;
 #else
 		return nullptr;
@@ -3874,13 +4036,13 @@ namespace Jazz2::Scripting
 		if (stream == nullptr || !stream->IsValid()) {
 			return false;
 		}
-		auto buffer = std::make_unique<AudioBuffer>(std::move(stream), path);
+		auto buffer = std::make_unique<AudioBuffer>(Death::move(stream), path);
 
 		auto it = _scriptSamples.find(sampleId);
 		if (it != _scriptSamples.end()) {
-			it->second = std::move(buffer);
+			it->second = Death::move(buffer);
 		} else {
-			_scriptSamples.emplace(sampleId, std::move(buffer));
+			_scriptSamples.emplace(sampleId, Death::move(buffer));
 		}
 		return true;
 #else

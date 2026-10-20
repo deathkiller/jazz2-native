@@ -3,6 +3,10 @@
 #if defined(WITH_EDITOR)
 
 #include "../../../Main.h"
+#include "../Files/AtomicFile.h"
+#include "../Files/JsonAccess.h"
+#include "../Files/JsonFile.h"
+
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
 
@@ -19,6 +23,12 @@ namespace Jazz2::Editor
 	{
 		StringView GetKeyName(Keys key)
 		{
+			// The side buttons of a mouse are past all keys, they're not in the switch
+			if (key == Shortcut::Mouse4) {
+				return "Mouse 4"_s;
+			} else if (key == Shortcut::Mouse5) {
+				return "Mouse 5"_s;
+			}
 			switch (key) {
 				case Keys::A: return "A"_s; case Keys::B: return "B"_s; case Keys::C: return "C"_s; case Keys::D: return "D"_s;
 				case Keys::E: return "E"_s; case Keys::F: return "F"_s; case Keys::G: return "G"_s; case Keys::H: return "H"_s;
@@ -30,12 +40,18 @@ namespace Jazz2::Editor
 				case Keys::D0: return "0"_s; case Keys::D1: return "1"_s; case Keys::D2: return "2"_s; case Keys::D3: return "3"_s;
 				case Keys::D4: return "4"_s; case Keys::D5: return "5"_s; case Keys::D6: return "6"_s; case Keys::D7: return "7"_s;
 				case Keys::D8: return "8"_s; case Keys::D9: return "9"_s;
+				// The keys of the numeric keypad are keys of their own, they can be given to other actions than the digits
+				case Keys::NumPad0: return "Num 0"_s; case Keys::NumPad1: return "Num 1"_s; case Keys::NumPad2: return "Num 2"_s;
+				case Keys::NumPad3: return "Num 3"_s; case Keys::NumPad4: return "Num 4"_s; case Keys::NumPad5: return "Num 5"_s;
+				case Keys::NumPad6: return "Num 6"_s; case Keys::NumPad7: return "Num 7"_s; case Keys::NumPad8: return "Num 8"_s;
+				case Keys::NumPad9: return "Num 9"_s;
+				case Keys::NumPadPeriod: return "Num ."_s; case Keys::NumPadDivide: return "Num /"_s; case Keys::NumPadMultiply: return "Num *"_s;
 				case Keys::F1: return "F1"_s; case Keys::F2: return "F2"_s; case Keys::F3: return "F3"_s; case Keys::F4: return "F4"_s;
 				case Keys::F5: return "F5"_s; case Keys::F6: return "F6"_s; case Keys::F7: return "F7"_s; case Keys::F8: return "F8"_s;
 				case Keys::F9: return "F9"_s; case Keys::F10: return "F10"_s; case Keys::F11: return "F11"_s; case Keys::F12: return "F12"_s;
 				case Keys::Delete: return "Del"_s;
 				case Keys::Backspace: return "Backspace"_s;
-				case Keys::Return: return "Enter"_s;
+				case Keys::Return: case Keys::NumPadEnter: return "Enter"_s;
 				case Keys::Escape: return "Esc"_s;
 				case Keys::Space: return "Space"_s;
 				case Keys::Tab: return "Tab"_s;
@@ -53,7 +69,8 @@ namespace Jazz2::Editor
 			}
 		}
 
-		// Keys that type the same character are the same key for a shortcut
+		// Plus, minus and Enter of the numeric keypad are the same keys for a shortcut as the others, there's a shortcut
+		// of only one of each; its digits are keys of their own, each of them can be given to an action, see GetKeyName()
 		bool AreSameKey(Keys a, Keys b)
 		{
 			auto normalize = [](Keys key) {
@@ -61,7 +78,6 @@ namespace Jazz2::Editor
 					case Keys::Equals: case Keys::NumPadPlus: return Keys::Plus;
 					case Keys::NumPadMinus: return Keys::Minus;
 					case Keys::NumPadEnter: return Keys::Return;
-					case Keys::NumPad0: return Keys::D0;
 					default: return key;
 				}
 			};
@@ -69,22 +85,114 @@ namespace Jazz2::Editor
 		}
 	}
 
+	Shortcut Shortcut::FromEvent(const KeyboardEvent& event)
+	{
+		Shortcut shortcut;
+		shortcut.Key = event.sym;
+		if ((event.mod & KeyMod::Ctrl) != 0) {
+			shortcut.Modifiers |= KeyMod::Ctrl;
+		}
+#if defined(DEATH_TARGET_APPLE)
+		// Cmd is what Ctrl is elsewhere
+		if ((event.mod & KeyMod::Super) != 0) {
+			shortcut.Modifiers |= KeyMod::Ctrl;
+		}
+#endif
+		if ((event.mod & KeyMod::Shift) != 0) {
+			shortcut.Modifiers |= KeyMod::Shift;
+		}
+		if ((event.mod & KeyMod::Alt) != 0) {
+			shortcut.Modifiers |= KeyMod::Alt;
+		}
+		return shortcut;
+	}
+
+	Keys Shortcut::GetMouseButtonKey(MouseButton button)
+	{
+		switch (button) {
+			case MouseButton::Fourth: return Mouse4;
+			case MouseButton::Fifth: return Mouse5;
+			default: return Keys::Unknown;
+		}
+	}
+
+	bool Shortcut::Parse(StringView text, Shortcut& result)
+	{
+		struct Prefix { StringView Text; std::int32_t Modifier; };
+		static const Prefix Prefixes[] = {
+			{ "Ctrl+"_s, KeyMod::Ctrl }, { "Cmd+"_s, KeyMod::Ctrl }, { "Shift+"_s, KeyMod::Shift }, { "Alt+"_s, KeyMod::Alt }
+		};
+
+		// Small and capital letters are the same, "ctrl+s" is typed into a search too
+		auto equalsIgnoreCase = [](StringView a, StringView b) {
+			if (a.size() != b.size()) {
+				return false;
+			}
+			for (std::size_t i = 0; i < a.size(); i++) {
+				char ca = (a[i] >= 'A' && a[i] <= 'Z' ? char(a[i] - 'A' + 'a') : a[i]);
+				char cb = (b[i] >= 'A' && b[i] <= 'Z' ? char(b[i] - 'A' + 'a') : b[i]);
+				if (ca != cb) {
+					return false;
+				}
+			}
+			return true;
+		};
+
+		std::int32_t modifiers = 0;
+		StringView rest = text.trimmed();
+		bool found = true;
+		while (found) {
+			found = false;
+			for (const Prefix& prefix : Prefixes) {
+				// "Ctrl++" is Ctrl with the plus key, a prefix is only taken while something is left after it
+				if (rest.size() > prefix.Text.size() && equalsIgnoreCase(rest.prefix(prefix.Text.size()), prefix.Text)) {
+					modifiers |= prefix.Modifier;
+					rest = rest.exceptPrefix(prefix.Text.size());
+					found = true;
+					break;
+				}
+			}
+		}
+		if (rest.empty()) {
+			return false;
+		}
+		for (std::int32_t i = 0; i < std::int32_t(Keys::Count); i++) {
+			if (equalsIgnoreCase(GetKeyName(Keys(i)), rest)) {
+				result.Key = Keys(i);
+				result.Modifiers = modifiers;
+				return true;
+			}
+		}
+		for (Keys key : { Mouse4, Mouse5 }) {
+			if (equalsIgnoreCase(GetKeyName(key), rest)) {
+				result.Key = key;
+				result.Modifiers = modifiers;
+				return true;
+			}
+		}
+		return false;
+	}
+
 	bool Shortcut::Matches(const KeyboardEvent& event) const
 	{
 		if (Key == Keys::Unknown || !AreSameKey(Key, event.sym)) {
 			return false;
 		}
-		std::int32_t mod = 0;
-		if ((event.mod & KeyMod::Ctrl) != 0) {
-			mod |= KeyMod::Ctrl;
+#if !defined(DEATH_TARGET_APPLE)
+		// A key pressed with the system key is meant for the system, Win+S isn't S
+		if ((event.mod & KeyMod::Super) != 0) {
+			return false;
 		}
-		if ((event.mod & KeyMod::Shift) != 0) {
-			mod |= KeyMod::Shift;
+#endif
+		return (FromEvent(event).Modifiers == Modifiers);
+	}
+
+	bool Shortcut::IsSameAs(const Shortcut& other) const
+	{
+		if (Key == Keys::Unknown || other.Key == Keys::Unknown) {
+			return (Key == other.Key);
 		}
-		if ((event.mod & KeyMod::Alt) != 0) {
-			mod |= KeyMod::Alt;
-		}
-		return (mod == Modifiers);
+		return (AreSameKey(Key, other.Key) && Modifiers == other.Modifiers);
 	}
 
 	String Shortcut::ToString() const
@@ -95,7 +203,11 @@ namespace Jazz2::Editor
 		}
 		String result;
 		if ((Modifiers & KeyMod::Ctrl) != 0) {
+#if defined(DEATH_TARGET_APPLE)
+			result += "Cmd+"_s;
+#else
 			result += "Ctrl+"_s;
+#endif
 		}
 		if ((Modifiers & KeyMod::Shift) != 0) {
 			result += "Shift+"_s;
@@ -124,7 +236,7 @@ namespace Jazz2::Editor
 		action->Id = id;
 		action->Label = label;
 		action->Icon = icon;
-		action->Execute = std::move(execute);
+		action->Execute = Death::move(execute);
 		return *action;
 	}
 
@@ -135,6 +247,26 @@ namespace Jazz2::Editor
 				return action.get();
 			}
 		}
+#if !defined(WITH_MULTIPLAYER)
+		// The menus ask for the game modes and the reachability without multiplayer too, they're just left out then
+		if (id.hasPrefix("play."_s)) {
+			StringView mode = id.exceptPrefix("play."_s);
+			if (mode.hasPrefix("players"_s) || mode == "alone"_s || mode == "cooperation"_s || mode == "battle"_s ||
+				mode == "teamBattle"_s || mode == "race"_s || mode == "treasureHunt"_s || mode == "captureTheFlag"_s) {
+				return nullptr;
+			}
+		} else if (id.hasPrefix("view.reach"_s)) {
+			return nullptr;
+		}
+#endif
+		// A typo in an identifier would only leave a menu item or a button out, so it's said once
+		for (const String& missing : _missingIds) {
+			if (missing == id) {
+				return nullptr;
+			}
+		}
+		_missingIds.emplace_back(id);
+		LOGW("Editor action \"{}\" doesn't exist", id);
 		return nullptr;
 	}
 
@@ -154,89 +286,388 @@ namespace Jazz2::Editor
 			return nullptr;
 		}
 		for (auto& action : _actions) {
-			if (action.get() != except && ((AreSameKey(action->Key.Key, shortcut.Key) && action->Key.Modifiers == shortcut.Modifiers) ||
-				(AreSameKey(action->AlternateKey.Key, shortcut.Key) && action->AlternateKey.Modifiers == shortcut.Modifiers))) {
+			if (action.get() == except || (except != nullptr && !ScopesOverlap(action->Scope, except->Scope))) {
+				continue;
+			}
+			if (action->Key.IsSameAs(shortcut) || action->AlternateKey.IsSameAs(shortcut)) {
 				return action.get();
 			}
 		}
 		return nullptr;
 	}
 
+	bool ActionRegistry::HasConflict(const EditorAction& action) const
+	{
+		for (const auto& other : _actions) {
+			// The key of an action of the game and one of the editor are never pressed for both
+			if (other.get() == &action || !ScopesOverlap(other->Scope, action.Scope)) {
+				continue;
+			}
+			for (const Shortcut* shortcut : { &action.Key, &action.AlternateKey }) {
+				if (shortcut->Key != Keys::Unknown && (other->Key.IsSameAs(*shortcut) || other->AlternateKey.IsSameAs(*shortcut))) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	void ActionRegistry::CaptureDefaults()
 	{
 		for (auto& action : _actions) {
 			action->DefaultKey = action->Key;
+			action->DefaultAlternateKey = action->AlternateKey;
 		}
 	}
 
-	void ActionRegistry::LoadOverrides(StringView path)
+	void ActionRegistry::ResetToDefaults()
 	{
-		auto s = fs::Open(path, FileAccess::Read);
-		std::int64_t size = (s->IsValid() ? s->GetSize() : 0);
-		if (size <= 0 || size > 1024 * 1024) {
-			return;
+		for (auto& action : _actions) {
+			action->Key = action->DefaultKey;
+			action->AlternateKey = action->DefaultAlternateKey;
 		}
-		std::unique_ptr<char[]> buffer = std::make_unique<char[]>(std::size_t(size));
-		s->Read(buffer.get(), size);
+	}
 
-		Json::CharReaderBuilder builder;
-		auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
-		Json::Value doc; std::string errors;
-		if (!reader->parse(buffer.get(), buffer.get() + size, &doc, &errors) || !doc.isObject()) {
-			LOGW("Editor shortcuts cannot be read: {}", errors.c_str());
-			return;
+	namespace
+	{
+		// Reads a shortcut as the file has it: text, null for none, or the [key, modifiers] numbers of older versions,
+		// returns false if it can't be read
+		bool ReadShortcut(const Json::Value& value, Shortcut& result)
+		{
+			if (value.isNull()) {
+				result = Shortcut();
+				return true;
+			}
+			if (value.isString()) {
+				return Shortcut::Parse(JsonAccess::ToString(value), result);
+			}
+			if (value.isArray() && value.size() == 2) {
+				// The number of a key changes when a key is added to the list, it's only taken if it still has a name
+				std::int32_t key = JsonAccess::ToInt(value[0], -1);
+				std::int32_t modifiers = JsonAccess::ToInt(value[1], -1);
+				if (key < 0 || key >= std::int32_t(Keys::Count) || modifiers < 0 || GetKeyName(Keys(key)).empty()) {
+					return false;
+				}
+				result.Key = Keys(key);
+				result.Modifiers = modifiers & (KeyMod::Ctrl | KeyMod::Shift | KeyMod::Alt);
+				return true;
+			}
+			return false;
+		}
+
+		Json::Value WriteShortcut(const Shortcut& shortcut)
+		{
+			String text = shortcut.ToString();
+			if (shortcut.Key == Keys::Unknown || text.empty()) {
+				return Json::Value(Json::nullValue);
+			}
+			return Json::Value(std::string(text.data(), text.size()));
+		}
+	}
+
+	bool ActionRegistry::LoadOverrides(StringView path)
+	{
+		Json::Value doc;
+		if (JsonFile::Read(path, doc, 1024 * 1024, "Editor shortcuts"_s) != JsonFile::ReadResult::Ok) {
+			return false;
 		}
 		for (auto& action : _actions) {
-			const Json::Value& value = doc[std::string(action->Id.data(), action->Id.size())];
-			if (value.isNull() && !doc.isMember(std::string(action->Id.data(), action->Id.size()))) {
+			std::string id(action->Id.data(), action->Id.size());
+			if (!doc.isMember(id)) {
 				continue;
 			}
-			if (value.isArray() && value.size() == 2 && value[0].isInt() && value[1].isInt()) {
-				action->Key.Key = Keys(value[0].asInt());
-				action->Key.Modifiers = value[1].asInt() & (KeyMod::Ctrl | KeyMod::Shift | KeyMod::Alt);
+			const Json::Value& value = JsonAccess::Member(doc, id.c_str());
+			if (value.isObject()) {
+				// Both shortcuts, each may be missing, it keeps its default then
+				const Json::Value& key = JsonAccess::Member(value, "Key");
+				if (!key.isNull() || value.isMember("Key")) {
+					Shortcut shortcut;
+					if (ReadShortcut(key, shortcut)) {
+						action->Key = shortcut;
+					} else {
+						LOGW("Editor shortcut of \"{}\" cannot be read", action->Id);
+					}
+				}
+				const Json::Value& alternate = JsonAccess::Member(value, "Alternate");
+				if (!alternate.isNull() || value.isMember("Alternate")) {
+					Shortcut shortcut;
+					if (ReadShortcut(alternate, shortcut)) {
+						action->AlternateKey = shortcut;
+					} else {
+						LOGW("Editor shortcut of \"{}\" cannot be read", action->Id);
+					}
+				}
+				continue;
+			}
+			Shortcut shortcut;
+			if (ReadShortcut(value, shortcut)) {
+				action->Key = shortcut;
 			} else {
-				// No shortcut at all
-				action->Key = Shortcut();
+				LOGW("Editor shortcut of \"{}\" cannot be read", action->Id);
 			}
 		}
+		return true;
 	}
 
 	bool ActionRegistry::SaveOverrides(StringView path) const
 	{
-		Json::Value doc(Json::objectValue);
+		return WriteKeymap(path, false);
+	}
+
+	bool ActionRegistry::ExportKeymap(StringView path) const
+	{
+		return WriteKeymap(path, true);
+	}
+
+	bool ActionRegistry::ImportKeymap(StringView path)
+	{
+		// Read into a copy first, a file that can't be read leaves the shortcuts as they were
+		SmallVector<std::pair<Shortcut, Shortcut>, 0> before;
 		for (const auto& action : _actions) {
-			if (action->Key.Key == action->DefaultKey.Key && action->Key.Modifiers == action->DefaultKey.Modifiers) {
+			before.push_back({ action->Key, action->AlternateKey });
+		}
+		ResetToDefaults();
+		if (!LoadOverrides(path)) {
+			for (std::size_t i = 0; i < _actions.size(); i++) {
+				_actions[i]->Key = before[i].first;
+				_actions[i]->AlternateKey = before[i].second;
+			}
+			return false;
+		}
+		return true;
+	}
+
+	void ActionRegistry::ApplyPreset(KeymapPreset preset, SmallVectorImpl<String>* cleared)
+	{
+		struct Binding { const char* Id; Keys Key; std::int32_t Modifiers; };
+		// Like Jazz Creation Station: F flips a tile horizontally and I vertically. The eyedropper leaves I, Alt picks
+		// with any tool anyway. The number keys choose the layers as they do by default.
+		static const Binding JcsBindings[] = {
+			{ ActionIds::StampFlipX, Keys::F, 0 }, { ActionIds::StampFlipY, Keys::I, 0 }, { ActionIds::ToolEyedropper, Keys::Unknown, 0 },
+		};
+		// Like the Multi-Layer Level Editor: as JCS, R rotates the stamp where the editor offers it, the rectangle moves to Shift+R
+		static const Binding MlleBindings[] = {
+			{ ActionIds::StampRotate, Keys::R, 0 }, { ActionIds::ToolRectangle, Keys::R, KeyMod::Shift },
+		};
+
+		ResetToDefaults();
+		auto apply = [this, cleared](const Binding* bindings, std::size_t count) {
+			for (std::size_t i = 0; i < count; i++) {
+				EditorAction* action = Find(StringView(bindings[i].Id));
+				if (action == nullptr) {
+					continue;
+				}
+				Shortcut shortcut;
+				shortcut.Key = bindings[i].Key;
+				shortcut.Modifiers = bindings[i].Modifiers;
+				if (shortcut.Key != Keys::Unknown) {
+					// Whatever had the key before is left without it, as when a shortcut is changed by hand
+					while (EditorAction* other = FindByShortcut(shortcut, action)) {
+						if (other->Key.IsSameAs(shortcut)) {
+							other->Key = Shortcut();
+						}
+						if (other->AlternateKey.IsSameAs(shortcut)) {
+							other->AlternateKey = Shortcut();
+						}
+						if (cleared != nullptr) {
+							cleared->push_back(other->Label);
+						}
+					}
+				}
+				action->Key = shortcut;
+			}
+		};
+		if (preset == KeymapPreset::Jcs || preset == KeymapPreset::Mlle) {
+			apply(JcsBindings, sizeof(JcsBindings) / sizeof(JcsBindings[0]));
+		}
+		if (preset == KeymapPreset::Mlle) {
+			apply(MlleBindings, sizeof(MlleBindings) / sizeof(MlleBindings[0]));
+		}
+	}
+
+	std::int32_t ActionRegistry::SelfTest()
+	{
+		std::int32_t problems = 0;
+
+		// Shortcuts written as text are read back the same, in any case of the letters
+		struct ParseCase { const char* Text; Keys Key; std::int32_t Modifiers; };
+		static const ParseCase Cases[] = {
+			{ "Ctrl+S", Keys::S, KeyMod::Ctrl }, { "ctrl+shift+z", Keys::Z, KeyMod::Ctrl | KeyMod::Shift }, { "Ctrl++", Keys::Plus, KeyMod::Ctrl },
+			{ "F5", Keys::F5, 0 }, { "Alt+F5", Keys::F5, KeyMod::Alt }, { "Cmd+O", Keys::O, KeyMod::Ctrl }, { "PgDn", Keys::PageDown, 0 },
+			{ "Num 0", Keys::NumPad0, 0 }, { "ctrl+num 7", Keys::NumPad7, KeyMod::Ctrl }, { "Num *", Keys::NumPadMultiply, 0 },
+			{ "Mouse 4", Shortcut::Mouse4, 0 }, { "ctrl+mouse 5", Shortcut::Mouse5, KeyMod::Ctrl },
+		};
+		for (const ParseCase& c : Cases) {
+			Shortcut shortcut;
+			if (!Shortcut::Parse(StringView(c.Text), shortcut) || shortcut.Key != c.Key || shortcut.Modifiers != c.Modifiers) {
+				LOGE("Shortcut \"{}\" isn't read right", c.Text);
+				problems++;
 				continue;
 			}
+			Shortcut again;
+			if (!Shortcut::Parse(shortcut.ToString(), again) || !again.IsSameAs(shortcut)) {
+				LOGE("Shortcut \"{}\" isn't written so it can be read again", c.Text);
+				problems++;
+			}
+		}
+		for (const char* bad : { "", "Ctrl+", "Ctrl+Nothing", "Shift", "Mouse 3" }) {
+			Shortcut shortcut;
+			if (Shortcut::Parse(StringView(bad), shortcut)) {
+				LOGE("\"{}\" is read as a shortcut", bad);
+				problems++;
+			}
+		}
+
+		// A preset takes the key from what had it before, and starts from the defaults
+		ActionRegistry registry;
+		registry.Add("tool.eyedropper"_s, "Eyedropper"_s, EditorIcon::None, []() {}).Key = { Keys::I, 0 };
+		registry.Add("stamp.flipX"_s, "Flip X"_s, EditorIcon::None, []() {}).Key = { Keys::X, 0 };
+		registry.Add("stamp.flipY"_s, "Flip Y"_s, EditorIcon::None, []() {}).Key = { Keys::Y, 0 };
+		registry.Add("layer.select1"_s, "Layer 1"_s, EditorIcon::None, []() {}).Key = { Keys::D1, 0 };
+		registry.Add("file.save"_s, "Save"_s, EditorIcon::None, []() {}).Key = { Keys::S, KeyMod::Ctrl };
+		registry.Find("file.save"_s)->WorksWhileTyping = true;
+		registry.CaptureDefaults();
+		SmallVector<String, 4> cleared;
+		registry.ApplyPreset(KeymapPreset::Jcs, &cleared);
+		if (registry.Find("stamp.flipY"_s)->Key.Key != Keys::I || registry.Find("tool.eyedropper"_s)->Key.Key != Keys::Unknown ||
+			registry.Find("layer.select1"_s)->Key.Key != Keys::D1 || registry.HasConflict(*registry.Find("stamp.flipY"_s))) {
+			LOGE("The JCS preset of shortcuts isn't applied right");
+			problems++;
+		}
+		registry.ApplyPreset(KeymapPreset::Default);
+		if (registry.Find("tool.eyedropper"_s)->Key.Key != Keys::I || registry.Find("stamp.flipY"_s)->Key.Key != Keys::Y ||
+			registry.Find("layer.select1"_s)->Key.Key != Keys::D1) {
+			LOGE("The default shortcuts aren't brought back by their preset");
+			problems++;
+		}
+		KeyboardEvent save;
+		save.sym = Keys::S;
+		save.mod = KeyMod::LCtrl;
+		KeyboardEvent other;
+		other.sym = Keys::X;
+		other.mod = 0;
+		if (!registry.MatchesWhileTyping(save) || registry.MatchesWhileTyping(other)) {
+			LOGE("Shortcuts that work while typing aren't told apart");
+			problems++;
+		}
+
+		// One key runs an action while editing and another while playing, they don't conflict, and a key of the editor
+		// isn't taken from the game
+		ActionRegistry scoped;
+		std::int32_t edited = 0, played = 0;
+		EditorAction& editAction = scoped.Add("view.example"_s, "Edit Action"_s, EditorIcon::None, [&edited]() { edited++; });
+		editAction.Key = { Keys::F6, 0 };
+		EditorAction& teleport = scoped.Add("play.teleport"_s, "Teleport"_s, EditorIcon::None, [&played]() { played++; });
+		teleport.Key = { Keys::F6, 0 };
+		teleport.Scope = ActionScope::Play;
+		EditorAction& undo = scoped.Add("edit.undo"_s, "Undo"_s, EditorIcon::None, []() {});
+		undo.Key = { Keys::Z, KeyMod::Ctrl };
+		EditorAction& help = scoped.Add("help.shortcuts"_s, "Shortcuts"_s, EditorIcon::None, []() {});
+		help.Key = { Keys::F6, 0 };
+		help.Scope = ActionScope::Both;
+		KeyboardEvent f6;
+		f6.sym = Keys::F6;
+		f6.mod = 0;
+		KeyboardEvent ctrlZ;
+		ctrlZ.sym = Keys::Z;
+		ctrlZ.mod = KeyMod::LCtrl;
+		bool editRan = scoped.HandleKey(f6, ActionScope::Edit);
+		bool playRan = scoped.HandleKey(f6, ActionScope::Play);
+		if (!editRan || !playRan || edited != 1 || played != 1 || scoped.HandleKey(ctrlZ, ActionScope::Play) ||
+			scoped.FindByShortcut(teleport.Key, &editAction) != &help || !scoped.HasConflict(teleport) || !scoped.HasConflict(help)) {
+			LOGE("Shortcuts of editing and playing aren't told apart");
+			problems++;
+		}
+		help.Key = Shortcut();
+		if (scoped.HasConflict(editAction) || scoped.HasConflict(teleport) || scoped.FindByShortcut(teleport.Key, &editAction) != nullptr) {
+			LOGE("Shortcuts of editing and playing conflict with each other");
+			problems++;
+		}
+
+		// A side button of the mouse is passed on as the key that stands for it
+		std::int32_t pressed = 0;
+		EditorAction& byButton = scoped.Add("view.byButton"_s, "By Button"_s, EditorIcon::None, [&pressed]() { pressed++; });
+		byButton.Key = { Shortcut::Mouse4, KeyMod::Shift };
+		KeyboardEvent mouse4;
+		mouse4.sym = Shortcut::GetMouseButtonKey(MouseButton::Fourth);
+		mouse4.mod = KeyMod::LShift;
+		KeyboardEvent mouse5 = mouse4;
+		mouse5.sym = Shortcut::GetMouseButtonKey(MouseButton::Fifth);
+		if (!scoped.HandleKey(mouse4) || scoped.HandleKey(mouse5) || pressed != 1 ||
+			Shortcut::GetMouseButtonKey(MouseButton::Middle) != Keys::Unknown) {
+			LOGE("Side buttons of the mouse don't run their actions");
+			problems++;
+		}
+		return problems;
+	}
+
+	bool ActionRegistry::MatchesWhileTyping(const KeyboardEvent& event) const
+	{
+		for (const auto& action : _actions) {
+			// Nothing is typed while the level is played
+			if (action->Scope == ActionScope::Play) {
+				continue;
+			}
+			if (action->WorksWhileTyping && (action->Key.Matches(event) || action->AlternateKey.Matches(event))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool ActionRegistry::WriteKeymap(StringView path, bool all) const
+	{
+		Json::Value doc(Json::objectValue);
+		for (const auto& action : _actions) {
+			bool keyChanged = !(action->Key.Key == action->DefaultKey.Key && action->Key.Modifiers == action->DefaultKey.Modifiers);
+			bool alternateChanged = !(action->AlternateKey.Key == action->DefaultAlternateKey.Key && action->AlternateKey.Modifiers == action->DefaultAlternateKey.Modifiers);
 			std::string id(action->Id.data(), action->Id.size());
-			if (action->Key.Key == Keys::Unknown) {
-				doc[id] = Json::Value(Json::nullValue);
+			if (all) {
+				// Every shortcut, the file stands on its own, a key without a name keeps the default where it's read
+				Json::Value both(Json::objectValue);
+				if (action->Key.Key == Keys::Unknown || !action->Key.ToString().empty()) {
+					both["Key"] = WriteShortcut(action->Key);
+				}
+				if (action->AlternateKey.Key == Keys::Unknown || !action->AlternateKey.ToString().empty()) {
+					both["Alternate"] = WriteShortcut(action->AlternateKey);
+				}
+				doc[id] = both;
+				continue;
+			}
+			if (!keyChanged && !alternateChanged) {
+				continue;
+			}
+			if (!alternateChanged) {
+				doc[id] = WriteShortcut(action->Key);
 			} else {
-				Json::Value pair(Json::arrayValue);
-				pair.append(std::int32_t(action->Key.Key));
-				pair.append(action->Key.Modifiers);
-				doc[id] = pair;
+				// Only what changed, the rest keeps its default, which may be a key without a name
+				Json::Value both(Json::objectValue);
+				if (keyChanged) {
+					both["Key"] = WriteShortcut(action->Key);
+				}
+				both["Alternate"] = WriteShortcut(action->AlternateKey);
+				doc[id] = both;
 			}
 		}
 		Json::StreamWriterBuilder builder;
 		builder["indentation"] = "\t";
 		std::string text = Json::writeString(builder, doc);
 
-		auto s = fs::Open(path, FileAccess::Write);
-		if (!s->IsValid()) {
+		if (!AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
 			return false;
 		}
-		s->Write(text.data(), std::int64_t(text.size()));
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-		s = nullptr;
 		fs::SyncToPersistent();
 #endif
 		return true;
 	}
 
-	bool ActionRegistry::HandleKey(const KeyboardEvent& event)
+	bool ActionRegistry::HandleKey(const KeyboardEvent& event, ActionScope scope)
 	{
 		for (auto& action : _actions) {
+			if (!ScopesOverlap(action->Scope, scope)) {
+				continue;
+			}
 			if (action->Key.Matches(event) || action->AlternateKey.Matches(event)) {
 				if (action->CanExecute()) {
 					action->Execute();

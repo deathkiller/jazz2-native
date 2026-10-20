@@ -250,7 +250,7 @@ namespace Jazz2::Scripting
 				ExtractDeclaration(scriptContent, pos, metadataName, metadataDeclaration, type);
 
 				if (type != MetadataType::Unknown) {
-					_foundDeclarations.emplace_back(std::move(metadata), metadataName,
+					_foundDeclarations.emplace_back(Death::move(metadata), metadataName,
 						metadataDeclaration, type, currentClass, currentNamespace);
 				}
 			} else if (token == "#"_s && (pos + 1 < scriptSize)) {
@@ -653,7 +653,7 @@ namespace Jazz2::Scripting
 				pos += len;
 			}
 
-			metadata.emplace_back(String(std::move(metadataString)));
+			metadata.emplace_back(String(Death::move(metadataString)));
 
 			// Check for more metadata, possibly separated by comments
 			asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);

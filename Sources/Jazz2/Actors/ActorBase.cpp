@@ -1071,15 +1071,15 @@ namespace Jazz2::Actors
 		tilemap->CreateParticleDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), force, _renderer.CurrentFrame, IsFacingLeft());
 	}
 
-	void ActorBase::CreateSpriteDebris(AnimState state, std::int32_t count)
+	void ActorBase::CreateSpriteDebris(AnimState state, std::int32_t count, float elasticity)
 	{
-		_levelHandler->HandleCreateSpriteDebris(this, state, count);
+		_levelHandler->HandleCreateSpriteDebris(this, state, count, elasticity);
 
 		auto* tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr && _metadata != nullptr) {
 			auto* res = _metadata->FindAnimation(state);
 			if (res != nullptr) {
-				tilemap->CreateSpriteDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
+				tilemap->CreateSpriteDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count, elasticity);
 			}
 		}
 	}
@@ -1130,7 +1130,7 @@ namespace Jazz2::Actors
 				_currentTransition = nullptr;
 
 				if (_currentTransitionCallback) {
-					auto oldCallback = std::move(_currentTransitionCallback);
+					auto oldCallback = Death::move(_currentTransitionCallback);
 					_currentTransitionCallback = nullptr;
 					oldCallback();
 				}
@@ -1157,14 +1157,14 @@ namespace Jazz2::Actors
 		}
 
 		if (_currentTransitionCallback) {
-			auto oldCallback = std::move(_currentTransitionCallback);
+			auto oldCallback = Death::move(_currentTransitionCallback);
 			_currentTransitionCallback = nullptr;
 			oldCallback();
 		}
 
 		_currentTransition = anim;
 		_currentTransitionCancellable = cancellable;
-		_currentTransitionCallback = std::move(callback);		
+		_currentTransitionCallback = Death::move(callback);		
 		RefreshAnimation();
 
 		return true;
@@ -1174,7 +1174,7 @@ namespace Jazz2::Actors
 	{
 		if (_currentTransition != nullptr && _currentTransitionCancellable) {
 			if (_currentTransitionCallback) {
-				auto oldCallback = std::move(_currentTransitionCallback);
+				auto oldCallback = Death::move(_currentTransitionCallback);
 				_currentTransitionCallback = nullptr;
 				oldCallback();
 			}
@@ -1207,7 +1207,7 @@ namespace Jazz2::Actors
 			RefreshAnimation();
 
 			if (_currentTransitionCallback) {
-				auto oldCallback = std::move(_currentTransitionCallback);
+				auto oldCallback = Death::move(_currentTransitionCallback);
 				_currentTransitionCallback = nullptr;
 				oldCallback();
 			}

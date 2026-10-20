@@ -32,7 +32,12 @@ jobs:
       uses: actions/checkout@v6
       with:
         fetch-depth: 0
-        
+
+    - name: 'Check Editor Includes'
+      shell: pwsh
+      run: |
+        ./Sources/Jazz2/Editor/Tests/CheckIncludes.ps1
+
     - name: 'Setup MSBuild'
       uses: microsoft/setup-msbuild@v3
 

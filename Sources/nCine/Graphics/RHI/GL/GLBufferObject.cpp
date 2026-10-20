@@ -3,6 +3,8 @@
 #include "../../../../Main.h"
 #include "../../../tracy_opengl.h"
 
+#include <atomic>
+
 namespace nCine::RHI::GL
 {
 	GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> GLBufferObject::_boundBuffers;
@@ -12,9 +14,11 @@ namespace nCine::RHI::GL
 	GLBufferObject::GLBufferObject(GLenum target)
 		: _glHandle(0), _target(target), _size(0), _mapped(false)
 	{
-		// Buffer objects are created on the rendering thread only
-		static std::uint64_t lastUniqueId = 0;
-		_uniqueId = ++lastUniqueId;
+		// Atomic, nothing guarantees that every buffer object is created on the rendering thread. A 32-bit counter is
+		// lock-free everywhere (a 64-bit one would need libatomic on some 32-bit targets), and it would take billions
+		// of buffer objects to wrap around.
+		static std::atomic<std::uint32_t> lastUniqueId{0};
+		_uniqueId = std::uint64_t(lastUniqueId.fetch_add(1, std::memory_order_relaxed)) + 1;
 		glGenBuffers(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}

@@ -56,7 +56,7 @@ namespace Jazz2::Editor
 
 		/** @brief Reads the rules of a tile set */
 		void Load(StringView tileSet);
-		/** @brief Writes the rules into the rules of a tile set in the user content */
+		/** @brief Writes the rules into the rules of a tile set in the user content, nothing if the rules there can't be read, returns `false` then */
 		bool Save(StringView tileSet) const;
 		/** @brief Finds the tiles of extra tile sets in a level, call it whenever the level is used with the rules */
 		void Resolve(const LevelDocument& document);
@@ -100,6 +100,10 @@ namespace Jazz2::Editor
 		std::uint32_t GetRevision() const {
 			return _revision;
 		}
+		/** @brief Returns a number that changes whenever the slope tags do, not with the rules of the terrains */
+		std::uint32_t GetSlopeRevision() const {
+			return _slopeRevision;
+		}
 
 		/** @brief Returns whether a tile can be in a rule, a tile of the default tile set or an extra one in a file, not animated */
 		static bool IsRuleTile(const LevelDocument& document, const TileRef& tile);
@@ -127,12 +131,14 @@ namespace Jazz2::Editor
 		std::int32_t _current;
 		SmallVector<std::pair<std::uint16_t, SlopeTag>, 0> _slopes;
 		std::uint32_t _revision;
+		std::uint32_t _slopeRevision = 0;
 		const LevelDocument* _document;
-		// The extra tile sets of the level when it was resolved, a change makes it resolved again
-		String _resolvedFor;
+		// A hash of the extra tile sets of the level when it was resolved, a change makes it resolved again
+		std::uint64_t _resolvedFor = 0;
+		bool _resolved = false;
 
 		void ResolveTerrain(Terrain& terrain) const;
-		static String GetExtraTileSetsKey(const LevelDocument& document);
+		static std::uint64_t GetExtraTileSetsKey(const LevelDocument& document);
 	};
 }
 

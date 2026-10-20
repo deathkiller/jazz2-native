@@ -119,6 +119,8 @@ namespace Jazz2::UI::Menu
 #endif
 		/** @brief Applies changes to preferences */
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;
+		/** @brief Shows or hides the mouse cursor as the current state handler wants, see @ref IRootController::ApplyCursorPolicy() */
+		virtual void ApplyCursorPolicy() = 0;
 		/** @brief Returns `true` if specified action is pressed */
 		virtual bool ActionPressed(PlayerAction action) = 0;
 		/** @brief Returns `true` if specified action is hit (newly pressed) */

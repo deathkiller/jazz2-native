@@ -39,6 +39,20 @@ namespace Jazz2
 	};
 
 	/**
+		@brief Texts of a level translated to one language
+
+		A level may carry its texts in more languages (see @ref Formats::LevelTextsChunk), the game shows those of the
+		language it's in, and the texts of the level itself where there's no translation.
+	*/
+	struct LocalizedLevelTexts
+	{
+		/** @brief Language, as the game names it in its settings, such as `cs` or `pt-br` */
+		String Language;
+		/** @brief Texts by their number, an empty one isn't translated */
+		SmallVector<String, 0> Texts;
+	};
+
+	/**
 		@brief Contains all components to fully initialize a level instance
 		
 		Produced when a level file is loaded and consumed by the level handler during setup. Bundles the parsed tile
@@ -73,7 +87,7 @@ namespace Jazz2
 		std::uint16_t WaterLevel;
 		/** @brief Level texts */
 		SmallVector<String, 0> LevelTexts;
-		/** @brief Whether the level editor can open the level, see @ref LevelFlags::NotEditable */
-		bool Editable = true;
+		/** @brief Level texts translated to other languages, empty if the level has none */
+		SmallVector<LocalizedLevelTexts, 0> LocalizedTexts;
 	};
 }

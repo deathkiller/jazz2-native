@@ -75,6 +75,6 @@ namespace Jazz2::UI::Menu
 #endif
 
 		list->SetSelectedIndex(selectedIndex);
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 }

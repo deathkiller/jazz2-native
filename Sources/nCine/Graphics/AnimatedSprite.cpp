@@ -79,7 +79,7 @@ namespace nCine
 
 	void AnimatedSprite::addAnimation(RectAnimation&& anim)
 	{
-		_anims.push_back(std::move(anim));
+		_anims.push_back(Death::move(anim));
 		_currentAnimIndex = (unsigned int)_anims.size() - 1;
 		setTexRect(_anims[_currentAnimIndex].rect());
 	}

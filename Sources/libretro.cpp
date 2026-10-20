@@ -258,7 +258,7 @@ RETRO_API bool retro_unserialize(const void* data, size_t size)
 	}
 	auto ms = std::make_shared<MemoryStream>(Containers::InPlaceInit,
 		Containers::ArrayView<const std::uint8_t>(bytes, (std::size_t)size));
-	return theLibretroApplication().LoadState(std::move(ms));
+	return theLibretroApplication().LoadState(Death::move(ms));
 }
 
 RETRO_API void retro_cheat_reset(void) {}
@@ -291,7 +291,7 @@ RETRO_API bool retro_load_game(const struct retro_game_info* game)
 	if (game != nullptr && game->path != nullptr) {
 		hostPaths.Content = game->path;
 	}
-	theLibretroApplication().SetHostPaths(std::move(hostPaths));
+	theLibretroApplication().SetHostPaths(Death::move(hostPaths));
 
 	retro_pixel_format pixelFormat = RETRO_PIXEL_FORMAT_XRGB8888;
 	if (!LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &pixelFormat)) {

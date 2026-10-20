@@ -69,7 +69,7 @@ namespace nCine
 		: AudioBuffer()
 	{
 #	if defined(WITH_AUDIO)
-		const bool hasLoaded = loadFromStream(std::move(fileHandle), filename);
+		const bool hasLoaded = loadFromStream(Death::move(fileHandle), filename);
 		if (!hasLoaded) {
 			LOGE("Audio file \"{}\" cannot be loaded", filename);
 		}
@@ -104,7 +104,7 @@ namespace nCine
 	}
 
 	AudioBuffer::AudioBuffer(AudioBuffer&& other) noexcept
-		: Object(std::move(other)), _bufferId(other._bufferId), _bytesPerSample(other._bytesPerSample), _numChannels(other._numChannels),
+		: Object(Death::move(other)), _bufferId(other._bufferId), _bytesPerSample(other._bytesPerSample), _numChannels(other._numChannels),
 			_frequency(other._frequency), _numSamples(other._numSamples), _duration(other._duration)
 	{
 		other._bufferId = 0;
@@ -112,7 +112,7 @@ namespace nCine
 
 	AudioBuffer& AudioBuffer::operator=(AudioBuffer&& other) noexcept
 	{
-		Object::operator=(std::move(other));
+		Object::operator=(Death::move(other));
 
 		_bufferId = other._bufferId;
 		_bytesPerSample = other._bytesPerSample;
@@ -193,7 +193,7 @@ namespace nCine
 	bool AudioBuffer::loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename)
 	{
 #	if defined(WITH_AUDIO)
-		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromStream(std::move(fileHandle), filename);
+		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromStream(Death::move(fileHandle), filename);
 		if (audioLoader->hasLoaded()) {
 			return load(*audioLoader);
 		}

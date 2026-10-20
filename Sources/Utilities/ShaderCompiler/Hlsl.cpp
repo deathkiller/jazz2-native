@@ -282,7 +282,7 @@ namespace ShaderCompiler
 			std::map<String, TyRef> _locals;			// current-function locals + params (for type inference)
 			std::set<String> _arrayVars;				// locals/params that are arrays (Index yields the element type, not a swizzle)
 
-			void Fail(String why) { if (_ok) { _ok = false; _reason = std::move(why); } }
+			void Fail(String why) { if (_ok) { _ok = false; _reason = Death::move(why); } }
 
 			std::int32_t BatchSize() const
 			{
@@ -982,7 +982,7 @@ namespace ShaderCompiler
 		SmallVector<GlslToken, 0> tokens;
 		String reason;
 		if (!TokenizeStage(modernSource, tokens, reason)) {
-			diag.Message = std::move(reason);
+			diag.Message = Death::move(reason);
 			diag.Line = 1;
 			return false;
 		}
@@ -1000,7 +1000,7 @@ namespace ShaderCompiler
 			diag.Line = 1;
 			return false;
 		}
-		out = std::move(code);
+		out = Death::move(code);
 		return true;
 	}
 }

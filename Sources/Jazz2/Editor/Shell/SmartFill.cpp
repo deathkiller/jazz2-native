@@ -2,14 +2,18 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../EditorSession.h"
+#include "../Tools/EditorContext.h"
+#include "../Common/TileStamp.h"
+#include "../Document/LevelDocument.h"
 #include "../Document/Commands.h"
+#include "../Imaging/TileMasks.h"
 #include "../Smart/SmartTileModel.h"
 #include "../../Formats/TileSetFile.h"
 
 #include "../../../nCine/I18n.h"
 
 #include <Containers/StringConcatenable.h>
+#include <Cryptography/xxHash.h>
 
 #include <algorithm>
 #include <cmath>
@@ -21,6 +25,9 @@ namespace Jazz2::Editor
 	namespace
 	{
 		constexpr std::int32_t Offsets[8][2] = { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 } };
+		// Selected cells at most, and the most cells of the rectangle around them, it's done at once
+		constexpr std::int64_t MaxCells = 1 << 20;
+		constexpr std::int64_t MaxAreaCells = 1 << 22;
 
 		std::uint32_t HashCell(std::int32_t x, std::int32_t y)
 		{
@@ -35,7 +42,7 @@ namespace Jazz2::Editor
 		}
 
 		// What both operations need: the layer of the selection, which can be changed, and the tiles learned
-		const DocumentLayer* Prepare(EditorSession& session, SmartTileModel*& model, std::int32_t& layerIndex)
+		const DocumentLayer* Prepare(IEditorContext& session, SmartTileModel*& model, std::int32_t& layerIndex)
 		{
 			const TileSelection& selection = session.GetSelection();
 			if (selection.IsEmpty()) {
@@ -57,18 +64,50 @@ namespace Jazz2::Editor
 				session.ShowMessage(_("The layer is locked or hidden"));
 				return nullptr;
 			}
+			// All of it is worked out at once, the cells of the selection and of the rectangle around it are kept
+			const Recti& bounds = selection.GetBounds();
+			bool tooLarge = (std::int64_t(bounds.W + 2) * std::int64_t(bounds.H + 2) > MaxAreaCells);
+			std::int64_t count = 0;
+			for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H && !tooLarge; y++) {
+				for (std::int32_t x = bounds.X; x < bounds.X + bounds.W; x++) {
+					count += (selection.Contains(x, y) ? 1 : 0);
+				}
+				tooLarge = (count > MaxCells);
+			}
+			if (tooLarge) {
+				session.ShowMessage(_f("The selection is too large, select {} tiles at most", std::int32_t(MaxCells)));
+				return nullptr;
+			}
 			return &document.Layers[layerIndex];
 		}
 
-		// The tiles of a layer with some of them changed
+		// The tiles of a layer with some of them changed, in a rectangle around the selection. A cell can be solid with its
+		// tile not chosen yet: it's solid for its neighbors, but no tile for them to go well with, any tile standing for it
+		// would be taken for one the levels have next to them.
 		struct LayerTiles
 		{
 			const DocumentLayer& Layer;
-			std::unordered_map<std::uint32_t, TileRef> Changed;
+			// The cells kept, the selection and the cells around it, within the layer
+			Recti Area;
+			SmallVector<TileRef, 0> Tiles;
+			BitArray Changed;
+			BitArray Unknown;
 
-			explicit LayerTiles(const DocumentLayer& layer)
+			LayerTiles(const DocumentLayer& layer, const Recti& bounds)
 				: Layer(layer)
 			{
+				std::int32_t x1 = std::max(bounds.X - 1, 0), y1 = std::max(bounds.Y - 1, 0);
+				std::int32_t x2 = std::min(bounds.X + bounds.W + 1, layer.GetWidth()), y2 = std::min(bounds.Y + bounds.H + 1, layer.GetHeight());
+				Area = Recti(x1, y1, std::max(x2 - x1, 0), std::max(y2 - y1, 0));
+				std::size_t size = std::size_t(Area.W) * std::size_t(Area.H);
+				Tiles.reserve(size);
+				for (std::int32_t y = Area.Y; y < Area.Y + Area.H; y++) {
+					for (std::int32_t x = Area.X; x < Area.X + Area.W; x++) {
+						Tiles.push_back(layer.GetTile(x, y));
+					}
+				}
+				Changed = BitArray(ValueInit, size);
+				Unknown = BitArray(ValueInit, size);
 			}
 
 			bool Contains(std::int32_t x, std::int32_t y) const
@@ -76,21 +115,59 @@ namespace Jazz2::Editor
 				return (x >= 0 && y >= 0 && x < Layer.GetWidth() && y < Layer.GetHeight());
 			}
 
+			bool IsInArea(std::int32_t x, std::int32_t y) const
+			{
+				return (x >= Area.X && y >= Area.Y && x < Area.X + Area.W && y < Area.Y + Area.H);
+			}
+
+			std::size_t IndexOf(std::int32_t x, std::int32_t y) const
+			{
+				return std::size_t(y - Area.Y) * std::size_t(Area.W) + std::size_t(x - Area.X);
+			}
+
 			TileRef Get(std::int32_t x, std::int32_t y) const
 			{
-				auto it = Changed.find(std::uint32_t(y) * std::uint32_t(Layer.GetWidth()) + std::uint32_t(x));
-				return (it != Changed.end() ? it->second : Layer.GetTile(x, y));
+				return (IsInArea(x, y) ? Tiles[IndexOf(x, y)] : Layer.GetTile(x, y));
 			}
 
 			void Set(std::int32_t x, std::int32_t y, const TileRef& tile)
 			{
-				Changed[std::uint32_t(y) * std::uint32_t(Layer.GetWidth()) + std::uint32_t(x)] = tile;
+				if (IsInArea(x, y)) {
+					std::size_t index = IndexOf(x, y);
+					Tiles[index] = tile;
+					Changed.set(index);
+					Unknown.reset(index);
+				}
+			}
+
+			// Makes a cell solid without choosing its tile yet
+			void SetUnknownSolid(std::int32_t x, std::int32_t y)
+			{
+				if (IsInArea(x, y)) {
+					Unknown.set(IndexOf(x, y));
+				}
+			}
+
+			bool IsUnknown(std::int32_t x, std::int32_t y) const
+			{
+				return (IsInArea(x, y) && Unknown[IndexOf(x, y)]);
+			}
+
+			// Gives a cell back the tile the layer has
+			void Revert(std::int32_t x, std::int32_t y)
+			{
+				if (IsInArea(x, y)) {
+					std::size_t index = IndexOf(x, y);
+					Tiles[index] = Layer.GetTile(x, y);
+					Changed.reset(index);
+					Unknown.reset(index);
+				}
 			}
 
 			// Outside of the layer counts as solid, as the levels were learned
 			bool IsSolid(std::int32_t x, std::int32_t y) const
 			{
-				return (!Contains(x, y) || IsSolidTile(Get(x, y)));
+				return (!Contains(x, y) || IsUnknown(x, y) || IsSolidTile(Get(x, y)));
 			}
 
 			std::uint8_t GetNeighbors(std::int32_t x, std::int32_t y) const
@@ -104,10 +181,10 @@ namespace Jazz2::Editor
 				return neighbors;
 			}
 
-			// A model tile next to a cell, `false` if there's none
+			// A model tile next to a cell, `false` if there's none, or it's solid without its tile chosen yet
 			bool GetModelTile(std::int32_t x, std::int32_t y, TileRef& tile) const
 			{
-				if (!Contains(x, y)) {
+				if (!Contains(x, y) || IsUnknown(x, y)) {
 					return false;
 				}
 				tile = Get(x, y);
@@ -124,27 +201,33 @@ namespace Jazz2::Editor
 			}
 		};
 
-		bool Commit(EditorSession& session, std::int32_t layerIndex, const LayerTiles& tiles, StringView name)
+		bool Commit(IEditorContext& session, std::int32_t layerIndex, const LayerTiles& tiles, StringView name)
 		{
 			auto command = std::make_unique<SetTilesCommand>(session.GetDocument(), layerIndex, String(name));
-			for (const auto& [cell, tile] : tiles.Changed) {
-				std::int32_t width = tiles.Layer.GetWidth();
-				command->Set(std::int32_t(cell % std::uint32_t(width)), std::int32_t(cell / std::uint32_t(width)), tile);
+			const Recti& area = tiles.Area;
+			for (std::int32_t y = area.Y; y < area.Y + area.H; y++) {
+				for (std::int32_t x = area.X; x < area.X + area.W; x++) {
+					std::size_t index = tiles.IndexOf(x, y);
+					if (tiles.Changed[index]) {
+						command->Set(x, y, tiles.Tiles[index]);
+					}
+				}
 			}
 			command->Seal();
 			if (command->IsEmpty()) {
 				return false;
 			}
-			session.Execute(std::move(command));
+			session.Execute(Death::move(command));
 			return true;
 		}
 
-		// Collision masks of the tiles of a tile set, flipped every way, to find tiles of the same mask
+		// Collision masks of the tiles of the default tile set as the level has them, changed in it or not, flipped every
+		// way, to find tiles of the same mask
 		class MaskIndex
 		{
 		public:
-			explicit MaskIndex(const Formats::TileSetData& data)
-				: _data(data)
+			MaskIndex(const LevelDocument& document, const Formats::TileSetData& data)
+				: _document(document), _data(data)
 			{
 				for (std::int32_t index = 1; index < data.TileCount; index++) {
 					for (std::uint8_t flags = 0; flags < 4; flags++) {
@@ -189,11 +272,14 @@ namespace Jazz2::Editor
 				std::uint8_t Bits[128];
 			};
 
+			const LevelDocument& _document;
 			const Formats::TileSetData& _data;
 			std::unordered_map<std::uint64_t, SmallVector<TileRef, 1>> _byHash;
 
 			void Transform(std::int32_t index, std::uint8_t flags, Mask& mask) const
 			{
+				// A tile of the default tile set has its index as its tile ID, the level may change its mask
+				const Formats::TileMaskOverride* changed = (index <= UINT16_MAX ? SetTileOverrideCommand::FindMask(_document, std::uint16_t(index)) : nullptr);
 				const std::uint8_t* bits = &_data.Masks[std::size_t(index) * Formats::TileSetData::MaskBytesPerTile];
 				std::memset(mask.Bits, 0, sizeof(mask.Bits));
 				for (std::int32_t y = 0; y < 32; y++) {
@@ -201,8 +287,9 @@ namespace Jazz2::Editor
 						std::int32_t sx = ((flags & Formats::TileRecord::FlipX) != 0 ? 31 - x : x);
 						std::int32_t sy = ((flags & Formats::TileRecord::FlipY) != 0 ? 31 - y : y);
 						std::int32_t from = sy * 32 + sx, to = y * 32 + x;
-						if (((bits[from / 8] >> (from % 8)) & 1) != 0) {
-							mask.Bits[to / 8] |= std::uint8_t(1 << (to % 8));
+						bool solid = (changed != nullptr ? changed->Mask[from] != 0 : TileMasks::GetBit(bits, from));
+						if (solid) {
+							TileMasks::SetBit(mask.Bits, to);
 						}
 					}
 				}
@@ -220,16 +307,12 @@ namespace Jazz2::Editor
 
 			static std::uint64_t Hash(const Mask& mask)
 			{
-				std::uint64_t hash = 14695981039346656037ull;
-				for (std::uint8_t b : mask.Bits) {
-					hash = (hash ^ b) * 1099511628211ull;
-				}
-				return hash;
+				return Death::Cryptography::xxHash3(mask.Bits, sizeof(mask.Bits));
 			}
 		};
 	}
 
-	bool FillSelectionWithGround(EditorSession& session)
+	bool FillSelectionWithGround(IEditorContext& session)
 	{
 		SmartTileModel* model;
 		std::int32_t layerIndex;
@@ -239,32 +322,45 @@ namespace Jazz2::Editor
 		}
 		const TileSelection& selection = session.GetSelection();
 		const Recti& bounds = selection.GetBounds();
-		LayerTiles tiles(*layer);
+		LayerTiles tiles(*layer, bounds);
 
-		// All of it solid first, so each cell knows its neighbors, any solid tile stands for them until they're chosen
+		// All of it solid first, so each cell knows its neighbors, without a tile until it's chosen
 		for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
 			for (std::int32_t x = bounds.X; x < bounds.X + bounds.W; x++) {
 				if (selection.Contains(x, y) && !IsSolidTile(tiles.Get(x, y))) {
-					tiles.Set(x, y, TileRef{ 1, TileRef::DefaultTileSet, 0 });
+					tiles.SetUnknownSolid(x, y);
 				}
 			}
 		}
-		// Then the tiles from the left and from the top, those around too if they don't fit anymore
-		for (std::int32_t y = bounds.Y - 1; y <= bounds.Y + bounds.H; y++) {
-			for (std::int32_t x = bounds.X - 1; x <= bounds.X + bounds.W; x++) {
-				if (!tiles.Contains(x, y)) {
+		// Then the tiles from the left and from the top
+		for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
+			for (std::int32_t x = bounds.X; x < bounds.X + bounds.W; x++) {
+				TileRef picked;
+				if (selection.Contains(x, y) && tiles.Pick(*model, x, y, nullptr, picked)) {
+					tiles.Set(x, y, picked);
+				}
+			}
+		}
+		// A cell no tile was found for keeps what it had, it isn't ground of any kind
+		for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
+			for (std::int32_t x = bounds.X; x < bounds.X + bounds.W; x++) {
+				if (tiles.IsUnknown(x, y)) {
+					tiles.Revert(x, y);
+				}
+			}
+		}
+		// And those around that don't fit anymore, with the tiles of the selection as they're now
+		const Recti& area = tiles.Area;
+		for (std::int32_t y = area.Y; y < area.Y + area.H; y++) {
+			for (std::int32_t x = area.X; x < area.X + area.W; x++) {
+				if (selection.Contains(x, y)) {
 					continue;
 				}
 				TileRef current = tiles.Get(x, y);
 				TileRef picked;
-				if (selection.Contains(x, y)) {
-					if (tiles.Pick(*model, x, y, nullptr, picked)) {
-						tiles.Set(x, y, picked);
-					}
-				} else if (SmartTileModel::IsModelTile(current) && !model->Fits(tiles.GetNeighbors(x, y), layer->IsSpriteLayer(), current)) {
-					if (tiles.Pick(*model, x, y, &current, picked)) {
-						tiles.Set(x, y, picked);
-					}
+				if (SmartTileModel::IsModelTile(current) && !model->Fits(tiles.GetNeighbors(x, y), layer->IsSpriteLayer(), current) &&
+					tiles.Pick(*model, x, y, &current, picked)) {
+					tiles.Set(x, y, picked);
 				}
 			}
 		}
@@ -275,7 +371,7 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	bool BeautifySelection(EditorSession& session)
+	bool BeautifySelection(IEditorContext& session)
 	{
 		SmartTileModel* model;
 		std::int32_t layerIndex;
@@ -288,16 +384,33 @@ namespace Jazz2::Editor
 			session.ShowMessage(_("The tile set can't be read"));
 			return false;
 		}
-		MaskIndex masks(*data);
+		MaskIndex masks(session.GetDocument(), *data);
 		const TileSelection& selection = session.GetSelection();
 		const Recti& bounds = selection.GetBounds();
 		bool spriteLayer = layer->IsSpriteLayer();
-		LayerTiles tiles(*layer);
+		LayerTiles tiles(*layer, bounds);
 
-		// The tiles each selected cell can become, the most fitting of those with its mask
+		// The tiles each selected cell can become, the most fitting of those with its mask, by the cells of the bounds,
+		// one after another in a single list
 		constexpr std::size_t MaxCandidates = 16;
-		std::unordered_map<std::uint32_t, SmallVector<TileRef, 0>> candidates;
+		struct CellCandidates
+		{
+			std::uint32_t First = 0;
+			std::uint32_t Count = 0;
+		};
+		SmallVector<CellCandidates, 0> cellCandidates;
+		cellCandidates.resize(std::size_t(bounds.W) * std::size_t(bounds.H));
+		SmallVector<TileRef, 0> allCandidates;
+		auto key = [&bounds](std::int32_t x, std::int32_t y) { return std::size_t(y - bounds.Y) * std::size_t(bounds.W) + std::size_t(x - bounds.X); };
+		auto hasCandidates = [&](std::int32_t x, std::int32_t y) {
+			return (x >= bounds.X && y >= bounds.Y && x < bounds.X + bounds.W && y < bounds.Y + bounds.H && cellCandidates[key(x, y)].Count > 0);
+		};
+		auto candidatesOf = [&](std::int32_t x, std::int32_t y) {
+			const CellCandidates& cell = cellCandidates[key(x, y)];
+			return ArrayView<const TileRef>(allCandidates.data() + cell.First, cell.Count);
+		};
 		SmallVector<TileRef, 0> found;
+		bool any = false;
 		for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
 			for (std::int32_t x = bounds.X; x < bounds.X + bounds.W; x++) {
 				TileRef tile = layer->GetTile(x, y);
@@ -312,19 +425,24 @@ namespace Jazz2::Editor
 				std::sort(found.begin(), found.end(), [&](const TileRef& a, const TileRef& b) {
 					return model->GetCount(neighbors, spriteLayer, a) > model->GetCount(neighbors, spriteLayer, b);
 				});
-				auto& list = candidates[std::uint32_t(y) * std::uint32_t(layer->GetWidth()) + std::uint32_t(x)];
+				CellCandidates& cell = cellCandidates[key(x, y)];
+				cell.First = std::uint32_t(allCandidates.size());
+				bool hasCurrent = false;
 				for (std::size_t i = 0; i < found.size() && i < MaxCandidates; i++) {
 					// The modifier of the tile stays, translucent or not
-					list.push_back(TileRef{ found[i].Index, found[i].Source, std::uint8_t((tile.Flags & ~0x03) | found[i].Flags) });
+					TileRef candidate{ found[i].Index, found[i].Source, std::uint8_t((tile.Flags & ~0x03) | found[i].Flags) };
+					allCandidates.push_back(candidate);
+					hasCurrent |= (candidate == tile);
 				}
 				// The tile there is one of them in any case
-				bool hasCurrent = std::any_of(list.begin(), list.end(), [&tile](const TileRef& t) { return t == tile; });
 				if (!hasCurrent) {
-					list.push_back(tile);
+					allCandidates.push_back(tile);
 				}
+				cell.Count = std::uint32_t(allCandidates.size()) - cell.First;
+				any = true;
 			}
 		}
-		if (candidates.empty()) {
+		if (!any) {
 			session.ShowMessage(_("No other tile of the tile set has the masks of the selected ones"));
 			return false;
 		}
@@ -353,18 +471,17 @@ namespace Jazz2::Editor
 			}
 			return score;
 		};
-		auto key = [layer](std::int32_t x, std::int32_t y) { return std::uint32_t(y) * std::uint32_t(layer->GetWidth()) + std::uint32_t(x); };
 
 		// Each run of cells in a row as a whole, the best path through their candidates, from the top
 		for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
 			std::int32_t x = bounds.X;
 			while (x < bounds.X + bounds.W) {
-				if (candidates.find(key(x, y)) == candidates.end()) {
+				if (!hasCandidates(x, y)) {
 					x++;
 					continue;
 				}
 				std::int32_t start = x;
-				while (x < bounds.X + bounds.W && candidates.find(key(x, y)) != candidates.end()) {
+				while (x < bounds.X + bounds.W && hasCandidates(x, y)) {
 					x++;
 				}
 				std::int32_t end = x;
@@ -373,7 +490,7 @@ namespace Jazz2::Editor
 				SmallVector<SmallVector<float, 0>, 0> scores;
 				SmallVector<SmallVector<std::int32_t, 0>, 0> from;
 				for (std::int32_t cx = start; cx < end; cx++) {
-					const auto& list = candidates[key(cx, y)];
+					ArrayView<const TileRef> list = candidatesOf(cx, y);
 					auto& cellScores = scores.emplace_back();
 					auto& cellFrom = from.emplace_back();
 					for (const TileRef& tile : list) {
@@ -385,7 +502,7 @@ namespace Jazz2::Editor
 								score += 0.6f * log1(model->GetRightPair(left, tile));
 							}
 						} else {
-							const auto& previous = candidates[key(cx - 1, y)];
+							ArrayView<const TileRef> previous = candidatesOf(cx - 1, y);
 							const auto& previousScores = scores[std::size_t(cx - 1 - start)];
 							float bestPrevious = -1e30f;
 							for (std::size_t p = 0; p < previous.size(); p++) {
@@ -411,7 +528,7 @@ namespace Jazz2::Editor
 				const auto& lastScores = scores.back();
 				std::int32_t index = std::int32_t(std::max_element(lastScores.begin(), lastScores.end()) - lastScores.begin());
 				for (std::int32_t cx = end - 1; cx >= start && index >= 0; cx--) {
-					tiles.Set(cx, y, candidates[key(cx, y)][std::size_t(index)]);
+					tiles.Set(cx, y, candidatesOf(cx, y)[std::size_t(index)]);
 					index = from[std::size_t(cx - start)][std::size_t(index)];
 				}
 			}
@@ -421,13 +538,12 @@ namespace Jazz2::Editor
 		for (std::int32_t sweep = 0; sweep < 2; sweep++) {
 			for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
 				for (std::int32_t x = bounds.X; x < bounds.X + bounds.W; x++) {
-					auto it = candidates.find(key(x, y));
-					if (it == candidates.end()) {
+					if (!hasCandidates(x, y)) {
 						continue;
 					}
 					float bestScore = -1e30f;
 					TileRef best = tiles.Get(x, y);
-					for (const TileRef& tile : it->second) {
+					for (const TileRef& tile : candidatesOf(x, y)) {
 						float score = unary(x, y, tile, true);
 						if (score > bestScore) {
 							bestScore = score;

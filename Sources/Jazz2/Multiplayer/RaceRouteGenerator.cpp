@@ -35,7 +35,7 @@ namespace Jazz2::Multiplayer
 	void GenerateRaceRouteFromGeometry(Tiles::TileMap* tileMap, Events::EventMap* eventMap, TrackRouteType routeType, float waterLevel,
 		const SmallVector<MultiplayerSpawnPoint, 0>& spawnPoints, const SmallVector<Vector2i, 0>& startMarkers,
 		SmallVector<RaceCheckpoint, 0>& orderedCheckpoints, Vector2i& outBoundsMin, Vector2i& outBoundsMax,
-		bool& outCheckpointsOrdered, SmallVectorImpl<std::int32_t>* outDistances)
+		bool& outCheckpointsOrdered, SmallVectorImpl<std::int32_t>* outDistances, TrackCharacterMoves moves)
 	{
 		// Heuristic auto-placement for original levels that don't carry JJ2+ waypoint Text events.
 		// We trace the actual walkable route the player would take. On a race track, that is from a spawn point,
@@ -211,8 +211,8 @@ namespace Jazz2::Multiplayer
 					hPoleMap[x + y * W] = 1;
 					break;
 				case EventType::PowerUpMorph:
-					// A monitor that turns the player into a bird, which flies - levels are built around it the same
-					// way as around a copter, although the engine doesn't morph into a bird yet
+					// A monitor that turns the player into a bird, which flies until a Fly Off area - levels are built
+					// around it the same way as around a copter
 					if (e.EventParams[0] == 2) {
 						flightMap[x + y * W] = 1;
 					}
@@ -274,7 +274,7 @@ namespace Jazz2::Multiplayer
 					break;
 			}
 			return true;
-		});
+		}, true);	// Off-grid ones too, with the tile their position is in (checked against the level above)
 		auto springAt = [&springMap, W, H](std::int32_t tx, std::int32_t ty) -> std::uint8_t {
 			return (tx >= 0 && ty >= 0 && tx < W && ty < H ? springMap[tx + ty * W] : 0);
 		};
@@ -1132,6 +1132,11 @@ namespace Jazz2::Multiplayer
 			return getFlights(jumpFlights, c, true, [&](auto&& emit, auto&& emitAt) {
 				const float startX = (float)bodyXAt(c.X, c.Y), startFeet = (float)feetAt(c.X, c.Y);
 				for (const auto& p : JumpProfiles) {
+					// The moves of a character the player doesn't have
+					if ((p.Move == JumpMove::DoubleJump && (moves & TrackCharacterMoves::DoubleJump) == TrackCharacterMoves::None) ||
+						(p.Move == JumpMove::Glide && (moves & TrackCharacterMoves::Glide) == TrackCharacterMoves::None)) {
+						continue;
+					}
 					for (float dir = -1.0f; dir <= 1.0f; dir += 2.0f) {
 						if (dir > 0.0f && p.SpeedX == 0.0f && p.SteerSpeedX == 0.0f) {
 							continue;	// A straight jump is the same in both directions
@@ -2089,8 +2094,8 @@ namespace Jazz2::Multiplayer
 				fixedArc.push_back(b);
 				fixedGroup.push_back(routeArcGroup[i]);
 			}
-			routeArc = std::move(fixedArc);
-			routeArcGroup = std::move(fixedGroup);
+			routeArc = Death::move(fixedArc);
+			routeArcGroup = Death::move(fixedGroup);
 		}
 
 		// Minimap extent = the route's bounding box (padded for track width), plus start markers
@@ -2166,7 +2171,7 @@ namespace Jazz2::Multiplayer
 	}
 
 	bool ComputeReachableTiles(Tiles::TileMap* tileMap, Events::EventMap* eventMap, float waterLevel, Vector2f startPos,
-		SmallVectorImpl<std::int32_t>& distances)
+		SmallVectorImpl<std::int32_t>& distances, TrackCharacterMoves moves)
 	{
 		SmallVector<MultiplayerSpawnPoint, 0> spawnPoints;
 		spawnPoints.emplace_back(startPos, 0);
@@ -2176,7 +2181,7 @@ namespace Jazz2::Multiplayer
 		bool ordered = false;
 		distances.clear();
 		GenerateRaceRouteFromGeometry(tileMap, eventMap, TrackRouteType::LevelExit, waterLevel, spawnPoints, startMarkers,
-			checkpoints, boundsMin, boundsMax, ordered, &distances);
+			checkpoints, boundsMin, boundsMax, ordered, &distances, moves);
 		return !distances.empty();
 	}
 }

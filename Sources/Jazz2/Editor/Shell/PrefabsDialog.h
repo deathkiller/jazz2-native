@@ -4,7 +4,7 @@
 
 namespace Jazz2::Editor
 {
-	class EditorSession;
+	class IEditorContext;
 
 	/**
 		@brief Shows the prefabs of the default tile set of the level, see @ref TilePrefab
@@ -12,7 +12,7 @@ namespace Jazz2::Editor
 		A prefab is chosen as the brush, the brush is saved as a new one under a name, or one is removed. The window
 		stays open while the level is edited.
 	*/
-	void ShowPrefabsDialog(EditorSession& session);
+	void ShowPrefabsDialog(IEditorContext& session);
 }
 
 #endif

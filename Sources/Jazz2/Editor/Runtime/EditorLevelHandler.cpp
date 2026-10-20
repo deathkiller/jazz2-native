@@ -70,7 +70,7 @@ namespace Jazz2::Editor
 			_sceneCanvas = std::make_unique<EditorSceneCanvas>();
 			_sceneCanvas->setParent(_rootNode.get());
 		}
-		_sceneCanvas->DrawContent = std::move(drawContent);
+		_sceneCanvas->DrawContent = Death::move(drawContent);
 	}
 
 	void EditorLevelHandler::SetInitialCamera(Vector2f center, float scale, bool relative)

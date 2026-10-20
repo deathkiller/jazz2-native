@@ -10,7 +10,7 @@ using namespace Death::IO;
 namespace nCine
 {
 	AudioLoaderMpt::AudioLoaderMpt(std::unique_ptr<Stream> fileHandle)
-		: IAudioLoader(std::move(fileHandle))
+		: IAudioLoader(Death::move(fileHandle))
 	{
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
@@ -24,7 +24,7 @@ namespace nCine
 
 	std::unique_ptr<IAudioReader> AudioLoaderMpt::createReader()
 	{
-		return std::make_unique<AudioReaderMpt>(std::move(_fileHandle), _frequency);
+		return std::make_unique<AudioReaderMpt>(Death::move(_fileHandle), _frequency);
 	}
 }
 

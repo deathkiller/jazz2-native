@@ -441,7 +441,9 @@ namespace nCine::Backends
 			return;
 		}
 
-		_scrollEvent.x = static_cast<float>(xoffset);
+		// GLFW reports the horizontal offset positive to the left on every platform (for consistency with macOS and X11),
+		// the opposite of the other backends
+		_scrollEvent.x = static_cast<float>(-xoffset);
 		_scrollEvent.y = static_cast<float>(yoffset);
 		_inputEventHandler->OnMouseWheel(_scrollEvent);
 	}

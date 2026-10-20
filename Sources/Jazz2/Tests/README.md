@@ -19,6 +19,7 @@ still differ.
 | `Level/_pt.j2as` | The original-game probe, in JJ2+ AngelScript. The counterpart of `PhysicsProbe.cpp`: same scenario names, same columns, same state machine. |
 | `Level/MLLE-Include-1.8.asc` | Required by `_pt.j2as`; the level is MLLE-generated and the script's first lines pull this in. |
 | `Level/Diam3.j2as` | A one-scenario probe for the original game's **own** Diamondus 3, for `dm_chain`. Standalone rather than a copy of `_pt.j2as`: that one opens with an MLLE include its level requires, and Diam3 is an original 1.20 level. Drop it next to `Diam3.j2l` — JJ2+ picks up `<level>.j2as` by itself, and the level file is not modified. |
+| `Level/LayerProbe.j2as` | Not a movement probe: where JJ2+ draws a **layer**, for every speed model. See *Measuring where layers are drawn* below. |
 | `Results/*.csv.gz` | Captured runs, committed so a later change can be checked against them without needing the original game to hand. Gzipped — about 2.2 MB rather than 15, and still exact. |
 | `Tools/ExtractTrace.ps1` | Turns a raw capture (game log or `.asdat`) into a CSV, gzipped if the destination ends in `.gz`. |
 | `Tools/TraceIO.ps1` | Shared reading and writing, so `.csv` and `.csv.gz` are interchangeable everywhere. |
@@ -129,15 +130,16 @@ position snap, which no prop scenario could reach.
 
 ```powershell
 # This engine — the scenario is guarded on the level, so FirstScenario has to be raised to reach it
-#   (set FirstScenario to the index of `dm_chain`, the last case in ApplyInput() — 363 — and rebuild)
+#   (set FirstScenario to the index of `dm_chain`, the last case in ApplyInput() — 549 — and rebuild,
+#   or set ScenarioFilter to "dm_")
 Jazz2.exe /physics-probe /level flash/02_diam3 /log:file:"<path>\d3.log" /max-fps:60
 
 # The original — copy Level/Diam3.j2as next to Diam3.j2l, then
 Jazz2.exe Diam3.j2l          # writes diam3_trace.asdat
 ```
 
-The guard is what keeps it out of a normal sweep: on `_pt` scenario 363 falls through to `return false`, the
-probe reports finished after 362, and the committed `_pt` traces never contain it. **Its traces are
+The guard is what keeps it out of a normal sweep: on `_pt` the first guarded scenario (`cn_chain`, 548) falls
+through to `return false`, the probe reports finished after 547, and the committed `_pt` traces never contain it. **Its traces are
 committed separately** (`Results/*-diam3.csv.gz`) rather than merged into the main pair — one trace, one
 level's geometry, or the level-version caveat in `Results/README.md` stops meaning anything.
 
@@ -146,6 +148,30 @@ things to know: the original auto-loads `<level>.j2as` by base name, so the file
 shipped level has **live enemies**, which the test level deliberately does not. `dm_chain` ends with the
 original's player nudged by a Turtle Goon that walks over at tick ~1091 — level content arriving, not
 movement, but it is the kind of thing to expect in the tail of a long run.
+
+### Measuring where layers are drawn
+
+`Level/LayerProbe.j2as` measures the layer placement rather than the player. It builds two hundred layers of its own
+— every `LAYERSPEEDMODEL` on both axes, by speed, auto speed, `tileWidth`/`tileHeight`, `limitVisibleRegion`, offset
+and size — freezes the camera at five places, both corners of the level among them, and logs
+`jjLAYER::getXPosition()`/`getYPosition()` of each, the layer coordinate at the top left of the view. Drop it next to
+`Castle1.j2l` as `Castle1.j2as`, run `Jazz2.exe Castle1.j2l`, wait for "Layer probe finished" (a few seconds) and
+read `layer_probe.asdat`; remove the script afterwards, it takes the level over. Measured 2026-10-19 with JJ2+ v6.6h
+at 800×450, 640×480 and 320×200 — the resolution is `Width`/`Height` under `HKCU\Software\Epic MegaGames\Jazz
+Jackrabbit 2 Special Edition\1.24\VideoSize`, so put the old values back afterwards.
+
+All 49 920 samples of the three runs fit the model written up at `Tiles::LayerDescription::GetViewCoordinates()`; a
+selection of 90 is the editor self-test's `TestLayerPlacement()`, which is what to extend rather than re-running this.
+Four things to know when reading a capture:
+
+- **The game doesn't clamp the camera.** `cameraFreeze()` past the end of the level puts the camera back at 0, which
+  is why the script works out the bottom right corner itself.
+- **`getXPosition()` reports the last frame drawn**, so the auto speed's part is `auto * (jjRenderFrame - 1)`, a pixel
+  per unit and per 70 Hz tick, not `auto * jjRenderFrame`.
+- **Speeds are 16.16 fixed point** in the original: 0.1 is 0.1000061, so a slow layer seen from the far end of the
+  level is a few hundredths of a pixel away from a float model. It is not a model difference.
+- `NORMAL` with an auto speed ignores the speed **entirely**, the alignment term included, which is why the converter
+  can emulate it as the default model without the speed.
 
 ### Recording a run by hand (free-run mode)
 
@@ -425,6 +451,9 @@ column needed no adjustment while the original's did.
 | `cp_kill*`, `cp_sj_*` | What refuses the copter, and the reason `cp_tap*` could not answer it on its own: every one of those taps from a stated tick and **never stops**, and all five share one jump, so a rule about the tapping and a rule about the airtime predict the same thing for all of them. These press **once** and then go quiet until tick 80 (`cp_kill47/52/58`, with `cp_kill80` the no-early-press control), and repeat the question out of a two-tick jump rather than a five-tick one (`cp_sj_early`, `cp_sj_late`, `cp_sj_hold`). Read them as **engaged or not, and on which tick** — the descent afterwards is `cp_tap65`'s and adds nothing. `cp_kill47` looks redundant beside `cp_kill80` and is not: its "early press" falls inside the jump's own key hold, so it produces no fresh press at all and is the check that the pair really are the same input |
 | `ow_*` | One-way floors, on the ladder of seven 3-tile platforms at tiles 27..29, rows 33, 31, 29, 26, 23, 19 and 15, standing on the bottom rung. `ow_jump` rises through two and comes down on one, `ow_hop` peaks level with the next one up, `ow_down` and `ow_down_fall` hold Down standing on one and through the fall onto one, and `ow_hold` never lets the jump key go. Read **`ow_hold`**: crossing a platform with jump held relaunches the jump, so any scenario that *releases* the key near a crossing is decided by that tick rather than by the rule (see the hazard below) |
 
+| `bd_*`, `b2_*` | The two bird morphs, `CHAR::BIRD` and `CHAR::BIRD2` in JJ2+ (`morphTo()` at the reset, so no monitor is needed). The flight from rest, released, reversed and with Run, Up, Down, the two together, Jump held and tapped, and nothing at all; `_clamp` writes 10 px/tick onto both speeds at tick 60, the only way to reach the vertical cap; then what Fire does with each direction, tapped, from a perch and beside the level's turtle, and a forced hurt. **Read `objx` first**: it carries the character on every row (8 for `BIRD`, 21 for `BIRD2` on the original's side), so a trace that never morphed says so. On the original's side the set also writes `#pl` lines (JJ2+'s `idle`, the frame within the animation, the facing, health, blinking and `xAcc`) and `#obj` lines (every live object the player created) into the `.asdat`; `ExtractTrace.ps1` passes them by, so read them from the raw capture. `xAcc` is where the eased acceleration was read and `idle` where the perch's 37 ticks were. The two birds fly identically to the last tick, so most `b2_*` scenarios are a check on that and only the Fire ones say anything new |
+| `bd_ch_*` | The first bird's beak charge, which `bd_fire_r` had only met at the cap on the floor. `_rest` and `_fire_first` press Fire and a direction together from rest, and Fire first; `_f06`…`_f34` press Fire at a known speed (the number is the tick, 0.56 to 4.0 px/tick); `_air` and `_air_f` do it in mid-air, `_coast` with no direction at all, and `_c70`/`_c71`/`_c72` press Fire while coasting through exactly 2.0 px/tick, which is what settled *strictly* faster than 2. `_rel`, `_rev`, `_frel`, `_up`, `_down`, `_jump`, `_retap`, `_rel_frel` and `_rev_frel` act on a charge already flying at the cap; `_up_first`, `_left` and `_left_rest` are the variants; `_turn` presses Fire while turning round, which showed the charge follows the speed and not the facing; `_wall` charges into the upper floor's wall in mid-air. `_idle` only takes the morph. **Read the pose against `xs`**: a charge is its pose (332/333/334 on the original's side, down/level/up) and the speed jumping to the cap. The original logs the speed after the charge has put it back and this engine before, so a released or reversed charge reads 4.0 there and a shade under here while the positions agree |
+
 ## Scenarios that do not measure the same thing on both sides
 
 These show up as outliers in every comparison and are not engine bugs. Check this list before chasing one.
@@ -432,6 +461,9 @@ These show up as outliers in every comparison and are not engine bugs. Check thi
 | Scenario | Why |
 |---|---|
 | `lc_*` | Engine only — the original has no ledge climb. |
+| `bd_idle`, `b2_idle` (animation columns only) | Each runs straight after a morph, and the original plays its perched poses there at about **3 ticks a frame** against the 7 it uses everywhere else — the same post-morph contamination as the doubled acceleration below, which is why they come first in their sets and accelerate nothing. Read `bd_idle2` / `b2_idle2` for the perch. |
+| `bd_ch_c71` | A knife edge by construction: Fire goes down on the tick the coasting bird's speed is exactly 2.0 px/tick after that tick's brake, which the original refuses to charge on. This engine's 60 Hz frame falls between two of the original's ticks, where the bird is still a shade faster (2.03), so it charges and flies 664 px further. `bd_ch_c70` and `bd_ch_c72`, a tick either side, agree. |
+| `bd_*`, `b2_*` (the `y` column) | This engine's flying bird sits 8 px lower than the original's, by design (see *A flying bird sits 8 px lower* in `Docs/MovementAccuracyReference.dox`), so it starts a scenario sinking, lands a frame or so apart and perches later. Compare by speed and per-tick steps. |
 | `ob_spring_frozen` | The original's frozen spring never fires (it needs a Freezer shot to thaw), so its trace is a player standing still. The engine side spawns the same spring in its normal state and does fire. |
 | `sp_spaz_side` | The probe holds **Down and Jump** for the whole scenario. The original jumps once the sidekick ends — a 216 px rise on the end of its trace — while this engine's standard jump is gated on Down not being pressed, so the player stays crouched. `sp_spaz_side_rel` releases both and is the one to read for the sidekick itself. |
 | `sp_spaz_side_rel`, `sp_spaz_side_jump` (animation columns only) | The sidekick's ending pose runs **deliberately shorter than measured**, asked for after seeing it: 5 ticks here against the original's 12 with nothing following. Positions and speeds still compare normally. The jump case is the one that measures the *behaviour* — the original gives 3 ticks of the pose before the jump pose takes over, and a longer reading there would be a real fault. See `Player::SidekickEndSpeedUp`. |

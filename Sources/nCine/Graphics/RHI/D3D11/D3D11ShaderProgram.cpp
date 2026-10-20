@@ -450,7 +450,7 @@ namespace nCine::RHI::D3D11
 				}
 			}
 
-			slots.push_back(std::move(slot));
+			slots.push_back(Death::move(slot));
 		}
 
 		refl->Release();

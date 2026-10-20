@@ -15,7 +15,10 @@ namespace Jazz2::Editor
 	/**
 		@brief Self-test of the level editor, run by the `/editor-selftest [directory]` command-line switch
 
-		Every level in the directory (`Cache/Episodes` by default) is loaded into a @ref LevelDocument and:
+		Tests of the parts of the editor that need no game data run first: the document and its commands, the files,
+		the images, the event catalog, the tools driven through a host without the shown level, and more. With
+		`/editor-selftest --unit` only those run (see @ref RunUnit()), so no converted game is needed. Then every
+		level in the directory (`Cache/Episodes` by default) is loaded into a @ref LevelDocument and:
 		- exported again, which has to give the same file --- or, for a level written by another tool, a file that
 		  reads back to the same level
 		- saved with editor data, which has to survive being loaded again and be dropped by the export
@@ -29,8 +32,10 @@ namespace Jazz2::Editor
 	public:
 		EditorSelfTest() = delete;
 
-		/** @brief Runs the self-test, returns `false` if anything failed */
+		/** @brief Runs the whole self-test with the levels of a directory, returns `false` if anything failed */
 		static bool Run(StringView directory);
+		/** @brief Runs only the tests that need no game data, returns `false` if anything failed */
+		static bool RunUnit();
 	};
 }
 

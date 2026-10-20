@@ -28,7 +28,7 @@ namespace Jazz2::UI
 		Length = other.Length;
 		Location = other.Location;
 		Height = other.Height;
-		CurrentColor = std::move(other.CurrentColor);
+		CurrentColor = Death::move(other.CurrentColor);
 		Scale = other.Scale;
 		CharSpacing = other.CharSpacing;
 		AllowVariance = other.AllowVariance;
@@ -53,7 +53,7 @@ namespace Jazz2::UI
 		Length = other.Length;
 		Location = other.Location;
 		Height = other.Height;
-		CurrentColor = std::move(other.CurrentColor);
+		CurrentColor = Death::move(other.CurrentColor);
 		Scale = other.Scale;
 		CharSpacing = other.CharSpacing;
 		AllowVariance = other.AllowVariance;
@@ -82,10 +82,10 @@ namespace Jazz2::UI
 
 	FormattedTextBlock::FormattedTextBlock(FormattedTextBlock&& other) noexcept
 	{
-		_parts = std::move(other._parts);
-		_background = std::move(other._background);
-		_font = std::move(other._font);
-		_text = std::move(other._text);
+		_parts = Death::move(other._parts);
+		_background = Death::move(other._background);
+		_font = Death::move(other._font);
+		_text = Death::move(other._text);
 		_flags = other._flags;
 		_proposedWidth = other._proposedWidth;
 		_cachedWidth = other._cachedWidth;
@@ -98,10 +98,10 @@ namespace Jazz2::UI
 
 	FormattedTextBlock& FormattedTextBlock::operator=(FormattedTextBlock&& other) noexcept
 	{
-		_parts = std::move(other._parts);
-		_background = std::move(other._background);
-		_font = std::move(other._font);
-		_text = std::move(other._text);
+		_parts = Death::move(other._parts);
+		_background = Death::move(other._background);
+		_font = Death::move(other._font);
+		_text = Death::move(other._text);
 		_flags = other._flags;
 		_proposedWidth = other._proposedWidth;
 		_cachedWidth = other._cachedWidth;
@@ -974,7 +974,7 @@ namespace Jazz2::UI
 		if (_text == value) {
 			return;
 		}
-		_text = std::move(value);
+		_text = Death::move(value);
 		_parts.clear();
 		_background.clear();
 	}

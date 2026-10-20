@@ -16,7 +16,7 @@ namespace nCine
 
 	void ServiceLocator::RegisterAudioDevice(std::unique_ptr<IAudioDevice> service)
 	{
-		_registeredAudioDevice = std::move(service);
+		_registeredAudioDevice = Death::move(service);
 		_audioDevice = _registeredAudioDevice.get();
 	}
 
@@ -28,7 +28,7 @@ namespace nCine
 
 	void ServiceLocator::RegisterThreadPool(std::unique_ptr<IThreadPool> service)
 	{
-		_registeredThreadPool = std::move(service);
+		_registeredThreadPool = Death::move(service);
 		_threadPool = _registeredThreadPool.get();
 	}
 
@@ -40,7 +40,7 @@ namespace nCine
 
 	void ServiceLocator::RegisterRhiCapabilities(std::unique_ptr<RHI::IRhiCapabilities> service)
 	{
-		_registeredRhiCapabilities = std::move(service);
+		_registeredRhiCapabilities = Death::move(service);
 		_rhiCapabilities = _registeredRhiCapabilities.get();
 	}
 

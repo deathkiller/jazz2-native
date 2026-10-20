@@ -7,20 +7,31 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "Teams.h"
+#include "PacketTypes.h"
 #include "ServerDiscovery.h"
 #include "WebhookClient.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../../nCine/I18n.h"
+#include "../../nCine/Base/Algorithms.h"
 
 #include <jsoncpp/json.h>
 
 #include <float.h>
+#include <cstring>
 
 #include <Containers/DateTime.h>
 #include <Containers/StringUtils.h>
 #include <Containers/StringStlView.h>
 #include <IO/FileSystem.h>
+#include <IO/MemoryStream.h>
+
+#if !defined(NCINE_PROTOCOL_VERSION_MIN_s)
+#	define NCINE_PROTOCOL_VERSION_MIN_s DEATH_PASTE(NCINE_PROTOCOL_VERSION_MIN, _s)
+#endif
+#if !defined(NCINE_PROTOCOL_VERSION_MAX_s)
+#	define NCINE_PROTOCOL_VERSION_MAX_s DEATH_PASTE(NCINE_PROTOCOL_VERSION_MAX, _s)
+#endif
 
 using namespace Death;
 using namespace Death::Containers::Literals;
@@ -68,7 +79,7 @@ namespace Jazz2::Multiplayer
 		return false;
 #else
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
-		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
+		_serverConfig = std::make_unique<ServerConfiguration>(Death::move(serverConfig));
 
 		std::uint16_t serverPort = _serverConfig->ServerPort; // Server port is part of Unique Server ID
 		std::memcpy(&_serverConfig->UniqueServerID[0], &PreferencesCache::UniqueServerID[0], arraySize(_serverConfig->UniqueServerID) - sizeof(std::uint16_t));
@@ -120,7 +131,7 @@ namespace Jazz2::Multiplayer
 	bool NetworkManager::CreateLocalServer(INetworkHandler* handler, ServerConfiguration&& serverConfig)
 	{
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
-		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
+		_serverConfig = std::make_unique<ServerConfiguration>(Death::move(serverConfig));
 		_serverConfig->StartUnixTimestamp = DateTime::UtcNow().ToUnixMilliseconds() / 1000;
 
 		// No socket, no server discovery and no content path override (all content is local)
@@ -278,7 +289,7 @@ namespace Jazz2::Multiplayer
 	void NetworkManager::SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider)
 	{
 		if (_discovery != nullptr) {
-			_discovery->SetStatusProvider(std::move(statusProvider));
+			_discovery->SetStatusProvider(Death::move(statusProvider));
 		}
 	}
 
@@ -863,7 +874,7 @@ namespace Jazz2::Multiplayer
 						}
 
 						if (!playlistEntry.LevelName.empty() && serverConfig.GameMode != MpGameMode::Unknown) {
-							serverConfig.Playlist.push_back(std::move(playlistEntry));
+							serverConfig.Playlist.push_back(Death::move(playlistEntry));
 						}
 					}
 				}
@@ -1023,6 +1034,173 @@ namespace Jazz2::Multiplayer
 			uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 		DEATH_DEBUG_ASSERT(uuidStr.size() == uuidStrLength);
 		return uuidStr;
+	}
+
+	ConnectionResult NetworkManager::AcceptServerPeer(const Peer& peer, std::uint32_t clientData)
+	{
+		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > TransportProtocolVersion) {
+			// Connected client is newer than server, reject it
+			LOGI("Peer kicked ({}) [{}]: Incompatible protocol version", AddressToString(peer), peer);
+			return Reason::IncompatibleVersion;
+		}
+
+		const auto& serverConfig = GetServerConfiguration();
+		std::uint32_t peerCount = GetPeerCount();
+		if (peerCount >= serverConfig.MaxPlayerCount) {
+			// The connecting peer is not counted yet, so reject already when the count reaches the limit
+			LOGI("Peer kicked ({}) [{}]: Server is full ({}/{} players)", AddressToString(peer),
+				peer, peerCount, serverConfig.MaxPlayerCount);
+			return Reason::ServerIsFull;
+		}
+
+		return true;
+	}
+
+	bool NetworkManager::HandleServerPacket(const Peer& peer, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
+	{
+		switch ((ClientPacketType)packetType) {
+			case ClientPacketType::Ping: {
+				SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::Pong, {});
+				return true;
+			}
+			case ClientPacketType::Auth: {
+				MemoryStream packet(data);
+				char gameID[4];
+				packet.Read(gameID, 4);
+				std::uint64_t protocolVersion = packet.ReadVariableUint64();
+
+				constexpr std::uint64_t minVersion = parseVersion(NCINE_PROTOCOL_VERSION_MIN_s);
+				constexpr std::uint64_t maxVersion = parseVersion(NCINE_PROTOCOL_VERSION_MAX_s);
+
+				// Compared in full, patch included. `NCINE_PROTOCOL_VERSION` is a hand-maintained literal that
+				// moves only when the wire format does (it is never derived from the build or from Git), so any
+				// version outside the range the server was built to talk to is a genuine incompatibility.
+				// Masking the patch out meant a wire change could only be announced by moving the *minor*, which
+				// tied protocol versioning to release numbering and left no way to express "the protocol changed
+				// in a patch release".
+				if (std::strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || protocolVersion < minVersion || protocolVersion > maxVersion) {
+					LOGI("Peer kicked ({}) [{}]: Incompatible protocol version", AddressToString(peer), peer);
+					Kick(peer, Reason::IncompatibleVersion);
+					return true;
+				}
+
+				Uuid uuid;
+				packet.Read(uuid.data(), uuid.size());
+				String uniquePlayerId = UuidToString(uuid);
+
+				LOGD("[MP] ClientPacketType::Auth [{}] - gameID: \"{}\", protocolVersion: 0x{:x}, uuid: \"{}\"",
+					peer, StringView(gameID, 4), protocolVersion, uniquePlayerId);
+
+				// The length comes from a peer that isn't authenticated yet, so it's bounded before anything is allocated
+				constexpr std::uint32_t MaxPasswordLength = 256;
+				std::uint32_t passwordLength = packet.ReadVariableUint32();
+				if DEATH_UNLIKELY(passwordLength > MaxPasswordLength || std::int64_t(passwordLength) > packet.GetSize() - packet.GetPosition()) {
+					LOGI("Peer kicked ({}) [{}]: Invalid password", AddressToString(peer), peer);
+					Kick(peer, Reason::InvalidPassword);
+					return true;
+				}
+				String password{NoInit, passwordLength};
+				packet.Read(password.data(), passwordLength);
+
+				std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
+
+				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
+				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
+					LOGI("Peer kicked ({}) [{}]: Invalid player name", AddressToString(peer), peer);
+					Kick(peer, Reason::InvalidPlayerName);
+					return true;
+				}
+
+				String playerName{NoInit, playerNameLength};
+				packet.Read(playerName.data(), playerNameLength);
+
+				const auto& serverConfig = GetServerConfiguration();
+				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
+					LOGI("Peer kicked \"{}\" ({}) [{}]: Banned by unique player ID", playerName, AddressToString(peer), peer);
+					Kick(peer, Reason::Banned);
+					return true;
+				}
+				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
+					LOGI("Peer kicked \"{}\" ({}) [{}]: Not in whitelist", playerName, AddressToString(peer), peer);
+					Kick(peer, Reason::NotInWhitelist);
+					return true;
+				}
+
+				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
+					LOGI("Peer kicked \"{}\" ({}) [{}]: Invalid password", playerName, AddressToString(peer), peer);
+					Kick(peer, Reason::InvalidPassword);
+					return true;
+				}
+
+				std::uint8_t deviceIdLength = packet.ReadValue<std::uint8_t>();
+				String deviceId{NoInit, deviceIdLength};
+				packet.Read(deviceId.data(), deviceIdLength);
+
+				std::uint64_t playerUserId = packet.ReadVariableUint64();
+				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
+					LOGI("Peer kicked \"{}\" ({}) [{}]: Discord authentication is required", playerName, AddressToString(peer), peer);
+					Kick(peer, Reason::Requires3rdPartyAuthProvider);
+					return true;
+				}
+				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist)
+
+				std::uint32_t furColor = packet.ReadValueAsLE<std::uint32_t>();
+
+				if (auto peerDesc = GetPeerDescriptor(peer)) {
+					peerDesc->UniquePlayerID = Death::move(uuid);
+					peerDesc->PlayerName = Death::move(playerName);
+					peerDesc->FurColor = furColor;
+					peerDesc->IsAuthenticated = true;
+
+					if (serverConfig.AdminUniquePlayerIDs.contains(uniquePlayerId)) {
+						peerDesc->IsAdmin = true;
+					}
+
+					// Reconnect: if this player disconnected recently (and no new round invalidated it), restore
+					// their progression (weapons, lives, score, gems) and championship points so they resume
+					if (auto previous = ReclaimDisconnectedPeer(peerDesc->UniquePlayerID)) {
+						if (previous->HasCarryOver) {
+							peerDesc->CarryOver = previous->CarryOver;
+							peerDesc->HasCarryOver = true;
+							peerDesc->Points = previous->Points;
+							peerDesc->Team = previous->Team;
+							// A player who left while spectating carries the spectator actor's type in the snapshot,
+							// which is not a character: spawning it as one produced a player that looked like a
+							// spectator while neither side had it marked as one (the pause menu offered "Spectate"
+							// to someone already spectating). The character is the one chosen before spectating,
+							// and the spectate state itself is restored so the join spawns a spectator again.
+							if (previous->CarryOver.Type != PlayerType::Spectate) {
+								peerDesc->PreferredPlayerType = previous->CarryOver.Type;
+							} else if (previous->PreferredPlayerType != PlayerType::Spectate) {
+								peerDesc->PreferredPlayerType = previous->PreferredPlayerType;
+							}
+							peerDesc->IsSpectating = previous->IsSpectating;
+							LOGI("Peer \"{}\" [{}] reconnected, restoring progression{}", peerDesc->PlayerName, peer,
+								(peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None ? " (as spectator)" : "");
+						}
+					}
+
+					LOGI("Peer authenticated as \"{}\" ({}){} [{}]", peerDesc->PlayerName, AddressToString(peer),
+						peerDesc->IsAdmin ? " [Admin]" : "", peer);
+
+					MemoryStream response(37);
+					response.WriteValue<std::uint8_t>(0x01);	// Flags (0x01 = accepted protocol version range follows)
+					response.Write(PreferencesCache::UniqueServerID, PreferencesCache::UniqueServerID.size() - sizeof(std::uint16_t));
+					response.WriteValue<std::uint16_t>(GetServerPort());	// Server port is part of Unique Server ID
+					// Appended, so older clients that read only the fields above are not affected
+					response.WriteVariableUint64(minVersion);
+					response.WriteVariableUint64(maxVersion);
+					SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::AuthResponse, response);
+				} else {
+					DEATH_ASSERT_UNREACHABLE();
+				}
+				// The level handler is given the authentication too
+				return false;
+			}
+			default: {
+				return false;
+			}
+		}
 	}
 
 	bool NetworkManager::IsKickedOff(Reason reason)

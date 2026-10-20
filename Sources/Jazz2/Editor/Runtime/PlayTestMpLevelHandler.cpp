@@ -2,6 +2,7 @@
 
 #if defined(WITH_EDITOR) && defined(WITH_MULTIPLAYER)
 
+#include "PlayTestDebug.h"
 #include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
 #include "../../Actors/Player.h"
@@ -39,7 +40,7 @@ namespace Jazz2::Editor
 			serverConfig.AllowLedgeClimb = PreferencesCache::EnableLedgeClimb;
 
 			_playTestNetwork = std::make_unique<NetworkManager>();
-			_playTestNetwork->CreateLocalServer(this, std::move(serverConfig));
+			_playTestNetwork->CreateLocalServer(this, Death::move(serverConfig));
 		}
 
 		PlayTestLocalSession::~PlayTestLocalSession()
@@ -67,10 +68,18 @@ namespace Jazz2::Editor
 	PlayTestMpLevelHandler::PlayTestMpLevelHandler(IRootController* root, const PlayTestOptions& options)
 		: PlayTestLocalSession(options), MpLevelHandler(root, _playTestNetwork.get(), MpLevelHandler::LevelState::InitialUpdatePending), _options(options)
 	{
+		// Before the level is initialized, it makes the node the objects are under
+		_playTestDebug = std::make_unique<PlayTestDebug>(*this);
 	}
 
 	PlayTestMpLevelHandler::~PlayTestMpLevelHandler()
 	{
+#if defined(WITH_AUDIO)
+		// A play-test that isn't kept anymore takes its sounds with it, also the paused ones and those an actor still holds
+		for (auto& sound : _playingSounds) {
+			sound->stop();
+		}
+#endif
 	}
 
 	bool PlayTestMpLevelHandler::Initialize(const LevelDocument& document, StringView levelName, StringView fullPath)
@@ -82,7 +91,7 @@ namespace Jazz2::Editor
 
 		// The first player as chosen, the others take the next characters
 		PlayerType players[LevelInitialization::MaxPlayerCount];
-		std::int32_t count = std::clamp(_options.PlayerCount, 1, LevelInitialization::MaxPlayerCount);
+		std::int32_t count = std::clamp<std::int32_t>(_options.PlayerCount, 1, LevelInitialization::MaxPlayerCount);
 		for (std::int32_t i = 0; i < count; i++) {
 			std::int32_t character = (std::int32_t(_options.Player) - std::int32_t(PlayerType::Jazz) + i) % 3;
 			players[i] = PlayerType(std::int32_t(PlayerType::Jazz) + character);
@@ -95,12 +104,13 @@ namespace Jazz2::Editor
 		if (!result) {
 			return false;
 		}
+		RetainResources();
 
 		if (_options.HasSpawnPosition) {
 			// The players start where they were asked to, next to each other as they start in the game
 			for (std::size_t i = 0; i < _players.size(); i++) {
 				Vector2f pos;
-				if (!FindSpawnPositionNear(_tileMap.get(), _options.SpawnPosition + Vector2f(float(i) * 30.0f, 0.0f), 160.0f, pos)) {
+				if (!_playTestDebug->FindClearPlayerPosition(_options.SpawnPosition + Vector2f(float(i) * 30.0f, 0.0f), 160.0f, pos)) {
 					_spawnFellBack = true;
 					break;
 				}
@@ -141,10 +151,11 @@ namespace Jazz2::Editor
 		if (_music != nullptr) {
 			_music->pause();
 		}
-		for (auto& sound : _playingSounds) {
-			sound->stop();
+		// As PlayTestLevelHandler::Suspend(), the sound effects wait, the music of Sugar Rush ends
+		if (_sugarRushMusic != nullptr) {
+			_sugarRushMusic->stop();
 		}
-		_playingSounds.clear();
+		PauseAllSfx();
 #endif
 	}
 
@@ -154,13 +165,12 @@ namespace Jazz2::Editor
 		if (_music != nullptr && _musicStartDelay == 0) {
 			_music->play();
 		}
+		// Under the pause menu they go on once it's closed
+		if (!IsPausable() || _pauseMenu == nullptr) {
+			ResumeAllSfx();
+		}
 #endif
 		_playPath.BreakSegment(PlayPath::Break::None);
-	}
-
-	bool PlayTestMpLevelHandler::CanOpenInEditor() const
-	{
-		return false;
 	}
 
 	bool PlayTestMpLevelHandler::IsEditorPlayTest() const
@@ -184,9 +194,21 @@ namespace Jazz2::Editor
 	{
 		MpLevelHandler::OnEndFrame();
 
-		if (Actors::Player* player = GetPlayer()) {
-			_playPath.Record(player->GetPos(), player->GetSpeed().Length(), theApplication().GetTimeMult());
+		// By the time of the level, which stands still while it's paused, see PlayTestDebug
+		float timeMult = GetLevelTimeMult();
+		Actors::Player* player = GetPlayer();
+		if (player != nullptr && timeMult > 0.0f) {
+			_playPath.Record(player->GetPos(), player->GetSpeed().Length(), timeMult);
 		}
+	}
+
+	void PlayTestMpLevelHandler::HandleLevelChange(LevelInitialization&& levelInit)
+	{
+		// Without a playlist, and never online, the round or the level ends in the editor (see EditorSession::ChangeLevel()),
+		// a level that follows is played on in local splitscreen as the play-test was, not by a session that isn't there
+		levelInit.IsLocalSession = true;
+		levelInit.LocalMultiplayerGameMode = _options.GameMode;
+		LevelHandler::HandleLevelChange(Death::move(levelInit));
 	}
 
 	void PlayTestMpLevelHandler::HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags)

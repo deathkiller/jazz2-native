@@ -2,8 +2,12 @@
 
 #if defined(WITH_EDITOR)
 
+#include "TextPrompt.h"
 #include "TileSetsDialog.h"
-#include "../EditorSession.h"
+#include "../Tools/EditorContext.h"
+#include "../Common/TileStamp.h"
+#include "../Document/LevelDocument.h"
+#include "../Common/ToolMath.h"
 #include "../UI/UiDialogs.h"
 #include "../UI/UiMenu.h"
 #include "../UI/UiSurface.h"
@@ -55,11 +59,7 @@ namespace Jazz2::Editor
 			return t * t * (3.0 - 2.0 * t);
 		}
 
-		std::int32_t Mod(std::int32_t a, std::int32_t m)
-		{
-			std::int32_t r = a % m;
-			return (r < 0 ? r + m : r);
-		}
+		using ToolMath::PositiveModulo;
 
 		double Dither(std::int32_t x, std::int32_t y)
 		{
@@ -83,8 +83,8 @@ namespace Jazz2::Editor
 			double tx = fx - ix, ty = fy - iy;
 			tx = tx * tx * (3.0 - 2.0 * tx);
 			ty = ty * ty * (3.0 - 2.0 * ty);
-			std::int32_t p = std::max(1, period / cell);
-			auto h = [p, seed](std::int32_t a, std::int32_t b) { return Hash(Mod(a, p), Mod(b, p), seed); };
+			std::int32_t p = std::max<std::int32_t>(1, period / cell);
+			auto h = [p, seed](std::int32_t a, std::int32_t b) { return Hash(PositiveModulo(a, p), PositiveModulo(b, p), seed); };
 			return Mix(Mix(h(ix, iy), h(ix + 1, iy), tx), Mix(h(ix, iy + 1), h(ix + 1, iy + 1), tx), ty);
 		}
 
@@ -99,7 +99,7 @@ namespace Jazz2::Editor
 				}
 				case FxTileKind::GlassBlocks: {
 					constexpr std::int32_t Block = 16;
-					std::int32_t u = Mod(x, Block), v = Mod(y, Block);
+					std::int32_t u = PositiveModulo(x, Block), v = PositiveModulo(y, Block);
 					if (u < 2 || v < 2) {
 						return 0;
 					}
@@ -110,7 +110,7 @@ namespace Jazz2::Editor
 					return Fx(235.0 * k + Dither(x, y) * 2.0, 0.0);
 				case FxTileKind::Water: {
 					double d = y + 0.5;
-					double f = std::min(1.0, d / std::max(h, 1));
+					double f = std::min(1.0, d / std::max<std::int32_t>(h, 1));
 					double phase = d * 0.45 + std::sin(x * 2.0 * Pi / TileSize) * 0.9;
 					double band = 0.5 + 0.5 * std::sin(phase);
 					double reflection = 235.0 * (1.0 - 0.7 * f) * (0.72 + 0.28 * band) * k;
@@ -142,7 +142,7 @@ namespace Jazz2::Editor
 					if (edge <= 0.0) {
 						return 0;
 					}
-					double depth = std::min(7.0 * std::sqrt(edge) * std::max(1, h / TileSize), double(h));
+					double depth = std::min(7.0 * std::sqrt(edge) * std::max<std::int32_t>(1, h / TileSize), double(h));
 					if (y + 0.5 > depth) {
 						return 0;
 					}
@@ -179,8 +179,8 @@ namespace Jazz2::Editor
 
 	void GenerateFxTiles(FxTileKind kind, std::int32_t widthTiles, std::int32_t heightTiles, float strength, Formats::TileSetData& tiles)
 	{
-		widthTiles = std::max(widthTiles, 1);
-		heightTiles = std::max(heightTiles, 1);
+		widthTiles = std::max<std::int32_t>(widthTiles, 1);
+		heightTiles = std::max<std::int32_t>(heightTiles, 1);
 		std::int32_t w = widthTiles * TileSize, h = heightTiles * TileSize;
 		tiles.Resize(widthTiles * heightTiles);
 		for (std::int32_t ty = 0; ty < heightTiles; ty++) {
@@ -204,14 +204,14 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void ShowFxTileGeneratorDialog(EditorSession& session)
+	void ShowFxTileGeneratorDialog(IEditorContext& session)
 	{
 		UiSurface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
 
-		EditorSession* s = &session;
+		IEditorContext* s = &session;
 		auto state = std::make_shared<GeneratorState>();
 		auto dialog = std::make_unique<UiDialog>(_("Generate Effect Tiles"));
 		UiDialog* dialogPtr = dialog.get();
@@ -232,7 +232,7 @@ namespace Jazz2::Editor
 					entry.Label = GetKindName(kind);
 					entry.IsChecked = [state, kind]() { return state->Kind == kind; };
 					entry.Execute = [state, kind]() { state->Kind = kind; };
-					entries.push_back(std::move(entry));
+					entries.push_back(Death::move(entry));
 				}
 			})->Flex = 1.0f;
 		}
@@ -274,17 +274,13 @@ namespace Jazz2::Editor
 				stamp.Tiles.push_back(TileRef{ std::uint16_t(first.Index + i), first.Source, 0 });
 				stamp.Present.push_back(true);
 			}
-			s->SetStamp(std::move(stamp));
+			s->SetStamp(Death::move(stamp));
 			s->ShowMessage(_("The tiles are the brush now, paint them on a layer drawn as Blur Behind"));
 			dialogPtr->Close();
 		}, true);
 		dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
-		UiOverlayOptions options;
-		options.Centered = true;
-		options.Modal = true;
-		options.CloseOnOutsideClick = false;
-		surface->PushOverlay(std::move(dialog), std::move(options));
+		ShowModal(*surface, Death::move(dialog));
 	}
 }
 

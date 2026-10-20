@@ -751,7 +751,7 @@ namespace Jazz2::UI::Menu
 		// Called on the discovery thread, while the main thread may be drawing or navigating the list, so the
 		// server only waits here to be merged into it by ProcessPendingServers()
 		std::unique_lock<Death::Threading::Spinlock> lock(_pendingServersLock);
-		_pendingServers.push_back(std::move(desc));
+		_pendingServers.push_back(Death::move(desc));
 	}
 
 	bool ServerSelectSection::IsServerCompatible(const Jazz2::Multiplayer::ServerDescription& desc)
@@ -785,12 +785,12 @@ namespace Jazz2::UI::Menu
 			if (_pendingServers.empty()) {
 				return;
 			}
-			servers = std::move(_pendingServers);
+			servers = Death::move(_pendingServers);
 			_pendingServers.clear();
 		}
 
 		for (auto& desc : servers) {
-			AddOrUpdateServer(std::move(desc));
+			AddOrUpdateServer(Death::move(desc));
 		}
 	}
 
@@ -811,11 +811,11 @@ namespace Jazz2::UI::Menu
 			// carries the endpoint of that family alone - so they are collected into the endpoint list the
 			// client already knows how to walk through in order, instead of becoming two entries
 			String endpoints = (sameEndpoint
-				? std::move(desc.EndpointString)
+				? Death::move(desc.EndpointString)
 				: AppendEndpoint(item.Desc.EndpointString, desc.EndpointString));
 
-			item.Desc = std::move(desc);
-			item.Desc.EndpointString = std::move(endpoints);
+			item.Desc = Death::move(desc);
+			item.Desc.EndpointString = Death::move(endpoints);
 			item.Desc.Flags |= prevFlags;
 
 			if (item.Desc.IsCompatible != wasCompatible) {
@@ -824,7 +824,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		std::int32_t index = InsertItem(ItemData(std::move(desc)));
+		std::int32_t index = InsertItem(ItemData(Death::move(desc)));
 		// The selected server stays selected while the list grows around it, except at the very top - there the
 		// cursor stays at the top, so a compatible server that comes later still gets it before the player moves
 		if (_selectedIndex > 0 && index <= _selectedIndex) {
@@ -843,20 +843,20 @@ namespace Jazz2::UI::Menu
 				index++;
 			}
 		}
-		_items.insert(_items.begin() + index, std::move(item));
+		_items.insert(_items.begin() + index, Death::move(item));
 		return index;
 	}
 
 	void ServerSelectSection::MoveItemToGroup(std::int32_t index)
 	{
 		bool wasSelected = (index == _selectedIndex);
-		ItemData item = std::move(_items[index]);
+		ItemData item = Death::move(_items[index]);
 		_items.erase(_items.begin() + index);
 		if (index < _selectedIndex) {
 			_selectedIndex--;
 		}
 
-		std::int32_t newIndex = InsertItem(std::move(item));
+		std::int32_t newIndex = InsertItem(Death::move(item));
 		if (wasSelected) {
 			_selectedIndex = newIndex;
 		} else if (newIndex <= _selectedIndex) {
@@ -998,7 +998,7 @@ namespace Jazz2::UI::Menu
 	}
 
 	ServerSelectSection::ItemData::ItemData(Jazz2::Multiplayer::ServerDescription&& desc)
-		: Desc(std::move(desc)), Y(0.0f)
+		: Desc(Death::move(desc)), Y(0.0f)
 	{
 	}
 

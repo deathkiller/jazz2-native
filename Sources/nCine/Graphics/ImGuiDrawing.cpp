@@ -351,7 +351,7 @@ namespace nCine
 			texture->TexImage2D(0, PixelFormat::RGBA8, false, tex->Width, tex->Height, pixels);
 
 			RHI::Texture* texturePtr = texture.get();
-			_textures.emplace(texturePtr, std::move(texture));
+			_textures.emplace(texturePtr, Death::move(texture));
 			// Store identifiers
 			tex->SetTexID((ImTextureID)(intptr_t)texturePtr);
 			tex->SetStatus(ImTextureStatus_OK);

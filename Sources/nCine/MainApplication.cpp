@@ -1155,7 +1155,7 @@ namespace nCine
 		std::memset(_oskInputBuffer, 0, sizeof(_oskInputBuffer));
 		std::memset(_oskOutputBuffer, 0, sizeof(_oskOutputBuffer));
 		std::memset(_oskTitle, 0, sizeof(_oskTitle));
-		_imeOnCompleted = std::move(onCompleted);
+		_imeOnCompleted = Death::move(onCompleted);
 
 		// Seed the editor with what the field already holds, so the user edits it instead of retyping it.
 		// UTF-8 in, UCS-2 out; a code point the encoding cannot hold (outside the BMP) is dropped.
@@ -1220,7 +1220,7 @@ namespace nCine
 			return false;
 		}
 		_swkbdInitialText = initialText;
-		_imeOnCompleted = std::move(onCompleted);
+		_imeOnCompleted = Death::move(onCompleted);
 		_swkbdPending = true;
 		return true;
 #elif defined(DEATH_TARGET_VITA)
@@ -1234,7 +1234,7 @@ namespace nCine
 
 		std::memset(_imeInputBuffer, 0, sizeof(_imeInputBuffer));
 		std::memset(_imeTitle, 0, sizeof(_imeTitle));
-		_imeOnCompleted = std::move(onCompleted);
+		_imeOnCompleted = Death::move(onCompleted);
 
 		// Seed the editor with what the field already holds, so the user edits it instead of retyping it.
 		// UTF-8 in, UTF-16 out, a code point at a time; anything past the buffer is dropped rather than
@@ -1640,13 +1640,24 @@ namespace nCine
 						SDL_GetWindowSize(windowHandle, &logicalWidth, &logicalHeight);
 						_gfxDevice->_width = logicalWidth;
 						_gfxDevice->_height = logicalHeight;
-						_gfxDevice->_isFullscreen = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+						static_cast<SdlGfxDevice*>(_gfxDevice.get())->syncFullscreenState();
 						// Query the pixel size the way the active backend measures it, then resize the backend
 						// swap chain to match (no-op on OpenGL / software); see the SDL2 branch for the rationale
 						SdlGfxDevice::queryDrawableSize(windowHandle, logicalWidth, logicalHeight,
 							_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
 						RHI::Device::ResizeSwapchain(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
 						ResizeScreenViewport(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
+					}
+					break;
+				case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
+				case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
+					// The confirmation of an asynchronous request can arrive after the resize it caused - it has to be
+					// recorded here, or the next resize would take it for a change the window system made by itself
+					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+						static_cast<SdlGfxDevice*>(_gfxDevice.get())->syncFullscreenState();
+					}
+					if (_appCfg.withGraphics) {
+						SdlInputManager::parseEvent(event);
 					}
 					break;
 				case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
@@ -1723,7 +1734,7 @@ namespace nCine
 								_gfxDevice->_width = event.window.data1;
 								_gfxDevice->_height = event.window.data2;
 								SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
-								_gfxDevice->_isFullscreen = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+								static_cast<SdlGfxDevice*>(_gfxDevice.get())->syncFullscreenState();
 								// Query the pixel size the way the active backend measures it, then resize the
 								// backend swap chain to match (no-op on OpenGL / software). The explicit resize
 								// is deterministic on Vulkan: some drivers never report OUT_OF_DATE for a

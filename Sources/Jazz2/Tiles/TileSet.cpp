@@ -8,7 +8,7 @@
 namespace Jazz2::Tiles
 {
 	TileSet::TileSet(StringView path, std::uint16_t tileCount, SmallVector<std::unique_ptr<Texture>, 1>&& textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile, const std::uint8_t* tileDiffuseOpaque)
-		: FilePath(path), TextureDiffuse(std::move(textureDiffuse)), _mask(std::move(mask)), _captionTile(std::move(captionTile)),
+		: FilePath(path), TextureDiffuse(Death::move(textureDiffuse)), _mask(Death::move(mask)), _captionTile(Death::move(captionTile)),
 			_isMaskEmpty(), _isMaskFilled(), _isTileFilled(), _isTileOpaque(), _isColumnContiguous()
 	{
 		// TilesPerRow/TilesPerTexture are used only for rendering. Every chunk shares the layout of chunk 0
@@ -23,6 +23,18 @@ namespace Jazz2::Tiles
 		}
 
 		TileCount = tileCount;
+
+		// A tile's mask is found by its ID alone (see GetTileMask() and OverrideTileMask()), so the buffer must have
+		// room for every tile even if fewer masks were given; the missing ones are empty
+		const std::uint32_t fullMaskSize = std::uint32_t(tileCount) * MaskBytesPerTile;
+		if (maskSize < fullMaskSize || _mask == nullptr) {
+			std::unique_ptr<std::uint8_t[]> fullMask = std::make_unique<std::uint8_t[]>(fullMaskSize > 0 ? fullMaskSize : 1);
+			if (_mask != nullptr && maskSize > 0) {
+				std::memcpy(fullMask.get(), _mask.get(), maskSize);
+			}
+			_mask = Death::move(fullMask);
+		}
+
 		_isMaskEmpty.resize(ValueInit, TileCount);
 		_isMaskFilled.resize(ValueInit, TileCount);
 		_isTileFilled.resize(ValueInit, TileCount);
@@ -111,19 +123,25 @@ namespace Jazz2::Tiles
 
 	bool TileSet::OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<PaddedTileSize * PaddedTileSize, std::uint32_t> tileDiffuse)
 	{
-		if (tileId >= TileCount) {
+		if (std::uint32_t(tileId) >= std::uint32_t(TileCount)) {
 			return false;
 		}
 
 		// The tile may live in any texture chunk when the atlas was split by the device texture-size limit
 		std::int32_t localTileId = tileId;
 		Texture* texture = ResolveTextureDiffuse(localTileId);
-		if (texture == nullptr) {
+		if (texture == nullptr || TilesPerRow <= 0) {
 			return false;
 		}
 
 		std::int32_t x = (localTileId % TilesPerRow) * PaddedTileSize;
 		std::int32_t y = (localTileId / TilesPerRow) * PaddedTileSize;
+		// The last chunk can be shorter than the others, and the tile count can exceed the cells of the atlas; not every
+		// backend checks the region of an upload, so it's checked here
+		const Vector2i texSize = texture->GetSize();
+		if (x < 0 || y < 0 || x + PaddedTileSize > texSize.X || y + PaddedTileSize > texSize.Y) {
+			return false;
+		}
 
 		// The incoming tile is RGBA (palette index in red, alpha in alpha). Repack it to match the atlas format,
 		// which may have been reduced to R8 (index only) or RG8 (index + alpha) to save VRAM (see CreateIndexedTexture)
@@ -204,7 +222,8 @@ namespace Jazz2::Tiles
 
 	bool TileSet::OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, const std::uint8_t> tileMask)
 	{
-		if (tileId >= TileCount) {
+		// The mask has room for every tile (see the constructor)
+		if (std::uint32_t(tileId) >= std::uint32_t(TileCount)) {
 			return false;
 		}
 

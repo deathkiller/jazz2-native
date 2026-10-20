@@ -152,7 +152,7 @@ namespace nCine
 		//if (_cameraUniformDataMap.loadFactor() >= 0.8f)
 		//	_cameraUniformDataMap.rehash(_cameraUniformDataMap.capacity() * 2);
 
-		_cameraUniformDataMap.emplace(shaderProgram, std::move(cameraUniformData));
+		_cameraUniformDataMap.emplace(shaderProgram, Death::move(cameraUniformData));
 	}
 
 	bool RenderResources::RemoveCameraUniformData(RHI::ShaderProgram* shaderProgram)

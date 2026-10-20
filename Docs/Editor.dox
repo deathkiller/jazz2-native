@@ -8,19 +8,18 @@
 
 @section editor-overview Overview
 
-The game has a built-in level editor, compiled in with the `WITH_EDITOR` option @m_span{m-text m-dim} (see
-@ref building-config-params-game) @m_endspan. It's on by default on every platform that can save files --- all except
-the <b>Nintendo 64</b>, <b>Dreamcast</b>, <b>GameCube</b> and <b>PlayStation 2</b> --- but never in a dedicated server
-or the Shareware Demo.
+The game has a built-in level editor, included by the `WITH_EDITOR` build option (see
+@ref building-config-params-game). It's on by default on every platform that can save files, except the
+<b>Nintendo 64</b>, <b>Dreamcast</b>, <b>GameCube</b> and <b>PlayStation 2</b>, and never in a dedicated server or
+the Shareware Demo.
 
-The editor works only with the game's own level format, not with original @cpp ".j2l" @ce files. Original levels are
-converted on the first start @m_span{m-text m-dim} (see @ref paths) @m_endspan and can be opened from @cpp "Cache/" @ce.
+The editor works with the game's own level format. Original `.j2l` levels are converted on the first start (see
+@ref paths) and can be opened from @cpp "Cache/" @ce.
 
 @section editor-opening Opening the editor
 
--   <b>Level Editor</b> in the main menu --- starts with an empty level and the <b>Open</b> dialog.
--   <b>Edit This Level</b> in the pause menu of a single-player game --- opens the current level.
--   The `/edit` command-line switch, optionally followed by a level (`episode/level`) or a file path:
+-   <b>Level Editor</b> in the main menu opens an empty level and the <b>Open</b> dialog.
+-   The `/edit` command-line switch opens a level by name (`episode/level`) or by path:
 
 @code{.sh}
 Jazz2 /edit prince/01_castle1
@@ -29,31 +28,61 @@ Jazz2 /edit "C:\Levels\MyLevel.j2l"
 
 @section editor-interface Interface
 
--   <b>Menu bar</b> and <b>toolbar</b> at the top.
--   <b>Left panel</b> --- the tools, the current stamp, and the <b>Tiles</b> and <b>Events</b> pickers.
--   <b>Right panel</b> --- the layer list, and the properties of the selected layer or event below it.
--   <b>Status bar</b> --- how the current tool works (or what the gamepad buttons do), the current layer, the tile and
-    event under the pointer, and the zoom.
+-   <b>Menu bar and toolbar</b> at the top. The toolbar ends with the options of the current tool.
+-   <b>Left panel</b> --- the tools, the current stamp, and the <b>Tiles</b> and <b>Events</b> tabs.
+-   <b>Right panel</b> --- the layer list, with the properties of the selected layer or event below it.
+-   <b>Status bar</b> --- how to use the current tool, the current layer, the tile and event under the pointer, and
+    the zoom.
 
-The level fills the window behind the panels, and its music plays muffled, as under the pause menu.
+The level fills the window behind the panels.
 
-Panels are resized by dragging their inner edges. Either panel can also float over the level
-(@ref Editor::UiDockFrame) --- use the button in its header or drag the header by its grip. To dock it again, drag it
-back to its edge, or double-click the header.
+-   <b>Panels</b> are resized by dragging their inner edge. Each panel can also float over the level: use the button
+    in its header, or drag the header. Drag it back to its edge, or double-click the header, to dock it again.
+-   <b>Small windows</b> --- below 600 units wide, the panels become drawers opened from the toolbar; below 420 units,
+    the tools move to a row at the bottom. The <b>View</b> menu can fix the layout to desktop or compact.
+-   <b>Expert Mode</b> (<b>View</b> menu, on by default) shows all tools and commands. Turned off, only the basic ones
+    are shown.
+-   <b>Interface size</b> follows the window size; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>+</kbd> / <kbd>-</kbd> makes
+    it larger or smaller.
 
-The layout follows the window size, or can be fixed to desktop or compact in the <b>View</b> menu:
+In dialogs, <kbd>Enter</kbd> chooses the highlighted button. <kbd>Esc</kbd> or the cross closes the dialog without
+choosing anything. Windows such as <b>Check Level</b>, <b>Statistics</b>, the <b>Navigator</b> or the <b>Palette</b>
+stay open beside the level until they're closed; opening one again brings it to the front, and its shortcut closes it.
+Some windows, such as <b>History</b>, can be resized by their edges. Every color has a swatch that opens a color
+picker.
 
--   narrower than 600 units, the panels become drawers opened by the buttons at the start of the toolbar,
--   narrower than 420 units, the tools move to a row at the bottom and the toolbar is trimmed.
+@subsection editor-interface-keyboard Using the interface with the keyboard
 
-<b>Expert Mode</b> in the <b>View</b> menu (on by default) shows all tools and commands; turned off, only the basic
-ones. The interface scales with the window and can be made larger or smaller with
-<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>+</kbd> / <kbd>-</kbd>. Its text is drawn at @ref Editor::UiTheme::TextScale of
-that scale.
+-   <kbd>Tab</kbd> and <kbd>Shift</kbd>+<kbd>Tab</kbd> move between controls. <kbd>Enter</kbd> or <kbd>Space</kbd>
+    presses the focused one, <kbd>Esc</kbd> gives the keys back to the level.
+-   A dropdown opens with <kbd>Enter</kbd>, <kbd>Space</kbd>, <kbd>F4</kbd> or <kbd>Alt</kbd>+<kbd>Down</kbd>.
+    <kbd>Up</kbd> and <kbd>Down</kbd> change it without opening it.
+-   <kbd>Alt</kbd> with the underlined letter opens a menu. In menus and long lists, typing a letter jumps to the next
+    item that starts with it.
+-   Text fields have their own undo (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Y</kbd>), and
+    <kbd>Ctrl</kbd> with the arrows, <kbd>Backspace</kbd> or <kbd>Del</kbd> moves or deletes by words.
+-   On macOS, <kbd>Cmd</kbd> works as <kbd>Ctrl</kbd>.
 
-In dialogs, <kbd>Enter</kbd> chooses the accented button, <kbd>Esc</kbd> or the cross cancels. Every RGB color has a
-swatch that opens a <b>color picker</b> (@ref Editor::UiColorPicker) --- a saturation/value square, a hue bar, an alpha
-bar where the color has one, and a `#RRGGBB` field. The swatch of the previous color brings it back.
+@subsection editor-interface-accessibility Contrast and motion
+
+In the <b>View</b> menu:
+
+-   <b>High Contrast Interface</b> --- a theme with stronger contrast.
+-   <b>Reduce Motion</b> --- nothing animates: panels and lists don't slide, the view jumps instead of flying, and a
+    play-test starts without the growing ring, with the music opened up and muffled again at once.
+
+@subsection editor-interface-navigator Navigator, bookmarks and notes
+
+The <b>Navigator</b> (<kbd>F2</kbd>) shows the whole level in small; click or drag in it to move the view.
+<b>Events</b> adds the events and the camera limits. Below the map:
+
+-   <b>Bookmarks</b> 1 to 9 --- set at the view center by <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd> --
+    <kbd>9</kbd>, gone to by <kbd>Ctrl</kbd>+<kbd>1</kbd> -- <kbd>9</kbd>. Each can be renamed and given a color.
+-   <b>Notes</b> --- texts placed in the level (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> at the pointer). A note
+    keeps its author and time and can be replied to, so notes work as review threads. <b>Done</b> marks a note as
+    resolved.
+
+Bookmarks and notes can be undone like any other change, and export leaves them out.
 
 @section editor-controls Controls
 
@@ -61,15 +90,16 @@ bar where the color has one, and a `#RRGGBB` field. The swatch of the previous c
 
 -   <b>Left button</b> --- use the tool. <b>Right button</b> --- pick the tile under the pointer (brush), or erase
     (rectangle, fill, events).
--   <b>Wheel</b> --- zoom at the pointer, in steps where every pixel of the level is the same size. With
-    <kbd>Shift</kbd> it scrolls sideways, with <kbd>Ctrl</kbd> up and down, with <kbd>Alt</kbd> it changes the layer
-    and with <kbd>Ctrl</kbd>+<kbd>Shift</kbd> the interface scale.
--   <b>Middle button</b>, or the left one with <kbd>Space</kbd> held --- pan the view, with inertia.
--   <b>Number fields</b> --- drag, click to type, or use the arrows at their end (click or wheel, <kbd>Shift</kbd> for
-    steps of ten).
+-   <b>Wheel</b> --- zoom at the pointer. With <kbd>Shift</kbd> it scrolls sideways, with <kbd>Ctrl</kbd> up and down,
+    with <kbd>Alt</kbd> it changes the layer, and with <kbd>Ctrl</kbd>+<kbd>Shift</kbd> the interface size.
+-   <b>Middle button</b>, or the left one with <kbd>Space</kbd> held --- pan the view.
+-   <b>Number fields</b> --- drag, click to type, or use the wheel (<kbd>Shift</kbd> for steps of ten). A drag is one
+    undo step.
+-   <b>Dropdowns</b> --- the wheel steps through the choices.
 
-Zoomed out until a tile is smaller than about 6 screen pixels, layers are drawn from cached images at 4 pixels per tile
-(@ref Editor::TileLod), so even a large level is drawn quickly as a whole.
+Zoomed out below 15 %, layers are drawn from cached images (@ref Editor::TileLod), so even a large level stays fast.
+The images are as sharp as the screen allows, up to 16 pixels per tile. Palette-shifted, solid and effect layers are
+always drawn as tiles.
 
 @subsection editor-controls-keyboard Keyboard
 
@@ -77,574 +107,827 @@ Keys | Action
 ---- | ------
 <kbd>B</kbd>, <kbd>E</kbd>, <kbd>R</kbd>, <kbd>G</kbd>, <kbd>I</kbd> | Brush, eraser, rectangle, fill, eyedropper
 <kbd>M</kbd>, <kbd>W</kbd>, <kbd>Q</kbd>, <kbd>H</kbd> | Select, magic wand, events, hand
-<kbd>T</kbd>, <kbd>P</kbd>, <kbd>U</kbd>, <kbd>K</kbd> | Smart brush, ground line, measure, events along path
-<kbd>Space</kbd> / <kbd>Alt</kbd> (held) | Temporary hand / eyedropper
+<kbd>T</kbd>, <kbd>P</kbd>, <kbd>U</kbd>, <kbd>K</kbd>, <kbd>L</kbd> | Smart brush, ground line, measure, events along path, shapes
+<kbd>Space</kbd> / <kbd>Alt</kbd> (held) | Hand / eyedropper while held
 <kbd>X</kbd> / <kbd>Y</kbd> | Flip the stamp horizontally / vertically
+<kbd>Shift</kbd>+<kbd>R</kbd> | Turn the stamp clockwise
 <kbd>Z</kbd> / <kbd>Shift</kbd>+<kbd>Z</kbd> | Paint random tiles of the stamp / reroll them
-<kbd>1</kbd> -- <kbd>9</kbd> | Edit a layer, with <kbd>Shift</kbd> hide or show it
+<kbd>1</kbd> -- <kbd>9</kbd> | Edit a layer; with <kbd>Shift</kbd>, hide or show it
 <kbd>Page Up</kbd> / <kbd>Page Down</kbd> | Previous / next layer
-<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> | Undo / redo
-<kbd>Ctrl</kbd>+<kbd>X</kbd>, <kbd>C</kbd>, <kbd>V</kbd> | Cut, copy, paste --- pasted tiles become the brush stamp
+<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> | Undo / redo (also <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>)
+<kbd>Ctrl</kbd>+<kbd>X</kbd>, <kbd>C</kbd>, <kbd>V</kbd> | Cut, copy, paste --- pasted tiles become the stamp
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> / <kbd>V</kbd> | Copy / paste all layers with their events
 <kbd>Del</kbd> | Delete the selection
-<kbd>Ctrl</kbd>+<kbd>A</kbd> / <kbd>Ctrl</kbd>+<kbd>D</kbd> | Select all / deselect
-<kbd>Esc</kbd> | Cancel the current tool action, then deselect
-<kbd>+</kbd>, <kbd>-</kbd> | Zoom in, out
-<kbd>0</kbd> / <kbd>Home</kbd> | Zoom as in the game / fit the whole level
+<kbd>Ctrl</kbd>+<kbd>A</kbd> / <kbd>D</kbd> / <kbd>I</kbd> | Select all / deselect / invert --- the tiles, or the events while the event tool is chosen
+<kbd>Shift</kbd>+arrows | Move the selected tiles
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> / <kbd>Y</kbd> | Mirror the selection horizontally / vertically
+<kbd>Esc</kbd> | Cancel the current action, then deselect
+<kbd>+</kbd>, <kbd>-</kbd> / <kbd>0</kbd> / <kbd>Home</kbd> | Zoom in, out / zoom as in the game / fit the whole level
 Arrows | Move the view
-<kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>P</kbd> | Toggle grid / flat layers
+<kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>P</kbd> | Grid / flat layers
 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> | Pause layers that move by themselves
 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> | Show events while using other tools
-<kbd>Ctrl</kbd>+<kbd>M</kbd> | Cycle collision masks: over the tiles, instead of them, off (see @ref editor-layers)
+<kbd>Ctrl</kbd>+<kbd>M</kbd> | Collision masks: over the tiles, instead of them, off
 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> | Show where the player can get
-<kbd>Ctrl</kbd>+<kbd>T</kbd> | Edit level texts
-<kbd>Ctrl</kbd>+<kbd>F</kbd> | Find and replace tiles or events
+<kbd>Ctrl</kbd>+<kbd>T</kbd> | Level texts
+<kbd>Ctrl</kbd>+<kbd>F</kbd> | Find and replace
 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Right</kbd> | Continue the row right of the pointer with suggested tiles
 <kbd>Ctrl</kbd>+<kbd>N</kbd>, <kbd>O</kbd>, <kbd>S</kbd> | New, open, save
 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>E</kbd> | Save as / export
-<kbd>F5</kbd>, <kbd>Shift</kbd>+<kbd>F5</kbd>, <kbd>Ctrl</kbd>+<kbd>F5</kbd> | Play, play here, play from start --- <kbd>F5</kbd> again returns
-<kbd>F6</kbd> / <kbd>Alt</kbd>+<kbd>F5</kbd> | Set the play-start marker at the pointer / play from it
-<kbd>Ctrl</kbd>+<kbd>L</kbd> | Toggle the path of the last play-test
-<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd> -- <kbd>9</kbd> / <kbd>Ctrl</kbd>+<kbd>1</kbd> -- <kbd>9</kbd> | Set a bookmark at the view center / go to it
+<kbd>F5</kbd>, <kbd>Shift</kbd>+<kbd>F5</kbd>, <kbd>Ctrl</kbd>+<kbd>F5</kbd> | Play, play here, play from start --- <kbd>F5</kbd> while playing goes back to the editor
+<kbd>F6</kbd>, <kbd>F7</kbd>, <kbd>F8</kbd>, <kbd>F9</kbd> (while playing) | Move the player to the pointer, stop time, next frame, slow motion --- see @ref editor-playing-debug
+<kbd>Ctrl</kbd>+<kbd>L</kbd> | Path of the last play-test
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd> -- <kbd>9</kbd> / <kbd>Ctrl</kbd>+<kbd>1</kbd> -- <kbd>9</kbd> | Set a bookmark / go to it
 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | Add a note at the pointer
-<kbd>F2</kbd> | Navigator --- the whole level in small, with bookmarks and notes; click or drag to move there
+<kbd>F2</kbd> / <kbd>F3</kbd> | Navigator / event list
 <kbd>Ctrl</kbd>+<kbd>H</kbd> | History --- click a change to go back or forward to it
-<kbd>Ctrl</kbd>+<kbd>K</kbd> | Command palette --- search all commands by name, <kbd>Enter</kbd> runs the first match
+<kbd>Ctrl</kbd>+<kbd>K</kbd> | Command palette --- search all commands by name
 <kbd>F1</kbd> | Keyboard shortcuts
 
-To change a shortcut, open <b>Keyboard Shortcuts</b> (<kbd>F1</kbd>), click it and press the new keys ---
-<kbd>Backspace</kbd> removes it, <kbd>Esc</kbd> keeps it. An action that had the same shortcut loses it. Changes are
-saved in @cpp "Jazz2.EditorHotkeys.json" @ce in the configuration directory as an object of action identifiers, each
-@cpp [key, modifiers] @ce or @cpp null @ce (@ref Editor::ActionRegistry::LoadOverrides()). <b>Reset All</b> restores the
-defaults.
+@subsection editor-controls-shortcuts Changing shortcuts
 
-Copied tiles and events also go to the system clipboard as text starting with @cpp {"J2R": @ce, so they can be pasted
-into another level or another running instance of the game.
+In <b>Keyboard Shortcuts</b> (<kbd>F1</kbd>), click a shortcut and press the new keys. <kbd>Backspace</kbd> removes
+it, <kbd>Esc</kbd> keeps it. An action that had the same keys loses them. Actions can be searched by name or by keys
+(`ctrl+s`), and <b>Press Keys</b> finds what a shortcut does. <b>Reset All</b> restores the defaults.
 
-Bookmarks and notes are editor-only: they're stored in the @cpp "anno" @ce chunk (see @ref editor-formats-chunks),
-dropped on export, and not undoable, though changing them marks the level unsaved (@ref Editor::Annotation).
+The side buttons of a mouse have no use of their own, so they can be shortcuts too, with or without modifiers.
+Press one instead of the keys, it's shown as `Mouse 4` or `Mouse 5`.
+
+<b>Shortcuts like</b> applies a preset (@ref Editor::KeymapPreset):
+
+-   <b>This Editor</b> --- the defaults.
+-   <b>Jazz Creation Station</b> --- <kbd>F</kbd> and <kbd>I</kbd> flip the stamp (<kbd>Alt</kbd> still picks a
+    tile).
+-   <b>MLLE</b> --- as Jazz Creation Station, and <kbd>R</kbd> turns the stamp; the rectangle moves to
+    <kbd>Shift</kbd>+<kbd>R</kbd>.
+
+Some shortcuts work only while the level is played --- <b>Back to Editor</b> and the debug tools --- which is why
+<kbd>F5</kbd> both starts and stops a play-test.
+
+Changed shortcuts are saved in @cpp "Jazz2.EditorHotkeys.json" @ce in the configuration directory, as an object of
+action IDs and their shortcuts, such as @cpp "Ctrl+Shift+Z" @ce or @cpp "Mouse 4" @ce, or @cpp null @ce for none. Only those that differ
+from the defaults are written. <b>Export</b> and <b>Import</b> move them to another computer.
 
 @subsection editor-controls-gamepad Gamepad
 
-Pressing any gamepad button shows a cursor and lists the buttons in the status bar. Using the mouse or keyboard switches
-back.
+Pressing a gamepad button shows a cursor and lists the buttons in the status bar. Using the mouse or the keyboard
+switches back.
 
 Gamepad | Action
 ------- | ------
-Left stick | Move the cursor --- faster the further and longer it's pushed
+Left stick | Move the cursor, faster the further and longer it's pushed
 Directional pad | Move the cursor by one tile; over a number, change it
 Right stick | Move the view; over a list, scroll it
 Left / right trigger | Zoom out / in at the cursor
 A | Use the tool, or press what the cursor is over
 B | Erase, or close what's open over the interface
 X | Pick the tile or event under the cursor
-Y | Next tool; hold for a tool ring (aim with the left stick, release to pick); over a text field, open a keyboard
+Y | Next tool; hold it for a tool ring (aim with the left stick, release to pick); over a text field, open a keyboard
 Left / right bumper | Previous / next layer
 Back / left stick press | Undo / redo
 Start | Play
 
-Text is typed with the system's on-screen keyboard where there is one, otherwise with the editor's own
-(@ref Editor::UiOnScreenKeyboard).
+While a dialog waits for an answer, the gamepad only moves the cursor and presses A and B. Text is typed with the
+system's on-screen keyboard where there is one, otherwise with the editor's own.
 
 @subsection editor-controls-touch Touch screen
 
-The status bar lists the gestures (@ref Editor::TouchGestures).
+The status bar lists the gestures.
 
 Fingers | Action
 ------- | ------
-One | Use the tool once the finger moves a little (so a second finger can still turn it into a gesture); a quick tap is a click. Over the interface, it acts as a pointer
-Two | Pan and pinch to zoom
+One | Use the tool once the finger moves a little; a quick tap is a click. Over the interface, it acts as a pointer
+Two | Pan, and pinch to zoom
 Tap with two / three | Undo / redo
 Hold one still | Tool ring, tap to pick
 Tap a text field | System keyboard, or the editor's own
+
+Over the interface, a finger held still shows the tooltip, and lists scroll by dragging them. A number field opens the
+keyboard when tapped, and changes the number when dragged.
 
 @section editor-layers Layers
 
 The layer list is in the right panel:
 
--   The <b>eye</b> hides a layer and the <b>lock</b> protects it --- in the editor only, the level isn't changed.
--   Drag a layer to reorder it, double-click to rename it. An unnamed layer shows its kind, dimmed. Names are
-    editor-only and dropped on export.
+-   The <b>eye</b> hides a layer. <kbd>Alt</kbd>+click on it shows only that layer, or all layers again. The
+    <b>lock</b> protects a layer from changes. Both only affect the editor, not the level.
+-   Drag a layer to reorder it, double-click it to rename it. An unnamed layer is named by what it is, such as
+    <em>Foreground</em> or <em>Background</em>. Layer names are editor-only.
+-   <b>Duplicate Layer</b> and <b>Resize Layer</b> are in the <b>Layer</b> menu. Removing a layer asks first.
 
-Layer properties, below the list:
+@subsection editor-layers-properties Layer properties
 
--   <b>Speed</b> and <b>offset</b>, and a <b>model</b> per axis --- moving by its speed, fixed to the screen, fitted to
-    the level, or moving by the view size.
--   <b>Movement</b> presets set speeds and models for common layer kinds at once (foreground, background depths,
-    fixed, fitted), and show <em>Custom</em> otherwise.
--   <b>Renderer</b> --- tiles, solid color, tinted, x-ray, blur behind, sky or circle.
--   <b>Color</b>, whose meaning depends on the renderer: a multiplier for tiles, a palette entry and strength for a
-    tinted layer, or the horizon and stars for a sky or circle. A sky or circle is shown as plain tiles while edited.
+The <b>speed</b>, <b>offset</b> and <b>model</b> of each axis decide where the layer is, as in JJ2+:
 
-<b>Resize Layer</b> in the <b>Layer</b> menu changes the size around an anchor point, and fills the new area with empty
-tiles, the extended edge tiles, or the layer repeated. Events and the water level follow the sprite layer.
+Model | Where the layer is | JJ2+
+----- | ------------------ | ----
+<b>Speed</b> | Moves by its speed and automatic speed. It meets the top left of the level only at speed 1 | `LAYERSPEEDMODEL::BOTHSPEEDS`
+<b>Speed from level start</b> | The same, but starts at the top left of the level in a view of any size | `LAYERSPEEDMODEL::FROMSTART`
+<b>Fixed to screen</b> | Ignores its speeds and offset | `LAYERSPEEDMODEL::LAYER8`
+<b>Fit to level</b> | Spans the whole level, whatever its speeds | ---
+<b>Speed of view size</b> | The speed is its position with the view at the top left of the level, the automatic speed at the bottom right, in sizes of the view | ---
 
-How layers are shown:
+<b>Inherent offset</b> (`limitVisibleRegion` of JJ2+) moves a layer of <b>Speed</b> that doesn't repeat vertically
+down by half of how much taller the view is than 200 pixels.
 
--   Layers scroll with parallax, placed as the game would place them for a player at the view center.
-    <b>Flat Layers</b> (<kbd>Ctrl</kbd>+<kbd>P</kbd>) aligns them all to one grid, which helps when editing backgrounds.
--   A layer that moves by itself stays still while edited. <b>Pause Layer Movement</b>
+-   <b>Movement</b> presets set the speeds and models for common kinds of layers. <em>Custom</em> means none of them
+    matches, as in most converted levels.
+-   <b>Renderer</b> --- how the layer is drawn, see @ref editor-layers-renderers.
+-   <b>Color</b> --- what it means depends on the renderer: a multiplier of the tiles, the tint, or the color of the
+    horizon.
+-   <b>Editor opacity</b> --- how see-through the editor shows the layer, to see the layers behind it. Editor-only, the
+    game doesn't use it.
+
+<b>Resize Layer</b> changes the size around an anchor point. The new area is empty, extends the edge tiles, or repeats
+the layer. Events, the water level, bookmarks and notes move with the sprite layer. With the <b>Select</b> or
+<b>Hand</b> tool, the frame of the layer also has handles to resize it by dragging.
+
+@subsection editor-layers-renderers Renderers
+
+Renderer | What it draws
+-------- | -------------
+<b>Tiles</b> | The tiles as they are
+<b>Solid color</b> | The color of the layer where its tiles are
+<b>Tinted</b> | The tiles tinted by a palette entry
+<b>Palette shift</b> | Each pixel shows the color <b>Shift</b> entries further in the palette, as `SPRITE::PALSHIFT` of JJ2+. <b>Opacity</b> sets how opaque the layer is. True color tile sets aren't shifted
+<b>X-ray</b> | The last frame of each animated tile only where an object is behind it, as its silhouette
+<b>Blur behind</b> | Not its tiles, but what is behind them, moved, mirrored or blurred by the colors of the tiles
+<b>Sky</b> | The texture as two planes stretching to the horizon, as `TEXTURE::WARPHORIZON` of JJ2+
+<b>Tunnel</b> | The texture as circles getting smaller into the distance, as `TEXTURE::TUNNEL`
+<b>Wave</b> | The texture where the tiles would be, its rows and columns moved by sine waves, as `TEXTURE::WAVE`
+<b>Cylinder</b> | The texture as the inside of a horizontal tube, as `TEXTURE::CYLINDER`
+<b>Reflection</b> | What is behind it, mirrored below a horizon and rippled by the texture, as `TEXTURE::REFLECTION`
+
+The sprite layer can only be drawn as tiles, in a solid color, tinted, or with a palette shift.
+
+-   <b>Texture</b> of a sky, tunnel, wave, cylinder or reflection --- <em>Its tiles</em> (the 8×8 tiles at the top left of
+    the layer), or an <em>Own image</em> of 256×256 pixels stored in the level and shown under the row. A level
+    converted from JJ2+ gets an own image where it used a JJ2+ texture or an image made in MLLE. The menu of the row
+    imports a PNG (its colors are matched to the palette), exports the image to edit it elsewhere, turns the tiles into
+    an own image, or goes back to the tiles.
+-   <b>Tunnel</b> --- <b>Center</b> in percent of the view, <b>Fade</b> into the color of the horizon, and
+    <b>Spiral</b>.
+-   <b>Wave</b> --- the <b>Wavelength</b> of the waves that move the rows left and right and of those that move the
+    columns up and down (one more pixel than the number, 0 for none), their <b>Amplitude</b> (1 moves the texture by
+    128 pixels each way), their <b>Speed</b> along the texture, and <b>Swap angles</b> to move the vertical waves the
+    other way. The waves follow the texture, as in JJ2+. Backends without shaders draw its tiles, without the waves.
+-   <b>Cylinder</b> --- <b>Center</b> of the horizon, <b>Fade</b> of the far wall, and <b>Half size</b> for a more
+    curved tube.
+-   <b>Reflection</b> --- below the <b>Horizon line</b>, mirrors what is behind it as on water. The texture ripples the
+    reflection towards the <b>Vanishing point</b>: <b>Distortion</b> sets how strongly, <b>Distance</b> how small the
+    ripples are. <b>Tint</b> and <b>Tint opacity</b> color it, <b>Blur</b> blurs it horizontally. The <b>Area</b> is
+    the whole view, or only where the layer is, as a window (`SURFACE::INNERWINDOW`) or as part of the layer
+    (`SURFACE::INNERLAYER`); the ripples then move by <b>Inner speed</b> and <b>Inner auto</b> instead of the speeds of
+    the layer. Only the last reflection layer is drawn, and only on backends that support it.
+
+While a layer is selected, a sky, tunnel, wave, cylinder or reflection is shown as plain tiles so it can be painted --- except
+a reflection with its own image, which keeps rippling.
+
+Layers converted from MLLE keep their sprite mode: `PALSHIFT` and `TRANSLUCENTPALSHIFT` become a palette shift,
+`TINTED` a tinted layer, and `TRANSLUCENT` and `INVISIBLE` ordinary tiles with an alpha of 192 or 0 (an invisible
+layer is still solid).
+
+@subsection editor-layers-view How layers are shown
+
+-   Layers scroll with parallax, as the game would place them for a player at the view center. <b>Flat Layers</b>
+    (<kbd>Ctrl</kbd>+<kbd>P</kbd>) aligns them all to one grid, which helps when editing backgrounds.
+-   A layer that moves by itself stays still while it's selected. <b>Pause Layer Movement</b>
     (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>) stops all of them.
--   Outside the edited layer is darkened where it doesn't repeat. A repeating layer shows a frame at its real extent and
-    fainter lines where it repeats.
--   <kbd>Ctrl</kbd>+<kbd>M</kbd> shows the collision masks of the edited layer, darkened and outlined. On the sprite
-    layer, a symbol shows what an event makes the tile do --- one-way, vine, hook, pole, hurting, instant death,
-    destructible, collapsing, ricochet, slide, no climbing, tube or trigger.
+-   The selected layer is framed in white, and darkened outside where it doesn't repeat. A repeating layer shows
+    faint lines where it repeats, and the frame is around the copy nearest the middle of the view.
+-   <kbd>Ctrl</kbd>+<kbd>M</kbd> shows the collision masks of the selected layer. On the sprite layer, symbols show
+    what events make the tiles do --- one-way, vine, hook, pole, hurting, destructible and so on. Translucent tiles
+    are tinted, invisible ones crossed out.
 
 @section editor-level Level properties
 
 In the <b>Level</b> menu:
 
--   <b>Properties</b> --- name, author, next, secret and bonus levels, music, starting light, weather, water level, the
-    caption tile, and the pit and multiplayer flags.
-    -   The <b>author</b> defaults to the player name from the options (<b>Me</b> puts it back). The custom level list
-        shows it after the level name.
-    -   Level links pick a file; a level of the same episode is stored without the episode name, as in original levels.
-    -   <b>Music</b> is picked from the `Music` directories of the user content, `Content` or the original game, and
-        starts playing right away.
-    -   The <b>caption tile</b> is shown in the level list and lights up RGB keyboards during play. The brush button
-        takes the brush tile, <b>Auto</b> picks a colorful tile the level uses a lot.
--   <b>Texts</b> (<kbd>Ctrl</kbd>+<kbd>T</kbd>) --- events refer to texts by number, so texts can only be added or
-    removed at the end. <kbd>Enter</kbd> starts a new line, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> confirms. Formatting codes
-    are shown as `\f`, a backslash as `\\`.
+-   <b>Properties</b> --- name, author, next, secret and bonus levels, music, starting light, weather, water level,
+    the caption tile, and the pit and multiplayer settings.
+    -   The <b>author</b> defaults to the player name from the options.
+    -   The <b>caption tile</b> is shown in the level list. <b>Auto</b> picks a colorful tile the level uses a lot.
+    -   Whether the level is a race or has Capture the Flag isn't chosen here. It follows from the events when the
+        level is saved: a warp with <b>Set Lap</b> makes a race, a CTF base makes Capture the Flag.
+-   <b>Texts</b> (<kbd>Ctrl</kbd>+<kbd>T</kbd>) --- events refer to texts by number, so new texts are added at the end
+    and only the last one can be removed. The arrows reorder texts, and the events using them follow.
+    <kbd>Enter</kbd> starts a new line, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> confirms.
+-   <b>Episode</b> --- see @ref editor-level-episode.
 
-When the level is saved, a small preview of its start --- all layers with game parallax, a third of the size --- is
-stored with it (the @cpp "PRVW" @ce chunk, see @ref Formats::LevelFile::PreviewChunk). The custom level list shows it
-for the selected level.
+Saving also stores a small preview of the start of the level, which the custom level list shows.
+
+@subsection editor-level-translations Translating level texts
+
+In <b>Level Texts</b>, choose a language at the top, or <b>Add Language</b> by its code (`de`, `pt-br`), and type
+the translations next to the texts. An empty translation shows the original text. The game shows the translation to
+its language, or to the language without its region (`pt` for `pt-br`).
+
+For translators, <b>Export .pot</b> writes a gettext template, <b>Export .po</b> a catalog with the translations of
+the chosen language, and <b>Import .po</b> reads one back.
+
+@subsection editor-level-episode Episode
+
+<b>Episode</b> in the <b>Level</b> menu shows the episode of the level --- the folder it's in and its `.j2e` file:
+
+-   the name, the first level, the episodes before and after it, and its position in the list (the original episodes
+    are below 100),
+-   the title and background images, which can be imported and exported as PNG,
+-   the levels in the order their links lead, with broken links and levels nothing leads to marked.
+
+<b>Rename</b> renames a level and its script, and updates the links to it in other levels. The previous files are kept
+as `.bak`.
+
+Levels in `unknown` belong to no episode. For them, the editor offers to create a <b>New Episode</b> with the level as
+its first, to <b>Move to Episode</b>, or to list the <b>Levels of No Episode</b>. Moving lists every change first. The
+level is then saved into the folder of the episode, with its script and unsaved changes, and removed from `unknown`,
+and links to it in other levels are updated (their previous files kept as `.bak`).
 
 @section editor-tiles Tiles
 
 @subsection editor-tiles-picker Tile picker
 
--   Click picks a tile, drag picks a rectangle.
--   The arrows next to the name switch between tile sets and animated tiles.
--   <kbd>Ctrl</kbd>+wheel or the buttons on the right change the tiles per row --- 10 by default, the width the original
-    tile sets were drawn in.
+-   Click picks a tile, drag picks a rectangle. The arrows next to the name switch between tile sets and animated
+    tiles.
+-   <kbd>Ctrl</kbd>+wheel or the buttons on the right change the tiles per row, 10 by default.
 -   With the brush, the <b>Next</b> row suggests tiles that other levels put next to the tiles around the pointer.
-    <b>Continue Row by Suggestions</b> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Right</kbd>) fills the empty cells to the
-    right of the pointer with the most common ones.
--   The magnifier button in the header shows tile usage: unused tiles are dark, used ones have a bar by how often.
+    <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Right</kbd> fills the row right of the pointer with them.
+-   The magnifier button in the header shows how much each tile is used.
+-   The strip above the tiles holds favourite and recent tiles. Right-click a tile to make it a favourite.
 
 @subsection editor-tiles-edit Editing a tile
 
-Double-click a tile in the picker, or use <b>Edit Tile of the Brush</b> in the <b>Level</b> menu, to change its
-<b>pixels</b> and collision <b>mask</b>. The change applies only to this level; the tile set file stays as it is.
+Double-click a tile in the picker, or use <b>Edit Tile of the Brush</b> in the <b>Level</b> menu, to change its pixels
+and collision mask. The change applies only to this level, the tile set file stays as it is.
 
--   Tools: pencil, line, rectangle (filled with <kbd>Shift</kbd>), fill, <b>Replace</b> (recolors every pixel of the
-    clicked color), selection (drag to move, right button to clear) and eyedropper. Left paints, right erases.
--   Buttons below flip, rotate and shift the whole tile --- pixels and mask together, wrapping around.
--   The edges of neighboring tiles in the tile set are shown dimmed around it.
--   <b>Paint in Level</b> paints directly in the level: every place the edited layer shows the tile is outlined, and
-    painting any of them changes all of them (@ref Editor::TilePixelTool).
--   Mask: <b>Mask from Pixels</b> (solid where opaque), <b>Fill Below Surface</b> (solid below a line drawn with the
-    pencil), <b>Slope</b> (between heights at the left and right edge), <b>Mask of Brush Tile</b>, <b>Empty</b>,
-    <b>Solid</b>.
--   <b>As in Tile Set</b> drops the changes.
--   <b>Export PNG</b> / <b>Import PNG</b> exchange the tile with another program. Only the top-left 32 × 32 pixels are
-    read; images in the level palette keep their indices, other colors are mapped to the nearest entry.
+-   Tools: pencil, line, rectangle, fill, <b>Replace</b> (recolors every pixel of a color), selection and eyedropper.
+    Left paints, right erases.
+-   Buttons below flip, rotate and shift the whole tile; the mirror buttons make painting mirrored. Copy and paste move
+    pixels between tiles.
+-   <b>Seams</b> shows the tile repeated around itself, to check that it tiles.
+-   <b>Paint in Level</b> paints right in the level, everywhere the layer shows the tile.
+-   <b>True Color</b> paints any color; the tile is first copied into the tiles of this level.
+-   Mask: <b>Mask from Pixels</b>, <b>Fill Below Surface</b>, <b>Slope</b>, <b>Mask of Brush Tile</b>, <b>Empty</b>
+    and <b>Solid</b>.
+-   <b>As in Tile Set</b> drops the changes. <b>Export PNG</b> and <b>Import PNG</b> exchange the tile with another
+    program.
+-   An animated tile shows its frames, each edited as its own tile.
 
-The level stores palette indices, so a true color tile is reduced to the nearest palette colors --- unless it belongs to
-the tiles of this level.
+8-bit tiles keep palette indices, so a color is reduced to the nearest one of the palette --- except in the tiles of
+this level.
 
 @subsection editor-tiles-level Tiles of this level
 
-The <b>tiles of this level</b> are an extra tile set stored inside the level, not in any file
-(@ref Formats::ExtraTileSetRecord::Embedded). It's created when tiles are first added, then listed with the other extra
-tile sets.
+The <b>tiles of this level</b> are an extra tile set stored inside the level, created when tiles are first added to it.
 
--   Its tiles are edited in <b>true color</b> with transparency: the color picker has alpha, the palette offers its
-    colors too, and imported images keep their colors.
--   <b>Copy into This Level</b> in the window of any other tile copies it there, and the level uses the copy wherever
-    it used the tile --- one undo step. This allows true color changes to any tile, per level, which the original
-    game's 8-bit overrides can't do.
--   Undo removes added tiles. Replacing this tile set with another drops its tiles; <b>Save Tile Changes into Tile
-    Set</b> moves them into a file.
+-   Its tiles are true color, with transparency.
+-   <b>Copy into This Level</b> in the window of any tile copies the tile there, and the level uses the copy instead.
+    That way any tile can get true color changes in a single level.
+-   <b>Save Tile Changes into Tile Set</b> moves them into a tile set file.
 
 @subsection editor-tiles-animated Animated tiles
 
-<b>Animated Tiles</b> in the <b>Level</b> menu lists them, with the selected one on the right.
+<b>Animated Tiles</b> in the <b>Level</b> menu lists them.
 
--   A new animated tile is made of the brush tiles. <b>Add Brush</b> inserts them as frames after the selected frame;
-    the window stays open while tiles are picked.
+-   A new animated tile is made of the brush tiles. <b>Add Brush</b> adds them as frames.
 -   Frame time is in game frames (60 per second). The delay holds the last frame longer, and an animation can play
     forward and back.
 -   A removed animated tile is replaced by its first frame everywhere. <b>Paint with It</b> makes it the brush.
 
 @subsection editor-tiles-sets Tile sets
 
-All in the <b>Level</b> menu. New or changed tile set files are saved into the user content as
-`Tilesets/<name>.j2t`. A tile set that isn't there yet is copied there first, and the copy is used from then on.
+All in the <b>Level</b> menu. New and changed tile set files are saved into the user content as
+`Tilesets/<name>.j2t`.
 
--   <b>Tile Sets</b> --- the default tile set and the <b>extra tile sets</b>, whose tiles follow the default one's. An
-    extra tile set can use a range of its file's tiles, and can have its colors matched to the level palette (otherwise
-    its indices are used as they are). The level's tiles are remapped on every change, so they keep showing the same
-    picture; tiles of a removed set, or outside a range, are cleared. All of it is one undo step. Tile IDs grow as
-    needed, but scripts can't address more than 4096.
--   <b>New Tile Set</b> --- empty tiles in the level palette, added as an extra or the default tile set.
--   <b>New Tile Set from Image</b> --- the image is cut into 32 × 32 tiles row by row.
-    -   Colors: keep the image's own palette (indexed images), keep true color, map to the level palette, or
-        <b>generate a palette</b>. A generated palette keeps the entries sprites use, so they still look right, and
-        fills the rest from the image (@ref Editor::BuildPalette() --- median cut refined by k-means).
-    -   <b>Dither</b> mixes in-between colors with an ordered pattern that continues across tiles.
-    -   <b>Skip tiles that are the same as another</b> drops duplicates, empty tiles included.
-    -   An image `.mask.png` next to it gives the masks; otherwise tiles are solid where they aren't transparent.
-    -   The first tile is always empty, trailing empty tiles are dropped. The name can't be one that already exists.
-    -   An image from <b>Export Tile Set Image</b>, edited elsewhere, comes back unchanged this way.
--   <b>Add Tiles from Image</b> --- cuts an image the same way and appends it to a tile set of the level in its
-    nearest colors, optionally skipping tiles it already has. Existing tiles keep their places. <b>Add to</b> can also
-    put them into a <b>New tile set</b> or into the <b>Tiles of this level</b>.
--   <b>Save Tile Changes into Tile Set</b> (also <b>Save into Tile Set</b> in a tile's window) --- moves this level's
-    tile changes into the tile set they came from, where every level using it sees them, or into a new tile set this
-    level then uses. True color tiles stay true color; remapped extra tile sets get their own indices back. Undo puts
-    the changes back into the level, but the saved file stays.
--   <b>Rearrange Tile Set</b> (@ref Editor::ShowTileSetLayoutDialog()) --- deletes and moves tiles of the default tile
-    set and inserts empty ones. Levels refer to tiles by position, so either:
-    -   save it as itself --- every writable level using it is updated, and levels in the game files are listed, since
-        they'd show the wrong tiles; or
-    -   save it as a new tile set used only by this level.
+Command | What it does
+------- | ------------
+<b>Tile Sets</b> | The default tile set and the extra ones. An extra one can use a range of its file and have its colors matched to the level palette. The tiles of the level are remapped, so they keep their look
+<b>New Tile Set</b> | Empty tiles in the level palette
+<b>New Tile Set from Image</b> | Cuts an image into 32×32 tiles, with the options below
+<b>Add Tiles from Image</b> | Adds the tiles of an image to a tile set of the level, a new tile set, or the tiles of this level
+<b>Save Tile Changes into Tile Set</b> | Moves the tile changes of this level into the tile set file (the previous one kept as `.bak`), or into a new tile set
+<b>Rearrange Tile Set</b> | Deletes, moves and inserts tiles, merges duplicates and removes unused ones, see below
+<b>Export Tile Set Image</b> | Saves the tile set as PNG, 10 tiles per row, with the masks in `.mask.png`
+<b>Generate Effect Tiles</b> | Tiles for a <b>Blur behind</b> layer: glass, glass blocks, frosted glass, water, heat haze, a magnifier or a puddle
 
-    Deleted tiles are cleared from the level. Changes to other files can't be undone.
--   <b>Export Tile Set Image</b> --- saves the default tile set as a PNG in rows of 10, plus `.mask.png` with the
-    masks. 8-bit tile sets are saved indexed in their own palette with entry 0 transparent, losslessly. The editor has
-    its own PNG codec (@ref Editor::PngCodec) and reads every kind of PNG.
--   <b>Generate Effect Tiles</b> --- tiles for a Blur Behind layer: clear glass, glass blocks, frosted glass, water,
-    heat haze, a magnifier or a puddle, of a given size and strength (@ref Editor::GenerateFxTiles()). They're added to
-    the tiles of this level by default, or to any tile set, and become the brush.
+Options of the tiles from an image:
+
+-   <b>Colors</b> --- keep the palette of the image, keep true color, map to the level palette, or generate a palette
+    (it keeps the entries the sprites use).
+-   <b>Dither</b> --- by an ordered pattern, or by error diffusion.
+-   <b>Margin</b> and <b>Gutters</b> for sprite sheets, a <b>Transparent</b> color, and the <b>Alpha</b> a pixel needs
+    to be seen.
+-   <b>Skip tiles that are the same as another</b>.
+-   A `.mask.png` next to the image gives the masks; otherwise the tiles are solid where they're opaque. An image from
+    <b>Export Tile Set Image</b> comes back unchanged.
+
+In <b>Rearrange Tile Set</b>, click, <kbd>Ctrl</kbd>+click or <kbd>Shift</kbd>+click selects tiles, and dragging moves
+them. Levels refer to tiles by their position, so it either saves the tile set as itself and updates the levels that
+use it --- the previous files kept as `.bak`, <b>Files</b> listing them first and <b>Restore Backups</b> putting them
+back; this clears the undo history --- or saves a new tile set that only this level uses.
 
 @subsection editor-tiles-palette Palette
 
-<b>Palette</b> in the <b>Level</b> menu shows the palette in use --- the default tile set's, unless the level has its
-own. Only the level's own palette can be changed; it starts as a copy.
+<b>Palette</b> in the <b>Level</b> menu shows the palette in use. Only the level's own palette can be changed; it starts
+as a copy of the tile set's.
 
--   Click picks an entry, drag or <kbd>Shift</kbd> picks a range. The first picked entry is edited as RGB, HSV,
-    `#RRGGBB` or with the color picker.
--   <b>Gradient</b> fills the range evenly between its ends. <b>From Tile Set</b> restores the tile set's colors.
--   The level, sprites included, updates live while the window is open.
--   <b>Into Tile Set</b> makes the palette the default tile set's palette (or that of a new tile set), and the level no
-    longer has its own.
--   <b>Import</b> reads JASC (.pal), GIMP (.gpl), Adobe (.act) or PNG (an indexed image's palette, or a 16 × 16 grid of
-    colors) into the level's own palette; entry 0 stays transparent. <b>Export</b> picks the format by the file
-    extension (@ref Editor::PaletteFile).
--   Usage shows how many pixels of the level's 8-bit tiles use the entry. <b>Unused</b> crosses out entries no tile
-    uses (sprites may still use them), <b>Next</b> jumps to the next one.
--   The arrows move the picked entries, <b>Swap</b> swaps the first and the last. With <b>Keep the look of the
-    level</b>, pixels are remapped so the level looks the same; otherwise pixels show whatever color is now at their
-    index. Either way it's one undo step.
+-   Click picks an entry, drag or <kbd>Shift</kbd>+click a range. Edit it as RGB, HSV, `#RRGGBB` or with the color
+    picker. The level, sprites included, updates live.
+-   <b>Gradient</b> fills a range between its ends. <b>From Tile Set</b> restores the colors of the tile set.
+-   <b>Keep the colors of sprites</b> protects the entries that sprites use.
+-   <b>Tiles Using It</b> makes the tiles that use the entry the brush.
+-   The arrows move entries, <b>Swap</b> swaps two. <b>Keep the look of the level</b> remaps the tiles so the level
+    looks the same.
+-   <b>Mark</b> crosses out the unused entries, those the sprites use, or those that differ from the tile set.
+-   <b>Into Tile Set</b> makes it the palette of the tile set. <b>Import</b> and <b>Export</b> read and write JASC
+    (`.pal`), GIMP (`.gpl`), Adobe (`.act`) or PNG.
+
+@section editor-tools Painting and selecting
+
+Choose a tool on the left, or in the <b>Tools</b> menu. Its options are at the end of the toolbar.
+
+Tool | How it works | Options
+---- | ------------ | -------
+<b>Brush</b> (<kbd>B</kbd>) | Paints the stamp; <kbd>Shift</kbd>+drag paints a line | Stamp options
+<b>Eraser</b> (<kbd>E</kbd>) | Erases; <kbd>Shift</kbd>+drag erases a line | ---
+<b>Rectangle</b> (<kbd>R</kbd>) | Fills a rectangle with the stamp | Stamp options, <b>Only empty</b>
+<b>Fill</b> (<kbd>G</kbd>) | Fills the area of the same tile | Stamp options, <b>Only empty</b>, <b>Across edges</b>, <b>Flipped too</b>
+<b>Shapes</b> (<kbd>L</kbd>) | Draws a line, rectangle, ellipse or filled ellipse; <kbd>Shift</kbd> keeps lines at 45° and shapes square | The shape, stamp options, <b>Only empty</b>
+<b>Select</b> (<kbd>M</kbd>) | Selects a rectangle of tiles | ---
+<b>Magic Wand</b> (<kbd>W</kbd>) | Selects joined tiles like the clicked one, <kbd>Ctrl</kbd>+click all of them in the layer | <b>Whole layer</b>, <b>Across edges</b>, <b>Flipped too</b>
+<b>Eyedropper</b> (<kbd>I</kbd>) | Picks a tile | ---
+<b>Hand</b> (<kbd>H</kbd>) | Moves the view | ---
+
+<b>Across edges</b> goes on at the other side of a repeating layer, <b>Flipped too</b> counts a flipped tile as the
+same one. The stamp options are:
+
+-   <b>Flip</b> (<kbd>X</kbd>, <kbd>Y</kbd>) and <b>turn</b> (<kbd>Shift</kbd>+<kbd>R</kbd>) the stamp. Turning moves
+    the tiles around; the tiles themselves can only be flipped.
+-   <b>Random tiles</b> (<kbd>Z</kbd>) paints a random tile of the stamp in each cell --- the same one each time it's
+    painted over, <kbd>Shift</kbd>+<kbd>Z</kbd> rerolls --- optionally flipped at random. <b>Weights of Tiles</b> sets
+    how often each tile comes up.
+-   <b>Tiles</b> --- paint the tiles <b>As they are</b>, or <b>Normal</b>, <b>Translucent</b> or <b>Invisible</b>, as
+    the tile modifiers of the original game, or with <b>Heat</b>, the heat effect of JJ2+: every row of pixels of the
+    tile wavers left and right, as if seen through heat (only in a layer drawn as tiles, and only on backends with
+    shaders). <b>Only modifier</b> changes only the modifier.
+
+The <b>Select</b> menu:
+
+-   <b>Invert Selection</b>, <b>Grow</b>, <b>Shrink</b> and <b>Select All Tiles Like These</b>.
+-   Selected tiles are moved by dragging them, or by <kbd>Shift</kbd>+arrows.
+-   <b>Mirror Selection</b> flips the tiles and, on the sprite layer, the events on them, with their parameters changed
+    as they should be --- springs, directions, offsets. <b>Mirroring Swaps Teams of Events</b> also swaps the first two
+    teams, for symmetric multiplayer levels.
+-   <b>Copy All Layers</b> and <b>Paste All Layers</b> copy the area of every visible, unlocked layer with its events.
+    Pasted warps and triggers get new identifiers.
+
+Copied tiles and events also go to the system clipboard as text, so they can be pasted into another level, or into the
+game running elsewhere.
+
+@subsection editor-tools-find Find and Replace
+
+<b>Find and Replace</b> (<kbd>Ctrl</kbd>+<kbd>F</kbd>):
+
+-   <b>Tiles</b> --- finds the brush tile, flipped the same way or any way, in the current layer, in all layers, or only
+    in the selection. <b>Select</b> selects them, <b>Replace</b> puts another tile in, keeping its flips and
+    translucency.
+-   <b>Events</b> --- finds events of a kind, optionally only those with the values of the parameters ticked, and
+    replaces them with another kind. The parameters are edited as in the event properties. The new events get the
+    values set for them; with <b>Keep matching parameters</b>, they keep the values of parameters of the same name,
+    which are dimmed then. <b>Selected</b> takes the kind and the parameters of the selected event.
+
+Replacing events asks first. Each replacement is one undo step.
 
 @section editor-terrain Terrain tools
 
--   <b>Paint Tiles of Stamp at Random</b> (<kbd>Z</kbd>) --- the brush, rectangle and fill put a random tile of the
-    stamp in each cell, chosen by the cell position, so painting over it again doesn't change it. Tiles repeated in the
-    stamp come up more often, and an empty spot in the stamp leaves the cell alone. <kbd>Shift</kbd>+<kbd>Z</kbd>
-    rerolls.
--   <b>Smart Brush</b> (<kbd>T</kbd>) --- left button paints ground, right button removes it. Each cell gets the tile
-    that levels of this tile set use most for the same 8 neighbors, so blocks get their tops, edges and corners
-    automatically (@ref Editor::SmartTileModel). On first use the levels are scanned (progress in the status bar) and
-    the result is cached in @cpp "Cache/Editor/Adjacency/" @ce until a level changes. Animated tiles, tiles of other
-    tile sets, and tiles that already fit their neighbors are left alone.
--   <b>Choose Tiles by Their Neighbors</b> (<b>Edit</b> menu) re-picks the selected tiles the same way.
-    <b>Fill Selection with Ground</b> makes the selection solid ground.
--   <b>Beautify Selection</b> (<b>Edit</b> menu) keeps the collision exactly, but replaces each tile with one of the
-    same mask (flipped or not) that fits its neighbors better. Tiles without collision are kept.
--   <b>Find and Replace</b> (<kbd>Ctrl</kbd>+<kbd>F</kbd>) --- finds a tile from the brush (same flip or any) in the
-    current layer or all of them. <b>Select</b> selects the matches, <b>Replace</b> swaps in another brush tile keeping
-    flip and translucency. Events are found by kind and replaced by another kind with default parameters, keeping
-    difficulties and flags. One undo step each.
+-   <b>Smart Brush</b> (<kbd>T</kbd>) --- the left button paints ground, the right one removes it. Each tile is chosen
+    by what other levels of the tile set put there with the same neighbors, so blocks get their tops, edges and
+    corners automatically. The levels are read the first time it's used (the status bar shows the progress) and cached
+    in `Cache/Editor/Adjacency/`.
+-   <b>Choose Tiles by Their Neighbors</b> (<b>Edit</b> menu) picks the selected tiles again the same way. <b>Fill
+    Selection with Ground</b> fills the selection with ground.
+-   <b>Beautify Selection</b> (<b>Edit</b> menu) replaces the selected tiles with ones that fit their neighbors better
+    and have the same collision mask, so the collision stays exactly the same.
 
 @subsection editor-terrain-rules Terrain rules and prefabs
 
-<b>Terrain Rules...</b> in the <b>Edit</b> menu (@ref Editor::TerrainRules) shows the tile used for each of the 47 ways
-the surrounding cells can be solid (a corner counts only if both sides next to it are solid) and lets you override it:
+<b>Terrain Rules</b> in the <b>Edit</b> menu shows the tile used for each of the 47 ways the surrounding cells can be
+solid, and lets you override it:
 
--   Click assigns the brush tiles; several tiles alternate by cell position. Right-click restores the learned tile.
-    Overridden tiles are framed and used first by the Smart Brush, the Ground Line tool and neighbor-based picking.
--   Tiles of extra tile sets work too --- they're found by tile set name in any level.
--   A tile set can have several <b>terrains</b> (ground, wall, cloud, ...); the one chosen at the top is used.
--   <b>Slopes</b> tags the brush tile as a slope with surface heights at both edges, or excludes it from ground, for
-    tiles whose masks are misleading. The Ground Line tool uses the tags.
--   <b>Try It</b> is a small sandbox where clicks toggle cells and tiles are picked as the tools would.
+-   Click assigns the brush tiles --- several of them alternate. Right-click restores the learned tile. The overrides
+    are used first by the Smart Brush and the Ground Line tool.
+-   A tile set can have several <b>terrains</b>, such as ground, wall or cloud.
+-   <b>Slopes</b> tags a tile as a slope with heights at both edges, or excludes it from ground.
+-   <b>Try It</b> is a small sandbox. <b>Coverage</b> shows which of the 47 still need a rule, in red.
 
-<b>Prefabs...</b> in the <b>Edit</b> menu stores named stamps for the default tile set, usable in any level of it
-(@ref Editor::TilePrefab): <b>Save Brush</b> saves the brush, <b>Use</b> makes a prefab the brush. Animated tiles are
-left out.
+<b>Prefabs</b> in the <b>Edit</b> menu keeps named stamps for a tile set: <b>Save Brush</b> saves one, <b>Use</b>
+makes it the brush. <b>Save Copy of All Layers</b> keeps a copy of all layers with events, such as a warp pair or a
+base for Capture the Flag.
 
-Rules and prefabs are stored per tile set in `Tilesets/<name>.rules`, a JSON file found like tile sets and saved into
-the user content. The game ships rules for `castle1`, `diam1` and `jungle2`, as a starting point
-(`Content/Tilesets/*.rules`).
+Rules and prefabs are stored in `Tilesets/<name>.rules`. The game includes rules for `castle1`, `diam1` and `jungle2`.
 
 @subsection editor-terrain-ground-line Ground Line tool
 
-The <b>Ground Line</b> tool (<kbd>P</kbd>) lays ground along a line. Clicks add points (<kbd>Ctrl</kbd> snaps to tile
-corners), the line runs left to right, and the right button lays it as one undo step.
+The <b>Ground Line</b> tool (<kbd>P</kbd>) lays ground along a line. Click to add points (<kbd>Ctrl</kbd> snaps to
+tile corners), right-click to lay it.
 
--   Tiles along the line get the ground pieces whose masks follow it best, flat or sloped (@ref Editor::TileShapes),
-    from those the levels use with the same neighbors. Below, it's filled down to existing ground (at most 6 tiles),
-    and edges are picked as by the Smart Brush.
--   Kinds: <b>Ground</b> below the line, <b>Ceiling</b> above it, a floating <b>Band</b> as thick as the depth, or a
-    closed <b>Shape</b>. <b>Smooth curve</b> makes it a curve through the points. Options also apply to the last line.
--   The line is kept with the level (@ref Editor::TerrainSpline, editor-only chunk @cpp "spln" @ce) and stays
-    editable: drag a point (ground follows live, is laid on release), click the line to add a point,
-    <kbd>Shift</kbd>+click to remove one, right-click the line to remove its ground.
--   The laid collision surface is drawn over the line, green where it matches and red where it misses.
--   Relaying restores tiles it wrote that are still unchanged; tiles edited by hand since are left alone.
--   <b>Make Tiles Along Ground Line</b> (<b>Edit</b> menu) cuts the most common solid tile along the last line into
-    tiles of this level, so collision follows the line exactly --- even for tile sets without slopes.
--   <b>Make Ground Line from Selection</b> (<b>Edit</b> menu) traces a line along the top of the selected ground, so
-    existing ground can be reshaped by dragging it.
+-   The tiles along the line get the ground pieces whose masks follow it best, filled down to existing ground.
+-   <b>Lays</b> --- <b>Ground</b> below the line, <b>Ceiling</b> above it, a <b>Band</b> as thick as the
+    <b>Depth</b>, or a closed <b>Shape</b>. <b>Smooth</b> makes it a curve.
+-   The line stays editable: drag a point, click the line to add one, <kbd>Shift</kbd>+click to remove one, right-click
+    the line to remove its ground. Tiles edited by hand since are left alone.
+-   Its collision surface is drawn over it, green where it matches, red where it misses.
+-   <b>Make Tiles Along Ground Line</b> (<b>Edit</b> menu) makes tiles of this level so the collision follows the line
+    exactly. <b>Make Ground Line from Selection</b> traces existing ground, so it can be reshaped.
 
 @section editor-events Events
 
-Everything that isn't a tile --- starts, enemies, pickups, springs, warps, tile behaviors --- is an event. Events sit
-on tiles of the sprite layer, one per tile, regardless of which layer is being edited.
+Everything that isn't a tile --- starts, enemies, pickups, springs, warps, tile behaviors --- is an event. Events sit on
+tiles of the sprite layer, one per tile.
 
-The <b>Events</b> tab in the left panel lists them by category, with a search box. Clicking one selects it and the
-<b>event tool</b> (<kbd>Q</kbd>). Events the game doesn't use are found only by searching.
+The <b>Events</b> tab lists them by category, with a search box. Clicking one chooses it with the event tool
+(<kbd>Q</kbd>). Events the game doesn't use are found only by searching. The strip above the list holds favourite and
+recent events.
 
 @subsection editor-events-placing Placing and selecting
 
 -   Click an empty tile to place the event, drag to keep placing. <kbd>Shift</kbd> places over existing events.
--   Click an event to select it, <kbd>Ctrl</kbd>+click to toggle it in the selection, <kbd>Ctrl</kbd>+drag over empty
-    tiles to select a rectangle. Drag selected events to move them.
--   Right button erases. <kbd>Alt</kbd>+click picks an event with all its parameters for placing elsewhere.
--   <kbd>Del</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>, <kbd>X</kbd> and <kbd>V</kbd> work on selected events; pasted events
-    are placed by a click, keeping their arrangement. A warp pasted with its target, or a trigger with its tiles, gets
-    a fresh identifier so the copy works on its own; a lone part keeps its identifier and joins the original.
+-   The <b>Mode</b> in the toolbar places by <b>Click</b>, in a <b>Rectangle</b>, or by <b>Fill</b> over the joined
+    tiles of the same kind --- handy for vines, hooks and hurting tiles. The <b>Select</b> mode only selects.
+-   Click an event to select it, <kbd>Ctrl</kbd>+click to toggle it, <kbd>Ctrl</kbd>+drag to select a rectangle; drag
+    the selected events to move them. In the <b>Select</b> mode, a drag selects a rectangle, <kbd>Shift</kbd> adds and
+    <kbd>Ctrl</kbd> removes.
+-   The right button erases. <kbd>Alt</kbd>+click picks an event with all its parameters.
+-   <kbd>Del</kbd>, cut, copy and paste work on the selected events. A warp copied with its target, or a trigger with
+    its tiles, gets new identifiers each time it's pasted.
+-   <b>Fill Selection with Event</b> in the <b>Select</b> menu places the event on the selected tiles that have none.
 
-The right panel shows the parameters of the selected events, or of the event to place. Changes apply to all selected
-events of the first one's type; difficulties and flags apply to all. <b>Raw parameters</b> at the bottom show all 16
-bytes.
+The right panel shows the parameters of the selected events, or of the event to place. A change applies to all
+selected events of the same kind, and a value that differs among them is shown as <em>mixed</em>. Events of different
+kinds share only their difficulties and flags. <b>Raw parameters</b> show all 16 bytes.
 
-Single selected events have white <b>handles</b> for parameters with a position in the level --- light radii, bridge
-width, chain length of spike balls and platforms, pole position, new water level, camera limit edges. Dragging one is
-a single undo step (@ref Editor::EventGizmos). A camera limit's right edge dragged to the end of the level stays at
-the end even if the level is resized.
+-   Some fields are shown only for some values of another field.
+-   A crate or barrel edits the parameters of what is inside it.
+-   A field that refers to another event: choose <b>Choose in the Events tab</b>, then click the event in the
+    <b>Events</b> tab. <kbd>Esc</kbd> cancels.
+-   An <b>End of Level</b> whose next level is 0 shows where it leads by default.
+-   A selected <b>Ambient Sound</b> plays its sound.
 
-In the <b>Edit</b> menu:
+A single selected event has white <b>handles</b> for its values that are a place in the level --- the radius of a
+light, the width of a bridge, the length of a chain, camera limits, the water level. A tube or a force has an arrow of
+its speed; <kbd>Shift</kbd> snaps it to 8 directions. Dragging a handle is one undo step.
 
--   <b>Select Events of the Same Kind</b> selects all events like the first selected one.
--   <b>Copy Event to Every Tile Like Its Own</b> places the selected event on every sprite layer tile showing the same
-    tile and flip and having no event --- e.g. place a hook once and copy it to all hook tiles.
+In the <b>Edit</b> menu, <b>Select Events of the Same Kind</b> selects all events like the selected one, and <b>Copy
+Event to Every Tile Like Its Own</b> places it on every tile that shows the same tile --- place a hook once and copy it
+to all hook tiles.
 
-Two tools place events too:
+Two more tools place events:
 
--   <b>Measure</b> (<kbd>U</kbd>) --- drag to measure in pixels and tiles (<kbd>Ctrl</kbd> snaps to tile centers). It
-    draws the arcs of a walking jump, a running jump and Spaz's double jump as the original game computes them
-    (`Legacy` constants of @ref Actors::Player), and tells which reach the end. Walls and ceilings aren't considered.
--   <b>Events Along Path</b> (<kbd>K</kbd>) --- places the event evenly along a path, e.g. a row or arc of coins.
-    Clicks add points (<kbd>Ctrl</kbd> snaps to tile centers), right button places them. Its window sets the spacing,
-    smooth curve, and whether events go off-grid on the path or on the tiles it crosses.
+-   <b>Measure</b> (<kbd>U</kbd>) --- drag to measure in pixels and tiles. It draws the arcs of jumps --- walking,
+    dashing, the double jump and the copter --- and tells the easiest one that reaches. With <b>Stop at walls</b>, the
+    arcs stop at walls. Started on a spring, it shows roughly where the spring throws the player.
+-   <b>Events Along Path</b> (<kbd>K</kbd>) --- places the event evenly along a path, such as a row of coins. Click to
+    add points, right-click to place them. Options: <b>Distance</b>, <b>Smooth</b>, <b>On tiles</b>.
+
+@subsection editor-events-list Event list
+
+<b>Event List</b> (<kbd>F3</kbd>) lists all events of the level, with their position, difficulties and main
+parameters, filtered by what is typed. Click to select an event and move the view to it, <kbd>Ctrl</kbd>+click or
+<kbd>Shift</kbd>+click to select more and change them together.
 
 @subsection editor-events-display How events look
 
-Events are drawn as the objects they create, with a corner mark in their category's color. Other events are boxes in
-that color with their name, shrunk, wrapped or cut to initials as needed. Badges:
+Events look like the objects they create, with a corner mark in the color of their category. Others are boxes in that
+color with their name. Badges show the difficulties (bottom right, if not all three), that it respawns (blue, top
+right), and multiplayer only (purple, bottom left).
 
--   white and dark squares, bottom right --- difficulties, if not all three,
--   blue square, top right --- the object respawns,
--   purple square, bottom left --- multiplayer only.
-
-Warps are linked to their targets with blue arrows; a warp without a target is crossed out in red. A selected trigger
-event shows the others of the same trigger, a light shows its reach, a water level change shows the new level, and a
-camera limit darkens the area the camera can't reach. Events are dimmed while another layer is edited, and hidden
-under other tools unless <b>Show Events</b> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) is on.
+Arrows link warps to their targets (blue; a red cross means no target) and race waypoints in the order they're run
+(green). A selected light shows its reach, a trigger the events it belongs with, a water level change the new level,
+and a camera limit the area the camera can't reach. Events are dimmed while another layer is edited, and hidden under
+other tools unless <b>Show Events</b> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) is on.
 
 @subsection editor-events-offgrid Off-grid events
 
-Off-grid events --- objects at any position, as levels made in MLLE can have --- are kept, shown faded, and played as
-the game plays them (@ref Events::EventMap): spawned at their exact position, gone for good once collected or
-destroyed, and respawned after a checkpoint. Starts and warp targets keep their exact position; tile modifiers apply to
-the tile they're in.
+Off-grid events are at any position, as levels made in MLLE can have them. They have a triangle in their corner, and
+the game spawns them at their exact position.
 
--   <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click places the event off the grid.
--   Click selects one (edit in the right panel, <kbd>Del</kbd> removes it, copying makes an on-grid event), drag moves
-    it (<kbd>Shift</kbd> snaps to tile centers), right button erases, <kbd>Alt</kbd> picks it.
--   <b>Snap Off-Grid Events to Grid</b> in the <b>Level</b> menu moves them onto their tiles in one step, except where
-    the tile already has an event.
+-   <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click places an event off the grid.
+-   They're selected, moved (<kbd>Shift</kbd> snaps to tile centers), erased and picked as other events.
+-   <b>Snap Off-Grid Events to Grid</b> in the <b>Level</b> menu moves them onto their tiles.
 
 @subsection editor-events-catalog Event catalog
 
-Event descriptions are compiled in, in @ref Editor::EventCatalog, split by category into
-@cpp Editor/Events/EventCatalog.*.cpp @ce. They describe parameters as the game reads them, not as the level converter
-writes them (it reorders and scales them). Each event has a type, a stable key, a name and description, a category,
-parameters and a preview sprite.
-
-A parameter (@ref Editor::EventParamField) occupies some bits of the 16 parameter bytes and has an editor kind ---
-number, yes/no, options, flags, another event, text, or a warp, trigger or text identifier. Bytes no parameter covers
-are preserved.
-
-@ref Editor::ResolveEventPreview() mirrors how objects pick their look from parameters (food kind, gem color, spring
-direction...). Horizontal springs without a set direction turn away from the adjacent wall, upward springs stand on
-the bottom of their tile, and bridges are shown at their length. Sprites are drawn among the layers as in the game,
-while marks, badges and links stay on top.
+The descriptions of events are compiled in, in @ref Editor::EventCatalog (`Editor/Events/EventCatalog.*.cpp`). They
+describe the parameters as the game reads them. Each event has a type, a stable key, a name, a category, a preview
+(@ref Editor::ResolveEventPreview()) and its parameters (@ref Editor::EventParamField) --- bits of the 16 bytes of
+parameters, with how they're edited, when they're shown, what mirroring does to them, and their handles. Bytes no
+parameter covers are kept as they are.
 
 @subsection editor-events-extensions Events described outside the game
 
-A level script can describe events the game doesn't know, or uses differently, with lines in its `.j2as` file --- one
-event per line in JSON, ignored by the script itself:
+A level script can describe events the game doesn't know, one JSON object per line of its `.j2as` file:
 
 @code{.cpp}
 #pragma editor-event {"type": 300, "key": "MyThing", "name": "My Thing", "category": "enemy", "preview": {"metadata": "Enemy/Turtle", "animation": 1}, "params": [{"name": "Speed", "type": "uint", "offset": 0, "bits": 4, "max": 15, "default": 3}, {"name": "Mode", "type": "enum", "offset": 0, "shift": 4, "bits": 2, "options": ["Walk", "Fly", "Swim"]}]}
 @endcode
 
-Event packs for all levels are `.json` files in `Editor/Events/` of the content or the user content --- a single event,
-an array, or an object with an `"events"` array. Priority: level script, then event packs, then built-in events.
-They're read when a level is opened or saved under another name; <b>Read Event Descriptions Again</b> in the
-<b>Level</b> menu reloads them. Supported fields are listed at @ref Editor::EventCatalog::LoadExtensions(); errors go
-to the log. An undescribed event is shown as its number with raw parameters only.
+Event packs for all levels are `.json` files in `Editor/Events/` of the content or the user content --- an event, an
+array, or an object with an `"events"` array. The level script wins over event packs, and those over the built-in
+events. They're read when a level is opened, and the script again whenever it's saved; <b>Read Event Descriptions
+Again</b> in the <b>Level</b> menu reloads them. All fields are listed at @ref Editor::EventCatalog::LoadExtensions().
+A description that can't be used is skipped and reported in <b>Check Level</b>.
 
 @section editor-checking Checking the level
 
-In the <b>Level</b> and <b>View</b> menus:
+In the <b>Level</b> and <b>Show</b> menus:
 
--   <b>Statistics</b> --- counts per difficulty: enemies, bosses, gems and coins by value (including those in crates and
-    barrels), food, carrots, extra lives, ammo, containers, checkpoints, warps, exits, generators and character starts
-    (a missing start is red). Multiplayer-only events aren't counted (@ref Editor::LevelStatistics).
--   <b>Check Level</b> (@ref Editor::CheckLevel()) --- lists likely problems: no Jazz start (other characters fall back
-    to it), no multiplayer start in a multiplayer level, warps without targets, coin warps needing more coins than
-    exist, empty texts, triggers that change nothing or are never set, rolling rocks and triggers without each other,
-    out-of-range parameters, unknown events, more than one sky layer, no reachable exit, and pickups that may be out of
-    reach. Errors come first in red. <b>Show</b> jumps to the event, <b>Check Again</b> reruns it; the window stays
-    open while fixing.
--   <b>Show Where the Player Can Get</b> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>) --- tints green every tile
-    reachable from the start, brighter near the start. It uses the multiplayer minimap's route tracer
-    (@ref Multiplayer::ComputeReachableTiles()), which walks, jumps, swims, climbs and uses springs, poles, tubes and
-    warps like the original game. It's conservative, so some routes may be missing, and it doesn't update live ---
-    toggle it again after changes.
+-   <b>Statistics</b> --- counts for each difficulty: enemies, bosses, gems and coins (also those in crates), food,
+    carrots, extra lives, ammo, checkpoints, warps, exits and starts. Click a count to select those events. Below, the
+    results of the play-tests.
+-   <b>Check Level</b> --- likely problems, see @ref editor-checking-check.
+-   <b>Show Where the Player Can Get</b> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>) --- tints green every tile the
+    player can reach from the start, by walking, jumping, swimming, climbing, springs, poles, tubes and warps. It errs
+    on the safe side, so some routes may be missing. The <b>Show</b> menu chooses the character, and can add the
+    multiplayer starts. Only in builds with multiplayer.
+-   <b>Show Game Screen Frame</b> --- a frame of what the game shows: the game view, 4:3, 16:9, or half of a split
+    screen.
+-   <b>Compare with Saved</b> --- marks the tiles and events that differ from the saved file.
 
-A camera limit narrower than the game screen is widened to the left by the game; the editor shows the resulting area
-lighter, with a thinner edge.
+@subsection editor-checking-check Check Level
+
+<b>Check Level</b> lists likely problems --- errors in red, then warnings and information, each kind with a button that
+shows or hides it. The list follows the changes of the level. <b>Show</b> moves the view to a problem, and <b>Check
+Again</b> checks everything again, including what the player can reach.
+
+-   Starts --- no Jazz start, characters without a start of their own, no multiplayer start in a multiplayer level.
+-   Warps without targets, targets nothing leads to, coin warps needing more coins than there are, missing texts,
+    triggers that do nothing, parameters out of range, unknown events, layer effects that can't work.
+-   No reachable exit, and pickups or race waypoints that may be out of reach.
+-   Events inside solid tiles, next levels or music that don't exist, and more tile IDs than a script can use (4096).
+-   Multiplayer --- fewer than 4 starts, bases for Capture the Flag missing or doubled, and gaps in the order of race
+    waypoints.
+
+Some problems have a button that fixes them: <b>Remove Warp</b>, <b>Add Warp Target</b>, <b>Add Start</b>, <b>Add
+Multiplayer Start</b> and <b>Add CTF Base</b>.
 
 @section editor-playing Playing the level
 
-The level can be played straight from the editor, saved or not. The view flies to the player position, the game is
-revealed in a growing ring, and a bar at the top slides in to get back. Music continues throughout.
+The level can be played right from the editor, saved or not. The view flies to the player and the game is revealed in
+a growing ring, with a bar at the top to get back.
 
--   <b>Play</b> (<kbd>F5</kbd>) --- continues the last play-test where it was left, if the level wasn't changed. If it
-    was, the level restarts where the player was, with the same lives, health, score, weapons, gems and shield, and
-    collected, destroyed or triggered things stay so --- except in changed cells and events. A resized sprite layer
-    starts fresh. On consoles with little memory, the play-test isn't kept and only the position carries over.
-    Without a previous play-test, the level starts at its start.
--   <b>Play Here</b> (<kbd>Shift</kbd>+<kbd>F5</kbd>) --- starts at the pointer (from the key) or the view center (from
-    the menu or toolbar), at the nearest spot the player fits, or the level start if there's none.
+-   <b>Play</b> (<kbd>F5</kbd>) --- continues the last play-test where it was left. Tiles and events changed meanwhile
+    are applied to it. Changes it can't take --- starts, warp targets, generators, events that change what a tile does,
+    off-grid events, multiplayer, or another character, difficulty or game mode --- restart the level where the player
+    was. Played alone at the same difficulty, the player keeps the lives, score and weapons, and what was collected or
+    destroyed stays so.
+-   <b>Play Here</b> (<kbd>Shift</kbd>+<kbd>F5</kbd>) --- starts at the pointer, or at the view center from the menu.
 -   <b>Play from Start</b> (<kbd>Ctrl</kbd>+<kbd>F5</kbd>).
--   <b>Play from Marker</b> (<kbd>Alt</kbd>+<kbd>F5</kbd>) --- starts at the green play-start flag set by <b>Set Play
-    Start Marker Here</b> (<kbd>F6</kbd>), handy for testing one section repeatedly. The marker is editor-only.
 
-The character and difficulty are chosen in the <b>Play</b> menu. <kbd>F5</kbd>, <b>Back to Editor</b> in the pause menu,
-reaching the exit, or a game over all return to the editor, with the view where the player was. The next level is
-never loaded and nothing is saved.
+The character, difficulty and game mode are chosen in the <b>Play</b> menu. <kbd>F5</kbd>, <b>Back to Editor</b> in the
+pause menu, the exit or a game over return to the editor, with the view where the player was; nothing is saved.
+Finishing a level that has a next one offers <b>Edit It</b> (opens the next level in the editor), <b>Play On</b>
+(plays the next level as the episode would) or <b>Stay Here</b>.
 
 The <b>Play</b> menu can also play <b>local splitscreen multiplayer</b> --- Cooperation, Battle, Team Battle, Race,
-Treasure Hunt or Capture the Flag with 1 to 4 players --- to test multiplayer starts, laps and bases
-(@ref Editor::PlayTestMpLevelHandler). <b>Alone</b> switches back. Extra players take the next characters, and Play Here
-places them side by side. Changing the mode or player count restarts the play-test.
+Treasure Hunt or Capture the Flag, with 1 to 4 players --- to test multiplayer starts, laps and bases.
 
-After a play-test, the player's path is drawn over the level, blue to gold, thick where fast, with a red mark at
-deaths and a white one where the test ended. <b>Show Play Path</b> (<kbd>Ctrl</kbd>+<kbd>L</kbd>) toggles it.
+@subsection editor-playing-debug Debug toggles
+
+In the <b>Debug</b> button of the bar while playing. The keys can be changed in <b>Keyboard Shortcuts</b>.
+
+Key | Toggle
+--- | ------
+<kbd>F5</kbd> | <b>Back to Editor</b>, keeping the play-test to resume it
+<kbd>F9</kbd> | <b>Slow Motion</b> --- half speed, quarter speed, normal
+(none) | <b>Show Hitboxes</b> of players, enemies, collectibles and solid objects
+(none) | <b>Show Event Zones</b> --- the tiles of modifiers, areas, triggers and warps
+<kbd>F7</kbd> / <kbd>F8</kbd> | <b>Stop Time of Level</b> / <b>Next Frame</b>
+<kbd>F6</kbd> | <b>Move Player to Pointer</b>
+
+@subsection editor-playing-paths Paths of play-tests
+
+After a play-test, the path of the player is drawn over the level --- thicker where faster, with red marks where it
+died. <kbd>Ctrl</kbd>+<kbd>L</kbd> toggles it. The last 8 paths are kept with the level: <b>Show Deaths in
+Play-Tests</b> shows where the player died in them, <b>Forget Paths of Play-Tests</b> removes them, and
+<b>Statistics</b> tells the best time.
 
 @section editor-files Files
 
--   <b>Save</b> --- writes the level back to its file. Levels in @cpp "Cache/" @ce are saved as a new file instead,
-    since the cache is rebuilt from the original levels.
--   <b>Save As</b> --- saves into the user content @m_span{m-text m-dim} (see @ref paths) @m_endspan, or into
-    @cpp "Content/" @ce if writable; a game level goes into the same episode by default. If the level also exists
-    elsewhere, the editor tells which one the game will load (user content, then @cpp "Content/" @ce, then
-    @cpp "Cache/" @ce). The level script (@cpp ".j2as" @ce) is copied along.
--   <b>Export</b> --- saves for publishing, without editor-only data, after checking for problems such as a missing
-    start. <b>Don't allow editing</b> in the file dialog sets @ref LevelFlags::NotEditable: the game plays the level,
-    but the editor won't open it and the pause menu won't offer <b>Edit This Level</b>. It only prevents accidents ---
-    anyone can clear the bit --- so keep your editable copy.
+-   <b>Save</b> --- writes the level. A level from @cpp "Cache/" @ce is saved as a new file instead, since the cache is
+    made again from the original levels.
+-   <b>Save As</b> --- saves into the user content (see @ref paths), or into @cpp "Content/" @ce if it can be written.
+    The level script is copied along. If the level exists elsewhere too, the editor tells which copy the game loads.
+-   <b>Export</b> --- saves for publishing, without what only the editor uses, after checking for problems such as a
+    missing start. <b>Don't allow editing</b> marks the file so the editor won't open it. It's a courtesy, not a
+    protection, so keep an editable copy.
+-   <b>Export Package</b> --- a ZIP archive to publish, see @ref editor-files-package.
 
-Files are written to a temporary file next to the target and moved into place when complete, so a failed save never
-damages a level.
+A failed save, such as on a full disk, never damages the file that was there.
 
 @subsection editor-files-recovery Recovery
 
-While a level has unsaved changes, a recovery copy is written into @cpp "Editor/Recovery/" @ce in the configuration
-directory every minute and when the application is suspended. It's removed when the level is saved or changes are
-discarded. If a copy newer than the level is found when opening it, the editor offers to restore it.
+While a level has unsaved changes, a recovery copy is written every minute into @cpp "Editor/Recovery/" @ce in the
+configuration directory, with the undo history. When a level with a newer copy is opened, the editor offers to restore
+it. <b>Recovery Copies</b> in the <b>File</b> menu lists all copies, also of levels that were never saved.
+
+@subsection editor-files-package Export Package
+
+<b>Export Package</b> in the <b>File</b> menu writes a ZIP archive laid out as the content of the game, ready to be
+unpacked into the user content:
+
+-   `manifest.json` --- @cpp "format" @ce (1), @cpp "game" @ce, @cpp "name" @ce, @cpp "author" @ce,
+    @cpp "version" @ce, @cpp "description" @ce, @cpp "tags" @ce, @cpp "levels" @ce, @cpp "episode" @ce and
+    @cpp "files" @ce,
+-   `preview.png`,
+-   `Episodes/<episode>/<level>.j2l` --- exported, or as saved with <b>Keep what only the editor uses</b>; with <b>All
+    levels of the episode</b>, the other levels and the `.j2e` file too,
+-   the scripts of the levels, the tile sets and music they use that aren't of the game, and the event packs.
+
+Files that are needed but missing are listed in red.
+
+@subsection editor-files-script Script, files changed elsewhere and the lock
+
+-   <b>Edit Script</b> in the <b>Level</b> menu opens the script of the level (`<level>.j2as`) in the program the system
+    has for it, or in the one named by @cpp "ScriptEditor" @ce in the settings (see @ref editor-files-settings). A level
+    without a script gets one made from a template. Once the script is saved, the events it describes are read again.
+-   A tile set changed by another program is noticed, and <b>Load Again</b> shows the change.
+-   A level open in the editor has a lock file next to it, `<level>.j2l.lock`. Opening a level that another editor has
+    open warns first.
 
 @subsection editor-files-web In a browser
 
 The web version can't open local files directly: <b>From This Computer</b> in the open dialog uploads a level, and
-saving also downloads it. Settings and recovery copies are kept in browser storage (@ref Editor::WebFileBridge).
+saving also downloads it. Settings and recovery copies are kept in the browser storage.
 
 @subsection editor-files-settings Settings
 
-Editor settings are stored in @cpp "Jazz2.Editor.json" @ce in the configuration directory: grid visibility, tile picker
-width, interface scale (@cpp 0 @ce = by window size), @cpp "Layout" @ce (@cpp 0 @ce by window size, @cpp 1 @ce desktop,
-@cpp 2 @ce compact), @cpp "Expert" @ce, floating panel positions, play-test character, difficulty and players, and
-recent files (listed in the <b>File</b> menu). The view state of each level is stored in the level itself, in the
-@cpp "edoc" @ce chunk.
+The settings are stored in @cpp "Jazz2.Editor.json" @ce in the configuration directory (@ref Editor::EditorSettings).
+The file can be edited by hand, best while the editor is closed; a value of a wrong type or out of range falls back to
+the default.
+
+Key | Meaning
+--- | -------
+@cpp "UiScale" @ce | Interface scale, @cpp 0 @ce by the window size
+@cpp "Layout" @ce | @cpp 0 @ce by the window size, @cpp 1 @ce desktop, @cpp 2 @ce compact
+@cpp "Expert" @ce, @cpp "ShowGrid" @ce, @cpp "PauseLayerMovement" @ce, @cpp "ReducedMotion" @ce | <b>Expert Mode</b>, <b>Show Grid</b>, <b>Pause Layer Movement</b>, <b>Reduce Motion</b>
+@cpp "Theme" @ce | @cpp 0 @ce the usual theme, @cpp 1 @ce high contrast
+@cpp "ScriptEditor" @ce | The program <b>Edit Script</b> opens scripts in, empty for the one the system has. A path, or a name found in `PATH`, with optional arguments where `{file}` stands for the script, otherwise it goes last; a path with spaces followed by arguments is in quotes. Set only in this file
+@cpp "TileColumns" @ce | Tiles in a row of the tile picker, 1 to 32
+@cpp "RightPanelWidth" @ce, @cpp "LayerListHeight" @ce, @cpp "PickerPanelWidth" @ce | Sizes of the panels
+@cpp "PickerPanelPlacement" @ce, @cpp "RightPanelPlacement" @ce | Whether a panel floats and where: @cpp "Floating" @ce, @cpp "X" @ce, @cpp "Y" @ce, @cpp "Width" @ce, @cpp "Height" @ce
+@cpp "PlayCharacter" @ce, @cpp "PlayDifficulty" @ce, @cpp "PlayGameMode" @ce, @cpp "PlayPlayerCount" @ce | How the level is played
+@cpp "Tools" @ce | Tool options: @cpp "AcrossSeams" @ce, @cpp "IgnoreFlips" @ce, @cpp "OnlyEmpty" @ce, @cpp "WandGlobal" @ce, @cpp "Shape" @ce (@cpp 0 @ce line, @cpp 1 @ce rectangle, @cpp 2 @ce ellipse, @cpp 3 @ce filled ellipse), @cpp "EventMode" @ce (@cpp 0 @ce click, @cpp 1 @ce rectangle, @cpp 2 @ce fill), @cpp "MeasureArcs" @ce (bits: @cpp 1 @ce walk, @cpp 2 @ce dash, @cpp 4 @ce double jump, @cpp 8 @ce copter), @cpp "MeasureCollisions" @ce, @cpp "MirrorSwapTeams" @ce
+@cpp "PlayTest" @ce | Play-test options: @cpp "TimeScale" @ce (0.05 to 4), @cpp "ShowHitboxes" @ce, @cpp "ShowEventZones" @ce, @cpp "ShowDeaths" @ce, @cpp "ReachCharacter" @ce (@cpp 0 @ce any, @cpp 1 @ce Jazz, @cpp 2 @ce Spaz, @cpp 3 @ce Lori), @cpp "ReachFromMpStarts" @ce
+@cpp "ShowScreenFrame" @ce, @cpp "ScreenFrameKind" @ce | <b>Show Game Screen Frame</b>: @cpp 0 @ce game view, @cpp 1 @ce 4:3, @cpp 2 @ce 16:9, @cpp 3 @ce split screen
+@cpp "CheckLevelFilter" @ce | What <b>Check Level</b> shows, bits: @cpp 1 @ce errors, @cpp 2 @ce warnings, @cpp 4 @ce information
+@cpp "RecentEvents" @ce, @cpp "FavoriteEvents" @ce | Event types in the strip of the <b>Events</b> tab
+@cpp "TileFavorites" @ce | An object by tile set name, each with @cpp "Recent" @ce and @cpp "Favorites" @ce tile indices
+@cpp "RecentFiles" @ce | Files listed in the <b>File</b> menu, the most recent first
+
+Where the view was in each level is stored in the level itself, in the @cpp "edoc" @ce chunk.
 
 @section editor-formats Level and tile set formats
 
-All level reading and writing --- by the converter, the game and the editor --- goes through
-@ref Formats::LevelReader and @ref Formats::LevelWriter, and tile sets through @ref Formats::TileSetFile.
-@ref Formats::LevelFile describes the level layout.
+All reading and writing of levels --- by the converter, the game and the editor --- goes through
+@ref Formats::LevelReader and @ref Formats::LevelWriter, and of tile sets through @ref Formats::TileSetFile.
+@ref Formats::LevelFile describes the layout of a level.
 
-The editor holds a level as an @ref Editor::LevelDocument. Loading and saving a level is lossless --- the file comes
-out byte for byte the same. Tiles are referenced by tile set and index, so adding a tile set or an animated tile
-doesn't change any layer.
+The editor holds a level as an @ref Editor::LevelDocument. Loading and saving is lossless --- the file comes out byte
+for byte the same. Tiles are referred to by tile set and index, so adding a tile set or an animated tile doesn't change
+any layer. Every file is written to a temporary file first and replaces the target only once it's complete
+(@ref Editor::AtomicFile).
 
 @subsection editor-formats-chunks Chunks
 
-A level can carry optional data at the end of its body, in chunks tagged by four characters. Readers skip unknown
-chunks, so newer levels still load in older versions. Tags starting with a lowercase letter are editor-only: the game
-never reads them and export drops them.
+A level can carry optional data at the end of its body, in chunks tagged by four characters. Readers skip chunks they
+don't know. The case of the first two letters tells what a chunk is (@ref Formats::LevelFile):
+
+-   First letter lowercase --- editor-only: the game never reads it, and export drops it.
+-   Uppercase and lowercase, such as @cpp "Gscr" @ce --- <b>critical</b>: the level can't be played correctly without
+    it, so a reader since 3.9.1 that doesn't know it refuses the level (@ref Formats::LevelFile::IsCriticalChunk()).
+    Older readers skip it, so it may only hold data whose absence breaks nothing worse than the look of the level.
+-   Both uppercase, such as @cpp "PRVW" @ce --- ancillary data of the game, skipped by a reader that doesn't know it.
+    All chunks so far are ancillary or editor-only.
 
 Tag | Contents
 --- | --------
-@cpp "lnam" @ce | Layer names, one per layer, in layer order
-@cpp "elay" @ce | Layer editor state (hidden, locked), one byte per layer
+@cpp "PRVW" @ce | Preview for the custom level list, kept on export: @cpp u16 @ce width and height, then @cpp R, G, B @ce bytes row by row; the writer sets @ref LevelFlags::HasPreview with it
+@cpp "SPRL" @ce | How the sprite layer is drawn, kept on export (@ref Formats::SpriteLayerChunk): @cpp u8 @ce renderer type and the 4 bytes of the color; written only when it isn't drawn as plain tiles
+@cpp "TXLP" @ce | Parameters of tunnels, waves, cylinders and reflections their color has no room for, and textures of their own, kept on export (@ref Formats::TexturedLayerChunk): @cpp varuint @ce count, then for each layer @cpp varuint @ce index in layer order, @cpp varuint @ce size, @cpp f32 @ce fade X and Y (the amplitudes of a wave), @cpp u8 @ce fade and @cpp u8 @ce flags (1 spiral, 2 window of the layer, 4 the layer, 8 half size, 16 swapped angles of a wave); a layer with inner speeds or its own texture goes on with @cpp f32 @ce inner speed X and Y, inner auto speed X and Y and @cpp u8 @ce texture (0 the tiles, 1 an image of 256×256 palette indices, which follows); written only for layers without the defaults
+@cpp "LTXT" @ce | Translations of the level texts, kept on export (@ref Formats::LevelTextsChunk): @cpp u8 @ce version (1), @cpp varuint @ce number of languages, then each as a @cpp varuint @ce size and a record of @cpp str8 @ce language, @cpp varuint @ce number of texts, and for each @cpp varuint @ce text number, @cpp varuint @ce length and UTF-8 text
+@cpp "lnam" @ce | Layer names, one @cpp str8 @ce per layer, in layer order
+@cpp "ela2" @ce | Layer editor state (@ref Editor::LevelDocument::LayerStateChunk): @cpp u8 @ce version (1), @cpp varuint @ce number of layers, @cpp varuint @ce bytes of each layer, then those bytes of each layer --- hidden and locked flags, and the editor opacity if any layer has one
+@cpp "ann2" @ce | Bookmarks and notes (@ref Editor::Annotation): @cpp u8 @ce version (2), @cpp varuint @ce count, then each as a @cpp varuint @ce size and a record of @cpp i32 @ce X and Y in pixels, @cpp u8 @ce bookmark number (0 = note), @cpp varuint @ce length and text; version 2 adds @cpp u32 @ce color, the author, @cpp i64 @ce time, @cpp u8 @ce flags (1 = done) and the replies, each with its author, time and text
+@cpp "spl2" @ce | Ground lines (@ref Editor::TerrainSpline): @cpp u8 @ce version (1), @cpp varuint @ce count, then each as a @cpp varuint @ce size and a record of @cpp i32 @ce layer, @cpp u8 @ce depth, @cpp u8 @ce kind (ground, ceiling, band, shape), @cpp u8 @ce flags (1 = smooth), @cpp varuint @ce point count and @cpp f32 @ce X and Y of each in layer pixels, @cpp varuint @ce count of written tiles and for each @cpp i32 @ce X and Y, then the written and previous tile, each as @cpp u16 @ce index, @cpp u8 @ce source and @cpp u8 @ce flags
+@cpp "edoc" @ce | View state, written on every save so the level opens as it was left (@ref Editor::DocumentViewState): @cpp u8 @ce version (1), @cpp u16 @ce flags (camera, grid, events, play path, flat layers, play settings; 0x40 is reserved), @cpp f32 @ce center X, Y and zoom relative to the game's, @cpp i32 @ce layer, @cpp u8 @ce mask mode and picker panel, @cpp u8 @ce character, difficulty, game mode and players, two reserved @cpp i32 @ce written as 0
+@cpp "ppth" @ce | Paths of the last play-tests (@ref Editor::PlayPathHistory): @cpp u8 @ce version (2), then up to 8 paths, each with its time, whether the level was finished, and up to 4096 points, each as a difference from the previous one with the speed of the player there (a @cpp varuint @ce in 1/16 px per frame, up to 1024 px per frame)
+@cpp "pkgi" @ce | What <b>Export Package</b> says of the package: @cpp u8 @ce version (1), then a JSON object
 @cpp "rcov" @ce | Path of the level a recovery copy belongs to (recovery copies only)
-@cpp "PRVW" @ce | Preview image for the custom level list, kept on export: @cpp u16 @ce width and height, then @cpp R, G, B @ce bytes row by row
-@cpp "anno" @ce | Bookmarks and notes: @cpp varuint @ce count, then each: @cpp i32 @ce X and Y in pixels, @cpp u8 @ce bookmark number (0 = note), @cpp varuint @ce length and text
-@cpp "edoc" @ce | Editor view state, written on every save so the level reopens as it was left (@ref Editor::DocumentViewState): @cpp u8 @ce version, @cpp u16 @ce flags (camera, grid, events, play path, flat layers, play settings, play-start marker), @cpp f32 @ce center X, Y and zoom relative to the game's, @cpp i32 @ce layer, @cpp u8 @ce mask mode and picker panel, @cpp u8 @ce character, difficulty, game mode and players, @cpp i32 @ce play-start marker X and Y
-@cpp "spln" @ce | Ground lines: @cpp varuint @ce count, then each: @cpp i32 @ce layer, @cpp u8 @ce depth, @cpp u8 @ce kind (ground, ceiling, band, shape), @cpp u8 @ce flags (1 = smooth), @cpp varuint @ce point count and @cpp f32 @ce X and Y of each in layer pixels, @cpp varuint @ce count of written tiles and for each @cpp i32 @ce X and Y, then the written and previous tile, each as @cpp u16 @ce index, @cpp u8 @ce source and @cpp u8 @ce flags
+@cpp "rhst" @ce | History of changes of a recovery copy (@ref Editor::CommandArchive): @cpp u8 @ce version (3), a fingerprint of the layout of the records and of how snapshots are written, @cpp varuint @ce number of commands, of those done and of those done when it was saved plus one, then each command as a @cpp varuint @ce size and its data, in the native byte order (recovery copies only)
+
+A versioned chunk is read for any version but 0; a newer version only adds fields at the end of a record, which a
+reader skips. @cpp "edoc" @ce, @cpp "PRVW" @ce, @cpp "ppth" @ce, @cpp "rcov" @ce and @cpp "rhst" @ce are made anew
+by the editor, so undo never brings them back.
+
+@subsection editor-formats-compat Compatibility with 3.9.0
+
+Levels move between this version and 3.9.0, with these differences:
+
+-   The editor chunks of 3.9.0 (@cpp "anno" @ce, @cpp "spln" @ce, @cpp "elay" @ce) had no version. They're still
+    read, but only the versioned ones are written, so 3.9.0 opens a level saved since without its notes, ground lines
+    and layer flags. A level that has both was saved by 3.9.0 last, which keeps the versioned ones as they were, so the
+    legacy ones are taken then (with the colors, authors and replies of the notes that are still the same, and the
+    editor opacity of the layers, which the legacy chunks have no room for).
+-   <b>Speed from level start</b> is placed as <b>Speed</b>, and <b>Inherent offset</b> moves any layer that has it.
+-   A cylinder or a reflection is drawn as tiles, a tunnel centered, a palette-shifted layer as an ordinary one tinted
+    by its color, and the sprite layer always as plain tiles.
+-   A level saved by the editor of 3.9.0 shows no preview in the level list until it's saved again.
+
+@subsection editor-formats-limits Limits and checks
+
+Levels and tile sets can come from anywhere, so the readers check everything before relying on it, and refuse what no
+editor would write:
+
+-   A layer of more than @ref Formats::LevelFile::MaxLayerSize "65535" tiles on a side, more than
+    @ref Formats::LevelFile::MaxLayerTiles "2²⁶" tiles in a layer or @ref Formats::LevelFile::MaxTotalLayerTiles "2²⁷"
+    in all layers, a decompressed body over @ref Formats::LevelFile::MaxBodySize "1 GiB", an embedded tile set or a
+    chunk over @ref Formats::LevelFile::MaxBlobSize "256 MiB", more than 65535 off-grid events, 65536 overridden tiles
+    or masks, or 65535 chunks, and a @cpp varuint @ce of more than 5 bytes or a value over 32 bits.
+-   Offsets and speeds of a layer, and parameters of a textured layer, that aren't finite are replaced by their
+    defaults when a level is read or written, the level itself is still read.
+-   Flag bits that would change the layout of a record (those of an extra tile set outside of 0x07) and a layer kind
+    above the sprite layer (2) make a level unreadable since 3.9.1, instead of misread. The reserved event flag 0x08,
+    which 3.9.0 could write, is dropped instead.
+-   A tile set path must be relative and must not go up, and no part of it may end with a dot or a space or be a
+    device name of Windows (@ref Formats::LevelFile::IsSafeTileSetPath()).
+-   A tile set has one or four channels, a whole number of tiles at most 32768 pixels wide, at least one tile, and a
+    body that fits the file (@ref Formats::TileSetFile::Validate()).
+-   A savegame of a level whose size changed since is refused, instead of restored into the wrong places.
+
+@ref LevelFlags::NotEditable is a courtesy to the author, a single bit anyone can clear, not a protection.
 
 @subsection editor-formats-verify Verifying the formats
 
 The `verify-formats` command of @ref asset-packer "AssetPacker" reads every level and tile set in a directory and
-writes it back into memory, which must give the same file byte for byte. Files written by other tools, which compress
-differently, must read back to the same content instead.
+writes it back into memory, which must give the same file byte for byte (or the same content, for files written by
+other tools). With `--sweep-truncated`, every file is also read cut short at many places, which must never pass for a
+different level.
+`fuzz-formats` tests the readers with mutated files, and `level-to-text` writes a level as text for version control
+(see @ref asset-packer-usage).
 
 @code{.sh}
-AssetPacker verify-formats <directory>
+AssetPacker verify-formats <directory> [--sweep-truncated]
+AssetPacker fuzz-formats <directory> [<findings directory>] [--iterations=N] [--seed=N]
+AssetPacker level-to-text <level.j2l> <level.txt>
+AssetPacker text-to-level <level.txt> <level.j2l>
 @endcode
 
 @section editor-testing Testing the editor
 
 Debug builds have an editor self-test. `/editor-selftest` loads every level in @cpp "Cache/Episodes/" @ce (or a given
-directory) into an @ref Editor::LevelDocument and checks that:
-
--   saving it gives the same file,
--   editor data survives saving and loading, and export drops it,
--   a random sequence of changes, undone, restores the original, and redone, the changed level.
-
-It first validates the @ref editor-events-catalog "event catalog" (parameters don't overlap, fit their bits, and
-defaults match), then logs everything in the levels' events the catalog doesn't expect --- unknown events, values out
-of range, and unclaimed bits (mostly converter bytes the game ignores). Results go to the log, then the application
-quits.
+directory) into an @ref Editor::LevelDocument and checks that saving gives the same file, that editor data survives
+saving and loading while export drops it, that random changes undone and redone give the original and the changed
+level, and that <b>Check Level</b> runs. It also validates the @ref editor-events-catalog "event catalog" and tests
+the parts of the editor on their own --- from the PNG codec and the quantizer to the history, recovery copies, the tools
+and the shortcuts. Results go to the log, then the game quits.
 
 @code{.sh}
 Jazz2 /editor-selftest
+Jazz2 /editor-selftest --unit
 @endcode
 
+With `--unit` only the tests that need no game data run, so no converted game is needed: the tools are driven through
+a host of their own over a document (`Editor/Tests/FakeToolHost.h`), and the level shown is checked to follow the
+document by its layers only. `Sources/Jazz2/Editor/Tests/CheckIncludes.ps1` checks that the folders of the editor
+include each other only in the allowed directions, CI runs it before the build.
+
 Debug builds also run `/console` commands once the editor is open, in order, so it can be driven without input ---
-e.g. to take screenshots. Positions are in window pixels.
+such as to take screenshots. Positions are in window pixels.
 
 Command | What it does
 ------- | ------------
-`/jump <x> <y> [scale]`, `/fly <x> <y> <scale>` | Move the camera instantly, or fly it
+`/jump <x> <y> [scale]`, `/fly <x> <y> <scale>` | Move the camera at once, or fly it there
 `/zoom <scale>`, `/fit` | Zoom, fit the whole level
+`/view <x> <y> <percent>` | Center the view at a position (`c c` for the middle of the level) at a zoom as the status bar shows it
+`/drift <dx> <dy> [zoom] [frames]` | Move the view by so many screen pixels every frame, zooming out by the factor and back every so many frames; `/drift 0 0` stops it
+`/lod <on\|off\|auto\|stats>` | Draw the layers as cached images always, never, or by the zoom; `stats` logs the pixels per tile, wanted and used, and the memory
+`/perf reset`, `/perf log <label>` | Start averaging the frame statistics, log them
 `/layer <index>`, `/hide <index>`, `/layers` | Edit a layer, hide it, log the layers
 `/paint <layer> <x> <y> <[source:]tile> [width] [height]` | Paint tiles of the default tile set, or of a source numbered as in `/addtiles`
 `/undo`, `/redo`, `/action <id>` | Undo, redo, run a menu action
 `/click <x> <y>`, `/rclick <x> <y>`, `/drag <x1> <y1> <x2> <y2>`, `/hover <x> <y>`, `/wheel <x> <y> <amount>` | Pointer input
+`/press <x> <y>`, `/move <x> <y>`, `/release <x> <y>` | A drag over several commands
 `/key <name>` | Press `enter`, `escape`, `delete`, `f5`, `left`, `right`, `up`, `down`, `space`, `ctrl`, `shift` or `alt`
-`/keydown <name>`, `/keyup <name>` | Hold or release a key (held keys are read once per frame)
-`/gamepad <x> <y>` | Simulate gamepad use with its cursor at a position
-`/renderer <type>` | Set the current layer's renderer, see @ref Tiles::LayerRendererType
+`/keydown <name>`, `/keyup <name>` | Hold or release a key
+`/type <text>` | Type into what has the keyboard focus, a space written as `+`
+`/focus [back]` | Move the keyboard focus as <kbd>Tab</kbd> or <kbd>Shift</kbd>+<kbd>Tab</kbd> does
+`/gamepad <x> <y>`, `/radial [<x> <y>]` | Use the gamepad with its cursor at a position; show the tool ring, or point at a tool of it
+`/touch <down\|pointerdown\|move\|pointerup\|up> <id> <x> <y> ...` | A touch event in screen pixels, the finger that came or went given last
+`/keyboard` | Show the editor's own on-screen keyboard
+`/theme <default\|contrast> [still]` | Apply a theme, with reduced motion, not saved
+`/keymap <default\|jcs\|mlle>` | Apply a set of shortcuts and save it
+`/renderer <type> [red [alpha]]` | Set the renderer of the current layer, see @ref Tiles::LayerRendererType (10 sky, 11 tunnel, 14 wave, 15 cylinder, 16 reflection), and optionally its color
+`/textured <x> <y> [fade [flags]]` | Set the parameters of a tunnel, cylinder or reflection of the current layer that its color has no room for (@ref Formats::TexturedLayerParams)
+`/innerspeeds <x> <y> <auto x> <auto y>` | Set the inner speeds of a reflection drawn only where the layer is
 `/addtiles <source> <image.png> [all] [dither]` | <b>Add Tiles from Image</b>; `all` keeps duplicates; source is a number as in `/applytiles`, `level`, or `new:<name>`
 `/fxtiles <source> <kind> <width> <height>` | <b>Generate Effect Tiles</b> into a source as in `/addtiles`; kind is an @ref Editor::FxTileKind
 `/newtileset <name> <tiles> [extra\|default\|save]` | <b>New Tile Set</b>
@@ -652,16 +935,27 @@ Command | What it does
 `/exporttileset <image.png>` | <b>Export Tile Set Image</b>
 `/applytiles <source> [new name\|-] [palette]` | <b>Save Tile Changes into Tile Set</b>; source 0 is the default tile set, 1+ the extra ones; `palette` saves the level palette too
 `/tileoverride <tile ID> <index>` | Fill a tile with one palette entry and make it solid, in this level only
-`/palette <entry> <rrggbb>` | Set a level palette entry (the level gets its own palette)
-`/animframe <index> <frames>` | Set an animated tile's frame time
-`/placeevent <key> <x> <y>` | Place a catalog event with default parameters on a tile
-`/placeoffgrid <key> <x> <y> [delay]` | Place an off-grid catalog event at a pixel position; with a delay in seconds, as a generator
-`/brush <key>`, `/selectevent <x> <y> [add]`, `/events` | Choose the event to place, select (or add) the event of a tile, log the selection and brush
-`/texts`, `/findevents <key>` | Log the level texts with control characters, or up to 20 events of a kind
+`/palette <entry> <rrggbb>` | Set an entry of the level palette, and log how long it took
+`/palettemove <first> <last> <-1\|1> [keep]` | Move palette entries, with `keep` keeping the look of the level, and log how long it took
+`/animframe <index> <frames>` | Set the frame time of an animated tile
+`/placeevent <key> <x> <y> [bytes...]` | Place an event of the catalog on a tile, the bytes given replacing the first bytes of its parameters
+`/placeoffgrid <key> <x> <y> [delay]` | Place an off-grid event at a position in pixels; with a delay in seconds, as a generator
+`/brush <key>`, `/selectevent <x> <y> [add]`, `/events` | Choose the event to place, select (or add) the event of a tile, log the selection and the event tool
+`/texts`, `/findevents <key>` | Log the level texts, or up to 20 events of a kind
+`/links [next] [secret] [bonus]` | Set the next, secret and bonus level (`-` for none), then log them; without arguments only log them
+`/check [index]` | Log the problems <b>Check Level</b> finds, or fix the one of the index
+`/saveprefab <name>`, `/exportrules <tile set>...` | Save the brush as a prefab; make rules of tile sets from what the levels use the most (a space in a name written as `+`)
 `/pngtest <directory>` | Read every PNG in a directory, compare with a same-named `.rgba` file if present, write it to `out/` and read it back
+`/preview <image.png>` | Write the preview the level would be saved with
 `/save <path>`, `/export <path>`, `/exportplayonly <path>`, `/autosave` | Save, export, export as not editable, write a recovery copy
+`/restorecopy <path>` | Restore a recovery copy with its history
+`/rebuild` | Load the shown level again from the document
 `/playring <progress>` | Freeze the play transition at a point between 0 and 1
+`/stopplay [keep]` | Return from the play-test to the editor, with `keep` keeping it to resume
 `/exitlevel` | Leave the played level through its exit
+`/teleport <x> <y>`, `/step` | Move the player of the play-test to a position; go on by one update
+`/playerstate [<score> <lives>]` | Add score and lives to the player of the play-test, and log what it has
+`/paths`, `/reach [character] [mp starts]` | Log the kept paths of play-tests, or how many tiles can be reached
 `/wait <frames>`, `/quit` | Wait before the next commands, quit
 
 @code{.sh}

@@ -39,7 +39,9 @@ namespace nCine::RHI::Software
 		DefaultSpriteNoTexture,	/**< Solid-colour sprite (`vColor`, no texture) over a single instance */
 		DefaultBatchedSpritesNoTexture,	/**< The solid-colour sprite over an array of batched instances */
 		TexturedBackground,		/**< The animated, per-pixel-warped menu/level background (planar tunnel) */
-		TexturedBackgroundCircle,	/**< The circular ("tube") variant of the textured background */
+		TexturedBackgroundTunnel,	/**< The tunnel variant of the textured background */
+		TexturedBackgroundCylinder,	/**< The cylinder variant of the textured background */
+		TexturedBackgroundWave,	/**< The wave variant of the textured background */
 		PaletteRemap,			/**< An R8/RG8 index sprite recolored through the shared palette texture */
 		BatchedPaletteRemap,	/**< The palette-remap effect over an array of batched instances */
 		Combine					/**< The viewport compositor (scene + lighting + blur + ambient) */

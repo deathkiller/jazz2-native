@@ -33,8 +33,8 @@ namespace nCine
 			std::unique_ptr<RenderCommand>& command = _freeCommandsPool[i];
 			if (command && command->GetMaterial().GetShaderProgram() == shaderProgram) {
 				retrievedCommand = command.get();
-				_usedCommandsPool.push_back(std::move(command));
-				command = std::move(_freeCommandsPool[poolSize - 1]);
+				_usedCommandsPool.push_back(Death::move(command));
+				command = Death::move(_freeCommandsPool[poolSize - 1]);
 				_freeCommandsPool.pop_back();
 				break;
 			}
@@ -67,7 +67,7 @@ namespace nCine
 		RenderStatistics::GatherCommandPoolStatistics(std::uint32_t(_usedCommandsPool.size()), std::uint32_t(_freeCommandsPool.size()));
 #endif
 		for (std::unique_ptr<RenderCommand>& command : _usedCommandsPool) {
-			_freeCommandsPool.push_back(std::move(command));
+			_freeCommandsPool.push_back(Death::move(command));
 		}
 		_usedCommandsPool.clear();
 	}

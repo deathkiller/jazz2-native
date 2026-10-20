@@ -136,6 +136,28 @@ namespace Jazz2::Multiplayer
 		/** @brief Converts UUID to the string representation */
 		static String UuidToString(StaticArrayView<Uuid::Size, Uuid::Type> uuid);
 
+		/** @brief Version of the transport a client connects with and a server lets in, see @ref AcceptServerPeer() */
+		static constexpr std::uint32_t TransportProtocolVersion = 1;
+		/** @brief Longest name of a player in bytes */
+		static constexpr std::uint32_t MaxPlayerNameLength = 32;
+
+		/**
+		 * @brief Decides whether a peer that connects to the server is let in, as every server does
+		 *
+		 * Checks the version of the transport the client connects with and whether the server is full. Meant to be
+		 * called from @ref INetworkHandler::OnPeerConnected() of a server.
+		 */
+		ConnectionResult AcceptServerPeer(const Peer& peer, std::uint32_t clientData);
+		/**
+		 * @brief Handles what every server handles before its level handler, called from @ref INetworkHandler::OnPacketReceived()
+		 *
+		 * Answers a ping and authenticates a peer by its authentication packet --- the protocol version, the player
+		 * name, bans, the whitelist, the password and the 3rd party authentication --- and gives a player that
+		 * reconnects back what it had. Returns `true` if the packet was handled completely (answered, or the peer was
+		 * kicked), `false` if the level handler should have it too.
+		 */
+		bool HandleServerPacket(const Peer& peer, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		using NetworkManagerBase::CreateServer;

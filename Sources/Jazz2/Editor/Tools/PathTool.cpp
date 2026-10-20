@@ -3,10 +3,9 @@
 #if defined(WITH_EDITOR)
 
 #include "EventTools.h"
+#include "../Common/ToolMath.h"
 #include "../Document/Commands.h"
 #include "../Events/EventPreviews.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -21,21 +20,15 @@ namespace Jazz2::Editor
 {
 	namespace
 	{
-		Vector2f CatmullRom(Vector2f p0, Vector2f p1, Vector2f p2, Vector2f p3, float t)
-		{
-			float t2 = t * t, t3 = t2 * t;
-			return (p1 * 2.0f + (p2 - p0) * t + (p0 * 2.0f - p1 * 5.0f + p2 * 4.0f - p3) * t2 + (p1 * 3.0f - p0 - p2 * 3.0f + p3) * t3) * 0.5f;
-		}
+		using ToolMath::CatmullRom;
+
+		// Events along a path at most, a point far out with the pointer doesn't stop the editor
+		constexpr std::size_t MaxPlacements = 4096;
 	}
 
 	PathTool::PathTool(IToolHost& host)
-		: EditorTool(host), _options(std::make_shared<Options>()), _window(std::make_shared<UiElement*>(nullptr))
+		: EditorTool(host), _options(std::make_shared<Options>())
 	{
-	}
-
-	PathTool::~PathTool()
-	{
-		// The window goes with the interface, it only shares the pointer to itself
 	}
 
 	EditorToolType PathTool::GetType() const
@@ -43,15 +36,9 @@ namespace Jazz2::Editor
 		return EditorToolType::Path;
 	}
 
-	void PathTool::OnActivate()
-	{
-		ShowWindow();
-	}
-
 	void PathTool::OnDeactivate()
 	{
 		// The points stay, the hand can be taken for a while in the middle of a path
-		CloseWindow();
 	}
 
 	Vector2f PathTool::GetPoint(const ToolPointer& pointer) const
@@ -77,7 +64,6 @@ namespace Jazz2::Editor
 			return;
 		}
 		_points.push_back(GetPoint(pointer));
-		ShowWindow();
 	}
 
 	void PathTool::Cancel()
@@ -88,6 +74,12 @@ namespace Jazz2::Editor
 	bool PathTool::IsBusy() const
 	{
 		return !_points.empty();
+	}
+
+	bool PathTool::HasPointerCapture() const
+	{
+		// The points are clicked one by one, the view can be moved between them
+		return false;
 	}
 
 	void PathTool::GetLine(ArrayView<const Vector2f> points, bool smooth, SmallVectorImpl<Vector2f>& line)
@@ -127,13 +119,13 @@ namespace Jazz2::Editor
 			float length = (to - from).Length();
 			float position = spacing - carried;
 			while (position <= length) {
+				if (placements.size() >= MaxPlacements) {
+					return;
+				}
 				placements.push_back(from + (to - from) * (position / length));
 				position += spacing;
 			}
 			carried = length - (position - spacing);
-			if (placements.size() > 4096) {
-				return;
-			}
 		}
 	}
 
@@ -156,7 +148,8 @@ namespace Jazz2::Editor
 
 		SmallVector<Vector2f, 0> placements;
 		GetPlacements(_points, _options->Smooth, _options->Spacing, placements);
-		Formats::EventRecord event = brush.Items[0].Event;
+		// A stamp of only events off the grid has no first one on it, its first one is placed
+		Formats::EventRecord event = *brush.GetFirst();
 		LevelDocument::NormalizeEvent(event);
 		Vector2i gridSize = document.GetEventGridSize();
 		std::int32_t placed = 0;
@@ -170,22 +163,19 @@ namespace Jazz2::Editor
 				if (x < 0 || y < 0 || x >= gridSize.X || y >= gridSize.Y || !LevelDocument::IsEmptyEvent(document.GetEvent(x, y))) {
 					continue;
 				}
-				std::uint32_t cell = std::uint32_t(x + y * gridSize.X);
-				if (std::find(cells.begin(), cells.end(), cell) != cells.end()) {
-					continue;
-				}
-				cells.push_back(cell);
-				command->Set(x, y, event);
+				cells.push_back(std::uint32_t(x + y * gridSize.X));
+			}
+			std::sort(cells.begin(), cells.end());
+			cells.erase(std::unique(cells.begin(), cells.end()), cells.end());
+			for (std::uint32_t cell : cells) {
+				command->Set(std::int32_t(cell % std::uint32_t(gridSize.X)), std::int32_t(cell / std::uint32_t(gridSize.X)), event);
 				placed++;
 			}
 			if (placed > 0) {
-				_host.Execute(std::move(command));
+				_host.Execute(Death::move(command));
 			}
 		} else {
-			SmallVector<Formats::OffGridEventRecord, 0> events;
-			for (const Formats::OffGridEventRecord& existing : document.OffGridEvents) {
-				events.push_back(existing);
-			}
+			SmallVector<Formats::OffGridEventRecord, 0> events = CopyOffGridEvents(document);
 			for (const Vector2f& p : placements) {
 				if (p.X < 0.0f || p.Y < 0.0f || p.X >= gridSize.X * 32.0f || p.Y >= gridSize.Y * 32.0f) {
 					continue;
@@ -197,55 +187,26 @@ namespace Jazz2::Editor
 				placed++;
 			}
 			if (placed > 0) {
-				_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, std::move(events), _("Place Events")));
+				_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _("Place Events")));
 			}
 		}
 		_host.ShowMessage(_fn("{} event placed", "{} events placed", placed, placed));
 		_points.clear();
 	}
 
-	void PathTool::ShowWindow()
+	void PathTool::BuildOptions(ToolOptionsBuilder& builder)
 	{
-		UiSurface* surface = _host.GetSurface();
-		if (surface == nullptr || *_window != nullptr) {
-			return;
-		}
-
 		std::shared_ptr<Options> options = _options;
-		auto dialog = std::make_unique<UiDialog>(_("Place Along Path"));
-		auto* content = dialog->GetContent();
-		{
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			row->Add<UiLabel>(_("Distance (px)"))->Flex = 1.0f;
-			auto* spacing = row->Add<UiNumberBox>([options]() { return options->Spacing; }, [options](float value, bool final) {
-				options->Spacing = std::clamp(value, 4.0f, 1024.0f);
-			}, 4.0f, 1024.0f, 1.0f, 0);
-			spacing->Width = 60.0f;
-			spacing->Tooltip = _("Distance between two events along the path, 32 is a tile");
-		}
-		content->Add<UiCheckBox>(_("Smooth curve"), [options]() { return options->Smooth; }, [options](bool value) { options->Smooth = value; })
-			->Tooltip = _("Through the points in a curve, otherwise straight from one to the next");
-		content->Add<UiCheckBox>(_("On the tiles"), [options]() { return options->OnGrid; }, [options](bool value) { options->OnGrid = value; })
-			->Tooltip = _("Each on the tile the path goes through, otherwise off the grid, exactly on the path");
-		content->Add<UiLabel>(_("Click to add points, the right button places"), UiTheme::TextDim);
-
-		std::shared_ptr<UiElement*> window = _window;
-		UiOverlayOptions overlayOptions;
-		overlayOptions.Position = Vector2f(1.0e6f, 1.0e6f);
-		overlayOptions.Modal = false;
-		overlayOptions.CloseOnOutsideClick = false;
-		overlayOptions.OnClosed = [window]() { *window = nullptr; };
-		*_window = surface->PushOverlay(std::move(dialog), std::move(overlayOptions));
-	}
-
-	void PathTool::CloseWindow()
-	{
-		if (*_window != nullptr) {
-			if (UiSurface* surface = _host.GetSurface()) {
-				surface->CloseOverlay(*_window);
-			}
-			*_window = nullptr;
-		}
+		// TRANSLATORS: Label of the distance between two events placed along a path, in pixels
+		builder.AddNumber(_("Distance"), _("Distance between two events along the path in pixels, 32 is a tile"), 4.0f, 1024.0f, 1.0f,
+			[options]() { return options->Spacing; }, [options](float value, bool final) { options->Spacing = std::clamp(value, 4.0f, 1024.0f); });
+		builder.AddSeparator();
+		// TRANSLATORS: Toggle in the toolbar, the path is a smooth curve through its points
+		builder.AddToggle({ _("Smooth"), EditorIcon::None, nullptr, _("Through the points in a curve, otherwise straight from one to the next") },
+			[options]() { return options->Smooth; }, [options](bool value) { options->Smooth = value; });
+		// TRANSLATORS: Toggle in the toolbar, the events are placed on the tiles the path goes through
+		builder.AddToggle({ _("On tiles"), EditorIcon::None, nullptr, _("Each on the tile the path goes through, otherwise off the grid, exactly on the path") },
+			[options]() { return options->OnGrid; }, [options](bool value) { options->OnGrid = value; });
 	}
 
 	void PathTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
@@ -278,8 +239,8 @@ namespace Jazz2::Editor
 			}
 			Vector2f screen = view.WorldToScreen(world);
 			Rectf rect(screen.X - tile * 0.5f, screen.Y - tile * 0.5f, tile, tile);
-			if (!brush.IsEmpty()) {
-				previews.DrawPlaced(painter, brush.Items[0].Event, rect, view.Scale, 0.6f, _host.GetAnimTime(), world);
+			if (const Formats::EventRecord* first = brush.GetFirst()) {
+				previews.DrawPlaced(painter, *first, rect, view.Scale, 0.6f, _host.GetAnimTime(), world);
 			}
 		}
 

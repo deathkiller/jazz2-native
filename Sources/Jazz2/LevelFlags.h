@@ -24,7 +24,19 @@ namespace Jazz2
 		HasCaptureTheFlag = 0x40,				/**< Level has capture the flag */
 		HasVerticalSplitscreen = 0x80,			/**< Vertical splitscreen should be used */
 		HasMultiplayerSpawnPoints = 0x100,		/**< Level has multiplayer spawn points */
-		NotEditable = 0x200						/**< Level was exported only to be played, the level editor doesn't open it */
+		/**
+		 * @brief Level was exported only to be played, the level editor doesn't open it
+		 *
+		 * Only a courtesy to the author, not a protection --- it's a single bit of the header anyone can clear.
+		 */
+		NotEditable = 0x200,
+		/**
+		 * @brief Level has a preview image (@ref Formats::LevelFile::PreviewChunk)
+		 *
+		 * Lets the list of custom levels skip the levels without one, the chunk is at the very end of the body. Readers
+		 * before 3.9.1 ignore it, as they do every bit of the header they don't know.
+		 */
+		HasPreview = 0x400
 	};
 
 	DEATH_ENUM_FLAGS(LevelFlags);

@@ -16,11 +16,9 @@ namespace Jazz2::Editor
 
 		Kept in the editor-only chunk `edoc` (see @ref Formats::LevelFile::IsEditorOnlyChunk()), so the exported level
 		has none of it. The level opens where it was left --- the same place, zoom, layer and view toggles --- and is
-		played the same way, with the same character, difficulty and players. The play-start marker is where
-		@ref PlayStartMode::Marker starts the play-test.
+		played the same way, with the same character, difficulty and players.
 
-		It's written whenever the level is saved, a change of it alone doesn't make the level unsaved, except for
-		the marker, which is a part of the level a user places on purpose.
+		It's written whenever the level is saved, a change of it alone doesn't make the level unsaved.
 	*/
 	struct DocumentViewState
 	{
@@ -58,11 +56,6 @@ namespace Jazz2::Editor
 		std::uint8_t PlayGameMode = 0;
 		/** @brief Players of multiplayer in local splitscreen */
 		std::uint8_t PlayPlayerCount = 2;
-
-		/** @brief Whether the play-start marker is placed */
-		bool HasPlayStart = false;
-		/** @brief Position of the play-start marker in the level in pixels */
-		Vector2i PlayStart;
 
 		/** @brief Reads it from a level, returns `false` if the level has none */
 		static bool Read(const LevelDocument& document, DocumentViewState& state);

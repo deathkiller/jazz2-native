@@ -19,7 +19,10 @@ namespace Jazz2::Actors::Solid
 		switch (morphType) {
 			case MorphType::Swap2: PreloadMetadataAsync("Object/PowerUp/Swap2"_s); break;
 			case MorphType::Swap3: PreloadMetadataAsync("Object/PowerUp/Swap3"_s); break;
-			case MorphType::ToBird: PreloadMetadataAsync("Object/PowerUp/Bird"_s); break;
+			case MorphType::ToBird:
+				PreloadMetadataAsync("Object/PowerUp/Bird"_s);
+				PreloadMetadataAsync(Player::GetCharacterTraits(PlayerType::Bird2).Metadata);
+				break;
 			default: PreloadMetadataAsync("Object/PowerUp/Empty"_s); break;
 		}
 	}
@@ -109,8 +112,13 @@ namespace Jazz2::Actors::Solid
 	{
 		std::optional<PlayerType> playerType = GetTargetType(player->GetPlayerType());
 		if (playerType) {
-			if (!player->MorphTo(*playerType)) {
-				player->MorphTo(PlayerType::Jazz);
+			// A bird breaking the bird monitor stays a bird - the original simply morphs it again, which changes nothing
+			if (*playerType != player->GetPlayerType() && !player->MorphTo(*playerType)) {
+				// A character whose sprites aren't available (Lori in the shareware data) is replaced by Jazz. The bird isn't
+				// available there either, but a rabbit is no stand-in for it, so the player stays as it is.
+				if (*playerType != PlayerType::Bird && *playerType != PlayerType::Bird2) {
+					player->MorphTo(PlayerType::Jazz);
+				}
 			}
 
 			DecreaseHealth(INT32_MAX, player);
@@ -137,8 +145,9 @@ namespace Jazz2::Actors::Solid
 				}
 
 			case MorphType::ToBird:
-				// TODO: Implement Birds
-				return std::nullopt;
+				// The bird that shoots the player's weapon. Deliberately without a time limit, it lasts until a Fly Off or
+				// Revert Morph area, a death or the end of the level.
+				return PlayerType::Bird2;
 
 			default:
 				return std::nullopt;

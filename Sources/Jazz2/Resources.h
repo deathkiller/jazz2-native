@@ -498,8 +498,14 @@ namespace Jazz2::Resources
 
 		TexturedBackground,					/**< Textured background */
 		TexturedBackgroundDither,			/**< Textured background with dithering */
-		TexturedBackgroundCircle,			/**< Circular textured background */
-		TexturedBackgroundCircleDither,		/**< Circular textured background with dithering */
+		TexturedBackgroundTunnel,			/**< Tunnel textured background */
+		TexturedBackgroundTunnelDither,		/**< Tunnel textured background with dithering */
+		TexturedBackgroundCylinder,			/**< Cylinder textured background */
+		TexturedBackgroundCylinderDither,	/**< Cylinder textured background with dithering */
+		TexturedBackgroundWave,				/**< Wave textured background, it has no dithering */
+
+		TileMapMeshHeat,					/**< Tiles of the heat effect, see @ref Tiles::LayerTileFlags::Heat */
+		TileMapMeshHeatPalette,				/**< Tiles of the heat effect with palette */
 
 		Colorized,							/**< Colorized */
 		BatchedColorized,					/**< Batched variant of @ref Colorized */
@@ -537,8 +543,8 @@ namespace Jazz2::Resources
 		TileMapMeshPalette,					/**< Batched variant of @ref TileMapMesh */
 #endif
 #if defined(TILEMAP_LAYER_EFFECTS)
-		// The special tile layers (see Tiles::LayerRendererType::XRay and ::BlurBehind) and the actor coverage the
-		// x-ray layers sample. Compiled only once a level that has such a layer is loaded, see
+		// The special tile layers (see Tiles::LayerRendererType::XRay, ::BlurBehind and ::Reflection) and the actor
+		// coverage the x-ray layers sample. Compiled only once a level that has such a layer is loaded, see
 		// ContentResolver::CompileLayerEffectShaders()
 		TileMapMeshXRay,					/**< Animated tiles of an x-ray layer */
 		TileMapMeshXRayPalette,				/**< Palette variant of @ref TileMapMeshXRay */
@@ -546,6 +552,7 @@ namespace Jazz2::Resources
 		TileMapMeshBlurPalette,				/**< Palette variant of @ref TileMapMeshBlur */
 		Silhouette,							/**< Coverage of the actors behind an x-ray layer */
 		SilhouettePalette,					/**< Palette variant of @ref Silhouette */
+		TexturedBackgroundReflection,		/**< Reflection layer */
 #endif
 
 #if !defined(DISABLE_RESCALE_SHADERS)

@@ -465,7 +465,7 @@ namespace
 							im.Name = f.Name;
 							im.Offset = f.Offset;
 							im.ComponentCount = cc;
-							out.push_back(std::move(im));
+							out.push_back(Death::move(im));
 						}
 						break;
 					}
@@ -478,7 +478,7 @@ namespace
 					im.Name = m.Name;
 					im.Offset = m.Offset;
 					im.ComponentCount = cc;
-					out.push_back(std::move(im));
+					out.push_back(Death::move(im));
 				}
 			}
 		}
@@ -537,7 +537,7 @@ namespace
 			GeneratedUniformField f;
 			f.Name = line.suffix(space.end());
 			f.ComponentCount = ComponentCountFromType(line.prefix(space.begin()).trimmed(Blanks));
-			out.push_back(std::move(f));
+			out.push_back(Death::move(f));
 		}
 	}
 
@@ -635,7 +635,7 @@ namespace
 				VariantReflection v;
 				v.Name = name;
 				v.Define = name;
-				program.Variants.push_back(std::move(v));
+				program.Variants.push_back(Death::move(v));
 			}
 			for (VariantReflection& v : program.Variants) {
 				StageReflection vertex, fragment;
@@ -669,7 +669,7 @@ namespace
 					return false;
 				}
 			}
-			programs.push_back(std::move(program));
+			programs.push_back(Death::move(program));
 		}
 		return true;
 	}
@@ -797,7 +797,7 @@ namespace
 				if (!component.contains('*') && !component.contains('?')) {
 					String candidate = fs::CombinePath(directory, component);
 					if (lastComponent ? fs::FileExists(candidate) : fs::DirectoryExists(candidate)) {
-						next.push_back(std::move(candidate));
+						next.push_back(Death::move(candidate));
 					}
 					continue;
 				}
@@ -818,7 +818,7 @@ namespace
 			std::sort(next.begin(), next.end(), [](const String& a, const String& b) {
 				return std::strcmp(a.data(), b.data()) < 0;
 			});
-			pending = std::move(next);
+			pending = Death::move(next);
 			start = end + 1;
 		}
 
@@ -842,7 +842,7 @@ namespace
 		if (!overridePath.empty()) {
 			String candidate = overridePath;
 			if (fs::FileExists(candidate)) {
-				outPath = std::move(candidate);
+				outPath = Death::move(candidate);
 				return true;
 			}
 			return false;
@@ -852,7 +852,7 @@ namespace
 			for (StringView relative : { "Bin\\glslangValidator.exe"_s, "Bin32\\glslangValidator.exe"_s }) {
 				String candidate = fs::CombinePath(sdk, relative);
 				if (fs::FileExists(candidate)) {
-					outPath = std::move(candidate);
+					outPath = Death::move(candidate);
 					return true;
 				}
 			}
@@ -879,7 +879,7 @@ namespace
 		if (!searchRoot.empty()) {
 			String candidate = fs::CombinePath(searchRoot, ".fake\\_legacy\\.fake\\glsl\\glslangValidator.exe"_s);
 			if (fs::FileExists(candidate)) {
-				outPath = std::move(candidate);
+				outPath = Death::move(candidate);
 				return true;
 			}
 		}
@@ -959,7 +959,7 @@ namespace
 		{
 			String logContent;
 			if (ReadFileToString(logPath, logContent)) {
-				log = std::move(logContent);
+				log = Death::move(logContent);
 			}
 		}
 		bool ok = ran && (exitCode == 0);
@@ -1048,7 +1048,7 @@ namespace
 		if (TryGetEnvironmentVariable("VULKAN_SDK"_s, sdk)) {
 			String candidate = fs::CombinePath({ sdk, "bin"_s, "glslangValidator"_s });
 			if (fs::FileExists(candidate)) {
-				outPath = std::move(candidate);
+				outPath = Death::move(candidate);
 				return true;
 			}
 		}
@@ -1084,7 +1084,7 @@ namespace
 		{
 			String logContent;
 			if (ReadFileToString(logPath, logContent)) {
-				log = std::move(logContent);
+				log = Death::move(logContent);
 			}
 		}
 		bool ok = ran && (exitCode == 0);
@@ -1696,8 +1696,8 @@ namespace
 					}
 					GeneratedEffectEntry e;
 					e.Program = document.ProgramName;
-					e.Variant = std::move(variant);
-					e.Intrinsic = std::move(r.Intrinsic);
+					e.Variant = Death::move(variant);
+					e.Intrinsic = Death::move(r.Intrinsic);
 					e.UsesOffsetColor = r.UsesOffsetColor;
 					e.Requirements = r.Requirements;
 					// Keyed on the BODY, not on the intrinsic: a block may bind a pipeline stage AND carry
@@ -1715,18 +1715,18 @@ namespace
 						if (fi == functions.size()) {
 							GeneratedEffectFunction fn;
 							fn.Name = prefix + "_Effect"_s;
-							fn.Body = std::move(r.Body);
+							fn.Body = Death::move(r.Body);
 							fn.Provenance = provenance;
-							functions.push_back(std::move(fn));
+							functions.push_back(Death::move(fn));
 						}
 						String label = (e.Variant.empty()
 							? e.Program : String(e.Program + " ("_s + e.Variant + ")"_s));
-						functions[fi].SharedBy.push_back(std::move(label));
+						functions[fi].SharedBy.push_back(Death::move(label));
 						functions[fi].SharedProvenance.push_back(provenance);
 						e.FnIndex = std::int32_t(fi);
 					}
-					e.Prefix = std::move(prefix);
-					entries.push_back(std::move(e));
+					e.Prefix = Death::move(prefix);
+					entries.push_back(Death::move(e));
 				}
 			}
 		}
@@ -1858,14 +1858,14 @@ namespace
 						Diagnostic diag;
 						if (HlslEmitter::Transform(modern, vertexStage, v.Reflection, cg, diag,
 								HlslEmitter::Dialect::Cg)) {
-							(vertexStage ? e.VertexSource : e.FragmentSource) = std::move(cg);
+							(vertexStage ? e.VertexSource : e.FragmentSource) = Death::move(cg);
 						} else {
 							declined.emplace_back(prefix, diag.Message);
 							ok = false;
 						}
 					}
 					if (ok) {
-						entries.push_back(std::move(e));
+						entries.push_back(Death::move(e));
 					}
 				}
 			}
@@ -2240,7 +2240,7 @@ namespace
 						SamplerBinding sb;
 						sb.Name = t.Name;
 						sb.Unit = t.Unit;
-						samplers.push_back(std::move(sb));
+						samplers.push_back(Death::move(sb));
 					}
 					SmallVector<GlslInstanceMember, 0> instanceMembers;
 					BuildInstanceMembers(v.Reflection, instanceMembers);
@@ -2251,7 +2251,7 @@ namespace
 					} else if (r.Supported) {
 						GeneratedShaderEntry e;
 						e.Prefix = prefix;
-						e.Code = std::move(r.Code);
+						e.Code = Death::move(r.Code);
 						e.HasComputeVaryings = r.HasComputeVaryings;
 						ExtractUniformFields(e.Code, e.Prefix, e.Fields);
 						// Constant-varying fields share the struct with the loose uniforms but are filled by
@@ -2265,7 +2265,7 @@ namespace
 								}
 							}
 						}
-						supported.push_back(std::move(e));
+						supported.push_back(Death::move(e));
 					} else {
 						declined.emplace_back(prefix, r.UnsupportedReason);
 					}
@@ -2330,7 +2330,7 @@ namespace
 				};
 				for (String& candidate : candidates) {
 					if (fs::DirectoryExists(candidate)) {
-						outPath = std::move(candidate);
+						outPath = Death::move(candidate);
 						return true;
 					}
 				}
@@ -2461,9 +2461,9 @@ namespace
 				std::fprintf(stderr, "%s:%d: error: %s\n", inputPath.data(), diag.Line, diag.Message.data());
 				return 1;
 			}
-			d3d11Bodies.emplace_back(String{ns}, std::move(artifacts.D3d11));
-			vulkanBodies.emplace_back(String{ns}, std::move(artifacts.Vulkan));
-			metalBodies.emplace_back(String{ns}, std::move(artifacts.Metal));
+			d3d11Bodies.emplace_back(String{ns}, Death::move(artifacts.D3d11));
+			vulkanBodies.emplace_back(String{ns}, Death::move(artifacts.Vulkan));
+			metalBodies.emplace_back(String{ns}, Death::move(artifacts.Metal));
 			String headerName = stem + ".h"_s;
 			String headerPath = fs::CombinePath(outputDirectory, headerName);
 			if (!WriteStringToFile(headerPath, output)) {
@@ -3009,7 +3009,7 @@ int main(int argc, char* argv[])
 			VariantReflection v;
 			v.Name = name;
 			v.Define = name;
-			program.Variants.push_back(std::move(v));
+			program.Variants.push_back(Death::move(v));
 		}
 
 		for (VariantReflection& v : program.Variants) {
@@ -3041,7 +3041,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		programs.push_back(std::move(program));
+		programs.push_back(Death::move(program));
 	}
 
 	if (essl100Check) {

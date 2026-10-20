@@ -20,15 +20,58 @@ using namespace Death;
 
 namespace Jazz2::Editor
 {
+	Colorf UiLerpColor(const Colorf& a, const Colorf& b, float t)
+	{
+		return Colorf(a.R + (b.R - a.R) * t, a.G + (b.G - a.G) * t, a.B + (b.B - a.B) * t, a.A + (b.A - a.A) * t);
+	}
+
 	namespace
 	{
-		Colorf Lerp(const Colorf& a, const Colorf& b, float t)
-		{
-			return Colorf(a.R + (b.R - a.R) * t, a.G + (b.G - a.G) * t, a.B + (b.B - a.B) * t, a.A + (b.A - a.A) * t);
-		}
-
 		// Frames the caret is shown and hidden for
 		constexpr float CaretBlinkPeriod = 60.0f;
+
+		// Breaks a text into lines at spaces, each as long as fits the width, a word wider than it gets a line of its own
+		template<class TMeasurer>
+		void BreakLines(const TMeasurer& measurer, StringView text, float width, SmallVectorImpl<StringView>& lines)
+		{
+			lines.clear();
+			float spaceWidth = measurer.MeasureText(StringView(" ", 1));
+			for (StringView paragraph : text.split('\n')) {
+				const char* lineBegin = paragraph.begin();
+				const char* lineEnd = lineBegin;
+				// Width of the line so far, by its words and spaces measured apart, each rounded up, so it's never less
+				// than the line measured as a whole
+				float lineWidth = 0.0f;
+				const char* p = lineBegin;
+				while (p < paragraph.end()) {
+					const char* wordEnd = p;
+					while (wordEnd < paragraph.end() && *wordEnd != ' ') {
+						wordEnd++;
+					}
+					float wordWidth = measurer.MeasureText(StringView(p, std::size_t(wordEnd - p)));
+					if (lineEnd != lineBegin) {
+						float candidate = lineWidth + spaceWidth * float(p - lineEnd) + wordWidth;
+						if (candidate > width) {
+							// Measured as a whole only near the width, where the rounding of the parts may matter
+							candidate = measurer.MeasureText(StringView(lineBegin, std::size_t(wordEnd - lineBegin)));
+						}
+						if (candidate > width) {
+							lines.push_back(StringView(lineBegin, std::size_t(lineEnd - lineBegin)));
+							lineBegin = p;
+							lineWidth = wordWidth;
+						} else {
+							lineWidth = candidate;
+						}
+					} else {
+						// The first word, after any spaces the line starts with
+						lineWidth = spaceWidth * float(p - lineBegin) + wordWidth;
+					}
+					lineEnd = wordEnd;
+					p = (wordEnd < paragraph.end() ? wordEnd + 1 : wordEnd);
+				}
+				lines.push_back(StringView(lineBegin, std::size_t(lineEnd - lineBegin)));
+			}
+		}
 	}
 
 	UiLabel::UiLabel(StringView text, const Colorf& color, Alignment align)
@@ -36,9 +79,18 @@ namespace Jazz2::Editor
 	{
 	}
 
-	String UiLabel::GetText()
+	StringView UiLabel::GetText()
 	{
-		return (TextFunc ? TextFunc() : Text);
+		if (!TextFunc) {
+			return Text;
+		}
+		// The text is measured and drawn in the same frame, it's made only once for both
+		std::uint32_t layout = GetLayoutFrame();
+		if (layout == 0 || layout != _frameTextLayout) {
+			_frameText = TextFunc();
+			_frameTextLayout = layout;
+		}
+		return _frameText;
 	}
 
 	Vector2f UiLabel::Measure(const UiContext& context, Vector2f available)
@@ -54,6 +106,11 @@ namespace Jazz2::Editor
 		return size;
 	}
 
+	bool UiLabel::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
 	void UiLabel::Draw(UiPainter& painter)
 	{
 		Colorf color = (IsUsable() ? Color : UiTheme::TextDisabled);
@@ -62,15 +119,116 @@ namespace Jazz2::Editor
 		painter.PopClip();
 	}
 
-	UiButton::UiButton(StringView text, EditorIcon icon, Function<void()>&& onClick)
-		: Text(text), Icon(icon), Style(UiButtonStyle::Normal), OnClick(std::move(onClick)), IconColor(UiTheme::IconColor), MinWidth(0.0f),
-			TextAlign(Alignment::Center), TextColor(0.0f, 0.0f, 0.0f, 0.0f)
+	UiWrappedLabel::UiWrappedLabel(StringView text, const Colorf& color)
+		: UiLabel(text, color)
 	{
+	}
+
+	template<class TMeasurer>
+	const UiWrappedLabel::WrappedLines& UiWrappedLabel::GetLines(WrappedLines& cache, const TMeasurer& measurer, float width)
+	{
+		StringView text = GetText();
+		float textHeight = measurer.GetTextHeight();
+		if (cache.Width == width && cache.TextHeight == textHeight && cache.Text == text) {
+			return cache;
+		}
+		cache.Text = text;
+		cache.Width = width;
+		cache.TextHeight = textHeight;
+		cache.Lines.clear();
+		cache.Widest = 0.0f;
+		SmallVector<StringView, 8> lines;
+		BreakLines(measurer, cache.Text, width, lines);
+		for (StringView line : lines) {
+			std::uint32_t offset = (line.empty() ? 0 : std::uint32_t(line.data() - cache.Text.data()));
+			cache.Lines.push_back({ offset, std::uint32_t(line.size()) });
+			cache.Widest = std::max(cache.Widest, measurer.MeasureText(line));
+		}
+		return cache;
+	}
+
+	Vector2f UiWrappedLabel::Measure(const UiContext& context, Vector2f available)
+	{
+		float width = (Width >= 0.0f ? context.Px(Width) : available.X);
+		const WrappedLines& wrapped = GetLines(_measured, context, width);
+		float lineHeight = context.GetTextHeight() + context.Px(2.0f);
+		return Vector2f(std::min(wrapped.Widest + context.Px(1.0f), width), lineHeight * float(wrapped.Lines.size()) + context.Px(4.0f));
+	}
+
+	bool UiWrappedLabel::MeasureDependsOnAvailable() const
+	{
+		return true;
+	}
+
+	void UiWrappedLabel::Draw(UiPainter& painter)
+	{
+		const WrappedLines& wrapped = GetLines(_drawn, painter, Bounds.W);
+		float lineHeight = painter.GetTextHeight() + painter.Px(2.0f);
+		float y = Bounds.Y + painter.Px(2.0f);
+		Colorf color = (IsUsable() ? Color : UiTheme::TextDisabled);
+		painter.PushClip(Bounds);
+		for (const auto& line : wrapped.Lines) {
+			painter.Text(wrapped.Text.slice(line.first, line.first + line.second), Vector2f(Bounds.X, y), color);
+			y += lineHeight;
+		}
+		painter.PopClip();
+	}
+
+	UiButton::UiButton(StringView text, EditorIcon icon, Function<void()>&& onClick)
+		: Text(text), Icon(icon), Style(UiButtonStyle::Normal), OnClick(Death::move(onClick)), IconColor(UiTheme::IconColor), MinWidth(0.0f),
+			TextAlign(Alignment::Center), TextColor(0.0f, 0.0f, 0.0f, 0.0f), _textHidden(false), _neededWidth(0.0f)
+	{
+	}
+
+	StringView UiButton::GetTooltip(Vector2f pos) const
+	{
+		StringView tooltip = UiElement::GetTooltip(pos);
+		// What the button says, when only its icon is shown
+		return (tooltip.empty() && _textHidden ? StringView(Text) : tooltip);
 	}
 
 	bool UiButton::IsChecked()
 	{
 		return (IsCheckedFunc && IsCheckedFunc());
+	}
+
+	bool UiButton::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
+	template<class TMeasurer>
+	float UiButton::GetTextWidth(const TMeasurer& measurer)
+	{
+		float textHeight = measurer.GetTextHeight();
+		if (_measuredTextHeight != textHeight || _measuredText != Text) {
+			_measuredText = Text;
+			_measuredTextHeight = textHeight;
+			_measuredTextWidth = measurer.MeasureText(Text);
+		}
+		return _measuredTextWidth;
+	}
+
+	bool UiButton::YieldsToScroll() const
+	{
+		return true;
+	}
+
+	bool UiButton::IsTabStop() const
+	{
+		return true;
+	}
+
+	bool UiButton::OnKeyPressed(const KeyboardEvent& event)
+	{
+		if ((event.sym == Keys::Return || event.sym == Keys::NumPadEnter || event.sym == Keys::Space) && (event.mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
+			if (IsUsable() && OnClick) {
+				// Nothing of the button is touched after, as after a click
+				OnClick();
+			}
+			return true;
+		}
+		return false;
 	}
 
 	Vector2f UiButton::Measure(const UiContext& context, Vector2f available)
@@ -81,7 +239,7 @@ namespace Jazz2::Editor
 			width = height;
 		} else {
 			float padding = context.Px(UiTheme::Padding) * 1.5f;
-			width = padding * 2.0f + context.MeasureText(Text);
+			width = padding * 2.0f + GetTextWidth(context);
 			if (Icon != EditorIcon::None) {
 				width += context.Px(UiTheme::IconSize) + context.Px(UiTheme::Spacing);
 			}
@@ -108,13 +266,13 @@ namespace Jazz2::Editor
 		switch (Style) {
 			default:
 			case UiButtonStyle::Normal:
-				fill = (checked ? Lerp(UiTheme::ButtonChecked, UiTheme::ButtonCheckedHover, hover) : Lerp(UiTheme::ButtonFill, UiTheme::ButtonHover, hover));
+				fill = (checked ? UiLerpColor(UiTheme::ButtonChecked, UiTheme::ButtonCheckedHover, hover) : UiLerpColor(UiTheme::ButtonFill, UiTheme::ButtonHover, hover));
 				break;
 			case UiButtonStyle::Flat:
-				fill = (checked ? Lerp(UiTheme::ButtonChecked, UiTheme::ButtonCheckedHover, hover) : Colorf(UiTheme::ButtonHover.R, UiTheme::ButtonHover.G, UiTheme::ButtonHover.B, UiTheme::ButtonHover.A * hover));
+				fill = (checked ? UiLerpColor(UiTheme::ButtonChecked, UiTheme::ButtonCheckedHover, hover) : Colorf(UiTheme::ButtonHover.R, UiTheme::ButtonHover.G, UiTheme::ButtonHover.B, UiTheme::ButtonHover.A * hover));
 				break;
 			case UiButtonStyle::Accent:
-				fill = Lerp(UiTheme::ButtonChecked, UiTheme::ButtonCheckedHover, hover);
+				fill = UiLerpColor(UiTheme::ButtonChecked, UiTheme::ButtonCheckedHover, hover);
 				break;
 		}
 		if (_pressed && usable) {
@@ -128,25 +286,35 @@ namespace Jazz2::Editor
 		} else if (Style == UiButtonStyle::Normal) {
 			painter.RoundRectBorder(Bounds, UiTheme::PanelBorderDim);
 		}
+		if (_focused) {
+			// Reached by Tab
+			painter.FocusRing(Bounds);
+		}
 
 		Colorf iconColor = (usable ? IconColor : UiTheme::IconDisabled);
 		Colorf textColor = (usable ? (checked ? UiTheme::TextOnAccent : (TextColor.A > 0.0f ? TextColor : UiTheme::Text)) : UiTheme::TextDisabled);
 		// Pressed content moves down a little, like a key
 		float offset = (_pressed && usable ? std::max(1.0f, std::round(painter.GetScale() * 0.5f)) : 0.0f);
 
-		if (Text.empty()) {
+		float padding = painter.Px(UiTheme::Padding) * 1.5f;
+		float contentWidth = (Text.empty() ? 0.0f : GetTextWidth(painter));
+		if (Icon != EditorIcon::None) {
+			contentWidth += painter.Px(UiTheme::IconSize) + painter.Px(UiTheme::Spacing);
+		}
+		// Squeezed narrower than the icon and the text take, the icon alone says what it is better than a cut text
+		_neededWidth = (Text.empty() ? 0.0f : contentWidth + padding * 2.0f);
+		_textHidden = (!Text.empty() && Icon != EditorIcon::None && (IconOnlyFunc ? IconOnlyFunc() : IsTextCut()));
+		if (Text.empty() || _textHidden) {
 			painter.Icon(Icon, Rectf(Bounds.X, Bounds.Y + offset, Bounds.W, Bounds.H), iconColor);
 			return;
 		}
 
-		float padding = painter.Px(UiTheme::Padding) * 1.5f;
 		float x = Bounds.X + padding;
-		float contentWidth = painter.MeasureText(Text);
-		if (Icon != EditorIcon::None) {
-			contentWidth += painter.Px(UiTheme::IconSize) + painter.Px(UiTheme::Spacing);
-		}
-		// Centered if the button is wider than its content, unless it's in a list
-		if ((TextAlign & Alignment::HorizontalMask) != Alignment::Left) {
+		// Centered if the button is wider than its content, unless it's in a list, or at the right as numbers in a table
+		Alignment horizontal = (TextAlign & Alignment::HorizontalMask);
+		if (horizontal == Alignment::Right) {
+			x = std::max(x, std::round(Bounds.X + Bounds.W - padding - contentWidth));
+		} else if (horizontal != Alignment::Left) {
 			x = std::max(x, std::round(Bounds.X + (Bounds.W - contentWidth) * 0.5f));
 		}
 		if (Icon != EditorIcon::None) {
@@ -175,7 +343,7 @@ namespace Jazz2::Editor
 	}
 
 	UiCheckBox::UiCheckBox(StringView text, Function<bool()>&& getter, Function<void(bool)>&& setter)
-		: Text(text), Getter(std::move(getter)), Setter(std::move(setter))
+		: Text(text), Getter(Death::move(getter)), Setter(Death::move(setter))
 	{
 	}
 
@@ -199,7 +367,7 @@ namespace Jazz2::Editor
 		bool checked = (Getter && Getter());
 		float box = painter.Px(10.0f);
 		Rectf boxRect(Bounds.X, std::round(Bounds.Y + (Bounds.H - box) * 0.5f), box, box);
-		painter.RoundRect(boxRect, Lerp(UiTheme::InputFill, UiTheme::ButtonHover, usable ? _hoverAmount : 0.0f));
+		painter.RoundRect(boxRect, UiLerpColor(UiTheme::InputFill, UiTheme::ButtonHover, usable ? _hoverAmount : 0.0f));
 		painter.RoundRectBorder(boxRect, checked ? UiTheme::Accent : UiTheme::InputBorder);
 		if (checked) {
 			float inset = std::max(2.0f, std::round(box * 0.25f));
@@ -208,6 +376,35 @@ namespace Jazz2::Editor
 		}
 		float x = boxRect.X + box + painter.Px(UiTheme::Spacing * 2.0f);
 		painter.TextInRect(Text, Rectf(x, Bounds.Y, Bounds.X + Bounds.W - x, Bounds.H), usable ? UiTheme::Text : UiTheme::TextDisabled);
+		if (_focused) {
+			painter.FocusRing(boxRect);
+		}
+	}
+
+	bool UiCheckBox::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
+	bool UiCheckBox::YieldsToScroll() const
+	{
+		return true;
+	}
+
+	bool UiCheckBox::IsTabStop() const
+	{
+		return true;
+	}
+
+	bool UiCheckBox::OnKeyPressed(const KeyboardEvent& event)
+	{
+		if (event.sym == Keys::Space && (event.mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
+			if (IsUsable() && Setter) {
+				Setter(!(Getter && Getter()));
+			}
+			return true;
+		}
+		return false;
 	}
 
 	bool UiCheckBox::AcceptsPointer() const
@@ -238,6 +435,11 @@ namespace Jazz2::Editor
 		return (Orientation == UiOrientation::Horizontal ? Vector2f(0.0f, thickness) : Vector2f(thickness, 0.0f));
 	}
 
+	bool UiSeparator::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
 	void UiSeparator::Draw(UiPainter& painter)
 	{
 		float thickness = std::max(1.0f, std::round(painter.GetScale() * 0.5f));
@@ -261,6 +463,7 @@ namespace Jazz2::Editor
 
 	void UiScrollView::ScrollIntoView(float top, float bottom)
 	{
+		_velocity = 0.0f;
 		if (top < _targetScroll) {
 			_targetScroll = top;
 		} else if (bottom > _targetScroll + Bounds.H) {
@@ -269,16 +472,42 @@ namespace Jazz2::Editor
 		_targetScroll = std::clamp(_targetScroll, 0.0f, GetMaxScroll());
 	}
 
+	void UiScrollView::ScrollTo(float scroll, bool immediate)
+	{
+		_velocity = 0.0f;
+		_targetScroll = std::clamp(scroll, 0.0f, GetMaxScroll());
+		if (immediate) {
+			_scroll = _targetScroll;
+		}
+	}
+
+	void UiScrollView::Fling(float velocity)
+	{
+		_velocity = (UiTheme::ReducedMotion ? 0.0f : velocity);
+		_targetScroll = _scroll;
+	}
+
 	Vector2f UiScrollView::Measure(const UiContext& context, Vector2f available)
 	{
 		Vector2f size;
 		Vector2f fixedSize = GetFixedSize(context);
 		if (UiElement* content = GetContent()) {
-			size = content->Measure(context, Vector2f(available.X, 1.0e6f));
+			size = content->MeasureCached(context, Vector2f(available.X, 1.0e6f));
+			// Kept for Arrange() in this frame, the content isn't measured in the same width again
+			_measuredWidth = available.X;
+			_measuredHeight = size.Y;
+			_measuredFrame = GetLayoutFrame();
 			float maxHeight = (fixedSize.Y >= 0.0f ? fixedSize.Y : available.Y);
 			if (size.Y > maxHeight) {
-				// The scroll bar takes its own space next to the content
-				size.X += context.Px(UiTheme::ScrollBarWidth);
+				// The scroll bar takes its own space next to the content, which is as narrow as the rest then, and never
+				// more than all the space there is
+				float barWidth = context.Px(UiTheme::ScrollBarWidth);
+				if (available.X < 1.0e5f) {
+					Vector2f narrowSize = content->MeasureCached(context, Vector2f(std::max(available.X - barWidth, 0.0f), 1.0e6f));
+					size = Vector2f(std::min(narrowSize.X + barWidth, available.X), narrowSize.Y);
+				} else {
+					size.X += barWidth;
+				}
 			}
 			size.Y = std::min(size.Y, available.Y);
 		}
@@ -293,6 +522,9 @@ namespace Jazz2::Editor
 
 	void UiScrollView::Arrange(const UiContext& context, const Rectf& bounds)
 	{
+		// Scrolled to the end as it was laid out last, at once the first time, see FollowEnd
+		bool followEnd = (FollowEnd && _velocity == 0.0f && !_draggingThumb && _targetScroll >= GetMaxScroll() - 1.0f);
+		bool firstLayout = (Bounds.H <= 0.0f);
 		Bounds = bounds;
 		UiElement* content = GetContent();
 		if (content == nullptr || !content->IsShown()) {
@@ -301,12 +533,20 @@ namespace Jazz2::Editor
 		}
 
 		float barWidth = context.Px(UiTheme::ScrollBarWidth);
-		_contentHeight = content->Measure(context, Vector2f(bounds.W, 1.0e6f)).Y;
+		std::uint32_t layoutFrame = GetLayoutFrame();
+		_contentHeight = (layoutFrame != 0 && _measuredFrame == layoutFrame && _measuredWidth == bounds.W
+			? _measuredHeight : content->MeasureCached(context, Vector2f(bounds.W, 1.0e6f)).Y);
 		if (_contentHeight > bounds.H) {
 			// The scroll bar takes its own space
-			_contentHeight = content->Measure(context, Vector2f(bounds.W - barWidth, 1.0e6f)).Y;
+			_contentHeight = content->MeasureCached(context, Vector2f(bounds.W - barWidth, 1.0e6f)).Y;
 		}
 
+		if (followEnd) {
+			_targetScroll = GetMaxScroll();
+			if (firstLayout || UiTheme::ReducedMotion) {
+				_scroll = _targetScroll;
+			}
+		}
 		_targetScroll = std::clamp(_targetScroll, 0.0f, GetMaxScroll());
 		_scroll = std::clamp(_scroll, 0.0f, GetMaxScroll());
 		float width = (_contentHeight > bounds.H ? bounds.W - barWidth : bounds.W);
@@ -329,8 +569,15 @@ namespace Jazz2::Editor
 	{
 		UiElement::Update(timeMult);
 
-		if (_scroll != _targetScroll) {
-			float step = 1.0f - std::pow(0.65f, timeMult);
+		if (_velocity != 0.0f) {
+			// Flicked by a finger, it slows down by itself and stops at the ends
+			_targetScroll = _scroll = std::clamp(_scroll - _velocity * timeMult, 0.0f, GetMaxScroll());
+			_velocity *= std::pow(0.93f, timeMult);
+			if (std::abs(_velocity) < 0.2f || _scroll <= 0.0f || _scroll >= GetMaxScroll()) {
+				_velocity = 0.0f;
+			}
+		} else if (_scroll != _targetScroll) {
+			float step = (UiTheme::ReducedMotion ? 1.0f : 1.0f - std::pow(0.65f, timeMult));
 			_scroll += (_targetScroll - _scroll) * step;
 			if (std::abs(_targetScroll - _scroll) < 0.5f) {
 				_scroll = _targetScroll;
@@ -343,7 +590,7 @@ namespace Jazz2::Editor
 		if (!IsShown() || !Bounds.Contains(pos)) {
 			return nullptr;
 		}
-		if (_contentHeight > Bounds.H && pos.X >= Bounds.X + Bounds.W - GetThumbRect().W * 1.5f) {
+		if (_contentHeight > Bounds.H && pos.X >= Bounds.X + Bounds.W - GetThumbZoneWidth()) {
 			return this;
 		}
 		if (UiElement* content = GetContent()) {
@@ -365,10 +612,10 @@ namespace Jazz2::Editor
 			return false;
 		}
 		Rectf thumb = GetThumbRect();
-		if (event.Pos.X < thumb.X - thumb.W * 0.5f) {
+		if (event.Pos.X < Bounds.X + Bounds.W - GetThumbZoneWidth()) {
 			return false;
 		}
-		if (!thumb.Contains(event.Pos)) {
+		if (event.Pos.Y < thumb.Y || event.Pos.Y >= thumb.Y + thumb.H) {
 			// A click on the track moves the thumb there
 			float ratio = std::clamp((event.Pos.Y - Bounds.Y - thumb.H * 0.5f) / std::max(Bounds.H - thumb.H, 1.0f), 0.0f, 1.0f);
 			_targetScroll = _scroll = ratio * GetMaxScroll();
@@ -389,12 +636,23 @@ namespace Jazz2::Editor
 		_targetScroll = _scroll = ratio * GetMaxScroll();
 	}
 
+	void UiScrollView::OnPointerUp(const UiPointerEvent& event, bool inside)
+	{
+		_draggingThumb = false;
+	}
+
+	void UiScrollView::OnPointerCancel()
+	{
+		_draggingThumb = false;
+	}
+
 	bool UiScrollView::OnWheel(const UiPointerEvent& event)
 	{
 		if (_contentHeight <= Bounds.H) {
 			return false;
 		}
 		_draggingThumb = false;
+		_velocity = 0.0f;
 		UiSurface* surface = GetSurface();
 		float rowHeight = std::round(UiTheme::RowHeight * (surface != nullptr ? surface->GetScale() : 1.0f));
 		_targetScroll = std::clamp(_targetScroll - event.Wheel.Y * rowHeight * 3.0f, 0.0f, GetMaxScroll());
@@ -418,10 +676,33 @@ namespace Jazz2::Editor
 		return std::max(_contentHeight - Bounds.H, 0.0f);
 	}
 
+	float UiScrollView::GetThumbZoneWidth() const
+	{
+		UiSurface* surface = GetSurface();
+		float scale = (surface != nullptr ? surface->GetScale() : 1.0f);
+		float zone = std::round(UiTheme::ScrollBarWidth * scale) * 1.5f;
+		if (surface != nullptr && surface->TouchInput) {
+			// A finger is wider than the bar, not too much more, a list is mostly scrolled by dragging what's in it
+			zone = std::max(zone, std::round(8.0f * scale));
+		}
+		return zone;
+	}
+
 	UiSplitter::UiSplitter(UiOrientation orientation, Function<void()>&& onDragStart, Function<void(float)>&& onDrag, Function<void()>&& onDragEnd)
-		: Orientation(orientation), OnDragStart(std::move(onDragStart)), OnDrag(std::move(onDrag)), OnDragEnd(std::move(onDragEnd)), _startPos(0.0f)
+		: Orientation(orientation), OnDragStart(Death::move(onDragStart)), OnDrag(Death::move(onDrag)), OnDragEnd(Death::move(onDragEnd)), _startPos(0.0f)
 	{
 		Tooltip = _("Drag to resize");
+	}
+
+	void UiSplitter::Update(float timeMult)
+	{
+		UiElement::Update(timeMult);
+		// Arrows by the pointer while the edge is pointed at or dragged, which way it goes
+		if (_hovered || _pressed) {
+			if (UiSurface* surface = GetSurface()) {
+				surface->SetCursorOverlay(Orientation == UiOrientation::Vertical ? UiCursorOverlay::ResizeHorizontal : UiCursorOverlay::ResizeVertical);
+			}
+		}
 	}
 
 	void UiSplitter::Draw(UiPainter& painter)
@@ -497,6 +778,7 @@ namespace Jazz2::Editor
 			return false;
 		}
 		_startPos = event.Pos;
+		_moved = false;
 		if (OnDragStart) {
 			OnDragStart(event.Pos);
 		}
@@ -505,6 +787,9 @@ namespace Jazz2::Editor
 
 	void UiDragBar::OnPointerMove(const UiPointerEvent& event)
 	{
+		if ((event.Pos - _startPos).SqrLength() > 4.0f) {
+			_moved = true;
+		}
 		if (OnDrag) {
 			OnDrag(event.Pos - _startPos, event.Pos);
 		}
@@ -512,8 +797,20 @@ namespace Jazz2::Editor
 
 	void UiDragBar::OnPointerUp(const UiPointerEvent& event, bool inside)
 	{
+		_moved = false;
 		if (OnDragEnd) {
 			OnDragEnd(event.Pos);
+		}
+	}
+
+	void UiDragBar::Update(float timeMult)
+	{
+		UiStack::Update(timeMult);
+		// What is moved by it is being moved, a window by its title
+		if (_pressed && _moved && OnDrag) {
+			if (UiSurface* surface = GetSurface()) {
+				surface->SetCursorOverlay(UiCursorOverlay::Move);
+			}
 		}
 	}
 
@@ -537,7 +834,7 @@ namespace Jazz2::Editor
 				continue;
 			}
 			if (auto* row = runtime_cast<UiFormRow>(child.get())) {
-				float labelWidth = std::ceil(context.MeasureText(row->GetLabel()->Text));
+				float labelWidth = row->GetLabelWidth(context);
 				if (labelWidth <= _maxLabelColumn) {
 					_labelColumn = std::max(_labelColumn, labelWidth);
 				}
@@ -565,22 +862,35 @@ namespace Jazz2::Editor
 		_content = Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 	}
 
+	float UiFormRow::GetLabelWidth(const UiContext& context) const
+	{
+		// The form and the row both ask for it, more than once a frame
+		std::uint32_t layout = GetLayoutFrame();
+		if (layout == 0 || layout != _labelWidthLayout || context.Scale != _labelWidthScale) {
+			// What the label shows, its text may come from a function
+			_labelWidth = std::ceil(context.MeasureText(_label->GetText()));
+			_labelWidthLayout = layout;
+			_labelWidthScale = context.Scale;
+		}
+		return _labelWidth;
+	}
+
 	bool UiFormRow::IsStacked(const UiContext& context) const
 	{
-		return (std::ceil(context.MeasureText(_label->Text)) > _form.GetMaxLabelColumn());
+		return (GetLabelWidth(context) > _form.GetMaxLabelColumn());
 	}
 
 	Vector2f UiFormRow::Measure(const UiContext& context, Vector2f available)
 	{
-		Vector2f labelSize = _label->Measure(context, available);
+		Vector2f labelSize = _label->MeasureCached(context, available);
 		if (IsStacked(context)) {
 			// The label above what it's about
-			Vector2f contentSize = _content->Measure(context, available);
+			Vector2f contentSize = _content->MeasureCached(context, available);
 			return Vector2f(std::max(labelSize.X, contentSize.X), labelSize.Y + contentSize.Y);
 		}
 		float column = _form.GetLabelColumn();
 		float spacing = context.Px(UiTheme::Spacing);
-		Vector2f contentSize = _content->Measure(context, Vector2f(std::max(available.X - column - spacing, 0.0f), available.Y));
+		Vector2f contentSize = _content->MeasureCached(context, Vector2f(std::max(available.X - column - spacing, 0.0f), available.Y));
 		return Vector2f(column + spacing + contentSize.X, std::max(labelSize.Y, contentSize.Y));
 	}
 
@@ -588,7 +898,7 @@ namespace Jazz2::Editor
 	{
 		Bounds = bounds;
 		if (IsStacked(context)) {
-			float labelHeight = _label->Measure(context, Vector2f(bounds.W, bounds.H)).Y;
+			float labelHeight = _label->MeasureCached(context, Vector2f(bounds.W, bounds.H)).Y;
 			_label->Arrange(context, Rectf(bounds.X, bounds.Y, bounds.W, labelHeight));
 			_content->Arrange(context, Rectf(bounds.X, bounds.Y + labelHeight, bounds.W, std::max(bounds.H - labelHeight, 0.0f)));
 			return;
@@ -605,6 +915,13 @@ namespace Jazz2::Editor
 	{
 	}
 
+	UiTextBox::~UiTextBox()
+	{
+		if (_alive != nullptr) {
+			*_alive = false;
+		}
+	}
+
 	void UiTextBox::BeginEdit()
 	{
 		if (UiSurface* surface = GetSurface()) {
@@ -616,22 +933,40 @@ namespace Jazz2::Editor
 
 	bool UiTextBox::ShowScreenKeyboard()
 	{
+		// A box that is typed into already keeps its caret, a tap into it only places the caret, and the keys of
+		// the keyboard of the editor tap too, so all of the text isn't selected again
+		bool editing = _focused;
 		if (!theApplication().CanShowScreenKeyboard()) {
 			// The keyboard of the editor then, it types into the box as long as it has the focus
 			UiSurface* surface = GetSurface();
 			if (surface == nullptr) {
 				return false;
 			}
-			BeginEdit();
+			if (!editing) {
+				BeginEdit();
+			}
 			UiOnScreenKeyboard::Show(*surface);
 			return true;
 		}
-		BeginEdit();
-		// A keyboard that types like a real one types into the box, one that collects the text gives it all at once
-		return theApplication().ShowScreenKeyboard(Text, [this](StringView text) {
-			Text = text;
-			_caret = std::int32_t(Text.size());
-			_selectionStart = _caret;
+		if (editing && theApplication().IsScreenKeyboardVisible()) {
+			return true;
+		}
+		if (!editing) {
+			BeginEdit();
+		}
+		if (_alive == nullptr) {
+			_alive = std::make_shared<bool>(true);
+		}
+		// A keyboard that types like a real one types into the box, one that collects the text gives it all at once,
+		// possibly frames later, when the box may be gone already
+		std::shared_ptr<bool> alive = _alive;
+		return theApplication().ShowScreenKeyboard(Text, [this, alive](StringView text) {
+			if (!*alive) {
+				return;
+			}
+			Text = String();
+			_caret = _selectionStart = 0;
+			Insert(text);
 			NotifyChanged();
 			if (UiSurface* surface = GetSurface()) {
 				surface->SetFocus(nullptr);
@@ -683,7 +1018,7 @@ namespace Jazz2::Editor
 		float height = context.Px(UiTheme::RowHeight + 2.0f);
 		if (Multiline) {
 			// Grows with the lines of the text
-			String shown = (_focused || !TextFunc ? Text : TextFunc());
+			StringView shown = GetShownText();
 			std::int32_t lines = 1;
 			for (char c : shown) {
 				if (c == '\n') {
@@ -703,17 +1038,45 @@ namespace Jazz2::Editor
 		return size;
 	}
 
+	bool UiTextBox::MeasureDependsOnAvailable() const
+	{
+		return false;
+	}
+
+	StringView UiTextBox::GetShownText()
+	{
+		if (_focused || !TextFunc) {
+			return Text;
+		}
+		// Measured and drawn in the same frame, it's made only once for both
+		std::uint32_t layout = GetLayoutFrame();
+		if (layout == 0 || layout != _shownTextLayout) {
+			_shownText = TextFunc();
+			_shownTextLayout = layout;
+		}
+		return _shownText;
+	}
+
+	void UiTextBox::ClampCaret()
+	{
+		std::int32_t length = std::int32_t(Text.size());
+		_caret = std::clamp<std::int32_t>(_caret, 0, length);
+		_selectionStart = std::clamp<std::int32_t>(_selectionStart, 0, length);
+	}
+
 	void UiTextBox::Draw(UiPainter& painter)
 	{
 		_lastContext = UiContext{ painter.GetScale() };
+		ClampCaret();
 
 		bool usable = IsUsable();
-		painter.RoundRect(Bounds, Lerp(UiTheme::InputFill, UiTheme::ButtonPressed, usable && !_focused ? _hoverAmount * 0.6f : 0.0f));
+		painter.RoundRect(Bounds, UiLerpColor(UiTheme::InputFill, UiTheme::ButtonPressed, usable && !_focused ? _hoverAmount * 0.6f : 0.0f));
 		painter.RoundRectBorder(Bounds, _focused ? UiTheme::FocusRing : UiTheme::InputBorder);
 
 		float padding = painter.Px(UiTheme::Padding);
 		Rectf inner(Bounds.X + padding, Bounds.Y, Bounds.W - padding * 2.0f, Bounds.H);
-		String shown = (_focused || !TextFunc ? Text : TextFunc());
+		// The text being edited is shown as it is, a copy is made only of a text from the function
+		StringView shown = GetShownText();
 
 		SmallVector<std::int32_t, 8> starts;
 		GetLineStarts(shown, starts);
@@ -765,7 +1128,8 @@ namespace Jazz2::Editor
 				painter.TextInRect(shown.slice(std::size_t(starts[line]), std::size_t(lineEnd)), Rectf(rect.X - _scrollX, rect.Y, rect.W + _scrollX, rect.H), color);
 			}
 
-			if (_focused && std::fmod(_blinkTime, CaretBlinkPeriod) < CaretBlinkPeriod * 0.5f) {
+			// The caret doesn't blink with reduced motion
+			if (_focused && (UiTheme::ReducedMotion || std::fmod(_blinkTime, CaretBlinkPeriod) < CaretBlinkPeriod * 0.5f)) {
 				float caretWidth = std::max(1.0f, std::round(painter.GetScale() * 0.5f));
 				Rectf rect = lineRect(caretLine);
 				float caretInset = (Multiline ? painter.Px(1.0f) : painter.Px(2.0f));
@@ -798,6 +1162,8 @@ namespace Jazz2::Editor
 				return true;
 			}
 		}
+		ClampCaret();
+		_lastEdit = EditKind::None;
 		_caret = GetOffsetAt(event.Pos);
 		if ((event.Modifiers & KeyMod::Shift) == 0) {
 			_selectionStart = _caret;
@@ -823,33 +1189,58 @@ namespace Jazz2::Editor
 		if (!_focused) {
 			return false;
 		}
+		if (OnKeyPreview && OnKeyPreview(event)) {
+			return true;
+		}
 
+		ClampCaret();
 		bool shift = (event.mod & KeyMod::Shift) != 0;
 		bool ctrl = (event.mod & KeyMod::Ctrl) != 0;
+#if defined(DEATH_TARGET_APPLE)
+		// Cmd is what Ctrl is elsewhere
+		ctrl = ctrl || (event.mod & KeyMod::Super) != 0;
+#endif
 		_blinkTime = 0.0f;
 
 		auto moveCaret = [this, shift](std::int32_t offset) {
-			_caret = std::clamp(offset, 0, std::int32_t(Text.size()));
+			_caret = std::clamp<std::int32_t>(offset, 0, std::int32_t(Text.size()));
 			if (!shift) {
 				_selectionStart = _caret;
 			}
+			// Typing after the caret moved is another step of undo
+			_lastEdit = EditKind::None;
 		};
 
 		switch (event.sym) {
 			case Keys::Left:
-				if (!shift && _selectionStart != _caret) {
+				if (ctrl) {
+					moveCaret(FindWordBoundary(_caret, false));
+				} else if (!shift && _selectionStart != _caret) {
 					moveCaret(std::min(_selectionStart, _caret));
 				} else if (_caret > 0) {
 					moveCaret(std::int32_t(Utf8::PrevChar(Text, std::size_t(_caret)).second()));
 				}
 				return true;
 			case Keys::Right:
-				if (!shift && _selectionStart != _caret) {
+				if (ctrl) {
+					moveCaret(FindWordBoundary(_caret, true));
+				} else if (!shift && _selectionStart != _caret) {
 					moveCaret(std::max(_selectionStart, _caret));
 				} else if (_caret < std::int32_t(Text.size())) {
 					moveCaret(std::int32_t(Utf8::NextChar(Text, std::size_t(_caret)).second()));
 				}
 				return true;
+			case Keys::Z:
+			case Keys::Y:
+				if (ctrl) {
+					// Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes, the level isn't touched while typing
+					bool redo = (event.sym == Keys::Y || shift);
+					if (redo ? Redo() : Undo()) {
+						NotifyChanged();
+					}
+					return true;
+				}
+				break;
 			case Keys::Up:
 			case Keys::Down: {
 				if (!Multiline) {
@@ -883,16 +1274,23 @@ namespace Jazz2::Editor
 				return true;
 			}
 			case Keys::Backspace:
+				if (_selectionStart != _caret || _caret > 0) {
+					RecordUndo(EditKind::Deleting);
+				}
 				if (!DeleteSelection() && _caret > 0) {
-					std::int32_t from = std::int32_t(Utf8::PrevChar(Text, std::size_t(_caret)).second());
+					// With Ctrl, the whole word before the caret
+					std::int32_t from = (ctrl ? FindWordBoundary(_caret, false) : std::int32_t(Utf8::PrevChar(Text, std::size_t(_caret)).second()));
 					Text = Text.prefix(std::size_t(from)) + Text.exceptPrefix(std::size_t(_caret));
 					_caret = _selectionStart = from;
 				}
 				NotifyChanged();
 				return true;
 			case Keys::Delete:
+				if (_selectionStart != _caret || _caret < std::int32_t(Text.size())) {
+					RecordUndo(EditKind::Deleting);
+				}
 				if (!DeleteSelection() && _caret < std::int32_t(Text.size())) {
-					std::int32_t to = std::int32_t(Utf8::NextChar(Text, std::size_t(_caret)).second());
+					std::int32_t to = (ctrl ? FindWordBoundary(_caret, true) : std::int32_t(Utf8::NextChar(Text, std::size_t(_caret)).second()));
 					Text = Text.prefix(std::size_t(_caret)) + Text.exceptPrefix(std::size_t(to));
 				}
 				NotifyChanged();
@@ -900,6 +1298,7 @@ namespace Jazz2::Editor
 			case Keys::Return:
 			case Keys::NumPadEnter:
 				if (Multiline && !ctrl) {
+					RecordUndo(EditKind::Other);
 					DeleteSelection();
 					Insert(StringView("\n", 1));
 					NotifyChanged();
@@ -929,6 +1328,7 @@ namespace Jazz2::Editor
 					std::int32_t from = std::min(_selectionStart, _caret), to = std::max(_selectionStart, _caret);
 					theApplication().GetInputManager().setClipboardText(Text.slice(std::size_t(from), std::size_t(to)));
 					if (event.sym == Keys::X) {
+						RecordUndo(EditKind::Other);
 						DeleteSelection();
 						NotifyChanged();
 					}
@@ -937,11 +1337,9 @@ namespace Jazz2::Editor
 				break;
 			case Keys::V:
 				if (ctrl) {
+					// A single line takes only the first line of it, Insert() leaves out the rest
 					String clipboard = theApplication().GetInputManager().getClipboardText();
-					if (!Multiline) {
-						// A single line only
-						clipboard = clipboard.prefix(clipboard.findOr('\n', clipboard.end()).begin());
-					}
+					RecordUndo(EditKind::Other);
 					DeleteSelection();
 					Insert(clipboard);
 					NotifyChanged();
@@ -952,19 +1350,115 @@ namespace Jazz2::Editor
 				break;
 		}
 
-		// Everything else typed goes here too, so it doesn't trigger hotkeys
-		return (event.sym != Keys::Tab && event.sym != Keys::F1 && event.sym != Keys::F5);
+		// Everything else typed goes here too, so it doesn't trigger hotkeys, except Tab, which moves the focus, and what
+		// the surface leaves to the shortcuts, such as showing the help
+		if (event.sym == Keys::Tab) {
+			return false;
+		}
+		UiSurface* surface = GetSurface();
+		return (surface == nullptr || !surface->LeavesKeyToShortcuts(event));
 	}
 
 	bool UiTextBox::OnTextInput(const TextInputEvent& event)
 	{
-		if (!_focused) {
+		if (!_focused || !IsUsable()) {
 			return false;
 		}
+		ClampCaret();
+		// Letters typed in a row are one step of undo, a space starts the next one
+		StringView typed(event.text, std::size_t(event.length));
+		bool space = (typed.size() == 1 && typed[0] == ' ');
+		RecordUndo(space || _selectionStart != _caret ? EditKind::Other : EditKind::Typing);
 		DeleteSelection();
-		Insert(StringView(event.text, std::size_t(event.length)));
+		Insert(typed);
 		NotifyChanged();
 		return true;
+	}
+
+	void UiTextBox::RecordUndo(EditKind kind)
+	{
+		// Edits of the same kind in a row, such as typing a word, are undone together
+		if (kind != EditKind::Other && kind == _lastEdit && !_undo.empty()) {
+			return;
+		}
+		if (_undo.size() >= MaxUndoSteps) {
+			_undo.erase(_undo.begin());
+		}
+		_undo.push_back(EditState{ Text, _caret, _selectionStart });
+		_redo.clear();
+		_lastEdit = kind;
+	}
+
+	bool UiTextBox::Undo()
+	{
+		if (_undo.empty()) {
+			return false;
+		}
+		_redo.push_back(EditState{ Text, _caret, _selectionStart });
+		EditState& state = _undo.back();
+		Text = Death::move(state.Text);
+		_caret = state.Caret;
+		_selectionStart = state.SelectionStart;
+		_undo.pop_back();
+		_lastEdit = EditKind::None;
+		ClampCaret();
+		return true;
+	}
+
+	bool UiTextBox::Redo()
+	{
+		if (_redo.empty()) {
+			return false;
+		}
+		_undo.push_back(EditState{ Text, _caret, _selectionStart });
+		EditState& state = _redo.back();
+		Text = Death::move(state.Text);
+		_caret = state.Caret;
+		_selectionStart = state.SelectionStart;
+		_redo.pop_back();
+		_lastEdit = EditKind::None;
+		ClampCaret();
+		return true;
+	}
+
+	std::int32_t UiTextBox::FindWordBoundary(std::int32_t offset, bool forward) const
+	{
+		// A word is letters and digits, any character beyond ASCII counts as a letter; spaces are skipped, and other
+		// characters make words of their own
+		auto classOf = [](char c) {
+			std::uint8_t b = std::uint8_t(c);
+			if (c == ' ' || c == '\t' || c == '\n') {
+				return 0;
+			}
+			if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || b >= 0x80) {
+				return 1;
+			}
+			return 2;
+		};
+		std::int32_t length = std::int32_t(Text.size());
+		std::int32_t i = std::clamp<std::int32_t>(offset, 0, length);
+		if (forward) {
+			if (i < length) {
+				std::int32_t kind = classOf(Text[std::size_t(i)]);
+				while (i < length && kind != 0 && classOf(Text[std::size_t(i)]) == kind) {
+					i++;
+				}
+			}
+			while (i < length && classOf(Text[std::size_t(i)]) == 0) {
+				i++;
+			}
+		} else {
+			while (i > 0 && classOf(Text[std::size_t(i - 1)]) == 0) {
+				i--;
+			}
+			if (i > 0) {
+				std::int32_t kind = classOf(Text[std::size_t(i - 1)]);
+				while (i > 0 && classOf(Text[std::size_t(i - 1)]) == kind) {
+					i--;
+				}
+			}
+		}
+		return i;
 	}
 
 	bool UiTextBox::IsFocusable() const
@@ -978,18 +1472,35 @@ namespace Jazz2::Editor
 			if (TextFunc) {
 				Text = TextFunc();
 			}
+			// Undo goes back only within one edit
+			_undo.clear();
+			_redo.clear();
+			_lastEdit = EditKind::None;
 			_cancelled = false;
 			_blinkTime = 0.0f;
 			_selectionStart = 0;
 			_caret = std::int32_t(Text.size());
-		} else if (!_cancelled) {
-			if (OnCommit) {
-				OnCommit(Text);
-			}
-		} else if (TextFunc) {
-			Text = TextFunc();
+			// Only a text typed into is confirmed when the edit ends, a box only tabbed or clicked through writes nothing
+			_editStartText = Text;
+			return;
 		}
+
+		bool cancelled = _cancelled;
 		_cancelled = false;
+		if (cancelled) {
+			if (TextFunc) {
+				Text = TextFunc();
+			}
+			return;
+		}
+		// Typed over with the same text is confirmed too, so a value can be given to everything it's shown for, unless it
+		// was all undone again
+		if (OnCommit && (Text != _editStartText || !_undo.empty())) {
+			_editStartText = Text;
+			// Called last and with a copy, what the text is confirmed into may rebuild the part of the interface the box is in
+			String text = Text;
+			OnCommit(text);
+		}
 	}
 
 	std::int32_t UiTextBox::GetOffsetAt(Vector2f pos) const
@@ -1000,7 +1511,7 @@ namespace Jazz2::Editor
 		if (Multiline) {
 			float lineHeight, top;
 			GetLineLayout(_lastContext, std::int32_t(starts.size()), lineHeight, top);
-			line = std::clamp(std::int32_t(std::floor((pos.Y - top) / lineHeight)), 0, std::int32_t(starts.size()) - 1);
+			line = std::clamp<std::int32_t>(std::int32_t(std::floor((pos.Y - top) / std::max(lineHeight, 1.0f))), 0, std::int32_t(starts.size()) - 1);
 		}
 		float padding = _lastContext.Px(UiTheme::Padding);
 		return GetOffsetInLine(line, pos.X - (Bounds.X + padding) + _scrollX);
@@ -1010,7 +1521,7 @@ namespace Jazz2::Editor
 	{
 		SmallVector<std::int32_t, 8> starts;
 		GetLineStarts(Text, starts);
-		line = std::clamp(line, 0, std::int32_t(starts.size()) - 1);
+		line = std::clamp<std::int32_t>(line, 0, std::int32_t(starts.size()) - 1);
 		std::int32_t start = starts[line];
 		std::int32_t end = GetLineEnd(starts, line);
 		std::int32_t best = start;
@@ -1040,6 +1551,35 @@ namespace Jazz2::Editor
 
 	void UiTextBox::Insert(StringView text)
 	{
+		// Control characters are left out --- a carriage return of a pasted Windows text, or a form feed, which the
+		// font would take for the start of formatting --- a tab becomes a space, and a single line ends at a line break
+		String filtered;
+		bool needsFilter = false;
+		for (char c : text) {
+			if (std::uint8_t(c) < 0x20 || c == 0x7F) {
+				needsFilter = true;
+				break;
+			}
+		}
+		if (needsFilter) {
+			filtered = String(NoInit, text.size());
+			std::size_t length = 0;
+			for (char c : text) {
+				if (c == '\n') {
+					if (!Multiline) {
+						break;
+					}
+					filtered[length++] = c;
+				} else if (c == '\t') {
+					filtered[length++] = ' ';
+				} else if (std::uint8_t(c) >= 0x20 && c != 0x7F) {
+					filtered[length++] = c;
+				}
+			}
+			text = filtered.prefix(length);
+		}
+
+		ClampCaret();
 		std::size_t room = (MaxLength > std::int32_t(Text.size()) ? std::size_t(MaxLength) - Text.size() : 0);
 		if (text.size() > room) {
 			// Not in the middle of a character
@@ -1069,7 +1609,7 @@ namespace Jazz2::Editor
 	}
 
 	UiNumberBox::UiNumberBox(Function<float()>&& getter, Function<void(float, bool)>&& setter, float minValue, float maxValue, float step, std::int32_t decimals)
-		: Getter(std::move(getter)), Setter(std::move(setter)), MinValue(minValue), MaxValue(maxValue), Step(step), Decimals(decimals),
+		: Getter(Death::move(getter)), Setter(Death::move(setter)), MinValue(minValue), MaxValue(maxValue), Step(step), Decimals(decimals),
 			_dragStartX(0.0f), _dragStartValue(0.0f), _dragging(false)
 	{
 		TextFunc = [this]() {
@@ -1079,11 +1619,53 @@ namespace Jazz2::Editor
 			String value = text;
 			char* end = nullptr;
 			float parsed = std::strtof(value.data(), &end);
-			if (end != value.data() && Setter) {
+			// "nan" and "inf" are numbers to strtof(), not to a property
+			if (end != value.data() && std::isfinite(parsed) && Setter) {
 				Setter(std::clamp(parsed, MinValue, MaxValue), true);
 			}
 		};
 		MaxLength = 16;
+	}
+
+	bool UiNumberBox::IsTabStop() const
+	{
+		return true;
+	}
+
+	bool UiNumberBox::OnKeyPressed(const KeyboardEvent& event)
+	{
+		if (_focused && (event.sym == Keys::Up || event.sym == Keys::Down)) {
+			// Confirms what was typed, steps the value, and goes on typing with the new one
+			float steps = (event.sym == Keys::Up ? 1.0f : -1.0f) * ((event.mod & KeyMod::Shift) != 0 ? 10.0f : 1.0f);
+			if (UiSurface* surface = GetSurface()) {
+				surface->SetFocus(nullptr);
+				// What was typed may have rebuilt the part of the interface the box is in, a box taken out of it is left
+				if (GetSurface() == surface) {
+					StepValue(steps);
+					BeginEdit();
+				}
+			}
+			return true;
+		}
+		return UiTextBox::OnKeyPressed(event);
+	}
+
+	bool UiNumberBox::IsFocusable() const
+	{
+		// The surface would give it the focus before the click, which would always place the caret, the arrows and
+		// dragging wouldn't work, it takes the focus itself after a click without dragging
+		return false;
+	}
+
+	void UiNumberBox::OnPointerCancel()
+	{
+		// What was dragged to is kept, as if it was let go
+		if (_dragging) {
+			_dragging = false;
+			if (Setter && Getter) {
+				Setter(Getter(), true);
+			}
+		}
 	}
 
 	Rectf UiNumberBox::GetSpinRect() const
@@ -1121,8 +1703,8 @@ namespace Jazz2::Editor
 
 	bool UiNumberBox::OnWheel(const UiPointerEvent& event)
 	{
-		// Over the arrows only, a panel full of numbers scrolls over the rest of them
-		if (!IsUsable() || (!_focused && !GetSpinRect().Contains(event.Pos)) || event.Wheel.Y == 0.0f) {
+		// Anywhere over the box, the list it's in scrolls only where the pointer isn't over a control
+		if (!IsUsable() || !Bounds.Contains(event.Pos) || event.Wheel.Y == 0.0f) {
 			return false;
 		}
 		float steps = (event.Wheel.Y > 0.0f ? 1.0f : -1.0f) * ((event.Modifiers & KeyMod::Shift) != 0 ? 10.0f : 1.0f);
@@ -1130,6 +1712,10 @@ namespace Jazz2::Editor
 			// The edited text is replaced by the new value
 			if (UiSurface* surface = GetSurface()) {
 				surface->SetFocus(nullptr);
+				// What was typed may have rebuilt the part of the interface the box is in, a box taken out of it is left
+				if (GetSurface() != surface) {
+					return true;
+				}
 			}
 		}
 		StepValue(steps);
@@ -1194,7 +1780,84 @@ namespace Jazz2::Editor
 	{
 		char buffer[32];
 		std::int32_t length = std::snprintf(buffer, sizeof(buffer), "%.*f", Decimals, value);
-		return String(buffer, std::size_t(std::max(length, 0)));
+		return String(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
+	}
+
+	Rectf UiResizeEdges::GetHitBounds(const Rectf& bounds, float scale)
+	{
+		float grip = std::max(3.0f, std::round(scale * GripWidth));
+		float half = std::round(grip * 0.5f);
+		return Rectf(bounds.X - half, bounds.Y - half, bounds.W + half * 2.0f, bounds.H + half * 2.0f);
+	}
+
+	std::uint8_t UiResizeEdges::GetAt(const Rectf& bounds, float scale, Vector2f pos, float cornerSize)
+	{
+		if (!GetHitBounds(bounds, scale).Contains(pos)) {
+			return 0;
+		}
+		float grip = std::max(3.0f, std::round(scale * GripWidth));
+		float half = std::round(grip * 0.5f);
+		float right = bounds.X + bounds.W, bottom = bounds.Y + bounds.H;
+		// The corner with the dots is easier to grab
+		float corner = grip * cornerSize;
+		if (pos.X >= right - corner && pos.Y >= bottom - corner) {
+			return Right | Bottom;
+		}
+		std::uint8_t edges = 0;
+		if (pos.X < bounds.X + half) {
+			edges |= Left;
+		} else if (pos.X >= right - half) {
+			edges |= Right;
+		}
+		if (pos.Y < bounds.Y + half) {
+			edges |= Top;
+		} else if (pos.Y >= bottom - half) {
+			edges |= Bottom;
+		}
+		return edges;
+	}
+
+	void UiResizeEdges::Draw(UiPainter& painter, const Rectf& bounds, std::uint8_t edges)
+	{
+		// The edges it's resized by light up when pointed at
+		float thickness = std::max(1.0f, std::round(painter.GetScale()));
+		if (edges != 0) {
+			Colorf color = UiTheme::Accent;
+			color.A = 0.8f;
+			float right = bounds.X + bounds.W, bottom = bounds.Y + bounds.H;
+			if (edges & Left) {
+				painter.FillRect(Rectf(bounds.X, bounds.Y, thickness, bounds.H), color, UiLayer::Overlay);
+			}
+			if (edges & Right) {
+				painter.FillRect(Rectf(right - thickness, bounds.Y, thickness, bounds.H), color, UiLayer::Overlay);
+			}
+			if (edges & Top) {
+				painter.FillRect(Rectf(bounds.X, bounds.Y, bounds.W, thickness), color, UiLayer::Overlay);
+			}
+			if (edges & Bottom) {
+				painter.FillRect(Rectf(bounds.X, bottom - thickness, bounds.W, thickness), color, UiLayer::Overlay);
+			}
+		}
+
+		// Dots in the corner it's resized by
+		float dot = thickness;
+		float step = dot * 2.0f;
+		Colorf gripColor = UiTheme::IconColor;
+		gripColor.A = ((edges & (Right | Bottom)) == (Right | Bottom) ? 0.9f : 0.45f);
+		float cornerX = bounds.X + bounds.W - step - dot, cornerY = bounds.Y + bounds.H - step - dot;
+		for (std::int32_t row = 0; row < 3; row++) {
+			for (std::int32_t column = 2 - row; column < 3; column++) {
+				painter.FillRect(Rectf(cornerX - (2 - column) * step, cornerY - (2 - row) * step, dot, dot), gripColor, UiLayer::Overlay);
+			}
+		}
+	}
+
+	void UiResizeEdges::ShowCursor(UiSurface& surface, std::uint8_t edges)
+	{
+		// Arrows by the pointer while an edge or a corner is pointed at or dragged, which way it resizes
+		if (edges != 0) {
+			surface.SetCursorOverlay(UiSurface::GetResizeOverlay((edges & Left) != 0, (edges & Top) != 0, (edges & Right) != 0, (edges & Bottom) != 0));
+		}
 	}
 }
 

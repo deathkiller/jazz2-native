@@ -21,7 +21,7 @@ using namespace Death::IO;
 namespace nCine
 {
 	IAudioLoader::IAudioLoader(std::unique_ptr<Stream> fileHandle)
-		: _hasLoaded(false), _fileHandle(std::move(fileHandle)), _bytesPerSample(0), _numChannels(0),
+		: _hasLoaded(false), _fileHandle(Death::move(fileHandle)), _bytesPerSample(0), _numChannels(0),
 			_frequency(0), _numSamples(0L), _duration(0.0f)
 	{
 	}
@@ -40,7 +40,7 @@ namespace nCine
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromStream(std::unique_ptr<Stream> fileHandle, StringView path)
 	{
-		return createLoader(std::move(fileHandle), path);
+		return createLoader(Death::move(fileHandle), path);
 	}
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<Stream> fileHandle, StringView path)
@@ -48,23 +48,23 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		auto extension = fs::GetExtension(path);
 		if (extension == "wav"_s) {
-			return std::make_unique<AudioLoaderWav>(std::move(fileHandle));
+			return std::make_unique<AudioLoaderWav>(Death::move(fileHandle));
 		}
 #	if defined(WITH_VORBIS)
 		if (extension == "ogg"_s) {
-			return std::make_unique<AudioLoaderOgg>(std::move(fileHandle));
+			return std::make_unique<AudioLoaderOgg>(Death::move(fileHandle));
 		}
 #	endif
 #	if defined(WITH_OPENMPT)
 		if (extension == "it"_s || extension == "j2b"_s || extension == "mo3"_s || extension == "mod"_s || extension == "s3m"_s || extension == "xm"_s) {
-			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
+			return std::make_unique<AudioLoaderMpt>(Death::move(fileHandle));
 		}
 #	elif defined(WITH_XMP)
 		// The lightweight module player for platforms where libopenmpt is not real-time-viable
 		// (no ".mo3": that is an Un4seen container libxmp does not parse, and the game's own
 		// soundtrack never uses it)
 		if (extension == "it"_s || extension == "j2b"_s || extension == "mod"_s || extension == "s3m"_s || extension == "xm"_s) {
-			return std::make_unique<AudioLoaderXmp>(std::move(fileHandle));
+			return std::make_unique<AudioLoaderXmp>(Death::move(fileHandle));
 		}
 #	endif
 

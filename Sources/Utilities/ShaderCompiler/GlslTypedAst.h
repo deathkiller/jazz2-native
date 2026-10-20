@@ -250,7 +250,7 @@ namespace ShaderCompiler
 		bool IsOp(const char* s) const { return Cur().Type == GlslTokenType::Operator && Cur().Text == s; }
 		bool IsKw(const char* s) const { return Cur().Type == GlslTokenType::Identifier && Cur().Text == s; }
 		void Next() { if (Cur().Type != GlslTokenType::End) _pos++; }
-		void Fail(String why) { if (_ok) { _ok = false; _reason = std::move(why); } }
+		void Fail(String why) { if (_ok) { _ok = false; _reason = Death::move(why); } }
 
 		bool Expect(const char* op)
 		{
@@ -386,7 +386,7 @@ namespace ShaderCompiler
 			String name = Cur().Text;
 			Next();
 
-			if (IsOp("(")) { ParseFunctionRest(t, std::move(name)); return; }
+			if (IsOp("(")) { ParseFunctionRest(t, Death::move(name)); return; }
 
 			// Array suffix on the name (e.g. "uniform vec4 uLights[N];")
 			std::int32_t arraySize = 0;
@@ -401,33 +401,33 @@ namespace ShaderCompiler
 
 			if (isUniform) {
 				if (IsSampler(t.T)) {
-					SamplerDecl s; s.Name = std::move(name); s.Type = t.T;
-					Samplers.push_back(std::move(s));
+					SamplerDecl s; s.Name = Death::move(name); s.Type = t.T;
+					Samplers.push_back(Death::move(s));
 				} else {
-					UniformDecl u; u.Name = std::move(name); u.Type = t; u.ArraySize = (symbolic ? 0 : arraySize);
-					Uniforms.push_back(std::move(u));
+					UniformDecl u; u.Name = Death::move(name); u.Type = t; u.ArraySize = (symbolic ? 0 : arraySize);
+					Uniforms.push_back(Death::move(u));
 				}
 			} else if (isIn) {
 				if (_vertexStage) {
-					AttributeDecl a; a.Name = std::move(name); a.Type = t; a.Location = location;
-					Attributes.push_back(std::move(a));
+					AttributeDecl a; a.Name = Death::move(name); a.Type = t; a.Location = location;
+					Attributes.push_back(Death::move(a));
 				} else {
-					VaryingDecl v; v.Name = std::move(name); v.Type = t; v.Flat = isFlat;
-					Varyings.push_back(std::move(v));
+					VaryingDecl v; v.Name = Death::move(name); v.Type = t; v.Flat = isFlat;
+					Varyings.push_back(Death::move(v));
 				}
 			} else if (isOut) {
 				if (_vertexStage) {
-					VaryingDecl v; v.Name = std::move(name); v.Type = t; v.Flat = isFlat;
-					Varyings.push_back(std::move(v));
+					VaryingDecl v; v.Name = Death::move(name); v.Type = t; v.Flat = isFlat;
+					Varyings.push_back(Death::move(v));
 				} else {
 					// Render-target index = declaration order (SV_Target0..N); an explicit location would
 					// diverge from that scheme (and from the offline SPIR-V emission), so it is declined
 					if (location >= 0) { Fail("explicit locations on fragment outputs are unsupported (render targets follow declaration order)"_s); return; }
-					FragOutputs.push_back({ std::move(name), t });
+					FragOutputs.push_back({ Death::move(name), t });
 				}
 			} else {
-				GlobalVarDecl g; g.Name = std::move(name); g.Type = t; g.IsConst = isConst; g.Init = std::move(init);
-				GlobalVars.push_back(std::move(g));
+				GlobalVarDecl g; g.Name = Death::move(name); g.Type = t; g.IsConst = isConst; g.Init = Death::move(init);
+				GlobalVars.push_back(Death::move(g));
 			}
 		}
 
@@ -469,13 +469,13 @@ namespace ShaderCompiler
 			while (!IsOp("}") && !AtEnd() && _ok) {
 				Field f;
 				if (!ParseField(f)) return;
-				s.Fields.push_back(std::move(f));
+				s.Fields.push_back(Death::move(f));
 			}
 			if (!Expect("}")) return;
 			if (Is(GlslTokenType::Identifier)) Next();		// optional inline instance name (unused)
 			if (IsOp(";")) Next();
 			_structNames.insert(s.Name);
-			Structs.push_back(std::move(s));
+			Structs.push_back(Death::move(s));
 		}
 
 		void ParseBlock()
@@ -487,12 +487,12 @@ namespace ShaderCompiler
 			while (!IsOp("}") && !AtEnd() && _ok) {
 				Field f;
 				if (!ParseField(f)) return;
-				b.Members.push_back(std::move(f));
+				b.Members.push_back(Death::move(f));
 			}
 			if (!Expect("}")) return;
 			if (Is(GlslTokenType::Identifier)) { b.Instance = Cur().Text; Next(); }
 			if (!Expect(";")) return;
-			Blocks.push_back(std::move(b));
+			Blocks.push_back(Death::move(b));
 		}
 
 		void ParseFunctionRest(TyRef retType, String name)
@@ -500,7 +500,7 @@ namespace ShaderCompiler
 			Expect("(");
 			Function fn;
 			fn.RetType = retType;
-			fn.Name = std::move(name);
+			fn.Name = Death::move(name);
 			if (IsKw("void") && At(_pos + 1).Type == GlslTokenType::Operator && At(_pos + 1).Text == ")") { Next(); }
 			while (!IsOp(")") && !AtEnd() && _ok) {
 				String qual;
@@ -516,17 +516,17 @@ namespace ShaderCompiler
 				bool sym = false;
 				if (IsOp("[")) { arraySize = ParseArraySuffix(sym); }			// "vec3[9] name"
 				if (!Is(GlslTokenType::Identifier)) { Fail("expected a parameter name"_s); return; }
-				Param p; p.Type = pt; p.Name = Cur().Text; p.Qualifier = std::move(qual); Next();
+				Param p; p.Type = pt; p.Name = Cur().Text; p.Qualifier = Death::move(qual); Next();
 				if (IsOp("[")) { arraySize = ParseArraySuffix(sym); }			// "vec3 name[9]"
 				p.ArraySize = arraySize;
-				fn.Params.push_back(std::move(p));
+				fn.Params.push_back(Death::move(p));
 				if (IsOp(",")) { Next(); continue; }
 				break;
 			}
 			if (!Expect(")")) return;
 			fn.Body = ParseBlock2();
 			if (!_ok) return;
-			Functions.push_back(std::move(fn));
+			Functions.push_back(Death::move(fn));
 		}
 
 		StmtPtr ParseBlock2()
@@ -535,7 +535,7 @@ namespace ShaderCompiler
 			StmtPtr block = MakeStmt(StmtKind::Block);
 			while (!IsOp("}") && !AtEnd() && _ok) {
 				StmtPtr s = ParseStatement();
-				if (s != nullptr) block->Body.push_back(std::move(s));
+				if (s != nullptr) block->Body.push_back(Death::move(s));
 			}
 			Expect("}");
 			return block;
@@ -555,7 +555,7 @@ namespace ShaderCompiler
 			if (!_ok) return nullptr;
 			Expect(";");
 			StmtPtr s = MakeStmt(StmtKind::ExprStmt);
-			s->E = std::move(e);
+			s->E = Death::move(e);
 			return s;
 		}
 
@@ -589,7 +589,7 @@ namespace ShaderCompiler
 				if (IsOp("[")) { Fail("local array declarations are unsupported"_s); return nullptr; }
 				ExprPtr init;
 				if (IsOp("=")) { Next(); init = ParseExpression(1); if (!_ok) return nullptr; }
-				s->ExtraDecls.emplace_back(std::move(name), std::move(init));
+				s->ExtraDecls.emplace_back(Death::move(name), Death::move(init));
 			}
 			Expect(";");
 			return s;
@@ -605,9 +605,9 @@ namespace ShaderCompiler
 			StmtPtr el;
 			if (IsKw("else")) { Next(); el = ParseStatement(); }
 			StmtPtr s = MakeStmt(StmtKind::If);
-			s->Cond = std::move(cond);
-			s->Then = std::move(th);
-			s->Else = std::move(el);
+			s->Cond = Death::move(cond);
+			s->Then = Death::move(th);
+			s->Else = Death::move(el);
 			return s;
 		}
 
@@ -622,7 +622,7 @@ namespace ShaderCompiler
 				ExprPtr e = ParseExpression(0);
 				Expect(";");
 				init = MakeStmt(StmtKind::ExprStmt);
-				init->E = std::move(e);
+				init->E = Death::move(e);
 			}
 			ExprPtr cond;
 			if (!IsOp(";")) cond = ParseExpression(0);
@@ -632,10 +632,10 @@ namespace ShaderCompiler
 			Expect(")");
 			StmtPtr body = ParseStatement();
 			StmtPtr s = MakeStmt(StmtKind::For);
-			s->ForInit = std::move(init);
-			s->ForCond = std::move(cond);
-			s->ForUpdate = std::move(upd);
-			s->ForBody = std::move(body);
+			s->ForInit = Death::move(init);
+			s->ForCond = Death::move(cond);
+			s->ForUpdate = Death::move(upd);
+			s->ForBody = Death::move(body);
 			return s;
 		}
 
@@ -661,10 +661,10 @@ namespace ShaderCompiler
 					Expect(":");
 					ExprPtr rhs = ParseExpression(2);
 					ExprPtr cond = MakeExpr(ExprKind::Conditional);
-					cond->A = std::move(lhs);
-					cond->B = std::move(mid);
-					cond->C = std::move(rhs);
-					lhs = std::move(cond);
+					cond->A = Death::move(lhs);
+					cond->B = Death::move(mid);
+					cond->C = Death::move(rhs);
+					lhs = Death::move(cond);
 					continue;
 				}
 				std::int32_t prec = BinPrec(op);
@@ -674,10 +674,10 @@ namespace ShaderCompiler
 				bool assign = (prec == 1);
 				ExprPtr rhs = ParseExpression(assign ? prec : prec + 1);
 				if (!_ok) return lhs;
-				ExprPtr node = MakeExpr(assign ? ExprKind::Assign : ExprKind::Binary, std::move(opText));
-				node->A = std::move(lhs);
-				node->B = std::move(rhs);
-				lhs = std::move(node);
+				ExprPtr node = MakeExpr(assign ? ExprKind::Assign : ExprKind::Binary, Death::move(opText));
+				node->A = Death::move(lhs);
+				node->B = Death::move(rhs);
+				lhs = Death::move(node);
 			}
 			return lhs;
 		}
@@ -691,8 +691,8 @@ namespace ShaderCompiler
 					String o = Cur().Text;
 					Next();
 					ExprPtr v = ParseUnary();
-					ExprPtr node = MakeExpr(ExprKind::Unary, std::move(o));
-					node->A = std::move(v);
+					ExprPtr node = MakeExpr(ExprKind::Unary, Death::move(o));
+					node->A = Death::move(v);
 					return node;
 				}
 			}
@@ -709,23 +709,23 @@ namespace ShaderCompiler
 					if (!Is(GlslTokenType::Identifier)) { Fail("expected a member name after '.'"_s); return e; }
 					ExprPtr m = MakeExpr(ExprKind::Member, Cur().Text);
 					Next();
-					m->A = std::move(e);
-					e = std::move(m);
+					m->A = Death::move(e);
+					e = Death::move(m);
 				} else if (IsOp("[")) {
 					Next();
 					ExprPtr idx = ParseExpression(0);
 					if (!_ok) return e;
 					if (!Expect("]")) return e;
 					ExprPtr node = MakeExpr(ExprKind::Index);
-					node->A = std::move(e);
-					node->B = std::move(idx);
-					e = std::move(node);
+					node->A = Death::move(e);
+					node->B = Death::move(idx);
+					e = Death::move(node);
 				} else if (IsOp("++") || IsOp("--")) {
 					ExprPtr node = MakeExpr(ExprKind::Unary, Cur().Text);
 					node->Postfix = true;
-					node->A = std::move(e);
+					node->A = Death::move(e);
 					Next();
-					e = std::move(node);
+					e = Death::move(node);
 				} else {
 					break;
 				}
@@ -746,7 +746,7 @@ namespace ShaderCompiler
 					Next();
 					if (IsOp("(")) {
 						Next();
-						ExprPtr call = MakeExpr(ExprKind::Call, std::move(name));
+						ExprPtr call = MakeExpr(ExprKind::Call, Death::move(name));
 						if (!IsOp(")")) {
 							for (;;) {
 								call->Args.push_back(ParseExpression(0));
@@ -758,7 +758,7 @@ namespace ShaderCompiler
 						Expect(")");
 						return call;
 					}
-					return MakeExpr(ExprKind::Ident, std::move(name));
+					return MakeExpr(ExprKind::Ident, Death::move(name));
 				}
 				case GlslTokenType::Operator:
 					if (IsOp("(")) {

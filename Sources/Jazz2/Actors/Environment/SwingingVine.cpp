@@ -32,7 +32,8 @@ namespace Jazz2::Actors::Environment
 
 		SetAnimation(AnimState::Default);
 
-		_phase = _originTile.X + _originTile.Y * 0.5f;
+		// From the tile of the spawn position, the origin tile only names the event (an off-grid one has its tile past the grid)
+		_phase = (_spawnPos.X / 32) + (_spawnPos.Y / 32) * 0.5f;
 
 		_renderer.AnimPaused = true;
 

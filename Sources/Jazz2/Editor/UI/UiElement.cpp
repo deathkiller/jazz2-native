@@ -28,19 +28,60 @@ namespace Jazz2::Editor
 	float UiContext::MeasureText(StringView text) const
 	{
 		UI::Font* font = GetFont();
-		return (font != nullptr ? font->MeasureString(text, Scale * UiTheme::TextScale).X : 0.0f);
+		return (font != nullptr ? font->MeasureString(text, UiTheme::GetTextScale(Scale)).X : 0.0f);
 	}
 
 	float UiContext::GetTextHeight() const
 	{
 		UI::Font* font = GetFont();
-		return (font != nullptr ? font->GetSizeInPixels() * Scale * UiTheme::TextScale : 0.0f);
+		return (font != nullptr ? font->GetSizeInPixels() * UiTheme::GetTextScale(Scale) : 0.0f);
 	}
+
+	std::uint32_t UiElement::_layoutFrame = 0;
+	bool UiElement::_layoutActive = false;
 
 	UiElement::UiElement()
 		: Bounds(), Visible(true), Enabled(true), Width(Auto), Height(Auto), Flex(0.0f), _parent(nullptr), _surface(nullptr),
-			_hovered(false), _pressed(false), _focused(false), _hoverAmount(0.0f)
+			_hovered(false), _pressed(false), _focused(false), _hoverAmount(0.0f), _measureFrame(0), _measureScale(0.0f)
 	{
+	}
+
+	void UiElement::BeginLayout()
+	{
+		_layoutFrame++;
+		if (_layoutFrame == 0) {
+			// 0 means no layout, a size measured then is never kept
+			_layoutFrame = 1;
+		}
+		_layoutActive = true;
+	}
+
+	void UiElement::EndLayout()
+	{
+		_layoutActive = false;
+	}
+
+	Vector2f UiElement::MeasureCached(const UiContext& context, Vector2f available)
+	{
+		if (!_layoutActive) {
+			return Measure(context, available);
+		}
+		// A size set while the frame is laid out, as a parent may do before it places its children, is measured again
+		if (_measureFrame == _layoutFrame && _measureScale == context.Scale && _measureFixed.X == Width && _measureFixed.Y == Height &&
+			(!MeasureDependsOnAvailable() || (_measureAvailable.X == available.X && _measureAvailable.Y == available.Y))) {
+			return _measureSize;
+		}
+		_measureSize = Measure(context, available);
+		_measureFrame = _layoutFrame;
+		_measureScale = context.Scale;
+		_measureAvailable = available;
+		_measureFixed = Vector2f(Width, Height);
+		return _measureSize;
+	}
+
+	bool UiElement::MeasureDependsOnAvailable() const
+	{
+		return true;
 	}
 
 	UiElement::~UiElement()
@@ -51,13 +92,21 @@ namespace Jazz2::Editor
 	UiElement* UiElement::AddChild(std::unique_ptr<UiElement> child)
 	{
 		child->_parent = this;
-		_children.push_back(std::move(child));
+		_children.push_back(Death::move(child));
 		return _children.back().get();
 	}
 
 	void UiElement::ClearChildren()
 	{
+		if (_children.empty()) {
+			return;
+		}
+		// Taken out of the list first, what their removal does may add children again
+		SmallVector<std::unique_ptr<UiElement>, 0> children = Death::move(_children);
 		_children.clear();
+		for (auto& child : children) {
+			UiSurface::Retire(Death::move(child));
+		}
 	}
 
 	UiSurface* UiElement::GetSurface() const
@@ -89,7 +138,7 @@ namespace Jazz2::Editor
 		Vector2f size;
 		for (auto& child : _children) {
 			if (child->IsShown()) {
-				Vector2f childSize = child->Measure(context, available);
+				Vector2f childSize = child->MeasureCached(context, available);
 				size.X = std::max(size.X, childSize.X);
 				size.Y = std::max(size.Y, childSize.Y);
 			}
@@ -118,7 +167,8 @@ namespace Jazz2::Editor
 	void UiElement::Draw(UiPainter& painter)
 	{
 		for (auto& child : _children) {
-			if (child->IsShown()) {
+			// What is scrolled or cut away isn't drawn at all, a long list doesn't cost more than what's seen of it
+			if (child->IsShown() && painter.IsVisible(child->Bounds)) {
 				child->Draw(painter);
 			}
 		}
@@ -153,6 +203,11 @@ namespace Jazz2::Editor
 		return (AcceptsPointer() ? this : nullptr);
 	}
 
+	Rectf UiElement::GetHitBounds() const
+	{
+		return Bounds;
+	}
+
 	bool UiElement::AcceptsPointer() const
 	{
 		return false;
@@ -175,6 +230,15 @@ namespace Jazz2::Editor
 	{
 	}
 
+	void UiElement::OnPointerCancel()
+	{
+	}
+
+	bool UiElement::YieldsToScroll() const
+	{
+		return false;
+	}
+
 	bool UiElement::OnWheel(const UiPointerEvent& event)
 	{
 		return false;
@@ -193,6 +257,11 @@ namespace Jazz2::Editor
 	bool UiElement::IsFocusable() const
 	{
 		return false;
+	}
+
+	bool UiElement::IsTabStop() const
+	{
+		return IsFocusable();
 	}
 
 	bool UiElement::KeepsFocus() const
@@ -226,6 +295,8 @@ namespace Jazz2::Editor
 		float padY = context.Px(Padding.Top) + context.Px(Padding.Bottom);
 		float spacing = context.Px(Spacing);
 		Vector2f inner(std::max(available.X - padX, 0.0f), std::max(available.Y - padY, 0.0f));
+		_childAvailable = inner;
+		_childAvailableFrame = GetLayoutFrame();
 
 		float main = 0.0f, cross = 0.0f;
 		std::int32_t count = 0;
@@ -233,7 +304,7 @@ namespace Jazz2::Editor
 			if (!child->IsShown()) {
 				continue;
 			}
-			Vector2f size = child->Measure(context, inner);
+			Vector2f size = child->MeasureCached(context, inner);
 			main += (horizontal ? size.X : size.Y);
 			cross = std::max(cross, horizontal ? size.Y : size.X);
 			count++;
@@ -241,6 +312,7 @@ namespace Jazz2::Editor
 		if (count > 1) {
 			main += spacing * float(count - 1);
 		}
+		_childContent = (horizontal ? Vector2f(main, cross) : Vector2f(cross, main));
 
 		Vector2f size = (horizontal ? Vector2f(main + padX, cross + padY) : Vector2f(cross + padX, main + padY));
 		Vector2f fixedSize = GetFixedSize(context);
@@ -263,7 +335,23 @@ namespace Jazz2::Editor
 		Rectf inner(bounds.X + left, bounds.Y + top, std::max(bounds.W - left - right, 0.0f), std::max(bounds.H - top - bottom, 0.0f));
 		float spacing = context.Px(Spacing);
 
-		SmallVector<float, 16> sizes;
+		// The children are measured in the space Measure() gave them in this frame, so they aren't measured again (see
+		// MeasureCached()), as long as the stack got at least the room they took and at most the room they were given ---
+		// a size limited by the room, or text wrapped by it, comes out the same in any room between the two. A stack that
+		// got less, as one squeezed, or one that wasn't measured, measures them in the room it got.
+		std::uint32_t layoutFrame = GetLayoutFrame();
+		Vector2f childAvailable(inner.W, inner.H);
+		if (layoutFrame != 0 && _childAvailableFrame == layoutFrame) {
+			if (inner.W + 0.5f >= _childContent.X && inner.W <= _childAvailable.X + 0.5f) {
+				childAvailable.X = _childAvailable.X;
+			}
+			if (inner.H + 0.5f >= _childContent.Y && inner.H <= _childAvailable.Y + 0.5f) {
+				childAvailable.Y = _childAvailable.Y;
+			}
+		}
+
+		SmallVector<float, 16>& sizes = _childSizes;
+		sizes.clear();
 		float fixedTotal = 0.0f, flexTotal = 0.0f;
 		std::int32_t count = 0;
 		for (auto& child : _children) {
@@ -276,7 +364,7 @@ namespace Jazz2::Editor
 				flexTotal += child->Flex;
 				sizes.push_back(0.0f);
 			} else {
-				Vector2f size = child->Measure(context, Vector2f(inner.W, inner.H));
+				Vector2f size = child->MeasureCached(context, childAvailable);
 				float mainSize = (horizontal ? size.X : size.Y);
 				sizes.push_back(mainSize);
 				fixedTotal += mainSize;

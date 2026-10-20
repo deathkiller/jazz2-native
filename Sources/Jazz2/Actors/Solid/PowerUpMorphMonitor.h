@@ -9,7 +9,8 @@ namespace Jazz2::Actors::Solid
 		@brief Power-up morph monitor
 		
 		A floating monitor that, when broken by the player, transforms them into another character, cycling
-		between Jazz, Spaz and Lori (or, in the original game, morphing into a bird).
+		between Jazz, Spaz and Lori, or morphing them into the bird that shoots (@ref PlayerType::Bird2), which flies
+		until a Fly Off or Revert Morph area.
 	*/
 	class PowerUpMorphMonitor : public SolidObjectBase
 	{

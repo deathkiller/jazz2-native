@@ -186,9 +186,9 @@ namespace nCine
 	class ScrollEvent
 	{
 	public:
-		/** @brief Scroll offset on the X axis */
+		/** @brief Scroll offset on the X axis, positive to the right (as SDL reports it, every backend is made to match) */
 		float x;
-		/** @brief Scroll offset on the Y axis */
+		/** @brief Scroll offset on the Y axis, positive away from the user */
 		float y;
 	};
 

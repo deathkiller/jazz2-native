@@ -95,7 +95,7 @@ namespace nCine::Backends
 
 	bool LibretroApplication::LoadState(std::shared_ptr<Death::IO::Stream> src)
 	{
-		return (_appEventHandler != nullptr && _appEventHandler->OnLoadState(std::move(src)));
+		return (_appEventHandler != nullptr && _appEventHandler->OnLoadState(Death::move(src)));
 	}
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <CommonWindows.h>
+#include <Base/Move.h>
 
 #include <functional>
 #include <memory>
@@ -169,7 +170,7 @@ namespace nCine
 		static void Invoke(void* rawVals) noexcept {
 			const std::unique_ptr<Tuple> fnVals(static_cast<Tuple*>(rawVals));
 			Tuple& tup = *fnVals;
-			std::invoke(std::move(std::get<Indices>(tup))...);
+			std::invoke(Death::move(std::get<Indices>(tup))...);
 		}
 
 		template<class Tuple, std::size_t... Indices>

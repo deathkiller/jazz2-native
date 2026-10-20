@@ -24,6 +24,13 @@ namespace nCine
 
 		/** @brief Binds a VAO matching the specified vertex format, reusing a pooled one or creating it */
 		void BindVao(const RHI::VertexFormat& vertexFormat);
+		/**
+		 * @brief Binds a VAO without any attributes, for a draw that reads nothing from a buffer
+		 *
+		 * The same as @ref BindVao() with an empty vertex format, but without searching the pool, a VAO of its own
+		 * is kept for it, so drawing many such commands in a row costs a single comparison each.
+		 */
+		void BindEmptyVao();
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -43,6 +50,8 @@ namespace nCine
 		SmallVector<VaoBinding, 0> _vaoPool;
 		// Monotonically increasing counter, incremented on every BindVao() call
 		std::uint64_t _bindIndex = 0;
+		// Not a part of the pool, so it's never recycled, see BindEmptyVao(). No attribute is ever enabled in it.
+		std::unique_ptr<RHI::VertexArray> _emptyVao;
 
 		void InsertGLDebugMessage(const VaoBinding& binding);
 	};

@@ -2,67 +2,70 @@
 
 #if defined(WITH_EDITOR)
 
+#include "../Common/ToolMath.h"
 #include "../Document/Commands.h"
 #include "../Smart/SmartTileModel.h"
 #include "../Smart/TileShapes.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
 
 #include "../../../nCine/I18n.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <unordered_map>
 #include <unordered_set>
-
-#if !defined(N_)
-#	define N_(text) text
-#endif
 
 namespace Jazz2::Editor
 {
 	namespace
 	{
-		std::uint64_t ToKey(Vector2i cell)
+		using ToolMath::CatmullRom;
+		using ToolMath::HashCell;
+		using ToolMath::IsSolidTile;
+		using ToolMath::PositiveModulo;
+		inline std::uint64_t ToKey(Vector2i cell) { return ToolMath::ToCellKey(cell); }
+		inline Vector2i FromKey(std::uint64_t key) { return ToolMath::FromCellKey(key); }
+
+		// Points far beyond any level, a damaged chunk can have anything there
+		constexpr float MaxCoordinate = 65536.0f * 32.0f;
+
+		// Reads the lines of a level, with points that can't be laid made harmless
+		void ReadSplines(const LevelDocument& document, SmallVectorImpl<TerrainSpline>& splines)
 		{
-			return (std::uint64_t(std::uint32_t(cell.Y)) << 32) | std::uint32_t(cell.X);
+			TerrainSpline::Read(document, splines);
+			for (TerrainSpline& spline : splines) {
+				for (Vector2f& p : spline.Points) {
+					p.X = (std::isfinite(p.X) ? std::clamp(p.X, -MaxCoordinate, MaxCoordinate) : 0.0f);
+					p.Y = (std::isfinite(p.Y) ? std::clamp(p.Y, -MaxCoordinate, MaxCoordinate) : 0.0f);
+				}
+			}
 		}
 
-		Vector2i FromKey(std::uint64_t key)
+		// A tile another line laid over a line taken away, what's under it is what was there before the line taken away
+		struct Handover
 		{
-			return Vector2i(std::int32_t(std::uint32_t(key)), std::int32_t(std::uint32_t(key >> 32)));
-		}
+			std::int32_t Spline;
+			std::int32_t Owned;
+			TileRef Previous;
+		};
 
-		std::uint32_t HashCell(Vector2i cell)
+		// Where a closed line crosses a horizontal line, sorted from the left
+		void GetRowCrossings(ArrayView<const Vector2f> polygon, float y, SmallVectorImpl<float>& crossings)
 		{
-			std::uint32_t h = std::uint32_t(cell.X) * 0x8DA6B343u ^ std::uint32_t(cell.Y) * 0xD8163841u;
-			h ^= h >> 15;
-			return h * 0x2C1B3C6Du;
-		}
-
-		bool IsSolidTile(const TileRef& tile)
-		{
-			return (!tile.IsEmpty() && (tile.Flags & Formats::TileRecord::ModifierMask) != Formats::TileRecord::ModifierInvisible);
-		}
-
-		Vector2f CatmullRom(Vector2f p0, Vector2f p1, Vector2f p2, Vector2f p3, float t)
-		{
-			float t2 = t * t, t3 = t2 * t;
-			return (p1 * 2.0f + (p2 - p0) * t + (p0 * 2.0f - p1 * 5.0f + p2 * 4.0f - p3) * t2 + (p1 * 3.0f - p0 - p2 * 3.0f + p3) * t3) * 0.5f;
-		}
-
-		// Whether a point is inside of a closed line, which ends where it starts
-		bool IsInside(ArrayView<const Vector2f> polygon, Vector2f point)
-		{
-			bool inside = false;
+			crossings.clear();
 			for (std::size_t i = 0, j = polygon.size() - 1; i < polygon.size(); j = i++) {
 				const Vector2f& a = polygon[i];
 				const Vector2f& b = polygon[j];
-				if ((a.Y > point.Y) != (b.Y > point.Y) && point.X < (b.X - a.X) * (point.Y - a.Y) / (b.Y - a.Y) + a.X) {
-					inside = !inside;
+				if ((a.Y > y) != (b.Y > y)) {
+					crossings.push_back(a.X + (b.X - a.X) * (y - a.Y) / (b.Y - a.Y));
 				}
 			}
-			return inside;
+			std::sort(crossings.begin(), crossings.end());
+		}
+
+		std::int32_t FloorDiv(std::int32_t value, std::int32_t divisor)
+		{
+			return (value >= 0 ? value / divisor : -((-value + divisor - 1) / divisor));
 		}
 
 		// Where a closed line crosses a vertical line, sorted from the top
@@ -91,16 +94,20 @@ namespace Jazz2::Editor
 			return best;
 		}
 
-		constexpr std::int32_t Offsets[8][2] = { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 } };
+		using ToolMath::NeighborOffsets;
 
 		// The tiles of a layer as they are with some of them changed, by their positions in the layer
 		struct LayerState
 		{
 			const DocumentLayer& Layer;
 			std::unordered_map<std::uint64_t, TileRef> Changed;
+			bool RepeatX;
+			bool RepeatY;
 
 			explicit LayerState(const DocumentLayer& layer)
-				: Layer(layer)
+				: Layer(layer),
+					RepeatX(!layer.IsSpriteLayer() && (layer.Record.Flags & Formats::LayerRecord::RepeatX) != 0),
+					RepeatY(!layer.IsSpriteLayer() && (layer.Record.Flags & Formats::LayerRecord::RepeatY) != 0)
 			{
 			}
 
@@ -108,23 +115,34 @@ namespace Jazz2::Editor
 			bool Wrap(Vector2i cell, Vector2i& tile) const
 			{
 				std::int32_t width = Layer.GetWidth(), height = Layer.GetHeight();
-				bool repeatX = !Layer.IsSpriteLayer() && (Layer.Record.Flags & Formats::LayerRecord::RepeatX) != 0;
-				bool repeatY = !Layer.IsSpriteLayer() && (Layer.Record.Flags & Formats::LayerRecord::RepeatY) != 0;
 				if (width <= 0 || height <= 0) {
 					return false;
 				}
 				tile = cell;
-				if (repeatX) {
-					tile.X = ((tile.X % width) + width) % width;
+				if (RepeatX) {
+					tile.X = PositiveModulo(tile.X, width);
 				} else if (tile.X < 0 || tile.X >= width) {
 					return false;
 				}
-				if (repeatY) {
-					tile.Y = ((tile.Y % height) + height) % height;
+				if (RepeatY) {
+					tile.Y = PositiveModulo(tile.Y, height);
 				} else if (tile.Y < 0 || tile.Y >= height) {
 					return false;
 				}
 				return true;
+			}
+
+			// Limits cells along an axis to those that can be laid, a line can't loop forever on points far away: the
+			// layer and a cell around it, or a single round of a layer that repeats
+			void ClampRange(std::int32_t& from, std::int32_t& to, bool horizontal) const
+			{
+				std::int32_t size = (horizontal ? Layer.GetWidth() : Layer.GetHeight());
+				if (horizontal ? RepeatX : RepeatY) {
+					to = std::min<std::int32_t>(to, from + size - 1);
+				} else {
+					from = std::max<std::int32_t>(from, -1);
+					to = std::min<std::int32_t>(to, size);
+				}
 			}
 
 			TileRef Get(Vector2i tile) const
@@ -181,7 +199,7 @@ namespace Jazz2::Editor
 			auto getNeighbors = [&](Vector2i cell) {
 				std::uint8_t neighbors = 0;
 				for (std::int32_t i = 0; i < 8; i++) {
-					if (isSolid(Vector2i(cell.X + Offsets[i][0], cell.Y + Offsets[i][1]))) {
+					if (isSolid(Vector2i(cell.X + NeighborOffsets[i][0], cell.Y + NeighborOffsets[i][1]))) {
 						neighbors |= std::uint8_t(1 << i);
 					}
 				}
@@ -225,10 +243,12 @@ namespace Jazz2::Editor
 			if (spline.Kind == SplineKind::Ground || spline.Kind == SplineKind::Band) {
 				std::int32_t cx1 = std::int32_t(std::floor(line.front().X / 32.0f));
 				std::int32_t cx2 = std::int32_t(std::floor((line.back().X - 0.5f) / 32.0f));
+				state.ClampRange(cx1, cx2, true);
 				for (std::int32_t cx = cx1; cx <= cx2; cx++) {
 					float yl = GroundLineTool::GetLineY(line, cx * 32.0f), yr = GroundLineTool::GetLineY(line, cx * 32.0f + 32.0f);
 					std::int32_t cyTop = std::int32_t(std::floor(std::min(yl, yr) / 32.0f));
 					std::int32_t cyBottom = std::int32_t(std::floor(std::max(yl, yr) / 32.0f));
+					state.ClampRange(cyTop, cyBottom, false);
 					std::int32_t lowest = cyTop;
 					for (std::int32_t cy = cyTop; cy <= cyBottom; cy++) {
 						Vector2i cell(cx, cy);
@@ -264,10 +284,12 @@ namespace Jazz2::Editor
 			} else if (spline.Kind == SplineKind::Ceiling) {
 				std::int32_t cx1 = std::int32_t(std::floor(line.front().X / 32.0f));
 				std::int32_t cx2 = std::int32_t(std::floor((line.back().X - 0.5f) / 32.0f));
+				state.ClampRange(cx1, cx2, true);
 				for (std::int32_t cx = cx1; cx <= cx2; cx++) {
 					float yl = GroundLineTool::GetLineY(line, cx * 32.0f), yr = GroundLineTool::GetLineY(line, cx * 32.0f + 32.0f);
 					std::int32_t cyTop = std::int32_t(std::floor(std::min(yl, yr) / 32.0f));
 					std::int32_t cyBottom = std::int32_t(std::floor(std::max(yl, yr) / 32.0f));
+					state.ClampRange(cyTop, cyBottom, false);
 					std::int32_t highest = cyBottom;
 					for (std::int32_t cy = cyBottom; cy >= cyTop; cy--) {
 						Vector2i cell(cx, cy);
@@ -310,22 +332,39 @@ namespace Jazz2::Editor
 				}
 				std::int32_t cx1 = std::int32_t(std::floor(minX / 32.0f)), cx2 = std::int32_t(std::floor(maxX / 32.0f));
 				std::int32_t cy1 = std::int32_t(std::floor(minY / 32.0f)), cy2 = std::int32_t(std::floor(maxY / 32.0f));
+				state.ClampRange(cx1, cx2, true);
+				state.ClampRange(cy1, cy2, false);
 				std::unordered_set<std::uint64_t> inside;
-				for (std::int32_t cy = cy1; cy <= cy2; cy++) {
-					for (std::int32_t cx = cx1; cx <= cx2; cx++) {
-						std::int32_t count = 0;
+				SmallVector<float, 8> crossings;
+				if (cx1 <= cx2) {
+					// 4 by 4 samples in a cell, the samples of a row are inside between the crossings of the line, so each row
+					// of them is found at once
+					std::int32_t columns = cx2 - cx1 + 1;
+					SmallVector<std::uint8_t, 0> counts;
+					counts.resize(std::size_t(columns));
+					for (std::int32_t cy = cy1; cy <= cy2; cy++) {
+						std::fill(counts.begin(), counts.end(), std::uint8_t(0));
 						for (std::int32_t sy = 0; sy < 4; sy++) {
-							for (std::int32_t sx = 0; sx < 4; sx++) {
-								count += (IsInside(line, Vector2f(cx * 32.0f + sx * 8.0f + 4.0f, cy * 32.0f + sy * 8.0f + 4.0f)) ? 1 : 0);
+							GetRowCrossings(line, cy * 32.0f + sy * 8.0f + 4.0f, crossings);
+							for (std::size_t k = 0; k + 1 < crossings.size(); k += 2) {
+								// Samples at x = 8 * s + 4 with crossings[k] <= x < crossings[k + 1]
+								std::int32_t first = std::int32_t(std::ceil((crossings[k] - 4.0f) / 8.0f));
+								std::int32_t last = std::int32_t(std::ceil((crossings[k + 1] - 4.0f) / 8.0f)) - 1;
+								first = std::max<std::int32_t>(first, cx1 * 4);
+								last = std::min<std::int32_t>(last, cx2 * 4 + 3);
+								for (std::int32_t s = first; s <= last; s++) {
+									counts[std::size_t(FloorDiv(s, 4) - cx1)]++;
+								}
 							}
 						}
-						TileRef existing;
-						if (count >= 8 && cellTile(Vector2i(cx, cy), existing)) {
-							inside.insert(ToKey(Vector2i(cx, cy)));
+						for (std::int32_t cx = cx1; cx <= cx2; cx++) {
+							TileRef existing;
+							if (counts[std::size_t(cx - cx1)] >= 8 && cellTile(Vector2i(cx, cy), existing)) {
+								inside.insert(ToKey(Vector2i(cx, cy)));
+							}
 						}
 					}
 				}
-				SmallVector<float, 8> crossings;
 				// The edge of the shape near a cell, at the left and the right edge of the cell, the topmost or the lowest
 				auto edgeDepth = [&](Vector2i cell, float x, bool top) {
 					GetCrossings(line, x, crossings);
@@ -400,7 +439,7 @@ namespace Jazz2::Editor
 			for (const auto& [key, isCellSolid] : solid) {
 				Vector2i cell = FromKey(key);
 				for (std::int32_t i = 0; i < 8; i++) {
-					Vector2i neighbor(cell.X + Offsets[i][0], cell.Y + Offsets[i][1]);
+					Vector2i neighbor(cell.X + NeighborOffsets[i][0], cell.Y + NeighborOffsets[i][1]);
 					TileRef tile;
 					if (solid.find(ToKey(neighbor)) == solid.end() && !isPinned(neighbor) && cellTile(neighbor, tile) && SmartTileModel::IsModelTile(tile)) {
 						toChoose.push_back(ToKey(neighbor));
@@ -436,9 +475,11 @@ namespace Jazz2::Editor
 			}
 		}
 
-		// What laying a line changes: the tiles of its layer, and the line with the tiles it owns then
+		// What laying a line changes: the tiles of its layer, and the line with the tiles it owns then; a line taken away hands
+		// over the tiles other lines laid over it, see `handovers`
 		bool ComputeSpline(IToolHost& host, const SmallVectorImpl<TerrainSpline>& splines, std::int32_t index, const TerrainSpline* spline,
-			bool quiet, std::int32_t& layerIndex, std::unordered_map<std::uint64_t, TileRef>& changed, TerrainSpline& result)
+			bool quiet, std::int32_t& layerIndex, std::unordered_map<std::uint64_t, TileRef>& changed, TerrainSpline& result,
+			SmallVectorImpl<Handover>* handovers = nullptr)
 		{
 			LevelDocument& document = host.GetDocument();
 			layerIndex = (spline != nullptr ? spline->Layer : (index >= 0 && index < std::int32_t(splines.size()) ? splines[index].Layer : -1));
@@ -459,19 +500,61 @@ namespace Jazz2::Editor
 			const DocumentLayer& layer = document.Layers[layerIndex];
 			LayerState state(layer);
 
+			// The tiles the other lines of the layer wrote, a line laid over this one may have written the same tile again
+			struct OtherOwner
+			{
+				std::int32_t Spline;
+				std::int32_t Owned;
+			};
+			std::unordered_map<std::uint64_t, SmallVector<OtherOwner, 1>> others;
+			for (std::int32_t i = 0; i < std::int32_t(splines.size()); i++) {
+				if (i == index || splines[i].Layer != layerIndex) {
+					continue;
+				}
+				for (std::int32_t j = 0; j < std::int32_t(splines[i].Owned.size()); j++) {
+					const TerrainSpline::OwnedTile& owned = splines[i].Owned[j];
+					if (layer.Contains(owned.X, owned.Y)) {
+						others[ToKey(Vector2i(owned.X, owned.Y))].push_back(OtherOwner{ i, j });
+					}
+				}
+			}
+
 			// The ground as it was goes first: its tiles still as it wrote them get back what was there, those changed by hand
-			// since stay and aren't written again
+			// since stay and aren't written again. A tile another line wrote over it stays too, owned as it was, so it comes
+			// back once that line goes; a line taken away hands what was under it over to that line instead.
 			std::unordered_set<std::uint64_t> pinned;
+			SmallVector<TerrainSpline::OwnedTile, 0> covered;
 			if (index >= 0 && index < std::int32_t(splines.size())) {
 				for (const TerrainSpline::OwnedTile& owned : splines[index].Owned) {
-					if (owned.X < 0 || owned.Y < 0 || owned.X >= layer.GetWidth() || owned.Y >= layer.GetHeight()) {
+					if (!layer.Contains(owned.X, owned.Y)) {
 						continue;
 					}
-					Vector2i tile(owned.X, owned.Y);
-					if (layer.GetTile(owned.X, owned.Y) == owned.Written) {
-						state.Changed[ToKey(tile)] = owned.Previous;
+					std::uint64_t key = ToKey(Vector2i(owned.X, owned.Y));
+					const TileRef& current = layer.GetTile(owned.X, owned.Y);
+					const OtherOwner* above = nullptr;
+					auto it = others.find(key);
+					if (it != others.end()) {
+						for (const OtherOwner& other : it->second) {
+							const TerrainSpline::OwnedTile& otherTile = splines[other.Spline].Owned[other.Owned];
+							if (otherTile.Previous == owned.Written && otherTile.Written == current) {
+								above = &other;
+								break;
+							}
+						}
+					}
+					if (above != nullptr) {
+						pinned.insert(key);
+						if (spline != nullptr) {
+							covered.push_back(owned);
+						} else if (handovers != nullptr) {
+							handovers->push_back(Handover{ above->Spline, above->Owned, owned.Previous });
+						}
+						continue;
+					}
+					if (current == owned.Written) {
+						state.Changed[key] = owned.Previous;
 					} else {
-						pinned.insert(ToKey(tile));
+						pinned.insert(key);
 					}
 				}
 			}
@@ -480,32 +563,36 @@ namespace Jazz2::Editor
 			if (spline != nullptr) {
 				result = *spline;
 				result.Owned.clear();
+				for (const TerrainSpline::OwnedTile& owned : covered) {
+					result.Owned.push_back(owned);
+				}
 				std::unordered_map<std::uint64_t, TileRef> decided;
 				Generate(result, state, pinned, model, shapes, decided);
+				// A line longer than a layer that repeats goes over some of its tiles twice, the first one is kept
+				std::unordered_set<std::uint64_t> written;
 				for (const auto& [key, tile] : decided) {
 					Vector2i wrapped;
-					if (!state.Wrap(FromKey(key), wrapped) || pinned.find(ToKey(wrapped)) != pinned.end()) {
+					if (!state.Wrap(FromKey(key), wrapped)) {
+						continue;
+					}
+					std::uint64_t wrappedKey = ToKey(wrapped);
+					if (pinned.find(wrappedKey) != pinned.end() || !written.insert(wrappedKey).second) {
 						continue;
 					}
 					TileRef previous = state.Get(wrapped);
-					state.Changed[ToKey(wrapped)] = tile;
+					state.Changed[wrappedKey] = tile;
 					result.Owned.push_back(TerrainSpline::OwnedTile{ wrapped.X, wrapped.Y, tile, previous });
 				}
 			}
-			changed = std::move(state.Changed);
+			changed = Death::move(state.Changed);
 			return true;
 		}
 	}
 
 	GroundLineTool::GroundLineTool(IToolHost& host)
-		: EditorTool(host), _dragSpline(-1), _dragPoint(-1), _dragInsert(false), _selectedSpline(-1), _options(std::make_shared<Options>()),
-			_window(std::make_shared<UiElement*>(nullptr)), _previewLayer(-1)
+		: EditorTool(host), _dragSpline(-1), _dragPoint(-1), _dragInsert(false), _selectedSpline(-1), _selectedLayer(-1),
+			_options(std::make_shared<Options>()), _previewLayer(-1), _previewPending(false), _cacheValid(false), _overlayShapesRevision(0)
 	{
-	}
-
-	GroundLineTool::~GroundLineTool()
-	{
-		// The window goes with the interface, it only shares the pointer to itself
 	}
 
 	EditorToolType GroundLineTool::GetType() const
@@ -517,13 +604,139 @@ namespace Jazz2::Editor
 	{
 		// Learning the tile set takes a while, it starts right away
 		_host.GetSmartTiles();
-		ShowWindow();
 	}
 
 	void GroundLineTool::OnDeactivate()
 	{
+		// The points of a new line stay, the view can be moved by another tool for a while between them, but a point
+		// being dragged isn't, the release goes to the other tool
 		ClearPreview();
-		CloseWindow();
+		_previewPending = false;
+		_dragSpline = -1;
+		_dragPoint = -1;
+		_dragInsert = false;
+	}
+
+	bool GroundLineTool::HasPointerCapture() const
+	{
+		return (_dragSpline >= 0);
+	}
+
+	std::int32_t GroundLineTool::GetSelectedSpline() const
+	{
+		SmallVector<TerrainSpline, 0> splines;
+		ReadSplines(_host.GetDocument(), splines);
+		return FindSelected(splines);
+	}
+
+	void GroundLineTool::Select(const SmallVectorImpl<TerrainSpline>& splines, std::int32_t index)
+	{
+		_selectedPoints.clear();
+		if (index < 0 || index >= std::int32_t(splines.size())) {
+			_selectedSpline = -1;
+			_selectedLayer = -1;
+			return;
+		}
+		_selectedSpline = index;
+		_selectedLayer = splines[index].Layer;
+		for (const Vector2f& p : splines[index].Points) {
+			_selectedPoints.push_back(p);
+		}
+	}
+
+	std::int32_t GroundLineTool::FindSelected(const SmallVectorImpl<TerrainSpline>& splines) const
+	{
+		if (_selectedSpline < 0) {
+			return -1;
+		}
+		auto isSelected = [this](const TerrainSpline& spline) {
+			if (spline.Layer != _selectedLayer || spline.Points.size() != _selectedPoints.size()) {
+				return false;
+			}
+			for (std::size_t i = 0; i < spline.Points.size(); i++) {
+				if (spline.Points[i] != _selectedPoints[i]) {
+					return false;
+				}
+			}
+			return true;
+		};
+		// Where it was, or where an undo moved it
+		if (_selectedSpline < std::int32_t(splines.size()) && isSelected(splines[_selectedSpline])) {
+			return _selectedSpline;
+		}
+		for (std::int32_t i = 0; i < std::int32_t(splines.size()); i++) {
+			if (isSelected(splines[i])) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	const SmallVectorImpl<TerrainSpline>& GroundLineTool::GetSplines()
+	{
+		// Compared byte by byte, which is much cheaper than reading them every frame
+		const Formats::ChunkRecord* chunk = _host.GetDocument().FindChunk(TerrainSpline::Chunk);
+		std::size_t size = (chunk != nullptr ? chunk->Data.size() : 0);
+		bool same = (_cacheValid && size == _cachedChunk.size() && (size == 0 || std::memcmp(chunk->Data.data(), _cachedChunk.data(), size) == 0));
+		if (!same) {
+			_cachedChunk.clear();
+			if (chunk != nullptr) {
+				for (std::uint8_t byte : chunk->Data) {
+					_cachedChunk.push_back(byte);
+				}
+			}
+			ReadSplines(_host.GetDocument(), _cachedSplines);
+			_cacheValid = true;
+			_overlays.clear();
+		}
+		return _cachedSplines;
+	}
+
+	void GroundLineTool::UpdateOverlays(const SmallVectorImpl<TerrainSpline>& splines, const TileShapes& shapes)
+	{
+		if (_overlays.size() == splines.size() && _overlayShapesRevision == shapes.GetRevision()) {
+			return;
+		}
+		_overlayShapesRevision = shapes.GetRevision();
+		_overlays.clear();
+
+		// The pieces of ground and of ceiling by their tiles
+		auto tileKey = [](const TileRef& tile) {
+			return std::uint32_t(tile.Index) | (std::uint32_t(tile.Source) << 16) | (std::uint32_t(tile.Flags & 0x03) << 24);
+		};
+		std::unordered_map<std::uint32_t, const TileShapes::Surface*> grounds, ceilings;
+		for (const TileShapes::Surface& s : shapes.GetSurfaces()) {
+			grounds.emplace(tileKey(s.Tile), &s);
+		}
+		for (const TileShapes::Surface& s : shapes.GetCeilings()) {
+			ceilings.emplace(tileKey(s.Tile), &s);
+		}
+
+		// How far the collision of each piece laid is from the line, measured once for all frames
+		for (const TerrainSpline& spline : splines) {
+			SplineOverlay& overlay = _overlays.emplace_back();
+			SampleLine(spline, overlay.Fine);
+			for (const TerrainSpline::OwnedTile& owned : spline.Owned) {
+				OwnedOverlay& item = overlay.Owned.emplace_back();
+				item = OwnedOverlay{ 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f };
+				std::uint32_t key = tileKey(owned.Written);
+				Vector2f origin(owned.X * 32.0f, owned.Y * 32.0f);
+				auto it = grounds.find(key);
+				if (it != grounds.end()) {
+					item.GroundLeft = it->second->Left;
+					item.GroundRight = it->second->Right;
+					item.GroundMiss = std::max(DistanceToLine(overlay.Fine, origin + Vector2f(0.0f, item.GroundLeft)),
+						DistanceToLine(overlay.Fine, origin + Vector2f(32.0f, item.GroundRight)));
+				}
+				it = ceilings.find(key);
+				if (it != ceilings.end()) {
+					item.CeilingLeft = it->second->Left;
+					item.CeilingRight = it->second->Right;
+					item.CeilingMiss = std::max(DistanceToLine(overlay.Fine, origin + Vector2f(0.0f, item.CeilingLeft)),
+						DistanceToLine(overlay.Fine, origin + Vector2f(32.0f, item.CeilingRight)));
+				}
+			}
+		}
 	}
 
 	void GroundLineTool::SampleLine(const TerrainSpline& spline, SmallVectorImpl<Vector2f>& line)
@@ -657,12 +870,12 @@ namespace Jazz2::Editor
 	{
 		LayerView view = _host.GetLayerView(_host.GetCurrentLayer());
 		SmallVector<TerrainSpline, 0> splines;
-		TerrainSpline::Read(_host.GetDocument(), splines);
+		ReadSplines(_host.GetDocument(), splines);
 		std::int32_t hitSpline = -1, hitPoint = -1, hitSegment = -1;
 		bool hit = (_points.empty() && HitTest(splines, view, pointer.Screen, hitSpline, hitPoint, hitSegment));
 		if (hit) {
 			// Its options are shown, and changed by the window
-			_selectedSpline = hitSpline;
+			Select(splines, hitSpline);
 			_options->Kind = splines[hitSpline].Kind;
 			_options->Smooth = splines[hitSpline].Smooth;
 			_options->Depth = splines[hitSpline].Depth;
@@ -674,7 +887,7 @@ namespace Jazz2::Editor
 			} else if (hit) {
 				// The ground of the line goes away, what was there before comes back
 				ApplySpline(_host, splines, hitSpline, nullptr, _("Remove ground"));
-				_selectedSpline = -1;
+				Select(splines, -1);
 			} else {
 				_host.ShowMessage(_("Click points of the surface first, the right button then lays the ground"));
 			}
@@ -693,7 +906,9 @@ namespace Jazz2::Editor
 				return;
 			}
 			changed.Points.erase(changed.Points.begin() + hitPoint);
-			ApplySpline(_host, splines, hitSpline, &changed, _("Change ground"));
+			if (ApplySpline(_host, splines, hitSpline, &changed, _("Change ground"))) {
+				Select(splines, hitSpline);
+			}
 			return;
 		}
 		if (hit && hitPoint >= 0) {
@@ -713,7 +928,7 @@ namespace Jazz2::Editor
 			_previewPos = Vector2f(-1e30f, -1e30f);
 			return;
 		}
-		_selectedSpline = -1;
+		Select(splines, -1);
 		_points.push_back(GetPoint(pointer));
 	}
 
@@ -722,8 +937,9 @@ namespace Jazz2::Editor
 		if (_dragSpline >= 0) {
 			_dragPos = GetPoint(pointer);
 			if (_dragPos != _previewPos) {
+				// Laid at most once a frame, the pointer can move more times in one
 				_previewPos = _dragPos;
-				UpdatePreview();
+				_previewPending = true;
 			}
 		}
 	}
@@ -749,16 +965,16 @@ namespace Jazz2::Editor
 
 	void GroundLineTool::UpdatePreview()
 	{
-		// The ground as it would be laid now, shown in the view only
+		// The ground as it would be laid now, shown in the view only, nothing where it can't be laid
+		ClearPreview();
 		SmallVector<TerrainSpline, 0> splines;
-		TerrainSpline::Read(_host.GetDocument(), splines);
+		ReadSplines(_host.GetDocument(), splines);
 		TerrainSpline dragged, result;
 		std::int32_t layerIndex;
 		std::unordered_map<std::uint64_t, TileRef> changed;
 		if (!GetDraggedSpline(splines, dragged) || !ComputeSpline(_host, splines, _dragSpline, &dragged, true, layerIndex, changed, result)) {
 			return;
 		}
-		ClearPreview();
 		_previewLayer = layerIndex;
 		bool first = true;
 		for (const auto& [key, tile] : changed) {
@@ -795,22 +1011,24 @@ namespace Jazz2::Editor
 			return;
 		}
 		ClearPreview();
+		_previewPending = false;
 		SmallVector<TerrainSpline, 0> splines;
-		TerrainSpline::Read(_host.GetDocument(), splines);
+		ReadSplines(_host.GetDocument(), splines);
 		TerrainSpline changed;
 		std::int32_t index = _dragSpline;
 		bool valid = GetDraggedSpline(splines, changed);
 		_dragSpline = -1;
 		_dragPoint = -1;
 		_dragInsert = false;
-		if (valid) {
-			ApplySpline(_host, splines, index, &changed, _("Change ground"));
+		if (valid && ApplySpline(_host, splines, index, &changed, _("Change ground"))) {
+			Select(splines, index);
 		}
 	}
 
 	void GroundLineTool::Cancel()
 	{
 		ClearPreview();
+		_previewPending = false;
 		_points.clear();
 		_dragSpline = -1;
 		_dragPoint = -1;
@@ -831,18 +1049,16 @@ namespace Jazz2::Editor
 		LevelDocument& document = _host.GetDocument();
 		const TileShapes& shapes = _host.GetTileShapes();
 
-		// The pieces of ground and of ceiling by their tiles, to draw where the collision of the ground laid is
-		std::unordered_map<std::uint32_t, const TileShapes::Surface*> grounds, ceilings;
-		for (const TileShapes::Surface& s : shapes.GetSurfaces()) {
-			grounds[std::uint32_t(s.Tile.Index) | (std::uint32_t(s.Tile.Flags & 0x03) << 16)] = &s;
-		}
-		for (const TileShapes::Surface& s : shapes.GetCeilings()) {
-			ceilings[std::uint32_t(s.Tile.Index) | (std::uint32_t(s.Tile.Flags & 0x03) << 16)] = &s;
+		// The point dragged moved since the last frame, the ground follows it
+		if (_previewPending) {
+			_previewPending = false;
+			UpdatePreview();
 		}
 
-		// The lines kept, of the layer being edited
-		SmallVector<TerrainSpline, 0> splines;
-		TerrainSpline::Read(document, splines);
+		// The lines kept, of the layer being edited, read and measured again only when they change
+		const SmallVectorImpl<TerrainSpline>& splines = GetSplines();
+		UpdateOverlays(splines, shapes);
+		std::int32_t selectedSpline = FindSelected(splines);
 		std::int32_t hoverSpline = -1, hoverPoint = -1, hoverSegment = -1;
 		if (hoverValid && _points.empty() && _dragSpline < 0) {
 			HitTest(splines, view, hover.Screen, hoverSpline, hoverPoint, hoverSegment);
@@ -851,38 +1067,43 @@ namespace Jazz2::Editor
 			if (splines[i].Layer != layerIndex) {
 				continue;
 			}
-			TerrainSpline shown = splines[i];
-			if (i == _dragSpline) {
-				GetDraggedSpline(splines, shown);
+			TerrainSpline dragged;
+			bool isDragged = (i == _dragSpline && GetDraggedSpline(splines, dragged));
+			const TerrainSpline& shown = (isDragged ? dragged : splines[i]);
+			SmallVector<Vector2f, 0> draggedFine;
+			if (isDragged) {
+				SampleLine(shown, draggedFine);
 			}
-			SmallVector<Vector2f, 0> fine;
-			SampleLine(shown, fine);
+			const SmallVectorImpl<Vector2f>& fine = (isDragged ? draggedFine : _overlays[i].Fine);
 
 			// Where the collision of the ground laid is, red where it misses the line
 			if (i != _dragSpline && layerIndex >= 0 && layerIndex < std::int32_t(document.Layers.size())) {
 				const DocumentLayer& layer = document.Layers[layerIndex];
-				for (const TerrainSpline::OwnedTile& owned : splines[i].Owned) {
+				const SplineOverlay& overlay = _overlays[i];
+				for (std::size_t j = 0; j < splines[i].Owned.size() && j < overlay.Owned.size(); j++) {
+					const TerrainSpline::OwnedTile& owned = splines[i].Owned[j];
 					if (!layer.Contains(owned.X, owned.Y) || layer.GetTile(owned.X, owned.Y) != owned.Written) {
 						continue;
 					}
-					std::uint32_t key = std::uint32_t(owned.Written.Index) | (std::uint32_t(owned.Written.Flags & 0x03) << 16);
+					const OwnedOverlay& item = overlay.Owned[j];
 					bool openAbove = !layer.Contains(owned.X, owned.Y - 1) || !IsSolidTile(layer.GetTile(owned.X, owned.Y - 1));
 					bool openBelow = !layer.Contains(owned.X, owned.Y + 1) || !IsSolidTile(layer.GetTile(owned.X, owned.Y + 1));
-					const TileShapes::Surface* s = nullptr;
-					if (openAbove && owned.Written.Source == TileRef::DefaultTileSet) {
-						auto it = grounds.find(key);
-						s = (it != grounds.end() ? it->second : nullptr);
-					}
-					if (s == nullptr && openBelow && owned.Written.Source == TileRef::DefaultTileSet) {
-						auto it = ceilings.find(key);
-						s = (it != ceilings.end() ? it->second : nullptr);
-					}
-					if (s == nullptr) {
+					float left, right, miss;
+					if (openAbove && item.GroundMiss >= 0.0f) {
+						left = item.GroundLeft;
+						right = item.GroundRight;
+						miss = item.GroundMiss;
+					} else if (openBelow && item.CeilingMiss >= 0.0f) {
+						left = item.CeilingLeft;
+						right = item.CeilingRight;
+						miss = item.CeilingMiss;
+					} else {
 						continue;
 					}
-					Vector2f a(owned.X * 32.0f, owned.Y * 32.0f + s->Left), b(owned.X * 32.0f + 32.0f, owned.Y * 32.0f + s->Right);
-					float miss = std::max(DistanceToLine(fine, a), DistanceToLine(fine, b));
-					Colorf color = (miss <= 4.0f ? Colorf(0.4f, 1.0f, 0.5f, 0.45f) : Colorf(1.0f, 0.3f, 0.25f, std::clamp(0.4f + miss / 32.0f, 0.4f, 0.95f)));
+					Vector2f a(owned.X * 32.0f, owned.Y * 32.0f + left), b(owned.X * 32.0f + 32.0f, owned.Y * 32.0f + right);
+					// Colors of what is right and wrong, as the theme has them, see UiTheme
+					Colorf color = (miss <= 4.0f ? UiTheme::OverlayGood : UiTheme::OverlayBad);
+					color.A = (miss <= 4.0f ? 0.45f : std::clamp(0.4f + miss / 32.0f, 0.4f, 0.95f));
 					painter.Line(view.WorldToScreen(a + view.Origin), view.WorldToScreen(b + view.Origin), std::max(1.0f, thickness * 0.75f), color, UiLayer::Overlay);
 				}
 			}
@@ -891,7 +1112,7 @@ namespace Jazz2::Editor
 			for (const Vector2f& p : fine) {
 				screenLine.push_back(view.WorldToScreen(p + view.Origin));
 			}
-			bool active = (i == hoverSpline || i == _dragSpline || i == _selectedSpline);
+			bool active = (i == hoverSpline || i == _dragSpline || i == selectedSpline);
 			Colorf color = (active ? Colorf(1.0f, 0.95f, 0.5f, 0.95f) : Colorf(0.6f, 1.0f, 0.4f, 0.7f));
 			painter.Polyline(screenLine, thickness, color, UiLayer::Overlay);
 			for (std::int32_t j = 0; j < std::int32_t(shown.Points.size()); j++) {
@@ -957,7 +1178,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		SmallVector<TerrainSpline, 0> splines;
-		TerrainSpline::Read(_host.GetDocument(), splines);
+		ReadSplines(_host.GetDocument(), splines);
 		TerrainSpline spline;
 		spline.Layer = _host.GetCurrentLayer();
 		spline.Depth = _options->Depth;
@@ -971,18 +1192,21 @@ namespace Jazz2::Editor
 		}
 		if (ApplySpline(_host, splines, -1, &spline, _("Lay ground"))) {
 			_points.clear();
-			_selectedSpline = std::int32_t(splines.size()) - 1;
+			Select(splines, std::int32_t(splines.size()) - 1);
 		}
 	}
 
 	void GroundLineTool::ApplyOptionsToSelected()
 	{
 		SmallVector<TerrainSpline, 0> splines;
-		TerrainSpline::Read(_host.GetDocument(), splines);
-		if (_selectedSpline < 0 || _selectedSpline >= std::int32_t(splines.size())) {
+		ReadSplines(_host.GetDocument(), splines);
+		// The line clicked last, as long as it's there and it's seen, an undo can take it away
+		std::int32_t selected = FindSelected(splines);
+		if (selected < 0 || splines[selected].Layer != _host.GetCurrentLayer()) {
+			Select(splines, -1);
 			return;
 		}
-		TerrainSpline changed = splines[_selectedSpline];
+		TerrainSpline changed = splines[selected];
 		if (changed.Kind == _options->Kind && changed.Smooth == _options->Smooth && changed.Depth == _options->Depth) {
 			return;
 		}
@@ -998,75 +1222,52 @@ namespace Jazz2::Editor
 		changed.Kind = _options->Kind;
 		changed.Smooth = _options->Smooth;
 		changed.Depth = _options->Depth;
-		ApplySpline(_host, splines, _selectedSpline, &changed, _("Change ground"));
+		if (ApplySpline(_host, splines, selected, &changed, _("Change ground"))) {
+			// Sorted points are other points
+			Select(splines, selected);
+		}
 	}
 
-	void GroundLineTool::ShowWindow()
+	void GroundLineTool::BuildOptions(ToolOptionsBuilder& builder)
 	{
-		UiSurface* surface = _host.GetSurface();
-		if (surface == nullptr || *_window != nullptr) {
-			return;
-		}
-
 		std::shared_ptr<Options> options = _options;
-		auto dialog = std::make_unique<UiDialog>(_("Ground Line"));
-		auto* content = dialog->GetContent();
-		{
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			struct KindOption { const char* Label; SplineKind Kind; const char* Tooltip; };
+		// The options change the line clicked last too
+		const ToolOptionItem kinds[] = {
 			// TRANSLATORS: What a ground line lays, ground below it, a ceiling above it, a floating band, a closed shape
-			static const KindOption Kinds[] = {
-				{ N_("Ground"), SplineKind::Ground, N_("Ground below the line, down to the ground that's there") },
-				{ N_("Ceiling"), SplineKind::Ceiling, N_("Ground above the line, its surface faces down") },
-				{ N_("Band"), SplineKind::Band, N_("A floating strip of ground below the line, as thick as the depth") },
-				{ N_("Shape"), SplineKind::Closed, N_("Ground inside of the line, its points go around the shape") },
-			};
-			for (const KindOption& option : Kinds) {
-				SplineKind kind = option.Kind;
-				auto* button = row->Add<UiButton>(_(option.Label), EditorIcon::None, [this, options, kind]() {
-					options->Kind = kind;
-					ApplyOptionsToSelected();
-				});
-				button->Style = UiButtonStyle::Flat;
-				button->Tooltip = _(option.Tooltip);
-				button->IsCheckedFunc = [options, kind]() { return (options->Kind == kind); };
+			{ _("Ground"), EditorIcon::None, nullptr, _("Ground below the line, down to the ground that's there - changes the line clicked last too") },
+			{ _("Ceiling"), EditorIcon::None, nullptr, _("Ground above the line, its surface faces down - changes the line clicked last too") },
+			{ _("Band"), EditorIcon::None, nullptr, _("A floating strip of ground below the line, as thick as the depth - changes the line clicked last too") },
+			{ _("Shape"), EditorIcon::None, nullptr, _("Ground inside of the line, its points go around the shape - changes the line clicked last too") },
+		};
+		static const SplineKind KindValues[] = { SplineKind::Ground, SplineKind::Ceiling, SplineKind::Band, SplineKind::Closed };
+		// TRANSLATORS: Label of the choice of what a ground line lays
+		builder.AddChoice(_("Lays"), kinds, [options]() {
+			for (std::int32_t i = 0; i < std::int32_t(sizeof(KindValues) / sizeof(KindValues[0])); i++) {
+				if (KindValues[i] == options->Kind) {
+					return i;
+				}
 			}
-		}
-		content->Add<UiCheckBox>(_("Smooth curve"), [options]() { return options->Smooth; }, [this, options](bool value) {
-			options->Smooth = value;
-			ApplyOptionsToSelected();
-		})->Tooltip = _("Through the points in a curve, otherwise straight from one to the next");
-		{
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			row->Add<UiLabel>(_("Depth (tiles)"))->Flex = 1.0f;
-			auto* depth = row->Add<UiNumberBox>([options]() { return float(options->Depth); }, [this, options](float value, bool final) {
+			return std::int32_t(0);
+		}, [this, options](std::int32_t index) {
+			if (index >= 0 && index < std::int32_t(sizeof(KindValues) / sizeof(KindValues[0]))) {
+				options->Kind = KindValues[index];
+				ApplyOptionsToSelected();
+			}
+		});
+		builder.AddSeparator();
+		builder.AddToggle({ _("Smooth"), EditorIcon::None, nullptr, _("Through the points in a curve, otherwise straight from one to the next") },
+			[options]() { return options->Smooth; }, [this, options](bool value) {
+				options->Smooth = value;
+				ApplyOptionsToSelected();
+			});
+		// TRANSLATORS: Label of how deep the ground a ground line lays goes, in tiles
+		builder.AddNumber(_("Depth"), _("How deep the ground goes at most in tiles, how thick a band is"), 1.0f, 32.0f, 1.0f,
+			[options]() { return float(options->Depth); }, [this, options](float value, bool final) {
 				options->Depth = std::clamp<std::int32_t>(std::int32_t(value), 1, 32);
 				if (final) {
 					ApplyOptionsToSelected();
 				}
-			}, 1.0f, 32.0f, 1.0f, 0);
-			depth->Width = 50.0f;
-			depth->Tooltip = _("How deep the ground goes at most, how thick a band is");
-		}
-		content->Add<UiLabel>(_("The options change the line clicked last too"), UiTheme::TextDim);
-
-		std::shared_ptr<UiElement*> window = _window;
-		UiOverlayOptions overlayOptions;
-		overlayOptions.Position = Vector2f(1.0e6f, 1.0e6f);
-		overlayOptions.Modal = false;
-		overlayOptions.CloseOnOutsideClick = false;
-		overlayOptions.OnClosed = [window]() { *window = nullptr; };
-		*_window = surface->PushOverlay(std::move(dialog), std::move(overlayOptions));
-	}
-
-	void GroundLineTool::CloseWindow()
-	{
-		if (*_window != nullptr) {
-			if (UiSurface* surface = _host.GetSurface()) {
-				surface->CloseOverlay(*_window);
-			}
-			*_window = nullptr;
-		}
+			});
 	}
 
 	bool GroundLineTool::TraceSelection(IToolHost& host)
@@ -1091,6 +1292,21 @@ namespace Jazz2::Editor
 			left = right = 0.0f;
 		};
 
+		// Tiles other lines of the layer wrote and still have, the new line is laid over them, so it doesn't take them away
+		SmallVector<TerrainSpline, 0> splines;
+		ReadSplines(document, splines);
+		std::unordered_set<std::uint64_t> ownedByOthers;
+		for (const TerrainSpline& other : splines) {
+			if (other.Layer != layerIndex) {
+				continue;
+			}
+			for (const TerrainSpline::OwnedTile& owned : other.Owned) {
+				if (layer.Contains(owned.X, owned.Y) && layer.GetTile(owned.X, owned.Y) == owned.Written) {
+					ownedByOthers.insert(ToKey(Vector2i(owned.X, owned.Y)));
+				}
+			}
+		}
+
 		// The top of the ground in each column, from the masks of its tiles
 		TerrainSpline spline;
 		spline.Layer = layerIndex;
@@ -1113,8 +1329,9 @@ namespace Jazz2::Editor
 					}
 					spline.Points.push_back(b);
 				}
-				// Its own tiles, with nothing before them
-				spline.Owned.push_back(TerrainSpline::OwnedTile{ x, y, tile, TileRef{} });
+				// Its own tiles, with nothing before them, but those of another line, with the same tile before them
+				bool other = (ownedByOthers.find(ToKey(Vector2i(x, y))) != ownedByOthers.end());
+				spline.Owned.push_back(TerrainSpline::OwnedTile{ x, y, tile, other ? tile : TileRef{} });
 				count = y - top + 1;
 			}
 			deepest = std::max(deepest, count);
@@ -1137,9 +1354,7 @@ namespace Jazz2::Editor
 			}
 		}
 
-		SmallVector<TerrainSpline, 0> splines;
-		TerrainSpline::Read(document, splines);
-		splines.push_back(std::move(spline));
+		splines.push_back(Death::move(spline));
 		host.Execute(std::make_unique<SetTerrainSplinesCommand>(document, splines, nullptr, _("Make ground line")));
 		host.ShowMessage(_("The ground can be changed by its line now, with the Ground Line tool"));
 		return true;
@@ -1151,7 +1366,8 @@ namespace Jazz2::Editor
 		std::int32_t layerIndex;
 		std::unordered_map<std::uint64_t, TileRef> changed;
 		TerrainSpline result;
-		if (!ComputeSpline(host, splines, index, spline, false, layerIndex, changed, result)) {
+		SmallVector<Handover, 0> handovers;
+		if (!ComputeSpline(host, splines, index, spline, false, layerIndex, changed, result, &handovers)) {
 			return false;
 		}
 
@@ -1173,10 +1389,17 @@ namespace Jazz2::Editor
 		if (index < 0 && spline != nullptr) {
 			newSplines.push_back(result);
 		}
-		host.Execute(std::make_unique<SetTerrainSplinesCommand>(document, newSplines, tiles->IsEmpty() ? nullptr : std::move(tiles), String(name)));
+		// The lines laid over the one taken away have what was under it under them now, they go back to that
+		for (const Handover& handover : handovers) {
+			std::int32_t target = (spline == nullptr && index >= 0 && handover.Spline > index ? handover.Spline - 1 : handover.Spline);
+			if (target >= 0 && target < std::int32_t(newSplines.size()) && handover.Owned < std::int32_t(newSplines[target].Owned.size())) {
+				newSplines[target].Owned[handover.Owned].Previous = handover.Previous;
+			}
+		}
+		host.Execute(std::make_unique<SetTerrainSplinesCommand>(document, newSplines, tiles->IsEmpty() ? nullptr : Death::move(tiles), String(name)));
 		splines.clear();
 		for (TerrainSpline& s : newSplines) {
-			splines.push_back(std::move(s));
+			splines.push_back(Death::move(s));
 		}
 		return true;
 	}

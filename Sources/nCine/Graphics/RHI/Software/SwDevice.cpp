@@ -841,11 +841,12 @@ namespace nCine::RHI::Software
 		// Resolve the offline-transpiled generated fragment for this program (looked up by object label = the
 		// shader name; FindGeneratedShader also resolves the labels that bake a variant into the name, such as
 		// the "...Dither" ones). An Unknown-effect program requires one, else the draw is skipped as before.
-		// TexturedBackground(+Circle) and PaletteRemap(+Batched) are dispatched entirely through this generated
+		// TexturedBackground(+Tunnel/Cylinder/Wave) and PaletteRemap(+Batched) are dispatched entirely through this generated
 		// fragment. DefaultSprite / DefaultBatchedSprites keep their dedicated no-fragment fast path and never
 		// look one up.
 		const bool prefersGenerated = (effect == SwEffect::Unknown ||
-			effect == SwEffect::TexturedBackground || effect == SwEffect::TexturedBackgroundCircle ||
+			effect == SwEffect::TexturedBackground || effect == SwEffect::TexturedBackgroundTunnel ||
+			effect == SwEffect::TexturedBackgroundCylinder || effect == SwEffect::TexturedBackgroundWave ||
 			effect == SwEffect::PaletteRemap || effect == SwEffect::BatchedPaletteRemap);
 		const SwGeneratedShaderInfo* generatedShader = nullptr;
 		if (prefersGenerated) {
@@ -986,7 +987,7 @@ namespace nCine::RHI::Software
 		}
 
 		// Offline-transpiled generated fragment path. Reached for Unknown-effect programs and for the
-		// Combine / TexturedBackground(+Circle) / PaletteRemap(+Batched) effects, which are dispatched entirely
+		// Combine / TexturedBackground(+Tunnel/Cylinder/Wave) / PaletteRemap(+Batched) effects, which are dispatched entirely
 		// here (the switch below only keeps the DefaultSprite / DefaultBatchedSprites fast path). Handles
 		// batched and non-batched draws and fills any per-instance-constant varyings via the generated
 		// computeVaryings hook.

@@ -140,7 +140,7 @@ namespace nCine
 	{
 	public:
 		explicit InvalidTextureLoader(std::unique_ptr<Death::IO::Stream> fileHandle)
-			: ITextureLoader(std::move(fileHandle)) { }
+			: ITextureLoader(Death::move(fileHandle)) { }
 	};
 #endif
 }

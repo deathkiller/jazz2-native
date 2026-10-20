@@ -12,16 +12,28 @@ namespace nCine::RHI::GL
 {
 	namespace
 	{
-		/** @brief Size of the buffer range a block is bound with */
-		inline GLint GetBoundSize(const GLUniformBlockCache& uniformBlockCache)
+		/**
+		 * @brief Size of the buffer range a block is bound with
+		 *
+		 * The range never reaches past @p available bytes, what is left of the allocation from where the block
+		 * starts, but it always covers the data of the block.
+		 */
+		inline GLint GetBoundSize(const GLUniformBlockCache& uniformBlockCache, std::int64_t available)
 		{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 			// WebGL rejects a draw whose bound range is smaller than the block the program declares, although a
 			// batch shorter than its shader's instance array reads only the instances it holds - so the range
-			// always spans the whole block there, and the rest of it is whatever follows in the buffer
+			// spans the whole block there, and the rest of it is whatever follows in the buffer. Not past the
+			// allocation, though: a block that doesn't fit whole after the ones before it makes WebGL skip that
+			// draw, which is still better than asking for more than a uniform buffer holds.
+			const GLint usedSize = uniformBlockCache.usedSize();
 			const GLint declaredSize = uniformBlockCache.uniformBlock()->GetSize() - uniformBlockCache.uniformBlock()->GetAlignAmount();
-			return std::max(uniformBlockCache.usedSize(), declaredSize);
+			if (declaredSize <= usedSize) {
+				return usedSize;
+			}
+			return GLint(std::max<std::int64_t>(usedSize, std::min<std::int64_t>(declaredSize, available)));
 #else
+			static_cast<void>(available);
 			return uniformBlockCache.usedSize();
 #endif
 		}
@@ -74,7 +86,8 @@ namespace nCine::RHI::GL
 #if defined(DEATH_DEBUG)
 				DEATH_DEBUG_ASSERT(offset % offsetAlignment == 0);
 #endif
-				_uboParams.object->BindBufferRange(uniformBlockCache.GetBindingIndex(), offset, GetBoundSize(uniformBlockCache));
+				_uboParams.object->BindBufferRange(uniformBlockCache.GetBindingIndex(), offset,
+					GetBoundSize(uniformBlockCache, std::int64_t(_uboParams.size) - std::int64_t(moreOffset)));
 				moreOffset += uniformBlockCache.usedSize();
 			}
 		}
@@ -132,7 +145,13 @@ namespace nCine::RHI::GL
 		if (_shaderProgram != nullptr) {
 			if (_shaderProgram->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 				std::int32_t totalUsedSize = 0;
-				// Where Bind() makes a range reach past the data of its block, the allocation has to cover it too
+				// Where Bind() makes a range reach past the data of its block, the allocation has to cover it too, but
+				// it can't be larger than a uniform buffer (the allocator stops the game on that), see GetBoundSize()
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+				static const std::int64_t maxAllocationSize = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::MaxUniformBlockSizeNormalized);
+#else
+				constexpr std::int64_t maxAllocationSize = INT32_MAX;
+#endif
 				std::int32_t totalBoundSize = 0;
 				bool hasMemoryGaps = false;
 				for (GLUniformBlockCache& uniformBlockCache : _uniformBlockCaches) {
@@ -140,7 +159,7 @@ namespace nCine::RHI::GL
 					if (uniformBlockCache.GetDataPointer() != _dataPointer + totalUsedSize) {
 						hasMemoryGaps = true;
 					}
-					totalBoundSize = std::max(totalBoundSize, totalUsedSize + GetBoundSize(uniformBlockCache));
+					totalBoundSize = std::max<std::int32_t>(totalBoundSize, totalUsedSize + GetBoundSize(uniformBlockCache, maxAllocationSize - totalUsedSize));
 					totalUsedSize += uniformBlockCache.usedSize();
 				}
 

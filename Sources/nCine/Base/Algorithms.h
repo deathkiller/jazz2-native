@@ -829,7 +829,7 @@ namespace nCine
 
 #if defined(WITH_ZLIB) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/** @brief Returns the CRC-32 checksum of the given byte buffer */
-	std::uint32_t crc32(Containers::ArrayView<std::uint8_t> data);
+	std::uint32_t crc32(Containers::ArrayView<const std::uint8_t> data);
 	/** @brief Returns the CRC-32 checksum of the remaining contents of the given stream */
 	std::uint32_t crc32(IO::Stream& stream);
 #endif

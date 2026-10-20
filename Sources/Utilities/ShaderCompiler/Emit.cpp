@@ -410,7 +410,7 @@ namespace ShaderCompiler
 					String es2source;
 					Diagnostic es2diag;
 					if (!Essl100Emitter::Transform(lowPowerSource, vertexStage, es2source, es2diag)) {
-						es2source = std::move(lowPowerSource);
+						es2source = Death::move(lowPowerSource);
 					}
 					if (es2source.contains(")__SHDR__\""_s)) {
 						diag.Message = "ES2 shader source contains the raw string terminator sequence )__SHDR__\"";
@@ -443,7 +443,7 @@ namespace ShaderCompiler
 									hlslDxbc[stage].clear();
 								}
 							}
-							hlslSources[stage] = std::move(hlslSource);
+							hlslSources[stage] = Death::move(hlslSource);
 						}
 					}
 
@@ -472,7 +472,7 @@ namespace ShaderCompiler
 						}
 						artifacts.Vulkan += "\tinline constexpr std::size_t " + sym + "Size = " +
 							Death::format("{}", words.size()) + ";\n\n";
-						(vertexStage ? vk.VsSymbol : vk.FsSymbol) = std::move(sym);
+						(vertexStage ? vk.VsSymbol : vk.FsSymbol) = Death::move(sym);
 					}
 
 					// Metal (MSL) lowering of the same stage, into the Metal AGGREGATE. The Metal backend compiles
@@ -491,7 +491,7 @@ namespace ShaderCompiler
 						} else {
 							artifacts.Metal += "\tinline constexpr const char* " + sym + " = nullptr;\n\n";
 						}
-						(vertexStage ? msl.VsSource : msl.FsSource) = std::move(sym);
+						(vertexStage ? msl.VsSource : msl.FsSource) = Death::move(sym);
 					}
 				}
 				// Direct3D 11 artifacts, all into the D3D11 AGGREGATE rather than here - D3DCompile is a
@@ -510,7 +510,7 @@ namespace ShaderCompiler
 					}
 					artifacts.D3d11 += "\tinline constexpr std::size_t " + dxbcSym + "Size = " +
 						Death::format("{}", haveDxbc ? hlslDxbc[stage].size() : std::size_t(0)) + ";\n\n";
-					(stage == 0 ? hlsl.VsDxbc : hlsl.FsDxbc) = std::move(dxbcSym);
+					(stage == 0 ? hlsl.VsDxbc : hlsl.FsDxbc) = Death::move(dxbcSym);
 
 					String sourceSym = prefix + (stage == 0 ? "_VsHlsl" : "_FsHlsl");
 					if (!haveDxbc && !hlslSources[stage].empty()) {
@@ -521,11 +521,11 @@ namespace ShaderCompiler
 					} else {
 						artifacts.D3d11 += "\tinline constexpr const char* " + sourceSym + " = nullptr;\n\n";
 					}
-					(stage == 0 ? hlsl.VsSource : hlsl.FsSource) = std::move(sourceSym);
+					(stage == 0 ? hlsl.VsSource : hlsl.FsSource) = Death::move(sourceSym);
 				}
-				hlslSymbols.push_back(std::move(hlsl));
-				vkSymbols.push_back(std::move(vk));
-				mslSymbols.push_back(std::move(msl));
+				hlslSymbols.push_back(Death::move(hlsl));
+				vkSymbols.push_back(Death::move(vk));
+				mslSymbols.push_back(Death::move(msl));
 
 				if (!r.Uniforms.empty()) {
 					output += "\tinline constexpr ShaderCompiler::Uniform " + prefix + "_Uniforms[] = {\n";

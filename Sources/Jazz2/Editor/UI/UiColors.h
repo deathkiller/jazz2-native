@@ -32,10 +32,14 @@ namespace Jazz2::Editor
 		Function<void()> OnClick;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
 		void Draw(UiPainter& painter) override;
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		bool YieldsToScroll() const override;
+		bool IsTabStop() const override;
+		bool OnKeyPressed(const KeyboardEvent& event) override;
 	};
 
 	/**
@@ -74,6 +78,7 @@ namespace Jazz2::Editor
 		static Colorf ToColor(std::uint32_t entry);
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
 		void Draw(UiPainter& painter) override;
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
@@ -85,10 +90,16 @@ namespace Jazz2::Editor
 		Function<std::int32_t()> _selected;
 		Function<void(std::int32_t, bool)> _onPick;
 		mutable String _tooltip;
+		mutable std::int32_t _tooltipIndex;
+		mutable std::uint32_t _tooltipEntry;
 		std::int32_t _dragIndex;
+		// The entries as one texture of 16 x 16 pixels, drawn at once, loaded again only when the palette changed
+		std::unique_ptr<Texture> _texture;
+		std::uint32_t _shownEntries[256];
 
 		std::int32_t GetIndexAt(Vector2f pos) const;
 		float GetCellPixels() const;
+		void UpdateTexture(const std::uint32_t* palette);
 	};
 
 	/**
@@ -119,6 +130,7 @@ namespace Jazz2::Editor
 		static bool FromHex(StringView text, Colorf& color);
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		bool MeasureDependsOnAvailable() const override;
 		void Draw(UiPainter& painter) override;
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;

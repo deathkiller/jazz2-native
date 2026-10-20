@@ -54,8 +54,8 @@ namespace nCine
 	}
 
 	SceneNode::SceneNode(SceneNode&& other) noexcept
-		: Object(std::move(other)), _updateEnabled(other._updateEnabled), _drawEnabled(other._drawEnabled), _parent(other._parent),
-			_children(std::move(other._children)), _visitOrderState(other._visitOrderState), _position(other._position), _anchorPoint(other._anchorPoint),
+		: Object(Death::move(other)), _updateEnabled(other._updateEnabled), _drawEnabled(other._drawEnabled), _parent(other._parent),
+			_children(Death::move(other._children)), _visitOrderState(other._visitOrderState), _position(other._position), _anchorPoint(other._anchorPoint),
 			_scaleFactor(other._scaleFactor), _rotation(other._rotation), _color(other._color), _layer(other._layer),
 			_shouldDeleteChildrenOnDestruction(other._shouldDeleteChildrenOnDestruction), _dirtyBits(other._dirtyBits), _lastFrameUpdated(other._lastFrameUpdated)
 	{
@@ -67,12 +67,12 @@ namespace nCine
 
 	SceneNode& SceneNode::operator=(SceneNode&& other) noexcept
 	{
-		Object::operator=(std::move(other));
+		Object::operator=(Death::move(other));
 
 		_updateEnabled = other._updateEnabled;
 		_drawEnabled = other._drawEnabled;
 		_parent = other._parent;
-		_children = std::move(other._children);
+		_children = Death::move(other._children);
 		_visitOrderState = other._visitOrderState;
 		_position = other._position;
 		_anchorPoint = other._anchorPoint;

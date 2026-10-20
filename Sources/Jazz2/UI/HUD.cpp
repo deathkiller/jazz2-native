@@ -60,6 +60,8 @@ namespace Jazz2::UI
 		static constexpr AnimState CharacterSpaz = (AnimState)61;
 		static constexpr AnimState CharacterLori = (AnimState)62;
 		static constexpr AnimState CharacterFrog = (AnimState)63;
+		static constexpr AnimState CharacterBird = (AnimState)64;
+		static constexpr AnimState CharacterBird2 = (AnimState)65;
 		static constexpr AnimState Heart = (AnimState)70;
 		static constexpr AnimState PickupGemRed = (AnimState)71;
 		static constexpr AnimState PickupGemGreen = (AnimState)72;
@@ -633,6 +635,17 @@ namespace Jazz2::UI
 			case PlayerType::Spaz: playerIcon = CharacterSpaz; break;
 			case PlayerType::Lori: playerIcon = CharacterLori; break;
 			case PlayerType::Frog: playerIcon = CharacterFrog; break;
+			case PlayerType::Bird: playerIcon = CharacterBird; break;
+			case PlayerType::Bird2: playerIcon = CharacterBird2; break;
+		}
+		// Either bird shows its own icon, or the one of the character it was if the content has none
+		if (player->IsBird() && _metadata->FindAnimation(playerIcon) == nullptr) {
+			switch (player->GetPlayerTypeBeforeMorph()) {
+				default:
+				case PlayerType::Jazz: playerIcon = CharacterJazz; break;
+				case PlayerType::Spaz: playerIcon = CharacterSpaz; break;
+				case PlayerType::Lori: playerIcon = CharacterLori; break;
+			}
 		}
 
 		std::int32_t health = player->GetHealth();
@@ -848,7 +861,8 @@ namespace Jazz2::UI
 		}
 #endif
 
-		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog) {
+		// The frog and the first bird have no weapon, the second bird shoots the player's
+		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog || player->_playerType == PlayerType::Bird) {
 			return;
 		}
 
@@ -1507,13 +1521,15 @@ namespace Jazz2::UI
 			offset.X += 6;
 		}
 
+		// A bird has no blaster of its own to show, it fires the one of the character it was
+		PlayerType blasterType = player->GetPersistentPlayerType();
 		if ((player->_inventory.WeaponUpgrades[(std::int32_t)weapon] & 0x01) != 0) {
 			switch (weapon) {
 				default:
 				case WeaponType::Blaster:
-					if (player->_playerType == PlayerType::Spaz) {
+					if (blasterType == PlayerType::Spaz) {
 						return WeaponPowerUpBlasterSpaz;
-					} else if (player->_playerType == PlayerType::Lori) {
+					} else if (blasterType == PlayerType::Lori) {
 						return WeaponPowerUpBlasterLori;
 					} else {
 						return WeaponPowerUpBlasterJazz;
@@ -1533,9 +1549,9 @@ namespace Jazz2::UI
 			switch (weapon) {
 				default:
 				case WeaponType::Blaster:
-					if (player->_playerType == PlayerType::Spaz) {
+					if (blasterType == PlayerType::Spaz) {
 						return WeaponBlasterSpaz;
-					} else if (player->_playerType == PlayerType::Lori) {
+					} else if (blasterType == PlayerType::Lori) {
 						return WeaponBlasterLori;
 					} else {
 						return WeaponBlasterJazz;
@@ -1807,7 +1823,8 @@ namespace Jazz2::UI
 		auto& state = _weaponWheel[player->_playerIndex];
 
 		if (PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled || player == nullptr ||
-			!((player->_controllable && player->_controllableExternal) || !_levelHandler->IsReforged()) || player->_playerType == PlayerType::Frog) {
+			!((player->_controllable && player->_controllableExternal) || !_levelHandler->IsReforged()) ||
+			player->_playerType == PlayerType::Frog || player->_playerType == PlayerType::Bird) {
 			if (state.Anim > 0.0f) {
 				state.Shown = false;
 				state.LastIndex = -1;

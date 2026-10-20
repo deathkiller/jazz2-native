@@ -29,6 +29,11 @@ namespace Jazz2::Editor
 
 	void PlayTransition::Start(Texture* outside, Texture* inside, const Colorf& color)
 	{
+		// With reduced motion, what's next is shown at once, without the ring
+		if (UiTheme::ReducedMotion) {
+			Stop();
+			return;
+		}
 		_outside = outside;
 		_inside = inside;
 		_color = color;
@@ -53,7 +58,6 @@ namespace Jazz2::Editor
 		_time = std::clamp(progress, 0.0f, 1.0f) * Duration;
 		_hold = hold;
 	}
-
 	void PlayTransition::Stop()
 	{
 		_outside = nullptr;

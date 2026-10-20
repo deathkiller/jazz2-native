@@ -1,0 +1,218 @@
+/*
+	Layer placement probe - where JJ2+ draws a layer, for every speed model, measured rather than read off its docs.
+
+	Not a trajectory probe: it moves nothing. It builds a set of layers of its own, puts them into the drawing order
+	behind the sprite layer, freezes the camera at a few places and logs `jjLAYER::getXPosition()`/`getYPosition()`
+	for each of them - the layer coordinate at the left/top edge of the player's subscreen, so a layer's tile (0, 0)
+	is drawn at minus that on the screen. That's what `Tiles::LayerDescription::GetViewCoordinates()` gives, plus
+	its hardcoded offset; the editor self-test's `TestLayerPlacement()` holds a selection of the measured cases.
+
+	The matrix is every LAYERSPEEDMODEL on both axes, by speed, auto speed, tiling (tileWidth/tileHeight) and
+	limitVisibleRegion, four times over with different speeds and offsets, plus eight layers of other sizes, which
+	is what FITLEVEL and SPEEDMULTIPLIERS depend on. The level's own eight layers are logged too.
+
+	Drop it next to Castle1.j2l as Castle1.j2as - JJ2+ picks up `<level>.j2as` by itself and the level file isn't
+	modified - and run `Jazz2.exe Castle1.j2l`; any level of 256x64 tiles does. Remove it again afterwards, it takes
+	the level over. The resolution is the one the game is set to, so run it once per resolution to be measured.
+
+	Output goes to layer_probe.asdat next to the game (jjSTREAM::save() forces that extension), written once when
+	the last batch is done - "Layer probe finished" is shown then, the game doesn't quit by itself.
+*/
+
+const string OutputFile = "layer_probe.csv";
+
+const array<LAYERSPEEDMODEL::LayerSpeedModel> Models = {
+	LAYERSPEEDMODEL::NORMAL, LAYERSPEEDMODEL::LAYER8, LAYERSPEEDMODEL::BOTHSPEEDS,
+	LAYERSPEEDMODEL::FROMSTART, LAYERSPEEDMODEL::FITLEVEL, LAYERSPEEDMODEL::SPEEDMULTIPLIERS
+};
+
+// Per batch: four speeds, two auto speeds and the offsets of every matrix layer
+const array<array<float> > BatchSpeeds = { { 0.0f, 0.5f, 1.0f, 1.5f }, { 0.0f, 0.5f, 1.0f, 1.5f }, { 0.25f, 2.0f, -0.5f, 3.0f }, { 0.75f, 1.25f, 0.1f, 0.9f } };
+const array<array<float> > BatchAutoSpeeds = { { 0.0f, 0.5f }, { 0.0f, -0.375f }, { 0.0f, -1.0f }, { 0.0f, 2.0f } };
+const array<float> BatchOffsetX = { 0.0f, 37.0f, 0.0f, -50.0f };
+const array<float> BatchOffsetY = { 0.0f, -23.0f, 0.0f, 61.0f };
+
+// The layers of other sizes, each without and with tiling - widths that can tile are multiples of four
+const array<int> SizeW = { 12, 28, 100, 256 };
+const array<int> SizeH = { 8, 14, 50, 64 };
+
+// Top left of the view, -1 is the bottom right corner of the level - the game doesn't clamp what it's given, a
+// position past the end puts the camera back at the start
+const array<float> CameraX = { 0.0f, 1000.0f, 2500.0f, -1.0f, 4000.0f };
+const array<float> CameraY = { 0.0f, 517.0f, 1000.0f, -1.0f, 300.0f };
+
+const int MatrixCount = 192;
+const int WarmupTicks = 70;
+const int SettleTicks = 6;
+const int SampleTicks = 2;
+
+array<jjLAYER@> TestLayers;
+jjSTREAM@ Log = jjSTREAM();
+
+int Warmed = 0;
+int Batch = 0;
+int Camera = 0;
+int Step = 0;
+bool Done = false;
+
+void onLevelLoad() {
+	for (int i = 0; i < MatrixCount; i++) {
+		TestLayers.insertLast(jjLAYER(40, 30));
+	}
+	for (int i = 0; i < 8; i++) {
+		TestLayers.insertLast(jjLAYER(SizeW[i / 2], SizeH[i / 2]));
+	}
+	// One tile at the origin, so there is something to draw - the rest of the layer is the empty tile
+	for (uint i = 0; i < TestLayers.length; i++) {
+		TestLayers[i].generateSettableTileArea(0, 0, 4, 1);
+		TestLayers[i].tileSet(0, 0, 1);
+	}
+
+	array<jjLAYER@> order = { jjLayers[1], jjLayers[2], jjLayers[3], jjLayers[4] };
+	for (uint i = 0; i < TestLayers.length; i++) {
+		order.insertLast(TestLayers[i]);
+	}
+	order.insertLast(jjLayers[5]);
+	order.insertLast(jjLayers[6]);
+	order.insertLast(jjLayers[7]);
+	order.insertLast(jjLayers[8]);
+	bool ordered = jjLayerOrderSet(order);
+
+	Log.write("#order," + (ordered ? 1 : 0) + "," + order.length + "\n");
+	ApplyBatch(0);
+}
+
+void ApplyBatch(int batch) {
+	for (int i = 0; i < MatrixCount; i++) {
+		jjLAYER@ layer = TestLayers[i];
+		int model = i / 32;
+		int rest = i % 32;
+		float speed = BatchSpeeds[batch][rest / 8];
+		float autoSpeed = BatchAutoSpeeds[batch][(rest % 8) / 4];
+		bool tiled = ((rest % 4) / 2) != 0;
+		bool limited = (rest % 2) != 0;
+		layer.xSpeedModel = Models[model];
+		layer.ySpeedModel = Models[model];
+		layer.xSpeed = speed;
+		layer.ySpeed = speed;
+		layer.xAutoSpeed = autoSpeed;
+		layer.yAutoSpeed = autoSpeed;
+		layer.xOffset = BatchOffsetX[batch];
+		layer.yOffset = BatchOffsetY[batch];
+		layer.tileWidth = tiled;
+		layer.tileHeight = tiled;
+		layer.limitVisibleRegion = limited;
+	}
+
+	for (int i = 0; i < 8; i++) {
+		jjLAYER@ layer = TestLayers[MatrixCount + i];
+		bool tiled = (i % 2) != 0;
+		layer.tileWidth = tiled;
+		layer.tileHeight = tiled;
+		layer.xOffset = 0.0f;
+		layer.yOffset = 0.0f;
+		switch (batch) {
+			case 0:
+				layer.xSpeedModel = LAYERSPEEDMODEL::FITLEVEL;
+				layer.ySpeedModel = LAYERSPEEDMODEL::FITLEVEL;
+				layer.xSpeed = 0.5f;
+				layer.ySpeed = 0.5f;
+				layer.xAutoSpeed = 0.5f;
+				layer.yAutoSpeed = 0.5f;
+				layer.limitVisibleRegion = true;
+				break;
+			case 1:
+				layer.xSpeedModel = LAYERSPEEDMODEL::SPEEDMULTIPLIERS;
+				layer.ySpeedModel = LAYERSPEEDMODEL::SPEEDMULTIPLIERS;
+				layer.xSpeed = 0.25f;
+				layer.ySpeed = 0.25f;
+				layer.xAutoSpeed = 0.75f;
+				layer.yAutoSpeed = 0.75f;
+				layer.limitVisibleRegion = true;
+				break;
+			case 2:
+				layer.xSpeedModel = LAYERSPEEDMODEL::NORMAL;
+				layer.ySpeedModel = LAYERSPEEDMODEL::NORMAL;
+				layer.xSpeed = 0.5f;
+				layer.ySpeed = 0.5f;
+				layer.xAutoSpeed = 0.0f;
+				layer.yAutoSpeed = 0.0f;
+				layer.limitVisibleRegion = true;
+				break;
+			default:
+				layer.xSpeedModel = LAYERSPEEDMODEL::FROMSTART;
+				layer.ySpeedModel = LAYERSPEEDMODEL::FROMSTART;
+				layer.xSpeed = 0.5f;
+				layer.ySpeed = 0.5f;
+				layer.xAutoSpeed = 0.0f;
+				layer.yAutoSpeed = 0.0f;
+				layer.limitVisibleRegion = true;
+				break;
+		}
+	}
+}
+
+void FreezeCamera(jjPLAYER@ play, int camera) {
+	float x = (CameraX[camera] < 0.0f ? float(jjLayerWidth[4] * 32 - jjSubscreenWidth) : CameraX[camera]);
+	float y = (CameraY[camera] < 0.0f ? float(jjLayerHeight[4] * 32 - jjSubscreenHeight) : CameraY[camera]);
+	play.cameraFreeze(x, y, false, true);
+}
+
+void LogLayer(jjPLAYER@ play, const string &in id, jjLAYER@ layer) {
+	Log.write("lp," + jjSubscreenWidth + "x" + jjSubscreenHeight + "," + Batch + "," + Camera + "," + (Step - SettleTicks) + "," +
+		jjGameTicks + "," + jjRenderFrame + "," +
+		formatFloat(play.cameraX, "", 0, 3) + "," + formatFloat(play.cameraY, "", 0, 3) + "," + id + "," +
+		int(layer.xSpeedModel) + "," + int(layer.ySpeedModel) + "," +
+		formatFloat(layer.xSpeed, "", 0, 4) + "," + formatFloat(layer.ySpeed, "", 0, 4) + "," +
+		formatFloat(layer.xAutoSpeed, "", 0, 4) + "," + formatFloat(layer.yAutoSpeed, "", 0, 4) + "," +
+		formatFloat(layer.xOffset, "", 0, 3) + "," + formatFloat(layer.yOffset, "", 0, 3) + "," +
+		(layer.tileWidth ? 1 : 0) + "," + (layer.tileHeight ? 1 : 0) + "," + (layer.limitVisibleRegion ? 1 : 0) + "," +
+		layer.width + "," + layer.height + "," +
+		formatFloat(layer.getXPosition(play), "", 0, 3) + "," + formatFloat(layer.getYPosition(play), "", 0, 3) + "\n");
+}
+
+void onPlayer(jjPLAYER@ play) {
+	if (Done) {
+		return;
+	}
+	play.invincibility = 70;
+	if (Warmed < WarmupTicks) {
+		Warmed++;
+		if (Warmed == WarmupTicks) {
+			Log.write("#res," + jjResolutionWidth + "," + jjResolutionHeight + "," + jjSubscreenWidth + "," + jjSubscreenHeight + "," +
+				jjResolutionMaxWidth + "," + jjResolutionMaxHeight + "," + jjBorderWidth + "," + jjBorderHeight + "," +
+				jjLayerWidth[4] + "," + jjLayerHeight[4] + "\n");
+			Log.write("scenario,res,batch,cam,sample,gametick,renderframe,camx,camy,id,xmodel,ymodel,xspeed,yspeed,xauto,yauto,xoffset,yoffset,tilew,tileh,limit,w,h,getx,gety\n");
+			FreezeCamera(play, 0);
+		}
+		return;
+	}
+
+	if (Step >= SettleTicks) {
+		for (uint i = 0; i < TestLayers.length; i++) {
+			LogLayer(play, "T" + i, TestLayers[i]);
+		}
+		for (int i = 1; i <= 8; i++) {
+			LogLayer(play, "L" + i, jjLayers[i]);
+		}
+	}
+
+	Step++;
+	if (Step >= SettleTicks + SampleTicks) {
+		Step = 0;
+		Camera++;
+		if (Camera >= int(CameraX.length)) {
+			Camera = 0;
+			Batch++;
+			if (Batch >= int(BatchSpeeds.length)) {
+				Done = true;
+				play.cameraUnfreeze(true);
+				Log.save(OutputFile);
+				jjAlert("Layer probe finished, wrote " + OutputFile);
+				return;
+			}
+			ApplyBatch(Batch);
+		}
+		FreezeCamera(play, Camera);
+	}
+}

@@ -310,7 +310,7 @@ namespace Jazz2::Multiplayer
 			String nullTerminatedMac = String::nullTerminatedView(mac);
 			if (enet_address_set_host(&addr, nullTerminatedMac.data()) == 0) {
 				addr.port = defaultPort;
-				_desiredEndpoints.push_back(std::move(addr));
+				_desiredEndpoints.push_back(Death::move(addr));
 			} else {
 				LOGW("Failed to parse specified ad hoc endpoint \"{}\"", firstEndpoint);
 			}
@@ -501,7 +501,12 @@ namespace Jazz2::Multiplayer
 		addr.port = port;
 
 		_host = enet_host_create(&addr, MaxPeerCount, (std::size_t)NetworkChannel::Count, 0, 0);
-		DEATH_ASSERT(_host != nullptr, "Failed to create a server", false);
+		if (_host == nullptr) {
+			// Not an assertion, which is compiled out without DEATH_TRACE - the port is taken by another server most likely,
+			// and the network thread would be started on no host at all
+			LOGE("Failed to create a server on port {}", port);
+			return false;
+		}
 
 		_handler = handler;
 		_state = NetworkState::Listening;
@@ -697,7 +702,7 @@ namespace Jazz2::Multiplayer
 						String addressString = AddressToString(*addrPtr, _host->address.port);
 						LOGI(" -\t{}: {}", ifr[i].ifr_name, addressString);
 						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
-							arrayAppend(result, std::move(addressString));
+							arrayAppend(result, Death::move(addressString));
 						}
 					}
 #		if ENET_IPV6
@@ -707,7 +712,7 @@ namespace Jazz2::Multiplayer
 						String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
 						LOGI(" -\t{}: {}", ifr[i].ifr_name, addressString);
 						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
-							arrayAppend(result, std::move(addressString));
+							arrayAppend(result, Death::move(addressString));
 						}
 					}
 #		endif
@@ -729,7 +734,7 @@ namespace Jazz2::Multiplayer
 							auto* addrPtr = &((struct sockaddr_in*)address->Address.lpSockaddr)->sin_addr;
 							String addressString = AddressToString(*addrPtr, _host->address.port);
 							if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
-								arrayAppend(result, std::move(addressString));
+								arrayAppend(result, Death::move(addressString));
 							}
 						}
 #		if ENET_IPV6
@@ -738,7 +743,7 @@ namespace Jazz2::Multiplayer
 							//auto scopeId = ((struct sockaddr_in6*)address->Address.lpSockaddr)->sin6_scope_id;
 							String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
 							if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
-								arrayAppend(result, std::move(addressString));
+								arrayAppend(result, Death::move(addressString));
 							}
 						}
 #		endif
@@ -761,7 +766,7 @@ namespace Jazz2::Multiplayer
 				LOGI("Found 1 interface:");
 				LOGI(" -\t{}", addressString);
 				if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
-					arrayAppend(result, std::move(addressString));
+					arrayAppend(result, Death::move(addressString));
 				}
 			} else {
 				LOGW("Failed to get server endpoints");
@@ -776,7 +781,7 @@ namespace Jazz2::Multiplayer
 				LOGI("Found 1 interface:");
 				LOGI(" -\t{}", addressString);
 				if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
-					arrayAppend(result, std::move(addressString));
+					arrayAppend(result, Death::move(addressString));
 				}
 			} else {
 				LOGW("Failed to get server endpoints");
@@ -791,7 +796,7 @@ namespace Jazz2::Multiplayer
 					String addressString = format("{}:{}", macString, _host->address.port);
 					LOGI("Found 1 interface (ad hoc):");
 					LOGI(" -\t{}", addressString);
-					arrayAppend(result, std::move(addressString));
+					arrayAppend(result, Death::move(addressString));
 				} else {
 					LOGW("Failed to get server endpoints");
 				}
@@ -806,7 +811,7 @@ namespace Jazz2::Multiplayer
 				LOGI("Found 1 interface:");
 				LOGI(" -\t{}", addressString);
 				if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
-					arrayAppend(result, std::move(addressString));
+					arrayAppend(result, Death::move(addressString));
 				}
 			} else {
 				LOGW("Failed to get server endpoints");
@@ -823,7 +828,7 @@ namespace Jazz2::Multiplayer
 						auto* addrPtr = &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
 						String addressString = AddressToString(*addrPtr, _host->address.port);
 						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
-							arrayAppend(result, std::move(addressString));
+							arrayAppend(result, Death::move(addressString));
 						}
 					}
 #		if ENET_IPV6
@@ -832,7 +837,7 @@ namespace Jazz2::Multiplayer
 						//auto scopeId = ((struct sockaddr_in6*)ifa->ifa_addr)->sin6_scope_id;
 						String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
 						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
-							arrayAppend(result, std::move(addressString));
+							arrayAppend(result, Death::move(addressString));
 						}
 					}
 #		endif
@@ -850,7 +855,7 @@ namespace Jazz2::Multiplayer
 			) {
 				String addressString = AddressToString(_connectedPeers[0]._enet->address, true);
 				if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
-					arrayAppend(result, std::move(addressString));
+					arrayAppend(result, Death::move(addressString));
 				}
 			}
 		}

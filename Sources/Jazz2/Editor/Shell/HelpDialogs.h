@@ -4,14 +4,14 @@
 
 namespace Jazz2::Editor
 {
-	class EditorSession;
+	class IEditorContext;
 
 	/**
 		@brief Shows a search of all actions of the editor, the one picked is done right away
 
 		What's written is looked for in their names, Enter does the first one found.
 	*/
-	void ShowCommandPalette(EditorSession& session);
+	void ShowCommandPalette(IEditorContext& session);
 
 	/**
 		@brief Shows all actions with their shortcuts, which can be changed
@@ -20,12 +20,12 @@ namespace Jazz2::Editor
 		keeps it. A shortcut another action had moves to the new one. Changed shortcuts are saved to
 		`Jazz2.EditorHotkeys.json` in the configuration directory.
 	*/
-	void ShowShortcutsDialog(EditorSession& session);
+	void ShowShortcutsDialog(IEditorContext& session);
 
 	/**
 		@brief Shows the changes that can be undone and redone, a click goes back or forward to one of them
 	*/
-	void ShowHistoryDialog(EditorSession& session);
+	void ShowHistoryDialog(IEditorContext& session);
 }
 
 #endif

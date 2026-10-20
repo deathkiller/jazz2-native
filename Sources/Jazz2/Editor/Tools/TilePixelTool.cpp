@@ -19,7 +19,7 @@ namespace Jazz2::Editor
 	}
 
 	TilePixelTool::TilePixelTool(IToolHost& host)
-		: EditorTool(host), _tileId(-1), _painting(false), _button(MouseButton::Left), _lastPixel(-1, -1)
+		: EditorTool(host), _tileId(-1), _painting(false), _button(MouseButton::Left), _lastPixel(-1, -1), _lastCell(INT32_MIN, INT32_MIN)
 	{
 	}
 
@@ -31,7 +31,7 @@ namespace Jazz2::Editor
 	void TilePixelTool::SetTarget(std::int32_t tileId, PaintFunction&& paint)
 	{
 		_tileId = tileId;
-		_paint = std::move(paint);
+		_paint = Death::move(paint);
 		_painting = false;
 	}
 
@@ -91,7 +91,8 @@ namespace Jazz2::Editor
 		_painting = true;
 		_button = pointer.Button;
 		_lastPixel = pixel;
-		_paint(pixel, _button, false);
+		_lastCell = pointer.Cell;
+		_paint(pixel, pixel, _button, false);
 	}
 
 	void TilePixelTool::OnPointerMove(const ToolPointer& pointer)
@@ -100,10 +101,14 @@ namespace Jazz2::Editor
 			return;
 		}
 		Vector2i pixel;
-		if (GetPixel(pointer, pixel) && pixel != _lastPixel) {
-			_lastPixel = pixel;
-			_paint(pixel, _button, true);
+		if (!GetPixel(pointer, pixel) || (pixel == _lastPixel && pointer.Cell == _lastCell)) {
+			return;
 		}
+		// Within the same cell the pixels between are painted too, another place of the tile starts anew
+		Vector2i from = (pointer.Cell == _lastCell ? _lastPixel : pixel);
+		_lastPixel = pixel;
+		_lastCell = pointer.Cell;
+		_paint(from, pixel, _button, true);
 	}
 
 	void TilePixelTool::OnPointerUp(const ToolPointer& pointer)

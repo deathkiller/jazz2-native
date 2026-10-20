@@ -759,7 +759,7 @@ namespace nCine::Backends
 		for (int i = 0; i < length && i < maxSize; i++) {
 			jobject modeObject = AndroidJniHelper::jniEnv->GetObjectArrayElement(arrModes, i);
 			AndroidJniClass_DisplayMode mode(modeObject);
-			destination[i] = std::move(mode);
+			destination[i] = Death::move(mode);
 			// The AndroidJniClass constructor deleted the local reference to `modeObject`
 		}
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrModes);
@@ -1165,7 +1165,7 @@ namespace nCine::Backends
 			for (int i = 0; i < length && i < maxSize; i++) {
 				jobject displayObject = AndroidJniHelper::jniEnv->GetObjectArrayElement(arrDisplays, i);
 				AndroidJniClass_Display display(displayObject);
-				destination[i] = std::move(display);
+				destination[i] = Death::move(display);
 				// The AndroidJniClass constructor deleted the local reference to `displayObject`
 			}
 		}

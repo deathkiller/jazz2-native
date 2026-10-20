@@ -66,19 +66,19 @@ namespace Jazz2
 
 	LevelInitialization::LevelInitialization(LevelInitialization&& move) noexcept
 	{
-		LevelName = std::move(move.LevelName);
+		LevelName = Death::move(move.LevelName);
 		IsLocalSession = move.IsLocalSession;
 		LocalMultiplayerGameMode = move.LocalMultiplayerGameMode;
 		Difficulty = move.Difficulty;
 		IsReforged = move.IsReforged;
 		CheatsUsed = move.CheatsUsed;
 		LastExitType = move.LastExitType;
-		LastEpisodeName = std::move(move.LastEpisodeName);
+		LastEpisodeName = Death::move(move.LastEpisodeName);
 		ElapsedMilliseconds = move.ElapsedMilliseconds;
 
 		std::memcpy(PlayerCarryOvers, move.PlayerCarryOvers, sizeof(PlayerCarryOvers));
-		ReturnLevelState = std::move(move.ReturnLevelState);
-		RestoreLevelState = std::move(move.RestoreLevelState);
+		ReturnLevelState = Death::move(move.ReturnLevelState);
+		RestoreLevelState = Death::move(move.RestoreLevelState);
 	}
 
 	std::int32_t LevelInitialization::GetPlayerCount(const PlayerCarryOver** firstPlayer) const

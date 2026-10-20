@@ -5,6 +5,7 @@
 #include "../Shaders/Generated/ShadersGen.h"
 #include "Compatibility/JJ2Anims.Palettes.h"
 #include "Formats/LevelFile.h"
+#include "Formats/LevelTextsChunk.h"
 #include "Formats/TileSetFile.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
@@ -142,7 +143,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set - bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 15;
+	static constexpr std::uint64_t ShadersVersion = 16;
 
 	ContentResolver& ContentResolver::Get()
 	{
@@ -167,6 +168,8 @@ namespace Jazz2
 
 	void ContentResolver::Release()
 	{
+		// The pins point into the cache
+		_pinnedMetadata.clear();
 		_cachedMetadata.clear();
 		_cachedGraphics.clear();
 #if defined(WITH_AUDIO)
@@ -471,7 +474,7 @@ namespace Jazz2
 		String localSourcePath = fs::CombinePath(localBase, "Source/"_s);
 		if (fs::FindPathCaseInsensitive(fs::CombinePath(localSourcePath, "Anims.j2a"_s)) ||
 			fs::FindPathCaseInsensitive(fs::CombinePath(localSourcePath, "AnimsSw.j2a"_s))) {
-			_sourcePath = std::move(localSourcePath);
+			_sourcePath = Death::move(localSourcePath);
 			_cachePath = fs::CombinePath(localBase, "Cache/"_s);
 		} else {
 			auto localStorage = fs::GetLocalStorage();
@@ -492,7 +495,7 @@ namespace Jazz2
 		StringView localBase = fs::GetDirectoryName(executablePath);
 		String localContentPath = fs::CombinePath(localBase, "Content/"_s);
 		if (fs::DirectoryExists(localContentPath)) {
-			_contentPath = std::move(localContentPath);
+			_contentPath = Death::move(localContentPath);
 			_sourcePath = fs::CombinePath(localBase, "Source/"_s);
 			_cachePath = fs::CombinePath(localBase, "Cache/"_s);
 		} else if (fs::DirectoryExists(_contentPath)) {
@@ -583,7 +586,7 @@ namespace Jazz2
 			if (!bootDirectory.empty()) {
 				String contentPath = bootDirectory + "Content/"_s;
 				if (nCine::Backends::Ps2Storage::DirectoryExists(contentPath)) {
-					_contentPath = std::move(contentPath);
+					_contentPath = Death::move(contentPath);
 					_cachePath = bootDirectory + "Cache/"_s;
 					_sourcePath = bootDirectory + "Source/"_s;
 					// Unlike a disc, this is somewhere the game can write - the level cache has somewhere
@@ -605,10 +608,10 @@ namespace Jazz2
 					String root = device + "Games/Jazz2/"_s;
 					String contentPath = root + "Content/"_s;
 					if (nCine::Backends::Ps2Storage::DirectoryExists(contentPath)) {
-						_contentPath = std::move(contentPath);
+						_contentPath = Death::move(contentPath);
 						_cachePath = root + "Cache/"_s;
 						_sourcePath = root + "Source/"_s;
-						_writablePath = std::move(root);
+						_writablePath = Death::move(root);
 						LOGI("Reading content from \"{}\" (removable storage), which is also writable", _writablePath);
 						break;
 					}
@@ -911,10 +914,25 @@ namespace Jazz2
 		std::int32_t soundsKept = 0, soundsReleased = 0;
 #endif
 
-		// Pinned metadata stays with everything it uses, whatever was requested in the meantime (see PinMetadata())
-		for (auto& resource : _cachedMetadata) {
-			if ((resource.second->Flags & MetadataFlags::Pinned) == MetadataFlags::Pinned) {
+		if (_retainedResources > 0) {
+			// Everything stays while it's retained, also what wasn't requested by this loading (see RetainLoadedResources())
+			for (auto& resource : _cachedMetadata) {
 				MarkReferenced(*resource.second);
+			}
+			for (auto& resource : _cachedGraphics) {
+				resource.second->Flags |= GenericGraphicResourceFlags::Referenced;
+			}
+#if defined(WITH_AUDIO)
+			for (auto& resource : _cachedSounds) {
+				resource.second->Flags |= GenericSoundResourceFlags::Referenced;
+			}
+#endif
+		} else {
+			// Pinned metadata stays with everything it uses, whatever was requested in the meantime (see PinMetadata())
+			for (auto& resource : _cachedMetadata) {
+				if ((resource.second->Flags & MetadataFlags::Pinned) == MetadataFlags::Pinned) {
+					MarkReferenced(*resource.second);
+				}
 			}
 		}
 
@@ -1021,16 +1039,40 @@ namespace Jazz2
 		if (metadata == nullptr) {
 			return;
 		}
+		// Counted, so one that pins it doesn't take it away from another one that still needs it
+		for (std::size_t i = 0; i < _pinnedMetadata.size(); i++) {
+			if (_pinnedMetadata[i].first() != metadata) {
+				continue;
+			}
+			if (pinned) {
+				_pinnedMetadata[i].second()++;
+			} else if (--_pinnedMetadata[i].second() <= 0) {
+				_pinnedMetadata.eraseUnordered(_pinnedMetadata.begin() + i);
+				metadata->Flags &= ~MetadataFlags::Pinned;
+			}
+			return;
+		}
 		if (pinned) {
+			_pinnedMetadata.emplace_back(metadata, 1);
 			metadata->Flags |= MetadataFlags::Pinned;
-		} else {
-			metadata->Flags &= ~MetadataFlags::Pinned;
+		}
+	}
+
+	void ContentResolver::RetainLoadedResources()
+	{
+		_retainedResources++;
+	}
+
+	void ContentResolver::ReleaseLoadedResources()
+	{
+		if (_retainedResources > 0) {
+			_retainedResources--;
 		}
 	}
 
 	void ContentResolver::OverridePathHandler(Function<String(StringView)>&& callback)
 	{
-		_pathHandler = std::move(callback);
+		_pathHandler = Death::move(callback);
 	}
 
 	void ContentResolver::PreloadMetadataAsync(StringView path)
@@ -1070,9 +1112,9 @@ namespace Jazz2
 		bool multipleAnimsNoStatesWarning = false;
 
 		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
-		metadata->Path = std::move(pathNormalized);
+		metadata->Path = Death::move(pathNormalized);
 		// The cache key references this string (the map key is a non-owning Reference), so it lives inside the value
-		metadata->CacheKey = std::move(cacheKey);
+		metadata->CacheKey = Death::move(cacheKey);
 		metadata->Flags |= MetadataFlags::Referenced;
 
 		Json::CharReaderBuilder builder;
@@ -1271,12 +1313,12 @@ namespace Jazz2
 						}
 					}
 #endif
-					metadata->Sounds.emplace(key, std::move(sound));
+					metadata->Sounds.emplace(key, Death::move(sound));
 				}
 			}
 		}
 
-		return _cachedMetadata.emplace(metadata->CacheKey, std::move(metadata)).first->second.get();
+		return _cachedMetadata.emplace(metadata->CacheKey, Death::move(metadata)).first->second.get();
 	}
 
 	bool ContentResolver::ResolveSound(Resources::SoundResource& sound)
@@ -1308,7 +1350,7 @@ namespace Jazz2
 				auto resource = std::make_unique<GenericSoundResource>(nativePath);
 #	else
 				auto s = OpenContentFile(fs::CombinePath("Animations"_s, assetPath));
-				auto resource = std::make_unique<GenericSoundResource>(std::move(s), assetPath);
+				auto resource = std::make_unique<GenericSoundResource>(Death::move(s), assetPath);
 #	endif
 				if (resource->Buffer.numSamples() <= 0) {
 					// The file was missing or could not be decoded (AudioBuffer already logged it).
@@ -1317,7 +1359,7 @@ namespace Jazz2
 					// below mark the sound Unavailable, so the read is not retried on every play.
 					continue;
 				}
-				auto res = _cachedSounds.emplace(assetPath, std::move(resource));
+				auto res = _cachedSounds.emplace(assetPath, Death::move(resource));
 				res.first->second->Flags |= GenericSoundResourceFlags::Referenced;
 				sound.Buffers.push_back(res.first->second.get());
 			}
@@ -1560,7 +1602,7 @@ namespace Jazz2
 #if defined(DEATH_DEBUG)
 				MigrateGraphics(pathNormalized);
 #endif
-				return _cachedGraphics.emplace(Pair(String(pathNormalized), cacheKeyOffset), std::move(graphics)).first->second.get();
+				return _cachedGraphics.emplace(Pair(String(pathNormalized), cacheKeyOffset), Death::move(graphics)).first->second.get();
 			}
 		}
 
@@ -1785,7 +1827,7 @@ namespace Jazz2
 		graphics->FrameDimensions = Vector2i(frameDimensionsX, frameDimensionsY);
 		graphics->FrameConfiguration = Vector2i(frameConfigurationX, frameConfigurationY);
 		graphics->FrameCount = frameCount;
-		graphics->FrameRects = std::move(frameRects);
+		graphics->FrameRects = Death::move(frameRects);
 		// The collision mask covers the whole sheet, so its rows are as wide as the sheet
 		graphics->MaskStride = (std::int32_t)width;
 
@@ -1810,7 +1852,7 @@ namespace Jazz2
 		// Indexed sprites are cached under a dedicated key (matching the lookup in RequestGraphics) so they don't
 		// collide with the baked variant of the same sprite
 		std::uint16_t cacheKeyOffset = (keepIndexed ? IndexedGraphicsCacheKey : paletteOffset);
-		return _cachedGraphics.emplace(Pair(String(path), cacheKeyOffset), std::move(graphics)).first->second.get();
+		return _cachedGraphics.emplace(Pair(String(path), cacheKeyOffset), Death::move(graphics)).first->second.get();
 	}
 
 	bool ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height,
@@ -1992,7 +2034,8 @@ namespace Jazz2
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(Stream& s, StringView path, std::uint16_t captionTileId, bool applyPalette,
 		const std::uint8_t* paletteRemapping, const BitArray* usedTiles, bool withDiffuse)
 	{
-		// Read outside of an assert, which isn't evaluated at all in builds without them
+		// Read outside of an assert, which isn't evaluated at all in builds without them. The header is validated too,
+		// everything below relies on its sizes, and a tile set can come embedded in a level from anywhere.
 		Formats::TileSetHeader header;
 		if (!Formats::TileSetFile::ReadHeader(s, header)) {
 			LOGE("Tile set \"{}\" has invalid signature", path);
@@ -2021,8 +2064,8 @@ namespace Jazz2
 
 		// Mask (kept packed, 1 bit per pixel - see ReadTilesetMask)
 		std::uint32_t maskSize;
-		std::unique_ptr<std::uint8_t[]> mask = ReadTilesetMask(uc, maskSize);
-		if (!uc.IsValid()) {
+		std::unique_ptr<std::uint8_t[]> mask = ReadTilesetMask(uc, tileCount, maskSize);
+		if (mask == nullptr || !uc.IsValid()) {
 			return nullptr;
 		}
 		// The image content follows the compressed block, the stream is moved past it in case the decompression didn't
@@ -2047,6 +2090,11 @@ namespace Jazz2
 			String name = path;
 			textureDiffuse = BuildTilesetDiffuse(s, name.data(), channelCount, lz4Content, usedTiles, atlasSlot, width, height, tileCount,
 				is32bitTile.get(), paletteRemapping, captionTileId, indexTiles, tileDiffuseOpaque, tileEffectInfo, captionTile);
+			if (textureDiffuse.empty()) {
+				// A valid header always gives at least one tile to the atlas, so nothing means it couldn't be built
+				LOGE("Cannot build atlas of tile set \"{}\"", path);
+				return nullptr;
+			}
 		}
 
 		if (!uc.IsValid()) {
@@ -2088,16 +2136,24 @@ namespace Jazz2
 		}
 	}
 
-	std::unique_ptr<std::uint8_t[]> ContentResolver::ReadTilesetMask(Stream& uc, std::uint32_t& maskSize)
+	std::unique_ptr<std::uint8_t[]> ContentResolver::ReadTilesetMask(Stream& uc, std::uint16_t tileCount, std::uint32_t& maskSize)
 	{
-		maskSize = uc.ReadValueAsLE<std::uint32_t>();
+		const std::uint32_t storedSize = uc.ReadValueAsLE<std::uint32_t>();
 
 		// The cache already stores the mask packed (1 bit per pixel, LSB-first, row-major) - keep it packed:
 		// TileSet and every collision query consume the packed form directly, which is 8x smaller than the
 		// former byte-per-pixel expansion (~1 MB -> 128 KB for a big tileset) and lets the rectangle scans
-		// test a whole 32-pixel row with one 32-bit AND
-		std::unique_ptr<std::uint8_t[]> mask = std::make_unique<std::uint8_t[]>(maskSize);
-		uc.Read(mask.get(), maskSize);
+		// test a whole 32-pixel row with one 32-bit AND.
+		//
+		// The buffer always has room for every tile, whatever size the file states: a tile's mask is found by its
+		// ID alone, and the stated size is never trusted with an allocation either. A shorter mask leaves the rest
+		// of the tiles empty, a longer one has nothing more to give (the block ends with it).
+		maskSize = std::uint32_t(tileCount) * Tiles::TileSet::MaskBytesPerTile;
+		std::unique_ptr<std::uint8_t[]> mask(new (std::nothrow) std::uint8_t[maskSize > 0 ? maskSize : 1]());
+		if (mask == nullptr) {
+			return nullptr;
+		}
+		uc.Read(mask.get(), std::min<std::uint32_t>(storedSize, maskSize));
 		return mask;
 	}
 
@@ -2149,9 +2205,11 @@ namespace Jazz2
 		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<std::uint8_t[]>& tileEffectInfo, std::unique_ptr<Color[]>& captionTile)
 	{
 		// 32-bit (true-color) tiles have no palette index, so a tileset containing any must stay baked as RGBA;
-		// an all-8-bit tileset keeps raw palette indices and recolors at draw time (uploaded as R8).
+		// an all-8-bit tileset keeps raw palette indices and recolors at draw time (uploaded as R8). A single-channel
+		// image has no colors for a true color tile, such a tile is read as an 8-bit one, as TileSetFile::Read() does.
+		const bool hasTrueColor = (channelCount >= 4);
 		indexTiles = true;
-		for (std::int32_t t = 0; t < (std::int32_t)tileCount; t++) {
+		for (std::int32_t t = 0; t < (std::int32_t)tileCount && hasTrueColor; t++) {
 			if ((is32bitTile[t / 8] & (1 << (t & 7))) != 0) {
 				indexTiles = false;
 				break;
@@ -2180,7 +2238,11 @@ namespace Jazz2
 		static_assert(Compatibility::JJ2Anims::TilesetLz4BandRows == TileSet::DefaultTileSize, "LZ4 blocks of a tileset have to be one band each");
 		bool lz4Failed = false;
 		const std::uint32_t sheetBandCount = (height + sheetBandRows - 1) / sheetBandRows;
-		std::unique_ptr<std::uint8_t[]> sheetBand = std::make_unique<std::uint8_t[]>(std::size_t(sheetBandRows) * width * channelCount);
+		// The header was validated (see TileSetFile::Validate()), so a band is a few megabytes at most
+		std::unique_ptr<std::uint8_t[]> sheetBand(new (std::nothrow) std::uint8_t[std::size_t(sheetBandRows) * width * channelCount]());
+		if (sheetBand == nullptr) {
+			return {};
+		}
 		Compatibility::JJ2Anims::ImageContentDecoder sheetDecoder;
 		std::int32_t sheetBandIndex = -1;
 		// The compressed sheet is read into memory in one go when it can be (see ReadImageFromFile for
@@ -2207,7 +2269,7 @@ namespace Jazz2
 		auto extractCaptionTile = [&]() {
 			const std::uint32_t tileX = (captionTileId % srcTilesPerRow) * TileSet::DefaultTileSize;
 			const std::uint32_t tileY = (captionTileId / srcTilesPerRow) * TileSet::DefaultTileSize;
-			const bool captionIs32bit = ((is32bitTile[captionTileId / 8] & (1 << (captionTileId & 7))) != 0);
+			const bool captionIs32bit = (hasTrueColor && (is32bitTile[captionTileId / 8] & (1 << (captionTileId & 7))) != 0);
 			captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
 			const std::uint8_t* pixels = sheetBand.get();
 
@@ -2313,7 +2375,9 @@ namespace Jazz2
 		if (usedTiles != nullptr) {
 			atlasSlot = std::make_unique<std::uint16_t[]>(tileCount);
 			slotToTile.push_back(0);
-			for (std::uint32_t t = 0; t < tileCount; t++) {
+			// The file is read again for the pruned atlas, the bits come from the first read of it
+			const std::uint32_t usedCount = std::uint32_t(std::min<std::size_t>(usedTiles->size(), tileCount));
+			for (std::uint32_t t = 0; t < usedCount; t++) {
 				if ((*usedTiles)[t]) {
 					atlasSlot[t] = (std::uint16_t)slotToTile.size();
 					slotToTile.push_back((std::uint16_t)t);
@@ -2335,7 +2399,7 @@ namespace Jazz2
 
 		// Caption tile (level-select thumbnail): downscale one tile 1:3 vertically, averaging 3 source rows. Resolve
 		// 8-bit indices through the palette here (32-bit tiles already hold RGB).
-		if (KeepCaptionTiles && captionTileId > 0) {
+		if (KeepCaptionTiles && captionTileId > 0 && captionTileId < tileCount) {
 			const std::uint32_t tileX = (captionTileId % srcTilesPerRow) * TileSet::DefaultTileSize;
 			const std::uint32_t tileY = (captionTileId / srcTilesPerRow) * TileSet::DefaultTileSize;
 			if (tileX + TileSet::DefaultTileSize <= width && tileY + TileSet::DefaultTileSize <= height) {
@@ -2396,8 +2460,16 @@ namespace Jazz2
 		// one chunk and uploaded before the next is filled, so the peak is one chunk rather than the whole
 		// sheet and nothing here needs a contiguous block larger than a single texture.
 		const std::uint32_t chunkRowsMax = std::min(tileRowsPerChunk, tilesPerColumn);
-		const std::size_t chunkBytes = std::size_t(paddedWidth) * chunkRowsMax * paddedTileSize * dstChannels;
-		std::unique_ptr<std::uint8_t[]> chunk = std::make_unique<std::uint8_t[]>(chunkBytes);
+		// Checked in 64 bits: a wide sheet on a device that reports a huge texture limit could overflow a 32-bit size
+		const std::uint64_t chunkBytes64 = std::uint64_t(paddedWidth) * chunkRowsMax * paddedTileSize * dstChannels;
+		if (chunkBytes64 == 0 || chunkBytes64 > std::uint64_t(SIZE_MAX / 2)) {
+			return {};
+		}
+		const std::size_t chunkBytes = std::size_t(chunkBytes64);
+		std::unique_ptr<std::uint8_t[]> chunk(new (std::nothrow) std::uint8_t[chunkBytes]());
+		if (chunk == nullptr) {
+			return {};
+		}
 
 		SmallVector<std::unique_ptr<Texture>, 1> textures;
 		const bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
@@ -2443,7 +2515,7 @@ namespace Jazz2
 				// The sheet's tile grid can be larger than its declared tile count (the last row may be
 				// padding), and the flag array holds exactly (tileCount + 7) / 8 bytes - a grid position
 				// past the count has no flag to read and is never a 32-bit tile
-				const bool is32bit = (tileIdx < (std::int32_t)tileCount) &&
+				const bool is32bit = hasTrueColor && (tileIdx < (std::int32_t)tileCount) &&
 					((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0);
 
 				std::uint8_t* dstTile = &chunk[(dstY * paddedWidth + dstX) * dstChannels];
@@ -2595,7 +2667,7 @@ namespace Jazz2
 			return false;
 		}
 
-		nextLevel = std::move(properties.NextLevel);
+		nextLevel = Death::move(properties.NextLevel);
 		return true;
 	}
 
@@ -2640,11 +2712,11 @@ namespace Jazz2
 		Formats::LevelProperties properties;
 		reader.ReadProperties(properties);
 
-		descriptor.DisplayName = std::move(properties.DisplayName);
-		descriptor.NextLevel = std::move(properties.NextLevel);
-		descriptor.SecretLevel = std::move(properties.SecretLevel);
-		descriptor.BonusLevel = std::move(properties.BonusLevel);
-		descriptor.MusicPath = std::move(properties.Music);
+		descriptor.DisplayName = Death::move(properties.DisplayName);
+		descriptor.NextLevel = Death::move(properties.NextLevel);
+		descriptor.SecretLevel = Death::move(properties.SecretLevel);
+		descriptor.BonusLevel = Death::move(properties.BonusLevel);
+		descriptor.MusicPath = Death::move(properties.Music);
 
 		std::uint32_t rawAmbientColor = properties.AmbientColor;
 		descriptor.AmbientColor = Vector4f((rawAmbientColor & 0xff) / 255.0f, ((rawAmbientColor >> 8) & 0xff) / 255.0f,
@@ -2653,7 +2725,6 @@ namespace Jazz2
 		descriptor.Weather = (WeatherType)properties.Weather;
 		descriptor.WeatherIntensity = properties.WeatherIntensity;
 		descriptor.WaterLevel = properties.WaterLevel;
-		descriptor.Editable = ((header.Flags & LevelFlags::NotEditable) != LevelFlags::NotEditable);
 
 		PitType pitType;
 		if ((header.Flags & LevelFlags::HasPit) == LevelFlags::HasPit) {
@@ -2677,12 +2748,28 @@ namespace Jazz2
 			RecreateGemPalettes();
 		}
 
+		// The tile sets are looked up by their names, a level from anywhere must not reach out of "Tilesets/" with them
+		if (!reader.IsValid() || !Formats::LevelFile::IsSafeTileSetPath(properties.DefaultTileSet)) {
+			LOGE("Level \"{}\" cannot be read: File is corrupted", fullPath);
+			return false;
+		}
+
 		descriptor.TileMap = std::make_unique<Tiles::TileMap>(properties.DefaultTileSet, properties.CaptionTileId, !hasCustomPalette);
 		descriptor.TileMap->SetPitType(pitType);
 
 		// Extra Tilesets
 		SmallVector<Formats::ExtraTileSetRecord, 0> extraTileSets;
 		reader.ReadExtraTileSets(extraTileSets);
+		if (!reader.IsValid()) {
+			LOGE("Level \"{}\" cannot be read: {}", fullPath, reader.GetError());
+			return false;
+		}
+		for (const Formats::ExtraTileSetRecord& tileSet : extraTileSets) {
+			if ((tileSet.Flags & Formats::ExtraTileSetRecord::Embedded) == 0 && !Formats::LevelFile::IsSafeTileSetPath(tileSet.Name)) {
+				LOGE("Level \"{}\" refers to tile set \"{}\" outside of the tile sets", fullPath, tileSet.Name);
+				return false;
+			}
+		}
 		for (const Formats::ExtraTileSetRecord& tileSet : extraTileSets) {
 			// TODO: A true color tile set remapped to an additional palette is used as it is, only an 8-bit one is remapped
 			bool isRemapped = ((tileSet.Flags & Formats::ExtraTileSetRecord::Remapped) != 0 &&
@@ -2729,8 +2816,12 @@ namespace Jazz2
 
 		// Layers
 		std::int32_t layerCount = reader.ReadLayerCount();
-		for (std::int32_t i = 0; i < layerCount; i++) {
+		for (std::int32_t i = 0; i < layerCount && reader.IsValid(); i++) {
 			descriptor.TileMap->LoadLayer(reader);
+		}
+		if (!reader.IsValid()) {
+			LOGE("Level \"{}\" cannot be read: {}", fullPath, reader.GetError());
+			return false;
 		}
 		if (descriptor.TileMap->HasLoadFailed()) {
 			// Out of memory for a layer: the level cannot be played, and the caller shows why
@@ -2743,18 +2834,64 @@ namespace Jazz2
 		descriptor.EventMap->SetPitType(pitType);
 		descriptor.EventMap->LoadEvents(reader, *descriptor.TileMap, options);
 		if (descriptor.EventMap->HasLoadFailed()) {
-			LOGE("Cannot load level \"{}\": Out of memory for its events", fullPath);
+			LOGE("Cannot load level \"{}\": Too many events, or out of memory for them", fullPath);
 			return false;
+		}
+
+		// Only the translations of the level texts, how the sprite layer is drawn and the parameters of the textured layers are
+		// needed of the chunks, but a critical one this version doesn't know means the level can't be played as it was made
+		// (see Formats::LevelFile::IsCriticalChunk())
+		{
+			SmallVector<Formats::ChunkRecord, 0> chunks;
+			reader.ReadSelectedChunks(chunks, [](std::uint32_t tag, std::uint32_t) {
+				return (tag == Formats::LevelTextsChunk::Tag || tag == Formats::SpriteLayerChunk::Tag || tag == Formats::TexturedLayerChunk::Tag);
+			});
+			if (!reader.IsValid()) {
+				LOGE("Level \"{}\" cannot be read: {}", fullPath, reader.GetError());
+				return false;
+			}
+			for (const Formats::ChunkRecord& chunk : chunks) {
+				if (chunk.Tag == Formats::LevelTextsChunk::Tag && !Formats::LevelTextsChunk::Read(chunk.Data, descriptor.LocalizedTexts)) {
+					// The level can be played without them, its texts are shown as they are
+					LOGW("Level \"{}\" has damaged translations of its texts", fullPath);
+					descriptor.LocalizedTexts.clear();
+				} else if (chunk.Tag == Formats::SpriteLayerChunk::Tag) {
+					// Read into a record of the sprite layer, so the color is taken as from any other layer
+					Formats::LayerRecord record = {};
+					record.Kind = Formats::LayerKind::Sprite;
+					if (Formats::SpriteLayerChunk::Read(chunk.Data, record)) {
+						Tiles::LayerDescription description = Tiles::TileMap::MakeLayerDescription(record);
+						descriptor.TileMap->SetSpriteLayerRenderer(description.RendererType, description.Color);
+					} else {
+						// The sprite layer is drawn as ordinary tiles then, as by a version that doesn't know the chunk
+						LOGW("Level \"{}\" has damaged description of how its sprite layer is drawn", fullPath);
+					}
+				} else if (chunk.Tag == Formats::TexturedLayerChunk::Tag) {
+					SmallVector<Formats::TexturedLayerChunk::Entry, 4> texturedLayers;
+					if (Formats::TexturedLayerChunk::Read(chunk.Data, texturedLayers)) {
+						for (const Formats::TexturedLayerChunk::Entry& entry : texturedLayers) {
+							const Tiles::LayerDescription* current = descriptor.TileMap->GetLayerDescription(std::int32_t(entry.Layer));
+							if (current != nullptr) {
+								Tiles::LayerDescription description = *current;
+								description.SetTexturedParams(entry.Params);
+								descriptor.TileMap->SetLayerDescription(std::int32_t(entry.Layer), description, descriptor.TileMap->IsLayerVisible(std::int32_t(entry.Layer)));
+								if (!entry.Texture.empty()) {
+									// Its own texture instead of the tiles at its top left
+									descriptor.TileMap->SetLayerTexture(std::int32_t(entry.Layer), entry.Texture);
+								}
+							}
+						}
+					} else {
+						// The tunnels and reflections are drawn with the defaults then, as by a version that doesn't know the chunk
+						LOGW("Level \"{}\" has damaged parameters of its textured layers", fullPath);
+					}
+				}
+			}
 		}
 
 		// Everything that can reference a tile has now been read, so the atlas can be cut down to what
 		// this level actually uses
 		descriptor.TileMap->PruneTilesetAtlas();
-
-		if (!reader.IsValid()) {
-			LOGE("Level \"{}\" cannot be read, the file is corrupted", fullPath);
-			return false;
-		}
 		return true;
 	}
 
@@ -3074,8 +3211,59 @@ namespace Jazz2
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", ShadersGen::TexturedBackground);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundDither] = CompileShader("TexturedBackgroundDither", ShadersGen::TexturedBackground, "DITHER");
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackgroundCircle", ShadersGen::TexturedBackgroundCircle);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircleDither] = CompileShader("TexturedBackgroundCircleDither", ShadersGen::TexturedBackgroundCircle, "DITHER");
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundTunnel] = CompileShader("TexturedBackgroundTunnel", ShadersGen::TexturedBackgroundTunnel);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundTunnelDither] = CompileShader("TexturedBackgroundTunnelDither", ShadersGen::TexturedBackgroundTunnel, "DITHER");
+		{
+			// The cylinder is newer than the offline tables of some backends (the PlayStation 3 has no microcode of it until
+			// its table is generated again), its layers are drawn as tiles where either variant is missing (see TileMap)
+			auto& cylinderShader = _precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCylinder];
+			auto& cylinderDitherShader = _precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCylinderDither];
+			cylinderShader = CompileShader("TexturedBackgroundCylinder", ShadersGen::TexturedBackgroundCylinder);
+			cylinderDitherShader = CompileShader("TexturedBackgroundCylinderDither", ShadersGen::TexturedBackgroundCylinder, "DITHER");
+			if (!cylinderShader->IsLinked() || !cylinderDitherShader->IsLinked()) {
+				LOGW("Shader of cylinder layers is not available, they are drawn as tiles");
+				cylinderShader = nullptr;
+				cylinderDitherShader = nullptr;
+			}
+		}
+		{
+			// The wave moves single pixels by sine waves, which has no fixed-function approximation, and is newer than the
+			// offline tables of some backends as the cylinder is - its layers are drawn as tiles where it's missing, which
+			// is where the texture would be anyway, only without the waves (see TileMap)
+			auto& waveShader = _precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundWave];
+			waveShader = CompileShader("TexturedBackgroundWave", ShadersGen::TexturedBackgroundWave);
+			if (waveShader != nullptr && !waveShader->IsLinked()) {
+				LOGW("Shader of wave layers is not available, they are drawn as tiles");
+				waveShader = nullptr;
+			}
+		}
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		{
+			// The tiles of the heat effect are a mesh of their own (see TileMap::AppendHeatTile()), with the position in the
+			// tile in the 12-float vertex; the fixed-function tiers have no shader of it and draw them as ordinary tiles
+			for (PrecompiledShader heatShader : { PrecompiledShader::TileMapMeshHeat, PrecompiledShader::TileMapMeshHeatPalette }) {
+				auto& shader = _precompiledShaders[(std::int32_t)heatShader];
+				shader = (heatShader == PrecompiledShader::TileMapMeshHeat
+					? CompileShader("TileMapMeshHeat", ShadersGen::TileMapMeshHeat)
+					: CompileShader("TileMapMeshHeatPalette", ShadersGen::TileMapMeshHeat, "USE_PALETTE"));
+				if (shader == nullptr || !shader->IsLinked()) {
+					shader = nullptr;
+					continue;
+				}
+				constexpr std::int32_t Stride = 12 * sizeof(float);
+				shader->SetAttribute(Material::PositionAttributeName, Stride, reinterpret_cast<void*>(0 * sizeof(float)));
+				shader->SetAttribute(Material::TexCoordsAttributeName, Stride, reinterpret_cast<void*>(2 * sizeof(float)));
+				shader->SetAttribute("aHeat", Stride, reinterpret_cast<void*>(4 * sizeof(float)));
+				shader->SetAttribute(Material::ColorAttributeName, Stride, reinterpret_cast<void*>(8 * sizeof(float)));
+			}
+			if (_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshHeat] == nullptr ||
+				_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshHeatPalette] == nullptr) {
+				LOGW("Shader of the tiles of the heat effect is not available, they are drawn as ordinary tiles");
+				_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshHeat] = nullptr;
+				_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshHeatPalette] = nullptr;
+			}
+		}
+#endif
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized] = CompileShader("Colorized", ShadersGen::Colorized);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", ShadersGen::BatchedColorized, Shader::Introspection::NoUniformsInBlocks);
@@ -3229,6 +3417,15 @@ namespace Jazz2
 				shader->SetAttribute("aTexCoords1", Stride, reinterpret_cast<void*>(4 * sizeof(float)));
 				shader->SetAttribute("aWeights", Stride, reinterpret_cast<void*>(6 * sizeof(float)));
 				shader->SetAttribute(Material::ColorAttributeName, Stride, reinterpret_cast<void*>(8 * sizeof(float)));
+			}
+
+			// The reflection is a sprite quad of its own (see TileMap::DrawReflection()), the other layers don't need it, so a
+			// backend without it only doesn't draw the reflections
+			auto& reflectionShader = _precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundReflection];
+			reflectionShader = CompileShader("TexturedBackgroundReflection", ShadersGen::TexturedBackgroundReflection);
+			if (reflectionShader != nullptr && !reflectionShader->IsLinked()) {
+				LOGW("Shader of reflection layers is not available, they are not drawn");
+				reflectionShader = nullptr;
 			}
 		}
 
@@ -3734,6 +3931,54 @@ namespace Jazz2
 		return freeRow * ColorsPerPalette;
 	}
 
+	// The scheme of a dynamic palette row that holds the shifted sprite palette, no recolor scheme has it
+	static constexpr std::uint8_t ShiftedPaletteScheme = 0xFF;
+
+	std::int32_t ContentResolver::AcquireShiftedPaletteOffset(std::uint8_t shift)
+	{
+		if (shift == 0) {
+			// Shifted by nothing, it's the sprite palette itself
+			return 0;
+		}
+		if (_isHeadless) {
+			return -1;
+		}
+
+		std::int32_t freeRow = -1;
+		for (std::int32_t row = FirstDynamicPaletteRow; row < PaletteCount; row++) {
+			if (_paletteRowRefCount[row] == 0) {
+				if (freeRow < 0) {
+					freeRow = row;
+				}
+			} else if (_paletteRowScheme[row] == ShiftedPaletteScheme && _paletteRowColor[row] == shift) {
+				_paletteRowRefCount[row]++;
+				return row * ColorsPerPalette;
+			}
+		}
+
+		if (freeRow < 0) {
+			return -1;
+		}
+
+		_paletteRowRefCount[freeRow] = 1;
+		_paletteRowColor[freeRow] = shift;
+		_paletteRowScheme[freeRow] = ShiftedPaletteScheme;
+		BuildShiftedPalette(shift, _palettes + freeRow * ColorsPerPalette);
+		MarkPaletteDirty(freeRow, freeRow);
+		return freeRow * ColorsPerPalette;
+	}
+
+	void ContentResolver::BuildShiftedPalette(std::uint8_t shift, std::uint32_t* outPalette) const
+	{
+		// As JJ2+ draws SPRITE::PALSHIFT: a transparent pixel is skipped before its index is moved, so index 0 stays
+		// transparent, while a pixel moved onto index 0 is drawn in the color of that entry
+		outPalette[0] = _palettes[0];
+		for (std::int32_t i = 1; i < ColorsPerPalette; i++) {
+			const std::int32_t from = (i + shift) & (ColorsPerPalette - 1);
+			outPalette[i] = (from == 0 ? (_palettes[0] | 0xFF000000u) : _palettes[from]);
+		}
+	}
+
 	void ContentResolver::ReleasePaletteOffset(std::int32_t paletteOffset)
 	{
 		// The public API deals in flat palette offsets; map back to the texture row that backs it (a negative offset,
@@ -3749,7 +3994,11 @@ namespace Jazz2
 	{
 		for (std::int32_t row = FirstDynamicPaletteRow; row < PaletteCount; row++) {
 			if (_paletteRowRefCount[row] > 0) {
-				BuildPlayerColorPaletteForScheme(_paletteRowColor[row], _paletteRowScheme[row], _palettes + row * ColorsPerPalette);
+				if (_paletteRowScheme[row] == ShiftedPaletteScheme) {
+					BuildShiftedPalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
+				} else {
+					BuildPlayerColorPaletteForScheme(_paletteRowColor[row], _paletteRowScheme[row], _palettes + row * ColorsPerPalette);
+				}
 				MarkPaletteDirty(row, row);
 			}
 		}

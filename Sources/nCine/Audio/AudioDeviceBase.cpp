@@ -380,7 +380,7 @@ namespace nCine
 				break;
 			}
 
-			device->_activeDecodeRequest = std::move(device->_decodeQueue.front());
+			device->_activeDecodeRequest = Death::move(device->_decodeQueue.front());
 			device->_decodeQueue.erase(device->_decodeQueue.begin());
 			device->_decodeMutex.Unlock();
 

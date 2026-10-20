@@ -131,7 +131,7 @@ namespace ShaderCompiler
 		{
 			String includeError;
 			if (!ShaderParser::ExpandIncludes(expanded, baseDir, reader, 0, includeError)) {
-				diag.Message = std::move(includeError);
+				diag.Message = Death::move(includeError);
 				diag.Line = 0;
 				return false;
 			}
@@ -156,7 +156,7 @@ namespace ShaderCompiler
 			RuntimeVariant v;
 			v.Name = name;
 			v.Define = name;
-			out.Variants.push_back(std::move(v));
+			out.Variants.push_back(Death::move(v));
 		}
 
 		for (RuntimeVariant& v : out.Variants) {

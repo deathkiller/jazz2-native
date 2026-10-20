@@ -362,7 +362,7 @@ namespace Jazz2::UI
 		constexpr std::uint32_t VideoPrefillBytes = 128 * 1024;
 	}
 	Cinematics::Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback)
-		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
+		: _root(root), _callback(Death::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_videoDownscale(1), _textureWidth(0), _textureHeight(0), _textureIndex(0),
 			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _decodingFailed(false),
 			_nativeFormat(false), _lz4Payloads(false), _convertTo565(false), _incremental565(false), _frame565Stale(false), _paletteDirty(true),
@@ -390,7 +390,7 @@ namespace Jazz2::UI
 			// Blocks for the length of the video. This is the one point of a frame where the renderer holds
 			// neither the display nor any RDP state: the previous frame has been presented and this one has not
 			// drawn anything yet.
-			String videoPath = std::move(_fullMotionVideoPath);
+			String videoPath = Death::move(_fullMotionVideoPath);
 			const bool completed = Backends::N64FullMotionVideo::Play(videoPath, PreferencesCache::MasterVolume);
 			_framesLeft = 0;
 			if (_callback && _callback(_root, completed)) {
@@ -600,7 +600,7 @@ namespace Jazz2::UI
 		std::uint8_t internalBuffer[16];
 		s->Read(internalBuffer, 16);
 		if (strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) == 0) {
-			return LoadLegacyVideo(std::move(s), path);
+			return LoadLegacyVideo(Death::move(s), path);
 		}
 
 		std::uint64_t signature = 0;
@@ -615,11 +615,11 @@ namespace Jazz2::UI
 					? resolver.OpenContentFile(contentPath, std::int32_t(VideoReadPieceSize))
 					: fs::Open(alternativePath, FileAccess::Read, std::int32_t(VideoReadPieceSize)));
 				if (reopened->IsValid()) {
-					s = std::move(reopened);
+					s = Death::move(reopened);
 				}
 			}
 			s->Seek(9, SeekOrigin::Begin);
-			return LoadNativeVideo(std::move(s), path);
+			return LoadNativeVideo(Death::move(s), path);
 		}
 
 		LOGE("Cannot load \"{}.j2v\" - Invalid signature", path);
@@ -761,12 +761,12 @@ namespace Jazz2::UI
 			// finished, so most of them carry no end-of-stream marker - running out of chunks is their
 			// regular end (DeflateStream treats it as EOF) and the read-ahead below is expected to hit it.
 			// Short reads still fail the decode (see Cinematics::Read).
-			_compressedStreams[i].Initialize(&_fileWindow, std::move(chunks[i]), 2);
+			_compressedStreams[i].Initialize(&_fileWindow, Death::move(chunks[i]), 2);
 			_decompressedStreams[i].Open(_compressedStreams[i]);
 			_streamBuffers[i].Initialize(&_decompressedStreams[i]);
 		}
 
-		_videoFile = std::move(s);
+		_videoFile = Death::move(s);
 
 		LOGI("Playing cinematic \"{}.j2v\" ({}x{}, {} frames, original format)", path, _width, _height, _framesLeft);
 
@@ -880,7 +880,7 @@ namespace Jazz2::UI
 		_framePayloadCapacity = 0;
 		_decompressedPayloadCapacity = 0;
 		const std::int64_t dataOffset = s->GetPosition();
-		_videoFile = std::move(s);
+		_videoFile = Death::move(s);
 		// Reading starts only once everything else the video needs is loaded (see Initialize())
 		if (!_videoReader.Initialize(_videoFile.get(), dataOffset, VideoReadAheadCapacity, VideoReadPieceSize)) {
 			LOGE("Cannot load \"{}.j2v\" - Cannot seek in the file", path);
@@ -1074,7 +1074,7 @@ namespace Jazz2::UI
 			String fullPath = fs::CombinePath("Animations"_s, samplePathNormalized);
 			auto sample = resolver.OpenContentFile(fullPath);
 			if (sample->IsValid()) {
-				_sfxSamples.emplace_back(std::move(sample), fullPath);
+				_sfxSamples.emplace_back(Death::move(sample), fullPath);
 			} else {
 				_sfxSamples.emplace_back(); // Sample not found
 			}
@@ -1538,7 +1538,7 @@ namespace Jazz2::UI
 	void Cinematics::ChunkedStream::Initialize(FileWindow* window, SmallVector<Pair<std::int64_t, std::int32_t>, 0>&& chunks, std::int64_t initialOffset)
 	{
 		_window = window;
-		_chunks = std::move(chunks);
+		_chunks = Death::move(chunks);
 		_size = 0;
 		for (auto& chunk : _chunks) {
 			_size += chunk.second();
@@ -2008,7 +2008,7 @@ namespace Jazz2::UI
 
 #	if !defined(NCINE_HAS_NATIVE_AUDIO)
 	Cinematics::SfxItem::SfxItem(std::unique_ptr<Stream> stream, StringView path)
-		: Buffer(std::make_unique<AudioBuffer>(std::move(stream), path))
+		: Buffer(std::make_unique<AudioBuffer>(Death::move(stream), path))
 	{
 	}
 #	endif

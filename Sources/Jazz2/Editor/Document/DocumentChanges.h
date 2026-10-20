@@ -82,9 +82,42 @@ namespace Jazz2::Editor
 		const Recti& GetEventArea() const {
 			return _eventArea;
 		}
+		/**
+		 * @brief Returns `false` if tiles changed that may be outside of @ref GetTileAreas()
+		 *
+		 * A change reported only by its kind, as a snapshot of layers restored, doesn't tell which tiles it changed, all
+		 * of them have to be taken as changed then.
+		 */
+		bool AreTileAreasComplete() const {
+			return !_tilesOutsideAreas;
+		}
+		/**
+		 * @brief Returns `false` if events changed that may be outside of @ref GetEventArea()
+		 *
+		 * An event off the grid is in the area of the tile its position is in.
+		 */
+		bool IsEventAreaComplete() const {
+			return !_eventsOutsideArea;
+		}
+		/**
+		 * @brief Returns the index each layer had before, for each index it has now, if the layers were only moved
+		 *
+		 * Empty if the layers weren't moved, or if they changed otherwise too --- added, removed, resized or replaced
+		 * by a snapshot (see @ref DocumentChangeKind::LayerStructure).
+		 */
+		ArrayView<const std::int32_t> GetLayerOrder() const {
+			return _layerOrder;
+		}
 
-		/** @brief Adds changes of the given kinds */
+		/**
+		 * @brief Adds changes of the given kinds
+		 *
+		 * Tiles and events added this way are of no known area, see @ref AreTileAreasComplete() and
+		 * @ref IsEventAreaComplete(), those of a known one are added by @ref AddTiles() and @ref AddEvents().
+		 */
 		void Add(DocumentChangeKind kinds);
+		/** @brief Adds a move of a layer of @p count layers, from an index to another one, see @ref GetLayerOrder() */
+		void AddLayerMove(std::int32_t from, std::int32_t to, std::int32_t count);
 		/** @brief Adds changed tiles of a layer */
 		void AddTiles(std::int32_t layer, const Recti& area);
 		/** @brief Adds changed events */
@@ -98,6 +131,14 @@ namespace Jazz2::Editor
 		DocumentChangeKind _kinds;
 		SmallVector<DocumentTileArea, 4> _tileAreas;
 		Recti _eventArea;
+		// See AreTileAreasComplete() and IsEventAreaComplete()
+		bool _tilesOutsideAreas;
+		bool _eventsOutsideArea;
+		// See GetLayerOrder(), whether the layers changed only by moves is told by it being non-empty
+		SmallVector<std::int32_t, 0> _layerOrder;
+
+		// Adds moves of layers, or forgets them if the layers changed otherwise too
+		void AddLayerOrder(ArrayView<const std::int32_t> order, bool onlyMoved);
 	};
 }
 

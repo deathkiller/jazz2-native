@@ -38,12 +38,22 @@ namespace Jazz2::UI
 			glyphBatch.Batch = RenderBatcher::DirectBatch();
 			glyphBatch.BatchCommandsUsed = 0;
 		}
+		// The runs of rectangles too, each record keeps the commands of its batches
+		for (QuadBatch& quadBatch : _quadBatches) {
+			quadBatch.Open = false;
+			quadBatch.Direct = true;
+			quadBatch.StandIn = nullptr;
+			quadBatch.Batch = RenderBatcher::DirectBatch();
+			quadBatch.BatchCommandsUsed = 0;
+		}
+		_openQuadRuns = 0;
 
 		return false;
 	}
 
 	void Canvas::DrawRenderCommand(RenderCommand* command)
 	{
+		EndQuadRun(command->GetLayer());
 		_currentRenderQueue->AddCommand(command);
 	}
 
@@ -56,14 +66,213 @@ namespace Jazz2::UI
 
 		Vector4f clippedTexCoords = texCoords;
 		if (std::abs(angle) > 0.01f) {
-			// A rotated rectangle can't be cut down, it's only left out if all of it is outside
-			Vector2f boundsPos = pos, boundsSize = size;
-			if (!ClipQuad(boundsPos, boundsSize, nullptr)) {
-				return;
+			// A rotated rectangle can't be cut down, it's only left out if all of it is outside. It turns about its
+			// center, so whatever the angle, all of it stays within the square around the circle through its corners.
+			if (ClipRect.W > 0.0f && ClipRect.H > 0.0f) {
+				const float radius = 0.5f * std::sqrt(size.X * size.X + size.Y * size.Y);
+				Vector2f boundsPos = pos + size * 0.5f - Vector2f(radius, radius);
+				Vector2f boundsSize = Vector2f(radius * 2.0f, radius * 2.0f);
+				if (!ClipQuad(boundsPos, boundsSize, nullptr)) {
+					return;
+				}
 			}
 		} else if (!ClipQuad(pos, size, &clippedTexCoords)) {
 			return;
 		}
+
+		DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, additiveBlending, angle, paletteOffset);
+	}
+
+	void Canvas::DrawTextureBatched(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color)
+	{
+		// Apply the optional per-layer draw transform (menu section transitions; identity by default)
+		pos = pos * LayerScale + LayerOffset;
+		size = size * LayerScale;
+		const Colorf finalColor = color * LayerColor;
+
+		Vector4f clippedTexCoords = texCoords;
+		if (!ClipQuad(pos, size, &clippedTexCoords)) {
+			return;
+		}
+
+		QuadBatch* record = GetQuadRun(texture, z);
+		if (record != nullptr) {
+			RenderBatcher::DirectBatch& batch = record->Batch;
+			if (batch.Count == batch.Capacity) {
+				// Full, the run goes on in another batch, drawn right after this one
+				RenderResources::GetRenderBatcher().EndDirectBatch(batch);
+				record->RunCapacity = std::min<std::uint32_t>(record->RunCapacity * 2, 1024);
+				record->StandIn->SetVisitOrder(TakeVisitOrder());
+				if (!BeginQuadBatch(*record)) {
+					record = nullptr;
+				}
+			}
+		}
+		if (record == nullptr) {
+			DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, false, 0.0f, -1);
+			return;
+		}
+
+		// Exactly what the command of its own would carry once committed, as a glyph in Font::DrawString()
+		RenderBatcher::DirectBatch& batch = record->Batch;
+		std::uint8_t* instance = batch.Instances + batch.Count * batch.Stride;
+		float* modelMatrix = static_cast<float*>(static_cast<void*>(instance + record->ModelMatrixOffset));
+		modelMatrix[0] = 1.0f; modelMatrix[1] = 0.0f; modelMatrix[2] = 0.0f; modelMatrix[3] = 0.0f;
+		modelMatrix[4] = 0.0f; modelMatrix[5] = 1.0f; modelMatrix[6] = 0.0f; modelMatrix[7] = 0.0f;
+		modelMatrix[8] = 0.0f; modelMatrix[9] = 0.0f; modelMatrix[10] = 1.0f; modelMatrix[11] = 0.0f;
+		modelMatrix[12] = pos.X; modelMatrix[13] = pos.Y; modelMatrix[14] = record->Depth; modelMatrix[15] = 1.0f;
+		float* instanceColor = static_cast<float*>(static_cast<void*>(instance + record->ColorOffset));
+		instanceColor[0] = finalColor.R; instanceColor[1] = finalColor.G; instanceColor[2] = finalColor.B; instanceColor[3] = finalColor.A;
+		float* texRect = static_cast<float*>(static_cast<void*>(instance + record->TexRectOffset));
+		texRect[0] = clippedTexCoords.X; texRect[1] = clippedTexCoords.Y; texRect[2] = clippedTexCoords.Z; texRect[3] = clippedTexCoords.W;
+		float* spriteSize = static_cast<float*>(static_cast<void*>(instance + record->SpriteSizeOffset));
+		spriteSize[0] = size.X;
+		spriteSize[1] = size.Y;
+		if (record->PaletteOffsetOffset >= 0) {
+			*static_cast<float*>(static_cast<void*>(instance + record->PaletteOffsetOffset)) = 0.0f;
+		}
+		batch.Count++;
+		// The batch is finished for what it holds after every rectangle, so it's drawn whole whenever the frame ends
+		RenderResources::GetRenderBatcher().EndDirectBatch(batch);
+	}
+
+	Canvas::QuadBatch* Canvas::GetQuadRun(const Texture& texture, std::uint16_t layer)
+	{
+		std::int32_t index = -1;
+		if (_lastQuadBatch >= 0 && _lastQuadBatch < std::int32_t(_quadBatches.size()) && _quadBatches[_lastQuadBatch].Layer == layer) {
+			index = _lastQuadBatch;
+		} else {
+			for (std::int32_t i = 0; i < std::int32_t(_quadBatches.size()); i++) {
+				if (_quadBatches[i].Layer == layer) {
+					index = i;
+					break;
+				}
+			}
+			if (index < 0) {
+				index = std::int32_t(_quadBatches.size());
+				_quadBatches.emplace_back();
+				_quadBatches[index].Layer = layer;
+			}
+		}
+		_lastQuadBatch = index;
+
+		QuadBatch& record = _quadBatches[index];
+		if (!record.Direct) {
+			return nullptr;
+		}
+		if (record.Open && record.QuadTexture == &texture) {
+			return &record;
+		}
+		if (record.Open) {
+			// Another texture, the rectangles of the run before are drawn under it
+			record.Open = false;
+			_openQuadRuns--;
+		}
+
+		bool textureChanged = (record.QuadTexture != &texture);
+		if (record.StandIn == nullptr) {
+			// The first run of the record in this frame: the stand-in, and everything its rectangles share
+			textureChanged = true;
+			record.StandIn = RentRenderCommand();
+			Material& material = record.StandIn->GetMaterial();
+			if (material.SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
+				material.ReserveUniformsDataMemory();
+				record.StandIn->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+				auto* textureUniform = material.Uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
+				}
+			}
+			material.SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+			record.StandIn->SetLayer(layer);
+
+			// Rectangles are written straight into the instances, member by member, at the offsets the stand-in's own
+			// instance block has them, as glyphs are (see GetGlyphBatch())
+			const RenderCommand::InstanceUniforms* instanceUniforms = record.StandIn->GetInstanceUniforms();
+			RHI::UniformBlockCache* instanceBlock = record.StandIn->GetInstanceBlock();
+			RHI::UniformCache* modelMatrix = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::ModelMatrixUniformName) : nullptr);
+			if (instanceUniforms == nullptr || modelMatrix == nullptr || instanceUniforms->Color == nullptr ||
+				instanceUniforms->TexRect == nullptr || instanceUniforms->SpriteSize == nullptr) {
+				record.Direct = false;
+				return nullptr;
+			}
+			const std::uint8_t* base = instanceBlock->GetDataPointer();
+			record.ModelMatrixOffset = std::uint32_t(modelMatrix->GetDataPointer() - base);
+			record.ColorOffset = std::uint32_t(instanceUniforms->Color->GetDataPointer() - base);
+			record.TexRectOffset = std::uint32_t(instanceUniforms->TexRect->GetDataPointer() - base);
+			record.SpriteSizeOffset = std::uint32_t(instanceUniforms->SpriteSize->GetDataPointer() - base);
+			record.PaletteOffsetOffset = (instanceUniforms->PaletteOffset != nullptr
+				? std::int32_t(instanceUniforms->PaletteOffset->GetDataPointer() - base) : -1);
+			const Camera::ProjectionValues& projection = RenderResources::GetCurrentCamera()->GetProjectionValues();
+			record.Depth = RenderCommand::CalculateDepth(layer, projection.nearClip, projection.farClip);
+		} else {
+			// A run after something else drawn on the layer is drawn after that
+			record.StandIn->SetVisitOrder(TakeVisitOrder());
+		}
+		if (textureChanged) {
+			record.StandIn->GetMaterial().SetTexture(0, texture);
+		}
+		record.QuadTexture = &texture;
+
+		// Most runs are a few shapes, the room grows when it's filled
+		record.RunCapacity = 16;
+		if (!BeginQuadBatch(record)) {
+			return nullptr;
+		}
+		record.Open = true;
+		_openQuadRuns++;
+		return &record;
+	}
+
+	bool Canvas::BeginQuadBatch(QuadBatch& record)
+	{
+		if (record.BatchCommandsUsed >= record.BatchCommands.size()) {
+			record.BatchCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Sprite));
+		}
+		RenderCommand* batchCommand = record.BatchCommands[record.BatchCommandsUsed].get();
+		if (!RenderResources::GetRenderBatcher().BeginDirectBatch(*record.StandIn, record.RunCapacity, record.Batch, batchCommand)) {
+			// The shader can't be batched this way, each rectangle gets a command of its own for the rest of the frame
+			if (record.Open) {
+				record.Open = false;
+				_openQuadRuns--;
+			}
+			record.Direct = false;
+			return false;
+		}
+		record.BatchCommandsUsed++;
+		_currentRenderQueue->AddCommand(record.Batch.Command);
+		return true;
+	}
+
+	void Canvas::EndQuadRunOnLayer(std::uint16_t layer)
+	{
+		for (QuadBatch& record : _quadBatches) {
+			if (record.Open && record.Layer == layer) {
+				record.Open = false;
+				_openQuadRuns--;
+				break;
+			}
+		}
+	}
+
+	std::uint16_t Canvas::TakeVisitOrder()
+	{
+		// The render queue orders commands of the same layer by their visit order before anything else, so a number
+		// that grows with every command keeps them in the order they were drawn in (see OrderedDraws)
+		if (!OrderedDraws) {
+			return 0;
+		}
+		std::uint16_t visitOrder = _nextVisitOrder;
+		if (_nextVisitOrder < UINT16_MAX) {
+			_nextVisitOrder++;
+		}
+		return visitOrder;
+	}
+
+	void Canvas::DrawTransformedTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& clippedTexCoords,
+		const Colorf& finalColor, bool additiveBlending, float angle, std::int32_t paletteOffset)
+	{
+		EndQuadRun(z);
 
 		// An indexed texture (palette index in the red channel) is recolored at draw time through the shared palette
 		// texture; paletteOffset selects the palette region (0 = default sprite palette). -1 = a plain RGBA texture.
@@ -142,6 +351,7 @@ namespace Jazz2::UI
 			return;
 		}
 
+		EndQuadRun(z);
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShader(shader)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
@@ -187,6 +397,7 @@ namespace Jazz2::UI
 			return;
 		}
 
+		EndQuadRun(z);
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
@@ -239,6 +450,9 @@ namespace Jazz2::UI
 
 	std::int32_t Canvas::GetGlyphBatch(const Texture& fontTexture, Shader* colorizeShader, std::uint16_t layer)
 	{
+		// A text drawn over rectangles of its layer comes after them
+		EndQuadRun(layer);
+
 		const bool colorized = (colorizeShader != nullptr);
 		std::int32_t index = -1, unusedIndex = -1;
 		for (std::int32_t i = 0; i < std::int32_t(_glyphBatches.size()); i++) {
@@ -348,25 +562,12 @@ namespace Jazz2::UI
 		}
 		_renderCommandsCount++;
 
-		// The render queue orders commands of the same layer by their visit order before anything else, so a number
-		// that grows with every command keeps them in the order they were drawn in (see OrderedDraws)
-		if (OrderedDraws) {
-			command->SetVisitOrder(_nextVisitOrder);
-			if (_nextVisitOrder < UINT16_MAX) {
-				_nextVisitOrder++;
-			}
-		} else {
-			command->SetVisitOrder(0);
-		}
+		command->SetVisitOrder(TakeVisitOrder());
 		return command;
 	}
 
-	bool Canvas::ClipQuad(Vector2f& pos, Vector2f& size, Vector4f* texCoords) const
+	bool Canvas::ClipQuadToRect(Vector2f& pos, Vector2f& size, Vector4f* texCoords) const
 	{
-		if (ClipRect.W <= 0.0f || ClipRect.H <= 0.0f) {
-			return true;
-		}
-
 		const float x0 = pos.X, y0 = pos.Y;
 		const float x1 = pos.X + size.X, y1 = pos.Y + size.Y;
 		const float cx0 = std::max(x0, ClipRect.X);

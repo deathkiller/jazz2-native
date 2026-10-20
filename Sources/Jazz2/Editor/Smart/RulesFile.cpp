@@ -3,67 +3,97 @@
 #if defined(WITH_EDITOR)
 
 #include "../Files/ContentTileSetLibrary.h"
+#include "../Files/JsonFile.h"
 #include "../../ContentResolver.h"
+#include "../../Formats/LevelFile.h"
 
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
 
-#include <memory>
-#include <string>
+#include <jsoncpp/json.h>
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
 namespace Jazz2::Editor
 {
-	bool RulesFile::Read(StringView tileSet, Json::Value& doc)
+	namespace
+	{
+		// Rules larger than this aren't rules of a tile set
+		constexpr std::int64_t MaxRulesSize = 16 * 1024 * 1024;
+
+		// Whether the rules found for a tile set can be replaced, those that can't be read would lose all their parts
+		bool CanReplace(StringView tileSet)
+		{
+			Json::Value current;
+			if (RulesFile::TryRead(tileSet, current) == RulesFile::ReadResult::Unreadable) {
+				LOGE("Rules of tile set \"{}\" can't be read, they're not written over, fix or remove the file first", tileSet);
+				return false;
+			}
+			return true;
+		}
+	}
+
+	RulesFile::ReadResult RulesFile::TryRead(StringView tileSet, Json::Value& doc)
 	{
 		doc = Json::Value(Json::objectValue);
+		if (!Formats::LevelFile::IsSafeTileSetPath(tileSet)) {
+			return ReadResult::Missing;
+		}
 		String path = ContentResolver::Get().FindContentFile(fs::CombinePath("Tilesets"_s, String(fs::ToNativeSeparators(tileSet) + ".rules"_s)));
-		if (path.empty()) {
-			return false;
+		// An empty file left behind counts as none, there's nothing in it to lose
+		switch (JsonFile::Read(path, doc, MaxRulesSize, String("Rules of tile set \""_s + tileSet + "\""_s))) {
+			case JsonFile::ReadResult::Ok: return ReadResult::Ok;
+			case JsonFile::ReadResult::Unreadable: return ReadResult::Unreadable;
+			default: return ReadResult::Missing;
 		}
-		auto s = fs::Open(path, FileAccess::Read);
-		std::int64_t size = (s->IsValid() ? s->GetSize() : 0);
-		if (size <= 0 || size > 16 * 1024 * 1024) {
-			return false;
+	}
+
+	bool RulesFile::Read(StringView tileSet, Json::Value& doc)
+	{
+		return (TryRead(tileSet, doc) == ReadResult::Ok);
+	}
+
+	String RulesFile::GetWritablePath(StringView tileSet, bool create)
+	{
+		if (!Formats::LevelFile::IsSafeTileSetPath(tileSet)) {
+			return {};
 		}
-		std::string text(std::size_t(size), '\0');
-		s->Read(text.data(), size);
-		Json::CharReaderBuilder builder;
-		auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
-		std::string errors;
-		if (!reader->parse(text.data(), text.data() + text.size(), &doc, &errors) || !doc.isObject()) {
-			LOGW("Rules of tile set \"{}\" cannot be read: {}", tileSet, errors.c_str());
-			doc = Json::Value(Json::objectValue);
-			return false;
+		String tileSetPath = ContentTileSetLibrary::GetWritablePath(tileSet, create);
+		if (tileSetPath.size() <= 4) {
+			return {};
 		}
-		return true;
+		return String(tileSetPath.exceptSuffix(std::size_t(4))) + ".rules"_s;
 	}
 
 	bool RulesFile::Write(StringView tileSet, const Json::Value& doc)
 	{
-		String tileSetPath = ContentTileSetLibrary::GetWritablePath(tileSet, true);
-		if (tileSetPath.empty()) {
+		if (!CanReplace(tileSet)) {
 			return false;
 		}
-		String path = String(tileSetPath.exceptSuffix(std::size_t(4))) + ".rules"_s;
-		Json::StreamWriterBuilder builder;
-		builder["indentation"] = "\t";
-		std::string text = Json::writeString(builder, doc);
-		String tempPath = path + ".tmp"_s;
-		{
-			auto s = fs::Open(tempPath, FileAccess::Write);
-			if (!s->IsValid() || s->Write(text.data(), std::int64_t(text.size())) != std::int64_t(text.size())) {
-				s = nullptr;
-				fs::RemoveFile(tempPath);
-				return false;
-			}
+		String path = GetWritablePath(tileSet, true);
+		if (path.empty()) {
+			return false;
 		}
-		if (fs::FileExists(path)) {
-			fs::RemoveFile(path);
+		// The rules that were there stay whole if the new ones can't be written, and are kept as .bak
+		return JsonFile::Write(path, doc, true);
+	}
+
+	bool RulesFile::Stage(StringView tileSet, const Json::Value& doc, String& path)
+	{
+		path = {};
+		if (!CanReplace(tileSet)) {
+			return false;
 		}
-		return fs::Move(tempPath, path);
+		String target = GetWritablePath(tileSet, true);
+		if (target.empty()) {
+			return false;
+		}
+		if (!JsonFile::Stage(target, doc)) {
+			return false;
+		}
+		path = Death::move(target);
+		return true;
 	}
 }
 

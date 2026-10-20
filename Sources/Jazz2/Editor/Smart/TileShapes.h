@@ -43,16 +43,31 @@ namespace Jazz2::Editor
 			float Error;
 		};
 
+		/** @brief Tiles a level stores in itself, an extra tile set embedded in it */
+		struct LevelTiles
+		{
+			/** @brief Source of the tiles, see @ref TileRef::Source */
+			std::uint8_t Source;
+			/** @brief The tile set */
+			const Formats::TileSetData* Data;
+		};
+
 		/**
 		 * @brief Analyzes the masks of the default tile set of a level, unless they're analyzed already
 		 *
 		 * The slope tags of @p rules go before what the masks tell, a tile left out isn't ground, a tagged one has
-		 * the surface it's tagged with.
+		 * the surface it's tagged with. With @p document, the masks the level overrides are those analyzed, and the
+		 * tiles of @p levelTiles are pieces of ground too. Any change of these is analyzed again.
 		 */
-		void Build(StringView tileSet, const Formats::TileSetData& data, const TerrainRules* rules = nullptr);
+		void Build(StringView tileSet, const Formats::TileSetData& data, const TerrainRules* rules = nullptr,
+			const LevelDocument* document = nullptr, ArrayView<const LevelTiles> levelTiles = {});
 		/** @brief Returns the tile set analyzed */
 		StringView GetTileSet() const {
 			return _tileSet;
+		}
+		/** @brief Returns a number that changes whenever the shapes do */
+		std::uint32_t GetRevision() const {
+			return _revision;
 		}
 		/** @brief Returns all tiles of ground with a straight surface */
 		const SmallVector<Surface, 0>& GetSurfaces() const {
@@ -71,7 +86,13 @@ namespace Jazz2::Editor
 		String _tileSet;
 		SmallVector<Surface, 0> _surfaces;
 		SmallVector<Surface, 0> _ceilings;
+		// Of the slope tags of the rules, see TerrainRules::GetSlopeRevision()
 		std::uint32_t _rulesRevision = ~0u;
+		// Of the masks the level overrides and of its own tiles, see Build()
+		std::uint64_t _levelKey = 0;
+		std::uint32_t _revision = 0;
+
+		static std::uint64_t GetLevelKey(const LevelDocument* document, ArrayView<const LevelTiles> levelTiles);
 	};
 }
 

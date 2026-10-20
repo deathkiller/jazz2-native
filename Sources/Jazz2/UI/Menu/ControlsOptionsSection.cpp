@@ -129,6 +129,6 @@ namespace Jazz2::UI::Menu
 		list->Add<ListItem>(_("Reset To Default"),
 			[this]() { ControlScheme::Reset(); _isDirty = true; }, ActionHeight);
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 }

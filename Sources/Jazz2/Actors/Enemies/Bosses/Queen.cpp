@@ -150,7 +150,7 @@ namespace Jazz2::Actors::Bosses
 								_levelHandler,
 								Vector3i((std::int32_t)(player->GetPos().X + Random().NextFloat(-50.0f, 50.0f)), (std::int32_t)(_pos.Y - 200.0f), _renderer.layer() - 20)
 							));
-							_levelHandler->AddActor(std::move(brick));
+							_levelHandler->AddActor(Death::move(brick));
 
 							_levelHandler->ShakeCameraViewNear(_pos, 20.0f);
 						});

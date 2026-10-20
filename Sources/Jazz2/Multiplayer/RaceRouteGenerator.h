@@ -13,6 +13,17 @@ namespace Jazz2::Multiplayer
 		LevelExit		/**< Straight from the spawn to the level exit, e.g. through a story level in Cooperation */
 	};
 
+	/** @brief Moves of only some characters the route tracer takes into account, supports a bitwise combination of its member values */
+	enum class TrackCharacterMoves : std::uint8_t
+	{
+		None = 0x00,			/**< None of them */
+		DoubleJump = 0x01,		/**< The double jump of Spaz */
+		Glide = 0x02,			/**< The copter ears of Jazz and Lori */
+		All = 0x03				/**< All of them, as a cooperation player can pick any character */
+	};
+
+	DEATH_ENUM_FLAGS(TrackCharacterMoves);
+
 	/**
 		@brief Auto-places minimap track checkpoints for levels without authored waypoints
 
@@ -34,12 +45,13 @@ namespace Jazz2::Multiplayer
 		emptied @p orderedCheckpoints when a traced route turns out to be degenerate).
 
 		With @p outDistances, nothing is traced, it only gets how far each tile is from the start along the way the
-		player goes, row by row, -1 where the player can't get, see @ref ComputeReachableTiles().
+		player goes, row by row, -1 where the player can't get, see @ref ComputeReachableTiles(). @p moves are the
+		moves of only some characters taken into account.
 	*/
 	void GenerateRaceRouteFromGeometry(Tiles::TileMap* tileMap, Events::EventMap* eventMap, TrackRouteType routeType, float waterLevel,
 		const SmallVector<MultiplayerSpawnPoint, 0>& spawnPoints, const SmallVector<Vector2i, 0>& startMarkers,
 		SmallVector<RaceCheckpoint, 0>& orderedCheckpoints, Vector2i& outBoundsMin, Vector2i& outBoundsMax,
-		bool& outCheckpointsOrdered, SmallVectorImpl<std::int32_t>* outDistances = nullptr);
+		bool& outCheckpointsOrdered, SmallVectorImpl<std::int32_t>* outDistances = nullptr, TrackCharacterMoves moves = TrackCharacterMoves::All);
 
 	/**
 		@brief Finds every tile the player can get to from a position, with the movement model of
@@ -47,9 +59,10 @@ namespace Jazz2::Multiplayer
 
 		@p distances gets how far each tile is from the start, row by row, in the cost units of the search (a walk
 		over a tile is 10), -1 where the player can't get. Returns `false` if the start isn't anywhere the player can be.
+		@p moves are the moves of only some characters the player has, all of them by default.
 	*/
 	bool ComputeReachableTiles(Tiles::TileMap* tileMap, Events::EventMap* eventMap, float waterLevel, Vector2f startPos,
-		SmallVectorImpl<std::int32_t>& distances);
+		SmallVectorImpl<std::int32_t>& distances, TrackCharacterMoves moves = TrackCharacterMoves::All);
 }
 
 #endif

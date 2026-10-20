@@ -16,7 +16,7 @@
 #include "nCine/Graphics/RHI/Software/SwRaster.h"
 #include "Shaders/Generated/DefaultSprite.h"
 #include "Shaders/Generated/TexturedBackground.h"
-#include "Shaders/Generated/TexturedBackgroundCircle.h"
+#include "Shaders/Generated/TexturedBackgroundTunnel.h"
 #include "Shaders/Generated/Combine.h"
 #include "Shaders/Generated/PaletteRemap.h"
 
@@ -435,15 +435,15 @@ void UploadRgba(RHI::Texture& texture, std::int32_t w, std::int32_t h, Fn texel)
 	texture.TexImage2D(0, PixelFormat::RGBA8, false, w, h, data.data());
 }
 
-// --- TexturedBackground / TexturedBackgroundCircle: solid source -> analytic horizon/edge asserts ---
+// --- TexturedBackground / TexturedBackgroundTunnel: solid source -> analytic horizon/edge asserts ---
 
-bool RunBackgroundTest(const char* baseDir, bool circle)
+bool RunBackgroundTest(const char* baseDir, bool tunnel)
 {
 	constexpr std::int32_t W = 256, H = 144;		// 16:9, so the shader's aspect correction is exactly 1.0
 	g_uniformBump = 0;
 
-	const ShaderCompiler::Program& prog = (circle ? Jazz2::ShadersGen::TexturedBackgroundCircle : Jazz2::ShadersGen::TexturedBackground);
-	const char* label = (circle ? "TexturedBackgroundCircle" : "TexturedBackground");
+	const ShaderCompiler::Program& prog = (tunnel ? Jazz2::ShadersGen::TexturedBackgroundTunnel : Jazz2::ShadersGen::TexturedBackground);
+	const char* label = (tunnel ? "TexturedBackgroundTunnel" : "TexturedBackground");
 	std::printf("\n=== %s (solid source) ===\n", label);
 
 	RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
@@ -469,6 +469,10 @@ bool RunBackgroundTest(const char* baseDir, bool circle)
 	const float horizon[4] = {0.9f, 0.2f, 0.1f, 0.0f};
 	camera.GetUniform("uHorizonColor")->SetFloatVector(horizon);
 	camera.GetUniform("uShift")->SetFloatValue(0.0f, 0.0f);
+	if (tunnel) {
+		// Centred on the view, fading out into the centre, not spiralling - the defaults of a tunnel layer
+		camera.GetUniform("uTunnel")->SetFloatValue(0.5f, 0.5f, 1.0f, 0.0f);
+	}
 
 	std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
 	RHI::ShaderUniformBlocks blocks(&program);
@@ -524,7 +528,7 @@ bool RunBackgroundTest(const char* baseDir, bool circle)
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 	const int hr = 230, hg = 51, hb = 26;		// round(horizon.rgb * 255)
 
-	if (!circle) {
+	if (!tunnel) {
 		std::printf("Horizon band (vertical centre) = horizon colour:\n");
 		CheckPixel(pixels, stride, 64, 68, hr, hg, hb, 255, 1, "band left");
 		CheckPixel(pixels, stride, 128, 72, hr, hg, hb, 255, 1, "band centre");
@@ -540,7 +544,7 @@ bool RunBackgroundTest(const char* baseDir, bool circle)
 	}
 
 	char outputPath[512];
-	MakePath(baseDir, (circle ? "sw_background_circle.png" : "sw_background.png"), outputPath, sizeof(outputPath));
+	MakePath(baseDir, (tunnel ? "sw_background_tunnel.png" : "sw_background.png"), outputPath, sizeof(outputPath));
 	const bool wrote = WritePng(outputPath, pixels, W, H, stride);
 	std::printf("PNG: %s (%s)\n", outputPath, wrote ? "ok" : "FAILED");
 	return wrote;

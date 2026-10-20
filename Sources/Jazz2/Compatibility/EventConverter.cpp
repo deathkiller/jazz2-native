@@ -51,12 +51,12 @@ namespace Jazz2::Compatibility
 			LOGW("Converter for event {} is already defined", originalEvent);
 		}
 
-		_converters[originalEvent] = std::move(converter);
+		_converters[originalEvent] = Death::move(converter);
 	}
 
 	void EventConverter::Override(JJ2Event originalEvent, ConversionFunction&& converter)
 	{
-		_converters[originalEvent] = std::move(converter);
+		_converters[originalEvent] = Death::move(converter);
 	}
 
 	EventConverter::ConversionFunction EventConverter::NoParamList(EventType ev)
@@ -408,7 +408,8 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 4 }		// Offset (JJ2+)
 			}, eventParams);
 
-			if (eventParams[1] != 0) {
+			// The coins take two bytes, the text is the third one
+			if (eventParams[2] != 0) {
 				level->AddLevelTokenTextID(eventParams[2]);
 			}
 

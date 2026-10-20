@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 		_items.push_back(list->Add<ListItem>(_("Controls"), [root]() { root->SwitchToSection<ControlsOptionsSection>(); }, itemHeight));
 		// TRANSLATORS: Menu item in Options section
 		_items.push_back(list->Add<ListItem>(_("User Profile"), [root]() { root->SwitchToSection<UserProfileOptionsSection>(); }, itemHeight));
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void OptionsSection::OnLayoutChanged(IMenuContainer* root)

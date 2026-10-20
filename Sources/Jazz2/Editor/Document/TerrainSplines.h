@@ -31,12 +31,20 @@ namespace Jazz2::Editor
 		The line is kept in pixels of its layer, from its tile (0, 0), so it stays with the layer however the layer moves
 		in the view. Each tile it wrote is remembered with the tile that was there before: when it's laid again, a tile
 		that's still as it wrote it gets back what was there, and a tile changed by hand since is left as it is and isn't
-		written anymore. They're kept in the editor-only chunk `spln`, so the exported level has only the tiles.
+		written anymore. They're kept in the editor-only chunk `spl2`, so the exported level has only the tiles.
+
+		The chunk is @cpp u8 @ce version (1), @cpp varuint @ce count, then for each line a @cpp varuint @ce size of its
+		record and the record: @cpp i32 @ce layer, @cpp u8 @ce depth, @cpp u8 @ce kind, @cpp u8 @ce flags (1 smooth),
+		@cpp varuint @ce count of points and @cpp f32 @ce X, Y of each, @cpp varuint @ce count of tiles and
+		@cpp i32 @ce X, Y, the tile written and the one before (@cpp u16 @ce index, @cpp u8 @ce source, @cpp u8 @ce
+		flags) of each. A newer version may add fields at the end of a record, a reader skips those it doesn't know.
 	*/
 	struct TerrainSpline
 	{
 		/** @brief Tag of the chunk they're kept in */
-		static constexpr std::uint32_t Chunk = Formats::LevelFile::MakeChunkTag('s', 'p', 'l', 'n');
+		static constexpr std::uint32_t Chunk = Formats::LevelFile::MakeChunkTag('s', 'p', 'l', '2');
+		/** @brief Tag of the chunk 3.9.0 kept them in, without a version, only read */
+		static constexpr std::uint32_t LegacyChunk = Formats::LevelFile::MakeChunkTag('s', 'p', 'l', 'n');
 
 		/** @brief Tile written by the ground, and what was there before */
 		struct OwnedTile
@@ -64,10 +72,28 @@ namespace Jazz2::Editor
 		/** @brief Tiles written */
 		SmallVector<OwnedTile, 0> Owned;
 
-		/** @brief Reads all of them from a level */
+		/**
+		 * @brief Reads all of them from a level, lines with points that make no sense are left out
+		 *
+		 * The legacy chunk wins over the current one if the level has both, it was written by 3.9.0 after this version
+		 * saved the level, as this version never writes it.
+		 */
 		static void Read(const LevelDocument& document, SmallVectorImpl<TerrainSpline>& splines);
 		/** @brief Writes all of them into bytes of the chunk */
 		static void Write(const SmallVectorImpl<TerrainSpline>& splines, SmallVectorImpl<std::uint8_t>& data);
+		/** @brief Returns the bytes of the chunk as the level has them now, in the current version, none without lines */
+		static void GetChunkData(const LevelDocument& document, SmallVectorImpl<std::uint8_t>& data);
+		/** @brief Replaces the chunk by the given bytes, the chunk of 3.9.0 is removed */
+		static void SetChunkData(LevelDocument& document, ArrayView<const std::uint8_t> data);
+		/** @brief Converts the chunk of 3.9.0 to the current one, if the level has it */
+		static void UpgradeLegacyChunk(LevelDocument& document);
+
+		/**
+		 * @brief Follows tiles that moved to other tile references, as when the tile sets changed
+		 *
+		 * @p remap changes a reference in place, or returns `false` if its tile is gone, it's then the empty tile.
+		 */
+		static void RemapTiles(LevelDocument& document, Function<bool(TileRef&)>& remap);
 
 		/**
 		 * @brief Follows layers that were added, removed or moved
@@ -96,10 +122,14 @@ namespace Jazz2::Editor
 		std::size_t GetMemoryUsage() const override;
 
 	private:
+		friend class CommandArchive;
+
 		String _name;
 		SmallVector<std::uint8_t, 0> _oldData;
 		SmallVector<std::uint8_t, 0> _newData;
 		std::unique_ptr<SetTilesCommand> _tiles;
+
+		explicit SetTerrainSplinesCommand(String name) : _name(Death::move(name)) {}
 	};
 }
 

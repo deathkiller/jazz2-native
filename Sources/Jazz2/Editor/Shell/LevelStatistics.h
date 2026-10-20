@@ -6,7 +6,7 @@
 
 namespace Jazz2::Editor
 {
-	class EditorSession;
+	class IEditorContext;
 	class LevelDocument;
 
 	/**
@@ -60,7 +60,7 @@ namespace Jazz2::Editor
 	};
 
 	/** @brief Shows what the level has in each difficulty */
-	void ShowLevelStatisticsDialog(EditorSession& session);
+	void ShowLevelStatisticsDialog(IEditorContext& session);
 }
 
 #endif

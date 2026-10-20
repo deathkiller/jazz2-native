@@ -25,7 +25,11 @@ namespace Jazz2::UI::Menu
 	CustomLevelSelectSection::CustomLevelSelectSection(bool multiplayer, bool privateServer, bool localGame)
 		: _multiplayer(multiplayer), _privateServer(privateServer), _localGame(localGame), _selectedIndex(0), _animation(0.0f), _y(0.0f),
 			_height(0.0f), _availableHeight(0.0f), _touchTime(0.0f), _touchSpeed(0.0f), _pressedCount(0),
-			_noiseCooldown(0.0f), _touchDirection(0), _previewWait(0.0f)
+			_noiseCooldown(0.0f), _touchDirection(0), _indexingFinished(false), _indexingCancelled(false), _itemsSorted(false),
+			_previewAnimation(0.0f), _previewWait(0.0f), _previewWaitIndex(-1)
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+			, _previewRequestDone(false), _previewRequestActive(false)
+#endif
 	{
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		_indexingThread = Thread([](void* arg) {
@@ -34,6 +38,7 @@ namespace Jazz2::UI::Menu
 		}, this);
 #else
 		AddCustomLevels();
+		TakeIndexedItems();
 #endif
 	}
 
@@ -41,8 +46,11 @@ namespace Jazz2::UI::Menu
 	{
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Indicate that indexing thread should stop
-		_selectedIndex = -1;
+		_indexingCancelled.store(true, std::memory_order_relaxed);
 		_indexingThread.Join();
+		if (_previewRequestActive) {
+			_previewThread.Join();
+		}
 #endif
 	}
 
@@ -60,8 +68,14 @@ namespace Jazz2::UI::Menu
 
 	void CustomLevelSelectSection::OnUpdate(float timeMult)
 	{
+		TakeIndexedItems();
+
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
+		}
+		// A quarter of a second
+		if (_previewAnimation < 1.0f) {
+			_previewAnimation = std::min(_previewAnimation + timeMult * 0.067f, 1.0f);
 		}
 
 		if (_touchSpeed > 0.0f) {
@@ -86,14 +100,7 @@ namespace Jazz2::UI::Menu
 			_noiseCooldown -= timeMult;
 		}
 
-		// Not while the selection is moving quickly, reading a level takes a while
-		if (_selectedIndex >= 0 && _selectedIndex < (std::int32_t)_items.size() && _items[_selectedIndex].Path != _previewPath) {
-			_previewWait += timeMult;
-			if (_previewWait > 15.0f) {
-				_previewWait = 0.0f;
-				LoadPreview(_selectedIndex);
-			}
-		}
+		UpdatePreview(timeMult);
 
 		if (_root->ActionHit(PlayerAction::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -165,40 +172,198 @@ namespace Jazz2::UI::Menu
 
 	void CustomLevelSelectSection::DrawPreview(float right, float centerY, float maxWidth)
 	{
-		// Where the level starts, small on the left of its name, with a soft shadow around
+		// Where the level starts, small on the left of its name, in a thin black border with its corners rounded off by
+		// a pixel, over a soft shadow dropped below it
 		if (_preview == nullptr || _selectedIndex < 0 || _selectedIndex >= (std::int32_t)_items.size() ||
 			_items[_selectedIndex].Path != _previewPath || _previewSize.X <= 0 || _previewSize.Y <= 0) {
 			return;
 		}
-		float width = std::min(std::round(maxWidth), 96.0f);
-		if (width < 40.0f) {
+		float width = std::min(std::round(maxWidth), 48.0f);
+		if (width < 24.0f) {
 			return;
 		}
-		Vector2f size(width, std::round(width * _previewSize.Y / _previewSize.X));
-		float x = std::round(right - size.X);
-		float y = std::round(centerY - size.Y * 0.5f);
-		for (std::int32_t i = 4; i > 0; i--) {
-			float grow = i * 1.5f;
-			_root->DrawSolid(x - grow + 1.0f, y - grow + 2.0f, IMenuContainer::MainLayer - 110 + (4 - i), Alignment::TopLeft,
-				Vector2f(size.X + grow * 2.0f, size.Y + grow * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.12f));
+		Vector2f size(width, std::max(std::round(width * _previewSize.Y / _previewSize.X), 1.0f));
+		// A preview much taller than wide (it may be 1 by 256) is fitted into twice its width in height instead, the shadow
+		// texture is made for the drawn size, so it would get far too large otherwise
+		float maxHeight = width * 2.0f;
+		if (size.Y > maxHeight) {
+			size.Y = maxHeight;
+			size.X = std::max(std::round(maxHeight * _previewSize.X / _previewSize.Y), 1.0f);
 		}
-		_root->DrawSolid(x - 1.0f, y - 1.0f, IMenuContainer::MainLayer - 105, Alignment::TopLeft, Vector2f(size.X + 2.0f, size.Y + 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f));
-		_root->DrawTexture(*_preview, x, y, IMenuContainer::MainLayer - 100, Alignment::TopLeft, size, Colorf::White);
+		// Fades in while it slides a few pixels to its place from the left, on whole pixels
+		constexpr float SlideDistance = 8.0f;
+		float eased = Easing::OutCubic(_previewAnimation);
+		float x = std::round(right - size.X - (1.0f - eased) * SlideDistance);
+		float y = std::round(centerY - size.Y * 0.5f);
+		float alpha = eased;
+
+		// Dropped a little below and to the right of it
+		UpdatePreviewShadow(Vector2i(std::int32_t(size.X), std::int32_t(size.Y)));
+		float spread = float(PreviewShadowSpread);
+		_root->DrawTexture(*_previewShadow, x - spread + 1.0f, y - spread + 2.0f, IMenuContainer::MainLayer - 110, Alignment::TopLeft,
+			Vector2f(size.X + spread * 2.0f, size.Y + spread * 2.0f), Colorf(1.0f, 1.0f, 1.0f, alpha));
+
+		// The border leaves out its corner pixels, which is what rounds the corners
+		Colorf borderColor(0.0f, 0.0f, 0.0f, alpha);
+		_root->DrawSolid(x, y - 1.0f, IMenuContainer::MainLayer - 105, Alignment::TopLeft, Vector2f(size.X, 1.0f), borderColor);
+		_root->DrawSolid(x, y + size.Y, IMenuContainer::MainLayer - 105, Alignment::TopLeft, Vector2f(size.X, 1.0f), borderColor);
+		_root->DrawSolid(x - 1.0f, y, IMenuContainer::MainLayer - 105, Alignment::TopLeft, Vector2f(1.0f, size.Y), borderColor);
+		_root->DrawSolid(x + size.X, y, IMenuContainer::MainLayer - 105, Alignment::TopLeft, Vector2f(1.0f, size.Y), borderColor);
+
+		_root->DrawTexture(*_preview, x, y, IMenuContainer::MainLayer - 100, Alignment::TopLeft, size, Colorf(1.0f, 1.0f, 1.0f, alpha));
 	}
 
-	void CustomLevelSelectSection::LoadPreview(std::int32_t index)
+	void CustomLevelSelectSection::UpdatePreview(float timeMult)
+	{
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (_previewRequestActive && _previewRequestDone.load(std::memory_order_acquire)) {
+			// The thread has nothing left to do but to end
+			_previewThread.Join();
+			_previewRequestActive = false;
+			_previewRequestDone.store(false, std::memory_order_relaxed);
+			// Kept even when it's empty, so a level whose preview can't be read isn't read again and again
+			CachePreview(Death::move(_previewRequest));
+		}
+#endif
+
+		if (_selectedIndex < 0 || _selectedIndex >= (std::int32_t)_items.size()) {
+			return;
+		}
+		const ItemData& item = _items[_selectedIndex];
+		if (item.Path == _previewPath) {
+			// Shown already, or known to have none
+			return;
+		}
+
+		if (!item.HasPreview) {
+			// Most levels have none (none converted from the original game has), they're known by the header
+			// already, so nothing is read for them at all
+			_preview = nullptr;
+			_previewSize = Vector2i();
+			_previewPath = item.Path;
+			return;
+		}
+		for (std::int32_t i = std::int32_t(_previewCache.size()) - 1; i >= 0; i--) {
+			if (_previewCache[i].Path == item.Path) {
+				ShowPreview(_previewCache[i]);
+				return;
+			}
+		}
+
+		// Not while the selection is moving quickly, reading a level takes a while
+		if (_previewWaitIndex != _selectedIndex) {
+			_previewWaitIndex = _selectedIndex;
+			_previewWait = 0.0f;
+		}
+		_previewWait += timeMult;
+		if (_previewWait <= 15.0f) {
+			return;
+		}
+
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (_previewRequestActive) {
+			// One at a time, the next one starts once it's done
+			return;
+		}
+		// The thread is started after the request is filled in, so it sees all of it
+		_previewRequest = PreviewData();
+		_previewRequest.Path = item.Path;
+		_previewRequestActive = true;
+		_previewThread = Thread([](void* arg) {
+			auto* _this = static_cast<CustomLevelSelectSection*>(arg);
+			ReadPreview(_this->_previewRequest);
+			_this->_previewRequestDone.store(true, std::memory_order_release);
+		}, this);
+#else
+		PreviewData preview;
+		preview.Path = item.Path;
+		ReadPreview(preview);
+		ShowPreview(preview);
+		CachePreview(Death::move(preview));
+#endif
+	}
+
+	void CustomLevelSelectSection::ShowPreview(const PreviewData& preview)
 	{
 		_preview = nullptr;
 		_previewSize = Vector2i();
-		if (index < 0 || index >= (std::int32_t)_items.size()) {
-			return;
-		}
-		_previewPath = _items[index].Path;
-		if (_previewPath.empty()) {
+		_previewPath = preview.Path;
+		if (preview.Size.X <= 0 || preview.Size.Y <= 0) {
 			return;
 		}
 
-		auto s = fs::Open(_previewPath, FileAccess::Read);
+		_preview = std::make_unique<Texture>("LevelPreview", Texture::Format::RGBA8, preview.Size.X, preview.Size.Y);
+		_preview->LoadFromTexels(preview.Texels.data(), 0, 0, preview.Size.X, preview.Size.Y);
+		_preview->SetMinFiltering(SamplerFilter::Linear);
+		_preview->SetMagFiltering(SamplerFilter::Nearest);
+		_previewSize = preview.Size;
+		_previewAnimation = 0.0f;
+	}
+
+	void CustomLevelSelectSection::UpdatePreviewShadow(Vector2i size)
+	{
+		if (_previewShadow != nullptr && _previewShadowSize == size) {
+			return;
+		}
+
+		// Black, faded out with the square of the distance from the edge of the preview, as the shadows of the editor's
+		// menus are (see Editor::UiSkin), around the same corners rounded off by a pixel
+		constexpr float MaxOpacity = 0.45f;
+		constexpr float Radius = 1.0f;
+		const std::int32_t spread = PreviewShadowSpread;
+		const std::int32_t width = size.X + spread * 2;
+		const std::int32_t height = size.Y + spread * 2;
+		const float innerHalfX = size.X * 0.5f - Radius;
+		const float innerHalfY = size.Y * 0.5f - Radius;
+
+		SmallVector<std::uint8_t, 0> texels;
+		texels.resize_for_overwrite(std::size_t(width) * std::size_t(height) * 4);
+		for (std::int32_t y = 0; y < height; y++) {
+			for (std::int32_t x = 0; x < width; x++) {
+				float qx = std::abs(x + 0.5f - width * 0.5f) - innerHalfX;
+				float qy = std::abs(y + 0.5f - height * 0.5f) - innerHalfY;
+				float outsideX = std::max(qx, 0.0f), outsideY = std::max(qy, 0.0f);
+				float distance = std::sqrt(outsideX * outsideX + outsideY * outsideY) + std::min(std::max(qx, qy), 0.0f) - Radius;
+				float fade = 1.0f - std::clamp(distance / float(spread), 0.0f, 1.0f);
+
+				std::uint8_t* texel = &texels[(std::size_t(y) * std::size_t(width) + std::size_t(x)) * 4];
+				texel[0] = 0;
+				texel[1] = 0;
+				texel[2] = 0;
+				texel[3] = std::uint8_t(fade * fade * MaxOpacity * 255.0f + 0.5f);
+			}
+		}
+
+		_previewShadow = std::make_unique<Texture>("LevelPreviewShadow", Texture::Format::RGBA8, width, height);
+		_previewShadow->LoadFromTexels(texels.data(), 0, 0, width, height);
+		_previewShadow->SetMinFiltering(SamplerFilter::Linear);
+		_previewShadow->SetMagFiltering(SamplerFilter::Linear);
+		_previewShadowSize = size;
+	}
+
+	void CustomLevelSelectSection::CachePreview(PreviewData&& preview)
+	{
+		for (std::size_t i = 0; i < _previewCache.size(); i++) {
+			if (_previewCache[i].Path == preview.Path) {
+				_previewCache.erase(_previewCache.begin() + i);
+				break;
+			}
+		}
+		if (std::int32_t(_previewCache.size()) >= MaxCachedPreviews) {
+			_previewCache.erase(_previewCache.begin());
+		}
+		_previewCache.push_back(Death::move(preview));
+	}
+
+	void CustomLevelSelectSection::ReadPreview(PreviewData& preview)
+	{
+		// The editor and the converter store previews of at most 128x72 pixels, anything much larger isn't one of them
+		constexpr std::int32_t MaxPreviewSize = 256;
+
+		preview.Texels.clear();
+		preview.Size = Vector2i();
+
+		auto s = fs::Open(preview.Path, FileAccess::Read);
 		Formats::LevelHeader header;
 		if (!s->IsValid() || !Formats::LevelFile::ReadHeader(*s, header)) {
 			return;
@@ -210,29 +375,28 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 		SmallVector<Formats::ChunkRecord, 0> chunks;
-		reader.ReadChunks(chunks, false);
+		reader.ReadSelectedChunks(chunks, [](std::uint32_t tag, std::uint32_t) {
+			return (tag == Formats::LevelFile::PreviewChunk);
+		});
 		for (const Formats::ChunkRecord& chunk : chunks) {
 			if (chunk.Tag != Formats::LevelFile::PreviewChunk || chunk.Data.size() < 4) {
 				continue;
 			}
 			std::int32_t width = chunk.Data[0] | (chunk.Data[1] << 8);
 			std::int32_t height = chunk.Data[2] | (chunk.Data[3] << 8);
-			if (width <= 0 || height <= 0 || width > 1024 || height > 1024 || chunk.Data.size() < 4 + std::size_t(width) * std::size_t(height) * 3) {
+			if (width <= 0 || height <= 0 || width > MaxPreviewSize || height > MaxPreviewSize ||
+				chunk.Data.size() < 4 + std::size_t(width) * std::size_t(height) * 3) {
 				return;
 			}
-			SmallVector<std::uint8_t, 0> texels;
-			texels.resize_for_overwrite(std::size_t(width) * std::size_t(height) * 4);
-			for (std::size_t i = 0; i < std::size_t(width) * std::size_t(height); i++) {
-				texels[i * 4] = chunk.Data[4 + i * 3];
-				texels[i * 4 + 1] = chunk.Data[4 + i * 3 + 1];
-				texels[i * 4 + 2] = chunk.Data[4 + i * 3 + 2];
-				texels[i * 4 + 3] = 255;
+			const std::size_t pixelCount = std::size_t(width) * std::size_t(height);
+			preview.Texels.resize_for_overwrite(pixelCount * 4);
+			for (std::size_t i = 0; i < pixelCount; i++) {
+				preview.Texels[i * 4] = chunk.Data[4 + i * 3];
+				preview.Texels[i * 4 + 1] = chunk.Data[4 + i * 3 + 1];
+				preview.Texels[i * 4 + 2] = chunk.Data[4 + i * 3 + 2];
+				preview.Texels[i * 4 + 3] = 255;
 			}
-			_preview = std::make_unique<Texture>("LevelPreview", Texture::Format::RGBA8, width, height);
-			_preview->LoadFromTexels(texels.data(), 0, 0, width, height);
-			_preview->SetMinFiltering(SamplerFilter::Linear);
-			_preview->SetMagFiltering(SamplerFilter::Nearest);
-			_previewSize = Vector2i(width, height);
+			preview.Size = Vector2i(width, height);
 			return;
 		}
 	}
@@ -288,7 +452,7 @@ namespace Jazz2::UI::Menu
 					_root->DrawStringShadow(levelName, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Left, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-					DrawPreview(column1 - 8.0f, center.Y, column1 - 8.0f - (contentBounds.X + 6.0f));
+					DrawPreview(column1 - 16.0f, center.Y, column1 - 16.0f - (contentBounds.X + 6.0f));
 				} else {
 					_root->DrawStringShadow(levelName, charOffset, column1, center.Y, IMenuContainer::FontLayer,
 						Alignment::Left, Font::DefaultColor, 0.7f);
@@ -427,14 +591,59 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void CustomLevelSelectSection::TakeIndexedItems()
+	{
+		if (_itemsSorted) {
+			return;
+		}
+
+		bool finished;
+		{
+			std::unique_lock<Death::Threading::Spinlock> lock(_indexedItemsLock);
+			finished = _indexingFinished.load(std::memory_order_relaxed);
+			for (ItemData& item : _indexedItems) {
+				_items.push_back(Death::move(item));
+			}
+			_indexedItems.clear();
+		}
+
+		if (finished) {
+			// Sorted once all levels are found, the selection stays on the level it's on
+			_itemsSorted = true;
+			String selectedName;
+			if (_selectedIndex >= 0 && _selectedIndex < (std::int32_t)_items.size()) {
+				selectedName = _items[_selectedIndex].LevelName;
+			}
+			nCine::sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
+				return (a.LevelName < b.LevelName);
+			});
+			if (!selectedName.empty()) {
+				for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
+					if (_items[i].LevelName == selectedName) {
+						_selectedIndex = i;
+						break;
+					}
+				}
+			}
+			_previewWaitIndex = -1;
+		}
+	}
+
+	void CustomLevelSelectSection::PublishItem(ItemData&& item)
+	{
+		std::unique_lock<Death::Threading::Spinlock> lock(_indexedItemsLock);
+		_indexedItems.push_back(Death::move(item));
+	}
+
 	void CustomLevelSelectSection::AddCustomLevels()
 	{
 		auto& resolver = ContentResolver::Get();
 
 #if defined(WITH_MULTIPLAYER)
 		if (_multiplayer && !_localGame) {
-			auto& level = _items.emplace_back();
+			ItemData level;
 			level.LevelName = CreateServerOptionsSection::FromPlaylist;
+			PublishItem(Death::move(level));
 		}
 #endif
 
@@ -443,7 +652,7 @@ namespace Jazz2::UI::Menu
 		HashMap<String, bool> foundLevels;
 		auto addLevelsIn = [&](StringView path) {
 			for (auto item : fs::Directory(fs::CombinePath({ path, "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories)) {
-				if (_selectedIndex < 0) {
+				if (_indexingCancelled.load(std::memory_order_relaxed)) {
 					return false;
 				}
 				if (foundLevels.try_emplace(String(fs::GetFileName(item)), true).second) {
@@ -461,9 +670,9 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		nCine::sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
-			return (a.LevelName < b.LevelName);
-		});
+		// The main thread sorts the list then, it's the only one that touches it (see TakeIndexedItems())
+		std::unique_lock<Death::Threading::Spinlock> lock(_indexedItemsLock);
+		_indexingFinished.store(true, std::memory_order_relaxed);
 	}
 
 	void CustomLevelSelectSection::AddLevel(StringView levelFile)
@@ -473,7 +682,10 @@ namespace Jazz2::UI::Menu
 		}
 
 		auto s = fs::Open(levelFile, FileAccess::Read);
-		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", );
+		if (!s->IsValid()) {
+			LOGW("Cannot open level \"{}\" for reading", levelFile);
+			return;
+		}
 
 		Formats::LevelHeader header;
 		if (!Formats::LevelFile::ReadHeader(*s, header)) {
@@ -497,14 +709,15 @@ namespace Jazz2::UI::Menu
 		Formats::LevelProperties properties;
 		reader.ReadProperties(properties);
 
-		auto& level = _items.emplace_back();
+		ItemData level;
 		level.LevelName = fs::GetFileNameWithoutExtension(levelFile);
 		level.Path = levelFile;
+		level.HasPreview = ((flags & LevelFlags::HasPreview) == LevelFlags::HasPreview);
 		if (!properties.Author.empty()) {
 			// TRANSLATORS: Level in the list of custom levels, with its name and the name of who made it
 			level.DisplayName = _f("{} by {}", properties.DisplayName, properties.Author);
 		} else {
-			level.DisplayName = std::move(properties.DisplayName);
+			level.DisplayName = Death::move(properties.DisplayName);
 		}
 
 #if defined(DEATH_DEBUG)
@@ -517,5 +730,7 @@ namespace Jazz2::UI::Menu
 			level.DisplayName += " [MultiSpawnPoints]"_s;
 		}
 #endif
+
+		PublishItem(Death::move(level));
 	}
 }

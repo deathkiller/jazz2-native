@@ -209,6 +209,18 @@ namespace Jazz2::Compatibility
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
 		Formats::TileSetData data;
+		Convert(data);
+
+		// The image content goes in LZ4 blocks of one band of tiles each, see JJ2Anims::WriteImageContentLz4()
+		bool lz4 = false;
+#if defined(WITH_LZ4)
+		lz4 = (JJ2Anims::PreferredImageCompression == JJ2Anims::ImageCompression::Lz4);
+#endif
+		Formats::TileSetFile::Write(*so, data, lz4);
+	}
+
+	void JJ2Tileset::Convert(Formats::TileSetData& data) const
+	{
 		data.Resize(_tileCount);
 
 		// Palette
@@ -237,12 +249,5 @@ namespace Jazz2::Compatibility
 			std::memcpy(&data.Images[std::size_t(i) * Formats::TileSetData::ImageBytesPerTile], tile.Image, sizeof(tile.Image));
 			std::memcpy(&data.Masks[std::size_t(i) * Formats::TileSetData::MaskBytesPerTile], tile.Mask, sizeof(tile.Mask));
 		}
-
-		// The image content goes in LZ4 blocks of one band of tiles each, see JJ2Anims::WriteImageContentLz4()
-		bool lz4 = false;
-#if defined(WITH_LZ4)
-		lz4 = (JJ2Anims::PreferredImageCompression == JJ2Anims::ImageCompression::Lz4);
-#endif
-		Formats::TileSetFile::Write(*so, data, lz4);
 	}
 }

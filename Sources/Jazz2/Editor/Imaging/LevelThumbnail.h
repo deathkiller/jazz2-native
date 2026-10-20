@@ -3,12 +3,18 @@
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Document/LevelDocument.h"
+#include "../../Formats/LevelPreview.h"
 
 #include <unordered_map>
 
+namespace Jazz2::Tiles
+{
+	class TileMap;
+}
+
 namespace Jazz2::Editor
 {
-	class EditorSession;
+	class TileSetDataCache;
 
 	/**
 		@brief Draws a level small, a pixel for a tile in the average color of the tile
@@ -19,14 +25,11 @@ namespace Jazz2::Editor
 	class LevelThumbnail
 	{
 	public:
-		/** @brief Size of the preview stored with a level */
-		static constexpr std::int32_t PreviewMaxWidth = 128;
-		/** @copydoc PreviewMaxWidth */
-		static constexpr std::int32_t PreviewMaxHeight = 72;
-		/** @brief Pixels of the level in a pixel of the preview, each way */
-		static constexpr std::int32_t PreviewScale = 3;
+		/** @brief Pixels of a tile as stored in its tile set */
+		using TilePixels = Formats::LevelPreview::TilePixels;
 
-		explicit LevelThumbnail(EditorSession& session);
+		/** @brief Creates a new instance for a level, the tiles of its tile sets are read whole from @p tileSets */
+		LevelThumbnail(const LevelDocument& document, TileSetDataCache& tileSets);
 
 		/** @brief Returns the average color of a tile as `R | G << 8 | B << 16 | A << 24`, its alpha is how much of it is covered */
 		std::uint32_t GetTileColor(TileRef tile);
@@ -34,41 +37,42 @@ namespace Jazz2::Editor
 		void DrawLayer(std::int32_t layer, SmallVectorImpl<std::uint32_t>& pixels);
 		/** @brief Forgets the colors of the tiles, when the palette or the tile sets change */
 		void Clear();
+		/**
+		 * @brief Forgets the colors of the tiles if what they're made of changed since the last call, returns `true` then
+		 *
+		 * Compares @ref GetSourceHash() with the one of the last call. Meant to be called whenever the level changed,
+		 * before it's drawn again; the colors of the tiles that stay the same are kept.
+		 */
+		bool Revalidate();
+		/**
+		 * @brief Returns a hash of everything the colors of the tiles of a level depend on
+		 *
+		 * That's the palette the level is shown in, the tile sets and the data @p tileSets has for them --- a tile set
+		 * read again from its file is new data --- their offsets, flags and remapping, the tiles stored in the level
+		 * itself and the first frames of the animations. Hashing the tiles stored in the level takes a moment for a
+		 * large set of them, so it's meant for once per change of the level, not for every frame.
+		 */
+		static std::uint64_t GetSourceHash(const LevelDocument& document, TileSetDataCache& tileSets);
 
 		/**
 		 * @brief Makes the preview of a level shown in the list of custom levels, see @ref Formats::LevelFile::PreviewChunk
 		 *
-		 * What the game shows around the start of the level, all layers at the parallax of the game, made
-		 * @ref PreviewScale times smaller.
+		 * What the game shows around the start of the level, see @ref Formats::LevelPreview. The layers are placed as
+		 * @p tileMap has them, if it's given, the indexed tiles are in the palette the level is shown in.
 		 */
-		static void MakePreview(EditorSession& session, SmallVectorImpl<std::uint8_t>& data);
-
-		/** @brief Pixels of a tile as stored in its tile set */
-		struct TilePixels
-		{
-			/** @brief Pixels in the tile set */
-			const std::uint8_t* Pixels = nullptr;
-			/** @brief Palette indices of the level for those of the tile set, if it's remapped */
-			const std::uint8_t* Remapping = nullptr;
-			/** @brief Whether the pixels are RGBA instead of palette indices */
-			bool TrueColor = false;
-			/** @brief Flags of the tile, see @ref Formats::TileRecord */
-			std::uint8_t Flags = 0;
-
-			/** @brief Returns the pixel as `R | G << 8 | B << 16 | A << 24`, flipped as the tile is */
-			std::uint32_t GetPixel(std::int32_t x, std::int32_t y, const std::uint32_t* palette) const;
-		};
+		static void MakePreview(const LevelDocument& document, Tiles::TileMap* tileMap, TileSetDataCache& tileSets, SmallVectorImpl<std::uint8_t>& data);
 
 		/** @brief Finds the pixels of a tile, the first frame of an animated one, returns `false` for an empty or unknown one */
-		static bool GetTilePixels(EditorSession& session, TileRef tile, TilePixels& result);
+		static bool GetTilePixels(const LevelDocument& document, TileSetDataCache& tileSets, TileRef tile, TilePixels& result);
 
 	private:
-		EditorSession& _session;
+		const LevelDocument& _document;
+		TileSetDataCache& _tileSets;
 		std::unordered_map<std::uint32_t, std::uint32_t> _colors;
+		// What the colors were found from, see Revalidate()
+		std::uint64_t _sourceHash = 0;
 
 		std::uint32_t ComputeTileColor(TileRef tile);
-
-		static std::uint32_t Blend(std::uint32_t dst, std::uint32_t src);
 	};
 }
 

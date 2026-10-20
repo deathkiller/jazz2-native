@@ -272,7 +272,7 @@ namespace Jazz2::UI::Menu
 			_transitionTime = 1.0f;
 		});
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void CreateLocalGameOptionsSection::OnUpdate(float timeMult)
@@ -432,7 +432,7 @@ namespace Jazz2::UI::Menu
 			levelInit.CheatsUsed = true;
 		}
 
-		_root->ChangeLevel(std::move(levelInit));
+		_root->ChangeLevel(Death::move(levelInit));
 	}
 }
 

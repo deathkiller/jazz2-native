@@ -52,7 +52,7 @@ namespace Jazz2
 		AreaEndOfLevel,						/**< Area that ends the level */
 		AreaCallback,						/**< Area that invokes a script callback */
 		AreaActivateBoss,					/**< Area that activates a boss */
-		AreaFlyOff,							/**< Area that disables the airboard */
+		AreaFlyOff,							/**< Area that disables the airboard and the flying carrot, and turns a bird back */
 		AreaRevertMorph,					/**< Area that reverts player morph */
 		AreaMorphToFrog,					/**< Area that morphs the player into a frog */
 		AreaNoFire,							/**< Area that disables firing */

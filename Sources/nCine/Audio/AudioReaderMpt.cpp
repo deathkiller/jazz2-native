@@ -18,6 +18,8 @@
 
 #include <cstring>
 
+#include <Base/Move.h>
+
 using namespace Death::IO;
 
 namespace nCine
@@ -35,7 +37,7 @@ namespace nCine
 	// Spelled with the fixed-width type the declaration uses: where `std::int32_t` is `long int` (MIPS,
 	// among others) a plain `int` parameter would be a different signature and match nothing
 	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<Stream> fileHandle, std::int32_t frequency)
-		: _fileHandle(std::move(fileHandle)), _frequency(frequency), _module(nullptr)
+		: _fileHandle(Death::move(fileHandle)), _frequency(frequency), _module(nullptr)
 	{
 		if (!_fileHandle->IsValid()) {
 			return;

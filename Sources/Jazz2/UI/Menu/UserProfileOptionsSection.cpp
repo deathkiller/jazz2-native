@@ -80,7 +80,7 @@ namespace Jazz2::UI::Menu
 	{
 		if (_isDirty) {
 			_isDirty = false;
-			PreferencesCache::PlayerName = std::move(_localPlayerName);
+			PreferencesCache::PlayerName = Death::move(_localPlayerName);
 			PreferencesCache::PlayerFurColor = _furColor;
 			PreferencesCache::PlayerColors = _colorMode;
 			PreferencesCache::Save();
@@ -257,7 +257,7 @@ namespace Jazz2::UI::Menu
 		RefreshUniqueIdItemHeight();
 #endif
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void UserProfileOptionsSection::OnUpdate(float timeMult)

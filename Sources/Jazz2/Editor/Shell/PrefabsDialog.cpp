@@ -2,10 +2,14 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../EditorSession.h"
+#include "TextPrompt.h"
+#include "../Tools/EditorContext.h"
+#include "../Runtime/TileDrawing.h"
 #include "../Smart/TilePrefabs.h"
+#include "../Tools/ToolActions.h"
 #include "../UI/UiDialogs.h"
 #include "../UI/UiSurface.h"
+#include "../UI/UiVirtualList.h"
 #include "../../Tiles/TileMap.h"
 
 #include "../../../nCine/I18n.h"
@@ -33,9 +37,15 @@ namespace Jazz2::Editor
 		class PrefabPreview : public UiElement
 		{
 		public:
-			PrefabPreview(EditorSession& session, std::shared_ptr<PrefabsState> state, std::int32_t index)
-				: _session(session), _state(std::move(state)), _index(index)
+			PrefabPreview(IEditorContext& session, std::shared_ptr<PrefabsState> state)
+				: _session(session), _state(Death::move(state)), _index(-1)
 			{
+			}
+
+			/** Sets the prefab shown, -1 for none */
+			void SetIndex(std::int32_t index)
+			{
+				_index = index;
 			}
 
 			Vector2f Measure(const UiContext& context, Vector2f available) override
@@ -47,7 +57,7 @@ namespace Jazz2::Editor
 			{
 				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
 				Tiles::TileMap* tileMap = _session.GetTileMap();
-				if (tileMap == nullptr || _index >= std::int32_t(_state->Prefabs.size())) {
+				if (tileMap == nullptr || _index < 0 || _index >= std::int32_t(_state->Prefabs.size())) {
 					return;
 				}
 				const LevelDocument& document = _session.GetDocument();
@@ -65,100 +75,125 @@ namespace Jazz2::Editor
 							continue;
 						}
 						const TileRef& tile = stamp.GetTile(x, y);
-						std::int32_t tileId = document.ToTileId(tile);
-						if (tileId > 0) {
-							painter.Tile(*tileMap, tileId, tile.Flags, Rectf(x0 + x * cell, y0 + y * cell, cell, cell), 1.0f, UiLayer::Content);
+						if (!tile.IsEmpty()) {
+							DrawTile(painter, *tileMap, document, tile, tile.Flags, Rectf(x0 + x * cell, y0 + y * cell, cell, cell), 1.0f, UiLayer::Content);
 						}
 					}
 				}
 			}
 
 		private:
-			EditorSession& _session;
+			IEditorContext& _session;
 			std::shared_ptr<PrefabsState> _state;
 			std::int32_t _index;
 		};
 
-		/** The prefabs, made again when they change */
-		class PrefabList : public UiStack
+		/** Row of the list of prefabs, shows the prefab it's bound to and acts on it, see UiVirtualList::CreateRow */
+		class PrefabRow : public UiStack
 		{
 		public:
-			PrefabList(EditorSession& session, std::shared_ptr<PrefabsState> state)
-				: UiStack(UiOrientation::Vertical, 2.0f), _session(session), _state(std::move(state)), _shownRevision(0)
+			// The space below it is the one between the rows of a stack
+			static constexpr float BottomSpace = 2.0f;
+
+			PrefabRow(IEditorContext& session, std::shared_ptr<PrefabsState> state)
+				: UiStack(UiOrientation::Horizontal, UiTheme::Spacing, UiThickness(0.0f, 0.0f, 0.0f, BottomSpace)), _state(state), _index(-1)
 			{
+				IEditorContext* s = &session;
+				PrefabRow* self = this;
+				_preview = Add<PrefabPreview>(session, state);
+				_name = Add<UiLabel>();
+				_name->Flex = 1.0f;
+				auto* use = Add<UiButton>(_("Use"), EditorIcon::Brush, [s, state, self]() {
+					std::int32_t i = self->_index;
+					if (i < 0 || i >= std::int32_t(state->Prefabs.size())) {
+						return;
+					}
+					// A prefab of more layers or with events is pasted with them, see ToolActions::UsePrefab()
+					if (!ToolActions::UsePrefab(*s, state->Prefabs[i])) {
+						s->ShowMessage(_("The level doesn't have the tile sets of the prefab"));
+					}
+				});
+				use->Tooltip = _("Paint with it");
+				auto* remove = Add<UiButton>(StringView(), EditorIcon::Delete, [s, state, self]() {
+					std::int32_t i = self->_index;
+					if (i < 0 || i >= std::int32_t(state->Prefabs.size())) {
+						return;
+					}
+					state->Prefabs.erase(state->Prefabs.begin() + i);
+					if (!TilePrefab::Save(state->TileSet, state->Prefabs)) {
+						s->ShowMessage(_("The prefabs couldn't be saved"));
+					}
+					state->Revision++;
+				});
+				remove->Tooltip = _("Remove the prefab");
+			}
+
+			/** Binds the row to a prefab */
+			void Bind(std::int32_t index)
+			{
+				_index = index;
+				_preview->SetIndex(index);
+				_name->Text = (index >= 0 && index < std::int32_t(_state->Prefabs.size()) ? _state->Prefabs[index].Name : String());
+			}
+
+		private:
+			std::shared_ptr<PrefabsState> _state;
+			std::int32_t _index;
+			PrefabPreview* _preview;
+			UiLabel* _name;
+		};
+
+		/** The prefabs, only the rows seen have elements, the rows are bound again when the prefabs change */
+		class PrefabList : public UiVirtualList
+		{
+		public:
+			PrefabList(IEditorContext& session, std::shared_ptr<PrefabsState> state)
+				: _state(Death::move(state)), _shownRevision(0)
+			{
+				// As high as the preview, and the space below it
+				RowHeight = 40.0f + PrefabRow::BottomSpace;
+				// The rows are only used by their buttons
+				Selectable = false;
+				EmptyText = _("The tile set has no prefabs yet");
+				CountFunc = [this]() { return std::int32_t(_state->Prefabs.size()); };
+				IEditorContext* s = &session;
+				std::shared_ptr<PrefabsState> rowState = _state;
+				CreateRow = [s, rowState]() -> std::unique_ptr<UiElement> {
+					return std::make_unique<PrefabRow>(*s, rowState);
+				};
+				BindRow = [](UiElement& row, std::int32_t index) {
+					static_cast<PrefabRow&>(row).Bind(index);
+				};
 			}
 
 			void Update(float timeMult) override
 			{
 				if (_shownRevision != _state->Revision) {
 					_shownRevision = _state->Revision;
-					Rebuild();
+					RebindRows();
 				}
-				UiStack::Update(timeMult);
+				UiVirtualList::Update(timeMult);
 			}
 
 		private:
-			EditorSession& _session;
 			std::shared_ptr<PrefabsState> _state;
 			std::uint32_t _shownRevision;
-
-			void Rebuild()
-			{
-				ClearChildren();
-				if (_state->Prefabs.empty()) {
-					Add<UiLabel>(_("The tile set has no prefabs yet"), UiTheme::TextDim);
-					return;
-				}
-				EditorSession* s = &_session;
-				std::shared_ptr<PrefabsState> state = _state;
-				for (std::int32_t i = 0; i < std::int32_t(_state->Prefabs.size()); i++) {
-					auto* row = Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-					row->Add<PrefabPreview>(_session, _state, i);
-					auto* name = row->Add<UiLabel>(_state->Prefabs[i].Name);
-					name->Flex = 1.0f;
-					auto* use = row->Add<UiButton>(_("Use"), EditorIcon::Brush, [s, state, i]() {
-						if (i >= std::int32_t(state->Prefabs.size())) {
-							return;
-						}
-						TileStamp stamp = state->Prefabs[i].ToStamp(s->GetDocument());
-						if (stamp.IsEmpty() || std::find(stamp.Present.begin(), stamp.Present.end(), true) == stamp.Present.end()) {
-							s->ShowMessage(_("The level doesn't have the tile sets of the prefab"));
-							return;
-						}
-						s->SetStamp(std::move(stamp));
-						s->GetTools().SetActive(EditorToolType::Brush);
-					});
-					use->Tooltip = _("Paint with it");
-					auto* remove = row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, state, i]() {
-						if (i >= std::int32_t(state->Prefabs.size())) {
-							return;
-						}
-						state->Prefabs.erase(state->Prefabs.begin() + i);
-						if (!TilePrefab::Save(state->TileSet, state->Prefabs)) {
-							s->ShowMessage(_("The prefabs couldn't be saved"));
-						}
-						state->Revision++;
-					});
-					remove->Tooltip = _("Remove the prefab");
-				}
-			}
 		};
 	}
 
-	void ShowPrefabsDialog(EditorSession& session)
+	void ShowPrefabsDialog(IEditorContext& session)
 	{
 		UiSurface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
 
-		EditorSession* s = &session;
+		IEditorContext* s = &session;
 		auto state = std::make_shared<PrefabsState>();
 		state->TileSet = session.GetDocument().Properties.DefaultTileSet;
 		TilePrefab::Load(state->TileSet, state->Prefabs);
 
 		auto dialog = std::make_unique<UiDialog>(_("Prefabs"));
-		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
 		content->Add<UiLabel>(_f("Prefabs of tile set \"{}\", for any level of it", state->TileSet), UiTheme::TextDim);
 		auto* scroll = content->Add<UiScrollView>();
@@ -184,12 +219,13 @@ namespace Jazz2::Editor
 				return;
 			}
 			TilePrefab prefab = TilePrefab::FromStamp(s->GetDocument(), stamp, name);
+			bool droppedTiles = (prefab.DroppedTiles > 0);
 			// One of the same name is replaced
 			auto it = std::find_if(state->Prefabs.begin(), state->Prefabs.end(), [&name](const TilePrefab& p) { return p.Name == name; });
 			if (it != state->Prefabs.end()) {
-				*it = std::move(prefab);
+				*it = Death::move(prefab);
 			} else {
-				state->Prefabs.push_back(std::move(prefab));
+				state->Prefabs.push_back(Death::move(prefab));
 			}
 			if (!TilePrefab::Save(state->TileSet, state->Prefabs)) {
 				s->ShowMessage(_("The prefabs couldn't be saved"));
@@ -197,17 +233,46 @@ namespace Jazz2::Editor
 			}
 			state->Revision++;
 			nameBox->Text = String();
-			s->ShowMessage(_f("Prefab \"{}\" saved with the tile set", name));
+			// Tiles of a tile set the level has in itself aren't in any other level, the prefab has empty cells there
+			s->ShowMessage(droppedTiles
+				? _f("Prefab \"{}\" saved with the tile set, the tiles of this level itself were left out", name)
+				: _f("Prefab \"{}\" saved with the tile set", name));
 		});
 		save->Tooltip = _("Save the brush as a prefab of the tile set, the rules of the tile set in the user content keep it");
+		auto* saveLayers = content->Add<UiButton>(_("Save Copy of All Layers"), EditorIcon::Layers, [s, state, nameBox]() {
+			String name = nameBox->Text.trimmed();
+			if (name.empty()) {
+				s->ShowMessage(_("Name the prefab first"));
+				return;
+			}
+			const LayeredStamp& copied = ToolActions::GetLayeredClipboard();
+			if (copied.IsEmpty()) {
+				s->ShowMessage(_("Copy tiles of all layers first"));
+				return;
+			}
+			// The layer being edited is the one the prefab is used on, the others go with it
+			TilePrefab prefab = TilePrefab::FromLayered(s->GetDocument(), copied, ToolActions::GetCurrentLayerFromSprite(*s), name);
+			bool droppedTiles = (prefab.DroppedTiles > 0);
+			auto it = std::find_if(state->Prefabs.begin(), state->Prefabs.end(), [&name](const TilePrefab& p) { return p.Name == name; });
+			if (it != state->Prefabs.end()) {
+				*it = Death::move(prefab);
+			} else {
+				state->Prefabs.push_back(Death::move(prefab));
+			}
+			if (!TilePrefab::Save(state->TileSet, state->Prefabs)) {
+				s->ShowMessage(_("The prefabs couldn't be saved"));
+				return;
+			}
+			state->Revision++;
+			nameBox->Text = String();
+			// Tiles of a tile set the level has in itself aren't in any other level, the prefab has empty cells there
+			s->ShowMessage(droppedTiles
+				? _f("Prefab \"{}\" saved with the tile set, the tiles of this level itself were left out", name)
+				: _f("Prefab \"{}\" saved with the tile set", name));
+		});
+		saveLayers->Tooltip = _("Save what Copy All Layers copied last as a prefab, with its layers and events");
 
-		dialog->AddButton(_("Close"), [dialogPtr]() { dialogPtr->Close(); }, true);
-
-		UiOverlayOptions options;
-		options.Centered = true;
-		options.Modal = false;
-		options.CloseOnOutsideClick = false;
-		surface->PushOverlay(std::move(dialog), std::move(options));
+		ShowModeless(*surface, Death::move(dialog));
 	}
 }
 

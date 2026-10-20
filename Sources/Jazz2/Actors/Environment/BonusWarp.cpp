@@ -63,6 +63,11 @@ namespace Jazz2::Actors::Environment
 			return;
 		}
 
-		player->WarpToPosition(targetPos, _fast ? WarpFlags::Fast : WarpFlags::Default);
+		WarpFlags flags = (_fast ? WarpFlags::Fast : WarpFlags::Default);
+		// The finish line of a race as an ordinary warp can be, see EventType::WarpOrigin in Player::HandleAreaEventAt()
+		if (_setLaps) {
+			flags |= WarpFlags::IncrementLaps;
+		}
+		player->WarpToPosition(targetPos, flags);
 	}
 }

@@ -2,29 +2,91 @@
 
 #if defined(WITH_EDITOR)
 
+#include "../Imaging/TileMasks.h"
 #include "../../Formats/TileSetFile.h"
 
 #include <Containers/StringUtils.h>
+#include <Cryptography/xxHash.h>
 
+#include <algorithm>
 #include <cmath>
+#include <cstring>
 
 using namespace Death::Containers;
+using Death::Cryptography::xxHash3;
 
 namespace Jazz2::Editor
 {
 	namespace
 	{
 		constexpr std::int32_t Size = 32;
+
+		bool EqualsIgnoreCase(StringView a, StringView b)
+		{
+			if (a.size() != b.size()) {
+				return false;
+			}
+			for (std::size_t i = 0; i < a.size(); i++) {
+				char ca = a[i], cb = b[i];
+				if (ca >= 'A' && ca <= 'Z') ca = char(ca - 'A' + 'a');
+				if (cb >= 'A' && cb <= 'Z') cb = char(cb - 'A' + 'a');
+				if (ca != cb) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		template<class T>
+		void MixValue(std::uint64_t& hash, const T& value)
+		{
+			hash = xxHash3(&value, sizeof(value), hash);
+		}
 	}
 
-	void TileShapes::Build(StringView tileSet, const Formats::TileSetData& data, const TerrainRules* rules)
+	std::uint64_t TileShapes::GetLevelKey(const LevelDocument* document, ArrayView<const LevelTiles> levelTiles)
 	{
-		std::uint32_t rulesRevision = (rules != nullptr ? rules->GetRevision() : 0);
-		if (!_tileSet.empty() && StringUtils::lowercase(_tileSet) == StringUtils::lowercase(tileSet) && _rulesRevision == rulesRevision) {
+		std::uint64_t hash = 0;
+		if (document == nullptr) {
+			return hash;
+		}
+		// The masks the level overrides, by the tile IDs they're of, which move with the tile sets before them
+		MixValue(hash, document->DefaultTileCount);
+		for (const Formats::ExtraTileSetRecord& record : document->ExtraTileSets) {
+			MixValue(hash, record.Count);
+		}
+		for (const Formats::TileMaskOverride& mask : document->MaskOverrides) {
+			MixValue(hash, mask.TileId);
+			hash = xxHash3(mask.Mask, sizeof(mask.Mask), hash);
+		}
+		// The tiles of the level, a change of them decodes them again
+		for (const LevelTiles& tiles : levelTiles) {
+			MixValue(hash, tiles.Source);
+			MixValue(hash, tiles.Data);
+			if (tiles.Data != nullptr) {
+				MixValue(hash, tiles.Data->TileCount);
+				hash = xxHash3(tiles.Data->Masks.data(), tiles.Data->Masks.size(), hash);
+			}
+		}
+		return hash;
+	}
+
+	void TileShapes::Build(StringView tileSet, const Formats::TileSetData& data, const TerrainRules* rules,
+		const LevelDocument* document, ArrayView<const LevelTiles> levelTiles)
+	{
+		// Only the slope tags of the rules matter, choosing another terrain or changing its rules analyzes nothing again
+		std::uint32_t rulesRevision = (rules != nullptr ? rules->GetSlopeRevision() : 0);
+		std::uint64_t levelKey = GetLevelKey(document, levelTiles);
+		MixValue(levelKey, rules);
+		MixValue(levelKey, &data);
+		MixValue(levelKey, data.TileCount);
+		if (!_tileSet.empty() && EqualsIgnoreCase(_tileSet, tileSet) && _rulesRevision == rulesRevision && _levelKey == levelKey) {
 			return;
 		}
 		_tileSet = tileSet;
 		_rulesRevision = rulesRevision;
+		_levelKey = levelKey;
+		_revision++;
 		_surfaces.clear();
 		_ceilings.clear();
 
@@ -36,9 +98,9 @@ namespace Jazz2::Editor
 			}
 		};
 
-		auto addSurface = [this](std::int32_t index, float left, float right, float error) {
+		auto addSurface = [this](TileRef tile, float left, float right, float error) {
 			Surface surface;
-			surface.Tile = TileRef{ std::uint16_t(index), TileRef::DefaultTileSet, 0 };
+			surface.Tile = tile;
 			surface.Left = left;
 			surface.Right = right;
 			surface.Error = error;
@@ -53,21 +115,42 @@ namespace Jazz2::Editor
 			}
 		};
 
-		for (std::int32_t index = 1; index < data.TileCount; index++) {
-			// Tagged by hand, the heights are from the bottom of the tile
-			if (const TerrainRules::SlopeTag* tag = (rules != nullptr ? rules->FindSlope(std::uint16_t(index)) : nullptr)) {
-				if (!tag->Excluded) {
-					addSurface(index, float(Size) - tag->Left, float(Size) - tag->Right, 0.0f);
-				}
-				continue;
+		// The masks the level overrides, as bits like those of the tile sets
+		struct OverriddenMask
+		{
+			std::int32_t TileId;
+			std::uint8_t Bits[Formats::TileSetData::MaskBytesPerTile];
+		};
+		SmallVector<OverriddenMask, 0> overrides;
+		if (document != nullptr) {
+			for (const Formats::TileMaskOverride& mask : document->MaskOverrides) {
+				OverriddenMask& converted = overrides.emplace_back();
+				converted.TileId = mask.TileId;
+				TileMasks::Pack(mask.Mask, converted.Bits);
 			}
+			std::sort(overrides.begin(), overrides.end(), [](const OverriddenMask& a, const OverriddenMask& b) { return a.TileId < b.TileId; });
+		}
+		auto findOverride = [&overrides](std::int32_t tileId) -> const std::uint8_t* {
+			auto it = std::lower_bound(overrides.begin(), overrides.end(), tileId, [](const OverriddenMask& item, std::int32_t value) { return item.TileId < value; });
+			return (it != overrides.end() && it->TileId == tileId ? it->Bits : nullptr);
+		};
 
-			const std::uint8_t* bits = &data.Masks[std::size_t(index) * Formats::TileSetData::MaskBytesPerTile];
-			const std::uint8_t* image = &data.Images[std::size_t(index) * Formats::TileSetData::ImageBytesPerTile];
-			bool trueColor = (data.TrueColor[index] != 0);
+		// Each tile of a tile set, with its mask as the level has it, `tile` is how the level refers to it
+		auto analyze = [&](const Formats::TileSetData& tiles, std::int32_t index, TileRef tile) {
+			if (index < 0 || index >= tiles.TileCount || std::size_t(index + 1) * Formats::TileSetData::MaskBytesPerTile > tiles.Masks.size() ||
+				std::size_t(index + 1) * Formats::TileSetData::ImageBytesPerTile > tiles.Images.size() || std::size_t(index) >= tiles.TrueColor.size()) {
+				return;
+			}
+			const std::uint8_t* bits = &tiles.Masks[std::size_t(index) * Formats::TileSetData::MaskBytesPerTile];
+			if (document != nullptr && !overrides.empty()) {
+				if (const std::uint8_t* overridden = findOverride(document->ToTileId(tile))) {
+					bits = overridden;
+				}
+			}
+			const std::uint8_t* image = &tiles.Images[std::size_t(index) * Formats::TileSetData::ImageBytesPerTile];
+			bool trueColor = (tiles.TrueColor[index] != 0);
 			auto solid = [bits](std::int32_t x, std::int32_t y) {
-				std::int32_t i = y * Size + x;
-				return ((bits[i / 8] >> (i % 8)) & 1) != 0;
+				return TileMasks::GetBit(bits, y * Size + x);
 			};
 
 			// A straight line where the solid part ends, below it for ground, above it for a ceiling, by least squares
@@ -129,10 +212,35 @@ namespace Jazz2::Editor
 
 			float left, right, error;
 			if (fit(false, left, right, error)) {
-				addSurface(index, left, right, error);
+				addSurface(tile, left, right, error);
 			}
 			if (fit(true, left, right, error)) {
-				addCeiling(TileRef{ std::uint16_t(index), TileRef::DefaultTileSet, 0 }, left, right, error);
+				addCeiling(tile, left, right, error);
+			}
+		};
+
+		for (std::int32_t index = 1; index < data.TileCount; index++) {
+			TileRef tile{ std::uint16_t(index), TileRef::DefaultTileSet, 0 };
+			// Tagged by hand, the heights are from the bottom of the tile
+			if (const TerrainRules::SlopeTag* tag = (rules != nullptr ? rules->FindSlope(std::uint16_t(index)) : nullptr)) {
+				if (!tag->Excluded) {
+					addSurface(tile, float(Size) - tag->Left, float(Size) - tag->Right, 0.0f);
+				}
+				continue;
+			}
+			analyze(data, index, tile);
+		}
+
+		// The tiles the level has in itself, by their index in the slot the level gives them
+		if (document != nullptr) {
+			for (const LevelTiles& tiles : levelTiles) {
+				if (tiles.Data == nullptr || tiles.Source == TileRef::DefaultTileSet || tiles.Source > document->ExtraTileSets.size()) {
+					continue;
+				}
+				const Formats::ExtraTileSetRecord& record = document->ExtraTileSets[tiles.Source - 1];
+				for (std::int32_t index = 0; index < std::int32_t(record.Count); index++) {
+					analyze(*tiles.Data, std::int32_t(record.Offset) + index, TileRef{ std::uint16_t(index), tiles.Source, 0 });
+				}
 			}
 		}
 

@@ -220,8 +220,8 @@ namespace ShaderCompiler
 				edit.Index = first.Index;
 				edit.Begin = first.Begin;
 				edit.End = last.End;
-				edit.Replacement = std::move(replacement);
-				_edits.push_back(std::move(edit));
+				edit.Replacement = Death::move(replacement);
+				_edits.push_back(Death::move(edit));
 			}
 
 			/** Renders a folded value as GLSL literal text, or "" when it cannot be represented exactly */
@@ -627,7 +627,7 @@ namespace ShaderCompiler
 				i += length;
 			}
 			t.End = i;
-			out.push_back(std::move(t));
+			out.push_back(Death::move(t));
 		}
 	}
 
@@ -691,7 +691,7 @@ namespace ShaderCompiler
 
 		GlslToken endToken;
 		endToken.Type = GlslTokenType::End;
-		tokens.push_back(std::move(endToken));
+		tokens.push_back(Death::move(endToken));
 		allowed.push_back(false);
 
 		Folder folder(lines, tokens, allowed, edits);

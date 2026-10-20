@@ -97,12 +97,20 @@ Without a command, `convert` is assumed.
     [--game-id=<id>] [--title=<name>]` --- Makes a bootable GameCube disc image (see
     @ref asset-packer-gamecube). `--game-id=` is the six-character game + maker code (default
     `GJJEJR`), `--title=` the name in the disc header
--   `verify-formats <directory>` --- Reads every level and tile set in the game's own format under the
-    directory (recursively) and writes it back into memory, which has to give the same file byte for
-    byte, or, for a file written by another tool, the same content once read back. Original JJ2 files
-    are skipped. It checks @ref Jazz2::Formats::LevelReader, @ref Jazz2::Formats::LevelWriter and
+-   `verify-formats <directory> [--sweep-truncated]` --- Reads every level and tile set in the game's own
+    format under the directory (recursively) and writes it back into memory, which has to give the same
+    file byte for byte, or, for a file written by another tool, the same content once read back. Original
+    JJ2 files are skipped. `--sweep-truncated` also reads every file cut short. It checks @ref Jazz2::Formats::LevelReader, @ref Jazz2::Formats::LevelWriter and
     @ref Jazz2::Formats::TileSetFile against real data, which the editors rely on when they save a file
-    they opened
+    they opened (@ref Jazz2::AssetPacker::FormatVerifier). See @ref asset-packer-formats
+-   `level-to-text <source .j2l> <target .txt>` --- Writes a level of the game's own format as text, one
+    thing on a line, so versions of it can be compared and merged by the usual tools. The text is checked
+    to give the same level again before it's written. See @ref asset-packer-formats-text
+-   `text-to-level <source .txt> <target .j2l>` --- Makes the level of such a text again, the same file
+    byte for byte as the level it came from
+-   `fuzz-formats <directory> [<findings directory>] [--iterations=N] [--seed=N] [--timeout=seconds]
+    [--memory-limit=MB] [--focus-level-texts]` --- Attacks the readers with seeded random mutations of the
+    levels and tile sets in the game's own format under the directory. See @ref asset-packer-formats-fuzz
 
 Progress and warnings go to stdout, errors to stderr; the exit code is non-zero on failure.
 
@@ -120,6 +128,9 @@ AssetPacker ./build/ConsoleContent --source=<original Jazz Jackrabbit 2> --conte
 -   `Anims.j2a` (or the shareware `AnimsSw.j2a`) is required. Sprites and sounds go into a package
     (`Source.pak` for `desktop`, `Prebaked.pak` otherwise); levels, tilesets, episodes and music follow
     via @ref Jazz2::Compatibility::AssetConverter.
+-   `Plus.j2d` of a JJ2+ installation, if it's beside the levels, gives a level made for JJ2+ the textures
+    its textured layers name (`TEXTURE::Texture`), stored in the converted level. Without it, such a layer
+    gets a texture made up of smooth noise in the same colors, so a reflection still ripples.
 -   `--source=` and the positional source resolve the same way; with `--source=` a lone positional
     argument is the target.
 -   `--content=` wins over a `Content` found beside the originals.
@@ -246,8 +257,9 @@ Characters outside it         | 65535
 
 `unpack-font` places glyphs back into cells at their bearings, so repacking gives the same font. The
 unpacked atlas holds palette indices (it looks like near-black noise): run `apply-palette` before
-editing and `to-indices` after, which warns when a color has no exact match. The tool has its own PNG
-codec (@ref Jazz2::AssetPacker::PngCodec) since it does not link the renderer.
+editing and `to-indices` after, which warns when a color has no exact match. PNG images are read and
+written by @ref nCine::PngCodec, the codec the game and the level editor share, which needs no renderer;
+the tool defines `WITH_PNG_ENCODER` for its encoder, which the game without the level editor leaves out.
 
 @subsection asset-packer-fonts-json The JSON description
 
@@ -442,6 +454,74 @@ volume (@ref Jazz2::AssetPacker::Iso9660Builder) whose first 32 KB (the system a
 The executable and `Content` are ordinary files with Joliet names; the game reads them through ISO 9660
 (see `OgcDvd.h`). The volume is followed by 32 KB of zeros, because a read past the image end is an error
 in Dolphin. There is no GameCube file system table, so tools that list a disc by it show no files.
+
+@section asset-packer-formats Checking the level and tile set formats
+
+Levels and tile sets in the game's own format (@ref Jazz2::Formats::LevelFile, @ref Jazz2::Formats::TileSetFile) are
+read by the game, the level editor and the converter alike, and can come from anywhere --- custom levels, servers,
+packages. Three commands check the readers and writers against real files; see also @ref editor-formats.
+
+@subsection asset-packer-formats-verify Verifying files
+
+`verify-formats <directory> [--sweep-truncated]` goes through every native level and tile set under the directory:
+
+-   Each is read whole and written back into memory: byte for byte the same file, or, for a file written by another
+    tool, the same content once read back again.
+-   With `--sweep-truncated`, each is also read cut short at many places --- at every byte of its first 32, at 40
+    places spread over the rest, and at each of its last 4 bytes. A cut level must never be read as anything but the
+    whole level (a cut that takes only the end of the compressed body can leave all of it readable), a tile set cut
+    before its image content must be refused. That reads every file 76 more times, which makes the whole check many
+    times slower, so it's left for when the readers themselves change.
+-   Levels are checked for what the reader can't check on its own, how the records refer to each other: a default or
+    extra tile set path the game wouldn't look up (@ref Jazz2::Formats::LevelFile::IsSafeTileSetPath()), an embedded
+    tile set that can't be read or has fewer tiles than the level takes, tiles and animation frames beyond the tiles of
+    the level, overridden tiles that aren't of a tile set, and off-grid events far outside of the level. These are
+    warnings --- the game copes with them --- and don't fail the check.
+
+The exit code is non-zero if a file differs, can't be read, or (with `--sweep-truncated`) passes for something else
+when cut.
+
+@subsection asset-packer-formats-text Levels as text
+
+`level-to-text <source .j2l> <target .txt>` writes a level as text (@ref Jazz2::AssetPacker::LevelText), and
+`text-to-level <source .txt> <target .j2l>` makes the level of it again --- the same file byte for byte, as
+@ref Jazz2::Formats::LevelWriter writes it. `level-to-text` checks that before it writes the text. Levels kept as text
+can be compared line by line and merged by the usual tools of version control.
+
+-   The text starts with a `format` line, one thing follows on a line, lines starting with `#` are comments.
+-   Strings are quoted, with C escapes for `"`, `\` and the control characters. Floating-point values are written
+    so they're read back exactly, or as `bits:XXXXXXXX` if they aren't numbers.
+-   A tile is its ID, followed by `:` and its flags in hexadecimal if it has any. Only the events of the grid that
+    aren't empty are written, each with its position.
+-   Binary data --- the tile sets a level stores in itself, the payload of a chunk --- is written as Base64 lines up to
+    `end`.
+
+@subsection asset-packer-formats-fuzz Fuzzing the readers
+
+`fuzz-formats <directory> [<findings directory>]` attacks the readers with seeded random mutations of the native levels
+and tile sets under the directory (@ref Jazz2::AssetPacker::FormatVerifier::FuzzDirectory()): of the file itself, of
+its decompressed content (inflated, mutated and deflated again, so the readers are attacked rather than the framing of
+the compression), of the chunks and records of a level, and of the tile sets it embeds. Every reader runs on each
+input, and what a reader accepts has to survive being written and read again. Every fourth level is also tried with a
+chunk of translated texts (@ref Jazz2::Formats::LevelTextsChunk), which converted levels don't have.
+
+An input that crashes, fails an assertion, hangs, asks for too much memory or doesn't survive is saved into the
+findings directory (@cpp "FuzzFindings" @ce by default) as `<reason>-<index>-<file>`; a crash, a hang or too much
+memory also ends the run. Given a single file instead of a directory, the command only runs it through the readers
+once, to reproduce a finding.
+
+Option | Meaning
+------ | -------
+`--iterations=N` | Number of inputs to try, 10000 by default
+`--seed=N` | Seed of the mutations, 1 by default; the same seed tries the same inputs again
+`--timeout=seconds` | How long a single input may take before it counts as a hang, 30 by default
+`--memory-limit=MB` | Memory the process may use before an input counts as asking for too much, 3072 by default, at least 64 (Windows only)
+`--focus-level-texts` | Only levels, each given a chunk of translated texts, and that chunk attacked more
+
+@code{.sh}
+AssetPacker fuzz-formats ./Cache --iterations=100000 --seed=7
+AssetPacker fuzz-formats ./FuzzFindings/crash-1234-castle1.j2l
+@endcode
 
 @section asset-packer-platforms Platform notes
 

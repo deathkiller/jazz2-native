@@ -26,7 +26,7 @@
 //
 //bool TextureSaverPng::saveToFile(const Properties &properties, std::unique_ptr<IFile> fileHandle)
 //{
-//	return saveToFile(properties, PngProperties(), std::move(fileHandle));
+//	return saveToFile(properties, PngProperties(), Death::move(fileHandle));
 //}
 //
 //bool TextureSaverPng::saveToFile(const Properties &properties, const PngProperties &pngProperties, const char *filename)

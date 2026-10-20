@@ -5,10 +5,12 @@
 #include "../../ContentResolver.h"
 #include "../../Formats/TileSetFile.h"
 
+#include <Containers/Array.h>
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
 #include <IO/Compression/DeflateStream.h>
 
+using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
 namespace Jazz2::Editor
@@ -63,15 +65,27 @@ namespace Jazz2::Editor
 
 	String ContentTileSetLibrary::GetWritablePath(StringView name, bool create)
 	{
+		// The name comes from a level, which may come from anywhere, it must not lead out of the tile sets
+		if (name.empty() || name[0] == '/' || name[0] == '\\' || name.contains(':')) {
+			return {};
+		}
+		String normalized = fs::FromNativeSeparators(name);
+		for (StringView part : normalized.split('/')) {
+			if (part.empty() || part == "."_s || part == ".."_s) {
+				return {};
+			}
+		}
 		StringView contentPath = ContentResolver::Get().GetWritableContentPath(create);
 		if (contentPath.empty()) {
 			return {};
 		}
 		String directory = fs::CombinePath(contentPath, "Tilesets"_s);
+		String path = fs::CombinePath(directory, String(fs::ToNativeSeparators(name) + ".j2t"_s));
 		if (create) {
-			fs::CreateDirectories(directory);
+			// A tile set in a folder of its own has it created too
+			fs::CreateDirectories(fs::GetDirectoryName(path));
 		}
-		return fs::CombinePath(directory, String(name + ".j2t"_s));
+		return path;
 	}
 
 	bool ContentTileSetLibrary::IsValidName(StringView name)

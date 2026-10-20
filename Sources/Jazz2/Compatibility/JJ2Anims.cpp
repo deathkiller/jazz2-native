@@ -381,23 +381,6 @@ namespace Jazz2::Compatibility
 						frame.ImageAddr = frameDataBlock.ReadInt32();
 						frame.MaskAddr = frameDataBlock.ReadInt32();
 
-						// Adjust normalized position
-						// In the output images, we want to make the hotspot and image size constant.
-						anim.NormalizedHotspotX = std::max((std::int16_t)-frame.HotspotX, anim.NormalizedHotspotX);
-						anim.NormalizedHotspotY = std::max((std::int16_t)-frame.HotspotY, anim.NormalizedHotspotY);
-
-						anim.LargestOffsetX = std::max((std::int16_t)(frame.SizeX + frame.HotspotX), anim.LargestOffsetX);
-						anim.LargestOffsetY = std::max((std::int16_t)(frame.SizeY + frame.HotspotY), anim.LargestOffsetY);
-
-						anim.AdjustedSizeX = std::max(
-							(std::int16_t)(anim.NormalizedHotspotX + anim.LargestOffsetX),
-							anim.AdjustedSizeX
-						);
-						anim.AdjustedSizeY = std::max(
-							(std::int16_t)(anim.NormalizedHotspotY + anim.LargestOffsetY),
-							anim.AdjustedSizeY
-						);
-
 						std::int32_t dpos = (frame.ImageAddr + 4);
 
 						imageDataBlock.SeekTo(dpos - 4);
@@ -453,6 +436,8 @@ namespace Jazz2::Compatibility
 							}
 						}*/
 					}
+
+					NormalizeAnimation(anim);
 				}
 			}
 
@@ -591,6 +576,10 @@ namespace Jazz2::Compatibility
 			AnimSetMapping::Entry* entry = animMapping.Get(anim.Set, anim.Anim);
 			if (entry == nullptr || entry->Category == AnimSetMapping::Discard) {
 				continue;
+			}
+
+			if (entry->Category == "BirdyYellow"_s) {
+				FixYellowBirdSpots(anim, *entry, anims, animMapping);
 			}
 
 			std::int32_t sizeX = (anim.AdjustedSizeX + AddBorder * 2);
@@ -842,6 +831,145 @@ namespace Jazz2::Compatibility
 				normalMap.Save(filename.Replace(".png", ".n.png"));
 			}*/
 		}
+	}
+
+	void JJ2Anims::NormalizeAnimation(AnimSection& anim)
+	{
+		// In the output images, we want to make the hotspot and image size constant
+		anim.NormalizedHotspotX = 0;
+		anim.NormalizedHotspotY = 0;
+		anim.LargestOffsetX = 0;
+		anim.LargestOffsetY = 0;
+
+		for (const AnimFrameSection& frame : anim.Frames) {
+			anim.NormalizedHotspotX = std::max((std::int16_t)-frame.HotspotX, anim.NormalizedHotspotX);
+			anim.NormalizedHotspotY = std::max((std::int16_t)-frame.HotspotY, anim.NormalizedHotspotY);
+
+			anim.LargestOffsetX = std::max((std::int16_t)(frame.SizeX + frame.HotspotX), anim.LargestOffsetX);
+			anim.LargestOffsetY = std::max((std::int16_t)(frame.SizeY + frame.HotspotY), anim.LargestOffsetY);
+		}
+
+		anim.AdjustedSizeX = (std::int16_t)(anim.NormalizedHotspotX + anim.LargestOffsetX);
+		anim.AdjustedSizeY = (std::int16_t)(anim.NormalizedHotspotY + anim.LargestOffsetY);
+	}
+
+	void JJ2Anims::FixYellowBirdSpots(AnimSection& anim, const AnimSetMapping::Entry& entry, SmallVectorImpl<AnimSection>& anims, AnimSetMapping& animMapping)
+	{
+		auto findAnimation = [&anims, &animMapping](auto&& matches) -> const AnimSection* {
+			for (const AnimSection& other : anims) {
+				const AnimSetMapping::Entry* otherEntry = animMapping.Get(other.Set, other.Anim);
+				if (otherEntry != nullptr && matches(other, *otherEntry)) {
+					return &other;
+				}
+			}
+			return nullptr;
+		};
+
+		bool hasNoSpots = std::all_of(anim.Frames.begin(), anim.Frames.end(), [](const AnimFrameSection& frame) {
+			return (frame.HotspotX == 0 && frame.HotspotY == 0 && frame.ColdspotX == 0 && frame.ColdspotY == 0);
+		});
+		if (entry.Name == "idle_turn_head_left"_s && hasNoSpots) {
+			// Turning the head to the left has no spots at all, which drew it far below and to the right of where the bird
+			// stands. Its frames are the last four of turning the head to the right, which has them - one is a pixel wider.
+			const AnimSection* twin = findAnimation([](const AnimSection& other, const AnimSetMapping::Entry& otherEntry) {
+				return (otherEntry.Category == "BirdyYellow"_s && otherEntry.Name == "idle_turn_head_right"_s);
+			});
+			if (twin == nullptr) {
+				return;
+			}
+			SmallVector<const AnimFrameSection*, 8> twinFrames;
+			for (const AnimFrameSection& frame : anim.Frames) {
+				const AnimFrameSection* best = nullptr;
+				std::int32_t bestDifference = 2;
+				for (const AnimFrameSection& twinFrame : twin->Frames) {
+					std::int32_t difference = std::abs(twinFrame.SizeX - frame.SizeX);
+					if (twinFrame.SizeY == frame.SizeY && difference < bestDifference) {
+						best = &twinFrame;
+						bestDifference = difference;
+					}
+				}
+				if (best == nullptr) {
+					LOGW("Frames of {}:{} \"{}/{}\" differ from the ones expected, the spots can't be fixed", anim.Set, anim.Anim, entry.Category, entry.Name);
+					return;
+				}
+				twinFrames.push_back(best);
+			}
+
+			LOGI("Applying \"Yellow Bird\" hotspot fix to {}:{} \"{}/{}\"", anim.Set, anim.Anim, entry.Category, entry.Name);
+			for (std::size_t i = 0; i < anim.Frames.size(); i++) {
+				anim.Frames[i].HotspotX = twinFrames[i]->HotspotX;
+				anim.Frames[i].HotspotY = twinFrames[i]->HotspotY;
+				anim.Frames[i].ColdspotX = twinFrames[i]->ColdspotX;
+				anim.Frames[i].ColdspotY = twinFrames[i]->ColdspotY;
+			}
+			NormalizeAnimation(anim);
+			return;
+		}
+
+		bool hasNoColdspot = std::all_of(anim.Frames.begin(), anim.Frames.end(), [](const AnimFrameSection& frame) {
+			return (frame.ColdspotX == 0 && frame.ColdspotY == 0);
+		});
+		if (!hasNoColdspot) {
+			return;
+		}
+
+		// The animations without a coldspot (flying, charging, hurt, dying, feathers) have their hotspot up to 14 pixels off
+		// from the green bird's, whose animations are the same pictures in the same order. The frames of the same size give
+		// the shift, the one most of them agree on (some frames are missing or one more on either side), and it moves all
+		// of them, with the coldspot and the gunspot where the green bird has them. Both birds are then drawn alike, and
+		// one resting on the floor stands on it rather than in it.
+		const AnimSection* green = findAnimation([&anim](const AnimSection& other, const AnimSetMapping::Entry& otherEntry) {
+			return (other.Anim == anim.Anim && otherEntry.Category == "Birdy"_s);
+		});
+		if (green == nullptr) {
+			return;
+		}
+
+		struct Shift {
+			std::int32_t X, Y;
+			std::int32_t Count;
+			const AnimFrameSection* Reference;
+		};
+		SmallVector<Shift, 8> shifts;
+		for (const AnimFrameSection& frame : anim.Frames) {
+			for (const AnimFrameSection& greenFrame : green->Frames) {
+				if (greenFrame.SizeX != frame.SizeX || greenFrame.SizeY != frame.SizeY) {
+					continue;
+				}
+				std::int32_t x = greenFrame.HotspotX - frame.HotspotX;
+				std::int32_t y = greenFrame.HotspotY - frame.HotspotY;
+				auto it = std::find_if(shifts.begin(), shifts.end(), [x, y](const Shift& shift) { return (shift.X == x && shift.Y == y); });
+				if (it != shifts.end()) {
+					it->Count++;
+				} else {
+					shifts.push_back({ x, y, 1, &greenFrame });
+				}
+				break;
+			}
+		}
+		auto shift = std::max_element(shifts.begin(), shifts.end(), [](const Shift& a, const Shift& b) { return (a.Count < b.Count); });
+		if (shift == shifts.end() || shift->Count * 2 < (std::int32_t)anim.Frames.size()) {
+			return;
+		}
+
+		LOGI("Applying \"Yellow Bird\" hotspot fix to {}:{} \"{}/{}\"", anim.Set, anim.Anim, entry.Category, entry.Name);
+		const AnimFrameSection& reference = *shift->Reference;
+		// A spot the green bird doesn't have (0, 0) isn't made up for the yellow one either
+		bool hasColdspot = (reference.ColdspotX != 0 || reference.ColdspotY != 0);
+		bool hasGunspot = (reference.GunspotX != 0 || reference.GunspotY != 0);
+		for (AnimFrameSection& frame : anim.Frames) {
+			frame.HotspotX = (std::int16_t)(frame.HotspotX + shift->X);
+			frame.HotspotY = (std::int16_t)(frame.HotspotY + shift->Y);
+			if (hasColdspot) {
+				frame.ColdspotX = (std::int16_t)(frame.HotspotX + reference.ColdspotX - reference.HotspotX);
+				frame.ColdspotY = (std::int16_t)(frame.HotspotY + reference.ColdspotY - reference.HotspotY);
+			}
+			if (hasGunspot) {
+				frame.GunspotX = (std::int16_t)(frame.HotspotX + reference.GunspotX - reference.HotspotX);
+				frame.GunspotY = (std::int16_t)(frame.HotspotY + reference.GunspotY - reference.HotspotY);
+			}
+		}
+		NormalizeAnimation(anim);
 	}
 
 	void JJ2Anims::ImportAudioSamples(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<SampleSection>& samples, ConversionProgress progress)

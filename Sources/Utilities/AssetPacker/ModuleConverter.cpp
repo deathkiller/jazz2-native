@@ -719,7 +719,7 @@ namespace Jazz2::AssetPacker
 						}
 					}
 					std::sort(clusters.begin(), clusters.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
-					list = std::move(clusters);
+					list = Death::move(clusters);
 				}
 
 				// Every used instrument gets its most frequent panning in its own slot first, so the numbering of

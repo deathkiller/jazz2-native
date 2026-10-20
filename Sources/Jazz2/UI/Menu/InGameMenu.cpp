@@ -308,7 +308,7 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::ChangeLevel(LevelInitialization&& levelInit)
 	{
-		_root->_root->ChangeLevel(std::move(levelInit));
+		_root->_root->ChangeLevel(Death::move(levelInit));
 	}
 
 	bool InGameMenu::HasResumableState() const
@@ -329,7 +329,7 @@ namespace Jazz2::UI::Menu
 
 	bool InGameMenu::CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit)
 	{
-		return _root->_root->CreateServer(std::move(serverInit));
+		return _root->_root->CreateServer(Death::move(serverInit));
 	}
 #endif
 
@@ -378,6 +378,11 @@ namespace Jazz2::UI::Menu
 #endif
 	}
 
+	void InGameMenu::ApplyCursorPolicy()
+	{
+		_root->_root->ApplyCursorPolicy();
+	}
+
 	void InGameMenu::RecreateSections()
 	{
 		_transition.Skip();
@@ -396,16 +401,6 @@ namespace Jazz2::UI::Menu
 	}
 
 #if defined(WITH_EDITOR)
-	bool InGameMenu::CanOpenInEditor() const
-	{
-		return _root->CanOpenInEditor();
-	}
-
-	void InGameMenu::OpenInEditor()
-	{
-		_root->OpenInEditor();
-	}
-
 	bool InGameMenu::IsEditorPlayTest() const
 	{
 		return _root->IsEditorPlayTest();

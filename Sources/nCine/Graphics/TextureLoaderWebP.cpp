@@ -8,7 +8,7 @@
 /////////////////////////////////////////////////////////////
 //
 //TextureLoaderWebP::TextureLoaderWebP(std::unique_ptr<IFile> fileHandle)
-//    : ITextureLoader(std::move(fileHandle))
+//    : ITextureLoader(Death::move(fileHandle))
 //{
 //	LOGI("Loading \"{}\"", _fileHandle->filename());
 //

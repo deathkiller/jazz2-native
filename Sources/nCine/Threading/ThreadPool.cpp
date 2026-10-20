@@ -48,7 +48,7 @@ namespace nCine
 		DEATH_ASSERT(threadCommand);
 
 		_queueMutex.Lock();
-		_queue.push_back(std::move(threadCommand));
+		_queue.push_back(Death::move(threadCommand));
 		_queueCV.Broadcast();
 		_queueMutex.Unlock();
 	}
@@ -70,7 +70,7 @@ namespace nCine
 				break;
 			}
 
-			std::unique_ptr<IThreadCommand> threadCommand = std::move(threadStruct->queue->front());
+			std::unique_ptr<IThreadCommand> threadCommand = Death::move(threadStruct->queue->front());
 			threadStruct->queue->pop_front();
 			threadStruct->queueMutex->Unlock();
 

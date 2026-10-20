@@ -101,6 +101,9 @@ See also @ref third-party for the licenses of the libraries used.
 /** @file nCine/ServiceLocator.h
 	@brief Class @ref nCine::ServiceLocator
 */
+/** @file nCine/Graphics/PngCodec.h
+	@brief Class @ref nCine::PngCodec and the `WITH_PNG_ENCODER` macro
+*/
 /** @dir nCine/Backends
 	@brief Namespace @ref nCine::Backends
 */
@@ -408,7 +411,8 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief The game's own level and tile set formats
 
 	The only places that know the layout of a level or a tile set file --- the converter of the original files, the
-	game and the level editor all read and write them through these (see @ref editor-formats).
+	game and the level editor all read and write them through these (see @ref editor-formats). The preview of a level
+	is made here too (@ref Jazz2::Formats::LevelPreview), so the converter and the level editor make the same one.
 */
 /** @dir Jazz2/Input
 	@brief Namespace @ref Jazz2::Input

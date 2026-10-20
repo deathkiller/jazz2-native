@@ -122,13 +122,9 @@ namespace Jazz2::UI::Menu
 				[]() -> StringView { return (PreferencesCache::EnableFullscreen ? _("Enabled") : _("Disabled")); },
 				[this](std::int32_t) {
 					PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
-					if (PreferencesCache::EnableFullscreen) {
-						theApplication().GetGfxDevice().setResolution(true);
-						theApplication().GetInputManager().setCursor(IInputManager::Cursor::Hidden);
-					} else {
-						theApplication().GetGfxDevice().setResolution(false);
-						theApplication().GetInputManager().setCursor(IInputManager::Cursor::Arrow);
-					}
+					theApplication().GetGfxDevice().setResolution(PreferencesCache::EnableFullscreen);
+					// The cursor follows the policy of the state handler, as when it's toggled by a key (see Main.cpp)
+					_root->ApplyCursorPolicy();
 					_isDirty = true;
 				});
 		}
@@ -317,7 +313,7 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 
 	void GraphicsOptionsSection::OnHide()

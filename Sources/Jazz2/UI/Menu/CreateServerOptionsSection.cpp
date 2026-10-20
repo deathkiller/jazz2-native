@@ -451,7 +451,7 @@ namespace Jazz2::UI::Menu
 			serverInit.Configuration.PlaylistIndex = -1;
 		}
 
-		if (!_root->CreateServer(std::move(serverInit))) {
+		if (!_root->CreateServer(Death::move(serverInit))) {
 			_shouldStart = false;
 			_transitionTime = 0.0f;
 			_root->SwitchToSection<SimpleMessageSection>(_("\f[c:#704a4a]Cannot create the server!\f[/c]\n\n\nPlease verify that no other server\nis running on that port and try it again."), true);

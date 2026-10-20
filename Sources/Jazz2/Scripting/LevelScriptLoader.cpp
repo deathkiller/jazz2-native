@@ -914,7 +914,8 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char morphTo(CHAR::Char charNew, bool morphEffect = true)", asMETHOD(jjPLAYER, morphTo), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char revertMorph(bool morphEffect = true)", asMETHOD(jjPLAYER, revertMorph), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char get_charCurr() const", asMETHOD(jjPLAYER, get_charCurr), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "CHAR::Char charOrig", asOFFSET(jjPLAYER, charOrig));
+		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char get_charOrig() const", asMETHOD(jjPLAYER, get_charOrig), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_charOrig(CHAR::Char)", asMETHOD(jjPLAYER, set_charOrig), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("TEAM");
 		engine->RegisterEnum("Color");

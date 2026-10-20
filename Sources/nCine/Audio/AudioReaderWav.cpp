@@ -13,7 +13,7 @@ using namespace Death::Memory;
 namespace nCine
 {
 	AudioReaderWav::AudioReaderWav(std::unique_ptr<Stream> fileHandle, std::int32_t bytesPerSample)
-		: _fileHandle(std::move(fileHandle)), _bytesPerSample(bytesPerSample)
+		: _fileHandle(Death::move(fileHandle)), _bytesPerSample(bytesPerSample)
 	{
 		DEATH_ASSERT(_fileHandle->IsValid());
 	}

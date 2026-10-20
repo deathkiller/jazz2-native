@@ -15,31 +15,49 @@ namespace Jazz2::Editor::EventCatalogParts
 			EnumField(N_("Theme"), 0, 8, XmasThemes)
 				.WithDescription(N_("Also changes the shell it leaves behind")),
 		};
+		constexpr EventPreviewCase TurtlePreview[] = {
+			{ 1, "Enemy/TurtleXmas", std::uint32_t(AnimState::Walk) },
+			{ EventPreviewCase::AnyValue, "Enemy/Turtle", std::uint32_t(AnimState::Walk) }
+		};
 
 		constexpr EventParamField LizardFields[] = {
 			EnumField(N_("Theme"), 0, 8, XmasThemes),
 			BoolField(N_("Falling"), 1)
 				.WithDescription(N_("Starts as a lizard that lost its copter, it isn't placed on the ground")),
+			// Lizard::OnActivatedAsync() reads it only of a falling one
 			BoolField(N_("Facing left"), 2)
-				.WithDescription(N_("Used only when falling, otherwise the direction is random")),
+				.WithDescription(N_("Used only when falling, otherwise the direction is random"))
+				.ShowIf(1, 1).MirroredX(MirrorMode::Toggle),
 		};
 
 		constexpr ParamOption SuckerDirections[] = {
 			{ N_("None"), 0 }, { N_("Up"), 1 }, { N_("Down"), 2 }, { N_("Left"), 4 }, { N_("Right"), 8 }
 		};
+		// Mirrored, it was popped off the other way
+		constexpr std::int32_t SuckerMirrorX[] = { 4, 8 };
+		constexpr std::int32_t SuckerMirrorY[] = { 1, 2 };
 		constexpr EventParamField SuckerFields[] = {
 			EnumField(N_("Pop direction"), 0, 8, SuckerDirections)
-				.WithDescription(N_("Starts deflating as if popped off a floating sucker in this direction, None for a normal sucker")),
+				.WithDescription(N_("Starts deflating as if popped off a floating sucker in this direction, None for a normal sucker"))
+				.MirroredXPairs(SuckerMirrorX).MirroredYPairs(SuckerMirrorY),
 		};
 
 		constexpr EventParamField MonkeyFields[] = {
 			BoolField(N_("Walking"), 0, 0, true)
 				.WithDescription(N_("Walks around, otherwise it stands in place")),
 		};
+		constexpr EventPreviewCase MonkeyPreview[] = {
+			{ 0, "Enemy/Monkey", std::uint32_t(AnimState::Jump) },
+			{ EventPreviewCase::AnyValue, "Enemy/Monkey", std::uint32_t(AnimState::Walk) }
+		};
 
 		constexpr ParamOption DoggyThemes[] = { { N_("Dog"), 0 }, { N_("Cat"), 1 } };
 		constexpr EventParamField DoggyFields[] = {
 			EnumField(N_("Theme"), 0, 8, DoggyThemes),
+		};
+		constexpr EventPreviewCase DoggyPreview[] = {
+			{ 1, "Enemy/Cat", std::uint32_t(AnimState::Walk) },
+			{ EventPreviewCase::AnyValue, "Enemy/Doggy", std::uint32_t(AnimState::Walk) }
 		};
 
 		constexpr EventParamField LizardFloatFields[] = {
@@ -48,6 +66,11 @@ namespace Jazz2::Editor::EventCatalogParts
 				.WithUnit(ParamUnit::Seconds)
 				.WithDescription(N_("How long the copter stays after the lizard is hit, so a player can use it; 0 destroys it at once")),
 		};
+		// Its copter is drawn with it, see EventPreviews::GetExtraParts()
+		constexpr EventPreviewCase LizardFloatPreview[] = {
+			{ 1, "Enemy/LizardFloatXmas", std::uint32_t(AnimState::Idle) },
+			{ EventPreviewCase::AnyValue, "Enemy/LizardFloat", std::uint32_t(AnimState::Idle) }
+		};
 
 		constexpr ParamOption BilsyThemes[] = { { N_("Normal"), 0 }, { N_("Christmas"), 1 } };
 		constexpr EventParamField BilsyFields[] = {
@@ -55,6 +78,20 @@ namespace Jazz2::Editor::EventCatalogParts
 			TextIdField(N_("End text"), 1)
 				.WithDescription(N_("Level text shown when the boss is defeated")),
 		};
+		constexpr EventPreviewCase BilsyPreview[] = {
+			{ 1, "Boss/BilsyXmas", std::uint32_t(AnimState::Idle) },
+			{ EventPreviewCase::AnyValue, "Boss/Bilsy", std::uint32_t(AnimState::Idle) }
+		};
+
+		// Facing or placed as the objects turn or move themselves when they're spawned
+		constexpr EventPreviewCase DragonPreview[] = { { EventPreviewCase::AnyValue, "Enemy/Dragon", std::uint32_t(AnimState::Idle), false, 0, 8 } };
+		constexpr EventPreviewCase FencerPreview[] = { { EventPreviewCase::AnyValue, "Enemy/Fencer", std::uint32_t(AnimState::Idle), true } };
+		constexpr EventPreviewCase CaterpillarPreview[] = { { EventPreviewCase::AnyValue, "Enemy/Caterpillar", std::uint32_t(AnimState::Idle), true } };
+		constexpr EventPreviewCase SparksPreview[] = { { EventPreviewCase::AnyValue, "Enemy/Sparks", std::uint32_t(AnimState::Idle), true } };
+		constexpr EventPreviewCase DevanRemotePreview[] = { { EventPreviewCase::AnyValue, "Boss/DevanRemote", std::uint32_t(AnimState::Idle), true } };
+		constexpr EventPreviewCase RobotPreview[] = { { EventPreviewCase::AnyValue, "Boss/Robot", std::uint32_t(AnimState::Idle), true } };
+		constexpr EventPreviewCase TurtleBossPreview[] = { { EventPreviewCase::AnyValue, "Boss/TurtleBoss", std::uint32_t(AnimState::Idle), true } };
+		constexpr EventPreviewCase QueenPreview[] = { { EventPreviewCase::AnyValue, "Boss/Queen", std::uint32_t(AnimState::Idle), false, 0, -8 } };
 
 		// Bosses that read only the end text from the second byte
 		constexpr EventParamField BossFields[] = {
@@ -74,11 +111,17 @@ namespace Jazz2::Editor::EventCatalogParts
 		constexpr EventParamField TurtleShellFields[] = {
 			EnumField(N_("Theme"), 8, 8, TurtleShellThemes),
 		};
+		constexpr EventPreviewCase TurtleShellPreview[] = {
+			{ 1, "Enemy/TurtleShellXmas", std::uint32_t(AnimState::Default) },
+			{ 2, "Boss/TurtleBossShell", std::uint32_t(AnimState::Default) },
+			{ EventPreviewCase::AnyValue, "Enemy/TurtleShell", std::uint32_t(AnimState::Default) }
+		};
 
 		constexpr EventDescriptor Events[] = {
 			DescribeEvent(EventType::EnemyTurtle, "EnemyTurtle", N_("Turtle"), EventCategory::Enemy,
 				N_("Walks back and forth, leaves its shell behind when defeated."),
-				TurtleFields, "Enemy/Turtle", std::uint32_t(AnimState::Walk), EventTraits::Object),
+				TurtleFields, "Enemy/Turtle", std::uint32_t(AnimState::Walk), EventTraits::Object)
+				.WithPreviewCases(0, TurtlePreview),
 			DescribeEvent(EventType::EnemyLizard, "EnemyLizard", N_("Lizard"), EventCategory::Enemy,
 				N_("Walks back and forth."),
 				LizardFields, "Enemy/Lizard", std::uint32_t(AnimState::Walk), EventTraits::Object),
@@ -96,7 +139,8 @@ namespace Jazz2::Editor::EventCatalogParts
 				"Enemy/Helmut", std::uint32_t(AnimState::Walk), EventTraits::Object),
 			DescribeEvent(EventType::EnemyDragon, "EnemyDragon", N_("Dragon"), EventCategory::Enemy,
 				N_("Breathes fire at nearby players."),
-				"Enemy/Dragon", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				"Enemy/Dragon", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(-1, DragonPreview),
 			DescribeEvent(EventType::EnemyBat, "EnemyBat", N_("Bat"), EventCategory::Enemy,
 				N_("Hangs in place and flies at nearby players."),
 				"Enemy/Bat", std::uint32_t(AnimState::Idle), EventTraits::Object),
@@ -105,16 +149,19 @@ namespace Jazz2::Editor::EventCatalogParts
 				"Enemy/FatChick", std::uint32_t(AnimState::Walk), EventTraits::Object),
 			DescribeEvent(EventType::EnemyFencer, "EnemyFencer", N_("Fencer"), EventCategory::Enemy,
 				N_("Jumps towards and away from nearby players."),
-				"Enemy/Fencer", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				"Enemy/Fencer", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(-1, FencerPreview),
 			DescribeEvent(EventType::EnemyRapier, "EnemyRapier", N_("Rapier"), EventCategory::Enemy,
 				N_("Floats around and flies at nearby players."),
 				"Enemy/Rapier", std::uint32_t(AnimState::Idle), EventTraits::Object),
 			DescribeEvent(EventType::EnemySparks, "EnemySparks", N_("Sparks"), EventCategory::Enemy,
 				N_("Flies through walls towards nearby players."),
-				"Enemy/Sparks", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				"Enemy/Sparks", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(-1, SparksPreview),
 			DescribeEvent(EventType::EnemyMonkey, "EnemyMonkey", N_("Monkey"), EventCategory::Enemy,
 				N_("Throws bananas at nearby players."),
-				MonkeyFields, "Enemy/Monkey", std::uint32_t(AnimState::Walk), EventTraits::Object),
+				MonkeyFields, "Enemy/Monkey", std::uint32_t(AnimState::Walk), EventTraits::Object)
+				.WithPreviewCases(0, MonkeyPreview),
 			DescribeEvent(EventType::EnemyDemon, "EnemyDemon", N_("Demon"), EventCategory::Enemy,
 				N_("Walks and attacks nearby players."),
 				"Enemy/Demon", std::uint32_t(AnimState::Idle), EventTraits::Object),
@@ -126,13 +173,15 @@ namespace Jazz2::Editor::EventCatalogParts
 				"Enemy/Bee", std::uint32_t(AnimState::Idle), EventTraits::Unused),
 			DescribeEvent(EventType::EnemyCaterpillar, "EnemyCaterpillar", N_("Caterpillar"), EventCategory::Enemy,
 				N_("Blows smoke rings that make players dizzy, it can't be destroyed."),
-				"Enemy/Caterpillar", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				"Enemy/Caterpillar", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(-1, CaterpillarPreview),
 			DescribeEvent(EventType::EnemyCrab, "EnemyCrab", N_("Crab"), EventCategory::Enemy,
 				N_("Walks back and forth."),
 				"Enemy/Crab", std::uint32_t(AnimState::Walk), EventTraits::Object),
 			DescribeEvent(EventType::EnemyDoggy, "EnemyDoggy", N_("Doggy"), EventCategory::Enemy,
 				N_("Walks back and forth, charges when hit."),
-				DoggyFields, "Enemy/Doggy", std::uint32_t(AnimState::Walk), EventTraits::Object),
+				DoggyFields, "Enemy/Doggy", std::uint32_t(AnimState::Walk), EventTraits::Object)
+				.WithPreviewCases(0, DoggyPreview),
 			DescribeEvent(EventType::EnemyDragonfly, "EnemyDragonfly", N_("Dragonfly"), EventCategory::Enemy,
 				N_("Flies around and attacks nearby players."),
 				"Enemy/Dragonfly", std::uint32_t(AnimState::Idle), EventTraits::Object),
@@ -159,42 +208,49 @@ namespace Jazz2::Editor::EventCatalogParts
 				"Enemy/Witch", std::uint32_t(AnimState::Idle), EventTraits::Object),
 			DescribeEvent(EventType::EnemyLizardFloat, "EnemyLizardFloat", N_("Floating Lizard"), EventCategory::Enemy,
 				N_("Flies on a copter and drops bombs, falls as a lizard when hit."),
-				LizardFloatFields, "Enemy/LizardFloat", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				LizardFloatFields, "Enemy/LizardFloat", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(0, LizardFloatPreview),
 
 			DescribeEvent(EventType::BossTweedle, "BossTweedle", N_("Tweedle"), EventCategory::Boss,
 				N_("Not implemented by the game."),
 				"Boss/Tweedle", std::uint32_t(AnimState::Idle), EventTraits::Unused),
 			DescribeEvent(EventType::BossBilsy, "BossBilsy", N_("Bilsy"), EventCategory::Boss,
 				N_("Teleports around and throws fireballs."),
-				BilsyFields, "Boss/Bilsy", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				BilsyFields, "Boss/Bilsy", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(0, BilsyPreview),
 			DescribeEvent(EventType::BossDevan, "BossDevan", N_("Devan"), EventCategory::Boss,
 				N_("Shoots at players, then turns into a flying demon."),
 				BossFields, "Boss/Devan", std::uint32_t(AnimState::Idle), EventTraits::Object),
 			DescribeEvent(EventType::BossQueen, "BossQueen", N_("Queen"), EventCategory::Boss,
 				N_("Can't be hurt, hits push her back until she falls off her ledge."),
-				BossFields, "Boss/Queen", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				BossFields, "Boss/Queen", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(-1, QueenPreview),
 			DescribeEvent(EventType::BossRobot, "BossRobot", N_("Robot"), EventCategory::Boss,
 				N_("Hidden until a Devan Remote boss activates it."),
-				"Boss/Robot", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				"Boss/Robot", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(-1, RobotPreview),
 			DescribeEvent(EventType::BossUterus, "BossUterus", N_("Uterus"), EventCategory::Boss,
 				N_("Protected by shields, spawns crabs."),
 				BossFields, "Boss/Uterus", std::uint32_t(AnimState::Idle), EventTraits::Object),
 			DescribeEvent(EventType::BossTurtleTough, "BossTurtleTough", N_("Turtle Boss"), EventCategory::Boss,
 				N_("Walks towards players and throws its mace."),
-				BossFields, "Boss/TurtleBoss", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				BossFields, "Boss/TurtleBoss", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(-1, TurtleBossPreview),
 			DescribeEvent(EventType::BossBubba, "BossBubba", N_("Bubba"), EventCategory::Boss,
 				N_("Spits fireballs and spins like a tornado."),
 				BossFields, "Boss/Bubba", std::uint32_t(AnimState::Idle), EventTraits::Object),
 			DescribeEvent(EventType::BossDevanRemote, "BossDevanRemote", N_("Devan Remote"), EventCategory::Boss,
 				N_("Devan controlling the Robot boss, which has to be placed in the level too."),
-				DevanRemoteFields, "Boss/DevanRemote", std::uint32_t(AnimState::Idle), EventTraits::Object),
+				DevanRemoteFields, "Boss/DevanRemote", std::uint32_t(AnimState::Idle), EventTraits::Object)
+				.WithPreviewCases(-1, DevanRemotePreview),
 			DescribeEvent(EventType::BossBolly, "BossBolly", N_("Bolly"), EventCategory::Boss,
 				N_("Flies after players with a spiked chain and fires rockets."),
 				BossFields, "Boss/Bolly", std::uint32_t(AnimState::Idle), EventTraits::Object),
 
 			DescribeEvent(EventType::TurtleShell, "TurtleShell", N_("Turtle Shell"), EventCategory::Enemy,
 				N_("Slides when shot and hurts enemies it hits."),
-				TurtleShellFields, "Enemy/TurtleShell", std::uint32_t(AnimState::Default), EventTraits::Object),
+				TurtleShellFields, "Enemy/TurtleShell", std::uint32_t(AnimState::Default), EventTraits::Object)
+				.WithPreviewCases(0, TurtleShellPreview),
 		};
 	}
 

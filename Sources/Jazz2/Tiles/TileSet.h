@@ -144,7 +144,8 @@ namespace Jazz2::Tiles
 		/** @brief Returns the packed mask (@ref MaskBytesPerTile bytes, 1 bit per pixel) for the specified tile */
 		const std::uint8_t* GetTileMask(std::int32_t tileId) const
 		{
-			if (tileId >= TileCount) {
+			// One unsigned comparison covers a negative ID too, the mask has room for every tile (see the constructor)
+			if (std::uint32_t(tileId) >= std::uint32_t(TileCount)) {
 				return nullptr;
 			}
 
@@ -271,7 +272,7 @@ namespace Jazz2::Tiles
 		/** @brief Sets the table returned by @ref GetTileEffectInfo(), one byte per tile */
 		void SetTileEffectInfo(std::unique_ptr<std::uint8_t[]> tileEffectInfo)
 		{
-			_tileEffectInfo = std::move(tileEffectInfo);
+			_tileEffectInfo = Death::move(tileEffectInfo);
 		}
 #endif
 

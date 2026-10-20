@@ -9,7 +9,7 @@ using namespace Death::Memory;
 namespace nCine
 {
 	TextureLoaderPvr::TextureLoaderPvr(std::unique_ptr<Stream> fileHandle)
-		: ITextureLoader(std::move(fileHandle))
+		: ITextureLoader(Death::move(fileHandle))
 	{
 		Pvr3Header header;
 
