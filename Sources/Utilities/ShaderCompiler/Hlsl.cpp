@@ -117,9 +117,24 @@ namespace ShaderCompiler
 			return false;
 		}
 
-		String SanitizeIdent(StringView name)
+		// Words the Cg compilers reserve on top of HLSL that GLSL leaves free - SceShaccCg (PS Vita) refuses e.g. a local
+		// named "row" ("expected an identifier but found keyword 'row'"). Only the Cg dialect renames them, so the HLSL
+		// text, and with it the committed DXBC, stays as it is.
+		bool IsCgReservedIdent(StringView name)
 		{
-			if (IsReservedIdent(name)) return String{name} + "_"_s;
+			static const char* const kCgReserved[] = {
+				"row", "column", "fixed", "decl", "emit", "get", "pass", "packed", "technique", "string", "compile",
+				"interface", "pixelfragment", "vertexfragment", "pixelshader", "vertexshader", "sampler_state", "shared"
+			};
+			for (const char* n : kCgReserved) {
+				if (name == n) return true;
+			}
+			return false;
+		}
+
+		String SanitizeIdent(StringView name, bool cg)
+		{
+			if (IsReservedIdent(name) || (cg && IsCgReservedIdent(name))) return String{name} + "_"_s;
 			return String{name};
 		}
 
@@ -486,11 +501,11 @@ namespace ShaderCompiler
 					if (p.ArraySize > 0) _arrayVars.insert(p.Name);
 				}
 				String out;
-				out += TypeName(fn.RetType) + " "_s + SanitizeIdent(fn.Name) + "("_s;
+				out += TypeName(fn.RetType) + " "_s + SanitizeIdent(fn.Name, _cg) + "("_s;
 				for (std::size_t i = 0; i < fn.Params.size(); i++) {
 					if (i != 0) out += ", "_s;
 					const Param& pp = fn.Params[i];
-					out += (pp.Qualifier.empty() ? String{} : pp.Qualifier + " "_s) + TypeName(pp.Type) + " "_s + SanitizeIdent(pp.Name) +
+					out += (pp.Qualifier.empty() ? String{} : pp.Qualifier + " "_s) + TypeName(pp.Type) + " "_s + SanitizeIdent(pp.Name, _cg) +
 						(pp.ArraySize > 0 ? String("["_s + Death::format("{}", pp.ArraySize) + "]"_s) : String{});
 				}
 				out += ")\n{\n"_s;
@@ -526,13 +541,13 @@ namespace ShaderCompiler
 					case StmtKind::VarDecl:
 						_locals[s->DeclName] = s->DeclType;
 						if (s->DeclArraySize > 0) _arrayVars.insert(s->DeclName);
-						out += indent + (s->DeclConst ? String("const ") : String{}) + TypeName(s->DeclType) + " "_s + SanitizeIdent(s->DeclName) +
+						out += indent + (s->DeclConst ? String("const ") : String{}) + TypeName(s->DeclType) + " "_s + SanitizeIdent(s->DeclName, _cg) +
 							(s->DeclArraySize > 0 ? String("["_s + Death::format("{}", s->DeclArraySize) + "]"_s) : String{});
 						if (s->Init != nullptr) out += " = "_s + EmitExpr(s->Init.get(), 0);
 						out += ";\n"_s;
 						for (const std::pair<String, ExprPtr>& d : s->ExtraDecls) {
 							_locals[d.first] = s->DeclType;
-							out += indent + (s->DeclConst ? String("const ") : String{}) + TypeName(s->DeclType) + " "_s + SanitizeIdent(d.first);
+							out += indent + (s->DeclConst ? String("const ") : String{}) + TypeName(s->DeclType) + " "_s + SanitizeIdent(d.first, _cg);
 							if (d.second != nullptr) out += " = "_s + EmitExpr(d.second.get(), 0);
 							out += ";\n"_s;
 						}
@@ -572,11 +587,11 @@ namespace ShaderCompiler
 				if (s == nullptr) return {};
 				if (s->Kind == StmtKind::VarDecl) {
 					_locals[s->DeclName] = s->DeclType;
-					String r = TypeName(s->DeclType) + " "_s + SanitizeIdent(s->DeclName);
+					String r = TypeName(s->DeclType) + " "_s + SanitizeIdent(s->DeclName, _cg);
 					if (s->Init != nullptr) r += " = "_s + EmitExpr(s->Init.get(), 0);
 					for (const std::pair<String, ExprPtr>& d : s->ExtraDecls) {
 						_locals[d.first] = s->DeclType;
-						r += ", "_s + SanitizeIdent(d.first);
+						r += ", "_s + SanitizeIdent(d.first, _cg);
 						if (d.second != nullptr) r += " = "_s + EmitExpr(d.second.get(), 0);
 					}
 					return r;
@@ -882,7 +897,7 @@ namespace ShaderCompiler
 				if (IsPassthroughBuiltin(name)) return String{name} + "("_s + EmitArgs(e) + ")"_s;
 
 				auto it = _funcRet.find(String{name});
-				if (it != _funcRet.end()) return SanitizeIdent(name) + "("_s + EmitArgs(e) + ")"_s;
+				if (it != _funcRet.end()) return SanitizeIdent(name, _cg) + "("_s + EmitArgs(e) + ")"_s;
 
 				Fail("unknown function '"_s + name + "'"_s);
 				return {};
@@ -942,7 +957,7 @@ namespace ShaderCompiler
 				if (name == "gl_InstanceID") { _usedInstanceID = true; return "gl_InstanceID"_s; }
 				if (name == "gl_FragCoord") { _usedFragCoord = true; return "gl_FragCoord"_s; }
 				// Locals/params may carry reserved names (e.g. "frac", "point"); rename them consistently.
-				if (_locals.find(String{name}) != _locals.end()) return SanitizeIdent(name);
+				if (_locals.find(String{name}) != _locals.end()) return SanitizeIdent(name, _cg);
 				return String{name};
 			}
 

@@ -59,11 +59,11 @@ Log | Only with `/log:file`, `/log` opens a console window instead
 What | Location
 ---- | --------
 Portable @m_span{m-text m-dim} (@cpp "Content/" @ce next to the executable) @m_endspan | @cpp "Content/" @ce, @cpp "Source/" @ce and @cpp "Cache/" @ce next to the executable
-Installed package @m_span{m-text m-dim} (DEB, RPM, distribution packages) @m_endspan | @cpp "Content/" @ce in @cpp "/usr/share/jazz2/" @ce @m_span{m-text m-dim} (install prefix and package name) @m_endspan, @cpp "Source/" @ce and @cpp "Cache/" @ce in @cpp "~/.local/share/jazz2/" @ce @m_span{m-text m-dim} (`$XDG_DATA_HOME`; @cpp "~/.local/share/Jazz² Resurrection/" @ce is used instead if it has a @cpp "Cache/" @ce) @m_endspan. A @cpp "Source/" @ce in @cpp "/usr/share/jazz2/" @ce is used if the per-user one doesn't contain the game files
+Installed package @m_span{m-text m-dim} (DEB, RPM, distribution packages) @m_endspan | @cpp "Content/" @ce in @cpp "/usr/share/jazz2/" @ce @m_span{m-text m-dim} (install prefix and package name) @m_endspan, @cpp "Source/" @ce and @cpp "Cache/" @ce in @cpp "~/.local/share/jazz2/" @ce @m_span{m-text m-dim} (`$XDG_DATA_HOME`, but @cpp "~/.local/share/Jazz² Resurrection/" @ce is used instead if it has a @cpp "Cache/" @ce) @m_endspan. A @cpp "Source/" @ce in @cpp "/usr/share/jazz2/" @ce is used if the per-user one doesn't contain the game files
 AppImage | @cpp "Content/" @ce inside the image, @cpp "Source/" @ce and @cpp "Cache/" @ce next to the @cpp ".AppImage" @ce file if @cpp "Source/" @ce there contains the game files, otherwise in @cpp "~/.local/share/jazz2/" @ce
 Flatpak | @cpp "Content/" @ce in @cpp "/app/share/Jazz² Resurrection/" @ce, everything else under @cpp "~/.var/app/dev.de4th.jazz2/" @ce
 User @cpp "Content/" @ce | Next to @cpp "Cache/" @ce, if it isn't the same as @cpp "Content/" @ce
-Config directory | @cpp "~/.config/Jazz² Resurrection/" @ce @m_span{m-text m-dim} (`$XDG_CONFIG_HOME`; @cpp "~/.config/jazz2/" @ce for AppImage) @m_endspan, or the working directory if a @cpp "Jazz2.config" @ce already exists there
+Config directory | @cpp "~/.config/Jazz² Resurrection/" @ce @m_span{m-text m-dim} (`$XDG_CONFIG_HOME`, @cpp "~/.config/jazz2/" @ce for AppImage) @m_endspan, or the working directory if a @cpp "Jazz2.config" @ce already exists there
 Log | Only with `/log:file`
 
 @subsection paths-macos macOS

@@ -36,23 +36,7 @@
 #include <string>
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-#	include <cerrno>
-#	include <sys/types.h>
 #	include <emscripten.h>
-
-/**
-	Emscripten's libc declares fallocate() without implementing it, and the base layer's FileSystem::Copy() calls it -
-	only to preallocate the copy, and it carries on when the call says it is not supported, which is what this says
-*/
-extern "C" int fallocate(int fd, int mode, off_t offset, off_t length)
-{
-	static_cast<void>(fd);
-	static_cast<void>(mode);
-	static_cast<void>(offset);
-	static_cast<void>(length);
-	errno = ENOSYS;
-	return -1;
-}
 
 /** Version of the game this tool was built for, the page shows it when a conversion starts (see Web/assetpacker-worker.js) */
 extern "C" EMSCRIPTEN_KEEPALIVE const char* GetGameVersion()

@@ -3214,8 +3214,8 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundTunnel] = CompileShader("TexturedBackgroundTunnel", ShadersGen::TexturedBackgroundTunnel);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundTunnelDither] = CompileShader("TexturedBackgroundTunnelDither", ShadersGen::TexturedBackgroundTunnel, "DITHER");
 		{
-			// The cylinder is newer than the offline tables of some backends (the PlayStation 3 has no microcode of it until
-			// its table is generated again), its layers are drawn as tiles where either variant is missing (see TileMap)
+			// The cylinder may be newer than the offline tables of some backends (a table like the PlayStation 3's has no
+			// microcode of it until it's generated again), its layers are drawn as tiles where either variant is missing (see TileMap)
 			auto& cylinderShader = _precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCylinder];
 			auto& cylinderDitherShader = _precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCylinderDither];
 			cylinderShader = CompileShader("TexturedBackgroundCylinder", ShadersGen::TexturedBackgroundCylinder);

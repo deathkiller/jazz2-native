@@ -33,13 +33,13 @@ On the first eight `NCINE_PREFERRED_RHI` is pinned to the console's one backend 
 is a configure error. The PlayStation 3's `RSX` is a full shader backend, so it keeps the
 post-processing chain and differs from desktop mainly in <em>when</em> its shaders are compiled
 @m_span{m-text m-dim} (see @ref consoles-ps3) @m_endspan. The PS Vita and the Switch are ordinary
-shader platforms; for them mostly the deployment parts apply.
+shader platforms. For them mostly the deployment parts apply.
 
 @section consoles-common What every console build shares
 
 -   <b>The host tools are not built.</b> @ref shader-compiler "ShaderCompiler" and
     @ref asset-packer "AssetPacker" are skipped for cross-compiled targets. The generated shader
-    headers are committed to the repository; the game content is prepared ahead of time.
+    headers are committed to the repository. The game content is prepared ahead of time.
 -   <b>The game data is converted in advance</b> with AssetPacker. The Nintendo 64, Dreamcast,
     PlayStation 2 and GameCube have no first-run conversion compiled in
     @m_span{m-text m-dim} (`NCINE_HAS_WRITABLE_CACHE` in @cpp "Sources/Main.h" @ce) @m_endspan and
@@ -49,7 +49,7 @@ shader platforms; for them mostly the deployment parts apply.
 -   <b>Seven of them have no shaders.</b> `RDP`, `PVR`, `GX`, `GU`, `GS` and `PICA` implement each
     effect as fixed-function passes transpiled by ShaderCompiler from the same `.shader` files ---
     see @ref shader-compiler-fixed-function "console fixed-function blocks". There is no
-    post-processing chain and no rescale filter; the level viewport is aspect-fitted into the
+    post-processing chain and no rescale filter. The level viewport is aspect-fitted into the
     console's native output.
 
 @subsection consoles-common-content Preparing the game content
@@ -59,7 +59,7 @@ All data-prepared consoles consume the <b>same</b> tree, prepared once with
 the @ref consoles-dreamcast-content "Dreamcast" and the GameCube need their own profile, and the
 @ref consoles-n64-content "Nintendo 64" needs its own conversion that also covers sound and music.
 The `dreamcast`, `ps2`, `gamecube` and `n64` profiles also write sprite sheets and tilesets in LZ4
-@m_span{m-text m-dim} (see @ref asset-packer-lz4) @m_endspan; the generic `console` tree keeps the
+@m_span{m-text m-dim} (see @ref asset-packer-lz4) @m_endspan, while the generic `console` tree keeps the
 game's own format.
 
 @m_class{m-block m-info}
@@ -72,7 +72,7 @@ Demo @m_span{m-text m-dim} (which ships @cpp "AnimsSw.j2a" @ce instead of @cpp "
 @m_class{m-noindent}
 
 <b>1. Build the tool.</b> It is part of any desktop build @m_span{m-text m-dim}
-(`NCINE_BUILD_ASSET_PACKER`) @m_endspan; naming the target builds only the tool:
+(`NCINE_BUILD_ASSET_PACKER`) @m_endspan. Naming the target builds only the tool:
 
 @code{.sh}
 cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
@@ -93,11 +93,11 @@ The binary lands at @cpp "build/Utilities/AssetPacker/AssetPacker" @ce.
 @m_class{m-noindent}
 
 The tree is written straight into the target directory @m_span{m-text m-dim} (not into a
-@cpp "Content" @ce subdirectory; created if missing) @m_endspan. A full game installation, which has
+@cpp "Content" @ce subdirectory, created if missing) @m_endspan. A full game installation, which has
 both halves in @cpp "Source" @ce and @cpp "Content" @ce, can be passed as a single positional
 argument instead @m_span{m-text m-dim} (@cpp "AssetPacker <installation> ./build/ConsoleContent --target=console" @ce)
 @m_endspan. A bare copy of the original game converted without @cpp "--content=" @ce produces a tree
-with no fonts, @cpp "Metadata" @ce or translations that cannot even draw its menu; the tool warns
+with no fonts, @cpp "Metadata" @ce or translations that cannot even draw its menu. The tool warns
 about it.
 
 Pick the profile by the cinematics:
@@ -105,7 +105,7 @@ Pick the profile by the cinematics:
 `--target=` | For | Cinematics
 ----------- | --- | ----------
 `console` | Every console except the Dreamcast and the GameCube @m_span{m-text m-dim} (`wii` and `psp` are aliases) @m_endspan | Original `.j2v` files copied unchanged
-`dreamcast` | @ref consoles-dreamcast "Sega Dreamcast" | Re-encoded into @ref Jazz2::VideoFormat @m_span{m-text m-dim} (LZ4 block per frame; the SH-4 cannot inflate the original in time) @m_endspan
+`dreamcast` | @ref consoles-dreamcast "Sega Dreamcast" | Re-encoded into @ref Jazz2::VideoFormat @m_span{m-text m-dim} (LZ4 block per frame, since the SH-4 cannot inflate the original in time) @m_endspan
 `gamecube` | @ref consoles-gamecube "Nintendo GameCube" | Re-encoded the same way @m_span{m-text m-dim} (the original's interleaved streams cannot be read from disc fast enough) @m_endspan
 
 @m_class{m-noindent}
@@ -150,10 +150,10 @@ the place the console reads it:
 
 Console | Content directory | Cache / save data
 ------- | ----------------- | -----------------
-Nintendo 64 | @cpp "rom:/Content/" @ce @m_span{m-text m-dim} (ROM's DragonFS image) @m_endspan | @cpp "rom:/Cache/" @ce, read-only; preferences on the cartridge EEPROM @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce) @m_endspan
-Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (disc image) @m_endspan | @cpp "/cd/Cache/" @ce, read-only; preferences and resumable state on a memory card @m_span{m-text m-dim} (@cpp "/vmu/<port><unit>/Jazz2" @ce and @cpp "Jazz2.resume" @ce) @m_endspan
+Nintendo 64 | @cpp "rom:/Content/" @ce @m_span{m-text m-dim} (ROM's DragonFS image) @m_endspan | @cpp "rom:/Cache/" @ce, read-only, preferences on the cartridge EEPROM @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce) @m_endspan
+Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (disc image) @m_endspan | @cpp "/cd/Cache/" @ce, read-only, preferences and resumable state on a memory card @m_span{m-text m-dim} (@cpp "/vmu/<port><unit>/Jazz2" @ce and @cpp "Jazz2.resume" @ce) @m_endspan
 Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/Cache/" @ce
-GameCube | @cpp "dvd:/Content/" @ce @m_span{m-text m-dim} (disc image) @m_endspan, or @cpp "Jazz2/Content/" @ce on an SD card @m_span{m-text m-dim} (`sd:`, `carda:` or `cardb:`, see @ref consoles-gamecube-disc) @m_endspan | Disc: read-only, preferences and resumable state on a memory card @m_span{m-text m-dim} (@cpp "mca:/Jazz2.config" @ce and @cpp "Jazz2.resume" @ce) @m_endspan; SD card: @cpp "Jazz2/Cache/" @ce, writable
+GameCube | @cpp "dvd:/Content/" @ce @m_span{m-text m-dim} (disc image) @m_endspan, or @cpp "Jazz2/Content/" @ce on an SD card @m_span{m-text m-dim} (`sd:`, `carda:` or `cardb:`, see @ref consoles-gamecube-disc) @m_endspan | Disc: read-only, preferences and resumable state on a memory card @m_span{m-text m-dim} (@cpp "mca:/Jazz2.config" @ce and @cpp "Jazz2.resume" @ce) @m_endspan. SD card: @cpp "Jazz2/Cache/" @ce, writable
 Nintendo 3DS | @cpp "sdmc:/3ds/Jazz2/Content/" @ce | @cpp "sdmc:/3ds/Jazz2/Cache/" @ce
 PlayStation Portable | @cpp "ms0:/PSP/GAME/Jazz2/Content/" @ce | @cpp "ms0:/PSP/GAME/Jazz2/Cache/" @ce
 PlayStation 2 | @cpp "cdfs:/Content/" @ce @m_span{m-text m-dim} (disc image) @m_endspan | @cpp "cdfs:/Cache/" @ce, read-only, nothing staged
@@ -183,7 +183,7 @@ disc image. For these three:
     content check --- an incomplete tree just shows a main menu with nothing to play.
 -   <b>The staging directory is added to, not replaced.</b> `NCINE_CONTENT_DIR` is copied into its
     `Content` subdirectory on every build, so files removed from the tree survive and get packed into
-    later images. The N64 build clears it first; for the Dreamcast and PS2 delete
+    later images. The N64 build clears it first. For the Dreamcast and PS2 delete
     @cpp "<build dir>/cd/" @ce by hand after regenerating a tree.
 
 @m_class{m-block m-warning}
@@ -200,7 +200,7 @@ can't be reconverted can be upgraded from the unversioned layout to version 1 by
 
 @subsection consoles-common-features What is available on which console
 
-Decided at configure time from the platform; values are for a default `Release` configuration.
+Decided at configure time from the platform. Values are for a default `Release` configuration.
 
 Feature | N64 | Dreamcast | Wii | GameCube | 3DS | PSP | PS2 | PS3 | Vita | Switch
 ------- | --- | --------- | --- | -------- | --- | --- | --- | --- | ---- | ------
@@ -208,7 +208,7 @@ Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes |
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No | No
 Audio backend | `N64` @m_span{m-text m-dim} (RSP mixer) @m_endspan | `AICA` | `ASND` | `ASND` | `NDSP` | `PSP` | `PS2` | `PS3` | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
 Sound effects | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (needs DSP firmware, see @ref consoles-3ds-limits) @m_endspan | Yes | Yes | Yes | SDK-dependent | SDK-dependent
-Module music | Yes @m_span{m-text m-dim} (**XM64**, converted ahead, see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-psp-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
+Module music | Yes @m_span{m-text m-dim} (**XM64**, converted ahead, see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-psp-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, with libxmp packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
 Underwater low-pass filter | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** | SDK-dependent | Yes
 Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (one controller) @m_endspan | Yes @m_span{m-text m-dim} (one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
 Online multiplayer | **No** | **No** | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-3ds-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
@@ -220,28 +220,28 @@ Converts the game data itself | **No** | **No** | Yes | **No** | Yes | Yes | **N
 @subsection consoles-common-audio Audio backends
 
 `WITH_AUDIO` compiles the audio subsystem in, with exactly one <b>audio backend</b> chosen at
-configure time from the platform. A backend implements @ref nCine::IAudioDevice; @ref nCine::AudioBuffer,
+configure time from the platform. A backend implements @ref nCine::IAudioDevice. @ref nCine::AudioBuffer,
 @ref nCine::IAudioPlayer and @ref nCine::AudioStream contain no backend calls, so a console only has
 to provide a device. Backends live in @cpp "nCine/Audio/Backends/<backend>/" @ce.
 
 Backend | `WITH_*` | What it drives
 ------- | -------- | --------------
 @ref nCine::ALAudioDevice "AL" | `WITH_OPENAL` | System OpenAL on desktop, the SDK's own on the Switch and Vita
-@ref nCine::AsndAudioDevice "ASND" | `WITH_ASND` | libogc's DSP mixer @m_span{m-text m-dim} (Wii, GameCube; ships with devkitPPC) @m_endspan
+@ref nCine::AsndAudioDevice "ASND" | `WITH_ASND` | libogc's DSP mixer @m_span{m-text m-dim} (Wii and GameCube, ships with devkitPPC) @m_endspan
 @ref nCine::AicaAudioDevice "AICA" | `WITH_AICA` | The Dreamcast sound processor through KallistiOS: wavetable channels for effects, `snd_stream` for music
-@ref nCine::Ps3AudioDevice "PS3" | `WITH_PS3AUDIO` | PSL1GHT's libaudio; lv2 offers only an output ring, so this backend is a software mixer on the PPE
+@ref nCine::Ps3AudioDevice "PS3" | `WITH_PS3AUDIO` | PSL1GHT's libaudio (lv2 offers only an output ring, so this backend is a software mixer on the PPE)
 @ref nCine::PspAudioDevice "PSP" | `WITH_PSPAUDIO` | Integer software mixer into one `sceAudio` channel, on its own thread
-@ref nCine::NdspAudioDevice "NDSP" | `WITH_NDSP` | Same mixer into one libctru NDSP channel on a higher-priority thread; the DSP resamples, so any mixing rate is valid. Needs the DSP firmware, see @ref consoles-3ds-limits
+@ref nCine::NdspAudioDevice "NDSP" | `WITH_NDSP` | Same mixer into one libctru NDSP channel on a higher-priority thread. The DSP resamples, so any mixing rate is valid. Needs the DSP firmware, see @ref consoles-3ds-limits
 @ref nCine::N64AudioDevice "N64" | `WITH_N64AUDIO` | libdragon's RSP mixer into the AI ring. Effects stream from `.wav64` files the asset packer writes, music is libdragon's `.xm64` player, cinematic soundtracks play through libdragon's video player @m_span{m-text m-dim} (`NCINE_HAS_NATIVE_AUDIO`) @m_endspan
-@ref nCine::Ps2AudioDevice "PS2" | `WITH_PS2AUDIO` | Software mixer into the `audsrv` IRX stream, topped up per frame @m_span{m-text m-dim} (no threads) @m_endspan; the SPU2 resamples in hardware
+@ref nCine::Ps2AudioDevice "PS2" | `WITH_PS2AUDIO` | Software mixer into the `audsrv` IRX stream, topped up per frame @m_span{m-text m-dim} (no threads) @m_endspan. The SPU2 resamples in hardware
 none | --- | Silent fallback when no backend is available or audio is turned off
 
-Each console's SDK provides what its backend needs; nothing has to be installed by hand.
-`NCINE_WITH_AUDIO` is @cpp ON @ce everywhere; clearing it removes the whole subsystem.
+Each console's SDK provides what its backend needs, so nothing has to be installed by hand.
+`NCINE_WITH_AUDIO` is @cpp ON @ce everywhere. Clearing it removes the whole subsystem.
 
 Backends that mix on the main thread starve when it blocks longer than they have queued, e.g. during a
 level load. @ref nCine::IAudioDevice::beginBlockingOperation() and its counterpart are called around
-the level load and the episode scan; the PS2 stops its stream for the duration
+the level load and the episode scan, and the PS2 stops its stream for the duration
 @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan.
 
 @m_class{m-block m-info}
@@ -260,7 +260,7 @@ the level load and the episode scan; the PS2 stops its stream for the duration
     @ref nCine::IAudioDevice::LengthToPhysical, Y and Z negated) @m_endspan but the listener in raw
     pixels, so the listener must be scaled first, or sounds go silent away from the level origin.
 -   <b>Streaming:</b> @ref nCine::AudioStream decodes one chunk ahead on a decoding thread and
-    `enqueue()` <b>never waits</b> for it; a chunk that isn't ready is simply not queued. Without a
+    `enqueue()` <b>never waits</b> for it: a chunk that isn't ready is simply not queued. Without a
     decoding thread it decodes in place, unless the device takes over @m_span{m-text m-dim} (PS2, see
     @ref consoles-ps2-limits) @m_endspan. Level and menu music start two frames late
     @m_span{m-text m-dim} (`_musicStartDelay`) @m_endspan to clear the deferred-loading frames.
@@ -282,13 +282,13 @@ Console | Where the trace goes
 ------- | --------------------
 Nintendo 64 | `stderr` via libdragon's debug sinks: the <b>ISViewer</b> window @m_span{m-text m-dim} (**ares** prints it to its terminal) @m_endspan and the <b>USB log</b> of an EverDrive/SC64, both probed at startup. The boot console shows startup messages until the renderer takes over
 Dreamcast | `dbgio`: the <b>framebuffer console</b> during startup, then the <b>SCIF serial port</b>. Emulators print it to their log, `dc-tool` to its console
-Wii / GameCube | A <b>USB Gecko</b> on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed at startup; without one nothing is written. <b>Dolphin</b> serves it on TCP port 55020 @m_span{m-text m-dim} (or the next free one) @m_endspan with slot B set to "USB Gecko". `Jazz2.log` is written beside the content on an SD card, never to a GameCube memory card
+Wii / GameCube | A <b>USB Gecko</b> on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed at startup. Without one nothing is written. <b>Dolphin</b> serves it on TCP port 55020 @m_span{m-text m-dim} (or the next free one) @m_endspan with slot B set to "USB Gecko". `Jazz2.log` is written beside the content on an SD card, never to a GameCube memory card
 Nintendo 3DS | `svcOutputDebugString`: <b>Azahar</b> logs it under `Debug.Emulated` @m_span{m-text m-dim} (hidden by its default filter, see @ref consoles-3ds-deploy) @m_endspan, or an attached debugger. The <b>bottom-screen console</b> shows every line until the renderer starts, then warnings and errors. `Jazz2.log` is written next to the `.3dsx`
 PlayStation Portable | `stdout` via `sceIoWrite` on fd 1: <b>PPSSPP</b> log, `psplink` console, plus the <b>debug screen</b> until the GU takes over
 PlayStation 2 | The EE <b>SIO transmit register</b> @m_span{m-text m-dim} (`0x1000F180`) @m_endspan: <b>PCSX2</b> shows it as EE console output with `EnableEEConsole` on, a serial cable on hardware. Plus the <b>boot console</b> @m_span{m-text m-dim} (libdebug) @m_endspan until the renderer starts --- after the disc wait, IOP module loads and content/memory-card probes --- so a stalled boot leaves its last line on screen
 PlayStation 3 | `sysTtyWrite`: fd 1 and 2 go to the console TTY on hardware and to <b>RPCS3</b>'s log
 PlayStation Vita | `sceClibPrintf`, read with host tools @m_span{m-text m-dim} (`psp2shell`, VitaCompanion) @m_endspan
-Switch | `svcOutputDebugString`, read with a host debug logger; a log file on the SD card is always written too
+Switch | `svcOutputDebugString`, read with a host debug logger. A log file on the SD card is always written too
 
 @m_class{m-noindent}
 
@@ -299,7 +299,7 @@ in @ref paths-consoles.
 
 The log header names the device via @ref nCine::Application::GetDeviceHostname() --- the console
 nickname (Wii, 3DS, Switch), WLAN MAC (PSP), OpenPSID (Vita, PS3), i.Link ID (PS2) or BIOS system ID
-(Dreamcast); empty on the GameCube and N64. It also seeds the device ID sent to the servers.
+(Dreamcast). It is empty on the GameCube and N64. It also seeds the device ID sent to the servers.
 
 @subsection consoles-common-indexedquads Tile layers are indexed meshes
 
@@ -310,17 +310,17 @@ quads. The mesh is <b>indexed</b>: four vertices per quad plus six indices from 
 relative to the draw's first vertex, allocated once so a render queue may keep the pointer) @m_endspan.
 
 -   <b>Shader backends</b> @m_span{m-text m-dim} (`GL`, `GXM`, `RSX`, `D3D11`, `Vulkan`) @m_endspan
-    draw through the index buffer with base-vertex addressing; OpenGL|ES below 3.2 has no
+    draw through the index buffer with base-vertex addressing. OpenGL|ES below 3.2 has no
     @cpp glDrawElementsBaseVertex() @ce and folds the base into the vertex format's offset
     @m_span{m-text m-dim} (@cpp RenderCommand::Issue() @ce) @m_endspan.
 -   <b>Fixed-function backends</b> @m_span{m-text m-dim} (`GU`, `GX`, `PVR`, `GS`, `RDP`, `PICA`,
     `LegacyGL`) @m_endspan resolve the indices on the CPU via @cpp ResolveHostIndices() @ce and a
-    `vertexAt()` resolver; quad recognition @m_span{m-text m-dim} (one GE rectangle, `GX_QUADS` quad
+    `vertexAt()` resolver, and quad recognition @m_span{m-text m-dim} (one GE rectangle, `GX_QUADS` quad
     or GS sprite per tile) @m_endspan still works.
 
 @cpp RenderResources::GetMaxQuadsPerDraw() @ce alone decides the chunk length, from the streaming
 buffer sizes and the 16-bit index range @m_span{m-text m-dim} (sceGxm rejects indices above 63999)
-@m_endspan; larger meshes are split on whole quads.
+@m_endspan. Larger meshes are split on whole quads.
 
 @subsection consoles-common-levelgrids What a level's grids cost
 
@@ -331,12 +331,12 @@ layers) @m_endspan. Two storage choices reduce that, transparently to readers:
 -   <b>The event grid is sparse</b> on every platform: a @cpp uint16_t @ce slot per cell into a dense
     array of only the cells that have an event @m_span{m-text m-dim}
     (@ref Jazz2::Events::EventMap "EventMap" `::EventLayout`) @m_endspan. Empty cells read as a shared
-    empty tile. Writes go through @cpp Edit() @ce, which allocates the cell; @cpp Find() @ce looks up
+    empty tile. Writes go through @cpp Edit() @ce, which allocates the cell, while @cpp Find() @ce looks up
     without allocating. A reference from @cpp Edit() @ce is valid only until the next @cpp Edit() @ce.
 -   <b>Draw-only layers store 4 bytes a tile</b> instead of 12 @m_span{m-text m-dim}
     (`LayerLayout::CompactDrawOnlyLayers`: N64, PSP, Dreamcast, 3DS, PS2) @m_endspan. @cpp Layout[i] @ce
     decodes into a small ring of scratch @ref Jazz2::Tiles::LayerTile "LayerTile" values, so a reference
-    survives only the next few lookups; writes go through @cpp Set() @ce. Other platforms keep plain
+    survives only the next few lookups. Writes go through @cpp Set() @ce. Other platforms keep plain
     arrays.
 
 Both grids are allocated in blocks of 4096 tiles and without throwing: a level whose grids don't fit
@@ -344,7 +344,7 @@ Both grids are allocated in blocks of 4096 tiles and without throwing: a level w
 
 @subsection consoles-common-skips Work the fixed-function consoles leave out
 
-Shared optimizations on the CPU-transforming consoles; none changes the output visibly or audibly.
+Shared optimizations on the CPU-transforming consoles. None changes the output visibly or audibly.
 
 -   <b>A fully lit level draws no lightmap.</b> Backends that clamp the lightmap to darkening only
     declare `RHI_LIGHTING_DARKEN_ONLY` @m_span{m-text m-dim} (@cpp "nCine/Graphics/RHI/RhiFwd.h" @ce
@@ -353,9 +353,9 @@ Shared optimizations on the CPU-transforming consoles; none changes the output v
     ambient level.
 -   <b>A tile layer's visible window is cached between frames</b> with `TILEMAP_CACHE_LAYER_WINDOW`
     @m_span{m-text m-dim} (@cpp "Jazz2/Tiles/TileMap.h" @ce) @m_endspan and re-issued under a new
-    translation until it moves by a whole tile or a tile changes; animated tiles stay per-frame. It
+    translation until it moves by a whole tile or a tile changes. Animated tiles stay per-frame. It
     needs a backend whose tile-mesh dispatch applies the model matrix --- every shader backend plus
-    `GX`, `PICA`, `GS` and `GU`. The N64 has its own cache in the RDP tile format; `PVR` and legacy GL
+    `GX`, `PICA`, `GS` and `GU`. The N64 has its own cache in the RDP tile format. `PVR` and legacy GL
     walk every frame. Compact layers @m_span{m-text m-dim} (see @ref consoles-common-levelgrids)
     @m_endspan carry a version stamp bumped on every write for this check.
 -   <b>Slow libm calls are replaced.</b> libxmp's per-tick double `pow()`/`log()`/divisions and the
@@ -371,7 +371,7 @@ PSP | `pow`, `log`, double division, `floorf`, `ceilf` | Single-precision FPU on
 
 @m_class{m-noindent}
 
-`pow()` and `log()` are computed in single precision within a few ULPs; whole exponents go to newlib
+`pow()` and `log()` are computed in single precision within a few ULPs. Whole exponents go to newlib
 exactly @m_span{m-text m-dim} (libxmp's Vorbis decoder needs exact integral powers) @m_endspan. Division
 and rounding are bit-exact. A new target opts in by adding the file to its source list and the
 `--wrap` options to its link, both in its arm of @cpp "cmake/ncine_extra_sources.cmake" @ce.
@@ -388,7 +388,7 @@ cannot hold the game. Renders through the `RDP` backend @m_span{m-text m-dim}
 
 @subsection consoles-n64-toolchain Toolchain
 
-libdragon ships a prebuilt `mips64-elf` GCC; only the library is built. Requirements the toolchain
+libdragon ships a prebuilt `mips64-elf` GCC, so only the library is built. Requirements the toolchain
 file checks:
 
 -   libdragon must come from the <b>preview</b> branch, and must <b>not</b> be built with `NDEBUG`
@@ -433,7 +433,7 @@ Everything else in @ref consoles-common-content applies.
 
 @m_class{m-noindent}
 
--   `audioconv64` is required; `videoconv64` plus **ffmpeg** and **ffprobe** encode the cinematics.
+-   `audioconv64` is required. `videoconv64` plus **ffmpeg** and **ffprobe** encode the cinematics.
 -   A packer built with **libopenmpt** pre-renders the tracks not in the game's own module format and
     mixes music into the cinematics' soundtracks.
 -   Sprite sheets and tilesets are written in LZ4 (`NCINE_WITH_LZ4`, see @ref asset-packer-lz4).
@@ -459,7 +459,7 @@ The build produces @cpp "build/n64/jazz2.elf" @ce and the bootable @cpp "build/n
 A POST_BUILD step reproduces libdragon's ROM layout:
 
 -   `n64sym` (symbol table for on-console backtraces), `n64elfcompress` (stripped, compressed
-    executable) and `mkdfs` (**DragonFS** image of the content), concatenated by `n64tool`;
+    executable) and `mkdfs` (**DragonFS** image of the content), concatenated by `n64tool`.
 -   `ed64romconfig` sets **eeprom16k** (2 KB EEPROM for preferences) and a **Rumble Pak** in
     controller 1. The real-time clock is deliberately not declared --- an EverDrive cannot provide it
     together with EEPROM.
@@ -470,7 +470,7 @@ A POST_BUILD step reproduces libdragon's ROM layout:
 
 -   <b>Emulator</b> --- @cpp "jazz2.z64" @ce boots in **ares** or **simple64** (both default to an
     Expansion Pak). ares prints the trace (ISViewer) to its terminal.
--   <b>Real hardware</b> --- copy the ROM to an **EverDrive-64** or **SC64**; the save type is read from
+-   <b>Real hardware</b> --- copy the ROM to an **EverDrive-64** or **SC64**. The save type is read from
     the header. An Expansion Pak must be installed.
 -   <b>New content without the toolchain</b> ---
     `AssetPacker swap-content jazz2.z64 --content=<n64 content tree>`
@@ -491,18 +491,18 @@ a level frame takes about 14--31 ms in ares depending on the level.
     @ref consoles-common-levelgrids "the section above"), the tileset atlas is built and uploaded in
     chunks of at most 256 KB, and direct-colour textures are converted straight into their RDP store.
     A level that does not fit returns to the menu with a message. All animations are deferred (sheets
-    read on first use); the few that would hitch are read behind the loading screen.
+    read on first use). The few that would hitch are read behind the loading screen.
 -   <b>The executable (1.9 MB) comes out of the same 8 MB as the heap.</b> To keep it small, the bundled
     JSON library formats with @cpp fputs() @ce and parses with @cpp strtod() @ce (string streams pull
     in ~350 KB of @cpp <locale> @ce), the port defines its own @cpp std::terminate @ce handler
     @m_span{m-text m-dim} (@cpp "nCine/MainApplication.cpp" @ce, avoids linking the demangler)
     @m_endspan, and the game target is built without RTTI on every platform, since casts use
-    @cpp runtime_cast<T>() @ce (`DEATH_USE_RUNTIME_CAST`; turning it off brings RTTI back). The last
+    @cpp runtime_cast<T>() @ce (`DEATH_USE_RUNTIME_CAST`, and turning it off brings RTTI back). The last
     two also help the @ref consoles-dreamcast "Dreamcast" and @ref consoles-ps2 "PlayStation 2".
 -   The display is double buffered (not triple), and the tileset atlas has no
     `TileSet::TilePadding` border (75--84 KB saved). That is valid only because tile layers are drawn
     1:1 with point sampling --- any platform that scales or bilinearly samples them needs the border.
--   <b>The ROM must fit in 64 MB</b> (flashcart and PI bus limit); the build fails if it does not. A
+-   <b>The ROM must fit in 64 MB</b> (flashcart and PI bus limit). The build fails if it does not. A
     `--target=n64` tree is about 39 MB with all music and both cinematics.
 -   <b>Preferences live in cartridge EEPROM</b> via eepromfs (@cpp "eeprom:/JAZZ2CFG" @ce, 2 KB). An
     emulator or flashcart that ignores the header's save type leaves the game unable to save (warned
@@ -517,7 +517,7 @@ a level frame takes about 14--31 ms in ares depending on the level.
     PCM stream limits every mixer round to ~120 samples and roughly doubles the cost. VADPCM's Huffman
     stage is left off (the CPU would have to undo it).
 -   <b>A paused sound effect restarts from the beginning</b> when resumed: the mixer has no paused
-    state and effects have no VADPCM seek points; libdragon asserts ("invalid VADPCM seeking point")
+    state and effects have no VADPCM seek points, and libdragon asserts ("invalid VADPCM seeking point")
     on any other position.
 -   <b>Cinematics are MPEG-1</b>, played by libdragon's player (CPU + RSP), which owns the main thread
     while playing. The port tops audio up once more per frame and holds a frame back while the
@@ -534,14 +534,14 @@ a level frame takes about 14--31 ms in ares depending on the level.
     `VI_AA_MODE_NONE` hits a documented NTSC hardware bug at this width --- don't switch.
 -   <b>TMEM is per-primitive</b>: 4 KB (2 KB for paletted texels) uploaded before each draw, so frame
     cost tracks distinct texture windows. Tiles upload one 32x32 tile at a time (same-tile runs
-    coalesced); sprites larger than a window are drawn as row bands. Windows alternate between
+    coalesced). Sprites larger than a window are drawn as row bands. Windows alternate between
     TILE0 and TILE1.
     -   Unused tile descriptors are given harmless values at startup --- a real console powers up with
         random contents (emulators zero them), which two-cycle draws (colorized text) would sample.
     -   Two-cycle draws skip alpha compare on screen (the hardware is a pixel off) and keep it only in
         render targets.
     -   A tile's TMEM window must be derived from the same fixed-point texel coordinates as its
-        rectangle; from floats, non-power-of-two atlases overflow the 1 KB slot.
+        rectangle. From floats, non-power-of-two atlases overflow the 1 KB slot.
 -   <b>Additive blending is drawn as alpha-over</b>: the RDP's additive mode wraps past white to black.
     Effects that need true summing accumulate on the CPU and are unaffected.
 -   <b>A hung RDP reports itself on screen.</b> A watchdog on the VI interrupt detects the RDP stuck on
@@ -554,9 +554,9 @@ a level frame takes about 14--31 ms in ares depending on the level.
 
 <b>Rendering fast paths (N64-only)</b>
 
--   The frame is CPU-bound; the RDP is never waited on.
+-   The frame is CPU-bound. The RDP is never waited on.
 -   Each tile layer has a <b>cached mesh</b> of its visible window, rebuilt only when the window moves
-    by a whole tile; animated tiles are kept out and resolved per frame. Records wholly outside the
+    by a whole tile. Animated tiles are kept out and resolved per frame. Records wholly outside the
     scissor are neither uploaded nor drawn.
 -   Tiles reach the RDP as one 16-byte integer record each (@cpp RHI::RDP::TileRecord @ce, drawn as
     @cpp PrimitiveType::Points @ce, a form only this backend gets). Debris keeps the indexed
@@ -565,9 +565,9 @@ a level frame takes about 14--31 ms in ares depending on the level.
     (@cpp SubmitSpriteRect() @ce), including the HUD icons. A point-sampled mirrored sprite starts
     1/32 texel inside its far edge, as mirrored tiles do.
 -   The plain sprite effect is recognized at link time (@cpp RdpShaderProgram::DispatchFacts::PlainSprite @ce),
-    and axis-aligned textured instances go straight to a textured rectangle; rotated or untextured
+    and axis-aligned textured instances go straight to a textured rectangle. Rotated or untextured
     ones take the general path.
--   <b>Text is drawn without shadows</b> (@cpp Font::ShadowsEnabled @ce is off); sprite shadows under
+-   <b>Text is drawn without shadows</b> (@cpp Font::ShadowsEnabled @ce is off), but sprite shadows under
     the HUD icons and the logo stay.
 -   Glyphs are written straight into batched commands (@cpp RenderBatcher::BeginDirectBatch() @ce).
 -   When profiling, compare release builds --- code layout alone moves timings by milliseconds.
@@ -583,7 +583,7 @@ backend @m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/PVR" @ce) @m_end
 
 @subsection consoles-dreamcast-toolchain Toolchain
 
-KallistiOS and its `sh-elf` cross-compiler are built from source; there is no prebuilt package.
+KallistiOS and its `sh-elf` cross-compiler are built from source. There is no prebuilt package.
 
 @code{.sh}
 git clone https://github.com/KallistiOS/KallistiOS.git kos
@@ -612,7 +612,7 @@ For a non-default install prefix, edit @cpp "utils/kos-chain/Makefile.cfg" @ce f
 @par Source environ.sh before CMake, in every terminal
 The KOS toolchain file finds the compiler, linker script and ports through its variables and fails
 without them. `$KOS_CMAKE_TOOLCHAIN` points at the toolchain file (the `kos-cmake` wrapper in
-@cpp "utils/build_wrappers" @ce passes it automatically). Use `kallistios.toolchain.cmake`;
+@cpp "utils/build_wrappers" @ce passes it automatically). Use `kallistios.toolchain.cmake`.
 `dreamcast.toolchain.cmake` is a deprecated alias.
 
 @m_class{m-noindent}
@@ -702,7 +702,7 @@ produces a disc the game cannot read.
 @cpp "cmake -E copy_directory" @ce keeps files no longer in the source, so anything ever staged into
 @cpp "build/dreamcast/cd/" @ce ends up in every later image (dropped levels, renamed packages, a stale
 `Source.pak`). After regenerating the content tree, run `rm -rf ./build/dreamcast/cd/` before
-building. (The Nintendo 64 build clears its staging directory itself; this one does not.)
+building. (The Nintendo 64 build clears its staging directory itself, but this one does not.)
 
 @m_class{m-block m-danger}
 
@@ -727,8 +727,8 @@ No KallistiOS toolchain or `mkdcdisc` is needed to replace the content:
 rewrites the image around a new `Content` from a `--target=dreamcast` conversion. It runs wherever
 the packer does, and the image keeps its size if the new content fits (usually). The `--content=`
 directory becomes `Content` on the disc whatever its name, and since the image is rebuilt rather
-than patched, the staging-directory trap above does not apply. See @ref asset-packer-swap-content;
-the @ref consoles-ps2-swap "PlayStation 2 image" uses the same command.
+than patched, the staging-directory trap above does not apply. See @ref asset-packer-swap-content.
+The @ref consoles-ps2-swap "PlayStation 2 image" uses the same command.
 
 @subsection consoles-dreamcast-deploy Deploying and running
 
@@ -748,7 +748,7 @@ and serial output is block-buffered, so a crash loses everything since the last 
 <b>Display and memory</b>
 
 -   <b>The logical view is 640x480</b> (not the 720x405 of 16:9 platforms), so it maps 1:1 onto the
-    4:3 480-line output. It is ~1.4x the pixels; lower <em>Rendering Resolution</em> in
+    4:3 480-line output. It is ~1.4x the pixels, so lower <em>Rendering Resolution</em> in
     Options > Graphics if frame rate matters more
     @m_span{m-text m-dim} (see @cpp Jazz2::Rendering::UpscaleRenderPass::DefaultViewWidth @ce) @m_endspan.
 -   <b>Main memory is the binding constraint</b>: the heap is roughly <b>13.8 MB</b>. Exhaustion shows
@@ -770,17 +770,17 @@ and serial output is block-buffered, so a crash loses everything since the last 
     0.5--4 MB versus libopenmpt's 4.6--12.5 MB, and with libopenmpt the larger levels run out of
     memory. `-D NCINE_WITH_XMP=OFF` brings libopenmpt back (both are compiled from source). libxmp
     cannot read the four `.mo3` tracks.
--   Sound effects use AICA wavetable channels (one per mono channel; stereo samples are
+-   Sound effects use AICA wavetable channels (one per mono channel, so stereo samples are
     de-interleaved on upload), see @ref nCine::AicaAudioDevice. When one has finished is <b>predicted
     from length and rate</b> --- real hardware never clears the key-on bit of a finished one-shot
     (emulators do). Music uses KallistiOS's `snd_stream`, of which there are only <b>four</b>.
 -   A channel addresses at most <b>65534 samples</b> (~3 s at 22 kHz). A longer sound that fits after
-    one halving of its sample rate is halved (logged by @ref nCine::AicaAudioDevice::uploadBuffer);
-    one that would need more is kept in main memory and played through a `snd_stream` handle (shared
+    one halving of its sample rate is halved (logged by @ref nCine::AicaAudioDevice::uploadBuffer).
+    One that would need more is kept in main memory and played through a `snd_stream` handle (shared
     with music, no pitch changes). Only if that memory is unavailable is it halved further.
--   <b>8-bit samples are converted to signed on upload</b>; uploaded unsigned they crackle loudly
+-   <b>8-bit samples are converted to signed on upload</b>: uploaded unsigned they crackle loudly
     (nearly all original sounds are 8-bit).
--   Panning and attenuation are computed on the CPU; the per-channel low-pass filter is not reachable
+-   Panning and attenuation are computed on the CPU. The per-channel low-pass filter is not reachable
     through KallistiOS, so nothing is muffled underwater.
 -   Module music renders at 22050 Hz (the AICA resamples for free) and uses single-precision
     `pow()`/`log()` @m_span{m-text m-dim} (see @ref consoles-common-skips) @m_endspan.
@@ -792,9 +792,9 @@ and serial output is block-buffered, so a crash loses everything since the last 
 
 -   Textures are 16-bit (ARGB4444, or palettized), clipping is geometric (no hardware scissor), and
     there is no post-processing tier: no rescale filters, the lightmap is combined on the CPU.
--   A scissor covering the whole viewport is ignored (it would clip nothing); splitscreen and partial
+-   A scissor covering the whole viewport is ignored (it would clip nothing), but splitscreen and partial
     menu scissors still clip, and primitives wholly inside a narrower scissor skip clipping.
--   The lightmap's ARGB4444 texture persists; only the lit spans of this and the previous frame are
+-   The lightmap's ARGB4444 texture persists. Only the lit spans of this and the previous frame are
     converted (`RHI_LIGHTING_LIT_SPANS`) while size and ambient stay unchanged.
 
 <b>Saving</b>
@@ -802,13 +802,13 @@ and serial output is block-buffered, so a crash loses everything since the last 
 -   Preferences and resumable state go to the first VMU @m_span{m-text m-dim}
     (@cpp "/vmu/a1/Jazz2" @ce and @cpp "/vmu/a1/Jazz2.resume" @ce) @m_endspan. With no card there is
     nowhere to save (warned at startup, not an error). The level cache is read from the disc.
--   Both files carry a <b>VMS header</b> (descriptions + 32x32 icon) so the file manager lists them;
-    it costs two extra blocks per file
+-   Both files carry a <b>VMS header</b> (descriptions + 32x32 icon) so the file manager lists them.
+    It costs two extra blocks per file
     @m_span{m-text m-dim} (see @ref Jazz2::PreferencesCache::DescribeNextMemoryCardFile) @m_endspan.
     The icon is @cpp "Sources/Icons/Dreamcast/Icon.ico" @ce (32x32, 4 bpp, 15 colours + transparency,
     not animated), converted at configure time by @cpp "cmake/ncine_dreamcast_icon.cmake" @ce with no
     host image tool --- replace that file to change it.
--   Online multiplayer is disabled; local splitscreen works.
+-   Online multiplayer is disabled, but local splitscreen works.
 
 - - -
 
@@ -874,32 +874,32 @@ folder instead of an image (`WiiSDCardEnableFolderSync`).
 @m_class{m-noindent}
 
 <b>Logs:</b> put a **USB Gecko** in memory-card slot B (`SlotB = 7` in `Dolphin.ini`) and read
-Dolphin's TCP socket on port <b>55020</b>; without the adapter nothing is written.
+Dolphin's TCP socket on port <b>55020</b>. Without the adapter nothing is written.
 <b>Frame dumps:</b> `DumpXFBTarget = True` in @cpp "GFX.ini" @ce writes every displayed frame as PNG.
 
 @subsection consoles-wii-limits Limits and known issues
 
--   <b>The logical view is 640x480 on a 4:3 set</b> (not 720x405), ~1.4x the pixels; lower
+-   <b>The logical view is 640x480 on a 4:3 set</b> (not 720x405), ~1.4x the pixels, so lower
     <em>Rendering Resolution</em> in Options > Graphics if needed. With widescreen set in the system
     settings, the view is fitted to 16:9 (640x360) and the TV stretches it
     @m_span{m-text m-dim} (@cpp nCine::Backends::OgcGfxDevice::displayAspect() @ce, reads
     `CONF_GetAspectRatio()`) @m_endspan.
 -   <b>Music plays through libxmp</b> (`NCINE_WITH_XMP`, on by default): 0.5--4 MB per module versus
     libopenmpt's 4.6--12.5 MB, and libopenmpt would also be compiled into the binary (not packaged by
-    devkitPro). libxmp cannot read the four `.mo3` tracks; `-D NCINE_WITH_XMP=OFF` switches back.
+    devkitPro). libxmp cannot read the four `.mo3` tracks. `-D NCINE_WITH_XMP=OFF` switches back.
 -   <b>Sound uses libogc's ASND</b>, not OpenAL: the DSP mixes up to <b>16 voices</b> at 48 kHz, which
     is also the engine's source limit (64 on desktop). Panning and attenuation are folded into the
     per-voice volume on the CPU (@cpp AsndAudioDevice::computeVolume() @ce).
 -   ASND holds only two buffers per voice, so the stream queue lives in the backend
     (@ref nCine::AsndAudioDevice::updatePlayers).
--   The DSP reads samples from main memory by DMA (32-byte aligned and padded buffers); there is no
+-   The DSP reads samples from main memory by DMA (32-byte aligned and padded buffers). There is no
     separate sound RAM, so sound effects share the heap.
 -   No DSP filter stage, so nothing is muffled underwater.
--   Online multiplayer is disabled; local splitscreen works.
--   No post-processing tier: no rescale filters; the lightmap is combined on the CPU (skipped in fully
+-   Online multiplayer is disabled, but local splitscreen works.
+-   No post-processing tier: no rescale filters, the lightmap is combined on the CPU (skipped in fully
     lit levels, see @ref consoles-common-skips), converted in one pass into the 4x4-tiled RGBA8 GPU
     layout, using `frsqrte` + two Newton steps since the CPU has no square-root instruction.
--   Textures are converted to GX formats (CI8 with hardware TLUT for palettized ones); effect passes
+-   Textures are converted to GX formats (CI8 with hardware TLUT for palettized ones). Effect passes
     become TEV stages generated from the `.shader` files.
 -   Palette data is byte-swapped on load (big-endian) --- keep in mind when comparing palette dumps with
     desktop.
@@ -939,7 +939,7 @@ make -j $(nproc) -C ./build/gamecube/
 @m_class{m-noindent}
 
 Prepare the tree with `--target=gamecube` (LZ4 sprites/tilesets, see @ref asset-packer-lz4, and
-cinematics re-encoded into @ref Jazz2::VideoFormat); a `console` tree works but its intro falls far
+cinematics re-encoded into @ref Jazz2::VideoFormat). A `console` tree works but its intro falls far
 behind the music. The build stages the content both as a disc image and as an SD card layout:
 
 @code{.shell-session}
@@ -958,11 +958,11 @@ The staged `Content` is cleared before each copy.
 `AssetPacker create-image` makes the image (see @ref asset-packer-gamecube): an ISO 9660 volume with
 the executable and `Content`, plus the disc header and an <b>apploader</b> in the system area, built
 from @cpp "Sources/nCine/Backends/Ogc/GameCubeApploader.c" @ce (none ships with the toolchain). Game
-ID `GJJEJR` (`GAMECUBE_GAME_ID`; no retail game, so Dolphin applies no game-specific settings),
+ID `GJJEJR` (`GAMECUBE_GAME_ID`, no retail game, so Dolphin applies no game-specific settings),
 region NTSC-U. `AssetPacker swap-content` (also in its web version) replaces the content of a
 finished image without the toolchain.
 
-The disc is read through the game's own driver (`OgcDvd`, mounted as `dvd:`; libogc's ISO 9660
+The disc is read through the game's own driver (`OgcDvd`, mounted as `dvd:`, since libogc's ISO 9660
 driver leaks and resets the drive). Content is searched in this order
 (`ContentResolver::InitializePaths()`):
 
@@ -981,13 +981,13 @@ cache and log go to the card. With disc content, saves go to the first usable <b
 
 -   <b>Dolphin</b> --- boot @cpp "build/gamecube/jazz2.iso" @ce (Dolphin has no GameCube SD adapter, so
     the image is the only way). Slot A holds a memory card by default ("GCI Folder" saves `.gci` files
-    under @cpp "GC/USA/Card A/" @ce); keep slot B on "USB Gecko" for the log (trace goes to EXI
+    under @cpp "GC/USA/Card A/" @ce). Keep slot B on "USB Gecko" for the log (trace goes to EXI
     channel 1 = slot B).
 -   <b>Real hardware, SD card</b> --- copy @cpp "build/gamecube/sd/" @ce to a card in an <b>SD2SP2</b> or
     <b>SD Gecko</b> (either slot) and start @cpp "Jazz2/Jazz2.dol" @ce from <b>Swiss</b>.
 -   <b>Real hardware, disc image</b> --- an optical drive emulator (GCLoader, CubeODE, FlippyDrive) or a
     burned disc on a console that boots them. Untested: only known to boot in Dolphin. Don't load the
-    image from a card via Swiss (its disc-read patching does not fit this game); use the SD layout.
+    image from a card via Swiss (its disc-read patching does not fit this game). Use the SD layout.
 
 @subsection consoles-gamecube-limits Limits and known issues
 
@@ -999,7 +999,7 @@ Everything in @ref consoles-wii-limits applies, plus:
 -   No Bluetooth: only GameCube controllers (the Wii build also links `wiiuse` and `bte` for Wii
     Remotes).
 -   Dolphin's default DSP HLE sometimes raises ASND's DSP interrupt without its mail, which would hang
-    libogc's handler forever; the ASND backend lets such an interrupt pass (`AsndAudioDevice.cpp`).
+    libogc's handler forever, so the ASND backend lets such an interrupt pass (`AsndAudioDevice.cpp`).
     No effect on real hardware.
 
 - - -
@@ -1007,7 +1007,7 @@ Everything in @ref consoles-wii-limits applies, plus:
 @section consoles-3ds Nintendo 3DS
 
 A 268 MHz ARM11 MPCore @m_span{m-text m-dim} (804 MHz with the L2 cache on a New 3DS, requested at
-startup) @m_endspan with 64 MB of application memory @m_span{m-text m-dim} (more on a New 3DS; the
+startup) @m_endspan with 64 MB of application memory @m_span{m-text m-dim} (more on a New 3DS, and the
 first log line reports how libctru split it between the heap and the linear heap) @m_endspan and a DMP
 PICA200 driven through <b>citro3d</b>. The port renders through the `PICA` backend
 @m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/PICA" @ce) @m_endspan, presented by the `Ctr`
@@ -1038,7 +1038,7 @@ export PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH
 
 Root is not needed: the packages are plain tarballs @m_span{m-text m-dim}
 (@cpp "https://pkg.devkitpro.org/packages/" @ce, listed in the `dkp-libs` and `dkp-linux`
-databases) @m_endspan that `bsdtar` extracts into any prefix; point `DEVKITPRO` at the `opt/devkitpro`
+databases) @m_endspan that `bsdtar` extracts into any prefix. Point `DEVKITPRO` at the `opt/devkitpro`
 inside it. The server answers generic download clients with <b>403</b> --- send pacman's `User-Agent`
 @m_span{m-text m-dim} (`pacman/6.1.0 (Linux x86_64) libalpm/14.0.0` works) @m_endspan.
 
@@ -1048,14 +1048,14 @@ through `3dsx.specs` and provides `ctr_add_shader_library()`, `ctr_generate_smdh
 
 -   <b>Threads</b> come from devkitARM's `libsysbase` over libctru's `LightLock`/`CondVar`, so
     `find_package(Threads)` succeeds and `NCINE_WITH_THREADS` stays on. `sched_yield()` is supplied by
-    @cpp "Sources/nCine/Backends/Ctr/CtrLibcCompat.cpp" @ce; scheduling parameters and affinity are
+    @cpp "Sources/nCine/Backends/Ctr/CtrLibcCompat.cpp" @ce. Scheduling parameters and affinity are
     absent and unused (the application sees one core).
 -   <b>libctru's sub-headers have no `extern "C"`</b>, only the umbrella @cpp <3ds.h> @ce wraps them.
     C++ code that includes @cpp <3ds/svc.h> @ce or @cpp <3ds/synchronization.h> @ce directly must wrap
     the include itself, or the link fails on mangled symbols.
 
-Module music is <b>libxmp</b>, built from source by the configure step; libopenmpt is too heavy for this
-CPU.
+Module music is <b>libxmp</b>, built from source by the configure step, as libopenmpt is too heavy for
+this CPU.
 
 @subsection consoles-3ds-build Building
 
@@ -1087,7 +1087,7 @@ build/3ds/sdmc/3ds/Jazz2/Content/…
 
 @m_class{m-noindent}
 
-Content is read from @cpp "sdmc:/3ds/Jazz2/Content/" @ce; the cache, configuration, saves and
+Content is read from @cpp "sdmc:/3ds/Jazz2/Content/" @ce. The cache, configuration, saves and
 `Jazz2.log` are written next to it @m_span{m-text m-dim} (see @ref Jazz2::ContentResolver) @m_endspan.
 
 @subsection consoles-3ds-deploy Deploying and running
@@ -1095,26 +1095,26 @@ Content is read from @cpp "sdmc:/3ds/Jazz2/Content/" @ce; the cache, configurati
 -   <b>Real hardware</b> --- copy @cpp "build/3ds/sdmc/3ds/Jazz2" @ce to @cpp "/3ds/Jazz2" @ce on the
     SD card and start it from the Homebrew Launcher (needs custom firmware or another way to run
     unsigned homebrew). `3dslink -a <console IP> build/3ds/jazz2.3dsx` sends a fresh build to the
-    launcher's network loader; the content must already be on the card.
+    launcher's network loader. The content must already be on the card.
 -   <b>Azahar</b> @m_span{m-text m-dim} (Citra's continuation) @m_endspan ---
     `azahar -w build/3ds/jazz2.3dsx`. Copy the staged @cpp "3ds/Jazz2" @ce tree into its virtual SD
     card @cpp "user/sdmc/" @ce @m_span{m-text m-dim} (flatpak:
-    @cpp "~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/sdmc/" @ce) @m_endspan;
+    @cpp "~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/sdmc/" @ce) @m_endspan.
     @cpp "sdmc:/" @ce resolves against that card, not the `.3dsx` directory. Networking needs no setup,
     `soc:u` runs on the host's sockets.
 
 @m_class{m-block m-info}
 
 @par Sound needs the DSP firmware
-`ndspInit()` loads @cpp "sdmc:/3ds/dspfirm.cdc" @ce, which homebrew cannot ship; users dump it once
+`ndspInit()` loads @cpp "sdmc:/3ds/dspfirm.cdc" @ce, which homebrew cannot ship, so users dump it once
 with the `DSP1` homebrew. Without it the game logs the failure and runs silent. In Azahar (HLE audio)
 an empty file of a few kilobytes at that path on its virtual card is enough.
 
 @m_class{m-noindent}
 
 <b>Logs:</b> the trace goes to `svcOutputDebugString()`, which Azahar writes to
-@cpp "user/log/azahar_log.txt" @ce under `Debug.Emulated` --- <b>hidden by the default filter</b>;
-set `log_filter=*:Info Debug.Emulated:Debug` in its `qt-config.ini`. `Jazz2.log` on the virtual card
+@cpp "user/log/azahar_log.txt" @ce under `Debug.Emulated` --- <b>hidden by the default filter</b>.
+Set `log_filter=*:Info Debug.Emulated:Debug` in its `qt-config.ini`. `Jazz2.log` on the virtual card
 is flushed as it is written.
 
 Azahar renderers:
@@ -1138,7 +1138,7 @@ Azahar renderers:
 -   <b>Textures are 8..1024 texels, powers of two, 8x8 Morton-tiled, in the linear heap.</b> Larger ones
     are paged as on the GE. The hardware wraps at the padded size, so repeating textures must be powers of
     two (as on the PSP). Stores and vertex buffers must be written back with `GSPGPU_FlushDataCache()`
-    before the GPU reads them; vertices are flushed once per submitted command list
+    before the GPU reads them. Vertices are flushed once per submitted command list
     @m_span{m-text m-dim} (@cpp PicaDevice::FlushPendingWrites() @ce) @m_endspan, not per draw ---
     that GSP request is expensive.
 -   <b>Triangle strips join the batch as triangle lists</b>, so the warped textured background batches
@@ -1149,36 +1149,36 @@ Azahar renderers:
     banding is the hardware's.
 -   <b>One 400x240 view</b> on the top screen: no stereoscopic 3D, nothing on the bottom screen but the
     console, no rendering-resolution option. The <b>"Sample Rate"</b> option in Options > Sounds exists
-    as on the PSP; the DSP resamples to its own 32728 Hz, so the presets go up to that.
+    as on the PSP. The DSP resamples to its own 32728 Hz, so the presets go up to that.
 -   <b>Text input uses the system `swkbd` applet</b>, which blocks its thread and must not run inside a
-    citro3d frame. `MainApplication::ShowScreenKeyboard()` only records the request;
+    citro3d frame. `MainApplication::ShowScreenKeyboard()` only records the request.
     `UpdateScreenKeyboard()` runs the applet after the frame is presented (the game pauses) and replaces
     the field's text, as on the PSP and Vita. Afterwards the pad reads idle until every button has been
     released once.
 -   <b>A mid-frame clear splits the command list.</b> `C3D_RenderTargetClear()` is a transfer-engine fill,
-    not a command, so @cpp PicaDevice::Clear() @ce calls `C3D_FrameSplit()` first; a scissored clear is
+    not a command, so @cpp PicaDevice::Clear() @ce calls `C3D_FrameSplit()` first. A scissored clear is
     drawn as a quad.
 -   <b>Online multiplayer works, over ENet only.</b> libctru's sockets @m_span{m-text m-dim} (`soc:u`)
-    @m_endspan have `getaddrinfo()` and `poll()`; the vendored `enet.h` only routes `sendmsg()` and
+    @m_endspan have `getaddrinfo()` and `poll()`. The vendored `enet.h` only routes `sendmsg()` and
     `recvmsg()` through `sendto()` (buffers gathered into one datagram) and `recvfrom()`. `ENET_IPV6=0`
     (no `in6_addr` in libctru) and `WITH_WEBSOCKET` is off (no @cpp "netinet/ip.h" @ce).
     `CtrPlatform::Initialize()` lends the service a page-aligned 1 MB buffer with `socInit()` before any
-    socket opens, and `Shutdown()` takes it back. The WLAN is the system's business; an offline console
+    socket opens, and `Shutdown()` takes it back. The WLAN is the system's business: an offline console
     simply fails to connect. In Azahar a server on `127.0.0.1` is the host.
 -   <b>A failed socket call is not treated as a lost connection.</b> The one `soc:u` buffer is shared by
     every socket and HTTPS request, so transient errors happen on hardware (not in Azahar). The 3DS arms
     of `enet_socket_send()` and `enet_socket_receive()` treat every error except `EBADF`, `ENOTSOCK` and
-    `EFAULT` as nothing sent/received; ENet resends reliable data and the peer timeout still catches a
+    `EFAULT` as nothing sent/received. ENet resends reliable data and the peer timeout still catches a
     dead server. The first 16 errors are logged with their `errno`.
 -   <b>HTTPS needs the CA bundle staged next to the content.</b> devkitPro's libcurl (mbedTLS) defaults to
-    @cpp "sdmc:/config/ssl/cacert.pem" @ce; the build downloads the bundle at configure time and stages it
+    @cpp "sdmc:/config/ssl/cacert.pem" @ce. The build downloads the bundle at configure time and stages it
     as @cpp "Content/cacert.pem" @ce, where `ApplyPlatformWebRequestOptions()` points libcurl (as on the
     PSP and Vita). Without it the update check and server list fail with an mbedTLS `-0x3E00` error
     naming the default path. The console clock is real time @m_span{m-text m-dim} (unlike pspdev's, see
     @ref consoles-psp-limits) @m_endspan. When porting further: `WebRequest.cpp` picks its libcurl
     backend from an explicit target list, and a missing target silently gets no backend.
 -   Asynchronous tracing is off, as on the PSP, so the logs are complete when the process dies.
--   The lighting approximation and @cpp sinApprox() @ce use the PSP's values, untuned on hardware; the
+-   The lighting approximation and @cpp sinApprox() @ce use the PSP's values, untuned on hardware. The
     port was verified in Azahar.
 
 - - -
@@ -1206,8 +1206,8 @@ export PATH=$PSPDEV/bin:$PATH
 
 @m_class{m-noindent}
 
-The SDK includes <b>zlib</b>, <b>libvorbis</b> and an <b>OpenAL Soft</b> with a `sceAudio` backend;
-further ports install with `psp-pacman`. The toolchain file is
+The SDK includes <b>zlib</b>, <b>libvorbis</b> and an <b>OpenAL Soft</b> with a `sceAudio` backend.
+Further ports install with `psp-pacman`. The toolchain file is
 @cpp "$PSPDEV/psp/share/pspdev.cmake" @ce (`psp-cmake` passes it automatically). Keep `$PSPDEV/bin` on
 `PATH`: packaging runs `psp-fixup-imports`, `mksfoex` and `pack-pbp` from there.
 
@@ -1254,13 +1254,13 @@ time --- for the flatpak, @cpp "~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/G
 @m_class{m-noindent}
 
 <b>Logs:</b> the trace reaches PPSSPP's log at <em>info</em> level, prefixed
-@cpp "I[PRINTF]: stdout:" @ce --- use `--loglevel=4 --log=FILE`; for the flatpak the log path must be
+@cpp "I[PRINTF]: stdout:" @ce --- use `--loglevel=4 --log=FILE`. For the flatpak the log path must be
 sandbox-writable (`--filesystem=<dir>`). `Jazz2.log` next to the EBOOT is flushed only on a clean exit.
 
 @m_class{m-block m-info}
 
 @par Networking in PPSSPP
-Turn on <b>Enable networking/WLAN</b> for the update check and online play; otherwise
+Turn on <b>Enable networking/WLAN</b> for the update check and online play. Otherwise
 `sceNetApctlConnect()` fails with @cpp "SCE_NET_APCTL_ERROR_WLAN_SWITCH_OFF" @ce. The emulator takes a
 little over <b>6 seconds</b> to reach `GOT_IP`, hence the generous wait in
 `PspNetwork::ScopedConnection`. PPSSPP lacks `sceNetInetRecvmsg()`, so ENet receives through
@@ -1283,25 +1283,25 @@ so the console always has a way out.
     `C1-2858-3` on a Vita running Adrenaline. Divisors from level data are still guarded
     @m_span{m-text m-dim} (@ref Jazz2::Actors::Solid::Bridge) @m_endspan.
 -   <b>Compute animation frames through @ref Jazz2::GraphicResource::GetFrameForTime()</b>, which returns
-    the first frame for a static image; @cpp animTime * FrameCount / AnimDuration @ce divides by zero
+    the first frame for a static image. @cpp animTime * FrameCount / AnimDuration @ce divides by zero
     there. `ActorBase::ActorRenderer::UpdateAnimation()` guards zero-duration looping animations. Code
-    merely sloppy on a desktop can be fatal here without a log; localize such a crash by enabling parts in
+    merely sloppy on a desktop can be fatal here without a log. Localize such a crash by enabling parts in
     stages and logging each.
 -   <b>A GE store must not be freed while a display list still references it.</b> Lists run only at
     `sceGuFinish()` in `GuDevice::PresentFrame()`, so `GuDevice::SyncBeforeStoreRelease()` kicks the list
     and waits for the GE before `GuTexture` frees a store @m_span{m-text m-dim} (`RefreshGeStore()`,
-    `FreeGeStores()`, the destructor) @m_endspan; `EnsureList()` opens a fresh one. Otherwise
+    `FreeGeStores()`, the destructor) @m_endspan, and `EnsureList()` opens a fresh one. Otherwise
     `sceGuSync()` hangs and the firmware kills the process (same freeze and `C1-2858-3`, no log).
 -   <b>Main memory is tight.</b> The heap is the whole user partition @m_span{m-text m-dim}
     (`PSP_HEAP_SIZE_KB(-1)`) @m_endspan and a full level leaves a few hundred kilobytes, so even a second
     64 KB streaming vertex buffer may fail. With `-fno-exceptions` a failed `operator new` is a bare
-    `abort()`; the `std::set_new_handler` from @ref nCine::Application::InitCommon() logs a fatal line
+    `abort()`. The `std::set_new_handler` from @ref nCine::Application::InitCommon() logs a fatal line
     first (on every console). Large true-colour tilesets do not fit: the LayerFX test level
     @m_span{m-text m-dim} (`Sources/Jazz2/Tests/LayerEffects`, a 9.6 MB 32-bit tileset) @m_endspan loses
     tiles from its green screen on, as 512 KB atlas-page stores fail to allocate. PPSSPP's allocator leaves
     more room --- check memory on hardware.
 -   <b>Palette-indexed fonts are kept on a palette change</b> (with `RHI_CAP_PALETTED_TEXTURES` they
-    resolve colours from the live palette); @ref Jazz2::ContentResolver asks
+    resolve colours from the live palette). @ref Jazz2::ContentResolver asks
     @ref Jazz2::UI::Font::IsPaletteIndexed(), saving a texture reload during level load.
 -   <b>The GE display list is 32 KB</b> (the busiest frame uses 3.7 KB). `sceGu` does not bounds-check
     it, so `GuDevice::PresentFrame()` warns once if a frame passes three quarters.
@@ -1309,13 +1309,13 @@ so the console always has a way out.
     are compiled out, as on the libogc consoles. `pthread_t` is a pointer (use `reinterpret_cast`), and
     stack information comes from `sceKernelReferThreadStatus()`.
 -   <b>Thread stacks are 64 KB, and raising them is not free.</b> `sceKernelCreateThread` allocates stacks
-    from what the firmware kept back, which holds one 256 KB stack but not two; the second creation fails
+    from what the firmware kept back, which holds one 256 KB stack but not two. The second creation fails
     with `NO_MEMORY` and the thread silently never runs. Even at 64 KB the multiplayer client thread did
     not fit next to the audio decoder and the discovery thread, so the server list stops discovering
     @m_span{m-text m-dim} (@ref Jazz2::Multiplayer::ServerDiscovery::Stop()) @m_endspan before it
     connects, and a client whose thread cannot start reports the failure.
 -   <b>Spinlocks sleep here.</b> The kernel has strict priorities and no time-slicing, so a busy-wait
-    deadlocks against a descheduled holder; @ref Death::Threading::Spinlock sleeps
+    deadlocks against a descheduled holder, so @ref Death::Threading::Spinlock sleeps
     @m_span{m-text m-dim} (`sceKernelDelayThread(50)`) @m_endspan while contended. The multiplayer
     client thread raises itself above the main thread's priority 32 @m_span{m-text m-dim}
     (`sceKernelChangeThreadPriority(0, 24)`) @m_endspan, otherwise pings are 200-300 ms. The console's
@@ -1323,7 +1323,7 @@ so the console always has a way out.
 
 <b>Rendering</b>
 
--   Textures are limited to <b>512 pixels per axis</b>; larger atlases are split into pages with
+-   Textures are limited to <b>512 pixels per axis</b>. Larger atlases are split into pages with
     per-primitive page selection. Palettized textures use the hardware CLUT, only one of which is resident
     at a time, so the palette is part of the batch key.
 -   The GE has no post-texture additive term and no combiner output scale: an `offset_color` pass expands
@@ -1352,21 +1352,21 @@ so the console always has a way out.
     the original `.j2b` modules directly, but not <b>MO3</b>, so the four `.mo3` tracks are silent. Its
     double-precision hot paths are replaced @m_span{m-text m-dim} (see @ref consoles-common-skips)
     @m_endspan.
--   <b>Audio mixes at 44100 Hz by default; the "Sample Rate" option in Options > Sounds can halve it</b>
+-   <b>Audio mixes at 44100 Hz by default, and the "Sample Rate" option in Options > Sounds can halve it</b>
     @m_span{m-text m-dim} (22050 or 44100 Hz, stored in @ref Jazz2::PreferencesCache::AudioSampleRate,
     applied through @ref nCine::IAudioDevice::setMixingFrequency()) @m_endspan, halving the mixer's and
     the module decoder's cost. @ref nCine::PspAudioDevice mixes at that rate and linearly upsamples below
-    44100 Hz; the decoder renders at @ref nCine::IAudioDevice::nativeFrequency(). Effects switch at once,
+    44100 Hz. The decoder renders at @ref nCine::IAudioDevice::nativeFrequency(). Effects switch at once,
     music when the next stream opens.
 -   <b>This libm is very slow --- `sinf()` costs about 13.5 us.</b> Appearance-only math (flicker, pulse,
     orbit) goes through @ref nCine::sinApprox() / @ref nCine::cosApprox() (331 ns, within 0.0014), which
     substitute only on the consoles because on x86-64 the library is faster. Avoid `std::floor()` too
-    (a real `jal floorf`); the remaining calls go to an exact replacement @m_span{m-text m-dim} (see
+    (a real `jal floorf`). The remaining calls go to an exact replacement @m_span{m-text m-dim} (see
     @ref consoles-common-skips) @m_endspan.
 -   <b>The underwater and pause low-pass filters are absent</b> --- the mixer has no filter stage, like the
     other software-mixing consoles.
 -   <b>The Media Engine is not used.</b> pspdev's `libme-core` needs custom firmware, reports the core
-    unavailable under Adrenaline (no ME firmware image) and hangs PPSSPP in `kinit()`; code touching the ME
+    unavailable under Adrenaline (no ME firmware image) and hangs PPSSPP in `kinit()`. Code touching the ME
     must first test for the emulator with @cpp sceIoDevctl("kemulator:", 0x03, ...) @ce, which succeeds
     only there.
 
@@ -1382,7 +1382,7 @@ so the console always has a way out.
     @m_span{m-text m-dim} (`DateTime.cpp`) @m_endspan gets the offset, daylight saving included, by
     passing one tick through `sceRtcConvertUtcToLocalTime()`, and `GetLocalTm()` applies it.
 -   <b>HTTPS needs its own CA bundle.</b> The configure step downloads curl.se's `cacert.pem` and stages it
-    under `Content/`, as on the @ref consoles-vita-limits "Vita";
+    under `Content/`, as on the @ref consoles-vita-limits "Vita".
     @cpp "Sources/Jazz2/PlatformWebRequest.h" @ce points `CURLOPT_CAINFO` at it and <b>clears
     `CURLOPT_CAPATH`</b>, because mbedTLS reads the default directory (`/etc/ssl/certs`) first and fails on
     it. To debug a failed verification, route `CURLOPT_DEBUGFUNCTION` into the trace.
@@ -1394,7 +1394,7 @@ so the console always has a way out.
     confirming Cross also fires the menu item behind it). The status call returns an error, not "none",
     when no keyboard was started, so checks match dialog states explicitly.
 -   <b>The PSPSDK stub libraries must not be linked twice.</b> psp-gcc's `*lib` spec already appends
-    `-lpsputility -lpsprtc -lpspnet_inet -lpspnet_resolver -lpspsdk -lpspmodinfo -lpspuser`; adding any of
+    `-lpsputility -lpsprtc -lpspnet_inet -lpspnet_resolver -lpspsdk -lpspmodinfo -lpspuser`. Adding any of
     them to `target_link_libraries` splits their stubs, `psp-fixup-imports` reports
     @cpp "could not fixup imports, stubs out of order" @ce, and syscalls such as `sceNetInetSocket()`
     end up calling something else.
@@ -1412,29 +1412,29 @@ so the console always has a way out.
     second arm of ENet's socket functions (`enet_psp_set_adhoc()`), where an `ENetAddress` host indexes a
     table of seen MAC addresses, written `AA:BB:CC:DD:EE:FF`.
     @ref nCine::Backends::PspNetwork::AdhocBegin() drops the access point and brings up
-    `sceNetAdhoc`/`sceNetAdhocctl`; the menus switch modes through
+    `sceNetAdhoc`/`sceNetAdhocctl`. The menus switch modes through
     @ref Jazz2::Multiplayer::NetworkManagerBase::SetAdhocMode().
-    -   <b>Hosting:</b> the <em>Connection</em> row of <em>Create Server</em> picks Wi-Fi or ad hoc; the
+    -   <b>Hosting:</b> the <em>Connection</em> row of <em>Create Server</em> picks Wi-Fi or ad hoc. The
         group is named after the server (8 alphanumeric characters, see
         @ref nCine::Backends::PspNetwork::MakeAdhocGroupName()).
-    -   <b>Joining:</b> Left/Right in <em>Connect To Server</em> toggles the mode;
+    -   <b>Joining:</b> Left/Right in <em>Connect To Server</em> toggles the mode.
         @ref Jazz2::Multiplayer::ServerDiscovery then lists scanned groups, and an endpoint is `GROUP/MAC`.
-    -   Ad hoc groups are visible only to other PSPs (and Vitas running Adrenaline); an ad hoc server is
+    -   Ad hoc groups are visible only to other PSPs (and Vitas running Adrenaline). An ad hoc server is
         not published anywhere.
 -   <b>The access point is joined on demand.</b> `PspNetwork::Initialize()` @m_span{m-text m-dim}
-    (@cpp "Sources/nCine/Backends/Psp/PspNetwork.cpp" @ce) @m_endspan loads the network PRXes at startup;
+    (@cpp "Sources/nCine/Backends/Psp/PspNetwork.cpp" @ce) @m_endspan loads the network PRXes at startup.
     `PspNetwork::ScopedConnection`, held by each network consumer on its own thread, joins and waits for
-    DHCP. The association is reference counted; the last release starts a <b>30 second</b> grace period,
+    DHCP. The association is reference counted. The last release starts a <b>30 second</b> grace period,
     ended by `PspNetwork::Update()` once a frame. The infrastructure modules stay loaded (unloading them
     under a live libcurl session is unsafe).
 -   <b>The access point comes from the saved connections.</b> The slots under <em>Network Settings</em>
     are probed and the first existing one is used (deleting a connection leaves its slot empty). The
     Vita's PSP emulator @m_span{m-text m-dim} (Adrenaline, ARK-4) @m_endspan saves none, so the
-    <em>connect automatically</em> profile, <b>configuration 0</b>, is used instead; a real console with
+    <em>connect automatically</em> profile, <b>configuration 0</b>, is used instead. A real console with
     nothing saved refuses it and reports that no connection is configured.
 -   <b>Local discovery uses the IPv4 broadcast address</b> `255.255.255.255`
     (`TryCreateLocalSocket()`). Desktop builds use `ff02::1` multicast plus an `AF_INET` broadcast socket
-    (`TryCreateLocalBroadcastSocket()`; the multicast one is `IPV6_V6ONLY` since they share a port), so
+    (`TryCreateLocalBroadcastSocket()`, and the multicast one is `IPV6_V6ONLY` since they share a port), so
     console and desktop find each other. @ref Jazz2::UI::Menu::ServerSelectSection merges answers with the
     same identifier into one entry with `|`-joined endpoints.
 
@@ -1485,9 +1485,9 @@ ls ./build/ConsoleContentPs2
 @m_class{m-block m-info}
 
 @par Why `--target=ps2` and not `--target=console`
-Only the cinematics differ: `console` keeps the original 640x480 zlib `.j2v`, too slow to inflate here;
+Only the cinematics differ: `console` keeps the original 640x480 zlib `.j2v`, too slow to inflate here.
 `ps2` re-encodes them into the game's LZ4 container @m_span{m-text m-dim} (see @ref Jazz2::VideoFormat)
-@m_endspan at <b>320x240</b> (see @ref asset-packer-cinematics-format; any profile can do this with
+@m_endspan at <b>320x240</b> (see @ref asset-packer-cinematics-format, and any profile can do this with
 `--video-downscale=`). A `console` tree still plays, just slower, and a `ps2` tree works on the other
 consoles too.
 
@@ -1518,7 +1518,7 @@ limits file names on the disc to <b>31 characters</b> --- mind this for custom l
 The packaging step renames a @cpp "Source.pak" @ce to @cpp "Prebaked.pak" @ce (so a `desktop`-profile
 cache can go on a disc too). A `console`/`ps2` tree already has @cpp "Prebaked.pak" @ce, so configure
 prints `No "Source.pak" in "<path>", the disc image will not be marked as prebaked` --- harmless. Check
-for @cpp "Prebaked.pak" @ce in the tree instead; if neither package is there, the conversion never ran
+for @cpp "Prebaked.pak" @ce in the tree instead. If neither package is there, the conversion never ran
 or the wrong directory was passed.
 
 @m_class{m-block m-danger}
@@ -1575,7 +1575,7 @@ is not loaded at all @m_span{m-text m-dim} (see @cpp nCine::Backends::Ps2Modules
 
 @m_class{m-noindent}
 
-@cpp nCine::Backends::Ps2Storage @ce only brings the modules up and reports which units mounted; the
+@cpp nCine::Backends::Ps2Storage @ce only brings the modules up and reports which units mounted. The
 directory name and the `Content`/`Cache`/`Source` layout live in
 @cpp Jazz2::ContentResolver::InitializePaths() @ce. A build running from removable storage writes
 `Jazz2.log` next to its content --- the only practical way to read a trace without a serial cable. From a
@@ -1586,7 +1586,7 @@ disc no log is written (the memory card is no place for one).
 @par A disc in the drive always wins
 The probe runs only when the drive reports <b>no disc at all</b>, so a disc boot never picks up a stale
 tree from a card or touches a driver that shares the SIO2 registers with `SIO2MAN`, `MCMAN` and the pads.
-To run from removable storage, start the ELF from it with no disc in the drive; a disc image launched
+To run from removable storage, start the ELF from it with no disc in the drive. A disc image launched
 through Open PS2 Loader reads its content from the image.
 @par
 `sceCdInit()` returns before the drive has identified the disc, and `SCECdNODISC` is the <b>zero</b>
@@ -1608,7 +1608,7 @@ cmake --build build/ps2 -j$(nproc)
 The toolchain file defines `PLATFORM_PS2`, which pins `NCINE_PREFERRED_RHI` to `GS`.
 `NCINE_CONTENT_DIR` is cached, so set it on the first configuration @m_span{m-text m-dim} (see
 @ref consoles-ps2-content) @m_endspan. The build produces a stripped `jazz2.elf` and a bootable
-`jazz2.iso` with the layout above; `Source.pak` is renamed to `Prebaked.pak` so the game sees a prepared
+`jazz2.iso` with the layout above. `Source.pak` is renamed to `Prebaked.pak` so the game sees a prepared
 tree, and nothing goes into `Cache/`.
 
 Without an ISO author on `PATH` at configure time the build prints
@@ -1637,7 +1637,7 @@ image:
 @m_class{m-noindent}
 
 `swap-content` keeps `SYSTEM.CNF`, the executable it names and the `.IRX` modules as they are and
-rewrites the file system around the new `Content`; the image is resized to fit. It always writes a Joliet
+rewrites the file system around the new `Content`. The image is resized to fit. It always writes a Joliet
 hierarchy. See @ref asset-packer-swap-content.
 
 @subsection consoles-ps2-deploy Deploying and running
@@ -1654,13 +1654,13 @@ pcsx2-qt -batch -nogui -earlyconsolelog -logfile run.log jazz2.iso
 
 <b>Logs:</b> the trace goes to the Emotion Engine's <b>SIO transmit register</b>
 @m_span{m-text m-dim} (`0x1000F180`) @m_endspan, including the early CDVD bring-up messages from
-@cpp MainApplication::Run() @ce. PCSX2 captures it as EE console output; on hardware a serial cable
+@cpp MainApplication::Run() @ce. PCSX2 captures it as EE console output. On hardware a serial cable
 picks it up.
 
 Without a cable the same lines appear on the <b>television</b> (PS2SDK's libdebug console, opened
 before the IOP is touched) until @cpp Ps2GfxDevice @ce logs "Handing the display over to the renderer".
 Every IOP step that can stall a boot (disc wait, `CDFS.IRX`, memory card, `LIBSD` and `audsrv`, the
-MX4SIO probe) runs before that, so the last line shown names the stuck step; a hang after it points at
+MX4SIO probe) runs before that, so the last line shown names the stuck step. A hang after it points at
 renderer setup or content loading. Report the last lines shown when a boot stops.
 
 Before the console exists, solid screen colours mark the earlier stages @m_span{m-text m-dim}
@@ -1681,7 +1681,7 @@ Black        | Never --- none of the executable ran: the loader, the file or the
     level's sheets do not, so textures stream on transitions and a busy level still reports allocation
     failures. The allocator hands out whole 8 KB <b>pages</b>, because the swizzle within a page depends on
     the pixel storage mode.
--   <b>Sound goes through `audsrv`</b>, the IRX that owns the SPU2 on the IOP; the EE only hands it
+-   <b>Sound goes through `audsrv`</b>, the IRX that owns the SPU2 on the IOP. The EE only hands it
     finished PCM @m_span{m-text m-dim} (see @ref nCine::Ps2AudioDevice) @m_endspan.
     -   Its ring buffer is small @m_span{m-text m-dim} (about 50 ms at the default 22050 Hz, reported in the
         trace) @m_endspan and there is no mixer thread, so a long frame is heard as a <em>repeat</em> of
@@ -1689,14 +1689,14 @@ Black        | Never --- none of the executable ran: the loader, the file or the
         call @ref nCine::IAudioDevice::beginBlockingOperation() first, which stops the stream. Gameplay
         below about 19 fps still repeats.
     -   Music is decoded on the main thread in 1 KB slices during the vertical-blank wait
-        @m_span{m-text m-dim} (@ref nCine::IAudioDevice::runIdleWork()) @m_endspan; a chunk unfinished
+        @m_span{m-text m-dim} (@ref nCine::IAudioDevice::runIdleWork()) @m_endspan. A chunk unfinished
         after twelve frames is decoded inside the frame. libxmp's double-precision hot paths (soft-float on
         the EE) are replaced @m_span{m-text m-dim} (see @ref consoles-common-skips) @m_endspan.
     -   `NCINE_WITH_OPENMPT` is forced off @m_span{m-text m-dim} (libopenmpt's
         `to_chars(char*, char*, const double&)` is ambiguous against PS2SDK's newlib) @m_endspan, so the
         soundtrack is <b>libxmp</b>'s (on by default), which cannot read the 4 `.mo3` tracks of the 56.
 -   <b>The picture is composed for 4:3, not for 640x448.</b> An NTSC pixel here is a seventh taller than
-    wide; @cpp Ps2GfxDevice::displayAspect() @ce reports that and the view is fitted to it. The view is
+    wide. @cpp Ps2GfxDevice::displayAspect() @ce reports that and the view is fitted to it. The view is
     <b>597x448</b> at the default rendering resolution, so nothing is resampled vertically
     @m_span{m-text m-dim} (see @cpp Jazz2::Rendering::UpscaleRenderPass::DefaultViewWidth @ce, which
     raises the bound from the 16:9 720x405 of other platforms) @m_endspan.
@@ -1786,7 +1786,7 @@ The build produces `jazz2.elf` and stages a package tree from a stripped copy:
 -   `pkg` wraps the whole tree into `jazz2.pkg`
 
 The application id is derived from the application name, zero-padded to nine characters and
-uppercased, like the PS Vita title id @m_span{m-text m-dim} (see @ref consoles-vita) @m_endspan; the
+uppercased, like the PS Vita title id @m_span{m-text m-dim} (see @ref consoles-vita) @m_endspan. The
 content id, `PARAM.SFO` and the runtime writable path all follow from it. Override it with
 `-DPS3_APPID=<id>` --- anything other than four letters followed by five digits fails configuration.
 
@@ -1809,7 +1809,7 @@ profiles. `cgcomp` needs the Cg Toolkit on the library path, hence `LD_LIBRARY_P
 
 -   Without `cgcomp`, `--generate-all` reports @cpp "skipped: RsxGeneratedShaders.h" @ce and leaves
     the committed header untouched. Commit the result --- the console build never runs `cgcomp`.
--   A stage the profiles reject is left out of the table; the backend then fails that program at load
+-   A stage the profiles reject is left out of the table. The backend then fails that program at load
     time with a message naming the variant. See @ref consoles-ps3-limits for which ones.
 
 @subsection consoles-ps3-deploy Deploying and running
@@ -1837,13 +1837,13 @@ or under memory pressure causes the same.
 @subsection consoles-ps3-limits Limits and known issues
 
 -   <b>No threads.</b> PSL1GHT's `<pthread.h>` declares symbols nothing implements, so `pthread_create`
-    does not link; supporting lv2 PPU threads @m_span{m-text m-dim} (`sysThreadCreate`, `sys/mutex.h`,
+    does not link. Supporting lv2 PPU threads @m_span{m-text m-dim} (`sysThreadCreate`, `sys/mutex.h`,
     `sys/cond.h`) @m_endspan would need a new backend in @cpp "Thread.cpp" @ce. Multiplayer
     @m_span{m-text m-dim} (including local splitscreen) @m_endspan is compiled out and asset loading is
     synchronous.
 -   <b>Three rescale filters have no microcode</b> (they exceed `fp40` limits): `ResizeCleanEdge`,
     `ResizeSabr` and `ResizeMonochrome`. `RHI_CAP_HEAVY_RESCALE_SHADERS` is left undefined, so they are
-    dropped from <em>Options > Graphics > Rescale Mode</em>; a value saved by another backend falls
+    dropped from <em>Options > Graphics > Rescale Mode</em>. A value saved by another backend falls
     back to pixel-perfect.
 -   <b>Sprite batching is off</b> (`RHI_CAP_BATCHING` undefined), so every sprite is drawn individually
     and batched programs are not linked: RPCS3 aborts the batched vertex programs
@@ -1852,7 +1852,7 @@ or under memory pressure causes the same.
 -   <b>When re-enabled, the batch size is 32</b>, and three places must agree: ShaderCompiler's
     `RsxMaxBatchSize`, @cpp RsxDevice::MaxBatchSize @ce and
     @cpp IRhiCapabilities::IntValues::MaxBatchSize @ce. Left to derive it, the engine picks 65 and
-    overruns; the backend reports this at load time.
+    overruns. The backend reports this at load time.
 -   <b>Generated stage attributes are struct-qualified</b> (`_input.aQuadCorner`, not `aQuadCorner`),
     while `rsxVertexProgramGetAttrib()` matches whole names only, so
     @cpp RsxDevice::FindVertexAttribute() @ce matches the name as a suffix. Looking up the bare name
@@ -1864,20 +1864,20 @@ or under memory pressure causes the same.
 
 @par Toolchain libstdc++ quirks
 `powerpc64-ps3-elf` was built with `_GLIBCXX_USE_C99_MATH_TR1` undefined, so `<cmath>` puts no C99
-maths functions in `std::`. Defining the macro breaks `<cmath>` (missing `long double` variants);
-instead @cpp "cmake/toolchains/ps3-libstdc++-c99.h" @ce imports the names and is
+maths functions in `std::`. Defining the macro breaks `<cmath>` (missing `long double` variants).
+Instead @cpp "cmake/toolchains/ps3-libstdc++-c99.h" @ce imports the names and is
 <b>force-included into every translation unit</b> by the toolchain file, third-party sources included.
 @par
 The same libstdc++ has no gthreads, so no `std::mutex`. libopenmpt's single-threaded mode can't be
 selected with a `-D` (`mpt/base/detect_quirks.hpp` hardcodes it), so @cpp "cmake/Findlibopenmpt.cmake" @ce
-patches the fetched copy; hence the PS3 sets `NCINE_COMPILE_OPENMPT` (ps3dev has no libopenmpt and
+patches the fetched copy. Hence the PS3 sets `NCINE_COMPILE_OPENMPT` (ps3dev has no libopenmpt and
 there is no dynamic loader).
 
 - - -
 
 @section consoles-vita PlayStation Vita
 
-A shader platform with a PowerVR SGX543MP4+ driven by <b>sceGxm</b>; window and input come from
+A shader platform with a PowerVR SGX543MP4+ driven by <b>sceGxm</b>. Window and input come from
 <b>SDL2</b>. It is the only console with a choice of two hardware backends.
 
 `NCINE_PREFERRED_RHI` | What it drives
@@ -1902,7 +1902,7 @@ make -j $(nproc) -C ./build/vita/
 
 @m_class{m-noindent}
 
-This builds the `GXM` backend; add @cpp "-D NCINE_PREFERRED_RHI=OpenGL" @ce for vitaGL. Either way the
+This builds the `GXM` backend. Add @cpp "-D NCINE_PREFERRED_RHI=OpenGL" @ce for vitaGL. Either way the
 console needs @cpp "libshacccg.suprx" @ce, see @ref consoles-vita-shaders. The result is
 @cpp "build/vita/jazz2.vpk" @ce.
 
@@ -1921,7 +1921,7 @@ on @cpp "ux0:" @ce alone.
 
 @par Vita3K notes
 Vita3K does not implement @cpp "sceNetRecvmsg()" @ce, so ENet receives through @cpp "recvfrom()" @ce
-and online play works there; the stubbed @cpp "sceNetCtlInit()" @ce and @cpp "sceNetResolverDestroy()" @ce
+and online play works there. The stubbed @cpp "sceNetCtlInit()" @ce and @cpp "sceNetResolverDestroy()" @ce
 @m_span{m-text m-dim} (leaks one resolver handle per lookup, emulator only) @m_endspan are harmless.
 Vita3K re-runs a cached image of an @cpp "eboot.bin" @ce it has loaded before, so to test a new binary
 quit the emulator fully or give each build its own title id with `-D VITA_TITLEID=`.
@@ -1945,7 +1945,7 @@ On-console compilation costs about 3.3 s of a cold start, so
 @cpp nCine::RHI::GXM::GxmShaderCache @ce keeps the GXP binaries SceShaccCg produces.
 
 -   Entries are keyed by a 64-bit hash of the exact Cg source, so only changed stages recompile. The
-    file header holds a format revision and a fingerprint of @cpp "libshacccg.suprx" @ce; either
+    file header holds a format revision and a fingerprint of @cpp "libshacccg.suprx" @ce. Either
     mismatch rejects the whole pack and the console recompiles.
 -   <b>Two packs are loaded</b>: the read-only @cpp "app0:/Content/Shaders/ShadersGxm.bin" @ce shipped
     in the VPK, then the writable one under @cpp "ux0:/data/jazz2/Cache/Shaders/" @ce over it. Writes
@@ -1955,7 +1955,7 @@ On-console compilation costs about 3.3 s of a cold start, so
     the console wrote it</b> --- some keys belong to sources not in @cpp "CgGeneratedShaders.h" @ce
     (runtime-patched batched shaders, the clear/present shaders in @cpp "GxmDevice.cpp" @ce), and
     pruning deletes them. See its `README.md`.
--   The pack holds 65 binaries; 53 load at startup, the other 12 are the x-ray and blur-behind
+-   The pack holds 65 binaries: 53 load at startup, the other 12 are the x-ray and blur-behind
     stages compiled only when a level uses them @m_span{m-text m-dim} (see
     @ref Jazz2::ContentResolver::CompileLayerEffectShaders()) @m_endspan. The refresh run must
     therefore play such a level --- the LayerFX test level in `Sources/Jazz2/Tests` does.
@@ -1964,7 +1964,7 @@ On-console compilation costs about 3.3 s of a cold start, so
 
 The backend publishes @cpp IRhiCapabilities::IntValues::MaxBatchSize @ce as <b>32</b>, bounding both
 the `BATCH_SIZE` baked into the batched Cg programs and @cpp nCine::RenderBatcher @ce. Only this
-ceiling must match the shader; @cpp minBatchSize @ce stays 2, since raising it to the ceiling would
+ceiling must match the shader. @cpp minBatchSize @ce stays 2, since raising it to the ceiling would
 draw every shorter run one command at a time.
 
 @subsection consoles-vita-limits Limits and known issues
@@ -1977,33 +1977,33 @@ draw every shorter run one command at a time.
     vertex attribute.
 -   <b>sceGxm's polygon mode must match the primitive</b>: under the default
     @cpp SCE_GXM_POLYGON_MODE_TRIANGLE_FILL @ce, @cpp SCE_GXM_PRIMITIVE_LINES @ce draws nothing.
-    @cpp GxmDevice::DrawCommon() @ce selects `LINE`, `POINT` or `TRIANGLE_FILL` from the primitive;
-    since it is sticky state, the paths bypassing it (stencil band, @cpp Clear() @ce, present blit)
+    @cpp GxmDevice::DrawCommon() @ce selects `LINE`, `POINT` or `TRIANGLE_FILL` from the primitive.
+    Since it is sticky state, the paths bypassing it (stencil band, @cpp Clear() @ce, present blit)
     set `TRIANGLE_FILL` themselves.
 -   <b>Consecutive scenes are not ordered on the GPU</b>, so a scene can sample a render target an
     earlier scene has not finished (a flickering player light). @cpp GxmDevice::FinishScene() @ce
-    waits for those scenes before submitting; scene dependency flags or a shared sync object don't
+    waits for those scenes before submitting. Scene dependency flags or a shared sync object don't
     replace this wait.
 -   <b>Buffers are never orphaned</b>: they are GPU-visible memory written in place
     @m_span{m-text m-dim} (@cpp nCine::RHI::GXM::GxmBufferObject @ce) @m_endspan and re-declared by
     @cpp nCine::RenderBuffersManager::Remap() @ce while scenes may still read them, so only a fresh
     block may be cleared.
--   Under <b>Vita3K</b>, `GXM` shows a one-pixel seam where a repeating texture wraps; it is an
+-   Under <b>Vita3K</b>, `GXM` shows a one-pixel seam where a repeating texture wraps. It is an
     emulator artifact, no workaround is applied.
 -   <b>Rendering Resolution</b> @m_span{m-text m-dim} (Options > Graphics) @m_endspan: `GXM` renders
     the whole frame into a smaller surface that @ref nCine::RHI::GXM::GxmDevice::PresentFrame()
     stretches onto the 960x544 panel. Choices are 50% (480x272, default, see
     @ref nCine::RHI::GXM::GxmDevice::ScreenWidth), 60% (576x326) and 75% (720x408), resized live via
     @ref nCine::RHI::GXM::GxmDevice::ResizeScreenSurface(). On other shader-tier platforms the option
-    scales the 720x405 view bound instead; direct-tier consoles don't offer it.
+    scales the 720x405 view bound instead. Direct-tier consoles don't offer it.
 -   <b>Blur effects and high-quality water are on by default</b>, using the cheaper `LOW_POWER_GPU`
     shader paths @m_span{m-text m-dim} (see @ref shader-compiler-input-preprocessor) @m_endspan.
 -   <b>Shorter blur chain</b>, since each pass is a separate scene that must finish first: below 100%
-    the first blur pass reads the view directly; at 25% and below the quarter-size level is dropped too
+    the first blur pass reads the view directly. At 25% and below the quarter-size level is dropped too
     @m_span{m-text m-dim} (@ref Jazz2::Rendering::PlayerViewport::Initialize(), all platforms) @m_endspan.
 -   <b>X-ray and blur-behind layers cost about 4--6 ms</b> where several are on screen, mostly from
     extra scenes.
--   <b>The firmware's Cg compiler is stricter than Vita3K's</b> (e.g. <em>ambiguous call to 'lerp'</em>;
+-   <b>The firmware's Cg compiler is stricter than Vita3K's</b> (e.g. <em>ambiguous call to 'lerp'</em>,
     see @ref shader-compiler-cg), and one failed program reverts every special layer to its reduced form
     @m_span{m-text m-dim} (see @ref Jazz2::ContentResolver::CompileLayerEffectShaders()) @m_endspan.
     Compile a new shader on a console once before trusting it --- refreshing the shipped pack does this.
@@ -2018,8 +2018,8 @@ draw every shorter run one command at a time.
     broke HTTPS (libcurl/OpenSSL failed every request with @cpp "no alternative certificate subject
     name matches target ipv4 address" @ce) and ENet's @cpp "enet_address_set_host_ip()" @ce. It is
     replaced in @cpp "Sources/nCine/Backends/Vita/VitaLibcCompat.cpp" @ce.
--   <b>`"sceNetSendmsg()"` caps the number of iovecs</b> well below the 65 ENet may use per datagram;
-    a 33-buffer send returns `EMSGSIZE` @m_span{m-text m-dim} (SCE error 0x28) @m_endspan and ENet
+-   <b>`"sceNetSendmsg()"` caps the number of iovecs</b> well below the 65 ENet may use per datagram.
+    A 33-buffer send returns `EMSGSIZE` @m_span{m-text m-dim} (SCE error 0x28) @m_endspan and ENet
     drops the connection @m_span{m-text m-dim} (@cpp "enet_host_service() returned -1" @ce, shortly
     after joining) @m_endspan. The Vita uses the gather-then-@cpp "sendto()" @ce arm like the 3DS and
     PSP. Failed sends, receives and socket options log `errno` and @cpp "*sceNetErrnoLoc()" @ce.
@@ -2029,8 +2029,8 @@ draw every shorter run one command at a time.
 
 <b>Other</b>
 
--   Asynchronous tracing is disabled; threads are available.
--   Sound needs the SDK to provide OpenAL; without it, audio is compiled out.
+-   Asynchronous tracing is disabled, but threads are available.
+-   Sound needs the SDK to provide OpenAL. Without it, audio is compiled out.
 -   <b>Module music is libopenmpt</b>, built from source at configure time. `NCINE_WITH_XMP=ON` uses
     the SDK's prebuilt <b>libxmp</b> instead @m_span{m-text m-dim} (no download, several MB smaller)
     @m_endspan, at the cost of the four `.mo3` tracks and some playback accuracy.
@@ -2055,7 +2055,7 @@ make -j $(nproc) -C ./build/switch/
 `DEATH_TRACE_ASYNC` must be off --- it crashes on startup here. The build produces
 @cpp "build/switch/jazz2.nro" @ce with the game content <b>embedded in its RomFS</b>: copy the `.nro`
 to @cpp "sd:/switch/" @ce and start it from `hbmenu`. Like the Vita, the Switch converts the original
-game data itself --- put an original installation into @cpp "sdmc:/Games/Jazz2/Source/" @ce; the cache
+game data itself --- put an original installation into @cpp "sdmc:/Games/Jazz2/Source/" @ce. The cache
 and save data appear in @cpp "sdmc:/Games/Jazz2/" @ce.
 
 - - -
@@ -2067,7 +2067,7 @@ the game builds as a <b>libretro core</b> @m_span{m-text m-dim} (@cpp "jazz2_lib
 @cpp "Sources/nCine/Backends/Libretro" @ce) @m_endspan driven by RetroArch, with no window backend of its
 own. `NCINE_PREFERRED_RHI` can be:
 
--   `Software` --- the framebuffer is handed to `retro_video_refresh`; works on every frontend
+-   `Software` --- the framebuffer is handed to `retro_video_refresh`, so it works on every frontend
 -   `OpenGL` --- renders into the frontend's FBO via `SET_HW_RENDER`, targeting OpenGL\|ES 3.0
 
 @code{.sh}
@@ -2085,7 +2085,7 @@ SDK's container image, and uploads a ready-to-deploy package:
 
 Workflow | Container image | Artifact
 -------- | --------------- | --------
-`dreamcast.yml` | `pcercuei/dreamcast-toolchain` @m_span{m-text m-dim} (compilers only; KOS, kos-ports and mkdcdisc are built in the job and cached) @m_endspan | `Jazz2.cdi` + `Jazz2.elf`
+`dreamcast.yml` | `pcercuei/dreamcast-toolchain` @m_span{m-text m-dim} (compilers only, while KOS, kos-ports and mkdcdisc are built in the job and cached) @m_endspan | `Jazz2.cdi` + `Jazz2.elf`
 `wii.yml` | `devkitpro/devkitppc` | the `sd/` card tree with `apps/Jazz2/boot.dol`
 `gamecube.yml` | `devkitpro/devkitppc` @m_span{m-text m-dim} (AssetPacker built in the job for the disc image) @m_endspan | `Jazz2.iso` + the `sd/` card tree with `Jazz2/Jazz2.dol`
 `3ds.yml` | `devkitpro/devkitarm` @m_span{m-text m-dim} (installs `3ds-zlib`, `3ds-curl`, `3ds-mbedtls`) @m_endspan | the `sdmc/` card tree with `3ds/Jazz2/Jazz2.3dsx`
@@ -2096,12 +2096,12 @@ Workflow | Container image | Artifact
 
 @m_class{m-noindent}
 
--   The PlayStation 3 has <b>no workflow</b> --- there is no official SDK container; see
+-   The PlayStation 3 has <b>no workflow</b> --- there is no official SDK container. See
     @ref consoles-ps3-toolchain for the manual setup.
 -   KallistiOS, kos-ports and mkdcdisc in `dreamcast.yml` are <b>pinned to specific commits</b> and
     cached against them, so upstream changes cannot break the build or the runtime.
 -   The workflows use the repository's own @cpp "Content" @ce (they cannot ship original game data),
-    so their artifacts boot to the main menu only; prepare a content tree as in
+    so their artifacts boot to the main menu only. Prepare a content tree as in
     @ref consoles-common-content to play a level.
 
 - - -
@@ -2136,7 +2136,7 @@ Workflow | Container image | Artifact
     slot B on the PowerPC consoles, PPSSPP's stdout. On the Dreamcast and PSP startup messages go to
     the screen, not the log.
 -   <b>`std::bad_alloc`, an `sbrk` message, or an unexplained CPU exception</b> on the Dreamcast or
-    GameCube means main memory ran out; `Out of PVR memory allocating …` on the Dreamcast is video
+    GameCube means main memory ran out, while `Out of PVR memory allocating …` on the Dreamcast is video
     memory, see @ref consoles-dreamcast-limits.
 -   <b>PPSSPP runs an old build.</b> It boots from its own configured memory stick, see
     @ref consoles-psp-deploy.
@@ -2144,7 +2144,7 @@ Workflow | Container image | Artifact
     that shell, see @ref consoles-dreamcast-toolchain.
 -   <b>A fully loaded sound is cut short on the Dreamcast.</b> An AICA channel addresses at most 65534
     samples, see @ref consoles-dreamcast-limits.
--   <b>Sound effects are noise on the Wii or GameCube.</b> Samples were emitted little-endian; buffer
+-   <b>Sound effects are noise on the Wii or GameCube.</b> Samples were emitted little-endian, but buffer
     formats are native-endian, see @ref consoles-common-audio.
 -   <b>"Dead FIFO commands queue state" in RPCS3.</b> Usually the emulator (headless run, no GPU,
     swapping), see @ref consoles-ps3-deploy. If genuine, memory the GPU is still reading was reused or

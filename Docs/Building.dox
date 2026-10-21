@@ -157,11 +157,11 @@ See @ref building-config-params-uwp for more details.
 The iOS build (iPhone and iPad) is cross-compiled on a Mac with **Xcode** installed --- the Command Line
 Tools alone carry no iOS SDK. CMake's own iOS support is used (no toolchain file): `CMAKE_SYSTEM_NAME=iOS`
 together with the SDK (`CMAKE_OSX_SYSROOT`, `iphoneos` or `iphonesimulator`), the architecture
-(`CMAKE_OSX_ARCHITECTURES`, `arm64` for devices; the simulator runs the Mac's own architecture) and the
+(`CMAKE_OSX_ARCHITECTURES`, `arm64` for devices, while the simulator runs the Mac's own architecture) and the
 minimum iOS version (`CMAKE_OSX_DEPLOYMENT_TARGET`, `14.0` is the default and the lowest the launch screen
 in the `Info.plist` supports). None of the prebuilt dependency archives cover iOS, so **SDL2**, **OpenAL Soft**,
 <b>Ogg/Vorbis</b> and **libcurl** are downloaded as source and compiled as part of the build (CMake 3.18 or newer),
-like **libopenmpt**, **lz4** and **Zstd** already are everywhere; **zlib** comes from the SDK.
+like **libopenmpt**, **lz4** and **Zstd** already are everywhere, while **zlib** comes from the SDK.
 
 @code{.sh}
 cmake -B build -G Xcode \
@@ -197,7 +197,7 @@ A device bundle built this way has to be signed before a device accepts it: `NCI
 The result is the flat `jazz2.app` bundle (assembled at build time, there is no install or CPack step):
 the executable, the `Info.plist`, the icons scaled from `Sources/Icons/1024px.png` and the `Content`
 directory copied from `NCINE_CONTENT_DIR`. The original game files go to the application's `Documents/Source`
-directory, which the bundle exposes through file sharing (the **Files** app, or *Finder*); the converted cache
+directory, which the bundle exposes through file sharing (the **Files** app, or *Finder*). The converted cache
 lives in `Library/Caches`, where the system may reclaim it (it is then rebuilt on the next start), and the trace
 log `Jazz2.log` is written next to `Source`. A simulator build is installed and started with:
 
@@ -215,7 +215,7 @@ deprecated it in iOS 12 but still ships it, and it is the one the iOS Simulator 
 Metal-capable GPU. **SDL2** is the only window backend: it provides the UIKit window, the touch, game-controller
 and keyboard input, the on-screen keyboard and the application lifecycle (the game suspends whenever it leaves
 the foreground, as on Android). LAN server discovery uses multicast, which iOS 14 and newer only allow with the
-`com.apple.developer.networking.multicast` entitlement granted by Apple; without it, servers are joined by
+`com.apple.developer.networking.multicast` entitlement granted by Apple. Without it, servers are joined by
 address.
 
 @subsection building-consoles Building for consoles
@@ -382,8 +382,8 @@ The following parameters can be used to customize the build:
     -   Possible values:
         - `OpenGL` --- Uses the OpenGL family (which profile is chosen with `NCINE_RHI_GL_PROFILE`)
         - `D3D11` --- Uses Direct3D 11 (**Windows** with the **MSVC** toolchain only)
-        - `Vulkan` --- Uses Vulkan, on a device with `VK_KHR_maintenance1` or Vulkan 1.1 @m_span{m-text m-dim} (for the negative-height viewport every pass is drawn through; every current desktop driver and MoltenVK have one) @m_endspan --- on **macOS** through MoltenVK: the backend enables the portability extensions the loader needs, but the Vulkan SDK's loader and MoltenVK have to be installed or shipped next to the executable
-        - `Metal` --- Uses Metal (**macOS** and **iOS**; the offline MSL sources are compiled on the device at load time, no Xcode is needed to build for macOS)
+        - `Vulkan` --- Uses Vulkan, on a device with `VK_KHR_maintenance1` or Vulkan 1.1 @m_span{m-text m-dim} (for the negative-height viewport every pass is drawn through. Every current desktop driver and MoltenVK have one) @m_endspan --- on **macOS** through MoltenVK: the backend enables the portability extensions the loader needs, but the Vulkan SDK's loader and MoltenVK have to be installed or shipped next to the executable
+        - `Metal` --- Uses Metal (**macOS** and **iOS**. The offline MSL sources are compiled on the device at load time, no Xcode is needed to build for macOS)
         - `GXM` --- Uses **sceGxm** directly (**PlayStation Vita** only), see @ref consoles-vita
         - `RSX` --- Uses **libgcm** directly (**PlayStation 3** only), see @ref consoles-ps3
         - `PVR` --- Fixed-function PowerVR backend on top of KallistiOS (**Sega Dreamcast** only), see @ref consoles-dreamcast
@@ -402,7 +402,7 @@ The following parameters can be used to customize the build:
         - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
     -   Only `GXM`, `OpenGL` (through **vitaGL**, which pins the profile to `ES2`) and `Software` are
         available on **PS Vita**
-    -   Only `LegacyGL` (the default) and `Software` are available on **MorphOS** and **AmigaOS 4.1**;
+    -   Only `LegacyGL` (the default) and `Software` are available on **MorphOS** and **AmigaOS 4.1**, while
         <b>AmigaOS 3.x</b> is pinned to `Software`, see @ref amiga
     -   Pinned to the console's only rendering backend on **Nintendo 64** (`RDP`), **Sega Dreamcast**
         (`PVR`), **Nintendo Wii** and **Nintendo GameCube** (`GX`), **PlayStation Portable** (`GU`),
@@ -415,7 +415,7 @@ The following parameters can be used to customize the build:
         - `ES3` --- **OpenGL|ES** 3.0, and **WebGL** 2.0 on **Emscripten** (ESSL 300 es)
         - `ES2` --- **OpenGL|ES** 2.0 (ESSL 100, no uniform buffer objects, no `gl_VertexID`, no buffer mapping)
     -   Defaults to `ES3` on **Android**, **Emscripten**, **Nintendo Switch**, **iOS**, ARM Linux and **ANGLE** builds,
-        and to `Core` elsewhere; pinned to `ES2` on **PS Vita** (vitaGL is an **OpenGL|ES** 2.0 implementation)
+        and to `Core` elsewhere. Pinned to `ES2` on **PS Vita** (vitaGL is an **OpenGL|ES** 2.0 implementation)
         and to `ES3` for the libretro core (also the only profile on **iOS**, whose OpenGL|ES has no EGL for the `ES2`
         vertex-array-object entry points)
     -   Every profile builds on every platform that can provide the matching client library, so an `ES2` build
@@ -435,7 +435,7 @@ The following parameters can be used to customize the build:
     -   The console's 8 MB of RDRAM is shared by the code, the framebuffers and the whole heap, so the
         binary's size is the game's memory: the cold sources --- level loading, the content
         conversion, the menus --- give back RDRAM the levels then have. The frame loop itself keeps
-        `-O2`; building everything for size cost about a fifth of the frame rate when it was measured,
+        `-O2`: building everything for size cost about a fifth of the frame rate when it was measured,
         see @ref consoles-n64-limits
 -   `NCINE_WITH_THREADS` (default @cpp ON @ce except on **Emscripten**, **Nintendo 64**, **PlayStation 2**, **PlayStation 3**, the **classic Amiga** and **MorphOS**) --- Allow to use multiple threads for better performance
     -   Multiplayer requires threads, so it's compiled out where they are unavailable
@@ -449,7 +449,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_BACKWARD` (default @cpp ON @ce except on Android, iOS, Emscripten and UWP) --- Enable better exception handling
 -   `NCINE_WITH_LZ4` (default @cpp ON @ce on the **Nintendo 64**, **Sega Dreamcast**, **PlayStation 2** and **Nintendo GameCube**, @cpp OFF @ce elsewhere) --- Enable **LZ4** support, built from source with the target's own toolchain (`NCINE_DOWNLOAD_DEPENDENCIES`, see `cmake/FindLz4.cmake`). These consoles cannot convert the game data on the device, so they only ever get a tree prepared by the asset packer, and that tree carries their sprite sheets and tilesets in LZ4 --- see @ref asset-packer-lz4. A build without it refuses such a file instead of misreading it
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
--   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library on desktop; the consoles use their own backends, see @ref consoles-common-audio
+-   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library on desktop. The consoles use their own backends, see @ref consoles-common-audio
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
 -   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **Nintendo 64**, **PlayStation Portable**, **PlayStation 2**, the **classic Amiga**, and wherever `NCINE_WITH_XMP` is on --- which by default also covers the **Dreamcast**, the **Wii**, the **GameCube**, the **3DS** and the **PS Vita**) --- Enable module music audio file support, requires **libopenmpt** library
     -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce, forced @cpp ON @ce on **PlayStation Portable** and **PlayStation 3**) --- Download and compile **libopenmpt** library from source automatically. Neither SDK packages the library, and the runtime fallback the desktop platforms use needs a dynamic loader no console has
@@ -486,13 +486,13 @@ The platform itself is selected with CMake's own variables --- `CMAKE_SYSTEM_NAM
 (`iphoneos` or `iphonesimulator`), `CMAKE_OSX_ARCHITECTURES` and `CMAKE_OSX_DEPLOYMENT_TARGET` --- see
 @ref building-ios. These decide how the bundle is identified and signed:
 
--   `NCINE_IOS_BUNDLE_IDENTIFIER` (default @cpp "jazz2.resurrection" @ce) --- Bundle identifier of the application;
-    a personal team's provisioning may require an identifier of its own
--   `NCINE_IOS_DEVELOPMENT_TEAM` --- Apple Developer team ID; the **Xcode** generator signs the application with
+-   `NCINE_IOS_BUNDLE_IDENTIFIER` (default @cpp "jazz2.resurrection" @ce) --- Bundle identifier of the application.
+    A personal team's provisioning may require an identifier of its own
+-   `NCINE_IOS_DEVELOPMENT_TEAM` --- Apple Developer team ID. The **Xcode** generator signs the application with
     it (automatic signing), and a <b>Ninja</b>/<b>Makefile</b> device build derives its entitlements from it. Empty by
     default, which leaves the bundle unsigned (simulator only)
 -   `NCINE_IOS_CODESIGN_IDENTITY` --- `codesign` identity (e.g. @cpp "Apple Development" @ce) that signs the bundle
-    after a <b>Ninja</b>/<b>Makefile</b> device build; not used by the **Xcode** generator, which signs on its own
+    after a <b>Ninja</b>/<b>Makefile</b> device build. Not used by the **Xcode** generator, which signs on its own
 -   `NCINE_IOS_PROVISIONING_PROFILE` --- Provisioning profile (`.mobileprovision`) embedded into a
     <b>Ninja</b>/<b>Makefile</b> device build next to the signature
 

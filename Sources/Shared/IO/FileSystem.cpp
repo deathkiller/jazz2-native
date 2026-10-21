@@ -2689,11 +2689,12 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_3DS) && \
-		!defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && \
-		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && \
-		!defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS) && \
-		!defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS) && !defined(__FreeBSD__)
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && \
+		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_WII) && \		
+		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
+		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS) && \
+		!defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;

@@ -5544,22 +5544,22 @@ float4 main(PsInput _input) : COLOR
 	float horizon = uHorizon.x;
 	float viewRow = uQuad.y + vTexCoords.y * uQuad.w;
 	float rows = viewRow - horizon;
-	float column = uQuad.x + vTexCoords.x * uQuad.z - uHorizon.y;
+	float column_ = uQuad.x + vTexCoords.x * uQuad.z - uHorizon.y;
 	float planeRows = max(rows, 0.0) + uHorizon.z * 0.5;
 	float depth = uHorizon.z / planeRows;
-	float2 texturePos = float2(column * depth, -depth * 330.0) * 0.5 + uShift.xy;
+	float2 texturePos = float2(column_ * depth, -depth * 330.0) * 0.5 + uShift.xy;
 	float rippleY = paletteIndex(texturePos) - paletteIndex(texturePos + float2(0.0, 128.0));
 	float rippleX = paletteIndex(texturePos + float2(-64.0, 64.0)) - paletteIndex(texturePos + float2(64.0, 64.0));
-	float row = floor(max(rows, 0.0));
-	float nearHorizon = 0.0625 * (1.0 + step(1.0, row)) * (1.0 + step(3.0, row)) * (1.0 + step(7.0, row)) * (1.0 + step(15.0, row));
+	float row_ = floor(max(rows, 0.0));
+	float nearHorizon = 0.0625 * (1.0 + step(1.0, row_)) * (1.0 + step(3.0, row_)) * (1.0 + step(7.0, row_)) * (1.0 + step(15.0, row_));
 	float scale = floor(uHorizon.w * 255.0 + 0.5) / 32.0 * nearHorizon * 0.6;
-	float movedY = min(truncateTowardZero(rippleY * scale), max(row - 1.0, 0.0));
+	float movedY = min(truncateTowardZero(rippleY * scale), max(row_ - 1.0, 0.0));
 	float movedX = truncateTowardZero(rippleX * scale);
 	float2 viewToUv = ((float2)1.0) / uViewSize;
 	float pixelsPerRow = viewToUv.y / uTargetSizeInv.y;
 	float pixelsPerColumn = viewToUv.x / uTargetSizeInv.x;
 	float2 uv = gl_FragCoord.xy * uTargetSizeInv;
-	float mirroredRows = 2.0 * row - movedY;
+	float mirroredRows = 2.0 * row_ - movedY;
 	float2 mirroredUv = float2(uv.x - floor(movedX * pixelsPerColumn + 0.5) * uTargetSizeInv.x, uv.y - floor(mirroredRows * pixelsPerRow + 0.5) * uTargetSizeInv.y);
 	float topRowUv = uv.y - viewRow * viewToUv.y + 0.5 * uTargetSizeInv.y;
 	mirroredUv.y = max(mirroredUv.y, topRowUv);
@@ -6176,8 +6176,8 @@ struct PsInput
 
 float heatShift(float k)
 {
-	float4 row = ((float4)k);
-	return dot(float4(1.0, 1.0, -3.0, 1.0), step(float4(1.0, 3.0, 5.0, 7.0), row)) + dot(float4(-2.0, 3.0, -1.0, -1.0), step(float4(8.0, 9.0, 10.0, 13.0), row)) + dot(float4(-1.0, 1.0, 2.0, 1.0), step(float4(15.0, 17.0, 18.0, 19.0), row)) + dot(float4(-1.0, -2.0, 1.0, 1.0), step(float4(20.0, 21.0, 23.0, 25.0), row)) + dot(float4(-1.0, -1.0, -1.0, 1.0), step(float4(27.0, 28.0, 29.0, 30.0), row)) + step(31.0, k);
+	float4 row_ = ((float4)k);
+	return dot(float4(1.0, 1.0, -3.0, 1.0), step(float4(1.0, 3.0, 5.0, 7.0), row_)) + dot(float4(-2.0, 3.0, -1.0, -1.0), step(float4(8.0, 9.0, 10.0, 13.0), row_)) + dot(float4(-1.0, 1.0, 2.0, 1.0), step(float4(15.0, 17.0, 18.0, 19.0), row_)) + dot(float4(-1.0, -2.0, 1.0, 1.0), step(float4(20.0, 21.0, 23.0, 25.0), row_)) + dot(float4(-1.0, -1.0, -1.0, 1.0), step(float4(27.0, 28.0, 29.0, 30.0), row_)) + step(31.0, k);
 }
 
 float4 main(PsInput _input) : COLOR
@@ -6277,8 +6277,8 @@ struct PsInput
 
 float heatShift(float k)
 {
-	float4 row = ((float4)k);
-	return dot(float4(1.0, 1.0, -3.0, 1.0), step(float4(1.0, 3.0, 5.0, 7.0), row)) + dot(float4(-2.0, 3.0, -1.0, -1.0), step(float4(8.0, 9.0, 10.0, 13.0), row)) + dot(float4(-1.0, 1.0, 2.0, 1.0), step(float4(15.0, 17.0, 18.0, 19.0), row)) + dot(float4(-1.0, -2.0, 1.0, 1.0), step(float4(20.0, 21.0, 23.0, 25.0), row)) + dot(float4(-1.0, -1.0, -1.0, 1.0), step(float4(27.0, 28.0, 29.0, 30.0), row)) + step(31.0, k);
+	float4 row_ = ((float4)k);
+	return dot(float4(1.0, 1.0, -3.0, 1.0), step(float4(1.0, 3.0, 5.0, 7.0), row_)) + dot(float4(-2.0, 3.0, -1.0, -1.0), step(float4(8.0, 9.0, 10.0, 13.0), row_)) + dot(float4(-1.0, 1.0, 2.0, 1.0), step(float4(15.0, 17.0, 18.0, 19.0), row_)) + dot(float4(-1.0, -2.0, 1.0, 1.0), step(float4(20.0, 21.0, 23.0, 25.0), row_)) + dot(float4(-1.0, -1.0, -1.0, 1.0), step(float4(27.0, 28.0, 29.0, 30.0), row_)) + step(31.0, k);
 }
 
 float4 main(PsInput _input) : COLOR
