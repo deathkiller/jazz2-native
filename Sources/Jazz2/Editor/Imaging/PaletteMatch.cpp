@@ -12,6 +12,12 @@ namespace Jazz2::Editor
 {
 	namespace
 	{
+		// std::cbrt() is C99, which isn't in `std` on every console
+		float Cbrt(float value)
+		{
+			return (value < 0.0f ? -std::pow(-value, 1.0f / 3.0f) : std::pow(value, 1.0f / 3.0f));
+		}
+
 		// Linear values of the 256 levels of sRGB, a conversion is done for each color of an image, std::pow() for
 		// each of its channels was most of the time it took
 		struct LinearTable
@@ -42,9 +48,9 @@ namespace Jazz2::Editor
 		float b = linear[(entry >> 16) & 0xFF];
 
 		// From linear sRGB as Björn Ottosson defines it
-		float l = std::cbrt(0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b);
-		float m = std::cbrt(0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b);
-		float s = std::cbrt(0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b);
+		float l = Cbrt(0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b);
+		float m = Cbrt(0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b);
+		float s = Cbrt(0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b);
 
 		OkLab result;
 		result.L = 0.2104542553f * l + 0.7936177850f * m - 0.0040720468f * s;

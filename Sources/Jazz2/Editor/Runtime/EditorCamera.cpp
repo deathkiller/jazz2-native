@@ -13,6 +13,15 @@ namespace Jazz2::Editor
 {
 	namespace
 	{
+		// std::asinh() is C99, which isn't in `std` on every console. Taken of the magnitude, so a large negative value
+		// doesn't lose its precision to the subtraction, and in double, so the square doesn't overflow
+		float Asinh(float value)
+		{
+			double magnitude = std::abs(double(value));
+			double result = std::log(magnitude + std::sqrt(magnitude * magnitude + 1.0));
+			return float(value < 0.0f ? -result : result);
+		}
+
 		// Steps of the zoom, scales above 1 are whole numbers, so every pixel of the level is just as large
 		const float ScaleSteps[] = {
 			1.0f / 32.0f, 1.0f / 24.0f, 1.0f / 16.0f, 1.0f / 12.0f, 1.0f / 10.0f,
@@ -237,8 +246,8 @@ namespace Jazz2::Editor
 			float b0 = (w1 * w1 - w0 * w0 + rho4 * u1 * u1) / (2.0f * w0 * rho2 * u1);
 			float b1 = (w1 * w1 - w0 * w0 - rho4 * u1 * u1) / (2.0f * w1 * rho2 * u1);
 			// log(-b + sqrt(b² + 1)) of the paper is -asinh(b), which doesn't lose the precision for a long flight from close up
-			_flyR0 = -std::asinh(b0);
-			float r1 = -std::asinh(b1);
+			_flyR0 = -Asinh(b0);
+			float r1 = -Asinh(b1);
 			_flyLength = (r1 - _flyR0) / rho;
 		}
 

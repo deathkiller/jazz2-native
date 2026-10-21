@@ -655,10 +655,12 @@ namespace Jazz2::Editor
 		float padding = getPadding(rect.W);
 		Rectf inner(rect.X + padding, rect.Y + padding, rect.W - padding * 2.0f, rect.H - padding * 2.0f);
 		constexpr float StepsPerOctave = 16.0f;
-		std::int32_t widthStep = std::int32_t(std::round(std::log2(rect.W) * StepsPerOctave));
-		std::int32_t heightStep = std::int32_t(std::round(std::log2(rect.H) * StepsPerOctave));
-		float layoutWidth = std::exp2(float(widthStep) / StepsPerOctave);
-		float layoutHeight = std::exp2(float(heightStep) / StepsPerOctave);
+		// log() and pow() instead of std::log2() and std::exp2(), which are C99 and not in `std` on every console
+		constexpr float Ln2 = 0.69314718f;
+		std::int32_t widthStep = std::int32_t(std::round(std::log(rect.W) / Ln2 * StepsPerOctave));
+		std::int32_t heightStep = std::int32_t(std::round(std::log(rect.H) / Ln2 * StepsPerOctave));
+		float layoutWidth = std::pow(2.0f, float(widthStep) / StepsPerOctave);
+		float layoutHeight = std::pow(2.0f, float(heightStep) / StepsPerOctave);
 		std::uint64_t key = std::uint64_t(type) |
 			(std::uint64_t(std::clamp<std::int32_t>(widthStep + 0x8000, 0, 0xFFFF)) << 16) |
 			(std::uint64_t(std::clamp<std::int32_t>(heightStep + 0x8000, 0, 0xFFFF)) << 32) |
