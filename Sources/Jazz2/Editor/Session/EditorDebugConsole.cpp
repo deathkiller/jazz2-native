@@ -86,7 +86,7 @@ namespace Jazz2::Editor
 				return defaultValue;
 			}
 			String value = Values[index];
-			return std::strtof(value.data(), nullptr);
+			return float(std::strtod(value.data(), nullptr));
 		}
 	};
 

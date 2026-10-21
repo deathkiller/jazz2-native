@@ -641,7 +641,7 @@ namespace Jazz2::Editor
 				return;
 			}
 			auto& layerCounts = Counts[layer.IsSpriteLayer() ? 1 : 0];
-			for (std::int32_t y = std::max(fromRow, 0); y < std::min(toRow, height); y++) {
+			for (std::int32_t y = std::max<std::int32_t>(fromRow, 0); y < std::min<std::int32_t>(toRow, height); y++) {
 				for (std::int32_t x = 0; x < width; x++) {
 					const TileRef& tile = layer.GetTile(x, y);
 					if (!IsModelTile(tile)) {
@@ -927,7 +927,7 @@ namespace Jazz2::Editor
 		// The rows of the band and those next to them, the neighbors of its tiles, by what tells anything of them
 		std::int32_t width = layer.GetWidth(), height = layer.GetHeight();
 		std::int32_t fromRow = band * DocumentBandRows, toRow = std::min(fromRow + DocumentBandRows, height);
-		std::int32_t hashFrom = std::max(fromRow - 1, 0), hashTo = std::min(toRow + 1, height);
+		std::int32_t hashFrom = std::max<std::int32_t>(fromRow - 1, 0), hashTo = std::min<std::int32_t>(toRow + 1, height);
 		const std::int32_t header[4] = { width, height, fromRow, layer.IsSpriteLayer() ? 1 : 0 };
 		std::uint64_t hash = Death::Cryptography::xxHash3(header, sizeof(header));
 		hash = Death::Cryptography::xxHash3(&layer.Tiles[std::size_t(hashFrom) * std::size_t(width)],

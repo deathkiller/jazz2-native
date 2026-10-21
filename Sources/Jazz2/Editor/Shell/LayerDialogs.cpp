@@ -170,7 +170,7 @@ namespace Jazz2::Editor
 			auto* number = row->Add<UiNumberBox>([state, axis]() {
 				return float(axis == 0 ? state->Size.X : state->Size.Y);
 			}, [state, axis](float value, bool final) {
-				std::int32_t size = std::clamp(std::int32_t(std::round(value)), 1, std::int32_t(UINT16_MAX));
+				std::int32_t size = std::clamp<std::int32_t>(std::int32_t(std::round(value)), 1, std::int32_t(UINT16_MAX));
 				(axis == 0 ? state->Size.X : state->Size.Y) = size;
 			}, 1.0f, float(UINT16_MAX), 1.0f, 0);
 			number->Width = 60.0f;

@@ -497,7 +497,7 @@ namespace Jazz2::Editor
 				if (nCine::Texture* thumbnail = _panel.GetThumbnail(_index)) {
 					// The shape of the layer kept, centered in its place
 					Vector2i size(thumbnail->GetWidth(), thumbnail->GetHeight());
-					float fit = std::min(thumbnailRect.W / float(std::max(size.X, 1)), thumbnailRect.H / float(std::max(size.Y, 1)));
+					float fit = std::min(thumbnailRect.W / float(std::max<std::int32_t>(size.X, 1)), thumbnailRect.H / float(std::max<std::int32_t>(size.Y, 1)));
 					float w = std::round(size.X * fit), h = std::round(size.Y * fit);
 					Rectf image(std::round(thumbnailRect.X + (thumbnailRect.W - w) * 0.5f), std::round(thumbnailRect.Y + (thumbnailRect.H - h) * 0.5f), w, h);
 					painter.Image(*thumbnail, image, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), hidden ? Colorf(1.0f, 1.0f, 1.0f, 0.35f) : Colorf::White, -1, UiLayer::Content);
@@ -1936,7 +1936,7 @@ namespace Jazz2::Editor
 		_usageDirty = false;
 		_usageSource = _source;
 		_usage.clear();
-		_usage.resize(std::size_t(std::max(GetTileCount(), 0)), 0);
+		_usage.resize(std::size_t(std::max<std::int32_t>(GetTileCount(), 0)), 0);
 		_usageMax = 0;
 
 		const LevelDocument& document = _session.GetDocument();
@@ -1969,13 +1969,13 @@ namespace Jazz2::Editor
 
 	std::int32_t TileGrid::GetColumns() const
 	{
-		return std::max(_session.GetSettings().TilePickerColumns, 1);
+		return std::max<std::int32_t>(_session.GetSettings().TilePickerColumns, 1);
 	}
 
 	void TileGrid::SetColumns(std::int32_t columns)
 	{
 		EditorSettings& settings = _session.GetSettings();
-		columns = std::clamp(columns, 1, 32);
+		columns = std::clamp<std::int32_t>(columns, 1, 32);
 		if (settings.TilePickerColumns != columns) {
 			settings.TilePickerColumns = columns;
 			settings.Save();
@@ -1995,7 +1995,7 @@ namespace Jazz2::Editor
 				count = tileMap->GetTileSetTileCount(0);
 			}
 		}
-		return std::max(count, 0);
+		return std::max<std::int32_t>(count, 0);
 	}
 
 	float TileGrid::GetTileSize(const UiContext& context, float availableWidth) const
@@ -2034,7 +2034,7 @@ namespace Jazz2::Editor
 		const Rectf& clip = painter.GetClip();
 		float clipTop = (clip.H > 0.0f ? clip.Y : Bounds.Y);
 		float clipBottom = (clip.H > 0.0f ? clip.Y + clip.H : Bounds.Y + Bounds.H);
-		std::int32_t firstRow = std::max(0, std::int32_t((clipTop - Bounds.Y) / _tileSize));
+		std::int32_t firstRow = std::max<std::int32_t>(0, std::int32_t((clipTop - Bounds.Y) / _tileSize));
 		std::int32_t lastRow = std::min(rows - 1, std::int32_t((clipBottom - Bounds.Y) / _tileSize));
 
 		painter.FillRect(Rectf(Bounds.X, Bounds.Y, width, rows * _tileSize), Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
@@ -2055,7 +2055,7 @@ namespace Jazz2::Editor
 			// Unused tiles darkened, used ones with a bar as long as how often, on a logarithmic scale
 			UpdateUsage();
 			float barHeight = std::max(2.0f, std::round(_tileSize / 8.0f));
-			float maxLog = std::log(float(std::max(_usageMax, 1)) + 1.0f);
+			float maxLog = std::log(float(std::max<std::int32_t>(_usageMax, 1)) + 1.0f);
 			for (std::int32_t row = firstRow; row <= lastRow; row++) {
 				for (std::int32_t column = 0; column < columns; column++) {
 					std::int32_t index = row * columns + column;
@@ -2167,7 +2167,7 @@ namespace Jazz2::Editor
 			Vector2i cell = GetCellAt(event.Pos);
 			std::int32_t columns = GetColumns();
 			std::int32_t rows = (GetTileCount() + columns - 1) / columns;
-			_dragEnd = Vector2i(std::clamp(cell.X, 0, columns - 1), std::clamp(cell.Y, 0, std::max(rows - 1, 0)));
+			_dragEnd = Vector2i(std::clamp<std::int32_t>(cell.X, 0, columns - 1), std::clamp<std::int32_t>(cell.Y, 0, std::max<std::int32_t>(rows - 1, 0)));
 		}
 	}
 

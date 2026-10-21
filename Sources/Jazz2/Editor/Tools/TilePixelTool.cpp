@@ -66,8 +66,8 @@ namespace Jazz2::Editor
 			return false;
 		}
 		// Where in the cell, then where in the tile, which the cell may show flipped
-		std::int32_t x = std::clamp(std::int32_t(std::floor(pointer.World.X - view.Origin.X)) - pointer.Cell.X * TileSize, 0, TileSize - 1);
-		std::int32_t y = std::clamp(std::int32_t(std::floor(pointer.World.Y - view.Origin.Y)) - pointer.Cell.Y * TileSize, 0, TileSize - 1);
+		std::int32_t x = std::clamp<std::int32_t>(std::int32_t(std::floor(pointer.World.X - view.Origin.X)) - pointer.Cell.X * TileSize, 0, TileSize - 1);
+		std::int32_t y = std::clamp<std::int32_t>(std::int32_t(std::floor(pointer.World.Y - view.Origin.Y)) - pointer.Cell.Y * TileSize, 0, TileSize - 1);
 		if ((flags & Formats::TileRecord::FlipX) != 0) {
 			x = TileSize - 1 - x;
 		}

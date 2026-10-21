@@ -87,14 +87,14 @@ namespace Jazz2::Editor
 		for (const TilePrefab& prefab : prefabs) {
 			Json::Value item(Json::objectValue);
 			item["name"] = std::string(prefab.Name.data(), prefab.Name.size());
-			item["width"] = prefab.Width;
-			item["height"] = prefab.Height;
+			item["width"] = Json::Int(prefab.Width);
+			item["height"] = Json::Int(prefab.Height);
 			item["tiles"] = WriteTiles(prefab.Tiles);
 			if (!prefab.ExtraLayers.empty()) {
 				Json::Value layers(Json::arrayValue);
 				for (const LayerTiles& layer : prefab.ExtraLayers) {
 					Json::Value value(Json::objectValue);
-					value["o"] = layer.FromLayer;
+					value["o"] = Json::Int(layer.FromLayer);
 					value["tiles"] = WriteTiles(layer.Tiles);
 					layers.append(value);
 				}
@@ -143,15 +143,15 @@ namespace Jazz2::Editor
 		Json::Value list(Json::arrayValue);
 		for (const PrefabEvent& event : events) {
 			Json::Value value(Json::objectValue);
-			value["x"] = event.Offset.X;
-			value["y"] = event.Offset.Y;
-			value["type"] = std::uint32_t(event.Event.Type);
-			value["flags"] = std::uint32_t(event.Event.Flags);
-			value["gen"] = std::uint32_t(event.Event.GeneratorFlags);
-			value["delay"] = std::uint32_t(event.Event.GeneratorDelay);
+			value["x"] = Json::Int(event.Offset.X);
+			value["y"] = Json::Int(event.Offset.Y);
+			value["type"] = Json::UInt(event.Event.Type);
+			value["flags"] = Json::UInt(event.Event.Flags);
+			value["gen"] = Json::UInt(event.Event.GeneratorFlags);
+			value["delay"] = Json::UInt(event.Event.GeneratorDelay);
 			Json::Value params(Json::arrayValue);
 			for (std::int32_t j = 0; j < Formats::LevelFile::EventParamsSize; j++) {
-				params.append(std::uint32_t(event.Event.Params[j]));
+				params.append(Json::UInt(event.Event.Params[j]));
 			}
 			value["p"] = params;
 			list.append(value);

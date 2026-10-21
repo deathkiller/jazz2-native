@@ -26,8 +26,8 @@ namespace Jazz2::Editor
 	TileStamp TileStamp::FromLayer(const DocumentLayer& layer, const Recti& area)
 	{
 		TileStamp stamp;
-		stamp.Width = std::max(area.W, 1);
-		stamp.Height = std::max(area.H, 1);
+		stamp.Width = std::max<std::int32_t>(area.W, 1);
+		stamp.Height = std::max<std::int32_t>(area.H, 1);
 		stamp.Tiles.reserve(std::size_t(stamp.Width) * stamp.Height);
 		stamp.Present.reserve(std::size_t(stamp.Width) * stamp.Height);
 		for (std::int32_t y = 0; y < stamp.Height; y++) {
@@ -48,8 +48,8 @@ namespace Jazz2::Editor
 	TileStamp TileStamp::FromTileSet(std::uint8_t source, std::int32_t columns, const Recti& area)
 	{
 		TileStamp stamp;
-		stamp.Width = std::max(area.W, 1);
-		stamp.Height = std::max(area.H, 1);
+		stamp.Width = std::max<std::int32_t>(area.W, 1);
+		stamp.Height = std::max<std::int32_t>(area.H, 1);
 		stamp.Tiles.reserve(std::size_t(stamp.Width) * stamp.Height);
 		stamp.Present.reserve(std::size_t(stamp.Width) * stamp.Height);
 		for (std::int32_t y = 0; y < stamp.Height; y++) {
@@ -219,7 +219,7 @@ namespace Jazz2::Editor
 			Reset(layer, layerSize);
 		}
 
-		std::int32_t x1 = std::max(area.X, 0), y1 = std::max(area.Y, 0);
+		std::int32_t x1 = std::max<std::int32_t>(area.X, 0), y1 = std::max<std::int32_t>(area.Y, 0);
 		std::int32_t x2 = std::min(area.X + area.W, layerSize.X), y2 = std::min(area.Y + area.H, layerSize.Y);
 		for (std::int32_t y = y1; y < y2; y++) {
 			for (std::int32_t x = x1; x < x2; x++) {
@@ -241,7 +241,7 @@ namespace Jazz2::Editor
 
 		// The bounds of what's added are found while it's added, the mask is gone through once
 		std::size_t count = std::min(mask.size(), _mask.size());
-		std::int32_t width = std::max(_layerSize.X, 1);
+		std::int32_t width = std::max<std::int32_t>(_layerSize.X, 1);
 		std::int32_t minX = INT32_MAX, minY = INT32_MAX, maxX = INT32_MIN, maxY = INT32_MIN;
 		for (std::size_t i = 0; i < count; i++) {
 			if (mask[i]) {
@@ -324,7 +324,7 @@ namespace Jazz2::Editor
 
 	void TileSelection::UpdateBounds(const Recti& area)
 	{
-		std::int32_t x1 = std::max(area.X, 0), y1 = std::max(area.Y, 0);
+		std::int32_t x1 = std::max<std::int32_t>(area.X, 0), y1 = std::max<std::int32_t>(area.Y, 0);
 		std::int32_t x2 = std::min(area.X + area.W, _layerSize.X), y2 = std::min(area.Y + area.H, _layerSize.Y);
 		std::int32_t minX = INT32_MAX, minY = INT32_MAX, maxX = INT32_MIN, maxY = INT32_MIN;
 		for (std::int32_t y = y1; y < y2; y++) {
@@ -355,7 +355,7 @@ namespace Jazz2::Editor
 	{
 		_layer = layer;
 		_layerSize = layerSize;
-		_mask = BitArray(ValueInit, std::size_t(std::max(layerSize.X, 0)) * std::size_t(std::max(layerSize.Y, 0)));
+		_mask = BitArray(ValueInit, std::size_t(std::max<std::int32_t>(layerSize.X, 0)) * std::size_t(std::max<std::int32_t>(layerSize.Y, 0)));
 		_bounds = Recti();
 	}
 

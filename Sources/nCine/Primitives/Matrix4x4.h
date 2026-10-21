@@ -134,11 +134,11 @@ namespace nCine
 			static Matrix4x4 Scaling(T s);
 
 			/** @brief Creates an orthographic projection matrix */
-			static Matrix4x4 Ortho(T left, T right, T bottom, T top, T near, T far);
+			static Matrix4x4 Ortho(T left, T right, T bottom, T top, T zNear, T zFar);
 			/** @brief Creates a perspective projection matrix from frustum boundaries */
-			static Matrix4x4 Frustum(T left, T right, T bottom, T top, T near, T far);
+			static Matrix4x4 Frustum(T left, T right, T bottom, T top, T zNear, T zFar);
 			/** @brief Creates a perspective projection matrix from a vertical field of view and aspect ratio */
-			static Matrix4x4 Perspective(T fovY, T aspect, T near, T far);
+			static Matrix4x4 Perspective(T fovY, T aspect, T zNear, T zFar);
 
 			/** @{ @name Constants */
 
@@ -794,36 +794,36 @@ namespace nCine
 		}
 
 		template<class T>
-		inline Matrix4x4<T> Matrix4x4<T>::Ortho(T left, T right, T bottom, T top, T near, T far)
+		inline Matrix4x4<T> Matrix4x4<T>::Ortho(T left, T right, T bottom, T top, T zNear, T zFar)
 		{
 			float invRL = 1.0f / (right - left);
 			float invTB = 1.0f / (top - bottom);
-			float invFN = 1.0f / (far - near);
+			float invFN = 1.0f / (zFar - zNear);
 
 			return Matrix4x4(Vector4<T>(2 * invRL, 0, 0, 0),
 				Vector4<T>(0, 2 * invTB, 0, 0),
 				Vector4<T>(0, 0, -2 * invFN, 0),
-				Vector4<T>(-(right + left) * invRL, -(top + bottom) * invTB, -(far + near) * invFN, 1));
+				Vector4<T>(-(right + left) * invRL, -(top + bottom) * invTB, -(zFar + zNear) * invFN, 1));
 		}
 
 		template<class T>
-		inline Matrix4x4<T> Matrix4x4<T>::Frustum(T left, T right, T bottom, T top, T near, T far)
+		inline Matrix4x4<T> Matrix4x4<T>::Frustum(T left, T right, T bottom, T top, T zNear, T zFar)
 		{
-			return Matrix4x4(Vector4<T>((2 * near) / (right - left), 0, 0, 0),
-				Vector4<T>(0, (2 * near) / (top - bottom), 0, 0),
-				Vector4<T>((right + left) / (right - left), (top + bottom) / (top - bottom), -(far + near) / (far - near), -1),
-				Vector4<T>(0, 0, (-2 * far * near) / (far - near), 0));
+			return Matrix4x4(Vector4<T>((2 * zNear) / (right - left), 0, 0, 0),
+				Vector4<T>(0, (2 * zNear) / (top - bottom), 0, 0),
+				Vector4<T>((right + left) / (right - left), (top + bottom) / (top - bottom), -(zFar + zNear) / (zFar - zNear), -1),
+				Vector4<T>(0, 0, (-2 * zFar * zNear) / (zFar - zNear), 0));
 		}
 
 		template<class T>
-		inline Matrix4x4<T> Matrix4x4<T>::Perspective(T fovY, T aspect, T near, T far)
+		inline Matrix4x4<T> Matrix4x4<T>::Perspective(T fovY, T aspect, T zNear, T zFar)
 		{
-			const T yMax = near * tan(fovY * static_cast<T>(Pi) / 360);
+			const T yMax = zNear * tan(fovY * static_cast<T>(Pi) / 360);
 			const T yMin = -yMax;
 			const T xMin = yMin * aspect;
 			const T xMax = yMax * aspect;
 
-			return Frustum(xMin, xMax, yMin, yMax, near, far);
+			return Frustum(xMin, xMax, yMin, yMax, zNear, zFar);
 		}
 
 		template<class T>

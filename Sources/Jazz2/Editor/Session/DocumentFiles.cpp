@@ -438,11 +438,15 @@ namespace Jazz2::Editor
 				roots.push_back({ _x("editor", "Level folder"), Death::move(levelDirectory), writable });
 			}
 		}
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_IOS)) || \
+	((defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)) && !defined(DEATH_TARGET_ANDROID))
+		// Only a desktop has a home folder, the consoles don't even link what looks it up (getpwuid() isn't in libnx or libogc)
 		String home = fs::GetHomeDirectory();
 		if (!home.empty() && fs::DirectoryExists(home)) {
 			// TRANSLATORS: Name of a place in the file dialog, the home folder of the user
 			roots.push_back({ _x("editor", "Home"), Death::move(home), true });
 		}
+#endif
 	}
 
 	String DocumentFiles::FindDefaultTileSet()

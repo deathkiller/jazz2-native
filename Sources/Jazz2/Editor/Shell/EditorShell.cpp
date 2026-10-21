@@ -889,11 +889,11 @@ namespace Jazz2::Editor
 		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X, _viewRect.Y)));
 		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X + _viewRect.W, _viewRect.Y + _viewRect.H)));
 		if (!view.RepeatX) {
-			from.X = std::max(from.X, 0);
+			from.X = std::max<std::int32_t>(from.X, 0);
 			to.X = std::min(to.X, view.Size.X - 1);
 		}
 		if (!view.RepeatY) {
-			from.Y = std::max(from.Y, 0);
+			from.Y = std::max<std::int32_t>(from.Y, 0);
 			to.Y = std::min(to.Y, view.Size.Y - 1);
 		}
 		if (to.X < from.X || to.Y < from.Y) {
@@ -1123,7 +1123,7 @@ namespace Jazz2::Editor
 				for (std::int32_t i = 0; i < count; i++) {
 					float sum = 0.0f;
 					std::int32_t samples = 0;
-					for (std::int32_t j = std::max(i - SpeedWindow, 0); j <= std::min(i + SpeedWindow, count - 1); j++) {
+					for (std::int32_t j = std::max<std::int32_t>(i - SpeedWindow, 0); j <= std::min<std::int32_t>(i + SpeedWindow, count - 1); j++) {
 						sum += (j < std::int32_t(segment.Speeds.size()) ? segment.Speeds[j] : 0.0f);
 						samples++;
 					}
@@ -1192,7 +1192,7 @@ namespace Jazz2::Editor
 		for (const CachedPathSegment& segment : _cachedPath) {
 			total += std::int32_t(segment.Points.size());
 		}
-		std::int32_t runLength = std::max(8, total / 32);
+		std::int32_t runLength = std::max<std::int32_t>(8, total / 32);
 		SmallVector<Vector2f, 0> screen;
 		SmallVector<float, 0> halfThicknesses;
 		std::int32_t index = 0;
@@ -1216,7 +1216,7 @@ namespace Jazz2::Editor
 				if (!seen) {
 					continue;
 				}
-				float t = float(index + (start + end) / 2) / float(std::max(total, 1));
+				float t = float(index + (start + end) / 2) / float(std::max<std::int32_t>(total, 1));
 				Colorf color(0.3f + 0.7f * t, 0.55f + 0.2f * t, 1.0f - 0.8f * t, 0.85f);
 				// The runs share their first and last point and their directions there, so they join without a seam
 				SmallVector<RenderCommand*, 4> commands;
@@ -1280,8 +1280,8 @@ namespace Jazz2::Editor
 		LayerView view = _session.GetLayerView(spriteLayer);
 		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X, _viewRect.Y)));
 		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X + _viewRect.W, _viewRect.Y + _viewRect.H)));
-		from.X = std::max(from.X, 0);
-		from.Y = std::max(from.Y, 0);
+		from.X = std::max<std::int32_t>(from.X, 0);
+		from.Y = std::max<std::int32_t>(from.Y, 0);
 		to.X = std::min(to.X, gridSize.X - 1);
 		to.Y = std::min(to.Y, gridSize.Y - 1);
 
@@ -1302,8 +1302,8 @@ namespace Jazz2::Editor
 			if (distance < 0) {
 				return -1;
 			}
-			float near = std::clamp(1.0f - float(distance) / float(maxDistance), 0.0f, 1.0f);
-			return std::int32_t(std::round(near * float(Steps)));
+			float closeness = std::clamp(1.0f - float(distance) / float(maxDistance), 0.0f, 1.0f);
+			return std::int32_t(std::round(closeness * float(Steps)));
 		};
 		Vector2i fromUnit(from.X / unit, from.Y / unit), toUnit(to.X / unit, to.Y / unit);
 		for (std::int32_t uy = fromUnit.Y; uy <= toUnit.Y; uy++) {
@@ -1429,8 +1429,8 @@ namespace Jazz2::Editor
 		}
 		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X, _viewRect.Y)));
 		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X + _viewRect.W, _viewRect.Y + _viewRect.H)));
-		from.X = std::max(from.X, 0);
-		from.Y = std::max(from.Y, 0);
+		from.X = std::max<std::int32_t>(from.X, 0);
+		from.Y = std::max<std::int32_t>(from.Y, 0);
 		to.X = std::min(to.X, gridSize.X - 1);
 		to.Y = std::min(to.Y, gridSize.Y - 1);
 		if (to.X < from.X || to.Y < from.Y) {
@@ -1573,8 +1573,8 @@ namespace Jazz2::Editor
 		constexpr std::int32_t Margin = 2;
 		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(Bounds.X, Bounds.Y)));
 		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(Bounds.X + Bounds.W, Bounds.Y + Bounds.H)));
-		from.X = std::max(from.X - Margin, 0);
-		from.Y = std::max(from.Y - Margin, 0);
+		from.X = std::max<std::int32_t>(from.X - Margin, 0);
+		from.Y = std::max<std::int32_t>(from.Y - Margin, 0);
 		to.X = std::min(to.X + Margin, gridSize.X - 1);
 		to.Y = std::min(to.Y + Margin, gridSize.Y - 1);
 
@@ -1635,8 +1635,8 @@ namespace Jazz2::Editor
 		constexpr std::int32_t Margin = 2;
 		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(area.X, area.Y)));
 		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(area.X + area.W, area.Y + area.H)));
-		from.X = std::max(from.X - Margin, 0);
-		from.Y = std::max(from.Y - Margin, 0);
+		from.X = std::max<std::int32_t>(from.X - Margin, 0);
+		from.Y = std::max<std::int32_t>(from.Y - Margin, 0);
 		to.X = std::min(to.X + Margin, gridSize.X - 1);
 		to.Y = std::min(to.Y + Margin, gridSize.Y - 1);
 		if (to.X < from.X || to.Y < from.Y) {
@@ -1842,12 +1842,12 @@ namespace Jazz2::Editor
 					}
 					light.RadiusNear += pulse;
 					light.RadiusFar += pulse;
-					float far = light.RadiusFar * view.Scale;
-					if (far >= 2.0f) {
+					float farRadius = light.RadiusFar * view.Scale;
+					if (farRadius >= 2.0f) {
 						drawRing(light.RadiusNear * view.Scale, thickness, lightColor);
 						drawRing(distanceAt(0.5f) * view.Scale, thickness, Colorf(lightColor.R, lightColor.G, lightColor.B, 0.6f));
 						drawRing(distanceAt(0.1f) * view.Scale, thickness, Colorf(lightColor.R, lightColor.G, lightColor.B, 0.35f));
-						drawRing(far, std::max(1.0f, thickness * 0.5f), Colorf(lightColor.R, lightColor.G, lightColor.B, 0.2f));
+						drawRing(farRadius, std::max(1.0f, thickness * 0.5f), Colorf(lightColor.R, lightColor.G, lightColor.B, 0.2f));
 					}
 				}
 			}

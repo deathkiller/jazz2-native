@@ -433,7 +433,7 @@ namespace Jazz2::Editor
 									continue;
 								}
 								if (std::uint32_t(newPosition) != index) {
-									item["i"] = newPosition;
+									item["i"] = Json::Int(newPosition);
 									changed = true;
 								}
 							}
@@ -460,7 +460,7 @@ namespace Jazz2::Editor
 						tile = Json::Value(Json::nullValue);
 						changed = true;
 					} else if (std::uint32_t(newPosition) != index) {
-						tile["i"] = newPosition;
+						tile["i"] = Json::Int(newPosition);
 						changed = true;
 					}
 				}

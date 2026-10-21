@@ -379,8 +379,8 @@ namespace Jazz2::Editor
 		std::size_t target = 0;
 		for (std::size_t i = 0; i < _cells.size(); i++) {
 			std::uint32_t cell = _cells[i];
-			std::int32_t x = std::int32_t(cell % std::uint32_t(std::max(gridSize.X, 1)));
-			std::int32_t y = std::int32_t(cell / std::uint32_t(std::max(gridSize.X, 1)));
+			std::int32_t x = std::int32_t(cell % std::uint32_t(std::max<std::int32_t>(gridSize.X, 1)));
+			std::int32_t y = std::int32_t(cell / std::uint32_t(std::max<std::int32_t>(gridSize.X, 1)));
 			if (gridSize.X > 0 && y < gridSize.Y && !LevelDocument::IsEmptyEvent(document.GetEvent(x, y))) {
 				_cells[target++] = cell;
 			}
@@ -775,7 +775,7 @@ namespace Jazz2::Editor
 				if (!brush.IsSingle()) {
 					break;
 				}
-				std::int32_t x1 = std::max(std::min(_start.X, _current.X), 0), y1 = std::max(std::min(_start.Y, _current.Y), 0);
+				std::int32_t x1 = std::max<std::int32_t>(std::min<std::int32_t>(_start.X, _current.X), 0), y1 = std::max<std::int32_t>(std::min<std::int32_t>(_start.Y, _current.Y), 0);
 				std::int32_t x2 = std::min(std::max(_start.X, _current.X), gridSize.X - 1), y2 = std::min(std::max(_start.Y, _current.Y), gridSize.Y - 1);
 				SmallVector<Vector2i, 0> cells;
 				for (std::int32_t y = y1; y <= y2; y++) {
@@ -857,7 +857,7 @@ namespace Jazz2::Editor
 		}
 
 		// The events within the tiles of the rectangle, those off the grid by the tile they're in
-		std::int32_t x1 = std::max(std::min(_start.X, _current.X), 0), y1 = std::max(std::min(_start.Y, _current.Y), 0);
+		std::int32_t x1 = std::max<std::int32_t>(std::min<std::int32_t>(_start.X, _current.X), 0), y1 = std::max<std::int32_t>(std::min<std::int32_t>(_start.Y, _current.Y), 0);
 		std::int32_t x2 = std::min(std::max(_start.X, _current.X), gridSize.X - 1), y2 = std::min(std::max(_start.Y, _current.Y), gridSize.Y - 1);
 		auto isInside = [x1, y1, x2, y2](std::int32_t x, std::int32_t y) {
 			return (x >= x1 && x <= x2 && y >= y1 && y <= y2);
@@ -1376,7 +1376,7 @@ namespace Jazz2::Editor
 
 		if (_mode == Mode::PlaceRect) {
 			// The event on every tile it would be placed on
-			Vector2i from(std::max(std::min(_start.X, _current.X), 0), std::max(std::min(_start.Y, _current.Y), 0));
+			Vector2i from(std::max<std::int32_t>(std::min<std::int32_t>(_start.X, _current.X), 0), std::max<std::int32_t>(std::min<std::int32_t>(_start.Y, _current.Y), 0));
 			Vector2i to(std::min(std::max(_start.X, _current.X), gridSize.X - 1), std::min(std::max(_start.Y, _current.Y), gridSize.Y - 1));
 			const EventStamp& brush = _host.GetEventBrush();
 			if (!brush.Items.empty() && std::int64_t(to.X - from.X + 1) * std::int64_t(to.Y - from.Y + 1) <= MaxRectPreviews) {

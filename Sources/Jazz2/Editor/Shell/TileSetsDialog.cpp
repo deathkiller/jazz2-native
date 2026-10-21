@@ -905,7 +905,7 @@ namespace Jazz2::Editor
 			usage->TextFunc = [s]() {
 				const LevelDocument& document = s->GetDocument();
 				std::int32_t staticCount = document.GetStaticTileCount();
-				std::int32_t used = std::max(staticCount, 0) + std::int32_t(document.Animations.size());
+				std::int32_t used = std::max<std::int32_t>(staticCount, 0) + std::int32_t(document.Animations.size());
 				// TRANSLATORS: Bottom of the Tile Sets dialog, the number of tile IDs the level uses and the number it can have
 				String text = _fx("editor", "Tile IDs used: {} of {}", used, document.TileIdSpace);
 				if (used > LevelDocument::ScriptTileIdLimit) {

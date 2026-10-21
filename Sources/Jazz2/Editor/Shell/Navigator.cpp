@@ -87,7 +87,7 @@ namespace Jazz2::Editor
 			DateTime::Tm tm = DateTime::FromUnixMilliseconds(seconds * 1000).Partitioned();
 			char buffer[32];
 			std::int32_t length = std::snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d", tm.Year, tm.Month + 1, tm.Day, tm.Hour, tm.Minute);
-			return String(buffer, std::size_t(std::max(length, 0)));
+			return String(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
 		}
 
 		// The author and when, as a note or a reply shows them

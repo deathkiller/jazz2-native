@@ -483,7 +483,7 @@ namespace Jazz2::Editor
 				previewInfo->TextFunc = [state]() { return DescribePreview(*state); };
 				auto* palette = content->Add<UiPaletteGrid>([state]() -> const std::uint32_t* {
 					return (state->Preview != nullptr ? state->Preview->TileSet.Palette : ContentResolver::Get().GetPalettes().data());
-				}, []() { return -1; }, [](std::int32_t, bool) {});
+				}, []() -> std::int32_t { return -1; }, [](std::int32_t, bool) {});
 				palette->CellSize = 8.0f;
 				palette->Tooltip = _x("editor", "The palette the tile set would have");
 				palette->IsVisibleFunc = [state]() {

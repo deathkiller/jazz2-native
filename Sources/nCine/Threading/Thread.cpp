@@ -335,10 +335,11 @@ namespace nCine
 		return (exitCode == STILL_ACTIVE);
 #else
 		pthread_t handle = _sharedBlock->_handle;
-#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_AMIGAOS4)
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_AMIGAOS4) || \
+		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		// pthread_kill() is available neither in KOS, in AmigaOS 4's newlib nor in libnx (which has
 		// no signals at all, so the function is declared but never defined); the 3DS shim over libctru
-		// has no signals to deliver either
+		// and the one over libogc's threads have no signals to deliver either
 		return (handle != 0);
 #	else
 		return (handle != 0 && pthread_kill(handle, 0) == 0);

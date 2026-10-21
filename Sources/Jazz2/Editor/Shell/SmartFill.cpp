@@ -96,9 +96,9 @@ namespace Jazz2::Editor
 			LayerTiles(const DocumentLayer& layer, const Recti& bounds)
 				: Layer(layer)
 			{
-				std::int32_t x1 = std::max(bounds.X - 1, 0), y1 = std::max(bounds.Y - 1, 0);
+				std::int32_t x1 = std::max<std::int32_t>(bounds.X - 1, 0), y1 = std::max<std::int32_t>(bounds.Y - 1, 0);
 				std::int32_t x2 = std::min(bounds.X + bounds.W + 1, layer.GetWidth()), y2 = std::min(bounds.Y + bounds.H + 1, layer.GetHeight());
-				Area = Recti(x1, y1, std::max(x2 - x1, 0), std::max(y2 - y1, 0));
+				Area = Recti(x1, y1, std::max<std::int32_t>(x2 - x1, 0), std::max<std::int32_t>(y2 - y1, 0));
 				std::size_t size = std::size_t(Area.W) * std::size_t(Area.H);
 				Tiles.reserve(size);
 				for (std::int32_t y = Area.Y; y < Area.Y + Area.H; y++) {

@@ -82,7 +82,7 @@ namespace Jazz2::Editor
 		std::int32_t rows = GetRows(_patternCount);
 		float rowHeight = painter.Px(UiTheme::RowHeight);
 		float legendHeight = painter.Px(UiTheme::Spacing) + rowHeight * LegendRows;
-		float cell = std::floor(std::min(Bounds.W / Columns, (Bounds.H - legendHeight) / std::max(rows, 1)));
+		float cell = std::floor(std::min(Bounds.W / Columns, (Bounds.H - legendHeight) / std::max<std::int32_t>(rows, 1)));
 		if (cell < 6.0f) {
 			return;
 		}

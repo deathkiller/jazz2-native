@@ -51,7 +51,7 @@ namespace Jazz2::Editor
 	{
 		char buffer[16];
 		std::int32_t length = std::snprintf(buffer, sizeof(buffer), "%d", value);
-		return String(buffer, std::size_t(std::max(length, 0)));
+		return String(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
 	}
 
 	StringView GetUnitSuffix(ParamUnit unit)

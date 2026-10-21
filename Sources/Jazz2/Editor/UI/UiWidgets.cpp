@@ -1618,8 +1618,9 @@ namespace Jazz2::Editor
 		OnCommit = [this](StringView text) {
 			String value = text;
 			char* end = nullptr;
-			float parsed = std::strtof(value.data(), &end);
-			// "nan" and "inf" are numbers to strtof(), not to a property
+			// strtod(), as strtof() is C99, which isn't in `std` on every console
+			float parsed = float(std::strtod(value.data(), &end));
+			// "nan" and "inf" are numbers to strtod(), not to a property
 			if (end != value.data() && std::isfinite(parsed) && Setter) {
 				Setter(std::clamp(parsed, MinValue, MaxValue), true);
 			}

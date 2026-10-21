@@ -528,9 +528,9 @@ namespace Jazz2::Editor
 					_cellSize = std::max(1.0f, std::floor(available.X / float(FixedColumns)));
 				} else {
 					_cellSize = context.Px(CellSize);
-					_columns = std::max(1, std::int32_t(available.X / _cellSize));
+					_columns = std::max<std::int32_t>(1, std::int32_t(available.X / _cellSize));
 				}
-				std::int32_t rows = std::max(1, (_count() + _columns - 1) / _columns);
+				std::int32_t rows = std::max<std::int32_t>(1, (_count() + _columns - 1) / _columns);
 				return Vector2f(available.X, rows * _cellSize);
 			}
 

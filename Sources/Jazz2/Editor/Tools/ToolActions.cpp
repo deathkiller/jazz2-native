@@ -773,7 +773,7 @@ namespace Jazz2::Editor::ToolActions
 				}
 				for (std::size_t i = 0; i < current.Tiles.size() && i < current.Present.size(); i++) {
 					if (current.Present[i] && current.Tiles[i] == tile) {
-						current.Weights[i] = std::max(value, 0.0f) / float(std::max(count, 1));
+						current.Weights[i] = std::max(value, 0.0f) / float(std::max<std::int32_t>(count, 1));
 					}
 				}
 			}, 0.0f, 100.0f, 1.0f, 1);

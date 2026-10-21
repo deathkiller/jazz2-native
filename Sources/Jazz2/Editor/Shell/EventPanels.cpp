@@ -356,7 +356,7 @@ namespace Jazz2::Editor
 		float padding = context.Px(2.0f);
 		float chipHeight = context.Px(ChipHeight);
 		float minWidth = std::max(context.Px(ChipWidth * 0.5f), std::ceil(chipHeight + padding * 5.0f + _measuredNameWidth));
-		_columns = std::max(1, std::int32_t(available.X / minWidth));
+		_columns = std::max<std::int32_t>(1, std::int32_t(available.X / minWidth));
 		_chipWidth = std::floor(available.X / float(_columns));
 		_chipHeight = context.Px(ChipHeight);
 		std::int32_t rows = (std::int32_t(_items.size()) + _columns - 1) / _columns;
@@ -389,7 +389,7 @@ namespace Jazz2::Editor
 		const Rectf& clip = painter.GetClip();
 		float clipTop = (clip.H > 0.0f ? clip.Y : Bounds.Y);
 		float clipBottom = (clip.H > 0.0f ? clip.Y + clip.H : Bounds.Y + Bounds.H);
-		std::int32_t firstRow = std::max(0, std::int32_t((clipTop - Bounds.Y) / _chipHeight));
+		std::int32_t firstRow = std::max<std::int32_t>(0, std::int32_t((clipTop - Bounds.Y) / _chipHeight));
 		std::int32_t lastRow = std::int32_t((clipBottom - Bounds.Y) / _chipHeight);
 
 		const EventStamp& brush = _session.GetEventBrush();
@@ -553,7 +553,7 @@ namespace Jazz2::Editor
 		bool brush = (count == 0);
 		// The fields of the event inside of a crate are those of its kind
 		std::uint32_t contents = (hasEvent ? GetContentsSignature(event) : 0);
-		if (type != _shownType || std::min(count, 2) != std::min(_shownCount, 2) || brush != _shownBrush || _shownRevision != EventCatalog::GetRevision() ||
+		if (type != _shownType || std::min<std::int32_t>(count, 2) != std::min<std::int32_t>(_shownCount, 2) || brush != _shownBrush || _shownRevision != EventCatalog::GetRevision() ||
 			contents != _shownContents || HasMixedKinds() != _shownMixedKinds) {
 			Rebuild();
 		}

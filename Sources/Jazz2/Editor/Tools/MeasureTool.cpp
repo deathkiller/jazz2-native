@@ -438,10 +438,10 @@ namespace Jazz2::Editor
 				Vector2f springStart(startCell.X * 32.0f + 16.0f, startCell.Y * 32.0f + 32.0f);
 				SmallVector<Vector2f, 0> path;
 				GetJumpPath(arc, springStart, springDirection, path, collisions);
-				float top = springStart.Y, far = springStart.X;
+				float top = springStart.Y, farthest = springStart.X;
 				for (const Vector2f& p : path) {
 					top = std::min(top, p.Y);
-					far = (springDirection > 0.0f ? std::max(far, p.X) : std::min(far, p.X));
+					farthest = (springDirection > 0.0f ? std::max(farthest, p.X) : std::min(farthest, p.X));
 				}
 				for (Vector2f& p : path) {
 					p = view.WorldToScreen(p);
@@ -449,7 +449,7 @@ namespace Jazz2::Editor
 				painter.Polyline(path, thickness + 1.0f, UiTheme::OverlayCaution, UiLayer::Overlay);
 				char buffer[64];
 				if (horizontal) {
-					std::snprintf(buffer, sizeof(buffer), "%.1f", std::abs(far - springStart.X) / 32.0f);
+					std::snprintf(buffer, sizeof(buffer), "%.1f", std::abs(farthest - springStart.X) / 32.0f);
 					// TRANSLATORS: Shown by the measure tool dragged from a spring, {} is the distance in tiles with one decimal place
 					springText = _fx("editor", "The spring throws the player {} tiles far", buffer);
 				} else {

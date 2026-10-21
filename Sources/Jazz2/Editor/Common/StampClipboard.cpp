@@ -36,8 +36,9 @@ namespace Jazz2::Editor::StampClipboard
 		// Reads a whole number, `false` if there's none or it's out of the range, a comma after it is skipped
 		bool ReadNumber(const char*& p, std::int64_t min, std::int64_t max, std::int64_t& value)
 		{
+			// Every range fits into 32 bits, so strtol() is enough - strtoll() is C99, which isn't in `std` on every console
 			char* end;
-			long long number = std::strtoll(p, &end, 10);
+			long number = std::strtol(p, &end, 10);
 			if (end == p || number < min || number > max) {
 				return false;
 			}

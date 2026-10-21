@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#if (defined(WITH_EDITOR) && defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
-
 #include "../../../Main.h"
+
+#if (defined(WITH_EDITOR) && defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include <Containers/Function.h>
 #include <Containers/String.h>

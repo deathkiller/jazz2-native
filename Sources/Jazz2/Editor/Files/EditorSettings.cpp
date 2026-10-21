@@ -65,7 +65,7 @@ namespace Jazz2::Editor
 		{
 			Json::Value value(Json::arrayValue);
 			for (std::uint16_t number : numbers) {
-				value.append(std::int32_t(number));
+				value.append(Json::Int(number));
 			}
 			return value;
 		}
@@ -168,19 +168,19 @@ namespace Jazz2::Editor
 		doc["UiScale"] = UiScale;
 		doc["ShowGrid"] = ShowGrid;
 		doc["PauseLayerMovement"] = PauseLayerMovement;
-		doc["TileColumns"] = TilePickerColumns;
+		doc["TileColumns"] = Json::Int(TilePickerColumns);
 		doc["RightPanelWidth"] = RightPanelWidth;
 		doc["LayerListHeight"] = LayerListHeight;
 		doc["PickerPanelWidth"] = PickerPanelWidth;
-		doc["Layout"] = Layout;
+		doc["Layout"] = Json::Int(Layout);
 		doc["Expert"] = Expert;
 		doc["PickerPanelPlacement"] = WritePlacement(PickerPanelPlacement);
 		doc["RightPanelPlacement"] = WritePlacement(RightPanelPlacement);
-		doc["PlayCharacter"] = PlayCharacter;
-		doc["PlayDifficulty"] = PlayDifficulty;
-		doc["PlayGameMode"] = PlayGameMode;
-		doc["PlayPlayerCount"] = PlayPlayerCount;
-		doc["Theme"] = Theme;
+		doc["PlayCharacter"] = Json::Int(PlayCharacter);
+		doc["PlayDifficulty"] = Json::Int(PlayDifficulty);
+		doc["PlayGameMode"] = Json::Int(PlayGameMode);
+		doc["PlayPlayerCount"] = Json::Int(PlayPlayerCount);
+		doc["Theme"] = Json::Int(Theme);
 		doc["ReducedMotion"] = ReducedMotion;
 		// Written even when empty, so it can be found in the file, it's set only there
 		doc["ScriptEditor"] = Json::Value(ScriptEditor.data(), ScriptEditor.data() + ScriptEditor.size());
@@ -190,9 +190,9 @@ namespace Jazz2::Editor
 			tools["IgnoreFlips"] = Tools.IgnoreFlips;
 			tools["OnlyEmpty"] = Tools.OnlyEmpty;
 			tools["WandGlobal"] = Tools.WandGlobal;
-			tools["Shape"] = Tools.Shape;
-			tools["EventMode"] = Tools.EventMode;
-			tools["MeasureArcs"] = Tools.MeasureArcs;
+			tools["Shape"] = Json::Int(Tools.Shape);
+			tools["EventMode"] = Json::Int(Tools.EventMode);
+			tools["MeasureArcs"] = Json::Int(Tools.MeasureArcs);
 			tools["MeasureCollisions"] = Tools.MeasureCollisions;
 			tools["MirrorSwapTeams"] = Tools.MirrorSwapTeams;
 			doc["Tools"] = tools;
@@ -203,13 +203,13 @@ namespace Jazz2::Editor
 			playTest["ShowHitboxes"] = PlayTest.ShowHitboxes;
 			playTest["ShowEventZones"] = PlayTest.ShowEventZones;
 			playTest["ShowDeaths"] = PlayTest.ShowDeaths;
-			playTest["ReachCharacter"] = PlayTest.ReachCharacter;
+			playTest["ReachCharacter"] = Json::Int(PlayTest.ReachCharacter);
 			playTest["ReachFromMpStarts"] = PlayTest.ReachFromMpStarts;
 			doc["PlayTest"] = playTest;
 		}
 		doc["ShowScreenFrame"] = ShowScreenFrame;
-		doc["ScreenFrameKind"] = ScreenFrameKind;
-		doc["CheckLevelFilter"] = CheckLevelFilter;
+		doc["ScreenFrameKind"] = Json::Int(ScreenFrameKind);
+		doc["CheckLevelFilter"] = Json::Int(CheckLevelFilter);
 		doc["RecentEvents"] = WriteNumbers(RecentEvents);
 		doc["FavoriteEvents"] = WriteNumbers(FavoriteEvents);
 		Json::Value& tileFavorites = doc["TileFavorites"];

@@ -6,6 +6,11 @@
 #include "../../Input/IInputEventHandler.h"
 #include "../../Input/JoyMapping.h"
 
+namespace nCine
+{
+	const std::int32_t IInputManager::MaxNumJoysticks = Backends::LibretroInputManager::NumPads;
+}
+
 namespace nCine::Backends
 {
 	namespace

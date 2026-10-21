@@ -1345,7 +1345,7 @@ namespace Jazz2::Editor
 			return false;
 		}
 		// The ground laid again reaches as deep as it's selected
-		spline.Depth = std::min(deepest, 255);
+		spline.Depth = std::min<std::int32_t>(deepest, 255);
 
 		// Points on a straight line between their neighbors aren't needed
 		for (std::size_t i = 1; i + 1 < spline.Points.size(); ) {
