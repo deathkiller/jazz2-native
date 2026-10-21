@@ -3,7 +3,10 @@
 #include "JJ2Block.h"
 #include "../Formats/TileSetFile.h"
 
+#include <Containers/SmallVector.h>
 #include <IO/FileSystem.h>
+
+#include <algorithm>
 
 using namespace Death::IO;
 
@@ -17,6 +20,76 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
+		BlockSizes sizes;
+		if (!ReadHeader(s, strictParser, sizes)) {
+			return false;
+		}
+
+		JJ2Block infoBlock(s, sizes.InfoPacked, sizes.InfoUnpacked);
+		std::uint32_t palette[PaletteSize];
+		SmallVector<TileOffsets, 0> offsets;
+		std::int32_t tileCount = ReadMetadata(infoBlock, palette, offsets);
+
+		// The tiles go straight into the converted form, which is then written as it is (see Convert())
+		_data.Resize(tileCount);
+		ConvertPalette(palette, _data.Palette);
+		{
+			// The blocks are read one after another, the images are done with before the masks are unpacked
+			JJ2Block imageBlock(s, sizes.ImagePacked, sizes.ImageUnpacked);
+			JJ2Block alphaBlock(s, sizes.AlphaPacked, sizes.AlphaUnpacked);
+			for (std::int32_t i = 0; i < tileCount; i++) {
+				_data.TrueColor[i] = ((offsets[i].Image & Is32bitTile) != 0 ? 1 : 0);
+				DecodeTileImage(imageBlock, alphaBlock, offsets[i].Image, offsets[i].Alpha,
+					&_data.Images[std::size_t(i) * Formats::TileSetData::ImageBytesPerTile]);
+			}
+		}
+
+		JJ2Block maskBlock(s, sizes.MaskPacked, sizes.MaskUnpacked);
+		LoadMaskData(maskBlock, offsets);
+
+		return true;
+	}
+
+	bool JJ2Tileset::ConvertTiles(StringView path, ArrayView<const std::int32_t> tiles, Formats::TileSetData& data, std::int32_t& tileCount)
+	{
+		auto s = fs::Open(path, FileAccess::Read);
+		if (!s->IsValid()) {
+			LOGE("Cannot open file \"{}\" for reading", path);
+			return false;
+		}
+
+		// Only the header is kept of the tile set, the tiles aren't loaded into it
+		JJ2Tileset tileset;
+		BlockSizes sizes;
+		if (!tileset.ReadHeader(s, false, sizes)) {
+			return false;
+		}
+
+		// The collision masks aren't needed, so their block isn't even read
+		JJ2Block infoBlock(s, sizes.InfoPacked, sizes.InfoUnpacked);
+		JJ2Block imageBlock(s, sizes.ImagePacked, sizes.ImageUnpacked);
+		JJ2Block alphaBlock(s, sizes.AlphaPacked, sizes.AlphaUnpacked);
+
+		std::uint32_t palette[PaletteSize];
+		SmallVector<TileOffsets, 0> offsets;
+		tileCount = tileset.ReadMetadata(infoBlock, palette, offsets);
+
+		data.Resize(std::int32_t(tiles.size()));
+		ConvertPalette(palette, data.Palette);
+		for (std::size_t i = 0; i < tiles.size(); i++) {
+			std::int32_t tile = tiles[i];
+			if (tile < 0 || tile >= tileCount) {
+				continue;
+			}
+			data.TrueColor[i] = ((offsets[tile].Image & Is32bitTile) != 0 ? 1 : 0);
+			DecodeTileImage(imageBlock, alphaBlock, offsets[tile].Image, offsets[tile].Alpha, &data.Images[i * Formats::TileSetData::ImageBytesPerTile]);
+		}
+
+		return true;
+	}
+
+	bool JJ2Tileset::ReadHeader(std::unique_ptr<Stream>& s, bool strictParser, BlockSizes& sizes)
+	{
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
 
@@ -41,161 +114,92 @@ namespace Jazz2::Compatibility
 		// so either the variant is something else or the CRC is not applied to the whole file but on a part
 		/*int recordedCRC =*/ headerBlock.ReadInt32();
 
-		// Read the lengths, uncompress the blocks and bail if any block could not be uncompressed
-		// This could look better without all the copy-paste, but meh.
-		std::int32_t infoBlockPackedSize = headerBlock.ReadInt32();
-		std::int32_t infoBlockUnpackedSize = headerBlock.ReadInt32();
-		std::int32_t imageBlockPackedSize = headerBlock.ReadInt32();
-		std::int32_t imageBlockUnpackedSize = headerBlock.ReadInt32();
-		std::int32_t alphaBlockPackedSize = headerBlock.ReadInt32();
-		std::int32_t alphaBlockUnpackedSize = headerBlock.ReadInt32();
-		std::int32_t maskBlockPackedSize = headerBlock.ReadInt32();
-		std::int32_t maskBlockUnpackedSize = headerBlock.ReadInt32();
-
-		JJ2Block infoBlock(s, infoBlockPackedSize, infoBlockUnpackedSize);
-		JJ2Block imageBlock(s, imageBlockPackedSize, imageBlockUnpackedSize);
-		JJ2Block alphaBlock(s, alphaBlockPackedSize, alphaBlockUnpackedSize);
-		JJ2Block maskBlock(s, maskBlockPackedSize, maskBlockUnpackedSize);
-
-		LoadMetadata(infoBlock);
-		LoadImageData(imageBlock, alphaBlock);
-		LoadMaskData(maskBlock);
-
+		// Read the lengths, the blocks are uncompressed by the caller
+		sizes.InfoPacked = headerBlock.ReadInt32();
+		sizes.InfoUnpacked = headerBlock.ReadInt32();
+		sizes.ImagePacked = headerBlock.ReadInt32();
+		sizes.ImageUnpacked = headerBlock.ReadInt32();
+		sizes.AlphaPacked = headerBlock.ReadInt32();
+		sizes.AlphaUnpacked = headerBlock.ReadInt32();
+		sizes.MaskPacked = headerBlock.ReadInt32();
+		sizes.MaskUnpacked = headerBlock.ReadInt32();
 		return true;
 	}
 
-	void JJ2Tileset::LoadMetadata(JJ2Block& block)
+	std::int32_t JJ2Tileset::ReadMetadata(JJ2Block& block, std::uint32_t* palette, SmallVectorImpl<TileOffsets>& offsets) const
 	{
-		for (std::int32_t i = 0; i < 256; i++) {
-			std::uint32_t color = block.ReadUInt32();
-			color = (color & 0x00ffffff) | ((255 - ((color >> 24) & 0xff)) << 24);
-			_palette[i] = color;
-		}
+		ReadPalette(block, palette);
 
-		_tileCount = block.ReadInt32();
-
-		// TODO: Use _tileCount instead of maxTiles ???
+		// The file has a record for every tile the format can have, only the ones of the tile set are kept
 		std::int32_t maxTiles = GetMaxSupportedTiles();
-		_tiles = std::make_unique<TilesetTileSection[]>(maxTiles);
+		std::int32_t tileCount = std::clamp<std::int32_t>(block.ReadInt32(), 0, maxTiles);
+		std::int32_t unusedTiles = maxTiles - tileCount;
+		offsets.resize_for_overwrite(tileCount);
 
-		for (std::int32_t i = 0; i < maxTiles; i++) {
-			_tiles[i].Opaque = block.ReadBool();
+		// Whether the tiles are opaque, and a block of unknown values, skip
+		block.DiscardBytes(maxTiles + maxTiles);
+
+		for (std::int32_t i = 0; i < tileCount; i++) {
+			offsets[i].Image = block.ReadUInt32();
 		}
-
-		// Block of unknown values, skip
-		block.DiscardBytes(maxTiles);
-
-		for (std::int32_t i = 0; i < maxTiles; i++) {
-			_tiles[i].ImageDataOffset = block.ReadUInt32();
-		}
-
-		// Block of unknown values, skip
-		block.DiscardBytes(4 * maxTiles);
-
-		for (std::int32_t i = 0; i < maxTiles; i++) {
-			_tiles[i].AlphaDataOffset = block.ReadUInt32();
-		}
+		block.DiscardBytes(4 * unusedTiles);
 
 		// Block of unknown values, skip
 		block.DiscardBytes(4 * maxTiles);
 
-		for (std::int32_t i = 0; i < maxTiles; i++) {
-			_tiles[i].MaskDataOffset = block.ReadUInt32();
+		for (std::int32_t i = 0; i < tileCount; i++) {
+			offsets[i].Alpha = block.ReadUInt32();
 		}
+		block.DiscardBytes(4 * unusedTiles);
+
+		// Block of unknown values, skip
+		block.DiscardBytes(4 * maxTiles);
+
+		for (std::int32_t i = 0; i < tileCount; i++) {
+			offsets[i].Mask = block.ReadUInt32();
+		}
+		block.DiscardBytes(4 * unusedTiles);
 
 		// We don't care about the flipped masks, those are generated on runtime
 		block.DiscardBytes(4 * maxTiles);
+
+		return tileCount;
 	}
 
-	void JJ2Tileset::LoadImageData(JJ2Block& imageBlock, JJ2Block& alphaBlock)
+	void JJ2Tileset::LoadMaskData(JJ2Block& block, ArrayView<const TileOffsets> offsets)
 	{
-		std::uint8_t imageBuffer[BlockSize * BlockSize * 4];
-		std::uint8_t maskBuffer[BlockSize * BlockSize / 8];
+		constexpr std::int32_t MaskBytes = Formats::TileSetData::MaskBytesPerTile;
+		std::int32_t tileCount = _data.TileCount;
+		auto mask = [this](std::int32_t tileIdx) {
+			return &_data.Masks[std::size_t(tileIdx) * MaskBytes];
+		};
 
-		std::int32_t maxTiles = GetMaxSupportedTiles();
-		for (std::int32_t i = 0; i < maxTiles; i++) {
-			auto& tile = _tiles[i];
-
-			imageBlock.SeekTo(tile.ImageDataOffset & ~Is32bitTile);
-
-			if (tile.ImageDataOffset & Is32bitTile) {
-				// 32-bit image
-				imageBlock.ReadRawBytes(imageBuffer, BlockSize * BlockSize * 4);
-			} else {
-				// 8-bit palette image
-				imageBlock.ReadRawBytes(imageBuffer, BlockSize * BlockSize);
-			}
-
-			alphaBlock.SeekTo(tile.AlphaDataOffset);
-			alphaBlock.ReadRawBytes(maskBuffer, sizeof(maskBuffer));
-
-			if (tile.ImageDataOffset & Is32bitTile) {
-				std::memcpy(tile.Image, imageBuffer, BlockSize * BlockSize * 4);
-			} else {
-				for (std::int32_t j = 0; j < (BlockSize * BlockSize); j++) {
-					std::uint8_t idx = imageBuffer[j];
-					if (((maskBuffer[j / 8] >> (j % 8)) & 0x01) == 0x00) {
-						// Empty mask
-						idx = 0;
-					}
-
-					tile.Image[j] = idx;
-				}
-			}
-		}
-	}
-
-	void JJ2Tileset::LoadMaskData(JJ2Block& block)
-	{
-		//std::uint8_t maskBuffer[BlockSize * BlockSize / 8];
-
-		std::int32_t maxTiles = GetMaxSupportedTiles();
-		for (std::int32_t i = 0; i < maxTiles; i++) {
-			auto& tile = _tiles[i];
-
-			block.SeekTo(tile.MaskDataOffset);
-			/*block.ReadRawBytes(maskBuffer, sizeof(maskBuffer));
-
-			for (std::int32_t j = 0; j < 128; j++) {
-				std::uint8_t idx = maskBuffer[j];
-				for (std::int32_t k = 0; k < 8; k++) {
-					std::int32_t pixelIdx = 8 * j + k;
-					std::int32_t x = pixelIdx % BlockSize;
-					std::int32_t y = pixelIdx / BlockSize;
-					if (((idx >> k) & 0x01) == 0) {
-						tile.Mask[y * BlockSize + x] = 0;
-					} else {
-						tile.Mask[y * BlockSize + x] = 1;
-					}
-				}
-			}*/
-
-			block.ReadRawBytes(tile.Mask, sizeof(tile.Mask));
+		for (std::int32_t i = 0; i < tileCount; i++) {
+			block.SeekTo(offsets[i].Mask);
+			block.ReadRawBytes(mask(i), MaskBytes);
 		}
 
 		// Try to fix some known bugs in tilesets
-		if (_name == "Castle 1"_s || _name == "Castle 1 Night"_s) {
+		if ((_name == "Castle 1"_s || _name == "Castle 1 Night"_s) && tileCount > 189) {
 			LOGI("Applying \"{}\" tileset mask fix", _name);
 			// Spikes with empty mask
-			auto& spikesWithEmptyMask = _tiles[189];
-			auto& spikesWithCorrectMask = _tiles[184];
-			std::memcpy(spikesWithEmptyMask.Mask, spikesWithCorrectMask.Mask, sizeof(spikesWithEmptyMask.Mask));
-		} else if (_name == "Inferno Night"_s) {
+			std::memcpy(mask(189), mask(184), MaskBytes);
+		} else if (_name == "Inferno Night"_s && tileCount > 156) {
 			LOGI("Applying \"{}\" tileset mask fix", _name);
 			// Solid tiles with empty mask
 			static const std::int32_t SolidTilesWithEmptyMask[] = { 142, 143, 146, 152, 153, 156 };
 			for (std::int32_t tileIdx : SolidTilesWithEmptyMask) {
-				std::memset(_tiles[tileIdx].Mask, 0xFF, sizeof(_tiles[tileIdx].Mask));
+				std::memset(mask(tileIdx), 0xFF, MaskBytes);
 			}
-		} else if (_name == "Town House 1"_s || _name == "Town House 2"_s) {
+		} else if ((_name == "Town House 1"_s || _name == "Town House 2"_s) && tileCount > 829) {
 			LOGI("Applying \"{}\" tileset mask fix", _name);
 			// Vine/chain with empty mask
 			for (std::int32_t tileIdx = 826; tileIdx <= 829; tileIdx++) {
-				auto& mask = _tiles[tileIdx].Mask;
-				if (std::all_of(mask, mask + sizeof(mask), [](std::uint8_t p) { return p == 0; })) {
+				std::uint8_t* tileMask = mask(tileIdx);
+				if (std::all_of(tileMask, tileMask + MaskBytes, [](std::uint8_t p) { return p == 0; })) {
 					for (std::int32_t y = 6; y < 6 + 3; y++) {
 						for (std::int32_t x = 0; x < BlockSize / 8; x++) {
-							mask[y * (BlockSize / 8) + x] = 0xFF;
+							tileMask[y * (BlockSize / 8) + x] = 0xFF;
 						}
 					}
 				}
@@ -208,46 +212,79 @@ namespace Jazz2::Compatibility
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
-		Formats::TileSetData data;
-		Convert(data);
-
 		// The image content goes in LZ4 blocks of one band of tiles each, see JJ2Anims::WriteImageContentLz4()
 		bool lz4 = false;
 #if defined(WITH_LZ4)
 		lz4 = (JJ2Anims::PreferredImageCompression == JJ2Anims::ImageCompression::Lz4);
 #endif
-		Formats::TileSetFile::Write(*so, data, lz4);
+		Formats::TileSetFile::Write(*so, _data, lz4);
 	}
 
 	void JJ2Tileset::Convert(Formats::TileSetData& data) const
 	{
-		data.Resize(_tileCount);
+		data = _data;
+	}
 
-		// Palette
-		std::memcpy(data.Palette, _palette, sizeof(_palette));
+	void JJ2Tileset::ReadPalette(JJ2Block& block, std::uint32_t* palette)
+	{
+		for (std::int32_t i = 0; i < PaletteSize; i++) {
+			std::uint32_t color = block.ReadUInt32();
+			color = (color & 0x00ffffff) | ((255 - ((color >> 24) & 0xff)) << 24);
+			palette[i] = color;
+		}
+	}
+
+	void JJ2Tileset::ConvertPalette(const std::uint32_t* palette, std::uint32_t* target)
+	{
+		std::memcpy(target, palette, PaletteSize * sizeof(std::uint32_t));
 
 		bool hasAlphaChannel = false;
-		for (std::int32_t i = 1; i < std::int32_t(arraySize(data.Palette)); i++) {
-			if ((data.Palette[i] & 0xff000000) != 0) {
+		for (std::int32_t i = 1; i < PaletteSize; i++) {
+			if ((target[i] & 0xff000000) != 0) {
 				hasAlphaChannel = true;
 				break;
 			}
 		}
 		if (!hasAlphaChannel) {
-			for (std::int32_t i = 1; i < std::int32_t(arraySize(data.Palette)); i++) {
-				data.Palette[i] |= 0xff000000;
+			for (std::int32_t i = 1; i < PaletteSize; i++) {
+				target[i] |= 0xff000000;
 			}
 		}
 
 		// The first palette entry is fixed to transparent black
-		data.Palette[0] = 0x00000000;
+		target[0] = 0x00000000;
+	}
 
-		for (std::int32_t i = 0; i < _tileCount; i++) {
-			const auto& tile = _tiles[i];
-			data.TrueColor[i] = ((tile.ImageDataOffset & Is32bitTile) != 0 ? 1 : 0);
-			// An 8-bit tile keeps its palette indices in the first part of the image, as TileSetData expects
-			std::memcpy(&data.Images[std::size_t(i) * Formats::TileSetData::ImageBytesPerTile], tile.Image, sizeof(tile.Image));
-			std::memcpy(&data.Masks[std::size_t(i) * Formats::TileSetData::MaskBytesPerTile], tile.Mask, sizeof(tile.Mask));
+	void JJ2Tileset::DecodeTileImage(JJ2Block& imageBlock, JJ2Block& alphaBlock, std::uint32_t imageOffset, std::uint32_t alphaOffset, std::uint8_t* image)
+	{
+		std::uint8_t imageBuffer[BlockSize * BlockSize * 4];
+		std::uint8_t maskBuffer[BlockSize * BlockSize / 8];
+
+		imageBlock.SeekTo(imageOffset & ~Is32bitTile);
+
+		if (imageOffset & Is32bitTile) {
+			// 32-bit image
+			imageBlock.ReadRawBytes(imageBuffer, BlockSize * BlockSize * 4);
+		} else {
+			// 8-bit palette image
+			imageBlock.ReadRawBytes(imageBuffer, BlockSize * BlockSize);
+		}
+
+		alphaBlock.SeekTo(alphaOffset);
+		alphaBlock.ReadRawBytes(maskBuffer, sizeof(maskBuffer));
+
+		if (imageOffset & Is32bitTile) {
+			std::memcpy(image, imageBuffer, BlockSize * BlockSize * 4);
+		} else {
+			for (std::int32_t j = 0; j < (BlockSize * BlockSize); j++) {
+				std::uint8_t idx = imageBuffer[j];
+				if (((maskBuffer[j / 8] >> (j % 8)) & 0x01) == 0x00) {
+					// Empty mask
+					idx = 0;
+				}
+
+				image[j] = idx;
+			}
 		}
 	}
 }

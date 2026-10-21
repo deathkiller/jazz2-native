@@ -3,18 +3,16 @@
 #include "../../Main.h"
 #include "JJ2Block.h"
 #include "JJ2Version.h"
+#include "../Formats/TileSetFile.h"
 
 #include <memory>
 
+#include <Containers/ArrayView.h>
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
 using namespace Death::Containers;
-
-namespace Jazz2::Formats
-{
-	struct TileSetData;
-}
 
 namespace Jazz2::Compatibility
 {
@@ -35,15 +33,25 @@ namespace Jazz2::Compatibility
 		/** @} */
 
 		/** @brief Creates a new instance */
-		JJ2Tileset() : _version(JJ2Version::Unknown), _tileCount(0) { }
+		JJ2Tileset() : _version(JJ2Version::Unknown) { }
 
 		/** @brief Opens and parses the specified tile set file */
 		bool Open(StringView path, bool strictParser);
 
 		/** @brief Converts the tile set and writes the result to the specified target path */
 		void Convert(StringView targetPath) const;
-		/** @brief Converts the tile set into memory, the same data the overload above writes */
+		/** @brief Copies the converted tile set, the same data the overload above writes */
 		void Convert(Formats::TileSetData& data) const;
+
+		/**
+		 * @brief Converts only some tiles of a tile set file into memory
+		 *
+		 * The tiles of @p tiles, indices into the tile set, go into @p data in the same order, as @ref Convert() converts
+		 * them but without their collision masks; one past the end of the tile set stays empty. @p tileCount is set to the
+		 * number of tiles of the whole tile set. Unlike @ref Open(), which keeps the whole tile set, it takes little more
+		 * memory than the tiles it returns, which is what the previews of the levels need where memory is scarce.
+		 */
+		static bool ConvertTiles(StringView path, ArrayView<const std::int32_t> tiles, Formats::TileSetData& data, std::int32_t& tileCount);
 
 		/** @brief Returns maximum number of supported tiles */
 		std::int32_t GetMaxSupportedTiles() const {
@@ -53,14 +61,18 @@ namespace Jazz2::Compatibility
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		struct TilesetTileSection {
-			bool Opaque;
-			std::uint32_t ImageDataOffset;
-			std::uint32_t AlphaDataOffset;
-			std::uint32_t MaskDataOffset;
+		struct TileOffsets {
+			std::uint32_t Image;
+			std::uint32_t Alpha;
+			std::uint32_t Mask;
+		};
 
-			std::uint8_t Image[BlockSize * BlockSize * 4];
-			std::uint8_t Mask[BlockSize * BlockSize / 8];
+		// Sizes of the blocks of the file, packed and unpacked
+		struct BlockSizes {
+			std::int32_t InfoPacked, InfoUnpacked;
+			std::int32_t ImagePacked, ImageUnpacked;
+			std::int32_t AlphaPacked, AlphaUnpacked;
+			std::int32_t MaskPacked, MaskUnpacked;
 		};
 #endif
 
@@ -69,12 +81,15 @@ namespace Jazz2::Compatibility
 
 		String _name;
 		JJ2Version _version;
-		std::uint32_t _palette[PaletteSize];
-		std::unique_ptr<TilesetTileSection[]> _tiles;
-		std::int32_t _tileCount;
+		// The tiles are converted as they're read, so a tile set is in memory only once, also while it's written
+		Formats::TileSetData _data;
 
-		void LoadMetadata(JJ2Block& block);
-		void LoadImageData(JJ2Block& imageBlock, JJ2Block& alphaBlock);
-		void LoadMaskData(JJ2Block& block);
+		bool ReadHeader(std::unique_ptr<Stream>& s, bool strictParser, BlockSizes& sizes);
+		std::int32_t ReadMetadata(JJ2Block& block, std::uint32_t* palette, SmallVectorImpl<TileOffsets>& offsets) const;
+		void LoadMaskData(JJ2Block& block, ArrayView<const TileOffsets> offsets);
+
+		static void ReadPalette(JJ2Block& block, std::uint32_t* palette);
+		static void ConvertPalette(const std::uint32_t* palette, std::uint32_t* target);
+		static void DecodeTileImage(JJ2Block& imageBlock, JJ2Block& alphaBlock, std::uint32_t imageOffset, std::uint32_t alphaOffset, std::uint8_t* image);
 	};
 }

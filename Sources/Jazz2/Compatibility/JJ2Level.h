@@ -118,9 +118,11 @@ namespace Jazz2::Compatibility
 		/**
 		 * @brief Converts the level and writes the result to the specified target path
 		 *
-		 * With @p tilesetLookup, which returns an original tile set of a name converted into memory, or `nullptr` if
-		 * there's no such tile set, the level gets a preview drawn with them (see @ref Formats::LevelPreview). A level
-		 * whose default tile set isn't there gets none, the tiles of an extra tile set that isn't there are left out.
+		 * With @p tilesetLookup, which converts tiles of an original tile set of a name into memory, or returns `nullptr`
+		 * if there's no such tile set, the level gets a preview drawn with them (see @ref Formats::LevelPreview). It's
+		 * given the indices of the tiles the preview takes, sorted, returns them in the same order (one past the end of
+		 * the tile set empty) and sets the last argument to the number of tiles of the whole tile set. A level whose
+		 * default tile set isn't there gets none, the tiles of an extra tile set that isn't there are left out.
 		 *
 		 * With @p textureLookup, which fills @ref Formats::TexturedLayerChunk::TextureSize ×
 		 * @ref Formats::TexturedLayerChunk::TextureSize palette indices with a texture of JJ2+ by its number
@@ -129,7 +131,7 @@ namespace Jazz2::Compatibility
 		 * smooth noise in the same colors, which ripples a reflection alike.
 		 */
 		void Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion = {},
-			Function<std::shared_ptr<const Formats::TileSetData>(StringView)>&& tilesetLookup = {},
+			Function<std::shared_ptr<const Formats::TileSetData>(StringView, ArrayView<const std::int32_t>, std::int32_t&)>&& tilesetLookup = {},
 			Function<bool(std::int32_t, std::uint8_t*)>&& textureLookup = {});
 		/** @brief Marks the level text with the specified ID as a level token */
 		void AddLevelTokenTextID(std::uint8_t textId);

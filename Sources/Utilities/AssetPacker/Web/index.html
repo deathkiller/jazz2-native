@@ -5,183 +5,215 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jazz² Resurrection Content Swapper</title>
 <meta name="description" content="Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast, PlayStation 2 or GameCube image of Jazz² Resurrection, right in the browser.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,400i,600,600i%7CSource+Code+Pro:400,400i,600&amp;subset=latin-ext">
 <style>
+	/* Follows the m.css dark theme of the documentation */
 	:root {
-		--bg: #f6f5f2;
-		--panel: #ffffff;
-		--text: #1d1d1f;
-		--muted: #5f6368;
-		--border: #d9d6cf;
-		--accent: #0077b6;
-		--accent-text: #ffffff;
-		--ok: #1e7f3c;
-		--error: #b3261e;
-		--log-bg: #1b1b1f;
-		--log-text: #e3e3e6;
-		--log-error: #ff8a80;
-		--drop: #e3f3fb;
+		color-scheme: dark;
+		--bg: #2f363f;
+		--text: #dcdcdc;
+		--muted: #acacac;
+		--line: #405363;
+		--link: #5b9dd9;
+		--link-active: #a5c9ea;
+		--heading: #a5c9ea;
+		--header-bg: #22272e;
+		--note-bg: #34424d;
+		--console-bg: #1a1c1d;
+		--ok: #3bd267;
+		--error: #ff9391;
 	}
-	@media (prefers-color-scheme: dark) {
-		:root {
-			--bg: #141416;
-			--panel: #1e1e22;
-			--text: #ececef;
-			--muted: #a0a0a8;
-			--border: #34343a;
-			--accent: #4cc9f0;
-			--accent-text: #141416;
-			--ok: #6ad48a;
-			--error: #ff8a80;
-			--log-bg: #0e0e10;
-			--drop: #12303d;
-		}
-	}
-	* { box-sizing: border-box; }
+	*, ::before, ::after { box-sizing: border-box; }
+	html { background: var(--bg); }
 	body {
 		margin: 0;
 		background: var(--bg);
 		color: var(--text);
-		font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+		font: 16px 'Source Sans Pro', sans-serif;
 	}
+	a { color: var(--link); }
+	a:hover, a:focus, a:active { color: var(--link-active); }
+	code, pre { font-family: 'Source Code Pro', monospace; font-size: 0.9em; color: #e6e6e6; }
+	code { background: #282e36; padding: 0.125rem; }
+	[hidden] { display: none !important; }
+	.backdrop {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		width: 100%;
+		max-width: 1930px;
+		text-align: right;
+		pointer-events: none;
+		mix-blend-mode: screen;
+	}
+	.backdrop::after {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: linear-gradient(180deg, transparent 50%, #000000 95%);
+		z-index: 2;
+	}
+	.backdrop video {
+		position: relative;
+		width: 100%;
+		max-width: 1280px;
+		z-index: 1;
+		opacity: 0.4;
+	}
+	@media only screen and (max-width: 940px) {
+		.backdrop video { display: none; }
+	}
+	body > header > nav {
+		background: var(--header-bg);
+		border-bottom: 1px solid #1a1d1f;
+		box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+		padding: 0.25rem 1rem;
+		line-height: 2.5rem;
+		font-size: 1.125rem;
+		font-weight: 600;
+	}
+	body > header a { color: #ffffff; text-decoration: none; }
+	body > header a:hover, body > header a:focus { color: var(--link-active); }
+	body > header .breadcrumb { color: #747474; margin: 0 0.25rem; }
+	body > header .thin { font-weight: normal; }
 	main {
-		max-width: 760px;
+		max-width: 47rem;
 		margin: 0 auto;
-		padding: 32px 16px 48px;
+		padding: 2rem 1rem 0.5rem;
 	}
-	h1 {
-		font-size: 1.6rem;
-		margin: 0 0 4px;
-	}
-	.lead {
-		color: var(--muted);
-		margin: 0 0 24px;
-	}
-	.step {
-		background: var(--panel);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		padding: 16px 18px;
-		margin-bottom: 16px;
-	}
-	.step h2 {
-		font-size: 1rem;
-		margin: 0 0 4px;
-	}
-	.step p {
-		margin: 0 0 12px;
-		color: var(--muted);
-		font-size: 0.92rem;
-	}
+	h2 { margin: 0 0 0.5rem; font-size: 1.17rem; font-weight: 600; color: var(--heading); }
+	p { margin: 0 0 1rem; text-align: justify; }
+	.lead { color: #f0f0f0; }
+	.step { margin-bottom: 1.5rem; }
 	.drop {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 12px;
-		border: 2px dashed var(--border);
-		border-radius: 10px;
-		padding: 14px;
-		transition: background 0.15s, border-color 0.15s;
+		gap: 0.75rem;
+		border: 0.125rem dashed var(--line);
+		border-radius: 0.2rem;
+		padding: 0.875rem;
 	}
-	.drop.over {
-		background: var(--drop);
-		border-color: var(--accent);
-	}
-	.drop .hint {
-		color: var(--muted);
-		font-size: 0.9rem;
-	}
+	.drop.ok { border-style: solid; border-color: #2a703f; background: rgba(42, 112, 63, 0.2); }
+	.drop.bad { border-style: solid; border-color: #702b2a; background: rgba(112, 43, 42, 0.25); }
+	.drop.over { border-style: dashed; border-color: var(--link); background: #2a4f70; }
+	.drop .hint, .option small { color: var(--muted); }
 	.chosen {
-		margin-top: 10px;
-		font-size: 0.92rem;
+		flex: 1;
+		min-width: 12rem;
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
 		overflow-wrap: anywhere;
 	}
-	.chosen.ok { color: var(--ok); }
-	.chosen.bad { color: var(--error); }
+	.chosen::before {
+		content: "";
+		flex: none;
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 50%;
+		background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 12.5l3.25 3.25L17 9' fill='none' stroke='%232f363f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+	}
+	.drop.bad .chosen::before {
+		background: #cd3431 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8.5 8.5l7 7M15.5 8.5l-7 7' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+	}
+	.chosen strong { display: block; font-weight: 600; color: #ffffff; }
+	.chosen small { display: block; color: var(--muted); font-size: 0.85rem; }
+	.drop.bad .chosen small { color: var(--error); }
 	.options {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 0.5rem;
+		background: var(--note-bg);
+		border-radius: 0.2rem;
+		box-shadow: 0 3px 8px #20242b;
+		padding: 1rem;
 	}
-	.options + .options {
-		margin-top: 12px;
-		padding-top: 12px;
-		border-top: 1px solid var(--border);
-	}
-	.option {
-		display: flex;
-		align-items: flex-start;
-		gap: 10px;
-		cursor: pointer;
-	}
-	.option input {
-		margin: 4px 0 0;
-		accent-color: var(--accent);
-	}
-	.option small {
-		display: block;
-		color: var(--muted);
-		font-size: 0.85rem;
-	}
+	.options + .options { margin-top: 0.75rem; }
+	.option { display: flex; align-items: flex-start; gap: 0.625rem; cursor: pointer; }
+	.option input { margin: 0.2rem 0 0; accent-color: var(--link); }
+	.option small { display: block; font-size: 0.85rem; }
 	button, .button {
 		font: inherit;
-		border: 1px solid var(--border);
-		background: var(--panel);
 		color: var(--text);
-		border-radius: 8px;
-		padding: 7px 14px;
+		background: var(--header-bg);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 0.2rem;
+		padding: 0.5rem 1rem;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+		transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 		cursor: pointer;
 		text-decoration: none;
-		display: inline-block;
+	}
+	.button { display: inline-block; }
+	button:hover, button:focus-visible, .button:hover, .button:focus-visible {
+		background: #34424d;
+		border-color: rgba(255, 255, 255, 0.3);
+		color: #ffffff;
 	}
 	button.primary, .button.primary {
-		background: var(--accent);
-		border-color: var(--accent);
-		color: var(--accent-text);
+		background: var(--heading);
+		border-color: rgba(255, 255, 255, 0.5);
+		color: var(--bg);
 		font-weight: 600;
 	}
-	button:disabled {
-		opacity: 0.5;
-		cursor: default;
+	button.primary:hover, button.primary:focus-visible, .button.primary:hover, .button.primary:focus-visible {
+		background: #c4dcf1;
+		border-color: rgba(255, 255, 255, 0.7);
+		color: var(--bg);
 	}
+	button:active:not(:disabled), .button:active {
+		background: #2b3640;
+		box-shadow: none;
+	}
+	button.primary:active:not(:disabled), .button.primary:active { background: #8fb6da; }
+	button:disabled { opacity: 0.5; cursor: default; }
+	button:disabled:hover { background: var(--header-bg); border-color: rgba(255, 255, 255, 0.15); color: var(--text); }
+	button.primary:disabled:hover { background: var(--heading); border-color: rgba(255, 255, 255, 0.5); color: var(--bg); }
 	input[type=file] { display: none; }
 	.actions {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 12px;
-		margin: 20px 0 12px;
+		gap: 0.75rem;
+		margin: 1.5rem 0 1rem;
 	}
-	#status {
-		color: var(--muted);
-		font-size: 0.92rem;
-	}
+	#status { color: var(--muted); }
 	#log {
-		background: var(--log-bg);
-		color: var(--log-text);
-		font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		border-radius: 10px;
-		padding: 12px;
-		height: 320px;
+		background: var(--console-bg);
+		font-size: 0.8rem;
+		line-height: 1.45;
+		border-radius: 0.2rem;
+		padding: 0.5rem 1rem;
+		height: 20rem;
 		overflow: auto;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
 		margin: 0;
 	}
-	#log .error { color: var(--log-error); }
-	#result {
-		display: none;
-		margin-top: 16px;
-	}
-	footer {
-		margin-top: 28px;
-		color: var(--muted);
+	#log .error { color: var(--error); }
+	#result { display: none; margin-top: 1rem; text-align: center; }
+	body > footer {
+		padding: 0 1rem 1rem;
+		color: #969696;
 		font-size: 0.85rem;
+		text-align: center;
 	}
+	body > footer p { max-width: 45rem; margin: 0.5rem auto; text-align: center; }
 </style>
 </head>
 <body>
-<main>
-	<h1>Jazz² Resurrection Content Swapper</h1>
+	
+<div class="backdrop" data-url="/images/rays.mp4"></div><script>var isVideoSupported=!!document.createElement("video").canPlayType&&!!document.createElement("video").canPlayType("video/mp4")&&void 0!==window.getComputedStyle(document.body).mixBlendMode;isVideoSupported?document.querySelectorAll("body > .backdrop").forEach(function(e){var d=e.getAttribute("data-url");if(d){var a=document.createElement("video"),r;try{r=JSON.parse(sessionStorage.getItem("backdrop"))}catch(x){}a.autoplay=!0,a.loop=!0,a.muted=!0,r&&r.f?(a.poster=r.f,a.style.transition="none",e.classList.add("ready")):r=null,a.addEventListener("loadedmetadata",function(){a.currentTime=r?(+r.t||0)%a.duration:Math.random()*a.duration,a.play()}),a.addEventListener("loadeddata",function(){e.classList.add("ready")}),addEventListener("pagehide",function(){if(a.readyState>1)try{var c=document.createElement("canvas");c.width=a.videoWidth,c.height=a.videoHeight,c.getContext("2d").drawImage(a,0,0),sessionStorage.setItem("backdrop",JSON.stringify({t:a.currentTime,f:c.toDataURL("image/jpeg",.8)}))}catch(x){}}),addEventListener("pageshow",function(v){v.persisted&&a.play()});var t=document.createElement("source");t.src=d,t.type="video/mp4",a.appendChild(t),e.appendChild(a)}}):document.querySelectorAll("body > .backdrop").forEach(function(e){e.style.display="none"});</script>
+
+<header><nav>
+	<a href="https://de4th.dev/jazz2/">Jazz² Resurrection</a><span class="breadcrumb">|</span><span class="thin">Content Swapper</span>
+</nav></header>
+<main><article>
 	<p class="lead">Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast, PlayStation 2 or
 		GameCube image of Jazz² Resurrection. Everything happens in this browser tab &ndash; your files are not uploaded
 		anywhere.</p>
@@ -194,21 +226,21 @@
 			<button type="button" id="imageButton">Choose image…</button>
 			<span class="hint">or drop it here</span>
 			<input type="file" id="imageInput" accept=".z64,.n64,.v64,.cdi,.iso,.gcm">
+			<div class="chosen" id="imageChosen" hidden><span><strong></strong><small></small></span></div>
 		</div>
-		<div class="chosen" id="imageChosen"></div>
 	</section>
 
 	<section class="step">
 		<h2>2. Original game files</h2>
 		<p>The <code>Source</code> folder with the files of Jazz Jackrabbit 2 (<code>Anims.j2a</code>, levels, tilesets,
-			music...), or the game folder that contains it. Any supported version works &ndash; the Shareware Demo,
+			music...), or the game folder that contains it. Any supported version works &ndash; including the Shareware Demo,
 			Holiday Hare &rsquo;98, The Secret Files or Christmas Chronicles.</p>
 		<div class="drop" id="sourceDrop">
 			<button type="button" id="sourceButton">Choose folder…</button>
 			<span class="hint">or drop the folder here</span>
 			<input type="file" id="sourceInput" webkitdirectory multiple>
+			<div class="chosen" id="sourceChosen" hidden><span><strong></strong><small></small></span></div>
 		</div>
-		<div class="chosen" id="sourceChosen"></div>
 	</section>
 
 	<section class="step">
@@ -248,12 +280,13 @@
 		<a class="button primary" id="downloadLink" href="#">Download</a>
 	</div>
 
-	<footer>
-		On a desktop computer, converting takes under half a minute for a Dreamcast, PlayStation 2 or GameCube image and
+</article></main>
+
+<footer>
+	<p>On a desktop computer, converting takes under half a minute for a Dreamcast, PlayStation 2 or GameCube image and
 		around a minute for a Nintendo 64 one, whose music and cinematics are encoded for the console. A Dreamcast image is
-		over 700&nbsp;MB, so a desktop browser with a few gigabytes of free memory is recommended.
-	</footer>
-</main>
+		over 700&nbsp;MB, so a desktop browser with a few gigabytes of free memory is recommended.</p>
+</footer>
 
 <script>
 (() => {
@@ -289,9 +322,15 @@
 		return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.ceil(bytes / 1024) + ' KB';
 	}
 
-	function setChosen(element, text, ok) {
-		element.textContent = text;
-		element.className = 'chosen ' + (ok ? 'ok' : 'bad');
+	/** Shows what was chosen in place of the hint of its drop zone */
+	function setChosen(element, title, detail, ok) {
+		const zone = element.parentElement;
+		element.querySelector('strong').textContent = title;
+		element.querySelector('small').textContent = detail;
+		element.hidden = false;
+		zone.querySelector('.hint').hidden = true;
+		zone.classList.toggle('ok', ok);
+		zone.classList.toggle('bad', !ok);
 	}
 
 	function updateStart() {
@@ -311,25 +350,27 @@
 		}
 		if (!platform) {
 			image = null;
-			setChosen(imageChosen, file.name + ' is not a .z64, .cdi or .iso image', false);
+			setChosen(imageChosen, file.name, 'Not a .z64, .cdi or .iso image', false);
 		} else {
 			image = file;
-			setChosen(imageChosen, file.name + ' (' + formatSize(file.size) + ') — ' + platform, true);
+			setChosen(imageChosen, file.name, platform + ' image, ' + formatSize(file.size), true);
 		}
 		updateStart();
 	}
 
-	/** Takes the files of the chosen folder, with their paths relative to it */
-	function setSources(files) {
+	/** Takes the files of the chosen folder, with their paths relative to it, and the folder's name if there is one */
+	function setSources(files, name) {
 		sources = files;
 		const hasAnims = files.some((s) => /(^|\/)(anims|animssw)\.j2a$/i.test(s.path));
 		if (files.length === 0) {
-			setChosen(sourceChosen, 'The folder is empty', false);
+			setChosen(sourceChosen, name || 'No files', 'The folder is empty', false);
 		} else if (!hasAnims) {
-			setChosen(sourceChosen, files.length + ' files, but no Anims.j2a among them — this does not look like Jazz Jackrabbit 2', false);
+			setChosen(sourceChosen, name || files.length + ' files', 'No Anims.j2a among the files – this does not look like Jazz Jackrabbit 2', false);
 		} else {
 			const size = files.reduce((sum, s) => sum + s.file.size, 0);
-			setChosen(sourceChosen, files.length + ' files (' + formatSize(size) + ')', true);
+			const levels = files.filter((s) => /\.j2l$/i.test(s.path)).length;
+			setChosen(sourceChosen, name || 'Dropped files', files.length + ' files, ' + formatSize(size) + ', ' +
+				levels + (levels === 1 ? ' level' : ' levels'), true);
 		}
 		updateStart();
 	}
@@ -388,7 +429,9 @@
 		}
 	});
 	sourceInput.addEventListener('change', () => {
-		setSources(Array.from(sourceInput.files, (file) => ({ path: stripTopFolder(file.webkitRelativePath || file.name), file })));
+		const files = Array.from(sourceInput.files);
+		const name = (files.length > 0 ? (files[0].webkitRelativePath || '').split('/')[0] : '');
+		setSources(files.map((file) => ({ path: stripTopFolder(file.webkitRelativePath || file.name), file })), name);
 	});
 
 	setupDrop(document.getElementById('imageDrop'), (dataTransfer) => {
@@ -399,7 +442,9 @@
 	setupDrop(document.getElementById('sourceDrop'), async (dataTransfer) => {
 		const items = Array.from(dataTransfer.items || []).map((item) => item.webkitGetAsEntry && item.webkitGetAsEntry()).filter(Boolean);
 		const files = [];
+		let name = '';
 		if (items.length === 1 && items[0].isDirectory) {
+			name = items[0].name;
 			// The dropped folder is the one chosen, so its own name is not part of the paths
 			for (const child of await readAllEntries(items[0].createReader())) {
 				await collectEntry(child, '', files);
@@ -409,7 +454,7 @@
 				await collectEntry(item, '', files);
 			}
 		}
-		setSources(files);
+		setSources(files, name);
 	});
 
 	function appendLog(text, level) {

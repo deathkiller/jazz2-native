@@ -299,7 +299,7 @@ in @ref paths-consoles.
 
 The log header names the device via @ref nCine::Application::GetDeviceHostname() --- the console
 nickname (Wii, 3DS, Switch), WLAN MAC (PSP), OpenPSID (Vita, PS3), i.Link ID (PS2) or BIOS system ID
-(Dreamcast). It is empty on the GameCube and N64. It also seeds the device ID sent to the servers.
+(Dreamcast). It is empty on the GameCube and N64.
 
 @subsection consoles-common-indexedquads Tile layers are indexed meshes
 
@@ -579,7 +579,7 @@ a level frame takes about 14--31 ms in ares depending on the level.
 A 200 MHz SH-4 with <b>16 MB</b> main memory, <b>8 MB</b> video memory and a PowerVR2 (CLX2): no
 programmable shading, no hardware scissor, 16-bit texture formats only. Renders through the `PVR`
 backend @m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/PVR" @ce) @m_endspan on
-**KallistiOS**, presented by the `Dc` window backend in 640x480 RGB565.
+<b>KallistiOS</b>, presented by the `Dc` window backend in 640x480 RGB565.
 
 @subsection consoles-dreamcast-toolchain Toolchain
 

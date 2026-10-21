@@ -138,22 +138,77 @@ namespace Jazz2::Compatibility
 		}
 
 		/**
-			@brief Original tile sets converted into memory for the previews of the levels, see JJ2Level::Convert()
+			@brief Tiles of the original tile sets the previews of the levels are drawn with, see JJ2Level::Convert()
 
-			Many levels share a tile set, and reading one takes longer than converting a level, so the ones used last
-			are kept for the levels after, as many as fit into a budget - a tile set of a few thousand tiles takes
-			megabytes. A tile set that isn't there is remembered as such.
+			A preview takes only a few hundred tiles of a tile set. Where memory is scarce, only those are read from the
+			file, a whole tile set wouldn't fit beside the level being converted. Elsewhere, many levels share a tile set,
+			and reading one takes longer than converting a level, so the whole tile sets used last are kept for the levels
+			after, as many as fit into a budget - a tile set of a few thousand tiles takes megabytes - and the tiles are
+			copied from them. A tile set that isn't there is remembered as such.
 		*/
 		class PreviewTilesetCache
 		{
 		public:
 			explicit PreviewTilesetCache(StringView sourcePath)
-				: _sourcePath(sourcePath), _size(0), _lastUse(0)
+				: _sourcePath(sourcePath)
 			{
 			}
 
-			/** @brief Returns the tile set of a name, or `nullptr` if the source directory doesn't have it */
-			std::shared_ptr<const Formats::TileSetData> Get(StringView name)
+			/**
+			 * @brief Returns the tiles of a tile set of a name in the order of @p tiles, or `nullptr` if the source directory
+			 *        doesn't have it, and sets @p tileCount to the number of tiles of the whole tile set
+			 */
+			std::shared_ptr<const Formats::TileSetData> Get(StringView name, ArrayView<const std::int32_t> tiles, std::int32_t& tileCount)
+			{
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
+				auto adjustedPath = fs::FindPathCaseInsensitive(fs::CombinePath(_sourcePath, String(name + ".j2t"_s)));
+				if (!fs::IsReadableFile(adjustedPath)) {
+					return nullptr;
+				}
+				auto data = std::make_shared<Formats::TileSetData>();
+				if (!JJ2Tileset::ConvertTiles(adjustedPath, tiles, *data, tileCount)) {
+					return nullptr;
+				}
+				return data;
+#else
+				std::shared_ptr<const Formats::TileSetData> whole = GetWhole(name);
+				if (whole == nullptr) {
+					return nullptr;
+				}
+				tileCount = whole->TileCount;
+
+				auto data = std::make_shared<Formats::TileSetData>();
+				std::memcpy(data->Palette, whole->Palette, sizeof(data->Palette));
+				data->Resize(std::int32_t(tiles.size()));
+				for (std::size_t i = 0; i < tiles.size(); i++) {
+					std::int32_t tile = tiles[i];
+					if (tile >= 0 && tile < whole->TileCount) {
+						data->TrueColor[i] = whole->TrueColor[tile];
+						std::memcpy(&data->Images[i * Formats::TileSetData::ImageBytesPerTile],
+							&whole->Images[std::size_t(tile) * Formats::TileSetData::ImageBytesPerTile], Formats::TileSetData::ImageBytesPerTile);
+					}
+				}
+				return data;
+#endif
+			}
+
+		private:
+#if !defined(DEATH_TARGET_CONSTRAINED_MEMORY)
+			struct Entry
+			{
+				String Name;
+				std::shared_ptr<Formats::TileSetData> Data;
+				std::uint32_t LastUse;
+			};
+
+			static constexpr std::size_t Budget = 64 * 1024 * 1024;
+
+			SmallVector<Entry, 0> _entries;
+			std::size_t _size = 0;
+			std::uint32_t _lastUse = 0;
+
+			// The whole tile set of a name, or `nullptr` if the source directory doesn't have it
+			std::shared_ptr<const Formats::TileSetData> GetWhole(StringView name)
 			{
 				_lastUse++;
 				for (Entry& entry : _entries) {
@@ -174,7 +229,7 @@ namespace Jazz2::Compatibility
 				}
 
 				// One that doesn't fit into the budget on its own isn't kept at all, it would only push out all the others
-				// and then stay behind once the level that asked for it is done (with no budget, every one of them)
+				// and then stay behind once the level that asked for it is done
 				std::size_t size = GetDataSize(data.get());
 				if (size > Budget) {
 					return data;
@@ -196,30 +251,14 @@ namespace Jazz2::Compatibility
 				return data;
 			}
 
-		private:
 			// The memory a tile set takes, its masks and the flags of its true color tiles included
 			static std::size_t GetDataSize(const Formats::TileSetData* data)
 			{
 				return (data != nullptr ? data->Images.size() + data->TrueColor.size() + data->Masks.size() : 0);
 			}
-
-			struct Entry
-			{
-				String Name;
-				std::shared_ptr<Formats::TileSetData> Data;
-				std::uint32_t LastUse;
-			};
-
-#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
-			static constexpr std::size_t Budget = 0;
-#else
-			static constexpr std::size_t Budget = 64 * 1024 * 1024;
 #endif
 
 			String _sourcePath;
-			SmallVector<Entry, 0> _entries;
-			std::size_t _size;
-			std::uint32_t _lastUse;
 		};
 
 		/**
@@ -635,8 +674,8 @@ namespace Jazz2::Compatibility
 						fs::CreateDirectories(fs::GetDirectoryName(fullPath));
 						if (it == knownLevels.end()) {
 							// The list of custom levels shows the levels of no episode, each with its preview
-							level.Convert(fullPath, eventConverter, LevelTokenConversion, [&previewTilesets](StringView name) {
-								return previewTilesets.Get(name);
+							level.Convert(fullPath, eventConverter, LevelTokenConversion, [&previewTilesets](StringView name, ArrayView<const std::int32_t> tiles, std::int32_t& tileCount) {
+								return previewTilesets.Get(name, tiles, tileCount);
 							}, textureLookup);
 						} else {
 							level.Convert(fullPath, eventConverter, LevelTokenConversion, {}, textureLookup);

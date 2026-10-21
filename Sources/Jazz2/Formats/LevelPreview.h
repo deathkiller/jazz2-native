@@ -4,6 +4,8 @@
 #include "TileSetFile.h"
 #include "../Tiles/LayerTypes.h"
 
+#include <Containers/Function.h>
+
 namespace Jazz2::Formats
 {
 	/**
@@ -94,6 +96,13 @@ namespace Jazz2::Formats
 				std::int32_t Count;
 				/** @brief Palette indices of the level for those of the 8-bit tiles, `nullptr` if they're shown as they are */
 				const std::uint8_t* Remapping;
+				/**
+				 * @brief Tiles of the tile set that @ref Data has, sorted, in the order it has them
+				 *
+				 * Empty if it has all of them, each at its own index. A tile set loaded only in part needs no more than
+				 * the tiles @ref CollectTiles() reports.
+				 */
+				ArrayView<const std::int32_t> Tiles;
 			};
 
 			/** @brief Layers in the order of the file */
@@ -111,9 +120,25 @@ namespace Jazz2::Formats
 			const LayerRecord& GetLayer(std::int32_t index) override;
 			bool GetTilePixels(std::int32_t layer, std::int32_t x, std::int32_t y, TilePixels& result) override;
 
+			/**
+			 * @brief Reports the tiles of the tile sets the preview around @p start takes
+			 *
+			 * Calls @p visit with the index of a tile set in @ref TileSets and the index of a tile in it, for every tile
+			 * @ref Make() reads pixels of, possibly more than once, so the tile sets can be loaded only in part before.
+			 * Doesn't need @ref TileSet::Data.
+			 */
+			void CollectTiles(nCine::Vector2f start, Function<void(std::int32_t, std::int32_t)>&& visit);
+
 		private:
 			// Whether DiffuseOverrides are sorted by their tile, so they can be searched, -1 until it's known
 			std::int8_t _overridesSorted = -1;
+
+			// The tile a tile of a layer shows, the first frame of an animated one, returns `false` for an empty one
+			bool ResolveTile(std::int32_t layer, std::int32_t x, std::int32_t y, TileRecord& tile) const;
+			// The overridden diffuse of a tile, `nullptr` if it isn't overridden
+			const std::uint8_t* FindDiffuseOverride(std::uint16_t tileId);
+			// The tile set of a tile ID and the index of the tile in it, returns `false` for one past all the tile sets
+			bool FindTileSet(std::int32_t tileId, std::int32_t& tileSet, std::int32_t& index) const;
 		};
 
 		/**

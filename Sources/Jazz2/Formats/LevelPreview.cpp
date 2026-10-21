@@ -30,6 +30,95 @@ namespace Jazz2::Formats
 		{
 			return (layer.Kind == LayerKind::Sprite ? 50 : layer.Depth);
 		}
+
+		// Each pixel the average of a few points of the level
+		constexpr std::int32_t Samples = LevelPreview::Scale;
+		constexpr std::int32_t SampleW = LevelPreview::Width * Samples, SampleH = LevelPreview::Height * Samples;
+		constexpr float SampleStep = float(LevelPreview::Scale) / Samples;
+
+		// The view of the game around the start, kept within the level as the camera is, and the size of the sprite layer
+		// in tiles, returns `false` for a level without a sprite layer
+		bool GetView(LevelPreview::ISource& source, Vector2f start, Rectf& view, Vector2i& levelSize)
+		{
+			// The last sprite layer is the one, as in the game
+			std::int32_t spriteLayer = source.GetLayerCount() - 1;
+			while (spriteLayer >= 0 && source.GetLayer(spriteLayer).Kind != LayerKind::Sprite) {
+				spriteLayer--;
+			}
+			if (spriteLayer < 0) {
+				return false;
+			}
+			std::int32_t width = source.GetLayer(spriteLayer).Width, height = source.GetLayer(spriteLayer).Height;
+			if (width <= 0 || height <= 0) {
+				return false;
+			}
+
+			constexpr float ViewW = float(LevelPreview::Width * LevelPreview::Scale), ViewH = float(LevelPreview::Height * LevelPreview::Scale);
+			float levelW = width * 32.0f, levelH = height * 32.0f;
+			Vector2f center(levelW > ViewW ? std::clamp(start.X, ViewW * 0.5f, levelW - ViewW * 0.5f) : levelW * 0.5f,
+				levelH > ViewH ? std::clamp(start.Y, ViewH * 0.5f, levelH - ViewH * 0.5f) : levelH * 0.5f);
+			view = Rectf(std::round(center.X - ViewW * 0.5f), std::round(center.Y - ViewH * 0.5f), ViewW, ViewH);
+			levelSize = Vector2i(width, height);
+			return true;
+		}
+
+		// The layers the preview draws, in the order the game draws them: by their depth, whatever order the level stores
+		// them in, as an extra layer of MLLE comes after the eight of the original format; the ones of the same depth from
+		// the last one on. Not the hidden ones and the layers of effects (x-ray and blur behind).
+		SmallVector<std::int32_t, 16> GetDrawnLayers(LevelPreview::ISource& source)
+		{
+			std::int32_t layerCount = source.GetLayerCount();
+			SmallVector<std::int32_t, 16> order;
+			order.reserve(layerCount);
+			for (std::int32_t l = layerCount - 1; l >= 0; l--) {
+				const LayerRecord& layer = source.GetLayer(l);
+				auto rendererType = Tiles::LayerRendererType(layer.RendererType);
+				if ((layer.Flags & LayerRecord::Visible) != 0 && rendererType != Tiles::LayerRendererType::XRay &&
+					rendererType != Tiles::LayerRendererType::BlurBehind) {
+					order.push_back(l);
+				}
+			}
+			std::stable_sort(order.begin(), order.end(), [&source](std::int32_t a, std::int32_t b) {
+				return GetDrawDepth(source.GetLayer(a)) > GetDrawDepth(source.GetLayer(b));
+			});
+			return order;
+		}
+
+		// Calls `sample(sx, sy, tx, ty, px, py)` for every point of the preview a layer of tiles covers, row by row, with the
+		// tile of the layer there and the pixel of the layer
+		template<class Func>
+		void ForEachTileSample(LevelPreview::ISource& source, std::int32_t l, const Rectf& view, Vector2i levelSize, Func&& sample)
+		{
+			const LayerRecord& layer = source.GetLayer(l);
+			std::int32_t layerW = layer.Width, layerH = layer.Height;
+			if (layerW <= 0 || layerH <= 0) {
+				return;
+			}
+			bool isSprite = (layer.Kind == LayerKind::Sprite);
+			bool repeatX = !isSprite && (layer.Flags & LayerRecord::RepeatX) != 0;
+			bool repeatY = !isSprite && (layer.Flags & LayerRecord::RepeatY) != 0;
+			Vector2f origin = source.GetLayerDescription(l).GetGameplayOrigin(Vector2i(layerW, layerH), levelSize, view);
+
+			for (std::int32_t sy = 0; sy < SampleH; sy++) {
+				std::int32_t py = std::int32_t(std::floor(view.Y + (sy + 0.5f) * SampleStep - origin.Y));
+				std::int32_t ty = (py >= 0 ? py / 32 : -1 - (-1 - py) / 32);
+				if (repeatY) {
+					ty = ((ty % layerH) + layerH) % layerH;
+				} else if (ty < 0 || ty >= layerH) {
+					continue;
+				}
+				for (std::int32_t sx = 0; sx < SampleW; sx++) {
+					std::int32_t px = std::int32_t(std::floor(view.X + (sx + 0.5f) * SampleStep - origin.X));
+					std::int32_t tx = (px >= 0 ? px / 32 : -1 - (-1 - px) / 32);
+					if (repeatX) {
+						tx = ((tx % layerW) + layerW) % layerW;
+					} else if (tx < 0 || tx >= layerW) {
+						continue;
+					}
+					sample(sx, sy, tx, ty, px, py);
+				}
+			}
+		}
 	}
 
 	std::uint32_t LevelPreview::TilePixels::GetPixel(std::int32_t x, std::int32_t y, const std::uint32_t* palette) const
@@ -69,8 +158,83 @@ namespace Jazz2::Formats
 
 	bool LevelPreview::RecordSource::GetTilePixels(std::int32_t layer, std::int32_t x, std::int32_t y, TilePixels& result)
 	{
+		TileRecord tile;
+		if (!ResolveTile(layer, x, y, tile)) {
+			return false;
+		}
+
+		result.Remapping = nullptr;
+		result.TrueColor = false;
+		result.Flags = tile.Flags;
+		// Palette indices of the level, whatever tile set the tile is of
+		if (const std::uint8_t* indices = FindDiffuseOverride(tile.TileId)) {
+			result.Pixels = indices;
+			return true;
+		}
+
+		std::int32_t tileSetIndex, index;
+		if (!FindTileSet(tile.TileId, tileSetIndex, index)) {
+			return false;
+		}
+		const TileSet& tileSet = TileSets[tileSetIndex];
+		if (tileSet.Data == nullptr) {
+			return false;
+		}
+		std::int32_t slot = index;
+		if (!tileSet.Tiles.empty()) {
+			auto it = std::lower_bound(tileSet.Tiles.begin(), tileSet.Tiles.end(), index);
+			if (it == tileSet.Tiles.end() || *it != index) {
+				return false;
+			}
+			slot = std::int32_t(it - tileSet.Tiles.begin());
+		}
+		if (slot >= tileSet.Data->TileCount) {
+			return false;
+		}
+		result.Pixels = &tileSet.Data->Images[std::size_t(slot) * TileSetData::ImageBytesPerTile];
+		result.TrueColor = (tileSet.Data->TrueColor[slot] != 0);
+		result.Remapping = tileSet.Remapping;
+		return true;
+	}
+
+	void LevelPreview::RecordSource::CollectTiles(Vector2f start, Function<void(std::int32_t, std::int32_t)>&& visit)
+	{
+		Rectf view;
+		Vector2i levelSize;
+		if (!GetView(*this, start, view, levelSize)) {
+			return;
+		}
+
+		for (std::int32_t l : GetDrawnLayers(*this)) {
+			const LayerRecord& layer = GetLayer(l);
+			auto rendererType = Tiles::LayerRendererType(layer.RendererType);
+			if (rendererType == Tiles::LayerRendererType::Reflection || rendererType == Tiles::LayerRendererType::Solid) {
+				continue;
+			}
+
+			// The same tiles the samples of Make() read, each run of samples in one tile only once
+			std::int32_t lastTileIndex = -1;
+			ForEachTileSample(*this, l, view, levelSize, [&](std::int32_t, std::int32_t, std::int32_t tx, std::int32_t ty, std::int32_t, std::int32_t) {
+				std::int32_t tileIndex = ty * layer.Width + tx;
+				if (tileIndex == lastTileIndex) {
+					return;
+				}
+				lastTileIndex = tileIndex;
+
+				TileRecord tile;
+				std::int32_t tileSet, index;
+				if (ResolveTile(l, tx, ty, tile) && (tile.Flags & TileRecord::ModifierMask) != TileRecord::ModifierInvisible &&
+					FindDiffuseOverride(tile.TileId) == nullptr && FindTileSet(tile.TileId, tileSet, index)) {
+					visit(tileSet, index);
+				}
+			});
+		}
+	}
+
+	bool LevelPreview::RecordSource::ResolveTile(std::int32_t layer, std::int32_t x, std::int32_t y, TileRecord& tile) const
+	{
 		const Layer& source = Layers[layer];
-		TileRecord tile = source.Tiles[std::size_t(y) * std::size_t(source.Record.Width) + std::size_t(x)];
+		tile = source.Tiles[std::size_t(y) * std::size_t(source.Record.Width) + std::size_t(x)];
 		if (tile.TileId >= AnimatedTilesOffset) {
 			// The first frame stands for the animation
 			std::int32_t animation = tile.TileId - AnimatedTilesOffset;
@@ -88,50 +252,45 @@ namespace Jazz2::Formats
 				return false;
 			}
 		}
-		if (tile.TileId == 0) {
-			return false;
-		}
+		return (tile.TileId != 0);
+	}
 
-		result.Remapping = nullptr;
-		result.TrueColor = false;
-		result.Flags = tile.Flags;
-		// Palette indices of the level, whatever tile set the tile is of; the editor keeps the list sorted, so it's searched
-		// then, a list from anywhere else is only checked for it once
+	const std::uint8_t* LevelPreview::RecordSource::FindDiffuseOverride(std::uint16_t tileId)
+	{
+		// The editor keeps the list sorted, so it's searched then, a list from anywhere else is only checked for it once
 		if (_overridesSorted < 0) {
 			_overridesSorted = (std::is_sorted(DiffuseOverrides.begin(), DiffuseOverrides.end(), [](const TileDiffuseOverride& a, const TileDiffuseOverride& b) {
 				return (a.TileId < b.TileId);
 			}) ? 1 : 0);
 		}
 		if (_overridesSorted != 0) {
-			auto it = std::lower_bound(DiffuseOverrides.begin(), DiffuseOverrides.end(), tile.TileId, [](const TileDiffuseOverride& diffuse, std::uint16_t tileId) {
+			auto it = std::lower_bound(DiffuseOverrides.begin(), DiffuseOverrides.end(), tileId, [](const TileDiffuseOverride& diffuse, std::uint16_t tileId) {
 				return (diffuse.TileId < tileId);
 			});
-			if (it != DiffuseOverrides.end() && it->TileId == tile.TileId) {
-				result.Pixels = it->Indices;
-				return true;
+			if (it != DiffuseOverrides.end() && it->TileId == tileId) {
+				return it->Indices;
 			}
 		} else {
 			for (const TileDiffuseOverride& diffuse : DiffuseOverrides) {
-				if (diffuse.TileId == tile.TileId) {
-					result.Pixels = diffuse.Indices;
-					return true;
+				if (diffuse.TileId == tileId) {
+					return diffuse.Indices;
 				}
 			}
 		}
+		return nullptr;
+	}
 
-		std::int32_t index = tile.TileId;
-		for (const TileSet& tileSet : TileSets) {
-			if (index < tileSet.Count) {
-				index += tileSet.Offset;
-				if (tileSet.Data == nullptr || index >= tileSet.Data->TileCount) {
-					return false;
-				}
-				result.Pixels = &tileSet.Data->Images[std::size_t(index) * TileSetData::ImageBytesPerTile];
-				result.TrueColor = (tileSet.Data->TrueColor[index] != 0);
-				result.Remapping = tileSet.Remapping;
+	bool LevelPreview::RecordSource::FindTileSet(std::int32_t tileId, std::int32_t& tileSet, std::int32_t& index) const
+	{
+		// The tile IDs count the tiles of the tile sets in their order
+		std::int32_t remaining = tileId;
+		for (std::size_t i = 0; i < TileSets.size(); i++) {
+			if (remaining < TileSets[i].Count) {
+				tileSet = std::int32_t(i);
+				index = remaining + TileSets[i].Offset;
 				return true;
 			}
-			index -= tileSet.Count;
+			remaining -= TileSets[i].Count;
 		}
 		return false;
 	}
@@ -160,56 +319,22 @@ namespace Jazz2::Formats
 	void LevelPreview::Make(ISource& source, Vector2f start, const std::uint32_t* palette, SmallVectorImpl<std::uint8_t>& data)
 	{
 		data.clear();
-		// The last sprite layer is the one, as in the game
-		std::int32_t layerCount = source.GetLayerCount();
-		std::int32_t spriteLayer = layerCount - 1;
-		while (spriteLayer >= 0 && source.GetLayer(spriteLayer).Kind != LayerKind::Sprite) {
-			spriteLayer--;
-		}
-		if (spriteLayer < 0) {
+		Rectf view;
+		Vector2i levelSize;
+		if (!GetView(source, start, view, levelSize)) {
 			return;
 		}
-		std::int32_t width = source.GetLayer(spriteLayer).Width, height = source.GetLayer(spriteLayer).Height;
-		if (width <= 0 || height <= 0) {
-			return;
-		}
-
-		// The view of the game there, kept within the level as the camera is
-		constexpr float ViewW = float(Width * Scale), ViewH = float(Height * Scale);
-		float levelW = width * 32.0f, levelH = height * 32.0f;
-		Vector2f center(levelW > ViewW ? std::clamp(start.X, ViewW * 0.5f, levelW - ViewW * 0.5f) : levelW * 0.5f,
-			levelH > ViewH ? std::clamp(start.Y, ViewH * 0.5f, levelH - ViewH * 0.5f) : levelH * 0.5f);
-		Rectf view(std::round(center.X - ViewW * 0.5f), std::round(center.Y - ViewH * 0.5f), ViewW, ViewH);
+		std::int32_t width = levelSize.X, height = levelSize.Y;
 
 		// Each pixel the average of a few points of the level, all layers from the farthest one on, at the parallax
 		// of the game; just the color of a layer of solid color, what is behind a reflection mirrored, and nothing of
 		// the other layers of effects
-		constexpr std::int32_t Samples = Scale;
 		SmallVector<std::uint32_t, 0> accum;
 		accum.resize(std::size_t(Width * Height * Samples * Samples), 0xFF201810u);
-		constexpr std::int32_t SampleW = Width * Samples, SampleH = Height * Samples;
-		constexpr float SampleStep = float(Scale) / Samples;
 
-		// The game draws the layers by their depth, whatever order the level stores them in, as an extra layer of MLLE
-		// comes after the eight of the original format; the ones of the same depth from the last one on
-		SmallVector<std::int32_t, 16> order;
-		order.reserve(layerCount);
-		for (std::int32_t l = layerCount - 1; l >= 0; l--) {
-			order.push_back(l);
-		}
-		std::stable_sort(order.begin(), order.end(), [&source](std::int32_t a, std::int32_t b) {
-			return GetDrawDepth(source.GetLayer(a)) > GetDrawDepth(source.GetLayer(b));
-		});
-
-		for (std::int32_t l : order) {
+		for (std::int32_t l : GetDrawnLayers(source)) {
 			const LayerRecord& layer = source.GetLayer(l);
-			if ((layer.Flags & LayerRecord::Visible) == 0) {
-				continue;
-			}
 			auto rendererType = Tiles::LayerRendererType(layer.RendererType);
-			if (rendererType == Tiles::LayerRendererType::XRay || rendererType == Tiles::LayerRendererType::BlurBehind) {
-				continue;
-			}
 			if (rendererType == Tiles::LayerRendererType::Reflection) {
 				// What is behind it mirrored at its horizon and tinted, as the game draws it without the ripples its tiles make
 				// (see Tiles::LayerRendererType::Reflection); with nothing above the horizon, it's black. Drawn only where the
@@ -253,15 +378,6 @@ namespace Jazz2::Formats
 				continue;
 			}
 
-			std::int32_t layerW = layer.Width, layerH = layer.Height;
-			if (layerW <= 0 || layerH <= 0) {
-				continue;
-			}
-			bool isSprite = (layer.Kind == LayerKind::Sprite);
-			bool repeatX = !isSprite && (layer.Flags & LayerRecord::RepeatX) != 0;
-			bool repeatY = !isSprite && (layer.Flags & LayerRecord::RepeatY) != 0;
-			Vector2f origin = source.GetLayerDescription(l).GetGameplayOrigin(Vector2i(layerW, layerH), Vector2i(width, height), view);
-
 			// A palette-shifted layer takes the colors further in the palette, as the game draws it (see
 			// ContentResolver::AcquireShiftedPaletteOffset())
 			std::uint32_t shiftedPalette[256];
@@ -278,41 +394,25 @@ namespace Jazz2::Formats
 			std::int32_t lastTileIndex = -1;
 			TilePixels tilePixels;
 			bool tileValid = false;
-			for (std::int32_t sy = 0; sy < SampleH; sy++) {
-				std::int32_t py = std::int32_t(std::floor(view.Y + (sy + 0.5f) * SampleStep - origin.Y));
-				std::int32_t ty = (py >= 0 ? py / 32 : -1 - (-1 - py) / 32);
-				if (repeatY) {
-					ty = ((ty % layerH) + layerH) % layerH;
-				} else if (ty < 0 || ty >= layerH) {
-					continue;
+			ForEachTileSample(source, l, view, levelSize, [&](std::int32_t sx, std::int32_t sy, std::int32_t tx, std::int32_t ty, std::int32_t px, std::int32_t py) {
+				std::int32_t tileIndex = ty * layer.Width + tx;
+				if (tileIndex != lastTileIndex) {
+					lastTileIndex = tileIndex;
+					// The modifier as resolved, an animation's own frame can be the invisible one too
+					tileValid = (source.GetTilePixels(l, tx, ty, tilePixels) &&
+						(tilePixels.Flags & TileRecord::ModifierMask) != TileRecord::ModifierInvisible);
 				}
-				for (std::int32_t sx = 0; sx < SampleW; sx++) {
-					std::int32_t px = std::int32_t(std::floor(view.X + (sx + 0.5f) * SampleStep - origin.X));
-					std::int32_t tx = (px >= 0 ? px / 32 : -1 - (-1 - px) / 32);
-					if (repeatX) {
-						tx = ((tx % layerW) + layerW) % layerW;
-					} else if (tx < 0 || tx >= layerW) {
-						continue;
-					}
-					std::int32_t tileIndex = ty * layerW + tx;
-					if (tileIndex != lastTileIndex) {
-						lastTileIndex = tileIndex;
-						// The modifier as resolved, an animation's own frame can be the invisible one too
-						tileValid = (source.GetTilePixels(l, tx, ty, tilePixels) &&
-							(tilePixels.Flags & TileRecord::ModifierMask) != TileRecord::ModifierInvisible);
-					}
-					if (!tileValid) {
-						continue;
-					}
-					std::uint32_t color = tilePixels.GetPixel(((px % 32) + 32) % 32, ((py % 32) + 32) % 32, layerPalette);
-					if ((tilePixels.Flags & TileRecord::ModifierMask) == TileRecord::ModifierTranslucent) {
-						// As translucent as the game draws them, see Tiles::TileMap::TranslucentTileAlpha
-						color = (color & 0x00FFFFFFu) | (((color >> 24) * 192 / 255) << 24);
-					}
-					std::uint32_t& pixel = accum[std::size_t(sy) * SampleW + std::size_t(sx)];
-					pixel = Blend(pixel, color);
+				if (!tileValid) {
+					return;
 				}
-			}
+				std::uint32_t color = tilePixels.GetPixel(((px % 32) + 32) % 32, ((py % 32) + 32) % 32, layerPalette);
+				if ((tilePixels.Flags & TileRecord::ModifierMask) == TileRecord::ModifierTranslucent) {
+					// As translucent as the game draws them, see Tiles::TileMap::TranslucentTileAlpha
+					color = (color & 0x00FFFFFFu) | (((color >> 24) * 192 / 255) << 24);
+				}
+				std::uint32_t& pixel = accum[std::size_t(sy) * SampleW + std::size_t(sx)];
+				pixel = Blend(pixel, color);
+			});
 		}
 
 		data.push_back(std::uint8_t(Width));

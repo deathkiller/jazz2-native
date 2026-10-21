@@ -673,7 +673,8 @@ namespace Jazz2::Compatibility
 	}
 
 	void JJ2Level::Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion,
-		Function<std::shared_ptr<const Formats::TileSetData>(StringView)>&& tilesetLookup, Function<bool(std::int32_t, std::uint8_t*)>&& textureLookup)
+		Function<std::shared_ptr<const Formats::TileSetData>(StringView, ArrayView<const std::int32_t>, std::int32_t&)>&& tilesetLookup,
+		Function<bool(std::int32_t, std::uint8_t*)>&& textureLookup)
 	{
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
@@ -1252,35 +1253,62 @@ namespace Jazz2::Compatibility
 		}
 
 		// Preview, drawn with the original tile sets, the level can't be shown without its default one
-		std::shared_ptr<const Formats::TileSetData> defaultTileSet = (makePreview ? tilesetLookup(properties.DefaultTileSet) : nullptr);
-		if (defaultTileSet != nullptr) {
-			SmallVector<std::shared_ptr<const Formats::TileSetData>, 4> extraTileSetData;
-			SmallVector<Formats::LevelPreview::RecordSource::TileSet, 4> previewTileSets;
-			previewTileSets.push_back({ defaultTileSet.get(), 0, defaultTileSet->TileCount, nullptr });
-			for (const auto& extraTileSet : extraTileSets) {
-				const auto& data = extraTileSetData.emplace_back(tilesetLookup(extraTileSet.Name));
-				// A tile set of true color tiles isn't matched to the palette of the level
-				constexpr std::uint8_t RemapFlags = Formats::ExtraTileSetRecord::Remapped | Formats::ExtraTileSetRecord::TrueColor;
-				bool remapped = ((extraTileSet.Flags & RemapFlags) == Formats::ExtraTileSetRecord::Remapped);
-				previewTileSets.push_back({ data.get(), extraTileSet.Offset, extraTileSet.Count, remapped ? extraTileSet.Remapping : nullptr });
-			}
+		if (makePreview) {
 			for (std::size_t i = 0; i < previewLayers.size(); i++) {
 				previewLayers[i].Tiles = previewTiles[i];
 			}
 
 			Formats::LevelPreview::RecordSource source;
 			source.Layers = previewLayers;
-			source.TileSets = previewTileSets;
 			source.AnimatedTilesOffset = lastTilesetTileIndex;
 			source.AnimatedTiles = animatedTiles;
 			source.DiffuseOverrides = diffuseOverrides;
 
-			Formats::ChunkRecord preview;
-			preview.Tag = Formats::LevelFile::PreviewChunk;
-			Formats::LevelPreview::Make(source, previewStart.GetPosition(_layers[3].Width, _layers[3].Height),
-				_useLevelPalette ? levelPalette : defaultTileSet->Palette, preview.Data);
-			if (!preview.Data.empty()) {
-				chunks.push_back(Death::move(preview));
+			// Only the tiles the preview takes are asked for, a few hundred of the thousands a tile set can have. Which tile
+			// set a tile ID is of depends on the number of tiles of the default one, so the IDs are collected first
+			nCine::Vector2f start = previewStart.GetPosition(_layers[3].Width, _layers[3].Height);
+			SmallVector<Formats::LevelPreview::RecordSource::TileSet, 4> previewTileSets;
+			previewTileSets.push_back({ nullptr, 0, INT32_MAX, nullptr, {} });
+			source.TileSets = previewTileSets;
+			SmallVector<std::int32_t, 0> neededIds;
+			source.CollectTiles(start, [&neededIds](std::int32_t, std::int32_t index) {
+				neededIds.push_back(index);
+			});
+			std::sort(neededIds.begin(), neededIds.end());
+			neededIds.erase(std::unique(neededIds.begin(), neededIds.end()), neededIds.end());
+
+			std::int32_t tileCount = 0;
+			std::shared_ptr<const Formats::TileSetData> defaultTileSet = tilesetLookup(properties.DefaultTileSet, neededIds, tileCount);
+			if (defaultTileSet != nullptr) {
+				previewTileSets[0] = { defaultTileSet.get(), 0, tileCount, nullptr, neededIds };
+
+				SmallVector<std::shared_ptr<const Formats::TileSetData>, 4> extraTileSetData;
+				SmallVector<SmallVector<std::int32_t, 0>, 4> extraTiles(extraTileSets.size());
+				std::int32_t firstId = tileCount;
+				for (std::size_t i = 0; i < extraTileSets.size(); i++) {
+					const auto& extraTileSet = extraTileSets[i];
+					for (std::int32_t id : neededIds) {
+						if (id >= firstId && id < firstId + extraTileSet.Count) {
+							extraTiles[i].push_back(id - firstId + extraTileSet.Offset);
+						}
+					}
+					firstId += extraTileSet.Count;
+
+					std::int32_t extraTileCount = 0;
+					const auto& data = extraTileSetData.emplace_back(tilesetLookup(extraTileSet.Name, extraTiles[i], extraTileCount));
+					// A tile set of true color tiles isn't matched to the palette of the level
+					constexpr std::uint8_t RemapFlags = Formats::ExtraTileSetRecord::Remapped | Formats::ExtraTileSetRecord::TrueColor;
+					bool remapped = ((extraTileSet.Flags & RemapFlags) == Formats::ExtraTileSetRecord::Remapped);
+					previewTileSets.push_back({ data.get(), extraTileSet.Offset, extraTileSet.Count, remapped ? extraTileSet.Remapping : nullptr, extraTiles[i] });
+				}
+				source.TileSets = previewTileSets;
+
+				Formats::ChunkRecord preview;
+				preview.Tag = Formats::LevelFile::PreviewChunk;
+				Formats::LevelPreview::Make(source, start, _useLevelPalette ? levelPalette : defaultTileSet->Palette, preview.Data);
+				if (!preview.Data.empty()) {
+					chunks.push_back(Death::move(preview));
+				}
 			}
 		}
 

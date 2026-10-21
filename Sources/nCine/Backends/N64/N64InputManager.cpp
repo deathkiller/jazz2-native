@@ -5,6 +5,7 @@
 #include "../../Input/IInputEventHandler.h"
 #include "../../../Main.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -212,11 +213,12 @@ namespace nCine::Backends
 
 	bool N64InputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
-		// The Rumble Pak motor is on/off only, so any nonzero request runs it at full strength. The duration
-		// has to be enforced here: unlike a driver that takes one, nothing switches the motor off on its own,
+		// The Rumble Pak motor is on/off only, so the requested strength is turned into a duty cycle that
+		// updateJoystickStates() applies once a frame - a plain on/off ran every effect at full strength. The duration
+		// has to be enforced there too: unlike a driver that takes one, nothing switches the motor off on its own,
 		// and the caller never asks it to - RumbleProcessor only calls this while an effect is still running
 		// and simply stops calling once the effect ends, which left the motor running forever. The deadline
-		// below is refreshed on every call and is checked from updateJoystickStates() once a frame.
+		// below is refreshed on every call.
 		if (joyId < 0 || joyId >= MaxJoysticks || !_pads[joyId].Connected) {
 			return false;
 		}
@@ -226,14 +228,14 @@ namespace nCine::Backends
 		}
 
 		PadInfo& pad = _pads[joyId];
-		const bool active = (lowFrequency > 0.0f || highFrequency > 0.0f);
-		if (active) {
+		const float strength = std::min(std::max(lowFrequency, highFrequency), 1.0f);
+		if (strength > 0.0f) {
 			// A request with no duration would never expire, so give it one frame at 60 Hz to be refreshed in
 			pad.RumbleUntilMs = get_ticks_ms() + (durationMs > 0 ? durationMs : 17);
-		}
-		if (pad.RumbleActive != active) {
-			pad.RumbleActive = active;
-			joypad_set_rumble_active(port, active);
+			pad.RumbleStrength = strength;
+		} else {
+			pad.RumbleStrength = 0.0f;
+			pad.RumbleUntilMs = 0;
 		}
 		return true;
 	}
@@ -262,6 +264,7 @@ namespace nCine::Backends
 			}
 		} else {
 			_pads[joyId].RumbleActive = false;
+			_pads[joyId].RumbleStrength = 0.0f;
 			_pads[joyId].RumbleUntilMs = 0;
 			_pads[joyId].State.resetJoystickState(joyId);
 			if (_inputEventHandler != nullptr) {
@@ -285,10 +288,26 @@ namespace nCine::Backends
 				continue;
 			}
 
-			// Stop a Rumble Pak whose effect has run out - see joystickRumble() for why this is needed
-			if (_pads[i].RumbleActive && get_ticks_ms() >= _pads[i].RumbleUntilMs) {
-				_pads[i].RumbleActive = false;
-				joypad_set_rumble_active(port, false);
+			// Drive the motor with the requested duty cycle and stop it once the effect has run out - see joystickRumble()
+			PadInfo& pad = _pads[i];
+			if (pad.RumbleStrength > 0.0f && get_ticks_ms() >= pad.RumbleUntilMs) {
+				pad.RumbleStrength = 0.0f;
+			}
+			bool rumbleActive = false;
+			if (pad.RumbleStrength > 0.0f) {
+				// Sigma-delta: the motor is on in the fraction of frames given by the strength, starting half-way
+				// so a short weak effect still gets a pulse instead of none
+				pad.RumbleAccumulator += pad.RumbleStrength;
+				if (pad.RumbleAccumulator >= 1.0f) {
+					pad.RumbleAccumulator -= 1.0f;
+					rumbleActive = true;
+				}
+			} else {
+				pad.RumbleAccumulator = 0.5f;
+			}
+			if (pad.RumbleActive != rumbleActive) {
+				pad.RumbleActive = rumbleActive;
+				joypad_set_rumble_active(port, rumbleActive);
 			}
 
 			const joypad_inputs_t inputs = joypad_get_inputs(port);

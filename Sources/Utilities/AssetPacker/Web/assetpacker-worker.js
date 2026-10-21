@@ -72,7 +72,7 @@ self.onmessage = async (e) => {
 	let sink = null;
 	try {
 		// Shown right away, the module takes a while to load with the game's content baked into it
-		post('log', { text: 'Process started', level: 'info' });
+		post('log', { text: 'Process started at ' + new Date(startTime).toLocaleString(), level: 'info' });
 
 		const module = await createAssetPacker({
 			print: (text) => post('log', { text, level: 'info' }),
