@@ -609,6 +609,7 @@ namespace Jazz2::UI
 		std::int32_t charOffset = 0, charOffsetShadow = 0;
 
 		if DEATH_UNLIKELY(player->_playerType == PlayerType::Spectate) {
+			// TRANSLATORS: Shown in the HUD while spectating in multiplayer, may be followed by the name of the watched player
 			auto spectateText = _("Spectating");
 			if constexpr (Font::ShadowsEnabled) {
 				_smallFont->DrawString(this, spectateText, charOffsetShadow, view.X + 10.0f, view.Y + 6.0f + 2.0f, FontShadowLayer,

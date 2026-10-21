@@ -129,18 +129,18 @@ namespace Jazz2::Editor
 		String targetName = (intoItself ? name : String(newName));
 		if (!intoItself) {
 			if (!ContentTileSetLibrary::IsValidName(targetName)) {
-				session.ShowMessage(_("A tile set is named by lowercase letters, digits, dashes and underscores"));
+				session.ShowMessage(_x("editor", "A tile set is named by lowercase letters, digits, dashes and underscores"));
 				return false;
 			}
 			if (!ContentTileSetLibrary::FindTileSetFile(targetName).empty()) {
-				session.ShowMessage(_("A tile set of this name exists already"));
+				session.ShowMessage(_x("editor", "A tile set of this name exists already"));
 				return false;
 			}
 		}
 
 		Formats::TileSetData tileSet;
 		if (!ReadTileSetOf(session, source, tileSet)) {
-			session.ShowMessage(_("The tile set can't be read"));
+			session.ShowMessage(_x("editor", "The tile set can't be read"));
 			return false;
 		}
 		// The tiles the level stores in itself are changed there, a new tile set gets a file of its own
@@ -207,7 +207,7 @@ namespace Jazz2::Editor
 			tileSet.Palette[0] &= 0x00FFFFFFu;
 		}
 		if (applied.empty() && !paletteApplied) {
-			session.ShowMessage(_("This level doesn't change any tile of the tile set"));
+			session.ShowMessage(_x("editor", "This level doesn't change any tile of the tile set"));
 			return false;
 		}
 
@@ -215,24 +215,24 @@ namespace Jazz2::Editor
 		String path;
 		if (intoLevel) {
 			if (!SerializeTileSet(tileSet, bytes)) {
-				session.ShowMessage(_("The tile set couldn't be saved"));
+				session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 				return false;
 			}
 		} else {
 			// The name of the tile set comes from the level, it must not lead out of where tile sets are saved to
 			if (!Formats::LevelFile::IsSafeTileSetPath(targetName)) {
-				session.ShowMessage(_("The tile set has a name that can't be saved"));
+				session.ShowMessage(_x("editor", "The tile set has a name that can't be saved"));
 				return false;
 			}
 			path = ContentTileSetLibrary::GetWritablePath(targetName, true);
 			if (path.empty()) {
-				session.ShowMessage(_("There's no place to save tile sets to"));
+				session.ShowMessage(_x("editor", "There's no place to save tile sets to"));
 				return false;
 			}
 			// Written next to it first, so a tile set that can't be saved whole isn't lost, the one written over is kept
 			// as a backup, undo doesn't change the file back
 			if (!AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); }, intoItself)) {
-				session.ShowMessage(_("The tile set couldn't be saved"));
+				session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 				return false;
 			}
 			session.InvalidateTileSet(targetName);
@@ -248,7 +248,8 @@ namespace Jazz2::Editor
 		if ((!intoItself && source == TileRef::DefaultTileSet) || paletteApplied) {
 			parts |= SnapshotParts::Properties;
 		}
-		session.RecordSnapshotStep(_("Save tile changes into tile set"), parts, [&](LevelDocument& document) {
+		// TRANSLATORS: Name of an undo step in the history
+		session.RecordSnapshotStep(_x("editor", "Save tile changes into tile set"), parts, [&](LevelDocument& document) {
 			if (intoLevel) {
 				document.ExtraTileSets[std::size_t(source) - 1].Data = Death::move(bytes);
 			} else if (!intoItself) {
@@ -277,11 +278,12 @@ namespace Jazz2::Editor
 		});
 
 		if (tiles == 0) {
-			session.ShowMessage(_f("The palette of the level was saved into tile set \"{}\"", targetName));
+			session.ShowMessage(_fx("editor", "The palette of the level was saved into tile set \"{}\"", targetName));
 		} else {
-			String message = _fn("{} changed tile was saved into tile set \"{}\"", "{} changed tiles were saved into tile set \"{}\"", tiles, tiles, targetName);
+			String message = _fnx("editor", "{} changed tile was saved into tile set \"{}\"", "{} changed tiles were saved into tile set \"{}\"", tiles, tiles, targetName);
 			if (paletteApplied) {
-				message += " "_s + _("- and the palette of the level");
+				// TRANSLATORS: Added to the end of the message about how many changed tiles were saved into a tile set
+				message += " "_s + _x("editor", "- and the palette of the level");
 			}
 			session.ShowMessage(message);
 		}
@@ -313,7 +315,7 @@ namespace Jazz2::Editor
 			}
 		}
 		if (state->Source < 0) {
-			session.ShowMessage(_("This level doesn't change any tile or have a palette of its own"));
+			session.ShowMessage(_x("editor", "This level doesn't change any tile or have a palette of its own"));
 			return;
 		}
 
@@ -326,15 +328,19 @@ namespace Jazz2::Editor
 			return GetTileSetLabel(name);
 		};
 
-		auto dialog = std::make_unique<UiDialog>(_("Save Tile Changes into Tile Set"));
+		// TRANSLATORS: Title of the dialog that saves the tiles changed in the level into a tile set
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Save Tile Changes into Tile Set"));
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
-		content->Add<UiLabel>(_("The tiles changed in this level become tiles of a tile set,"), UiTheme::TextDim);
-		content->Add<UiLabel>(_("the level doesn't change them anymore."), UiTheme::TextDim);
+		// TRANSLATORS: First line of a sentence in the Save Tile Changes into Tile Set dialog, the next text continues it
+		content->Add<UiLabel>(_x("editor", "The tiles changed in this level become tiles of a tile set,"), UiTheme::TextDim);
+		// TRANSLATORS: Second line of a sentence in the Save Tile Changes into Tile Set dialog, continues the previous text
+		content->Add<UiLabel>(_x("editor", "the level doesn't change them anymore."), UiTheme::TextDim);
 		// The name of the new tile set follows the tile set chosen
 		auto nameHolder = std::make_shared<UiTextBox*>(nullptr);
 		{
-			auto* row = content->AddRow(_("Tiles of"));
+			// TRANSLATORS: Label of the choice of the tile set whose changed tiles are saved, followed by its name
+			auto* row = content->AddRow(_x("editor", "Tiles of"));
 			auto* dropdown = row->Add<UiDropdown>([state, sourceName]() {
 				return sourceName(state->Source);
 			}, [s, state, sourceName, sourceCount, nameHolder](SmallVectorImpl<UiMenuEntry>& entries) {
@@ -344,7 +350,8 @@ namespace Jazz2::Editor
 						continue;
 					}
 					UiMenuEntry entry;
-					entry.Label = sourceName(i) + " ("_s + _fn("{} changed tile", "{} changed tiles", changed, changed) + ")"_s;
+					// TRANSLATORS: Number of the tiles the level changes in a tile set, shown after the name of the tile set
+					entry.Label = sourceName(i) + " ("_s + _fnx("editor", "{} changed tile", "{} changed tiles", changed, changed) + ")"_s;
 					entry.IsChecked = [state, i]() { return (state->Source == i); };
 					entry.Execute = [s, state, i, nameHolder]() {
 						if (state->Source != i && *nameHolder != nullptr) {
@@ -371,34 +378,36 @@ namespace Jazz2::Editor
 					cache->Revision = revision;
 					cache->Source = state->Source;
 					std::int32_t changed = CountChangedTiles(*s, std::uint8_t(state->Source));
-					cache->Text = _fn("{} changed tile", "{} changed tiles", changed, changed);
+					cache->Text = _fnx("editor", "{} changed tile", "{} changed tiles", changed, changed);
 				}
 				return cache->Text;
 			};
 		}
 		{
-			auto* withPalette = content->Add<UiCheckBox>(_("With the palette of the level"), [state]() { return state->WithPalette; },
+			// TRANSLATORS: Checkbox in the Save Tile Changes into Tile Set dialog, the palette of the level is saved into the tile set too
+			auto* withPalette = content->Add<UiCheckBox>(_x("editor", "With the palette of the level"), [state]() { return state->WithPalette; },
 				[state](bool value) { state->WithPalette = value; });
-			withPalette->Tooltip = _("It becomes the palette of the tile set, the level then doesn't have its own");
+			withPalette->Tooltip = _x("editor", "It becomes the palette of the tile set, the level then doesn't have its own");
 			withPalette->IsVisibleFunc = [s, state]() { return (state->Source == TileRef::DefaultTileSet && HasLevelPalette(*s)); };
 		}
 		UiTextBox* nameBox;
 		{
-			content->Add<UiCheckBox>(_("Into a new tile set, this level then uses it instead"), [state]() { return !state->IntoItself; },
+			content->Add<UiCheckBox>(_x("editor", "Into a new tile set, this level then uses it instead"), [state]() { return !state->IntoItself; },
 				[state](bool value) { state->IntoItself = !value; });
-			auto* row = content->AddRow(_("Name"));
+			// TRANSLATORS: Label of the name of the new tile set in the Save Tile Changes into Tile Set dialog
+			auto* row = content->AddRow(_x("editor", "Name"));
 			nameBox = row->Add<UiTextBox>(MakeNewName(document, std::uint8_t(state->Source)));
 			*nameHolder = nameBox;
 			nameBox->Width = 160.0f;
 			nameBox->MaxLength = 32;
-			nameBox->Tooltip = _("The tile set is saved in the user content, Tilesets/<name>.j2t");
+			nameBox->Tooltip = _x("editor", "The tile set is saved in the user content, Tilesets/<name>.j2t");
 			nameBox->IsEnabledFunc = [state]() { return !state->IntoItself; };
 		}
 		{
 			auto* warning = content->Add<UiLabel>(StringView(), UiTheme::TextAccent);
 			warning->TextFunc = [s, state]() {
 				return (state->IntoItself && !IsLevelTileSet(s->GetDocument(), std::uint8_t(state->Source))
-					? String(_("Every level that uses the tile set shows the changes")) : String());
+					? String(_x("editor", "Every level that uses the tile set shows the changes")) : String());
 			};
 			// Its own copy in the user content is written over, any other one is covered by a copy there
 			auto* copy = content->Add<UiLabel>(StringView(), UiTheme::TextAccent);
@@ -407,7 +416,8 @@ namespace Jazz2::Editor
 					return String();
 				}
 				String name = sourceName(state->Source);
-				return (state->IntoItself && !IsOwnTileSetCopy(name) ? String(_("- a copy in the user content is used instead of it")) : String());
+				// TRANSLATORS: Warning in the Save Tile Changes into Tile Set dialog, the changed tile set is saved as a copy in the user content
+				return (state->IntoItself && !IsOwnTileSetCopy(name) ? String(_x("editor", "- a copy in the user content is used instead of it")) : String());
 			};
 		}
 
@@ -417,7 +427,7 @@ namespace Jazz2::Editor
 				dialogPtr->Close();
 			}
 		}, true);
-		dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
+		dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
 		ShowModal(*surface, Death::move(dialog));
 	}

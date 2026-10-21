@@ -192,7 +192,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (!_host.IsLayerEditable(_host.GetCurrentLayer())) {
-			_host.ShowMessage(_("The layer is locked or hidden"));
+			_host.ShowMessage(_x("editor", "The layer is locked or hidden"));
 			return;
 		}
 		_dragging = true;
@@ -217,7 +217,8 @@ namespace Jazz2::Editor
 
 		TileStamp eraseStamp = TileStamp::FromTile(TileRef{});
 		const TileStamp& stamp = (_erase ? eraseStamp : _host.GetStamp());
-		if (stamp.IsEmpty() || !BeginStroke(_erase ? _("Erase shape") : _("Draw shape"), false)) {
+		// TRANSLATORS: Names of undo steps in the history, after the shape tool erased or drew a shape of tiles
+		if (stamp.IsEmpty() || !BeginStroke(_erase ? _x("editor", "Erase shape") : _x("editor", "Draw shape"), false)) {
 			return;
 		}
 		_strokeOptions = !_erase;
@@ -271,23 +272,24 @@ namespace Jazz2::Editor
 
 	StringView ShapeTool::GetHint() const
 	{
-		return _("Drag to draw the shape, right-drag to erase it - Shift: 45 degrees or square");
+		return _x("editor", "Drag to draw the shape, right-drag to erase it - Shift: 45 degrees or square");
 	}
 
 	void ShapeTool::BuildOptions(ToolOptionsBuilder& builder)
 	{
 		const ToolOptionItem shapes[] = {
 			// TRANSLATORS: Shapes the shape tool draws
-			{ _("Line"), EditorIcon::ShapeLine, ActionIds::ShapeLine },
-			{ _("Rectangle"), EditorIcon::Rectangle, ActionIds::ShapeRectangle },
-			{ _("Ellipse"), EditorIcon::Ellipse, ActionIds::ShapeEllipse },
-			{ _("Filled ellipse"), EditorIcon::FilledEllipse, ActionIds::ShapeFilledEllipse },
+			{ _x("editor", "Line"), EditorIcon::ShapeLine, ActionIds::ShapeLine },
+			{ _x("editor", "Rectangle"), EditorIcon::Rectangle, ActionIds::ShapeRectangle },
+			{ _x("editor", "Ellipse"), EditorIcon::Ellipse, ActionIds::ShapeEllipse },
+			{ _x("editor", "Filled ellipse"), EditorIcon::FilledEllipse, ActionIds::ShapeFilledEllipse },
 		};
 		// TRANSLATORS: Label of the choice of the shape the shape tool draws
-		builder.AddChoice(_("Shape"), shapes);
+		builder.AddChoice(_x("editor", "Shape"), shapes);
 		AddStampOptions(builder);
 		AddModifierOptions(builder);
-		builder.AddAction(ActionIds::ToolsOnlyEmpty, _("Only empty"));
+		// TRANSLATORS: Toggle in the toolbar, short for painting only the tiles that are empty
+		builder.AddAction(ActionIds::ToolsOnlyEmpty, _x("editor", "Only empty"));
 	}
 }
 

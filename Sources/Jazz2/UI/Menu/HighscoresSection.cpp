@@ -178,6 +178,7 @@ namespace Jazz2::UI::Menu
 
 		SeriesName selectedSeries = (SeriesName)_selectedSeries;
 		if (selectedSeries == SeriesName::BaseGame) {
+			// TRANSLATORS: Header text in Highscores section for the episodes of the full game, keep the color tags \f[c:#d0705d] and \f[/c] as they are
 			_root->DrawStringShadow(_("Highscores for \f[c:#d0705d]Base game\f[/c]"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		} else {
@@ -188,6 +189,7 @@ namespace Jazz2::UI::Menu
 				default: episodeName = "Unknown"; break;
 			}
 
+			// TRANSLATORS: Header text in Highscores section, {} is the name of the game edition (Shareware Demo or The Secret Files, not translated), keep the color tags \f[c:#d0705d] and \f[/c] as they are
 			_root->DrawStringShadow(_f("Highscores for \f[c:#d0705d]{}\f[/c]", episodeName), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		}

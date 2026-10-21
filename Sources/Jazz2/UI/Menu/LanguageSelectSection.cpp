@@ -41,6 +41,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// TRANSLATORS: Header of Options > Gameplay > Language section
 		SetTitle(_("Language"));
 
 		auto& resolver = ContentResolver::Get();

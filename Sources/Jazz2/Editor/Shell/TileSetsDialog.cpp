@@ -92,7 +92,7 @@ namespace Jazz2::Editor
 				return true;
 			});
 			if (cleared > 0) {
-				session.ShowMessage(_fn("{} tile that isn't in the tile sets anymore was cleared", "{} tiles that aren't in the tile sets anymore were cleared", cleared, cleared));
+				session.ShowMessage(_fnx("editor", "{} tile that isn't in the tile sets anymore was cleared", "{} tiles that aren't in the tile sets anymore were cleared", cleared, cleared));
 			}
 		}
 
@@ -102,10 +102,13 @@ namespace Jazz2::Editor
 			auto& resolver = ContentResolver::Get();
 			StringView userContent = resolver.GetUserContentPath();
 			if (!userContent.empty()) {
-				roots.push_back({ _("User content"), fs::CombinePath(userContent, "Tilesets"_s), false });
+				// TRANSLATORS: Name of a place tile sets are picked from, the folder of the content added by the user
+				roots.push_back({ _x("editor", "User content"), fs::CombinePath(userContent, "Tilesets"_s), false });
 			}
-			roots.push_back({ _("Content"), fs::CombinePath(resolver.GetContentPath(), "Tilesets"_s), false });
-			roots.push_back({ _("Cache"), fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s), false });
+			// TRANSLATORS: Name of a place tile sets are picked from, the folder of the content of the game
+			roots.push_back({ _x("editor", "Content"), fs::CombinePath(resolver.GetContentPath(), "Tilesets"_s), false });
+			// TRANSLATORS: Name of a place tile sets are picked from, the folder of the files converted from the original game
+			roots.push_back({ _x("editor", "Cache"), fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s), false });
 			for (std::size_t i = 0; i < roots.size(); ) {
 				if (!fs::DirectoryExists(roots[i].Path)) {
 					roots.erase(roots.begin() + i);
@@ -351,11 +354,13 @@ namespace Jazz2::Editor
 				std::uint8_t source = GetSource();
 				std::int32_t tileId = _session.GetDocument().ToTileId(TileRef{ std::uint16_t(index), source, 0 });
 				if (source == TileRef::DefaultTileSet) {
-					_tooltip = _f("Tile {} - tile ID {}", index, tileId);
+					// TRANSLATORS: Tooltip of a tile in the preview of the Tile Sets dialog, with its index in the tile set and its tile ID in the level
+					_tooltip = _fx("editor", "Tile {} - tile ID {}", index, tileId);
 				} else {
 					// The tile of the file it is, the level takes only a part of it
 					std::int32_t fileIndex = index + _session.GetDocument().ExtraTileSets[source - 1].Offset;
-					_tooltip = _f("Tile {} of the file - tile ID {}", fileIndex, tileId);
+					// TRANSLATORS: Tooltip of a tile in the preview of the Tile Sets dialog, with its index in the tile set file and its tile ID in the level
+					_tooltip = _fx("editor", "Tile {} of the file - tile ID {}", fileIndex, tileId);
 				}
 				return _tooltip;
 			}
@@ -391,7 +396,8 @@ namespace Jazz2::Editor
 			UiScrollView* Preview = nullptr;
 
 			TileSetsWindow()
-				: UiDialog(_("Tile Sets"), true)
+				// TRANSLATORS: Title of the dialog of the tile sets the level uses
+				: UiDialog(_x("editor", "Tile Sets"), true)
 			{
 				MaxScreenHeightFraction = 0.9f;
 			}
@@ -435,7 +441,7 @@ namespace Jazz2::Editor
 						Add<ExtraTileSetRow>(_session, _selection, i);
 					}
 					if (count == 0) {
-						Add<UiLabel>(_("The level has no extra tile sets"), UiTheme::TextDim);
+						Add<UiLabel>(_x("editor", "The level has no extra tile sets"), UiTheme::TextDim);
 					}
 				}
 				UiStack::Update(timeMult);
@@ -453,7 +459,7 @@ namespace Jazz2::Editor
 		LevelDocument& document = session.GetDocument();
 		std::int32_t tileCount = session.GetTileSetLibrary().GetTileCount(name);
 		if (tileCount <= 0) {
-			session.ShowMessage(_("The tile set can't be read"));
+			session.ShowMessage(_x("editor", "The tile set can't be read"));
 			return false;
 		}
 		if (name == document.Properties.DefaultTileSet) {
@@ -464,7 +470,8 @@ namespace Jazz2::Editor
 		}
 		// The tiles of the default tile set keep their indices, so they show what is there in the new one
 		String newName = name;
-		ChangeTileSets(session, _("Change default tile set"), true, [&newName, tileCount](LevelDocument& document) {
+		// TRANSLATORS: Name of an undo step in the history
+		ChangeTileSets(session, _x("editor", "Change default tile set"), true, [&newName, tileCount](LevelDocument& document) {
 			document.Properties.DefaultTileSet = Death::move(newName);
 			document.DefaultTileCount = tileCount;
 		}, [](TileRef&) { return true; });
@@ -474,12 +481,12 @@ namespace Jazz2::Editor
 	bool AddExtraTileSet(IEditorContext& session, StringView name, std::int32_t matchColors)
 	{
 		if (session.GetDocument().ExtraTileSets.size() >= TileRef::LastExtraTileSet) {
-			session.ShowMessage(_("A level can't have more extra tile sets"));
+			session.ShowMessage(_x("editor", "A level can't have more extra tile sets"));
 			return false;
 		}
 		std::int32_t tileCount = session.GetTileSetLibrary().GetTileCount(name);
 		if (tileCount <= 0) {
-			session.ShowMessage(_("The tile set can't be read"));
+			session.ShowMessage(_x("editor", "The tile set can't be read"));
 			return false;
 		}
 		// All of its tiles after the tiles of the tile sets before it, it doesn't move any of them
@@ -499,11 +506,12 @@ namespace Jazz2::Editor
 			tileSet.Flags |= Formats::ExtraTileSetRecord::Remapped;
 			matched = true;
 		}
-		ChangeTileSets(session, _("Add tile set"), false, [&tileSet](LevelDocument& document) {
+		// TRANSLATORS: Name of an undo step in the history
+		ChangeTileSets(session, _x("editor", "Add tile set"), false, [&tileSet](LevelDocument& document) {
 			document.ExtraTileSets.push_back(Death::move(tileSet));
 		}, [](TileRef&) { return true; });
 		if (matched) {
-			session.ShowMessage(_("The tile set has another palette, its colors were matched to the palette of the level"));
+			session.ShowMessage(_x("editor", "The tile set has another palette, its colors were matched to the palette of the level"));
 		}
 		return true;
 	}
@@ -527,7 +535,8 @@ namespace Jazz2::Editor
 			auto* previewColumn = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
 			dialog->PreviewColumn = previewColumn;
 			auto* header = previewColumn->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			header->Add<UiLabel>(_("Preview"), UiTheme::TextHeader);
+			// TRANSLATORS: Header of the preview of the tiles of a tile set in the Tile Sets dialog, a noun
+			header->Add<UiLabel>(_x("editor", "Preview"), UiTheme::TextHeader);
 			auto* shown = header->Add<UiDropdown>([s, selection]() {
 				const LevelDocument& document = s->GetDocument();
 				std::int32_t preview = selection->Preview;
@@ -552,7 +561,7 @@ namespace Jazz2::Editor
 				}
 			});
 			shown->Flex = 1.0f;
-			shown->Tooltip = _("Tile set whose tiles are shown, as the level takes them");
+			shown->Tooltip = _x("editor", "Tile set whose tiles are shown, as the level takes them");
 			auto* previewScroll = previewColumn->Add<UiScrollView>();
 			previewScroll->SetContent<TileSetPreviewGrid>(session, selection);
 			dialog->Preview = previewScroll;
@@ -563,12 +572,13 @@ namespace Jazz2::Editor
 				if (preview > 0 && preview <= std::int32_t(document.ExtraTileSets.size())) {
 					const Formats::ExtraTileSetRecord& tileSet = document.ExtraTileSets[preview - 1];
 					std::int32_t first = document.ToTileId(TileRef{ 0, std::uint8_t(preview), 0 });
-					return _f("Tile IDs {} - {}", first, first + tileSet.Count - 1);
+					// TRANSLATORS: Below the preview in the Tile Sets dialog, the first and the last tile ID of the tile set shown
+					return _fx("editor", "Tile IDs {} - {}", first, first + tileSet.Count - 1);
 				}
 				if (document.DefaultTileCount <= 0) {
-					return String(_("The tile set can't be read"));
+					return String(_x("editor", "The tile set can't be read"));
 				}
-				return _f("Tile IDs {} - {}", 0, document.DefaultTileCount - 1);
+				return _fx("editor", "Tile IDs {} - {}", 0, document.DefaultTileCount - 1);
 			};
 		}
 
@@ -586,20 +596,22 @@ namespace Jazz2::Editor
 				const LevelDocument& document = s->GetDocument();
 				String text = document.Properties.DefaultTileSet;
 				if (document.DefaultTileCount >= 0) {
-					text += " ("_s + _fn("{} tile", "{} tiles", document.DefaultTileCount, document.DefaultTileCount) + ")"_s;
+					text += " ("_s + _fnx("editor", "{} tile", "{} tiles", document.DefaultTileCount, document.DefaultTileCount) + ")"_s;
 				}
 				return text;
 			};
 			auto* pick = row->Add<UiButton>(StringView(), EditorIcon::Folder, [s]() {
-				PickTileSet(*s, _("Default Tile Set"), s->GetDocument().Properties.DefaultTileSet, [s](StringView name) {
+				// TRANSLATORS: Title of the file picker that chooses the default tile set of the level
+				PickTileSet(*s, _x("editor", "Default Tile Set"), s->GetDocument().Properties.DefaultTileSet, [s](StringView name) {
 					SetDefaultTileSet(*s, name);
 				});
 			});
-			pick->Tooltip = _("Choose another default tile set, the tiles keep their positions in it");
+			pick->Tooltip = _x("editor", "Choose another default tile set, the tiles keep their positions in it");
 		}
 
 		content->Add<UiSeparator>();
-		content->Add<UiLabel>(_("Extra tile sets"), UiTheme::TextHeader);
+		// TRANSLATORS: Header of the list of the tile sets the level uses besides the default one
+		content->Add<UiLabel>(_x("editor", "Extra tile sets"), UiTheme::TextHeader);
 		auto* listScroll = content->Add<UiScrollView>();
 		listScroll->Height = 80.0f;
 		listScroll->SetContent<ExtraTileSetList>(session, selection);
@@ -607,12 +619,14 @@ namespace Jazz2::Editor
 
 		{
 			auto* buttons = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			buttons->Add<UiButton>(_("Add"), EditorIcon::Plus, [s, selection]() {
+			// TRANSLATORS: Button below the list of extra tile sets in the Tile Sets dialog, a verb
+			buttons->Add<UiButton>(_x("editor", "Add"), EditorIcon::Plus, [s, selection]() {
 				if (s->GetDocument().ExtraTileSets.size() >= TileRef::LastExtraTileSet) {
-					s->ShowMessage(_("A level can't have more extra tile sets"));
+					s->ShowMessage(_x("editor", "A level can't have more extra tile sets"));
 					return;
 				}
-				PickTileSet(*s, _("Add Tile Set"), {}, [s, selection](StringView name) {
+				// TRANSLATORS: Title of the file picker and the question that add an extra tile set to the level
+				PickTileSet(*s, _x("editor", "Add Tile Set"), {}, [s, selection](StringView name) {
 					String nameCopy = name;
 					auto add = [s, selection, nameCopy](std::int32_t matchColors) {
 						if (AddExtraTileSet(*s, nameCopy, matchColors)) {
@@ -625,10 +639,11 @@ namespace Jazz2::Editor
 						add(-1);
 						return;
 					}
-					UiMessageDialog::Show(*s->GetSurface(), _("Add Tile Set"),
-						_("The tile set has another palette than the level. Its tiles can get the closest colors of the palette of the level, "
+					UiMessageDialog::Show(*s->GetSurface(), _x("editor", "Add Tile Set"),
+						_x("editor", "The tile set has another palette than the level. Its tiles can get the closest colors of the palette of the level, "
 							"otherwise they show the colors the palette of the level has at their indices."),
-						{ _("Match Colors"), _("Keep Indices"), _("Cancel") }, [add](std::int32_t choice) {
+						// TRANSLATORS: Buttons of the question when an added tile set has another palette, match its colors to the level palette or keep its color indices
+						{ _x("editor", "Match Colors"), _x("editor", "Keep Indices"), _x("editor", "Cancel") }, [add](std::int32_t choice) {
 						if (choice == 0 || choice == 1) {
 							add(choice == 0 ? 1 : 0);
 						}
@@ -641,7 +656,8 @@ namespace Jazz2::Editor
 				}
 				std::uint8_t source = std::uint8_t(selection->Index + 1);
 				std::int32_t index = selection->Index;
-				ChangeTileSets(*s, _("Remove tile set"), false, [index](LevelDocument& document) {
+				// TRANSLATORS: Name of an undo step in the history
+				ChangeTileSets(*s, _x("editor", "Remove tile set"), false, [index](LevelDocument& document) {
 					document.ExtraTileSets.erase(document.ExtraTileSets.begin() + index);
 				}, [source](TileRef& tile) {
 					// Tiles of the removed tile set are gone, those of the tile sets after it move down
@@ -661,7 +677,7 @@ namespace Jazz2::Editor
 					selection->Preview--;
 				}
 			});
-			remove->Tooltip = _("Remove the tile set, its tiles are cleared from the level");
+			remove->Tooltip = _x("editor", "Remove the tile set, its tiles are cleared from the level");
 			remove->IsEnabledFunc = [selected]() mutable { return (selected() != nullptr); };
 
 			for (std::int32_t direction : { -1, 1 }) {
@@ -673,7 +689,8 @@ namespace Jazz2::Editor
 						return;
 					}
 					std::uint8_t a = std::uint8_t(index + 1), b = std::uint8_t(target + 1);
-					ChangeTileSets(*s, _("Move tile set"), false, [index, target](LevelDocument& document) {
+					// TRANSLATORS: Name of an undo step in the history
+					ChangeTileSets(*s, _x("editor", "Move tile set"), false, [index, target](LevelDocument& document) {
 						std::swap(document.ExtraTileSets[index], document.ExtraTileSets[target]);
 					}, [a, b](TileRef& tile) {
 						if (tile.Source == a) {
@@ -690,7 +707,7 @@ namespace Jazz2::Editor
 						selection->Preview = a;
 					}
 				});
-				move->Tooltip = (direction < 0 ? _("Move up, its tiles get lower tile IDs") : _("Move down, its tiles get higher tile IDs"));
+				move->Tooltip = (direction < 0 ? _x("editor", "Move up, its tiles get lower tile IDs") : _x("editor", "Move down, its tiles get higher tile IDs"));
 				move->IsEnabledFunc = [s, selection, direction]() {
 					std::int32_t target = selection->Index + direction;
 					return (selection->Index >= 0 && target >= 0 && target < std::int32_t(s->GetDocument().ExtraTileSets.size()));
@@ -701,7 +718,8 @@ namespace Jazz2::Editor
 		// The selected extra tile set
 		auto hasSelected = [selected]() mutable { return (selected() != nullptr); };
 		{
-			auto* row = content->AddRow(_("Tile set"));
+			// TRANSLATORS: Label of the name of the extra tile set selected in the Tile Sets dialog
+			auto* row = content->AddRow(_x("editor", "Tile set"));
 			auto* name = row->Add<UiLabel>();
 			name->Flex = 1.0f;
 			name->TextFunc = [selected]() mutable {
@@ -714,11 +732,12 @@ namespace Jazz2::Editor
 					return;
 				}
 				std::int32_t index = selection->Index;
-				PickTileSet(*s, _("Replace Tile Set"), tileSet->Name, [s, index](StringView name) {
+				// TRANSLATORS: Title of the file picker that chooses another tile set in place of the selected extra tile set
+				PickTileSet(*s, _x("editor", "Replace Tile Set"), tileSet->Name, [s, index](StringView name) {
 					LevelDocument& document = s->GetDocument();
 					std::int32_t tileCount = s->GetTileSetLibrary().GetTileCount(name);
 					if (tileCount <= 0 || index >= std::int32_t(document.ExtraTileSets.size())) {
-						s->ShowMessage(_("The tile set can't be read"));
+						s->ShowMessage(_x("editor", "The tile set can't be read"));
 						return;
 					}
 					// The same part of the other tile set, as much of it as there is
@@ -738,16 +757,18 @@ namespace Jazz2::Editor
 					} else if ((wasMatched || HasOtherPalette(*s, name)) && MatchColors(*s, replaced)) {
 						replaced.Flags |= Formats::ExtraTileSetRecord::Remapped;
 					}
-					ChangeTileSets(*s, _("Replace tile set"), false, [index, &replaced](LevelDocument& document) {
+					// TRANSLATORS: Name of an undo step in the history
+					ChangeTileSets(*s, _x("editor", "Replace tile set"), false, [index, &replaced](LevelDocument& document) {
 						document.ExtraTileSets[index] = Death::move(replaced);
 					}, [](TileRef&) { return true; });
 				});
 			});
-			pick->Tooltip = _("Use another tile set in its place");
+			pick->Tooltip = _x("editor", "Use another tile set in its place");
 			pick->IsEnabledFunc = hasSelected;
 		}
 		{
-			auto* row = content->AddRow(_("First tile"));
+			// TRANSLATORS: Label of the first tile of the file the level takes from the selected extra tile set
+			auto* row = content->AddRow(_x("editor", "First tile"));
 			auto* number = row->Add<UiNumberBox>([selected]() mutable {
 				Formats::ExtraTileSetRecord* tileSet = selected();
 				return (tileSet != nullptr ? float(tileSet->Offset) : 0.0f);
@@ -769,7 +790,8 @@ namespace Jazz2::Editor
 				// The tiles keep showing the same pictures, those that aren't taken anymore are cleared
 				std::uint8_t source = std::uint8_t(index + 1);
 				std::int32_t delta = std::int32_t(tileSet.Offset) - offset;
-				ChangeTileSets(*s, _("Tile set range"), false, [index, offset, fileTileCount](LevelDocument& document) {
+				// TRANSLATORS: Name of an undo step in the history, the range of tiles taken from an extra tile set was changed
+				ChangeTileSets(*s, _x("editor", "Tile set range"), false, [index, offset, fileTileCount](LevelDocument& document) {
 					Formats::ExtraTileSetRecord& tileSet = document.ExtraTileSets[index];
 					tileSet.Offset = std::uint16_t(offset);
 					if (fileTileCount > 0) {
@@ -787,11 +809,12 @@ namespace Jazz2::Editor
 				});
 			}, 0.0f, 65535.0f, 1.0f, 0);
 			number->Width = 60.0f;
-			number->Tooltip = _("First tile taken from the tile set");
+			number->Tooltip = _x("editor", "First tile taken from the tile set");
 			number->IsEnabledFunc = hasSelected;
 		}
 		{
-			auto* row = content->AddRow(_("Tiles"));
+			// TRANSLATORS: Label of the number of tiles the level takes from the selected extra tile set
+			auto* row = content->AddRow(_x("editor", "Tiles"));
 			auto* number = row->Add<UiNumberBox>([selected]() mutable {
 				Formats::ExtraTileSetRecord* tileSet = selected();
 				return (tileSet != nullptr ? float(tileSet->Count) : 0.0f);
@@ -811,16 +834,16 @@ namespace Jazz2::Editor
 					return;
 				}
 				// Tiles of the tile sets after it move with it, those past the end of it are cleared
-				ChangeTileSets(*s, _("Tile set range"), false, [index, count](LevelDocument& document) {
+				ChangeTileSets(*s, _x("editor", "Tile set range"), false, [index, count](LevelDocument& document) {
 					document.ExtraTileSets[index].Count = std::uint16_t(count);
 				}, [](TileRef&) { return true; });
 			}, 1.0f, 65535.0f, 1.0f, 0);
 			number->Width = 60.0f;
-			number->Tooltip = _("Number of tiles taken from the tile set");
+			number->Tooltip = _x("editor", "Number of tiles taken from the tile set");
 			number->IsEnabledFunc = hasSelected;
 		}
 		{
-			auto* check = content->Add<UiCheckBox>(_("Match colors to the level palette"), [selected]() mutable {
+			auto* check = content->Add<UiCheckBox>(_x("editor", "Match colors to the level palette"), [selected]() mutable {
 				Formats::ExtraTileSetRecord* tileSet = selected();
 				return (tileSet != nullptr && (tileSet->Flags & Formats::ExtraTileSetRecord::Remapped) != 0);
 			}, [s, selection](bool value) {
@@ -837,7 +860,7 @@ namespace Jazz2::Editor
 						return;
 					}
 					if (!MatchColors(*s, tileSet)) {
-						s->ShowMessage(_("The palettes can't be read"));
+						s->ShowMessage(_x("editor", "The palettes can't be read"));
 						return;
 					}
 					tileSet.Flags |= Formats::ExtraTileSetRecord::Remapped;
@@ -847,13 +870,13 @@ namespace Jazz2::Editor
 						const Formats::TileSetData* data = s->GetTileSetData(tileSet.Name);
 						SmallVector<std::uint8_t, 0> bytes;
 						if (data == nullptr) {
-							s->ShowMessage(_("The tile set can't be read"));
+							s->ShowMessage(_x("editor", "The tile set can't be read"));
 							return;
 						}
 						Formats::TileSetData baked = *data;
 						BakeRemapping(baked, tileSet.Remapping);
 						if (!SerializeTileSet(baked, bytes)) {
-							s->ShowMessage(_("The tile set couldn't be saved"));
+							s->ShowMessage(_x("editor", "The tile set couldn't be saved"));
 							return;
 						}
 						tileSet.Data = Death::move(bytes);
@@ -861,11 +884,12 @@ namespace Jazz2::Editor
 					tileSet.Flags &= ~Formats::ExtraTileSetRecord::Remapped;
 				}
 				// Only the colors change, all tiles stay where they are
-				ChangeTileSets(*s, _("Tile set colors"), false, [index, &tileSet](LevelDocument& document) {
+				// TRANSLATORS: Name of an undo step in the history, the colors of an extra tile set were matched or unmatched to the level palette
+				ChangeTileSets(*s, _x("editor", "Tile set colors"), false, [index, &tileSet](LevelDocument& document) {
 					document.ExtraTileSets[index] = Death::move(tileSet);
 				}, [](TileRef&) { return true; });
 			});
-			check->Tooltip = _("Each color of the tile set is replaced by the closest one of the palette of the level, "
+			check->Tooltip = _x("editor", "Each color of the tile set is replaced by the closest one of the palette of the level, "
 				"otherwise its colors are the entries of the level palette of the same index");
 			check->IsEnabledFunc = [selected]() mutable {
 				// The tiles of the level are made in its palette, they can only stop being matched
@@ -882,9 +906,10 @@ namespace Jazz2::Editor
 				const LevelDocument& document = s->GetDocument();
 				std::int32_t staticCount = document.GetStaticTileCount();
 				std::int32_t used = std::max(staticCount, 0) + std::int32_t(document.Animations.size());
-				String text = _f("Tile IDs used: {} of {}", used, document.TileIdSpace);
+				// TRANSLATORS: Bottom of the Tile Sets dialog, the number of tile IDs the level uses and the number it can have
+				String text = _fx("editor", "Tile IDs used: {} of {}", used, document.TileIdSpace);
 				if (used > LevelDocument::ScriptTileIdLimit) {
-					text += " "_s + _("(scripts can't refer to all of them)");
+					text += " "_s + _x("editor", "(scripts can't refer to all of them)");
 				}
 				return text;
 			};
@@ -895,7 +920,8 @@ namespace Jazz2::Editor
 
 	String GetTileSetLabel(StringView name)
 	{
-		return (name.hasPrefix(':') ? String(_("Tiles of this level")) : String(name));
+		// TRANSLATORS: Shown in place of the name of a tile set for the tiles stored in the level itself
+		return (name.hasPrefix(':') ? String(_x("editor", "Tiles of this level")) : String(name));
 	}
 
 	bool IsLevelTileSet(const LevelDocument& document, std::uint8_t source)
@@ -975,7 +1001,7 @@ namespace Jazz2::Editor
 		}
 		std::int64_t total = std::int64_t(std::max<std::int32_t>(document.GetStaticTileCount(), 0)) + added + std::int64_t(document.Animations.size());
 		if (total > std::int64_t(UINT16_MAX) + 1) {
-			session.ShowMessage(_("The level can't refer to so many tiles, it has 65536 tile IDs for all of its tile sets and animated tiles"));
+			session.ShowMessage(_x("editor", "The level can't refer to so many tiles, it has 65536 tile IDs for all of its tile sets and animated tiles"));
 			return false;
 		}
 		return true;
@@ -1058,17 +1084,17 @@ namespace Jazz2::Editor
 			const LevelDocument& document = session.GetDocument();
 			bool newSlot = (target.Type == TileTarget::Kind::NewTileSet || (target.Type == TileTarget::Kind::Level && FindLevelTileSet(document) < 0));
 			if (newSlot && document.ExtraTileSets.size() >= TileRef::LastExtraTileSet) {
-				session.ShowMessage(_("A level can't have more extra tile sets"));
+				session.ShowMessage(_x("editor", "A level can't have more extra tile sets"));
 				return false;
 			}
 			switch (target.Type) {
 				case TileTarget::Kind::NewTileSet: {
 					if (!ContentTileSetLibrary::IsValidName(target.Name)) {
-						session.ShowMessage(_("A tile set is named by lowercase letters, digits, dashes and underscores"));
+						session.ShowMessage(_x("editor", "A tile set is named by lowercase letters, digits, dashes and underscores"));
 						return false;
 					}
 					if (!ContentTileSetLibrary::FindTileSetFile(target.Name).empty()) {
-						session.ShowMessage(_("A tile set of this name exists already"));
+						session.ShowMessage(_x("editor", "A tile set of this name exists already"));
 						return false;
 					}
 					GetLevelPalette(session, tileSet.Palette);
@@ -1079,7 +1105,7 @@ namespace Jazz2::Editor
 					std::int32_t slot = FindLevelTileSet(document);
 					if (slot >= 0) {
 						if (!ReadTileSetOf(session, std::uint8_t(slot + 1), tileSet)) {
-							session.ShowMessage(_("The tile set can't be read"));
+							session.ShowMessage(_x("editor", "The tile set can't be read"));
 							return false;
 						}
 						return true;
@@ -1090,7 +1116,7 @@ namespace Jazz2::Editor
 				}
 				default: {
 					if (!ReadTileSetOf(session, target.Source, tileSet)) {
-						session.ShowMessage(_("The tile set can't be read"));
+						session.ShowMessage(_x("editor", "The tile set can't be read"));
 						return false;
 					}
 					return true;
@@ -1138,7 +1164,7 @@ namespace Jazz2::Editor
 
 			std::int32_t oldCount = tileSet.TileCount;
 			if (oldCount + std::int32_t(tiles.size()) > std::int32_t(UINT16_MAX)) {
-				session.ShowMessage(_("A tile set can't have more tiles"));
+				session.ShowMessage(_x("editor", "A tile set can't have more tiles"));
 				return false;
 			}
 			// An extra tile set that takes only a part of its file wouldn't take the new tiles at its end, they'd be
@@ -1146,7 +1172,7 @@ namespace Jazz2::Editor
 			std::uint16_t offset = (slot >= 0 ? document.ExtraTileSets[slot].Offset : 0);
 			bool takesAll = (slot >= 0 && std::int32_t(offset) + std::int32_t(document.ExtraTileSets[slot].Count) >= oldCount);
 			if (slot >= 0 && !takesAll) {
-				session.ShowMessage(_("The level takes only a part of this tile set, let it take the tiles up to its end in Tile Sets first"));
+				session.ShowMessage(_x("editor", "The level takes only a part of this tile set, let it take the tiles up to its end in Tile Sets first"));
 				return false;
 			}
 			if (!CanAddTileIds(session, std::int32_t(tiles.size()) + (newSlot ? oldCount : 0))) {
@@ -1174,13 +1200,13 @@ namespace Jazz2::Editor
 			SmallVector<std::uint8_t, 0> bytes;
 			if (embedded) {
 				if (!SerializeTileSet(tileSet, bytes)) {
-					session.ShowMessage(_("The tile set couldn't be saved"));
+					session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 					return false;
 				}
 			} else {
 				String path = ContentTileSetLibrary::GetWritablePath(name, true);
 				if (path.empty()) {
-					session.ShowMessage(_("There's no place to save tile sets to"));
+					session.ShowMessage(_x("editor", "There's no place to save tile sets to"));
 					return false;
 				}
 				// Only appended to, the tiles other levels take from it stay where they are, but a level that has it as its
@@ -1188,7 +1214,7 @@ namespace Jazz2::Editor
 				// changed with it, and it isn't written if any of them can't be; copies of the files before are kept
 				if (target.Type == TileTarget::Kind::NewTileSet) {
 					if (!AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
-						session.ShowMessage(_("The tile set couldn't be saved"));
+						session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 						return false;
 					}
 				} else if (!WriteTileSetWithAddedTiles(session, name, path, tileSet, oldCount)) {
@@ -1202,7 +1228,8 @@ namespace Jazz2::Editor
 			std::int32_t newCount = tileSet.TileCount;
 			bool trueColor = tileSet.HasTrueColorTiles();
 			std::uint8_t source = (isDefault ? TileRef::DefaultTileSet : std::uint8_t(newSlot ? document.ExtraTileSets.size() + 1 : slot + 1));
-			String label = (replace != nullptr ? String(_("Copy tile into the level")) : (newSlot ? String(_("Add tile set")) : String(_("Add tiles to tile set"))));
+			// TRANSLATORS: Names of undo steps in the history, a tile copied into the tiles stored in the level, a new tile set added, or tiles added to a tile set
+			String label = (replace != nullptr ? String(_x("editor", "Copy tile into the level")) : (newSlot ? String(_x("editor", "Add tile set")) : String(_x("editor", "Add tiles to tile set"))));
 			// A tile copied in its place is shown by the copy everywhere, and the level doesn't change the tile copied anymore
 			TileRef replaced = (replace != nullptr ? *replace : TileRef{});
 			std::int32_t replacedId = (replace != nullptr ? document.ToTileId(replaced) : -1);
@@ -1263,7 +1290,8 @@ namespace Jazz2::Editor
 	{
 		IEditorContext* s = &session;
 		auto* dropdown = row->Add<UiDropdown>([s, target]() {
-			return (target->Type == TileTarget::Kind::NewTileSet ? String(_("New tile set")) : GetTargetLabel(*s, *target));
+			// TRANSLATORS: Choice of where new tiles are added, a tile set made for them, followed by a box for its name
+			return (target->Type == TileTarget::Kind::NewTileSet ? String(_x("editor", "New tile set")) : GetTargetLabel(*s, *target));
 		}, [s, target](SmallVectorImpl<UiMenuEntry>& entries) {
 			const LevelDocument& document = s->GetDocument();
 			std::int32_t count = 1 + std::min<std::int32_t>(std::int32_t(document.ExtraTileSets.size()), TileRef::LastExtraTileSet);
@@ -1283,18 +1311,18 @@ namespace Jazz2::Editor
 				entries.push_back(Death::move(entry));
 			}
 			UiMenuEntry newEntry;
-			newEntry.Label = _("New tile set");
+			newEntry.Label = _x("editor", "New tile set");
 			newEntry.IsChecked = [target]() { return (target->Type == TileTarget::Kind::NewTileSet); };
 			newEntry.Execute = [target]() { target->Type = TileTarget::Kind::NewTileSet; };
 			entries.push_back(Death::move(newEntry));
 			UiMenuEntry levelEntry;
-			levelEntry.Label = _("Tiles of this level");
+			levelEntry.Label = _x("editor", "Tiles of this level");
 			levelEntry.IsChecked = [target]() { return (target->Type == TileTarget::Kind::Level); };
 			levelEntry.Execute = [target]() { target->Type = TileTarget::Kind::Level; };
 			entries.push_back(Death::move(levelEntry));
 		});
 		dropdown->Width = 170.0f;
-		dropdown->Tooltip = _("Tiles of this level are stored in the level itself, not in any tile set file");
+		dropdown->Tooltip = _x("editor", "Tiles of this level are stored in the level itself, not in any tile set file");
 
 		if (target->Name.empty()) {
 			// A name of the level, as tile sets are named
@@ -1303,7 +1331,7 @@ namespace Jazz2::Editor
 		auto* nameBox = row->Add<UiTextBox>(target->Name);
 		nameBox->Width = 110.0f;
 		nameBox->MaxLength = 32;
-		nameBox->Tooltip = _("The tile set is saved in the user content, Tilesets/<name>.j2t");
+		nameBox->Tooltip = _x("editor", "The tile set is saved in the user content, Tilesets/<name>.j2t");
 		nameBox->OnChanged = [target](StringView text) { target->Name = String(text).trimmed(); };
 		nameBox->OnCommit = [target](StringView text) { target->Name = String(text).trimmed(); };
 		nameBox->IsVisibleFunc = [target]() { return (target->Type == TileTarget::Kind::NewTileSet); };
@@ -1316,7 +1344,7 @@ namespace Jazz2::Editor
 		note->TextFunc = [s, target]() {
 			switch (target->Type) {
 				case TileTarget::Kind::Level:
-					return String(_("The level keeps the tiles, no other level has them"));
+					return String(_x("editor", "The level keeps the tiles, no other level has them"));
 				case TileTarget::Kind::NewTileSet:
 					return String();
 				default: {
@@ -1325,7 +1353,7 @@ namespace Jazz2::Editor
 					}
 					// Its copy in the user content is written over, any other one is covered by a copy there
 					String name = GetTargetLabel(*s, *target);
-					return (IsOwnTileSetCopy(name) ? String() : String(_("A copy in the user content is used instead of it from now on")));
+					return (IsOwnTileSetCopy(name) ? String() : String(_x("editor", "A copy in the user content is used instead of it from now on")));
 				}
 			}
 		};
@@ -1339,7 +1367,7 @@ namespace Jazz2::Editor
 		}
 		Formats::TileSetData original;
 		if (!ReadTileSetOf(session, tile.Source, original)) {
-			session.ShowMessage(_("The tile set can't be read"));
+			session.ShowMessage(_x("editor", "The tile set can't be read"));
 			return false;
 		}
 		TileSource source;
@@ -1440,7 +1468,7 @@ namespace Jazz2::Editor
 				// The masks next to it, as the editor exports them
 				String error;
 				if (!PngCodec::LoadWithMasks(imagePath, job->Image, job->Masks, job->HasMasks, &error)) {
-					session.ShowMessage(_f("The image can't be read: {}", error));
+					session.ShowMessage(_fx("editor", "The image can't be read: {}", error));
 					return nullptr;
 				}
 			}
@@ -1524,7 +1552,8 @@ namespace Jazz2::Editor
 		}
 		IEditorContext* s = &session;
 		auto callback = std::make_shared<Function<void(bool)>>(Death::move(onDone));
-		RunWithProgress(session, _("Adding Tiles"), [job](JobProgress& progress) {
+		// TRANSLATORS: Title of the progress dialog while tiles from an image are added to a tile set
+		RunWithProgress(session, _x("editor", "Adding Tiles"), [job](JobProgress& progress) {
 			SliceAddTiles(*job, &progress);
 		}, [s, job, callback](bool cancelled) {
 			bool added = (!cancelled || job->Success) && FinishAddTiles(*s, *job);
@@ -1548,9 +1577,9 @@ namespace Jazz2::Editor
 		String name = GetTargetLabel(session, target);
 		if (!job.Success) {
 			switch (result.Error) {
-				case TileImportError::TooManyTiles: session.ShowMessage(_f("The image has more than {} different tiles, a tile set can't hold them", MaxImportedTiles)); break;
-				case TileImportError::Cancelled: session.ShowMessage(_("Adding the tiles was stopped")); break;
-				default: session.ShowMessage(_("The image has no tile in it, it's smaller than a tile with the margin and gutters")); break;
+				case TileImportError::TooManyTiles: session.ShowMessage(_fx("editor", "The image has more than {} different tiles, a tile set can't hold them", MaxImportedTiles)); break;
+				case TileImportError::Cancelled: session.ShowMessage(_x("editor", "Adding the tiles was stopped")); break;
+				default: session.ShowMessage(_x("editor", "The image has no tile in it, it's smaller than a tile with the margin and gutters")); break;
 			}
 			return false;
 		}
@@ -1577,7 +1606,7 @@ namespace Jazz2::Editor
 			added.push_back(i);
 		}
 		if (added.empty()) {
-			session.ShowMessage(_("The tile set has all tiles of the image already"));
+			session.ShowMessage(_x("editor", "The tile set has all tiles of the image already"));
 			return false;
 		}
 		if (!job.SourcePath.empty()) {
@@ -1585,7 +1614,7 @@ namespace Jazz2::Editor
 			std::int64_t time, size;
 			GetFileStamp(job.SourcePath, time, size);
 			if (time != job.SourceTime || size != job.SourceSize) {
-				session.ShowMessage(_("The tile set was changed meanwhile, add the tiles again"));
+				session.ShowMessage(_x("editor", "The tile set was changed meanwhile, add the tiles again"));
 				return false;
 			}
 		}
@@ -1596,9 +1625,10 @@ namespace Jazz2::Editor
 		LOGI("{} tiles of \"{}\" added to \"{}\"", std::int32_t(added.size()), imagePath, name);
 
 		std::int32_t count = std::int32_t(added.size());
-		String message = _fn("{} tile was added to tile set \"{}\", from tile {}", "{} tiles were added to tile set \"{}\", from tile {}", count, count, name, oldCount);
+		String message = _fnx("editor", "{} tile was added to tile set \"{}\", from tile {}", "{} tiles were added to tile set \"{}\", from tile {}", count, count, name, oldCount);
 		if (result.ColorsChanged) {
-			message += " "_s + _("- some colors became the closest ones of its palette");
+			// TRANSLATORS: Added to the end of the message about how many tiles from an image were added to a tile set
+			message += " "_s + _x("editor", "- some colors became the closest ones of its palette");
 		}
 		session.ShowMessage(message);
 		return true;
@@ -1608,7 +1638,8 @@ namespace Jazz2::Editor
 	void ShowAddTilesFromImageDialog(IEditorContext& session)
 	{
 		IEditorContext* s = &session;
-		ShowOpenImageDialog(session, _("Add Tiles from Image"), [s](StringView path) {
+		// TRANSLATORS: Title of the file picker and the dialog that add tiles from an image file to a tile set
+		ShowOpenImageDialog(session, _x("editor", "Add Tiles from Image"), [s](StringView path) {
 			struct AddState
 			{
 				String Path;
@@ -1618,18 +1649,19 @@ namespace Jazz2::Editor
 			state->Path = path;
 			auto target = std::make_shared<TileTarget>();
 
-			auto dialog = std::make_unique<UiDialog>(_("Add Tiles from Image"));
+			auto dialog = std::make_unique<UiDialog>(_x("editor", "Add Tiles from Image"));
 			UiDialog* dialogPtr = dialog.get();
 			auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
-			content->Add<UiLabel>(_("The tiles of the image go to the end of the tile set, in its colors."), UiTheme::TextDim);
-			AddTileTargetRow(*s, content->AddRow(_("Add to")), target);
-			content->Add<UiCheckBox>(_("Skip tiles the tile set has already"), [state]() { return state->Options.SkipExisting; },
+			content->Add<UiLabel>(_x("editor", "The tiles of the image go to the end of the tile set, in its colors."), UiTheme::TextDim);
+			// TRANSLATORS: Label of the choice of where the tiles are added, followed by a tile set or the level
+			AddTileTargetRow(*s, content->AddRow(_x("editor", "Add to")), target);
+			content->Add<UiCheckBox>(_x("editor", "Skip tiles the tile set has already"), [state]() { return state->Options.SkipExisting; },
 				[state](bool value) { state->Options.SkipExisting = value; });
-			content->Add<UiCheckBox>(_("Mix colors between two of the palette (dither)"), [state]() { return state->Options.Dither || state->Options.ErrorDiffusion; },
+			content->Add<UiCheckBox>(_x("editor", "Mix colors between two of the palette (dither)"), [state]() { return state->Options.Dither || state->Options.ErrorDiffusion; },
 				[state](bool value) { state->Options.Dither = value; state->Options.ErrorDiffusion = false; });
-			content->Add<UiCheckBox>(_("Spread what each pixel misses to the next ones (Floyd-Steinberg)"), [state]() { return state->Options.ErrorDiffusion; },
+			content->Add<UiCheckBox>(_x("editor", "Spread what each pixel misses to the next ones (Floyd-Steinberg)"), [state]() { return state->Options.ErrorDiffusion; },
 				[state](bool value) { state->Options.ErrorDiffusion = value; state->Options.Dither = false; })
-				->Tooltip = _("Mixes colors more smoothly than a regular pattern, best for pictures with gradients");
+				->Tooltip = _x("editor", "Mixes colors more smoothly than a regular pattern, best for pictures with gradients");
 
 			// Sprite sheets have a margin around the tiles and gutters between them, and a color for transparent pixels
 			auto addNumber = [](UiStack* row, std::int32_t* value, float max, StringView tooltip, std::shared_ptr<AddState> keep) {
@@ -1640,28 +1672,30 @@ namespace Jazz2::Editor
 				number->Tooltip = tooltip;
 			};
 			{
-				auto* row = content->AddRow(_("Margin"));
-				addNumber(row, &state->Options.OffsetX, 1024.0f, _("Pixels left of the first column of tiles"), state);
-				addNumber(row, &state->Options.OffsetY, 1024.0f, _("Pixels above the first row of tiles"), state);
-				auto* gutterRow = content->AddRow(_("Gutters"));
-				addNumber(gutterRow, &state->Options.SpacingX, 256.0f, _("Pixels between two tiles next to each other"), state);
-				addNumber(gutterRow, &state->Options.SpacingY, 256.0f, _("Pixels between two rows of tiles"), state);
-				auto* transparentRow = content->AddRow(_("Transparent"));
-				transparentRow->Add<UiCheckBox>(_("Magenta"), [state]() { return state->Options.UseColorKey; }, [state](bool value) { state->Options.UseColorKey = value; })
-					->Tooltip = _("Magenta pixels are transparent, as many sprite sheets without alpha have them");
-				transparentRow->Add<UiLabel>(_("Alpha"), UiTheme::TextDim);
-				addNumber(transparentRow, &state->Options.AlphaThreshold, 255.0f, _("How opaque a pixel has to be to be seen, and a pixel of the masks to be solid, from 1 to 255"), state);
+				auto* row = content->AddRow(_x("editor", "Margin"));
+				addNumber(row, &state->Options.OffsetX, 1024.0f, _x("editor", "Pixels left of the first column of tiles"), state);
+				addNumber(row, &state->Options.OffsetY, 1024.0f, _x("editor", "Pixels above the first row of tiles"), state);
+				auto* gutterRow = content->AddRow(_x("editor", "Gutters"));
+				addNumber(gutterRow, &state->Options.SpacingX, 256.0f, _x("editor", "Pixels between two tiles next to each other"), state);
+				addNumber(gutterRow, &state->Options.SpacingY, 256.0f, _x("editor", "Pixels between two rows of tiles"), state);
+				auto* transparentRow = content->AddRow(_x("editor", "Transparent"));
+				// TRANSLATORS: Checkbox after "Transparent" in the Add Tiles from Image dialog, the color, magenta pixels are transparent
+				transparentRow->Add<UiCheckBox>(_x("editor", "Magenta"), [state]() { return state->Options.UseColorKey; }, [state](bool value) { state->Options.UseColorKey = value; })
+					->Tooltip = _x("editor", "Magenta pixels are transparent, as many sprite sheets without alpha have them");
+				transparentRow->Add<UiLabel>(_x("editor", "Alpha"), UiTheme::TextDim);
+				addNumber(transparentRow, &state->Options.AlphaThreshold, 255.0f, _x("editor", "How opaque a pixel has to be to be seen, and a pixel of the masks to be solid, from 1 to 255"), state);
 			}
 			AddTileTargetNote(*s, content, target);
 
-			dialog->AddButton(_("Add Tiles"), [s, state, target, dialogPtr]() {
+			// TRANSLATORS: Button in the Add Tiles from Image dialog
+			dialog->AddButton(_x("editor", "Add Tiles"), [s, state, target, dialogPtr]() {
 				AddTilesFromImageAsync(*s, *target, state->Path, state->Options, [dialogPtr](bool added) {
 					if (added) {
 						dialogPtr->Close();
 					}
 				});
 			}, true);
-			dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
+			dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
 			ShowModal(*s->GetSurface(), Death::move(dialog));
 		});

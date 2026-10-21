@@ -282,17 +282,17 @@ namespace Jazz2::Editor
 		builder.AddSeparator();
 		const ToolOptionItem modifiers[] = {
 			// TRANSLATORS: The modifier the tiles are painted with, as the tiles of the stamp have it
-			{ _("As they are"), EditorIcon::None, ActionIds::ToolsModifierKeep },
-			{ _("Normal"), EditorIcon::None, ActionIds::ToolsModifierNormal },
-			{ _("Translucent"), EditorIcon::None, ActionIds::ToolsModifierTranslucent },
-			{ _("Invisible"), EditorIcon::None, ActionIds::ToolsModifierInvisible },
+			{ _x("editor", "As they are"), EditorIcon::None, ActionIds::ToolsModifierKeep },
+			{ _x("editor", "Normal"), EditorIcon::None, ActionIds::ToolsModifierNormal },
+			{ _x("editor", "Translucent"), EditorIcon::None, ActionIds::ToolsModifierTranslucent },
+			{ _x("editor", "Invisible"), EditorIcon::None, ActionIds::ToolsModifierInvisible },
 			// TRANSLATORS: The modifier of tiles whose rows of pixels are drawn wavily, as if seen through heat
-			{ _("Heat"), EditorIcon::None, ActionIds::ToolsModifierHeat },
+			{ _x("editor", "Heat"), EditorIcon::None, ActionIds::ToolsModifierHeat },
 		};
 		// TRANSLATORS: Label of the choice of how the tiles are painted, as they are, translucent, invisible or with heat
-		builder.AddChoice(_("Tiles"), modifiers, true);
+		builder.AddChoice(_x("editor", "Tiles"), modifiers, true);
 		// TRANSLATORS: Toggle in the toolbar, short for changing only the modifier of the tiles painted over
-		builder.AddAction(ActionIds::ToolsModifierOnly, _("Only modifier"));
+		builder.AddAction(ActionIds::ToolsModifierOnly, _x("editor", "Only modifier"));
 	}
 
 	StrokeTool::StrokeTool(IToolHost& host)
@@ -326,7 +326,7 @@ namespace Jazz2::Editor
 		Cancel();
 		std::int32_t layer = _host.GetCurrentLayer();
 		if (!_host.IsLayerEditable(layer)) {
-			_host.ShowMessage(_("The layer is locked or hidden"));
+			_host.ShowMessage(_x("editor", "The layer is locked or hidden"));
 			return false;
 		}
 		_strokeLayer = layer;
@@ -459,7 +459,8 @@ namespace Jazz2::Editor
 		const TileStamp& stamp = GetBrushStamp();
 		// With Shift a straight line, shown while it's dragged and painted when it's let go
 		bool lineMode = ((pointer.Modifiers & KeyMod::Shift) != 0);
-		if (stamp.IsEmpty() || !BeginStroke(_erase ? _("Erase") : _("Paint"), !lineMode)) {
+		// TRANSLATORS: Names of undo steps in the history, after the brush erased or painted tiles
+		if (stamp.IsEmpty() || !BeginStroke(_erase ? _x("editor", "Erase") : _x("editor", "Paint"), !lineMode)) {
 			return;
 		}
 		_strokeOptions = !_erase;
@@ -554,7 +555,7 @@ namespace Jazz2::Editor
 
 	StringView BrushTool::GetHint() const
 	{
-		return (_erase ? _("Click or drag to erase tiles - Shift+drag: a straight line") : _("Click or drag to paint, right-click to pick a tile - Shift+drag: a straight line"));
+		return (_erase ? _x("editor", "Click or drag to erase tiles - Shift+drag: a straight line") : _x("editor", "Click or drag to paint, right-click to pick a tile - Shift+drag: a straight line"));
 	}
 
 	void BrushTool::BuildOptions(ToolOptionsBuilder& builder)
@@ -582,7 +583,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (!_host.IsLayerEditable(_host.GetCurrentLayer())) {
-			_host.ShowMessage(_("The layer is locked or hidden"));
+			_host.ShowMessage(_x("editor", "The layer is locked or hidden"));
 			return;
 		}
 		_dragging = true;
@@ -607,7 +608,8 @@ namespace Jazz2::Editor
 
 		TileStamp eraseStamp = TileStamp::FromTile(TileRef{});
 		const TileStamp& stamp = (_erase ? eraseStamp : _host.GetStamp());
-		if (stamp.IsEmpty() || !BeginStroke(_erase ? _("Erase rectangle") : _("Fill rectangle"), false)) {
+		// TRANSLATORS: Names of undo steps in the history, after the rectangle tool erased or filled a rectangle of tiles
+		if (stamp.IsEmpty() || !BeginStroke(_erase ? _x("editor", "Erase rectangle") : _x("editor", "Fill rectangle"), false)) {
 			return;
 		}
 		_strokeOptions = !_erase;
@@ -666,7 +668,7 @@ namespace Jazz2::Editor
 
 	StringView RectangleTool::GetHint() const
 	{
-		return _("Drag to fill a rectangle, right-drag to erase one");
+		return _x("editor", "Drag to fill a rectangle, right-drag to erase one");
 	}
 
 	void RectangleTool::BuildOptions(ToolOptionsBuilder& builder)
@@ -674,7 +676,7 @@ namespace Jazz2::Editor
 		AddStampOptions(builder);
 		AddModifierOptions(builder);
 		// TRANSLATORS: Toggle in the toolbar, short for painting only the tiles that are empty
-		builder.AddAction(ActionIds::ToolsOnlyEmpty, _("Only empty"));
+		builder.AddAction(ActionIds::ToolsOnlyEmpty, _x("editor", "Only empty"));
 	}
 
 	FillTool::FillTool(IToolHost& host)
@@ -703,7 +705,8 @@ namespace Jazz2::Editor
 		bool erase = (pointer.Button == MouseButton::Right);
 		TileStamp eraseStamp = TileStamp::FromTile(TileRef{});
 		const TileStamp& stamp = (erase ? eraseStamp : _host.GetStamp());
-		if (stamp.IsEmpty() || !BeginStroke(erase ? _("Erase area") : _("Fill"), false)) {
+		// TRANSLATORS: Names of undo steps in the history, after the fill tool erased or filled an area of tiles, "Fill" in the same verb form as "Erase"
+		if (stamp.IsEmpty() || !BeginStroke(erase ? _x("editor", "Erase area") : _x("editor", "Fill"), false)) {
 			return;
 		}
 
@@ -726,7 +729,7 @@ namespace Jazz2::Editor
 		}
 		EndStroke();
 		if (count >= MaxFillTiles) {
-			_host.ShowMessage(_("The area is too large, only a part of it was filled"));
+			_host.ShowMessage(_x("editor", "The area is too large, only a part of it was filled"));
 		}
 	}
 
@@ -741,14 +744,15 @@ namespace Jazz2::Editor
 
 	StringView FillTool::GetHint() const
 	{
-		return _("Click to fill an area of the same tiles, right-click to erase it");
+		return _x("editor", "Click to fill an area of the same tiles, right-click to erase it");
 	}
 
 	void FillTool::BuildOptions(ToolOptionsBuilder& builder)
 	{
 		AddStampOptions(builder);
 		AddModifierOptions(builder);
-		builder.AddAction(ActionIds::ToolsOnlyEmpty, _("Only empty"));
+		// TRANSLATORS: Toggle in the toolbar, short for filling only the tiles that are empty
+		builder.AddAction(ActionIds::ToolsOnlyEmpty, _x("editor", "Only empty"));
 		builder.AddSeparator();
 		AddAreaOptions(builder);
 	}
@@ -756,9 +760,9 @@ namespace Jazz2::Editor
 	void EditorTool::AddAreaOptions(ToolOptionsBuilder& builder)
 	{
 		// TRANSLATORS: Toggle in the toolbar, short for going on across the edges of a layer that repeats
-		builder.AddAction(ActionIds::ToolsAcrossSeams, _("Across edges"));
+		builder.AddAction(ActionIds::ToolsAcrossSeams, _x("editor", "Across edges"));
 		// TRANSLATORS: Toggle in the toolbar, short for taking tiles flipped as the same tiles
-		builder.AddAction(ActionIds::ToolsIgnoreFlips, _("Flipped too"));
+		builder.AddAction(ActionIds::ToolsIgnoreFlips, _x("editor", "Flipped too"));
 	}
 
 	EyedropperTool::EyedropperTool(IToolHost& host)
@@ -800,7 +804,7 @@ namespace Jazz2::Editor
 		// As large as a stamp pasted can be, a larger one would make every step of a stroke paint too many tiles
 		if (rect.W > StampClipboard::MaxStampSide || rect.H > StampClipboard::MaxStampSide ||
 			std::int64_t(rect.W) * std::int64_t(rect.H) > StampClipboard::MaxStampTiles) {
-			_host.ShowMessage(_f("The area is too large to pick, a brush can have {} tiles at most", StampClipboard::MaxStampTiles));
+			_host.ShowMessage(_fx("editor", "The area is too large to pick, a brush can have {} tiles at most", StampClipboard::MaxStampTiles));
 			return;
 		}
 
@@ -844,7 +848,7 @@ namespace Jazz2::Editor
 
 	StringView EyedropperTool::GetHint() const
 	{
-		return _("Click to pick a tile, drag to pick an area");
+		return _x("editor", "Click to pick a tile, drag to pick an area");
 	}
 
 	void DrawTileModifiers(UiPainter& painter, const DocumentLayer& layer, const LayerView& view, const Rectf& viewRect)
@@ -918,7 +922,7 @@ namespace Jazz2::Editor
 			return false;
 		}
 		if (!host.IsLayerEditable(layerIndex)) {
-			host.ShowMessage(_("The layer is locked or hidden"));
+			host.ShowMessage(_x("editor", "The layer is locked or hidden"));
 			return false;
 		}
 		const DocumentLayer& layer = document.Layers[layerIndex];
@@ -950,7 +954,7 @@ namespace Jazz2::Editor
 					continue;
 				}
 				if (!move(x, y, to)) {
-					host.ShowMessage(_("Tiles can't be moved out of the layer"));
+					host.ShowMessage(_x("editor", "Tiles can't be moved out of the layer"));
 					return false;
 				}
 				target.set(std::size_t(to.Y) * std::size_t(width) + std::size_t(to.X));
@@ -958,7 +962,8 @@ namespace Jazz2::Editor
 		}
 
 		// The tiles left behind are empty, unless others are moved there
-		String name = _("Move Tiles");
+		// TRANSLATORS: Name of an undo step in the history, after selected tiles were moved
+		String name = _x("editor", "Move Tiles");
 		host.BeginChanges(name);
 		auto command = std::make_unique<SetTilesCommand>(document, layerIndex, name);
 		for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
@@ -1195,7 +1200,7 @@ namespace Jazz2::Editor
 
 	StringView SelectTool::GetHint() const
 	{
-		return _("Drag to select tiles - Shift: add to the selection - drag the selection to move its tiles, Shift+arrows nudge them");
+		return _x("editor", "Drag to select tiles - Shift: add to the selection - drag the selection to move its tiles, Shift+arrows nudge them");
 	}
 
 	WandTool::WandTool(IToolHost& host)
@@ -1235,13 +1240,13 @@ namespace Jazz2::Editor
 
 	StringView WandTool::GetHint() const
 	{
-		return _("Click to select an area of the same tiles - Shift: add to the selection - Ctrl: all such tiles of the layer");
+		return _x("editor", "Click to select an area of the same tiles - Shift: add to the selection - Ctrl: all such tiles of the layer");
 	}
 
 	void WandTool::BuildOptions(ToolOptionsBuilder& builder)
 	{
 		// TRANSLATORS: Toggle in the toolbar, short for the magic wand selecting all such tiles of the layer
-		builder.AddAction(ActionIds::ToolsWandGlobal, _("Whole layer"));
+		builder.AddAction(ActionIds::ToolsWandGlobal, _x("editor", "Whole layer"));
 		AddAreaOptions(builder);
 	}
 
@@ -1299,7 +1304,7 @@ namespace Jazz2::Editor
 
 	StringView HandTool::GetHint() const
 	{
-		return _("Drag to move the view");
+		return _x("editor", "Drag to move the view");
 	}
 
 	ToolManager::ToolManager(IToolHost& host)

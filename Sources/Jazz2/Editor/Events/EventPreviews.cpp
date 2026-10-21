@@ -64,7 +64,7 @@ namespace Jazz2::Editor
 		StringView GetEventNameView(std::uint16_t type, char (&buffer)[16])
 		{
 			if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(type))) {
-				return _(descriptor->Name);
+				return _x("editor", descriptor->Name);
 			}
 			std::int32_t length = std::snprintf(buffer, sizeof(buffer), "#%u", std::uint32_t(type));
 			return StringView(buffer, std::size_t(std::max<std::int32_t>(length, 0)));

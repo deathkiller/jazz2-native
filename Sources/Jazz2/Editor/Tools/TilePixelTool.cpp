@@ -85,7 +85,7 @@ namespace Jazz2::Editor
 		}
 		Vector2i pixel;
 		if (!GetPixel(pointer, pixel)) {
-			_host.ShowMessage(_("Paint over a tile outlined in the level, it shows the tile being edited"));
+			_host.ShowMessage(_x("editor", "Paint over a tile outlined in the level, it shows the tile being edited"));
 			return;
 		}
 		_painting = true;
@@ -172,7 +172,7 @@ namespace Jazz2::Editor
 
 	StringView TilePixelTool::GetHint() const
 	{
-		return _("Paint the pixels of the tile right in the level, everywhere it's seen changes - right-click erases");
+		return _x("editor", "Paint the pixels of the tile right in the level, everywhere it's seen changes - right-click erases");
 	}
 }
 

@@ -80,8 +80,10 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		std::int32_t charOffset = 0;
 
+		// TRANSLATORS: Header of Options > Gameplay > Refresh Cache section
 		_root->DrawMenuTitle(charOffset, _("Refresh Cache"), center.X, topLine);
 
+		// TRANSLATORS: Text in Refresh Cache section while the game files are being converted, "Source" is a directory name and must stay as it is, keep the color tags \f[c:#9e7056] and \f[/c] too
 		_root->DrawStringShadow(_("Processing of files in \f[c:#9e7056]\"Source\"\f[/c] directory..."), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 

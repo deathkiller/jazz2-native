@@ -30,7 +30,7 @@ namespace Jazz2::Editor
 		}
 		// The file stores the number of layers in a byte
 		if (document.Layers.size() >= UINT8_MAX) {
-			session.ShowMessage(_("A level can't have more layers"));
+			session.ShowMessage(_x("editor", "A level can't have more layers"));
 			return false;
 		}
 
@@ -40,7 +40,8 @@ namespace Jazz2::Editor
 		if (copy.IsSpriteLayer()) {
 			copy.Record.Kind = Formats::LayerKind::Other;
 		}
-		copy.Name = _f("{} (copy)", GetLayerTitle(document, current));
+		// TRANSLATORS: Name of a duplicated layer, {} is the name of the original layer
+		copy.Name = _fx("editor", "{} (copy)", GetLayerTitle(document, current));
 		if (copy.Name.size() > 64) {
 			// Not in the middle of a character of UTF-8
 			copy.Name = String(copy.Name.prefix(Death::Utf8::FitPrefix(copy.Name, 64)));
@@ -48,7 +49,7 @@ namespace Jazz2::Editor
 		copy.EditorFlags &= ~DocumentLayer::EditorLocked;
 
 		std::int32_t index = current + 1;
-		session.Execute(InsertLayerCommand::Add(document, index, copy, _("Duplicate Layer")));
+		session.Execute(InsertLayerCommand::Add(document, index, copy, _x("editor", "Duplicate Layer")));
 		session.SetCurrentLayer(index);
 		return true;
 	}
@@ -91,12 +92,13 @@ namespace Jazz2::Editor
 		EditorSettings* settings = &session.GetSettings();
 
 		{
-			auto& duplicate = actions.Add(ActionIds::LayerDuplicate,_("Duplicate Layer"), EditorIcon::Copy, [s]() { DuplicateCurrentLayer(*s); });
+			// TRANSLATORS: Menu item in the Layer menu, also the name of an undo step in the history, copies the current layer (verb)
+			auto& duplicate = actions.Add(ActionIds::LayerDuplicate,_x("editor", "Duplicate Layer"), EditorIcon::Copy, [s]() { DuplicateCurrentLayer(*s); });
 			duplicate.IsEnabled = [s]() {
 				std::int32_t layer = s->GetCurrentLayer();
 				return (layer >= 0 && layer < std::int32_t(s->GetDocument().Layers.size()) && s->GetDocument().Layers.size() < UINT8_MAX);
 			};
-			auto& solo = actions.Add(ActionIds::LayerSolo,_("Show Only This Layer"), EditorIcon::Eye, [s]() { SoloLayer(*s, s->GetCurrentLayer()); });
+			auto& solo = actions.Add(ActionIds::LayerSolo,_x("editor", "Show Only This Layer"), EditorIcon::Eye, [s]() { SoloLayer(*s, s->GetCurrentLayer()); });
 			solo.IsEnabled = [s]() {
 				std::int32_t layer = s->GetCurrentLayer();
 				return (layer >= 0 && layer < std::int32_t(s->GetDocument().Layers.size()));
@@ -105,20 +107,21 @@ namespace Jazz2::Editor
 
 		// The frame of what the game shows around the pointer, in a few sizes
 		{
-			auto& frame = actions.Add(ActionIds::ViewScreenFrame,_("Show Game Screen Frame"), EditorIcon::Fit, [settings]() {
+			auto& frame = actions.Add(ActionIds::ViewScreenFrame,_x("editor", "Show Game Screen Frame"), EditorIcon::Fit, [settings]() {
 				settings->ShowScreenFrame = !settings->ShowScreenFrame;
 				settings->Save();
 			});
 			frame.IsChecked = [settings]() { return settings->ShowScreenFrame; };
 			struct FrameKind { const char* Id; const char* Label; };
 			static const FrameKind Kinds[] = {
-				{ ActionIds::ViewScreenFrameGame, N_("Screen Frame: Game View") },
-				{ ActionIds::ViewScreenFrame4x3, N_("Screen Frame: 4:3") },
-				{ ActionIds::ViewScreenFrame16x9, N_("Screen Frame: 16:9") },
-				{ ActionIds::ViewScreenFrameSplit, N_("Screen Frame: Split Screen") }
+				// TRANSLATORS: Choices in the Show menu of the size of the frame around the pointer that shows what the game screen would show
+				{ ActionIds::ViewScreenFrameGame, NC_("editor", "Screen Frame: Game View") },
+				{ ActionIds::ViewScreenFrame4x3, NC_("editor", "Screen Frame: 4:3") },
+				{ ActionIds::ViewScreenFrame16x9, NC_("editor", "Screen Frame: 16:9") },
+				{ ActionIds::ViewScreenFrameSplit, NC_("editor", "Screen Frame: Split Screen") }
 			};
 			for (std::int32_t i = 0; i < std::int32_t(sizeof(Kinds) / sizeof(Kinds[0])); i++) {
-				auto& kind = actions.Add(Kinds[i].Id, _(Kinds[i].Label), EditorIcon::None, [settings, i]() {
+				auto& kind = actions.Add(Kinds[i].Id, _x("editor", Kinds[i].Label), EditorIcon::None, [settings, i]() {
 					settings->ScreenFrameKind = i;
 					settings->ShowScreenFrame = true;
 					settings->Save();
@@ -128,7 +131,7 @@ namespace Jazz2::Editor
 		}
 
 		// All events in a list
-		actions.Add(ActionIds::EventsList,_("Event List"), EditorIcon::Event, [s]() { ShowEventOutline(*s); }).Key = { Keys::F3, 0 };
+		actions.Add(ActionIds::EventsList,_x("editor", "Event List"), EditorIcon::Event, [s]() { ShowEventOutline(*s); }).Key = { Keys::F3, 0 };
 	}
 }
 

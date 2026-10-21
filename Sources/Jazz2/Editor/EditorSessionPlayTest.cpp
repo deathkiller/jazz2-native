@@ -46,7 +46,7 @@ namespace Jazz2::Editor
 	{
 		if (!_playTest->IsEditing()) {
 			// A play-test returns to the editor instead
-			_playTest->ReturnFromGame(_("Back in the editor"), false);
+			_playTest->ReturnFromGame(_x("editor", "Back in the editor"), false);
 			return;
 		}
 		_root->GoToMainMenu(afterIntro);
@@ -59,18 +59,18 @@ namespace Jazz2::Editor
 			String levelName = levelInit.LevelName;
 			bool gameOver = levelName.hasSuffix(":gameover"_s);
 			if (gameOver || levelName.empty() || levelName.contains(':')) {
-				_playTest->ReturnFromGame(gameOver ? _("Game over") : _("The level was finished"), !gameOver);
+				_playTest->ReturnFromGame(gameOver ? _x("editor", "Game over") : _x("editor", "The level was finished"), !gameOver);
 				return;
 			}
 			// A round of multiplayer ends by playing the same level again, the play-test ends with the round instead (see
 			// PlayTestMpLevelHandler::HandleLevelChange())
 			if (levelInit.LocalMultiplayerGameMode != 0 && StringUtils::equalsIgnoreCase(levelName, _files->GetLevelName())) {
-				_playTest->ReturnFromGame(_("The round is over"), false);
+				_playTest->ReturnFromGame(_x("editor", "The round is over"), false);
 				return;
 			}
 			// The level that follows can be edited or played on, as the episode goes, with what the player has now
 			auto next = std::make_shared<LevelInitialization>(Death::move(levelInit));
-			_playTest->ReturnFromGame(_("The level was finished"), true, [this, next, levelName]() {
+			_playTest->ReturnFromGame(_x("editor", "The level was finished"), true, [this, next, levelName]() {
 				OfferNextLevel(next, levelName);
 			});
 		}
@@ -105,11 +105,12 @@ namespace Jazz2::Editor
 		}
 		String path = FindNextLevelFile(levelName);
 		if (path.empty()) {
-			ShowMessage(_f("The level \"{}\" that follows wasn't found", levelName));
+			ShowMessage(_fx("editor", "The level \"{}\" that follows wasn't found", levelName));
 			return;
 		}
-		UiMessageDialog::Show(*_surface, _("Level Finished"), _f("The level that follows is \"{}\".", levelName),
-			{ _("Edit It"), _("Play On"), _("Stay Here") }, [this, next, path](std::int32_t button) {
+		UiMessageDialog::Show(*_surface, _x("editor", "Level Finished"), _fx("editor", "The level that follows is \"{}\".", levelName),
+			// TRANSLATORS: Buttons of the dialog after a play-tested level was finished - open the following level in the editor, leave the editor and play it, or stay in this level
+			{ _x("editor", "Edit It"), _x("editor", "Play On"), _x("editor", "Stay Here") }, [this, next, path](std::int32_t button) {
 			if (button == 0) {
 				OpenFile(path);
 			} else if (button == 1) {
@@ -237,7 +238,8 @@ namespace Jazz2::Editor
 		_settings.Save();
 		ApplyPlayTestDebugOptions();
 		if (_playTest->IsInGame()) {
-			ShowMessage(timeScale >= 1.0f ? String(_("Normal speed")) : String(_f("Slow motion, {}%", std::int32_t(std::round(timeScale * 100.0f)))));
+			// TRANSLATORS: Status messages after changing the speed of a running play-test, {} is the speed of the game in percent
+			ShowMessage(timeScale >= 1.0f ? String(_x("editor", "Normal speed")) : String(_fx("editor", "Slow motion, {}%", std::int32_t(std::round(timeScale * 100.0f)))));
 		}
 	}
 
@@ -249,7 +251,7 @@ namespace Jazz2::Editor
 		PlayTestDebugOptions options = _playTest->GetDebugOptions();
 		options.Paused = !options.Paused;
 		_playTest->SetDebugOptions(options);
-		ShowMessage(options.Paused ? _("Paused - F8 goes on frame by frame") : _("Running again"));
+		ShowMessage(options.Paused ? _x("editor", "Paused - F8 goes on frame by frame") : _x("editor", "Running again"));
 	}
 
 	void EditorSession::TeleportPlayTestPlayer()
@@ -260,7 +262,7 @@ namespace Jazz2::Editor
 		}
 		Vector2i res = theApplication().GetResolution();
 		if (!_playTest->TeleportPlayer(pointerPos, Vector2f(float(res.X), float(res.Y)))) {
-			ShowMessage(_("There's no room for the player there"));
+			ShowMessage(_x("editor", "There's no room for the player there"));
 		}
 	}
 }

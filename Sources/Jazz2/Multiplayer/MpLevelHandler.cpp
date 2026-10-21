@@ -609,6 +609,7 @@ namespace Jazz2::Multiplayer
 						} else {
 							_levelState = LevelState::PreGame;
 							_gameTimeLeft = serverConfig.PreGameSecs * FrameTimer::FramesPerSecond;
+							// TRANSLATORS: Message shown to all players in multiplayer when the pre-game phase of a round starts, keep the leading line breaks
 							ShowAlertToAllPlayers(_("\n\nThe game will begin shortly!"));
 						}
 
@@ -793,6 +794,7 @@ namespace Jazz2::Multiplayer
 						}
 
 						if (hasChampion) {
+							// TRANSLATORS: Message shown to all players in multiplayer when a player reaches the target points of the whole playlist, {} is player name, keep the leading line breaks
 							ShowAlertToAllPlayers(_f("\n\n{} won the championship!", championName));
 							LOGW("Champion is \"{}\" [{}] ({} points)", championName, championPeerRef, championPoints);
 
@@ -2919,6 +2921,7 @@ namespace Jazz2::Multiplayer
 					value = value.trimmed();
 					auto intValue = stou32(value.data(), value.size());
 					if (intValue < 2 || intValue > MaxTeamCount) {
+						// TRANSLATORS: Reply in the console to the /set teamcount command of a server admin, {} is the maximum number of teams
 						SendMessage(peer, UI::MessageLevel::Confirm, _f("Value out of range (2-{})", MaxTeamCount));
 						return true;
 					}
@@ -2995,6 +2998,7 @@ namespace Jazz2::Multiplayer
 			} else if (arg == "auto"_s) {
 				requestedTeam = NoPreferredTeam;
 			} else {
+				// TRANSLATORS: Help for the /team command in the console, keep the command and the words in <> as they are
 				SendMessage(peer, UI::MessageLevel::Warning, _("Usage: /team <blue|red|green|yellow|auto>"));
 				return true;
 			}
@@ -3002,6 +3006,7 @@ namespace Jazz2::Multiplayer
 			if (peer) {
 				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 				if (peerDesc != nullptr && peerDesc->Player != nullptr && ChangePlayerTeam(peerDesc->Player, requestedTeam, false)) {
+					// TRANSLATORS: Message in the console after the player changed team, {} is the team color name in English (Blue, Red, Green or Yellow)
 					SendMessage(peer, UI::MessageLevel::Info, _f("You joined the {} team", GetTeamName(peerDesc->Team)));
 				} else {
 					SendMessage(peer, UI::MessageLevel::Warning, _("Cannot change team right now"));
@@ -3018,6 +3023,7 @@ namespace Jazz2::Multiplayer
 					SendMessage(peer, UI::MessageLevel::Warning, _("Teams are only used in team game modes"));
 				} else {
 					RebalanceTeams(true);
+					// TRANSLATORS: Reply in the console to the /balance command of a server admin
 					SendMessage(peer, UI::MessageLevel::Confirm, _("Teams rebalanced"));
 				}
 			}
@@ -3042,6 +3048,7 @@ namespace Jazz2::Multiplayer
 				} else if (teamStr == "yellow"_s || teamStr == "3"_s) {
 					team = 3;
 				} else {
+					// TRANSLATORS: Help for the /setteam command in the console, keep the command and the team names as they are, <player#> stands for the player number
 					SendMessage(peer, UI::MessageLevel::Warning, _("Usage: /setteam <player#> <blue|red|green|yellow>"));
 					return true;
 				}
@@ -3057,6 +3064,7 @@ namespace Jazz2::Multiplayer
 				}
 
 				if (target != nullptr && ChangePlayerTeam(target, team, true)) {
+					// TRANSLATORS: Reply in the console to the /setteam command of a server admin, first {} is player number, second {} is the team color name in English (Blue, Red, Green or Yellow)
 					SendMessage(peer, UI::MessageLevel::Confirm, _f("Player {} moved to the {} team", targetIndex, GetTeamName(team)));
 				} else {
 					SendMessage(peer, UI::MessageLevel::Warning, _("Player not found"));
@@ -3842,6 +3850,7 @@ namespace Jazz2::Multiplayer
 				// never announced as connected and has no name yet, so its leaving is not announced either
 				if (wasAuthenticated) {
 					InvokeAsync([this, peerDesc]() mutable {
+						// TRANSLATORS: Message in the console in multiplayer, {} is player name, keep \f[...] formatting as it is
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] disconnected", peerDesc->PlayerName));
 					});
 
@@ -4124,6 +4133,7 @@ namespace Jazz2::Multiplayer
 			peerDesc->LevelState = PeerLevelState::ValidatingAssets;
 
 			InvokeAsync([this, peerDesc]() mutable {
+				// TRANSLATORS: Message in the console in multiplayer, {} is player name, keep \f[...] formatting as it is
 				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", peerDesc->PlayerName));
 			});
 
@@ -4787,6 +4797,7 @@ namespace Jazz2::Multiplayer
 				return;
 			}
 			if (ChangePlayerTeam(peerDesc->Player, requestedTeam, false)) {
+				// TRANSLATORS: Message in the console after the player changed team, {} is the team color name in English (Blue, Red, Green or Yellow)
 				SendMessage(peer, UI::MessageLevel::Info, _f("You joined the {} team", GetTeamName(peerDesc->Team)));
 			} else {
 				SendMessage(peer, UI::MessageLevel::Warning, _("Cannot change team right now"));
@@ -4918,8 +4929,10 @@ namespace Jazz2::Multiplayer
 
 				InvokeAsync([this, type, playerName = Death::move(playerName)]() mutable {
 					if (type == PeerPropertyType::Connected) {
+						// TRANSLATORS: Message in the console in multiplayer, {} is player name, keep \f[...] formatting as it is
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", playerName));
 					} else {
+						// TRANSLATORS: Message in the console in multiplayer, {} is player name, keep \f[...] formatting as it is
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] disconnected", playerName));
 					}
 				});
@@ -4941,9 +4954,11 @@ namespace Jazz2::Multiplayer
 
 				InvokeAsync([this, victimName = Death::move(victimName), attackerName = Death::move(attackerName)]() mutable {
 					if (!attackerName.empty()) {
+						// TRANSLATORS: Message in the console in multiplayer when a player is killed by another player, first {} is victim name, second {} is attacker name, keep \f[...] formatting as it is
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
 							victimName, attackerName));
 					} else {
+						// TRANSLATORS: Message in the console in multiplayer when a player is killed by an enemy or a hazard (not by another player), {} is player name, keep \f[...] formatting as it is
 						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
 							victimName));
 					}
@@ -7775,6 +7790,7 @@ namespace Jazz2::Multiplayer
 						}
 					}
 
+					// TRANSLATORS: Message in the console in multiplayer when a player is killed by another player, first {} is victim name, second {} is attacker name, keep \f[...] formatting as it is
 					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
 						peerDesc->PlayerName, attackerPeerDesc->PlayerName));
 
@@ -7801,6 +7817,7 @@ namespace Jazz2::Multiplayer
 						return (peerDesc && peerDesc->IsAuthenticated);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet5);
 				} else {
+					// TRANSLATORS: Message in the console in multiplayer when a player is killed by an enemy or a hazard (not by another player), {} is player name, keep \f[...] formatting as it is
 					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
 						peerDesc->PlayerName));
 
@@ -9069,6 +9086,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		if (anyChanged) {
+			// TRANSLATORS: Message shown to all players in multiplayer when players were moved between teams to even them out, keep the leading line breaks
 			ShowAlertToAllPlayers(_("\n\nTeams have been rebalanced"));
 		}
 	}
@@ -9374,6 +9392,7 @@ namespace Jazz2::Multiplayer
 					// Enemy flag taken
 					flag.State = CtfFlagState::Carried;
 					flag.CarrierPlayerIndex = mpPlayer->_playerIndex;
+					// TRANSLATORS: Message shown to all players in Capture the Flag, first {} is player name, second {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
 					ShowAlertToAllPlayers(_f("\n\n{} took the {} flag!", peerDesc->PlayerName, GetTeamName(flag.Team)));
 					stateChanged = true;
 				} else if (flag.State == CtfFlagState::Dropped) {
@@ -9382,6 +9401,7 @@ namespace Jazz2::Multiplayer
 					if (flag.Actor != nullptr) {
 						flag.Actor->MoveInstantly(flag.BasePos, Actors::MoveType::Absolute | Actors::MoveType::Force);
 					}
+					// TRANSLATORS: Message shown to all players in Capture the Flag when a dropped flag is returned to its base, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
 					ShowAlertToAllPlayers(_f("\n\nThe {} flag was returned", GetTeamName(flag.Team)));
 					stateChanged = true;
 				}
@@ -9430,6 +9450,7 @@ namespace Jazz2::Multiplayer
 					flag.Actor->MoveInstantly(flag.BasePos, Actors::MoveType::Absolute | Actors::MoveType::Force);
 				}
 
+				// TRANSLATORS: Message shown to all players in Capture the Flag, both {} are team color names in English (Blue, Red, Green or Yellow), keep the leading line breaks
 				ShowAlertToAllPlayers(_f("\n\n{} team captured the {} flag!", GetTeamName(carrierTeam), GetTeamName(flag.Team)));
 
 				if (auto* webhook = _networkManager->GetWebhook()) {
@@ -9541,6 +9562,7 @@ namespace Jazz2::Multiplayer
 				if (flag.Actor != nullptr) {
 					flag.Actor->MoveInstantly(player->_pos, Actors::MoveType::Absolute | Actors::MoveType::Force);
 				}
+				// TRANSLATORS: Message shown to all players in Capture the Flag when the flag carrier dies, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
 				ShowAlertToAllPlayers(_f("\n\nThe {} flag was dropped", GetTeamName(flag.Team)));
 				SyncTeamScores();
 			}
@@ -10590,6 +10612,7 @@ namespace Jazz2::Multiplayer
 
 			LOGI("Overtime started - {} seconds", serverConfig.OvertimeSecs);
 			// TODO: Localize on client
+			// TRANSLATORS: Message shown to all players in a multiplayer race when the first player finishes, first {} is player name, second {} is number of seconds left for the others, keep the line breaks
 			ShowAlertToAllPlayers(_f("\n\n{} finished the race!\n{} seconds remaining", peerDesc->PlayerName, serverConfig.OvertimeSecs));
 
 			// Clients count the remaining time down on their own from here, so the players still racing can see it
@@ -10604,6 +10627,7 @@ namespace Jazz2::Multiplayer
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 			}
 		} else {
+			// TRANSLATORS: Message shown to all players in a multiplayer race, first {} is player name, second {} is the finishing position as a number followed by the dot (e.g. "2." for second), keep the leading line breaks
 			ShowAlertToAllPlayers(_f("\n\n{} finished {}.", peerDesc->PlayerName, peerDesc->RaceFinishOrder));
 		}
 
@@ -10868,6 +10892,7 @@ namespace Jazz2::Multiplayer
 
 		if (winner != nullptr) {
 			auto peerDesc = winner->GetPeerDescriptor();
+			// TRANSLATORS: Message shown to all players in multiplayer at the end of a round, {} is player name, keep the leading line breaks
 			ShowAlertToAllPlayers(_f("\n\nWinner is {}", peerDesc->PlayerName));
 			LOGW("Winner is player {} \"{}\" [{}]", winner->_playerIndex, peerDesc->PlayerName, peerDesc->RemotePeer);
 		}
@@ -10932,6 +10957,7 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
+		// TRANSLATORS: Message shown to all players in multiplayer at the end of a round in team game modes, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
 		ShowAlertToAllPlayers(_f("\n\n{} team wins!", GetTeamName(team)));
 		LOGW("Team {} wins", team);
 
@@ -10988,6 +11014,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (tied || bestScore == 0) {
+				// TRANSLATORS: Message shown to all players in multiplayer when the time runs out in team game modes and no team leads, keep the leading line breaks
 				ShowAlertToAllPlayers(_("\n\nThe round ended in a draw"));
 				EndGame(static_cast<MpPlayer*>(nullptr));
 			} else {

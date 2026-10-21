@@ -34,7 +34,7 @@ namespace Jazz2::Editor
 		auto s = fs::Open(path, FileAccess::Read);
 		if (!s->IsValid()) {
 			if (error != nullptr) {
-				*error = _("The file can't be read");
+				*error = _x("editor", "The file can't be read");
 			}
 			return false;
 		}
@@ -69,13 +69,13 @@ namespace Jazz2::Editor
 	{
 		switch (error) {
 			case PngError::None: return {};
-			case PngError::NotPng: return _("It isn't a PNG image");
-			case PngError::EndsTooSoon: return _("The image ends too soon");
-			case PngError::TooLarge: return _("The image is too large");
-			case PngError::UnknownKind: return _("The image is of an unknown kind");
-			case PngError::Unsupported: return _("The image uses a feature that isn't supported");
-			case PngError::NoPalette: return _("The image has no palette");
-			default: return _("The image is damaged");
+			case PngError::NotPng: return _x("editor", "It isn't a PNG image");
+			case PngError::EndsTooSoon: return _x("editor", "The image ends too soon");
+			case PngError::TooLarge: return _x("editor", "The image is too large");
+			case PngError::UnknownKind: return _x("editor", "The image is of an unknown kind");
+			case PngError::Unsupported: return _x("editor", "The image uses a feature that isn't supported");
+			case PngError::NoPalette: return _x("editor", "The image has no palette");
+			default: return _x("editor", "The image is damaged");
 		}
 	}
 }

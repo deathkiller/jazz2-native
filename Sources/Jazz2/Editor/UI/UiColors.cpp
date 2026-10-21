@@ -375,9 +375,9 @@ namespace Jazz2::Editor
 
 		auto* row = column->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 		auto* before = row->Add<UiColorSwatch>([original]() { return original; }, [change, original]() { (*change)(original); });
-		before->Tooltip = _("The color before, click to bring it back");
+		before->Tooltip = _x("editor", "The color before, click to bring it back");
 		auto* now = row->Add<UiColorSwatch>([shared]() { return (*shared)(); });
-		now->Tooltip = _("The color now");
+		now->Tooltip = _x("editor", "The color now");
 		auto* hex = row->Add<UiTextBox>();
 		hex->MaxLength = 7;
 		hex->Flex = 1.0f;
@@ -389,7 +389,8 @@ namespace Jazz2::Editor
 				(*change)(value);
 			}
 		};
-		hex->Tooltip = _("The color as #RRGGBB");
+		// TRANSLATORS: Tooltip of the box with the hex code of the color in the color picker, keep #RRGGBB as it is
+		hex->Tooltip = _x("editor", "The color as #RRGGBB");
 
 		UiOverlayOptions options;
 		options.Position = pos;

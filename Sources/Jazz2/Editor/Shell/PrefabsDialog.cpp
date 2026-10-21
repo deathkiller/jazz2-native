@@ -103,17 +103,18 @@ namespace Jazz2::Editor
 				_preview = Add<PrefabPreview>(session, state);
 				_name = Add<UiLabel>();
 				_name->Flex = 1.0f;
-				auto* use = Add<UiButton>(_("Use"), EditorIcon::Brush, [s, state, self]() {
+				// TRANSLATORS: Button next to a prefab in the Prefabs dialog, makes it the brush to paint with (verb), keep it short
+				auto* use = Add<UiButton>(_x("editor", "Use"), EditorIcon::Brush, [s, state, self]() {
 					std::int32_t i = self->_index;
 					if (i < 0 || i >= std::int32_t(state->Prefabs.size())) {
 						return;
 					}
 					// A prefab of more layers or with events is pasted with them, see ToolActions::UsePrefab()
 					if (!ToolActions::UsePrefab(*s, state->Prefabs[i])) {
-						s->ShowMessage(_("The level doesn't have the tile sets of the prefab"));
+						s->ShowMessage(_x("editor", "The level doesn't have the tile sets of the prefab"));
 					}
 				});
-				use->Tooltip = _("Paint with it");
+				use->Tooltip = _x("editor", "Paint with it");
 				auto* remove = Add<UiButton>(StringView(), EditorIcon::Delete, [s, state, self]() {
 					std::int32_t i = self->_index;
 					if (i < 0 || i >= std::int32_t(state->Prefabs.size())) {
@@ -121,11 +122,11 @@ namespace Jazz2::Editor
 					}
 					state->Prefabs.erase(state->Prefabs.begin() + i);
 					if (!TilePrefab::Save(state->TileSet, state->Prefabs)) {
-						s->ShowMessage(_("The prefabs couldn't be saved"));
+						s->ShowMessage(_x("editor", "The prefabs couldn't be saved"));
 					}
 					state->Revision++;
 				});
-				remove->Tooltip = _("Remove the prefab");
+				remove->Tooltip = _x("editor", "Remove the prefab");
 			}
 
 			/** Binds the row to a prefab */
@@ -154,7 +155,7 @@ namespace Jazz2::Editor
 				RowHeight = 40.0f + PrefabRow::BottomSpace;
 				// The rows are only used by their buttons
 				Selectable = false;
-				EmptyText = _("The tile set has no prefabs yet");
+				EmptyText = _x("editor", "The tile set has no prefabs yet");
 				CountFunc = [this]() { return std::int32_t(_state->Prefabs.size()); };
 				IEditorContext* s = &session;
 				std::shared_ptr<PrefabsState> rowState = _state;
@@ -193,9 +194,10 @@ namespace Jazz2::Editor
 		state->TileSet = session.GetDocument().Properties.DefaultTileSet;
 		TilePrefab::Load(state->TileSet, state->Prefabs);
 
-		auto dialog = std::make_unique<UiDialog>(_("Prefabs"));
+		// TRANSLATORS: Title of the dialog with the prefabs of the tile set, saved pieces of tiles to paint with again
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Prefabs"));
 		auto* content = dialog->GetContent();
-		content->Add<UiLabel>(_f("Prefabs of tile set \"{}\", for any level of it", state->TileSet), UiTheme::TextDim);
+		content->Add<UiLabel>(_fx("editor", "Prefabs of tile set \"{}\", for any level of it", state->TileSet), UiTheme::TextDim);
 		auto* scroll = content->Add<UiScrollView>();
 		scroll->Width = 280.0f;
 		scroll->Height = 200.0f;
@@ -206,16 +208,17 @@ namespace Jazz2::Editor
 		auto* nameBox = row->Add<UiTextBox>();
 		nameBox->Flex = 1.0f;
 		nameBox->MaxLength = 48;
-		nameBox->Placeholder = _("Name of the prefab");
-		auto* save = row->Add<UiButton>(_("Save Brush"), EditorIcon::Plus, [s, state, nameBox]() {
+		nameBox->Placeholder = _x("editor", "Name of the prefab");
+		// TRANSLATORS: Button in the Prefabs dialog, saves the brush as a new prefab
+		auto* save = row->Add<UiButton>(_x("editor", "Save Brush"), EditorIcon::Plus, [s, state, nameBox]() {
 			String name = nameBox->Text.trimmed();
 			if (name.empty()) {
-				s->ShowMessage(_("Name the prefab first"));
+				s->ShowMessage(_x("editor", "Name the prefab first"));
 				return;
 			}
 			const TileStamp& stamp = s->GetStamp();
 			if (stamp.IsEmpty()) {
-				s->ShowMessage(_("The brush is empty"));
+				s->ShowMessage(_x("editor", "The brush is empty"));
 				return;
 			}
 			TilePrefab prefab = TilePrefab::FromStamp(s->GetDocument(), stamp, name);
@@ -228,26 +231,27 @@ namespace Jazz2::Editor
 				state->Prefabs.push_back(Death::move(prefab));
 			}
 			if (!TilePrefab::Save(state->TileSet, state->Prefabs)) {
-				s->ShowMessage(_("The prefabs couldn't be saved"));
+				s->ShowMessage(_x("editor", "The prefabs couldn't be saved"));
 				return;
 			}
 			state->Revision++;
 			nameBox->Text = String();
 			// Tiles of a tile set the level has in itself aren't in any other level, the prefab has empty cells there
 			s->ShowMessage(droppedTiles
-				? _f("Prefab \"{}\" saved with the tile set, the tiles of this level itself were left out", name)
-				: _f("Prefab \"{}\" saved with the tile set", name));
+				? _fx("editor", "Prefab \"{}\" saved with the tile set, the tiles of this level itself were left out", name)
+				: _fx("editor", "Prefab \"{}\" saved with the tile set", name));
 		});
-		save->Tooltip = _("Save the brush as a prefab of the tile set, the rules of the tile set in the user content keep it");
-		auto* saveLayers = content->Add<UiButton>(_("Save Copy of All Layers"), EditorIcon::Layers, [s, state, nameBox]() {
+		save->Tooltip = _x("editor", "Save the brush as a prefab of the tile set, the rules of the tile set in the user content keep it");
+		// TRANSLATORS: Button in the Prefabs dialog, saves what the Copy All Layers action copied last as a new prefab
+		auto* saveLayers = content->Add<UiButton>(_x("editor", "Save Copy of All Layers"), EditorIcon::Layers, [s, state, nameBox]() {
 			String name = nameBox->Text.trimmed();
 			if (name.empty()) {
-				s->ShowMessage(_("Name the prefab first"));
+				s->ShowMessage(_x("editor", "Name the prefab first"));
 				return;
 			}
 			const LayeredStamp& copied = ToolActions::GetLayeredClipboard();
 			if (copied.IsEmpty()) {
-				s->ShowMessage(_("Copy tiles of all layers first"));
+				s->ShowMessage(_x("editor", "Copy tiles of all layers first"));
 				return;
 			}
 			// The layer being edited is the one the prefab is used on, the others go with it
@@ -260,17 +264,17 @@ namespace Jazz2::Editor
 				state->Prefabs.push_back(Death::move(prefab));
 			}
 			if (!TilePrefab::Save(state->TileSet, state->Prefabs)) {
-				s->ShowMessage(_("The prefabs couldn't be saved"));
+				s->ShowMessage(_x("editor", "The prefabs couldn't be saved"));
 				return;
 			}
 			state->Revision++;
 			nameBox->Text = String();
 			// Tiles of a tile set the level has in itself aren't in any other level, the prefab has empty cells there
 			s->ShowMessage(droppedTiles
-				? _f("Prefab \"{}\" saved with the tile set, the tiles of this level itself were left out", name)
-				: _f("Prefab \"{}\" saved with the tile set", name));
+				? _fx("editor", "Prefab \"{}\" saved with the tile set, the tiles of this level itself were left out", name)
+				: _fx("editor", "Prefab \"{}\" saved with the tile set", name));
 		});
-		saveLayers->Tooltip = _("Save what Copy All Layers copied last as a prefab, with its layers and events");
+		saveLayers->Tooltip = _x("editor", "Save what Copy All Layers copied last as a prefab, with its layers and events");
 
 		ShowModeless(*surface, Death::move(dialog));
 	}

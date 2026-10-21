@@ -115,7 +115,8 @@ namespace Jazz2::Editor
 
 		// What the colors mean, a row each, so it's never wider than the cells
 		const Colorf* legendColors[LegendRows] = { &ColorByHand, &ColorLearned, &ColorMissing };
-		StringView legendTexts[LegendRows] = { _("Chosen by hand"), _("Learned from the levels"), _("No tile, a rule is needed") };
+		// TRANSLATORS: Legend of the colors in the overview of the terrain rules, where the tile of each pattern of neighbors comes from
+		StringView legendTexts[LegendRows] = { _x("editor", "Chosen by hand"), _x("editor", "Learned from the levels"), _x("editor", "No tile, a rule is needed") };
 		float y = Bounds.Y + cell * rows + painter.Px(UiTheme::Spacing);
 		float swatch = std::max(4.0f, rowHeight - painter.Px(4.0f));
 		for (std::int32_t i = 0; i < LegendRows; i++) {

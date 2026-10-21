@@ -365,12 +365,12 @@ namespace Jazz2::Editor
 		if (_drawer) {
 			if (_dockButton->Icon != EditorIcon::Close) {
 				_dockButton->Icon = EditorIcon::Close;
-				_dockButton->Tooltip = _("Close the panel");
+				_dockButton->Tooltip = _x("editor", "Close the panel");
 			}
 		} else if (_buttonShowsFloating != _floating || _dockButton->Tooltip.empty() || _dockButton->Icon == EditorIcon::Close) {
 			_buttonShowsFloating = _floating;
 			_dockButton->Icon = (_floating ? EditorIcon::Dock : EditorIcon::Undock);
-			_dockButton->Tooltip = (_floating ? _("Dock the panel back") : _("Float the panel, it can be moved anywhere"));
+			_dockButton->Tooltip = (_floating ? _x("editor", "Dock the panel back") : _x("editor", "Float the panel, it can be moved anywhere"));
 		}
 
 		UiElement::Update(timeMult);

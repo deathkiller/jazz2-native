@@ -376,7 +376,7 @@ namespace Jazz2::Editor
 			}
 			SmallVector<std::uint8_t, 0> bytes;
 			if (!SerializeTileSet(copy, bytes)) {
-				session.ShowMessage(_("The tile set couldn't be saved"));
+				session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 				// The level shows the tile as it has it again, in the colors it's matched to as the session shows it
 				std::uint8_t mask[PixelCount];
 				TileMasks::Unpack(&data->Masks[std::size_t(state.Index) * Formats::TileSetData::MaskBytesPerTile], mask);
@@ -500,7 +500,7 @@ namespace Jazz2::Editor
 				if (state.OnRetarget) {
 					state.OnRetarget();
 				}
-				session.ShowMessage(_("The tile was copied into this level to be painted in true color, the level shows the copy everywhere"));
+				session.ShowMessage(_x("editor", "The tile was copied into this level to be painted in true color, the level shows the copy everywhere"));
 			}
 			RefreshTrueColor(session, state);
 			if (state.TrueColor) {
@@ -878,12 +878,14 @@ namespace Jazz2::Editor
 						_shape = true;
 						return true;
 					case EditTool::Fill:
-						Modify(false, _state->Mode == EditMode::Mask ? _("Fill tile mask") : _("Fill tile"), [pixel](auto* data, auto value) {
+						// TRANSLATORS: Names of undo steps in the history, a flood fill of the mask or of the pixels of a tile
+						Modify(false, _state->Mode == EditMode::Mask ? _x("editor", "Fill tile mask") : _x("editor", "Fill tile"), [pixel](auto* data, auto value) {
 							FloodFill(data, pixel, value);
 						}, false, true);
 						return false;
 					case EditTool::Replace:
-						Modify(false, _("Replace color"), [pixel](auto* data, auto value) {
+						// TRANSLATORS: Name of an undo step in the history, a color replaced everywhere in a tile
+						Modify(false, _x("editor", "Replace color"), [pixel](auto* data, auto value) {
 							ReplaceValue(data, data[pixel.Y * TileSize + pixel.X], value);
 						});
 						return false;
@@ -892,7 +894,8 @@ namespace Jazz2::Editor
 							// Empties the selection, or the pixel without one
 							Recti area = (_selection.W > 0 ? _selection : Recti(pixel.X, pixel.Y, 1, 1));
 							_button = MouseButton::Right;
-							Modify(false, _("Clear pixels"), [area](auto* data, auto value) {
+							// TRANSLATORS: Name of an undo step in the history, selected pixels of a tile erased
+							Modify(false, _x("editor", "Clear pixels"), [area](auto* data, auto value) {
 								for (std::int32_t y = area.Y; y < area.Y + area.H; y++) {
 									for (std::int32_t x = area.X; x < area.X + area.W; x++) {
 										data[y * TileSize + x] = value;
@@ -963,12 +966,14 @@ namespace Jazz2::Editor
 					_shape = false;
 					Vector2i from = _startPixel, to = _lastPixel;
 					if (_state->Tool == EditTool::Line) {
-						Modify(false, _state->Mode == EditMode::Mask ? _("Line in tile mask") : _("Line in tile"), [from, to](auto* data, auto value) {
+						// TRANSLATORS: Names of undo steps in the history, a line drawn in the mask or in the pixels of a tile
+						Modify(false, _state->Mode == EditMode::Mask ? _x("editor", "Line in tile mask") : _x("editor", "Line in tile"), [from, to](auto* data, auto value) {
 							PaintLine(data, from, to, value);
 						}, false, true);
 					} else {
 						bool filled = IsFilled();
-						Modify(false, _state->Mode == EditMode::Mask ? _("Rectangle in tile mask") : _("Rectangle in tile"), [from, to, filled](auto* data, auto value) {
+						// TRANSLATORS: Names of undo steps in the history, a rectangle drawn in the mask or in the pixels of a tile
+						Modify(false, _state->Mode == EditMode::Mask ? _x("editor", "Rectangle in tile mask") : _x("editor", "Rectangle in tile"), [from, to, filled](auto* data, auto value) {
 							PaintRectangle(data, from, to, value, filled);
 						}, false, true);
 					}
@@ -977,7 +982,8 @@ namespace Jazz2::Editor
 					if (_moveOffset != Vector2i()) {
 						Recti area = _selection;
 						Vector2i offset = _moveOffset;
-						Modify(false, _("Move pixels"), [area, offset](auto* data, auto) {
+						// TRANSLATORS: Name of an undo step in the history, selected pixels of a tile dragged elsewhere
+						Modify(false, _x("editor", "Move pixels"), [area, offset](auto* data, auto) {
 							MoveArea(data, area, offset);
 						});
 						_selection.X += offset.X;
@@ -1005,9 +1011,11 @@ namespace Jazz2::Editor
 					std::uint32_t color = (rgba != nullptr ? ReadRgba(rgba, i) : 0);
 					char hex[16];
 					std::snprintf(hex, sizeof(hex), "#%02X%02X%02X%02X", color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >> 24);
-					_tooltip = _f("{}, {}: {}", pixel.X, pixel.Y, hex);
+					// TRANSLATORS: Tooltip of a pixel in the tile editor, its X and Y and its color as hexadecimal RGBA
+					_tooltip = _fx("editor", "{}, {}: {}", pixel.X, pixel.Y, hex);
 				} else {
-					_tooltip = _f("{}, {}: color {}", pixel.X, pixel.Y, GetIndices(_session, *_state)[i]);
+					// TRANSLATORS: Tooltip of a pixel in the tile editor, its X and Y and the index of its color in the palette
+					_tooltip = _fx("editor", "{}, {}: color {}", pixel.X, pixel.Y, GetIndices(_session, *_state)[i]);
 				}
 				return _tooltip;
 			}
@@ -1156,7 +1164,8 @@ namespace Jazz2::Editor
 			// A line, so a fast stroke has no gaps, the whole stroke is a single step
 			void Paint(Vector2i from, Vector2i to, bool continued)
 			{
-				Modify(continued, _state->Mode == EditMode::Mask ? _("Paint tile mask") : _("Paint tile"), [from, to](auto* data, auto value) {
+				// TRANSLATORS: Names of undo steps in the history, a stroke of the pencil in the mask or in the pixels of a tile
+				Modify(continued, _state->Mode == EditMode::Mask ? _x("editor", "Paint tile mask") : _x("editor", "Paint tile"), [from, to](auto* data, auto value) {
 					PaintLine(data, from, to, value);
 				}, true, true);
 			}
@@ -1247,7 +1256,8 @@ namespace Jazz2::Editor
 			StringView GetTooltip(Vector2f pos) const override
 			{
 				std::int32_t index = (Bounds.H > 0.0f ? std::int32_t((pos.X - Bounds.X) / Bounds.H) : -1);
-				_tooltip = _f("Frame {} - a click changes it", index + 1);
+				// TRANSLATORS: Tooltip of a frame of an animated tile in the tile editor, {} is its number, a click edits that frame
+				_tooltip = _fx("editor", "Frame {} - a click changes it", index + 1);
 				return _tooltip;
 			}
 
@@ -1291,7 +1301,7 @@ namespace Jazz2::Editor
 				return;
 			}
 		}
-		session.ShowMessage(_("The animated tile has no frame of a tile set to change"));
+		session.ShowMessage(_x("editor", "The animated tile has no frame of a tile set to change"));
 	}
 
 	namespace
@@ -1306,7 +1316,7 @@ namespace Jazz2::Editor
 		auto state = std::make_shared<TileEditState>();
 		std::int32_t tileId = session.GetDocument().ToTileId(tile);
 		if (tileId <= 0 || tileId > UINT16_MAX || !LoadOriginalTile(session, tile, *state)) {
-			session.ShowMessage(_("The tile can't be read from its tile set"));
+			session.ShowMessage(_x("editor", "The tile can't be read from its tile set"));
 			return;
 		}
 		state->TileId = std::uint16_t(tileId);
@@ -1317,8 +1327,10 @@ namespace Jazz2::Editor
 
 		IEditorContext* s = &session;
 		auto dialog = std::make_unique<UiDialog>(animation >= 0
-			? String(_f("Frame {} of Animated Tile {}", frame + 1, animation + 1))
-			: String(_f("Tile {} in This Level", tileId)));
+			// TRANSLATORS: Title of the tile editor for a frame of an animated tile, with the number of the frame and of the animated tile
+			? String(_fx("editor", "Frame {} of Animated Tile {}", frame + 1, animation + 1))
+			// TRANSLATORS: Title of the tile editor, {} is the tile ID of the tile
+			: String(_fx("editor", "Tile {} in This Level", tileId)));
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
 
@@ -1339,14 +1351,15 @@ namespace Jazz2::Editor
 			auto* info = content->Add<UiLabel>(StringView(), UiTheme::TextDim);
 			info->TextFunc = [s, state]() {
 				if (state->LevelTile) {
-					return String(state->TrueColor ? _("A tile of this level in true color, only this level has it") : _("A tile of this level, only this level has it"));
+					return String(state->TrueColor ? _x("editor", "A tile of this level in true color, only this level has it") : _x("editor", "A tile of this level, only this level has it"));
 				}
 				bool overridden = (SetTileOverrideCommand::FindDiffuse(s->GetDocument(), state->TileId) != nullptr ||
 					SetTileOverrideCommand::FindMask(s->GetDocument(), state->TileId) != nullptr);
-				return String(overridden ? _("Changed in this level, its tile set stays as it is") : _("As its tile set has it"));
+				// TRANSLATORS: Note in the tile editor whether the level changes the tile or it's the same as in its tile set
+				return String(overridden ? _x("editor", "Changed in this level, its tile set stays as it is") : _x("editor", "As its tile set has it"));
 			};
 			if (state->Reduced) {
-				content->Add<UiLabel>(_("A true color tile, its colors are the closest of the palette"), UiTheme::TextAccent);
+				content->Add<UiLabel>(_x("editor", "A true color tile, its colors are the closest of the palette"), UiTheme::TextAccent);
 			}
 		}
 
@@ -1356,23 +1369,25 @@ namespace Jazz2::Editor
 		{
 			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 			struct ModeOption { const char* Label; EditMode Mode; };
-			static const ModeOption Modes[] = { { N_("Pixels"), EditMode::Pixels }, { N_("Mask"), EditMode::Mask } };
+			// TRANSLATORS: Buttons of the tile editor, what is painted, the pixels of the tile or its collision mask
+			static const ModeOption Modes[] = { { NC_("editor", "Pixels"), EditMode::Pixels }, { NC_("editor", "Mask"), EditMode::Mask } };
 			for (const ModeOption& option : Modes) {
 				EditMode mode = option.Mode;
-				auto* button = row->Add<UiButton>(_(option.Label), mode == EditMode::Mask ? EditorIcon::Mask : EditorIcon::Tiles, [state, mode]() { state->Mode = mode; });
+				auto* button = row->Add<UiButton>(_x("editor", option.Label), mode == EditMode::Mask ? EditorIcon::Mask : EditorIcon::Tiles, [state, mode]() { state->Mode = mode; });
 				button->Style = UiButtonStyle::Flat;
 				button->IsCheckedFunc = [state, mode]() { return (state->Mode == mode); };
 			}
 			row->Add<UiSeparator>(UiOrientation::Vertical);
 			struct ToolOption { EditorIcon Icon; EditTool Tool; const char* Tooltip; };
 			static const ToolOption Tools[] = {
-				{ EditorIcon::Brush, EditTool::Pencil, N_("Pencil - the right button erases") },
-				{ EditorIcon::Path, EditTool::Line, N_("Line - the right button erases") },
-				{ EditorIcon::Rectangle, EditTool::Rectangle, N_("Rectangle, filled with Shift - the right button erases") },
-				{ EditorIcon::Fill, EditTool::Fill, N_("Fill - the right button erases") },
-				{ EditorIcon::Wand, EditTool::Replace, N_("Replace a color everywhere in the tile - the right button erases it") },
-				{ EditorIcon::Select, EditTool::Select, N_("Select pixels and drag them to move them - the right button clears them") },
-				{ EditorIcon::Eyedropper, EditTool::Eyedropper, N_("Pick a color") },
+				// TRANSLATORS: Tooltips of the drawing tools of the tile editor, most start with the name of the tool
+				{ EditorIcon::Brush, EditTool::Pencil, NC_("editor", "Pencil - the right button erases") },
+				{ EditorIcon::Path, EditTool::Line, NC_("editor", "Line - the right button erases") },
+				{ EditorIcon::Rectangle, EditTool::Rectangle, NC_("editor", "Rectangle, filled with Shift - the right button erases") },
+				{ EditorIcon::Fill, EditTool::Fill, NC_("editor", "Fill - the right button erases") },
+				{ EditorIcon::Wand, EditTool::Replace, NC_("editor", "Replace a color everywhere in the tile - the right button erases it") },
+				{ EditorIcon::Select, EditTool::Select, NC_("editor", "Select pixels and drag them to move them - the right button clears them") },
+				{ EditorIcon::Eyedropper, EditTool::Eyedropper, NC_("editor", "Pick a color") },
 			};
 			for (const ToolOption& option : Tools) {
 				EditTool tool = option.Tool;
@@ -1383,7 +1398,7 @@ namespace Jazz2::Editor
 					}
 				});
 				button->Style = UiButtonStyle::Flat;
-				button->Tooltip = _(option.Tooltip);
+				button->Tooltip = _x("editor", option.Tooltip);
 				button->IsCheckedFunc = [state, tool]() { return (state->Tool == tool); };
 			}
 		}
@@ -1393,38 +1408,42 @@ namespace Jazz2::Editor
 			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 			struct TransformOption { EditorIcon Icon; const char* Text; const char* Tooltip; std::int32_t Kind; };
 			static const TransformOption Transforms[] = {
-				{ EditorIcon::FlipX, nullptr, N_("Flip horizontally"), 0 },
-				{ EditorIcon::FlipY, nullptr, N_("Flip vertically"), 1 },
-				{ EditorIcon::Redo, nullptr, N_("Rotate clockwise"), 2 },
-				{ EditorIcon::ChevronLeft, nullptr, N_("Shift a pixel to the left, what goes out comes back on the other side"), 3 },
-				{ EditorIcon::ChevronRight, nullptr, N_("Shift a pixel to the right, what goes out comes back on the other side"), 4 },
-				{ EditorIcon::ArrowUp, nullptr, N_("Shift a pixel up, what goes out comes back on the other side"), 5 },
-				{ EditorIcon::ArrowDown, nullptr, N_("Shift a pixel down, what goes out comes back on the other side"), 6 },
+				{ EditorIcon::FlipX, nullptr, NC_("editor", "Flip horizontally"), 0 },
+				{ EditorIcon::FlipY, nullptr, NC_("editor", "Flip vertically"), 1 },
+				{ EditorIcon::Redo, nullptr, NC_("editor", "Rotate clockwise"), 2 },
+				{ EditorIcon::ChevronLeft, nullptr, NC_("editor", "Shift a pixel to the left, what goes out comes back on the other side"), 3 },
+				{ EditorIcon::ChevronRight, nullptr, NC_("editor", "Shift a pixel to the right, what goes out comes back on the other side"), 4 },
+				{ EditorIcon::ArrowUp, nullptr, NC_("editor", "Shift a pixel up, what goes out comes back on the other side"), 5 },
+				{ EditorIcon::ArrowDown, nullptr, NC_("editor", "Shift a pixel down, what goes out comes back on the other side"), 6 },
 			};
 			for (const TransformOption& option : Transforms) {
 				std::int32_t kind = option.Kind;
 				auto* button = row->Add<UiButton>(StringView(), option.Icon, [s, state, kind]() {
 					switch (kind) {
-						case 0: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return y * TileSize + (TileSize - 1 - x); }, _("Flip tile")); break;
-						case 1: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return (TileSize - 1 - y) * TileSize + x; }, _("Flip tile")); break;
-						case 2: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return (TileSize - 1 - x) * TileSize + y; }, _("Rotate tile")); break;
-						case 3: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return y * TileSize + (x + 1) % TileSize; }, _("Shift tile")); break;
-						case 4: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return y * TileSize + (x + TileSize - 1) % TileSize; }, _("Shift tile")); break;
-						case 5: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return ((y + 1) % TileSize) * TileSize + x; }, _("Shift tile")); break;
-						default: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return ((y + TileSize - 1) % TileSize) * TileSize + x; }, _("Shift tile")); break;
+						// TRANSLATORS: Name of an undo step in the history, a tile flipped horizontally or vertically
+						case 0: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return y * TileSize + (TileSize - 1 - x); }, _x("editor", "Flip tile")); break;
+						case 1: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return (TileSize - 1 - y) * TileSize + x; }, _x("editor", "Flip tile")); break;
+						// TRANSLATORS: Name of an undo step in the history
+						case 2: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return (TileSize - 1 - x) * TileSize + y; }, _x("editor", "Rotate tile")); break;
+						// TRANSLATORS: Name of an undo step in the history, a tile moved by a pixel with what goes out coming back on the other side
+						case 3: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return y * TileSize + (x + 1) % TileSize; }, _x("editor", "Shift tile")); break;
+						case 4: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return y * TileSize + (x + TileSize - 1) % TileSize; }, _x("editor", "Shift tile")); break;
+						case 5: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return ((y + 1) % TileSize) * TileSize + x; }, _x("editor", "Shift tile")); break;
+						default: TransformTile(*s, *state, [](std::int32_t x, std::int32_t y) { return ((y + TileSize - 1) % TileSize) * TileSize + x; }, _x("editor", "Shift tile")); break;
 					}
 				});
 				button->Style = UiButtonStyle::Flat;
-				button->Tooltip = _(option.Tooltip);
+				button->Tooltip = _x("editor", option.Tooltip);
 			}
 			row->Add<UiSeparator>(UiOrientation::Vertical);
 			auto* neighbors = row->Add<UiButton>(StringView(), EditorIcon::Grid, [state]() { state->ShowNeighbors = !state->ShowNeighbors; });
 			neighbors->Style = UiButtonStyle::Flat;
-			neighbors->Tooltip = _("Show the edges of the tiles around it in its tile set");
+			neighbors->Tooltip = _x("editor", "Show the edges of the tiles around it in its tile set");
 			neighbors->IsCheckedFunc = [state]() { return state->ShowNeighbors; };
-			auto* seams = row->Add<UiButton>(_("Seams"), EditorIcon::Tiles, [state]() { state->ShowSeams = !state->ShowSeams; });
+			// TRANSLATORS: Toggle in the tile editor, shows the tile repeated around itself to see where its edges meet
+			auto* seams = row->Add<UiButton>(_x("editor", "Seams"), EditorIcon::Tiles, [state]() { state->ShowSeams = !state->ShowSeams; });
 			seams->Style = UiButtonStyle::Flat;
-			seams->Tooltip = _("Show the tile all around itself, as it is changed, to see whether it tiles without a seam");
+			seams->Tooltip = _x("editor", "Show the tile all around itself, as it is changed, to see whether it tiles without a seam");
 			seams->IsCheckedFunc = [state]() { return state->ShowSeams; };
 
 			// What the pencil, line, rectangle and fill paint is mirrored across the middle of the tile
@@ -1434,7 +1453,7 @@ namespace Jazz2::Editor
 					state->Mirror ^= axis;
 				});
 				mirror->Style = UiButtonStyle::Flat;
-				mirror->Tooltip = (axis == 1 ? _("Mirror painting from left to right") : _("Mirror painting from top to bottom"));
+				mirror->Tooltip = (axis == 1 ? _x("editor", "Mirror painting from left to right") : _x("editor", "Mirror painting from top to bottom"));
 				mirror->IsCheckedFunc = [state, axis]() { return ((state->Mirror & axis) != 0); };
 			}
 
@@ -1462,10 +1481,10 @@ namespace Jazz2::Editor
 					}
 				}
 				clipboard.Valid = true;
-				s->ShowMessage(_("The pixels were copied, paste them into another tile"));
+				s->ShowMessage(_x("editor", "The pixels were copied, paste them into another tile"));
 			});
 			copyPixels->Style = UiButtonStyle::Flat;
-			copyPixels->Tooltip = _("Copy the selected pixels, or all of them, and the mask, to paste them into another tile");
+			copyPixels->Tooltip = _x("editor", "Copy the selected pixels, or all of them, and the mask, to paste them into another tile");
 			auto* pastePixels = row->Add<UiButton>(StringView(), EditorIcon::Paste, [s, state]() {
 				const PixelClipboard& clipboard = GetPixelClipboard();
 				if (!clipboard.Valid) {
@@ -1483,7 +1502,8 @@ namespace Jazz2::Editor
 								mask[i] = clipboard.Mask[i];
 							}
 						}
-					}, false, _("Paste mask"));
+					// TRANSLATORS: Name of an undo step in the history
+					}, false, _x("editor", "Paste mask"));
 				} else if (state->LevelTile && state->TrueColor) {
 					ChangeRgba(*s, *state, [&clipboard, &inArea](std::uint32_t* colors) {
 						for (std::int32_t i = 0; i < PixelCount; i++) {
@@ -1491,7 +1511,8 @@ namespace Jazz2::Editor
 								colors[i] = clipboard.Rgba[i];
 							}
 						}
-					}, false, _("Paste pixels"));
+					// TRANSLATORS: Name of an undo step in the history
+					}, false, _x("editor", "Paste pixels"));
 				} else {
 					ChangeTile(*s, *state, false, [&clipboard, &inArea](std::uint8_t* indices) {
 						for (std::int32_t i = 0; i < PixelCount; i++) {
@@ -1499,11 +1520,11 @@ namespace Jazz2::Editor
 								indices[i] = clipboard.Indices[i];
 							}
 						}
-					}, false, _("Paste pixels"));
+					}, false, _x("editor", "Paste pixels"));
 				}
 			});
 			pastePixels->Style = UiButtonStyle::Flat;
-			pastePixels->Tooltip = _("Paste the copied pixels where they were in their tile - the mask in the mask mode");
+			pastePixels->Tooltip = _x("editor", "Paste the copied pixels where they were in their tile - the mask in the mask mode");
 			pastePixels->IsEnabledFunc = []() { return GetPixelClipboard().Valid; };
 
 			// Painted right in the level, wherever the tile is seen
@@ -1529,7 +1550,8 @@ namespace Jazz2::Editor
 				}
 				*lastTarget = current->TileId;
 			};
-			auto* inLevel = row->Add<UiButton>(_("Paint in Level"), EditorIcon::Brush, [s, state, makePaint]() {
+			// TRANSLATORS: Toggle in the tile editor, paints the tile right where it's seen in the level
+			auto* inLevel = row->Add<UiButton>(_x("editor", "Paint in Level"), EditorIcon::Brush, [s, state, makePaint]() {
 				auto* tool = static_cast<TilePixelTool*>(s->GetTools().Get(EditorToolType::TilePixels));
 				if (s->GetTools().GetChosenType() == EditorToolType::TilePixels && tool->GetTargetTile() == state->TileId) {
 					tool->SetTarget(-1, nullptr);
@@ -1540,7 +1562,7 @@ namespace Jazz2::Editor
 				s->GetTools().SetActive(EditorToolType::TilePixels);
 			});
 			inLevel->Style = UiButtonStyle::Flat;
-			inLevel->Tooltip = _("Paint the tile right in the level with the tool chosen here, all the places it's seen change");
+			inLevel->Tooltip = _x("editor", "Paint the tile right in the level with the tool chosen here, all the places it's seen change");
 			inLevel->IsCheckedFunc = [s, state]() {
 				auto* tool = static_cast<TilePixelTool*>(s->GetTools().Get(EditorToolType::TilePixels));
 				return (s->GetTools().GetChosenType() == EditorToolType::TilePixels && tool->GetTargetTile() == state->TileId);
@@ -1550,7 +1572,7 @@ namespace Jazz2::Editor
 		auto* columns = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 2.0f);
 		*canvasHolder = columns->Add<TilePixelCanvas>(session, state, [s, dialogPtr]() {
 			// The tile sets changed, the window would change another tile now
-			s->ShowMessage(_("The tile sets of the level changed, open the tile again to change it"));
+			s->ShowMessage(_x("editor", "The tile sets of the level changed, open the tile again to change it"));
 			dialogPtr->Close();
 		});
 		{
@@ -1584,16 +1606,17 @@ namespace Jazz2::Editor
 						state->Rgba = ColorToRgba(color);
 					}, true);
 				};
-				swatch->Tooltip = _("Color to paint with - in true color, a click chooses any");
+				swatch->Tooltip = _x("editor", "Color to paint with - in true color, a click chooses any");
 			}
-			auto* trueColorButton = right->Add<UiButton>(_("True Color"), EditorIcon::None, [state]() {
+			// TRANSLATORS: Toggle in the tile editor, paints with any color instead of the colors of the palette
+			auto* trueColorButton = right->Add<UiButton>(_x("editor", "True Color"), EditorIcon::None, [state]() {
 				state->PaintTrueColor = !state->PaintTrueColor;
 				if (state->PaintTrueColor && state->Rgba == 0xFFFFFFFFu && state->Color != 0) {
 					state->Rgba = (ContentResolver::Get().GetPalettes()[state->Color] | 0xFF000000u);
 				}
 			});
 			trueColorButton->Style = UiButtonStyle::Flat;
-			trueColorButton->Tooltip = _("Paint any color, a tile of a tile set is copied into this level for it on the first stroke, a tile of the level becomes a true color one");
+			trueColorButton->Tooltip = _x("editor", "Paint any color, a tile of a tile set is copied into this level for it on the first stroke, a tile of the level becomes a true color one");
 			trueColorButton->IsCheckedFunc = [state]() { return (state->PaintTrueColor || (state->LevelTile && state->TrueColor)); };
 			trueColorButton->IsVisibleFunc = [state]() { return (state->Mode == EditMode::Pixels); };
 			auto* grid = right->Add<UiPaletteGrid>([]() {
@@ -1613,7 +1636,8 @@ namespace Jazz2::Editor
 			auto* maskTools = right->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
 			maskTools->IsVisibleFunc = [state]() { return (state->Mode == EditMode::Mask); };
 			{
-				auto* fromPixels = maskTools->Add<UiButton>(_("Mask from Pixels"), EditorIcon::Mask, [s, state]() {
+				// TRANSLATORS: Button in the mask mode of the tile editor, makes the collision mask of the tile from its pixels
+				auto* fromPixels = maskTools->Add<UiButton>(_x("editor", "Mask from Pixels"), EditorIcon::Mask, [s, state]() {
 					// Solid where it isn't transparent, a true color pixel at least half opaque
 					std::uint8_t solid[PixelCount];
 					if (state->LevelTile && state->TrueColor) {
@@ -1629,11 +1653,13 @@ namespace Jazz2::Editor
 					}
 					ChangeTile(*s, *state, true, [&solid](std::uint8_t* mask) {
 						std::memcpy(mask, solid, PixelCount);
-					}, false, _("Mask from pixels"));
+					// TRANSLATORS: Name of an undo step in the history
+					}, false, _x("editor", "Mask from pixels"));
 				});
-				fromPixels->Tooltip = _("Make every pixel that isn't transparent solid, and the others not");
+				fromPixels->Tooltip = _x("editor", "Make every pixel that isn't transparent solid, and the others not");
 
-				auto* fillBelow = maskTools->Add<UiButton>(_("Fill Below Surface"), EditorIcon::Fill, [s, state]() {
+				// TRANSLATORS: Button in the mask mode of the tile editor, makes the mask solid below the surface drawn, "Fill" is a verb
+				auto* fillBelow = maskTools->Add<UiButton>(_x("editor", "Fill Below Surface"), EditorIcon::Fill, [s, state]() {
 					ChangeTile(*s, *state, true, [](std::uint8_t* mask) {
 						for (std::int32_t x = 0; x < TileSize; x++) {
 							std::int32_t top = 0;
@@ -1644,11 +1670,13 @@ namespace Jazz2::Editor
 								mask[y * TileSize + x] = 1;
 							}
 						}
-					}, false, _("Fill mask below surface"));
+					// TRANSLATORS: Name of an undo step in the history
+					}, false, _x("editor", "Fill mask below surface"));
 				});
-				fillBelow->Tooltip = _("Draw the surface with the pencil, this makes everything below it in each column solid");
+				fillBelow->Tooltip = _x("editor", "Draw the surface with the pencil, this makes everything below it in each column solid");
 
-				auto* fromBrush = maskTools->Add<UiButton>(_("Mask of Brush Tile"), EditorIcon::Copy, [s, state]() {
+				// TRANSLATORS: Button in the mask mode of the tile editor, takes the mask of the first tile of the brush
+				auto* fromBrush = maskTools->Add<UiButton>(_x("editor", "Mask of Brush Tile"), EditorIcon::Copy, [s, state]() {
 					const TileStamp& stamp = s->GetStamp();
 					for (std::size_t i = 0; i < stamp.Tiles.size(); i++) {
 						if (!stamp.Present[i] || stamp.Tiles[i].IsEmpty()) {
@@ -1660,22 +1688,24 @@ namespace Jazz2::Editor
 						}
 						ChangeTile(*s, *state, true, [&mask](std::uint8_t* data) {
 							std::memcpy(data, mask, PixelCount);
-						}, false, _("Mask of another tile"));
+						// TRANSLATORS: Name of an undo step in the history
+						}, false, _x("editor", "Mask of another tile"));
 						return;
 					}
-					s->ShowMessage(_("Choose a tile with the mask as the brush first"));
+					s->ShowMessage(_x("editor", "Choose a tile with the mask as the brush first"));
 				});
-				fromBrush->Tooltip = _("Take the mask of the first tile of the brush");
+				fromBrush->Tooltip = _x("editor", "Take the mask of the first tile of the brush");
 
 				// A straight surface from one height at the left edge to another at the right edge
 				auto* slopeRow = maskTools->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 				auto* left = slopeRow->Add<UiNumberBox>([state]() { return state->SlopeLeft; }, [state](float value, bool) { state->SlopeLeft = value; }, 0.0f, 32.0f);
 				left->Width = 34.0f;
-				left->Tooltip = _("Height of the surface at the left edge in pixels");
+				left->Tooltip = _x("editor", "Height of the surface at the left edge in pixels");
 				auto* right2 = slopeRow->Add<UiNumberBox>([state]() { return state->SlopeRight; }, [state](float value, bool) { state->SlopeRight = value; }, 0.0f, 32.0f);
 				right2->Width = 34.0f;
-				right2->Tooltip = _("Height of the surface at the right edge in pixels");
-				auto* slope = slopeRow->Add<UiButton>(_("Slope"), EditorIcon::Slope, [s, state]() {
+				right2->Tooltip = _x("editor", "Height of the surface at the right edge in pixels");
+				// TRANSLATORS: Button in the mask mode of the tile editor, makes the mask a slope between the two heights next to it
+				auto* slope = slopeRow->Add<UiButton>(_x("editor", "Slope"), EditorIcon::Slope, [s, state]() {
 					float leftHeight = state->SlopeLeft, rightHeight = state->SlopeRight;
 					ChangeTile(*s, *state, true, [leftHeight, rightHeight](std::uint8_t* mask) {
 						for (std::int32_t x = 0; x < TileSize; x++) {
@@ -1686,23 +1716,29 @@ namespace Jazz2::Editor
 								mask[y * TileSize + x] = (y >= TileSize - height ? 1 : 0);
 							}
 						}
-					}, false, _("Slope mask"));
+					// TRANSLATORS: Name of an undo step in the history
+					}, false, _x("editor", "Slope mask"));
 				});
-				slope->Tooltip = _("Make the mask a slope between the two heights");
+				slope->Tooltip = _x("editor", "Make the mask a slope between the two heights");
 
 				auto* clearRow = maskTools->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-				clearRow->Add<UiButton>(_("Empty"), EditorIcon::Delete, [s, state]() {
-					ChangeTile(*s, *state, true, [](std::uint8_t* mask) { std::memset(mask, 0, PixelCount); }, false, _("Empty mask"));
+				// TRANSLATORS: Button in the mask mode of the tile editor, makes the whole mask empty, an adjective
+				clearRow->Add<UiButton>(_x("editor", "Empty"), EditorIcon::Delete, [s, state]() {
+					// TRANSLATORS: Name of an undo step in the history
+					ChangeTile(*s, *state, true, [](std::uint8_t* mask) { std::memset(mask, 0, PixelCount); }, false, _x("editor", "Empty mask"));
 				})->Style = UiButtonStyle::Flat;
-				clearRow->Add<UiButton>(_("Solid"), EditorIcon::Rectangle, [s, state]() {
-					ChangeTile(*s, *state, true, [](std::uint8_t* mask) { std::memset(mask, 1, PixelCount); }, false, _("Solid mask"));
+				// TRANSLATORS: Button in the mask mode of the tile editor, makes the whole mask solid, an adjective
+				clearRow->Add<UiButton>(_x("editor", "Solid"), EditorIcon::Rectangle, [s, state]() {
+					// TRANSLATORS: Name of an undo step in the history
+					ChangeTile(*s, *state, true, [](std::uint8_t* mask) { std::memset(mask, 1, PixelCount); }, false, _x("editor", "Solid mask"));
 				})->Style = UiButtonStyle::Flat;
 			}
 
 			// A tile of a tile set can become a tile of the level while the window is open, painted in true color
-			right->Add<UiLabel>(_("Changes are saved with the level"), UiTheme::TextDim)->IsVisibleFunc = [state]() { return state->LevelTile; };
+			right->Add<UiLabel>(_x("editor", "Changes are saved with the level"), UiTheme::TextDim)->IsVisibleFunc = [state]() { return state->LevelTile; };
 			{
-				auto* revert = right->Add<UiButton>(_("As in Tile Set"), EditorIcon::Undo, [s, state]() {
+				// TRANSLATORS: Button in the tile editor, the level stops changing the tile, so it's as its tile set has it
+				auto* revert = right->Add<UiButton>(_x("editor", "As in Tile Set"), EditorIcon::Undo, [s, state]() {
 					LevelDocument& document = s->GetDocument();
 					if (IsStale(*s, *state)) {
 						return;
@@ -1710,20 +1746,23 @@ namespace Jazz2::Editor
 					if (SetTileOverrideCommand::FindDiffuse(document, state->TileId) == nullptr && SetTileOverrideCommand::FindMask(document, state->TileId) == nullptr) {
 						return;
 					}
-					s->Execute(std::make_unique<SetTileOverrideCommand>(document, state->TileId, nullptr, nullptr, _("Tile as in tile set")));
+					// TRANSLATORS: Name of an undo step in the history, the changes of a tile in the level were dropped
+					s->Execute(std::make_unique<SetTileOverrideCommand>(document, state->TileId, nullptr, nullptr, _x("editor", "Tile as in tile set")));
 				});
-				revert->Tooltip = _("The level doesn't change the tile anymore");
+				revert->Tooltip = _x("editor", "The level doesn't change the tile anymore");
 				revert->IsVisibleFunc = [state]() { return !state->LevelTile; };
-				auto* apply = right->Add<UiButton>(_("Save into Tile Set"), EditorIcon::Save, [s, state]() {
+				// TRANSLATORS: Button in the tile editor, opens the dialog that saves the tiles changed in the level into a tile set
+				auto* apply = right->Add<UiButton>(_x("editor", "Save into Tile Set"), EditorIcon::Save, [s, state]() {
 					ShowApplyTileChangesDialog(*s, state->Ref.Source);
 				});
-				apply->Tooltip = _("Make the tiles changed in this level tiles of a tile set");
+				apply->Tooltip = _x("editor", "Make the tiles changed in this level tiles of a tile set");
 				apply->IsEnabledFunc = [s, state]() {
 					return (CountChangedTiles(*s, state->Ref.Source) > 0);
 				};
 				apply->IsVisibleFunc = [state]() { return !state->LevelTile; };
 				// True color, and anything else only this level has, in a copy of the tile the level shows instead
-				auto* copy = right->Add<UiButton>(_("Copy into This Level"), EditorIcon::Copy, [s, state, dialogPtr]() {
+				// TRANSLATORS: Button in the tile editor, copies the tile into the tiles stored in the level
+				auto* copy = right->Add<UiButton>(_x("editor", "Copy into This Level"), EditorIcon::Copy, [s, state, dialogPtr]() {
 					if (IsStale(*s, *state)) {
 						return;
 					}
@@ -1733,20 +1772,22 @@ namespace Jazz2::Editor
 						std::int32_t animation = state->Animation, frame = state->Frame;
 						dialogPtr->Close();
 						ShowTileEditorFor(*s, copied, animation, frame);
-						s->ShowMessage(_("The level shows a copy of the tile everywhere now, only this level has it"));
+						s->ShowMessage(_x("editor", "The level shows a copy of the tile everywhere now, only this level has it"));
 					}
 				});
-				copy->Tooltip = _("The tiles of this level can be changed in true color, the copy is shown wherever the tile was");
+				copy->Tooltip = _x("editor", "The tiles of this level can be changed in true color, the copy is shown wherever the tile was");
 				copy->IsVisibleFunc = [state]() { return !state->LevelTile; };
 			}
 
 			// To change the tile in another program and bring it back
-			auto* importImage = right->Add<UiButton>(_("Import PNG"), EditorIcon::Folder, [s, state]() {
-				ShowOpenImageDialog(*s, _("Import Tile"), [s, state](StringView path) {
+			// TRANSLATORS: Button in the tile editor, takes the pixels of the tile from a PNG image
+			auto* importImage = right->Add<UiButton>(_x("editor", "Import PNG"), EditorIcon::Folder, [s, state]() {
+				// TRANSLATORS: Title of the file picker of the image the tile is taken from
+				ShowOpenImageDialog(*s, _x("editor", "Import Tile"), [s, state](StringView path) {
 					PngImage image;
 					String error;
 					if (!PngCodec::Load(path, image, &error)) {
-						s->ShowMessage(_f("The image can't be read: {}", error));
+						s->ShowMessage(_fx("editor", "The image can't be read: {}", error));
 						return;
 					}
 					bool reduced = false;
@@ -1758,26 +1799,30 @@ namespace Jazz2::Editor
 									colors[y * TileSize + x] = (x < image.Width && y < image.Height ? image.GetColor(x, y) : 0u);
 								}
 							}
-						}, false, _("Import tile"));
+						// TRANSLATORS: Name of an undo step in the history, the pixels of a tile taken from an image
+						}, false, _x("editor", "Import tile"));
 					} else {
 						const std::uint32_t* palette = ContentResolver::Get().GetPalettes().data();
 						ChangeTile(*s, *state, false, [&image, palette, &reduced](std::uint8_t* indices) {
 							reduced = ReadTileFromImage(image, 0, 0, palette, indices);
-						}, false, _("Import tile"));
+						}, false, _x("editor", "Import tile"));
 					}
 					if (image.Width > TileSize || image.Height > TileSize) {
-						s->ShowMessage(_("Only the top left 32 x 32 pixels of the image were taken"));
+						s->ShowMessage(_x("editor", "Only the top left 32 x 32 pixels of the image were taken"));
 					} else if (reduced) {
-						s->ShowMessage(_("Some colors aren't in the palette, the closest ones were taken"));
+						s->ShowMessage(_x("editor", "Some colors aren't in the palette, the closest ones were taken"));
 					}
 				});
 			});
-			importImage->Tooltip = _("Take the pixels of the tile from an image");
-			auto* exportImage = right->Add<UiButton>(_("Export PNG"), EditorIcon::Export, [s, state]() {
+			importImage->Tooltip = _x("editor", "Take the pixels of the tile from an image");
+			// TRANSLATORS: Button in the tile editor, saves the tile as a PNG image
+			auto* exportImage = right->Add<UiButton>(_x("editor", "Export PNG"), EditorIcon::Export, [s, state]() {
 				SmallVector<UiFileRoot, 4> roots;
 				s->GetImageRoots(true, roots);
-				String name = _f("tile{}.png", state->TileId);
-				UiFileDialog::Show(*s->GetSurface(), _("Export Tile"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, {}, name, [s, state](StringView path) {
+				// TRANSLATORS: Suggested file name of an exported tile, {} is its tile ID, keep it a valid file name
+				String name = _fx("editor", "tile{}.png", state->TileId);
+				// TRANSLATORS: Title of the file picker the tile is saved as an image with
+				UiFileDialog::Show(*s->GetSurface(), _x("editor", "Export Tile"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, {}, name, [s, state](StringView path) {
 					PngImage image;
 					if (state->LevelTile && state->TrueColor) {
 						image.Create(TileSize, TileSize, false);
@@ -1789,11 +1834,11 @@ namespace Jazz2::Editor
 					}
 					auto file = fs::Open(path, FileAccess::Write);
 					if (!file->IsValid() || !PngCodec::Encode(*file, image)) {
-						s->ShowMessage(_("The image couldn't be saved"));
+						s->ShowMessage(_x("editor", "The image couldn't be saved"));
 					}
 				});
 			});
-			exportImage->Tooltip = _("Save the tile as an image");
+			exportImage->Tooltip = _x("editor", "Save the tile as an image");
 		}
 
 		// The level is seen behind it, with the tile changing as it's painted

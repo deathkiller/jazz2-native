@@ -83,6 +83,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
+		// TRANSLATORS: Header of Options > Controls > Input Diagnostics section
 		_root->DrawMenuTitle(charOffset, _("Input Diagnostics"), center.X, topLine);
 
 		// Show gamepad info

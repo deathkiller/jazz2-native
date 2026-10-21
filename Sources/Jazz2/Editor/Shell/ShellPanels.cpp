@@ -89,7 +89,7 @@ namespace Jazz2::Editor
 			StringView name;
 			std::int32_t offset;
 			if (!GetSourceTileSet(session.GetDocument(), source, name, offset)) {
-				session.ShowMessage(_("Animated tiles are of this level only, they can't be favourites"));
+				session.ShowMessage(_x("editor", "Animated tiles are of this level only, they can't be favourites"));
 				return;
 			}
 			EditorSettings& settings = session.GetSettings();
@@ -98,10 +98,10 @@ namespace Jazz2::Editor
 			auto it = std::find(favorites.begin(), favorites.end(), stored);
 			if (it != favorites.end()) {
 				favorites.erase(it);
-				session.ShowMessage(_f("Tile {} isn't a favourite anymore", index));
+				session.ShowMessage(_fx("editor", "Tile {} isn't a favourite anymore", index));
 			} else if (std::int32_t(favorites.size()) < EditorSettings::MaxFavoriteItems) {
 				favorites.push_back(stored);
-				session.ShowMessage(_f("Tile {} is a favourite now", index));
+				session.ShowMessage(_fx("editor", "Tile {} is a favourite now", index));
 			}
 			settings.Save();
 		}
@@ -171,40 +171,50 @@ namespace Jazz2::Editor
 	{
 		const DocumentLayer& layer = document.Layers[index];
 		if (layer.IsSpriteLayer()) {
-			return _("Sprite layer");
+			// TRANSLATORS: Name shown for the unnamed layer the player and the events are in
+			return _x("editor", "Sprite layer");
 		}
 		switch (Tiles::LayerRendererType(layer.Record.RendererType)) {
 			case Tiles::LayerRendererType::Sky:
 			case Tiles::LayerRendererType::Tunnel:
 			case Tiles::LayerRendererType::Wave:
-			case Tiles::LayerRendererType::Cylinder: return _("Textured Background");
-			case Tiles::LayerRendererType::Reflection: return _("Reflection");
-			case Tiles::LayerRendererType::BlurBehind: return _("Effects");
-			case Tiles::LayerRendererType::XRay: return _("Masked Layer");
-			case Tiles::LayerRendererType::Tinted: return _("Tinted Layer");
-			case Tiles::LayerRendererType::PaletteShift: return _("Palette Shifted Layer");
-			case Tiles::LayerRendererType::Solid: return _("Solid Color");
+			// TRANSLATORS: Name shown for an unnamed layer drawn as a 3D textured background (sky, tunnel, wave or cylinder)
+			case Tiles::LayerRendererType::Cylinder: return _x("editor", "Textured Background");
+			// TRANSLATORS: Name shown for an unnamed layer drawn as a reflection, such as of water (noun)
+			case Tiles::LayerRendererType::Reflection: return _x("editor", "Reflection");
+			// TRANSLATORS: Name shown for an unnamed layer whose tiles blur or distort what is behind them (noun, plural)
+			case Tiles::LayerRendererType::BlurBehind: return _x("editor", "Effects");
+			// TRANSLATORS: Name shown for an unnamed X-ray layer, shown only through a mask
+			case Tiles::LayerRendererType::XRay: return _x("editor", "Masked Layer");
+			case Tiles::LayerRendererType::Tinted: return _x("editor", "Tinted Layer");
+			case Tiles::LayerRendererType::PaletteShift: return _x("editor", "Palette Shifted Layer");
+			// TRANSLATORS: Name shown for an unnamed layer whose tiles are drawn in one solid color
+			case Tiles::LayerRendererType::Solid: return _x("editor", "Solid Color");
 			default: break;
 		}
 		// By how it moves compared to the sprite layer
 		std::uint8_t modelX = layer.Record.SpeedModels & 0x0F;
 		if (modelX == std::uint8_t(Tiles::LayerSpeedModel::AlwaysOnTop)) {
-			return _("Fixed to Screen");
+			// TRANSLATORS: Name shown for an unnamed layer that doesn't move with the view
+			return _x("editor", "Fixed to Screen");
 		}
 		if (modelX == std::uint8_t(Tiles::LayerSpeedModel::FitLevel)) {
-			return _("Fitted Background");
+			// TRANSLATORS: Name shown for an unnamed background layer stretched to fit the level
+			return _x("editor", "Fitted Background");
 		}
 		float speed = std::max(std::abs(layer.Record.SpeedX), std::abs(layer.Record.SpeedY));
 		if (speed == 1.0f) {
 			// Moves with the sprite layer
-			return _f("Layer {}", index + 1);
+			// TRANSLATORS: Name shown for an unnamed layer, {} is its number in the list of layers
+			return _fx("editor", "Layer {}", index + 1);
 		}
 		// In front of the sprite layer or behind it by how it's drawn - a layer in front that moves slower is still in front
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
 		if (spriteLayer >= 0) {
-			return (layer.Record.Depth < document.Layers[spriteLayer].Record.Depth ? _("Foreground") : _("Background"));
+			// TRANSLATORS: Names shown for an unnamed layer in front of the sprite layer or behind it (nouns)
+			return (layer.Record.Depth < document.Layers[spriteLayer].Record.Depth ? _x("editor", "Foreground") : _x("editor", "Background"));
 		}
-		return (speed > 1.0f ? _("Foreground") : _("Background"));
+		return (speed > 1.0f ? _x("editor", "Foreground") : _x("editor", "Background"));
 	}
 
 	String GetLayerTitle(const LevelDocument& document, std::int32_t index)
@@ -233,7 +243,8 @@ namespace Jazz2::Editor
 				return;
 			}
 			if (recordChanged || name != layer->Name) {
-				session.Execute(std::make_unique<SetLayerPropertiesCommand>(session.GetDocument(), session.GetCurrentLayer(), record, name, _("Layer properties")), true);
+				// TRANSLATORS: Name of an undo step in the history, a property of a layer changed
+				session.Execute(std::make_unique<SetLayerPropertiesCommand>(session.GetDocument(), session.GetCurrentLayer(), record, name, _x("editor", "Layer properties")), true);
 			}
 			if (final) {
 				session.GetHistory().BreakMerge();
@@ -322,7 +333,8 @@ namespace Jazz2::Editor
 				return;
 			}
 			IEditorContext* s = &session;
-			ShowOpenImageDialog(session, _("Import Layer Texture"), [s](StringView path) {
+			// TRANSLATORS: Title of the file dialog that opens an image to texture a layer with
+			ShowOpenImageDialog(session, _x("editor", "Import Layer Texture"), [s](StringView path) {
 				PngImage image;
 				String error;
 				if (!PngCodec::Load(path, image, &error)) {
@@ -330,16 +342,17 @@ namespace Jazz2::Editor
 					return;
 				}
 				if (image.Width != LayerTextureSize || image.Height != LayerTextureSize) {
-					s->ShowMessage(_f("The image has to be {} x {} pixels", LayerTextureSize, LayerTextureSize));
+					s->ShowMessage(_fx("editor", "The image has to be {} x {} pixels", LayerTextureSize, LayerTextureSize));
 					return;
 				}
 				// The palette indices of an image with the palette of the level, the closest entries of other colors
 				SmallVector<std::uint8_t, 0> texture;
 				texture.resize_for_overwrite(std::size_t(LayerTextureSize) * std::size_t(LayerTextureSize));
 				bool changed = ReadTextureFromImage(image, LayerTextureSize, ContentResolver::Get().GetPalettes().data(), texture.data());
-				SetCurrentLayerTexture(*s, Death::move(texture), _("Import layer texture"));
+				// TRANSLATORS: Name of an undo step in the history, an image imported as the texture of a layer
+				SetCurrentLayerTexture(*s, Death::move(texture), _x("editor", "Import layer texture"));
 				if (changed) {
-					s->ShowMessage(_("Some colors aren't in the palette, the closest ones were taken"));
+					s->ShowMessage(_x("editor", "Some colors aren't in the palette, the closest ones were taken"));
 				}
 			});
 		}
@@ -354,7 +367,7 @@ namespace Jazz2::Editor
 			SmallVector<UiFileRoot, 4> roots;
 			session.GetImageRoots(true, roots);
 			if (roots.empty()) {
-				session.ShowMessage(_("There is no place to save files to"));
+				session.ShowMessage(_x("editor", "There is no place to save files to"));
 				return;
 			}
 			// The image of its own, or the one its tiles make, so it can be edited and imported as its own
@@ -366,16 +379,17 @@ namespace Jazz2::Editor
 			}
 			IEditorContext* s = &session;
 			String name = GetLayerTitle(session.GetDocument(), session.GetCurrentLayer()) + ".png"_s;
-			UiFileDialog::Show(*surface, _("Export Layer Texture"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, {}, name, [s, texture](StringView path) {
+			UiFileDialog::Show(*surface, _x("editor", "Export Layer Texture"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, {}, name, [s, texture](StringView path) {
 				PngImage png = MakeTextureImage(texture->data(), LayerTextureSize, ContentResolver::Get().GetPalettes().data());
 				if (!AtomicFile::Write(path, [&png](Stream& stream) { return PngCodec::Encode(stream, png); })) {
-					s->ShowMessage(_("The file couldn't be written"));
+					s->ShowMessage(_x("editor", "The file couldn't be written"));
 					return;
 				}
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 				fs::SyncToPersistent();
 #endif
-				s->ShowMessage(_f("Saved {}", fs::GetFileName(path)));
+				// TRANSLATORS: Status message after the texture of a layer was exported, {} is the file name
+				s->ShowMessage(_fx("editor", "Saved {}", fs::GetFileName(path)));
 			});
 		}
 
@@ -387,7 +401,7 @@ namespace Jazz2::Editor
 				: _session(session), _shownLayer(-1), _shownRevision(UINT32_MAX), _shownOutsideChanges(UINT32_MAX)
 			{
 				Height = 88.0f;
-				Tooltip = _("The image of its own the layer is textured with");
+				Tooltip = _x("editor", "The image of its own the layer is textured with");
 			}
 
 			void Draw(UiPainter& painter) override
@@ -561,12 +575,13 @@ namespace Jazz2::Editor
 			{
 				float scale = (GetSurface() != nullptr ? GetSurface()->GetScale() : 1.0f);
 				if (GetEyeRect(scale).Contains(pos)) {
-					return _("Show or hide the layer in the editor, Alt+click shows only this one");
+					return _x("editor", "Show or hide the layer in the editor, Alt+click shows only this one");
 				}
 				if (GetLockRect(scale).Contains(pos)) {
-					return _("Lock the layer, so it can't be changed");
+					return _x("editor", "Lock the layer, so it can't be changed");
 				}
-				_tooltip = _f("Layer {} - double click to rename it, drag it to move it", _index + 1);
+				// TRANSLATORS: Tooltip of a layer in the list of layers, {} is its number
+				_tooltip = _fx("editor", "Layer {} - double click to rename it, drag it to move it", _index + 1);
 				return _tooltip;
 			}
 
@@ -611,7 +626,8 @@ namespace Jazz2::Editor
 					const DocumentLayer& layer = document.Layers[index];
 					String name = text.trimmed();
 					if (name != layer.Name) {
-						s->Execute(std::make_unique<SetLayerPropertiesCommand>(document, index, layer.Record, name, _("Rename layer")));
+						// TRANSLATORS: Name of an undo step in the history, a layer renamed
+						s->Execute(std::make_unique<SetLayerPropertiesCommand>(document, index, layer.Record, name, _x("editor", "Rename layer")));
 					}
 				});
 			}
@@ -733,7 +749,7 @@ namespace Jazz2::Editor
 					}, false);
 				}, withAlpha);
 			});
-			swatch->Tooltip = _("Pick a color");
+			swatch->Tooltip = _x("editor", "Pick a color");
 			return swatch;
 		}
 	}
@@ -743,14 +759,15 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		struct Tab { const char* Label; EditorIcon Icon; PickerPanel Panel; };
 		static const Tab Tabs[] = {
-			{ N_("Tiles"), EditorIcon::Tiles, PickerPanel::Tiles },
-			{ N_("Events"), EditorIcon::Event, PickerPanel::Events },
+			// TRANSLATORS: Tabs of the picker panel, switch between picking tiles and picking events
+			{ NC_("editor", "Tiles"), EditorIcon::Tiles, PickerPanel::Tiles },
+			{ NC_("editor", "Events"), EditorIcon::Event, PickerPanel::Events },
 		};
 		// When either of them is too narrow for its text, both show only their icons
 		auto buttons = std::make_shared<SmallVector<UiButton*, 2>>();
 		for (const Tab& tab : Tabs) {
 			PickerPanel panel = tab.Panel;
-			auto* button = header->Add<UiButton>(_(tab.Label), tab.Icon, [s, panel]() {
+			auto* button = header->Add<UiButton>(_x("editor", tab.Label), tab.Icon, [s, panel]() {
 				s->SetPickerPanel(panel);
 				// Events are placed by their own tool
 				if (panel == PickerPanel::Events) {
@@ -823,8 +840,9 @@ namespace Jazz2::Editor
 						// could put another one at its place
 						std::int32_t index = s->GetCurrentLayer();
 						std::uint32_t layerId = layer->Id;
-						UiMessageDialog::Show(*surface, _("Remove Layer"), _f("Remove the layer \"{}\" with all its tiles?", GetLayerTitle(s->GetDocument(), index)),
-							{ _("Remove"), _("Cancel") }, [action, s, layerId](std::int32_t button) {
+						UiMessageDialog::Show(*surface, _x("editor", "Remove Layer"), _fx("editor", "Remove the layer \"{}\" with all its tiles?", GetLayerTitle(s->GetDocument(), index)),
+							// TRANSLATORS: Buttons of the dialog that asks before removing a layer with tiles, "Remove" is a verb
+							{ _x("editor", "Remove"), _x("editor", "Cancel") }, [action, s, layerId](std::int32_t button) {
 								const DocumentLayer* current = GetCurrentLayer(*s);
 								if (button == 0 && current != nullptr && current->Id == layerId && action->CanExecute()) {
 									action->Execute();
@@ -1082,7 +1100,8 @@ namespace Jazz2::Editor
 		{
 			IEditorContext* s = &session;
 			{
-				auto* row = AddPropertyRow(rows, _("Name"));
+				// TRANSLATORS: Label of a property in the layer properties panel, the name of the layer
+				auto* row = AddPropertyRow(rows, _x("editor", "Name"));
 				auto* name = row->Add<UiTextBox>();
 				name->Flex = 1.0f;
 				name->MaxLength = 64;
@@ -1104,7 +1123,8 @@ namespace Jazz2::Editor
 				};
 			}
 			{
-				auto* row = AddPropertyRow(rows, _("Size"));
+				// TRANSLATORS: Label of a property in the layer properties panel, the width and the height of the layer in tiles
+				auto* row = AddPropertyRow(rows, _x("editor", "Size"));
 				auto* size = row->Add<UiLabel>();
 				size->TextFunc = [s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -1122,13 +1142,14 @@ namespace Jazz2::Editor
 				// Common ways a layer moves, the speeds and the models are set at once
 				struct Preset { const char* Label; float Speed; std::uint8_t Model; bool Repeat; };
 				static const Preset Presets[] = {
-					{ N_("Foreground"), 1.5f, std::uint8_t(Tiles::LayerSpeedModel::Default), false },
-					{ N_("With the sprite layer"), 1.0f, std::uint8_t(Tiles::LayerSpeedModel::Default), false },
-					{ N_("Near background"), 0.5f, std::uint8_t(Tiles::LayerSpeedModel::Default), true },
-					{ N_("Background"), 0.25f, std::uint8_t(Tiles::LayerSpeedModel::Default), true },
-					{ N_("Far background"), 0.125f, std::uint8_t(Tiles::LayerSpeedModel::Default), true },
-					{ N_("Fixed to screen"), 0.0f, std::uint8_t(Tiles::LayerSpeedModel::AlwaysOnTop), false },
-					{ N_("Fit to level"), 1.0f, std::uint8_t(Tiles::LayerSpeedModel::FitLevel), false },
+					// TRANSLATORS: Choices of the Movement property in the layer properties panel, common ways a layer moves with the view
+					{ NC_("editor", "Foreground"), 1.5f, std::uint8_t(Tiles::LayerSpeedModel::Default), false },
+					{ NC_("editor", "With the sprite layer"), 1.0f, std::uint8_t(Tiles::LayerSpeedModel::Default), false },
+					{ NC_("editor", "Near background"), 0.5f, std::uint8_t(Tiles::LayerSpeedModel::Default), true },
+					{ NC_("editor", "Background"), 0.25f, std::uint8_t(Tiles::LayerSpeedModel::Default), true },
+					{ NC_("editor", "Far background"), 0.125f, std::uint8_t(Tiles::LayerSpeedModel::Default), true },
+					{ NC_("editor", "Fixed to screen"), 0.0f, std::uint8_t(Tiles::LayerSpeedModel::AlwaysOnTop), false },
+					{ NC_("editor", "Fit to level"), 1.0f, std::uint8_t(Tiles::LayerSpeedModel::FitLevel), false },
 				};
 				auto matches = [](const Formats::LayerRecord& record, const Preset& preset) {
 					std::uint8_t models = std::uint8_t(preset.Model | (preset.Model << 4));
@@ -1141,22 +1162,24 @@ namespace Jazz2::Editor
 					}
 					return (record.SpeedX == preset.Speed && record.SpeedY == preset.Speed);
 				};
-				auto* row = AddPropertyRow(rows, _("Movement"));
+				// TRANSLATORS: Label of a property in the layer properties panel, the common way the layer moves with the view
+				auto* row = AddPropertyRow(rows, _x("editor", "Movement"));
 				auto* dropdown = row->Add<UiDropdown>([s, matches]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					if (layer != nullptr) {
 						for (const Preset& preset : Presets) {
 							if (matches(layer->Record, preset)) {
-								return String(_(preset.Label));
+								return String(_x("editor", preset.Label));
 							}
 						}
 					}
-					return String(_("Custom"));
+					// TRANSLATORS: Shown as the Movement of a layer in the layer properties panel when it moves in none of the common ways
+					return String(_x("editor", "Custom"));
 				}, [s, matches](SmallVectorImpl<UiMenuEntry>& entries) {
 					for (const Preset& preset : Presets) {
 						const Preset* p = &preset;
 						UiMenuEntry entry;
-						entry.Label = _(preset.Label);
+						entry.Label = _x("editor", preset.Label);
 						entry.IsChecked = [s, p, matches]() {
 							const DocumentLayer* layer = GetCurrentLayer(*s);
 							return (layer != nullptr && matches(layer->Record, *p));
@@ -1181,7 +1204,7 @@ namespace Jazz2::Editor
 				});
 				dropdown->Flex = 1.0f;
 				dropdown->IsEnabledFunc = isMovable;
-				row->Tooltip = _("Sets the speeds and the models of a common way a layer moves - Custom if they're none of these, as in most converted levels, the speeds and the models below say how it moves then");
+				row->Tooltip = _x("editor", "Sets the speeds and the models of a common way a layer moves - Custom if they're none of these, as in most converted levels, the speeds and the models below say how it moves then");
 			}
 
 			struct FloatProperty {
@@ -1191,15 +1214,16 @@ namespace Jazz2::Editor
 				std::int32_t Decimals;
 			};
 			static const FloatProperty FloatProperties[] = {
-				{ N_("Speed X"), &Formats::LayerRecord::SpeedX, -16.0f, 16.0f, 0.01f, 3 },
-				{ N_("Speed Y"), &Formats::LayerRecord::SpeedY, -16.0f, 16.0f, 0.01f, 3 },
-				{ N_("Auto X"), &Formats::LayerRecord::AutoSpeedX, -64.0f, 64.0f, 0.05f, 2 },
-				{ N_("Auto Y"), &Formats::LayerRecord::AutoSpeedY, -64.0f, 64.0f, 0.05f, 2 },
-				{ N_("Offset X"), &Formats::LayerRecord::OffsetX, -32768.0f, 32767.0f, 1.0f, 0 },
-				{ N_("Offset Y"), &Formats::LayerRecord::OffsetY, -32768.0f, 32767.0f, 1.0f, 0 },
+				// TRANSLATORS: Labels of properties in the layer properties panel - speed with the view, speed by itself and offset, X is horizontal and Y vertical
+				{ NC_("editor", "Speed X"), &Formats::LayerRecord::SpeedX, -16.0f, 16.0f, 0.01f, 3 },
+				{ NC_("editor", "Speed Y"), &Formats::LayerRecord::SpeedY, -16.0f, 16.0f, 0.01f, 3 },
+				{ NC_("editor", "Auto X"), &Formats::LayerRecord::AutoSpeedX, -64.0f, 64.0f, 0.05f, 2 },
+				{ NC_("editor", "Auto Y"), &Formats::LayerRecord::AutoSpeedY, -64.0f, 64.0f, 0.05f, 2 },
+				{ NC_("editor", "Offset X"), &Formats::LayerRecord::OffsetX, -32768.0f, 32767.0f, 1.0f, 0 },
+				{ NC_("editor", "Offset Y"), &Formats::LayerRecord::OffsetY, -32768.0f, 32767.0f, 1.0f, 0 },
 			};
 			for (const FloatProperty& property : FloatProperties) {
-				auto* row = AddPropertyRow(rows, _(property.Label));
+				auto* row = AddPropertyRow(rows, _x("editor", property.Label));
 				float Formats::LayerRecord::* member = property.Member;
 				auto* number = row->Add<UiNumberBox>([s, member]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -1211,7 +1235,8 @@ namespace Jazz2::Editor
 				number->IsEnabledFunc = isMovable;
 			}
 			{
-				auto* row = AddPropertyRow(rows, _("Depth"));
+				// TRANSLATORS: Label of a property in the layer properties panel, the order the layers are drawn in
+				auto* row = AddPropertyRow(rows, _x("editor", "Depth"));
 				auto* number = row->Add<UiNumberBox>([s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr ? float(layer->Record.Depth) : 0.0f);
@@ -1224,14 +1249,16 @@ namespace Jazz2::Editor
 
 			// How the layer moves with the camera, a model for each axis
 			static const PropertyChoice ModelChoices[] = {
-				{ N_("Speed"), std::int32_t(Tiles::LayerSpeedModel::Default) },
-				{ N_("Speed from level start"), std::int32_t(Tiles::LayerSpeedModel::FromStart) },
-				{ N_("Fixed to screen"), std::int32_t(Tiles::LayerSpeedModel::AlwaysOnTop) },
-				{ N_("Fit to level"), std::int32_t(Tiles::LayerSpeedModel::FitLevel) },
-				{ N_("Speed of view size"), std::int32_t(Tiles::LayerSpeedModel::SpeedMultipliers) },
+				// TRANSLATORS: Choices of the model of how a layer moves with the view along one axis, in the layer properties panel
+				{ NC_("editor", "Speed"), std::int32_t(Tiles::LayerSpeedModel::Default) },
+				{ NC_("editor", "Speed from level start"), std::int32_t(Tiles::LayerSpeedModel::FromStart) },
+				{ NC_("editor", "Fixed to screen"), std::int32_t(Tiles::LayerSpeedModel::AlwaysOnTop) },
+				{ NC_("editor", "Fit to level"), std::int32_t(Tiles::LayerSpeedModel::FitLevel) },
+				{ NC_("editor", "Speed of view size"), std::int32_t(Tiles::LayerSpeedModel::SpeedMultipliers) },
 			};
 			for (std::int32_t axis = 0; axis < 2; axis++) {
-				auto* row = AddPropertyRow(rows, axis == 0 ? _("Model X") : _("Model Y"));
+				// TRANSLATORS: Labels of properties in the layer properties panel, the model of how the layer moves horizontally and vertically
+				auto* row = AddPropertyRow(rows, axis == 0 ? _x("editor", "Model X") : _x("editor", "Model Y"));
 				std::int32_t shift = axis * 4;
 				auto* dropdown = AddChoiceDropdown(row, ModelChoices, [s, shift]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -1251,19 +1278,21 @@ namespace Jazz2::Editor
 		{
 			IEditorContext* s = &session;
 			static const PropertyChoice RendererChoices[] = {
-				{ N_("Tiles"), std::int32_t(Tiles::LayerRendererType::Default) },
-				{ N_("Solid color"), std::int32_t(Tiles::LayerRendererType::Solid) },
-				{ N_("Tinted"), std::int32_t(Tiles::LayerRendererType::Tinted) },
-				{ N_("Palette shift"), std::int32_t(Tiles::LayerRendererType::PaletteShift) },
-				{ N_("X-ray"), std::int32_t(Tiles::LayerRendererType::XRay) },
-				{ N_("Blur behind"), std::int32_t(Tiles::LayerRendererType::BlurBehind) },
-				{ N_("Sky"), std::int32_t(Tiles::LayerRendererType::Sky) },
-				{ N_("Tunnel"), std::int32_t(Tiles::LayerRendererType::Tunnel) },
-				{ N_("Wave"), std::int32_t(Tiles::LayerRendererType::Wave) },
-				{ N_("Cylinder"), std::int32_t(Tiles::LayerRendererType::Cylinder) },
-				{ N_("Reflection"), std::int32_t(Tiles::LayerRendererType::Reflection) },
+				// TRANSLATORS: Choices of the Renderer property in the layer properties panel, the ways the layer can be drawn
+				{ NC_("editor", "Tiles"), std::int32_t(Tiles::LayerRendererType::Default) },
+				{ NC_("editor", "Solid color"), std::int32_t(Tiles::LayerRendererType::Solid) },
+				{ NC_("editor", "Tinted"), std::int32_t(Tiles::LayerRendererType::Tinted) },
+				{ NC_("editor", "Palette shift"), std::int32_t(Tiles::LayerRendererType::PaletteShift) },
+				{ NC_("editor", "X-ray"), std::int32_t(Tiles::LayerRendererType::XRay) },
+				{ NC_("editor", "Blur behind"), std::int32_t(Tiles::LayerRendererType::BlurBehind) },
+				{ NC_("editor", "Sky"), std::int32_t(Tiles::LayerRendererType::Sky) },
+				{ NC_("editor", "Tunnel"), std::int32_t(Tiles::LayerRendererType::Tunnel) },
+				{ NC_("editor", "Wave"), std::int32_t(Tiles::LayerRendererType::Wave) },
+				{ NC_("editor", "Cylinder"), std::int32_t(Tiles::LayerRendererType::Cylinder) },
+				{ NC_("editor", "Reflection"), std::int32_t(Tiles::LayerRendererType::Reflection) },
 			};
-			auto* row = AddPropertyRow(rows, _("Renderer"));
+			// TRANSLATORS: Label of a property in the layer properties panel, how the tiles of the layer are drawn
+			auto* row = AddPropertyRow(rows, _x("editor", "Renderer"));
 			auto* dropdown = AddChoiceDropdown(row, RendererChoices, [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return std::int32_t(layer != nullptr ? layer->Record.RendererType : 0);
@@ -1316,7 +1345,7 @@ namespace Jazz2::Editor
 			dropdown->Flex = 1.0f;
 			// How it's drawn can be changed for the sprite layer too, unlike how it moves
 			dropdown->IsEnabledFunc = [s]() { return IsCurrentLayerUnlocked(*s); };
-			row->Tooltip = _("How the tiles of the layer are drawn - the sprite layer only as tiles, in a solid color, tinted or with a palette shift, the others wouldn't show its tiles where they are");
+			row->Tooltip = _x("editor", "How the tiles of the layer are drawn - the sprite layer only as tiles, in a solid color, tinted or with a palette shift, the others wouldn't show its tiles where they are");
 		}
 
 		/** What makes the layer drawn black, wrong or not at all, right under how it's drawn (see CheckLayerDrawing()) */
@@ -1349,7 +1378,7 @@ namespace Jazz2::Editor
 					if (indexed > 0) {
 						LevelProblem& problem = problems.emplace_back();
 						problem.Severity = LevelProblemSeverity::Warning;
-						problem.Text = _fn("{} tile is in palette colors and does nothing - blur behind takes its effect from true color tiles",
+						problem.Text = _fnx("editor", "{} tile is in palette colors and does nothing - blur behind takes its effect from true color tiles",
 							"{} tiles are in palette colors and do nothing - blur behind takes its effect from true color tiles", indexed, indexed);
 					}
 				}
@@ -1386,40 +1415,47 @@ namespace Jazz2::Editor
 			// A textured layer takes the tiles at its top left, unless it has an image of its own, such as a texture of JJ2+ of
 			// a converted level (see DocumentLayer::Texture) - one can be imported, exported to be edited elsewhere, made of
 			// the tiles or removed
-			auto* row = AddPropertyRow(rows, _("Texture"));
+			// TRANSLATORS: Label of a property in the layer properties panel, what a textured layer is textured with
+			auto* row = AddPropertyRow(rows, _x("editor", "Texture"));
 			auto* dropdown = row->Add<UiDropdown>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
-				return String(layer != nullptr && !layer->Texture.empty() ? _("Own image") : _("Its tiles"));
+				// TRANSLATORS: Value of the Texture property of a layer, textured with an image of its own or with its own tiles
+				return String(layer != nullptr && !layer->Texture.empty() ? _x("editor", "Own image") : _x("editor", "Its tiles"));
 			}, [s](SmallVectorImpl<UiMenuEntry>& entries) {
 				auto hasOwnImage = [s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr && !layer->Texture.empty());
 				};
 				UiMenuEntry importImage;
-				importImage.Label = _("Import image");
+				// TRANSLATORS: Entry in the Texture choice of a layer, opens an image file as its texture (verb)
+				importImage.Label = _x("editor", "Import image");
 				importImage.Execute = [s]() { ImportLayerTexture(*s); };
 				entries.push_back(Death::move(importImage));
 				UiMenuEntry exportImage;
-				exportImage.Label = _("Export image");
+				// TRANSLATORS: Entry in the Texture choice of a layer, saves its texture as an image file (verb)
+				exportImage.Label = _x("editor", "Export image");
 				exportImage.Execute = [s]() { ExportLayerTexture(*s); };
 				entries.push_back(Death::move(exportImage));
 				UiMenuEntry fromTiles;
-				fromTiles.Label = _("Make image of its tiles");
+				fromTiles.Label = _x("editor", "Make image of its tiles");
 				fromTiles.Execute = [s]() {
 					if (const DocumentLayer* layer = GetCurrentLayer(*s)) {
-						SetCurrentLayerTexture(*s, MakeTextureFromTiles(*s, *layer), _("Make layer texture of tiles"));
+						// TRANSLATORS: Name of an undo step in the history, the tiles of a layer made into an image of its own
+						SetCurrentLayerTexture(*s, MakeTextureFromTiles(*s, *layer), _x("editor", "Make layer texture of tiles"));
 					}
 				};
 				entries.push_back(Death::move(fromTiles));
 				UiMenuEntry useTiles;
-				useTiles.Label = _("Use its tiles");
+				// TRANSLATORS: Entry in the Texture choice of a layer, drops the image of its own so its tiles texture it again
+				useTiles.Label = _x("editor", "Use its tiles");
 				useTiles.IsEnabled = hasOwnImage;
-				useTiles.Execute = [s]() { SetCurrentLayerTexture(*s, {}, _("Remove layer texture")); };
+				// TRANSLATORS: Name of an undo step in the history, the image of its own of a layer removed
+				useTiles.Execute = [s]() { SetCurrentLayerTexture(*s, {}, _x("editor", "Remove layer texture")); };
 				entries.push_back(Death::move(useTiles));
 			});
 			dropdown->Flex = 1.0f;
 			dropdown->IsEnabledFunc = [s]() { return IsCurrentLayerUnlocked(*s); };
-			row->Tooltip = _("What the layer is textured with - the 8x8 tiles at its top left, or an image of its own of 256 x 256 pixels in the colors of the palette, such as a texture of JJ2+ a converted level has; it can be exported, edited elsewhere and imported again");
+			row->Tooltip = _x("editor", "What the layer is textured with - the 8x8 tiles at its top left, or an image of its own of 256 x 256 pixels in the colors of the palette, such as a texture of JJ2+ a converted level has; it can be exported, edited elsewhere and imported again");
 			ShowRowWhen(row, [s]() {
 				return RendererIs(*s, { Tiles::LayerRendererType::Sky, Tiles::LayerRendererType::Tunnel, Tiles::LayerRendererType::Wave,
 					Tiles::LayerRendererType::Cylinder, Tiles::LayerRendererType::Reflection });
@@ -1442,12 +1478,13 @@ namespace Jazz2::Editor
 			IEditorContext* s = &session;
 			auto isUnlocked = [s]() { return IsCurrentLayerUnlocked(*s); };
 			{
-				auto* row = AddPropertyRow(rows, _("Color"));
+				// TRANSLATORS: Label of a property in the layer properties panel, the color the tiles of the layer are multiplied by
+				auto* row = AddPropertyRow(rows, _x("editor", "Color"));
 				AddLayerColorSwatch(row, *s, true)->IsEnabledFunc = isUnlocked;
 				for (std::int32_t i = 0; i < 4; i++) {
 					AddLayerColorByte(row, *s, i)->IsEnabledFunc = isUnlocked;
 				}
-				row->Tooltip = _("Red, green, blue and alpha, the tiles are multiplied by it - an alpha below 255 makes the layer translucent, 0 invisible but still solid; a solid color layer draws its tiles in it");
+				row->Tooltip = _x("editor", "Red, green, blue and alpha, the tiles are multiplied by it - an alpha below 255 makes the layer translucent, 0 invisible but still solid; a solid color layer draws its tiles in it");
 				ShowRowWhen(row, [s]() {
 					return !RendererIs(*s, { Tiles::LayerRendererType::Tinted, Tiles::LayerRendererType::PaletteShift, Tiles::LayerRendererType::Sky,
 						Tiles::LayerRendererType::Tunnel, Tiles::LayerRendererType::Wave, Tiles::LayerRendererType::Cylinder,
@@ -1456,19 +1493,21 @@ namespace Jazz2::Editor
 			}
 			{
 				// Every color of the tiles is moved through the palette, live as the number is dragged or the wheel turned
-				auto* row = AddPropertyRow(rows, _("Shift"));
+				// TRANSLATORS: Label of a property in the layer properties panel, how far the colors of the layer move through the palette (noun, not the key)
+				auto* row = AddPropertyRow(rows, _x("editor", "Shift"));
 				AddLayerColorByte(row, *s, 0)->IsEnabledFunc = isUnlocked;
-				row->Tooltip = _("How many entries of the palette each color of the tiles moves by, wrapping around - transparent pixels and tiles in true color stay as they are");
+				row->Tooltip = _x("editor", "How many entries of the palette each color of the tiles moves by, wrapping around - transparent pixels and tiles in true color stay as they are");
 				ShowRowWhen(row, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::PaletteShift }); });
 
-				auto* opacityRow = AddPropertyRow(rows, _("Opacity"));
+				auto* opacityRow = AddPropertyRow(rows, _x("editor", "Opacity"));
 				AddLayerColorByte(opacityRow, *s, 3)->IsEnabledFunc = isUnlocked;
-				opacityRow->Tooltip = _("How opaque the layer is, 255 is fully");
+				opacityRow->Tooltip = _x("editor", "How opaque the layer is, 255 is fully");
 				ShowRowWhen(opacityRow, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::PaletteShift }); });
 			}
 			{
 				// A tinted layer takes the color from an entry of the palette, so it follows the palette as it changes
-				auto* row = AddPropertyRow(rows, _("Tint"));
+				// TRANSLATORS: Label of a property in the layer properties panel, the palette entry the layer is tinted with (noun)
+				auto* row = AddPropertyRow(rows, _x("editor", "Tint"));
 				row->Add<UiColorSwatch>([s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					if (layer == nullptr) {
@@ -1490,14 +1529,15 @@ namespace Jazz2::Editor
 					}, [s](std::int32_t index) {
 						ChangeLayer(*s, [index](Formats::LayerRecord& record, String&) { record.Color[0] = std::uint8_t(index); });
 					});
-				})->Tooltip = _("Pick from the palette");
-				AddLayerColorByte(row, *s, 0)->Tooltip = _("Index of the palette entry");
-				row->Tooltip = _("Entry of the palette the layer is tinted with");
+				})->Tooltip = _x("editor", "Pick from the palette");
+				AddLayerColorByte(row, *s, 0)->Tooltip = _x("editor", "Index of the palette entry");
+				row->Tooltip = _x("editor", "Entry of the palette the layer is tinted with");
 				ShowRowWhen(row, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Tinted }); });
 
-				auto* strengthRow = AddPropertyRow(rows, _("Strength"));
+				// TRANSLATORS: Label of a property in the layer properties panel, how strongly the layer is tinted
+				auto* strengthRow = AddPropertyRow(rows, _x("editor", "Strength"));
 				AddLayerColorByte(strengthRow, *s, 3);
-				strengthRow->Tooltip = _("How much the layer is tinted, 255 is fully");
+				strengthRow->Tooltip = _x("editor", "How much the layer is tinted, 255 is fully");
 				ShowRowWhen(strengthRow, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Tinted }); });
 			}
 		}
@@ -1507,21 +1547,23 @@ namespace Jazz2::Editor
 		{
 			IEditorContext* s = &session;
 			// The background blends towards the color of the horizon in the distance
-			auto* row = AddPropertyRow(rows, _("Horizon"));
+			// TRANSLATORS: Label of a property in the layer properties panel, the color of the horizon of a sky, tunnel or cylinder layer
+			auto* row = AddPropertyRow(rows, _x("editor", "Horizon"));
 			AddLayerColorSwatch(row, *s, false);
 			for (std::int32_t i = 0; i < 3; i++) {
 				AddLayerColorByte(row, *s, i);
 			}
-			row->Tooltip = _("Red, green and blue of the horizon the background fades into");
+			row->Tooltip = _x("editor", "Red, green and blue of the horizon the background fades into");
 			ShowRowWhen(row, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Sky, Tiles::LayerRendererType::Tunnel, Tiles::LayerRendererType::Cylinder }); });
 
-			auto* stars = rows->Add<UiCheckBox>(_("Stars"), [s]() {
+			// TRANSLATORS: Checkbox in the layer properties panel, shows stars over the horizon of a sky or tunnel layer
+			auto* stars = rows->Add<UiCheckBox>(_x("editor", "Stars"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Color[3] != 0);
 			}, [s](bool value) {
 				ChangeLayer(*s, [value](Formats::LayerRecord& record, String&) { record.Color[3] = (value ? 255 : 0); });
 			});
-			stars->Tooltip = _("Shows a field of stars over the horizon");
+			stars->Tooltip = _x("editor", "Shows a field of stars over the horizon");
 			stars->IsVisibleFunc = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Sky, Tiles::LayerRendererType::Tunnel }); };
 		}
 
@@ -1530,13 +1572,15 @@ namespace Jazz2::Editor
 		{
 			IEditorContext* s = &session;
 			auto isTunnel = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Tunnel }); };
-			auto* centerRow = AddPropertyRow(rows, _("Center"));
+			// TRANSLATORS: Label of a property in the layer properties panel, where the center of a tunnel or a cylinder layer is (noun)
+			auto* centerRow = AddPropertyRow(rows, _x("editor", "Center"));
 			AddTexturedFadePosition(centerRow, *s, 0);
 			AddTexturedFadePosition(centerRow, *s, 1);
-			centerRow->Tooltip = _("Where the center of the tunnel is, in percent of the width and the height of the view");
+			centerRow->Tooltip = _x("editor", "Where the center of the tunnel is, in percent of the width and the height of the view");
 			ShowRowWhen(centerRow, isTunnel);
 
-			auto* fade = rows->Add<UiCheckBox>(_("Fade"), [s]() {
+			// TRANSLATORS: Checkbox in the layer properties panel, a tunnel or a cylinder layer fades into the color of the horizon in the distance
+			auto* fade = rows->Add<UiCheckBox>(_x("editor", "Fade"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Textured.Fade != 0);
 			}, [s](bool value) {
@@ -1544,10 +1588,11 @@ namespace Jazz2::Editor
 					record.Textured.Fade = (value ? Formats::TexturedLayerParams::DefaultFade : 0);
 				});
 			});
-			fade->Tooltip = _("The circles fade into the color of the horizon in the distance, they go on into the center otherwise");
+			fade->Tooltip = _x("editor", "The circles fade into the color of the horizon in the distance, they go on into the center otherwise");
 			fade->IsVisibleFunc = isTunnel;
 
-			auto* spiral = rows->Add<UiCheckBox>(_("Spiral"), [s]() {
+			// TRANSLATORS: Checkbox in the layer properties panel, the circles of a tunnel layer spiral inwards
+			auto* spiral = rows->Add<UiCheckBox>(_x("editor", "Spiral"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && (layer->Record.Textured.Flags & Formats::TexturedLayerParams::Spiral) != 0);
 			}, [s](bool value) {
@@ -1556,7 +1601,7 @@ namespace Jazz2::Editor
 						: (record.Textured.Flags & ~Formats::TexturedLayerParams::Spiral));
 				});
 			});
-			spiral->Tooltip = _("The circles spiral inwards into the distance");
+			spiral->Tooltip = _x("editor", "The circles spiral inwards into the distance");
 			spiral->IsVisibleFunc = isTunnel;
 		}
 
@@ -1565,13 +1610,13 @@ namespace Jazz2::Editor
 		{
 			IEditorContext* s = &session;
 			auto isCylinder = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Cylinder }); };
-			auto* centerRow = AddPropertyRow(rows, _("Center"));
+			auto* centerRow = AddPropertyRow(rows, _x("editor", "Center"));
 			AddTexturedFadePosition(centerRow, *s, 0);
 			AddTexturedFadePosition(centerRow, *s, 1);
-			centerRow->Tooltip = _("Where the center of the horizon of the cylinder is, in percent of the width and the height of the view - far from the middle, the tube looks bent");
+			centerRow->Tooltip = _x("editor", "Where the center of the horizon of the cylinder is, in percent of the width and the height of the view - far from the middle, the tube looks bent");
 			ShowRowWhen(centerRow, isCylinder);
 
-			auto* fade = rows->Add<UiCheckBox>(_("Fade"), [s]() {
+			auto* fade = rows->Add<UiCheckBox>(_x("editor", "Fade"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Textured.Fade != 0);
 			}, [s](bool value) {
@@ -1579,10 +1624,11 @@ namespace Jazz2::Editor
 					record.Textured.Fade = (value ? Formats::TexturedLayerParams::DefaultFade : 0);
 				});
 			});
-			fade->Tooltip = _("The far wall fades a little into the color of the horizon");
+			fade->Tooltip = _x("editor", "The far wall fades a little into the color of the horizon");
 			fade->IsVisibleFunc = isCylinder;
 
-			auto* halfSize = rows->Add<UiCheckBox>(_("Half size"), [s]() {
+			// TRANSLATORS: Checkbox in the layer properties panel, the texture of a cylinder layer is drawn at half size
+			auto* halfSize = rows->Add<UiCheckBox>(_x("editor", "Half size"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && (layer->Record.Textured.Flags & Formats::TexturedLayerParams::HalfSize) != 0);
 			}, [s](bool value) {
@@ -1591,7 +1637,7 @@ namespace Jazz2::Editor
 						: (record.Textured.Flags & ~Formats::TexturedLayerParams::HalfSize));
 				});
 			});
-			halfSize->Tooltip = _("The texture goes four times across the view instead of once, and the tube is more curved, as if seen from further away");
+			halfSize->Tooltip = _x("editor", "The texture goes four times across the view instead of once, and the tube is more curved, as if seen from further away");
 			halfSize->IsVisibleFunc = isCylinder;
 		}
 
@@ -1601,14 +1647,14 @@ namespace Jazz2::Editor
 			IEditorContext* s = &session;
 			auto isWave = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Wave }); };
 
-			auto* wavelengthRow = AddPropertyRow(rows, _("Wavelength"));
-			AddLayerColorByte(wavelengthRow, *s, 0)->Tooltip = _("Of the waves that move the rows left and right");
-			AddLayerColorByte(wavelengthRow, *s, 1)->Tooltip = _("Of the waves that move the columns up and down");
-			wavelengthRow->Tooltip = _("How long the horizontal and the vertical waves are, one more pixel than the number, 0 for none - 255, 127, 63 and so on fit the texture best");
+			auto* wavelengthRow = AddPropertyRow(rows, _x("editor", "Wavelength"));
+			AddLayerColorByte(wavelengthRow, *s, 0)->Tooltip = _x("editor", "Of the waves that move the rows left and right");
+			AddLayerColorByte(wavelengthRow, *s, 1)->Tooltip = _x("editor", "Of the waves that move the columns up and down");
+			wavelengthRow->Tooltip = _x("editor", "How long the horizontal and the vertical waves are, one more pixel than the number, 0 for none - 255, 127, 63 and so on fit the texture best");
 			ShowRowWhen(wavelengthRow, isWave);
 
 			// The position of the fade of the other textured layers, JJ2+ keeps the amplitudes there
-			auto* amplitudeRow = AddPropertyRow(rows, _("Amplitude"));
+			auto* amplitudeRow = AddPropertyRow(rows, _x("editor", "Amplitude"));
 			for (std::int32_t axis = 0; axis < 2; axis++) {
 				auto* number = amplitudeRow->Add<UiNumberBox>([s, axis]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -1620,11 +1666,12 @@ namespace Jazz2::Editor
 				}, -2.0f, 2.0f, 0.01f, 2);
 				number->Flex = 1.0f;
 			}
-			amplitudeRow->Tooltip = _("How far the horizontal and the vertical waves move the texture, 1 is 128 pixels each way");
+			amplitudeRow->Tooltip = _x("editor", "How far the horizontal and the vertical waves move the texture, 1 is 128 pixels each way");
 			ShowRowWhen(amplitudeRow, isWave);
 
 			// The blue of the color as a signed byte, as JJ2+ keeps it
-			auto* speedRow = AddPropertyRow(rows, _("Speed"));
+			// TRANSLATORS: Label of a property in the layer properties panel, how fast the waves of a wave layer move (noun)
+			auto* speedRow = AddPropertyRow(rows, _x("editor", "Speed"));
 			auto* speed = speedRow->Add<UiNumberBox>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return float(layer != nullptr ? std::int8_t(layer->Record.Color[2]) : 0);
@@ -1633,10 +1680,11 @@ namespace Jazz2::Editor
 				ChangeLayer(*s, [byte](Formats::LayerRecord& record, String&) { record.Color[2] = byte; }, final);
 			}, -128.0f, 127.0f, 1.0f, 0);
 			speed->Flex = 1.0f;
-			speedRow->Tooltip = _("How fast the waves move along the texture - a positive one moves the horizontal waves up and the vertical ones left");
+			speedRow->Tooltip = _x("editor", "How fast the waves move along the texture - a positive one moves the horizontal waves up and the vertical ones left");
 			ShowRowWhen(speedRow, isWave);
 
-			auto* angle = rows->Add<UiCheckBox>(_("Swap angles"), [s]() {
+			// TRANSLATORS: Checkbox in the layer properties panel, the vertical waves of a wave layer move the other way
+			auto* angle = rows->Add<UiCheckBox>(_x("editor", "Swap angles"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && (layer->Record.Textured.Flags & Formats::TexturedLayerParams::DistortionAngle) != 0);
 			}, [s](bool value) {
@@ -1645,7 +1693,7 @@ namespace Jazz2::Editor
 						: (record.Textured.Flags & ~Formats::TexturedLayerParams::DistortionAngle));
 				});
 			});
-			angle->Tooltip = _("The vertical waves move the other way, so both move up and right, or down and left");
+			angle->Tooltip = _x("editor", "The vertical waves move the other way, so both move up and right, or down and left");
 			angle->IsVisibleFunc = isWave;
 		}
 
@@ -1656,11 +1704,13 @@ namespace Jazz2::Editor
 			auto isReflection = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Reflection }); };
 			{
 				static const PropertyChoice AreaChoices[] = {
-					{ N_("Whole view"), 0 },
-					{ N_("Window of the layer"), Formats::TexturedLayerParams::InnerWindow },
-					{ N_("The layer"), Formats::TexturedLayerParams::InnerLayer },
+					// TRANSLATORS: Choices of the Area property of a reflection layer, where it's drawn - over the whole view, the window the layer would fill, or the layer itself
+					{ NC_("editor", "Whole view"), 0 },
+					{ NC_("editor", "Window of the layer"), Formats::TexturedLayerParams::InnerWindow },
+					{ NC_("editor", "The layer"), Formats::TexturedLayerParams::InnerLayer },
 				};
-				auto* areaRow = AddPropertyRow(rows, _("Area"));
+				// TRANSLATORS: Label of a property in the layer properties panel, where a reflection layer is drawn
+				auto* areaRow = AddPropertyRow(rows, _x("editor", "Area"));
 				auto* areaDropdown = AddChoiceDropdown(areaRow, AreaChoices, [s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return std::int32_t(layer != nullptr ? GetReflectionArea(layer->Record) : 0);
@@ -1671,22 +1721,22 @@ namespace Jazz2::Editor
 					});
 				});
 				areaDropdown->Flex = 1.0f;
-				areaRow->Tooltip = _("Where the reflection is drawn - over the whole view, or only where the layer is placed as an ordinary layer, its horizon and vanishing point a part of the view or of the layer");
+				areaRow->Tooltip = _x("editor", "Where the reflection is drawn - over the whole view, or only where the layer is placed as an ordinary layer, its horizon and vanishing point a part of the view or of the layer");
 				ShowRowWhen(areaRow, isReflection);
 			}
 
-			auto* horizonRow = AddPropertyRow(rows, _("Horizon line"));
+			auto* horizonRow = AddPropertyRow(rows, _x("editor", "Horizon line"));
 			AddTexturedFadePosition(horizonRow, *s, 1);
-			horizonRow->Tooltip = _("How far down the view the horizon is in percent, or down the layer if it's drawn where the layer is - what is above it is mirrored below it");
+			horizonRow->Tooltip = _x("editor", "How far down the view the horizon is in percent, or down the layer if it's drawn where the layer is - what is above it is mirrored below it");
 			ShowRowWhen(horizonRow, isReflection);
 
-			auto* vanishingRow = AddPropertyRow(rows, _("Vanishing point"));
+			auto* vanishingRow = AddPropertyRow(rows, _x("editor", "Vanishing point"));
 			AddTexturedFadePosition(vanishingRow, *s, 0);
-			vanishingRow->Tooltip = _("Where the ripples meet at the horizon, in percent of the width of the view, or of the layer if it's drawn where the layer is");
+			vanishingRow->Tooltip = _x("editor", "Where the ripples meet at the horizon, in percent of the width of the view, or of the layer if it's drawn where the layer is");
 			ShowRowWhen(vanishingRow, isReflection);
 
 			// The tint is an entry of the palette, so it follows the palette as it changes
-			auto* tintRow = AddPropertyRow(rows, _("Tint"));
+			auto* tintRow = AddPropertyRow(rows, _x("editor", "Tint"));
 			tintRow->Add<UiColorSwatch>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				if (layer == nullptr) {
@@ -1708,7 +1758,7 @@ namespace Jazz2::Editor
 				}, [s](std::int32_t index) {
 					ChangeLayer(*s, [index](Formats::LayerRecord& record, String&) { record.Textured.Fade = std::uint8_t(index); });
 				});
-			})->Tooltip = _("Pick from the palette");
+			})->Tooltip = _x("editor", "Pick from the palette");
 			auto* tintIndex = AddByteBox(tintRow, [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return std::uint8_t(layer != nullptr ? layer->Record.Textured.Fade : 0);
@@ -1716,20 +1766,21 @@ namespace Jazz2::Editor
 				ChangeLayer(*s, [index](Formats::LayerRecord& record, String&) { record.Textured.Fade = index; }, final);
 			});
 			tintIndex->Flex = 1.0f;
-			tintIndex->Tooltip = _("Index of the palette entry");
-			tintRow->Tooltip = _("Entry of the palette the reflection is tinted with");
+			tintIndex->Tooltip = _x("editor", "Index of the palette entry");
+			tintRow->Tooltip = _x("editor", "Entry of the palette the reflection is tinted with");
 			ShowRowWhen(tintRow, isReflection);
 
 			struct ReflectionByte { const char* Label; const char* Tooltip; std::int32_t Index; };
 			static const ReflectionByte ReflectionBytes[] = {
-				{ N_("Tint opacity"), N_("How much the reflection is tinted, 255 is fully"), 0 },
-				{ N_("Distance"), N_("How far away the plane of the reflection is, the farther, the smaller its ripples"), 1 },
-				{ N_("Distortion"), N_("How far the ripples move what is mirrored, by how much each palette index of the texture differs from the one half of the texture away"), 2 },
+				// TRANSLATORS: Labels of properties of a reflection layer in the layer properties panel, each followed by its tooltip
+				{ NC_("editor", "Tint opacity"), NC_("editor", "How much the reflection is tinted, 255 is fully"), 0 },
+				{ NC_("editor", "Distance"), NC_("editor", "How far away the plane of the reflection is, the farther, the smaller its ripples"), 1 },
+				{ NC_("editor", "Distortion"), NC_("editor", "How far the ripples move what is mirrored, by how much each palette index of the texture differs from the one half of the texture away"), 2 },
 			};
 			for (const ReflectionByte& property : ReflectionBytes) {
-				auto* row = AddPropertyRow(rows, _(property.Label));
+				auto* row = AddPropertyRow(rows, _x("editor", property.Label));
 				AddLayerColorByte(row, *s, property.Index);
-				row->Tooltip = _(property.Tooltip);
+				row->Tooltip = _x("editor", property.Tooltip);
 				ShowRowWhen(row, isReflection);
 			}
 
@@ -1737,10 +1788,11 @@ namespace Jazz2::Editor
 			// the speeds of the layer move them over the whole view (see Formats::TexturedLayerParams::InnerSpeedX)
 			struct InnerSpeed { const char* Label; const char* Tooltip; float Formats::TexturedLayerParams::* Member; float Min, Max, Step; std::int32_t Decimals; };
 			static const InnerSpeed InnerSpeeds[] = {
-				{ N_("Inner speed X"), N_("How fast the ripples move to the left inside the layer as the view moves right"), &Formats::TexturedLayerParams::InnerSpeedX, -16.0f, 16.0f, 0.01f, 3 },
-				{ N_("Inner speed Y"), N_("How fast the ripples move towards the horizon inside the layer as the view moves down"), &Formats::TexturedLayerParams::InnerSpeedY, -16.0f, 16.0f, 0.01f, 3 },
-				{ N_("Inner auto X"), N_("How fast the ripples move to the left inside the layer by themselves"), &Formats::TexturedLayerParams::InnerAutoSpeedX, -64.0f, 64.0f, 0.05f, 2 },
-				{ N_("Inner auto Y"), N_("How fast the ripples move towards the horizon inside the layer by themselves"), &Formats::TexturedLayerParams::InnerAutoSpeedY, -64.0f, 64.0f, 0.05f, 2 },
+				// TRANSLATORS: Labels of properties of a reflection layer drawn only where the layer is, speeds of the ripples inside it (X horizontal, Y vertical), each followed by its tooltip
+				{ NC_("editor", "Inner speed X"), NC_("editor", "How fast the ripples move to the left inside the layer as the view moves right"), &Formats::TexturedLayerParams::InnerSpeedX, -16.0f, 16.0f, 0.01f, 3 },
+				{ NC_("editor", "Inner speed Y"), NC_("editor", "How fast the ripples move towards the horizon inside the layer as the view moves down"), &Formats::TexturedLayerParams::InnerSpeedY, -16.0f, 16.0f, 0.01f, 3 },
+				{ NC_("editor", "Inner auto X"), NC_("editor", "How fast the ripples move to the left inside the layer by themselves"), &Formats::TexturedLayerParams::InnerAutoSpeedX, -64.0f, 64.0f, 0.05f, 2 },
+				{ NC_("editor", "Inner auto Y"), NC_("editor", "How fast the ripples move towards the horizon inside the layer by themselves"), &Formats::TexturedLayerParams::InnerAutoSpeedY, -64.0f, 64.0f, 0.05f, 2 },
 			};
 			auto isInnerReflection = [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -1748,7 +1800,7 @@ namespace Jazz2::Editor
 					(layer->Record.Textured.Flags & (Formats::TexturedLayerParams::InnerWindow | Formats::TexturedLayerParams::InnerLayer)) != 0);
 			};
 			for (const InnerSpeed& property : InnerSpeeds) {
-				auto* row = AddPropertyRow(rows, _(property.Label));
+				auto* row = AddPropertyRow(rows, _x("editor", property.Label));
 				float Formats::TexturedLayerParams::* member = property.Member;
 				auto* number = row->Add<UiNumberBox>([s, member]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -1757,17 +1809,18 @@ namespace Jazz2::Editor
 					ChangeLayer(*s, [member, value](Formats::LayerRecord& record, String&) { record.Textured.*member = value; }, final);
 				}, property.Min, property.Max, property.Step, property.Decimals);
 				number->Flex = 1.0f;
-				row->Tooltip = _(property.Tooltip);
+				row->Tooltip = _x("editor", property.Tooltip);
 				ShowRowWhen(row, isInnerReflection);
 			}
 
-			auto* blur = rows->Add<UiCheckBox>(_("Blur"), [s]() {
+			// TRANSLATORS: Checkbox in the layer properties panel, blurs what a reflection layer mirrors
+			auto* blur = rows->Add<UiCheckBox>(_x("editor", "Blur"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Color[3] != 0);
 			}, [s](bool value) {
 				ChangeLayer(*s, [value](Formats::LayerRecord& record, String&) { record.Color[3] = (value ? 255 : 0); });
 			});
-			blur->Tooltip = _("Blurs what is mirrored horizontally");
+			blur->Tooltip = _x("editor", "Blurs what is mirrored horizontally");
 			blur->IsVisibleFunc = isReflection;
 		}
 
@@ -1777,7 +1830,8 @@ namespace Jazz2::Editor
 			IEditorContext* s = &session;
 			// Only how the editor shows it, the layers in front can be seen through to edit those behind; for any renderer, so
 			// it's after the rows of the color of each of them, right below the color itself where it has one
-			auto* row = AddPropertyRow(rows, _("Editor opacity"));
+			// TRANSLATORS: Label of a property in the layer properties panel, how opaque the editor shows the layer, not the game
+			auto* row = AddPropertyRow(rows, _x("editor", "Editor opacity"));
 			auto* number = row->Add<UiNumberBox>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr ? std::round(layer->EditorOpacity * 100.0f / 255.0f) : 100.0f);
@@ -1786,7 +1840,7 @@ namespace Jazz2::Editor
 				SetLayerEditorOpacity(*s, s->GetCurrentLayer(), opacity);
 			}, 0.0f, 100.0f, 5.0f, 0);
 			number->Flex = 1.0f;
-			row->Tooltip = _("How opaque the editor shows the layer in percent, the level isn't changed by it");
+			row->Tooltip = _x("editor", "How opaque the editor shows the layer in percent, the level isn't changed by it");
 		}
 
 		/** How the layer repeats, whether it has the inherent offset and whether it's shown in the game */
@@ -1798,14 +1852,15 @@ namespace Jazz2::Editor
 				std::uint16_t Flag;
 			};
 			static const FlagProperty FlagProperties[] = {
-				{ N_("Repeat horizontally"), Formats::LayerRecord::RepeatX },
-				{ N_("Repeat vertically"), Formats::LayerRecord::RepeatY },
-				{ N_("Inherent offset"), Formats::LayerRecord::UseInherentOffset },
-				{ N_("Visible in game"), Formats::LayerRecord::Visible },
+				// TRANSLATORS: Checkboxes in the layer properties panel, the inherent offset moves the layer down in views taller than the original game had
+				{ NC_("editor", "Repeat horizontally"), Formats::LayerRecord::RepeatX },
+				{ NC_("editor", "Repeat vertically"), Formats::LayerRecord::RepeatY },
+				{ NC_("editor", "Inherent offset"), Formats::LayerRecord::UseInherentOffset },
+				{ NC_("editor", "Visible in game"), Formats::LayerRecord::Visible },
 			};
 			for (const FlagProperty& property : FlagProperties) {
 				std::uint16_t flag = property.Flag;
-				auto* check = rows->Add<UiCheckBox>(_(property.Label), [s, flag]() {
+				auto* check = rows->Add<UiCheckBox>(_x("editor", property.Label), [s, flag]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr && (layer->Record.Flags & flag) != 0);
 				}, [s, flag](bool value) {
@@ -1825,7 +1880,7 @@ namespace Jazz2::Editor
 		: UiPanel(UiPanelStyle::None, UiOrientation::Vertical, UiTheme::Spacing, UiThickness()), _session(session)
 	{
 		// The edge above, between it and the list of layers, is drawn by the splitter that resizes them
-		Add<UiLabel>(_("Layer Properties"), UiTheme::TextHeader);
+		Add<UiLabel>(_x("editor", "Layer Properties"), UiTheme::TextHeader);
 
 		auto* scroll = Add<UiScrollView>();
 		scroll->Flex = 1.0f;
@@ -2170,9 +2225,10 @@ namespace Jazz2::Editor
 		if (ShowUsage) {
 			UpdateUsage();
 			std::int32_t used = (index < std::int32_t(_usage.size()) ? _usage[index] : 0);
-			_tooltip = (used == 0 ? _f("Tile {}, not used", index) : _fn("Tile {}, used once", "Tile {}, used {} times", used, index, used));
+			// TRANSLATORS: Tooltip of a tile in the tile picker while its usage is shown, the first {} is the number of the tile, the second how many times the level uses it
+			_tooltip = (used == 0 ? _fx("editor", "Tile {}, not used", index) : _fnx("editor", "Tile {}, used once", "Tile {}, used {} times", used, index, used));
 		} else {
-			_tooltip = _f("Tile {}", index);
+			_tooltip = _fx("editor", "Tile {}", index);
 		}
 		return _tooltip;
 	}
@@ -2237,11 +2293,11 @@ namespace Jazz2::Editor
 				}
 				float size = Bounds.H - painter.Px(4.0f);
 				// TRANSLATORS: Before tiles suggested to place next to the tiles around the cell under the pointer, keep it short
-				float label = painter.MeasureText(_("Next:")) + painter.Px(UiTheme::Spacing);
-				painter.TextInRect(_("Next:"), Rectf(Bounds.X, Bounds.Y, label, Bounds.H), _tiles.empty() ? UiTheme::TextDisabled : UiTheme::TextDim);
+				float label = painter.MeasureText(_x("editor", "Next:")) + painter.Px(UiTheme::Spacing);
+				painter.TextInRect(_x("editor", "Next:"), Rectf(Bounds.X, Bounds.Y, label, Bounds.H), _tiles.empty() ? UiTheme::TextDisabled : UiTheme::TextDim);
 				if (_tiles.empty()) {
 					// TRANSLATORS: In the row of suggested tiles while there's nothing to suggest, keep it short
-					String hint = _("point at the level");
+					String hint = _x("editor", "point at the level");
 					if (label + painter.MeasureText(hint) <= Bounds.W) {
 						painter.TextInRect(hint, Rectf(Bounds.X + label, Bounds.Y, Bounds.W - label, Bounds.H), UiTheme::TextDisabled);
 					}
@@ -2275,7 +2331,7 @@ namespace Jazz2::Editor
 
 			StringView GetTooltip(Vector2f pos) const override
 			{
-				return _("Tiles the levels have next to the tiles around the cell under the pointer, click one to paint with it");
+				return _x("editor", "Tiles the levels have next to the tiles around the cell under the pointer, click one to paint with it");
 			}
 
 		private:
@@ -2289,7 +2345,7 @@ namespace Jazz2::Editor
 			{
 				UiContext context = (GetSurface() != nullptr ? GetSurface()->GetContext() : UiContext{ 1.0f });
 				float size = Bounds.H - context.Px(4.0f);
-				float label = context.MeasureText(_("Next:")) + context.Px(UiTheme::Spacing);
+				float label = context.MeasureText(_x("editor", "Next:")) + context.Px(UiTheme::Spacing);
 				if (!Bounds.Contains(pos) || pos.X < Bounds.X + label) {
 					return -1;
 				}
@@ -2356,7 +2412,7 @@ namespace Jazz2::Editor
 					return;
 				}
 				if (_tiles.empty()) {
-					painter.TextInRect(_("Right-click a tile to keep it here"), Bounds, UiTheme::TextDisabled);
+					painter.TextInRect(_x("editor", "Right-click a tile to keep it here"), Bounds, UiTheme::TextDisabled);
 					return;
 				}
 				std::int32_t hovered = (_hovered && GetSurface() != nullptr ? GetIndexAt(GetSurface()->GetPointerPos()) : -1);
@@ -2404,10 +2460,10 @@ namespace Jazz2::Editor
 			{
 				std::int32_t index = GetIndexAt(pos);
 				if (index < 0) {
-					return _("Favourite tiles of the tile set and those picked recently - right-click a tile to make it a favourite");
+					return _x("editor", "Favourite tiles of the tile set and those picked recently - right-click a tile to make it a favourite");
 				}
-				_tooltip = _f("Tile {}", _tiles[index].Index) + "\n"_s + (index < _favoriteCount
-					? StringView(_("Favourite - right-click to take it away")) : StringView(_("Picked recently - right-click to make it a favourite")));
+				_tooltip = _fx("editor", "Tile {}", _tiles[index].Index) + "\n"_s + (index < _favoriteCount
+					? StringView(_x("editor", "Favourite - right-click to take it away")) : StringView(_x("editor", "Picked recently - right-click to make it a favourite")));
 				return _tooltip;
 			}
 
@@ -2436,24 +2492,24 @@ namespace Jazz2::Editor
 		auto* header = Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 		auto* previous = header->Add<UiButton>(StringView(), EditorIcon::ChevronLeft, [this]() { NextSource(-1); });
 		previous->Style = UiButtonStyle::Flat;
-		previous->Tooltip = _("Previous tile set");
+		previous->Tooltip = _x("editor", "Previous tile set");
 		auto* name = header->Add<UiLabel>(StringView(), UiTheme::Text, Alignment::Center);
 		name->Flex = 1.0f;
 		name->TextFunc = [this]() { return GetSourceName(); };
 		auto* next = header->Add<UiButton>(StringView(), EditorIcon::ChevronRight, [this]() { NextSource(1); });
 		next->Style = UiButtonStyle::Flat;
-		next->Tooltip = _("Next tile set");
+		next->Tooltip = _x("editor", "Next tile set");
 		header->Add<UiSeparator>(UiOrientation::Vertical);
 		auto* zoomOut = header->Add<UiButton>(StringView(), EditorIcon::ZoomOut, [this]() { _grid->SetColumns(_grid->GetColumns() + 1); });
 		zoomOut->Style = UiButtonStyle::Flat;
-		zoomOut->Tooltip = _("More tiles in a row, smaller");
+		zoomOut->Tooltip = _x("editor", "More tiles in a row, smaller");
 		auto* zoomIn = header->Add<UiButton>(StringView(), EditorIcon::ZoomIn, [this]() { _grid->SetColumns(_grid->GetColumns() - 1); });
 		zoomIn->Style = UiButtonStyle::Flat;
-		zoomIn->Tooltip = _("Fewer tiles in a row, larger");
+		zoomIn->Tooltip = _x("editor", "Fewer tiles in a row, larger");
 		auto* usage = header->Add<UiButton>(StringView(), EditorIcon::Usage, [this]() { _grid->ShowUsage = !_grid->ShowUsage; });
 		usage->Style = UiButtonStyle::Flat;
 		usage->IsCheckedFunc = [this]() { return _grid->ShowUsage; };
-		usage->Tooltip = _("Show how often the level uses each tile, unused ones are dark");
+		usage->Tooltip = _x("editor", "Show how often the level uses each tile, unused ones are dark");
 
 		Add<TileShortcutStrip>(session, _grid);
 		Add<SuggestionStrip>(session);
@@ -2480,7 +2536,8 @@ namespace Jazz2::Editor
 		LevelDocument& document = _session.GetDocument();
 		std::uint8_t source = _grid->GetSource();
 		if (source == TileRef::Animated) {
-			return _("Animated tiles");
+			// TRANSLATORS: Shown in the header of the tile picker in place of the name of a tile set, while the animated tiles of the level are picked from
+			return _x("editor", "Animated tiles");
 		}
 		if (source == TileRef::DefaultTileSet) {
 			return document.Properties.DefaultTileSet;
@@ -2556,7 +2613,8 @@ namespace Jazz2::Editor
 	StringView StampPreview::GetTooltip(Vector2f pos) const
 	{
 		const TileStamp& stamp = _session.GetStamp();
-		_tooltip = _f("Brush: {} x {} tiles", stamp.Width, stamp.Height);
+		// TRANSLATORS: Tooltip of the preview of the brush, the tiles being painted with, {} x {} is its width and height
+		_tooltip = _fx("editor", "Brush: {} x {} tiles", stamp.Width, stamp.Height);
 		return _tooltip;
 	}
 
@@ -2593,7 +2651,8 @@ namespace Jazz2::Editor
 			if (view.Wrap(pointer.Cell, tile)) {
 				const TileRef& ref = document.Layers[layerIndex].GetTile(tile.X, tile.Y);
 				info += "   "_s + FormatInteger(tile.X) + ", "_s + FormatInteger(tile.Y) + "   "_s;
-				info += (ref.IsAnimated() ? _f("Animation {}", ref.Index) : _f("Tile {}", document.ToTileId(ref)));
+				// TRANSLATORS: In the status bar, the tile under the pointer, {} is the number of the animated tile or of the tile
+				info += (ref.IsAnimated() ? _fx("editor", "Animation {}", ref.Index) : _fx("editor", "Tile {}", document.ToTileId(ref)));
 			}
 
 			// The event under the pointer, whichever layer is edited
@@ -2625,10 +2684,11 @@ namespace Jazz2::Editor
 			StringView text;
 			switch (_session.GetInputModality()) {
 				case InputModality::Gamepad:
-					text = _("A: use - B: erase - X: pick - Y: next tool, hold for all - LB/RB: layer - LT/RT: zoom - Right stick: move view - Back: undo - Start: play");
+					// TRANSLATORS: Hint in the status bar while a gamepad is used, keep the names of the buttons as they are
+					text = _x("editor", "A: use - B: erase - X: pick - Y: next tool, hold for all - LB/RB: layer - LT/RT: zoom - Right stick: move view - Back: undo - Start: play");
 					break;
 				case InputModality::Touch:
-					text = _("One finger: use the tool - Two: move and zoom - Tap with two: undo, three: redo - Hold: tools");
+					text = _x("editor", "One finger: use the tool - Two: move and zoom - Tap with two: undo, three: redo - Hold: tools");
 					break;
 				default:
 					text = _session.GetTools().GetActive()->GetHint();

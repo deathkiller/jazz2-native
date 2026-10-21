@@ -108,16 +108,20 @@ namespace Jazz2::Editor
 				return;
 			}
 			IEditorContext* s = &session;
-			auto dialog = std::make_unique<UiDialog>(_("Reply to the Note"));
+			// TRANSLATORS: Title of the dialog that adds a reply to a note in the level
+			auto dialog = std::make_unique<UiDialog>(_x("editor", "Reply to the Note"));
 			UiDialog* dialogPtr = dialog.get();
 			auto* text = dialog->GetContent()->Add<UiTextBox>();
 			text->Width = 240.0f;
 			text->MaxLength = 200;
-			text->Placeholder = _("Reply");
-			dialog->AddButton(_("Reply"), [s, index, text, dialogPtr]() {
+			// TRANSLATORS: Placeholder of the text box in the Reply to the Note dialog, the text of the reply (noun)
+			text->Placeholder = _x("editor", "Reply");
+			// TRANSLATORS: Button in the Reply to the Note dialog, adds the reply (verb)
+			dialog->AddButton(_x("editor", "Reply"), [s, index, text, dialogPtr]() {
 				String reply = text->Text.trimmed();
 				if (!reply.empty()) {
-					ChangeAnnotations(*s, _("Reply to note"), [index, &reply](SmallVectorImpl<Annotation>& list) {
+					// TRANSLATORS: Name of an undo step in the history, a reply was added to a note
+					ChangeAnnotations(*s, _x("editor", "Reply to note"), [index, &reply](SmallVectorImpl<Annotation>& list) {
 						if (index < std::int32_t(list.size())) {
 							Annotation::Reply& added = list[index].Replies.emplace_back();
 							added.Author = PreferencesCache::GetEffectivePlayerName();
@@ -128,7 +132,7 @@ namespace Jazz2::Editor
 				}
 				dialogPtr->Close();
 			}, true);
-			dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
+			dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 			ShowModal(*surface, Death::move(dialog));
 			text->BeginEdit();
 		}
@@ -309,7 +313,7 @@ namespace Jazz2::Editor
 
 			StringView GetTooltip(Vector2f pos) const override
 			{
-				return _("Click or drag to move the view there");
+				return _x("editor", "Click or drag to move the view there");
 			}
 
 		private:
@@ -630,7 +634,8 @@ namespace Jazz2::Editor
 			return;
 		}
 		Vector2f center = editHandler->GetCamera().GetCenter();
-		ChangeAnnotations(session, _("Set bookmark"), [slot, center](SmallVectorImpl<Annotation>& annotations) {
+		// TRANSLATORS: Name of an undo step in the history, a bookmark of a place in the level was set
+		ChangeAnnotations(session, _x("editor", "Set bookmark"), [slot, center](SmallVectorImpl<Annotation>& annotations) {
 			for (std::size_t i = 0; i < annotations.size(); i++) {
 				if (annotations[i].Slot == slot) {
 					annotations.erase(annotations.begin() + i);
@@ -642,7 +647,8 @@ namespace Jazz2::Editor
 			bookmark.Y = std::int32_t(center.Y);
 			bookmark.Slot = std::uint8_t(slot);
 		});
-		session.ShowMessage(_f("Bookmark {} set, Ctrl+{} goes back to it", slot, slot));
+		// TRANSLATORS: Status message, both {} are the number of the bookmark, 1 to 9, the second one is also its key
+		session.ShowMessage(_fx("editor", "Bookmark {} set, Ctrl+{} goes back to it", slot, slot));
 	}
 
 	bool GoToBookmark(IEditorContext& session, std::int32_t slot)
@@ -657,17 +663,20 @@ namespace Jazz2::Editor
 				return true;
 			}
 		}
-		session.ShowMessage(_f("Bookmark {} isn't set, Ctrl+Shift+{} sets it", slot, slot));
+		// TRANSLATORS: Status message, both {} are the number of the bookmark, 1 to 9, the second one is also its key
+		session.ShowMessage(_fx("editor", "Bookmark {} isn't set, Ctrl+Shift+{} sets it", slot, slot));
 		return false;
 	}
 
 	void AddNote(IEditorContext& session, Vector2f worldPos, StringView text)
 	{
-		ChangeAnnotations(session, _("Add note"), [worldPos, text](SmallVectorImpl<Annotation>& annotations) {
+		// TRANSLATORS: Name of an undo step in the history, a note was added to the level
+		ChangeAnnotations(session, _x("editor", "Add note"), [worldPos, text](SmallVectorImpl<Annotation>& annotations) {
 			Annotation& note = annotations.emplace_back();
 			note.X = std::int32_t(worldPos.X);
 			note.Y = std::int32_t(worldPos.Y);
-			note.Text = (text.empty() ? String(_("Note")) : String(text));
+			// TRANSLATORS: Text of a new note added to the level before it's written (noun)
+			note.Text = (text.empty() ? String(_x("editor", "Note")) : String(text));
 			// Who wrote it and when, a level made by more people has notes of all of them
 			note.Author = PreferencesCache::GetEffectivePlayerName();
 			note.Time = GetCurrentTime();
@@ -682,21 +691,23 @@ namespace Jazz2::Editor
 		}
 
 		IEditorContext* s = &session;
-		auto dialog = std::make_unique<UiDialog>(_("Navigator"));
+		// TRANSLATORS: Title of the dialog with the map of the level, the bookmarks and the notes
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Navigator"));
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
 		auto* minimap = content->Add<MinimapView>(session);
 		{
 			auto* options = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			options->Add<UiCheckBox>(_("Events"), [minimap]() { return minimap->ShowEvents; }, [minimap](bool value) { minimap->ShowEvents = value; })
-				->Tooltip = _("Shows the events in the colors of their categories, and where the camera is limited");
+			// TRANSLATORS: Check box in the Navigator dialog, shows the events on the map
+			options->Add<UiCheckBox>(_x("editor", "Events"), [minimap]() { return minimap->ShowEvents; }, [minimap](bool value) { minimap->ShowEvents = value; })
+				->Tooltip = _x("editor", "Shows the events in the colors of their categories, and where the camera is limited");
 		}
 
 		// The list follows the annotations, rebuilt when their chunk changes or the search does
 		struct ListState { AnnotationCache Cache; std::uint32_t Version = 0; bool Built = false; String Search; };
 		auto state = std::make_shared<ListState>();
 		auto* search = content->Add<UiTextBox>();
-		search->Placeholder = _("Search the notes");
+		search->Placeholder = _x("editor", "Search the notes");
 		search->OnChanged = [state](StringView text) {
 			state->Search = text;
 			state->Built = false;
@@ -716,16 +727,19 @@ namespace Jazz2::Editor
 				auto it = std::find_if(annotations.begin(), annotations.end(), [slot](const Annotation& a) { return a.Slot == slot; });
 				bool isSet = (it != annotations.end());
 				auto* row = rows->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-				row->Add<UiLabel>(_f("{}", slot), isSet ? UiTheme::Text : UiTheme::TextDisabled)->Width = 10.0f;
+				// TRANSLATORS: Number of a bookmark at the start of its row in the Navigator dialog, usually kept as it is
+				row->Add<UiLabel>(_fx("editor", "{}", slot), isSet ? UiTheme::Text : UiTheme::TextDisabled)->Width = 10.0f;
 				if (isSet) {
 					// Its name and color, a bookmark is known by them in the view and on the map
 					auto* name = row->Add<UiTextBox>(it->Text);
 					name->Flex = 1.0f;
 					name->MaxLength = 64;
-					name->Placeholder = _f("Bookmark {}", slot);
+					// TRANSLATORS: Name of a bookmark in the Navigator dialog until it's named, {} is its number
+					name->Placeholder = _fx("editor", "Bookmark {}", slot);
 					name->OnCommit = [s, slot](StringView value) {
 						String text = value.trimmed();
-						ChangeAnnotations(*s, _("Rename bookmark"), [slot, &text](SmallVectorImpl<Annotation>& list) {
+						// TRANSLATORS: Name of an undo step in the history, a bookmark was renamed
+						ChangeAnnotations(*s, _x("editor", "Rename bookmark"), [slot, &text](SmallVectorImpl<Annotation>& list) {
 							for (Annotation& annotation : list) {
 								if (annotation.Slot == slot) {
 									annotation.Text = text;
@@ -746,7 +760,8 @@ namespace Jazz2::Editor
 						UiColorPicker::ShowPopup(*surface, surface->GetPointerPos(), getColor, [s, slot](const Colorf& color) {
 							std::uint32_t rgb = std::uint32_t(std::round(color.R * 255.0f)) | (std::uint32_t(std::round(color.G * 255.0f)) << 8) |
 								(std::uint32_t(std::round(color.B * 255.0f)) << 16) | 0xFF000000u;
-							ChangeAnnotations(*s, _("Bookmark color"), [slot, rgb](SmallVectorImpl<Annotation>& list) {
+							// TRANSLATORS: Name of an undo step in the history, the color of a bookmark was changed
+							ChangeAnnotations(*s, _x("editor", "Bookmark color"), [slot, rgb](SmallVectorImpl<Annotation>& list) {
 								for (Annotation& annotation : list) {
 									if (annotation.Slot == slot) {
 										annotation.Color = rgb;
@@ -754,17 +769,22 @@ namespace Jazz2::Editor
 								}
 							});
 						}, false);
-					})->Tooltip = _("Color of the bookmark");
-					row->Add<UiButton>(_("Go"), EditorIcon::None, [s, slot]() { GoToBookmark(*s, slot); })->Style = UiButtonStyle::Flat;
+					})->Tooltip = _x("editor", "Color of the bookmark");
+					// TRANSLATORS: Button in the Navigator dialog, moves the view to the bookmark, keep it short
+					row->Add<UiButton>(_x("editor", "Go"), EditorIcon::None, [s, slot]() { GoToBookmark(*s, slot); })->Style = UiButtonStyle::Flat;
 				} else {
-					row->Add<UiLabel>(_f("Bookmark {}", slot), UiTheme::TextDisabled)->Flex = 1.0f;
+					// TRANSLATORS: Name of a bookmark in the Navigator dialog that isn't set, {} is its number
+					row->Add<UiLabel>(_fx("editor", "Bookmark {}", slot), UiTheme::TextDisabled)->Flex = 1.0f;
 				}
-				auto* set = row->Add<UiButton>(_("Set"), EditorIcon::None, [s, slot]() { SetBookmark(*s, slot); });
+				// TRANSLATORS: Button in the Navigator dialog, sets the bookmark to the middle of the view (verb), keep it short
+				auto* set = row->Add<UiButton>(_x("editor", "Set"), EditorIcon::None, [s, slot]() { SetBookmark(*s, slot); });
 				set->Style = UiButtonStyle::Flat;
-				set->Tooltip = _f("The middle of the view, Ctrl+Shift+{}", slot);
+				// TRANSLATORS: Tooltip of the Set button of a bookmark in the Navigator dialog, {} is the number of the bookmark as a key of its shortcut
+				set->Tooltip = _fx("editor", "The middle of the view, Ctrl+Shift+{}", slot);
 				if (isSet) {
 					row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, slot]() {
-						ChangeAnnotations(*s, _("Remove bookmark"), [slot](SmallVectorImpl<Annotation>& list) {
+						// TRANSLATORS: Name of an undo step in the history, a bookmark was removed
+						ChangeAnnotations(*s, _x("editor", "Remove bookmark"), [slot](SmallVectorImpl<Annotation>& list) {
 							list.erase(std::remove_if(list.begin(), list.end(), [slot](const Annotation& a) { return a.Slot == slot; }), list.end());
 						});
 					})->Style = UiButtonStyle::Flat;
@@ -798,20 +818,23 @@ namespace Jazz2::Editor
 				text->MaxLength = 200;
 				text->OnCommit = [s, index](StringView value) {
 					String copy = value;
-					ChangeAnnotations(*s, _("Edit note"), [index, &copy](SmallVectorImpl<Annotation>& list) {
+					// TRANSLATORS: Name of an undo step in the history, the text of a note was changed
+					ChangeAnnotations(*s, _x("editor", "Edit note"), [index, &copy](SmallVectorImpl<Annotation>& list) {
 						if (index < std::int32_t(list.size())) {
 							list[index].Text = copy;
 						}
 					});
 				};
-				row->Add<UiButton>(_("Go"), EditorIcon::None, [s, pos]() {
+				// TRANSLATORS: Button in the Navigator dialog, moves the view to the note, keep it short
+				row->Add<UiButton>(_x("editor", "Go"), EditorIcon::None, [s, pos]() {
 					if (EditorLevelHandler* editHandler = s->GetEditHandler()) {
 						EditorCamera& camera = editHandler->GetCamera();
 						camera.FlyTo(pos, camera.GetScale());
 					}
 				})->Style = UiButtonStyle::Flat;
 				row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, index]() {
-					ChangeAnnotations(*s, _("Remove note"), [index](SmallVectorImpl<Annotation>& list) {
+					// TRANSLATORS: Name of an undo step in the history, a note was removed
+					ChangeAnnotations(*s, _x("editor", "Remove note"), [index](SmallVectorImpl<Annotation>& list) {
 						if (index < std::int32_t(list.size())) {
 							list.erase(list.begin() + index);
 						}
@@ -821,9 +844,11 @@ namespace Jazz2::Editor
 				// Who wrote it, whether it was done, and the replies to it
 				auto* details = rows->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 				String author = DescribeAuthor(note.Author, note.Time);
-				details->Add<UiLabel>(author.empty() ? String(_("Unknown author")) : author, UiTheme::TextDim)->Flex = 1.0f;
+				// TRANSLATORS: Under a note in the Navigator dialog instead of who wrote it, when it isn't known
+				details->Add<UiLabel>(author.empty() ? String(_x("editor", "Unknown author")) : author, UiTheme::TextDim)->Flex = 1.0f;
 				std::weak_ptr<ListState> weakState = state;
-				details->Add<UiCheckBox>(_("Done"), [s, weakState, index]() {
+				// TRANSLATORS: Check box under a note in the Navigator dialog, what the note is about was done (adjective)
+				details->Add<UiCheckBox>(_x("editor", "Done"), [s, weakState, index]() {
 					std::shared_ptr<ListState> state = weakState.lock();
 					if (state == nullptr) {
 						return false;
@@ -831,13 +856,15 @@ namespace Jazz2::Editor
 					const SmallVectorImpl<Annotation>& list = state->Cache.Get(s->GetDocument());
 					return (index < std::int32_t(list.size()) && list[index].Resolved);
 				}, [s, index](bool value) {
-					ChangeAnnotations(*s, value ? _("Resolve note") : _("Reopen note"), [index, value](SmallVectorImpl<Annotation>& list) {
+					// TRANSLATORS: Names of undo steps in the history, a note was marked as done or as not done again
+					ChangeAnnotations(*s, value ? _x("editor", "Resolve note") : _x("editor", "Reopen note"), [index, value](SmallVectorImpl<Annotation>& list) {
 						if (index < std::int32_t(list.size())) {
 							list[index].Resolved = value;
 						}
 					});
-				})->Tooltip = _("What the note is about was done, it's shown dimmer");
-				details->Add<UiButton>(_("Reply"), EditorIcon::None, [s, index]() { ShowReplyDialog(*s, index); })->Style = UiButtonStyle::Flat;
+				})->Tooltip = _x("editor", "What the note is about was done, it's shown dimmer");
+				// TRANSLATORS: Button under a note in the Navigator dialog, opens the dialog to reply to it (verb)
+				details->Add<UiButton>(_x("editor", "Reply"), EditorIcon::None, [s, index]() { ShowReplyDialog(*s, index); })->Style = UiButtonStyle::Flat;
 				for (const Annotation::Reply& reply : note.Replies) {
 					auto* replyRow = rows->Add<UiStack>(UiOrientation::Vertical, 0.0f, UiThickness(10.0f, 0.0f, 0.0f, 0.0f));
 					replyRow->Add<UiLabel>(reply.Text, UiTheme::Text);
@@ -845,7 +872,7 @@ namespace Jazz2::Editor
 				}
 			}
 			if (notes > 0 && shownNotes == 0) {
-				rows->Add<UiLabel>(_("No note matches"), UiTheme::TextDisabled);
+				rows->Add<UiLabel>(_x("editor", "No note matches"), UiTheme::TextDisabled);
 			}
 		};
 		// Checked every frame, a note added in the view or a bookmark set by its keys shows at once
@@ -858,7 +885,8 @@ namespace Jazz2::Editor
 			}
 		});
 
-		dialog->AddButton(_("Add Note Here"), [s]() {
+		// TRANSLATORS: Button in the Navigator dialog, adds a note in the middle of the view
+		dialog->AddButton(_x("editor", "Add Note Here"), [s]() {
 			if (EditorLevelHandler* editHandler = s->GetEditHandler()) {
 				AddNote(*s, editHandler->GetCamera().GetCenter());
 			}

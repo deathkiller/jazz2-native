@@ -215,6 +215,7 @@ namespace Jazz2::UI::Multiplayer
 					? GetTeamColor(mpLevelHandler->GetSpectateFollowPlayerTeam())
 					: Colorf(0.62f, 0.44f, 0.34f, 0.5f));
 
+				// TRANSLATORS: Shown in the HUD while spectating in multiplayer, followed by the name of the watched player
 				float nameX = view.X + 10.0f + _smallFont->MeasureString(_("Spectating"), 0.8f, 0.9f).X + 8.0f;
 				if constexpr (Font::ShadowsEnabled) {
 					_smallFont->DrawString(this, followedName, charOffsetShadow, nameX, view.Y + 6.0f + 2.0f, FontShadowLayer,
@@ -248,6 +249,7 @@ namespace Jazz2::UI::Multiplayer
 			std::int32_t milliseconds = std::max<std::int32_t>(0, (std::int32_t)(fmod(timeLeftSecs, 1) * 100));
 
 			std::size_t length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", minutes, seconds, milliseconds);
+			// TRANSLATORS: Shown in the HUD in multiplayer before a round starts, {} is the remaining time (minutes:seconds:hundredths)
 			auto gameStartsInText = _f("Game starts in {}", StringView { stringBuffer, length });
 			if constexpr (Font::ShadowsEnabled) {
 				_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
@@ -256,6 +258,7 @@ namespace Jazz2::UI::Multiplayer
 			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::WaitingForMinPlayers) {
+			// TRANSLATORS: Shown in the HUD in multiplayer until enough players join to start a round, {} is number of players still needed
 			auto waitingText = _fn("Waiting for {} more player", "Waiting for {} more players", mpLevelHandler->_waitingForPlayerCount, mpLevelHandler->_waitingForPlayerCount);
 			if constexpr (Font::ShadowsEnabled) {
 				_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
@@ -279,6 +282,7 @@ namespace Jazz2::UI::Multiplayer
 			}
 
 			std::int32_t secsLeft = std::max<std::int32_t>(0, (std::int32_t)(mpLevelHandler->_overtimeTimeLeft * FrameTimer::SecondsPerFrame));
+			// TRANSLATORS: Shown in the HUD in a multiplayer race after the first player finished, {} is number of seconds left to finish, "s" stands for seconds, keep it short
 			auto overtimeText = _f("Finish in {} s", secsLeft);
 			// The last few seconds are marked in the same red the multiplayer error messages use
 			Colorf overtimeColor = (secsLeft <= 10 ? Colorf(0.6f, 0.41f, 0.40f, 0.5f) : Font::DefaultColor);
@@ -574,9 +578,12 @@ namespace Jazz2::UI::Multiplayer
 		StringView scoreLabel;
 		switch (gameMode) {
 			case MpGameMode::Race:
+			// TRANSLATORS: Column header in the final standings shown at the end of a multiplayer round (race finishing time), keep it short
 			case MpGameMode::TeamRace: scoreLabel = _("Time"); break;
 			case MpGameMode::TreasureHunt:
+			// TRANSLATORS: Column header in the final standings shown at the end of a multiplayer round (amount of treasure collected), keep it short
 			case MpGameMode::TeamTreasureHunt: scoreLabel = _("Treasure"); break;
+			// TRANSLATORS: Column header in the final standings shown at the end of a multiplayer round (number of kills), keep it short
 			default: scoreLabel = _("Kills"); break;
 		}
 
@@ -605,6 +612,7 @@ namespace Jazz2::UI::Multiplayer
 		constexpr Colorf rowColor = Font::DefaultColor;
 		constexpr Colorf SecondaryColor = Colorf(0.42f, 0.42f, 0.42f, 0.5f);
 
+		// TRANSLATORS: Title of the results board shown at the end of a multiplayer round
 		auto title = _("Final standings");
 		if constexpr (Font::ShadowsEnabled) {
 			_mediumFont->DrawString(this, title, charOffsetShadow, boxX + boxWidth * 0.5f, boxY + 2.0f, FontShadowLayer,

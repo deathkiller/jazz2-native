@@ -45,6 +45,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow(_message, charOffset, center.X, topLine - 30.0f, IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
+		// TRANSLATORS: Hint below a message box in the menu, "Fire" is the name of the action, keep the color tags \f[c:#d0705d] and \f[/c] as they are
 		_root->DrawStringShadow(_("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, bottomLine, IMenuContainer::FontLayer,
 			Alignment::Bottom, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 	}

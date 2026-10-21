@@ -17,6 +17,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// TRANSLATORS: Header of Play Multiplayer section
 		SetTitle(_("Play Multiplayer"));
 
 		auto list = std::make_unique<ScrollView>();

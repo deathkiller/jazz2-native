@@ -40,7 +40,7 @@ namespace Jazz2::Editor
 			std::int32_t value = binding->Getter();
 			for (const PropertyChoice& choice : binding->Choices) {
 				if (choice.Value == value) {
-					return String(_(choice.Label));
+					return String(_x("editor", choice.Label));
 				}
 			}
 			return (binding->OtherLabel ? binding->OtherLabel(value) : String());
@@ -48,7 +48,7 @@ namespace Jazz2::Editor
 			for (const PropertyChoice& choice : binding->Choices) {
 				std::int32_t value = choice.Value;
 				UiMenuEntry entry;
-				entry.Label = _(choice.Label);
+				entry.Label = _x("editor", choice.Label);
 				entry.IsChecked = [binding, value]() { return (binding->Getter() == value); };
 				if (binding->IsEnabled) {
 					entry.IsEnabled = [binding, value]() { return binding->IsEnabled(value); };

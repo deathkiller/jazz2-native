@@ -295,7 +295,7 @@ namespace Jazz2::Editor
 		explicit MoreButton(ToolOptionsBar& bar)
 			: OptionButton({}, EditorIcon::More, {}), _bar(bar), _skip(false)
 		{
-			Tooltip = _("More options of the tool");
+			Tooltip = _x("editor", "More options of the tool");
 			OnClick = [this]() {
 				if (!_skip) {
 					_bar.ShowList();

@@ -35,6 +35,7 @@ namespace Jazz2::UI::Menu
 
 		bool isInGame = (runtime_cast<InGameMenu>(root) != nullptr);
 
+		// TRANSLATORS: Header of Options > Gameplay section
 		SetTitle(_("Gameplay"));
 
 		auto list = std::make_unique<ScrollView>();
@@ -45,37 +46,43 @@ namespace Jazz2::UI::Menu
 		list->Add<ListItem>(_("Language"), [root]() { root->SwitchToSection<LanguageSelectSection>(); });
 
 #if defined(WITH_ANGELSCRIPT)
-		// TRANSLATORS: Menu item in Options > Gameplay section
 		// Uses a custom value drawer to show the UAC icon next to "Enabled" (it allows running unsigned scripts)
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		auto* scripting = list->Add<CustomValueItem>(_("Scripting"));
 		scripting->ReadOnly = isInGame;
 		scripting->OnChange = [this](std::int32_t) { PreferencesCache::AllowUnsignedScripts = !PreferencesCache::AllowUnsignedScripts; _isDirty = true; };
 		scripting->DrawValue = [](IMenuContainer* r, float centerX, float y, std::int32_t& charOffset, bool selected, bool readOnly) {
 			Colorf valueColor = (selected ? Colorf(0.46f, 0.46f, 0.46f, readOnly ? 0.36f : 0.5f) : (readOnly ? Font::TransparentDefaultColor : Font::DefaultColor));
 			if (PreferencesCache::AllowUnsignedScripts) {
+				// TRANSLATORS: Option for on/off items in Options > Gameplay section
 				r->DrawStringShadow(_("Enabled"), charOffset, centerX + 12.0f, y, IMenuContainer::FontLayer - 10, Alignment::Center, valueColor, 0.8f);
 				Vector2f textSize = r->MeasureString(_("Enabled"), 0.8f);
 				r->DrawElement(Uac, 0, std::ceil(centerX - textSize.X * 0.5f - 6.0f), y - 1.0f, IMenuContainer::MainLayer + 10,
 					Alignment::Center, (readOnly ? Colorf(1.0f, 1.0f, 1.0f, 0.5f) : Colorf::White));
 			} else {
+				// TRANSLATORS: Option for on/off items in Options > Gameplay section
 				r->DrawStringShadow(_("Disabled"), charOffset, centerX, y, IMenuContainer::FontLayer - 10, Alignment::Center, valueColor, 0.8f);
 			}
 		};
 #endif
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		list->Add<ChoiceItem>(_("Continuous Jump"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay section
 			[]() -> StringView { return (PreferencesCache::EnableContinuousJump ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::EnableContinuousJump = !PreferencesCache::EnableContinuousJump; _isDirty = true; });
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		list->Add<ChoiceItem>(_("Switch To New Weapon"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay section
 			[]() -> StringView { return (PreferencesCache::SwitchToNewWeapon ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::SwitchToNewWeapon = !PreferencesCache::SwitchToNewWeapon; _isDirty = true; });
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		list->Add<ChoiceItem>(_("Show Minimap"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay section
 			[]() -> StringView { return (PreferencesCache::ShowMinimap ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::ShowMinimap = !PreferencesCache::ShowMinimap; _isDirty = true; });
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		list->Add<ChoiceItem>(_("Allow Cheats"),
+			// TRANSLATORS: Option for Allow Cheats item in Options > Gameplay section
 			[]() -> StringView { return (PreferencesCache::AllowCheats ? _("Yes") : _("No")); },
 			[this](std::int32_t) { PreferencesCache::AllowCheats = !PreferencesCache::AllowCheats; _isDirty = true; },
 			isInGame);
@@ -83,9 +90,12 @@ namespace Jazz2::UI::Menu
 		list->Add<ChoiceItem>(_("Overwrite Episode Completion"),
 			[]() -> StringView {
 				return (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::NoCheatsOnly
+					// TRANSLATORS: Option for Overwrite Episode Completion item in Options > Gameplay section, only if the episode was completed without cheats
 					? _("No Cheats Only")
 					: (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::HigherScoreOnly
+						// TRANSLATORS: Option for Overwrite Episode Completion item in Options > Gameplay section, only if the new score is higher
 						? _("Higher Score Only")
+						// TRANSLATORS: Option for Overwrite Episode Completion item in Options > Gameplay section
 						: _("Always")));
 			},
 			[this](std::int32_t direction) {
@@ -98,6 +108,7 @@ namespace Jazz2::UI::Menu
 #if defined(NCINE_HAS_RGB_LIGHTS)
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		list->Add<ChoiceItem>(_("Razer Chroma™"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay section
 			[]() -> StringView { return (PreferencesCache::EnableRgbLights ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::EnableRgbLights = !PreferencesCache::EnableRgbLights;

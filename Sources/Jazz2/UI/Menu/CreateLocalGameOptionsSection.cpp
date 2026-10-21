@@ -156,8 +156,11 @@ namespace Jazz2::UI::Menu
 		{
 			switch (difficulty) {
 				default:
+				// TRANSLATORS: Option for Difficulty item in Create Local Splitscreen Game section
 				case 0: return _("Easy");
+				// TRANSLATORS: Option for Difficulty item in Create Local Splitscreen Game section
 				case 1: return _("Medium");
+				// TRANSLATORS: Option for Difficulty item in Create Local Splitscreen Game section
 				case 2: return _("Hard");
 			}
 		}
@@ -165,14 +168,23 @@ namespace Jazz2::UI::Menu
 		StringView GetGameModeName(MpGameMode mode)
 		{
 			switch (mode) {
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::Battle: return _("Battle");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::TeamBattle: return _("Team Battle");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::Race: return _("Race");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::TeamRace: return _("Team Race");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::TreasureHunt: return _("Treasure Hunt");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::TeamTreasureHunt: return _("Team Treasure Hunt");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::CaptureTheFlag: return _("Capture The Flag");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::Cooperation: return _("Cooperation");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				default: return _("Battle");
 			}
 		}
@@ -214,6 +226,7 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
+		// TRANSLATORS: Header of Play Multiplayer > Create Local Splitscreen Game section
 		SetTitle(_("Create Local Splitscreen Game"));
 
 		auto list = std::make_unique<ScrollView>();
@@ -231,6 +244,7 @@ namespace Jazz2::UI::Menu
 		// The rows are shown/hidden by the player count, so the character area grows and shrinks with it.
 		auto* characterHeader = list->Add<CanvasWidget>(28.0f, /*focusable*/false);
 		characterHeader->OnDrawContent = [](IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool selected, float animation) {
+			// TRANSLATORS: Label in Create Local Splitscreen Game section above the character selected for each player
 			root->DrawStringShadow(_("Character"), charOffset, bounds.X + bounds.W * 0.5f, bounds.Y + bounds.H * 0.5f,
 				IMenuContainer::FontLayer, Alignment::Center, Font::DefaultColor, 0.9f);
 		};
@@ -253,6 +267,7 @@ namespace Jazz2::UI::Menu
 			});
 
 		// Game mode is selected through the shared MultiplayerGameModeSelectSection (same as the create server screens)
+		// TRANSLATORS: Menu item to select the multiplayer game mode
 		auto* gameModeItem = list->Add<CustomValueItem>(_("Game Mode"));
 		gameModeItem->DrawValue = [this](IMenuContainer* root, float centerX, float y, std::int32_t& charOffset, bool selected, bool readOnly) {
 			root->DrawMenuValue(charOffset, GetGameModeName(_gameMode), centerX, y, selected, readOnly, false, 0.0f);

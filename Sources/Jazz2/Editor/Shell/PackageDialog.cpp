@@ -114,7 +114,8 @@ namespace Jazz2::Editor
 			data.append(reinterpret_cast<const std::uint8_t*>(text.data()), reinterpret_cast<const std::uint8_t*>(text.data()) + text.size());
 			const Formats::ChunkRecord* chunk = session.GetDocument().FindChunk(PackageInfoChunk);
 			if (chunk == nullptr || chunk->Data.size() != data.size() || std::memcmp(chunk->Data.data(), data.data(), data.size()) != 0) {
-				session.Execute(std::make_unique<SetChunkCommand>(session.GetDocument(), PackageInfoChunk, data, String(_("Package details"))));
+				// TRANSLATORS: Name of an undo step in the history, the details of the package changed in the Export Package dialog
+				session.Execute(std::make_unique<SetChunkCommand>(session.GetDocument(), PackageInfoChunk, data, String(_x("editor", "Package details"))));
 			}
 		}
 
@@ -143,7 +144,8 @@ namespace Jazz2::Editor
 			// The names come from the levels, an entry must stay inside the archive where it's unpacked
 			if (!Formats::LevelFile::IsSafeTileSetPath(archivePath)) {
 				item.SourcePath = {};
-				item.Problem = _("not a valid name");
+				// TRANSLATORS: In parentheses after a file in the list of files of the Export Package dialog, the package can't have it
+				item.Problem = _x("editor", "not a valid name");
 			}
 		}
 
@@ -154,12 +156,13 @@ namespace Jazz2::Editor
 			}
 			String archivePath = "Tilesets/"_s + fs::FromNativeSeparators(String(name)) + ".j2t"_s;
 			if (!Formats::LevelFile::IsSafeTileSetPath(name)) {
-				AddItem(state, archivePath, {}, _("not a valid name"));
+				AddItem(state, archivePath, {}, _x("editor", "not a valid name"));
 				return;
 			}
 			String path = ContentTileSetLibrary::FindTileSetFile(name);
 			if (path.empty()) {
-				AddItem(state, archivePath, {}, _("not found"));
+				// TRANSLATORS: In parentheses after a file in the list of files of the Export Package dialog, the file wasn't found
+				AddItem(state, archivePath, {}, _x("editor", "not found"));
 			} else if (!IsOfGame(path)) {
 				AddItem(state, archivePath, path);
 			}
@@ -173,7 +176,7 @@ namespace Jazz2::Editor
 			auto& resolver = ContentResolver::Get();
 			String archivePath = "Music/"_s + fs::FromNativeSeparators(String(music));
 			if (!Formats::LevelFile::IsSafeTileSetPath(music)) {
-				AddItem(state, archivePath, {}, _("not a valid name"));
+				AddItem(state, archivePath, {}, _x("editor", "not a valid name"));
 				return;
 			}
 			for (StringView root : { resolver.GetUserContentPath(), resolver.GetContentPath() }) {
@@ -193,7 +196,7 @@ namespace Jazz2::Editor
 			if (!source.empty() && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(source, String(fs::ToNativeSeparators(music)))))) {
 				return;
 			}
-			AddItem(state, archivePath, {}, _("not found"));
+			AddItem(state, archivePath, {}, _x("editor", "not found"));
 		}
 
 		void AddScript(PackageState& state, StringView episode, StringView levelPath)
@@ -319,7 +322,7 @@ namespace Jazz2::Editor
 
 			MemoryStream level(1024 * 1024);
 			if (!packaged.Save(level, !state.EditorData)) {
-				problem = _("The level couldn't be written");
+				problem = _x("editor", "The level couldn't be written");
 				return false;
 			}
 
@@ -387,11 +390,11 @@ namespace Jazz2::Editor
 				return zip.Finish();
 			});
 			if (!written) {
-				problem = _("The package couldn't be written");
+				problem = _x("editor", "The package couldn't be written");
 				return false;
 			}
 			if (missing) {
-				problem = _("Some of the files couldn't be read, the package lacks them");
+				problem = _x("editor", "Some of the files couldn't be read, the package lacks them");
 			}
 			return true;
 		}
@@ -458,37 +461,42 @@ namespace Jazz2::Editor
 		CollectItems(session, *state);
 
 		IEditorContext* s = &session;
-		auto dialog = std::make_unique<UiDialog>(_("Export Package"));
+		// TRANSLATORS: Title of the dialog that saves the level with the files it needs as a ZIP archive to publish
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Export Package"));
 		UiDialog* dialogPtr = dialog.get();
 		UiStack* content = dialog->GetContent();
-		content->Add<UiLabel>(_("A ZIP archive to publish, laid out as the content of the game"), UiTheme::TextDim);
+		content->Add<UiLabel>(_x("editor", "A ZIP archive to publish, laid out as the content of the game"), UiTheme::TextDim);
 
 		UiForm* form = content->Add<UiForm>(UiTheme::Spacing);
-		AddTextRow(form, _("Name"), &PackageState::Name, state, 255);
-		AddTextRow(form, _("Author"), &PackageState::Author, state, 255);
-		AddTextRow(form, _("Version"), &PackageState::Version, state, 32);
-		auto* description = AddTextRow(form, _("Description"), &PackageState::Description, state, 4096);
+		// TRANSLATORS: Labels of the details of the package in the Export Package dialog
+		AddTextRow(form, _x("editor", "Name"), &PackageState::Name, state, 255);
+		AddTextRow(form, _x("editor", "Author"), &PackageState::Author, state, 255);
+		AddTextRow(form, _x("editor", "Version"), &PackageState::Version, state, 32);
+		auto* description = AddTextRow(form, _x("editor", "Description"), &PackageState::Description, state, 4096);
 		description->Multiline = true;
-		AddTextRow(form, _("Tags"), &PackageState::Tags, state, 255)->Placeholder = _("separated by commas");
+		// TRANSLATORS: Label of the tags of the package in the Export Package dialog, and the placeholder of its empty box
+		AddTextRow(form, _x("editor", "Tags"), &PackageState::Tags, state, 255)->Placeholder = _x("editor", "separated by commas");
 
-		auto* episode = content->Add<UiCheckBox>(_("All levels of the episode"), [s, state]() { return (state->WholeEpisode && HasEpisode(*s)); }, [s, state](bool value) {
+		auto* episode = content->Add<UiCheckBox>(_x("editor", "All levels of the episode"), [s, state]() { return (state->WholeEpisode && HasEpisode(*s)); }, [s, state](bool value) {
 			state->WholeEpisode = value;
 			CollectItems(*s, *state);
 		});
-		episode->Tooltip = _("The other levels of the episode as they are saved, the episode file and what they need");
+		episode->Tooltip = _x("editor", "The other levels of the episode as they are saved, the episode file and what they need");
 		episode->IsEnabledFunc = [s]() { return HasEpisode(*s); };
-		auto* editorData = content->Add<UiCheckBox>(_("Keep what only the editor uses"), [state]() { return state->EditorData; }, [state](bool value) {
+		auto* editorData = content->Add<UiCheckBox>(_x("editor", "Keep what only the editor uses"), [state]() { return state->EditorData; }, [state](bool value) {
 			state->EditorData = value;
 		});
-		editorData->Tooltip = _("Layer names, notes and ground lines stay in the level, so it can be edited further as it was");
+		editorData->Tooltip = _x("editor", "Layer names, notes and ground lines stay in the level, so it can be edited further as it was");
 
-		content->Add<UiLabel>(_("Files"), UiTheme::TextHeader);
+		// TRANSLATORS: Header of the list of files the package will have in the Export Package dialog
+		content->Add<UiLabel>(_x("editor", "Files"), UiTheme::TextHeader);
 		auto* scroll = content->Add<UiScrollView>();
 		scroll->Width = 340.0f;
 		scroll->Height = 110.0f;
 		scroll->SetContent<PackageFileList>(state);
 
-		dialog->AddButton(_("Export"), [s, state, dialogPtr]() {
+		// TRANSLATORS: Button in the Export Package dialog, verb
+		dialog->AddButton(_x("editor", "Export"), [s, state, dialogPtr]() {
 			UiSurface* surface = s->GetSurface();
 			if (surface == nullptr) {
 				return;
@@ -496,7 +504,7 @@ namespace Jazz2::Editor
 			SmallVector<UiFileRoot, 4> roots;
 			s->GetImageRoots(true, roots);
 			if (roots.empty()) {
-				s->ShowMessage(_("There is no place to save files to"));
+				s->ShowMessage(_x("editor", "There is no place to save files to"));
 				return;
 			}
 			// Collected again, the files may have changed since the dialog was opened
@@ -505,7 +513,7 @@ namespace Jazz2::Editor
 			if (name.empty()) {
 				name = "level"_s;
 			}
-			UiFileDialog::Show(*surface, _("Export Package"), UiFileDialogMode::Save, Death::move(roots), ".zip"_s, {}, String(name + ".zip"_s),
+			UiFileDialog::Show(*surface, _x("editor", "Export Package"), UiFileDialogMode::Save, Death::move(roots), ".zip"_s, {}, String(name + ".zip"_s),
 				[s, state, dialogPtr](StringView path) {
 				StorePackageInfo(*s, *state);
 				String problem;
@@ -514,7 +522,7 @@ namespace Jazz2::Editor
 					s->ShowMessage(problem);
 					return;
 				}
-				s->ShowMessage(problem.empty() ? String(_("The package was exported")) : problem);
+				s->ShowMessage(problem.empty() ? String(_x("editor", "The package was exported")) : problem);
 				dialogPtr->Close();
 			});
 		}, true);

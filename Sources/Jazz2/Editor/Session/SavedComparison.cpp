@@ -67,13 +67,13 @@ namespace Jazz2::Editor
 		}
 		StringView filePath = _context.GetFilePath();
 		if (filePath.empty() || !fs::FileExists(filePath)) {
-			_context.ShowMessage(_("The level wasn't saved yet, there's nothing to compare it with"));
+			_context.ShowMessage(_x("editor", "The level wasn't saved yet, there's nothing to compare it with"));
 			return;
 		}
 		auto saved = std::make_unique<LevelDocument>();
 		auto s = fs::Open(filePath, FileAccess::Read);
 		if (!s->IsValid() || !saved->Load(*s, &_context.GetTileSetLibrary())) {
-			_context.ShowMessage(_("The saved level couldn't be read"));
+			_context.ShowMessage(_x("editor", "The saved level couldn't be read"));
 			return;
 		}
 		_savedDocument = Death::move(saved);
@@ -81,7 +81,7 @@ namespace Jazz2::Editor
 		_compareFull = true;
 		UpdateDifferences(strokeInProgress);
 		if (_savedDifferences.empty() && _savedEventDifferences.empty()) {
-			_context.ShowMessage(_("The level is as it was saved"));
+			_context.ShowMessage(_x("editor", "The level is as it was saved"));
 		}
 	}
 

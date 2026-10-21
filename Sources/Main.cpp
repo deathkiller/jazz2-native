@@ -1535,6 +1535,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	_networkManager = std::make_unique<NetworkManager>();
 
 	if (serverInit.Configuration.ServerName.empty()) {
+		// TRANSLATORS: Default name of a multiplayer server created without a name, shown in the server list
 		serverInit.Configuration.ServerName = _("Unnamed server");
 	}
 

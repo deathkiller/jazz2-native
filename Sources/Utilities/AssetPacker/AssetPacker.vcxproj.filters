@@ -123,6 +123,9 @@
     <ClCompile Include="SpriteRepacker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TranslationFilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Jazz2\Compatibility\AnimSetMapping.cpp">
       <Filter>Source Files\Jazz2\Compatibility</Filter>
     </ClCompile>
@@ -282,6 +285,9 @@
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="SpriteRepacker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TranslationFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Main.h">

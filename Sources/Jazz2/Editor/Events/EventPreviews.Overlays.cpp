@@ -497,11 +497,15 @@ namespace Jazz2::Editor
 		const String& level = (bonus ? document.Properties.SecretLevel : document.Properties.NextLevel);
 		if (brief) {
 			// Under the field of the next level, the narrow inspector shows only that much
-			String name = (level.empty() ? String(_("none - main menu")) : level);
-			text = (bonus ? _f("Default (secret): {}", name) : _f("Default: {}", name));
+			// TRANSLATORS: In place of the level name under the next level of an exit in the event properties, the level properties set none, keep it short
+			String name = (level.empty() ? String(_x("editor", "none - main menu")) : level);
+			// TRANSLATORS: Under the next level of an exit in the event properties, {} is the next (or secret) level from the level properties, keep it short
+			text = (bonus ? _fx("editor", "Default (secret): {}", name) : _fx("editor", "Default: {}", name));
 		} else {
-			String name = (level.empty() ? String(_("none - back to the main menu")) : level);
-			text = (bonus ? _f("Secret level (default): {}", name) : _f("Next level (default): {}", name));
+			// TRANSLATORS: In place of the level name above an exit in the level, the level properties set no next level
+			String name = (level.empty() ? String(_x("editor", "none - back to the main menu")) : level);
+			// TRANSLATORS: Above an exit in the level, {} is the next (or secret) level from the level properties the exit goes to
+			text = (bonus ? _fx("editor", "Secret level (default): {}", name) : _fx("editor", "Next level (default): {}", name));
 		}
 		return true;
 	}

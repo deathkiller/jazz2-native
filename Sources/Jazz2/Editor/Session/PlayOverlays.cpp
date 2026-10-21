@@ -119,14 +119,14 @@ namespace Jazz2::Editor
 		// The level is loaded again first, so the events are as they are now
 		RecomputeReachability(true);
 		if (_reachability.empty()) {
-			_context.ShowMessage(_("It can't be found out, the level needs a start of the character it's played with"));
+			_context.ShowMessage(_x("editor", "It can't be found out, the level needs a start of the character it's played with"));
 			return;
 		}
 		std::int32_t reached = 0;
 		for (std::int32_t distance : _reachability) {
 			reached += (distance >= 0 ? 1 : 0);
 		}
-		_context.ShowMessage(_f("The player can get to {} tiles, shown green, found again after each change", reached));
+		_context.ShowMessage(_fx("editor", "The player can get to {} tiles, shown green, found again after each change", reached));
 	}
 
 	void PlayOverlays::HideReachability()

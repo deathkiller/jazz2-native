@@ -52,6 +52,8 @@ set(SOURCES
 	N64Content.h
 	SpriteRepacker.cpp
 	SpriteRepacker.h
+	TranslationFilter.cpp
+	TranslationFilter.h
 	# Reads and writes the images of the fonts, the PNG codec of the engine, which depends on nothing but the base layer
 	${NCINE_SOURCE_DIR}/nCine/Graphics/PngCodec.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/PngCodec.h

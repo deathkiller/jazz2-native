@@ -50,19 +50,23 @@ namespace Jazz2::UI::Menu
 
 		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		list->Add<ChoiceItem>(_("Reforged Gameplay"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay > Enhancements section
 			[]() -> StringView { return (PreferencesCache::EnableReforgedGameplay ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::EnableReforgedGameplay = !PreferencesCache::EnableReforgedGameplay; _isDirty = true; },
 			reforgedGameplayReadOnly)->ArrowSpacing = WideArrowSpacing;
 		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		list->Add<ChoiceItem>(_("Reforged Camera"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay > Enhancements section
 			[]() -> StringView { return (PreferencesCache::EnableReforgedCamera ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::EnableReforgedCamera = !PreferencesCache::EnableReforgedCamera; _isDirty = true; })->ArrowSpacing = WideArrowSpacing;
 		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		list->Add<ChoiceItem>(_("Reforged HUD"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay > Enhancements section
 			[]() -> StringView { return (PreferencesCache::EnableReforgedHUD ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::EnableReforgedHUD = !PreferencesCache::EnableReforgedHUD; _isDirty = true; })->ArrowSpacing = WideArrowSpacing;
 		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		list->Add<ChoiceItem>(_("Reforged Main Menu"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay > Enhancements section
 			[]() -> StringView { return (PreferencesCache::EnableReforgedMainMenu ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::EnableReforgedMainMenu = !PreferencesCache::EnableReforgedMainMenu;
@@ -71,6 +75,7 @@ namespace Jazz2::UI::Menu
 			})->ArrowSpacing = WideArrowSpacing;
 		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		list->Add<ChoiceItem>(_("Ledge Climbing"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay > Enhancements section
 			[]() -> StringView { return (PreferencesCache::EnableLedgeClimb ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::EnableLedgeClimb = !PreferencesCache::EnableLedgeClimb; _isDirty = true; },
 			ledgeClimbReadOnly)->ArrowSpacing = WideArrowSpacing;
@@ -80,6 +85,7 @@ namespace Jazz2::UI::Menu
 				return (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount
 					// TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
 					? _("Enabled With Ammo Count")
+					// TRANSLATORS: Option for on/off items in Options > Gameplay > Enhancements section
 					: (PreferencesCache::WeaponWheel == WeaponWheelStyle::Enabled ? _("Enabled") : _("Disabled")));
 			},
 			[this](std::int32_t direction) {
@@ -89,6 +95,7 @@ namespace Jazz2::UI::Menu
 			})->ArrowSpacing = WideArrowSpacing;
 		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section (weapon wheel shows also weapons the player doesn't have)
 		list->Add<ChoiceItem>(_("Show All Weapon Wheel Slots"),
+			// TRANSLATORS: Option for on/off items in Options > Gameplay > Enhancements section
 			[]() -> StringView { return (PreferencesCache::ShowAllWeaponWheelSlots ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::ShowAllWeaponWheelSlots = !PreferencesCache::ShowAllWeaponWheelSlots; _isDirty = true; })->ArrowSpacing = WideArrowSpacing;
 
@@ -116,6 +123,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawMenuFrame(centerX, topLine, bottomLine);
 
 		std::int32_t charOffset = 0;
+		// TRANSLATORS: Header of Options > Gameplay > Enhancements section
 		_root->DrawMenuTitle(charOffset, _("Enhancements"), centerX, contentBounds.Y + TopLine);
 
 		// TRANSLATORS: Header in Options > Gameplay > Enhancements section

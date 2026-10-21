@@ -260,6 +260,7 @@ namespace Jazz2
 			return false;
 		}
 
+		// TRANSLATORS: Debug message in the console when a level is loaded, {} is level name
 		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" initialized", descriptor.DisplayName));
 
 		AttachComponents(Death::move(descriptor));
@@ -321,6 +322,7 @@ namespace Jazz2
 			return false;
 		}
 
+		// TRANSLATORS: Debug message in the console when a level is loaded, {} is level name
 		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" initialized", descriptor.DisplayName));
 
 		AttachComponents(Death::move(descriptor));
@@ -1226,6 +1228,7 @@ namespace Jazz2
 	{
 		if (line == "/help"_s) {
 			_console->WriteLine(UI::MessageLevel::Echo, line);
+			// TRANSLATORS: Reply to the /help command in the console, followed by a link to the website
 			_console->WriteLine(UI::MessageLevel::Confirm, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://de4th.dev/jazz2/help\f[/c]\f[/w]"_s);
 			return true;
 		}
@@ -2383,6 +2386,7 @@ namespace Jazz2
 			return false;
 		}
 
+		// TRANSLATORS: Debug message in the console when a level is restored from a saved state, {} is level name
 		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" restored", descriptor.DisplayName));
 
 		// The music that was playing when the level was left is started instead of the default one

@@ -73,14 +73,15 @@ namespace Jazz2::Editor
 						if (EventCatalog::ReadField(event, field) == 0) {
 							continue;
 						}
-						value = _("yes");
+						// TRANSLATORS: Value of a parameter that is on, after its name in the list of events, lowercase
+						value = _x("editor", "yes");
 						break;
 					case ParamType::Enum: {
 						std::int32_t raw = EventCatalog::ReadField(event, field);
 						value = FormatInteger(raw);
 						for (std::uint8_t j = 0; j < field.OptionCount; j++) {
 							if (field.Options[j].Value == raw) {
-								value = _(field.Options[j].Label);
+								value = _x("editor", field.Options[j].Label);
 								break;
 							}
 						}
@@ -100,7 +101,7 @@ namespace Jazz2::Editor
 				if (!result.empty()) {
 					result += ", "_s;
 				}
-				result += _(field.Name) + " "_s + value;
+				result += _x("editor", field.Name) + " "_s + value;
 				shown++;
 			}
 			return result;
@@ -112,16 +113,16 @@ namespace Jazz2::Editor
 			std::uint8_t difficulties = event.Flags & Formats::EventRecord::DifficultyMask;
 			if (difficulties != 0 && difficulties != Formats::EventRecord::DifficultyMask) {
 				// TRANSLATORS: First letters of Easy, Normal and Hard in the list of events, keep each one letter
-				if ((difficulties & Formats::EventRecord::Easy) != 0) result += _("E");
-				if ((difficulties & Formats::EventRecord::Normal) != 0) result += _("N");
-				if ((difficulties & Formats::EventRecord::Hard) != 0) result += _("H");
+				if ((difficulties & Formats::EventRecord::Easy) != 0) result += _x("editor", "E");
+				if ((difficulties & Formats::EventRecord::Normal) != 0) result += _x("editor", "N");
+				if ((difficulties & Formats::EventRecord::Hard) != 0) result += _x("editor", "H");
 			}
 			if ((event.Flags & Formats::EventRecord::MultiplayerOnly) != 0) {
 				if (!result.empty()) {
 					result += " "_s;
 				}
 				// TRANSLATORS: Short for "multiplayer only" in the list of events
-				result += _("MP");
+				result += _x("editor", "MP");
 			}
 			return result;
 		}
@@ -231,17 +232,18 @@ namespace Jazz2::Editor
 		}
 
 		IEditorContext* s = &session;
-		auto dialog = std::make_unique<UiDialog>(_("Event List"));
+		// TRANSLATORS: Title of the dialog with the list of all events placed in the level
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Event List"));
 		auto* content = dialog->GetContent();
 		auto* header = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 		auto* search = header->Add<UiTextBox>();
-		search->Placeholder = _("Filter by name or parameters");
+		search->Placeholder = _x("editor", "Filter by name or parameters");
 		search->Flex = 1.0f;
 		auto* summary = header->Add<UiLabel>(StringView(), UiTheme::TextDim);
 		auto* scroll = content->Add<UiScrollView>();
 		scroll->Width = 440.0f;
 		scroll->Height = 260.0f;
-		content->Add<UiLabel>(_("The selected events are changed together in the event properties"), UiTheme::TextDim);
+		content->Add<UiLabel>(_x("editor", "The selected events are changed together in the event properties"), UiTheme::TextDim);
 
 		// Only the rows seen are drawn, a level can have thousands of events
 		auto state = std::make_shared<OutlineState>();
@@ -250,7 +252,7 @@ namespace Jazz2::Editor
 		list->CountFunc = [state]() { return std::int32_t(state->Items.size()); };
 		list->RowText = [state](std::int32_t index) { return (index >= 0 && index < std::int32_t(state->Items.size()) ? state->GetName(state->Items[index].Record.Type) : String()); };
 		list->RowTooltip = [](std::int32_t index) {
-			return String(_("Click to select the event and go to it, Ctrl+click to add it to the selection, Shift+click to select all from the last one"));
+			return String(_x("editor", "Click to select the event and go to it, Ctrl+click to add it to the selection, Shift+click to select all from the last one"));
 		};
 		list->DrawRow = [s, state](UiPainter& painter, std::int32_t index, const Rectf& row, bool picked, float hover) {
 			if (index < 0 || index >= std::int32_t(state->Items.size())) {
@@ -332,8 +334,9 @@ namespace Jazz2::Editor
 				const Formats::OffGridEventRecord& event = document.OffGridEvents[i];
 				addItem(event.Event, 0, std::int32_t(i), Vector2i(event.X, event.Y));
 			}
-			summary->Text = (std::int32_t(state->Items.size()) == total ? _fn("{} event", "{} events", total, total)
-				: _f("{} of {}", std::int32_t(state->Items.size()), total));
+			summary->Text = (std::int32_t(state->Items.size()) == total ? _fnx("editor", "{} event", "{} events", total, total)
+				// TRANSLATORS: In the Event List dialog, how many events the filter shows of how many there are in the level
+				: _fx("editor", "{} of {}", std::int32_t(state->Items.size()), total));
 		};
 		search->OnChanged = [state](StringView text) {
 			state->Filter = text;

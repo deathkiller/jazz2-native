@@ -514,13 +514,13 @@ namespace Jazz2::Editor
 				if (!_host.OnPlayTestReturned()) {
 					_host.OnPlayTestViewChanged();
 				}
-				_host.ShowMessage(_("The level couldn't be played"));
+				_host.ShowMessage(_x("editor", "The level couldn't be played"));
 				return;
 			}
 			_playHandler = Death::move(handler);
 			_playedOptions = _playOptions;
 			if (_playHandler->HasSpawnFallenBack()) {
-				_host.ShowMessage(_("There's no room for the player there, it starts at the start of the level"));
+				_host.ShowMessage(_x("editor", "There's no room for the player there, it starts at the start of the level"));
 			}
 			if (_restorePlayState && previous != nullptr) {
 				RestorePlayState(*previous, *_playHandler);

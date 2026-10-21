@@ -26,7 +26,8 @@ namespace Jazz2::Editor
 		_titleBar->Add<UiLabel>(title, UiTheme::TextHeader)->Flex = 1.0f;
 		auto* closeButton = _titleBar->Add<UiButton>(StringView(), EditorIcon::Close, [this]() { Cancel(); });
 		closeButton->Style = UiButtonStyle::Flat;
-		closeButton->Tooltip = _("Close (Esc)");
+		// TRANSLATORS: Tooltip of the cross in the title of a dialog, with the key that closes it too
+		closeButton->Tooltip = _x("editor", "Close (Esc)");
 		_titleBar->OnDragStart = [this](Vector2f) {
 			_dragOrigin = Vector2f(Bounds.X, Bounds.Y);
 		};
@@ -325,7 +326,7 @@ namespace Jazz2::Editor
 			button->Style = UiButtonStyle::Flat;
 			button->IsCheckedFunc = [this, index]() { return (_rootIndex == index); };
 			if (!_roots[i].Writable) {
-				button->Tooltip = _("Files here can't be changed");
+				button->Tooltip = _x("editor", "Files here can't be changed");
 			}
 		}
 
@@ -359,7 +360,8 @@ namespace Jazz2::Editor
 
 		if (_mode == UiFileDialogMode::Save) {
 			auto* nameRow = _content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			nameRow->Add<UiLabel>(_("Name"), UiTheme::TextDim)->Width = 40.0f;
+			// TRANSLATORS: Label of the name of the file in the dialog to save a file, keep it short
+			nameRow->Add<UiLabel>(_x("editor", "Name"), UiTheme::TextDim)->Width = 40.0f;
 			_nameBox = nameRow->Add<UiTextBox>(initialName);
 			_nameBox->Flex = 1.0f;
 			_nameBox->MaxLength = 64;
@@ -373,14 +375,16 @@ namespace Jazz2::Editor
 			};
 		}
 
-		AddButton(_mode == UiFileDialogMode::Save ? _("Save") : _("Open"), [this]() { Confirm(); }, true)
+		// TRANSLATORS: Button in the dialog to open a file, opens the selected file
+		AddButton(_mode == UiFileDialogMode::Save ? _("Save") : _x("editor", "Open"), [this]() { Confirm(); }, true)
 			->IsEnabledFunc = [this]() {
 				if (_mode == UiFileDialogMode::Save) {
 					return (IsWritable() && _nameBox != nullptr && !_nameBox->Text.trimmed().empty());
 				}
 				return (_selected >= 0 && _selected < std::int32_t(_entries.size()) && !_entries[_selected].IsDirectory);
 			};
-		AddButton(_("Cancel"), [this]() { Close(); });
+		// TRANSLATORS: Button in the dialog to open or save a file, closes it without a change
+		AddButton(_x("editor", "Cancel"), [this]() { Close(); });
 
 		// A directory to save to doesn't have to exist yet, it's created along with the file
 		bool useInitial = (!initialDirectory.empty() && (fs::DirectoryExists(initialDirectory) ||
@@ -538,7 +542,7 @@ namespace Jazz2::Editor
 			String name = _nameBox->Text.trimmed();
 			if (name.empty() || name.find('/') || name.find('\\') || name.find(':')) {
 				if (UiSurface* surface = GetSurface()) {
-					surface->ShowToast(_("The name can't contain slashes or colons"), EditorIcon::Warning);
+					surface->ShowToast(_x("editor", "The name can't contain slashes or colons"), EditorIcon::Warning);
 				}
 				return;
 			}

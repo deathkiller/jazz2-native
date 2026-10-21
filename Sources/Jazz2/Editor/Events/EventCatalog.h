@@ -10,8 +10,12 @@
 #include <Containers/StringView.h>
 
 #if !defined(N_)
-/** @brief Marks a text of the event catalog for translation, it's translated where it's shown */
+/** @brief Marks a text for translation, it's translated where it's shown */
 #	define N_(text) text
+#endif
+#if !defined(NC_)
+/** @brief Marks a text for translation in the specified context, it's translated where it's shown */
+#	define NC_(context, text) text
 #endif
 
 namespace Jazz2::Editor
@@ -74,7 +78,7 @@ namespace Jazz2::Editor
 	/** @brief Option of a parameter of the type @ref ParamType::Enum or @ref ParamType::Flags */
 	struct ParamOption
 	{
-		/** @brief Name shown to the user, marked by @ref N_() */
+		/** @brief Name shown to the user, marked by @ref NC_() */
 		const char* Label;
 		/** @brief Value, or the mask of its bits for flags, relative to the field (before @ref EventParamField::Shift) */
 		std::int32_t Value;
@@ -147,7 +151,7 @@ namespace Jazz2::Editor
 	*/
 	struct EventParamField
 	{
-		/** @brief Name shown to the user, marked by @ref N_() */
+		/** @brief Name shown to the user, marked by @ref NC_() */
 		const char* Name;
 		/** @brief How the value is edited */
 		ParamType Type;
@@ -171,7 +175,7 @@ namespace Jazz2::Editor
 		std::uint8_t OptionCount;
 		/** @brief Unit */
 		ParamUnit Unit;
-		/** @brief Description shown as a tooltip, marked by @ref N_(), may be `nullptr` */
+		/** @brief Description shown as a tooltip, marked by @ref NC_(), may be `nullptr` */
 		const char* Description;
 
 		// What follows has defaults, the functions making fields above leave it as it is
@@ -426,11 +430,11 @@ namespace Jazz2::Editor
 		EventType Type;
 		/** @brief Identifier that doesn't change between versions */
 		const char* Key;
-		/** @brief Name shown to the user, marked by @ref N_() */
+		/** @brief Name shown to the user, marked by @ref NC_() */
 		const char* Name;
 		/** @brief Category */
 		EventCategory Category;
-		/** @brief Description, marked by @ref N_(), may be `nullptr` */
+		/** @brief Description, marked by @ref NC_(), may be `nullptr` */
 		const char* Description;
 		/** @brief Parameters */
 		const EventParamField* Fields;

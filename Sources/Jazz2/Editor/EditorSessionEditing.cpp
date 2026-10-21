@@ -55,7 +55,7 @@ namespace Jazz2::Editor
 		_eventPick = Death::move(callback);
 		_pickerPanel = PickerPanel::Events;
 		// The picker panel can be on either side, floating or in a drawer, its tab is named the same anywhere
-		ShowMessage(_("Choose the event in the Events tab, Esc cancels"));
+		ShowMessage(_x("editor", "Choose the event in the Events tab, Esc cancels"));
 	}
 
 	void EditorSession::OnEventChosen(EventType type)
@@ -77,16 +77,16 @@ namespace Jazz2::Editor
 		TerrainSpline::Read(_document, splines);
 		std::int32_t index = tool->GetSelectedSpline();
 		if (index < 0 || index >= std::int32_t(splines.size())) {
-			ShowMessage(_("Click a ground line with the Ground Line tool first"));
+			ShowMessage(_x("editor", "Click a ground line with the Ground Line tool first"));
 			return;
 		}
 		TerrainSpline spline = splines[index];
 		if (spline.Kind == SplineKind::Closed) {
-			ShowMessage(_("Tiles can be made along a line of ground, a ceiling or a band, not along a shape"));
+			ShowMessage(_x("editor", "Tiles can be made along a line of ground, a ceiling or a band, not along a shape"));
 			return;
 		}
 		if (spline.Layer < 0 || spline.Layer >= std::int32_t(_document.Layers.size()) || !IsLayerEditable(spline.Layer)) {
-			ShowMessage(_("The layer is locked or hidden"));
+			ShowMessage(_x("editor", "The layer is locked or hidden"));
 			return;
 		}
 
@@ -107,7 +107,7 @@ namespace Jazz2::Editor
 		}
 		const Formats::TileSetData* data = GetTileSetData(_document.Properties.DefaultTileSet);
 		if (best < 0.0f || data == nullptr || fullTile.Index >= data->TileCount) {
-			ShowMessage(_("The tile set has no solid tile to cut the ground from"));
+			ShowMessage(_x("editor", "The tile set has no solid tile to cut the ground from"));
 			return;
 		}
 		const std::uint8_t* inside = &data->Images[std::size_t(fullTile.Index) * Formats::TileSetData::ImageBytesPerTile];
@@ -117,7 +117,7 @@ namespace Jazz2::Editor
 		SmallVector<Vector2f, 0> line;
 		GroundLineTool::SampleLine(spline, line);
 		if (line.empty()) {
-			ShowMessage(_("Click a ground line with the Ground Line tool first"));
+			ShowMessage(_x("editor", "Click a ground line with the Ground Line tool first"));
 			return;
 		}
 		const DocumentLayer& layer = _document.Layers[spline.Layer];
@@ -175,11 +175,12 @@ namespace Jazz2::Editor
 			}
 		}
 		if (cells.empty()) {
-			ShowMessage(_("The line goes along the edges of the tiles, no tile has to be cut"));
+			ShowMessage(_x("editor", "The line goes along the edges of the tiles, no tile has to be cut"));
 			return;
 		}
 
-		_history->BeginTransaction(String(_("Make tiles along ground line")));
+		// TRANSLATORS: Name of an undo step in the history, new tiles cut along a ground line drawn with the Ground Line tool
+		_history->BeginTransaction(String(_x("editor", "Make tiles along ground line")));
 		TileTarget target;
 		target.Type = TileTarget::Kind::Level;
 		TileRef first;
@@ -191,7 +192,7 @@ namespace Jazz2::Editor
 		}
 		// The line owns the new tiles, what was there before them stays what it gets back
 		TerrainSpline::Read(_document, splines);
-		auto command = std::make_unique<SetTilesCommand>(_document, spline.Layer, String(_("Make tiles along ground line")));
+		auto command = std::make_unique<SetTilesCommand>(_document, spline.Layer, String(_x("editor", "Make tiles along ground line")));
 		for (std::size_t i = 0; i < cells.size(); i++) {
 			Vector2i cell = cells[i];
 			TileRef tile{ std::uint16_t(first.Index + i), first.Source, 0 };
@@ -209,9 +210,9 @@ namespace Jazz2::Editor
 			}
 		}
 		command->Seal();
-		Execute(std::make_unique<SetTerrainSplinesCommand>(_document, splines, Death::move(command), String(_("Make tiles along ground line"))));
+		Execute(std::make_unique<SetTerrainSplinesCommand>(_document, splines, Death::move(command), String(_x("editor", "Make tiles along ground line"))));
 		_history->EndTransaction();
-		ShowMessage(_fn("{} tile was made for the line, only this level has it", "{} tiles were made for the line, only this level has them", std::int32_t(cells.size()), std::int32_t(cells.size())));
+		ShowMessage(_fnx("editor", "{} tile was made for the line, only this level has it", "{} tiles were made for the line, only this level has them", std::int32_t(cells.size()), std::int32_t(cells.size())));
 	}
 
 	void EditorSession::ContinueRow()
@@ -226,7 +227,7 @@ namespace Jazz2::Editor
 		ToolPointer pointer;
 		LayerView view = GetLayerView(layerIndex);
 		if (!GetHoverPointer(pointer) || !view.Wrap(pointer.Cell, start)) {
-			ShowMessage(_("Point at the cell the row goes on from"));
+			ShowMessage(_x("editor", "Point at the cell the row goes on from"));
 			return;
 		}
 		const DocumentLayer& layer = _document.Layers[layerIndex];
@@ -239,7 +240,8 @@ namespace Jazz2::Editor
 		};
 
 		SmartTileModel& model = GetSmartTiles();
-		auto command = std::make_unique<SetTilesCommand>(_document, layerIndex, String(_("Continue row")));
+		// TRANSLATORS: Name of an undo step in the history, a row of tiles continued by the suggested tiles
+		auto command = std::make_unique<SetTilesCommand>(_document, layerIndex, String(_x("editor", "Continue row")));
 		TileRef previous;
 		bool hasPrevious = (at(start.X - 1, start.Y) != nullptr);
 		if (hasPrevious) {
@@ -260,7 +262,7 @@ namespace Jazz2::Editor
 			placed++;
 		}
 		if (placed == 0) {
-			ShowMessage(model.IsReady() ? _("The levels have nothing that would go on from here") : _("Still learning the tiles from the levels, try again in a moment"));
+			ShowMessage(model.IsReady() ? _x("editor", "The levels have nothing that would go on from here") : _x("editor", "Still learning the tiles from the levels, try again in a moment"));
 			return;
 		}
 		Execute(Death::move(command));
@@ -269,21 +271,21 @@ namespace Jazz2::Editor
 	void EditorSession::RetileSelection()
 	{
 		if (_selection.IsEmpty()) {
-			ShowMessage(_("Select the tiles to choose again first"));
+			ShowMessage(_x("editor", "Select the tiles to choose again first"));
 			return;
 		}
 		SmartTileModel& model = GetSmartTiles();
 		if (!model.IsReady()) {
-			ShowMessage(_f("Still learning how the tiles fit - {}%, try it again in a moment", std::int32_t(model.GetProgress() * 100.0f)));
+			ShowMessage(_fx("editor", "Still learning how the tiles fit - {}%, try it again in a moment", std::int32_t(model.GetProgress() * 100.0f)));
 			return;
 		}
 		if (model.GetLevelCount() == 0) {
-			ShowMessage(_("No level uses this tile set yet, so there's nothing to learn the tiles from"));
+			ShowMessage(_x("editor", "No level uses this tile set yet, so there's nothing to learn the tiles from"));
 			return;
 		}
 		std::int32_t layerIndex = _selection.GetLayer();
 		if (layerIndex < 0 || layerIndex >= std::int32_t(_document.Layers.size()) || !IsLayerEditable(layerIndex)) {
-			ShowMessage(_("The layer is locked or hidden"));
+			ShowMessage(_x("editor", "The layer is locked or hidden"));
 			return;
 		}
 
@@ -293,13 +295,14 @@ namespace Jazz2::Editor
 		constexpr std::int64_t MaxRetileCells = 1 << 20;
 		const Recti& bounds = _selection.GetBounds();
 		if (std::int64_t(bounds.W) * std::int64_t(bounds.H) > MaxRetileCells) {
-			ShowMessage(_f("The selection is too large, tiles can be chosen again in {} tiles at most at once", std::int32_t(MaxRetileCells)));
+			ShowMessage(_fx("editor", "The selection is too large, tiles can be chosen again in {} tiles at most at once", std::int32_t(MaxRetileCells)));
 			return;
 		}
 
 		const DocumentLayer& layer = _document.Layers[layerIndex];
 		std::int32_t width = layer.GetWidth(), height = layer.GetHeight();
-		auto command = std::make_unique<SetTilesCommand>(_document, layerIndex, _("Choose tiles by neighbors"));
+		// TRANSLATORS: Name of an undo step in the history, the selected tiles replaced by those that fit their neighbors
+		auto command = std::make_unique<SetTilesCommand>(_document, layerIndex, _x("editor", "Choose tiles by neighbors"));
 		// The tiles chosen already in the selected area, the neighbors after them are chosen by them
 		SmallVector<TileRef, 0> decidedTiles;
 		SmallVector<bool, 0> decided;
@@ -355,7 +358,7 @@ namespace Jazz2::Editor
 		}
 		command->Seal();
 		if (command->IsEmpty()) {
-			ShowMessage(_("The tiles fit their neighbors already"));
+			ShowMessage(_x("editor", "The tiles fit their neighbors already"));
 			return;
 		}
 		Execute(Death::move(command));
@@ -445,7 +448,8 @@ namespace Jazz2::Editor
 			if (cut) {
 				DeleteSelection();
 			} else {
-				ShowMessage(_("Copied"));
+				// TRANSLATORS: Status message after the selection was copied to the clipboard
+				ShowMessage(_x("editor", "Copied"));
 			}
 			return;
 		}
@@ -469,7 +473,7 @@ namespace Jazz2::Editor
 		if (cut) {
 			DeleteSelection();
 		} else {
-			ShowMessage(_("Copied"));
+			ShowMessage(_x("editor", "Copied"));
 		}
 	}
 
@@ -480,11 +484,12 @@ namespace Jazz2::Editor
 				return;
 			}
 			if (!IsLayerEditable(_document.GetSpriteLayerIndex())) {
-				ShowMessage(_("The sprite layer is locked or hidden"));
+				ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 				return;
 			}
 			// Those on the grid and those off it, as one step
-			String name = _("Delete Events");
+			// TRANSLATORS: Name of an undo step in the history, the selected events deleted
+			String name = _x("editor", "Delete Events");
 			BeginChanges(name);
 			if (_eventSelection.HasCells()) {
 				Vector2i gridSize = _document.GetEventGridSize();
@@ -514,7 +519,8 @@ namespace Jazz2::Editor
 			return;
 		}
 		const Recti& bounds = _selection.GetBounds();
-		auto command = std::make_unique<SetTilesCommand>(_document, _currentLayer, _("Delete"));
+		// TRANSLATORS: Name of an undo step in the history, the selected tiles deleted, also the Delete menu item in the Edit menu
+		auto command = std::make_unique<SetTilesCommand>(_document, _currentLayer, _x("editor", "Delete"));
 		for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
 			for (std::int32_t x = bounds.X; x < bounds.X + bounds.W; x++) {
 				if (_selection.Contains(x, y)) {
@@ -538,7 +544,7 @@ namespace Jazz2::Editor
 			}
 			std::int32_t remapped = RemapLinkedIds(stamp, _document);
 			SetEventBrush(Death::move(stamp));
-			ShowMessage(remapped > 0 ? _("Click to place what was copied, its warps and triggers got new identifiers") : _("Click to place what was copied"));
+			ShowMessage(remapped > 0 ? _x("editor", "Click to place what was copied, its warps and triggers got new identifiers") : _x("editor", "Click to place what was copied"));
 			return;
 		}
 
@@ -555,7 +561,7 @@ namespace Jazz2::Editor
 		_stamp = Death::move(stamp);
 		_selection.Clear();
 		_tools->SetActive(EditorToolType::Brush);
-		ShowMessage(_("Click to place what was copied"));
+		ShowMessage(_x("editor", "Click to place what was copied"));
 	}
 
 	void EditorSession::SelectAll()
@@ -602,7 +608,8 @@ namespace Jazz2::Editor
 		layer.Record.SpeedY = 1.0f;
 		layer.Record.Depth = (_currentLayer < std::int32_t(_document.Layers.size()) ? _document.Layers[_currentLayer].Record.Depth : 0);
 		std::memset(layer.Record.Color, 255, sizeof(layer.Record.Color));
-		layer.Name = _("New Layer");
+		// TRANSLATORS: Name a newly added layer gets
+		layer.Name = _x("editor", "New Layer");
 		layer.Tiles.resize(std::size_t(size.X) * std::size_t(size.Y), TileRef{});
 
 		// Only the new layer is kept by the step, not the whole level, the ground lines of the layers after it follow them
@@ -611,7 +618,8 @@ namespace Jazz2::Editor
 			CancelInteractions(false);
 		}
 		DocumentChanges changes;
-		_history->Execute(InsertLayerCommand::Add(_document, index, layer, _("Add Layer")), changes);
+		// TRANSLATORS: Name of an undo step in the history, also a menu item in the Layer menu (verb)
+		_history->Execute(InsertLayerCommand::Add(_document, index, layer, _x("editor", "Add Layer")), changes);
 		// As any other change of the layer edited, what the tool did on the one before is cancelled
 		SetCurrentLayer(index);
 		OnDocumentChanged(changes);
@@ -624,12 +632,13 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (!IsLayerEditable(spriteLayer)) {
-			ShowMessage(_("The sprite layer is locked or hidden"));
+			ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 			return;
 		}
 
 		Vector2i gridSize = _document.GetEventGridSize();
-		auto placed = std::make_unique<SetEventsCommand>(_document, _("Snap Off-Grid Events"));
+		// TRANSLATORS: Name of an undo step in the history, events placed off the grid of tiles moved onto it
+		auto placed = std::make_unique<SetEventsCommand>(_document, _x("editor", "Snap Off-Grid Events"));
 		SmallVector<Formats::OffGridEventRecord, 0> kept;
 		SmallVector<std::uint32_t, 0> taken;
 		for (const Formats::OffGridEventRecord& event : _document.OffGridEvents) {
@@ -645,20 +654,20 @@ namespace Jazz2::Editor
 			}
 		}
 		if (taken.empty()) {
-			ShowMessage(_("The tiles of all off-grid events have an event already"));
+			ShowMessage(_x("editor", "The tiles of all off-grid events have an event already"));
 			return;
 		}
 
 		std::int32_t keptCount = std::int32_t(kept.size());
 		// The indices of those off the grid change
 		_eventSelection.Clear();
-		_history->BeginTransaction(_("Snap Off-Grid Events"));
+		_history->BeginTransaction(_x("editor", "Snap Off-Grid Events"));
 		Execute(Death::move(placed));
-		Execute(std::make_unique<SetOffGridEventsCommand>(_document, Death::move(kept), _("Snap Off-Grid Events")));
+		Execute(std::make_unique<SetOffGridEventsCommand>(_document, Death::move(kept), _x("editor", "Snap Off-Grid Events")));
 		_history->EndTransaction();
 		ShowMessage(keptCount == 0
-			? _fn("{} event was moved onto the grid", "{} events were moved onto the grid", std::int32_t(taken.size()), std::int32_t(taken.size()))
-			: _f("{} events were moved onto the grid, {} stay off it, their tiles have an event already", std::int32_t(taken.size()), keptCount));
+			? _fnx("editor", "{} event was moved onto the grid", "{} events were moved onto the grid", std::int32_t(taken.size()), std::int32_t(taken.size()))
+			: _fx("editor", "{} events were moved onto the grid, {} stay off it, their tiles have an event already", std::int32_t(taken.size()), keptCount));
 	}
 
 	void EditorSession::SelectEventsOfSameType()
@@ -694,7 +703,7 @@ namespace Jazz2::Editor
 		std::int32_t count = std::int32_t(cells.size() + offGrid.size());
 		_eventSelection.Assign(Death::move(cells));
 		_eventSelection.AssignOffGrid(Death::move(offGrid));
-		ShowMessage(_fn("{} event selected", "{} events selected", count, count));
+		ShowMessage(_fnx("editor", "{} event selected", "{} events selected", count, count));
 	}
 
 	void EditorSession::CopyEventToMatchingTiles()
@@ -705,7 +714,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (!IsLayerEditable(spriteLayer)) {
-			ShowMessage(_("The sprite layer is locked or hidden"));
+			ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 			return;
 		}
 		std::uint32_t cell = _eventSelection.GetCells()[0];
@@ -716,13 +725,14 @@ namespace Jazz2::Editor
 		}
 		TileRef tile = layer.GetTile(cx, cy);
 		if (tile.IsEmpty()) {
-			ShowMessage(_("The event isn't on a tile"));
+			ShowMessage(_x("editor", "The event isn't on a tile"));
 			return;
 		}
 
 		// Flipped tiles are left out, an event that makes the tile do something often depends on which way it faces
 		Formats::EventRecord event = _document.GetEvent(cx, cy);
-		auto command = std::make_unique<SetEventsCommand>(_document, _("Copy Event to Tiles"));
+		// TRANSLATORS: Name of an undo step in the history, an event copied to every tile like its own
+		auto command = std::make_unique<SetEventsCommand>(_document, _x("editor", "Copy Event to Tiles"));
 		SmallVector<std::uint32_t, 0> cells;
 		std::int32_t taken = 0;
 		std::int32_t height = std::min<std::int32_t>(layer.GetHeight(), gridSize.Y);
@@ -741,7 +751,7 @@ namespace Jazz2::Editor
 			}
 		}
 		if (cells.empty()) {
-			ShowMessage(taken > 0 ? _("All other tiles like this one have an event already") : _("No other tile is like this one"));
+			ShowMessage(taken > 0 ? _x("editor", "All other tiles like this one have an event already") : _x("editor", "No other tile is like this one"));
 			return;
 		}
 		std::int32_t count = std::int32_t(cells.size());
@@ -749,8 +759,8 @@ namespace Jazz2::Editor
 		cells.push_back(cell);
 		_eventSelection.Assign(Death::move(cells));
 		ShowMessage(taken == 0
-			? _fn("Copied to {} tile", "Copied to {} tiles", count, count)
-			: _f("Copied to {} tiles, {} have an event already", count, taken));
+			? _fnx("editor", "Copied to {} tile", "Copied to {} tiles", count, count)
+			: _fx("editor", "Copied to {} tiles, {} have an event already", count, taken));
 	}
 
 	void EditorSession::RemoveLayer()
@@ -764,7 +774,8 @@ namespace Jazz2::Editor
 			CancelInteractions(false);
 		}
 		DocumentChanges changes;
-		_history->Execute(InsertLayerCommand::Remove(_document, _currentLayer, _("Remove Layer")), changes);
+		// TRANSLATORS: Name of an undo step in the history, also a menu item in the Layer menu (verb)
+		_history->Execute(InsertLayerCommand::Remove(_document, _currentLayer, _x("editor", "Remove Layer")), changes);
 		_currentLayer = std::min(_currentLayer, std::int32_t(_document.Layers.size()) - 1);
 		OnDocumentChanged(changes);
 	}
@@ -786,7 +797,8 @@ namespace Jazz2::Editor
 			CancelInteractions(false);
 		}
 		DocumentChanges changes;
-		_history->Execute(std::make_unique<MoveLayerCommand>(from, to, _("Move Layer")), changes);
+		// TRANSLATORS: Name of an undo step in the history, a layer moved up or down in the list of layers
+		_history->Execute(std::make_unique<MoveLayerCommand>(from, to, _x("editor", "Move Layer")), changes);
 		// The moved layer is the one edited then
 		_currentLayer = to;
 		OnDocumentChanged(changes);

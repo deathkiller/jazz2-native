@@ -213,6 +213,7 @@ namespace Jazz2::UI::Menu
 
 				_items[i].TouchY = center.Y + subItemOffset;
 			} else if (i == (std::int32_t)Item::Difficulty) {
+				// TRANSLATORS: Options for Difficulty item before starting an episode/level, shown side by side, keep them short
 				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
 				float spacing = 100.0f * columnScale;
 

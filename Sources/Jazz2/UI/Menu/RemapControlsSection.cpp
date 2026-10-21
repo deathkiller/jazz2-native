@@ -264,9 +264,11 @@ namespace Jazz2::UI::Menu
 		constexpr std::int32_t MaxSupportedPlayers = 1;
 #endif
 		if (MaxSupportedPlayers > 1) {
+			// TRANSLATORS: Header of Options > Controls > Remap Controls section, {} is the number of the player
 			_root->DrawStringShadow(_f("Remap Controls for Player {}", _playerIndex + 1), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		} else {
+			// TRANSLATORS: Header of Options > Controls > Remap Controls section
 			_root->DrawStringShadow(_("Remap Controls"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		}
@@ -296,6 +298,7 @@ namespace Jazz2::UI::Menu
 				auto& mapping = ControlScheme::GetMappings(_playerIndex)[(std::int32_t)_actions[row]];
 				if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_actions[row] == PlayerAction::Menu && _selectedColumn == 0)) {
 					char stringBuffer[64];
+					// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, the action whose key/button removes the assignment, followed by that key/button
 					std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
 					// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 					StringView removeText = _("to remove assignment");

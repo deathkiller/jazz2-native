@@ -13,6 +13,7 @@ namespace Jazz2::Multiplayer::GameModes
 	{
 		// The per-team capture counts are drawn by the generic team-score header; here we show each team's flag
 		// status (home / taken / dropped) centered just below it, aligned under each team's count.
+		// TRANSLATORS: Flag states shown in the HUD in Capture the Flag below each team's score (the flag is at its base, carried by an enemy, or lying on the ground), keep it short
 		const StringView flagStateText[] = { _("home"), _("taken"), _("dropped") };
 		std::uint8_t teamCount = ctx.GetCtfFlagStateCount();
 		if (teamCount >= 2) {

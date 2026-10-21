@@ -62,6 +62,7 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		std::int32_t charOffset = 0;
 
+		// TRANSLATORS: Header of Import Episodes section, opened from the main menu
 		_root->DrawMenuTitle(charOffset, _("Import Episodes"), center.X, contentBounds.Y + TopLine);
 
 		// TRANSLATORS: Header in Import Episodes section
@@ -71,6 +72,7 @@ namespace Jazz2::UI::Menu
 		switch (_state) {
 			case State::Loading:
 				if (_fileCount > 0) {
+					// TRANSLATORS: Text in Import Episodes section while the selected files are being processed, {} is number of files
 					_root->DrawStringShadow(_fn("Processing of {} file...", "Processing of {} files...", _fileCount, _fileCount), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {

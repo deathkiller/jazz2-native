@@ -12,6 +12,7 @@
 #include "ModuleConverter.h"
 #include "N64Content.h"
 #include "SpriteRepacker.h"
+#include "TranslationFilter.h"
 
 #include "../../Main.h"
 #include "../../Jazz2/ContentFileTypes.h"
@@ -194,6 +195,8 @@ namespace
 		bool Lz4Images = false;
 		/** @brief Whether re-encoded cinematics get their frames in LZ4, see @ref ProfileUsesLz4Videos() */
 		bool Lz4Videos = false;
+		/** @brief Whether the translations keep the texts of the level editor, see @ref ProfileHasEditor() */
+		bool HasEditor = true;
 		/** @brief The apploader named by `--apploader=`, which `create-image` puts on the disc */
 		String ApploaderPath;
 		/** @brief The game ID named by `--game-id=`, see @ref DefaultGameCubeGameId */
@@ -318,13 +321,26 @@ namespace
 		return (value == "dreamcast"_s || value == "gamecube"_s || value == "ps2"_s);
 	}
 
+	/**
+		@brief Whether the build of the game for a target profile has the level editor
+
+		The consoles that read all their content from a cartridge or a disc are built without it (see `WITH_EDITOR`),
+		so the texts of its `editor` context are left out of their translations (see @ref AssetPacker::TranslationFilter).
+		The generic `console` profile keeps them, as it doesn't say which console the tree is for.
+	*/
+	bool ProfileHasEditor(StringView value)
+	{
+		return !(value == "n64"_s || value == "dreamcast"_s || value == "ps2"_s || value == "gamecube"_s);
+	}
+
 	bool TryParseProfile(StringView value, TargetProfile& profile, std::int32_t& defaultVideoDownscale, bool& isN64, bool& lz4Images,
-		bool& lz4Videos)
+		bool& lz4Videos, bool& hasEditor)
 	{
 		defaultVideoDownscale = DefaultVideoDownscaleForProfile(value);
 		isN64 = (value == "n64"_s);
 		lz4Images = ProfileUsesLz4Images(value);
 		lz4Videos = ProfileUsesLz4Videos(value);
+		hasEditor = ProfileHasEditor(value);
 		if (value == "desktop"_s) {
 			profile = TargetProfile::Desktop;
 		} else if (value == "console"_s || value == "dreamcast"_s || value == "wii"_s || value == "gamecube"_s ||
@@ -359,7 +375,8 @@ namespace
 		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | psp | ps2 | n64 |");
 		LOGI("                         emscripten. dreamcast, ps2, gamecube and n64 get their sprite sheets and");
 		LOGI("                         tilesets in LZ4, and dreamcast, gamecube and ps2 the frames of their");
-		LOGI("                         re-encoded cinematics too, which only their builds decode");
+		LOGI("                         re-encoded cinematics too, which only their builds decode. Their builds");
+		LOGI("                         have no level editor either, so its texts are left out of the translations");
 		LOGI("    --n64-tools=<dir>    libdragon toolchain (or its \"bin\") for --target=n64, if N64_INST is not set.");
 		LOGI("                         That profile stores the sound effects, the music and the cinematics in");
 		LOGI("                         libdragon's formats, made with audioconv64, and videoconv64 with ffmpeg,");
@@ -438,7 +455,8 @@ namespace
 	{
 		std::int32_t profileVideoDownscale = 0;
 		if (!options.ProfileName.empty() &&
-			!TryParseProfile(options.ProfileName, options.Profile, profileVideoDownscale, options.N64, options.Lz4Images, options.Lz4Videos)) {
+			!TryParseProfile(options.ProfileName, options.Profile, profileVideoDownscale, options.N64, options.Lz4Images, options.Lz4Videos,
+				options.HasEditor)) {
 			LOGE("Unknown target profile \"{}\"", options.ProfileName);
 			return false;
 		}
@@ -672,6 +690,32 @@ namespace
 		return success;
 	}
 
+	/** @brief Leaves the texts of the level editor out of the translations of a tree whose target has no editor */
+	void RemoveEditorTranslations(StringView contentPath)
+	{
+		String translationsPath = fs::FindPathCaseInsensitive(fs::CombinePath(contentPath, "Translations"_s));
+		if (!fs::DirectoryExists(translationsPath)) {
+			return;
+		}
+
+		std::int32_t totalRemoved = 0, fileCount = 0;
+		for (auto item : fs::Directory(translationsPath)) {
+			if (StringUtils::lowercase(fs::GetExtension(item)) != "mo"_s) {
+				continue;
+			}
+			std::int32_t removed = AssetPacker::TranslationFilter::RemoveContext(item, "editor"_s);
+			if (removed < 0) {
+				LOGW("Cannot read \"{}\" as a translation, it is kept as it is", item);
+			} else if (removed > 0) {
+				totalRemoved += removed;
+				fileCount++;
+			}
+		}
+		if (totalRemoved > 0) {
+			LOGI("Left {} texts of the level editor out of {} translations", totalRemoved, fileCount);
+		}
+	}
+
 	/**
 		@brief Adds a directory tree to a package under the specified path
 
@@ -813,6 +857,9 @@ namespace
 		if (selfContained) {
 			LOGI("Copying \"{}\"...", layout.ContentPath);
 			CopyDirectoryRecursive(layout.ContentPath, outputPath, PackedContentDirectories, SkippedContentExtensions);
+			if (!options.HasEditor) {
+				RemoveEditorTranslations(outputPath);
+			}
 		}
 
 		// A tree that is loaded as it is gets the package name the game recognizes as "already converted", so it

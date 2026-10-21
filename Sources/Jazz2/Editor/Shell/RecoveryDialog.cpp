@@ -136,7 +136,7 @@ namespace Jazz2::Editor
 				_shownGeneration = _state->Generation;
 				ClearChildren();
 				if (_state->Copies.empty()) {
-					Add<UiLabel>(_("There are no recovery copies, all changes were saved or discarded"), UiTheme::TextDisabled);
+					Add<UiLabel>(_x("editor", "There are no recovery copies, all changes were saved or discarded"), UiTheme::TextDisabled);
 					return;
 				}
 				IEditorContext* s = &_session;
@@ -144,19 +144,22 @@ namespace Jazz2::Editor
 				UiDialog* dialog = _dialog;
 				for (const RecoveryCopy& copy : _state->Copies) {
 					auto* row = Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-					auto* label = row->Add<UiLabel>(copy.DisplayName.empty() ? String(_("Unnamed level")) : copy.DisplayName, UiTheme::Text);
+					// TRANSLATORS: In the Recovery Copies dialog instead of the name of a level that has none
+					auto* label = row->Add<UiLabel>(copy.DisplayName.empty() ? String(_x("editor", "Unnamed level")) : copy.DisplayName, UiTheme::Text);
 					label->Flex = 1.0f;
 					String path = copy.Path;
-					row->Add<UiButton>(_("Restore"), EditorIcon::None, [s, dialog, path]() {
+					// TRANSLATORS: Button next to a recovery copy in the Recovery Copies dialog, opens the level as the copy has it
+					row->Add<UiButton>(_x("editor", "Restore"), EditorIcon::None, [s, dialog, path]() {
 						dialog->Close();
 						s->OpenRecoveryCopy(path);
-					})->Tooltip = _("Edit the level as the copy has it, with the history of its changes");
+					})->Tooltip = _x("editor", "Edit the level as the copy has it, with the history of its changes");
 					row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, state, path]() {
 						UiSurface* surface = s->GetSurface();
 						if (surface == nullptr) {
 							return;
 						}
-						UiMessageDialog::Show(*surface, _("Recovery Copies"), _("The changes in this copy will be lost. Remove it?"), { _("Remove"), _("Cancel") },
+						// TRANSLATORS: Title and buttons of the message confirming that a recovery copy is removed
+						UiMessageDialog::Show(*surface, _x("editor", "Recovery Copies"), _x("editor", "The changes in this copy will be lost. Remove it?"), { _x("editor", "Remove"), _x("editor", "Cancel") },
 							[state, path](std::int32_t button) {
 							if (button == 0) {
 								fs::RemoveFile(path);
@@ -166,19 +169,21 @@ namespace Jazz2::Editor
 								ReadCopies(*state);
 							}
 						});
-					})->Tooltip = _("Remove the copy");
+					})->Tooltip = _x("editor", "Remove the copy");
 
 					String details;
 					if (copy.SourcePath.empty()) {
-						details = _("A level that wasn't saved yet");
+						details = _x("editor", "A level that wasn't saved yet");
 					} else if (!fs::FileExists(copy.SourcePath)) {
-						details = String(copy.SourcePath + " ("_s + _("the file is gone") + ")"_s);
+						// TRANSLATORS: In parentheses after the file of a level in the Recovery Copies dialog, the file doesn't exist anymore
+						details = String(copy.SourcePath + " ("_s + _x("editor", "the file is gone") + ")"_s);
 					} else {
 						details = copy.SourcePath;
 					}
 					details = String(details + ", "_s + FormatTime(copy.Modified));
 					if (copy.HasHistory) {
-						details = String(details + ", "_s + _("with history"));
+						// TRANSLATORS: At the end of the details of a recovery copy in the Recovery Copies dialog, the copy has the undo history of its changes too
+						details = String(details + ", "_s + _x("editor", "with history"));
 					}
 					Add<UiLabel>(details, UiTheme::TextDim);
 				}
@@ -196,10 +201,11 @@ namespace Jazz2::Editor
 		auto state = std::make_shared<RecoveryState>();
 		ReadCopies(*state);
 
-		auto dialog = std::make_unique<UiDialog>(_("Recovery Copies"));
+		// TRANSLATORS: Title of the dialog listing the copies of levels with changes that weren't saved, kept in case the game ended unexpectedly
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Recovery Copies"));
 		UiDialog* dialogPtr = dialog.get();
 		UiStack* content = dialog->GetContent();
-		content->Add<UiLabel>(_("Changes that weren't saved, kept in case the game ended unexpectedly"), UiTheme::TextDim);
+		content->Add<UiLabel>(_x("editor", "Changes that weren't saved, kept in case the game ended unexpectedly"), UiTheme::TextDim);
 		auto* scroll = content->Add<UiScrollView>();
 		scroll->Width = 420.0f;
 		scroll->Height = 200.0f;

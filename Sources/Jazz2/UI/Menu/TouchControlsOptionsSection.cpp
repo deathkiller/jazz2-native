@@ -108,6 +108,7 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 
 		// Title (centered, tap to go back)
+		// TRANSLATORS: Header text of the touch controls layout editor in Options > Controls section
 		_root->DrawStringShadow(_("Touch Controls"), charOffset, chrome.CenterX, chrome.OriginY + 12.0f,
 			IMenuContainer::FontLayer + 235, Alignment::Center,
 			Colorf(0.46f, 0.46f, 0.46f, 0.9f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
@@ -127,6 +128,7 @@ namespace Jazz2::UI::Menu
 			Vector2f(BtnW, BtnH), Colorf(0.2f, 0.58f, 0.16f, 0.85f));
 		DrawOutlineRect(saveLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f, BtnW * 0.5f, BtnH * 0.5f,
 			IMenuContainer::FontLayer + 242, 1.0f, Colorf(1.0f, 1.0f, 1.0f, 0.3f));
+		// TRANSLATORS: Button in the touch controls layout editor (verb), keep it short
 		_root->DrawStringShadow(_("Save"), charOffset, saveLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f + 1.0f,
 			IMenuContainer::FontLayer + 245, Alignment::Center,
 			Colorf(0.44f, 0.63f, 0.42f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -136,6 +138,7 @@ namespace Jazz2::UI::Menu
 			Vector2f(BtnW, BtnH), Colorf(0.7f, 0.2f, 0.2f, 0.85f));
 		DrawOutlineRect(resetLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f, BtnW * 0.5f, BtnH * 0.5f,
 			IMenuContainer::FontLayer + 242, 1.0f, Colorf(1.0f, 1.0f, 1.0f, 0.3f));
+		// TRANSLATORS: Button in the touch controls layout editor to restore the default layout (verb), keep it short
 		_root->DrawStringShadow(_("Reset"), charOffset, resetLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f + 1.0f,
 			IMenuContainer::FontLayer + 245, Alignment::Center,
 			Colorf(0.66f, 0.46f, 0.46f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -143,6 +146,7 @@ namespace Jazz2::UI::Menu
 		// Row 2: Joystick label + sliding toggle (label right-aligned to center, toggle just right of center)
 		{
 			bool on = PreferencesCache::EnableTouchJoystick;
+			// TRANSLATORS: Toggle in the touch controls layout editor to use an on-screen joystick for movement, keep it short
 			_root->DrawStringShadow(_("Joystick"), charOffset, btnCenterX - ToggleGap,
 				Row2Y + ToggleH * 0.5f + 1.0f, IMenuContainer::FontLayer + 245, Alignment::Right,
 				Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.80f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -153,6 +157,7 @@ namespace Jazz2::UI::Menu
 		// Row 3: Vibration label + sliding toggle
 		{
 			bool on = PreferencesCache::EnableTouchVibration;
+			// TRANSLATORS: Toggle in the touch controls layout editor to vibrate when a touch button is pressed, keep it short
 			_root->DrawStringShadow(_("Vibration"), charOffset, btnCenterX - ToggleGap,
 				Row3Y + ToggleH * 0.5f + 1.0f, IMenuContainer::FontLayer + 245, Alignment::Right,
 				Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.80f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -161,6 +166,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 		// Hint (just below top bar)
+		// TRANSLATORS: Hint in the touch controls layout editor how to move and resize the on-screen buttons
 		_root->DrawStringShadow(_("Drag to move · Pinch or corner to resize"), charOffset,
 			chrome.CenterX, chrome.OriginY + 100.0f, IMenuContainer::FontLayer + 235,
 			Alignment::Top, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.66f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);

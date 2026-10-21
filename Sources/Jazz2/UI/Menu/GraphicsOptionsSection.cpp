@@ -36,6 +36,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// TRANSLATORS: Header of Options > Graphics section
 		SetTitle(_("Graphics"));
 
 		auto list = std::make_unique<ScrollView>();
@@ -119,6 +120,7 @@ namespace Jazz2::UI::Menu
 		{
 			// TRANSLATORS: Menu item in Options > Graphics section
 			list->Add<ChoiceItem>(_("Fullscreen"),
+				// TRANSLATORS: Option for on/off items in Options > Graphics section
 				[]() -> StringView { return (PreferencesCache::EnableFullscreen ? _("Enabled") : _("Disabled")); },
 				[this](std::int32_t) {
 					PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
@@ -135,6 +137,7 @@ namespace Jazz2::UI::Menu
 		// compiler cannot build the antialiasing resolve shader (see ContentResolver / UpscaleRenderPass).
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Antialiasing"),
+			// TRANSLATORS: Option for on/off items in Options > Graphics section
 			[]() -> StringView { return ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				RescaleMode newMode = (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
@@ -159,6 +162,7 @@ namespace Jazz2::UI::Menu
 		// the option goes with it - that covers both PS Vita backends and the OpenGL|ES 2.0 profile.
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Background Dithering"),
+			// TRANSLATORS: Option for on/off items in Options > Graphics section
 			[]() -> StringView { return (PreferencesCache::BackgroundDithering ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::BackgroundDithering = !PreferencesCache::BackgroundDithering;
@@ -171,6 +175,7 @@ namespace Jazz2::UI::Menu
 		// at a lower lighting resolution (see PlayerViewport::Initialize()), which is what the PS Vita defaults to.
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Blur Effects"),
+			// TRANSLATORS: Option for on/off items in Options > Graphics section
 			[]() -> StringView { return (PreferencesCache::BlurEffects ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::BlurEffects = !PreferencesCache::BlurEffects;
@@ -225,8 +230,11 @@ namespace Jazz2::UI::Menu
 		list->Add<ChoiceItem>(_("Particle Quality"),
 			[]() -> StringView {
 				switch (PreferencesCache::Particles) {
+					// TRANSLATORS: Option for Particle Quality item in Options > Graphics section, no particles are shown
 					case ParticleQuality::Off: return _("Off");
+					// TRANSLATORS: Option for Particle Quality item in Options > Graphics section
 					case ParticleQuality::Low: return _("Low");
+					// TRANSLATORS: Option for Particle Quality item in Options > Graphics section
 					default: return _("High");
 				}
 			},
@@ -245,6 +253,7 @@ namespace Jazz2::UI::Menu
 		// tier uses - its water is the per-row tint and wave applied by the device's software compositor
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Water Quality"),
+			// TRANSLATORS: Option for Water Quality item in Options > Graphics section
 			[]() -> StringView { return (PreferencesCache::LowWaterQuality ? _("Low") : _("High")); },
 			[this](std::int32_t) {
 				PreferencesCache::LowWaterQuality = !PreferencesCache::LowWaterQuality;
@@ -254,6 +263,7 @@ namespace Jazz2::UI::Menu
 #endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Show Player Trails"),
+			// TRANSLATORS: Option for on/off items in Options > Graphics section
 			[]() -> StringView { return (PreferencesCache::ShowPlayerTrails ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::ShowPlayerTrails = !PreferencesCache::ShowPlayerTrails;
@@ -262,6 +272,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_MULTIPLAYER)
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Preferred Splitscreen"),
+			// TRANSLATORS: Option for Preferred Splitscreen item in Options > Graphics section, the direction the screen is split in
 			[]() -> StringView { return (PreferencesCache::PreferVerticalSplitscreen ? _("Vertical") : _("Horizontal")); },
 			[this](std::int32_t) {
 				PreferencesCache::PreferVerticalSplitscreen = !PreferencesCache::PreferVerticalSplitscreen;
@@ -270,6 +281,7 @@ namespace Jazz2::UI::Menu
 			});
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Prefer Zoom Out"),
+			// TRANSLATORS: Option for on/off items in Options > Graphics section
 			[]() -> StringView { return (PreferencesCache::PreferZoomOut ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::PreferZoomOut = !PreferencesCache::PreferZoomOut;
@@ -281,6 +293,7 @@ namespace Jazz2::UI::Menu
 		list->Add<ListItem>(_("Safe Area"), [root]() { root->SwitchToSection<SafeAreaOptionsSection>(); });
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Keep Aspect Ratio In Cinematics"),
+			// TRANSLATORS: Option for on/off items in Options > Graphics section
 			[]() -> StringView { return (PreferencesCache::KeepAspectRatioInCinematics ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::KeepAspectRatioInCinematics = !PreferencesCache::KeepAspectRatioInCinematics;
@@ -288,6 +301,7 @@ namespace Jazz2::UI::Menu
 			});
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Unaligned Viewport"),
+			// TRANSLATORS: Option for on/off items in Options > Graphics section, keep the color tags \f[c:#d0705d] and \f[/c] as they are
 			[]() -> StringView { return (PreferencesCache::UnalignedViewport ? _("Enabled \f[c:#d0705d](Experimental)\f[/c]") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::UnalignedViewport = !PreferencesCache::UnalignedViewport;
@@ -299,6 +313,7 @@ namespace Jazz2::UI::Menu
 		list->Add<ChoiceItem>(_("Performance Metrics"),
 			[]() -> StringView {
 				switch (PreferencesCache::PerformanceMetrics) {
+					// TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, nothing is shown
 					default: return _("Off");
 					// TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, only the frame rate is shown
 					case PerformanceMetricsLevel::Basic: return _("Basic");

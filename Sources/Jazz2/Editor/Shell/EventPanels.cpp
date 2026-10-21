@@ -55,10 +55,12 @@ namespace Jazz2::Editor
 			auto it = std::find(settings.FavoriteEvents.begin(), settings.FavoriteEvents.end(), type);
 			if (it != settings.FavoriteEvents.end()) {
 				settings.FavoriteEvents.erase(it);
-				session.ShowMessage(_f("{} isn't a favourite anymore", EventPreviews::GetEventName(type)));
+				// TRANSLATORS: Status message, {} is the name of an event
+				session.ShowMessage(_fx("editor", "{} isn't a favourite anymore", EventPreviews::GetEventName(type)));
 			} else if (std::int32_t(settings.FavoriteEvents.size()) < EditorSettings::MaxFavoriteItems) {
 				settings.FavoriteEvents.push_back(type);
-				session.ShowMessage(_f("{} is a favourite now", EventPreviews::GetEventName(type)));
+				// TRANSLATORS: Status message, {} is the name of an event
+				session.ShowMessage(_fx("editor", "{} is a favourite now", EventPreviews::GetEventName(type)));
 			}
 			settings.Save();
 		}
@@ -111,7 +113,7 @@ namespace Jazz2::Editor
 			void Draw(UiPainter& painter) override
 			{
 				if (_items.empty()) {
-					painter.TextInRect(_("Right-click an event to keep it here"), Bounds, UiTheme::TextDisabled);
+					painter.TextInRect(_x("editor", "Right-click an event to keep it here"), Bounds, UiTheme::TextDisabled);
 					return;
 				}
 				float size = Bounds.H;
@@ -162,10 +164,10 @@ namespace Jazz2::Editor
 			{
 				std::int32_t index = GetIndexAt(pos);
 				if (index < 0) {
-					return _("Favourite events and those placed recently - right-click an event to make it a favourite");
+					return _x("editor", "Favourite events and those placed recently - right-click an event to make it a favourite");
 				}
 				_tooltip = EventPreviews::GetEventName(_items[index]) + "\n"_s + (index < _favoriteCount
-					? StringView(_("Favourite - right-click to take it away")) : StringView(_("Placed recently - right-click to make it a favourite")));
+					? StringView(_x("editor", "Favourite - right-click to take it away")) : StringView(_x("editor", "Placed recently - right-click to make it a favourite")));
 				return _tooltip;
 			}
 
@@ -241,20 +243,24 @@ namespace Jazz2::Editor
 				Rectf text(x, Bounds.Y, Bounds.X + Bounds.W - x, lineHeight);
 				painter.PushClip(Rectf(x, Bounds.Y, text.W, Bounds.H));
 				// TRANSLATORS: Instead of the name of the selected events in the event properties, when they're of different kinds
-				painter.TextInRect(mixedKinds ? String(_("Different kinds")) : EventPreviews::GetEventName(event.Type), text, UiTheme::TextHeader);
+				painter.TextInRect(mixedKinds ? String(_x("editor", "Different kinds")) : EventPreviews::GetEventName(event.Type), text, UiTheme::TextHeader);
 
 				const EventSelection& selection = _session.GetEventSelection();
 				std::int32_t count = selection.GetTotalCount();
 				String subtitle;
 				if (count == 1 && selection.HasOffGrid()) {
-					subtitle = _("Off the grid");
+					// TRANSLATORS: Under the name of the event in the event properties, the selected event is placed off the grid of tiles
+					subtitle = _x("editor", "Off the grid");
 				} else if (count == 0) {
-					subtitle = _("To place");
+					// TRANSLATORS: Under the name of the event in the event properties, the event isn't selected but about to be placed
+					subtitle = _x("editor", "To place");
 				} else if (count == 1) {
 					const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
-					subtitle = (descriptor != nullptr ? String(EventCatalog::GetCategoryName(descriptor->Category)) : String(_("Unknown event")));
+					// TRANSLATORS: Under the name of the event in the event properties instead of its category, when the event isn't known
+					subtitle = (descriptor != nullptr ? String(EventCatalog::GetCategoryName(descriptor->Category)) : String(_x("editor", "Unknown event")));
 				} else {
-					subtitle = _f("{} selected", count);
+					// TRANSLATORS: Under the name of the event in the event properties, {} is the count of selected events
+					subtitle = _fx("editor", "{} selected", count);
 				}
 				painter.TextInRect(subtitle, Rectf(x, Bounds.Y + lineHeight, text.W, Bounds.H - lineHeight), UiTheme::TextDim);
 				painter.PopClip();
@@ -275,7 +281,7 @@ namespace Jazz2::Editor
 				if (descriptor == nullptr || descriptor->Description == nullptr) {
 					return {};
 				}
-				_tooltip = _(descriptor->Description);
+				_tooltip = _x("editor", descriptor->Description);
 				return _tooltip;
 			}
 
@@ -326,7 +332,7 @@ namespace Jazz2::Editor
 			if ((descriptor->Traits & EventTraits::Unused) == EventTraits::Unused && _search.empty()) {
 				continue;
 			}
-			if (!MatchesSearch(_(descriptor->Name), _search) && !MatchesSearch(descriptor->Key, _search)) {
+			if (!MatchesSearch(_x("editor", descriptor->Name), _search) && !MatchesSearch(descriptor->Key, _search)) {
 				continue;
 			}
 			_items.push_back(descriptor);
@@ -344,7 +350,7 @@ namespace Jazz2::Editor
 			_measuredScale = context.Scale;
 			_measuredNameWidth = 0.0f;
 			for (const EventDescriptor* descriptor : _items) {
-				_measuredNameWidth = std::max(_measuredNameWidth, context.MeasureText(_(descriptor->Name)));
+				_measuredNameWidth = std::max(_measuredNameWidth, context.MeasureText(_x("editor", descriptor->Name)));
 			}
 		}
 		float padding = context.Px(2.0f);
@@ -376,7 +382,7 @@ namespace Jazz2::Editor
 	void EventGrid::Draw(UiPainter& painter)
 	{
 		if (_items.empty()) {
-			painter.TextInRect(_("No event matches"), Rectf(Bounds.X + painter.Px(UiTheme::Padding), Bounds.Y, Bounds.W, painter.Px(ChipHeight)), UiTheme::TextDisabled);
+			painter.TextInRect(_x("editor", "No event matches"), Rectf(Bounds.X + painter.Px(UiTheme::Padding), Bounds.Y, Bounds.W, painter.Px(ChipHeight)), UiTheme::TextDisabled);
 			return;
 		}
 
@@ -424,7 +430,7 @@ namespace Jazz2::Editor
 				float textX = icon.X + icon.W + padding * 2.0f;
 				Rectf text(textX, rect.Y, rect.X + rect.W - textX - padding, rect.H);
 				painter.PushClip(text);
-				painter.TextInRect(_(descriptor->Name), text, unused ? UiTheme::TextDisabled : UiTheme::Text);
+				painter.TextInRect(_x("editor", descriptor->Name), text, unused ? UiTheme::TextDisabled : UiTheme::Text);
 				painter.PopClip();
 
 				if (IsFavoriteEvent(_session.GetSettings(), std::uint16_t(descriptor->Type))) {
@@ -472,12 +478,12 @@ namespace Jazz2::Editor
 			return {};
 		}
 		const EventDescriptor* descriptor = _items[index];
-		_tooltip = _(descriptor->Name);
+		_tooltip = _x("editor", descriptor->Name);
 		if (descriptor->Description != nullptr) {
-			_tooltip = _tooltip + "\n"_s + _(descriptor->Description);
+			_tooltip = _tooltip + "\n"_s + _x("editor", descriptor->Description);
 		}
 		_tooltip = _tooltip + "\n"_s + (IsFavoriteEvent(_session.GetSettings(), std::uint16_t(descriptor->Type))
-			? StringView(_("Right-click to take it away from the favourites")) : StringView(_("Right-click to make it a favourite")));
+			? StringView(_x("editor", "Right-click to take it away from the favourites")) : StringView(_x("editor", "Right-click to make it a favourite")));
 		return _tooltip;
 	}
 
@@ -492,7 +498,8 @@ namespace Jazz2::Editor
 		// A narrow panel has no room for a column of categories, so they're in a list next to the search
 		auto* header = Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 		auto categoryName = [](std::int32_t category) {
-			return String(category == EventGrid::AllCategories ? _("All") : EventCatalog::GetCategoryName(EventCategory(category)));
+			// TRANSLATORS: First option of the dropdown of categories in the Events tab, shows events of all categories
+			return String(category == EventGrid::AllCategories ? _x("editor", "All") : EventCatalog::GetCategoryName(EventCategory(category)));
 		};
 		auto* categories = header->Add<UiDropdown>([grid, categoryName]() {
 			return categoryName(grid->GetCategory());
@@ -506,15 +513,16 @@ namespace Jazz2::Editor
 			}
 		});
 		categories->Flex = 1.0f;
-		categories->Tooltip = _("Category of the events shown");
+		categories->Tooltip = _x("editor", "Category of the events shown");
 		auto* search = header->Add<UiTextBox>();
-		search->Placeholder = _("Search");
+		// TRANSLATORS: Placeholder of the search box in the Events tab, shown while it's empty
+		search->Placeholder = _x("editor", "Search");
 		search->Flex = 1.0f;
 		search->OnChanged = [grid](StringView text) {
 			grid->SetFilter(grid->GetCategory(), text);
 		};
 
-		auto* hint = Add<UiLabel>(_("Choose the event for the parameter - Esc cancels"), UiTheme::TextAccent);
+		auto* hint = Add<UiLabel>(_x("editor", "Choose the event for the parameter - Esc cancels"), UiTheme::TextAccent);
 		hint->IsVisibleFunc = [s]() { return s->IsPickingEvent(); };
 		Add<EventShortcutStrip>(session);
 
@@ -527,7 +535,8 @@ namespace Jazz2::Editor
 			_shownType(-1), _shownCount(-1), _shownBrush(false), _shownRevision(0), _mixed(0), _mixedRevision(UINT32_MAX), _mixedSelectionRevision(UINT32_MAX)
 	{
 		// The edge above, between it and the list of layers, is drawn by the splitter that resizes them
-		Add<UiLabel>(_("Event Properties"), UiTheme::TextHeader);
+		// TRANSLATORS: Header of the panel with the properties of the selected events
+		Add<UiLabel>(_x("editor", "Event Properties"), UiTheme::TextHeader);
 		_scroll = Add<UiScrollView>();
 		_scroll->Flex = 1.0f;
 		Rebuild();
@@ -652,8 +661,8 @@ namespace Jazz2::Editor
 	void EventInspectorPanel::AddMixedMark(UiElement* parent, std::uint64_t mask)
 	{
 		// TRANSLATORS: Next to a property of more selected events that differs among them
-		auto* mark = parent->Add<UiLabel>(_("mixed"), UiTheme::TextAccent);
-		mark->Tooltip = _("The selected events differ in it, a change sets it in all of them");
+		auto* mark = parent->Add<UiLabel>(_x("editor", "mixed"), UiTheme::TextAccent);
+		mark->Tooltip = _x("editor", "The selected events differ in it, a change sets it in all of them");
 		EventInspectorPanel* self = this;
 		mark->IsVisibleFunc = [self, mask]() { return (self->_mixed & mask) != 0; };
 	}
@@ -681,7 +690,7 @@ namespace Jazz2::Editor
 		_session.PickEventFromList([self, target](EventType type) {
 			// The events could have changed while the event was being chosen, the field is theirs only while they're shown
 			if (!self->IsPickTargetShown(*target)) {
-				self->_session.ShowMessage(_("The events changed meanwhile, choose the event for the parameter again"));
+				self->_session.ShowMessage(_x("editor", "The events changed meanwhile, choose the event for the parameter again"));
 				return;
 			}
 			const EventParamField* f = target->Field;
@@ -745,14 +754,14 @@ namespace Jazz2::Editor
 
 		LevelDocument& document = _session.GetDocument();
 		if (!_session.IsLayerEditable(document.GetSpriteLayerIndex())) {
-			_session.ShowMessage(_("The sprite layer is locked or hidden"));
+			_session.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 			return;
 		}
 
 		std::unique_ptr<SetEventsCommand> command;
 		Vector2i gridSize = document.GetEventGridSize();
 		if (selection.HasCells() && gridSize.X > 0) {
-			command = std::make_unique<SetEventsCommand>(document, _(name));
+			command = std::make_unique<SetEventsCommand>(document, _x("editor", name));
 			for (std::uint32_t cell : selection.GetCells()) {
 				std::int32_t x = std::int32_t(cell % std::uint32_t(gridSize.X)), y = std::int32_t(cell / std::uint32_t(gridSize.X));
 				Formats::EventRecord event = document.GetEvent(x, y);
@@ -791,7 +800,7 @@ namespace Jazz2::Editor
 				}
 			}
 			if (changed) {
-				offGridCommand = std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _(name));
+				offGridCommand = std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _x("editor", name));
 			}
 		}
 
@@ -799,7 +808,7 @@ namespace Jazz2::Editor
 		if (command != nullptr && offGridCommand != nullptr) {
 			// Those on the grid and those off it are undone together, but such a step isn't merged with the next
 			CommandHistory& history = _session.GetHistory();
-			history.BeginTransaction(_(name));
+			history.BeginTransaction(_x("editor", name));
 			_session.Execute(Death::move(command));
 			_session.Execute(Death::move(offGridCommand));
 			history.EndTransaction();
@@ -825,24 +834,27 @@ namespace Jazz2::Editor
 		auto* rows = _scroll->SetContent<UiForm>(2.0f, UiThickness(0.0f, 0.0f, 2.0f, 0.0f));
 		if (!hasEvent) {
 			// In short lines, labels don't wrap
-			rows->Add<UiLabel>(_("Pick an event below"), UiTheme::TextDim);
-			rows->Add<UiLabel>(_("or in the level"), UiTheme::TextDim);
+			// TRANSLATORS: First line of a sentence in the event properties when no event is picked, "or in the level" is its second line
+			rows->Add<UiLabel>(_x("editor", "Pick an event below"), UiTheme::TextDim);
+			// TRANSLATORS: Second line of the sentence that starts with "Pick an event below", keep both lines short
+			rows->Add<UiLabel>(_x("editor", "or in the level"), UiTheme::TextDim);
 			return;
 		}
 
 		rows->Add<EventHeader>(_session, *this);
 		if (_shownMixedKinds) {
 			// Not the parameters of any of them, the difficulties and the flags below are all they have in common
-			rows->Add<UiWrappedLabel>(_("Events of different kinds are selected - only what they have in common can be changed"), UiTheme::TextDim);
+			rows->Add<UiWrappedLabel>(_x("editor", "Events of different kinds are selected - only what they have in common can be changed"), UiTheme::TextDim);
 		} else if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type))) {
 			for (std::uint8_t i = 0; i < descriptor->FieldCount; i++) {
 				AddField(rows, *descriptor, i);
 			}
 			if (descriptor->FieldCount == 0) {
-				rows->Add<UiLabel>(_("No parameters"), UiTheme::TextDisabled);
+				// TRANSLATORS: In the event properties instead of the parameters, when the event has none
+				rows->Add<UiLabel>(_x("editor", "No parameters"), UiTheme::TextDisabled);
 			}
 		} else {
-			rows->Add<UiWrappedLabel>(_("Unknown event, only its raw parameters can be changed"), UiTheme::TextDim);
+			rows->Add<UiWrappedLabel>(_x("editor", "Unknown event, only its raw parameters can be changed"), UiTheme::TextDim);
 		}
 		rows->Add<UiSeparator>();
 		AddCommonRows(rows);
@@ -858,23 +870,25 @@ namespace Jazz2::Editor
 
 		// Difficulties, an event of none of them is in all of them
 		{
-			auto* row = AddRow(rows, _("Difficulty"), _("In which difficulties the event is in the level"));
+			auto* row = AddRow(rows, _("Difficulty"), _x("editor", "In which difficulties the event is in the level"));
 			struct Difficulty { const char* Label; std::uint8_t Bit; };
 			static const Difficulty Difficulties[] = {
-				{ N_("Easy"), Formats::EventRecord::Easy },
-				{ N_("Normal"), Formats::EventRecord::Normal },
-				{ N_("Hard"), Formats::EventRecord::Hard },
+				// TRANSLATORS: Check boxes of the difficulties the event is in, in the event properties
+				{ NC_("editor", "Easy"), Formats::EventRecord::Easy },
+				{ NC_("editor", "Normal"), Formats::EventRecord::Normal },
+				{ NC_("editor", "Hard"), Formats::EventRecord::Hard },
 			};
 			auto* checks = row->Add<UiStack>(UiOrientation::Vertical, 1.0f);
 			checks->Flex = 1.0f;
 			AddMixedMark(row, (std::uint64_t(1) << MixedEasy) | (std::uint64_t(1) << MixedNormal) | (std::uint64_t(1) << MixedHard));
 			for (const Difficulty& difficulty : Difficulties) {
 				std::uint8_t bit = difficulty.Bit;
-				checks->Add<UiCheckBox>(_(difficulty.Label), [readFlags, bit]() {
+				checks->Add<UiCheckBox>(_x("editor", difficulty.Label), [readFlags, bit]() {
 					std::uint8_t flags = readFlags();
 					return ((flags & Formats::EventRecord::DifficultyMask) == 0 || (flags & bit) != 0);
 				}, [self, bit](bool value) {
-					self->Change(N_("Difficulty"), [bit, value](Formats::EventRecord& event) {
+					// TRANSLATORS: Name of an undo step in the history, the difficulties of events were changed
+					self->Change(NC_("editor", "Difficulty"), [bit, value](Formats::EventRecord& event) {
 						std::uint8_t difficulties = event.Flags & Formats::EventRecord::DifficultyMask;
 						if (difficulties == 0) {
 							difficulties = Formats::EventRecord::DifficultyMask;
@@ -891,21 +905,22 @@ namespace Jazz2::Editor
 
 		struct FlagRow { const char* Label; const char* Description; std::uint8_t Bit; std::int32_t Mixed; };
 		static const FlagRow FlagRows[] = {
-			{ N_("Multiplayer only"), N_("The event is in the level only in multiplayer"), Formats::EventRecord::MultiplayerOnly, MixedMultiplayer },
-			{ N_("Illuminated"), N_("The object glows in the dark"), Formats::EventRecord::Illuminated, MixedIlluminated },
-			{ N_("Generator"), N_("The object appears again a while after it's gone"), Formats::EventRecord::Generator, MixedGenerator },
+			// TRANSLATORS: Check boxes in the event properties with their tooltips, the labels are also names of undo steps in the history
+			{ NC_("editor", "Multiplayer only"), NC_("editor", "The event is in the level only in multiplayer"), Formats::EventRecord::MultiplayerOnly, MixedMultiplayer },
+			{ NC_("editor", "Illuminated"), NC_("editor", "The object glows in the dark"), Formats::EventRecord::Illuminated, MixedIlluminated },
+			{ NC_("editor", "Generator"), NC_("editor", "The object appears again a while after it's gone"), Formats::EventRecord::Generator, MixedGenerator },
 		};
 		for (const FlagRow& flagRow : FlagRows) {
 			std::uint8_t bit = flagRow.Bit;
 			const char* label = flagRow.Label;
-			auto* check = rows->Add<UiCheckBox>(_(label), [readFlags, bit]() {
+			auto* check = rows->Add<UiCheckBox>(_x("editor", label), [readFlags, bit]() {
 				return ((readFlags() & bit) != 0);
 			}, [self, bit, label](bool value) {
 				self->Change(label, [bit, value](Formats::EventRecord& event) {
 					event.Flags = std::uint8_t(value ? (event.Flags | bit) : (event.Flags & ~bit));
 				}, false);
 			});
-			check->Tooltip = _(flagRow.Description);
+			check->Tooltip = _x("editor", flagRow.Description);
 			AddMixedMark(rows, flagRow.Mixed);
 		}
 
@@ -913,7 +928,8 @@ namespace Jazz2::Editor
 			return ((readFlags() & Formats::EventRecord::Generator) != 0);
 		};
 		{
-			auto* row = AddRow(rows, String(_("Delay") + " ("_s + _("s") + ")"_s), _("Seconds before the object appears again"));
+			// TRANSLATORS: Label of the delay of a generator in the event properties (noun), "s" is its unit, short for seconds
+			auto* row = AddRow(rows, String(_x("editor", "Delay") + " ("_s + _x("editor", "s") + ")"_s), _x("editor", "Seconds before the object appears again"));
 			auto* number = row->Add<UiNumberBox>([self]() {
 				Formats::EventRecord event;
 				return (self->GetPrimary(event) ? float(event.GeneratorDelay) : 0.0f);
@@ -922,7 +938,8 @@ namespace Jazz2::Editor
 				if (self->GetPrimary(primary) && self->IsShownValue(primary.GeneratorDelay, std::int32_t(std::round(value)), nullptr, final)) {
 					return;
 				}
-				self->Change(N_("Generator delay"), [value](Formats::EventRecord& event) {
+				// TRANSLATORS: Name of an undo step in the history, the delay of generator events was changed
+				self->Change(NC_("editor", "Generator delay"), [value](Formats::EventRecord& event) {
 					event.GeneratorDelay = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 255));
 				}, false, final);
 			}, 0.0f, 255.0f, 1.0f, 0);
@@ -932,12 +949,14 @@ namespace Jazz2::Editor
 			ShowRowWhen(row, isGenerator);
 		}
 		{
-			auto* check = rows->Add<UiCheckBox>(_("Delay the first one too"), [self]() {
+			// TRANSLATORS: Check box in the event properties of a generator, the first object also appears only after the delay
+			auto* check = rows->Add<UiCheckBox>(_x("editor", "Delay the first one too"), [self]() {
 				Formats::EventRecord event;
 				return (self->GetPrimary(event) && (event.GeneratorFlags & 0x01) != 0);
 			}, [self](bool value) {
 				// Named apart from the delay, changes of the same name would be merged into one step
-				self->Change(N_("Delay the first one too"), [value](Formats::EventRecord& event) {
+				// TRANSLATORS: Name of an undo step in the history, the same as the check box in the event properties of a generator
+				self->Change(NC_("editor", "Delay the first one too"), [value](Formats::EventRecord& event) {
 					event.GeneratorFlags = std::uint8_t(value ? (event.GeneratorFlags | 0x01) : (event.GeneratorFlags & ~0x01));
 				}, false);
 			});
@@ -946,7 +965,8 @@ namespace Jazz2::Editor
 
 		// All parameters as they are stored, for anything the fields above don't cover, only of events of a single kind
 		if (!_shownMixedKinds) {
-			rows->Add<UiLabel>(_("Raw parameters"), UiTheme::TextDim);
+			// TRANSLATORS: Label in the event properties above the bytes of the parameters of the event as they're stored
+			rows->Add<UiLabel>(_x("editor", "Raw parameters"), UiTheme::TextDim);
 			AddMixedMark(rows, MixedRaw);
 			auto* raw = rows->Add<UiTextBox>();
 			raw->MaxLength = Formats::LevelFile::EventParamsSize * 3;
@@ -992,7 +1012,8 @@ namespace Jazz2::Editor
 				if (!anyChanged) {
 					return;
 				}
-				self->Change(N_("Raw parameters"), [params, changed](Formats::EventRecord& event) {
+				// TRANSLATORS: Name of an undo step in the history, the raw parameters of events were changed
+				self->Change(NC_("editor", "Raw parameters"), [params, changed](Formats::EventRecord& event) {
 					for (std::int32_t i = 0; i < Formats::LevelFile::EventParamsSize; i++) {
 						if (changed[i]) {
 							event.Params[i] = params[i];
@@ -1054,11 +1075,11 @@ namespace Jazz2::Editor
 		}
 		const EventDescriptor* inner = EventCatalog::GetContentsDescriptor(descriptor, *contents, primary);
 		if (inner == nullptr) {
-			rows->Add<UiLabel>(_("Nothing inside, or nothing known of it"), UiTheme::TextDisabled);
+			rows->Add<UiLabel>(_x("editor", "Nothing inside, or nothing known of it"), UiTheme::TextDisabled);
 			return;
 		}
 		// TRANSLATORS: Header of the parameters of the event inside of a crate or a barrel, with its name
-		rows->Add<UiLabel>(_f("Inside - {}", EventPreviews::GetEventName(std::uint16_t(inner->Type))), UiTheme::TextHeader);
+		rows->Add<UiLabel>(_fx("editor", "Inside - {}", EventPreviews::GetEventName(std::uint16_t(inner->Type))), UiTheme::TextHeader);
 
 		EventInspectorPanel* self = this;
 		for (std::uint8_t i = 0; i < inner->FieldCount; i++) {
@@ -1085,8 +1106,8 @@ namespace Jazz2::Editor
 					EventCatalog::SetContents(*contents, event, inside);
 				}, true, final);
 			};
-			String label = _(f->Name);
-			String tooltip = (f->Description != nullptr ? String(_(f->Description)) : String());
+			String label = _x("editor", f->Name);
+			String tooltip = (f->Description != nullptr ? String(_x("editor", f->Description)) : String());
 			switch (f->Type) {
 				case ParamType::Bool: {
 					auto* check = rows->Add<UiCheckBox>(label, [read]() { return (read() != 0); }, [write](bool value) { write(value ? 1 : 0, true); });
@@ -1099,7 +1120,7 @@ namespace Jazz2::Editor
 						std::int32_t value = read();
 						for (std::uint8_t j = 0; j < f->OptionCount; j++) {
 							if (f->Options[j].Value == value) {
-								return String(_(f->Options[j].Label));
+								return String(_x("editor", f->Options[j].Label));
 							}
 						}
 						return FormatInteger(value);
@@ -1108,7 +1129,7 @@ namespace Jazz2::Editor
 						for (std::uint8_t j = 0; j < f->OptionCount; j++) {
 							std::int32_t value = f->Options[j].Value;
 							UiMenuEntry entry;
-							entry.Label = _(f->Options[j].Label);
+							entry.Label = _x("editor", f->Options[j].Label);
 							entry.IsChecked = [current, value]() { return (current == value); };
 							entry.Execute = [write, value]() { write(value, true); };
 							entries.push_back(Death::move(entry));
@@ -1123,7 +1144,7 @@ namespace Jazz2::Editor
 					auto* checks = rows->Add<UiStack>(UiOrientation::Vertical, 1.0f, UiThickness(8.0f, 0.0f, 0.0f, 0.0f));
 					for (std::uint8_t j = 0; j < f->OptionCount; j++) {
 						std::int32_t mask = f->Options[j].Value;
-						checks->Add<UiCheckBox>(_(f->Options[j].Label), [read, mask]() {
+						checks->Add<UiCheckBox>(_x("editor", f->Options[j].Label), [read, mask]() {
 							return ((read() & mask) == mask);
 						}, [self, d, contents, inner, f, mask](bool value) {
 							// Only the bit, each event keeps its other flags
@@ -1191,9 +1212,9 @@ namespace Jazz2::Editor
 		};
 		EventInspectorPanel* self = this;
 		const EventParamField* f = &field;
-		String label = _(field.Name);
+		String label = _x("editor", field.Name);
 		StringView unit = GetUnitSuffix(field.Unit);
-		String tooltip = (field.Description != nullptr ? String(_(field.Description)) : String());
+		String tooltip = (field.Description != nullptr ? String(_x("editor", field.Description)) : String());
 		auto read = [self, f]() -> std::int32_t {
 			Formats::EventRecord event;
 			return (self->GetPrimary(event) ? EventCatalog::ReadField(event, *f) : 0);
@@ -1218,7 +1239,7 @@ namespace Jazz2::Editor
 					std::int32_t value = read();
 					for (std::uint8_t i = 0; i < f->OptionCount; i++) {
 						if (f->Options[i].Value == value) {
-							return String(_(f->Options[i].Label));
+							return String(_x("editor", f->Options[i].Label));
 						}
 					}
 					return FormatInteger(value);
@@ -1227,7 +1248,7 @@ namespace Jazz2::Editor
 					for (std::uint8_t i = 0; i < f->OptionCount; i++) {
 						std::int32_t value = f->Options[i].Value;
 						UiMenuEntry entry;
-						entry.Label = _(f->Options[i].Label);
+						entry.Label = _x("editor", f->Options[i].Label);
 						entry.IsChecked = [current, value]() { return (current == value); };
 						entry.Execute = [self, f, value]() {
 							self->Change(f->Name, [f, value](Formats::EventRecord& event) {
@@ -1249,7 +1270,7 @@ namespace Jazz2::Editor
 				auto* checks = rows->Add<UiStack>(UiOrientation::Vertical, 1.0f, UiThickness(8.0f, 0.0f, 0.0f, 0.0f));
 				for (std::uint8_t i = 0; i < field.OptionCount; i++) {
 					std::int32_t mask = field.Options[i].Value;
-					checks->Add<UiCheckBox>(_(field.Options[i].Label), [read, mask]() {
+					checks->Add<UiCheckBox>(_x("editor", field.Options[i].Label), [read, mask]() {
 						return ((read() & mask) == mask);
 					}, [self, f, mask](bool value) {
 						self->Change(f->Name, [f, mask, value](Formats::EventRecord& event) {
@@ -1264,17 +1285,20 @@ namespace Jazz2::Editor
 				auto* row = AddRow(rows, label, tooltip);
 				auto* dropdown = row->Add<UiDropdown>([read]() {
 					std::int32_t value = read();
-					return (value == 0 ? String(_("Nothing")) : EventPreviews::GetEventName(std::uint16_t(value)));
+					// TRANSLATORS: Value of a parameter in the event properties that holds an event, when it holds none
+					return (value == 0 ? String(_x("editor", "Nothing")) : EventPreviews::GetEventName(std::uint16_t(value)));
 				}, [self, f](SmallVectorImpl<UiMenuEntry>& entries) {
 					UiMenuEntry choose;
-					choose.Label = _("Choose in the Events tab");
+					// TRANSLATORS: Option of a parameter in the event properties that holds an event, the event is then picked in the Events tab
+					choose.Label = _x("editor", "Choose in the Events tab");
 					choose.Icon = EditorIcon::Event;
 					choose.Execute = [self, f]() {
 						self->BeginEventPick(f);
 					};
 					entries.push_back(Death::move(choose));
 					UiMenuEntry none;
-					none.Label = _("Nothing");
+					// TRANSLATORS: Option of a parameter in the event properties that holds an event, sets it to no event
+					none.Label = _x("editor", "Nothing");
 					none.Execute = [self, f]() {
 						self->Change(f->Name, [f](Formats::EventRecord& event) {
 							WriteEventTypeField(event, *f, 0);
@@ -1353,7 +1377,7 @@ namespace Jazz2::Editor
 						std::int32_t index = read();
 						const auto& texts = session->GetDocument().Texts;
 						return (index >= 0 && index < std::int32_t(texts.size()) && !texts[index].empty()
-							? String("\""_s + EventCatalog::MakeTextPreview(texts[index], 64) + "\""_s) : String(_("No such text")));
+							? String("\""_s + EventCatalog::MakeTextPreview(texts[index], 64) + "\""_s) : String(_x("editor", "No such text")));
 					};
 				}
 				break;

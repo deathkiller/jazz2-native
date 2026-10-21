@@ -229,9 +229,10 @@ namespace Jazz2::Editor
 		});
 		session.AddChangeObserver(_changeObserver);
 
-		_rightFrame = Add<UiDockFrame>(UiDockSide::Right, _("Drag to move the panel, to the edge of the screen to dock it again"));
+		_rightFrame = Add<UiDockFrame>(UiDockSide::Right, _x("editor", "Drag to move the panel, to the edge of the screen to dock it again"));
 		_rightDock = _rightFrame->GetPanel();
-		_rightFrame->GetHeaderContent()->Add<UiLabel>(_("Layers"), UiTheme::TextHeader)->Flex = 1.0f;
+		// TRANSLATORS: Header of the panel with the list of layers of the level and their properties
+		_rightFrame->GetHeaderContent()->Add<UiLabel>(_x("editor", "Layers"), UiTheme::TextHeader)->Flex = 1.0f;
 		_layersPanel = _rightDock->Add<LayersPanel>(session);
 		EditorSession* s = &session;
 		auto* inspector = _rightDock->Add<InspectorPanel>(session);
@@ -242,7 +243,7 @@ namespace Jazz2::Editor
 		eventInspector->IsVisibleFunc = [s]() { return s->IsEditingEvents(); };
 
 		// Tiles and events to pick from, next to the tools, where there's more room than below the view
-		_pickerFrame = Add<UiDockFrame>(UiDockSide::Left, _("Drag to move the panel, to the edge of the screen to dock it again"));
+		_pickerFrame = Add<UiDockFrame>(UiDockSide::Left, _x("editor", "Drag to move the panel, to the edge of the screen to dock it again"));
 		_pickerDock = _pickerFrame->GetPanel();
 		_pickerDock->ClipContent = true;
 		AddPickerPanelTabs(_pickerFrame->GetHeaderContent(), session);
@@ -327,14 +328,16 @@ namespace Jazz2::Editor
 			EditorAction* stop = s->GetActions().Find(ActionIds::PlayStop);
 			return (stop != nullptr ? stop->GetTooltip() : String(_("Back to Editor")));
 		};
-		auto* restart = _playBar->Add<UiButton>(_("Restart"), EditorIcon::Play, [s]() {
+		// TRANSLATORS: Button in the bar shown while the level is play-tested, plays the level again from its start
+		auto* restart = _playBar->Add<UiButton>(_x("editor", "Restart"), EditorIcon::Play, [s]() {
 			s->StopPlayTest(false);
 			s->StartPlayTest(PlayStartMode::FromStart);
 		});
 		restart->Style = UiButtonStyle::Flat;
 		restart->IconColor = UiTheme::Play;
 		// The debug toggles of the play-test, their keys work while the level is played
-		LiveTooltipButton* debug = _playBar->Add<LiveTooltipButton>(_("Debug"), EditorIcon::Debug);
+		// TRANSLATORS: Button in the bar shown while the level is play-tested, opens a menu of debug tools such as pause and slow motion
+		LiveTooltipButton* debug = _playBar->Add<LiveTooltipButton>(_x("editor", "Debug"), EditorIcon::Debug);
 		debug->Style = UiButtonStyle::Flat;
 		debug->IconColor = Colorf::White;
 		debug->TooltipFunc = [s]() {
@@ -347,7 +350,7 @@ namespace Jazz2::Editor
 					text = (text.empty() ? String(action->Label + " - "_s + key) : String(text + "\n"_s + action->Label + " - "_s + key));
 				}
 			}
-			return (text.empty() ? String(_("Debug tools of the play-test")) : text);
+			return (text.empty() ? String(_x("editor", "Debug tools of the play-test")) : text);
 		};
 		debug->OnClick = [s, debug]() {
 			static const char* const DebugActions[] = { ActionIds::PlayPause, ActionIds::PlayStep, ActionIds::PlaySlowMotion, ActionIds::PlayTeleport, nullptr,
@@ -484,7 +487,8 @@ namespace Jazz2::Editor
 		};
 
 		EditorSession* session = &_session;
-		_menuBar->AddMenu(_("File"), [addActions, session](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor
+		_menuBar->AddMenu(_x("editor", "File"), [addActions, session](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::FileNew, ActionIds::FileOpen });
 			// Recent files, except the one open now
 			const auto& recentFiles = session->GetSettings().RecentFiles;
@@ -506,41 +510,49 @@ namespace Jazz2::Editor
 			}
 			addActions(entries, { nullptr, ActionIds::FileSave, ActionIds::FileSaveAs, ActionIds::FileExport, ActionIds::FileExportPackage, nullptr, ActionIds::FileRecovery, nullptr, ActionIds::FileExit });
 		});
-		_menuBar->AddMenu(_("Edit"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor
+		_menuBar->AddMenu(_x("editor", "Edit"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::EditUndo, ActionIds::EditRedo, ActionIds::EditHistory, nullptr, ActionIds::EditCut, ActionIds::EditCopy, ActionIds::EditPaste, ActionIds::EditDelete, nullptr,
 				ActionIds::EditSelectAll, ActionIds::EditDeselect, ActionIds::EditFindReplace, nullptr, ActionIds::EditFillGround, ActionIds::EditSmartRetile, ActionIds::EditBeautify, ActionIds::EditContinueRow, ActionIds::EditTerrainRules, ActionIds::EditTraceGround, ActionIds::EditBakeGround, nullptr, ActionIds::EventsSelectSameType, ActionIds::EventsCopyToMatchingTiles, nullptr, ActionIds::EditPrefabs });
 		});
 		// The camera and the interface, what's drawn over the level is in "Show"
-		_menuBar->AddMenu(_("View"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor, the camera and the look of the editor
+		_menuBar->AddMenu(_x("editor", "View"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::ViewZoomIn, ActionIds::ViewZoomOut, ActionIds::ViewZoomGame, ActionIds::ViewFit, nullptr, ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, nullptr,
 				ActionIds::ViewNavigator, ActionIds::ViewAddNote, nullptr, ActionIds::ViewUiLarger, ActionIds::ViewUiSmaller, ActionIds::ViewUiAuto, nullptr, ActionIds::ViewLayoutAuto, ActionIds::ViewLayoutDesktop, ActionIds::ViewLayoutCompact,
 				nullptr, ActionIds::ViewExpert, nullptr, ActionIds::ViewHighContrast, ActionIds::ViewReducedMotion });
 		});
-		_menuBar->AddMenu(_("Show"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor, what is drawn over the level, such as masks, events or the frame of the screen
+		_menuBar->AddMenu(_x("editor", "Show"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::ViewMasks, ActionIds::ViewEvents, ActionIds::ViewPlayPath, nullptr, ActionIds::ViewReachability, ActionIds::ViewReachAny, ActionIds::ViewReachJazz, ActionIds::ViewReachSpaz, ActionIds::ViewReachLori,
 				ActionIds::ViewReachFromMpStarts, nullptr, ActionIds::ViewCompareSaved, nullptr, ActionIds::ViewScreenFrame, ActionIds::ViewScreenFrameGame, ActionIds::ViewScreenFrame4x3,
 				ActionIds::ViewScreenFrame16x9, ActionIds::ViewScreenFrameSplit });
 		});
-		_menuBar->AddMenu(_("Select"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor, commands for the selection
+		_menuBar->AddMenu(_x("editor", "Select"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::EditSelectAll, ActionIds::EditDeselect, ActionIds::SelectInvert, ActionIds::SelectGrow, ActionIds::SelectShrink, ActionIds::SelectSameTiles, nullptr,
 				ActionIds::SelectMoveLeft, ActionIds::SelectMoveRight, ActionIds::SelectMoveUp, ActionIds::SelectMoveDown, nullptr, ActionIds::EditMirrorH, ActionIds::EditMirrorV, ActionIds::EditMirrorSwapTeams, nullptr,
 				ActionIds::EditCopyLayers, ActionIds::EditPasteLayers, nullptr, ActionIds::EditModifierNormal, ActionIds::EditModifierTranslucent, ActionIds::EditModifierInvisible,
 				ActionIds::EditModifierHeat, nullptr, ActionIds::EventsFillSelection });
 		});
-		_menuBar->AddMenu(_("Tools"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor
+		_menuBar->AddMenu(_x("editor", "Tools"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			// Only the tools, the options of the chosen one are in the toolbar; in the order of the tool strip
 			addActions(entries, { ActionIds::ToolSelect, ActionIds::ToolBrush, ActionIds::ToolEraser, ActionIds::ToolRectangle, ActionIds::ToolFill, ActionIds::ToolEyedropper,
 				ActionIds::ToolWand, ActionIds::ToolShape, ActionIds::ToolSmart, ActionIds::ToolGround, nullptr, ActionIds::ToolEvent, ActionIds::ToolPath, nullptr,
 				ActionIds::ToolHand, ActionIds::ToolMeasure });
 		});
-		_menuBar->AddMenu(_("Layer"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor, a layer of tiles
+		_menuBar->AddMenu(_x("editor", "Layer"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			// Going to the previous or the next layer is left to its shortcuts and the layer list
 			addActions(entries, { ActionIds::LayerAdd, ActionIds::LayerDuplicate, ActionIds::LayerRemove, ActionIds::LayerResize, nullptr, ActionIds::LayerUp, ActionIds::LayerDown });
 		});
-		_menuBar->AddMenu(_("Level"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor, the level as a whole
+		_menuBar->AddMenu(_x("editor", "Level"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::LevelProperties, ActionIds::LevelTexts, ActionIds::LevelEpisode, ActionIds::LevelStatistics, ActionIds::LevelCheck, ActionIds::EventsList, ActionIds::LevelSnapOffGrid, ActionIds::LevelReloadEvents, ActionIds::LevelEditScript, nullptr, ActionIds::LevelAnimations, ActionIds::LevelTileSets, ActionIds::LevelPalette, ActionIds::LevelEditTile, ActionIds::LevelApplyTileChanges, ActionIds::LevelRearrangeTileSet, nullptr, ActionIds::LevelNewTileSet, ActionIds::LevelImportTileSet, ActionIds::LevelAddTiles, ActionIds::LevelFxTiles, ActionIds::LevelExportTileSet });
 		});
-		_menuBar->AddMenu(_("Play"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor, for play-testing the level
+		_menuBar->AddMenu(_x("editor", "Play"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			// The debug toggles of a running play-test are in its play bar only
 			addActions(entries, { ActionIds::PlayResume, ActionIds::PlayHere, ActionIds::PlayStart, nullptr, ActionIds::PlayJazz, ActionIds::PlaySpaz, ActionIds::PlayLori, nullptr,
 				ActionIds::PlayEasy, ActionIds::PlayNormal, ActionIds::PlayHard, nullptr, ActionIds::ViewPlayPath, ActionIds::ViewDeaths, ActionIds::PlayClearPaths });
@@ -550,7 +562,8 @@ namespace Jazz2::Editor
 				ActionIds::PlayCaptureTheFlag, nullptr, ActionIds::PlayPlayers1, ActionIds::PlayPlayers2, ActionIds::PlayPlayers3, ActionIds::PlayPlayers4 });
 #endif
 		});
-		_menuBar->AddMenu(_("Help"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		// TRANSLATORS: Menu in the menu bar of the editor
+		_menuBar->AddMenu(_x("editor", "Help"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			// Presets of the shortcuts are chosen in the shortcuts dialog
 			addActions(entries, { ActionIds::HelpCommands, ActionIds::HelpShortcuts });
 		});
@@ -1362,7 +1375,8 @@ namespace Jazz2::Editor
 				painter.Circle(pos, size * 0.45f, Colorf(color.R * 0.4f, color.G * 0.35f, color.B * 0.3f, 1.0f), UiLayer::Overlay);
 				String text = EventCatalog::MakeTextPreview(annotation.Text, 40);
 				if (!annotation.Replies.empty()) {
-					text += _f(" ({})", std::int32_t(annotation.Replies.size()));
+					// TRANSLATORS: After the text of a note pinned in the level, {} is the number of its replies, keep the space in front
+					text += _fx("editor", " ({})", std::int32_t(annotation.Replies.size()));
 				}
 				if (!text.empty()) {
 					float width = painter.MeasureText(text) + padding * 2.0f;
@@ -1889,7 +1903,8 @@ namespace Jazz2::Editor
 				std::int32_t previousSlot = painter.GetSlot();
 				painter.SetSlot(BubbleSlot);
 				for (std::size_t i = bubbles.size(); i-- > 0; ) {
-					String label = (bubbles.size() > 1 ? _f("{}: ", _(bubbles[i].Field->Name)) : String());
+					// TRANSLATORS: In front of a text of an event shown in a bubble over the level, {} is the name of the parameter that holds the text
+					String label = (bubbles.size() > 1 ? _fx("editor", "{}: ", _x("editor", bubbles[i].Field->Name)) : String());
 					float labelWidth = (label.empty() ? 0.0f : painter.MeasureText(label));
 					float width = labelWidth + painter.MeasureText(bubbles[i].Text) + padding * 2.0f;
 					Rectf bubble(std::round(center.X - width * 0.5f), std::round(bottom - height), width, height);
@@ -2315,19 +2330,23 @@ namespace Jazz2::Editor
 		String label;
 		switch (_session.GetSettings().ScreenFrameKind) {
 			default:
-				label = _f("Game view, {} x {}", reference.X, reference.Y);
+				// TRANSLATORS: Label of the frame of the screen drawn over the level, the view of the game, with its width and height in pixels
+				label = _fx("editor", "Game view, {} x {}", reference.X, reference.Y);
 				break;
 			case 1:
 				size.X = std::round(size.Y * 4.0f / 3.0f);
-				label = _f("4:3, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				// TRANSLATORS: Label of the frame of the screen drawn over the level, an aspect ratio, with the width and height in pixels
+				label = _fx("editor", "4:3, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
 				break;
 			case 2:
 				size.X = std::round(size.Y * 16.0f / 9.0f);
-				label = _f("16:9, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				// TRANSLATORS: Label of the frame of the screen drawn over the level, an aspect ratio, with the width and height in pixels
+				label = _fx("editor", "16:9, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
 				break;
 			case 3:
 				size.Y = std::round(size.Y * 0.5f);
-				label = _f("Split screen, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				// TRANSLATORS: Label of the frame of the screen drawn over the level, a half of a split screen for two players, with its width and height in pixels
+				label = _fx("editor", "Split screen, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
 				break;
 		}
 		if (size.X <= 0.0f || size.Y <= 0.0f) {

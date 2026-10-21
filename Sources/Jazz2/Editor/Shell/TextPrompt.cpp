@@ -44,14 +44,16 @@ namespace Jazz2::Editor
 		box->MaxLength = maxLength;
 
 		auto sharedConfirmed = std::make_shared<Function<void(StringView)>>(Death::move(onConfirmed));
-		dialog->AddButton(_("OK"), [dialogPtr, box, sharedConfirmed]() {
+		// TRANSLATORS: Button in a dialog that asks for a text, such as a name, confirms it
+		dialog->AddButton(_x("editor", "OK"), [dialogPtr, box, sharedConfirmed]() {
 			String text = box->Text.trimmed();
 			dialogPtr->Close();
 			if (!text.empty() && *sharedConfirmed) {
 				(*sharedConfirmed)(text);
 			}
 		}, true);
-		dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
+		// TRANSLATORS: Button in a dialog that asks for a text, closes it without a change
+		dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
 		ShowModal(surface, Death::move(dialog));
 		// Typed right away

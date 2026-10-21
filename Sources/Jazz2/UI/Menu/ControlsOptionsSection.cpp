@@ -27,6 +27,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// TRANSLATORS: Header of Options > Controls section
 		SetTitle(_("Controls"));
 
 		// Row heights matching the original section (ItemHeight = 40, integer math)
@@ -66,9 +67,11 @@ namespace Jazz2::UI::Menu
 
 		// TRANSLATORS: Menu item in Options > Controls section
 		list->Add<ChoiceItem>(_("Toggle Run"),
+			// TRANSLATORS: Option for on/off items in Options > Controls section
 			[]() -> StringView { return (PreferencesCache::ToggleRunAction ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::ToggleRunAction = !PreferencesCache::ToggleRunAction; _isDirty = true; });
 
+		// TRANSLATORS: Menu item in Options > Controls section, which gamepad's button names and icons are shown
 		list->Add<ChoiceItem>(_("Gamepad Button Labels"),
 			[]() -> StringView {
 				switch (PreferencesCache::GamepadButtonLabels) {
@@ -92,6 +95,7 @@ namespace Jazz2::UI::Menu
 		// implements rumble for the platform (`VITA_JoystickRumble`, next to a `SetLED` that only a
 		// DualShock has), which reaches a controller paired to a PS TV - and, through the ds3vita/ds4vita
 		// plugins, one paired to a handheld too. Where nothing can rumble the setting simply does nothing.
+		// TRANSLATORS: Menu item in Options > Controls section
 		list->Add<ChoiceItem>(_("Gamepad Rumble"),
 			[]() -> StringView {
 				return (PreferencesCache::GamepadRumble == 2
@@ -100,6 +104,7 @@ namespace Jazz2::UI::Menu
 					: (PreferencesCache::GamepadRumble == 1
 						// TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
 						? _("Weak")
+						// TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
 						: _("Disabled")));
 			},
 			[this](std::int32_t direction) {
@@ -109,7 +114,9 @@ namespace Jazz2::UI::Menu
 			});
 #endif
 #if (defined(WITH_SDL2) || defined(WITH_SDL3))
+		// TRANSLATORS: Menu item in Options > Controls section, enables the extra features of PlayStation controllers
 		list->Add<ChoiceItem>(_("Extended PlayStation™ Support"),
+			// TRANSLATORS: Option for on/off items in Options > Controls section
 			[]() -> StringView { return (PreferencesCache::PlayStationExtendedSupport ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::PlayStationExtendedSupport = !PreferencesCache::PlayStationExtendedSupport;
@@ -120,12 +127,15 @@ namespace Jazz2::UI::Menu
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 		// TRANSLATORS: Menu item in Options > Controls section (Android only)
 		list->Add<ChoiceItem>(_("Native Back Button"),
+			// TRANSLATORS: Option for on/off items in Options > Controls section
 			[]() -> StringView { return (PreferencesCache::UseNativeBackButton ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::UseNativeBackButton = !PreferencesCache::UseNativeBackButton; _isDirty = true; });
 #endif
 
+		// TRANSLATORS: Menu item in Options > Controls section
 		list->Add<ListItem>(_("Input Diagnostics"),
 			[root]() { root->SwitchToSection<InputDiagnosticsSection>(); }, ActionHeight);
+		// TRANSLATORS: Menu item in Options > Controls section, resets all controls of all players to their defaults
 		list->Add<ListItem>(_("Reset To Default"),
 			[this]() { ControlScheme::Reset(); _isDirty = true; }, ActionHeight);
 

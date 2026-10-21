@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 
 		_items.clear();
 
-		// TRANSLATORS: Menu item in main menu
+		// TRANSLATORS: Menu item in pause menu
 		_items.emplace_back(Item::Resume, _("Resume"));
 
 #if defined(WITH_EDITOR)
@@ -55,20 +55,20 @@ namespace Jazz2::UI::Menu
 		if (!isLocalSession) {
 			if (isSpectating) {
 				// Leaving spectate returns to the lobby so the player can pick a (possibly different) character
-				// TRANSLATORS: Menu item in main menu
+				// TRANSLATORS: Menu item in pause menu
 				_items.emplace_back(Item::ChangeCharacter, _("Join Game"));
 			} else if (isSpectateAvailable) {
-				// TRANSLATORS: Menu item in main menu
+				// TRANSLATORS: Menu item in pause menu
 				_items.emplace_back(Item::Spectate, _("Spectate"));
 			} else {
 				// Spectate is disabled by the server; offer returning to the lobby to change character instead
-				// TRANSLATORS: Menu item in main menu
+				// TRANSLATORS: Menu item in pause menu
 				_items.emplace_back(Item::ChangeCharacter, _("Change Character"));
 			}
 		}
 #endif
 
-		// TRANSLATORS: Menu item in main menu
+		// TRANSLATORS: Menu item in pause menu
 		_items.emplace_back(Item::Options, _("Options"));
 
 #if defined(WITH_EDITOR)
@@ -83,10 +83,10 @@ namespace Jazz2::UI::Menu
 #endif
 
 #if defined(WITH_MULTIPLAYER)
-		// TRANSLATORS: Menu item in main menu
+		// TRANSLATORS: Menu item in pause menu
 		_items.emplace_back(Item::Exit, isLocalSession ? _("Save & Exit") : _("Disconnect & Exit"));
 #else
-		// TRANSLATORS: Menu item in main menu
+		// TRANSLATORS: Menu item in pause menu
 		_items.emplace_back(Item::Exit, _("Save & Exit"));
 #endif
 

@@ -46,22 +46,22 @@ namespace Jazz2::Editor
 		{
 			const TileSelection& selection = session.GetSelection();
 			if (selection.IsEmpty()) {
-				session.ShowMessage(_("Select the tiles first"));
+				session.ShowMessage(_x("editor", "Select the tiles first"));
 				return nullptr;
 			}
 			model = &session.GetSmartTiles();
 			if (!model->IsReady()) {
-				session.ShowMessage(_f("Still learning how the tiles fit - {}%, try it again in a moment", std::int32_t(model->GetProgress() * 100.0f)));
+				session.ShowMessage(_fx("editor", "Still learning how the tiles fit - {}%, try it again in a moment", std::int32_t(model->GetProgress() * 100.0f)));
 				return nullptr;
 			}
 			if (model->GetLevelCount() == 0 && model->GetRules().GetCount() == 0) {
-				session.ShowMessage(_("No level uses this tile set yet, so there's nothing to learn the tiles from"));
+				session.ShowMessage(_x("editor", "No level uses this tile set yet, so there's nothing to learn the tiles from"));
 				return nullptr;
 			}
 			LevelDocument& document = session.GetDocument();
 			layerIndex = selection.GetLayer();
 			if (layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size()) || !session.IsLayerEditable(layerIndex)) {
-				session.ShowMessage(_("The layer is locked or hidden"));
+				session.ShowMessage(_x("editor", "The layer is locked or hidden"));
 				return nullptr;
 			}
 			// All of it is worked out at once, the cells of the selection and of the rectangle around it are kept
@@ -75,7 +75,7 @@ namespace Jazz2::Editor
 				tooLarge = (count > MaxCells);
 			}
 			if (tooLarge) {
-				session.ShowMessage(_f("The selection is too large, select {} tiles at most", std::int32_t(MaxCells)));
+				session.ShowMessage(_fx("editor", "The selection is too large, select {} tiles at most", std::int32_t(MaxCells)));
 				return nullptr;
 			}
 			return &document.Layers[layerIndex];
@@ -364,8 +364,9 @@ namespace Jazz2::Editor
 				}
 			}
 		}
-		if (!Commit(session, layerIndex, tiles, _("Fill with ground"))) {
-			session.ShowMessage(_("The selection is ground already"));
+		// TRANSLATORS: Name of an undo step in the history, after the selected tiles were filled with ground fitting the tiles around
+		if (!Commit(session, layerIndex, tiles, _x("editor", "Fill with ground"))) {
+			session.ShowMessage(_x("editor", "The selection is ground already"));
 			return false;
 		}
 		return true;
@@ -381,7 +382,7 @@ namespace Jazz2::Editor
 		}
 		const Formats::TileSetData* data = session.GetTileSetData(session.GetDocument().Properties.DefaultTileSet);
 		if (data == nullptr) {
-			session.ShowMessage(_("The tile set can't be read"));
+			session.ShowMessage(_x("editor", "The tile set can't be read"));
 			return false;
 		}
 		MaskIndex masks(session.GetDocument(), *data);
@@ -443,7 +444,7 @@ namespace Jazz2::Editor
 			}
 		}
 		if (!any) {
-			session.ShowMessage(_("No other tile of the tile set has the masks of the selected ones"));
+			session.ShowMessage(_x("editor", "No other tile of the tile set has the masks of the selected ones"));
 			return false;
 		}
 
@@ -555,8 +556,9 @@ namespace Jazz2::Editor
 			}
 		}
 
-		if (!Commit(session, layerIndex, tiles, _("Beautify tiles"))) {
-			session.ShowMessage(_("The selected tiles fit their neighbors the best already"));
+		// TRANSLATORS: Name of an undo step in the history, after the selected tiles were replaced by tiles with the same masks that fit their neighbors better
+		if (!Commit(session, layerIndex, tiles, _x("editor", "Beautify tiles"))) {
+			session.ShowMessage(_x("editor", "The selected tiles fit their neighbors the best already"));
 			return false;
 		}
 		return true;

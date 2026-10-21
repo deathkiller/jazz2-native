@@ -15,8 +15,8 @@
 #include <cmath>
 #include <cstdio>
 
-#if !defined(N_)
-#	define N_(text) text
+#if !defined(NC_)
+#	define NC_(context, text) text
 #endif
 
 using namespace Death::Containers::Literals;
@@ -450,18 +450,22 @@ namespace Jazz2::Editor
 				char buffer[64];
 				if (horizontal) {
 					std::snprintf(buffer, sizeof(buffer), "%.1f", std::abs(far - springStart.X) / 32.0f);
-					springText = _f("The spring throws the player {} tiles far", buffer);
+					// TRANSLATORS: Shown by the measure tool dragged from a spring, {} is the distance in tiles with one decimal place
+					springText = _fx("editor", "The spring throws the player {} tiles far", buffer);
 				} else {
 					std::snprintf(buffer, sizeof(buffer), "%.1f", (springStart.Y - top) / 32.0f);
-					springText = _f("The spring throws the player {} tiles high", buffer);
+					// TRANSLATORS: Shown by the measure tool dragged from a spring, {} is the height in tiles with one decimal place
+					springText = _fx("editor", "The spring throws the player {} tiles high", buffer);
 				}
 			}
 		}
 
 		// The jumps from the start towards the end, the first one that gets there is told
 		static const char* const ReachTexts[] = {
-			N_("Walking jump gets there"), N_("Only dashing jump gets there"), N_("Only double jump gets there"),
-			N_("Only copter gets there")
+			// TRANSLATORS: Shown by the measure tool, the easiest jump of the player that reaches the measured point
+			NC_("editor", "Walking jump gets there"), NC_("editor", "Only dashing jump gets there"), NC_("editor", "Only double jump gets there"),
+			// TRANSLATORS: Shown by the measure tool, only the copter of Jazz reaches the measured point
+			NC_("editor", "Only copter gets there")
 		};
 		std::int32_t reachingArc = -1;
 		const JumpArc* arcs = GetArcs();
@@ -500,7 +504,7 @@ namespace Jazz2::Editor
 		if (!springText.empty()) {
 			reach = springText;
 		} else if (std::abs(delta.X) >= 1.0f && settings.ShownArcs != 0) {
-			reach = (reachingArc >= 0 ? String(_(ReachTexts[reachingArc])) : String(_("No jump gets there")));
+			reach = (reachingArc >= 0 ? String(_x("editor", ReachTexts[reachingArc])) : String(_x("editor", "No jump gets there")));
 		}
 
 		float padding = painter.Px(UiTheme::Padding);
@@ -522,7 +526,7 @@ namespace Jazz2::Editor
 
 	StringView MeasureTool::GetHint() const
 	{
-		return _("Drag: measure, with the jumps of the player, from a spring how it throws - Ctrl: snap to tiles - Right: clear");
+		return _x("editor", "Drag: measure, with the jumps of the player, from a spring how it throws - Ctrl: snap to tiles - Right: clear");
 	}
 
 	void MeasureTool::OnDeactivate()
@@ -534,16 +538,16 @@ namespace Jazz2::Editor
 	{
 		const ToolOptionItem arcs[] = {
 			// TRANSLATORS: Short names of the jumps of the player the measure tool shows, in the toolbar
-			{ _("Walk"), EditorIcon::None, ActionIds::MeasureWalk },
-			{ _("Dash"), EditorIcon::None, ActionIds::MeasureDash },
-			{ _("Double"), EditorIcon::None, ActionIds::MeasureDoubleJump },
-			{ _("Copter"), EditorIcon::None, ActionIds::MeasureCopter },
+			{ _x("editor", "Walk"), EditorIcon::None, ActionIds::MeasureWalk },
+			{ _x("editor", "Dash"), EditorIcon::None, ActionIds::MeasureDash },
+			{ _x("editor", "Double"), EditorIcon::None, ActionIds::MeasureDoubleJump },
+			{ _x("editor", "Copter"), EditorIcon::None, ActionIds::MeasureCopter },
 		};
 		// TRANSLATORS: Label of the jumps the measure tool shows
-		builder.AddToggles(_("Jumps"), arcs);
+		builder.AddToggles(_x("editor", "Jumps"), arcs);
 		builder.AddSeparator();
 		// TRANSLATORS: Toggle in the toolbar, short for the jumps stopping at solid tiles
-		builder.AddAction(ActionIds::MeasureCollisions, _("Stop at walls"));
+		builder.AddAction(ActionIds::MeasureCollisions, _x("editor", "Stop at walls"));
 	}
 }
 

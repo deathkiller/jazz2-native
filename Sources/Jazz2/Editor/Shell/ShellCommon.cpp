@@ -57,12 +57,17 @@ namespace Jazz2::Editor
 	StringView GetUnitSuffix(ParamUnit unit)
 	{
 		switch (unit) {
-			case ParamUnit::Pixels: return _("px");
-			case ParamUnit::Tiles: return _("tiles");
-			case ParamUnit::Frames: return _("frames");
-			case ParamUnit::Seconds: return _("s");
+			// TRANSLATORS: Unit after the value of a parameter of an event, short for pixels, keep it short
+			case ParamUnit::Pixels: return _x("editor", "px");
+			// TRANSLATORS: Unit after the value of a parameter of an event, a count of tiles, keep it short
+			case ParamUnit::Tiles: return _x("editor", "tiles");
+			// TRANSLATORS: Unit after the value of a parameter of an event, a count of game frames, keep it short
+			case ParamUnit::Frames: return _x("editor", "frames");
+			// TRANSLATORS: Unit after the value of a parameter of an event, symbol for seconds
+			case ParamUnit::Seconds: return _x("editor", "s");
 			case ParamUnit::Percent: return "%"_s;
-			case ParamUnit::Degrees: return _("deg");
+			// TRANSLATORS: Unit after the value of a parameter of an event, short for degrees of an angle
+			case ParamUnit::Degrees: return _x("editor", "deg");
 			default: return {};
 		}
 	}
@@ -157,7 +162,7 @@ namespace Jazz2::Editor
 	bool CheckLayerUnlocked(IEditorContext& session, std::int32_t layer)
 	{
 		if (IsLayerLocked(session.GetDocument(), layer)) {
-			session.ShowMessage(_("The layer is locked"));
+			session.ShowMessage(_x("editor", "The layer is locked"));
 			return false;
 		}
 		return true;

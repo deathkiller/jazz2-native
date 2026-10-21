@@ -81,9 +81,10 @@ namespace Jazz2::Editor
 			auto dialog = std::make_unique<UiDialog>(title);
 			UiDialog* dialogPtr = dialog.get();
 			auto* content = dialog->GetContent();
-			content->Add<UiLabel>(_("It may take a moment for a large image or many levels"), UiTheme::TextDim);
+			content->Add<UiLabel>(_x("editor", "It may take a moment for a large image or many levels"), UiTheme::TextDim);
 			content->Add<JobProgressBar>(job, Death::move(onDone), [dialogPtr]() { dialogPtr->Close(); });
-			dialog->AddButton(_("Stop"), [job]() { job->Cancel(); }, true);
+			// TRANSLATORS: Button in the dialog with the progress of a long task, cancels the task
+			dialog->AddButton(_x("editor", "Stop"), [job]() { job->Cancel(); }, true);
 
 			ShowModal(*surface, Death::move(dialog));
 

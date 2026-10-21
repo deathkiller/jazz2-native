@@ -485,14 +485,14 @@ namespace Jazz2::Editor
 			layerIndex = (spline != nullptr ? spline->Layer : (index >= 0 && index < std::int32_t(splines.size()) ? splines[index].Layer : -1));
 			if (layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size()) || !host.IsLayerEditable(layerIndex)) {
 				if (!quiet) {
-					host.ShowMessage(_("The layer is locked or hidden"));
+					host.ShowMessage(_x("editor", "The layer is locked or hidden"));
 				}
 				return false;
 			}
 			const TileShapes& shapes = host.GetTileShapes();
 			if (spline != nullptr && shapes.GetSurfaces().empty()) {
 				if (!quiet) {
-					host.ShowMessage(_("The tile set has no pieces of ground whose masks follow a line"));
+					host.ShowMessage(_x("editor", "The tile set has no pieces of ground whose masks follow a line"));
 				}
 				return false;
 			}
@@ -886,10 +886,11 @@ namespace Jazz2::Editor
 				Lay();
 			} else if (hit) {
 				// The ground of the line goes away, what was there before comes back
-				ApplySpline(_host, splines, hitSpline, nullptr, _("Remove ground"));
+				// TRANSLATORS: Name of an undo step in the history, after the ground laid by a ground line was removed
+				ApplySpline(_host, splines, hitSpline, nullptr, _x("editor", "Remove ground"));
 				Select(splines, -1);
 			} else {
-				_host.ShowMessage(_("Click points of the surface first, the right button then lays the ground"));
+				_host.ShowMessage(_x("editor", "Click points of the surface first, the right button then lays the ground"));
 			}
 			return;
 		}
@@ -902,11 +903,12 @@ namespace Jazz2::Editor
 			TerrainSpline changed = splines[hitSpline];
 			std::size_t minPoints = (changed.Kind == SplineKind::Closed ? 3 : 2);
 			if (changed.Points.size() <= minPoints) {
-				_host.ShowMessage(_("A line has two points at least, a shape three - the right button removes the whole ground"));
+				_host.ShowMessage(_x("editor", "A line has two points at least, a shape three - the right button removes the whole ground"));
 				return;
 			}
 			changed.Points.erase(changed.Points.begin() + hitPoint);
-			if (ApplySpline(_host, splines, hitSpline, &changed, _("Change ground"))) {
+			// TRANSLATORS: Name of an undo step in the history, after a ground line and its ground were changed
+			if (ApplySpline(_host, splines, hitSpline, &changed, _x("editor", "Change ground"))) {
 				Select(splines, hitSpline);
 			}
 			return;
@@ -1020,7 +1022,7 @@ namespace Jazz2::Editor
 		_dragSpline = -1;
 		_dragPoint = -1;
 		_dragInsert = false;
-		if (valid && ApplySpline(_host, splines, index, &changed, _("Change ground"))) {
+		if (valid && ApplySpline(_host, splines, index, &changed, _x("editor", "Change ground"))) {
 			Select(splines, index);
 		}
 	}
@@ -1165,16 +1167,16 @@ namespace Jazz2::Editor
 	StringView GroundLineTool::GetHint() const
 	{
 		if (!_points.empty()) {
-			return _("Click: add a point of the surface - Ctrl: corner of a tile - Right: lay the ground - Esc: start again");
+			return _x("editor", "Click: add a point of the surface - Ctrl: corner of a tile - Right: lay the ground - Esc: start again");
 		}
-		return _("Click: start a line, or drag a point of one - click on a line: add a point - Shift+click: remove one - Right on a line: remove it");
+		return _x("editor", "Click: start a line, or drag a point of one - click on a line: add a point - Shift+click: remove one - Right on a line: remove it");
 	}
 
 	void GroundLineTool::Lay()
 	{
 		std::size_t minPoints = (_options->Kind == SplineKind::Closed ? 3 : 2);
 		if (_points.size() < minPoints) {
-			_host.ShowMessage(_options->Kind == SplineKind::Closed ? _("Click at least three points around the shape first") : _("Click at least two points of the surface first"));
+			_host.ShowMessage(_options->Kind == SplineKind::Closed ? _x("editor", "Click at least three points around the shape first") : _x("editor", "Click at least two points of the surface first"));
 			return;
 		}
 		SmallVector<TerrainSpline, 0> splines;
@@ -1190,7 +1192,8 @@ namespace Jazz2::Editor
 		if (spline.Kind != SplineKind::Closed) {
 			std::sort(spline.Points.begin(), spline.Points.end(), [](const Vector2f& a, const Vector2f& b) { return a.X < b.X; });
 		}
-		if (ApplySpline(_host, splines, -1, &spline, _("Lay ground"))) {
+		// TRANSLATORS: Name of an undo step in the history, after a ground line laid new ground
+		if (ApplySpline(_host, splines, -1, &spline, _x("editor", "Lay ground"))) {
 			_points.clear();
 			Select(splines, std::int32_t(splines.size()) - 1);
 		}
@@ -1215,14 +1218,14 @@ namespace Jazz2::Editor
 			std::sort(changed.Points.begin(), changed.Points.end(), [](const Vector2f& a, const Vector2f& b) { return a.X < b.X; });
 		}
 		if (_options->Kind == SplineKind::Closed && changed.Points.size() < 3) {
-			_host.ShowMessage(_("A shape has three points at least"));
+			_host.ShowMessage(_x("editor", "A shape has three points at least"));
 			_options->Kind = changed.Kind;
 			return;
 		}
 		changed.Kind = _options->Kind;
 		changed.Smooth = _options->Smooth;
 		changed.Depth = _options->Depth;
-		if (ApplySpline(_host, splines, selected, &changed, _("Change ground"))) {
+		if (ApplySpline(_host, splines, selected, &changed, _x("editor", "Change ground"))) {
 			// Sorted points are other points
 			Select(splines, selected);
 		}
@@ -1234,14 +1237,14 @@ namespace Jazz2::Editor
 		// The options change the line clicked last too
 		const ToolOptionItem kinds[] = {
 			// TRANSLATORS: What a ground line lays, ground below it, a ceiling above it, a floating band, a closed shape
-			{ _("Ground"), EditorIcon::None, nullptr, _("Ground below the line, down to the ground that's there - changes the line clicked last too") },
-			{ _("Ceiling"), EditorIcon::None, nullptr, _("Ground above the line, its surface faces down - changes the line clicked last too") },
-			{ _("Band"), EditorIcon::None, nullptr, _("A floating strip of ground below the line, as thick as the depth - changes the line clicked last too") },
-			{ _("Shape"), EditorIcon::None, nullptr, _("Ground inside of the line, its points go around the shape - changes the line clicked last too") },
+			{ _x("editor", "Ground"), EditorIcon::None, nullptr, _x("editor", "Ground below the line, down to the ground that's there - changes the line clicked last too") },
+			{ _x("editor", "Ceiling"), EditorIcon::None, nullptr, _x("editor", "Ground above the line, its surface faces down - changes the line clicked last too") },
+			{ _x("editor", "Band"), EditorIcon::None, nullptr, _x("editor", "A floating strip of ground below the line, as thick as the depth - changes the line clicked last too") },
+			{ _x("editor", "Shape"), EditorIcon::None, nullptr, _x("editor", "Ground inside of the line, its points go around the shape - changes the line clicked last too") },
 		};
 		static const SplineKind KindValues[] = { SplineKind::Ground, SplineKind::Ceiling, SplineKind::Band, SplineKind::Closed };
 		// TRANSLATORS: Label of the choice of what a ground line lays
-		builder.AddChoice(_("Lays"), kinds, [options]() {
+		builder.AddChoice(_x("editor", "Lays"), kinds, [options]() {
 			for (std::int32_t i = 0; i < std::int32_t(sizeof(KindValues) / sizeof(KindValues[0])); i++) {
 				if (KindValues[i] == options->Kind) {
 					return i;
@@ -1255,13 +1258,14 @@ namespace Jazz2::Editor
 			}
 		});
 		builder.AddSeparator();
-		builder.AddToggle({ _("Smooth"), EditorIcon::None, nullptr, _("Through the points in a curve, otherwise straight from one to the next") },
+		// TRANSLATORS: Toggle in the toolbar, the ground line is a smooth curve through its points
+		builder.AddToggle({ _x("editor", "Smooth"), EditorIcon::None, nullptr, _x("editor", "Through the points in a curve, otherwise straight from one to the next") },
 			[options]() { return options->Smooth; }, [this, options](bool value) {
 				options->Smooth = value;
 				ApplyOptionsToSelected();
 			});
 		// TRANSLATORS: Label of how deep the ground a ground line lays goes, in tiles
-		builder.AddNumber(_("Depth"), _("How deep the ground goes at most in tiles, how thick a band is"), 1.0f, 32.0f, 1.0f,
+		builder.AddNumber(_x("editor", "Depth"), _x("editor", "How deep the ground goes at most in tiles, how thick a band is"), 1.0f, 32.0f, 1.0f,
 			[options]() { return float(options->Depth); }, [this, options](float value, bool final) {
 				options->Depth = std::clamp<std::int32_t>(std::int32_t(value), 1, 32);
 				if (final) {
@@ -1276,7 +1280,7 @@ namespace Jazz2::Editor
 		LevelDocument& document = host.GetDocument();
 		std::int32_t layerIndex = selection.GetLayer();
 		if (selection.IsEmpty() || layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size())) {
-			host.ShowMessage(_("Select the ground to make a line of first"));
+			host.ShowMessage(_x("editor", "Select the ground to make a line of first"));
 			return false;
 		}
 		const DocumentLayer& layer = document.Layers[layerIndex];
@@ -1337,7 +1341,7 @@ namespace Jazz2::Editor
 			deepest = std::max(deepest, count);
 		}
 		if (spline.Points.size() < 2) {
-			host.ShowMessage(_("Select the ground to make a line of first"));
+			host.ShowMessage(_x("editor", "Select the ground to make a line of first"));
 			return false;
 		}
 		// The ground laid again reaches as deep as it's selected
@@ -1355,8 +1359,9 @@ namespace Jazz2::Editor
 		}
 
 		splines.push_back(Death::move(spline));
-		host.Execute(std::make_unique<SetTerrainSplinesCommand>(document, splines, nullptr, _("Make ground line")));
-		host.ShowMessage(_("The ground can be changed by its line now, with the Ground Line tool"));
+		// TRANSLATORS: Name of an undo step in the history, after a line was made of the selected ground to change it by
+		host.Execute(std::make_unique<SetTerrainSplinesCommand>(document, splines, nullptr, _x("editor", "Make ground line")));
+		host.ShowMessage(_x("editor", "The ground can be changed by its line now, with the Ground Line tool"));
 		return true;
 	}
 

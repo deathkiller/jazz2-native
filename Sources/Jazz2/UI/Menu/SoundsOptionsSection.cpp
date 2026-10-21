@@ -38,6 +38,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// TRANSLATORS: Header of Options > Sounds section
 		SetTitle(_("Sounds"));
 
 		// A ScrollView rather than a spread-out StackLayout: with the sample-rate row the list no longer fits the

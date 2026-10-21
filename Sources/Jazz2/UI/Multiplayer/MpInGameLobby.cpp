@@ -136,6 +136,7 @@ namespace Jazz2::UI::Multiplayer
 			float teamRowY = center.Y + 78.0f;
 			float pressY = (_teamMode ? center.Y + 122.0f : center.Y + 56.0f);
 
+			// TRANSLATORS: Label above the character selection in the multiplayer lobby shown before joining the game
 			DrawStringShadow(_("Character"), charOffset, center.X, charLabelY, MainLayer,
 				Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
@@ -172,6 +173,7 @@ namespace Jazz2::UI::Multiplayer
 
 			// Team picker row (shown in team modes; interactive only when team selection is allowed)
 			if (_teamMode) {
+				// TRANSLATORS: Label above the team selection in the multiplayer lobby shown before joining the game
 				DrawStringShadow(_("Team"), charOffset, center.X, teamLabelY, MainLayer,
 					Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
@@ -181,6 +183,7 @@ namespace Jazz2::UI::Multiplayer
 				for (std::int32_t t = 0; t < optionCount; t++) {
 					float x = center.X - teamOffset + t * teamSpacing;
 					bool isAuto = (t >= _teamCount);
+					// TRANSLATORS: Option in the team selection of the multiplayer lobby to let the server pick the team, shown next to team color names, keep it short
 					StringView label = (isAuto ? _("Auto") : GetTeamName((std::uint8_t)t));
 					Colorf color = (isAuto ? Colorf(0.52f, 0.52f, 0.52f, 0.5f) : GetTeamColor((std::uint8_t)t));
 
@@ -220,10 +223,12 @@ namespace Jazz2::UI::Multiplayer
 			}
 
 			if (teamRowActive) {
+				// TRANSLATORS: Hint in the multiplayer lobby, "Up/Down" are the arrow keys or directions on the gamepad, keep the color tags \f[c:#d0705d] and \f[/c] as they are
 				DrawStringShadow(_("Use \f[c:#d0705d]Up/Down\f[/c] to switch between character and team"), charOffset, center.X, pressY - 22.0f, MainLayer,
 					Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 			}
 
+			// TRANSLATORS: Hint at the bottom of the screen, "Fire" is the name of the action, keep the color tags \f[c:#d0705d] and \f[/c] as they are
 			DrawStringShadow(_("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, pressY, MainLayer,
 				Alignment::Center, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 		}

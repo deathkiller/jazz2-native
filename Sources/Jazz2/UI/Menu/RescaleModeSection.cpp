@@ -29,6 +29,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// TRANSLATORS: Header of Options > Graphics > Rescale Mode section
 		SetTitle(_("Select Rescale Mode"));
 
 		auto list = std::make_unique<ScrollView>();

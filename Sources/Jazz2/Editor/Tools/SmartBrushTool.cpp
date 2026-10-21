@@ -47,14 +47,15 @@ namespace Jazz2::Editor
 		if (!model.CanPick()) {
 			// A cell painted now would keep the tile that only stands for any solid one
 			if (model.IsReady()) {
-				_host.ShowMessage(_("No level uses this tile set yet, so there's nothing to learn the tiles from"));
+				_host.ShowMessage(_x("editor", "No level uses this tile set yet, so there's nothing to learn the tiles from"));
 			} else {
-				_host.ShowMessage(_f("Learning how the tiles fit from the levels of the tile set - {}%", std::int32_t(model.GetProgress() * 100.0f)));
+				_host.ShowMessage(_fx("editor", "Learning how the tiles fit from the levels of the tile set - {}%", std::int32_t(model.GetProgress() * 100.0f)));
 			}
 			return;
 		}
 		_erase = (pointer.Button == MouseButton::Right);
-		if (!BeginStroke(_erase ? _("Erase ground") : _("Paint ground"))) {
+		// TRANSLATORS: Names of undo steps in the history, after the smart brush erased or painted ground
+		if (!BeginStroke(_erase ? _x("editor", "Erase ground") : _x("editor", "Paint ground"))) {
 			return;
 		}
 		_pending.clear();
@@ -138,10 +139,10 @@ namespace Jazz2::Editor
 	{
 		SmartTileModel& model = _host.GetSmartTiles();
 		if (!model.IsReady()) {
-			_hint = _f("Learning how the tiles fit from the levels of the tile set - {}%", std::int32_t(model.GetProgress() * 100.0f));
+			_hint = _fx("editor", "Learning how the tiles fit from the levels of the tile set - {}%", std::int32_t(model.GetProgress() * 100.0f));
 			return _hint;
 		}
-		return _("Click or drag to paint ground, the right button makes it empty - the tiles are chosen by the tiles around");
+		return _x("editor", "Click or drag to paint ground, the right button makes it empty - the tiles are chosen by the tiles around");
 	}
 
 	bool SmartBrushTool::GhostKey::operator==(const GhostKey& other) const

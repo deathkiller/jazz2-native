@@ -20,6 +20,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// TRANSLATORS: Header of Select Game Mode section, opened from the Game Mode item when creating a multiplayer game
 		SetTitle(_("Select Game Mode"));
 
 		MpGameMode currentMode = MpGameMode::Battle;

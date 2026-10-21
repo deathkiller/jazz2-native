@@ -29,6 +29,7 @@ namespace Jazz2::Multiplayer::GameModes
 
 		if (hasEnoughTreasure) {
 			// Animated prompt nudging the player to the exit
+			// TRANSLATORS: Shown in the HUD in Treasure Hunt when the player has collected enough treasure and can take the exit
 			auto findExitText = _("Find exit!");
 			hud.DrawHudText(GameModeFontType::Small, findExitText, view.X + view.W * 0.5f, view.Y + 36.0f, 2.5f,
 				UI::Alignment::Center, UI::Font::DefaultColor, 1.0f, 1.0f, 0.72f, 0.8f, 0.4f);

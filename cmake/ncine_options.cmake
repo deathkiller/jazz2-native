@@ -829,7 +829,7 @@ cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer supp
 # left out where nothing can be saved - the Nintendo 64, the Dreamcast, the GameCube and the PlayStation 2 read all
 # their content from a cartridge or a disc. The web keeps it, saving there is a download. A dedicated server has no
 # interface to edit with, and the Shareware Demo has only the episodes of the demo to play.
-cmake_dependent_option(WITH_EDITOR "Enable the built-in level editor" OFF "NOT DEDICATED_SERVER;NOT SHAREWARE_DEMO_ONLY;NOT PLATFORM_N64;NOT PLATFORM_DREAMCAST;NOT NINTENDO_GAMECUBE;NOT PLATFORM_PS2" OFF)
+cmake_dependent_option(WITH_EDITOR "Enable the built-in level editor" ON "NOT DEDICATED_SERVER;NOT SHAREWARE_DEMO_ONLY;NOT PLATFORM_N64;NOT PLATFORM_DREAMCAST;NOT NINTENDO_GAMECUBE;NOT PLATFORM_PS2" OFF)
 
 # The game itself, which is what nearly every build is for. Without it, only the offline tools below are built.
 option(NCINE_BUILD_GAME "Build the game itself, turn off to build only the offline tools" ON)

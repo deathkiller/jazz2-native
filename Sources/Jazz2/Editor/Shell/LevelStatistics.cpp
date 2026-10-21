@@ -183,7 +183,7 @@ namespace Jazz2::Editor
 			EventSelection& selection = session.GetEventSelection();
 			selection.Assign(Death::move(cells));
 			selection.AssignOffGrid(Death::move(offGrid));
-			session.ShowMessage(_fn("{} event selected", "{} events selected", count, count));
+			session.ShowMessage(_fnx("editor", "{} event selected", "{} events selected", count, count));
 		}
 
 		void FillStatistics(UiStack* content, IEditorContext& session)
@@ -216,25 +216,27 @@ namespace Jazz2::Editor
 				row.Tooltip = Death::move(tooltip);
 				row.Counted = std::make_shared<Function<bool(const LevelStatistics&)>>([member](const LevelStatistics& single) { return (single.*member > 0); });
 			};
-			addCount(_("Enemies"), &LevelStatistics::Enemies);
-			addCount(_("Bosses"), &LevelStatistics::Bosses);
-			addCount(_("Gems"), &LevelStatistics::Gems, _("By their value, red ones are worth 1, green 5, blue 10, those in crates and barrels too"));
-			addCount(_("Giant gems"), &LevelStatistics::GiantGems, _("Each breaks into 5 to 12 red gems, which aren't counted in the gems"));
-			addCount(_("Coins"), &LevelStatistics::Coins, _("By their value, silver ones are worth 1, gold 5"));
-			addCount(_("Food"), &LevelStatistics::Food);
-			addCount(_("Carrots"), &LevelStatistics::Carrots);
-			addCount(_("Extra lives"), &LevelStatistics::ExtraLives);
-			addCount(_("Ammo"), &LevelStatistics::Ammo);
-			addCount(_("Containers"), &LevelStatistics::Containers, _("Crates, barrels and monitors"));
-			addCount(_("Checkpoints"), &LevelStatistics::Checkpoints);
-			addCount(_("Warp tiles"), &LevelStatistics::Warps);
-			addCount(_("Exit tiles"), &LevelStatistics::Exits);
-			addCount(_("Generators"), &LevelStatistics::Generators, _("What they spawn isn't counted above, there's no end to it"));
+			// TRANSLATORS: Rows of the Statistics dialog, what is counted in the level for each difficulty, with tooltips of some of them
+			addCount(_x("editor", "Enemies"), &LevelStatistics::Enemies);
+			addCount(_x("editor", "Bosses"), &LevelStatistics::Bosses);
+			addCount(_x("editor", "Gems"), &LevelStatistics::Gems, _x("editor", "By their value, red ones are worth 1, green 5, blue 10, those in crates and barrels too"));
+			addCount(_x("editor", "Giant gems"), &LevelStatistics::GiantGems, _x("editor", "Each breaks into 5 to 12 red gems, which aren't counted in the gems"));
+			addCount(_x("editor", "Coins"), &LevelStatistics::Coins, _x("editor", "By their value, silver ones are worth 1, gold 5"));
+			addCount(_x("editor", "Food"), &LevelStatistics::Food);
+			addCount(_x("editor", "Carrots"), &LevelStatistics::Carrots);
+			addCount(_x("editor", "Extra lives"), &LevelStatistics::ExtraLives);
+			addCount(_x("editor", "Ammo"), &LevelStatistics::Ammo);
+			addCount(_x("editor", "Containers"), &LevelStatistics::Containers, _x("editor", "Crates, barrels and monitors"));
+			addCount(_x("editor", "Checkpoints"), &LevelStatistics::Checkpoints);
+			addCount(_x("editor", "Warp tiles"), &LevelStatistics::Warps);
+			addCount(_x("editor", "Exit tiles"), &LevelStatistics::Exits);
+			addCount(_x("editor", "Generators"), &LevelStatistics::Generators, _x("editor", "What they spawn isn't counted above, there's no end to it"));
 			{
-				static const char* const Characters[] = { N_("Starts of Jazz"), N_("Starts of Spaz"), N_("Starts of Lori") };
+				// TRANSLATORS: Rows of the Statistics dialog, how many starts of each character the level has
+				static const char* const Characters[] = { NC_("editor", "Starts of Jazz"), NC_("editor", "Starts of Spaz"), NC_("editor", "Starts of Lori") };
 				for (std::int32_t c = 0; c < 3; c++) {
 					CountRow& row = rows.emplace_back();
-					row.Label = _(Characters[c]);
+					row.Label = _x("editor", Characters[c]);
 					for (std::int32_t i = 0; i < 3; i++) {
 						row.Values[i] = FormatInteger(stats[i].Starts[c]);
 					}
@@ -242,8 +244,10 @@ namespace Jazz2::Editor
 					row.Counted = std::make_shared<Function<bool(const LevelStatistics&)>>([c](const LevelStatistics& single) { return (single.Starts[c] > 0); });
 				}
 			}
-			addCount(_("Events"), &LevelStatistics::Events, _("All events in the difficulty, only those in multiplayer are left out"));
-			String header[3] = { _("Easy"), _("Normal"), _("Hard") };
+			// TRANSLATORS: Last row of the Statistics dialog, the number of all events in the level, and its tooltip
+			addCount(_x("editor", "Events"), &LevelStatistics::Events, _x("editor", "All events in the difficulty, only those in multiplayer are left out"));
+			// TRANSLATORS: Column header in the Statistics dialog, the Normal difficulty between Easy and Hard
+			String header[3] = { _("Easy"), _x("editor", "Normal"), _("Hard") };
 
 			// A count is a flat button, its text is this far from its right edge, the header above it is placed the same
 			const float inset = UiTheme::Padding * 1.5f;
@@ -296,10 +300,10 @@ namespace Jazz2::Editor
 					button->TextAlign = Alignment::Right;
 					button->TextColor = countRow.Color;
 					button->Width = valueWidth;
-					button->Tooltip = _("Select the events counted here");
+					button->Tooltip = _x("editor", "Select the events counted here");
 				}
 			}
-			content->Add<UiLabel>(_("Events only in multiplayer aren't counted"), UiTheme::TextDim);
+			content->Add<UiLabel>(_x("editor", "Events only in multiplayer aren't counted"), UiTheme::TextDim);
 		}
 	}
 
@@ -312,7 +316,8 @@ namespace Jazz2::Editor
 
 		IEditorContext* s = &session;
 		// Scrolled if it's taller than the screen, the title stays
-		auto dialog = std::make_unique<UiDialog>(_("Statistics"), true);
+		// TRANSLATORS: Title of the dialog with the counts of things in the level
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Statistics"), true);
 		auto* table = dialog->GetContent()->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
 		FillStatistics(table, session);
 
@@ -327,11 +332,15 @@ namespace Jazz2::Editor
 			};
 			const PlayPath& last = history.GetPaths().back();
 			UiStack* playTests = dialog->GetContent()->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
-			playTests->Add<UiLabel>(_fn("Last {} play-test", "Last {} play-tests", std::int32_t(history.GetPaths().size()), std::int32_t(history.GetPaths().size())), UiTheme::TextHeader);
+			// TRANSLATORS: Header of the play-tests kept with the level in the Statistics dialog, {} is how many there are
+			playTests->Add<UiLabel>(_fnx("editor", "Last {} play-test", "Last {} play-tests", std::int32_t(history.GetPaths().size()), std::int32_t(history.GetPaths().size())), UiTheme::TextHeader);
 			float best = history.GetBestExitTime();
-			playTests->Add<UiLabel>(best >= 0.0f ? String(_f("Finished in {} at best", formatTime(best))) : String(_("Not finished yet")), UiTheme::Text);
-			playTests->Add<UiLabel>(_f("{} deaths in them", history.GetTotalDeaths()), UiTheme::Text);
-			playTests->Add<UiLabel>(_f("The last one took {}, {} deaths", formatTime(last.Duration), last.GetDeathCount()), UiTheme::TextDim);
+			// TRANSLATORS: In the Statistics dialog, {} is the best time of the play-tests as minutes:seconds.hundredths
+			playTests->Add<UiLabel>(best >= 0.0f ? String(_fx("editor", "Finished in {} at best", formatTime(best))) : String(_x("editor", "Not finished yet")), UiTheme::Text);
+			// TRANSLATORS: In the Statistics dialog, {} is how many times the player died in all the play-tests together
+			playTests->Add<UiLabel>(_fx("editor", "{} deaths in them", history.GetTotalDeaths()), UiTheme::Text);
+			// TRANSLATORS: In the Statistics dialog, the time the last play-test took as minutes:seconds.hundredths and how many times the player died in it
+			playTests->Add<UiLabel>(_fx("editor", "The last one took {}, {} deaths", formatTime(last.Duration), last.GetDeathCount()), UiTheme::TextDim);
 		}
 
 		// Counted again once the events stop changing for a moment, the counts are always those of the level as it is

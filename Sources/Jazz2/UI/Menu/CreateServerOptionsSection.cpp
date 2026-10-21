@@ -241,13 +241,21 @@ namespace Jazz2::UI::Menu
 		    } else if (i == 1) {
 				StringView gameModeString;
 				switch (_gameMode) {
+					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::Battle: gameModeString = _("Battle"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::TeamBattle: gameModeString = _("Team Battle"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::Race: gameModeString = _("Race"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::TeamRace: gameModeString = _("Team Race"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::TreasureHunt: gameModeString = _("Treasure Hunt"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::TeamTreasureHunt: gameModeString = _("Team Treasure Hunt"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::CaptureTheFlag: gameModeString = _("Capture The Flag"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::Cooperation: gameModeString = _("Cooperation"); break;
 				}
 

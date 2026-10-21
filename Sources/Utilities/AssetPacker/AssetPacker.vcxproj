@@ -143,6 +143,7 @@
     <ClCompile Include="ModuleConverter.cpp" />
     <ClCompile Include="N64Content.cpp" />
     <ClCompile Include="SpriteRepacker.cpp" />
+    <ClCompile Include="TranslationFilter.cpp" />
     <!-- Reads and writes the images of the fonts, the PNG codec of the engine, which depends on nothing but the base layer -->
     <ClCompile Include="..\..\nCine\Graphics\PngCodec.cpp" />
     <!-- The original-data converters, shared with the game (CONVERTER_SOURCES in cmake/ncine_sources.cmake) -->
@@ -205,6 +206,7 @@
     <ClInclude Include="ModuleConverter.h" />
     <ClInclude Include="N64Content.h" />
     <ClInclude Include="SpriteRepacker.h" />
+    <ClInclude Include="TranslationFilter.h" />
     <ClInclude Include="..\..\nCine\Graphics\PngCodec.h" />
     <ClInclude Include="..\..\Main.h" />
     <ClInclude Include="..\..\Jazz2\ContentFileTypes.h" />

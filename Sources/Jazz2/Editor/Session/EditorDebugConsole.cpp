@@ -282,7 +282,8 @@ namespace Jazz2::Editor
 			if (layer < 0 || layer >= std::int32_t(document.Layers.size())) {
 				return DebugResult::Failed;
 			}
-			auto paint = std::make_unique<SetTilesCommand>(document, layer, _("Paint"));
+			// TRANSLATORS: Name of an undo step in the history, after tiles were painted
+			auto paint = std::make_unique<SetTilesCommand>(document, layer, _x("editor", "Paint"));
 			for (std::int32_t j = 0; j < height; j++) {
 				for (std::int32_t i = 0; i < width; i++) {
 					paint->Set(x + i, y + j, tile);
@@ -337,7 +338,8 @@ namespace Jazz2::Editor
 				if (args.size() >= 4) {
 					record.Color[3] = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(args.Float(3, 255.0f)), 0, 255));
 				}
-				_session.Execute(std::make_unique<SetLayerPropertiesCommand>(document, currentLayer, record, layer.Name, _("Layer properties")));
+				// TRANSLATORS: Name of an undo step in the history, after properties of a layer were changed
+				_session.Execute(std::make_unique<SetLayerPropertiesCommand>(document, currentLayer, record, layer.Name, _x("editor", "Layer properties")));
 			}
 			return DebugResult::Done;
 		} });
@@ -357,7 +359,7 @@ namespace Jazz2::Editor
 				if (args.size() >= 5) {
 					record.Textured.Flags = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(args.Float(4, 0.0f)), 0, 255));
 				}
-				_session.Execute(std::make_unique<SetLayerPropertiesCommand>(document, currentLayer, record, layer.Name, _("Layer properties")));
+				_session.Execute(std::make_unique<SetLayerPropertiesCommand>(document, currentLayer, record, layer.Name, _x("editor", "Layer properties")));
 			}
 			return DebugResult::Done;
 		} });
@@ -373,7 +375,7 @@ namespace Jazz2::Editor
 				record.Textured.InnerSpeedY = args.Float(2, 0.0f);
 				record.Textured.InnerAutoSpeedX = args.Float(3, 0.0f);
 				record.Textured.InnerAutoSpeedY = args.Float(4, 0.0f);
-				_session.Execute(std::make_unique<SetLayerPropertiesCommand>(document, currentLayer, record, layer.Name, _("Layer properties")));
+				_session.Execute(std::make_unique<SetLayerPropertiesCommand>(document, currentLayer, record, layer.Name, _x("editor", "Layer properties")));
 			}
 			return DebugResult::Done;
 		} });
@@ -398,7 +400,8 @@ namespace Jazz2::Editor
 				for (std::size_t i = 0; i < 3 && i + 1 < args.size(); i++) {
 					*links[i] = (args[i + 1] == "-"_s ? String() : String(args[i + 1]));
 				}
-				_session.Execute(std::make_unique<SetLevelPropertiesCommand>(document, document.Flags, properties, _("Level properties")));
+				// TRANSLATORS: Name of an undo step in the history, after properties of the level were changed
+				_session.Execute(std::make_unique<SetLevelPropertiesCommand>(document, document.Flags, properties, _x("editor", "Level properties")));
 			}
 			LOGI("Links of \"{}\": next \"{}\", secret \"{}\", bonus \"{}\"", _files.GetFilePath(), document.Properties.NextLevel,
 				document.Properties.SecretLevel, document.Properties.BonusLevel);
@@ -453,7 +456,8 @@ namespace Jazz2::Editor
 			for (std::size_t i = 4; i < args.size() && i - 4 < sizeof(event.Params); i++) {
 				event.Params[i - 4] = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(args.Float(i, 0.0f)), 0, 255));
 			}
-			auto place = std::make_unique<SetEventsCommand>(document, _("Place Events"));
+			// TRANSLATORS: Name of an undo step in the history, after events were placed
+			auto place = std::make_unique<SetEventsCommand>(document, _x("editor", "Place Events"));
 			place->Set(x, y, event);
 			_session.Execute(Death::move(place));
 			return DebugResult::Done;
@@ -478,7 +482,7 @@ namespace Jazz2::Editor
 				record.Event.Flags |= Formats::EventRecord::Generator;
 				record.Event.GeneratorDelay = std::uint8_t(std::clamp(args.Float(4, 0.0f), 0.0f, 255.0f));
 			}
-			_session.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _("Place Events")));
+			_session.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _x("editor", "Place Events")));
 			return DebugResult::Done;
 		} });
 		commands.push_back({ "/events"_s, 0, "/events"_s, [this](const Args&) {
@@ -875,7 +879,8 @@ namespace Jazz2::Editor
 			std::uint32_t rgb = std::uint32_t(std::strtoul(String(args[2]).data(), nullptr, 16));
 			palette[entry] = ((rgb >> 16) & 0xFF) | (rgb & 0xFF00) | ((rgb & 0xFF) << 16) | 0xFF000000u;
 			TimeStamp start = TimeStamp::now();
-			_session.Execute(std::make_unique<SetLevelPaletteCommand>(_session.GetDocument(), true, palette, _("Palette")));
+			// TRANSLATORS: Name of an undo step in the history, after the palette of the level was changed
+			_session.Execute(std::make_unique<SetLevelPaletteCommand>(_session.GetDocument(), true, palette, _x("editor", "Palette")));
 			LOGI("Palette entry {} changed in {:.2f} ms", entry, start.millisecondsSince());
 			return DebugResult::Done;
 		} });
@@ -897,7 +902,8 @@ namespace Jazz2::Editor
 			std::uint8_t indices[32 * 32], mask[32 * 32];
 			std::memset(indices, std::uint8_t(args.Float(2, 1.0f)), sizeof(indices));
 			std::memset(mask, 1, sizeof(mask));
-			_session.Execute(std::make_unique<SetTileOverrideCommand>(document, std::uint16_t(tileId), indices, mask, _("Tile override")));
+			// TRANSLATORS: Name of an undo step in the history, after a tile was changed only in this level
+			_session.Execute(std::make_unique<SetTileOverrideCommand>(document, std::uint16_t(tileId), indices, mask, _x("editor", "Tile override")));
 			return DebugResult::Done;
 		} });
 		commands.push_back({ "/applytiles"_s, 1, "/applytiles <source> [new name|-] [palette]"_s, [this](const Args& args) {

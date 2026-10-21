@@ -19,6 +19,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// TRANSLATORS: Header of Options section
 		SetTitle(_("Options"));
 
 		// A ScrollView (rather than a plain centered StackLayout) so the list keeps edge padding and scrolls instead of

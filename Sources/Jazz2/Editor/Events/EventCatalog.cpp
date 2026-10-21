@@ -202,17 +202,20 @@ namespace Jazz2::Editor
 			using namespace JsonAccess;
 
 			if (!value.isObject()) {
-				ReportError(scope, source, _("An event description isn't an object"));
+				// TRANSLATORS: Error in event descriptions from a file or a level script, object as in a JSON object
+				ReportError(scope, source, _x("editor", "An event description isn't an object"));
 				return nullptr;
 			}
 			std::int32_t type = GetInt(value, "type", 0);
 			if (type <= 0 || type > 0xFFFF) {
-				ReportError(scope, source, _("An event description has no valid \"type\""));
+				// TRANSLATORS: Error in event descriptions, keep "type" as it is, it's a key in the JSON
+				ReportError(scope, source, _x("editor", "An event description has no valid \"type\""));
 				return nullptr;
 			}
 			String name = GetString(value, "name");
 			if (name.empty()) {
-				ReportError(scope, source, _f("Event {} has no \"name\"", type));
+				// TRANSLATORS: Error in event descriptions, {} is the number of the event type, keep "name" as it is, it's a key in the JSON
+				ReportError(scope, source, _fx("editor", "Event {} has no \"name\"", type));
 				return nullptr;
 			}
 
@@ -225,7 +228,7 @@ namespace Jazz2::Editor
 			descriptor.Traits = EventTraits::Object;
 			String category = GetString(value, "category", "other"_s);
 			if (!ParseCategory(category, descriptor.Category)) {
-				ReportError(scope, source, _f("Event \"{}\" has an unknown category \"{}\"", name, category));
+				ReportError(scope, source, _fx("editor", "Event \"{}\" has an unknown category \"{}\"", name, category));
 			}
 			const Json::Value& traits = Member(value, "traits");
 			if (traits.isArray()) {
@@ -258,7 +261,8 @@ namespace Jazz2::Editor
 			const Json::Value& preview = Member(value, "preview");
 			String metadata = GetString(preview, "metadata");
 			if (!metadata.empty() && !IsValidMetadataPath(metadata)) {
-				ReportError(scope, source, _f("Event \"{}\" has an invalid preview \"{}\", it's shown as a box", name, metadata));
+				// TRANSLATORS: Error in event descriptions, with the name of the event and the path of its preview sprite
+				ReportError(scope, source, _fx("editor", "Event \"{}\" has an invalid preview \"{}\", it's shown as a box", name, metadata));
 				metadata = {};
 			}
 			bool hasPreviewMetadata = !metadata.empty();
@@ -303,12 +307,13 @@ namespace Jazz2::Editor
 						const Json::Value& caseValue = Member(item, "value");
 						bool isDefault = (caseValue.isString() && ToString(caseValue) == "default"_s);
 						if (!isDefault && !caseValue.isNumeric()) {
-							ReportError(scope, source, _f("A preview case of event \"{}\" has no \"value\", it's left out", name));
+							// TRANSLATORS: Error in event descriptions, {} is the name of the event, keep "value" as it is, it's a key in the JSON
+							ReportError(scope, source, _fx("editor", "A preview case of event \"{}\" has no \"value\", it's left out", name));
 							continue;
 						}
 						String caseMetadata = GetString(item, "metadata");
 						if (!caseMetadata.empty() && !IsValidMetadataPath(caseMetadata)) {
-							ReportError(scope, source, _f("Event \"{}\" has an invalid preview \"{}\", it's shown as a box", name, caseMetadata));
+							ReportError(scope, source, _fx("editor", "Event \"{}\" has an invalid preview \"{}\", it's shown as a box", name, caseMetadata));
 							caseMetadata = {};
 						}
 						std::size_t metadataText = (caseMetadata.empty() ? SIZE_MAX : texts.size());
@@ -346,7 +351,7 @@ namespace Jazz2::Editor
 					String paramName = GetString(param, "name");
 					ParamType paramType = ParamType::UInt;
 					if (paramName.empty() || !ParseParamType(GetString(param, "type", "uint"_s), paramType)) {
-						ReportError(scope, source, _f("A parameter of event \"{}\" has no name or an unknown type, it's left out", name));
+						ReportError(scope, source, _fx("editor", "A parameter of event \"{}\" has no name or an unknown type, it's left out", name));
 						continue;
 					}
 					std::int32_t offset = GetInt(param, "offset", -1);
@@ -367,7 +372,7 @@ namespace Jazz2::Editor
 						fits = (offset + storage <= Formats::LevelFile::EventParamsSize);
 					}
 					if (!fits) {
-						ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" doesn't fit into the parameters, it's left out", paramName, name));
+						ReportError(scope, source, _fx("editor", "Parameter \"{}\" of event \"{}\" doesn't fit into the parameters, it's left out", paramName, name));
 						continue;
 					}
 
@@ -386,7 +391,8 @@ namespace Jazz2::Editor
 					std::int32_t minValue = std::clamp<std::int32_t>(GetInt(param, "min", std::int32_t(lowest)), std::int32_t(lowest), std::int32_t(highest));
 					std::int32_t maxValue = std::clamp<std::int32_t>(GetInt(param, "max", std::int32_t(highest)), std::int32_t(lowest), std::int32_t(highest));
 					if (minValue > maxValue) {
-						ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" has \"min\" above \"max\", the whole range is used", paramName, name));
+						// TRANSLATORS: Error in event descriptions, with the name of a parameter and of its event, keep "min" and "max" as they are, they are keys in the JSON
+						ReportError(scope, source, _fx("editor", "Parameter \"{}\" of event \"{}\" has \"min\" above \"max\", the whole range is used", paramName, name));
 						minValue = std::int32_t(lowest);
 						maxValue = std::int32_t(highest);
 					}
@@ -399,7 +405,8 @@ namespace Jazz2::Editor
 						minValue = std::clamp<std::int32_t>(minValue, -ExactLimit, ExactLimit);
 						maxValue = std::clamp<std::int32_t>(maxValue, -ExactLimit, ExactLimit);
 						if (Member(param, "min").isNumeric() || Member(param, "max").isNumeric()) {
-							ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" can be edited only from {} to {}", paramName, name, minValue, maxValue));
+							// TRANSLATORS: Warning in event descriptions, with the name of a parameter, of its event, and the lowest and the highest value it can have
+							ReportError(scope, source, _fx("editor", "Parameter \"{}\" of event \"{}\" can be edited only from {} to {}", paramName, name, minValue, maxValue));
 						}
 					}
 
@@ -521,7 +528,8 @@ namespace Jazz2::Editor
 						} else if (gizmo == "offsetY"_s) {
 							field.Field.Gizmo = FieldGizmo::OffsetY;
 						} else {
-							ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" has an unknown \"gizmo\" \"{}\"", texts[field.NameText], name, gizmo));
+							// TRANSLATORS: Error in event descriptions, with the name of a parameter, of its event and the unknown value, keep "gizmo" as it is, it's a key in the JSON
+							ReportError(scope, source, _fx("editor", "Parameter \"{}\" of event \"{}\" has an unknown \"gizmo\" \"{}\"", texts[field.NameText], name, gizmo));
 						}
 						field.Field.GizmoStep = std::int16_t(std::clamp<std::int32_t>(GetInt(param, "gizmoStep", 1), 1, 1024));
 					}
@@ -571,7 +579,8 @@ namespace Jazz2::Editor
 						return std::int8_t(index);
 					}
 				}
-				ReportError(scope, source, _f("\"{}\" of \"{}\" in event \"{}\" refers to no parameter", what, owner, name));
+				// TRANSLATORS: Error in event descriptions, with a key in the JSON (kept as it is), the name of a parameter and the name of its event
+				ReportError(scope, source, _fx("editor", "\"{}\" of \"{}\" in event \"{}\" refers to no parameter", what, owner, name));
 				return -1;
 			};
 			for (PendingField& field : pending) {
@@ -601,7 +610,8 @@ namespace Jazz2::Editor
 						std::uint32_t contentsStart = field.Field.Offset;
 						std::uint32_t contentsEnd = contentsStart + field.Field.Bits / 8u;
 						if (typeStart < contentsEnd && contentsStart < typeEnd) {
-							ReportError(scope, source, _f("Parameter \"{}\" of event \"{}\" contains its own \"typeParam\", the event inside is left out", paramName, name));
+							// TRANSLATORS: Error in event descriptions, with the name of a parameter and of its event, keep "typeParam" as it is, it's a key in the JSON
+							ReportError(scope, source, _fx("editor", "Parameter \"{}\" of event \"{}\" contains its own \"typeParam\", the event inside is left out", paramName, name));
 							field.Field.ContentsTypeField = -1;
 						}
 					}
@@ -692,7 +702,8 @@ namespace Jazz2::Editor
 	{
 		Json::Value doc; std::string errors;
 		if (!JsonFile::Parse(json, doc, &errors)) {
-			ReportError(scope, source, _f("The event descriptions can't be read - {}", StringView(errors.data(), errors.size()).trimmed()));
+			// TRANSLATORS: Error in event descriptions, {} is the error message of the JSON parser
+			ReportError(scope, source, _fx("editor", "The event descriptions can't be read - {}", StringView(errors.data(), errors.size()).trimmed()));
 			return 0;
 		}
 		const Json::Value* list = &doc;
@@ -804,19 +815,20 @@ namespace Jazz2::Editor
 	StringView EventCatalog::GetCategoryName(EventCategory category)
 	{
 		switch (category) {
-			case EventCategory::Basic: return _x("Event category", "Basic");
-			case EventCategory::Scenery: return _x("Event category", "Scenery");
-			case EventCategory::Modifier: return _x("Event category", "Tile modifiers");
-			case EventCategory::Area: return _x("Event category", "Areas");
-			case EventCategory::Trigger: return _x("Event category", "Triggers");
-			case EventCategory::Warp: return _x("Event category", "Warps");
-			case EventCategory::Light: return _x("Event category", "Lights");
-			case EventCategory::Environment: return _x("Event category", "Environment");
-			case EventCategory::Enemy: return _x("Event category", "Enemies");
-			case EventCategory::Boss: return _x("Event category", "Bosses");
-			case EventCategory::Collectible: return _x("Event category", "Collectibles");
-			case EventCategory::Container: return _x("Event category", "Containers");
-			default: return _x("Event category", "Other");
+			// TRANSLATORS: Names of categories of events in the list of events
+			case EventCategory::Basic: return _x("editor", "Basic");
+			case EventCategory::Scenery: return _x("editor", "Scenery");
+			case EventCategory::Modifier: return _x("editor", "Tile modifiers");
+			case EventCategory::Area: return _x("editor", "Areas");
+			case EventCategory::Trigger: return _x("editor", "Triggers");
+			case EventCategory::Warp: return _x("editor", "Warps");
+			case EventCategory::Light: return _x("editor", "Lights");
+			case EventCategory::Environment: return _x("editor", "Environment");
+			case EventCategory::Enemy: return _x("editor", "Enemies");
+			case EventCategory::Boss: return _x("editor", "Bosses");
+			case EventCategory::Collectible: return _x("editor", "Collectibles");
+			case EventCategory::Container: return _x("editor", "Containers");
+			default: return _x("editor", "Other");
 		}
 	}
 

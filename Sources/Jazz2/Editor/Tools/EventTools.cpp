@@ -459,7 +459,7 @@ namespace Jazz2::Editor
 				return;
 			}
 			if (!_host.IsLayerEditable(spriteLayer)) {
-				_host.ShowMessage(_("The sprite layer is locked or hidden"));
+				_host.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 				return;
 			}
 			if (pointer.Button == MouseButton::Right) {
@@ -469,7 +469,8 @@ namespace Jazz2::Editor
 				// are one less then, the selection finds them again
 				selection.DropEmpty(document);
 				selection.RemoveOffGrid(offGrid);
-				_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _("Erase Events")));
+				// TRANSLATORS: Name of an undo step in the history, after events were erased
+				_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _x("editor", "Erase Events")));
 				selection.DropEmpty(document);
 				return;
 			}
@@ -498,11 +499,11 @@ namespace Jazz2::Editor
 			// The event of the brush off the grid, exactly where it's clicked
 			const EventStamp& brush = _host.GetEventBrush();
 			if (!brush.IsSingle()) {
-				_host.ShowMessage(_("Only a single event can be placed off the grid"));
+				_host.ShowMessage(_x("editor", "Only a single event can be placed off the grid"));
 				return;
 			}
 			if (!_host.IsLayerEditable(spriteLayer)) {
-				_host.ShowMessage(_("The sprite layer is locked or hidden"));
+				_host.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 				return;
 			}
 			Vector2f world = _host.GetLayerView(spriteLayer).ScreenToWorld(pointer.Screen);
@@ -517,18 +518,19 @@ namespace Jazz2::Editor
 			record.Event = brush.Items[0].Event;
 			LevelDocument::NormalizeEvent(record.Event);
 			std::int32_t placedIndex = std::int32_t(events.size()) - 1;
-			_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _("Place Events")));
+			// TRANSLATORS: Name of an undo step in the history, after events were placed
+			_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _x("editor", "Place Events")));
 			selection.SetOffGrid(placedIndex);
 			return;
 		}
 
 		if (pointer.Button == MouseButton::Right) {
 			if (!_host.IsLayerEditable(spriteLayer)) {
-				_host.ShowMessage(_("The sprite layer is locked or hidden"));
+				_host.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 				return;
 			}
 			_mode = Mode::Erase;
-			_stroke = std::make_unique<SetEventsCommand>(document, _("Erase Events"));
+			_stroke = std::make_unique<SetEventsCommand>(document, _x("editor", "Erase Events"));
 			EraseAt(cell);
 			return;
 		}
@@ -547,7 +549,7 @@ namespace Jazz2::Editor
 			}
 			if (hit >= 0) {
 				if (!_host.IsLayerEditable(spriteLayer)) {
-					_host.ShowMessage(_("The sprite layer is locked or hidden"));
+					_host.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 					return;
 				}
 				LayerView view = _host.GetLayerView(spriteLayer);
@@ -555,7 +557,8 @@ namespace Jazz2::Editor
 				_gizmo = gizmos[hit];
 				_gizmoCell = gizmoCell;
 				_gizmoGrab = _gizmo.World - view.ScreenToWorld(pointer.Screen);
-				_stroke = std::make_unique<SetEventsCommand>(document, _("Change Event"));
+				// TRANSLATORS: Name of an undo step in the history, after an event was changed by dragging its handle
+				_stroke = std::make_unique<SetEventsCommand>(document, _x("editor", "Change Event"));
 				return;
 			}
 		}
@@ -614,7 +617,7 @@ namespace Jazz2::Editor
 		}
 
 		if (!_host.IsLayerEditable(spriteLayer)) {
-			_host.ShowMessage(_("The sprite layer is locked or hidden"));
+			_host.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 			return;
 		}
 		_overwrite = shift;
@@ -629,7 +632,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		_mode = Mode::Paint;
-		_stroke = std::make_unique<SetEventsCommand>(document, _("Place Events"));
+		_stroke = std::make_unique<SetEventsCommand>(document, _x("editor", "Place Events"));
 		if (!_host.GetEventBrush().IsSingle()) {
 			// Warps and triggers of the stamp placed before joined the level, this copy gets its own
 			RemapLinkedIds(_host.GetEventBrush(), document);
@@ -984,13 +987,13 @@ namespace Jazz2::Editor
 			return 0;
 		}
 		if (!_host.IsLayerEditable(document.GetSpriteLayerIndex())) {
-			_host.ShowMessage(_("The sprite layer is locked or hidden"));
+			_host.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 			return 0;
 		}
 		Vector2i gridSize = document.GetEventGridSize();
 		Formats::EventRecord event = brush.Items[0].Event;
 		LevelDocument::NormalizeEvent(event);
-		auto command = std::make_unique<SetEventsCommand>(document, _("Place Events"));
+		auto command = std::make_unique<SetEventsCommand>(document, _x("editor", "Place Events"));
 		std::int32_t placed = 0;
 		for (const Vector2i& cell : cells) {
 			if (!IsInGrid(cell, gridSize)) {
@@ -1052,7 +1055,7 @@ namespace Jazz2::Editor
 		}
 		PlaceOnCells(cells, true);
 		if (std::int32_t(cells.size()) >= MaxEventFill) {
-			_host.ShowMessage(_("The area is too large, only a part of it was filled"));
+			_host.ShowMessage(_x("editor", "The area is too large, only a part of it was filled"));
 		}
 	}
 
@@ -1092,7 +1095,7 @@ namespace Jazz2::Editor
 		}
 		// The events off the grid of the stamp with those on it, as one step
 		LevelDocument& document = _host.GetDocument();
-		_host.BeginChanges(_("Place Events"));
+		_host.BeginChanges(_x("editor", "Place Events"));
 		if (!stroke->IsEmpty()) {
 			_host.Execute(Death::move(stroke));
 		}
@@ -1101,7 +1104,7 @@ namespace Jazz2::Editor
 			events.push_back(record);
 		}
 		_pendingOffGrid.clear();
-		_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _("Place Events")));
+		_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _x("editor", "Place Events")));
 		_host.EndChanges();
 	}
 
@@ -1110,7 +1113,7 @@ namespace Jazz2::Editor
 		LevelDocument& document = _host.GetDocument();
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
 		if (!_host.IsLayerEditable(spriteLayer)) {
-			_host.ShowMessage(_("The sprite layer is locked or hidden"));
+			_host.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 			return;
 		}
 
@@ -1127,7 +1130,7 @@ namespace Jazz2::Editor
 			Vector2i from(std::int32_t(cell % std::uint32_t(gridSize.X)), std::int32_t(cell / std::uint32_t(gridSize.X)));
 			Vector2i to = from + cellOffset;
 			if (!IsInGrid(to, gridSize)) {
-				_host.ShowMessage(_("Events can't be moved out of the level"));
+				_host.ShowMessage(_x("editor", "Events can't be moved out of the level"));
 				return;
 			}
 			const Formats::EventRecord& event = document.GetEvent(from.X, from.Y);
@@ -1147,7 +1150,7 @@ namespace Jazz2::Editor
 				Formats::OffGridEventRecord& record = offGrid[index];
 				std::int64_t x = std::int64_t(record.X) + pixelOffset.X, y = std::int64_t(record.Y) + pixelOffset.Y;
 				if (x < 0 || y < 0 || x >= std::int64_t(gridSize.X) * 32 || y >= std::int64_t(gridSize.Y) * 32) {
-					_host.ShowMessage(_("Events can't be moved out of the level"));
+					_host.ShowMessage(_x("editor", "Events can't be moved out of the level"));
 					return;
 				}
 				record.X = std::uint32_t(x);
@@ -1159,10 +1162,11 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		_host.BeginChanges(_("Move Events"));
+		// TRANSLATORS: Name of an undo step in the history, after events were moved
+		_host.BeginChanges(_x("editor", "Move Events"));
 		if (!moved.empty()) {
 			// All are taken away first, so events moved onto each other's tiles aren't lost
-			auto command = std::make_unique<SetEventsCommand>(document, _("Move Events"));
+			auto command = std::make_unique<SetEventsCommand>(document, _x("editor", "Move Events"));
 			for (const Moved& item : moved) {
 				command->Set(item.From.X, item.From.Y, LevelDocument::GetEmptyEvent());
 			}
@@ -1172,7 +1176,7 @@ namespace Jazz2::Editor
 			_host.Execute(Death::move(command));
 		}
 		if (offGridMoved) {
-			_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(offGrid), _("Move Events")));
+			_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(offGrid), _x("editor", "Move Events")));
 		}
 		_host.EndChanges();
 
@@ -1427,25 +1431,25 @@ namespace Jazz2::Editor
 	StringView EventTool::GetHint() const
 	{
 		switch (GetSettings().EventMode) {
-			case EventPlaceMode::Rectangle: return _("Drag over empty tiles: place the event on all of them - Shift: over events too - click an event: select it");
-			case EventPlaceMode::Fill: return _("Click an empty tile: place the event on the area of such tiles joined to it - click an event: select it");
-			case EventPlaceMode::Select: return _("Click or drag: select - Shift: add - Ctrl: toggle or take away - Drag selected events: move them - Right: erase - Alt: pick");
+			case EventPlaceMode::Rectangle: return _x("editor", "Drag over empty tiles: place the event on all of them - Shift: over events too - click an event: select it");
+			case EventPlaceMode::Fill: return _x("editor", "Click an empty tile: place the event on the area of such tiles joined to it - click an event: select it");
+			case EventPlaceMode::Select: return _x("editor", "Click or drag: select - Shift: add - Ctrl: toggle or take away - Drag selected events: move them - Right: erase - Alt: pick");
 			default: break;
 		}
-		return _("Click: place or select - Drag: move - Right: erase - Alt: pick - Ctrl: select more - Ctrl+Shift: place off the grid");
+		return _x("editor", "Click: place or select - Drag: move - Right: erase - Alt: pick - Ctrl: select more - Ctrl+Shift: place off the grid");
 	}
 
 	void EventTool::BuildOptions(ToolOptionsBuilder& builder)
 	{
 		const ToolOptionItem modes[] = {
 			// TRANSLATORS: How the event tool places events, by clicking, in a rectangle, by filling an area, or that it only selects them
-			{ _("Click"), EditorIcon::Brush, ActionIds::EventsModePaint },
-			{ _("Rectangle"), EditorIcon::Rectangle, ActionIds::EventsModeRectangle },
-			{ _("Fill"), EditorIcon::Fill, ActionIds::EventsModeFill },
-			{ _("Select"), EditorIcon::Select, ActionIds::EventsModeSelect },
+			{ _x("editor", "Click"), EditorIcon::Brush, ActionIds::EventsModePaint },
+			{ _x("editor", "Rectangle"), EditorIcon::Rectangle, ActionIds::EventsModeRectangle },
+			{ _x("editor", "Fill"), EditorIcon::Fill, ActionIds::EventsModeFill },
+			{ _x("editor", "Select"), EditorIcon::Select, ActionIds::EventsModeSelect },
 		};
 		// TRANSLATORS: Label of the choice of how the event tool places events, or that it only selects them
-		builder.AddChoice(_("Mode"), modes);
+		builder.AddChoice(_x("editor", "Mode"), modes);
 	}
 }
 

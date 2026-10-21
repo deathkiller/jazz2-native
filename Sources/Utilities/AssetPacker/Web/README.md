@@ -8,7 +8,8 @@ of their copy of Jazz Jackrabbit 2; the page runs
 
 in a worker, which converts the original game files for the console the image is for and writes a new image with
 them. The levels chosen on the page add `--originals-only` or `--shareware-only`, and `--skip-non-episode-levels`. The game's own content (the repository's `Content`, without the `.po` sources) is baked into the module, and
-nothing leaves the browser.
+nothing leaves the browser. None of these consoles has the level editor, so the texts of its `editor` context are left
+out of the translations that go into the image.
 
 Nothing in the conversion needs a console SDK: the Nintendo 64 formats are written by encoders built into the tool
 (`Wav64Writer`, `Xm64Converter`, `Mpeg1Encoder`) rather than by libdragon's `audioconv64`/`videoconv64` and `ffmpeg`.

@@ -50,7 +50,7 @@ namespace Jazz2::Editor
 					palette[i] = image.Palette[i] | 0xFF000000u;
 				}
 				if (image.PaletteSize <= 0 && error != nullptr) {
-					*error = _("The file has no colors");
+					*error = _x("editor", "The file has no colors");
 				}
 				return image.PaletteSize;
 			}
@@ -69,7 +69,7 @@ namespace Jazz2::Editor
 				return count;
 			}
 			if (error != nullptr) {
-				*error = _("The image isn't indexed, and isn't a grid of 16 × 16 colors");
+				*error = _x("editor", "The image isn't indexed, and isn't a grid of 16 × 16 colors");
 			}
 			return 0;
 		}
@@ -117,7 +117,7 @@ namespace Jazz2::Editor
 		Format format = GetFormat(path);
 		if (format == Format::None) {
 			if (error != nullptr) {
-				*error = _("Only .pal, .gpl, .act and .png palettes can be read");
+				*error = _x("editor", "Only .pal, .gpl, .act and .png palettes can be read");
 			}
 			return 0;
 		}
@@ -128,14 +128,14 @@ namespace Jazz2::Editor
 		std::int64_t size = (s->IsValid() ? s->GetSize() : -1);
 		if (size <= 0 || size > 1024 * 1024) {
 			if (error != nullptr) {
-				*error = _("The file can't be read");
+				*error = _x("editor", "The file can't be read");
 			}
 			return 0;
 		}
 		String data{NoInit, std::size_t(size)};
 		if (s->Read(data.data(), size) != size) {
 			if (error != nullptr) {
-				*error = _("The file can't be read");
+				*error = _x("editor", "The file can't be read");
 			}
 			return 0;
 		}
@@ -143,7 +143,7 @@ namespace Jazz2::Editor
 		if (format == Format::Act) {
 			if (size < 768) {
 				if (error != nullptr) {
-					*error = _("The file is too short for a palette");
+					*error = _x("editor", "The file is too short for a palette");
 				}
 				return 0;
 			}
@@ -177,7 +177,7 @@ namespace Jazz2::Editor
 				if (lineIndex == 1) {
 					if (!line.hasPrefix("JASC-PAL"_s)) {
 						if (error != nullptr) {
-							*error = _("The file isn't a JASC palette");
+							*error = _x("editor", "The file isn't a JASC palette");
 						}
 						return 0;
 					}
@@ -198,7 +198,7 @@ namespace Jazz2::Editor
 				if (lineIndex == 1) {
 					if (!line.hasPrefix("GIMP Palette"_s)) {
 						if (error != nullptr) {
-							*error = _("The file isn't a GIMP palette");
+							*error = _x("editor", "The file isn't a GIMP palette");
 						}
 						return 0;
 					}
@@ -218,7 +218,7 @@ namespace Jazz2::Editor
 			}
 		}
 		if (count == 0 && error != nullptr) {
-			*error = _("The file has no colors");
+			*error = _x("editor", "The file has no colors");
 		}
 		return count;
 	}

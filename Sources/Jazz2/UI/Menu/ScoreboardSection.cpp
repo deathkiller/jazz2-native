@@ -136,8 +136,10 @@ namespace Jazz2::UI::Menu
 		StringView extraLabel;
 		bool hasExtra = false;
 		if (roundStarted && (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace)) {
+			// TRANSLATORS: Column header in the multiplayer scoreboard (number of completed laps in a race), keep it short
 			extraLabel = _("Laps"); hasExtra = true;
 		} else if (roundStarted && (gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt)) {
+			// TRANSLATORS: Column header in the multiplayer scoreboard (amount of treasure collected), keep it short
 			extraLabel = _("Treasure"); hasExtra = true;
 		}
 
@@ -166,11 +168,13 @@ namespace Jazz2::UI::Menu
 		float colPing = left + width * 0.98f;
 
 		// Title
+		// TRANSLATORS: Header text of the multiplayer scoreboard with the list of players
 		_root->DrawStringGlow(_("Scoreboard"), charOffset, contentBounds.X + contentBounds.W * 0.5f, top + slideY + 8.0f, IMenuContainer::FontLayer + 10,
 			Alignment::Center, faded(Font::DefaultColor, alpha), titleScale, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		float headerY = top + 20.0f;
 		Colorf headerColor = faded(Colorf(0.5f, 0.5f, 0.5f, 0.5f), alpha);
+		// TRANSLATORS: Column header in the multiplayer scoreboard (player name)
 		_root->DrawStringShadow(_("Player"), charOffset, colName, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::TopLeft, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		if (hasExtra) {
@@ -181,8 +185,10 @@ namespace Jazz2::UI::Menu
 			Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		_root->DrawStringShadow("D"_s, charOffset, colD, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+		// TRANSLATORS: Column header in the multiplayer scoreboard, abbreviation of "Points" (championship points), keep it very short
 		_root->DrawStringShadow(_("Pts"), charOffset, colPts, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+		// TRANSLATORS: Column header in the multiplayer scoreboard (network latency of the player), keep it short
 		_root->DrawStringShadow(_("Ping"), charOffset, colPing, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 

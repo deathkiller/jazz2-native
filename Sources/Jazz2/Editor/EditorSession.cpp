@@ -987,7 +987,8 @@ namespace Jazz2::Editor
 		_settings.Save();
 		// Only the interface, the level keeps its render targets
 		UpdateUiScale();
-		ShowMessage(_f("Interface size {}%", std::int32_t(std::round(_surface->GetScale() * 100.0f))));
+		// TRANSLATORS: Status message after making the interface larger or smaller, {} is its size in percent
+		ShowMessage(_fx("editor", "Interface size {}%", std::int32_t(std::round(_surface->GetScale() * 100.0f))));
 	}
 }
 

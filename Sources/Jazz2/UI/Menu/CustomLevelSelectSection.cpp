@@ -167,6 +167,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawMenuFrame(centerX, topLine, bottomLine);
 
 		std::int32_t charOffset = 0;
+		// TRANSLATORS: Header of the section with the list of custom levels
 		_root->DrawMenuTitle(charOffset, _("Play Custom Levels"), centerX, topLine);
 	}
 
@@ -432,6 +433,7 @@ namespace Jazz2::UI::Menu
 				StringView levelName, displayName;
 #if defined(WITH_MULTIPLAYER)
 				if (_items[i].LevelName == CreateServerOptionsSection::FromPlaylist) {
+					// TRANSLATORS: Item in the list of levels when creating a multiplayer server, starts the server with the configured playlist instead of a single level
 					levelName = _("Create server from playlist");
 				} else
 #endif

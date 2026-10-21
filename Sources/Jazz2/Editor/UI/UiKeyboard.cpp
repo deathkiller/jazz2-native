@@ -57,17 +57,21 @@ namespace Jazz2::Editor
 		}
 		auto* line = Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 		// TRANSLATORS: Keys of the keyboard on the screen, as a real keyboard names them
-		auto* shift = line->Add<KeyButton>(_("Shift"), EditorIcon::ArrowUp, [this]() {
+		auto* shift = line->Add<KeyButton>(_x("editor", "Shift"), EditorIcon::ArrowUp, [this]() {
 			_shift = !_shift;
 			UpdateLetters();
 		});
 		shift->IsCheckedFunc = [this]() { return _shift; };
-		auto* space = line->Add<KeyButton>(_("Space"), EditorIcon::None, [this]() { Type(" "_s); });
+		// TRANSLATORS: Key of the keyboard on the screen, the space bar, as a real keyboard names it
+		auto* space = line->Add<KeyButton>(_x("editor", "Space"), EditorIcon::None, [this]() { Type(" "_s); });
 		space->Flex = 1.0f;
-		line->Add<KeyButton>(StringView(), EditorIcon::ChevronLeft, [this]() { Press(Keys::Left); })->Tooltip = _("Move left");
-		line->Add<KeyButton>(StringView(), EditorIcon::ChevronRight, [this]() { Press(Keys::Right); })->Tooltip = _("Move right");
-		line->Add<KeyButton>(StringView(), EditorIcon::Delete, [this]() { Press(Keys::Backspace); })->Tooltip = _("Delete the character before");
-		auto* done = line->Add<KeyButton>(_("Done"), EditorIcon::Check, [this]() {
+		// TRANSLATORS: Tooltip of a key of the keyboard on the screen, moves the text cursor one character to the left
+		line->Add<KeyButton>(StringView(), EditorIcon::ChevronLeft, [this]() { Press(Keys::Left); })->Tooltip = _x("editor", "Move left");
+		// TRANSLATORS: Tooltip of a key of the keyboard on the screen, moves the text cursor one character to the right
+		line->Add<KeyButton>(StringView(), EditorIcon::ChevronRight, [this]() { Press(Keys::Right); })->Tooltip = _x("editor", "Move right");
+		line->Add<KeyButton>(StringView(), EditorIcon::Delete, [this]() { Press(Keys::Backspace); })->Tooltip = _x("editor", "Delete the character before");
+		// TRANSLATORS: Key of the keyboard on the screen, confirms the text and hides the keyboard
+		auto* done = line->Add<KeyButton>(_x("editor", "Done"), EditorIcon::Check, [this]() {
 			// Taking the focus away confirms the text, Enter would break a line in a box of more lines first
 			if (UiSurface* surface = GetSurface()) {
 				surface->SetFocus(nullptr);

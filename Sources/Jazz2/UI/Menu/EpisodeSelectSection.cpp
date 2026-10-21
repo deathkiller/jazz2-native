@@ -195,13 +195,18 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow(
 #if defined(WITH_MULTIPLAYER)
 			_mode == EpisodeSelectMode::LocalMultiplayer
+				// TRANSLATORS: Header of the episode list in Play Multiplayer > Create Local Splitscreen Game section
 				? _("Create Local Splitscreen Game")
 				: (_mode == EpisodeSelectMode::OnlineMultiplayer
 					? (_privateServer
+						// TRANSLATORS: Header of the episode list in Play Multiplayer > Create Private Server section
 						? _("Create Private Server")
+						// TRANSLATORS: Header of the episode list in Play Multiplayer > Create Public Server section
 						: _("Create Public Server"))
+					// TRANSLATORS: Header of the episode list in Play Story section
 					: _("Play Story")),
 #else
+			// TRANSLATORS: Header of the episode list in Play Story section
 			_("Play Story"),
 #endif
 			charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer, Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f),
@@ -601,6 +606,7 @@ namespace Jazz2::UI::Menu
 
 			if (episode.Description.FirstLevel == ":custom-levels"_s) {
 				episode.Flags |= EpisodeDataFlags::RedirectToCustomLevels | EpisodeDataFlags::IsAvailable;
+				// TRANSLATORS: Item in the episode list (Play Story section) that opens the list of custom levels
 				episode.Description.DisplayName = _("Play Custom Levels");
 			} else {
 				if (!resolver.LevelExists(String(episode.Description.Name + '/' + episode.Description.FirstLevel))) {

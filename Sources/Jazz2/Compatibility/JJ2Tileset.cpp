@@ -168,7 +168,7 @@ namespace Jazz2::Compatibility
 
 	void JJ2Tileset::LoadMaskData(JJ2Block& block, ArrayView<const TileOffsets> offsets)
 	{
-		constexpr std::int32_t MaskBytes = Formats::TileSetData::MaskBytesPerTile;
+		static constexpr std::int32_t MaskBytes = Formats::TileSetData::MaskBytesPerTile;
 		std::int32_t tileCount = _data.TileCount;
 		auto mask = [this](std::int32_t tileIdx) {
 			return &_data.Masks[std::size_t(tileIdx) * MaskBytes];

@@ -545,6 +545,7 @@ namespace Jazz2::UI
 		} else {
 			if (!_levelHandler->OnConsoleCommand(line)) {
 				WriteLine(MessageLevel::Echo, line);
+				// TRANSLATORS: Error message in the in-game console when the entered command is not recognized
 				WriteLine(MessageLevel::Error, _("Unknown command"));
 			}
 		}

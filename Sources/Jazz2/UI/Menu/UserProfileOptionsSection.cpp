@@ -97,6 +97,7 @@ namespace Jazz2::UI::Menu
 
 		bool isInGame = (runtime_cast<InGameMenu>(root) != nullptr);
 
+		// TRANSLATORS: Header of Options > User Profile section
 		SetTitle(_("User Profile"));
 
 		auto list = std::make_unique<ScrollView>();
@@ -104,6 +105,7 @@ namespace Jazz2::UI::Menu
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		// TRANSLATORS: Menu item in Options > User Profile section
 		auto* discordItem = list->Add<ChoiceItem>(_("Discord Integration"),
+			// TRANSLATORS: Option for on/off items in Options > User Profile section
 			[]() -> StringView { return (PreferencesCache::EnableDiscordIntegration ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
 				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
@@ -182,6 +184,7 @@ namespace Jazz2::UI::Menu
 					: (readOnly ? Font::TransparentDefaultColor : Font::DefaultColor));
 
 				if (base == 0) {
+					// TRANSLATORS: Option for fur/weapon color items in Options > User Profile section, the original colors of the character
 					r->DrawStringShadow(_("Default"), charOffset, centerX, y, IMenuContainer::FontLayer - 10, Alignment::Center, labelColor, 0.8f);
 				} else {
 					// Preview the chosen gradient: draw its sprite-palette colors (hue-shifted to match the variant) as a small strip
@@ -206,11 +209,11 @@ namespace Jazz2::UI::Menu
 			[this]() -> StringView {
 				switch (_colorMode) {
 					default:
-					// TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+					// TRANSLATORS: Value of "Apply Custom Colors" in Options > User Profile
 					case PlayerColorMode::OnlineOnly: return _("Online only");
-					// TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+					// TRANSLATORS: Value of "Apply Custom Colors" in Options > User Profile
 					case PlayerColorMode::FirstLocalPlayer: return _("Online and first local player");
-					// TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+					// TRANSLATORS: Value of "Apply Custom Colors" in Options > User Profile
 					case PlayerColorMode::AllLocalPlayers: return _("Online and all local players");
 				}
 			},

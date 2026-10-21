@@ -60,7 +60,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (_host.GetEventBrush().IsEmpty()) {
-			_host.ShowMessage(_("Choose the event to place first, in the list of events"));
+			_host.ShowMessage(_x("editor", "Choose the event to place first, in the list of events"));
 			return;
 		}
 		_points.push_back(GetPoint(pointer));
@@ -142,7 +142,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (!_host.IsLayerEditable(spriteLayer)) {
-			_host.ShowMessage(_("The sprite layer is locked or hidden"));
+			_host.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 			return;
 		}
 
@@ -156,7 +156,8 @@ namespace Jazz2::Editor
 
 		if (_options->OnGrid) {
 			// Each tile once, tiles that have an event keep it
-			auto command = std::make_unique<SetEventsCommand>(document, _("Place Events"));
+			// TRANSLATORS: Name of an undo step in the history, after events were placed
+			auto command = std::make_unique<SetEventsCommand>(document, _x("editor", "Place Events"));
 			SmallVector<std::uint32_t, 0> cells;
 			for (const Vector2f& p : placements) {
 				std::int32_t x = std::int32_t(std::floor(p.X / 32.0f)), y = std::int32_t(std::floor(p.Y / 32.0f));
@@ -187,10 +188,10 @@ namespace Jazz2::Editor
 				placed++;
 			}
 			if (placed > 0) {
-				_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _("Place Events")));
+				_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(events), _x("editor", "Place Events")));
 			}
 		}
-		_host.ShowMessage(_fn("{} event placed", "{} events placed", placed, placed));
+		_host.ShowMessage(_fnx("editor", "{} event placed", "{} events placed", placed, placed));
 		_points.clear();
 	}
 
@@ -198,14 +199,14 @@ namespace Jazz2::Editor
 	{
 		std::shared_ptr<Options> options = _options;
 		// TRANSLATORS: Label of the distance between two events placed along a path, in pixels
-		builder.AddNumber(_("Distance"), _("Distance between two events along the path in pixels, 32 is a tile"), 4.0f, 1024.0f, 1.0f,
+		builder.AddNumber(_x("editor", "Distance"), _x("editor", "Distance between two events along the path in pixels, 32 is a tile"), 4.0f, 1024.0f, 1.0f,
 			[options]() { return options->Spacing; }, [options](float value, bool final) { options->Spacing = std::clamp(value, 4.0f, 1024.0f); });
 		builder.AddSeparator();
 		// TRANSLATORS: Toggle in the toolbar, the path is a smooth curve through its points
-		builder.AddToggle({ _("Smooth"), EditorIcon::None, nullptr, _("Through the points in a curve, otherwise straight from one to the next") },
+		builder.AddToggle({ _x("editor", "Smooth"), EditorIcon::None, nullptr, _x("editor", "Through the points in a curve, otherwise straight from one to the next") },
 			[options]() { return options->Smooth; }, [options](bool value) { options->Smooth = value; });
 		// TRANSLATORS: Toggle in the toolbar, the events are placed on the tiles the path goes through
-		builder.AddToggle({ _("On tiles"), EditorIcon::None, nullptr, _("Each on the tile the path goes through, otherwise off the grid, exactly on the path") },
+		builder.AddToggle({ _x("editor", "On tiles"), EditorIcon::None, nullptr, _x("editor", "Each on the tile the path goes through, otherwise off the grid, exactly on the path") },
 			[options]() { return options->OnGrid; }, [options](bool value) { options->OnGrid = value; });
 	}
 
@@ -258,7 +259,7 @@ namespace Jazz2::Editor
 
 	StringView PathTool::GetHint() const
 	{
-		return _("Click: add a point - Ctrl: middle of a tile - Right: place the events - Esc: start again");
+		return _x("editor", "Click: add a point - Ctrl: middle of a tile - Right: place the events - Esc: start again");
 	}
 }
 

@@ -744,7 +744,7 @@ namespace Jazz2::Editor
 				return true;
 			});
 			if (cleared > 0) {
-				session.ShowMessage(_fn("{} tile that isn't in the tile set anymore was cleared", "{} tiles that aren't in the tile set anymore were cleared", cleared, cleared));
+				session.ShowMessage(_fnx("editor", "{} tile that isn't in the tile set anymore was cleared", "{} tiles that aren't in the tile set anymore were cleared", cleared, cleared));
 			}
 		}
 
@@ -1266,7 +1266,8 @@ namespace Jazz2::Editor
 					return {};
 				}
 				std::int32_t from = _state->Order[index];
-				_tooltip = (from < 0 ? String(_f("{}: a new empty tile", index)) : (from == index ? String(_f("Tile {}", index)) : String(_f("{}: tile {} before", index, from))));
+				// TRANSLATORS: Tooltips of a tile in the Rearrange Tile Set dialog, the first {} is its new place, "tile {} before" is the place it had
+				_tooltip = (from < 0 ? String(_fx("editor", "{}: a new empty tile", index)) : (from == index ? String(_fx("editor", "Tile {}", index)) : String(_fx("editor", "{}: tile {} before", index, from))));
 				return _tooltip;
 			}
 
@@ -1384,7 +1385,7 @@ namespace Jazz2::Editor
 					dialogPtr->Close();
 					(*shared)();
 				}, true);
-				dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
+				dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 			}
 			// Only a list to read otherwise, closed by its cross or Escape
 			ShowModal(*surface, Death::move(dialog));
@@ -1395,14 +1396,17 @@ namespace Jazz2::Editor
 		{
 			SmallVector<FileLine, 0> lines;
 			String tileSetPath = ContentTileSetLibrary::GetWritablePath(state.TileSet, false);
-			lines.push_back({ _("Tile set"), true });
-			lines.push_back({ tileSetPath + (fs::FileExists(tileSetPath) ? String(" - "_s + _("written over, kept as .bak")) : String(" - "_s + _("a copy in the user content"))), false });
-			lines.push_back({ _f("Levels changed with it ({})", std::int32_t(state.WritableLevels.size())), true });
+			// TRANSLATORS: Header in the list of the files changing a tile set would write, followed by the file of the tile set
+			lines.push_back({ _x("editor", "Tile set"), true });
+			// TRANSLATORS: After the path of the tile set file in the list of the files changing it would write, what happens to the file
+			lines.push_back({ tileSetPath + (fs::FileExists(tileSetPath) ? String(" - "_s + _x("editor", "written over, kept as .bak")) : String(" - "_s + _x("editor", "a copy in the user content"))), false });
+			// TRANSLATORS: Header in the list of the files changing a tile set would write, {} is the number of levels
+			lines.push_back({ _fx("editor", "Levels changed with it ({})", std::int32_t(state.WritableLevels.size())), true });
 			for (const String& level : state.WritableLevels) {
 				lines.push_back({ level, false });
 			}
 			if (!state.ReadOnlyLevels.empty()) {
-				lines.push_back({ _f("Levels that can't be changed, so the tile set can only be saved as a new one ({})", std::int32_t(state.ReadOnlyLevels.size())), true });
+				lines.push_back({ _fx("editor", "Levels that can't be changed, so the tile set can only be saved as a new one ({})", std::int32_t(state.ReadOnlyLevels.size())), true });
 				for (const String& level : state.ReadOnlyLevels) {
 					lines.push_back({ level, false });
 				}
@@ -1423,13 +1427,15 @@ namespace Jazz2::Editor
 				}
 			}
 			if (!rulesLines.empty()) {
-				lines.push_back({ _f("Prefabs and rules changed, kept as .bak ({})", std::int32_t(rulesLines.size())), true });
+				// TRANSLATORS: Header in the list of the files changing a tile set would write, {} is the number of files of prefabs and terrain rules
+				lines.push_back({ _fx("editor", "Prefabs and rules changed, kept as .bak ({})", std::int32_t(rulesLines.size())), true });
 				for (FileLine& line : rulesLines) {
 					lines.push_back(Death::move(line));
 				}
 			}
-			lines.push_back({ _("This level follows it in the editor, it's saved as usual"), true });
-			ShowFileList(session, _("Files That Would Change"), Death::move(lines), {}, {});
+			lines.push_back({ _x("editor", "This level follows it in the editor, it's saved as usual"), true });
+			// TRANSLATORS: Title of the list of the files changing a tile set would write
+			ShowFileList(session, _x("editor", "Files That Would Change"), Death::move(lines), {}, {});
 		}
 
 		// Whether the level uses the tile set, as its default one or as an extra one that isn't stored in it
@@ -1472,7 +1478,7 @@ namespace Jazz2::Editor
 				}
 			}
 			if (files.empty()) {
-				session.ShowMessage(_("There are no backups of the tile set and its levels"));
+				session.ShowMessage(_x("editor", "There are no backups of the tile set and its levels"));
 				return;
 			}
 
@@ -1487,20 +1493,21 @@ namespace Jazz2::Editor
 			bool reopen = ((ownRestored || ownFollows) && !ownPath.empty() && fs::FileExists(ownPath));
 
 			SmallVector<FileLine, 0> lines;
-			lines.push_back({ _("These files get their previous content back, from their .bak files:"), true });
+			lines.push_back({ _x("editor", "These files get their previous content back, from their .bak files:"), true });
 			for (const String& file : files) {
 				lines.push_back({ file, false });
 			}
-			lines.push_back({ _("Backups are made whenever a file is written over, they may be of different changes"), true });
+			lines.push_back({ _x("editor", "Backups are made whenever a file is written over, they may be of different changes"), true });
 			if (reopen) {
 				lines.push_back({ session.GetHistory().IsDirty()
-					? _("This level is opened again from its file, the changes that weren't saved are lost")
-					: _("This level is opened again from its file"), true });
+					? _x("editor", "This level is opened again from its file, the changes that weren't saved are lost")
+					: _x("editor", "This level is opened again from its file"), true });
 			} else if (ownFollows) {
-				lines.push_back({ _("This level isn't saved, it keeps the changed order and would show other tiles"), true });
+				lines.push_back({ _x("editor", "This level isn't saved, it keeps the changed order and would show other tiles"), true });
 			}
 			IEditorContext* s = &session;
-			ShowFileList(session, _("Restore Backups"), Death::move(lines), _("Restore"), [s, state, files = Death::move(files), layoutDialog, reopen]() {
+			// TRANSLATORS: Title and button of the dialog that puts back the tile set and its levels from their .bak files
+			ShowFileList(session, _x("editor", "Restore Backups"), Death::move(lines), _x("editor", "Restore"), [s, state, files = Death::move(files), layoutDialog, reopen]() {
 				std::int32_t restored = 0;
 				for (const String& file : files) {
 					String backupPath = file + ".bak"_s;
@@ -1532,7 +1539,7 @@ namespace Jazz2::Editor
 					s->GetHistory().MarkSaved();
 					s->OpenFile(s->GetFilePath());
 				}
-				s->ShowMessage(_fn("{} file got its previous content back", "{} files got their previous content back", restored, restored));
+				s->ShowMessage(_fnx("editor", "{} file got its previous content back", "{} files got their previous content back", restored, restored));
 			});
 		}
 
@@ -1547,7 +1554,7 @@ namespace Jazz2::Editor
 			const Formats::TileSetData* original = session.GetTileSetData(state->TileSet);
 			String tileSetPath = ContentTileSetLibrary::GetWritablePath(state->TileSet, true);
 			if (original == nullptr || tileSetPath.empty()) {
-				session.ShowMessage(_("There's no place to save tile sets to"));
+				session.ShowMessage(_x("editor", "There's no place to save tile sets to"));
 				return;
 			}
 
@@ -1583,7 +1590,8 @@ namespace Jazz2::Editor
 			job->TileSetExisted = fs::FileExists(job->TileSetPath);
 
 			IEditorContext* s = &session;
-			RunWithProgress(session, _("Changing the Tile Set"), [job](JobProgress& progress) {
+			// TRANSLATORS: Title of the progress dialog while a rearranged tile set and its levels are saved
+			RunWithProgress(session, _x("editor", "Changing the Tile Set"), [job](JobProgress& progress) {
 				std::size_t total = job->Levels.size() + 1;
 				for (std::size_t i = 0; i < job->Levels.size(); i++) {
 					if (!progress.Report(float(i) / float(total))) {
@@ -1607,11 +1615,11 @@ namespace Jazz2::Editor
 					DiscardStaged(job->Staged);
 					if (!job->FailedLevel.empty()) {
 						LOGE("Level \"{}\" couldn't be changed to the new order of its tile set, nothing was changed", job->FailedLevel);
-						s->ShowMessage(_f("Level \"{}\" couldn't be changed, so nothing was changed", fs::GetFileName(job->FailedLevel)));
+						s->ShowMessage(_fx("editor", "Level \"{}\" couldn't be changed, so nothing was changed", fs::GetFileName(job->FailedLevel)));
 					} else if (job->TileSetFailed) {
-						s->ShowMessage(_("The tile set couldn't be saved, so nothing was changed"));
+						s->ShowMessage(_x("editor", "The tile set couldn't be saved, so nothing was changed"));
 					} else {
-						s->ShowMessage(_("Changing the tile set was stopped, nothing was changed"));
+						s->ShowMessage(_x("editor", "Changing the tile set was stopped, nothing was changed"));
 					}
 					return;
 				}
@@ -1622,17 +1630,18 @@ namespace Jazz2::Editor
 				String failedRules;
 				if (!StageAllRules(job->TileSet, newIndex, job->Staged, failedRules)) {
 					DiscardStaged(job->Staged);
-					s->ShowMessage(_f("Prefabs and rules of tile set \"{}\" can't be read or changed, so nothing was changed", failedRules));
+					s->ShowMessage(_fx("editor", "Prefabs and rules of tile set \"{}\" can't be read or changed, so nothing was changed", failedRules));
 					return;
 				}
 				std::int32_t failed = CommitStaged(job->Staged);
 				if (failed >= 0) {
-					s->ShowMessage(_f("File \"{}\" couldn't be replaced, so nothing was changed", fs::GetFileName(job->Staged[failed].Path)));
+					s->ShowMessage(_fx("editor", "File \"{}\" couldn't be replaced, so nothing was changed", fs::GetFileName(job->Staged[failed].Path)));
 					return;
 				}
 
 				s->InvalidateTileSet(job->TileSet);
-				ApplyToDocument(*s, job->Order, job->MergedInto, job->TileSet, {}, _("Rearrange tile set"));
+				// TRANSLATORS: Name of an undo step in the history
+				ApplyToDocument(*s, job->Order, job->MergedInto, job->TileSet, {}, _x("editor", "Rearrange tile set"));
 				// The files can't be changed back, an undo would leave the level in the old order with the new tile set
 				s->GetHistory().Clear();
 				s->GetHistory().MarkDirty();
@@ -1640,7 +1649,7 @@ namespace Jazz2::Editor
 					layoutDialog->Close();
 				}
 				std::int32_t changed = std::int32_t(job->Levels.size());
-				s->ShowMessage(_fn("The tile set was changed with {} level", "The tile set was changed with {} levels", changed, changed));
+				s->ShowMessage(_fnx("editor", "The tile set was changed with {} level", "The tile set was changed with {} levels", changed, changed));
 			});
 		}
 	}
@@ -1653,7 +1662,8 @@ namespace Jazz2::Editor
 		}
 
 		IEditorContext* s = &session;
-		auto dialog = std::make_unique<LayoutWindow>(_f("Rearrange Tile Set \"{}\"", state->TileSet));
+		// TRANSLATORS: Title of the dialog that changes the order of the tiles of a tile set, {} is the name of the tile set
+		auto dialog = std::make_unique<LayoutWindow>(_fx("editor", "Rearrange Tile Set \"{}\"", state->TileSet));
 		UiDialog* dialogPtr = dialog.get();
 		// The controls on the left, the tiles on the right
 		auto* columns = dialog->GetContent()->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 2.0f);
@@ -1662,7 +1672,7 @@ namespace Jazz2::Editor
 		columns->Add<UiSeparator>(UiOrientation::Vertical);
 		{
 			auto* gridColumn = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
-			gridColumn->Add<UiWrappedLabel>(_("Click a tile to select it, Ctrl+click another one, Shift+click a range - drag them to move them"), UiTheme::TextDim);
+			gridColumn->Add<UiWrappedLabel>(_x("editor", "Click a tile to select it, Ctrl+click another one, Shift+click a range - drag them to move them"), UiTheme::TextDim);
 			auto* scroll = gridColumn->Add<UiScrollView>();
 			scroll->Height = 200.0f;
 			dialog->Grid = scroll->SetContent<LayoutGrid>(session, state);
@@ -1670,7 +1680,8 @@ namespace Jazz2::Editor
 			dialog->GridColumn = gridColumn;
 		}
 
-		content->Add<UiLabel>(_("Selected tiles"), UiTheme::TextHeader);
+		// TRANSLATORS: Header of the buttons that change the selected tiles in the Rearrange Tile Set dialog
+		content->Add<UiLabel>(_x("editor", "Selected tiles"), UiTheme::TextHeader);
 		auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 		auto* secondRow = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 		auto addOperation = [state](UiStack* buttons, StringView text, EditorIcon icon, StringView tooltip, Function<void()>&& operation) {
@@ -1680,42 +1691,49 @@ namespace Jazz2::Editor
 			button->IsEnabledFunc = [state]() { return state->HasSelection(); };
 			return button;
 		};
-		addOperation(row, _("Earlier"), EditorIcon::ChevronLeft, _("Move the selected tiles a place earlier"), [state]() {
+		// TRANSLATORS: Button in the Rearrange Tile Set dialog, moves the selected tiles a place earlier, keep it short
+		addOperation(row, _x("editor", "Earlier"), EditorIcon::ChevronLeft, _x("editor", "Move the selected tiles a place earlier"), [state]() {
 			MoveSelectedBy(*state, -1);
 		});
-		addOperation(row, _("Later"), EditorIcon::ChevronRight, _("Move the selected tiles a place later"), [state]() {
+		// TRANSLATORS: Button in the Rearrange Tile Set dialog, moves the selected tiles a place later, keep it short
+		addOperation(row, _x("editor", "Later"), EditorIcon::ChevronRight, _x("editor", "Move the selected tiles a place later"), [state]() {
 			MoveSelectedBy(*state, 1);
 		});
-		addOperation(secondRow, _("Delete"), EditorIcon::Delete, _("Remove the selected tiles, the tiles after them move up"), [state]() {
+		// TRANSLATORS: Button in the Rearrange Tile Set dialog, removes the selected tiles, a verb
+		addOperation(secondRow, _x("editor", "Delete"), EditorIcon::Delete, _x("editor", "Remove the selected tiles, the tiles after them move up"), [state]() {
 			DeleteSelected(*state);
 		});
-		addOperation(secondRow, _("Insert Empty"), EditorIcon::Plus, _("Put an empty tile before the selected ones"), [state]() {
+		// TRANSLATORS: Button in the Rearrange Tile Set dialog, puts an empty tile before the selected ones, keep it short
+		addOperation(secondRow, _x("editor", "Insert Empty"), EditorIcon::Plus, _x("editor", "Put an empty tile before the selected ones"), [state]() {
 			InsertEmptyBeforeSelected(*state);
 		});
 		auto* reset = row->Add<UiButton>(_("Reset"), EditorIcon::Undo, [state]() {
 			state->Reset();
 		});
 		reset->Style = UiButtonStyle::Flat;
-		reset->Tooltip = _("Put all tiles back where they were");
+		reset->Tooltip = _x("editor", "Put all tiles back where they were");
 
 		// Tiles that can go, found in all levels that use the tile set
 		content->Add<UiSeparator>();
-		content->Add<UiLabel>(_("Clean up"), UiTheme::TextHeader);
+		// TRANSLATORS: Header of the buttons that leave out duplicate and unused tiles in the Rearrange Tile Set dialog, a noun
+		content->Add<UiLabel>(_x("editor", "Clean up"), UiTheme::TextHeader);
 		auto* cleanRow = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-		auto* merge = cleanRow->Add<UiButton>(_("Merge Duplicates"), EditorIcon::Copy, [s, state]() {
+		// TRANSLATORS: Button in the Rearrange Tile Set dialog, leaves out the tiles that are the same as another one
+		auto* merge = cleanRow->Add<UiButton>(_x("editor", "Merge Duplicates"), EditorIcon::Copy, [s, state]() {
 			const Formats::TileSetData* data = s->GetTileSetData(state->TileSet);
 			if (data == nullptr) {
-				s->ShowMessage(_("The tile set can't be read"));
+				s->ShowMessage(_x("editor", "The tile set can't be read"));
 				return;
 			}
 			std::int32_t merged = MergeDuplicates(*state, *data);
 			s->ShowMessage(merged > 0
-				? String(_fn("{} tile was the same as another one, the levels show that one instead", "{} tiles were the same as others, the levels show those instead", merged, merged))
-				: String(_("No tile is the same as another one")));
+				? String(_fnx("editor", "{} tile was the same as another one, the levels show that one instead", "{} tiles were the same as others, the levels show those instead", merged, merged))
+				: String(_x("editor", "No tile is the same as another one")));
 		});
 		merge->Style = UiButtonStyle::Flat;
-		merge->Tooltip = _("Leave out the tiles that look the same as one before them and have the same mask, the levels show that one instead");
-		auto* unused = cleanRow->Add<UiButton>(_("Remove Unused"), EditorIcon::Delete, [s, state]() {
+		merge->Tooltip = _x("editor", "Leave out the tiles that look the same as one before them and have the same mask, the levels show that one instead");
+		// TRANSLATORS: Button in the Rearrange Tile Set dialog, leaves out the tiles no level uses
+		auto* unused = cleanRow->Add<UiButton>(_x("editor", "Remove Unused"), EditorIcon::Delete, [s, state]() {
 			// The levels are read off the user interface, they know their default tile sets, the counts of tiles come
 			// from the editor
 			struct UsageJob
@@ -1733,7 +1751,8 @@ namespace Jazz2::Editor
 			}
 			job->Used.resize(std::size_t(state->OriginalCount), false);
 			MarkOwnUsage(*s, state->TileSet, job->Used);
-			RunWithProgress(*s, _("Finding Unused Tiles"), [job](JobProgress& progress) {
+			// TRANSLATORS: Title of the progress dialog while the levels are searched for the tiles they use
+			RunWithProgress(*s, _x("editor", "Finding Unused Tiles"), [job](JobProgress& progress) {
 				for (std::size_t i = 0; i < job->Uses.size(); i++) {
 					if (!progress.Report(float(i) / float(job->Uses.size()))) {
 						return;
@@ -1747,13 +1766,14 @@ namespace Jazz2::Editor
 				std::int32_t removed = RemoveUnused(*state, job->Used);
 				std::int32_t levels = std::int32_t(job->Uses.size()) + 1;
 				s->ShowMessage(removed > 0
-					? String(_fn("{} tile no level uses was left out", "{} tiles no level uses were left out", removed, removed) + " ("_s +
-						_fn("{} level looked at", "{} levels looked at", levels, levels) + ")"_s)
-					: String(_("Every tile is used by a level, a prefab or a rule")));
+					? String(_fnx("editor", "{} tile no level uses was left out", "{} tiles no level uses were left out", removed, removed) + " ("_s +
+						// TRANSLATORS: In parentheses after the number of unused tiles left out, the number of levels that were searched
+						_fnx("editor", "{} level looked at", "{} levels looked at", levels, levels) + ")"_s)
+					: String(_x("editor", "Every tile is used by a level, a prefab or a rule")));
 			});
 		});
 		unused->Style = UiButtonStyle::Flat;
-		unused->Tooltip = _("Leave out the tiles that neither this level nor any level found that uses the tile set shows, nor its prefabs and rules");
+		unused->Tooltip = _x("editor", "Leave out the tiles that neither this level nor any level found that uses the tile set shows, nor its prefabs and rules");
 
 		auto* status = content->Add<UiWrappedLabel>(StringView(), UiTheme::TextDim);
 		status->TextFunc = [state]() {
@@ -1776,52 +1796,56 @@ namespace Jazz2::Editor
 					(isMerged ? merged : removed)++;
 				}
 			}
-			return String(_f("{} tiles - {} in another place, {} removed, {} merged, {} new empty ones", std::int32_t(state->Order.size()), moved, removed, merged, inserted));
+			// TRANSLATORS: Summary in the Rearrange Tile Set dialog, the number of tiles, then of the moved, removed, merged and inserted empty tiles
+			return String(_fx("editor", "{} tiles - {} in another place, {} removed, {} merged, {} new empty ones", std::int32_t(state->Order.size()), moved, removed, merged, inserted));
 		};
 
 		std::int32_t writable = std::int32_t(state->WritableLevels.size());
 		std::int32_t readOnly = std::int32_t(state->ReadOnlyLevels.size());
 		content->Add<UiSeparator>();
-		content->Add<UiLabel>(_("Levels"), UiTheme::TextHeader);
-		content->Add<UiWrappedLabel>(_f("Used by {} levels - {} of them are changed with the tile set", writable + readOnly, writable), UiTheme::TextDim);
+		// TRANSLATORS: Header of the levels that use the tile set in the Rearrange Tile Set dialog
+		content->Add<UiLabel>(_x("editor", "Levels"), UiTheme::TextHeader);
+		content->Add<UiWrappedLabel>(_fx("editor", "Used by {} levels - {} of them are changed with the tile set", writable + readOnly, writable), UiTheme::TextDim);
 		if (readOnly > 0) {
-			content->Add<UiWrappedLabel>(_fn("{} level is in the files of the game and can't be changed, it would show other tiles",
+			content->Add<UiWrappedLabel>(_fnx("editor", "{} level is in the files of the game and can't be changed, it would show other tiles",
 				"{} levels are in the files of the game and can't be changed, they would show other tiles", readOnly, readOnly), UiTheme::TextDanger);
-			content->Add<UiWrappedLabel>(_("So the tile set itself can't be changed, saving it as a new tile set changes only this level and leaves the others as they are"), UiTheme::TextDim);
+			content->Add<UiWrappedLabel>(_x("editor", "So the tile set itself can't be changed, saving it as a new tile set changes only this level and leaves the others as they are"), UiTheme::TextDim);
 		}
-		content->Add<UiWrappedLabel>(_("Levels are looked for in the episodes and next to this level, levels elsewhere aren't changed"), UiTheme::TextDim);
+		content->Add<UiWrappedLabel>(_x("editor", "Levels are looked for in the episodes and next to this level, levels elsewhere aren't changed"), UiTheme::TextDim);
 
 		content->Add<UiSeparator>();
 		auto* nameRow = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-		nameRow->Add<UiLabel>(_("New name"), UiTheme::TextDim);
+		// TRANSLATORS: Label of the name of the tile set saved as a new one in the Rearrange Tile Set dialog
+		nameRow->Add<UiLabel>(_x("editor", "New name"), UiTheme::TextDim);
 		auto* nameBox = nameRow->Add<UiTextBox>(SuggestTileSetName(state->TileSet, "-new"_s));
 		nameBox->Flex = 1.0f;
 		nameBox->MaxLength = 32;
 
-		dialog->AddButton(_("Save as New Tile Set"), [s, state, nameBox, dialogPtr]() {
+		// TRANSLATORS: Button in the Rearrange Tile Set dialog
+		dialog->AddButton(_x("editor", "Save as New Tile Set"), [s, state, nameBox, dialogPtr]() {
 			if (!state->IsChanged()) {
 				dialogPtr->Close();
 				return;
 			}
 			String name = nameBox->Text.trimmed();
 			if (!ContentTileSetLibrary::IsValidName(name)) {
-				s->ShowMessage(_("A tile set is named by lowercase letters, digits, dashes and underscores"));
+				s->ShowMessage(_x("editor", "A tile set is named by lowercase letters, digits, dashes and underscores"));
 				return;
 			}
 			if (!ContentTileSetLibrary::FindTileSetFile(name).empty()) {
-				s->ShowMessage(_f("A tile set \"{}\" exists already", name));
+				s->ShowMessage(_fx("editor", "A tile set \"{}\" exists already", name));
 				return;
 			}
 			const Formats::TileSetData* original = s->GetTileSetData(state->TileSet);
 			String path = ContentTileSetLibrary::GetWritablePath(name, true);
 			if (original == nullptr || path.empty()) {
-				s->ShowMessage(_("There's no place to save tile sets to"));
+				s->ShowMessage(_x("editor", "There's no place to save tile sets to"));
 				return;
 			}
 			Formats::TileSetData tileSet;
 			BuildTileSet(*original, state->Order, tileSet);
 			if (!AtomicFile::Write(path, [&tileSet](Stream& stream) { return Formats::TileSetFile::Write(stream, tileSet); })) {
-				s->ShowMessage(_("The tile set couldn't be saved"));
+				s->ShowMessage(_x("editor", "The tile set couldn't be saved"));
 				return;
 			}
 			// The prefabs and terrain rules of the tile set go with the new one, in its order
@@ -1836,18 +1860,19 @@ namespace Jazz2::Editor
 			}
 			s->InvalidateTileSet(name);
 			// The old tile set is still there as it was, so this can be undone
-			ApplyToDocument(*s, state->Order, state->MergedInto, state->TileSet, name, _("Rearrange tile set"));
+			ApplyToDocument(*s, state->Order, state->MergedInto, state->TileSet, name, _x("editor", "Rearrange tile set"));
 			dialogPtr->Close();
-			s->ShowMessage(_f("The level uses the new tile set \"{}\" now", name));
+			s->ShowMessage(_fx("editor", "The level uses the new tile set \"{}\" now", name));
 		}, true);
-		auto* changeButton = dialog->AddButton(_("Change the Tile Set"), [s, state, dialogPtr]() {
+		// TRANSLATORS: Button in the Rearrange Tile Set dialog, saves the tile set itself and the levels that use it
+		auto* changeButton = dialog->AddButton(_x("editor", "Change the Tile Set"), [s, state, dialogPtr]() {
 			if (!state->IsChanged()) {
 				dialogPtr->Close();
 				return;
 			}
 			// The changed copy in the user content would be used by the levels of the game too, they'd show other tiles
 			if (!state->ReadOnlyLevels.empty()) {
-				s->ShowMessage(_("Levels of the game use the tile set, it can only be saved as a new one"));
+				s->ShowMessage(_x("editor", "Levels of the game use the tile set, it can only be saved as a new one"));
 				return;
 			}
 			// Another editor would put a level back in the old order by saving it
@@ -1858,14 +1883,15 @@ namespace Jazz2::Editor
 				}
 			}
 			if (!locked.empty()) {
-				locked.insert(locked.begin(), FileLine{ _("These levels are open in another editor, close them there first:"), true });
-				ShowFileList(*s, _("Change the Tile Set"), Death::move(locked), {}, {});
+				locked.insert(locked.begin(), FileLine{ _x("editor", "These levels are open in another editor, close them there first:"), true });
+				ShowFileList(*s, _x("editor", "Change the Tile Set"), Death::move(locked), {}, {});
 				return;
 			}
 			std::int32_t writable = std::int32_t(state->WritableLevels.size());
-			String text = _f("The tile set and {} levels that use it are saved changed, the previous files are kept as .bak files.", writable);
-			text += "\n"_s + _("This can't be undone, the history of changes of this level is cleared.");
-			UiMessageDialog::Show(*s->GetSurface(), _("Change the Tile Set"), text, { _("Change It"), _("Cancel") }, [s, state, dialogPtr](std::int32_t choice) {
+			String text = _fx("editor", "The tile set and {} levels that use it are saved changed, the previous files are kept as .bak files.", writable);
+			text += "\n"_s + _x("editor", "This can't be undone, the history of changes of this level is cleared.");
+			// TRANSLATORS: Title of the question before the tile set and its levels are saved, and its button that confirms it
+			UiMessageDialog::Show(*s->GetSurface(), _x("editor", "Change the Tile Set"), text, { _x("editor", "Change It"), _x("editor", "Cancel") }, [s, state, dialogPtr](std::int32_t choice) {
 				if (choice == 0) {
 					ChangeTileSet(*s, state, dialogPtr);
 				}
@@ -1873,23 +1899,24 @@ namespace Jazz2::Editor
 		});
 		changeButton->IsEnabledFunc = [state]() { return state->ReadOnlyLevels.empty(); };
 		if (readOnly > 0) {
-			changeButton->Tooltip = _("Levels of the game use the tile set, it can only be saved as a new one");
+			changeButton->Tooltip = _x("editor", "Levels of the game use the tile set, it can only be saved as a new one");
 		}
-		dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
+		dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
 		// What would be written, and putting back what was
 		{
 			auto* filesRow = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			auto* files = filesRow->Add<UiButton>(_("Files"), EditorIcon::Folder, [s, state]() {
+			// TRANSLATORS: Button in the Rearrange Tile Set dialog, lists the files that would be written
+			auto* files = filesRow->Add<UiButton>(_x("editor", "Files"), EditorIcon::Folder, [s, state]() {
 				ShowChangedFiles(*s, *state);
 			});
 			files->Style = UiButtonStyle::Flat;
-			files->Tooltip = _("List the files changing the tile set would write, nothing is written");
-			auto* restore = filesRow->Add<UiButton>(_("Restore Backups"), EditorIcon::Undo, [s, state, dialogPtr]() {
+			files->Tooltip = _x("editor", "List the files changing the tile set would write, nothing is written");
+			auto* restore = filesRow->Add<UiButton>(_x("editor", "Restore Backups"), EditorIcon::Undo, [s, state, dialogPtr]() {
 				ShowRestoreBackups(*s, state, dialogPtr);
 			});
 			restore->Style = UiButtonStyle::Flat;
-			restore->Tooltip = _("Put back the tile set and its levels as they were before they were last written over, from their .bak files");
+			restore->Tooltip = _x("editor", "Put back the tile set and its levels as they were before they were last written over, from their .bak files");
 		}
 
 		ShowModal(*surface, Death::move(dialog));
@@ -1903,12 +1930,12 @@ namespace Jazz2::Editor
 		LevelDocument& document = session.GetDocument();
 		// The name comes from the level, it must not lead out of where tile sets are saved to
 		if (!Formats::LevelFile::IsSafeTileSetPath(document.Properties.DefaultTileSet)) {
-			session.ShowMessage(_("The tile set of the level has a name that can't be saved"));
+			session.ShowMessage(_x("editor", "The tile set of the level has a name that can't be saved"));
 			return;
 		}
 		const Formats::TileSetData* data = session.GetTileSetData(document.Properties.DefaultTileSet);
 		if (data == nullptr) {
-			session.ShowMessage(_("The tile set of the level can't be read"));
+			session.ShowMessage(_x("editor", "The tile set of the level can't be read"));
 			return;
 		}
 
@@ -1921,7 +1948,8 @@ namespace Jazz2::Editor
 		auto input = std::make_shared<ScanInput>(PrepareScan(session, state->TileSet));
 		auto uses = std::make_shared<SmallVector<LevelUse, 0>>();
 		IEditorContext* s = &session;
-		RunWithProgress(session, _("Looking for Levels of the Tile Set"), [input, uses](JobProgress& progress) {
+		// TRANSLATORS: Title of the progress dialog while the levels that use the tile set are searched for
+		RunWithProgress(session, _x("editor", "Looking for Levels of the Tile Set"), [input, uses](JobProgress& progress) {
 			ScanLevels(*input, *uses, &progress);
 		}, [s, state, uses](bool cancelled) {
 			if (cancelled) {
@@ -1938,7 +1966,7 @@ namespace Jazz2::Editor
 	bool WriteTileSetWithAddedTiles(IEditorContext& session, StringView tileSet, StringView path, const Formats::TileSetData& data, std::int32_t oldCount)
 	{
 		if (!Formats::LevelFile::IsSafeTileSetPath(tileSet) || oldCount < 0 || oldCount > data.TileCount) {
-			session.ShowMessage(_("The tile set couldn't be saved"));
+			session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 			return false;
 		}
 
@@ -1962,13 +1990,13 @@ namespace Jazz2::Editor
 			}
 		}
 		if (!readOnly.empty()) {
-			readOnly.insert(readOnly.begin(), FileLine{ _f("These levels of the game have more tile sets after \"{}\", they would show other tiles. Add the tiles to a new tile set or to the tiles of this level instead:", tileSet), true });
-			ShowFileList(session, _("Tiles Can't Be Added"), Death::move(readOnly), {}, {});
+			readOnly.insert(readOnly.begin(), FileLine{ _fx("editor", "These levels of the game have more tile sets after \"{}\", they would show other tiles. Add the tiles to a new tile set or to the tiles of this level instead:", tileSet), true });
+			ShowFileList(session, _x("editor", "Tiles Can't Be Added"), Death::move(readOnly), {}, {});
 			return false;
 		}
 		if (!locked.empty()) {
-			locked.insert(locked.begin(), FileLine{ _("These levels use the tile set and are open in another editor, close them there first:"), true });
-			ShowFileList(session, _("Tiles Can't Be Added"), Death::move(locked), {}, {});
+			locked.insert(locked.begin(), FileLine{ _x("editor", "These levels use the tile set and are open in another editor, close them there first:"), true });
+			ShowFileList(session, _x("editor", "Tiles Can't Be Added"), Death::move(locked), {}, {});
 			return false;
 		}
 
@@ -1986,7 +2014,7 @@ namespace Jazz2::Editor
 			if (!StageLevelFile(tileCounts, level, tileSet, order, {})) {
 				LOGE("Level \"{}\" couldn't be changed for the tiles added to tile set \"{}\", nothing was changed", level, tileSet);
 				DiscardStaged(staged);
-				session.ShowMessage(_f("Level \"{}\" couldn't be changed, so nothing was changed", fs::GetFileName(level)));
+				session.ShowMessage(_fx("editor", "Level \"{}\" couldn't be changed, so nothing was changed", fs::GetFileName(level)));
 				return false;
 			}
 			staged.push_back({ level, true });
@@ -1994,13 +2022,13 @@ namespace Jazz2::Editor
 		bool existed = fs::FileExists(path);
 		if (!AtomicFile::Stage(path, [&data](Stream& s) { return Formats::TileSetFile::Write(s, data); })) {
 			DiscardStaged(staged);
-			session.ShowMessage(_("The tile set couldn't be saved"));
+			session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 			return false;
 		}
 		staged.push_back({ String(path), existed });
 		std::int32_t failed = CommitStaged(staged);
 		if (failed >= 0) {
-			session.ShowMessage(_f("File \"{}\" couldn't be replaced, so nothing was changed", fs::GetFileName(staged[failed].Path)));
+			session.ShowMessage(_fx("editor", "File \"{}\" couldn't be replaced, so nothing was changed", fs::GetFileName(staged[failed].Path)));
 			return false;
 		}
 		if (!changed.empty()) {

@@ -113,9 +113,10 @@ namespace Jazz2::Editor
 		// Only the resized layer is kept, the ground lines go with the layers, the water level is a property of the level
 		// and the bookmarks and notes are in a chunk, both move with the sprite layer
 		SnapshotParts parts = (spriteLayer ? (SnapshotParts::Layers | SnapshotParts::Properties | SnapshotParts::Chunks) : SnapshotParts::Layers);
-		return session.RecordSnapshotStep(_("Resize layer"), parts, [&session, layer, size, offset, fill, spriteLayer](LevelDocument& document) {
+		// TRANSLATORS: Name of an undo step in the history, a layer was resized
+		return session.RecordSnapshotStep(_x("editor", "Resize layer"), parts, [&session, layer, size, offset, fill, spriteLayer](LevelDocument& document) {
 			if (!document.ResizeLayer(layer, size, offset, fill)) {
-				session.ShowMessage(_("The layer can't be that large"));
+				session.ShowMessage(_x("editor", "The layer can't be that large"));
 				return false;
 			}
 			// Ground lines of the layer move with its tiles, and bookmarks and notes with the sprite layer
@@ -152,16 +153,20 @@ namespace Jazz2::Editor
 		state->Fill = (repeats ? LevelDocument::ResizeFill::Repeat : LevelDocument::ResizeFill::Empty);
 
 		IEditorContext* s = &session;
-		auto dialog = std::make_unique<UiDialog>(_f("Resize Layer - {}", GetLayerTitle(document, layerIndex)));
+		// TRANSLATORS: Title of the dialog that resizes a layer, {} is the name of the layer
+		auto dialog = std::make_unique<UiDialog>(_fx("editor", "Resize Layer - {}", GetLayerTitle(document, layerIndex)));
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
 
 		{
-			auto* row = content->AddRow(_("Now"));
-			row->Add<UiLabel>(_f("{} x {} tiles", state->OldSize.X, state->OldSize.Y), UiTheme::TextDim);
+			// TRANSLATORS: Label in the Resize Layer dialog before the current size of the layer, keep it short
+			auto* row = content->AddRow(_x("editor", "Now"));
+			// TRANSLATORS: Current size of the layer in the Resize Layer dialog, {} are its width and height in tiles
+			row->Add<UiLabel>(_fx("editor", "{} x {} tiles", state->OldSize.X, state->OldSize.Y), UiTheme::TextDim);
 		}
 		for (std::int32_t axis = 0; axis < 2; axis++) {
-			auto* row = content->AddRow(axis == 0 ? _("Width") : _("Height"));
+			// TRANSLATORS: Labels in the Resize Layer dialog, the new width and height of the layer in tiles, keep them short
+			auto* row = content->AddRow(axis == 0 ? _x("editor", "Width") : _x("editor", "Height"));
 			auto* number = row->Add<UiNumberBox>([state, axis]() {
 				return float(axis == 0 ? state->Size.X : state->Size.Y);
 			}, [state, axis](float value, bool final) {
@@ -172,12 +177,14 @@ namespace Jazz2::Editor
 			auto* change = row->Add<UiLabel>(StringView(), UiTheme::TextDim);
 			change->TextFunc = [state, axis]() {
 				std::int32_t delta = (axis == 0 ? state->Size.X - state->OldSize.X : state->Size.Y - state->OldSize.Y);
-				return (delta == 0 ? String() : (delta > 0 ? _f("+{}", delta) : _f("{}", delta)));
+				// TRANSLATORS: Next to the new width or height in the Resize Layer dialog, {} is how many tiles are added or removed, usually kept as it is
+				return (delta == 0 ? String() : (delta > 0 ? _fx("editor", "+{}", delta) : _fx("editor", "{}", delta)));
 			};
 		}
 		{
 			// The point of the layer that stays where it is, it grows or shrinks away from it
-			auto* row = content->AddRow(_("Fixed at"));
+			// TRANSLATORS: Label in the Resize Layer dialog before the 3x3 buttons that choose which side or corner of the layer stays where it is
+			auto* row = content->AddRow(_x("editor", "Fixed at"));
 			auto* grid = row->Add<UiStack>(UiOrientation::Vertical, 1.0f);
 			for (std::int32_t y = 0; y < 3; y++) {
 				auto* line = grid->Add<UiStack>(UiOrientation::Horizontal, 1.0f);
@@ -189,15 +196,17 @@ namespace Jazz2::Editor
 		{
 			struct FillOption { const char* Label; LevelDocument::ResizeFill Fill; };
 			static const FillOption FillOptions[] = {
-				{ N_("Empty tiles"), LevelDocument::ResizeFill::Empty },
-				{ N_("Edge tiles extended"), LevelDocument::ResizeFill::ExtendEdges },
-				{ N_("Layer repeated"), LevelDocument::ResizeFill::Repeat },
+				// TRANSLATORS: Options in the Resize Layer dialog, what the layer gets where it grows
+				{ NC_("editor", "Empty tiles"), LevelDocument::ResizeFill::Empty },
+				{ NC_("editor", "Edge tiles extended"), LevelDocument::ResizeFill::ExtendEdges },
+				{ NC_("editor", "Layer repeated"), LevelDocument::ResizeFill::Repeat },
 			};
-			auto* row = content->AddRow(_("New tiles"));
+			// TRANSLATORS: Label in the Resize Layer dialog before the choice of what the layer gets where it grows
+			auto* row = content->AddRow(_x("editor", "New tiles"));
 			auto* dropdown = row->Add<UiDropdown>([state]() {
 				for (const FillOption& option : FillOptions) {
 					if (option.Fill == state->Fill) {
-						return String(_(option.Label));
+						return String(_x("editor", option.Label));
 					}
 				}
 				return String();
@@ -205,20 +214,21 @@ namespace Jazz2::Editor
 				for (const FillOption& option : FillOptions) {
 					LevelDocument::ResizeFill fill = option.Fill;
 					UiMenuEntry entry;
-					entry.Label = _(option.Label);
+					entry.Label = _x("editor", option.Label);
 					entry.IsChecked = [state, fill]() { return (state->Fill == fill); };
 					entry.Execute = [state, fill]() { state->Fill = fill; };
 					entries.push_back(Death::move(entry));
 				}
 			});
 			dropdown->Width = 130.0f;
-			row->Tooltip = _("What the layer gets where it grows - the edge tiles go on to the edge, the corner tiles fill the corners");
+			row->Tooltip = _x("editor", "What the layer gets where it grows - the edge tiles go on to the edge, the corner tiles fill the corners");
 		}
 		if (layer.IsSpriteLayer()) {
-			content->Add<UiLabel>(_("Events and the water level move with the tiles"), UiTheme::TextDim);
+			content->Add<UiLabel>(_x("editor", "Events and the water level move with the tiles"), UiTheme::TextDim);
 		}
 
-		dialog->AddButton(_("Resize"), [s, state, dialogPtr]() {
+		// TRANSLATORS: Button in the Resize Layer dialog, resizes the layer (verb)
+		dialog->AddButton(_x("editor", "Resize"), [s, state, dialogPtr]() {
 			LevelDocument& document = s->GetDocument();
 			if (state->Layer >= std::int32_t(document.Layers.size())) {
 				dialogPtr->Close();
@@ -232,7 +242,7 @@ namespace Jazz2::Editor
 				dialogPtr->Close();
 			}
 		}, true);
-		dialog->AddButton(_("Cancel"), [dialogPtr]() { dialogPtr->Close(); });
+		dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
 		ShowModal(*surface, Death::move(dialog));
 	}

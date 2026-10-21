@@ -14,8 +14,8 @@
 #include <Utf8.h>
 
 // The document knows nothing of the engine, its messages are only marked to be translated where they're shown
-#if !defined(N_)
-#	define N_(text) text
+#if !defined(NC_)
+#	define NC_(context, text) text
 #endif
 
 using namespace Death::Containers::Literals;
@@ -932,27 +932,27 @@ namespace Jazz2::Editor
 				spriteLayers++;
 			}
 			if (layer.Tiles.size() != std::size_t(layer.Record.Width) * std::size_t(layer.Record.Height)) {
-				return fail(N_("A layer has a different number of tiles than its size"));
+				return fail(NC_("editor", "A layer has a different number of tiles than its size"));
 			}
 		}
 		if (spriteLayers != 1) {
-			return fail(N_("The level has to have exactly one sprite layer"));
+			return fail(NC_("editor", "The level has to have exactly one sprite layer"));
 		}
 		if (Layers.size() > UINT8_MAX) {
-			return fail(N_("The level has too many layers"));
+			return fail(NC_("editor", "The level has too many layers"));
 		}
 		if (Texts.size() > UINT8_MAX) {
-			return fail(N_("The level has too many texts"));
+			return fail(NC_("editor", "The level has too many texts"));
 		}
 		if (ExtraTileSets.size() > TileRef::LastExtraTileSet) {
-			return fail(N_("The level has too many extra tile sets"));
+			return fail(NC_("editor", "The level has too many extra tile sets"));
 		}
 		if (TileIdSpace > UINT16_MAX + 1 || std::int32_t(Animations.size()) > TileIdSpace) {
-			return fail(N_("The level has too many animated tiles"));
+			return fail(NC_("editor", "The level has too many animated tiles"));
 		}
 		for (const DocumentAnimation& animation : Animations) {
 			if (animation.Frames.size() > UINT8_MAX) {
-				return fail(N_("An animated tile has too many frames"));
+				return fail(NC_("editor", "An animated tile has too many frames"));
 			}
 		}
 		// Tile sets with more tiles than the level can address are allowed, the game doesn't mind the tiles that
@@ -962,14 +962,14 @@ namespace Jazz2::Editor
 		for (const DocumentLayer& layer : Layers) {
 			for (const TileRef& tile : layer.Tiles) {
 				if (!IsTileAddressable(tile)) {
-					return fail(N_("The level uses tiles past the tile IDs it can address"));
+					return fail(NC_("editor", "The level uses tiles past the tile IDs it can address"));
 				}
 			}
 		}
 		for (const DocumentAnimation& animation : Animations) {
 			for (const TileRef& frame : animation.Frames) {
 				if (!IsTileAddressable(frame)) {
-					return fail(N_("The level uses tiles past the tile IDs it can address"));
+					return fail(NC_("editor", "The level uses tiles past the tile IDs it can address"));
 				}
 			}
 		}

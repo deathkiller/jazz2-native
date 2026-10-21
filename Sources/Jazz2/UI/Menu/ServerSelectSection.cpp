@@ -281,6 +281,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawMenuFrame(centerX, topLine, bottomLine);
 
 		std::int32_t charOffset = 0;
+		// TRANSLATORS: Header of Play Multiplayer > Join Server section with the list of servers
 		_root->DrawMenuTitle(charOffset, _("Connect To Server"), centerX, topLine);
 	}
 
@@ -301,6 +302,7 @@ namespace Jazz2::UI::Menu
 				return;
 			}
 #endif
+			// TRANSLATORS: Shown in Connect To Server section while no server has been found yet, the search goes on, casual tone
 			_root->DrawStringShadow(_("No servers found, but still searchin'!"), charOffset, centerX, contentBounds.Y + contentBounds.H * 0.33f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 			return;
@@ -449,6 +451,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}*/
 
+			// TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, the action whose key/button is shown after it
 			std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
 			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX + 4.0f, hintY, IMenuContainer::FontLayer + 110,
 				Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -479,6 +482,7 @@ namespace Jazz2::UI::Menu
 			}
 			centerX -= 60.0f;
 #endif
+			// TRANSLATORS: Bottom hint in Connect To Server section, the action whose key/button is shown after it
 			std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
 
 			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, hintY, IMenuContainer::FontLayer,

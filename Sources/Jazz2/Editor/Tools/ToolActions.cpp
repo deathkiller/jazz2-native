@@ -28,8 +28,8 @@
 #include <cmath>
 #include <memory>
 
-#if !defined(N_)
-#	define N_(text) text
+#if !defined(NC_)
+#	define NC_(context, text) text
 #endif
 
 using namespace Death::Containers::Literals;
@@ -124,7 +124,7 @@ namespace Jazz2::Editor::ToolActions
 			LevelDocument& document = session.GetDocument();
 			layerIndex = session.GetCurrentLayer();
 			if (selection.IsEmpty() || selection.GetLayer() != layerIndex || layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size())) {
-				session.ShowMessage(_("Select tiles of the layer first"));
+				session.ShowMessage(_x("editor", "Select tiles of the layer first"));
 				return false;
 			}
 			const DocumentLayer& layer = document.Layers[layerIndex];
@@ -133,7 +133,7 @@ namespace Jazz2::Editor::ToolActions
 				return false;
 			}
 			if (editable && !session.IsLayerEditable(layerIndex)) {
-				session.ShowMessage(_("The layer is locked or hidden"));
+				session.ShowMessage(_x("editor", "The layer is locked or hidden"));
 				return false;
 			}
 			return true;
@@ -207,7 +207,7 @@ namespace Jazz2::Editor::ToolActions
 			}
 			bounds = Recti(from.X, from.Y, to.X - from.X + 1, to.Y - from.Y + 1);
 		} else {
-			session.ShowMessage(_("Select the tiles to copy first"));
+			session.ShowMessage(_x("editor", "Select the tiles to copy first"));
 			return false;
 		}
 
@@ -263,12 +263,12 @@ namespace Jazz2::Editor::ToolActions
 			}
 		}
 		if (stamp.IsEmpty()) {
-			session.ShowMessage(_("There's nothing to copy there"));
+			session.ShowMessage(_x("editor", "There's nothing to copy there"));
 			return false;
 		}
 		theApplication().GetInputManager().setClipboardText(StampClipboard::WriteLayered(stamp, &document));
 		LayeredClipboard() = Death::move(stamp);
-		session.ShowMessage(_("Copied from all layers, with the events"));
+		session.ShowMessage(_x("editor", "Copied from all layers, with the events"));
 		return true;
 	}
 
@@ -281,7 +281,7 @@ namespace Jazz2::Editor::ToolActions
 			stamp = LayeredClipboard();
 		}
 		if (stamp.IsEmpty()) {
-			session.ShowMessage(_("Copy tiles of all layers first"));
+			session.ShowMessage(_x("editor", "Copy tiles of all layers first"));
 			return false;
 		}
 		// Where the pointer is, otherwise where they were copied from
@@ -303,7 +303,8 @@ namespace Jazz2::Editor::ToolActions
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
 		std::int32_t base = std::max<std::int32_t>(spriteLayer, 0);
 		Vector2i gridSize = document.GetEventGridSize();
-		String name = _("Paste All Layers");
+		// TRANSLATORS: Name of an undo step in the history, after tiles and events copied from all layers were pasted
+		String name = _x("editor", "Paste All Layers");
 		std::int32_t skipped = 0;
 		bool changed = false;
 
@@ -386,9 +387,9 @@ namespace Jazz2::Editor::ToolActions
 			session.GetSelection().Select(current, Vector2i(layer.GetWidth(), layer.GetHeight()), Recti(topLeft.X, topLeft.Y, stamp.Width, stamp.Height), false);
 		}
 		if (skipped > 0) {
-			session.ShowMessage(_("Pasted, but not into the layers that are locked, hidden or missing"));
+			session.ShowMessage(_x("editor", "Pasted, but not into the layers that are locked, hidden or missing"));
 		} else if (changed) {
-			session.ShowMessage(_("Pasted into all layers"));
+			session.ShowMessage(_x("editor", "Pasted into all layers"));
 		}
 		return changed;
 	}
@@ -406,9 +407,10 @@ namespace Jazz2::Editor::ToolActions
 			EditorAction* paste = session.GetActions().Find(ActionIds::EditPasteLayers);
 			String key = (paste != nullptr ? paste->Key.ToString() : String());
 			if (key.empty()) {
-				session.ShowMessage(_("Paste All Layers places the prefab with its layers and events where the pointer is"));
+				session.ShowMessage(_x("editor", "Paste All Layers places the prefab with its layers and events where the pointer is"));
 			} else {
-				session.ShowMessage(_f("{} places the prefab with its layers and events where the pointer is", key));
+				// TRANSLATORS: Status message after a prefab was chosen, {} is the keyboard shortcut of Paste All Layers, such as Ctrl+Shift+V
+				session.ShowMessage(_fx("editor", "{} places the prefab with its layers and events where the pointer is", key));
 			}
 		}
 		if (hasTiles) {
@@ -425,16 +427,17 @@ namespace Jazz2::Editor::ToolActions
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
 		Vector2i gridSize = document.GetEventGridSize();
 		bool swapTeams = session.GetTools().GetSettings().MirrorSwapTeams;
-		String name = (horizontal ? _("Mirror Horizontally") : _("Mirror Vertically"));
+		// TRANSLATORS: Names of undo steps in the history, after the selected tiles or events were mirrored
+		String name = (horizontal ? _x("editor", "Mirror Horizontally") : _x("editor", "Mirror Vertically"));
 
 		if (session.IsEditingEvents()) {
 			EventSelection& selection = session.GetEventSelection();
 			if (!session.IsLayerEditable(spriteLayer)) {
-				session.ShowMessage(_("The sprite layer is locked or hidden"));
+				session.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
 				return false;
 			}
 			if (selection.IsEmpty() || gridSize.X <= 0) {
-				session.ShowMessage(_("Select events first"));
+				session.ShowMessage(_x("editor", "Select events first"));
 				return false;
 			}
 			// Within the tiles of the selected events of the grid, or among the positions of those off it alone, a single
@@ -598,7 +601,8 @@ namespace Jazz2::Editor::ToolActions
 			(modifier == TileModifierMode::Invisible ? Formats::TileRecord::ModifierInvisible :
 			(modifier == TileModifierMode::Heat ? Formats::TileRecord::ModifierHeat : 0)));
 		const Recti& bounds = selection.GetBounds();
-		auto command = std::make_unique<SetTilesCommand>(document, layerIndex, _("Set Tile Modifier"));
+		// TRANSLATORS: Name of an undo step in the history, after the selected tiles were made normal, translucent, invisible or given heat
+		auto command = std::make_unique<SetTilesCommand>(document, layerIndex, _x("editor", "Set Tile Modifier"));
 		for (std::int32_t y = bounds.Y; y < bounds.Y + bounds.H; y++) {
 			for (std::int32_t x = bounds.X; x < bounds.X + bounds.W; x++) {
 				const TileRef& tile = layer.GetTile(x, y);
@@ -612,7 +616,7 @@ namespace Jazz2::Editor::ToolActions
 		}
 		command->Seal();
 		if (command->IsEmpty()) {
-			session.ShowMessage(_("The selected tiles have it already"));
+			session.ShowMessage(_x("editor", "The selected tiles have it already"));
 			return false;
 		}
 		session.Execute(Death::move(command));
@@ -625,11 +629,11 @@ namespace Jazz2::Editor::ToolActions
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
 		TileSelection& selection = session.GetSelection();
 		if (spriteLayer < 0 || selection.IsEmpty() || selection.GetLayer() != spriteLayer) {
-			session.ShowMessage(_("Select tiles of the sprite layer first"));
+			session.ShowMessage(_x("editor", "Select tiles of the sprite layer first"));
 			return false;
 		}
 		if (!session.GetEventBrush().IsSingle()) {
-			session.ShowMessage(_("Choose the event to place first, in the list of events"));
+			session.ShowMessage(_x("editor", "Choose the event to place first, in the list of events"));
 			return false;
 		}
 		SmallVector<Vector2i, 0> cells;
@@ -643,7 +647,7 @@ namespace Jazz2::Editor::ToolActions
 		}
 		auto* tool = static_cast<EventTool*>(session.GetTools().Get(EditorToolType::Event));
 		std::int32_t placed = tool->PlaceOnCells(cells, false);
-		session.ShowMessage(_fn("{} event placed, tiles with an event keep it", "{} events placed, tiles with an event keep it", placed, placed));
+		session.ShowMessage(_fnx("editor", "{} event placed, tiles with an event keep it", "{} events placed, tiles with an event keep it", placed, placed));
 		return (placed > 0);
 	}
 
@@ -679,7 +683,7 @@ namespace Jazz2::Editor::ToolActions
 			ToolPointer hover;
 			Vector2i tile;
 			if (!session.GetHoverPointer(hover) || !session.GetLayerView(layerIndex).Wrap(hover.Cell, tile)) {
-				session.ShowMessage(_("Select some tiles, or point at one"));
+				session.ShowMessage(_x("editor", "Select some tiles, or point at one"));
 				return false;
 			}
 			wanted.push_back(key(layer.GetTile(tile.X, tile.Y)));
@@ -707,7 +711,7 @@ namespace Jazz2::Editor::ToolActions
 			return;
 		}
 		if (stamp.IsEmpty() || stamp.Tiles.size() < 2) {
-			session.ShowMessage(_("Pick a brush of more tiles first, the weights tell how often each of them is painted"));
+			session.ShowMessage(_x("editor", "Pick a brush of more tiles first, the weights tell how often each of them is painted"));
 			return;
 		}
 
@@ -731,10 +735,11 @@ namespace Jazz2::Editor::ToolActions
 		}
 
 		IEditorContext* s = &session;
-		auto dialog = std::make_unique<UiDialog>(_("Weights of Tiles"));
+		// TRANSLATORS: Title of the dialog that sets how often each tile of the brush is painted at random
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Weights of Tiles"));
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
-		content->Add<UiLabel>(_("How often each tile is painted when the brush paints at random"), UiTheme::TextDim);
+		content->Add<UiLabel>(_x("editor", "How often each tile is painted when the brush paints at random"), UiTheme::TextDim);
 		auto* scroll = content->Add<UiScrollView>();
 		scroll->Width = 240.0f;
 		scroll->Height = std::min<float>(40.0f + 28.0f * float(entries.size()), 240.0f);
@@ -743,7 +748,8 @@ namespace Jazz2::Editor::ToolActions
 			TileRef tile = entry.Tile;
 			auto* row = list->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 			row->Add<WeightTile>(session, tile);
-			row->Add<UiLabel>(_f("Tile {}", std::int32_t(tile.Index)))->Flex = 1.0f;
+			// TRANSLATORS: Row in the Weights of Tiles dialog, {} is the number of the tile in the tile set
+			row->Add<UiLabel>(_fx("editor", "Tile {}", std::int32_t(tile.Index)))->Flex = 1.0f;
 			auto weightOf = [s, tile]() {
 				// The weight of a tile is the sum of its places, each 1 unless set
 				const TileStamp& current = s->GetStamp();
@@ -773,7 +779,7 @@ namespace Jazz2::Editor::ToolActions
 			}, 0.0f, 100.0f, 1.0f, 1);
 			box->Width = 56.0f;
 		}
-		content->Add<UiCheckBox>(_("Paint tiles of the brush at random"), [s]() { return s->GetStamp().Random; },
+		content->Add<UiCheckBox>(_x("editor", "Paint tiles of the brush at random"), [s]() { return s->GetStamp().Random; },
 			[s](bool value) { s->GetStamp().Random = value; });
 		dialog->AddButton(_("Reset"), [s]() { s->GetStamp().Weights.clear(); });
 		// Closed by its cross or Escape, resetting isn't what they do
@@ -809,7 +815,8 @@ namespace Jazz2::Editor::ToolActions
 
 		// The shape tool
 		{
-			auto& shape = a.Add(ActionIds::ToolShape, _("Shapes"), EditorIcon::Shapes, [s]() {
+			// TRANSLATORS: Name of the tool that draws lines, rectangles and ellipses of tiles, in the Tools menu and the tool strip
+			auto& shape = a.Add(ActionIds::ToolShape, _x("editor", "Shapes"), EditorIcon::Shapes, [s]() {
 				s->GetTools().SetActive(EditorToolType::Shape);
 				s->SetPickerPanel(PickerPanel::Tiles);
 			});
@@ -817,14 +824,15 @@ namespace Jazz2::Editor::ToolActions
 			shape.IsChecked = [s]() { return (s->GetTools().GetActiveType() == EditorToolType::Shape); };
 			struct ShapeChoice { const char* Id; const char* Label; ToolShape Shape; };
 			static const ShapeChoice Shapes[] = {
-				{ ActionIds::ShapeLine, N_("Shape: Line"), ToolShape::Line },
-				{ ActionIds::ShapeRectangle, N_("Shape: Rectangle Outline"), ToolShape::Rectangle },
-				{ ActionIds::ShapeEllipse, N_("Shape: Ellipse"), ToolShape::Ellipse },
-				{ ActionIds::ShapeFilledEllipse, N_("Shape: Filled Ellipse"), ToolShape::FilledEllipse },
+				// TRANSLATORS: Commands in the menus and the list of keyboard shortcuts, the shape the shape tool draws
+				{ ActionIds::ShapeLine, NC_("editor", "Shape: Line"), ToolShape::Line },
+				{ ActionIds::ShapeRectangle, NC_("editor", "Shape: Rectangle Outline"), ToolShape::Rectangle },
+				{ ActionIds::ShapeEllipse, NC_("editor", "Shape: Ellipse"), ToolShape::Ellipse },
+				{ ActionIds::ShapeFilledEllipse, NC_("editor", "Shape: Filled Ellipse"), ToolShape::FilledEllipse },
 			};
 			for (const ShapeChoice& choice : Shapes) {
 				ToolShape value = choice.Shape;
-				auto& action = a.Add(choice.Id, _(choice.Label), EditorIcon::None, [s, t, value]() {
+				auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [s, t, value]() {
 					t->Shape = value;
 					t->NotifyChanged();
 					s->GetTools().SetActive(EditorToolType::Shape);
@@ -835,59 +843,70 @@ namespace Jazz2::Editor::ToolActions
 
 		// The stamp
 		// The keymap like the Multi-Layer Level Editor gives it R, see ActionRegistry::ApplyPreset()
-		a.Add(ActionIds::StampRotate, _("Turn Stamp Clockwise"), EditorIcon::RotateCW, [s]() { s->GetStamp().Rotate(true); }).Key = { Keys::R, KeyMod::Shift };
-		a.Add(ActionIds::StampRotateCCW, _("Turn Stamp Counter-Clockwise"), EditorIcon::RotateCCW, [s]() { s->GetStamp().Rotate(false); });
+		// TRANSLATORS: Command in the menus and the list of keyboard shortcuts, turns the brush of tiles (stamp) by 90 degrees
+		a.Add(ActionIds::StampRotate, _x("editor", "Turn Stamp Clockwise"), EditorIcon::RotateCW, [s]() { s->GetStamp().Rotate(true); }).Key = { Keys::R, KeyMod::Shift };
+		// TRANSLATORS: Command in the menus and the list of keyboard shortcuts, turns the brush of tiles (stamp) back by 90 degrees
+		a.Add(ActionIds::StampRotateCCW, _x("editor", "Turn Stamp Counter-Clockwise"), EditorIcon::RotateCCW, [s]() { s->GetStamp().Rotate(false); });
 		{
-			auto& flipX = toggle(ActionIds::StampRandomFlipX,_("Flip Tiles at Random Horizontally"), &ToolSettings::RandomFlipX);
+			// TRANSLATORS: Toggle command, a brush painting at random flips some of its tiles horizontally
+			auto& flipX = toggle(ActionIds::StampRandomFlipX,_x("editor", "Flip Tiles at Random Horizontally"), &ToolSettings::RandomFlipX);
 			flipX.Icon = EditorIcon::RandomFlipX;
 			flipX.IsEnabled = [s]() { return s->GetStamp().Random; };
-			auto& flipY = toggle(ActionIds::StampRandomFlipY,_("Flip Tiles at Random Vertically"), &ToolSettings::RandomFlipY);
+			// TRANSLATORS: Toggle command, a brush painting at random flips some of its tiles vertically
+			auto& flipY = toggle(ActionIds::StampRandomFlipY,_x("editor", "Flip Tiles at Random Vertically"), &ToolSettings::RandomFlipY);
 			flipY.Icon = EditorIcon::RandomFlipY;
 			flipY.IsEnabled = [s]() { return s->GetStamp().Random; };
 		}
-		a.Add(ActionIds::StampWeights,_("Weights of Tiles"), EditorIcon::Usage, [s]() { ShowStampWeights(*s); });
+		// TRANSLATORS: Command that opens the dialog setting how often each tile of the brush is painted at random
+		a.Add(ActionIds::StampWeights,_x("editor", "Weights of Tiles"), EditorIcon::Usage, [s]() { ShowStampWeights(*s); });
 
 		// The modifier painted with the tiles
 		{
 			struct ModifierChoice { const char* Id; const char* Label; TileModifierMode Mode; };
 			static const ModifierChoice Modifiers[] = {
-				{ ActionIds::ToolsModifierKeep, N_("Paint Tiles as They Are"), TileModifierMode::Keep },
-				{ ActionIds::ToolsModifierNormal, N_("Paint Tiles Normal"), TileModifierMode::Normal },
-				{ ActionIds::ToolsModifierTranslucent, N_("Paint Tiles Translucent"), TileModifierMode::Translucent },
-				{ ActionIds::ToolsModifierInvisible, N_("Paint Tiles Invisible"), TileModifierMode::Invisible },
-				{ ActionIds::ToolsModifierHeat, N_("Paint Tiles with Heat"), TileModifierMode::Heat },
+				// TRANSLATORS: Commands in the menus and the list of keyboard shortcuts, the modifier the tools paint the tiles with
+				{ ActionIds::ToolsModifierKeep, NC_("editor", "Paint Tiles as They Are"), TileModifierMode::Keep },
+				{ ActionIds::ToolsModifierNormal, NC_("editor", "Paint Tiles Normal"), TileModifierMode::Normal },
+				{ ActionIds::ToolsModifierTranslucent, NC_("editor", "Paint Tiles Translucent"), TileModifierMode::Translucent },
+				{ ActionIds::ToolsModifierInvisible, NC_("editor", "Paint Tiles Invisible"), TileModifierMode::Invisible },
+				{ ActionIds::ToolsModifierHeat, NC_("editor", "Paint Tiles with Heat"), TileModifierMode::Heat },
 			};
 			for (const ModifierChoice& choice : Modifiers) {
 				TileModifierMode mode = choice.Mode;
-				auto& action = a.Add(choice.Id, _(choice.Label), EditorIcon::None, [t, mode]() { t->Modifier = mode; });
+				auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [t, mode]() { t->Modifier = mode; });
 				action.IsChecked = [t, mode]() { return (t->Modifier == mode); };
 			}
-			auto& only = a.Add(ActionIds::ToolsModifierOnly,_("Change Only the Modifier of Tiles"), EditorIcon::None, [t]() { t->ModifierOnly = !t->ModifierOnly; });
+			// TRANSLATORS: Toggle command, painting changes only the modifier of the tiles painted over and keeps the tiles
+			auto& only = a.Add(ActionIds::ToolsModifierOnly,_x("editor", "Change Only the Modifier of Tiles"), EditorIcon::None, [t]() { t->ModifierOnly = !t->ModifierOnly; });
 			only.IsChecked = [t]() { return t->ModifierOnly; };
 
 			struct SetChoice { const char* Id; const char* Label; TileModifierMode Mode; };
 			static const SetChoice Sets[] = {
-				{ ActionIds::EditModifierNormal, N_("Make Selected Tiles Normal"), TileModifierMode::Normal },
-				{ ActionIds::EditModifierTranslucent, N_("Make Selected Tiles Translucent"), TileModifierMode::Translucent },
-				{ ActionIds::EditModifierInvisible, N_("Make Selected Tiles Invisible"), TileModifierMode::Invisible },
-				{ ActionIds::EditModifierHeat, N_("Give Selected Tiles Heat"), TileModifierMode::Heat },
+				// TRANSLATORS: Commands in the Select menu, change the modifier of the selected tiles
+				{ ActionIds::EditModifierNormal, NC_("editor", "Make Selected Tiles Normal"), TileModifierMode::Normal },
+				{ ActionIds::EditModifierTranslucent, NC_("editor", "Make Selected Tiles Translucent"), TileModifierMode::Translucent },
+				{ ActionIds::EditModifierInvisible, NC_("editor", "Make Selected Tiles Invisible"), TileModifierMode::Invisible },
+				{ ActionIds::EditModifierHeat, NC_("editor", "Give Selected Tiles Heat"), TileModifierMode::Heat },
 			};
 			for (const SetChoice& choice : Sets) {
 				TileModifierMode mode = choice.Mode;
-				a.Add(choice.Id, _(choice.Label), EditorIcon::None, [s, mode]() { SetSelectionModifier(*s, mode); }).IsEnabled = hasTileSelection;
+				a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [s, mode]() { SetSelectionModifier(*s, mode); }).IsEnabled = hasTileSelection;
 			}
 		}
 
 		// The fill and the magic wand
-		toggle(ActionIds::ToolsAcrossSeams, _("Fill Across Edges of Repeating Layers"), &ToolSettings::AcrossSeams);
-		toggle(ActionIds::ToolsIgnoreFlips, _("Fill and Select Flipped Tiles as the Same"), &ToolSettings::IgnoreFlips);
-		toggle(ActionIds::ToolsOnlyEmpty, _("Fill Only Empty Tiles"), &ToolSettings::OnlyEmpty);
-		toggle(ActionIds::ToolsWandGlobal,_("Magic Wand Selects All Such Tiles"), &ToolSettings::WandGlobal);
+		// TRANSLATORS: Toggle command, the fill tool goes on across the edges of a layer that repeats
+		toggle(ActionIds::ToolsAcrossSeams, _x("editor", "Fill Across Edges of Repeating Layers"), &ToolSettings::AcrossSeams);
+		toggle(ActionIds::ToolsIgnoreFlips, _x("editor", "Fill and Select Flipped Tiles as the Same"), &ToolSettings::IgnoreFlips);
+		// TRANSLATORS: Toggle command, the fill, rectangle and shape tools paint only the tiles that are empty
+		toggle(ActionIds::ToolsOnlyEmpty, _x("editor", "Fill Only Empty Tiles"), &ToolSettings::OnlyEmpty);
+		// TRANSLATORS: Toggle command, the magic wand selects all such tiles of the layer, not only those joined together
+		toggle(ActionIds::ToolsWandGlobal,_x("editor", "Magic Wand Selects All Such Tiles"), &ToolSettings::WandGlobal);
 
 		// The selection
 		{
 			// Of the events with the event tool, as Select All
-			auto& invert = a.Add(ActionIds::SelectInvert,_("Invert Selection"), EditorIcon::Select, [s]() {
+			auto& invert = a.Add(ActionIds::SelectInvert,_x("editor", "Invert Selection"), EditorIcon::Select, [s]() {
 				if (s->IsEditingEvents()) {
 					InvertEventSelection(*s);
 					return;
@@ -899,19 +918,22 @@ namespace Jazz2::Editor::ToolActions
 				}
 			});
 			invert.Key = { Keys::I, KeyMod::Ctrl };
-			a.Add(ActionIds::SelectGrow, _("Grow Selection"), EditorIcon::Plus, [s]() { s->GetSelection().Grow(false); }).IsEnabled = hasTileSelection;
-			a.Add(ActionIds::SelectShrink, _("Shrink Selection"), EditorIcon::Minus, [s]() { s->GetSelection().Grow(true); }).IsEnabled = hasTileSelection;
-			a.Add(ActionIds::SelectSameTiles,_("Select All Tiles Like These"), EditorIcon::Wand, [s]() { SelectSameTiles(*s); }).IsEnabled = [s]() { return !s->IsEditingEvents(); };
+			// TRANSLATORS: Command in the Select menu, makes the selection of tiles one tile larger on each side
+			a.Add(ActionIds::SelectGrow, _x("editor", "Grow Selection"), EditorIcon::Plus, [s]() { s->GetSelection().Grow(false); }).IsEnabled = hasTileSelection;
+			// TRANSLATORS: Command in the Select menu, makes the selection of tiles one tile smaller on each side
+			a.Add(ActionIds::SelectShrink, _x("editor", "Shrink Selection"), EditorIcon::Minus, [s]() { s->GetSelection().Grow(true); }).IsEnabled = hasTileSelection;
+			a.Add(ActionIds::SelectSameTiles,_x("editor", "Select All Tiles Like These"), EditorIcon::Wand, [s]() { SelectSameTiles(*s); }).IsEnabled = [s]() { return !s->IsEditingEvents(); };
 			struct Nudge { const char* Id; const char* Label; Keys Key; Vector2i Offset; };
 			static const Nudge Nudges[] = {
-				{ ActionIds::SelectMoveLeft, N_("Move Selected Tiles Left"), Keys::Left, Vector2i(-1, 0) },
-				{ ActionIds::SelectMoveRight, N_("Move Selected Tiles Right"), Keys::Right, Vector2i(1, 0) },
-				{ ActionIds::SelectMoveUp, N_("Move Selected Tiles Up"), Keys::Up, Vector2i(0, -1) },
-				{ ActionIds::SelectMoveDown, N_("Move Selected Tiles Down"), Keys::Down, Vector2i(0, 1) },
+				// TRANSLATORS: Commands in the Select menu, move the selected tiles by one tile in the direction
+				{ ActionIds::SelectMoveLeft, NC_("editor", "Move Selected Tiles Left"), Keys::Left, Vector2i(-1, 0) },
+				{ ActionIds::SelectMoveRight, NC_("editor", "Move Selected Tiles Right"), Keys::Right, Vector2i(1, 0) },
+				{ ActionIds::SelectMoveUp, NC_("editor", "Move Selected Tiles Up"), Keys::Up, Vector2i(0, -1) },
+				{ ActionIds::SelectMoveDown, NC_("editor", "Move Selected Tiles Down"), Keys::Down, Vector2i(0, 1) },
 			};
 			for (const Nudge& nudge : Nudges) {
 				Vector2i offset = nudge.Offset;
-				auto& action = a.Add(nudge.Id, _(nudge.Label), EditorIcon::None, [s, offset]() { MoveSelectedTiles(*s, offset); });
+				auto& action = a.Add(nudge.Id, _x("editor", nudge.Label), EditorIcon::None, [s, offset]() { MoveSelectedTiles(*s, offset); });
 				action.Key = { nudge.Key, KeyMod::Shift };
 				action.IsEnabled = hasTileSelection;
 			}
@@ -920,32 +942,36 @@ namespace Jazz2::Editor::ToolActions
 		// Mirroring and copying all layers
 		{
 			auto canMirror = [s]() { return (s->IsEditingEvents() ? !s->GetEventSelection().IsEmpty() : !s->GetSelection().IsEmpty()); };
-			auto& mirrorX = a.Add(ActionIds::EditMirrorH,_("Mirror Selection Horizontally"), EditorIcon::FlipX, [s]() { MirrorSelection(*s, true); });
+			auto& mirrorX = a.Add(ActionIds::EditMirrorH,_x("editor", "Mirror Selection Horizontally"), EditorIcon::FlipX, [s]() { MirrorSelection(*s, true); });
 			mirrorX.Key = { Keys::X, KeyMod::Ctrl | KeyMod::Shift };
 			mirrorX.IsEnabled = canMirror;
-			auto& mirrorY = a.Add(ActionIds::EditMirrorV,_("Mirror Selection Vertically"), EditorIcon::FlipY, [s]() { MirrorSelection(*s, false); });
+			auto& mirrorY = a.Add(ActionIds::EditMirrorV,_x("editor", "Mirror Selection Vertically"), EditorIcon::FlipY, [s]() { MirrorSelection(*s, false); });
 			mirrorY.Key = { Keys::Y, KeyMod::Ctrl | KeyMod::Shift };
 			mirrorY.IsEnabled = canMirror;
-			toggle(ActionIds::EditMirrorSwapTeams,_("Mirroring Swaps Teams of Events"), &ToolSettings::MirrorSwapTeams);
+			// TRANSLATORS: Toggle command in the Select menu, mirrored events of a team get the other team, for team game modes
+			toggle(ActionIds::EditMirrorSwapTeams,_x("editor", "Mirroring Swaps Teams of Events"), &ToolSettings::MirrorSwapTeams);
 
-			auto& copyLayers = a.Add(ActionIds::EditCopyLayers,_("Copy All Layers"), EditorIcon::Copy, [s]() { CopyAllLayers(*s); });
+			// TRANSLATORS: Command in the Select menu, copies the selected area from all layers at once, with the events
+			auto& copyLayers = a.Add(ActionIds::EditCopyLayers,_x("editor", "Copy All Layers"), EditorIcon::Copy, [s]() { CopyAllLayers(*s); });
 			copyLayers.Key = { Keys::C, KeyMod::Ctrl | KeyMod::Shift };
 			copyLayers.IsEnabled = [s]() { return (!s->GetSelection().IsEmpty() || s->GetEventSelection().HasCells()); };
-			a.Add(ActionIds::EditPasteLayers,_("Paste All Layers"), EditorIcon::Paste, [s]() { PasteAllLayers(*s); }).Key = { Keys::V, KeyMod::Ctrl | KeyMod::Shift };
+			// TRANSLATORS: Command in the Select menu, pastes what Copy All Layers copied into all layers at once
+			a.Add(ActionIds::EditPasteLayers,_x("editor", "Paste All Layers"), EditorIcon::Paste, [s]() { PasteAllLayers(*s); }).Key = { Keys::V, KeyMod::Ctrl | KeyMod::Shift };
 		}
 
 		// How the event tool places events, or that it only selects them
 		{
 			struct ModeChoice { const char* Id; const char* Label; EventPlaceMode Mode; };
 			static const ModeChoice Modes[] = {
-				{ ActionIds::EventsModePaint, N_("Place Events by Clicking"), EventPlaceMode::Paint },
-				{ ActionIds::EventsModeRectangle, N_("Place Events in a Rectangle"), EventPlaceMode::Rectangle },
-				{ ActionIds::EventsModeFill, N_("Place Events by Filling an Area"), EventPlaceMode::Fill },
-				{ ActionIds::EventsModeSelect, N_("Select Events Without Placing Them"), EventPlaceMode::Select },
+				// TRANSLATORS: Commands in the menus and the list of keyboard shortcuts, how the event tool places events, or that it only selects them
+				{ ActionIds::EventsModePaint, NC_("editor", "Place Events by Clicking"), EventPlaceMode::Paint },
+				{ ActionIds::EventsModeRectangle, NC_("editor", "Place Events in a Rectangle"), EventPlaceMode::Rectangle },
+				{ ActionIds::EventsModeFill, NC_("editor", "Place Events by Filling an Area"), EventPlaceMode::Fill },
+				{ ActionIds::EventsModeSelect, NC_("editor", "Select Events Without Placing Them"), EventPlaceMode::Select },
 			};
 			for (const ModeChoice& choice : Modes) {
 				EventPlaceMode mode = choice.Mode;
-				auto& action = a.Add(choice.Id, _(choice.Label), EditorIcon::Event, [s, t, mode]() {
+				auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::Event, [s, t, mode]() {
 					t->EventMode = mode;
 					t->NotifyChanged();
 					s->GetTools().SetActive(EditorToolType::Event);
@@ -953,7 +979,8 @@ namespace Jazz2::Editor::ToolActions
 				});
 				action.IsChecked = [t, mode]() { return (t->EventMode == mode); };
 			}
-			a.Add(ActionIds::EventsFillSelection,_("Fill Selection with Event"), EditorIcon::Event, [s]() { FillSelectionWithEvent(*s); }).IsEnabled = [s]() {
+			// TRANSLATORS: Command that places the chosen event on all selected tiles of the sprite layer
+			a.Add(ActionIds::EventsFillSelection,_x("editor", "Fill Selection with Event"), EditorIcon::Event, [s]() { FillSelectionWithEvent(*s); }).IsEnabled = [s]() {
 				return (!s->GetSelection().IsEmpty() && s->GetSelection().GetLayer() == s->GetDocument().GetSpriteLayerIndex());
 			};
 		}
@@ -962,20 +989,21 @@ namespace Jazz2::Editor::ToolActions
 		{
 			struct ArcChoice { const char* Id; const char* Label; std::uint8_t Arc; };
 			static const ArcChoice Arcs[] = {
-				{ ActionIds::MeasureWalk, N_("Measure: Walking Jump"), ToolSettings::ArcWalk },
-				{ ActionIds::MeasureDash, N_("Measure: Dashing Jump"), ToolSettings::ArcDash },
-				{ ActionIds::MeasureDoubleJump, N_("Measure: Double Jump of Spaz"), ToolSettings::ArcDoubleJump },
-				{ ActionIds::MeasureCopter, N_("Measure: Copter of Jazz"), ToolSettings::ArcCopter },
+				// TRANSLATORS: Toggle commands, the jumps of the player the measure tool shows
+				{ ActionIds::MeasureWalk, NC_("editor", "Measure: Walking Jump"), ToolSettings::ArcWalk },
+				{ ActionIds::MeasureDash, NC_("editor", "Measure: Dashing Jump"), ToolSettings::ArcDash },
+				{ ActionIds::MeasureDoubleJump, NC_("editor", "Measure: Double Jump of Spaz"), ToolSettings::ArcDoubleJump },
+				{ ActionIds::MeasureCopter, NC_("editor", "Measure: Copter of Jazz"), ToolSettings::ArcCopter },
 			};
 			for (const ArcChoice& choice : Arcs) {
 				std::uint8_t arc = choice.Arc;
-				auto& action = a.Add(choice.Id, _(choice.Label), EditorIcon::Measure, [t, arc]() {
+				auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::Measure, [t, arc]() {
 					t->ShownArcs ^= arc;
 					t->NotifyChanged();
 				});
 				action.IsChecked = [t, arc]() { return ((t->ShownArcs & arc) != 0); };
 			}
-			toggle(ActionIds::MeasureCollisions,_("Measure: Jumps Stop at Solid Tiles"), &ToolSettings::ArcCollisions);
+			toggle(ActionIds::MeasureCollisions,_x("editor", "Measure: Jumps Stop at Solid Tiles"), &ToolSettings::ArcCollisions);
 		}
 	}
 

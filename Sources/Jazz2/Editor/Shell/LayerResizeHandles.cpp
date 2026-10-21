@@ -242,7 +242,7 @@ namespace Jazz2::Editor
 
 	StringView LayerResizeHandles::GetTooltip(Vector2f pos) const
 	{
-		return (_dragging ? StringView() : _("Drag to resize the layer - Esc cancels"));
+		return (_dragging ? StringView() : _x("editor", "Drag to resize the layer - Esc cancels"));
 	}
 
 	void LayerResizeHandles::EndDrag()
@@ -310,7 +310,8 @@ namespace Jazz2::Editor
 
 		// The size it will have, in a tooltip by the pointer (the surface keeps it below the arrows and on the screen)
 		if (_dragging && surface != nullptr) {
-			String text = _f("{} x {} tiles", _size.X, _size.Y);
+			// TRANSLATORS: Tooltip while a layer is resized by dragging its edge, the new width and height of the layer in tiles
+			String text = _fx("editor", "{} x {} tiles", _size.X, _size.Y);
 			Vector2i delta(_size.X - _startSize.X, _size.Y - _startSize.Y);
 			if (delta != Vector2i(0, 0)) {
 				text += " ("_s + FormatChange(delta.X) + ", "_s + FormatChange(delta.Y) + ")"_s;

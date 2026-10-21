@@ -691,7 +691,7 @@ namespace Jazz2::Editor
 	UiSplitter::UiSplitter(UiOrientation orientation, Function<void()>&& onDragStart, Function<void(float)>&& onDrag, Function<void()>&& onDragEnd)
 		: Orientation(orientation), OnDragStart(Death::move(onDragStart)), OnDrag(Death::move(onDrag)), OnDragEnd(Death::move(onDragEnd)), _startPos(0.0f)
 	{
-		Tooltip = _("Drag to resize");
+		Tooltip = _x("editor", "Drag to resize");
 	}
 
 	void UiSplitter::Update(float timeMult)

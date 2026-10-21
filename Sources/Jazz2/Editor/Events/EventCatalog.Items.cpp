@@ -10,45 +10,61 @@ namespace Jazz2::Editor::EventCatalogParts
 	{
 		// Values of WeaponType
 		constexpr ParamOption WeaponTypes[] = {
-			{ N_("Blaster"), 0 }, { N_("Bouncer"), 1 }, { N_("Freezer"), 2 }, { N_("Seeker"), 3 }, { N_("RF"), 4 },
-			{ N_("Toaster"), 5 }, { N_("TNT"), 6 }, { N_("Pepper"), 7 }, { N_("Electro"), 8 }, { N_("Thunderbolt"), 9 }
+			// TRANSLATORS: Choices of a parameter of an event (weapons)
+			{ NC_("editor", "Blaster"), 0 }, { NC_("editor", "Bouncer"), 1 }, { NC_("editor", "Freezer"), 2 }, { NC_("editor", "Seeker"), 3 }, { NC_("editor", "RF"), 4 },
+			// TRANSLATORS: Choices of a parameter of an event (weapons)
+			{ NC_("editor", "Toaster"), 5 }, { NC_("editor", "TNT"), 6 }, { NC_("editor", "Pepper"), 7 }, { NC_("editor", "Electro"), 8 }, { NC_("editor", "Thunderbolt"), 9 }
 		};
 		// Blaster has no ammo, so it's left out
 		constexpr ParamOption AmmoTypes[] = {
-			{ N_("Bouncer"), 1 }, { N_("Freezer"), 2 }, { N_("Seeker"), 3 }, { N_("RF"), 4 }, { N_("Toaster"), 5 },
-			{ N_("TNT"), 6 }, { N_("Pepper"), 7 }, { N_("Electro"), 8 }, { N_("Thunderbolt"), 9 }
+			// TRANSLATORS: Choices of a parameter of an event (weapons)
+			{ NC_("editor", "Bouncer"), 1 }, { NC_("editor", "Freezer"), 2 }, { NC_("editor", "Seeker"), 3 }, { NC_("editor", "RF"), 4 }, { NC_("editor", "Toaster"), 5 },
+			// TRANSLATORS: Choices of a parameter of an event (weapons)
+			{ NC_("editor", "TNT"), 6 }, { NC_("editor", "Pepper"), 7 }, { NC_("editor", "Electro"), 8 }, { NC_("editor", "Thunderbolt"), 9 }
 		};
 		// Blaster (0) means ammo of a random weapon the players already have
 		constexpr ParamOption AmmoContainerTypes[] = {
-			{ N_("Random"), 0 }, { N_("Bouncer"), 1 }, { N_("Freezer"), 2 }, { N_("Seeker"), 3 }, { N_("RF"), 4 },
-			{ N_("Toaster"), 5 }, { N_("TNT"), 6 }, { N_("Pepper"), 7 }, { N_("Electro"), 8 }, { N_("Thunderbolt"), 9 }
+			// TRANSLATORS: Choices of a parameter of an event (weapons, or a random one the players have)
+			{ NC_("editor", "Random"), 0 }, { NC_("editor", "Bouncer"), 1 }, { NC_("editor", "Freezer"), 2 }, { NC_("editor", "Seeker"), 3 }, { NC_("editor", "RF"), 4 },
+			// TRANSLATORS: Choices of a parameter of an event (weapons)
+			{ NC_("editor", "Toaster"), 5 }, { NC_("editor", "TNT"), 6 }, { NC_("editor", "Pepper"), 7 }, { NC_("editor", "Electro"), 8 }, { NC_("editor", "Thunderbolt"), 9 }
 		};
 
-		constexpr ParamOption CoinTypes[] = { { N_("Silver"), 0 }, { N_("Gold"), 1 } };
+		// TRANSLATORS: Choices of a parameter of an event (coin metals)
+		constexpr ParamOption CoinTypes[] = { { NC_("editor", "Silver"), 0 }, { NC_("editor", "Gold"), 1 } };
 		constexpr EventParamField CoinFields[] = {
-			EnumField(N_("Type"), 0, 8, CoinTypes).WithDescription(N_("Silver is worth 1 coin, gold 5 coins")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			EnumField(NC_("editor", "Type"), 0, 8, CoinTypes).WithDescription(NC_("editor", "Silver is worth 1 coin, gold 5 coins")),
 		};
 		// CoinCollectible uses the type as the animation, Coins.res has only silver (0) and gold (1)
 		constexpr EventPreviewCase CoinPreview[] = {
 			{ 0, "Collectible/Coins", 0 }, { 1, "Collectible/Coins", 1 }
 		};
 
-		constexpr ParamOption GemColors[] = { { N_("Red"), 0 }, { N_("Green"), 1 }, { N_("Blue"), 2 }, { N_("Purple"), 3 } };
+		// TRANSLATORS: Choices of a parameter of an event (gem colors)
+		constexpr ParamOption GemColors[] = { { NC_("editor", "Red"), 0 }, { NC_("editor", "Green"), 1 }, { NC_("editor", "Blue"), 2 }, { NC_("editor", "Purple"), 3 } };
 		constexpr EventParamField GemFields[] = {
-			EnumField(N_("Color"), 0, 2, GemColors).WithDescription(N_("Red is worth 1 gem, green 5, blue 10 and purple 1")),
-			BoolField(N_("Disappears"), 1, 0).WithDescription(N_("Disappears 8 seconds after it's knocked loose")),
-			BoolField(N_("Flipped"), 1, 1).WithDescription(N_("Faces the other way"))
+			// TRANSLATORS: Parameter of an event in the event properties
+			EnumField(NC_("editor", "Color"), 0, 2, GemColors).WithDescription(NC_("editor", "Red is worth 1 gem, green 5, blue 10 and purple 1")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			BoolField(NC_("editor", "Disappears"), 1, 0).WithDescription(NC_("editor", "Disappears 8 seconds after it's knocked loose")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			BoolField(NC_("editor", "Flipped"), 1, 1).WithDescription(NC_("editor", "Faces the other way"))
 				.MirroredX(MirrorMode::Toggle),
-			BoolField(N_("Delayed"), 1, 2).WithDescription(N_("Can't be collected for the first 40 frames")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			BoolField(NC_("editor", "Delayed"), 1, 2).WithDescription(NC_("editor", "Can't be collected for the first 40 frames")),
 		};
 
 		constexpr EventParamField GemRingFields[] = {
-			UIntField(N_("Length"), 0, 8, 0, 255, 8).WithDescription(N_("Number of red gems in the ring, 0 means 8")),
-			UIntField(N_("Speed"), 1, 8, 0, 255, 8).WithDescription(N_("Speed of rotation, 0 means 8")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			UIntField(NC_("editor", "Length"), 0, 8, 0, 255, 8).WithDescription(NC_("editor", "Number of red gems in the ring, 0 means 8")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			UIntField(NC_("editor", "Speed"), 1, 8, 0, 255, 8).WithDescription(NC_("editor", "Speed of rotation, 0 means 8")),
 		};
 
 		constexpr EventParamField CarrotFields[] = {
-			BoolField(N_("Full"), 0).WithDescription(N_("Restores full health instead of one heart")),
+			// TRANSLATORS: Parameter of a carrot event, a checkbox for a full carrot that restores all health
+			BoolField(NC_("editor", "Full"), 0).WithDescription(NC_("editor", "Restores full health instead of one heart")),
 		};
 		constexpr EventPreviewCase CarrotPreview[] = {
 			{ 0, "Collectible/Carrot", std::uint32_t(AnimState::Default) },
@@ -57,17 +73,22 @@ namespace Jazz2::Editor::EventCatalogParts
 
 		// Values of FoodType
 		constexpr ParamOption FoodTypes[] = {
-			{ N_("Apple"), 1 }, { N_("Banana"), 2 }, { N_("Cherry"), 3 }, { N_("Orange"), 4 }, { N_("Pear"), 5 },
-			{ N_("Pretzel"), 6 }, { N_("Strawberry"), 7 }, { N_("Lemon"), 8 }, { N_("Lime"), 9 }, { N_("Thing"), 10 },
-			{ N_("Watermelon"), 11 }, { N_("Peach"), 12 }, { N_("Grapes"), 13 }, { N_("Lettuce"), 14 }, { N_("Eggplant"), 15 },
-			{ N_("Cucumber"), 16 }, { N_("Pepsi"), 17 }, { N_("Coke"), 18 }, { N_("Milk"), 19 }, { N_("Pie"), 20 },
-			{ N_("Cake"), 21 }, { N_("Donut"), 22 }, { N_("Cupcake"), 23 }, { N_("Chips"), 24 }, { N_("Candy"), 25 },
-			{ N_("Chocolate"), 26 }, { N_("Ice Cream"), 27 }, { N_("Burger"), 28 }, { N_("Pizza"), 29 }, { N_("Fries"), 30 },
-			{ N_("Chicken Leg"), 31 }, { N_("Sandwich"), 32 }, { N_("Taco"), 33 }, { N_("Hot Dog"), 34 }, { N_("Ham"), 35 },
-			{ N_("Cheese"), 36 }
+			// TRANSLATORS: Choices of a parameter of an event (kinds of food)
+			{ NC_("editor", "Apple"), 1 }, { NC_("editor", "Banana"), 2 }, { NC_("editor", "Cherry"), 3 }, { NC_("editor", "Orange"), 4 }, { NC_("editor", "Pear"), 5 },
+			// TRANSLATORS: Choices of a parameter of an event (kinds of food), "Thing" is the name of one of them
+			{ NC_("editor", "Pretzel"), 6 }, { NC_("editor", "Strawberry"), 7 }, { NC_("editor", "Lemon"), 8 }, { NC_("editor", "Lime"), 9 }, { NC_("editor", "Thing"), 10 },
+			{ NC_("editor", "Watermelon"), 11 }, { NC_("editor", "Peach"), 12 }, { NC_("editor", "Grapes"), 13 }, { NC_("editor", "Lettuce"), 14 }, { NC_("editor", "Eggplant"), 15 },
+			// TRANSLATORS: Choices of a parameter of an event (kinds of food), Pepsi and Coke are drinks
+			{ NC_("editor", "Cucumber"), 16 }, { NC_("editor", "Pepsi"), 17 }, { NC_("editor", "Coke"), 18 }, { NC_("editor", "Milk"), 19 }, { NC_("editor", "Pie"), 20 },
+			// TRANSLATORS: Choices of a parameter of an event (kinds of food), "Chips" are potato chips (crisps)
+			{ NC_("editor", "Cake"), 21 }, { NC_("editor", "Donut"), 22 }, { NC_("editor", "Cupcake"), 23 }, { NC_("editor", "Chips"), 24 }, { NC_("editor", "Candy"), 25 },
+			{ NC_("editor", "Chocolate"), 26 }, { NC_("editor", "Ice Cream"), 27 }, { NC_("editor", "Burger"), 28 }, { NC_("editor", "Pizza"), 29 }, { NC_("editor", "Fries"), 30 },
+			{ NC_("editor", "Chicken Leg"), 31 }, { NC_("editor", "Sandwich"), 32 }, { NC_("editor", "Taco"), 33 }, { NC_("editor", "Hot Dog"), 34 }, { NC_("editor", "Ham"), 35 },
+			{ NC_("editor", "Cheese"), 36 }
 		};
 		constexpr EventParamField FoodFields[] = {
-			EnumField(N_("Type"), 0, 8, FoodTypes, 1).WithDescription(N_("Pepsi, Coke and Milk are drinks")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			EnumField(NC_("editor", "Type"), 0, 8, FoodTypes, 1).WithDescription(NC_("editor", "Pepsi, Coke and Milk are drinks")),
 		};
 		// FoodCollectible::OnActivatedAsync(), by FoodType
 		constexpr std::uint32_t FoodAnimation = std::uint32_t(AnimState::Default);
@@ -87,7 +108,8 @@ namespace Jazz2::Editor::EventCatalogParts
 		};
 
 		constexpr EventParamField AmmoFields[] = {
-			EnumField(N_("Weapon"), 0, 8, AmmoTypes, 1),
+			// TRANSLATORS: Parameter of an event in the event properties
+			EnumField(NC_("editor", "Weapon"), 0, 8, AmmoTypes, 1),
 		};
 		// AmmoCollectible::OnActivatedAsync(), by WeaponType; the upgraded ammo (animation 1) is shown only when the first
 		// local player has the upgrade
@@ -98,7 +120,8 @@ namespace Jazz2::Editor::EventCatalogParts
 		};
 
 		constexpr EventParamField PowerUpWeaponFields[] = {
-			EnumField(N_("Weapon"), 0, 8, WeaponTypes).WithDescription(N_("Gives 25 ammo and the upgrade")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			EnumField(NC_("editor", "Weapon"), 0, 8, WeaponTypes).WithDescription(NC_("editor", "Gives 25 ammo and the upgrade")),
 		};
 		// PowerUpWeaponMonitor::OnActivatedAsync(), by WeaponType; the blaster monitor shows the character of the first local
 		// player, Jazz (PlayerType::Jazz) without one
@@ -113,14 +136,18 @@ namespace Jazz2::Editor::EventCatalogParts
 		// What's released when it breaks, the event of the type with the bytes from 3 on as its parameters, see
 		// GenericContainer::AddContent()
 		constexpr EventParamField ContainerFields[] = {
-			EventTypeField(N_("Content"), 0).WithDescription(N_("Event spawned when it breaks, bytes 3 to 15 are passed to it as its parameters")),
-			UIntField(N_("Count"), 2, 8, 0, 255, 1),
-			ContentsField(N_("Parameters of the content"), 3, 13, 0)
-				.WithDescription(N_("Parameters of the event spawned when it breaks")),
+			// TRANSLATORS: Parameter of a crate or a barrel event, the event inside of it
+			EventTypeField(NC_("editor", "Content"), 0).WithDescription(NC_("editor", "Event spawned when it breaks, bytes 3 to 15 are passed to it as its parameters")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			UIntField(NC_("editor", "Count"), 2, 8, 0, 255, 1),
+			// TRANSLATORS: Parameter of a crate or a barrel event, the parameters of the event inside of it
+			ContentsField(NC_("editor", "Parameters of the content"), 3, 13, 0)
+				.WithDescription(NC_("editor", "Parameters of the event spawned when it breaks")),
 		};
 
 		constexpr EventParamField AmmoContainerFields[] = {
-			EnumField(N_("Weapon"), 0, 8, AmmoContainerTypes).WithDescription(N_("Releases 5 ammo of the weapon, Random releases 4 to 6 ammo of the weapons the players have")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			EnumField(NC_("editor", "Weapon"), 0, 8, AmmoContainerTypes).WithDescription(NC_("editor", "Releases 5 ammo of the weapon, Random releases 4 to 6 ammo of the weapons the players have")),
 		};
 		// AmmoCrate::OnActivatedAsync(), by WeaponType, Blaster and Thunderbolt use the generic crate
 		constexpr std::uint32_t CrateAnimation = std::uint32_t(AnimState::Idle);
@@ -133,16 +160,19 @@ namespace Jazz2::Editor::EventCatalogParts
 		};
 
 		constexpr EventParamField GemContainerFields[] = {
-			UIntField(N_("Red"), 0, 8, 0, 255, 5),
-			UIntField(N_("Green"), 1, 8, 0, 255),
-			UIntField(N_("Blue"), 2, 8, 0, 255),
-			UIntField(N_("Purple"), 3, 8, 0, 255),
+			// TRANSLATORS: Parameters of a gem crate or barrel event, the number of gems of each color
+			UIntField(NC_("editor", "Red"), 0, 8, 0, 255, 5),
+			UIntField(NC_("editor", "Green"), 1, 8, 0, 255),
+			UIntField(NC_("editor", "Blue"), 2, 8, 0, 255),
+			UIntField(NC_("editor", "Purple"), 3, 8, 0, 255),
 		};
 
 		// Values of PowerUpMorphMonitor::MorphType
-		constexpr ParamOption MorphTypes[] = { { N_("Jazz/Spaz"), 0 }, { N_("Jazz/Spaz/Lori"), 1 }, { N_("Bird"), 2 } };
+		// TRANSLATORS: Choices of a parameter of an event (characters a morph monitor switches between, or a bird)
+		constexpr ParamOption MorphTypes[] = { { NC_("editor", "Jazz/Spaz"), 0 }, { NC_("editor", "Jazz/Spaz/Lori"), 1 }, { NC_("editor", "Bird"), 2 } };
 		constexpr EventParamField PowerUpMorphFields[] = {
-			EnumField(N_("Morph"), 0, 8, MorphTypes).WithDescription(N_("Switches to the next character, Bird turns the player into a flying bird that shoots until a Fly Off or Revert Morph area")),
+			// TRANSLATORS: Parameter of a morph monitor event, what it turns the player into
+			EnumField(NC_("editor", "Morph"), 0, 8, MorphTypes).WithDescription(NC_("editor", "Switches to the next character, Bird turns the player into a flying bird that shoots until a Fly Off or Revert Morph area")),
 		};
 		// PowerUpMorphMonitor::OnActivatedAsync(), by PowerUpMorphMonitor::MorphType
 		constexpr EventPreviewCase PowerUpMorphPreview[] = {
@@ -151,9 +181,11 @@ namespace Jazz2::Editor::EventCatalogParts
 		};
 
 		// Values of ShieldType
-		constexpr ParamOption ShieldTypes[] = { { N_("Fire"), 1 }, { N_("Water"), 2 }, { N_("Lightning"), 3 }, { N_("Laser"), 4 } };
+		// TRANSLATORS: Choices of a parameter of an event (kinds of shields)
+		constexpr ParamOption ShieldTypes[] = { { NC_("editor", "Fire"), 1 }, { NC_("editor", "Water"), 2 }, { NC_("editor", "Lightning"), 3 }, { NC_("editor", "Laser"), 4 } };
 		constexpr EventParamField PowerUpShieldFields[] = {
-			EnumField(N_("Shield"), 0, 8, ShieldTypes, 1),
+			// TRANSLATORS: Parameter of an event in the event properties
+			EnumField(NC_("editor", "Shield"), 0, 8, ShieldTypes, 1),
 		};
 		// PowerUpShieldMonitor::OnActivatedAsync(), by ShieldType
 		constexpr EventPreviewCase PowerUpShieldPreview[] = {
@@ -163,64 +195,88 @@ namespace Jazz2::Editor::EventCatalogParts
 		};
 
 		constexpr EventParamField RaceCheckpointFields[] = {
-			UIntField(N_("Order"), 0, 8, 0, 255).WithDescription(N_("Waypoints are connected in ascending order, the ones with the same order and group are merged into their center")),
-			UIntField(N_("Group"), 1, 8, 0, 255).WithDescription(N_("Split of the track, each group is a separate route")),
+			// TRANSLATORS: Parameter of a race waypoint event, its position in the sequence of waypoints
+			UIntField(NC_("editor", "Order"), 0, 8, 0, 255).WithDescription(NC_("editor", "Waypoints are connected in ascending order, the ones with the same order and group are merged into their center")),
+			// TRANSLATORS: Parameter of an event in the event properties
+			UIntField(NC_("editor", "Group"), 1, 8, 0, 255).WithDescription(NC_("editor", "Split of the track, each group is a separate route")),
 		};
 
 		constexpr EventDescriptor Events[] = {
-			DescribeEvent(EventType::Coin, "Coin", N_("Coin"), EventCategory::Collectible, nullptr,
+			// TRANSLATORS: Name of an event, a collectible coin
+			DescribeEvent(EventType::Coin, "Coin", NC_("editor", "Coin"), EventCategory::Collectible, nullptr,
 				CoinFields, "Collectible/Coins", std::uint32_t(AnimState::Default), EventTraits::Object)
 				.WithPreviewCases(0, CoinPreview),
-			DescribeEvent(EventType::Gem, "Gem", N_("Gem"), EventCategory::Collectible, nullptr,
+			// TRANSLATORS: Name of an event, a collectible gem
+			DescribeEvent(EventType::Gem, "Gem", NC_("editor", "Gem"), EventCategory::Collectible, nullptr,
 				GemFields, "Collectible/Gems", std::uint32_t(AnimState::Default), EventTraits::Object),
-			DescribeEvent(EventType::GemGiant, "GemGiant", N_("Giant Gem"), EventCategory::Collectible, N_("Breaks into 5 to 12 red gems when it's shot or attacked"),
+			// TRANSLATORS: Name of an event, a big gem that breaks into small ones
+			DescribeEvent(EventType::GemGiant, "GemGiant", NC_("editor", "Giant Gem"), EventCategory::Collectible, NC_("editor", "Breaks into 5 to 12 red gems when it's shot or attacked"),
 				"Object/GemGiant", std::uint32_t(AnimState::Default), EventTraits::Object),
-			DescribeEvent(EventType::GemRing, "GemRing", N_("Gem Ring"), EventCategory::Collectible, N_("Rotating ring of red gems collected all at once"),
+			// TRANSLATORS: Name of an event, a rotating ring of gems
+			DescribeEvent(EventType::GemRing, "GemRing", NC_("editor", "Gem Ring"), EventCategory::Collectible, NC_("editor", "Rotating ring of red gems collected all at once"),
 				GemRingFields, "Collectible/Gems", std::uint32_t(AnimState::Default), EventTraits::Object),
-			DescribeEvent(EventType::GemStomp, "GemStomp", N_("Gem Stomp"), EventCategory::Collectible, N_("Releases 8 red gems when a player buttstomps onto this tile, only once"),
+			// TRANSLATORS: Name of an event, a tile that releases gems when a player buttstomps onto it
+			DescribeEvent(EventType::GemStomp, "GemStomp", NC_("editor", "Gem Stomp"), EventCategory::Collectible, NC_("editor", "Releases 8 red gems when a player buttstomps onto this tile, only once"),
 				nullptr, std::uint32_t(AnimState::Default), EventTraits::Area),
-			DescribeEvent(EventType::Carrot, "Carrot", N_("Carrot"), EventCategory::Collectible, N_("Restores health"),
+			// TRANSLATORS: Name of an event, a collectible carrot that restores health
+			DescribeEvent(EventType::Carrot, "Carrot", NC_("editor", "Carrot"), EventCategory::Collectible, NC_("editor", "Restores health"),
 				CarrotFields, "Collectible/Carrot", std::uint32_t(AnimState::Default), EventTraits::Object)
 				.WithPreviewCases(0, CarrotPreview),
-			DescribeEvent(EventType::CarrotFly, "CarrotFly", N_("Fly Carrot"), EventCategory::Collectible, N_("Gives the copter ears"),
+			// TRANSLATORS: Name of an event, a carrot that lets the player fly
+			DescribeEvent(EventType::CarrotFly, "CarrotFly", NC_("editor", "Fly Carrot"), EventCategory::Collectible, NC_("editor", "Gives the copter ears"),
 				"Collectible/CarrotFly", std::uint32_t(AnimState::Default), EventTraits::Object),
-			DescribeEvent(EventType::CarrotInvincible, "CarrotInvincible", N_("Invincibility Carrot"), EventCategory::Collectible, N_("Makes the player invincible for 30 seconds"),
+			// TRANSLATORS: Name of an event, a carrot that makes the player invincible
+			DescribeEvent(EventType::CarrotInvincible, "CarrotInvincible", NC_("editor", "Invincibility Carrot"), EventCategory::Collectible, NC_("editor", "Makes the player invincible for 30 seconds"),
 				"Collectible/CarrotInvincible", std::uint32_t(AnimState::Default), EventTraits::Object),
-			DescribeEvent(EventType::OneUp, "OneUp", N_("1up"), EventCategory::Collectible, N_("Extra life, a full carrot in cooperation"),
+			// TRANSLATORS: Name of an event, an extra life
+			DescribeEvent(EventType::OneUp, "OneUp", NC_("editor", "1up"), EventCategory::Collectible, NC_("editor", "Extra life, a full carrot in cooperation"),
 				"Collectible/OneUp", std::uint32_t(AnimState::Default), EventTraits::Object),
-			DescribeEvent(EventType::FastFire, "FastFire", N_("Fast Fire"), EventCategory::Collectible, N_("Increases the fire rate"),
+			// TRANSLATORS: Name of an event, a collectible that increases the fire rate
+			DescribeEvent(EventType::FastFire, "FastFire", NC_("editor", "Fast Fire"), EventCategory::Collectible, NC_("editor", "Increases the fire rate"),
 				"Collectible/FastFireJazz", std::uint32_t(AnimState::Default), EventTraits::Object),
-			DescribeEvent(EventType::Food, "Food", N_("Food"), EventCategory::Collectible, N_("Counts towards the sugar rush"),
+			// TRANSLATORS: Name of an event, a collectible piece of food
+			DescribeEvent(EventType::Food, "Food", NC_("editor", "Food"), EventCategory::Collectible, NC_("editor", "Counts towards the sugar rush"),
 				FoodFields, "Collectible/FoodApple", std::uint32_t(AnimState::Default), EventTraits::Object)
 				.WithPreviewCases(0, FoodPreview),
-			DescribeEvent(EventType::Ammo, "Ammo", N_("Ammo"), EventCategory::Collectible, N_("Gives 3 ammo of the weapon"),
+			// TRANSLATORS: Name of an event, collectible ammunition of a weapon
+			DescribeEvent(EventType::Ammo, "Ammo", NC_("editor", "Ammo"), EventCategory::Collectible, NC_("editor", "Gives 3 ammo of the weapon"),
 				AmmoFields, "Collectible/AmmoBouncer", std::uint32_t(AnimState::Default), EventTraits::Object)
 				.WithPreviewCases(0, AmmoPreview),
-			DescribeEvent(EventType::PowerUpWeapon, "PowerUpWeapon", N_("Weapon Power-up"), EventCategory::Container, N_("Monitor that upgrades a weapon when it's broken"),
+			// TRANSLATORS: Name of an event, a monitor that upgrades a weapon
+			DescribeEvent(EventType::PowerUpWeapon, "PowerUpWeapon", NC_("editor", "Weapon Power-up"), EventCategory::Container, NC_("editor", "Monitor that upgrades a weapon when it's broken"),
 				PowerUpWeaponFields, "Object/PowerUp/Blaster", std::uint32_t(1) /* PlayerType::Jazz */, EventTraits::Object)
 				.WithPreviewCases(0, PowerUpWeaponPreview),
 
-			DescribeEvent(EventType::Crate, "Crate", N_("Crate"), EventCategory::Container, N_("Wooden crate that releases another event when it's broken"),
+			// TRANSLATORS: Name of an event, a breakable wooden crate
+			DescribeEvent(EventType::Crate, "Crate", NC_("editor", "Crate"), EventCategory::Container, NC_("editor", "Wooden crate that releases another event when it's broken"),
 				ContainerFields, "Object/Crate/Generic", std::uint32_t(AnimState::Idle), EventTraits::Object),
-			DescribeEvent(EventType::Barrel, "Barrel", N_("Barrel"), EventCategory::Container, N_("Barrel that releases another event when it's broken"),
+			// TRANSLATORS: Name of an event, a breakable barrel
+			DescribeEvent(EventType::Barrel, "Barrel", NC_("editor", "Barrel"), EventCategory::Container, NC_("editor", "Barrel that releases another event when it's broken"),
 				ContainerFields, "Object/BarrelContainer", std::uint32_t(AnimState::Idle), EventTraits::Object),
-			DescribeEvent(EventType::CrateAmmo, "CrateAmmo", N_("Ammo Crate"), EventCategory::Container, N_("Wooden crate that releases ammo when it's broken"),
+			// TRANSLATORS: Name of an event, a breakable wooden crate with ammunition
+			DescribeEvent(EventType::CrateAmmo, "CrateAmmo", NC_("editor", "Ammo Crate"), EventCategory::Container, NC_("editor", "Wooden crate that releases ammo when it's broken"),
 				AmmoContainerFields, "Object/Crate/Generic", std::uint32_t(AnimState::Idle), EventTraits::Object)
 				.WithPreviewCases(0, CrateAmmoPreview),
-			DescribeEvent(EventType::BarrelAmmo, "BarrelAmmo", N_("Ammo Barrel"), EventCategory::Container, N_("Barrel that releases ammo when it's broken"),
+			// TRANSLATORS: Name of an event, a breakable barrel with ammunition
+			DescribeEvent(EventType::BarrelAmmo, "BarrelAmmo", NC_("editor", "Ammo Barrel"), EventCategory::Container, NC_("editor", "Barrel that releases ammo when it's broken"),
 				AmmoContainerFields, "Object/BarrelContainer", std::uint32_t(AnimState::Idle), EventTraits::Object),
-			DescribeEvent(EventType::CrateGem, "CrateGem", N_("Gem Crate"), EventCategory::Container, N_("Wooden crate that releases gems when it's broken"),
+			// TRANSLATORS: Name of an event, a breakable wooden crate with gems
+			DescribeEvent(EventType::CrateGem, "CrateGem", NC_("editor", "Gem Crate"), EventCategory::Container, NC_("editor", "Wooden crate that releases gems when it's broken"),
 				GemContainerFields, "Object/Crate/Generic", std::uint32_t(AnimState::Idle), EventTraits::Object),
-			DescribeEvent(EventType::BarrelGem, "BarrelGem", N_("Gem Barrel"), EventCategory::Container, N_("Barrel that releases gems when it's broken"),
+			// TRANSLATORS: Name of an event, a breakable barrel with gems
+			DescribeEvent(EventType::BarrelGem, "BarrelGem", NC_("editor", "Gem Barrel"), EventCategory::Container, NC_("editor", "Barrel that releases gems when it's broken"),
 				GemContainerFields, "Object/BarrelContainer", std::uint32_t(AnimState::Idle), EventTraits::Object),
-			DescribeEvent(EventType::PowerUpMorph, "PowerUpMorph", N_("Morph Monitor"), EventCategory::Container, N_("Monitor that changes the character, or turns the player into a bird, when it's broken"),
+			// TRANSLATORS: Name of an event, a monitor that changes the character
+			DescribeEvent(EventType::PowerUpMorph, "PowerUpMorph", NC_("editor", "Morph Monitor"), EventCategory::Container, NC_("editor", "Monitor that changes the character, or turns the player into a bird, when it's broken"),
 				PowerUpMorphFields, "Object/PowerUp/Swap2", std::uint32_t(AnimState::Default), EventTraits::Object)
 				.WithPreviewCases(0, PowerUpMorphPreview),
-			DescribeEvent(EventType::PowerUpShield, "PowerUpShield", N_("Shield Monitor"), EventCategory::Container, N_("Monitor that gives a shield for 30 seconds when it's broken"),
+			// TRANSLATORS: Name of an event, a monitor that gives a shield
+			DescribeEvent(EventType::PowerUpShield, "PowerUpShield", NC_("editor", "Shield Monitor"), EventCategory::Container, NC_("editor", "Monitor that gives a shield for 30 seconds when it's broken"),
 				PowerUpShieldFields, "Object/PowerUp/ShieldFire", std::uint32_t(AnimState::Default), EventTraits::Object)
 				.WithPreviewCases(0, PowerUpShieldPreview),
 
-			DescribeEvent(EventType::RaceCheckpoint, "RaceCheckpoint", N_("Race Waypoint"), EventCategory::Other, N_("Ordered waypoint of the track for the minimap and the race ranking"),
+			// TRANSLATORS: Name of an event, a point of the track in the race mode
+			DescribeEvent(EventType::RaceCheckpoint, "RaceCheckpoint", NC_("editor", "Race Waypoint"), EventCategory::Other, NC_("editor", "Ordered waypoint of the track for the minimap and the race ranking"),
 				RaceCheckpointFields, nullptr, std::uint32_t(AnimState::Default), EventTraits::MultiplayerOnly),
 		};
 	}

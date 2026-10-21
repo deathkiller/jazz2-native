@@ -234,6 +234,7 @@ namespace Jazz2::UI::Menu
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		if (_isEmbedded) {
 			// Show additional label under the logo if the game is embedded in an <iframe> element
+			// TRANSLATORS: Label in main menu when the game is embedded in a web page, {} is the link to the website, the character before "Discord" is its icon
 			_root->DrawStringShadow(_f("For more information, visit {} and \uE000 Discord!", "\f[c:#707070]https://de4th.dev/jazz2/\f[/c]"_s), charOffset, center.X, center.Y - 30.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 			itemCount++;
@@ -249,6 +250,7 @@ namespace Jazz2::UI::Menu
 
 				_root->DrawStringShadow(_("Access to external storage has been granted!"), charOffset, center.X, center.Y * 0.96f - 20.0f, IMenuContainer::FontLayer,
 					Alignment::Bottom, Colorf(0.2f, 0.45f, 0.2f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
+				// TRANSLATORS: Label in main menu after access to external storage was granted (Android only), keep the color tags \f[c:...] as they are
 				_root->DrawStringShadow(_("\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#337233] files correctly."), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
 					Alignment::Center, Font::DefaultColor, 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 			} else
@@ -259,6 +261,7 @@ namespace Jazz2::UI::Menu
 						Colorf(1.0f, 1.0f, 1.0f, 0.16f), 26.0f, 12.0f, true, true);
 				}
 
+				// TRANSLATORS: Label in main menu when the files of the original game are missing, keep the color tags \f[c:...] as they are
 				_root->DrawStringShadow(_("\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit 2\f[c:#704a4a] files!"), charOffset, center.X, center.Y - 40.0f, IMenuContainer::FontLayer,
 					Alignment::Bottom, Font::DefaultColor, 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 				_root->DrawStringShadow(_("Make sure Jazz Jackrabbit 2 files are present in following path:"), charOffset, center.X, center.Y - 20.0f, IMenuContainer::FontLayer,
