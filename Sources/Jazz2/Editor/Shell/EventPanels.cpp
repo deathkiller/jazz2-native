@@ -471,6 +471,16 @@ namespace Jazz2::Editor
 		_pressedIndex = -1;
 	}
 
+	void EventGrid::OnPointerCancel()
+	{
+		_pressedIndex = -1;
+	}
+
+	bool EventGrid::YieldsToScroll() const
+	{
+		return true;
+	}
+
 	StringView EventGrid::GetTooltip(Vector2f pos) const
 	{
 		std::int32_t index = GetIndexAt(pos);

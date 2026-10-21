@@ -203,8 +203,9 @@ namespace Jazz2::Editor
 		// The elements of the rows over what was drawn of them
 		UiElement::Draw(painter);
 		if (_focused && _selected >= first && _selected <= last) {
-			// Where the keys are, as a ring around the picked row
-			painter.FocusRing(Rectf(Bounds.X, Bounds.Y + float(_selected) * _rowPixels, Bounds.W, _rowPixels));
+			// Where the keys are, as the border of the picked row, which is usually highlighted already; the ring of other
+			// elements goes around them, it would be a second line next to the highlight
+			painter.RoundRectBorder(Rectf(Bounds.X, Bounds.Y + float(_selected) * _rowPixels, Bounds.W, _rowPixels), UiTheme::FocusRing, UiLayer::Overlay);
 		}
 	}
 

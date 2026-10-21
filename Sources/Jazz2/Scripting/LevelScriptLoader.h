@@ -5,6 +5,7 @@
 #include "ScriptLoader.h"
 #include "JJ2PlusDefinitions.h"
 #include "../ILevelHandler.h"
+#include "../Formats/TileSetFile.h"
 #include "../../nCine/Base/BitArray.h"
 
 namespace Jazz2::UI
@@ -26,6 +27,12 @@ namespace Jazz2::Compatibility
 namespace Jazz2::Resources
 {
 	struct GenericGraphicResource;
+}
+
+namespace Jazz2::Tiles
+{
+	struct LayerDescription;
+	struct TileMapLayer;
 }
 
 namespace Jazz2::Scripting
@@ -126,6 +133,34 @@ namespace Jazz2::Scripting
 		 */
 		Legacy::jjLAYER* GetLayerProxy(std::int32_t index);
 
+		/**
+		 * @brief Returns the index of the level layer a script means by a layer number of the original, 1 to 8
+		 *
+		 * The converted level keeps only the layers that have tiles, so the number is counted from the sprite layer,
+		 * which is always layer 4 --- exact for it, and for the others as long as no layer between them was left out.
+		 * Returns -1 if the level has no such layer.
+		 */
+		std::int32_t GetLayerIndex(std::int32_t layerNumber) const;
+		/**
+		 * @brief Returns the description of the level layer a script means by a layer number of the original, or `nullptr`
+		 *
+		 * See @ref GetLayerIndex(). A change takes effect on the next frame, unless it's one the `jjLAYER` proxy of the
+		 * layer pushes back every frame (its speeds, offsets and repeating).
+		 */
+		Tiles::LayerDescription* GetLayerDescription(std::int32_t layerNumber);
+
+		/**
+		 * @brief Reads the 32 × 32 palette indices of a tile that isn't animated, as scripts see them
+		 *
+		 * The pixels come from the file of the tile set, read on first use, and include what a script saved into the
+		 * tile since (see @ref SetTilePixels()). A true color tile is mapped to the nearest colors of @p palette, or of
+		 * `jjPalette` without it. Returns `false` and leaves @p pixels untouched if the tile has none, e.g. one of a
+		 * tile set stored in the level.
+		 */
+		bool GetTilePixels(std::int32_t tileId, std::uint8_t* pixels, const Legacy::jjPAL* palette = nullptr);
+		/** @brief Overwrites the pixels of a tile that isn't animated by 32 × 32 palette indices, everywhere it's drawn */
+		bool SetTilePixels(std::int32_t tileId, const std::uint8_t* pixels);
+
 		/** @brief Returns list of players */
 		ArrayView<Actors::Player* const> GetPlayers() const;
 
@@ -202,6 +237,22 @@ namespace Jazz2::Scripting
 		// Pushes every cached jjLAYER proxy's writable properties (speeds, offsets, repeat, speed models) into the engine
 		// tile-map layer descriptions; called once per frame from OnLevelUpdate. No proxies = no cost.
 		void SyncLayerProperties();
+
+		// Returns the engine layer a script means by a layer number of the original (see GetLayerIndex()), or nullptr, and
+		// in `proxy` its jjLAYER proxy if a script asked for one (not AddRef'd) - the global layer properties are the
+		// same as those of jjLayers[n], so they have to be written to it too, as the proxy pushes its values every frame
+		Tiles::TileMapLayer* ResolveLayerNumber(std::int32_t layerNumber, Legacy::jjLAYER** proxy);
+
+		// Pixels of the tile sets of the level as scripts read and write them (see jjPIXELMAP), one per part of the tile
+		// map, read from the file on first use (Data stays null if it can't be)
+		struct ScriptTileSetPixels {
+			std::unique_ptr<Formats::TileSetData> Data;
+			bool Loaded = false;
+		};
+		SmallVector<ScriptTileSetPixels, 0> _tileSetPixels;
+
+		// Returns the cached pixels of the tile set part a tile is in, and the index of the tile in its file, or nullptr
+		Formats::TileSetData* ResolveTileSetPixels(std::int32_t tileId, std::int32_t& fileTileId);
 
 		// Resolves (loading and caching on first use) the sample buffer for the given index, or `nullptr` if unavailable
 		nCine::AudioBuffer* ResolveSampleBuffer(std::int32_t sampleId);

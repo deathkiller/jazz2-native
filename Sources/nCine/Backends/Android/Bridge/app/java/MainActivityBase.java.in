@@ -352,14 +352,17 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 
 	private void updateSoftInputState(int height) {
 		boolean visible = (height > 0);
-		if (!visible && softInputRequested &&
-				SystemClock.uptimeMillis() - softInputRequestTime < SoftInputGracePeriodMs) {
-			// The keyboard was just requested and may still be animating in
-			return;
-		}
 
+		// Always recorded, a keyboard hidden right after it was requested would be reported as shown otherwise, forever,
+		// and a request to show it again would be skipped as needless
 		softInputHeight = height;
 		softInputVisible = visible;
+
+		if (!visible && softInputRequested &&
+				SystemClock.uptimeMillis() - softInputRequestTime < SoftInputGracePeriodMs) {
+			// The keyboard was just requested and may still be animating in, so the request and its retries stay
+			return;
+		}
 
 		if (!visible && softInputRequested) {
 			// The keyboard was dismissed by the user, don't leave the text editor focused behind it

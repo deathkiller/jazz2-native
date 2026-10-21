@@ -4,6 +4,15 @@
 
 namespace Jazz2::Editor
 {
+	namespace
+	{
+		// Sizes of the interface offered, in steps of 25% as the system offers its own, sizes between whole ones make the
+		// text a bit soft
+		constexpr float UiScaleStep = 0.25f;
+		constexpr float MinUiScale = 1.0f;
+		constexpr float MaxUiScale = 6.0f;
+	}
+
 	EditorSession::EditorSession(IRootController* root)
 		: _root(root), _shell(nullptr), _showPlayPath(true), _currentLayer(0), _showGrid(true), _maskMode(0), _showEvents(true),
 			_pickerPanel(PickerPanel::Tiles)
@@ -596,6 +605,11 @@ namespace Jazz2::Editor
 			_surface->VirtualCursor = _input->GetGamepadCursor();
 			// Windows stay open while the level is played, they're only hidden, and they come back with the editor
 			_surface->WindowsHidden = !_playTest->IsEditing();
+			// Clear of the edges of the screen the game keeps its own interface clear of, the setting can be changed in the
+			// pause menu of a play-test
+			_surface->SafeMargins = UiThickness(PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Left)] * 0.001f,
+				PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Top)] * 0.001f, PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Right)] * 0.001f,
+				PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Bottom)] * 0.001f);
 		}
 		if (LevelHandler* gameHandler = _playTest->GetGameHandler()) {
 			_playTest->UpdateTransition(timeMult);
@@ -656,11 +670,39 @@ namespace Jazz2::Editor
 		if (_surface == nullptr) {
 			return;
 		}
+		_surface->SetScale(_settings.UiScale > 0.0f ? _settings.UiScale : GetAutoUiScale());
+	}
+
+	float EditorSession::GetAutoUiScale()
+	{
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
+		float width = float(gfxDevice.drawableWidth()), height = float(gfxDevice.drawableHeight());
 		// By the size of the window up to the largest size offered, a larger one would only waste the room
-		float scale = (_settings.UiScale > 0.0f ? _settings.UiScale
-			: std::clamp(std::floor(std::min(gfxDevice.drawableWidth() / 640.0f, gfxDevice.drawableHeight() / 400.0f)), 1.0f, 6.0f));
-		_surface->SetScale(scale);
+		float byWindow = std::clamp(std::floor(std::min(width / 640.0f, height / 400.0f)), 1.0f, 6.0f);
+
+		// By how large the system shows its own interface, so the editor isn't tiny on a small screen with many pixels,
+		// two pixels a unit at 100%; never smaller than by the window, and only as large as still leaves room for the
+		// smallest layout of the panels
+		float systemScale = gfxDevice.windowScalingFactor();
+		if (!(systemScale > 0.0f && systemScale < 16.0f)) {
+			systemScale = 1.0f;
+		}
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS)
+		// A phone is held close, the panels may get as few units as the compact layout needs
+		constexpr float MinWidthUnits = 480.0f, MinHeightUnits = 270.0f;
+#else
+		constexpr float MinWidthUnits = 640.0f, MinHeightUnits = 360.0f;
+#endif
+		// The size of the system to the nearest step, as a density of 420 dpi would be 263%; the room for the panels is a
+		// limit, so it's rounded down
+		float fit = std::floor(std::min(width / MinWidthUnits, height / MinHeightUnits) / UiScaleStep) * UiScaleStep;
+		float bySystem = std::min(RoundUiScale(2.0f * systemScale), fit);
+		return std::clamp(std::max(byWindow, bySystem), MinUiScale, MaxUiScale);
+	}
+
+	float EditorSession::RoundUiScale(float scale)
+	{
+		return std::clamp(std::round(scale / UiScaleStep) * UiScaleStep, MinUiScale, MaxUiScale);
 	}
 
 	void EditorSession::OnSuspend()
@@ -960,29 +1002,12 @@ namespace Jazz2::Editor
 
 	void EditorSession::ChangeUiScale(std::int32_t direction)
 	{
-		// Quarter steps where a step is felt most, larger ones above, sizes between whole ones make the text a bit soft
-		static const float Steps[] = { 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.25f, 2.5f, 2.75f, 3.0f, 3.5f, 4.0f, 5.0f, 6.0f };
 		if (direction == 0) {
 			_settings.UiScale = 0.0f;
 		} else {
-			float current = _surface->GetScale();
-			float next = current;
-			if (direction > 0) {
-				for (float step : Steps) {
-					if (step > current + 0.01f) {
-						next = step;
-						break;
-					}
-				}
-			} else {
-				for (std::size_t i = std::size(Steps); i > 0; i--) {
-					if (Steps[i - 1] < current - 0.01f) {
-						next = Steps[i - 1];
-						break;
-					}
-				}
-			}
-			_settings.UiScale = next;
+			// From the nearest step, a size set by hand in the settings may be between them
+			float current = RoundUiScale(_surface->GetScale());
+			_settings.UiScale = RoundUiScale(current + (direction > 0 ? UiScaleStep : -UiScaleStep));
 		}
 		_settings.Save();
 		// Only the interface, the level keeps its render targets

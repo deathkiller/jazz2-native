@@ -16,6 +16,7 @@ namespace Jazz2::Editor
 {
 	class PlayTestController;
 	class UiRadialMenu;
+	class UiTextBox;
 
 	/**
 		@brief What @ref EditorInputRouter needs of the level editor beyond @ref IEditorContext
@@ -162,9 +163,17 @@ namespace Jazz2::Editor
 		float _gamepadCursorHold = 0.0f;
 		float _gamepadPanHold = 0.0f;
 		bool _gamepadPicking = false;
+		// The finger that pressed the bar shown over a level being played, it's the pointer, not a finger of the game, -1 if none
+		std::int32_t _barTouchId = -1;
+		// The keyboard of the system was shown for a box being typed into, it's hidden once no box is, see Update()
+		bool _screenKeyboardShown = false;
 
 		// Presses the pointer at a position on the screen, by the mouse or a gamepad
 		void PointerDown(Vector2f pos, MouseButton button);
+		// Passes the fingers on the screen to the level being played, except one on the bar shown over it, which is the pointer
+		void OnPlayTouchEvent(const TouchEvent& event);
+		// Shows the keyboard of the system for a box being typed into, remembering it was asked for, returns `false` if there's none
+		bool ShowScreenKeyboard(UiTextBox& field);
 		// Releases the pointer at a position on the screen
 		void PointerUp(Vector2f pos, MouseButton button);
 		// Reads the gamepad and uses the editor by it

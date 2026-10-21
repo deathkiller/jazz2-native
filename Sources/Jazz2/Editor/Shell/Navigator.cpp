@@ -177,6 +177,12 @@ namespace Jazz2::Editor
 				return Vector2f(fixedSize.X >= 0.0f ? fixedSize.X : context.Px(220.0f), fixedSize.Y >= 0.0f ? fixedSize.Y : context.Px(110.0f));
 			}
 
+			/** Height of the level relative to its width, half until the map was made */
+			float GetAspect() const
+			{
+				return (_size.X > 0 && _size.Y > 0 ? float(_size.Y) / float(_size.X) : 0.5f);
+			}
+
 			void Update(float timeMult) override
 			{
 				// Painting changes the tiles every frame, they're drawn again a few times a second at most
@@ -625,6 +631,86 @@ namespace Jazz2::Editor
 				}
 			}
 		};
+
+		/**
+			The map over its options, the search and the list of bookmarks and notes, the children in this order
+
+			In a window made smaller, the list gives up its room first, down to a row, then the map. In a larger one, the
+			map grows as far as the shape of the level can use it, the list gets the rest.
+		*/
+		class NavigatorBody : public UiElement
+		{
+		public:
+			static constexpr float NaturalWidth = 260.0f;
+			// As high as a button each with the spacing between the rows, 4 of them
+			static constexpr float NaturalListHeight = UiTheme::ButtonHeight * 4.0f + 2.0f * 3.0f + 1.0f;
+
+			Vector2f Measure(const UiContext& context, Vector2f available) override
+			{
+				float width = std::min(context.Px(NaturalWidth), available.X);
+				float height = GetMapHeight(context, width) + context.Px(NaturalListHeight) + GetFixedHeight(context, width);
+				return Vector2f(width, height);
+			}
+
+			void Arrange(const UiContext& context, const Rectf& bounds) override
+			{
+				Bounds = bounds;
+				if (_children.size() < 4) {
+					return;
+				}
+				float spacing = context.Px(UiTheme::Spacing);
+				float room = std::max(bounds.H - GetFixedHeight(context, bounds.W), 0.0f);
+				float mapNatural = GetMapHeight(context, bounds.W);
+				float listNatural = context.Px(NaturalListHeight);
+				float listMin = context.Px(UiTheme::ButtonHeight);
+				float mapMin = std::min(context.Px(40.0f), mapNatural);
+				float map;
+				if (room >= mapNatural + listNatural) {
+					// Taller than the map of the level drawn across the whole width would be is of no use to it
+					float fill = std::round(bounds.W * GetMinimap()->GetAspect());
+					map = mapNatural + std::clamp(fill - mapNatural, 0.0f, room - mapNatural - listNatural);
+				} else if (room >= mapNatural + listMin) {
+					map = mapNatural;
+				} else {
+					// Down to the smallest map, then the list goes, then the map too, so nothing is pushed out of the window
+					map = std::min(std::max(room - listMin, mapMin), room);
+				}
+				float list = std::max(room - map, 0.0f);
+
+				float y = bounds.Y;
+				_children[0]->Arrange(context, Rectf(bounds.X, y, bounds.W, map));
+				y += map + spacing;
+				for (std::int32_t i = 1; i <= 2; i++) {
+					float height = _children[i]->MeasureCached(context, Vector2f(bounds.W, 1.0e6f)).Y;
+					_children[i]->Arrange(context, Rectf(bounds.X, y, bounds.W, height));
+					y += height + spacing;
+				}
+				_children[3]->Arrange(context, Rectf(bounds.X, y, bounds.W, list));
+			}
+
+		private:
+			MinimapView* GetMinimap() const
+			{
+				return static_cast<MinimapView*>(_children[0].get());
+			}
+
+			// As high as the level drawn across the width needs, within what a map is usually given
+			float GetMapHeight(const UiContext& context, float width) const
+			{
+				float aspect = (!_children.empty() ? GetMinimap()->GetAspect() : 0.5f);
+				return std::clamp(std::round(width * aspect), context.Px(60.0f), context.Px(150.0f));
+			}
+
+			// The options and the search between the map and the list, with the spacing around them
+			float GetFixedHeight(const UiContext& context, float width)
+			{
+				float height = context.Px(UiTheme::Spacing) * 3.0f;
+				for (std::int32_t i = 1; i <= 2 && i < std::int32_t(_children.size()); i++) {
+					height += _children[i]->MeasureCached(context, Vector2f(width, 1.0e6f)).Y;
+				}
+				return height;
+			}
+		};
 	}
 
 	void SetBookmark(IEditorContext& session, std::int32_t slot)
@@ -694,10 +780,21 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Title of the dialog with the map of the level, the bookmarks and the notes
 		auto dialog = std::make_unique<UiDialog>(_x("editor", "Navigator"));
 		UiDialog* dialogPtr = dialog.get();
+		// Resized as needed, the list gets smaller first, then the map; the size stays for the session
+		static Vector2f lastSize(-1.0f, -1.0f);
+		dialog->Resizable = true;
+		// Still room for a small map and a row of the list under the title, the search and the button
+		dialog->MinResizeSize = Vector2f(160.0f, 210.0f);
+		if (lastSize.X > 0.0f && lastSize.Y > 0.0f) {
+			dialog->Width = lastSize.X;
+			dialog->Height = lastSize.Y;
+		}
 		auto* content = dialog->GetContent();
-		auto* minimap = content->Add<MinimapView>(session);
+		auto* body = content->Add<NavigatorBody>();
+		body->Flex = 1.0f;
+		auto* minimap = body->Add<MinimapView>(session);
 		{
-			auto* options = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* options = body->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 			// TRANSLATORS: Check box in the Navigator dialog, shows the events on the map
 			options->Add<UiCheckBox>(_x("editor", "Events"), [minimap]() { return minimap->ShowEvents; }, [minimap](bool value) { minimap->ShowEvents = value; })
 				->Tooltip = _x("editor", "Shows the events in the colors of their categories, and where the camera is limited");
@@ -706,18 +803,15 @@ namespace Jazz2::Editor
 		// The list follows the annotations, rebuilt when their chunk changes or the search does
 		struct ListState { AnnotationCache Cache; std::uint32_t Version = 0; bool Built = false; String Search; };
 		auto state = std::make_shared<ListState>();
-		auto* search = content->Add<UiTextBox>();
+		auto* search = body->Add<UiTextBox>();
 		search->Placeholder = _x("editor", "Search the notes");
 		search->OnChanged = [state](StringView text) {
 			state->Search = text;
 			state->Built = false;
 		};
 
-		auto* scroll = content->Add<UiScrollView>();
-		scroll->Width = 260.0f;
-		// 4 bookmarks at a time, as high as a button each with the spacing between the rows, the rest scrolls
-		constexpr std::int32_t ShownRows = 4;
-		scroll->Height = UiTheme::ButtonHeight * ShownRows + 2.0f * (ShownRows - 1) + 1.0f;
+		// 4 bookmarks at a time unless the window is resized, the rest scrolls, see NavigatorBody
+		auto* scroll = body->Add<UiScrollView>();
 
 		auto rebuild = [s, scroll, state]() {
 			SmallVector<Annotation, 0> annotations;
@@ -876,7 +970,10 @@ namespace Jazz2::Editor
 			}
 		};
 		// Checked every frame, a note added in the view or a bookmark set by its keys shows at once
-		content->Add<UiUpdateWatcher>([s, state, rebuild](float) {
+		content->Add<UiUpdateWatcher>([s, state, rebuild, dialogPtr](float) {
+			if (dialogPtr->Width > 0.0f && dialogPtr->Height > 0.0f) {
+				lastSize = Vector2f(dialogPtr->Width, dialogPtr->Height);
+			}
 			state->Cache.Get(s->GetDocument());
 			if (!state->Built || state->Cache.GetVersion() != state->Version) {
 				state->Version = state->Cache.GetVersion();

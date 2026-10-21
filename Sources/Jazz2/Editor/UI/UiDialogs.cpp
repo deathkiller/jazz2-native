@@ -18,16 +18,41 @@ using namespace Death::IO;
 
 namespace Jazz2::Editor
 {
+	namespace
+	{
+		/** The cross in the title of a window, it takes the pointer out to the corner of the window and as far around it */
+		class DialogCloseButton : public UiButton
+		{
+		public:
+			DialogCloseButton(const UiElement& window, Function<void()>&& onClick)
+				: UiButton(StringView(), EditorIcon::Close, Death::move(onClick)), _window(window)
+			{
+			}
+
+			Rectf GetHitBounds() const override
+			{
+				// The padding of the window around it is as easy to hit, by a finger too, also as far to the left and below
+				const Rectf& window = _window.Bounds;
+				float reachX = std::max(window.X + window.W - (Bounds.X + Bounds.W), 0.0f);
+				float reachY = std::max(Bounds.Y - window.Y, 0.0f);
+				return Rectf(Bounds.X - reachX, Bounds.Y - reachY, Bounds.W + reachX * 2.0f, Bounds.H + reachY * 2.0f);
+			}
+
+		private:
+			const UiElement& _window;
+		};
+	}
+
 	UiDialog::UiDialog(StringView title, bool scrollContent)
 		: UiPanel(UiPanelStyle::Floating, UiOrientation::Vertical, UiTheme::Spacing * 2.0f, UiThickness(UiTheme::Padding * 2.0f))
 	{
 		// The window is moved by its title
 		_titleBar = Add<UiDragBar>(UiTheme::Spacing);
 		_titleBar->Add<UiLabel>(title, UiTheme::TextHeader)->Flex = 1.0f;
-		auto* closeButton = _titleBar->Add<UiButton>(StringView(), EditorIcon::Close, [this]() { Cancel(); });
-		closeButton->Style = UiButtonStyle::Flat;
+		_closeButton = _titleBar->Add<DialogCloseButton>(*this, [this]() { Cancel(); });
+		_closeButton->Style = UiButtonStyle::Flat;
 		// TRANSLATORS: Tooltip of the cross in the title of a dialog, with the key that closes it too
-		closeButton->Tooltip = _x("editor", "Close (Esc)");
+		_closeButton->Tooltip = _x("editor", "Close (Esc)");
 		_titleBar->OnDragStart = [this](Vector2f) {
 			_dragOrigin = Vector2f(Bounds.X, Bounds.Y);
 		};
@@ -114,7 +139,14 @@ namespace Jazz2::Editor
 
 	UiElement* UiDialog::HitTest(Vector2f pos)
 	{
-		if (IsShown() && GetEdgesAt(pos) != 0) {
+		if (!IsShown()) {
+			return nullptr;
+		}
+		// The cross reaches into the padding around the title, the edges are still grabbed outside of the window
+		if (_closeButton->IsShown() && Bounds.Contains(pos) && _closeButton->GetHitBounds().Contains(pos)) {
+			return _closeButton;
+		}
+		if (GetEdgesAt(pos) != 0) {
 			return this;
 		}
 		return UiPanel::HitTest(pos);
@@ -148,11 +180,12 @@ namespace Jazz2::Editor
 			return;
 		}
 		UiSurface* surface = GetSurface();
-		Vector2f screen = (surface != nullptr ? surface->GetScreenSize() : Vector2f(1.0e6f, 1.0e6f));
+		// Only as far as the part of the screen that isn't cut off
+		Rectf screen = (surface != nullptr ? surface->GetSafeBounds() : Rectf(0.0f, 0.0f, 1.0e6f, 1.0e6f));
 		Vector2f offset = event.Pos - _resizeStart;
 		const Rectf& start = _resizeStartBounds;
-		float minW = std::min(std::round(MinResizeSize.X * _scale), screen.X);
-		float minH = std::min(std::round(MinResizeSize.Y * _scale), screen.Y);
+		float minW = std::min(std::round(MinResizeSize.X * _scale), screen.W);
+		float minH = std::min(std::round(MinResizeSize.Y * _scale), screen.H);
 		// A window already smaller than the smallest size, or past the edge of a window that got smaller since, can't
 		// get any smaller, nor larger past the edge, the limits are kept in order
 		auto clampOrdered = [](float value, float low, float high) {
@@ -160,16 +193,16 @@ namespace Jazz2::Editor
 		};
 		Rectf rect = start;
 		if (_resizeEdges & UiResizeEdges::Left) {
-			rect.X = clampOrdered(start.X + offset.X, 0.0f, start.X + start.W - minW);
+			rect.X = clampOrdered(start.X + offset.X, screen.X, start.X + start.W - minW);
 			rect.W = start.X + start.W - rect.X;
 		} else if (_resizeEdges & UiResizeEdges::Right) {
-			rect.W = clampOrdered(start.W + offset.X, minW, screen.X - start.X);
+			rect.W = clampOrdered(start.W + offset.X, minW, screen.X + screen.W - start.X);
 		}
 		if (_resizeEdges & UiResizeEdges::Top) {
-			rect.Y = clampOrdered(start.Y + offset.Y, 0.0f, start.Y + start.H - minH);
+			rect.Y = clampOrdered(start.Y + offset.Y, screen.Y, start.Y + start.H - minH);
 			rect.H = start.Y + start.H - rect.Y;
 		} else if (_resizeEdges & UiResizeEdges::Bottom) {
-			rect.H = clampOrdered(start.H + offset.Y, minH, screen.Y - start.Y);
+			rect.H = clampOrdered(start.H + offset.Y, minH, screen.Y + screen.H - start.Y);
 		}
 		// The size in units, which it's measured by from now on
 		Width = rect.W / _scale;

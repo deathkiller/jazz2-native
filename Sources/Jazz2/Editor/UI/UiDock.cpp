@@ -169,13 +169,13 @@ namespace Jazz2::Editor
 		Rectf bounds = (FloatingBounds.W > 0.0f ? FloatingBounds : GetDefaultFloatingBounds(scale, dockBounds));
 		Rectf rect(std::round(bounds.X * scale), std::round(bounds.Y * scale), std::round(bounds.W * scale), std::round(bounds.H * scale));
 
-		// It stays on the screen, whatever size the window got since
+		// It stays on the screen, the part of it that isn't cut off, whatever size the window got since
 		UiSurface* surface = GetSurface();
-		Vector2f screenSize = (surface != nullptr ? surface->GetScreenSize() : Vector2f(dockBounds.X + dockBounds.W, dockBounds.Y + dockBounds.H));
-		rect.W = std::min(rect.W, screenSize.X);
-		rect.H = std::min(rect.H, screenSize.Y);
-		rect.X = std::clamp(rect.X, 0.0f, screenSize.X - rect.W);
-		rect.Y = std::clamp(rect.Y, 0.0f, screenSize.Y - rect.H);
+		Rectf screen = (surface != nullptr ? surface->GetSafeBounds() : Rectf(0.0f, 0.0f, dockBounds.X + dockBounds.W, dockBounds.Y + dockBounds.H));
+		rect.W = std::min(rect.W, screen.W);
+		rect.H = std::min(rect.H, screen.H);
+		rect.X = std::clamp(rect.X, screen.X, screen.X + screen.W - rect.W);
+		rect.Y = std::clamp(rect.Y, screen.Y, screen.Y + screen.H - rect.H);
 		return rect;
 	}
 

@@ -244,6 +244,13 @@ namespace Jazz2::Editor
 		 * stays in view.
 		 */
 		bool FollowEnd = false;
+		/**
+		 * @brief Whether the bar is only a thin mark over the edge of the content, which keeps the whole width
+		 *
+		 * For a strip too narrow to give the bar room of its own. The bar can't be dragged then, the content is scrolled
+		 * by the wheel or a finger.
+		 */
+		bool OverlayBar = false;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
 		void Arrange(const UiContext& context, const Rectf& bounds) override;

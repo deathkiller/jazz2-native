@@ -28,6 +28,7 @@
 #include "../UI/UiTheme.h"
 #include "../../ContentResolver.h"
 #include "../../LevelHandler.h"
+#include "../../PreferencesCache.h"
 #include "../../Actors/Player.h"
 #include "../../Tiles/TileMap.h"
 
@@ -841,6 +842,13 @@ namespace Jazz2::Editor
 			UiThemeKind kind = (args[1] == "contrast"_s ? UiThemeKind::HighContrast : UiThemeKind::Default);
 			bool reducedMotion = (args.size() >= 3 && args[2] == "still"_s);
 			UiTheme::Apply(kind, reducedMotion);
+			return DebugResult::Done;
+		} });
+		commands.push_back({ "/safearea"_s, 4, "/safearea <left> <top> <right> <bottom>, in percent"_s, [](const Args& args) {
+			// As the Safe Area of the graphics options sets it, not saved unless the game saves its options
+			for (std::int32_t i = 0; i < std::int32_t(SafeAreaEdge::Count); i++) {
+				PreferencesCache::SafeArea[i] = std::uint16_t(std::clamp(args.Float(i + 1, 0.0f) * 10.0f, 0.0f, float(PreferencesCache::MaxSafeArea)));
+			}
 			return DebugResult::Done;
 		} });
 		commands.push_back({ "/keymap"_s, 1, "/keymap default|jcs|mlle"_s, [this](const Args& args) {

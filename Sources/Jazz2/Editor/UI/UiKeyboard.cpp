@@ -95,7 +95,8 @@ namespace Jazz2::Editor
 		}
 		UiOverlayOptions options;
 		// At the bottom in the middle, it's moved to fit the screen
-		options.Position = Vector2f(surface.GetScreenSize().X * 0.5f - surface.GetScale() * 120.0f, 1.0e6f);
+		Rectf safe = surface.GetSafeBounds();
+		options.Position = Vector2f(safe.X + safe.W * 0.5f - surface.GetScale() * 120.0f, 1.0e6f);
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;
 		surface.PushOverlay(std::make_unique<UiOnScreenKeyboard>(), Death::move(options));

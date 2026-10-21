@@ -214,6 +214,15 @@ namespace Jazz2::Editor
 		 * themselves keep the press.
 		 */
 		virtual bool YieldsToScroll() const;
+		/**
+		 * @brief Returns `true` if a finger has to rest on the element for a moment before it drags it
+		 *
+		 * A finger dragged at once scrolls the list the element is in instead, and the element gets no moves until it
+		 * was held, see @ref OnPointerHold(). A quick tap still clicks it. The mouse drags it at once.
+		 */
+		virtual bool DragsAfterHold() const;
+		/** @brief Called when a finger rested on an element that drags after it's held, its moves come from now on, see @ref DragsAfterHold() */
+		virtual void OnPointerHold(const UiPointerEvent& event);
 		/** @brief Called when the pointer is scrolled over the element, returns `true` if it was used */
 		virtual bool OnWheel(const UiPointerEvent& event);
 		/** @brief Called when a key is pressed while the element has the focus, returns `true` if it was used */

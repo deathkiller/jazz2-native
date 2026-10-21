@@ -1458,6 +1458,26 @@ namespace Jazz2::Editor
 			"................",
 		};
 
+		// Three sliders set to different values, the properties of something as a whole, such as of the level
+		const char* const IconProperties[16] = {
+			"..........##....",
+			".........####...",
+			".++++++++####++.",
+			".........####...",
+			"..........##....",
+			"....##..........",
+			"...####.........",
+			".++####++++++++.",
+			"...####.........",
+			"....##..........",
+			"........##......",
+			".......####.....",
+			".++++++####++++.",
+			".......####.....",
+			"........##......",
+			"................",
+		};
+
 		// Shown by the pointer while an edge or a corner is pointed at or dragged, with a shaft a pixel thin and heads as
 		// large as those of the diagonal ones, so all of them look alike - the diagonal ones span 9 pixels on each axis,
 		// which makes them as long as the straight ones
@@ -1635,6 +1655,7 @@ namespace Jazz2::Editor
 			case EditorIcon::EnterEditor: return IconEnterEditor;
 			case EditorIcon::Shapes: return IconShapes;
 			case EditorIcon::History: return IconHistory;
+			case EditorIcon::Properties: return IconProperties;
 			case EditorIcon::CursorResizeHorizontal: return IconCursorResizeHorizontal;
 			case EditorIcon::CursorResizeVertical: return IconCursorResizeVertical;
 			case EditorIcon::CursorResizeNWSE: return IconCursorResizeNWSE;

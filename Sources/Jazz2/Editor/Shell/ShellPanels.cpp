@@ -528,7 +528,21 @@ namespace Jazz2::Editor
 				}
 				_pressPos = event.Pos;
 				_dragging = false;
+				_dragMoved = false;
 				return true;
+			}
+
+			bool DragsAfterHold() const override
+			{
+				// A finger dragged over the list scrolls it, held on a layer it lifts the layer to move it
+				return true;
+			}
+
+			void OnPointerHold(const UiPointerEvent& event) override
+			{
+				_pressPos = event.Pos;
+				_dragging = true;
+				_panel.UpdateLayerDrag(_index, event.Pos);
 			}
 
 			void OnPointerMove(const UiPointerEvent& event) override
@@ -538,8 +552,9 @@ namespace Jazz2::Editor
 				}
 				float scale = (GetSurface() != nullptr ? GetSurface()->GetScale() : 1.0f);
 				// Only a real move starts dragging, a click wobbles a little
-				if (!_dragging && std::abs(event.Pos.Y - _pressPos.Y) > 4.0f * scale) {
+				if (std::abs(event.Pos.Y - _pressPos.Y) > 4.0f * scale) {
 					_dragging = true;
+					_dragMoved = true;
 				}
 				if (_dragging) {
 					_panel.UpdateLayerDrag(_index, event.Pos);
@@ -550,8 +565,11 @@ namespace Jazz2::Editor
 			{
 				if (_dragging) {
 					_dragging = false;
-					_panel.EndLayerDrag(true);
-					return;
+					// A layer only held and let go where it was is chosen, as by a click
+					_panel.EndLayerDrag(_dragMoved);
+					if (_dragMoved) {
+						return;
+					}
 				}
 				if (!inside) {
 					return;
@@ -568,6 +586,14 @@ namespace Jazz2::Editor
 					_session.ToggleLayerFlag(_index, DocumentLayer::EditorLocked);
 				} else {
 					_session.SetCurrentLayer(_index);
+				}
+			}
+
+			void OnPointerCancel() override
+			{
+				if (_dragging) {
+					_dragging = false;
+					_panel.EndLayerDrag(false);
 				}
 			}
 
@@ -591,6 +617,8 @@ namespace Jazz2::Editor
 			std::int32_t _index;
 			Vector2f _pressPos;
 			bool _dragging;
+			// Whether it was moved while dragged, a layer held by a finger is dragged before it moves
+			bool _dragMoved = false;
 			mutable String _tooltip;
 
 			Rectf GetThumbnailRect(float scale) const
@@ -876,6 +904,24 @@ namespace Jazz2::Editor
 		}
 		UpdateThumbnails(timeMult);
 		UiPanel::Update(timeMult);
+
+		if (_dragFrom >= 0 && _list->IsScrollable()) {
+			// A layer dragged to the top or the bottom of the list scrolls it, faster the closer it gets to the edge, as a
+			// finger can't scroll the list while it drags
+			UiSurface* surface = GetSurface();
+			float edge = std::round(UiTheme::RowHeight * (surface != nullptr ? surface->GetScale() : 1.0f));
+			const Rectf& list = _list->Bounds;
+			float speed = 0.0f;
+			if (_dragPos.Y < list.Y + edge) {
+				speed = -std::min((list.Y + edge - _dragPos.Y) / edge, 1.0f);
+			} else if (_dragPos.Y > list.Y + list.H - edge) {
+				speed = std::min((_dragPos.Y - (list.Y + list.H - edge)) / edge, 1.0f);
+			}
+			if (speed != 0.0f) {
+				_list->ScrollTo(_list->GetScroll() + speed * edge * 0.25f * timeMult, true);
+				UpdateLayerDrag(_dragFrom, _dragPos);
+			}
+		}
 	}
 
 	nCine::Texture* LayersPanel::GetThumbnail(std::int32_t index) const
@@ -1005,6 +1051,7 @@ namespace Jazz2::Editor
 		}
 		_dragFrom = from;
 		_dropSlot = slot;
+		_dragPos = pos;
 	}
 
 	void LayersPanel::EndLayerDrag(bool drop)
@@ -1050,6 +1097,14 @@ namespace Jazz2::Editor
 	void LayersPanel::Draw(UiPainter& painter)
 	{
 		UiPanel::Draw(painter);
+
+		// The dragged layer is lit up, so a finger holding it sees it was lifted before it moves
+		UiElement* rows = _list->GetContent();
+		if (_dragFrom >= 0 && rows != nullptr && _dragFrom < rows->GetChildCount()) {
+			painter.PushClip(_list->Bounds);
+			painter.RoundRectBorder(rows->GetChild(_dragFrom)->Bounds, UiTheme::Accent, UiLayer::Overlay);
+			painter.PopClip();
+		}
 
 		// Where the dragged layer would go, unless it would stay where it is
 		if (_dragFrom >= 0 && _dropSlot >= 0 && _dropSlot != _dragFrom && _dropSlot != _dragFrom + 1) {
@@ -2169,6 +2224,17 @@ namespace Jazz2::Editor
 			std::int32_t rows = (GetTileCount() + columns - 1) / columns;
 			_dragEnd = Vector2i(std::clamp<std::int32_t>(cell.X, 0, columns - 1), std::clamp<std::int32_t>(cell.Y, 0, std::max<std::int32_t>(rows - 1, 0)));
 		}
+	}
+
+	void TileGrid::OnPointerCancel()
+	{
+		// Scrolled by a finger instead, nothing is picked
+		_dragging = false;
+	}
+
+	bool TileGrid::DragsAfterHold() const
+	{
+		return true;
 	}
 
 	void TileGrid::OnPointerUp(const UiPointerEvent& event, bool inside)

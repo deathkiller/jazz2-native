@@ -42,14 +42,19 @@ The level fills the window behind the panels.
     the tools move to a row at the bottom. The <b>View</b> menu can fix the layout to desktop or compact.
 -   <b>Expert Mode</b> (<b>View</b> menu, on by default) shows all tools and commands. Turned off, only the basic ones
     are shown.
--   <b>Interface size</b> follows the window size. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>+</kbd> / <kbd>-</kbd> makes
-    it larger or smaller.
+-   <b>Interface size</b> follows the window size and the display scaling of the system (its DPI), so it isn't tiny on
+    a small screen with many pixels, such as a phone. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>+</kbd> / <kbd>-</kbd>
+    makes it larger or smaller, in steps of 25% from 100% to 600%.
+-   <b>Safe Area</b> (<b>Options</b> > <b>Graphics</b> in the game) also applies to the editor. The panels, windows and
+    the bar shown while playing keep clear of the cut-off edges. While editing, the edges are filled like the bars.
+-   The tools on the left scroll with the wheel or a finger when the window is too short for them.
 
 In dialogs, <kbd>Enter</kbd> chooses the highlighted button. <kbd>Esc</kbd> or the cross closes the dialog without
-choosing anything. Windows such as <b>Check Level</b>, <b>Statistics</b>, the <b>Navigator</b> or the <b>Palette</b>
-stay open beside the level until they're closed. Opening one again brings it to the front, and its shortcut closes it.
-Some windows, such as <b>History</b>, can be resized by their edges. Every color has a swatch that opens a color
-picker.
+choosing anything. The cross can also be hit anywhere in the corner of the window. Windows such as
+<b>Check Level</b>, <b>Statistics</b>, the <b>Navigator</b> or the <b>Palette</b> stay open beside the level until
+they're closed. Opening one again brings it to the front, and its shortcut closes it. Some windows, such as
+<b>History</b>, the <b>Navigator</b> and the <b>Event List</b>, can be resized by their edges. A smaller Navigator
+shortens the list of bookmarks first, then the map. Every color has a swatch that opens a color picker.
 
 @subsection editor-interface-keyboard Using the interface with the keyboard
 
@@ -202,8 +207,11 @@ Tap with two / three | Undo / redo
 Hold one still | Tool ring, tap to pick
 Tap a text field | System keyboard, or the editor's own
 
-Over the interface, a finger held still shows the tooltip, and lists scroll by dragging them. A number field opens the
-keyboard when tapped, and changes the number when dragged.
+Over the interface, a finger held still shows the tooltip, and lists scroll by dragging them. In the layer list and
+the tile picker, hold a finger still for half a second before dragging: then it moves the layer or picks a block of
+tiles, instead of scrolling. A number field opens the keyboard when tapped, and changes the number when dragged.
+
+While a level is played, a finger on the bar at the top uses the bar, the other fingers play the game.
 
 @section editor-layers Layers
 
@@ -924,6 +932,7 @@ Command | What it does
 `/touch <down\|pointerdown\|move\|pointerup\|up> <id> <x> <y> ...` | A touch event in screen pixels, the finger that came or went given last
 `/keyboard` | Show the editor's own on-screen keyboard
 `/theme <default\|contrast> [still]` | Apply a theme, with reduced motion, not saved
+`/safearea <left> <top> <right> <bottom>` | Set the Safe Area of the game in percent, as its graphics options do
 `/keymap <default\|jcs\|mlle>` | Apply a set of shortcuts and save it
 `/renderer <type> [red [alpha]]` | Set the renderer of the current layer, see @ref Tiles::LayerRendererType (10 sky, 11 tunnel, 14 wave, 15 cylinder, 16 reflection), and optionally its color
 `/textured <x> <y> [fade [flags]]` | Set the parameters of a tunnel, cylinder or reflection of the current layer that its color has no room for (@ref Formats::TexturedLayerParams)

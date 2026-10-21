@@ -1308,7 +1308,8 @@ namespace Jazz2::Editor
 	}
 
 	ToolManager::ToolManager(IToolHost& host)
-		: _active(EditorToolType::Brush), _chosen(EditorToolType::Brush), _temporary(false)
+		// Selecting first, a level just opened isn't changed by the first click or tap into it
+		: _active(EditorToolType::Select), _chosen(EditorToolType::Select), _temporary(false)
 	{
 		_tools[std::int32_t(EditorToolType::Brush)] = std::make_unique<BrushTool>(host, false);
 		_tools[std::int32_t(EditorToolType::Eraser)] = std::make_unique<BrushTool>(host, true);

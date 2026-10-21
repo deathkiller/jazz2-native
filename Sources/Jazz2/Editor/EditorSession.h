@@ -500,6 +500,10 @@ namespace Jazz2::Editor
 		void OfferNextLevel(const std::shared_ptr<LevelInitialization>& next, StringView levelName);
 		// Sets the size of the interface by the settings and the window
 		void UpdateUiScale();
+		// Returns the size of the interface chosen by the window and how large the system shows its own interface
+		static float GetAutoUiScale();
+		// Returns the size offered nearest to a size, in steps of 25%
+		static float RoundUiScale(float scale);
 		/**
 		 * @brief Draws the layer being edited so it can be painted on
 		 *

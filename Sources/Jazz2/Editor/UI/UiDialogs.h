@@ -90,6 +90,8 @@ namespace Jazz2::Editor
 
 	protected:
 		UiDragBar* _titleBar;
+		// The cross in the title, it's easier to hit than its size, see HitTest()
+		UiButton* _closeButton;
 		UiStack* _content;
 		UiStack* _buttons;
 		SmallVector<UiButton*, 4> _buttonList;

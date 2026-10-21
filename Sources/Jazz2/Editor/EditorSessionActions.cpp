@@ -368,7 +368,7 @@ namespace Jazz2::Editor
 	void EditorSession::CreateLevelActions()
 	{
 		auto& a = _actions;
-		a.Add(ActionIds::LevelProperties, _x("editor", "Level Properties"), EditorIcon::Settings, [this]() { ShowLevelPropertiesDialog(*this); });
+		a.Add(ActionIds::LevelProperties, _x("editor", "Level Properties"), EditorIcon::Properties, [this]() { ShowLevelPropertiesDialog(*this); });
 		// TRANSLATORS: Menu item in the Level menu, opens the list of the texts the level shows to the player
 		a.Add(ActionIds::LevelTexts, _x("editor", "Level Texts"), EditorIcon::None, [this]() { ShowLevelTextsDialog(*this); }).Key = { Keys::T, KeyMod::Ctrl };
 		// The episode is the directory the level file is in, a level that wasn't saved yet is offered to be saved first

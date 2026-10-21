@@ -85,6 +85,7 @@ namespace Jazz2::Editor
 		EnterEditor,
 		Shapes,
 		History,
+		Properties,
 		// Shown by the pointer, see UiCursorOverlay
 		CursorResizeHorizontal,
 		CursorResizeVertical,

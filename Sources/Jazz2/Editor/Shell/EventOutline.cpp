@@ -234,6 +234,15 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog with the list of all events placed in the level
 		auto dialog = std::make_unique<UiDialog>(_x("editor", "Event List"));
+		UiDialog* dialogPtr = dialog.get();
+		// Resized as needed, the list takes the room; the size stays for the session
+		static Vector2f lastSize(-1.0f, -1.0f);
+		dialog->Resizable = true;
+		dialog->MinResizeSize = Vector2f(200.0f, 140.0f);
+		if (lastSize.X > 0.0f && lastSize.Y > 0.0f) {
+			dialog->Width = lastSize.X;
+			dialog->Height = lastSize.Y;
+		}
 		auto* content = dialog->GetContent();
 		auto* header = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 		auto* search = header->Add<UiTextBox>();
@@ -241,8 +250,10 @@ namespace Jazz2::Editor
 		search->Flex = 1.0f;
 		auto* summary = header->Add<UiLabel>(StringView(), UiTheme::TextDim);
 		auto* scroll = content->Add<UiScrollView>();
+		// The size it starts with, it gets what the window has once it's resized
 		scroll->Width = 440.0f;
 		scroll->Height = 260.0f;
+		scroll->Flex = 1.0f;
 		content->Add<UiLabel>(_x("editor", "The selected events are changed together in the event properties"), UiTheme::TextDim);
 
 		// Only the rows seen are drawn, a level can have thousands of events
@@ -355,7 +366,10 @@ namespace Jazz2::Editor
 			}
 		});
 		session.AddChangeObserver(state->Observer);
-		content->Add<UiUpdateWatcher>([s, state, rebuild, list](float) {
+		content->Add<UiUpdateWatcher>([s, state, rebuild, list, dialogPtr](float) {
+			if (dialogPtr->Width > 0.0f && dialogPtr->Height > 0.0f) {
+				lastSize = Vector2f(dialogPtr->Width, dialogPtr->Height);
+			}
 			if (state->PendingKeyPick >= 0) {
 				std::int32_t index = state->PendingKeyPick;
 				state->PendingKeyPick = -1;

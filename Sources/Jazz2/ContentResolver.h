@@ -420,6 +420,13 @@ namespace Jazz2
 		 */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(Stream& s, StringView path, std::uint16_t captionTileId, bool applyPalette,
 			const std::uint8_t* paletteRemapping = nullptr, const BitArray* usedTiles = nullptr, bool withDiffuse = true);
+		/**
+		 * @brief Opens the file of a tile set, found the same way as by @ref RequestTileSet()
+		 *
+		 * For a caller that needs what the file stores rather than a tile set made of it, see @ref Formats::TileSetFile.
+		 * Returns `nullptr` if there is no such tile set.
+		 */
+		std::unique_ptr<Stream> OpenTileSetFile(StringView path);
 		/** @brief Returns `true` if specified level exists */
 		bool LevelExists(StringView levelName);
 		/**

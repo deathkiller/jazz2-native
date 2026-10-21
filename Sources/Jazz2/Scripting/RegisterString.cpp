@@ -1,11 +1,13 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "RegisterString.h"
+#include "RegisterArray.h"
 #include "../../Main.h"
 
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Base/HashMap.h"
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <new>
@@ -352,6 +354,10 @@ namespace Jazz2::Scripting
 	// int string::findFirst(const string &in sub, uint start = 0) const
 	static std::int32_t StringFindFirst(const String& sub, std::uint32_t start, const String& str)
 	{
+		// As std::string::find(), a start past the end finds nothing
+		if (start > str.size()) {
+			return -1;
+		}
 		auto found = str.exceptPrefix(start).find(sub);
 		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
@@ -363,67 +369,97 @@ namespace Jazz2::Scripting
 	// int string::findFirstOf(const string &in sub, uint start = 0) const
 	static std::int32_t StringFindFirstOf(const String& sub, std::uint32_t start, const String& str)
 	{
+		if (start > str.size()) {
+			return -1;
+		}
 		auto found = str.exceptPrefix(start).findAny(sub);
 		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
+	}
+
+	// Returns the part of the string a backward search starting at `start` looks at, -1 (or any position past the end)
+	// being the end, as std::string::rfind() and find_last_of() take it, `extra` is how far a match may reach past `start`
+	static StringView PrefixForBackwardSearch(const String& str, std::int32_t start, std::size_t extra)
+	{
+		if (start < 0 || std::size_t(start) >= str.size()) {
+			return str;
+		}
+		return str.prefix(std::min(str.size(), std::size_t(start) + extra));
 	}
 
 	// This function returns the index of the last position where the one of the bytes in substring
 	// exists in the input string. If the characters in the substring doesn't exist in the input
 	// string -1 is returned.
 	//
-	// int string::findLastOf(const string &in sub, uint start = 0) const
-	static std::int32_t StringFindLastOf(const String& sub, std::uint32_t start, const String& str)
+	// int string::findLastOf(const string &in sub, int start = -1) const
+	static std::int32_t StringFindLastOf(const String& sub, std::int32_t start, const String& str)
 	{
-		auto found = str.exceptSuffix(start).findLastAny(sub);
+		auto found = PrefixForBackwardSearch(str, start, 1).findLastAny(sub);
 		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
 
-	/*
 	// This function returns the index of the first position where a byte other than those in substring
 	// exists in the input string. If none is found -1 is returned.
 	//
 	// int string::findFirstNotOf(const string &in sub, uint start = 0) const
-	static int StringFindFirstNotOf(const String& sub, std::uint32_t start, const String& str)
+	static std::int32_t StringFindFirstNotOf(const String& sub, std::uint32_t start, const String& str)
 	{
-		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
-		return (int)str.find_first_not_of(sub, (size_t)(start < 0 ? string::npos : start));
+		for (std::size_t i = start; i < str.size(); i++) {
+			if (sub.find(StringView(str.data() + i, 1)) == nullptr) {
+				return (std::int32_t)i;
+			}
+		}
+		return -1;
 	}
 
 	// This function returns the index of the last position where a byte other than those in substring
 	// exists in the input string. If none is found -1 is returned.
 	//
-	// int string::findLastNotOf(const string &in sub, uint start = -1) const
-	static int StringFindLastNotOf(const String& sub, std::uint32_t start, const String& str)
+	// int string::findLastNotOf(const string &in sub, int start = -1) const
+	static std::int32_t StringFindLastNotOf(const String& sub, std::int32_t start, const String& str)
 	{
-		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
-		return (int)str.find_last_not_of(sub, (size_t)(start < 0 ? string::npos : start));
-	}*/
+		StringView part = PrefixForBackwardSearch(str, start, 1);
+		for (std::size_t i = part.size(); i > 0; i--) {
+			if (sub.find(StringView(str.data() + i - 1, 1)) == nullptr) {
+				return (std::int32_t)(i - 1);
+			}
+		}
+		return -1;
+	}
 
 	// This function returns the index of the last position where the substring
 	// exists in the input string. If the substring doesn't exist in the input
 	// string -1 is returned.
 	//
-	// int string::findLast(const string &in sub, int start = 0) const
+	// int string::findLast(const string &in sub, int start = -1) const
 	static std::int32_t StringFindLast(const String& sub, std::int32_t start, const String& str)
 	{
-		auto found = str.exceptSuffix(start).findLast(sub);
+		// A match may begin at `start` at the latest
+		auto found = PrefixForBackwardSearch(str, start, sub.size()).findLast(sub);
 		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
 
-	/*
 	// void string::insert(uint pos, const string &in other)
-	static void StringInsert(unsigned int pos, const String& other, String& str)
+	static void StringInsert(std::uint32_t pos, const String& other, String& str)
 	{
-		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
-		str.insert(pos, other);
+		if (pos > str.size()) {
+			asIScriptContext* ctx = asGetActiveContext();
+			ctx->SetException("Out of range");
+			return;
+		}
+		str = str.prefix(pos) + other + str.exceptPrefix(pos);
 	}
 
 	// void string::erase(uint pos, int count = -1)
-	static void StringErase(unsigned int pos, int count, String& str)
+	static void StringErase(std::uint32_t pos, std::int32_t count, String& str)
 	{
-		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
-		str.erase(pos, (size_t)(count < 0 ? string::npos : count));
-	}*/
+		if (pos > str.size()) {
+			asIScriptContext* ctx = asGetActiveContext();
+			ctx->SetException("Out of range");
+			return;
+		}
+		std::size_t end = (count < 0 || std::size_t(count) >= str.size() - pos ? str.size() : pos + std::size_t(count));
+		str = str.prefix(pos) + str.exceptPrefix(end);
+	}
 
 	// uint string::size() const
 	static std::uint32_t StringSize(const String& str)
@@ -433,11 +469,56 @@ namespace Jazz2::Scripting
 	}
 
 	// void string::resize(uint l)
-	/*static void StringResize(std::uint32_t l, String& str)
+	static void StringResize(std::uint32_t l, String& str)
 	{
-		// We don't register the method directly because the argument types change between 32bit and 64bit platforms
-		str.resize(l);
-	}*/
+		// As std::string::resize(), new characters are zeros
+		String resized{NoInit, l};
+		std::size_t kept = std::min(std::size_t(l), str.size());
+		std::memcpy(resized.data(), str.data(), kept);
+		std::memset(resized.data() + kept, 0, l - kept);
+		str = Death::move(resized);
+	}
+
+	// array<string>@ string::split(const string &in delim) const
+	static CScriptArray* StringSplit(const String& delim, const String& str)
+	{
+		asIScriptContext* ctx = asGetActiveContext();
+		asIScriptEngine* engine = ctx->GetEngine();
+		asITypeInfo* arrayType = engine->GetTypeInfoByDecl("array<string>");
+		CScriptArray* array = CScriptArray::Create(arrayType);
+
+		// As the add-on, every delimiter ends a part, and whatever follows the last one is the last part
+		std::size_t prev = 0;
+		if (!delim.empty()) {
+			while (true) {
+				auto found = str.exceptPrefix(prev).find(delim);
+				if (found == nullptr) {
+					break;
+				}
+				std::size_t pos = std::size_t(found.begin() - str.begin());
+				array->Resize(array->GetSize() + 1);
+				*static_cast<String*>(array->At(array->GetSize() - 1)) = str.slice(prev, pos);
+				prev = pos + delim.size();
+			}
+		}
+		array->Resize(array->GetSize() + 1);
+		*static_cast<String*>(array->At(array->GetSize() - 1)) = str.exceptPrefix(prev);
+		return array;
+	}
+
+	// string join(const array<string> &in array, const string &in delim)
+	static String StringJoin(const CScriptArray& array, const String& delim)
+	{
+		String result;
+		std::uint32_t count = array.GetSize();
+		for (std::uint32_t i = 0; i < count; i++) {
+			if (i > 0) {
+				result += delim;
+			}
+			result += *static_cast<const String*>(array.At(i));
+		}
+		return result;
+	}
 
 	// string formatInt(int64 val, const string &in options, uint width)
 	static String formatInt(std::int64_t value, const String& options, std::uint32_t width)
@@ -713,7 +794,7 @@ namespace Jazz2::Scripting
 #if AS_USE_ACCESSORS != 1
 		r = engine->RegisterObjectMethod("string", "uint length() const", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #endif
-		//r = engine->RegisterObjectMethod("string", "void resize(uint)", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "void resize(uint)", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #if AS_USE_STLNAMES != 1 && AS_USE_ACCESSORS == 1
 		// Don't register these if STL names is used, as they conflict with the method size()
 		r = engine->RegisterObjectMethod("string", "uint get_length() const property", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
@@ -758,12 +839,12 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectMethod("string", "string substr(uint start = 0, int count = -1) const", asFUNCTION(StringSubString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("string", "int findFirst(const string &in, uint start = 0) const", asFUNCTION(StringFindFirst), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("string", "int findFirstOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
-		//r = engine->RegisterObjectMethod("string", "int findFirstNotOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstNotOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "int findFirstNotOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstNotOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("string", "int findLast(const string &in, int start = -1) const", asFUNCTION(StringFindLast), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod("string", "int findLastOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
-		//r = engine->RegisterObjectMethod("string", "int findLastNotOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastNotOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
-		//r = engine->RegisterObjectMethod("string", "void insert(uint pos, const string &in other)", asFUNCTION(StringInsert), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
-		//r = engine->RegisterObjectMethod("string", "void erase(uint pos, int count = -1)", asFUNCTION(StringErase), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "int findLastNotOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastNotOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "void insert(uint pos, const string &in other)", asFUNCTION(StringInsert), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "void erase(uint pos, int count = -1)", asFUNCTION(StringErase), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
 		r = engine->RegisterGlobalFunction("string formatInt(int64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("string formatUInt(uint64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatUInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
@@ -771,6 +852,13 @@ namespace Jazz2::Scripting
 		r = engine->RegisterGlobalFunction("int64 parseInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("uint64 parseUInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseUInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("double parseFloat(const string &in, uint &out byteCount = 0)", asFUNCTION(parseFloat), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+	}
+
+	void RegisterStringUtils(asIScriptEngine* engine)
+	{
+		std::int32_t r;
+		r = engine->RegisterObjectMethod("string", "array<string>@ split(const string &in) const", asFUNCTION(StringSplit), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("string join(const array<string> &in, const string &in)", asFUNCTION(StringJoin), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 	}
 }
 

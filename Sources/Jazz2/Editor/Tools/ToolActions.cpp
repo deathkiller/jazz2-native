@@ -739,10 +739,14 @@ namespace Jazz2::Editor::ToolActions
 		auto dialog = std::make_unique<UiDialog>(_x("editor", "Weights of Tiles"));
 		UiDialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
-		content->Add<UiLabel>(_x("editor", "How often each tile is painted when the brush paints at random"), UiTheme::TextDim);
+		// On as many lines as it needs, the window is only as wide as the list
+		constexpr float ListWidth = 200.0f;
+		content->Add<UiWrappedLabel>(_x("editor", "How often each tile is painted when the brush paints at random"), UiTheme::TextDim)->Width = ListWidth;
 		auto* scroll = content->Add<UiScrollView>();
-		scroll->Width = 240.0f;
+		scroll->Width = ListWidth;
 		scroll->Height = std::min<float>(40.0f + 28.0f * float(entries.size()), 240.0f);
+		// Shorter on a short screen, the check box below it stays in the window
+		scroll->Flex = 1.0f;
 		auto* list = scroll->SetContent<UiStack>(UiOrientation::Vertical, 2.0f);
 		for (const Entry& entry : entries) {
 			TileRef tile = entry.Tile;
@@ -779,7 +783,7 @@ namespace Jazz2::Editor::ToolActions
 			}, 0.0f, 100.0f, 1.0f, 1);
 			box->Width = 56.0f;
 		}
-		content->Add<UiCheckBox>(_x("editor", "Paint tiles of the brush at random"), [s]() { return s->GetStamp().Random; },
+		content->Add<UiCheckBox>(_x("editor", "Paint tiles at random"), [s]() { return s->GetStamp().Random; },
 			[s](bool value) { s->GetStamp().Random = value; });
 		dialog->AddButton(_("Reset"), [s]() { s->GetStamp().Weights.clear(); });
 		// Closed by its cross or Escape, resetting isn't what they do

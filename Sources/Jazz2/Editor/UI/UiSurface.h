@@ -121,6 +121,13 @@ namespace Jazz2::Editor
 		UI::Font* GetFont() const;
 		/** @brief Returns the size of the screen in pixels */
 		Vector2f GetScreenSize() const;
+		/**
+		 * @brief Returns the part of the screen the interface is kept in, in pixels, see @ref SafeMargins
+		 *
+		 * The whole screen unless the margins are set. Windows, menus and messages are placed inside of it, and the root
+		 * is expected to place its panels there too, it's given the whole screen.
+		 */
+		Rectf GetSafeBounds() const;
 
 		/** @brief Passes a press of the pointer, returns `true` if the interface took it */
 		bool OnPointerDown(const UiPointerEvent& event);
@@ -224,6 +231,13 @@ namespace Jazz2::Editor
 		/** @brief Whether windows that aren't modal are hidden, as while a level is played, they're shown again after */
 		bool WindowsHidden = false;
 		/**
+		 * @brief Part of each edge of the screen the interface keeps clear of, as a fraction of its width or height
+		 *
+		 * For a display that cuts off the edges of the picture, as a television can. What is behind the interface, the
+		 * level, still takes the whole screen. See @ref GetSafeBounds().
+		 */
+		UiThickness SafeMargins;
+		/**
 		 * @brief Returns `true` for a key that runs a shortcut even while a text is typed, such as saving
 		 *
 		 * The text is confirmed first, then the key goes on to the shortcuts as if nothing was typed into.
@@ -302,6 +316,15 @@ namespace Jazz2::Editor
 		float _touchVelocity;
 		Vector2f _touchLastPos;
 		std::int64_t _touchLastTime = 0;
+		// A finger on an element that drags only once it was held, how long it has rested there, see UiElement::DragsAfterHold()
+		enum class TouchHold : std::uint8_t
+		{
+			None,
+			Waiting,
+			Held
+		};
+		TouchHold _touchHold = TouchHold::None;
+		float _touchHoldTime = 0.0f;
 		// Asked for by the pointer in this frame, forgotten after it's drawn
 		UiCursorOverlay _cursorOverlay = UiCursorOverlay::None;
 		String _pointerTooltip;

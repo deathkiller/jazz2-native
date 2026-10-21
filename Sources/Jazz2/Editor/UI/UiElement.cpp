@@ -239,6 +239,15 @@ namespace Jazz2::Editor
 		return false;
 	}
 
+	bool UiElement::DragsAfterHold() const
+	{
+		return false;
+	}
+
+	void UiElement::OnPointerHold(const UiPointerEvent& event)
+	{
+	}
+
 	bool UiElement::OnWheel(const UiPointerEvent& event)
 	{
 		return false;

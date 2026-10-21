@@ -35,8 +35,8 @@ namespace Jazz2::Editor
 	/**
 		@brief List of the layers of the level, with their visibility and lock
 
-		A layer is renamed by a double click on it, and moved in the list by dragging it. Alt+click on the eye shows
-		only that layer. Each row has a small picture of its layer.
+		A layer is renamed by a double click on it, and moved in the list by dragging it, by a finger after holding it
+		for a moment. Alt+click on the eye shows only that layer. Each row has a small picture of its layer.
 	*/
 	class LayersPanel : public UiPanel
 	{
@@ -75,6 +75,8 @@ namespace Jazz2::Editor
 		std::int32_t _dropSlot;
 		// Identity of the layer being dragged, the one moved when it's dropped
 		std::uint32_t _dragLayerId = 0;
+		// Where the pointer dragging a layer is, the list scrolls while it's held near its top or bottom
+		Vector2f _dragPos;
 		SmallVector<Thumbnail, 0> _thumbnails;
 		std::unique_ptr<LevelThumbnail> _thumbnailColors;
 		std::shared_ptr<Function<void(const DocumentChanges&)>> _changeObserver;
@@ -133,6 +135,9 @@ namespace Jazz2::Editor
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerMove(const UiPointerEvent& event) override;
 		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		void OnPointerCancel() override;
+		/** @brief A finger dragged over the tiles scrolls them, held on a tile it picks a block of them from there */
+		bool DragsAfterHold() const override;
 		bool OnWheel(const UiPointerEvent& event) override;
 		StringView GetTooltip(Vector2f pos) const override;
 

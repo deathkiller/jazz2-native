@@ -65,6 +65,61 @@ namespace Jazz2::Scripting
 		return Random().FastFloat(min, max);
 	}
 
+	// The rest of the math add-on of AngelScript, which JJ2+ ships whole
+	static bool asCloseTo(float a, float b, float epsilon)
+	{
+		// The same relative test as the add-on, so a script compares exactly as it does in JJ2+
+		if (a == b) {
+			return true;
+		}
+		float diff = fabsf(a - b);
+		if ((a == 0.0f || b == 0.0f) && (diff < epsilon)) {
+			return true;
+		}
+		// The add-on divides in double precision (fabs of floats)
+		return (diff / (fabs(a) + fabs(b)) < epsilon);
+	}
+
+	static bool asCloseToDouble(double a, double b, double epsilon)
+	{
+		if (a == b) {
+			return true;
+		}
+		double diff = fabs(a - b);
+		if ((a == 0.0 || b == 0.0) && (diff < epsilon)) {
+			return true;
+		}
+		return (diff / (fabs(a) + fabs(b)) < epsilon);
+	}
+
+	static float asFloatFromIEEE(std::uint32_t raw)
+	{
+		float value;
+		std::memcpy(&value, &raw, sizeof(value));
+		return value;
+	}
+
+	static std::uint32_t asFloatToIEEE(float value)
+	{
+		std::uint32_t raw;
+		std::memcpy(&raw, &value, sizeof(raw));
+		return raw;
+	}
+
+	static double asDoubleFromIEEE(std::uint64_t raw)
+	{
+		double value;
+		std::memcpy(&value, &raw, sizeof(value));
+		return value;
+	}
+
+	static std::uint64_t asDoubleToIEEE(double value)
+	{
+		std::uint64_t raw;
+		std::memcpy(&raw, &value, sizeof(raw));
+		return raw;
+	}
+
 	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath)
 		: _levelHandler(levelHandler), _onLevelUpdate(nullptr), _onLevelUpdateLastFrame(-1), _onDrawAmmo(nullptr),
 			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr),
@@ -624,6 +679,16 @@ namespace Jazz2::Scripting
 		r = engine->RegisterGlobalFunction("float abs(float)", asFUNCTIONPR(fabsf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("float floor(float)", asFUNCTIONPR(floorf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("float fraction(float)", asFUNCTIONPR(asFractionf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+
+		r = engine->RegisterGlobalFunction("bool closeTo(float, float, float = 0.00001f)", asFUNCTION(asCloseTo), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("bool closeTo(double, double, double = 0.0000000001)", asFUNCTION(asCloseToDouble), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("float fpFromIEEE(uint)", asFUNCTION(asFloatFromIEEE), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("uint fpToIEEE(float)", asFUNCTION(asFloatToIEEE), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("double fpFromIEEE(uint64)", asFUNCTION(asDoubleFromIEEE), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("uint64 fpToIEEE(double)", asFUNCTION(asDoubleToIEEE), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+
+		// Needs the array type, so it can't be part of RegisterString()
+		RegisterStringUtils(engine);
 	}
 
 	void LevelScriptLoader::RegisterLegacyFunctions(asIScriptEngine* engine)
@@ -776,9 +841,9 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "float get_yAcc() const", asMETHOD(jjPLAYER, get_yAcc), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float set_yAcc(float)", asMETHOD(jjPLAYER, set_yAcc), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float get_xOrg() const", asMETHOD(jjPLAYER, get_xOrg), asCALL_THISCALL);
-		//engine->RegisterObjectMethod("jjPLAYER", "float set_xOrg(float)", asMETHOD(jjPLAYER, set_xOrg), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float set_xOrg(float)", asMETHOD(jjPLAYER, set_xOrg), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float get_yOrg() const", asMETHOD(jjPLAYER, get_yOrg), asCALL_THISCALL);
-		//engine->RegisterObjectMethod("jjPLAYER", "float set_yOrg(float)", asMETHOD(jjPLAYER, set_yOrg), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float set_yOrg(float)", asMETHOD(jjPLAYER, set_yOrg), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float get_xSpeed() const", asMETHOD(jjPLAYER, get_xSpeed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float set_xSpeed(float)", asMETHOD(jjPLAYER, set_xSpeed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float get_ySpeed() const", asMETHOD(jjPLAYER, get_ySpeed), asCALL_THISCALL);
@@ -881,14 +946,15 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_keySelect() const", asMETHOD(jjPLAYER, get_playerKeySelectPressed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyJump() const", asMETHOD(jjPLAYER, get_playerKeyJumpPressed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyRun() const", asMETHOD(jjPLAYER, get_playerKeyRunPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_keyLeft(bool)", asMETHOD(jjPLAYER, set_playerKeyLeftPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_keyRight(bool)", asMETHOD(jjPLAYER, set_playerKeyRightPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_keyUp(bool)", asMETHOD(jjPLAYER, set_playerKeyUpPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_keyDown(bool)", asMETHOD(jjPLAYER, set_playerKeyDownPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_keyFire(bool)", asMETHOD(jjPLAYER, set_playerKeyFirePressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_keySelect(bool)", asMETHOD(jjPLAYER, set_playerKeySelectPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_keyJump(bool)", asMETHOD(jjPLAYER, set_playerKeyJumpPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_keyRun(bool)", asMETHOD(jjPLAYER, set_playerKeyRunPressed), asCALL_THISCALL);
+		// The value a setter returns is the value of the assignment, so `a.keyLeft = a.keyRight = false` needs it
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyLeft(bool)", asMETHOD(jjPLAYER, set_playerKeyLeftPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyRight(bool)", asMETHOD(jjPLAYER, set_playerKeyRightPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyUp(bool)", asMETHOD(jjPLAYER, set_playerKeyUpPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyDown(bool)", asMETHOD(jjPLAYER, set_playerKeyDownPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyFire(bool)", asMETHOD(jjPLAYER, set_playerKeyFirePressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keySelect(bool)", asMETHOD(jjPLAYER, set_playerKeySelectPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyJump(bool)", asMETHOD(jjPLAYER, set_playerKeyJumpPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyRun(bool)", asMETHOD(jjPLAYER, set_playerKeyRunPressed), asCALL_THISCALL);
 
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_powerup(uint8) const", asMETHOD(jjPLAYER, get_powerup), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool set_powerup(uint8, bool)", asMETHOD(jjPLAYER, set_powerup), asCALL_THISCALL);
@@ -915,7 +981,7 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char revertMorph(bool morphEffect = true)", asMETHOD(jjPLAYER, revertMorph), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char get_charCurr() const", asMETHOD(jjPLAYER, get_charCurr), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char get_charOrig() const", asMETHOD(jjPLAYER, get_charOrig), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void set_charOrig(CHAR::Char)", asMETHOD(jjPLAYER, set_charOrig), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char set_charOrig(CHAR::Char)", asMETHOD(jjPLAYER, set_charOrig), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("TEAM");
 		engine->RegisterEnum("Color");
@@ -1886,12 +1952,13 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectType("jjLAYER", sizeof(jjLAYER), asOBJ_REF);
 
 		engine->RegisterObjectType("jjPIXELMAP", sizeof(jjPIXELMAP), asOBJ_REF);
-		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(uint16 tileID = 0)", asFUNCTION(jjPIXELMAP::CreateFromTile), asCALL_CDECL);
+		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(uint16 tileID = 0, const jjPAL &in palette = jjPalette)", asFUNCTION(jjPIXELMAP::CreateFromTile), asCALL_CDECL);
 		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(uint width, uint height)", asFUNCTION(jjPIXELMAP::CreateFromSize), asCALL_CDECL);
-		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(const jjANIMFRAME@ animFrame)", asFUNCTION(jjPIXELMAP::CreateFromFrame), asCALL_CDECL);
-		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(uint left, uint top, uint width, uint height, uint layer = 4)", asFUNCTION(jjPIXELMAP::CreateFromLayer), asCALL_CDECL);
-		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(uint left, uint top, uint width, uint height, const jjLAYER &in layer)", asFUNCTION(jjPIXELMAP::CreateFromLayerObject), asCALL_CDECL);
-		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(TEXTURE::Texture texture)", asFUNCTION(jjPIXELMAP::CreateFromTexture), asCALL_CDECL);
+		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(const jjPIXELMAP &in other)", asFUNCTION(jjPIXELMAP::CreateFromOther), asCALL_CDECL);
+		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(const jjANIMFRAME@ animFrame, const jjPAL &in palette = jjPalette)", asFUNCTION(jjPIXELMAP::CreateFromFrame), asCALL_CDECL);
+		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(uint left, uint top, uint width, uint height, uint layer = 4, const jjPAL &in palette = jjPalette)", asFUNCTION(jjPIXELMAP::CreateFromLayer), asCALL_CDECL);
+		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(uint left, uint top, uint width, uint height, const jjLAYER &in layer, const jjPAL &in palette = jjPalette)", asFUNCTION(jjPIXELMAP::CreateFromLayerObject), asCALL_CDECL);
+		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(TEXTURE::Texture texture, const jjPAL &in palette = jjPalette)", asFUNCTION(jjPIXELMAP::CreateFromTexture), asCALL_CDECL);
 		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(const ::string &in filename, const jjPAL &in palette = jjPalette, uint8 threshold = 1)", asFUNCTION(jjPIXELMAP::CreateFromFilename), asCALL_CDECL);
 		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_ADDREF, "void f()", asMETHOD(jjPIXELMAP, AddRef), asCALL_THISCALL);
 		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_RELEASE, "void f()", asMETHOD(jjPIXELMAP, Release), asCALL_THISCALL);
@@ -1902,16 +1969,16 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPIXELMAP", "bool save(uint16 tileID, bool hFlip = false) const", asMETHOD(jjPIXELMAP, saveToTile), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPIXELMAP", "bool save(jjANIMFRAME@ frame) const", asMETHOD(jjPIXELMAP, saveToFrame), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPIXELMAP", "bool save(const ::string &in filename, const jjPAL &in palette = jjPalette) const", asMETHOD(jjPIXELMAP, saveToFile), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& crop(uint, uint, uint, uint)", asMETHOD(jjPIXELMAP, crop), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& addBorders(int, int, int, int, uint8 = 0)", asMETHOD(jjPIXELMAP, addBorders), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& flip(SPRITE::Direction)", asMETHOD(jjPIXELMAP, flip), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& rotate()", asMETHOD(jjPIXELMAP, rotate), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& recolor(const array<uint8> &in)", asMETHOD(jjPIXELMAP, recolor), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& resize(uint, uint)", asMETHOD(jjPIXELMAP, resize), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& trim(uint &out, uint &out, uint &out, uint &out, uint8 = 0)", asMETHOD(jjPIXELMAP, trim), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& trim(uint8 = 0)", asMETHOD(jjPIXELMAP, trimBasic), asCALL_THISCALL);
 		// TODO
 		/*engine->RegisterObjectMethod("jjPIXELMAP", "bool makeTexture(jjLAYER@ layer = null)", asMETHOD(PixelMap, saveToTexture), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& crop(uint, uint, uint, uint)", asMETHOD(PixelMap, crop), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& addBorders(int, int, int, int, uint8 = 0)", asMETHOD(PixelMap, addBorders), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& flip(SPRITE::Direction)", asMETHOD(PixelMap, flip), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& rotate()", asMETHOD(PixelMap, rotate), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& recolor(const array<uint8> &in)", asMETHOD(PixelMap, recolor), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& resize(uint, uint)", asMETHOD(PixelMap, resize), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& trim(uint &out, uint &out, uint &out, uint &out, uint8 = 0)", asMETHOD(PixelMap, trim), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPIXELMAP", "jjPIXELMAP& trim(uint8 = 0)", asMETHOD(PixelMap, trimBasic), asCALL_THISCALL);
 
 		engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @load(const jjPIXELMAP &in, uint frameWidth, uint frameHeight, uint frameSpacingX = 0, uint frameSpacingY = 0, uint startX = 0, uint startY = 0, const array<int> &in coldSpotYOffsets = array<int>(), int firstAnimToOverwrite = -1, int firstFrameToOverwrite = -1)", asFUNCTION(importSpriteSheetToAnimSet), asCALL_CDECL_OBJFIRST);*/
 

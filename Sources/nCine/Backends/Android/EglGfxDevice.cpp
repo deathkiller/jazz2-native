@@ -271,12 +271,13 @@ namespace nCine::Backends
 	void EglGfxDevice::updateMonitors()
 	{
 		const int32_t densityEnum = AConfiguration_getDensity(_state->config);
-		unsigned int density = ACONFIGURATION_DENSITY_LOW;
+		unsigned int density = ACONFIGURATION_DENSITY_MEDIUM;
 		if (densityEnum != ACONFIGURATION_DENSITY_ANY && densityEnum != ACONFIGURATION_DENSITY_NONE) {
 			density = static_cast<unsigned int>(densityEnum);
 		}
 
-		const float densityScale = density / static_cast<float>(ACONFIGURATION_DENSITY_LOW);
+		// Relative to Android's own unit (dp), 1/160 of an inch, so 1.0 means the system's 100% as on other platforms
+		const float densityScale = density / static_cast<float>(ACONFIGURATION_DENSITY_MEDIUM);
 
 		AndroidJniClass_Display displays[MaxMonitors];
 		const int monitorCount = AndroidJniWrap_DisplayManager::getDisplays(displays, MaxMonitors);

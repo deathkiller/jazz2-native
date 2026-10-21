@@ -76,6 +76,8 @@ namespace Jazz2::Editor
 		UiMenuBar* _menuBar;
 		UiPanel* _toolbar;
 		UiPanel* _toolStrip;
+		// The buttons of the tools, they scroll in the strip when it's too short for them
+		UiStack* _toolStripItems;
 		UiDockFrame* _rightFrame;
 		UiPanel* _rightDock;
 		UiElement* _layersPanel;
@@ -97,6 +99,8 @@ namespace Jazz2::Editor
 		float _pickerDockWidth;
 		float _dragStartSize;
 		Rectf _viewRect;
+		// Part of the screen the panels are in, the edges a display may cut off are around it, see UiSurface::GetSafeBounds()
+		Rectf _safeArea;
 		// Laid out for a small screen, with the panels in drawers, and for a very narrow one with the tools at the bottom
 		bool _compact = false;
 		bool _narrow = false;

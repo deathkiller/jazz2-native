@@ -75,8 +75,8 @@
 		background: var(--header-bg);
 		border-bottom: 1px solid #1a1d1f;
 		box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
-		padding: 0.25rem 1rem;
-		line-height: 2.5rem;
+		padding: 0 1rem;
+		color: #ffffff;
 		font-size: 1.125rem;
 		font-weight: 600;
 	}
@@ -84,9 +84,16 @@
 	@media screen and (min-width: 576px) { body > header > nav > div { width: 528px; } }
 	@media screen and (min-width: 768px) { body > header > nav > div { width: 718px; } }
 	@media screen and (min-width: 992px) { body > header > nav > div { width: 928px; } }
+	/* Same box model as m.css, the breadcrumb stays on the baseline while the rest is middle-aligned */
+	body > header a, body > header .thin {
+		display: inline-block;
+		vertical-align: middle;
+		line-height: 2.5rem;
+		padding: 0.25rem 0;
+	}
 	body > header a { color: #ffffff; text-decoration: none; }
 	body > header a:hover, body > header a:focus { color: var(--link-active); }
-	body > header .breadcrumb { color: #747474; margin: 0 0.25rem; }
+	body > header .breadcrumb { color: #747474; }
 	body > header .thin { font-weight: normal; }
 	main {
 		max-width: 47rem;
@@ -220,7 +227,7 @@
 <div class="backdrop" data-url="/images/rays.mp4"></div><script>var isVideoSupported=!!document.createElement("video").canPlayType&&!!document.createElement("video").canPlayType("video/mp4")&&void 0!==window.getComputedStyle(document.body).mixBlendMode;isVideoSupported?document.querySelectorAll("body > .backdrop").forEach(function(e){var d=e.getAttribute("data-url");if(d){var a=document.createElement("video"),r;try{r=JSON.parse(sessionStorage.getItem("backdrop"))}catch(x){}a.autoplay=!0,a.loop=!0,a.muted=!0,r&&r.f?(a.poster=r.f,a.style.transition="none",e.classList.add("ready")):r=null,a.addEventListener("loadedmetadata",function(){a.currentTime=r?(+r.t||0)%a.duration:Math.random()*a.duration,a.play()}),a.addEventListener("loadeddata",function(){e.classList.add("ready")}),addEventListener("pagehide",function(){if(a.readyState>1)try{var c=document.createElement("canvas");c.width=a.videoWidth,c.height=a.videoHeight,c.getContext("2d").drawImage(a,0,0),sessionStorage.setItem("backdrop",JSON.stringify({t:a.currentTime,f:c.toDataURL("image/jpeg",.8)}))}catch(x){}}),addEventListener("pageshow",function(v){v.persisted&&a.play()});var t=document.createElement("source");t.src=d,t.type="video/mp4",a.appendChild(t),e.appendChild(a)}}):document.querySelectorAll("body > .backdrop").forEach(function(e){e.style.display="none"});</script>
 
 <header><nav>
-	<div><a href="https://de4th.dev/jazz2/">Jazz² Resurrection</a><span class="breadcrumb">|</span><span class="thin">Content Swapper</span></div>
+	<div><a href="https://de4th.dev/jazz2/">Jazz² Resurrection</a> <span class="breadcrumb">|</span> <span class="thin">Content Swapper</span></div>
 </nav></header>
 <main><article>
 	<p class="lead">Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast, PlayStation 2 or

@@ -2011,6 +2011,16 @@ namespace Jazz2
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping,
 		const BitArray* usedTiles, bool withDiffuse)
 	{
+		auto s = OpenTileSetFile(path);
+		if (s == nullptr) {
+			return nullptr;
+		}
+
+		return RequestTileSet(*s, path, captionTileId, applyPalette, paletteRemapping, usedTiles, withDiffuse);
+	}
+
+	std::unique_ptr<Stream> ContentResolver::OpenTileSetFile(StringView path)
+	{
 		// Try user "Content" directory first, then "Content" directory and "Cache" directory
 		String fullPath;
 		if (_pathHandler) {
@@ -2027,8 +2037,7 @@ namespace Jazz2
 		if (!s->IsValid()) {
 			return nullptr;
 		}
-
-		return RequestTileSet(*s, path, captionTileId, applyPalette, paletteRemapping, usedTiles, withDiffuse);
+		return s;
 	}
 
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(Stream& s, StringView path, std::uint16_t captionTileId, bool applyPalette,

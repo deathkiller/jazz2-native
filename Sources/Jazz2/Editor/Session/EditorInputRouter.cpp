@@ -55,6 +55,29 @@ namespace Jazz2::Editor
 		if (_playTest.IsEditing()) {
 			_touch.Update(timeMult);
 		}
+
+		// The keyboard of the system covers a part of the screen, it goes away once nothing is typed into, so it's asked
+		// for again by the next box tapped
+		if (_screenKeyboardShown) {
+			UiSurface* surface = _context.GetSurface();
+			UiElement* focus = (surface != nullptr ? surface->GetFocus() : nullptr);
+			if (focus == nullptr || runtime_cast<UiTextBox>(focus) == nullptr) {
+				_screenKeyboardShown = false;
+				theApplication().HideScreenKeyboard();
+			}
+		}
+	}
+
+	bool EditorInputRouter::ShowScreenKeyboard(UiTextBox& field)
+	{
+		if (!field.ShowScreenKeyboard()) {
+			return false;
+		}
+		// The keyboard of the editor closes by itself, only one of the system is hidden again, see Update()
+		if (theApplication().CanShowScreenKeyboard()) {
+			_screenKeyboardShown = true;
+		}
+		return true;
 	}
 
 	void EditorInputRouter::OnKeyPressed(const KeyboardEvent& event)
@@ -175,15 +198,100 @@ namespace Jazz2::Editor
 	void EditorInputRouter::OnTouchEvent(const TouchEvent& event)
 	{
 		if (_playTest.IsInGame() && _playTest.GetPlayTest() != nullptr) {
-			_playTest.GetPlayTest()->GetLevelHandler().OnTouchEvent(event);
+			OnPlayTouchEvent(event);
 			return;
 		}
 		UiSurface* surface = _context.GetSurface();
+		if (_barTouchId >= 0) {
+			// The level isn't played anymore while a finger still holds the bar, as when a key went back to the editor
+			_barTouchId = -1;
+			if (surface != nullptr) {
+				surface->CancelPointerCapture();
+			}
+		}
 		if (_context.GetEditHandler() == nullptr || surface == nullptr || !_playTest.IsEditing()) {
 			return;
 		}
 		SetInputModality(InputModality::Touch);
 		_touch.OnTouchEvent(event, surface->GetScreenSize(), surface->GetScale());
+	}
+
+	void EditorInputRouter::OnPlayTouchEvent(const TouchEvent& event)
+	{
+		LevelHandler& game = _playTest.GetPlayTest()->GetLevelHandler();
+		UiSurface* surface = _context.GetSurface();
+		if (surface == nullptr) {
+			game.OnTouchEvent(event);
+			return;
+		}
+
+		Vector2f screen = surface->GetScreenSize();
+		auto positionOf = [screen](const TouchEvent::Pointer& pointer) {
+			return Vector2f(pointer.x * screen.X, pointer.y * screen.Y);
+		};
+		const TouchEvent::Pointer* action = (event.actionIndex >= 0 && event.actionIndex < std::int32_t(event.count) ? &event.pointers[event.actionIndex] : nullptr);
+		bool pressed = (event.type == TouchEventType::Down || event.type == TouchEventType::PointerDown);
+		bool released = (event.type == TouchEventType::Up || event.type == TouchEventType::PointerUp);
+
+		// A finger put on the bar over the level, or on a menu opened from it, is the pointer of the editor, the game
+		// doesn't see it at all
+		if (pressed && action != nullptr && _barTouchId < 0 && surface->IsOverInterface(positionOf(*action))) {
+			_barTouchId = action->id;
+			SetInputModality(InputModality::Touch);
+			Vector2f pos = positionOf(*action);
+			PointerMove(pos);
+			PointerDown(pos, MouseButton::Left);
+			return;
+		}
+		if (_barTouchId >= 0) {
+			if (released && action != nullptr && action->id == _barTouchId) {
+				// What it pressed is clicked now, which may end the play-test
+				_barTouchId = -1;
+				PointerUp(positionOf(*action), MouseButton::Left);
+				return;
+			}
+			std::int32_t index = event.findPointerIndex(_barTouchId);
+			if (index < 0) {
+				// Gone without being lifted, what it held isn't clicked
+				_barTouchId = -1;
+				surface->CancelPointerCapture();
+			} else if (event.type == TouchEventType::Move) {
+				PointerMove(positionOf(event.pointers[index]));
+			}
+		}
+
+		if (_barTouchId < 0) {
+			if (pressed) {
+				// A finger in the game closes a menu opened from the bar, as a click elsewhere does
+				surface->ClosePopups();
+			}
+			game.OnTouchEvent(event);
+			return;
+		}
+
+		// The other fingers go to the game as if the one on the bar wasn't there, the first of them comes and the last of
+		// them goes as the only one
+		TouchEvent gameEvent = event;
+		gameEvent.count = 0;
+		gameEvent.actionIndex = -1;
+		for (std::uint32_t i = 0; i < event.count && i < TouchEvent::MaxPointers; i++) {
+			if (event.pointers[i].id == _barTouchId) {
+				continue;
+			}
+			if (std::int32_t(i) == event.actionIndex) {
+				gameEvent.actionIndex = std::int32_t(gameEvent.count);
+			}
+			gameEvent.pointers[gameEvent.count++] = event.pointers[i];
+		}
+		if (gameEvent.count == 0) {
+			return;
+		}
+		if (gameEvent.type == TouchEventType::PointerDown && gameEvent.count == 1) {
+			gameEvent.type = TouchEventType::Down;
+		} else if (gameEvent.type == TouchEventType::PointerUp && gameEvent.count == 1) {
+			gameEvent.type = TouchEventType::Up;
+		}
+		game.OnTouchEvent(gameEvent);
 	}
 
 	void EditorInputRouter::SetupTouchGestures()
@@ -204,7 +312,7 @@ namespace Jazz2::Editor
 			// into (it takes the focus only by a tap without dragging), a tap into a box being typed into keeps its caret
 			UiSurface* surface = _context.GetSurface();
 			if (UiTextBox* field = (surface->GetFocus() != nullptr ? runtime_cast<UiTextBox>(surface->GetFocus()) : nullptr)) {
-				field->ShowScreenKeyboard();
+				ShowScreenKeyboard(*field);
 			}
 		};
 		_touch.PointerCancel = [this]() {
@@ -354,7 +462,7 @@ namespace Jazz2::Editor
 		UiNumberBox* numberField = (field != nullptr ? runtime_cast<UiNumberBox>(field) : nullptr);
 		bool fieldTakesY = false;
 		if (field != nullptr && field->IsUsable() && wasPressed(ButtonName::Y)) {
-			fieldTakesY = field->ShowScreenKeyboard();
+			fieldTakesY = ShowScreenKeyboard(*field);
 		}
 		bool fieldTakesPad = (numberField != nullptr && numberField->IsUsable());
 		if (fieldTakesPad) {

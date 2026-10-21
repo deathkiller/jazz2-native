@@ -34,6 +34,9 @@ namespace Jazz2::Editor
 		// the finger is lifted, in frames at 60 FPS
 		constexpr float TouchTooltipDelay = 30.0f;
 		constexpr float TouchTooltipLinger = 120.0f;
+		// How long a finger has to rest on an element that is dragged only after it's held, half a second as a long press
+		// of the system takes, in frames at 60 FPS
+		constexpr float TouchHoldDelay = 30.0f;
 		// How far the middle of the cursor overlay is from the pointer, along both axes, and the gap below it to a label
 		// shown by the pointer
 		constexpr float CursorOverlayOffset = 21.0f;
@@ -220,6 +223,17 @@ namespace Jazz2::Editor
 		return Vector2f(float(gfxDevice.drawableWidth()), float(gfxDevice.drawableHeight()));
 	}
 
+	Rectf UiSurface::GetSafeBounds() const
+	{
+		// Each edge a part of the side it's on, rounded as the game rounds its own margins
+		Vector2f screen = GetScreenSize();
+		float left = std::round(screen.X * std::clamp(SafeMargins.Left, 0.0f, 0.5f));
+		float top = std::round(screen.Y * std::clamp(SafeMargins.Top, 0.0f, 0.5f));
+		float right = std::round(screen.X * std::clamp(SafeMargins.Right, 0.0f, 0.5f));
+		float bottom = std::round(screen.Y * std::clamp(SafeMargins.Bottom, 0.0f, 0.5f));
+		return Rectf(left, top, std::max(screen.X - left - right, 1.0f), std::max(screen.Y - top - bottom, 1.0f));
+	}
+
 	bool UiSurface::OnPointerDown(const UiPointerEvent& event)
 	{
 		_pointerPos = event.Pos;
@@ -233,6 +247,8 @@ namespace Jazz2::Editor
 		_touchScroll = nullptr;
 		_touchScrolling = false;
 		_touchVelocity = 0.0f;
+		_touchHold = TouchHold::None;
+		_touchHoldTime = 0.0f;
 
 		// A click outside of the elements shown over the interface closes those that want it, from the top down to the
 		// one clicked into, so a list dropped down from a dialog closes on a click anywhere else in the dialog too
@@ -353,12 +369,17 @@ namespace Jazz2::Editor
 		if (hit->IsUsable() && hit->OnPointerDown(clickEvent)) {
 			_capture = hit;
 			_capture->_pressed = true;
+			// A finger drags it only once it rested on it, moved at once it scrolls the list instead
+			if (_touchDown && _capture->DragsAfterHold()) {
+				_touchHold = TouchHold::Waiting;
+			}
 		}
 		return true;
 	}
 
 	void UiSurface::CancelPointerCapture()
 	{
+		_touchHold = TouchHold::None;
 		if (_capture == nullptr) {
 			return;
 		}
@@ -397,8 +418,9 @@ namespace Jazz2::Editor
 			// A finger dragged up or down over a list scrolls it, what it pressed is let go, unless it's dragged itself
 			Vector2f moved = event.Pos - _touchStart;
 			if (!_touchScrolling && std::abs(moved.Y) > GetTouchSlop() && std::abs(moved.Y) > std::abs(moved.X) &&
-				(_capture == nullptr || _capture->YieldsToScroll())) {
+				(_capture == nullptr || _capture->YieldsToScroll() || _touchHold == TouchHold::Waiting)) {
 				_touchScrolling = true;
+				_touchHold = TouchHold::None;
 				_tooltipShown = false;
 				_touchTooltip = false;
 				if (_capture != nullptr) {
@@ -429,6 +451,15 @@ namespace Jazz2::Editor
 		}
 		_touchLastPos = event.Pos;
 
+		if (_touchHold == TouchHold::Waiting) {
+			if ((event.Pos - _touchStart).SqrLength() <= GetTouchSlop() * GetTouchSlop()) {
+				// Until it's held, a finger trembling on it doesn't move it
+				return true;
+			}
+			// Moved away before it was held, so it's neither dragged nor clicked when the finger is lifted
+			CancelPointerCapture();
+		}
+
 		bool blocked;
 		UiElement* hit = HitTestAll(event.Pos, blocked);
 		SetHover(_capture != nullptr ? (hit == _capture ? hit : nullptr) : hit);
@@ -446,6 +477,7 @@ namespace Jazz2::Editor
 		bool wasTouch = _touchDown;
 		bool touchTooltip = (_touchDown && _touchTooltip && _tooltipShown);
 		_touchDown = false;
+		_touchHold = TouchHold::None;
 
 		if (_touchScrolling) {
 			// A flick goes on for a while, unless the finger stood still before it was lifted
@@ -468,8 +500,9 @@ namespace Jazz2::Editor
 			UiElement* capture = _capture;
 			_capture = nullptr;
 			capture->_pressed = false;
-			// A finger held still to see the tooltip doesn't click what it was on
-			bool inside = (!touchTooltip && capture->Bounds.Contains(event.Pos));
+			// A finger held still to see the tooltip doesn't click what it was on; an element may take the pointer a little
+			// outside of itself, as the cross of a window
+			bool inside = (!touchTooltip && capture->GetHitBounds().Contains(event.Pos));
 			capture->OnPointerUp(event, inside);
 			handled = true;
 		}
@@ -905,6 +938,20 @@ namespace Jazz2::Editor
 			element->Update(timeMult);
 		}
 
+		if (_touchHold == TouchHold::Waiting && _touchDown && _capture != nullptr && !_touchScrolling) {
+			// The finger rested on it long enough, it drags it from now on, which the device tells by a short buzz
+			_touchHoldTime += timeMult;
+			if (_touchHoldTime >= TouchHoldDelay) {
+				_touchHold = TouchHold::Held;
+				_tooltipShown = false;
+				_touchTooltip = false;
+				theApplication().Vibrate(12);
+				UiPointerEvent holdEvent;
+				holdEvent.Pos = _pointerPos;
+				_capture->OnPointerHold(holdEvent);
+			}
+		}
+
 		if (_tooltipLinger > 0.0f) {
 			_tooltipLinger -= timeMult;
 			if (_tooltipLinger <= 0.0f) {
@@ -912,8 +959,8 @@ namespace Jazz2::Editor
 				SetHover(nullptr);
 			}
 		} else if (TouchInput) {
-			// A finger held still on an element shows its tooltip, also while it presses it
-			if (_touchDown && _hover != nullptr && !_touchScrolling && !_tooltipShown) {
+			// A finger held still on an element shows its tooltip, also while it presses it, unless holding it starts dragging it
+			if (_touchDown && _hover != nullptr && !_touchScrolling && !_tooltipShown && _touchHold == TouchHold::None) {
 				_tooltipTime += timeMult;
 				if (_tooltipTime >= TouchTooltipDelay && !_hover->GetTooltip(_pointerPos).empty()) {
 					_tooltipShown = true;
@@ -957,6 +1004,8 @@ namespace Jazz2::Editor
 			_root->Draw(painter);
 		}
 
+		// Windows and menus stay in the part of the screen that isn't cut off
+		Rectf safe = GetSafeBounds();
 		std::int32_t slot = FirstOverlaySlot;
 		for (std::size_t i = 0; i < _overlays.size(); i++) {
 			if (!IsActive(_overlays[i])) {
@@ -965,15 +1014,15 @@ namespace Jazz2::Editor
 
 			UiElement* element = _overlays[i].Element.get();
 			const UiOverlayOptions& options = _overlays[i].Options;
-			Vector2f size = element->MeasureCached(context, screenSize);
-			size.X = std::min(size.X, screenSize.X);
-			size.Y = std::min(size.Y, screenSize.Y);
+			Vector2f size = element->MeasureCached(context, Vector2f(safe.W, safe.H));
+			size.X = std::min(size.X, safe.W);
+			size.Y = std::min(size.Y, safe.H);
 			Vector2f pos = (options.Centered
-				? Vector2f(std::round((screenSize.X - size.X) * 0.5f), std::round((screenSize.Y - size.Y) * 0.4f))
+				? Vector2f(std::round(safe.X + (safe.W - size.X) * 0.5f), std::round(safe.Y + (safe.H - size.Y) * 0.4f))
 				: options.Position);
 			// Moved to fit the screen
-			pos.X = std::clamp(pos.X, 0.0f, screenSize.X - size.X);
-			pos.Y = std::clamp(pos.Y, 0.0f, screenSize.Y - size.Y);
+			pos.X = std::clamp(pos.X, safe.X, safe.X + safe.W - size.X);
+			pos.Y = std::clamp(pos.Y, safe.Y, safe.Y + safe.H - size.Y);
 			element->Arrange(context, Rectf(pos.X, pos.Y, size.X, size.Y));
 
 			painter.SetSlot(slot++);
@@ -1185,7 +1234,7 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		Vector2f screenSize = GetScreenSize();
+		Rectf safe = GetSafeBounds();
 		float padding = painter.Px(UiTheme::Padding * 1.5f);
 		// Less above and below the text than at its sides, the line itself is a little higher than the text already
 		float paddingY = std::round(padding * 0.5f);
@@ -1204,15 +1253,15 @@ namespace Jazz2::Editor
 			// Above the finger, which would cover it below
 			pos = Vector2f(_pointerPos.X - size.X * 0.5f, _pointerPos.Y - size.Y - painter.Px(24.0f));
 		}
-		if (pos.X + size.X > screenSize.X) {
-			pos.X = screenSize.X - size.X;
+		if (pos.X + size.X > safe.X + safe.W) {
+			pos.X = safe.X + safe.W - size.X;
 		}
-		pos.X = std::max(pos.X, 0.0f);
-		if (pos.Y + size.Y > screenSize.Y) {
+		pos.X = std::max(pos.X, safe.X);
+		if (pos.Y + size.Y > safe.Y + safe.H) {
 			// Above the pointer then, also above the arrows, which go there too near the bottom of the screen
 			pos.Y = _pointerPos.Y - size.Y - GetPointerLabelOffset(painter.Px(4.0f));
 		}
-		pos.Y = std::max(pos.Y, 0.0f);
+		pos.Y = std::max(pos.Y, safe.Y);
 		Rectf rect(std::round(pos.X), std::round(pos.Y), std::round(size.X), std::round(size.Y));
 		painter.Panel(rect, true, UiTheme::PanelHeader, UiTheme::PanelBorder);
 		painter.TextInRect(text, Rectf(rect.X + padding, rect.Y, rect.W - padding * 2.0f, rect.H), UiTheme::Text, Alignment::Left);
@@ -1220,10 +1269,10 @@ namespace Jazz2::Editor
 
 	void UiSurface::DrawToasts(UiPainter& painter)
 	{
-		Vector2f screenSize = GetScreenSize();
+		Rectf safe = GetSafeBounds();
 		float padding = painter.Px(UiTheme::Padding * 1.5f);
 		float iconSize = painter.Px(UiTheme::IconSize);
-		float y = screenSize.Y - painter.Px(UiTheme::StatusBarHeight + 8.0f);
+		float y = safe.Y + safe.H - painter.Px(UiTheme::StatusBarHeight + 8.0f);
 
 		for (std::size_t i = _toasts.size(); i > 0; i--) {
 			const Toast& toast = _toasts[i - 1];
@@ -1232,7 +1281,7 @@ namespace Jazz2::Editor
 			float slide = (UiTheme::ReducedMotion ? 0.0f : std::max(0.0f, 1.0f - age / ToastFadeTime));
 
 			Vector2f size(padding * 3.0f + iconSize + painter.MeasureText(toast.Text), std::max(iconSize, painter.Px(UiTheme::RowHeight)) + padding * 2.0f);
-			Rectf rect(std::round((screenSize.X - size.X) * 0.5f), std::round(y - size.Y + slide * painter.Px(12.0f)), std::round(size.X), std::round(size.Y));
+			Rectf rect(std::round(safe.X + (safe.W - size.X) * 0.5f), std::round(y - size.Y + slide * painter.Px(12.0f)), std::round(size.X), std::round(size.Y));
 
 			painter.PushOpacity(alpha);
 			painter.Panel(rect, true, UiTheme::PanelHeader, UiTheme::PanelBorder);

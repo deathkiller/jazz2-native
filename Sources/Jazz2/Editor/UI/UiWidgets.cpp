@@ -498,7 +498,7 @@ namespace Jazz2::Editor
 			_measuredHeight = size.Y;
 			_measuredFrame = GetLayoutFrame();
 			float maxHeight = (fixedSize.Y >= 0.0f ? fixedSize.Y : available.Y);
-			if (size.Y > maxHeight) {
+			if (size.Y > maxHeight && !OverlayBar) {
 				// The scroll bar takes its own space next to the content, which is as narrow as the rest then, and never
 				// more than all the space there is
 				float barWidth = context.Px(UiTheme::ScrollBarWidth);
@@ -532,11 +532,11 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		float barWidth = context.Px(UiTheme::ScrollBarWidth);
+		float barWidth = (OverlayBar ? 0.0f : context.Px(UiTheme::ScrollBarWidth));
 		std::uint32_t layoutFrame = GetLayoutFrame();
 		_contentHeight = (layoutFrame != 0 && _measuredFrame == layoutFrame && _measuredWidth == bounds.W
 			? _measuredHeight : content->MeasureCached(context, Vector2f(bounds.W, 1.0e6f)).Y);
-		if (_contentHeight > bounds.H) {
+		if (_contentHeight > bounds.H && barWidth > 0.0f) {
 			// The scroll bar takes its own space
 			_contentHeight = content->MeasureCached(context, Vector2f(bounds.W - barWidth, 1.0e6f)).Y;
 		}
@@ -561,6 +561,11 @@ namespace Jazz2::Editor
 
 		if (_contentHeight > Bounds.H) {
 			Rectf thumb = GetThumbRect();
+			if (OverlayBar) {
+				// Only a thin mark of where the content is scrolled to, over its edge
+				float width = std::max(1.0f, std::round(thumb.W * 0.5f));
+				thumb = Rectf(Bounds.X + Bounds.W - width - std::max(1.0f, painter.Px(1.0f)), thumb.Y, width, thumb.H);
+			}
 			painter.RoundRect(thumb, _draggingThumb ? UiTheme::Accent : Colorf(1.0f, 1.0f, 1.0f, 0.22f + 0.15f * _hoverAmount), UiLayer::Overlay);
 		}
 	}
@@ -590,7 +595,7 @@ namespace Jazz2::Editor
 		if (!IsShown() || !Bounds.Contains(pos)) {
 			return nullptr;
 		}
-		if (_contentHeight > Bounds.H && pos.X >= Bounds.X + Bounds.W - GetThumbZoneWidth()) {
+		if (_contentHeight > Bounds.H && !OverlayBar && pos.X >= Bounds.X + Bounds.W - GetThumbZoneWidth()) {
 			return this;
 		}
 		if (UiElement* content = GetContent()) {
@@ -608,7 +613,7 @@ namespace Jazz2::Editor
 
 	bool UiScrollView::OnPointerDown(const UiPointerEvent& event)
 	{
-		if (_contentHeight <= Bounds.H || event.Button != MouseButton::Left) {
+		if (_contentHeight <= Bounds.H || OverlayBar || event.Button != MouseButton::Left) {
 			return false;
 		}
 		Rectf thumb = GetThumbRect();

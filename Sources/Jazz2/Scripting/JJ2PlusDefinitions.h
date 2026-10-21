@@ -2439,21 +2439,21 @@ namespace Jazz2::Scripting
 			/** @brief Returns whether the run key is pressed */
 			bool get_playerKeyRunPressed();
 			/** @brief Sets whether the left key is pressed */
-			void set_playerKeyLeftPressed(bool value);
+			bool set_playerKeyLeftPressed(bool value);
 			/** @brief Sets whether the right key is pressed */
-			void set_playerKeyRightPressed(bool value);
+			bool set_playerKeyRightPressed(bool value);
 			/** @brief Sets whether the up key is pressed */
-			void set_playerKeyUpPressed(bool value);
+			bool set_playerKeyUpPressed(bool value);
 			/** @brief Sets whether the down key is pressed */
-			void set_playerKeyDownPressed(bool value);
+			bool set_playerKeyDownPressed(bool value);
 			/** @brief Sets whether the fire key is pressed */
-			void set_playerKeyFirePressed(bool value);
+			bool set_playerKeyFirePressed(bool value);
 			/** @brief Sets whether the weapon-select key is pressed */
-			void set_playerKeySelectPressed(bool value);
+			bool set_playerKeySelectPressed(bool value);
 			/** @brief Sets whether the jump key is pressed */
-			void set_playerKeyJumpPressed(bool value);
+			bool set_playerKeyJumpPressed(bool value);
 			/** @brief Sets whether the run key is pressed */
-			void set_playerKeyRunPressed(bool value);
+			bool set_playerKeyRunPressed(bool value);
 
 			/** @brief Returns whether the player has the powerup for the given weapon */
 			bool get_powerup(std::uint8_t index);
@@ -2483,7 +2483,7 @@ namespace Jazz2::Scripting
 			/** @brief Returns the player's original character, the one @ref revertMorph() turns it back into */
 			std::uint32_t get_charOrig() const;
 			/** @brief Sets the player's original character */
-			void set_charOrig(std::uint32_t value);
+			std::uint32_t set_charOrig(std::uint32_t value);
 
 			/** @brief Kills the player */
 			void kill();
@@ -2701,17 +2701,19 @@ namespace Jazz2::Scripting
 			~jjPIXELMAP();
 
 			/** @brief Returns a new instance built from a single tile */
-			static jjPIXELMAP* CreateFromTile();
+			static jjPIXELMAP* CreateFromTile(std::uint16_t tileID, const jjPAL* palette);
 			/** @brief Returns a new instance of the given size */
 			static jjPIXELMAP* CreateFromSize(std::uint32_t width, std::uint32_t height);
+			/** @brief Returns a new instance with the same size and image as another one */
+			static jjPIXELMAP* CreateFromOther(const jjPIXELMAP& other);
 			/** @brief Returns a new instance built from an animation frame */
-			static jjPIXELMAP* CreateFromFrame(const jjANIMFRAME* animFrame);
+			static jjPIXELMAP* CreateFromFrame(const jjANIMFRAME* animFrame, const jjPAL* palette);
 			/** @brief Returns a new instance built from a region of a tile layer */
-			static jjPIXELMAP* CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer);
+			static jjPIXELMAP* CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer, const jjPAL* palette);
 			/** @brief Returns a new instance built from a region of the given layer */
-			static jjPIXELMAP* CreateFromLayerObject(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, const jjLAYER* layer);
+			static jjPIXELMAP* CreateFromLayerObject(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, const jjLAYER* layer, const jjPAL* palette);
 			/** @brief Returns a new instance built from a texture */
-			static jjPIXELMAP* CreateFromTexture(std::uint32_t animFrame);
+			static jjPIXELMAP* CreateFromTexture(std::uint32_t texture, const jjPAL* palette);
 			/** @brief Returns a new instance built from an image file, mapped onto the given palette */
 			static jjPIXELMAP* CreateFromFilename(const String& filename, const jjPAL* palette, std::uint8_t threshold);
 
@@ -2722,8 +2724,8 @@ namespace Jazz2::Scripting
 
 			jjPIXELMAP& operator=(const jjPIXELMAP& o);
 
-			// TODO: return type std::uint8_t& instead?
-			std::uint8_t GetPixel(std::uint32_t x, std::uint32_t y);
+			/** @brief Returns the pixel at the given position, raises a script exception if it's out of the map */
+			std::uint8_t* GetPixel(std::uint32_t x, std::uint32_t y);
 
 			/** @brief Width in pixels */
 			std::uint32_t width = 0;
@@ -2737,14 +2739,42 @@ namespace Jazz2::Scripting
 			/** @brief Saves the pixel map to an image file using the given palette */
 			bool saveToFile(const String& filename, const jjPAL& palette) const;
 
+			/** @brief Extends (positive) or crops (negative) each edge by a number of pixels */
+			jjPIXELMAP& addBorders(std::int32_t left, std::int32_t top, std::int32_t right, std::int32_t bottom, std::uint8_t borderColor);
+			/** @brief Crops the map to the given rectangle */
+			jjPIXELMAP& crop(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height);
+			/** @brief Flips the image across one or both axes (`SPRITE::Direction`) */
+			jjPIXELMAP& flip(std::int32_t directions);
+			/** @brief Replaces every pixel by the value at its index of a mapping of at least 256 entries */
+			jjPIXELMAP& recolor(const CScriptArray& colorMapping);
+			/** @brief Resizes the image by nearest-neighbor sampling */
+			jjPIXELMAP& resize(std::uint32_t width, std::uint32_t height);
+			/** @brief Rotates the image by 90 degrees clockwise */
+			jjPIXELMAP& rotate();
+			/** @brief Trims empty rows and columns of the given color from all edges, returning how many of them */
+			jjPIXELMAP& trim(std::uint32_t& left, std::uint32_t& top, std::uint32_t& right, std::uint32_t& bottom, std::uint8_t trimColor);
+			/** @brief Trims empty rows and columns of the given color from all edges */
+			jjPIXELMAP& trimBasic(std::uint8_t trimColor);
+
 		private:
 			std::int32_t _refCount;
+			std::unique_ptr<std::uint8_t[]> _pixels;
+
+			// Returns a new transparent map, or nullptr with a script exception if it would be too large
+			static jjPIXELMAP* Create(std::uint32_t width, std::uint32_t height);
+			// Returns a new map of a rectangle of the tiles of a level layer, by its index in the tile map
+			static jjPIXELMAP* CreateFromEngineLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::int32_t layerIndex, const jjPAL* palette);
+			// Replaces the image by the given rectangle of it, the part out of the image is filled with `fill`
+			void Reframe(std::int64_t left, std::int64_t top, std::uint32_t newWidth, std::uint32_t newHeight, std::uint8_t fill);
 		};
 
 		/** @brief A rectangular collision mask of solid/empty pixels */
 		class jjMASKMAP
 		{
 		public:
+			/** @brief Size of the mask, which is always the one of a tile */
+			static constexpr std::uint32_t Size = 32;
+
 			/** @brief Creates a new instance */
 			jjMASKMAP();
 			~jjMASKMAP();
@@ -2761,14 +2791,15 @@ namespace Jazz2::Scripting
 
 			jjMASKMAP& operator=(const jjMASKMAP& o);
 
-			// TODO: return type bool& instead?
-			bool GetPixel(std::uint32_t x, std::uint32_t y);
+			/** @brief Returns the pixel at the given position, raises a script exception if it's out of the mask */
+			bool* GetPixel(std::uint32_t x, std::uint32_t y);
 
 			/** @brief Saves the mask into a tile's collision mask */
 			bool save(std::uint16_t tileID, bool hFlip) const;
 
 		private:
 			std::int32_t _refCount;
+			bool _mask[Size * Size];
 		};
 
 		/**
@@ -2910,6 +2941,7 @@ namespace Jazz2::Scripting
 			std::uint8_t _spriteParam = 0;
 
 			friend class LevelScriptLoader;
+			friend class jjPIXELMAP;	// A pixel map can be made of the tiles of a layer
 		};
 
 		/** @brief Controls which parts of a player are drawn and how */

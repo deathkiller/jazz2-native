@@ -41,6 +41,9 @@ namespace Jazz2::Editor
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
 		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		void OnPointerCancel() override;
+		/** @brief An event is only clicked, so a finger dragged over the events scrolls them */
+		bool YieldsToScroll() const override;
 		StringView GetTooltip(Vector2f pos) const override;
 
 	private:

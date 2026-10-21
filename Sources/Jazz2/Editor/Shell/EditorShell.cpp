@@ -209,7 +209,7 @@ namespace Jazz2::Editor
 	}
 
 	EditorShell::EditorShell(EditorSession& session)
-		: _session(session), _menuBar(nullptr), _toolbar(nullptr), _toolStrip(nullptr), _rightFrame(nullptr), _rightDock(nullptr), _layersPanel(nullptr),
+		: _session(session), _menuBar(nullptr), _toolbar(nullptr), _toolStrip(nullptr), _toolStripItems(nullptr), _rightFrame(nullptr), _rightDock(nullptr), _layersPanel(nullptr),
 			_pickerFrame(nullptr), _pickerDock(nullptr), _statusBar(nullptr), _playBar(nullptr), _rightSplitter(nullptr), _layersSplitter(nullptr),
 			_pickerSplitter(nullptr), _rightDockWidth(0.0f), _layerListHeight(0.0f), _pickerDockWidth(0.0f), _dragStartSize(0.0f), _cachedPathPoints(-1),
 			_cachedPathSegments(-1)
@@ -615,9 +615,13 @@ namespace Jazz2::Editor
 
 	void EditorShell::CreateToolStrip()
 	{
-		_toolStrip = Add<UiPanel>(UiPanelStyle::Panel, UiOrientation::Vertical, 2.0f, UiThickness(3.0f));
-		// A short window cuts off the buttons that don't fit, they'd show under the status bar otherwise
-		_toolStrip->ClipContent = true;
+		_toolStrip = Add<UiPanel>(UiPanelStyle::Panel, UiOrientation::Vertical, 0.0f, UiThickness(3.0f));
+		// A short window scrolls the buttons that don't fit, by the wheel or a finger, the strip is too narrow to give a bar
+		// room of its own, so it's only a mark over the buttons
+		auto* scroll = _toolStrip->Add<UiScrollView>();
+		scroll->Flex = 1.0f;
+		scroll->OverlayBar = true;
+		_toolStripItems = scroll->SetContent<UiStack>(UiOrientation::Vertical, 2.0f);
 		// Selecting first, then the tools that paint tiles, those that make them up by themselves, apart from them those of
 		// events, and the ones that change nothing last (a separator where the ID is null)
 		static const char* const ToolStripItems[] = { ActionIds::ToolSelect, ActionIds::ToolBrush, ActionIds::ToolEraser, ActionIds::ToolRectangle,
@@ -625,14 +629,14 @@ namespace Jazz2::Editor
 			ActionIds::ToolEvent, ActionIds::ToolPath, nullptr, ActionIds::ToolHand, ActionIds::ToolMeasure };
 		for (const char* id : ToolStripItems) {
 			if (id == nullptr) {
-				_toolStrip->Add<UiSeparator>();
+				_toolStripItems->Add<UiSeparator>();
 			} else {
-				AddActionButton(_toolStrip, id);
+				AddActionButton(_toolStripItems, id);
 			}
 		}
 		// Flipping and turning the stamp is among the options of the tools that paint it, in the toolbar
-		_toolStrip->Add<UiSeparator>();
-		_toolStrip->Add<StampPreview>(_session);
+		_toolStripItems->Add<UiSeparator>();
+		_toolStripItems->Add<StampPreview>(_session);
 	}
 
 	UiButton* EditorShell::AddActionButton(UiElement* parent, StringView actionId, bool showText)
@@ -675,22 +679,34 @@ namespace Jazz2::Editor
 	{
 		Bounds = bounds;
 
+		// The panels keep clear of the edges a display may cut off, the level is still seen behind them there
+		Rectf area = bounds;
+		if (UiSurface* surface = GetSurface()) {
+			Rectf safe = surface->GetSafeBounds();
+			float x1 = std::max(bounds.X, safe.X), y1 = std::max(bounds.Y, safe.Y);
+			float x2 = std::min(bounds.X + bounds.W, safe.X + safe.W), y2 = std::min(bounds.Y + bounds.H, safe.Y + safe.H);
+			if (x2 > x1 && y2 > y1) {
+				area = Rectf(x1, y1, x2 - x1, y2 - y1);
+			}
+		}
+		_safeArea = area;
+
 		float menuHeight = context.Px(UiTheme::MenuBarHeight);
 		float toolbarHeight = context.Px(UiTheme::ToolbarHeight);
 		float statusHeight = context.Px(UiTheme::StatusBarHeight);
 		const EditorSettings& settings = _session.GetSettings();
 
 		// A small screen gets the panels in drawers, a narrow one the tools at the bottom too
-		float widthUnits = bounds.W / std::max(context.Scale, 0.01f);
+		float widthUnits = area.W / std::max(context.Scale, 0.01f);
 		_compact = (settings.Layout == 2 || (settings.Layout == 0 && widthUnits < CompactWidth));
 		_narrow = (_compact && widthUnits < NarrowWidth);
 		_pickerFrame->SetDrawerMode(_compact);
 		_rightFrame->SetDrawerMode(_compact);
 		UiOrientation stripOrientation = (_narrow ? UiOrientation::Horizontal : UiOrientation::Vertical);
-		if (_toolStrip->Orientation != stripOrientation) {
-			_toolStrip->Orientation = stripOrientation;
-			for (std::int32_t i = 0; i < _toolStrip->GetChildCount(); i++) {
-				if (UiSeparator* separator = runtime_cast<UiSeparator>(_toolStrip->GetChild(i))) {
+		if (_toolStripItems->Orientation != stripOrientation) {
+			_toolStripItems->Orientation = stripOrientation;
+			for (std::int32_t i = 0; i < _toolStripItems->GetChildCount(); i++) {
+				if (UiSeparator* separator = runtime_cast<UiSeparator>(_toolStripItems->GetChild(i))) {
 					separator->Orientation = (_narrow ? UiOrientation::Vertical : UiOrientation::Horizontal);
 				}
 			}
@@ -698,25 +714,25 @@ namespace Jazz2::Editor
 
 		float toolStripWidth = context.Px(ToolStripWidth);
 		float maxPanel = (_compact ? DrawerMaxFraction : 1.0f);
-		float rightWidth = std::min(context.Px(settings.RightPanelWidth), std::round(bounds.W * (_compact ? maxPanel : RightDockMaxFraction)));
-		float pickerWidth = std::min(context.Px(settings.PickerPanelWidth), std::round(bounds.W * (_compact ? maxPanel : PickerDockMaxFraction)));
+		float rightWidth = std::min(context.Px(settings.RightPanelWidth), std::round(area.W * (_compact ? maxPanel : RightDockMaxFraction)));
+		float pickerWidth = std::min(context.Px(settings.PickerPanelWidth), std::round(area.W * (_compact ? maxPanel : PickerDockMaxFraction)));
 		_rightDockWidth = rightWidth;
 		_pickerDockWidth = pickerWidth;
 
-		float top = bounds.Y;
-		_menuBar->Arrange(context, Rectf(bounds.X, top, bounds.W, menuHeight));
+		float top = area.Y;
+		_menuBar->Arrange(context, Rectf(area.X, top, area.W, menuHeight));
 		top += menuHeight;
-		_toolbar->Arrange(context, Rectf(bounds.X, top, bounds.W, toolbarHeight));
+		_toolbar->Arrange(context, Rectf(area.X, top, area.W, toolbarHeight));
 		top += toolbarHeight;
 
-		float bottom = bounds.Y + bounds.H;
-		_statusBar->Arrange(context, Rectf(bounds.X, bottom - statusHeight, bounds.W, statusHeight));
+		float bottom = area.Y + area.H;
+		_statusBar->Arrange(context, Rectf(area.X, bottom - statusHeight, area.W, statusHeight));
 		bottom -= statusHeight;
 
-		float left = bounds.X;
+		float left = area.X;
 		if (_narrow) {
 			// A row above the status bar
-			_toolStrip->Arrange(context, Rectf(bounds.X, bottom - toolStripWidth, bounds.W, toolStripWidth));
+			_toolStrip->Arrange(context, Rectf(area.X, bottom - toolStripWidth, area.W, toolStripWidth));
 			bottom -= toolStripWidth;
 		} else {
 			_toolStrip->Arrange(context, Rectf(left, top, toolStripWidth, bottom - top));
@@ -726,8 +742,8 @@ namespace Jazz2::Editor
 		Rectf pickerDockBounds(left, top, pickerWidth, bottom - top);
 		_pickerFrame->Arrange(context, pickerDockBounds);
 		left += std::round(pickerWidth * _pickerFrame->GetDockedAmount());
-		Rectf rightDockBounds(bounds.X + bounds.W - rightWidth, top, rightWidth, bottom - top);
-		float right = bounds.X + bounds.W - std::round(rightWidth * _rightFrame->GetDockedAmount());
+		Rectf rightDockBounds(area.X + area.W - rightWidth, top, rightWidth, bottom - top);
+		float right = area.X + area.W - std::round(rightWidth * _rightFrame->GetDockedAmount());
 
 		// The list of layers is as high as it was dragged to, the properties take the rest
 		float padding = context.Px(UiTheme::Padding);
@@ -749,11 +765,11 @@ namespace Jazz2::Editor
 		float spacing = context.Px(UiTheme::Spacing);
 		_layersSplitter->Arrange(context, Rectf(layers.X, std::round(layers.Y + layers.H + (spacing - grip) * 0.5f), layers.W, grip));
 
-		// The bar slides in from above the screen as it fades in
-		Vector2f playBarSize = _playBar->Measure(context, Vector2f(bounds.W, bounds.H));
+		// The bar slides in from above the screen as it fades in, to below the edge that may be cut off
+		Vector2f playBarSize = _playBar->Measure(context, Vector2f(area.W, area.H));
 		float playBarEase = 1.0f - (1.0f - _playBarAppear) * (1.0f - _playBarAppear);
-		float playBarY = bounds.Y + context.Px(6.0f) - (1.0f - playBarEase) * (playBarSize.Y + context.Px(6.0f));
-		_playBar->Arrange(context, Rectf(std::round(bounds.X + (bounds.W - playBarSize.X) * 0.5f), std::round(playBarY), playBarSize.X, playBarSize.Y));
+		float playBarY = area.Y + context.Px(6.0f) - (1.0f - playBarEase) * (area.Y - bounds.Y + playBarSize.Y + context.Px(6.0f));
+		_playBar->Arrange(context, Rectf(std::round(area.X + (area.W - playBarSize.X) * 0.5f), std::round(playBarY), playBarSize.X, playBarSize.Y));
 	}
 
 	void EditorShell::Update(float timeMult)
@@ -829,6 +845,26 @@ namespace Jazz2::Editor
 		}
 		painter.PopClip();
 		painter.SetSlot(slot);
+
+		// The edges a display may cut off are filled as the bars are, the level is seen only between the panels
+		if (_safeArea.W < Bounds.W || _safeArea.H < Bounds.H) {
+			// As the bars are, the level shows through a little
+			const Colorf& fill = UiTheme::PanelHeader;
+			float top = _safeArea.Y - Bounds.Y, bottom = Bounds.Y + Bounds.H - (_safeArea.Y + _safeArea.H);
+			float left = _safeArea.X - Bounds.X, right = Bounds.X + Bounds.W - (_safeArea.X + _safeArea.W);
+			if (top > 0.0f) {
+				painter.FillRect(Rectf(Bounds.X, Bounds.Y, Bounds.W, top), fill, UiLayer::Back);
+			}
+			if (bottom > 0.0f) {
+				painter.FillRect(Rectf(Bounds.X, _safeArea.Y + _safeArea.H, Bounds.W, bottom), fill, UiLayer::Back);
+			}
+			if (left > 0.0f) {
+				painter.FillRect(Rectf(Bounds.X, _safeArea.Y, left, _safeArea.H), fill, UiLayer::Back);
+			}
+			if (right > 0.0f) {
+				painter.FillRect(Rectf(_safeArea.X + _safeArea.W, _safeArea.Y, right, _safeArea.H), fill, UiLayer::Back);
+			}
+		}
 
 		// The docked panels, then where a panel being dragged would dock, then the floating panels over them, each in
 		// a slot of its own (see UiSurface::RootSlots), so one doesn't show through another
