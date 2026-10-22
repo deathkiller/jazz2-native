@@ -1,4 +1,5 @@
 program TexturedBackgroundWave;
+variant KEYED;
 
 shader_type canvas_item;
 precision highp;
@@ -18,10 +19,14 @@ uniform vec4 uWave;
 // How far the horizontal and the vertical waves have moved, in periods
 uniform vec2 uWavePhase;
 
+#include "Include/TexturedBackgroundKey.inc"
+
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
 
 void fragment() {
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
 	// The pixel of the texture this pixel of the view shows, the texture repeats
 	vec2 pos = mod(floor(uShift + UV * uViewSize), TEXTURE_SIZE);
 
@@ -31,5 +36,10 @@ void fragment() {
 
 	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	COLOR = vec4(texture(TEXTURE, texturePos).rgb, 1.0);
+#if KEYED
+	COLOR = vec4(texture(TEXTURE, texturePos).rgb, keyedOpacity());
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(texture(TEXTURE, texturePos).rgb * opacity, opacity);
+#endif
 }

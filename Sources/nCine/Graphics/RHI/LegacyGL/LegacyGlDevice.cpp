@@ -526,6 +526,33 @@ namespace nCine::RHI::LegacyGL
 			FlushBatch();
 		}
 
+		/**
+			@brief Submits a triangle strip whose texture coordinates are interpolated in perspective by a q per vertex
+			(see FixedFunctionPass.h)
+
+			The interleaved record of the batch has two texture floats where a homogeneous coordinate needs four, so such a
+			strip goes out in the immediate mode, which takes (s * q, t * q, 0, q) as it is - the texture matrix scales the
+			texel coordinates before the division as it does for the batch.
+		*/
+		void SubmitStripPrimitiveQ(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
+			const float* pq, std::int32_t count, const std::uint32_t* abgr, std::uint32_t flatAbgr, float dx, float dy)
+		{
+			FlushBatch();
+			ApplyDrawState(state);
+			glBegin(GL_TRIANGLE_STRIP);
+			for (std::int32_t i = 0; i < count; i++) {
+				const std::uint32_t color = (abgr != nullptr ? abgr[i] : flatAbgr);
+				glColor4ubv(reinterpret_cast<const GLubyte*>(&color));
+				if (pu != nullptr) {
+					glTexCoord4f(pu[i] * pq[i], pv[i] * pq[i], 0.0f, pq[i]);
+				}
+				glVertex3f(px[i] + dx, py[i] + dy, 0.0f);
+			}
+			glEnd();
+			frameDrawCalls++;
+			frameVertices += std::uint32_t(count);
+		}
+
 		/** @brief Folds a pass descriptor's blend mode and texture function into a copy of the material state */
 		void ApplyPassToState(DrawState& state, const FixedFunctionPass& pass)
 		{
@@ -630,6 +657,9 @@ namespace nCine::RHI::LegacyGL
 		float StripU[MaxStripVertices];
 		float StripV[MaxStripVertices];
 		std::uint32_t StripAbgr[MaxStripVertices];
+		// The q of a strip in perspective (see SetStripVertexQ()), for the next submitted strip only
+		float StripQ[MaxStripVertices];
+		bool StripHasQ = false;
 
 		const float* Color() const { return InstanceColor; }
 		float TexelWidth() const { return TexelW; }
@@ -674,6 +704,13 @@ namespace nCine::RHI::LegacyGL
 		{
 			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
 				StripAbgr[i] = PackAbgr(QuantizeChannel(r), QuantizeChannel(g), QuantizeChannel(b), QuantizeChannel(a));
+			}
+		}
+		void SetStripVertexQ(std::int32_t i, float q)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripQ[i] = q;
+				StripHasQ = true;
 			}
 		}
 
@@ -758,6 +795,8 @@ namespace nCine::RHI::LegacyGL
 		// Textured strip out of the builder scratch: the pass's flat colour over the material state
 		void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
@@ -781,6 +820,11 @@ namespace nCine::RHI::LegacyGL
 			ApplyPassToState(state, effective);
 			const std::uint32_t abgr = PackAbgr(QuantizeChannel(effective.Color[0]), QuantizeChannel(effective.Color[1]),
 				QuantizeChannel(effective.Color[2]), QuantizeChannel(effective.Color[3]));
+			if (hasQ) {
+				SubmitStripPrimitiveQ(state, StripX, StripY, StripU, StripV, StripQ, count, nullptr, abgr,
+					pass.ScreenOffset[0], pass.ScreenOffset[1]);
+				return;
+			}
 			SubmitStripPrimitive(state, StripX, StripY, StripU, StripV, count, nullptr, abgr,
 				pass.ScreenOffset[0], pass.ScreenOffset[1]);
 		}
@@ -791,6 +835,8 @@ namespace nCine::RHI::LegacyGL
 		// texture coordinates with it) is kept for exactly that preset, as on the GX.
 		void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
@@ -802,6 +848,11 @@ namespace nCine::RHI::LegacyGL
 			const bool textured = (state.Texture != 0 && pass.Tev == FixedFunctionPass::TevPreset::TintMix);
 			if (!textured) {
 				state.Texture = 0;
+			}
+			if (hasQ && textured) {
+				SubmitStripPrimitiveQ(state, StripX, StripY, StripU, StripV, StripQ, count, StripAbgr, 0,
+					pass.ScreenOffset[0], pass.ScreenOffset[1]);
+				return;
 			}
 			SubmitStripPrimitive(state, StripX, StripY, (textured ? StripU : nullptr), (textured ? StripV : nullptr),
 				count, StripAbgr, 0, pass.ScreenOffset[0], pass.ScreenOffset[1]);

@@ -64,7 +64,7 @@ namespace Jazz2::Formats
 
 		// The layers the preview draws, in the order the game draws them: by their depth, whatever order the level stores
 		// them in, as an extra layer of MLLE comes after the eight of the original format; the ones of the same depth from
-		// the last one on. Not the hidden ones and the layers of effects (x-ray and blur behind).
+		// the last one on. Not the hidden ones and the layers of effects (x-ray, blur behind and chroma key).
 		SmallVector<std::int32_t, 16> GetDrawnLayers(LevelPreview::ISource& source)
 		{
 			std::int32_t layerCount = source.GetLayerCount();
@@ -74,7 +74,7 @@ namespace Jazz2::Formats
 				const LayerRecord& layer = source.GetLayer(l);
 				auto rendererType = Tiles::LayerRendererType(layer.RendererType);
 				if ((layer.Flags & LayerRecord::Visible) != 0 && rendererType != Tiles::LayerRendererType::XRay &&
-					rendererType != Tiles::LayerRendererType::BlurBehind) {
+					rendererType != Tiles::LayerRendererType::BlurBehind && rendererType != Tiles::LayerRendererType::ChromaKey) {
 					order.push_back(l);
 				}
 			}
@@ -390,6 +390,9 @@ namespace Jazz2::Formats
 				}
 				layerPalette = shiftedPalette;
 			}
+			// A single color layer is the shapes of its tiles in that entry of the palette, as opaque as the layer is
+			const bool singleColor = (rendererType == Tiles::LayerRendererType::SingleColor);
+			const std::uint32_t singleColorRgb = (palette[layer.Color[0]] & 0x00FFFFFFu);
 
 			std::int32_t lastTileIndex = -1;
 			TilePixels tilePixels;
@@ -406,6 +409,9 @@ namespace Jazz2::Formats
 					return;
 				}
 				std::uint32_t color = tilePixels.GetPixel(((px % 32) + 32) % 32, ((py % 32) + 32) % 32, layerPalette);
+				if (singleColor) {
+					color = singleColorRgb | (((color >> 24) * layer.Color[3] / 255) << 24);
+				}
 				if ((tilePixels.Flags & TileRecord::ModifierMask) == TileRecord::ModifierTranslucent) {
 					// As translucent as the game draws them, see Tiles::TileMap::TranslucentTileAlpha
 					color = (color & 0x00FFFFFFu) | (((color >> 24) * 192 / 255) << 24);

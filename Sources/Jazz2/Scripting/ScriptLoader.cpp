@@ -559,6 +559,20 @@ namespace Jazz2::Scripting
 		if (pos < scriptSize && scriptContent[pos] == '{') {
 			pos += 1;
 
+			// Returns the position of the next token that isn't a whitespace or a comment, and its class and length
+			auto nextToken = [this, &scriptContent, scriptSize](std::int32_t from, asETokenClass& tokenClass, std::uint32_t& tokenLength) {
+				tokenClass = asTC_UNKNOWN;
+				tokenLength = 0;
+				while (from < scriptSize) {
+					tokenClass = _engine->ParseToken(&scriptContent[from], scriptSize - from, &tokenLength);
+					if (tokenClass != asTC_COMMENT && tokenClass != asTC_WHITESPACE) {
+						break;
+					}
+					from += tokenLength;
+				}
+				return from;
+			};
+
 			std::int32_t level = 1;
 			while (level > 0 && pos < scriptSize) {
 				asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
@@ -567,6 +581,19 @@ namespace Jazz2::Scripting
 						level++;
 					} else if (scriptContent[pos] == '}') {
 						level--;
+					} else if (MutableStringView(&scriptContent[pos], len) == "const"_s) {
+						// AngelScript before 2.35.0 gave `const auto@ x = y` the type of `y` as it is, a handle to a mutable
+						// object if `y` is one, and scripts of JJ2+ of that time call methods that change the object through
+						// such a handle - without the `const` it's still a handle to a const object if `y` is one
+						asETokenClass t2, t3;
+						std::uint32_t len2, len3;
+						std::int32_t pos2 = nextToken(pos + len, t2, len2);
+						if (t2 == asTC_KEYWORD && MutableStringView(&scriptContent[pos2], len2) == "auto"_s) {
+							std::int32_t pos3 = nextToken(pos2 + len2, t3, len3);
+							if (t3 == asTC_KEYWORD && scriptContent[pos3] == '@') {
+								std::memset(&scriptContent[pos], ' ', len);
+							}
+						}
 					}
 				} else if (t == asTC_IDENTIFIER) {
 					// Convert all length() function calls to virtual properties for JJ2+ backward compatibility

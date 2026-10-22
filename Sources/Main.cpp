@@ -2057,7 +2057,11 @@ void GameEventHandler::ReleasePreviousHandler()
 	// Every place that builds a new handler while the previous one is still alive has to call this: a level
 	// being loaded (SetLevelHandler), a level change (ChangeLevel) and returning to the menu (GoToMainMenu)
 	// all hit the same peak.
-	if (!ReleaseAssetsBeforeLoading || _currentHandler == nullptr) {
+	if (_currentHandler == nullptr) {
+		return;
+	}
+	_currentHandler->OnReplacing();
+	if (!ReleaseAssetsBeforeLoading) {
 		return;
 	}
 

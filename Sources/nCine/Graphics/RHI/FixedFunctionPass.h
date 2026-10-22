@@ -166,6 +166,8 @@ namespace nCine::RHI
 				float TexelWidth() const;            // 1 / texture width, in texture space
 				float TexelHeight() const;           // 1 / texture height
 				bool IsBatched() const;              // whether instances come from InstancesBlock
+				const float* TexRect;                // the instance's texRect (scale and bias of U, then of V) -
+				                                     // the block language's quad_tex_rect() (vec4)
 
 				// The displacement of one texel in the quad's own coordinate space, already converted
 				// per backend (raster space on the PVR, logical pixels on the GX), derived from the
@@ -212,12 +214,26 @@ namespace nCine::RHI
 				// horizon tint) is expressed without a fragment shader. A shaded strip is untextured
 				// unless the pass's TEV preset consumes the texel as well (TevPreset::TintMix), in
 				// which case the strip keeps its texture and its UVs.
+				//
+				// SetStripVertexQ gives a vertex a weight q > 0 its texture coordinates are interpolated
+				// in perspective by - u * q, v * q and q linearly across the screen, the texel taken at
+				// (u * q / q, v * q / q) - so a strip can map a plane seen at an angle exactly (the warp of
+				// the textured background, whose q is the distance from the horizon). Only the ratios of
+				// the q of a strip matter. It holds for the next submitted strip only, which drops it
+				// afterwards; a strip without one is affine as always. A backend that can't divide per
+				// pixel ignores it (the PSP's GE in its through mode) - the blocks of such a backend
+				// don't ask for it.
 				void SetStripVertexPosition(std::int32_t i, float x, float y);
 				void SetStripVertexUv(std::int32_t i, float u, float v);
 				void SetStripVertexColor(std::int32_t i, float r, float g, float b, float a);
+				void SetStripVertexQ(std::int32_t i, float q);
 				void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count);
 				void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count);
 			};
+
+		The block language's strip_clip(vec4) cuts every strip submitted after it to a rectangle of the
+		quad's raster space before it reaches these methods (the generated support code does it, a
+		backend sees only what is left of each strip); a rectangular 4-vertex strip stays one.
 
 		A backend implements it against its own submission machinery (corner synthesis, geometric
 		scissor clipping and palette banks on the PVR; TEV presets, TLUTs and hardware scissor on

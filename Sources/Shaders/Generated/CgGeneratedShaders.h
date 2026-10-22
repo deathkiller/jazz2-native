@@ -5169,6 +5169,334 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
+			{ "SingleColor", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	vPaletteOffset = palOffset;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vPaletteOffset = vPaletteOffset;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vPaletteOffset = _input.vPaletteOffset;
+	COLOR = vColor;
+	float4 src = tex2D(uTexture, vTexCoords);
+	float alpha = src.w;
+	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)" },
+			{ "SingleColor", "USE_PALETTE",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	vPaletteOffset = palOffset;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vPaletteOffset = vPaletteOffset;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTexturePalette : TEXUNIT1;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vPaletteOffset = _input.vPaletteOffset;
+	COLOR = vColor;
+	float4 src = tex2D(uTexture, vTexCoords);
+	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float alpha = tex2D(uTexturePalette, float2(palX, palY)).w * src.w;
+	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)" },
+			{ "BatchedSingleColor", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+#define BATCH_SIZE 585
+
+struct Instance
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform Instance instances[BATCH_SIZE];
+
+static float2 aQuadCorner;
+static float aInstanceIndex;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+	float aInstanceIndex : TEXCOORD1;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	aInstanceIndex = _input.aInstanceIndex;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
+	float4 position = float4(aPosition.x * instances[int(aInstanceIndex)].spriteSize.x, aPosition.y * instances[int(aInstanceIndex)].spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(instances[int(aInstanceIndex)].modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * instances[int(aInstanceIndex)].texRect.x + instances[int(aInstanceIndex)].texRect.y, aPosition.y * instances[int(aInstanceIndex)].texRect.z + instances[int(aInstanceIndex)].texRect.w);
+	vColor = instances[int(aInstanceIndex)].color;
+	vPaletteOffset = instances[int(aInstanceIndex)].palOffset;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vPaletteOffset = vPaletteOffset;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vPaletteOffset = _input.vPaletteOffset;
+	COLOR = vColor;
+	float4 src = tex2D(uTexture, vTexCoords);
+	float alpha = src.w;
+	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)" },
+			{ "BatchedSingleColor", "USE_PALETTE",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+#define BATCH_SIZE 585
+
+struct Instance
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform Instance instances[BATCH_SIZE];
+
+static float2 aQuadCorner;
+static float aInstanceIndex;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+	float aInstanceIndex : TEXCOORD1;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	aInstanceIndex = _input.aInstanceIndex;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
+	float4 position = float4(aPosition.x * instances[int(aInstanceIndex)].spriteSize.x, aPosition.y * instances[int(aInstanceIndex)].spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(instances[int(aInstanceIndex)].modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * instances[int(aInstanceIndex)].texRect.x + instances[int(aInstanceIndex)].texRect.y, aPosition.y * instances[int(aInstanceIndex)].texRect.z + instances[int(aInstanceIndex)].texRect.w);
+	vColor = instances[int(aInstanceIndex)].color;
+	vPaletteOffset = instances[int(aInstanceIndex)].palOffset;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vPaletteOffset = vPaletteOffset;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTexturePalette : TEXUNIT1;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vPaletteOffset = _input.vPaletteOffset;
+	COLOR = vColor;
+	float4 src = tex2D(uTexture, vTexCoords);
+	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float alpha = tex2D(uTexturePalette, float2(palX, palY)).w * src.w;
+	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)" },
 			{ "TexturedBackground", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
@@ -5183,6 +5511,7 @@ uniform float palOffset;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float4 vColor;
 
 struct VsInput
 {
@@ -5193,6 +5522,7 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 VsOutput main(VsInput _input)
@@ -5202,9 +5532,11 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
 	return _output;
 }
 )",
@@ -5213,32 +5545,65 @@ uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
+uniform float4 uHorizonOffset;
+uniform float uModel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
+static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
+
+float3 legacyWarp(float2 uv)
+{
+	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
+	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
+	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
+	float distance_ = 1.3 - fromHorizon;
+	float distancePow15 = distance_ * sqrt(distance_);
+	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
+	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
+	float2 texturePos = float2(uShift.x / 256.0 + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
+	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusWarp(float2 uv)
+{
+	float2 pixel_ = uv * uViewSize - ((float2)0.5);
+	float row_ = pixel_.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
+	float below = step(0.0, row_);
+	float distance_ = abs(row_) + 8.0;
+	float2 texel = float2(uShift.x + (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * 60.0 / distance_, uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
+	float rows = row_ / 141.0;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
+}
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
-	float distance_ = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
-	float distancePow15 = distance_ * sqrt(distance_);
-	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
-	float yShift = vTexCoords.y > 0.5 ? 1.0 : 0.0;
-	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
-	float2 texturePos = float2(uShift.x / 256.0 + (vTexCoords.x - 0.5) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (vTexCoords.y - yShift) * 1.4 * distance_);
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 warp = ((float3)0.0);
+	if (uModel > 0.5) {
+		warp = plusWarp(vTexCoords);
+	} else {
+		warp = legacyWarp(vTexCoords);
+	}
+	float2 texturePos = warp.xy;
 	float4 texColor = tex2D(uTexture, texturePos);
-	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
+	float horizonOpacity = warp.z;
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity)));
-	COLOR.w = 1.0;
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * (1.0 - uHorizonOffset.z))));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
 )" },
@@ -5256,6 +5621,7 @@ uniform float palOffset;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float4 vColor;
 
 struct VsInput
 {
@@ -5266,6 +5632,7 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 VsOutput main(VsInput _input)
@@ -5275,9 +5642,11 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
 	return _output;
 }
 )",
@@ -5286,32 +5655,188 @@ uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
+uniform float4 uHorizonOffset;
+uniform float uModel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
+static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
+
+float3 legacyWarp(float2 uv)
+{
+	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
+	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
+	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
+	float distance_ = 1.3 - fromHorizon;
+	float distancePow15 = distance_ * sqrt(distance_);
+	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
+	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
+	float2 texturePos = float2(uShift.x / 256.0 + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
+	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusWarp(float2 uv)
+{
+	float2 pixel_ = uv * uViewSize - ((float2)0.5);
+	float row_ = pixel_.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
+	float below = step(0.0, row_);
+	float distance_ = abs(row_) + 8.0;
+	float2 texel = float2(uShift.x + (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * 60.0 / distance_, uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
+	float rows = row_ / 141.0;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
+}
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
-	float distance_ = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 warp = ((float3)0.0);
+	if (uModel > 0.5) {
+		warp = plusWarp(vTexCoords);
+	} else {
+		warp = legacyWarp(vTexCoords);
+	}
+	float2 texturePos = warp.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = warp.z;
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * (1.0 - uHorizonOffset.z))));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackground", "KEYED",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uHorizonOffset;
+uniform float uModel;
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+uniform float uOpacity;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float keyedOpacity()
+{
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+}
+
+float3 legacyWarp(float2 uv)
+{
+	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
+	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
+	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
+	float distance_ = 1.3 - fromHorizon;
 	float distancePow15 = distance_ * sqrt(distance_);
 	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
-	float yShift = vTexCoords.y > 0.5 ? 1.0 : 0.0;
 	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
-	float2 texturePos = float2(uShift.x / 256.0 + (vTexCoords.x - 0.5) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (vTexCoords.y - yShift) * 1.4 * distance_);
-	float4 texColor = tex2D(uTexture, texturePos);
+	float2 texturePos = float2(uShift.x / 256.0 + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
 	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusWarp(float2 uv)
+{
+	float2 pixel_ = uv * uViewSize - ((float2)0.5);
+	float row_ = pixel_.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
+	float below = step(0.0, row_);
+	float distance_ = abs(row_) + 8.0;
+	float2 texel = float2(uShift.x + (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * 60.0 / distance_, uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
+	float rows = row_ / 141.0;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 warp = ((float3)0.0);
+	if (uModel > 0.5) {
+		warp = plusWarp(vTexCoords);
+	} else {
+		warp = legacyWarp(vTexCoords);
+	}
+	float2 texturePos = warp.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = warp.z;
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity)));
-	COLOR.w = 1.0;
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * (1.0 - uHorizonOffset.z))));
+	COLOR.w = keyedOpacity();
 	return COLOR;
 }
 )" },
@@ -5329,6 +5854,7 @@ uniform float palOffset;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float4 vColor;
 
 struct VsInput
 {
@@ -5339,6 +5865,7 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 VsOutput main(VsInput _input)
@@ -5348,9 +5875,11 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
 	return _output;
 }
 )",
@@ -5364,29 +5893,33 @@ uniform float4 uCylinder;
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
+static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
-	float fov = uCylinder.w > 0.0 ? 2.0 : 1.0;
-	float repeats = uCylinder.w > 0.0 ? 4.0 : 1.0;
-	float along = (vTexCoords.x - uCylinder.x) * uViewSize.x;
-	float up = (uCylinder.y - vTexCoords.y) * uViewSize.y;
-	float slope = up * fov / (0.5 * uViewSize.y);
-	float angle = atan2(slope, 1.0);
-	float cosAngle = rsqrt(1.0 + slope * slope);
-	float2 texturePos = float2(repeats * along * cosAngle / uViewSize.x + uShift.x / 256.0, repeats * angle * uViewSize.y / (2.0 * fov * uViewSize.x) - uShift.y / 256.0);
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float2 pixel_ = vTexCoords * uViewSize - ((float2)0.5);
+	float row_ = pixel_.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(3.14159265359 * row_ / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	float2 texel = float2(uShift.x * 0.25 + (pixel_.x - uCylinder.x * uViewSize.x) * lerp(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x, uShift.y + 128.0 + 128.0 * halfSize + (pixel_.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y);
+	float rows = row_ / 141.0;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = tex2D(uTexture, texturePos);
-	float fadeOpacity = clamp(1.0 - angle * angle / (0.58 * 0.58), 0.0, 1.0) * 0.75;
-	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fadeOpacity * uCylinder.z)));
-	COLOR.w = 1.0;
+	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fade * uCylinder.z)));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
 )" },
@@ -5404,6 +5937,7 @@ uniform float palOffset;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float4 vColor;
 
 struct VsInput
 {
@@ -5414,6 +5948,7 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 VsOutput main(VsInput _input)
@@ -5423,9 +5958,11 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
 	return _output;
 }
 )",
@@ -5439,29 +5976,129 @@ uniform float4 uCylinder;
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
+static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
-	float fov = uCylinder.w > 0.0 ? 2.0 : 1.0;
-	float repeats = uCylinder.w > 0.0 ? 4.0 : 1.0;
-	float along = (vTexCoords.x - uCylinder.x) * uViewSize.x;
-	float up = (uCylinder.y - vTexCoords.y) * uViewSize.y;
-	float slope = up * fov / (0.5 * uViewSize.y);
-	float angle = atan2(slope, 1.0);
-	float cosAngle = rsqrt(1.0 + slope * slope);
-	float2 texturePos = float2(repeats * along * cosAngle / uViewSize.x + uShift.x / 256.0, repeats * angle * uViewSize.y / (2.0 * fov * uViewSize.x) - uShift.y / 256.0);
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float2 pixel_ = vTexCoords * uViewSize - ((float2)0.5);
+	float row_ = pixel_.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(3.14159265359 * row_ / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	float2 texel = float2(uShift.x * 0.25 + (pixel_.x - uCylinder.x * uViewSize.x) * lerp(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x, uShift.y + 128.0 + 128.0 * halfSize + (pixel_.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y);
+	float rows = row_ / 141.0;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = tex2D(uTexture, texturePos);
-	float fadeOpacity = clamp(1.0 - angle * angle / (0.58 * 0.58), 0.0, 1.0) * 0.75;
-	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fadeOpacity * uCylinder.z)));
-	COLOR.w = 1.0;
+	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fade * uCylinder.z)));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackgroundCylinder", "KEYED",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uCylinder;
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+uniform float uOpacity;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float keyedOpacity()
+{
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float2 pixel_ = vTexCoords * uViewSize - ((float2)0.5);
+	float row_ = pixel_.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(3.14159265359 * row_ / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	float2 texel = float2(uShift.x * 0.25 + (pixel_.x - uCylinder.x * uViewSize.x) * lerp(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x, uShift.y + 128.0 + 128.0 * halfSize + (pixel_.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y);
+	float rows = row_ / 141.0;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
+	float4 texColor = tex2D(uTexture, texturePos);
+	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fade * uCylinder.z)));
+	COLOR.w = keyedOpacity();
 	return COLOR;
 }
 )" },
@@ -5583,6 +6220,7 @@ uniform float palOffset;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float4 vColor;
 
 struct VsInput
 {
@@ -5593,6 +6231,7 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 VsOutput main(VsInput _input)
@@ -5602,9 +6241,11 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
 	return _output;
 }
 )",
@@ -5614,32 +6255,62 @@ uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uTunnel;
+uniform float uModel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
+static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
-float4 main(PsInput _input) : COLOR
+float3 legacyTunnel(float2 uv)
 {
-	vTexCoords = _input.vTexCoords;
-	float2 targetCoord = ((float2)2.0) * vTexCoords - ((float2)2.0) * uTunnel.xy;
+	float2 targetCoord = ((float2)2.0) * uv - ((float2)2.0) * uTunnel.xy;
 	targetCoord.x *= uViewSize.x / uViewSize.y;
 	float distance_ = length(targetCoord);
 	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
 	float depth = 1.0 / distance_ * 1.4;
 	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01 + (uTunnel.w > 0.0 ? depth * 0.5 : 0.0), depth + uShift.y * 0.002);
-	float4 texColor = tex2D(uTexture, texturePos);
 	float horizonOpacity = 1.0 - clamp(0.8 * (distance_ * sqrt(distance_)) + 0.2 * distance_ - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusTunnel(float2 uv)
+{
+	float2 fromCenter = uv * uViewSize - ((float2)0.5) - float2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
+	float logRadius = log2(radius);
+	float2 texel = float2(uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), uShift.y - 256.0 * logRadius);
+	float fade = 87.0 / radius;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = ((float3)0.0);
+	if (uModel > 0.5) {
+		tunnel = plusTunnel(vTexCoords);
+	} else {
+		tunnel = legacyTunnel(vTexCoords);
+	}
+	float2 texturePos = tunnel.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = tunnel.z;
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
 	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * uTunnel.z)));
-	COLOR.w = 1.0;
+	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
 )" },
@@ -5657,6 +6328,7 @@ uniform float palOffset;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float4 vColor;
 
 struct VsInput
 {
@@ -5667,6 +6339,7 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 VsOutput main(VsInput _input)
@@ -5676,9 +6349,11 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
 	return _output;
 }
 )",
@@ -5688,32 +6363,183 @@ uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uTunnel;
+uniform float uModel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
+static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
-float4 main(PsInput _input) : COLOR
+float3 legacyTunnel(float2 uv)
 {
-	vTexCoords = _input.vTexCoords;
-	float2 targetCoord = ((float2)2.0) * vTexCoords - ((float2)2.0) * uTunnel.xy;
+	float2 targetCoord = ((float2)2.0) * uv - ((float2)2.0) * uTunnel.xy;
 	targetCoord.x *= uViewSize.x / uViewSize.y;
 	float distance_ = length(targetCoord);
 	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
 	float depth = 1.0 / distance_ * 1.4;
 	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01 + (uTunnel.w > 0.0 ? depth * 0.5 : 0.0), depth + uShift.y * 0.002);
-	float4 texColor = tex2D(uTexture, texturePos);
 	float horizonOpacity = 1.0 - clamp(0.8 * (distance_ * sqrt(distance_)) + 0.2 * distance_ - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusTunnel(float2 uv)
+{
+	float2 fromCenter = uv * uViewSize - ((float2)0.5) - float2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
+	float logRadius = log2(radius);
+	float2 texel = float2(uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), uShift.y - 256.0 * logRadius);
+	float fade = 87.0 / radius;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = ((float3)0.0);
+	if (uModel > 0.5) {
+		tunnel = plusTunnel(vTexCoords);
+	} else {
+		tunnel = legacyTunnel(vTexCoords);
+	}
+	float2 texturePos = tunnel.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = tunnel.z;
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
 	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * uTunnel.z)));
-	COLOR.w = 1.0;
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackgroundTunnel", "KEYED",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uTunnel;
+uniform float uModel;
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+uniform float uOpacity;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float keyedOpacity()
+{
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+}
+
+float3 legacyTunnel(float2 uv)
+{
+	float2 targetCoord = ((float2)2.0) * uv - ((float2)2.0) * uTunnel.xy;
+	targetCoord.x *= uViewSize.x / uViewSize.y;
+	float distance_ = length(targetCoord);
+	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
+	float depth = 1.0 / distance_ * 1.4;
+	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01 + (uTunnel.w > 0.0 ? depth * 0.5 : 0.0), depth + uShift.y * 0.002);
+	float horizonOpacity = 1.0 - clamp(0.8 * (distance_ * sqrt(distance_)) + 0.2 * distance_ - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusTunnel(float2 uv)
+{
+	float2 fromCenter = uv * uViewSize - ((float2)0.5) - float2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
+	float logRadius = log2(radius);
+	float2 texel = float2(uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), uShift.y - 256.0 * logRadius);
+	float fade = 87.0 / radius;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = ((float3)0.0);
+	if (uModel > 0.5) {
+		tunnel = plusTunnel(vTexCoords);
+	} else {
+		tunnel = legacyTunnel(vTexCoords);
+	}
+	float2 texturePos = tunnel.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = tunnel.z;
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * uTunnel.z)));
+	COLOR.w = keyedOpacity();
 	return COLOR;
 }
 )" },
@@ -5731,6 +6557,7 @@ uniform float palOffset;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float4 vColor;
 
 struct VsInput
 {
@@ -5741,6 +6568,7 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 VsOutput main(VsInput _input)
@@ -5750,9 +6578,11 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
 	return _output;
 }
 )",
@@ -5765,22 +6595,116 @@ uniform float2 uWavePhase;
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
+static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
 };
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
 	float2 pos = (floor(uShift + vTexCoords * uViewSize) - (256.0) * floor((floor(uShift + vTexCoords * uViewSize)) / (256.0)));
 	float2 moved = floor(uWave.xy * float2(cos(6.28318530718 * (pos.y * uWave.z + uWavePhase.x)), sin(6.28318530718 * (pos.x * uWave.w + uWavePhase.y))));
 	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
 	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
-	COLOR = float4(tex2D(uTexture, texturePos).xyz, 1.0);
+	COLOR = float4(tex2D(uTexture, texturePos).xyz * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackgroundWave", "KEYED",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uShift;
+uniform float4 uWave;
+uniform float2 uWavePhase;
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+uniform float uOpacity;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float keyedOpacity()
+{
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float2 pos = (floor(uShift + vTexCoords * uViewSize) - (256.0) * floor((floor(uShift + vTexCoords * uViewSize)) / (256.0)));
+	float2 moved = floor(uWave.xy * float2(cos(6.28318530718 * (pos.y * uWave.z + uWavePhase.x)), sin(6.28318530718 * (pos.x * uWave.w + uWavePhase.y))));
+	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
+	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
+	COLOR = float4(tex2D(uTexture, texturePos).xyz, keyedOpacity());
 	return COLOR;
 }
 )" },
@@ -6093,6 +7017,187 @@ float4 main(PsInput _input) : COLOR
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
 	float3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
 	COLOR = float4(color / max(alpha, 0.0001), alpha * strength);
+	return COLOR;
+}
+)" },
+			{ "TileMapMeshChromaKey", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aPosition;
+static float2 aTexCoords;
+static float4 aColor;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+
+struct VsInput
+{
+	float2 aPosition : TEXCOORD0;
+	float2 aTexCoords : TEXCOORD1;
+	float4 aColor : TEXCOORD2;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aPosition = _input.aPosition;
+	aTexCoords = _input.aTexCoords;
+	aColor = _input.aColor;
+	gl_Position = mul(float4(aPosition.x, aPosition.y, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = aTexCoords;
+	vColor = aColor * color;
+	vPaletteOffset = palOffset;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vPaletteOffset = vPaletteOffset;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vPaletteOffset = _input.vPaletteOffset;
+	float4 src = tex2D(uTexture, vTexCoords);
+	float4 tile = src;
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
+	COLOR = float4(tile.xyz, tile.w * keyed) * vColor;
+	return COLOR;
+}
+)" },
+			{ "TileMapMeshChromaKey", "USE_PALETTE",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+uniform sampler2D uTexturePalette : TEXUNIT1;
+
+static float2 aPosition;
+static float2 aTexCoords;
+static float4 aColor;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+
+struct VsInput
+{
+	float2 aPosition : TEXCOORD0;
+	float2 aTexCoords : TEXCOORD1;
+	float4 aColor : TEXCOORD2;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aPosition = _input.aPosition;
+	aTexCoords = _input.aTexCoords;
+	aColor = _input.aColor;
+	gl_Position = mul(float4(aPosition.x, aPosition.y, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = aTexCoords;
+	vColor = aColor * color;
+	vPaletteOffset = palOffset;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vPaletteOffset = vPaletteOffset;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTexturePalette : TEXUNIT1;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vPaletteOffset = _input.vPaletteOffset;
+	float4 src = tex2D(uTexture, vTexCoords);
+	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float4 paletteColor = tex2D(uTexturePalette, float2(palX, palY));
+	float4 tile = float4(paletteColor.xyz, paletteColor.w * src.w);
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
+	COLOR = float4(tile.xyz, tile.w * keyed) * vColor;
 	return COLOR;
 }
 )" },

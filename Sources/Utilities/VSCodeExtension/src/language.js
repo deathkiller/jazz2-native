@@ -229,7 +229,9 @@ const FIXED_FUNCTION = {
 	stripHelpers: [
 		{ name: 'strip_position', insert: 'strip_position(${1:0}, ${2:vec2(0.0, 0.0)})', detail: 'strip_position(<index>, <vec2>)', doc: 'Writes the position of vertex `index` in the strip being built.' + STRIP_CAPACITY },
 		{ name: 'strip_uv', insert: 'strip_uv(${1:0}, ${2:vec2(0.0, 0.0)})', detail: 'strip_uv(<index>, <vec2>)', doc: 'Writes the texture coordinate of vertex `index`, in the shader\'s own texture space — the backend folds its padded-store scale in.' + STRIP_CAPACITY },
-		{ name: 'strip_color', insert: 'strip_color(${1:0}, ${2:vec4(1.0, 1.0, 1.0, 1.0)})', detail: 'strip_color(<index>, <vec4>)', doc: 'Writes the colour of vertex `index`, which only `submit_strip_shaded` reads.' + STRIP_CAPACITY }
+		{ name: 'strip_color', insert: 'strip_color(${1:0}, ${2:vec4(1.0, 1.0, 1.0, 1.0)})', detail: 'strip_color(<index>, <vec4>)', doc: 'Writes the colour of vertex `index`, which only `submit_strip_shaded` reads.' + STRIP_CAPACITY },
+		{ name: 'strip_q', insert: 'strip_q(${1:0}, ${2:1.0})', detail: 'strip_q(<index>, <float>)', doc: 'Writes the q of vertex `index`: the UVs of the next strip are interpolated in perspective (`u * q`, `v * q` and `q` across the screen, divided per pixel), the UVs given stay the true ones. Only for the strip submitted next; the GE draws it affine.' + STRIP_CAPACITY },
+		{ name: 'strip_clip', insert: 'strip_clip(${1:vec4(0.0, 0.0, 1.0, 1.0)})', detail: 'strip_clip(<vec4>)', doc: 'Cuts every strip submitted after it to the rectangle (min x, min y, max x, max y in screen space), in the generated code: a strip wholly inside goes out as it is, a rectangle stays one, anything else is cut into convex polygons.' }
 	],
 	context: [
 		{ name: 'texel_size', doc: 'The texel step of the bound texture (`vec2`). Sets the `NeedsTexelStep` requirement, so `Dispatch` only computes it for effects that ask.' },
@@ -237,6 +239,7 @@ const FIXED_FUNCTION = {
 		{ name: 'quad_origin', doc: 'The sprite quad\'s origin in screen space (`vec2`). Sets the `NeedsQuadAxes` requirement.' },
 		{ name: 'quad_axis_x', doc: 'The quad\'s X edge vector in screen space (`vec2`). Sets the `NeedsQuadAxes` requirement.' },
 		{ name: 'quad_axis_y', doc: 'The quad\'s Y edge vector in screen space (`vec2`). Sets the `NeedsQuadAxes` requirement.' },
+		{ name: 'quad_tex_rect', doc: 'The instance\'s texRect (`vec4`: scale and bias of U, then of V) - which part of what the shader draws the quad shows.' },
 		// The argument is an IDENTIFIER, not a string literal - the block expression tokenizer has no
 		// string literals at all, so a quoted name is a hard `unexpected token '"'` from the compiler.
 		// That is why these snippets insert a bare name (see the uniform builtins in

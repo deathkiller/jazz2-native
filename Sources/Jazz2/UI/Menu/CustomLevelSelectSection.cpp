@@ -731,6 +731,10 @@ namespace Jazz2::UI::Menu
 		} else if ((flags & LevelFlags::HasMultiplayerSpawnPoints) == LevelFlags::HasMultiplayerSpawnPoints) {
 			level.DisplayName += " [MultiSpawnPoints]"_s;
 		}
+		// The script of a level is the file of the same name next to it, see LevelHandler
+		if (fs::FileExists(String(levelFile.exceptSuffix(".j2l"_s) + ".j2as"_s))) {
+			level.DisplayName += " [Script]"_s;
+		}
 #endif
 
 		PublishItem(Death::move(level));

@@ -1,6 +1,9 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "JJ2PlusDefinitions.h"
+#include "JJ2PlusAnimations.h"
+#include "JJ2PlusEvents.h"
+#include "JJ2PlusObjects.h"
 #include "LevelScriptLoader.h"
 
 #include "../LevelHandler.h"
@@ -9,6 +12,8 @@
 #include "../Actors/Player.h"
 #include "../Compatibility/AnimSetMapping.h"
 #include "../Compatibility/EventConverter.h"
+#include "../Compatibility/JJ2Data.h"
+#include "../Compatibility/JJ2Level.h"
 #include "../Compatibility/JJ2Strings.h"
 #include "../UI/HUD.h"
 #include "../UI/InGameConsole.h"
@@ -17,6 +22,8 @@
 #include "../../nCine/Audio/AudioBufferPlayer.h"
 
 #include "../../nCine/Application.h"
+#include "../../nCine/Graphics/ITextureLoader.h"
+#include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Base/Random.h"
 
 #include <algorithm>
@@ -29,16 +36,29 @@
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStl.h>
+#include <Containers/StringUtils.h>
 
 using namespace Jazz2::Tiles;
 
 namespace Jazz2::Scripting
 {
-	static void Unimplemented(const char* sourceName) {
+	void Unimplemented(const char* sourceName) {
+		const char* sectionName = nullptr;
+		std::int32_t lineNumber = 0;
 		auto ctx = asGetActiveContext();
 		if (ctx != nullptr) {
-			const char* sectionName;
-			std::int32_t lineNumber = ctx->GetLineNumber(0, nullptr, &sectionName);
+			lineNumber = ctx->GetLineNumber(0, nullptr, &sectionName);
+		}
+
+		// Many of them are called every frame, each place in the script is reported only once
+		static HashMap<std::uint64_t, bool> reported;
+		std::uint64_t key = (std::uint64_t(reinterpret_cast<std::uintptr_t>(sourceName)) * 0x9E3779B97F4A7C15ull) ^
+			(std::uint64_t(reinterpret_cast<std::uintptr_t>(sectionName)) * 0xC2B2AE3D27D4EB4Full) ^ std::uint32_t(lineNumber);
+		if (!reported.emplace(key, true).second) {
+			return;
+		}
+
+		if (ctx != nullptr) {
 			LOGW("{} (called from \"{}:{}\")", sourceName, sectionName, lineNumber);
 		} else {
 			LOGW("{}", sourceName);
@@ -53,8 +73,13 @@ namespace Jazz2::Scripting
 
 	// Opens a file requested by a script: tries the converted content first, then the original "Source" directory
 	// (where a level's custom/original files live), so scripts can load files by their original name
-	static std::unique_ptr<Stream> OpenScriptFile(StringView path) {
+	std::unique_ptr<Stream> OpenScriptFile(StringView path) {
 		auto& resolver = ContentResolver::Get();
+		// A file that's only in "Source" isn't looked for in the content, the last place of it is opened without looking
+		// and that logs an error for every file
+		if (resolver.FindContentFile(path).empty() && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), path)))) {
+			return resolver.OpenSourceFile(path);
+		}
 		auto s = resolver.OpenContentFile(path);
 		if (s != nullptr && s->IsValid()) {
 			return s;
@@ -62,10 +87,20 @@ namespace Jazz2::Scripting
 		return resolver.OpenSourceFile(path);
 	}
 
+	// Returns the name of the converted tile set of a file name of the original - the tile sets are converted by their names
+	// in lower case, without the extension (see Compatibility::JJ2Level) - or an empty string if it can't be one
+	static String GetTileSetName(StringView fileName) {
+		String name = StringUtils::lowercase(fileName);
+		if (name.hasSuffix(".j2t"_s)) {
+			name = String(name.exceptSuffix(".j2t"_s));
+		}
+		return (Formats::LevelFile::IsSafeTileSetPath(name) ? name : String());
+	}
+
 	// A filename that came from a script has to stay inside the game's own data directory. `fs::CombinePath()`
 	// normalizes nothing, so without this a downloaded level could read or overwrite any file the process can
 	// open just by prefixing enough `..` segments.
-	static bool IsScriptFileNameSafe(StringView filename) {
+	bool IsScriptFileNameSafe(StringView filename) {
 		if (filename.empty() || fs::IsAbsolutePath(filename)) {
 			return false;
 		}
@@ -123,20 +158,58 @@ namespace Jazz2::Scripting
 
 	// Where a layer of the level is drawn for the view of a player - the layer coordinate at the top left corner of the
 	// view, as jjLAYER::getXPosition() and getYPosition() of JJ2+ return it, so without the pixel every layer that moves
-	// with the level is drawn higher here (see Tiles::LayerDescription::GetDrawOffsets()). The view is the whole one, the
-	// view of a player in a split screen is smaller.
+	// with the level is drawn higher here (see Tiles::LayerDescription::GetDrawOffsets()). The view is that of the player,
+	// smaller in a split screen.
 	static bool GetLayerPositionInView(LevelHandler* levelHandler, Actors::Player* player, std::int32_t layerIndex, Vector2f& result) {
 		auto tileMap = levelHandler->TileMap();
 		const Tiles::LayerDescription* description = (tileMap != nullptr ? tileMap->GetLayerDescription(layerIndex) : nullptr);
 		if (description == nullptr) {
 			return false;
 		}
-		Vector2f center = levelHandler->GetCameraPos(player);
-		Vector2i viewSize = levelHandler->GetViewSize();
-		Rectf view(center.X - viewSize.X * 0.5f, center.Y - viewSize.Y * 0.5f, float(viewSize.X), float(viewSize.Y));
+		Rectf view = levelHandler->GetCameraView(player);
 		Vector2f origin = tileMap->GetGameplayLayerOrigin(layerIndex, view);
 		result = Vector2f(view.X - origin.X, view.Y - origin.Y - (description->SpeedModelY != Tiles::LayerSpeedModel::AlwaysOnTop ? 1.0f : 0.0f));
 		return true;
+	}
+
+	// How text of a size (STRING::Size) is drawn, as JJ2+ draws it - in the small font, in the medium one, or in one about twice
+	// as large, the medium one scaled here; with its spacing, and moved by `OffsetY` so the glyphs are where they are against the
+	// position the script gives there (it puts the small text on it, the larger ones mostly below it) - measured in JJ2+, and
+	// then drawn smaller by `ScriptTextScale`
+	struct ScriptTextStyle {
+		UI::Font* Font;
+		float Scale;
+		float CharSpacing;
+		float LineSpacing;
+		float OffsetY;
+	};
+
+	// The text of scripts is drawn a quarter smaller than in JJ2+, as large as JJ2+ draws it, it looks too big in this game
+	constexpr float ScriptTextScale = 0.75f;
+
+	static ScriptTextStyle GetScriptTextStyle(std::uint32_t size) {
+		auto& resolver = ContentResolver::Get();
+		UI::Font* mediumFont = resolver.GetFont(FontType::Medium);
+		ScriptTextStyle style;
+		switch (size) {
+			case 1:	// SMALL
+				style = { resolver.GetFont(FontType::Small), 1.0f, 1.12f, 1.0f, -13.0f };
+				break;
+			case 2:	// LARGE
+				style = (mediumFont != nullptr
+					? ScriptTextStyle { mediumFont, 1.9f, 1.0f, 1.23f, -13.0f }
+					: ScriptTextStyle { resolver.GetFont(FontType::Small), 2.9f, 1.0f, 1.0f, -13.0f });
+				break;
+			default:
+			case 0:	// MEDIUM
+				style = (mediumFont != nullptr
+					? ScriptTextStyle { mediumFont, 1.0f, 1.0f, 1.23f, -10.0f }
+					: ScriptTextStyle { resolver.GetFont(FontType::Small), 1.6f, 1.0f, 1.0f, -10.0f });
+				break;
+		}
+		style.Scale *= ScriptTextScale;
+		style.OffsetY *= ScriptTextScale;
+		return style;
 	}
 
 	namespace Legacy
@@ -225,31 +298,11 @@ namespace Jazz2::Scripting
 				}
 			}
 
-			// Composite global indices for the animation model. A frame index packs [set | anim | frame] and an
-			// animation index packs [set | anim], so the JJ2+ idioms still work arithmetically:
-			//   jjAnimSets[set].firstAnim + n  -> animation index (set, n)
-			//   jjAnimations[a].firstFrame + f -> frame index (set, anim, f)
-			// set occupies the high bits, animation the middle 10, frame the low 10.
-			static constexpr std::uint32_t AnimFrameIndexBits = 10;	// up to 1024 frames per animation
-			static constexpr std::uint32_t AnimAnimIndexBits = 10;	// up to 1024 animations per set
-			static constexpr std::uint32_t AnimFrameIndexMask = (1u << AnimFrameIndexBits) - 1;
-			static constexpr std::uint32_t AnimAnimIndexMask = (1u << AnimAnimIndexBits) - 1;
-
-			// Decodes a composite global frame index (as produced by jjAnimations[a].firstFrame + f) back to its
-			// graphic resource and local frame number, for the "current frame" canvas draw functions
-			static GenericGraphicResource* ResolveCurFrame(LevelScriptLoader* owner, std::uint32_t sprite, std::int32_t& frameOut) {
-				std::uint32_t globalAnim = (sprite >> AnimFrameIndexBits);
-				frameOut = (std::int32_t)(sprite & AnimFrameIndexMask);
-				std::uint32_t setID = (globalAnim >> AnimAnimIndexBits);
-				std::uint32_t animIdx = (globalAnim & AnimAnimIndexMask);
-				return owner->ResolveSpriteGraphic((std::int32_t)setID, (std::int32_t)animIdx);
-			}
-
 			// Draws a single animation frame of a resolved graphic onto a HUD canvas, following the HUD::DrawElement
-			// pattern. The sprite is anchored at the frame's hotspot, optionally flipped (direction < 0 or negative
-			// scale), scaled and rotated (angle in JJ2 units where 1024 = a full turn). Indexed graphics draw through
-			// the palette-remap shader against the live sprite palette (so they recolor with jjPalette).
-			static void DrawSpriteFrame(UI::HUD* hud, std::uint16_t z, GenericGraphicResource* base, std::int32_t frame,
+			// pattern. The sprite is anchored at the frame's hotspot, optionally flipped (by `SPRITE::Direction` or a
+			// negative scale), scaled and rotated (angle in JJ2 units where 1024 = a full turn). Indexed graphics draw
+			// through the palette-remap shader against the live sprite palette (so they recolor with jjPalette).
+			static void DrawSpriteFrame(UI::Canvas* canvas, std::uint16_t z, GenericGraphicResource* base, std::int32_t frame,
 					float x, float y, std::int8_t direction, float scaleX, float scaleY, std::int32_t angle,
 					std::uint32_t mode, std::uint8_t param) {
 				if (base == nullptr || base->TextureDiffuse == nullptr || base->FrameCount <= 0 || base->FrameConfiguration.X <= 0) {
@@ -261,8 +314,10 @@ namespace Jazz2::Scripting
 					frame = base->FrameCount - 1;
 				}
 
-				bool flipX = (direction < 0);
-				bool flipY = false;
+				// The sign flips horizontally, the next bit flips vertically when it differs from the sign
+				std::uint8_t directionBits = std::uint8_t(direction);
+				bool flipX = ((directionBits & 0x80) != 0);
+				bool flipY = (((directionBits & 0x80) != 0) != ((directionBits & 0x40) != 0));
 				if (scaleX < 0.0f) { flipX = !flipX; scaleX = -scaleX; }
 				if (scaleY < 0.0f) { flipY = true; scaleY = -scaleY; }
 
@@ -285,35 +340,39 @@ namespace Jazz2::Scripting
 				float angleRad = angle * fTwoPi / 1024.0f;
 				// Indexed sprites recolor via the shared sprite palette (offset 0); pre-baked RGBA sprites use -1
 				std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? 0 : -1);
-				hud->DrawTexture(*base->TextureDiffuse.get(), pos, z, size, texCoords, color,
+				canvas->DrawTexture(*base->TextureDiffuse.get(), pos, z, size, texCoords, color,
 					mode == spriteType_BLENDLIGHTEN, angleRad, paletteOffset);
 			}
 
 			// JJ2+ names a character by its animation set (CHAR::Char), not by a player type - CHAR::BIRD is the set's
 			// own and CHAR::BIRD2 borrows Chuck's. Returns PlayerType::None for a set that isn't a character.
 			static PlayerType CharToPlayerType(std::uint32_t character) {
-				switch (character) {
-					case mJAZZ: return PlayerType::Jazz;
-					case mSPAZ: return PlayerType::Spaz;
-					case mLORI: return PlayerType::Lori;
-					case mFROG: return PlayerType::Frog;
-					case mBIRD: return PlayerType::Bird;
-					case mCHUCK: return PlayerType::Bird2;
-					default: return PlayerType::None;
-				}
+				// The set IDs depend on the version of the game (see AnimationTables)
+				bool isTSF = ScriptLoader::FromActiveContext<LevelScriptLoader>()->IsTSF();
+				std::int32_t setID = std::int32_t(character);
+				if (setID == AnimationTables::GetSetID(mJAZZ, isTSF)) return PlayerType::Jazz;
+				if (setID == AnimationTables::GetSetID(mSPAZ, isTSF)) return PlayerType::Spaz;
+				if (setID == AnimationTables::GetSetID(mLORI, isTSF)) return PlayerType::Lori;
+				if (setID == AnimationTables::GetSetID(mFROG, isTSF)) return PlayerType::Frog;
+				if (setID == AnimationTables::GetSetID(mBIRD, isTSF)) return PlayerType::Bird;
+				if (setID == AnimationTables::GetSetID(mCHUCK, isTSF)) return PlayerType::Bird2;
+				return PlayerType::None;
 			}
 
 			// The other direction, for what a script reads back
 			static std::uint32_t PlayerTypeToChar(PlayerType playerType) {
+				bool isTSF = ScriptLoader::FromActiveContext<LevelScriptLoader>()->IsTSF();
+				anim set;
 				switch (playerType) {
 					default:
-					case PlayerType::Jazz: return mJAZZ;
-					case PlayerType::Spaz: return mSPAZ;
-					case PlayerType::Lori: return mLORI;
-					case PlayerType::Frog: return mFROG;
-					case PlayerType::Bird: return mBIRD;
-					case PlayerType::Bird2: return mCHUCK;
+					case PlayerType::Jazz: set = mJAZZ; break;
+					case PlayerType::Spaz: set = mSPAZ; break;
+					case PlayerType::Lori: set = mLORI; break;
+					case PlayerType::Frog: set = mFROG; break;
+					case PlayerType::Bird: set = mBIRD; break;
+					case PlayerType::Bird2: set = mCHUCK; break;
 				}
+				return std::uint32_t(AnimationTables::GetSetID(set, isTSF));
 			}
 		}
 
@@ -345,22 +404,22 @@ namespace Jazz2::Scripting
 				return _obj;
 			}
 
-			// Configures the actor renderer to display the given JJ2 animation set + animation (resolved through the
-			// anim mapping), mirroring ActorBase::RefreshAnimation but from a raw graphic resource. The renderer then
-			// auto-advances and draws the animation in-world at the actor's position.
-			void ApplyAnimation(std::int32_t setID, std::int32_t animation)
+			// Configures the actor renderer to display an animation of jjAnimations, mirroring ActorBase::RefreshAnimation
+			// but from a raw graphic resource. The renderer then auto-advances and draws the animation in-world at the
+			// actor's position.
+			void ApplyAnimation(std::uint32_t animIndex)
 			{
 				// Behaviors often call determineCurAnim every frame; only rebuild the renderer when it actually changes
-				if (setID == _lastSetID && animation == _lastAnimation) {
+				if (animIndex == _lastAnimation) {
 					return;
 				}
 
-				auto* base = _levelScripts->ResolveSpriteGraphic(setID, animation);
-				if (base == nullptr || base->TextureDiffuse == nullptr || base->FrameConfiguration.X <= 0) {
+				std::int32_t cellCount = 0;
+				auto* base = _levelScripts->GetAnimationTables().ResolveAnimation(animIndex, cellCount);
+				if (base == nullptr || base->TextureDiffuse == nullptr || base->FrameConfiguration.X <= 0 || cellCount <= 0) {
 					return;
 				}
-				_lastSetID = setID;
-				_lastAnimation = animation;
+				_lastAnimation = animIndex;
 
 				// No GL renderer to configure on a dedicated/headless server
 				if (ContentResolver::Get().IsHeadless()) {
@@ -371,7 +430,7 @@ namespace Jazz2::Scripting
 				_renderer.FrameSource = base;
 				_renderer.FrameDimensions = base->FrameDimensions;
 				_renderer.FirstFrame = 0;
-				_renderer.FrameCount = base->FrameCount;
+				_renderer.FrameCount = cellCount;
 				_renderer.AnimDuration = base->AnimDuration;
 				_renderer.LoopMode = AnimationLoopMode::Loop;
 				_renderer.AnimTime = 0.0f;
@@ -406,54 +465,54 @@ namespace Jazz2::Scripting
 
 			void OnUpdate(float timeMult) override
 			{
-				// JJ2-style automatic motion, so a behavior can simply set speeds/acceleration
-				_obj->xSpeed += _obj->xAcc * timeMult;
-				_obj->ySpeed += _obj->yAcc * timeMult;
-				_obj->xPos += _obj->xSpeed * timeMult;
-				_obj->yPos += _obj->ySpeed * timeMult;
-
-				asIScriptFunction* behaviorFunc = _obj->behavior;
-				asIScriptObject* behaviorObj = _obj->behavior;
-				if (behaviorFunc != nullptr || behaviorObj != nullptr) {
-					asIScriptEngine* engine = _levelScripts->GetEngine();
-					asIScriptContext* ctx = engine->RequestContext();
-					if (behaviorObj != nullptr) {
-						asIScriptFunction* onBehave = behaviorObj->GetObjectType()->GetMethodByDecl("void onBehave(jjOBJ@ obj)");
-						if (onBehave != nullptr) {
-							ctx->Prepare(onBehave);
-							ctx->SetObject(behaviorObj);
-							ctx->SetArgObject(0, _obj);
-							ExecuteBehavior(ctx);
-						}
-					} else {
-						ctx->Prepare(behaviorFunc);
-						ctx->SetArgObject(0, _obj);
-						ExecuteBehavior(ctx);
+				// A behavior of the script moves the object itself (and counts its `age`), a behavior of the game that
+				// this object can't run at least moves it by its speed
+				// The behaviors of JJ2+ count in ticks, 70 of them in a second whatever the frame rate is, a few are caught up
+				// after a slow frame (see ScriptObjectHost::OnUpdate())
+				constexpr std::int32_t MaxTicksPerFrame = 4;
+				std::int32_t currentTick = _levelScripts->GetGameTick();
+				if (_nextTick < 0 || currentTick - _nextTick >= MaxTicksPerFrame) {
+					_nextTick = currentTick;
+				}
+				while (_nextTick <= currentTick) {
+					_nextTick++;
+					// A copy keeps the behavior alive while it runs, it may replace itself
+					jjBEHAVIOR behavior = _obj->behavior;
+					_hasScriptBehavior = ScriptObjectHost::CallScriptBehavior(_levelScripts, *_obj, behavior);
+					if (!_hasScriptBehavior) {
+						// In units of the 60 frames in a second, as a tick is
+						constexpr float TickTimeMult = 60.0f / 70.0f;
+						_obj->xSpeed += _obj->xAcc * TickTimeMult;
+						_obj->ySpeed += _obj->yAcc * TickTimeMult;
+						_obj->xPos += _obj->xSpeed * TickTimeMult;
+						_obj->yPos += _obj->ySpeed * TickTimeMult;
 					}
-					engine->ReturnContext(ctx);
 				}
 
-				// Apply the (possibly script-adjusted) position/facing to the actor and expose the current frame
+				// Apply the (possibly script-adjusted) position/facing to the actor
 				MoveInstantly(Vector2f(_obj->xPos, _obj->yPos), Actors::MoveType::Absolute | Actors::MoveType::Force);
 				SetFacingLeft(_obj->direction < 0);
-				_obj->curFrame = (std::uint32_t)_renderer.CurrentFrame;
-				_obj->age++;
+				// A behavior of the script draws the frame it chooses (see jjOBJ::draw()), without one the animation plays by
+				// itself and the current frame is the one it shows
+				std::uint32_t frameCount, firstFrame;
+				if (!_hasScriptBehavior && _lastAnimation != UINT32_MAX &&
+					_levelScripts->GetAnimationTables().GetAnimationFrames(_lastAnimation, frameCount, firstFrame) && frameCount > 0) {
+					_obj->curFrame = firstFrame + std::uint32_t(_renderer.CurrentFrame) % frameCount;
+				}
+			}
+
+			bool OnDraw(RenderQueue& renderQueue) override
+			{
+				return _hasScriptBehavior;
 			}
 
 		private:
 			LevelScriptLoader* _levelScripts;
 			jjOBJ* _obj;
-			std::int32_t _lastSetID = -1;
-			std::int32_t _lastAnimation = -1;
-
-			static void ExecuteBehavior(asIScriptContext* ctx)
-			{
-				std::int32_t r = ctx->Execute();
-				if (r == asEXECUTION_EXCEPTION) {
-					LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
-						ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
-				}
-			}
+			std::uint32_t _lastAnimation = UINT32_MAX;
+			// The next tick of the scripts the behavior runs in, -1 before the first one
+			std::int32_t _nextTick = -1;
+			bool _hasScriptBehavior = false;
 		};
 
 		void jjTEXTAPPEARANCE::constructor(void* self) {
@@ -472,6 +531,9 @@ namespace Jazz2::Scripting
 		}
 		void jjPALCOLOR::CreateFromRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue, void* self) {
 			new(self) jjPALCOLOR{red, green, blue};
+		}
+		void jjPALCOLOR::CreateFromRgba(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t alpha, void* self) {
+			new(self) jjPALCOLOR{red, green, blue, alpha};
 		}
 
 		std::uint8_t jjPALCOLOR::getHue() {
@@ -519,17 +581,17 @@ namespace Jazz2::Scripting
 			red = other.red;
 			green = other.green;
 			blue = other.blue;
+			// The colors of a jjCOLORMAP rely on it, a palette's alpha is never read
+			alpha = other.alpha;
 			return *this;
 		}
 		bool jjPALCOLOR::operator==(const jjPALCOLOR& other) {
-			noop(); return (red == other.red && green == other.green && blue == other.blue);
+			return (red == other.red && green == other.green && blue == other.blue);
 		}
 
 		jjPAL::jjPAL() : _refCount(1), _palette{} {
-			noop();
 		}
 		jjPAL::~jjPAL() {
-			noop();
 		}
 
 		jjPAL* jjPAL::Create() {
@@ -596,28 +658,64 @@ namespace Jazz2::Scripting
 
 			// Keep the script-visible current palette (jjPalette) in sync with what was applied
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			if (owner != nullptr && &owner->jjPalette != this) {
-				owner->jjPalette = *this;
+			if (owner != nullptr) {
+				if (&owner->jjPalette != this) {
+					owner->jjPalette = *this;
+				}
+				owner->GetAnimationTables().OnPaletteChanged();
 			}
 		}
 		bool jjPAL::load(const String& filename) {
+			if (StringUtils::lowercase(filename).hasSuffix(".j2t"_s)) {
+				// The palette of a tile set, the converted one has it as the original
+				String name = GetTileSetName(filename);
+				std::unique_ptr<Stream> s = (!name.empty() ? ContentResolver::Get().OpenTileSetFile(name) : nullptr);
+				std::uint32_t palette[256];
+				if (s == nullptr || !Formats::TileSetFile::ReadPalette(*s, palette)) {
+					return false;
+				}
+				for (std::int32_t i = 0; i < 256; i++) {
+					_palette[i].red = std::uint8_t(palette[i]);
+					_palette[i].green = std::uint8_t(palette[i] >> 8);
+					_palette[i].blue = std::uint8_t(palette[i] >> 16);
+				}
+				return true;
+			}
 
 			auto stream = OpenScriptFile(filename);
 			if (stream == nullptr || !stream->IsValid()) {
 				return false;
 			}
 
-			// Like the original, the raw bytes of the file are interpreted as a sequence of RGB triples (so any file
-			// "loads", but non-palette files produce garbage colors). Reads up to 256 entries; any remainder is left
-			// unchanged. Index 0 stays as-is so it can keep acting as the transparent color.
-			std::uint8_t rgb[3];
-			for (std::int32_t i = 0; i < 256; i++) {
-				if (stream->Read(rgb, sizeof(rgb)) != (std::int64_t)sizeof(rgb)) {
-					break;
-				}
-				_palette[i].red = rgb[0];
-				_palette[i].green = rgb[1];
-				_palette[i].blue = rgb[2];
+			// No palette file is longer than a RIFF one, which is a palette of Windows in a chunk
+			std::uint8_t data[1056];
+			std::int64_t size = stream->Read(data, sizeof(data));
+			std::int64_t offset = 0;
+			if (size >= 20 && std::memcmp(data, "RIFF", 4) == 0 && std::memcmp(data + 8, "PAL data", 8) == 0) {
+				offset = 20;
+			}
+
+			const std::uint8_t* entries;
+			std::int64_t count, stride;
+			if (size >= offset + 4 && data[offset] == 0x00 && data[offset + 1] == 0x03) {
+				// A palette of Windows (LOGPALETTE), as JJ2+ saves it - version 0x300 and the number of entries, then red,
+				// green, blue and flags of each
+				entries = data + offset + 4;
+				stride = 4;
+				count = std::min<std::int64_t>(data[offset + 2] | (data[offset + 3] << 8), (size - offset - 4) / stride);
+			} else {
+				// Anything else is taken as red, green and blue of each entry
+				entries = data;
+				stride = 3;
+				count = size / stride;
+			}
+
+			// The entries the file doesn't have are left as they are
+			count = std::min<std::int64_t>(count, 256);
+			for (std::int64_t i = 0; i < count; i++) {
+				_palette[i].red = entries[i * stride];
+				_palette[i].green = entries[i * stride + 1];
+				_palette[i].blue = entries[i * stride + 2];
 			}
 			return true;
 		}
@@ -676,6 +774,24 @@ namespace Jazz2::Scripting
 			std::int32_t bestIndex = 0;
 			std::int32_t bestDistance = INT32_MAX;
 			for (std::int32_t i = 0; i < 256; i++) {
+				std::int32_t dr = (std::int32_t)_palette[i].red - color.red;
+				std::int32_t dg = (std::int32_t)_palette[i].green - color.green;
+				std::int32_t db = (std::int32_t)_palette[i].blue - color.blue;
+				std::int32_t distance = dr * dr + dg * dg + db * db;
+				if (distance < bestDistance) {
+					bestDistance = distance;
+					bestIndex = i;
+					if (distance == 0) {
+						break;
+					}
+				}
+			}
+			return (std::uint8_t)bestIndex;
+		}
+		std::uint8_t jjPAL::FindNearestOpaqueColor(const jjPALCOLOR& color) const {
+			std::int32_t bestIndex = 1;
+			std::int32_t bestDistance = INT32_MAX;
+			for (std::int32_t i = 1; i < 256; i++) {
 				std::int32_t dr = (std::int32_t)_palette[i].red - color.red;
 				std::int32_t dg = (std::int32_t)_palette[i].green - color.green;
 				std::int32_t db = (std::int32_t)_palette[i].blue - color.blue;
@@ -1150,235 +1266,84 @@ namespace Jazz2::Scripting
 			return object;
 		}
 
-		jjANIMFRAME::jjANIMFRAME() : _refCount(1) {
-			noop();
-		}
-		jjANIMFRAME::~jjANIMFRAME() {
-			noop();
-		}
-
-		void jjANIMFRAME::AddRef()
+		bool ScriptWorldCanvas::OnDraw(RenderQueue& renderQueue)
 		{
-			_refCount++;
-		}
+			Canvas::OnDraw(renderQueue);
 
-		void jjANIMFRAME::Release()
-		{
-			if (--_refCount == 0) {
-				this->~jjANIMFRAME();
-				asFreeMem(this);
+			for (const SolidDraw& draw : _solids) {
+				Colorf color = PaletteIndexToColor(draw.Color, SpriteModeToAlpha(draw.Mode, draw.Param));
+				DrawSolid(Vector2f(draw.X, draw.Y), draw.Z, Vector2f(draw.Width, draw.Height), color, draw.Mode == spriteType_BLENDLIGHTEN);
 			}
-		}
-
-		// Assignment operator
-		jjANIMFRAME& jjANIMFRAME::operator=(const jjANIMFRAME& o)
-		{
-			// Copy only the content, not the script proxy class
-			//_value = o._value;
-			return *this;
-		}
-
-		jjANIMFRAME* jjANIMFRAME::get_jjAnimFrames(std::uint32_t index) {
-			void* mem = asAllocMem(sizeof(jjANIMFRAME));
-			auto* frame = new(mem) jjANIMFRAME();
-
-			// Decode the composite frame index back to (set, animation) and resolve the graphic. The engine stores a
-			// single hotspot/coldspot/gunspot per animation, so all frames of an animation report the same spots.
-			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			std::uint32_t globalAnim = (index >> AnimFrameIndexBits);
-			std::uint32_t setID = (globalAnim >> AnimAnimIndexBits);
-			std::uint32_t animIdx = (globalAnim & AnimAnimIndexMask);
-			auto* base = owner->ResolveSpriteGraphic((std::int32_t)setID, (std::int32_t)animIdx);
-			if (base != nullptr) {
-				// Every spot is stored negated and shifted by the margin the importer put around the frame, so the
-				// value the original JJ2 would have reported is recovered as (FrameBorder - engineSpot)
-				frame->width = (std::int16_t)base->FrameDimensions.X;
-				frame->height = (std::int16_t)base->FrameDimensions.Y;
-				frame->hotSpotX = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Hotspot.X);
-				frame->hotSpotY = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Hotspot.Y);
-				if (base->Coldspot.X != ContentResolver::InvalidValue) {
-					frame->coldSpotX = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Coldspot.X);
-					frame->coldSpotY = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Coldspot.Y);
-				}
-				if (base->Gunspot.X != ContentResolver::InvalidValue) {
-					frame->gunSpotX = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Gunspot.X);
-					frame->gunSpotY = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Gunspot.Y);
-				}
+			for (const SpriteDraw& draw : _sprites) {
+				DrawSpriteFrame(this, draw.Z, draw.Graphics, draw.Cell, draw.X, draw.Y, draw.Direction, draw.ScaleX, draw.ScaleY,
+					draw.Angle, draw.Mode, draw.Param);
 			}
-			return frame;
+			return true;
 		}
 
-		bool jjANIMFRAME::get_transparent() const {
-			noop();
-			return false;
-		}
-		bool jjANIMFRAME::set_transparent(bool value) const {
-			noop();
-			return false;
-		}
-		bool jjANIMFRAME::doesCollide(std::int32_t xPos, std::int32_t yPos, std::int32_t direction, const jjANIMFRAME* frame2, std::int32_t xPos2, std::int32_t yPos2, std::int32_t direction2, bool always) const {
-			noop();
-			return false;
-		}
-
-		jjANIMATION::jjANIMATION(std::uint32_t index) : _refCount(1), _index(index) {
-			noop();
-		}
-		jjANIMATION::~jjANIMATION() {
-			noop();
-		}
-
-		void jjANIMATION::AddRef()
+		jjCANVAS::jjCANVAS(UI::HUD* hud, const Rectf& view, std::uint16_t* drawCount)
+			: Hud(hud), View(view), DrawCount(drawCount)
 		{
-			_refCount++;
 		}
 
-		void jjANIMATION::Release()
-		{
-			if (--_refCount == 0) {
-				this->~jjANIMATION();
-				asFreeMem(this);
-			}
-		}
-
-		// Assignment operator
-		jjANIMATION& jjANIMATION::operator=(const jjANIMATION& o)
-		{
-			// Copy only the content, not the script proxy class
-			//_value = o._value;
-			return *this;
-		}
-
-		bool jjANIMATION::save(const String& filename, const jjPAL& palette) const {
-			noop();
-			return false;
-		}
-		bool jjANIMATION::load(const String& filename, std::int32_t hotSpotX, std::int32_t hotSpotY, std::int32_t coldSpotYOffset, std::int32_t firstFrameToOverwrite) {
-			noop();
-			return false;
-		}
-
-		jjANIMATION* jjANIMATION::get_jjAnimations(std::uint32_t index) {
-			void* mem = asAllocMem(sizeof(jjANIMATION));
-			auto* anim = new(mem) jjANIMATION(index);
-
-			// Decode the composite animation index to (set, animation), resolve the graphic and fill frame count + fps
-			// (the converter stores AnimDuration = 5 / FrameRate, so the original fps is 5 / AnimDuration)
-			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			std::uint32_t setID = (index >> AnimAnimIndexBits);
-			std::uint32_t animIdx = (index & AnimAnimIndexMask);
-			auto* base = owner->ResolveSpriteGraphic((std::int32_t)setID, (std::int32_t)animIdx);
-			if (base != nullptr) {
-				anim->frameCount = (std::uint16_t)base->FrameCount;
-				anim->fps = (base->AnimDuration > 0.0f ? (std::int16_t)(5.0f / base->AnimDuration + 0.5f) : 0);
-			}
-			return anim;
-		}
-
-		std::uint32_t jjANIMATION::get_firstFrame() const {
-			// First frame's composite global index for this animation
-			return (_index << AnimFrameIndexBits);
-		}
-		std::uint32_t jjANIMATION::set_firstFrame(std::uint32_t index) const {
-			// The first frame is derived from the animation's global index, so it can't be reassigned here
-			noop();
-			return (_index << AnimFrameIndexBits);
-		}
-
-		std::uint32_t jjANIMATION::getAnimFirstFrame() {
-			return (_index << AnimFrameIndexBits);
-		}
-
-		jjANIMSET::jjANIMSET(std::uint32_t index) : _refCount(1), _index(index) {
-			noop();
-		}
-		jjANIMSET::~jjANIMSET() {
-			noop();
-		}
-
-		void jjANIMSET::AddRef()
-		{
-			_refCount++;
-		}
-
-		void jjANIMSET::Release()
-		{
-			if (--_refCount == 0) {
-				this->~jjANIMSET();
-				asFreeMem(this);
-			}
-		}
-
-		jjANIMSET* jjANIMSET::get_jjAnimSets(std::uint32_t index) {
-			void* mem = asAllocMem(sizeof(jjANIMSET));
-			auto* set = new(mem) jjANIMSET(index);
-			// First animation's composite global index for this set (see the AnimAnimIndexBits packing scheme)
-			set->firstAnim = (index << AnimAnimIndexBits);
-			return set;
-		}
-
-		std::uint32_t jjANIMSET::convertAnimSetToUint() {
-			return _index;
-		}
-
-		jjANIMSET* jjANIMSET::load(std::uint32_t fileSetID, const String& filename, std::int32_t firstAnimToOverwrite, std::int32_t firstFrameToOverwrite) {
-			noop();
-			return this;
-		}
-		jjANIMSET* jjANIMSET::allocate(const CScriptArray& frameCounts) {
-			noop();
-			return this;
-		}
-
-		jjCANVAS::jjCANVAS(UI::HUD* hud, const Rectf& view)
-			: Hud(hud), View(view)
-		{
+		std::uint16_t jjCANVAS::NextLayer() {
+			// Commands of the same layer are drawn in no particular order, so every draw gets a layer of its own - from the
+			// main layer of the HUD up to just below its font layer, the draws after that stay on the topmost one
+			constexpr std::uint16_t MaxDraws = UI::HUD::FontLayer - UI::HUD::MainLayer - 1;
+			std::uint16_t index = (DrawCount != nullptr ? std::min<std::uint16_t>((*DrawCount)++, MaxDraws) : 0);
+			return std::uint16_t(UI::HUD::MainLayer + index);
 		}
 
 		void jjCANVAS::DrawPixel(std::int32_t xPixel, int32_t yPixel, std::uint8_t color, std::uint32_t mode, std::uint8_t param) {
 			Colorf c = PaletteIndexToColor(color, SpriteModeToAlpha(mode, param));
-			Hud->DrawSolid(Vector2f((float)xPixel, (float)yPixel), UI::HUD::MainLayer, Vector2f(1.0f, 1.0f), c,
+			Hud->DrawSolid(Vector2f((float)xPixel, (float)yPixel), NextLayer(), Vector2f(1.0f, 1.0f), c,
 				mode == spriteType_BLENDLIGHTEN);
 		}
 		void jjCANVAS::DrawRectangle(std::int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, std::uint8_t color, std::uint32_t mode, std::uint8_t param) {
 			Colorf c = PaletteIndexToColor(color, SpriteModeToAlpha(mode, param));
-			Hud->DrawSolid(Vector2f((float)xPixel, (float)yPixel), UI::HUD::MainLayer, Vector2f((float)width, (float)height), c,
+			Hud->DrawSolid(Vector2f((float)xPixel, (float)yPixel), NextLayer(), Vector2f((float)width, (float)height), c,
 				mode == spriteType_BLENDLIGHTEN);
 		}
 		void jjCANVAS::DrawSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, int8_t direction, std::uint32_t mode, std::uint8_t param) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			DrawSpriteFrame(Hud, UI::HUD::MainLayer, owner->ResolveSpriteGraphic(setID, animation), frame,
+			std::int32_t cell = 0;
+			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+			DrawSpriteFrame(Hud, NextLayer(), base, cell,
 				(float)xPixel, (float)yPixel, direction, 1.0f, 1.0f, 0, mode, param);
 		}
 		void jjCANVAS::DrawCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int8_t direction, std::uint32_t mode, std::uint8_t param) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			std::int32_t frame = 0;
-			auto* base = ResolveCurFrame(owner, sprite, frame);
-			DrawSpriteFrame(Hud, UI::HUD::MainLayer, base, frame,
+			std::int32_t cell = 0;
+			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+			DrawSpriteFrame(Hud, NextLayer(), base, cell,
 				(float)xPixel, (float)yPixel, direction, 1.0f, 1.0f, 0, mode, param);
 		}
 		void jjCANVAS::DrawResizedSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, std::uint32_t mode, std::uint8_t param) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			DrawSpriteFrame(Hud, UI::HUD::MainLayer, owner->ResolveSpriteGraphic(setID, animation), frame,
+			std::int32_t cell = 0;
+			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+			DrawSpriteFrame(Hud, NextLayer(), base, cell,
 				(float)xPixel, (float)yPixel, 1, xScale, yScale, 0, mode, param);
 		}
 		void jjCANVAS::DrawResizedCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, float xScale, float yScale, std::uint32_t mode, std::uint8_t param) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			std::int32_t frame = 0;
-			auto* base = ResolveCurFrame(owner, sprite, frame);
-			DrawSpriteFrame(Hud, UI::HUD::MainLayer, base, frame,
+			std::int32_t cell = 0;
+			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+			DrawSpriteFrame(Hud, NextLayer(), base, cell,
 				(float)xPixel, (float)yPixel, 1, xScale, yScale, 0, mode, param);
 		}
 		void jjCANVAS::DrawTransformedSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, int32_t angle, float xScale, float yScale, std::uint32_t mode, std::uint8_t param) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			DrawSpriteFrame(Hud, UI::HUD::MainLayer, owner->ResolveSpriteGraphic(setID, animation), frame,
+			std::int32_t cell = 0;
+			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+			DrawSpriteFrame(Hud, NextLayer(), base, cell,
 				(float)xPixel, (float)yPixel, 1, xScale, yScale, angle, mode, param);
 		}
 		void jjCANVAS::DrawTransformedCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int32_t angle, float xScale, float yScale, std::uint32_t mode, std::uint8_t param) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			std::int32_t frame = 0;
-			auto* base = ResolveCurFrame(owner, sprite, frame);
-			DrawSpriteFrame(Hud, UI::HUD::MainLayer, base, frame,
+			std::int32_t cell = 0;
+			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+			DrawSpriteFrame(Hud, NextLayer(), base, cell,
 				(float)xPixel, (float)yPixel, 1, xScale, yScale, angle, mode, param);
 		}
 		void jjCANVAS::DrawSwingingVine(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int32_t length, int32_t curvature, std::uint32_t mode, std::uint8_t param) {
@@ -1388,50 +1353,40 @@ namespace Jazz2::Scripting
 		void jjCANVAS::ExternalDrawTile(std::int32_t xPixel, int32_t yPixel, std::uint16_t tile, std::uint32_t tileQuadrant) {
 			noop();
 		}
-		void jjCANVAS::DrawTextBasicSize(std::int32_t xPixel, int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param) {
-			float scale;
-			switch (size) {
-				case 1:	// SMALL
-					scale = 0.6f;
-					break;
-				case 2:	// LARGE
-					scale = 1.1f;
-					break;
+		// The color of text drawn in a sprite mode, the font is drawn in its own colors only in the ordinary modes
+		static Colorf GetTextColor(std::uint32_t mode, std::uint8_t param) {
+			switch (mode) {
+				case spriteType_TRANSLUCENT:
+				case spriteType_TRANSLUCENTTILE:
+					return UI::Font::TransparentDefaultColor;
+				case spriteType_BLENDNORMAL: {
+					Colorf color = UI::Font::DefaultColor;
+					color.A = param / 255.0f;
+					return color;
+				}
+				case spriteType_SINGLECOLOR:
+					// Black is drawn as the shadow of text, as the shadows scripts draw with it are
+					return PaletteIndexToColor(param, 1.0f);
+				case spriteType_SHADOW:
+					return Colorf(0.0f, 0.0f, 0.0f, 0.5f);
 				default:
-				case 0:	// MEDIUM
-					scale = 0.8f;
-					break;
+					return UI::Font::DefaultColor;
 			}
+		}
 
+		void jjCANVAS::DrawTextBasicSize(std::int32_t xPixel, int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param) {
+			ScriptTextStyle style = GetScriptTextStyle(size);
+			if (style.Font == nullptr) {
+				return;
+			}
 			std::int32_t charOffset = 0;
 			auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
-			Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, UI::HUD::MainLayer,
-					UI::Alignment::TopLeft, UI::Font::DefaultColor, scale, 0.0f, 0.0f, 0.0f, 0.0f);
+			style.Font->DrawString(Hud, recodedText, charOffset, float(xPixel), float(yPixel) + style.OffsetY, NextLayer(),
+				UI::Alignment::TopLeft, GetTextColor(mode, param), style.Scale, 0.0f, 0.0f, 0.0f, 0.0f, style.CharSpacing, style.LineSpacing);
 		}
 		void jjCANVAS::DrawTextExtSize(std::int32_t xPixel, int32_t yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t mode, std::uint8_t param) {
-			Colorf color = UI::Font::DefaultColor;
-			if (mode == spriteType_BLENDNORMAL) {
-				color.A = param / 255.0f;
-			}
-
-			float scale;
-			switch (size) {
-				case 1:	// SMALL
-					scale = 0.6f;
-					break;
-				case 2:	// LARGE
-					scale = 1.1f;
-					break;
-				default:
-				case 0:	// MEDIUM
-					scale = 0.8f;
-					break;
-			}
-
-			std::int32_t charOffset = 0;
-			auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
-			Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, UI::HUD::MainLayer,
-					UI::Alignment::TopLeft, color, scale, 0.0f, 0.0f, 0.0f, 0.0f);
+			// The appearance isn't taken yet, only the size
+			DrawTextBasicSize(xPixel, yPixel, text, size, mode, param);
 		}
 
 		void jjCANVAS::drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param) {
@@ -1439,7 +1394,7 @@ namespace Jazz2::Scripting
 			// TODO
 			std::int32_t charOffset = 0;
 			auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
-			Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, UI::HUD::MainLayer,
+			Hud->_smallFont->DrawString(Hud, recodedText, charOffset, xPixel, yPixel, NextLayer(),
 					UI::Alignment::TopLeft, UI::Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 		}
 
@@ -1462,10 +1417,8 @@ namespace Jazz2::Scripting
 		}
 
 		jjOBJ::jjOBJ() : _refCount(1) {
-			noop();
 		}
 		jjOBJ::~jjOBJ() {
-			noop();
 		}
 
 		void jjOBJ::AddRef()
@@ -1482,8 +1435,8 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjOBJ::get_isActive() const {
-			// A script-controlled object is active while its hosting actor exists
-			return (_wrapper != nullptr);
+			// Active while its object exists, the one a script controls or the one of the game
+			return (_wrapper != nullptr || !_actor.expired());
 		}
 		std::uint32_t jjOBJ::get_lightType() const {
 			noop();
@@ -1495,23 +1448,49 @@ namespace Jazz2::Scripting
 		}
 
 		jjOBJ* jjOBJ::objectHit(jjOBJ* target, std::uint32_t playerHandling) {
-			noop();
-			return nullptr;
+			// This is a bullet that hits the target as the game would have it, even where they aren't - the game handles the
+			// collision of the two objects of the game, the script sees the energy the target has then
+			std::shared_ptr<Actors::ActorBase> bullet = _actor.lock();
+			std::shared_ptr<Actors::ActorBase> victim = (target != nullptr ? target->_actor.lock() : nullptr);
+			if (bullet != nullptr && victim != nullptr) {
+				if (!victim->OnHandleCollision(bullet.get())) {
+					bullet->OnHandleCollision(victim.get());
+				}
+				target->energy = std::int8_t(std::clamp<std::int32_t>(victim->GetHealth(), INT8_MIN, INT8_MAX));
+				target->_synced.Energy = target->energy;
+			}
+			// The handle is the function's to release, the result is the target
+			return target;
 		}
 		void jjOBJ::blast(std::int32_t maxDistance, bool blastObjects) {
 			noop();
 		}
 
 		void jjOBJ::behave1(std::uint32_t behavior, bool draw) {
-			// Built-in behaviors aren't emulated, but store the id so reads are consistent
-			this->behavior = behavior;
+			// Runs a behavior once, it doesn't become the behavior of the object. A behavior of the game is the object's own
+			// update, the object has no other; an object a script controls entirely has none.
+			if (_host != nullptr) {
+				if (behavior == aUNKNOWN) {
+					// BEHAVIOR::INACTIVE
+					_host->Delete();
+				} else {
+					_host->RunOwnBehavior(draw);
+				}
+			}
 		}
 		void jjOBJ::behave2(jjBEHAVIOR behavior, bool draw) {
-			this->behavior = behavior;
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			if (!ScriptObjectHost::CallScriptBehavior(owner, *this, behavior, draw)) {
+				behave1(behavior.behaviorId, draw);
+			}
 		}
 		void jjOBJ::behave3(jjVOIDFUNCOBJ behavior, bool draw) {
-			// The funcdef handle arrives as an AngelScript function pointer (see jjAddObjectEx)
-			this->behavior = reinterpret_cast<asIScriptFunction*>(behavior);
+			// The funcdef handle arrives as an AngelScript function pointer (see jjAddObjectEx), with a reference that is
+			// this function's to release - the temporary takes it over
+			jjBEHAVIOR function;
+			function.function = reinterpret_cast<asIScriptFunction*>(behavior);
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			ScriptObjectHost::CallScriptBehavior(owner, *this, function, draw);
 		}
 
 		std::int32_t jjOBJ::jjAddObject(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, std::uint32_t behavior) {
@@ -1520,9 +1499,25 @@ namespace Jazz2::Scripting
 			return owner->AddObjectFromEvent(eventID, xPixel, yPixel);
 		}
 		std::int32_t jjOBJ::jjAddObjectEx(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, jjVOIDFUNCOBJ behavior) {
-			// The funcdef handle is passed by AngelScript as an asIScriptFunction*; spawn a script-controlled object
+			// The funcdef handle is passed by AngelScript as an asIScriptFunction*, with a reference that is this function's
+			// to release - the temporary takes it over
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			std::int32_t id = owner->AddScriptControlledObject(eventID, xPixel, yPixel, reinterpret_cast<asIScriptFunction*>(behavior));
+			jjBEHAVIOR function;
+			function.function = reinterpret_cast<asIScriptFunction*>(behavior);
+
+			// The object of the game the event has, driven by the behavior, so the behavior can run the object's own one
+			std::int32_t id = owner->AddObjectFromEvent(eventID, xPixel, yPixel);
+			if (id > 0) {
+				jjOBJ* obj = owner->GetObjectById(id);
+				obj->behavior = function;
+				obj->_creatorID = creatorID;
+				obj->_creatorType = creatorType;
+				obj->Release();
+				return id;
+			}
+
+			// The event has no object in the game, a script-controlled one stands in
+			id = owner->AddScriptControlledObject(eventID, xPixel, yPixel, function.function);
 			// Record the creator on the persistent jjOBJ so scripts can read it back
 			if (auto* wrapper = runtime_cast<ScriptLegacyObject>(owner->GetScriptObject(id))) {
 				jjOBJ* obj = wrapper->GetObject();
@@ -1538,7 +1533,7 @@ namespace Jazz2::Scripting
 			if (auto* wrapper = runtime_cast<ScriptLegacyObject>(actor)) {
 				wrapper->Remove();		// silent removal
 			} else if (actor != nullptr) {
-				actor->DecreaseHealth(INT32_MAX);
+				ScriptObjectHost::DeleteActor(*actor);
 			}
 		}
 		void jjOBJ::jjKillObject(std::int32_t objectID) {
@@ -1550,8 +1545,16 @@ namespace Jazz2::Scripting
 		}
 
 		std::uint32_t jjOBJ::determineCurFrame(bool change) {
-			// The hosting actor's renderer advances the animation automatically; just report the current frame
-			return curFrame;
+			// As JJ2+ documents it, the frame of curAnim that frameID says
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			std::uint32_t frameCount, firstFrame, result = 0;
+			if (curAnim >= 0 && owner->GetAnimationTables().GetAnimationFrames(std::uint32_t(curAnim), frameCount, firstFrame) && frameCount > 0) {
+				result = firstFrame + std::uint32_t(frameID < 0 ? -frameID : frameID) % frameCount;
+			}
+			if (change) {
+				curFrame = result;
+			}
+			return result;
 		}
 
 		std::uint16_t jjOBJ::get_creatorID() const {
@@ -1570,13 +1573,21 @@ namespace Jazz2::Scripting
 		}
 
 		int16_t jjOBJ::determineCurAnim(std::uint8_t setID, std::uint8_t animation, bool change) {
-			// Selects the animation to display. `change` actually swaps the hosted actor's sprite; otherwise it only
-			// records the selection. (curAnim is 16-bit, so it stores the within-set animation index here.)
-			if (change && _wrapper != nullptr) {
-				_wrapper->ApplyAnimation(setID, animation);
+			return determineCurAnimOfSet(setID, animation, change);
+		}
+		int16_t jjOBJ::determineCurAnimOfSet(std::int32_t setID, std::uint8_t animation, bool change) {
+			// As JJ2+ documents it, the animation of the set in jjAnimations (a set of the original is always loaded), and
+			// the hosted actor shows it
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			std::uint32_t firstAnim = owner->GetAnimationTables().GetFirstAnim(setID);
+			int16_t result = int16_t(firstAnim != 0 ? firstAnim + animation : 0);
+			if (change) {
+				curAnim = result;
+				if (_wrapper != nullptr && result > 0) {
+					_wrapper->ApplyAnimation(std::uint32_t(result));
+				}
 			}
-			curAnim = (int16_t)animation;
-			return curAnim;
+			return result;
 		}
 
 		std::uint32_t jjOBJ::get_bulletHandling() {
@@ -1584,6 +1595,7 @@ namespace Jazz2::Scripting
 		}
 		std::uint32_t jjOBJ::set_bulletHandling(std::uint32_t value) {
 			_bulletHandling = value;
+			_bulletHandlingSet = true;
 			return _bulletHandling;
 		}
 		bool jjOBJ::get_ricochet() {
@@ -1613,6 +1625,7 @@ namespace Jazz2::Scripting
 		}
 		std::uint32_t jjOBJ::set_playerHandling(std::uint32_t value) {
 			_playerHandling = value;
+			_playerHandlingSet = true;
 			return _playerHandling;
 		}
 		bool jjOBJ::get_isTarget() {
@@ -1655,7 +1668,14 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjOBJ::draw() {
-			noop();
+			// An object of the game a behavior of the script drives is drawn only when the behavior asks, one a script controls
+			// entirely draws its current frame
+			if (_host != nullptr) {
+				_host->Draw();
+			} else if (_wrapper != nullptr && curFrame != 0) {
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				ScriptObjectHost::DrawFrame(owner, *this);
+			}
 			return 0;
 		}
 		std::int32_t jjOBJ::beSolid(bool shouldCheckForStompingLocalPlayers) {
@@ -1708,12 +1728,16 @@ namespace Jazz2::Scripting
 		void jjOBJ::deleteObject() {
 			if (_wrapper != nullptr) {
 				_wrapper->Remove();
+			} else if (std::shared_ptr<Actors::ActorBase> actor = _actor.lock()) {
+				ScriptObjectHost::DeleteActor(*actor);
 			}
 		}
 		void jjOBJ::deactivate() {
-			// Script-controlled objects don't return to the event map, so deactivation despawns them
 			if (_wrapper != nullptr) {
+				// Script-controlled objects don't return to the event map, so deactivation despawns them
 				_wrapper->Remove();
+			} else if (std::shared_ptr<Actors::ActorBase> actor = _actor.lock()) {
+				ScriptObjectHost::DeactivateActor(*actor);
 			}
 		}
 		void jjOBJ::pathMovement() {
@@ -1731,10 +1755,11 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjOBJ::findNearestPlayerEx(std::int32_t maxDistance, std::int32_t& foundDistance) const {
+			// Both distances are squares of the distance in pixels, as JJ2+ documents them
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			auto players = owner->GetPlayers();
 			std::int32_t nearest = -1;
-			float bestSq = (float)maxDistance * (float)maxDistance;
+			float bestSq = (float)maxDistance;
 			for (std::int32_t i = 0; i < (std::int32_t)players.size(); i++) {
 				Vector2f p = players[i]->GetPos();
 				float dx = p.X - xPos;
@@ -1745,7 +1770,7 @@ namespace Jazz2::Scripting
 					nearest = i;
 				}
 			}
-			foundDistance = (nearest >= 0 ? (std::int32_t)std::sqrt(bestSq) : maxDistance);
+			foundDistance = (nearest >= 0 ? (std::int32_t)std::min(bestSq, float(INT32_MAX)) : maxDistance);
 			return nearest;
 		}
 		std::int32_t jjOBJ::findNearestPlayer(std::int32_t maxDistance) const {
@@ -1797,7 +1822,9 @@ namespace Jazz2::Scripting
 		jjPLAYER::jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player)
 			: _levelScriptLoader(levelScripts), _player(player), _timerCallback(nullptr),
 				_timerState(0), _timerLeft(0.0f), _timerPersists(false) {
-			noop();
+			// Without a player, it stands for the players that aren't in the game, see LevelScriptLoader::GetPlayerBackingStore()
+			isLocal = (player != nullptr);
+			isActive = (player != nullptr);
 		}
 		jjPLAYER::~jjPLAYER() {
 			noop();
@@ -1811,29 +1838,50 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjPLAYER::get_score() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_score;
 		}
 		std::int32_t jjPLAYER::set_score(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_score = value;
 			return _player->_score;
 		}
 		std::int32_t jjPLAYER::get_scoreDisplayed() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_score;
 		}
 		std::int32_t jjPLAYER::set_scoreDisplayed(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_score = value;
 			return _player->_score;
 		}
 
 		std::int32_t jjPLAYER::setScore(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_score = value;
 			return _player->_score;
 		}
 
 		float jjPLAYER::get_xPos() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_pos.X;
 		}
 		float jjPLAYER::set_xPos(float value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_pos.X = value;
 			// A scripted move is a teleport, not a path the player walked, so nothing between the two positions
 			// may be collided with or triggered (see Actors::ActorBase::ResetPathTracking())
@@ -1841,58 +1889,103 @@ namespace Jazz2::Scripting
 			return _player->_pos.X;
 		}
 		float jjPLAYER::get_yPos() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_pos.Y;
 		}
 		float jjPLAYER::set_yPos(float value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_pos.Y = value;
 			_player->ResetPathTracking();
 			return _player->_pos.Y;
 		}
 		float jjPLAYER::get_xAcc() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_externalForce.X;
 		}
 		float jjPLAYER::set_xAcc(float value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_externalForce.X = value;
 			return _player->_externalForce.X;
 		}
 		float jjPLAYER::get_yAcc() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_externalForce.Y;
 		}
 		float jjPLAYER::set_yAcc(float value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_externalForce.Y = value;
 			return _player->_externalForce.Y;
 		}
 		float jjPLAYER::get_xOrg() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			// The "origin" is the position the player respawns at, i.e. the last checkpoint
 			return _player->_checkpointPos.X;
 		}
 		float jjPLAYER::set_xOrg(float value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_checkpointPos.X = value;
 			return _player->_checkpointPos.X;
 		}
 		float jjPLAYER::get_yOrg() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_checkpointPos.Y;
 		}
 		float jjPLAYER::set_yOrg(float value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_checkpointPos.Y = value;
 			return _player->_checkpointPos.Y;
 		}
 		float jjPLAYER::get_xSpeed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_speed.X;
 		}
 		float jjPLAYER::set_xSpeed(float value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_speed.X = value;
 			return value;
 		}
 		float jjPLAYER::get_ySpeed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_speed.Y;
 		}
 		float jjPLAYER::set_ySpeed(float value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_speed.Y = value;
 			return value;
 		}
 
 		void jjPLAYER::freeze(bool frozen) {
+			if (_player == nullptr) {
+				return;
+			}
 			if (frozen) {
 				_player->_frozenTimeLeft = 180.0f;
 				_player->_renderer.AnimPaused = true;
@@ -1901,39 +1994,69 @@ namespace Jazz2::Scripting
 			}
 		}
 		std::int32_t jjPLAYER::get_currTile() {
+			if (_player == nullptr) {
+				return {};
+			}
 			auto pos = _player->_pos;
 			return ((std::int32_t)pos.X / 32) + ((std::int32_t)pos.Y / 32 * 65536);
 		}
 		bool jjPLAYER::startSugarRush(std::int32_t time) {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop();
 			// TODO: if boss active, return false
 			_player->ActivateSugarRush((float)time * 60.0f / 70.0f);
 			return true;
 		}
 		std::int8_t jjPLAYER::get_health() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (std::int8_t)_player->_health;
 		}
 		std::int8_t jjPLAYER::set_health(std::int8_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->SetHealth(value);
 			return value;
 		}
 
 		std::int32_t jjPLAYER::get_fastfire() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		}
 		std::int32_t jjPLAYER::set_fastfire(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (value << 1));
 			return value;
 		}
 
+		// The weapons of JJ2+ are numbered from 1 (`WEAPON::BLASTER`), ours from 0, returns -1 if there's no such weapon
+		static std::int32_t ToWeaponIndex(std::int32_t number) {
+			return (number >= 1 && number <= std::int32_t(WeaponType::Count) ? number - 1 : -1);
+		}
+
 		std::int8_t jjPLAYER::get_currWeapon() const {
-			return (std::int8_t)_player->_currentWeapon;
+			if (_player == nullptr) {
+				return {};
+			}
+			return std::int8_t(std::int32_t(_player->_currentWeapon) + 1);
 		}
 		std::int8_t jjPLAYER::set_currWeapon(std::int8_t value) {
-			if (value < 0 || value >= (int8_t)WeaponType::Count) {
-				return (std::int8_t)_player->_currentWeapon;
+			if (_player == nullptr) {
+				return {};
 			}
-			_player->_currentWeapon = (WeaponType)value;
+			std::int32_t index = ToWeaponIndex(value);
+			if (index < 0) {
+				return std::int8_t(std::int32_t(_player->_currentWeapon) + 1);
+			}
+			_player->_currentWeapon = (WeaponType)index;
 			return value;
 		}
 
@@ -1941,28 +2064,46 @@ namespace Jazz2::Scripting
 			return _player->_lives;
 		}
 		std::int32_t jjPLAYER::set_lives(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_lives = value;
 			return _player->_lives;
 		}*/
 
 		std::int32_t jjPLAYER::get_invincibility() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (std::int32_t)(_player->_invulnerableTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
 		std::int32_t jjPLAYER::set_invincibility(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_invulnerableTime = value * FrameTimer::FramesPerSecond / 70.0f;
 			_player->SetState(Actors::ActorState::IsInvulnerable, _player->_invulnerableTime > 0.0f);
 			return value;
 		}
 
 		std::int32_t jjPLAYER::get_blink() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (std::int32_t)(_player->_invulnerableBlinkTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
 		std::int32_t jjPLAYER::set_blink(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_invulnerableBlinkTime = value * FrameTimer::FramesPerSecond / 70.0f;
 			return value;
 		}
 
 		std::int32_t jjPLAYER::extendInvincibility(std::int32_t duration) {
+			if (_player == nullptr) {
+				return {};
+			}
 			// Negative values are clamped so invincibility is never reduced below zero
 			_player->_invulnerableTime += duration * FrameTimer::FramesPerSecond / 70.0f;
 			if (_player->_invulnerableTime < 0.0f) {
@@ -1973,21 +2114,36 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjPLAYER::get_food() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop(); return _player->_inventory.FoodEaten;
 		}
 		std::int32_t jjPLAYER::set_food(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_inventory.FoodEaten = value;
 			return _player->_inventory.FoodEaten;
 		}
 		std::int32_t jjPLAYER::get_coins() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_inventory.Coins;
 		}
 		std::int32_t jjPLAYER::set_coins(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_inventory.Coins = value;
 			return _player->_inventory.Coins;
 		}
 
 		bool jjPLAYER::testForCoins(std::int32_t numberOfCoins) {
+			if (_player == nullptr) {
+				return {};
+			}
 			if (numberOfCoins > _player->_inventory.Coins) {
 				return false;
 			}
@@ -1995,15 +2151,24 @@ namespace Jazz2::Scripting
 			return true;
 		}
 		std::int32_t jjPLAYER::get_gems(std::uint32_t type) const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
 		}
 		std::int32_t jjPLAYER::set_gems(std::uint32_t type, std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			if (type < arraySize(_player->_inventory.Gems)) {
 				_player->_inventory.Gems[type] = value;
 			}
 			return (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
 		}
 		bool jjPLAYER::testForGems(std::int32_t numberOfGems, std::uint32_t type) {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop();
 			std::uint8_t currentCount = (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
 			if (numberOfGems <= currentCount) {
@@ -2017,26 +2182,44 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjPLAYER::get_shieldType() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (std::int32_t)_player->_activeShield;
 		}
 		std::int32_t jjPLAYER::set_shieldType(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			if (value >= 0 && value < (std::int32_t)ShieldType::Count) {
 				_player->_activeShield = (ShieldType)value;
 			}
 			return value;
 		}
 		std::int32_t jjPLAYER::get_shieldTime() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (std::int32_t)(_player->_activeShieldTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
 		std::int32_t jjPLAYER::set_shieldTime(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_activeShieldTime = value * FrameTimer::FramesPerSecond / 70.0f;
 			return value;
 		}
 
 		std::int32_t jjPLAYER::get_rolling() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (std::int32_t)(_player->_inTubeTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
 		std::int32_t jjPLAYER::set_rolling(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 		
 			if (value > 0) {
 				if (_player->_inTubeTime <= 0) {
@@ -2058,24 +2241,42 @@ namespace Jazz2::Scripting
 		}
 
 		std::int8_t jjPLAYER::get_playerID() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop(); return (std::int8_t)_player->_playerIndex;
 		}
 		std::int32_t jjPLAYER::get_localPlayerID() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop(); return _player->_playerIndex;
 		}
 
 		bool jjPLAYER::get_running() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop(); return _player->_isRunPressed;
 		}
 		bool jjPLAYER::set_running(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_isRunPressed = value;
 			return _player->_isRunPressed;
 		}
 
 		std::int32_t jjPLAYER::get_stoned() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return (std::int32_t)(_player->_dizzyTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
 		std::int32_t jjPLAYER::set_stoned(std::int32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->SetDizzy(value * FrameTimer::FramesPerSecond / 70.0f);
 			return value;
 		}
@@ -2111,9 +2312,8 @@ namespace Jazz2::Scripting
 			return false;
 		}
 		bool jjPLAYER::get_isInGame() const {
-			noop();
 			// TODO: Equals true if isActive is true but isConnecting, isIdle, isOut, and isSpectating are all false.
-			return true;
+			return (_player != nullptr);
 		}
 
 		String jjPLAYER::get_name() const {
@@ -2137,15 +2337,24 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 		std::uint32_t jjPLAYER::get_fur() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			// The engine packs one fur-section start index per byte, matching the JJ2+ 4-byte fur model
 			return _player->_furColor;
 		}
 		std::uint32_t jjPLAYER::set_fur(std::uint32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_furColor = value;
 			_player->RefreshColorPalette();
 			return value;
 		}
 		void jjPLAYER::getFur(std::uint8_t& a, std::uint8_t& b, std::uint8_t& c, std::uint8_t& d) const {
+			if (_player == nullptr) {
+				return;
+			}
 			std::uint32_t fur = _player->_furColor;
 			a = (std::uint8_t)(fur & 0xFF);
 			b = (std::uint8_t)((fur >> 8) & 0xFF);
@@ -2153,25 +2362,43 @@ namespace Jazz2::Scripting
 			d = (std::uint8_t)((fur >> 24) & 0xFF);
 		}
 		void jjPLAYER::setFur(std::uint8_t a, std::uint8_t b, std::uint8_t c, std::uint8_t d) {
+			if (_player == nullptr) {
+				return;
+			}
 			_player->_furColor = (std::uint32_t)a | ((std::uint32_t)b << 8) | ((std::uint32_t)c << 16) | ((std::uint32_t)d << 24);
 			_player->RefreshColorPalette();
 		}
 
 		bool jjPLAYER::get_noFire() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return !_player->_weaponAllowed;
 		}
 		bool jjPLAYER::set_noFire(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->_weaponAllowed = !value;
 			return value;
 		}
 		bool jjPLAYER::get_antiGrav() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return !_player->GetState(Actors::ActorState::ApplyGravitation);
 		}
 		bool jjPLAYER::set_antiGrav(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_player->SetState(Actors::ActorState::ApplyGravitation, !value);
 			return value;
 		}
 		bool jjPLAYER::get_invisibility() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->GetState(Actors::ActorState::IsInvulnerable);
 		}
 		bool jjPLAYER::set_invisibility(bool value) {
@@ -2179,19 +2406,31 @@ namespace Jazz2::Scripting
 			return false;
 		}
 		bool jjPLAYER::get_noclipMode() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return !_player->GetState(Actors::ActorState::CollideWithTileset);
 		}
 		bool jjPLAYER::set_noclipMode(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			// Toggles tileset collision so the player can pass through level geometry
 			_player->SetState(Actors::ActorState::CollideWithTileset, !value);
 			return value;
 		}
 		std::uint8_t jjPLAYER::get_lighting() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop();
 			// TODO: Viewports
 			return (std::uint8_t)(_levelScriptLoader->_levelHandler->GetAmbientLight(_player) * 64.0f);
 		}
 		std::uint8_t jjPLAYER::set_lighting(std::uint8_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			_levelScriptLoader->_levelHandler->SetAmbientLight(_player, value / 64.0f);
 			return value;
 		}
@@ -2201,96 +2440,161 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjPLAYER::get_playerKeyLeftPressed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Left);
 		}
 		bool jjPLAYER::get_playerKeyRightPressed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Right);
 		}
 		bool jjPLAYER::get_playerKeyUpPressed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Up);
 		}
 		bool jjPLAYER::get_playerKeyDownPressed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Down);
 		}
 		bool jjPLAYER::get_playerKeyFirePressed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Fire);
 		}
 		bool jjPLAYER::get_playerKeySelectPressed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::ChangeWeapon);
 		}
 		bool jjPLAYER::get_playerKeyJumpPressed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Jump);
 		}
 		bool jjPLAYER::get_playerKeyRunPressed() {
+			if (_player == nullptr) {
+				return {};
+			}
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Run);
 		}
 		bool jjPLAYER::set_playerKeyLeftPressed(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Left, value);
 			return value;
 		}
 		bool jjPLAYER::set_playerKeyRightPressed(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Right, value);
 			return value;
 		}
 		bool jjPLAYER::set_playerKeyUpPressed(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Up, value);
 			return value;
 		}
 		bool jjPLAYER::set_playerKeyDownPressed(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Down, value);
 			return value;
 		}
 		bool jjPLAYER::set_playerKeyFirePressed(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Fire, value);
 			return value;
 		}
 		bool jjPLAYER::set_playerKeySelectPressed(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::ChangeWeapon, value);
 			return value;
 		}
 		bool jjPLAYER::set_playerKeyJumpPressed(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Jump, value);
 			return value;
 		}
 		bool jjPLAYER::set_playerKeyRunPressed(bool value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Run, value);
 			return value;
 		}
 
-		bool jjPLAYER::get_powerup(std::uint8_t index) {
-			if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
-				return 0;
+		bool jjPLAYER::get_powerup(std::uint8_t number) {
+			std::int32_t index = ToWeaponIndex(number);
+			if (_player == nullptr || index < 0) {
+				return false;
 			}
 			return (_player->_inventory.WeaponUpgrades[index] & 0x01) == 0x01;
 		}
-		bool jjPLAYER::set_powerup(std::uint8_t index, bool value) {
-			if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
-				return 0;
+		bool jjPLAYER::set_powerup(std::uint8_t number, bool value) {
+			std::int32_t index = ToWeaponIndex(number);
+			if (_player == nullptr || index < 0) {
+				return false;
 			}
-			_player->_inventory.WeaponUpgrades[index] = (value ? 0x01 : 0x00);
+			// The rest of the bits are the fast fire of the blaster (see get_fastfire())
+			std::uint8_t& upgrades = _player->_inventory.WeaponUpgrades[index];
+			upgrades = std::uint8_t((upgrades & ~0x01) | (value ? 0x01 : 0x00));
 			return value;
 		}
-		std::int32_t jjPLAYER::get_ammo(std::uint8_t index) const {
-			if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
+		std::int32_t jjPLAYER::get_ammo(std::uint8_t number) const {
+			std::int32_t index = ToWeaponIndex(number);
+			if (_player == nullptr || index < 0) {
 				return 0;
 			}
-			return _player->_inventory.WeaponAmmo[index];
+			// In 1/256 units, the blaster has unlimited ammo, which JJ2+ doesn't count
+			std::uint16_t ammo = _player->_inventory.WeaponAmmo[index];
+			return (ammo == UINT16_MAX ? 0 : ammo / 256);
 		}
-		std::int32_t jjPLAYER::set_ammo(std::uint8_t index, std::int32_t value) {
-			if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
-				return 0;
+		std::int32_t jjPLAYER::set_ammo(std::uint8_t number, std::int32_t value) {
+			std::int32_t index = ToWeaponIndex(number);
+			if (_player == nullptr || index < 0) {
+				return value;
 			}
-			_player->_inventory.WeaponAmmo[index] = value * 256;
+			std::uint16_t& ammo = _player->_inventory.WeaponAmmo[index];
+			if (ammo != UINT16_MAX) {
+				ammo = std::uint16_t(std::clamp<std::int32_t>(value, 0, UINT16_MAX / 256 - 1) * 256);
+			}
 			return value;
 		}
 
 		bool jjPLAYER::offsetPosition(std::int32_t xPixels, std::int32_t yPixels) {
+			if (_player == nullptr) {
+				return {};
+			}
 
 			Vector2f pos = _player->GetPos();
 			_player->WarpToPosition(Vector2f(pos.X + xPixels, pos.Y + yPixels), WarpFlags::Fast);
 			return true;
 		}
 		bool jjPLAYER::warpToTile(std::int32_t xTile, std::int32_t yTile, bool fast) {
+			if (_player == nullptr) {
+				return {};
+			}
 
 			_player->WarpToPosition(Vector2f(xTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2,
 				yTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2),
@@ -2298,6 +2602,9 @@ namespace Jazz2::Scripting
 			return true;
 		}
 		bool jjPLAYER::warpToID(std::uint8_t warpID, bool fast) {
+			if (_player == nullptr) {
+				return {};
+			}
 
 			auto events = _levelScriptLoader->_levelHandler->EventMap();
 			Vector2f c = events->GetWarpTarget(warpID);
@@ -2313,6 +2620,9 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 		std::uint32_t jjPLAYER::morphTo(std::uint32_t charNew, bool morphEffect) {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop();
 			// TODO: morphEffect
 			PlayerType playerType = CharToPlayerType(charNew);
@@ -2323,6 +2633,9 @@ namespace Jazz2::Scripting
 			return PlayerTypeToChar(_player->_playerType);
 		}
 		std::uint32_t jjPLAYER::revertMorph(bool morphEffect) {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop();
 			// TODO: morphEffect
 			// JJ2+ reverts to charOrig, the same as a Revert Morph area does
@@ -2330,12 +2643,21 @@ namespace Jazz2::Scripting
 			return PlayerTypeToChar(_player->_playerType);
 		}
 		std::uint32_t jjPLAYER::get_charCurr() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return PlayerTypeToChar(_player->_playerType);
 		}
 		std::uint32_t jjPLAYER::get_charOrig() const {
+			if (_player == nullptr) {
+				return {};
+			}
 			return PlayerTypeToChar(_player->_playerTypeOriginal);
 		}
 		std::uint32_t jjPLAYER::set_charOrig(std::uint32_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
 			PlayerType playerType = CharToPlayerType(value);
 			// Only a rabbit can be what the player reverts to, a temporary form is never anyone's original character
 			if (playerType == PlayerType::Jazz || playerType == PlayerType::Spaz || playerType == PlayerType::Lori) {
@@ -2345,9 +2667,15 @@ namespace Jazz2::Scripting
 		}
 
 		void jjPLAYER::kill() {
+			if (_player == nullptr) {
+				return;
+			}
 			_player->DecreaseHealth(INT32_MAX);
 		}
 		bool jjPLAYER::hurt(std::int8_t damage, bool forceHurt, jjPLAYER* attacker) {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop();
 
 			// TODO: forceHurt and return value
@@ -2403,6 +2731,9 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjPLAYER::activateBoss(bool activate) {
+			if (_player == nullptr) {
+				return {};
+			}
 			noop();
 
 			// TODO: activate
@@ -2410,34 +2741,46 @@ namespace Jazz2::Scripting
 			return true;
 		}
 		bool jjPLAYER::limitXScroll(std::uint16_t left, std::uint16_t width) {
+			if (_player == nullptr) {
+				return {};
+			}
 
 			_levelScriptLoader->_levelHandler->LimitCameraView(_player, _player->_pos, left * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
 			return true;
 		}
+		// An axis given by a bool is let go of if it's true, and left as it is otherwise
 		void jjPLAYER::cameraFreezeFF(float xPixel, float yPixel, bool centered, bool instant) {
-			noop();
-			// TODO: instant
-			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, xPixel, yPixel, !centered);
+			if (_player == nullptr) {
+				return;
+			}
+			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, CameraOverride::Fix, xPixel, CameraOverride::Fix, yPixel, centered, instant);
 		}
 		void jjPLAYER::cameraFreezeBF(bool xUnfreeze, float yPixel, bool centered, bool instant) {
-			noop();
-			// TODO: instant
-			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, INFINITY, yPixel, !centered);
+			if (_player == nullptr) {
+				return;
+			}
+			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, xUnfreeze ? CameraOverride::Follow : CameraOverride::Keep, 0.0f,
+				CameraOverride::Fix, yPixel, centered, instant);
 		}
 		void jjPLAYER::cameraFreezeFB(float xPixel, bool yUnfreeze, bool centered, bool instant) {
-			noop();
-			// TODO: instant
-			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, xPixel, INFINITY, !centered);
+			if (_player == nullptr) {
+				return;
+			}
+			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, CameraOverride::Fix, xPixel,
+				yUnfreeze ? CameraOverride::Follow : CameraOverride::Keep, 0.0f, centered, instant);
 		}
 		void jjPLAYER::cameraFreezeBB(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant) {
-			noop();
-			// TODO: instant, centered
-			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, INFINITY, INFINITY, false);
+			if (_player == nullptr) {
+				return;
+			}
+			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, xUnfreeze ? CameraOverride::Follow : CameraOverride::Keep, 0.0f,
+				yUnfreeze ? CameraOverride::Follow : CameraOverride::Keep, 0.0f, centered, instant);
 		}
 		void jjPLAYER::cameraUnfreeze(bool instant) {
-			noop();
-			// TODO: instant
-			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, INFINITY, INFINITY, false);
+			if (_player == nullptr) {
+				return;
+			}
+			_levelScriptLoader->_levelHandler->OverrideCameraView(_player, CameraOverride::Follow, 0.0f, CameraOverride::Follow, 0.0f, false, instant);
 		}
 		void jjPLAYER::showText(const String& text, std::uint32_t size) {
 			noop();
@@ -2473,11 +2816,18 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 
+		// The top left corner of the view, as JJ2+ has it - the layer coordinate of the sprite layer there (see GetLayerPositionInView())
 		float jjPLAYER::get_cameraX() const {
-			return _levelScriptLoader->_levelHandler->GetCameraPos(_player).X;
+			if (_player == nullptr) {
+				return {};
+			}
+			return _levelScriptLoader->_levelHandler->GetCameraView(_player).X;
 		}
 		float jjPLAYER::get_cameraY() const {
-			return _levelScriptLoader->_levelHandler->GetCameraPos(_player).Y;
+			if (_player == nullptr) {
+				return {};
+			}
+			return _levelScriptLoader->_levelHandler->GetCameraView(_player).Y;
 		}
 		std::int32_t jjPLAYER::get_deaths() const {
 			noop();
@@ -2534,15 +2884,47 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 		bool jjPLAYER::objectHit(jjOBJ* target, std::int32_t force, std::uint32_t playerHandling) {
-			noop();
-			return false;
+			// The player collides with the target as the game would have it, even where they aren't, the script sees the
+			// energy the target has then
+			std::shared_ptr<Actors::ActorBase> victim = (target != nullptr ? target->_actor.lock() : nullptr);
+			bool result = false;
+			if (_player != nullptr && victim != nullptr) {
+				result = (_player->OnHandleCollision(victim.get()) || victim->OnHandleCollision(_player));
+				target->energy = std::int8_t(std::clamp<std::int32_t>(victim->GetHealth(), INT8_MIN, INT8_MAX));
+				target->_synced.Energy = target->energy;
+			}
+			if (target != nullptr) {
+				// A handle passed to a native function is the function's to release
+				target->Release();
+			}
+			return result;
 		}
 		bool jjPLAYER::isEnemy(const jjPLAYER* victim) const {
 			noop();
 			return false;
 		}
 
+		std::uint32_t jjPLAYER::get_spriteMode() const {
+			return _spriteMode;
+		}
+		std::uint32_t jjPLAYER::set_spriteMode(std::uint32_t value) {
+			noop();
+			// TODO: Only kept, the player is drawn as always - it decides how it's drawn every frame itself (blinking)
+			_spriteMode = value;
+			return value;
+		}
+		std::uint8_t jjPLAYER::get_spriteParam() const {
+			return _spriteParam;
+		}
+		std::uint8_t jjPLAYER::set_spriteParam(std::uint8_t value) {
+			_spriteParam = value;
+			return value;
+		}
+
 		void jjPLAYER::SyncPropertiesToBackingStore() {
+			if (_player == nullptr) {
+				return;
+			}
 			noop();
 			// TODO
 			_backingStoreDirty = true;
@@ -2550,6 +2932,9 @@ namespace Jazz2::Scripting
 			lives = _player->_lives;
 		}
 		void jjPLAYER::SyncPropertiesFromBackingStore() {
+			if (_player == nullptr) {
+				return;
+			}
 			noop();
 			// TODO
 			if (!_backingStoreDirty) {
@@ -2639,18 +3024,18 @@ namespace Jazz2::Scripting
 			return map;
 		}
 		jjPIXELMAP* jjPIXELMAP::CreateFromFrame(const jjANIMFRAME* animFrame, const jjPAL* palette) {
-			noop();
-
-			// TODO: The image of the frame, which needs frames that know where they are in their animation (see jjANIMFRAME),
-			// until then the map has only the size of the frame
-			std::uint32_t frameWidth = 0, frameHeight = 0;
-			if (animFrame != nullptr) {
-				frameWidth = std::uint32_t(std::max<std::int32_t>(animFrame->width, 0));
-				frameHeight = std::uint32_t(std::max<std::int32_t>(animFrame->height, 0));
-				// A handle passed to a native function is the function's to release
-				const_cast<jjANIMFRAME*>(animFrame)->Release();
+			if (animFrame == nullptr) {
+				return Create(0, 0);
 			}
-			return Create(frameWidth, frameHeight);
+
+			// The frame came from jjAnimFrames, which read its image already
+			jjPIXELMAP* map = Create(animFrame->width, animFrame->height);
+			if (map != nullptr && animFrame->_pixels != nullptr) {
+				std::memcpy(map->_pixels.get(), animFrame->_pixels.get(), std::size_t(animFrame->width) * animFrame->height);
+			}
+			// A handle passed to a native function is the function's to release
+			const_cast<jjANIMFRAME*>(animFrame)->Release();
+			return map;
 		}
 		jjPIXELMAP* jjPIXELMAP::CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer, const jjPAL* palette) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -2692,14 +3077,39 @@ namespace Jazz2::Scripting
 			return map;
 		}
 		jjPIXELMAP* jjPIXELMAP::CreateFromTexture(std::uint32_t texture, const jjPAL* palette) {
-			noop();
-			// TODO: The textures of the textured background
-			return Create(256, 256);
+			constexpr std::uint32_t Size = Formats::TexturedLayerChunk::TextureSize;
+			if (texture == 0) {
+				// TEXTURE::LAYER8, the tiles of the textured background
+				return CreateFromLayer(0, 0, Size, Size, 8, palette);
+			}
+			jjPIXELMAP* map = Create(Size, Size);
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			if (map != nullptr && !owner->GetPlusTexture(std::int32_t(texture), map->_pixels.get())) {
+				LOGW("Texture {} of JJ2+ isn't available, \"Plus.j2d\" of JJ2+ is needed in the \"Source\" directory", texture);
+			}
+			return map;
 		}
 		jjPIXELMAP* jjPIXELMAP::CreateFromFilename(const String& filename, const jjPAL* palette, std::uint8_t threshold) {
-			noop();
-			// TODO: PNG files, JJ2+ gives a 1 × 1 map for a file it can't read
-			return Create(1, 1);
+			// The colors of the image become the nearest ones of the palette, a pixel of less alpha than `threshold` is
+			// transparent
+			jjCOLORMAP* colors = jjCOLORMAP::CreateFromFilename(filename);
+			if (colors == nullptr) {
+				return nullptr;
+			}
+			jjPIXELMAP* map = Create(colors->width, colors->height);
+			if (map != nullptr) {
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				const jjPAL& target = (palette != nullptr ? *palette : owner->jjPalette);
+				std::size_t count = std::size_t(colors->width) * colors->height;
+				for (std::size_t i = 0; i < count; i++) {
+					const jjPALCOLOR& color = colors->_pixels[i];
+					if (color.alpha != 0 && color.alpha >= threshold) {
+						map->_pixels[i] = target.FindNearestOpaqueColor(color);
+					}
+				}
+			}
+			colors->Release();
+			return map;
 		}
 
 		void jjPIXELMAP::AddRef()
@@ -2732,11 +3142,10 @@ namespace Jazz2::Scripting
 
 		std::uint8_t* jjPIXELMAP::GetPixel(std::uint32_t x, std::uint32_t y) {
 			if (x >= width || y >= height) {
-				asIScriptContext* ctx = asGetActiveContext();
-				if (ctx != nullptr) {
-					ctx->SetException("Index out of bounds");
-				}
-				return nullptr;
+				// Scripts of JJ2+ reach past the edge (`x <= 32` of a tile) and work there, a pixel out of the map is a
+				// scratch one, what's written to it is lost
+				_outOfRange = 0;
+				return &_outOfRange;
 			}
 			return &_pixels[std::size_t(y) * width + x];
 		}
@@ -2766,17 +3175,40 @@ namespace Jazz2::Scripting
 			return owner->SetTilePixels(tileID & TileMap::TileIndexMask, image);
 		}
 		bool jjPIXELMAP::saveToFrame(jjANIMFRAME* frame) const {
-			noop();
-			// TODO: Needs frames that know where they are in their animation (see jjANIMFRAME)
-			if (frame != nullptr) {
-				// A handle passed to a native function is the function's to release
-				frame->Release();
+			if (frame == nullptr) {
+				return false;
 			}
-			return false;
+
+			// The image and its size, the spots stay as they are; the sprites show it once the script returns
+			bool result = (width <= UINT16_MAX && height <= UINT16_MAX);
+			if (result) {
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				owner->GetAnimationTables().SetFramePixels(*frame, _pixels.get(), width, height);
+			}
+			// A handle passed to a native function is the function's to release
+			frame->Release();
+			return result;
 		}
 		bool jjPIXELMAP::saveToFile(const String& filename, const jjPAL& palette) const {
 			noop();
 			return false;
+		}
+
+		bool jjPIXELMAP::makeTexture(jjLAYER* layer) const {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			std::int32_t layerIndex = (layer != nullptr ? layer->_layerIndex : owner->GetLayerIndex(8));
+			// TEXTURE::CUSTOM, as JJ2+ reports a texture of a pixel map
+			jjLAYER* proxy = (layer != nullptr ? layer : owner->GetLayerProxy(layerIndex));
+			if (proxy == nullptr) {
+				return false;
+			}
+			proxy->_texture = -1;
+
+			constexpr std::uint32_t Size = Formats::TexturedLayerChunk::TextureSize;
+			bool result = (width == Size && height == Size && proxy->SetCustomTexture(_pixels.get()));
+			// A handle passed to a native function is the function's to release, and GetLayerProxy() gave one too
+			proxy->Release();
+			return result;
 		}
 
 		void jjPIXELMAP::Reframe(std::int64_t left, std::int64_t top, std::uint32_t newWidth, std::uint32_t newHeight, std::uint8_t fill) {
@@ -2798,8 +3230,8 @@ namespace Jazz2::Scripting
 			// Nothing changes if the image would be empty, or if more is cropped of it than it has
 			std::int64_t newWidth = std::int64_t(width) + left + right;
 			std::int64_t newHeight = std::int64_t(height) + top + bottom;
-			std::int64_t cropX = std::int64_t(std::max(0, -left)) + std::max(0, -right);
-			std::int64_t cropY = std::int64_t(std::max(0, -top)) + std::max(0, -bottom);
+			std::int64_t cropX = std::int64_t(std::max<std::int32_t>(0, -left)) + std::max<std::int32_t>(0, -right);
+			std::int64_t cropY = std::int64_t(std::max<std::int32_t>(0, -top)) + std::max<std::int32_t>(0, -bottom);
 			if (newWidth <= 0 || newHeight <= 0 || cropX > width || cropY > height ||
 				std::uint64_t(newWidth) * std::uint64_t(newHeight) > MaxPixelMapPixels) {
 				return *this;
@@ -2913,6 +3345,418 @@ namespace Jazz2::Scripting
 			std::uint32_t left, top, right, bottom;
 			return trim(left, top, right, bottom, trimColor);
 		}
+		jjPIXELMAP* jjPIXELMAP::CreateFromColorMap(const jjCOLORMAP& other, const jjPAL* palette) {
+			jjPIXELMAP* map = Create(other.width, other.height);
+			if (map != nullptr) {
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				auto indices = other.ToIndices(palette != nullptr ? *palette : owner->jjPalette);
+				std::memcpy(map->_pixels.get(), indices.get(), std::size_t(other.width) * other.height);
+			}
+			return map;
+		}
+
+		jjCOLORMAP::jjCOLORMAP() : _refCount(1) {
+		}
+		jjCOLORMAP::~jjCOLORMAP() {
+		}
+
+		jjCOLORMAP* jjCOLORMAP::Create(std::uint32_t width, std::uint32_t height) {
+			if (std::uint64_t(width) * height > MaxPixelMapPixels) {
+				asIScriptContext* ctx = asGetActiveContext();
+				if (ctx != nullptr) {
+					ctx->SetException("Color map is too large");
+				}
+				return nullptr;
+			}
+
+			void* mem = asAllocMem(sizeof(jjCOLORMAP));
+			jjCOLORMAP* map = new(mem) jjCOLORMAP();
+			map->width = width;
+			map->height = height;
+			// Value-initialized, so the map is transparent
+			map->_pixels = std::make_unique<jjPALCOLOR[]>(std::size_t(width) * height);
+			return map;
+		}
+
+		jjCOLORMAP* jjCOLORMAP::CreateFromIndices(const std::uint8_t* indices, std::uint32_t width, std::uint32_t height, const jjPAL& palette) {
+			jjCOLORMAP* map = Create(width, height);
+			if (map == nullptr || indices == nullptr) {
+				return map;
+			}
+			std::size_t count = std::size_t(width) * height;
+			for (std::size_t i = 0; i < count; i++) {
+				if (indices[i] != 0) {
+					map->_pixels[i] = palette.getConstColor(indices[i]);
+					map->_pixels[i].alpha = 255;
+				}
+			}
+			return map;
+		}
+
+		jjCOLORMAP* jjCOLORMAP::CreateFromSize(std::uint32_t width, std::uint32_t height) {
+			return Create(width, height);
+		}
+		jjCOLORMAP* jjCOLORMAP::CreateFromPixelMap(const jjPIXELMAP& other, const jjPAL& palette) {
+			jjPIXELMAP& source = const_cast<jjPIXELMAP&>(other);
+			return CreateFromIndices(other.width > 0 && other.height > 0 ? source.GetPixel(0, 0) : nullptr, other.width, other.height, palette);
+		}
+		jjCOLORMAP* jjCOLORMAP::CreateFromOther(const jjCOLORMAP& other) {
+			jjCOLORMAP* map = Create(other.width, other.height);
+			if (map != nullptr) {
+				std::memcpy(map->_pixels.get(), other._pixels.get(), std::size_t(other.width) * other.height * sizeof(jjPALCOLOR));
+			}
+			return map;
+		}
+		jjCOLORMAP* jjCOLORMAP::CreateFromFrame(const jjANIMFRAME* animFrame, const jjPAL& palette) {
+			if (animFrame == nullptr) {
+				return Create(0, 0);
+			}
+			// The frame came from jjAnimFrames, which read its image already; a 32-bit one has its own colors
+			jjCOLORMAP* map;
+			if (animFrame->_colors != nullptr) {
+				map = Create(animFrame->width, animFrame->height);
+				if (map != nullptr) {
+					std::memcpy(map->_pixels.get(), animFrame->_colors.get(), std::size_t(animFrame->width) * animFrame->height * sizeof(jjPALCOLOR));
+				}
+			} else {
+				map = CreateFromIndices(animFrame->_pixels.get(), animFrame->width, animFrame->height, palette);
+			}
+			// A handle passed to a native function is the function's to release
+			const_cast<jjANIMFRAME*>(animFrame)->Release();
+			return map;
+		}
+		jjCOLORMAP* jjCOLORMAP::CreateFromTexture(std::uint32_t texture, const jjPAL& palette) {
+			jjPIXELMAP* indices = jjPIXELMAP::CreateFromTexture(texture, &palette);
+			if (indices == nullptr) {
+				return nullptr;
+			}
+			jjCOLORMAP* map = CreateFromPixelMap(*indices, palette);
+			indices->Release();
+			return map;
+		}
+		jjCOLORMAP* jjCOLORMAP::CreateFromTile(std::uint16_t tileID, const jjPAL& palette) {
+			constexpr std::uint32_t Size = TileSet::DefaultTileSize;
+			jjCOLORMAP* map = Create(Size, Size);
+			if (map == nullptr) {
+				return map;
+			}
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto* tileMap = owner->GetLevelHandler()->TileMap();
+			if (tileMap == nullptr) {
+				return map;
+			}
+			// An animated tile is the frame it shows now, as jjPIXELMAP has it
+			std::int32_t tileId = (tileID & TileMap::TileIndexMask);
+			if ((tileID & TileMap::TileFlagAnimated) != 0) {
+				tileId = tileMap->ResolveStaticTileId(tileMap->GetStaticTileCount() + tileId);
+				if (tileId < 0) {
+					return map;
+				}
+			}
+			jjPALCOLOR source[Size * Size];
+			if (!owner->GetTileColors(tileId, source, palette)) {
+				return map;
+			}
+			// As jjPIXELMAP has it, every tile can be drawn flipped
+			bool flipX = ((tileID & TileMap::TileFlagFlipX) != 0);
+			bool flipY = ((tileID & TileMap::TileFlagFlipY) != 0);
+			for (std::uint32_t y = 0; y < Size; y++) {
+				const jjPALCOLOR* src = &source[(flipY ? Size - 1 - y : y) * Size];
+				for (std::uint32_t x = 0; x < Size; x++) {
+					map->_pixels[y * Size + x] = src[flipX ? Size - 1 - x : x];
+				}
+			}
+			return map;
+		}
+		jjCOLORMAP* jjCOLORMAP::CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer, const jjPAL& palette) {
+			// TODO: A true color tile of the layer is in the nearest colors of the palette
+			jjPIXELMAP* indices = jjPIXELMAP::CreateFromLayer(left, top, width, height, layer, &palette);
+			if (indices == nullptr) {
+				return nullptr;
+			}
+			jjCOLORMAP* map = CreateFromPixelMap(*indices, palette);
+			indices->Release();
+			return map;
+		}
+		jjCOLORMAP* jjCOLORMAP::CreateFromLayerObject(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, const jjLAYER& layer, const jjPAL& palette) {
+			jjPIXELMAP* indices = jjPIXELMAP::CreateFromLayerObject(left, top, width, height, &layer, &palette);
+			if (indices == nullptr) {
+				return nullptr;
+			}
+			jjCOLORMAP* map = CreateFromPixelMap(*indices, palette);
+			indices->Release();
+			return map;
+		}
+		jjCOLORMAP* jjCOLORMAP::CreateFromFilename(const String& filename) {
+			// The real colors and alpha of the file, whatever kind of image it is; JJ2+ gives a 1 × 1 map for a file it can't read
+			std::unique_ptr<ITextureLoader> loader;
+			if (IsScriptFileNameSafe(filename)) {
+				auto stream = OpenScriptFile(filename);
+				if (stream != nullptr && stream->IsValid()) {
+					loader = ITextureLoader::createFromStream(Death::move(stream), filename);
+				}
+			}
+			if (loader == nullptr || !loader->hasLoaded() || loader->pixels() == nullptr) {
+				return Create(1, 1);
+			}
+
+			const std::uint32_t channels = loader->texFormat().numChannels();
+			const bool bgr = loader->texFormat().isBgr();
+			jjCOLORMAP* map = Create(std::uint32_t(loader->width()), std::uint32_t(loader->height()));
+			if (map == nullptr || channels < 1 || channels > 4) {
+				return map;
+			}
+			const std::uint8_t* src = loader->pixels();
+			std::size_t count = std::size_t(map->width) * map->height;
+			for (std::size_t i = 0; i < count; i++, src += channels) {
+				jjPALCOLOR& color = map->_pixels[i];
+				if (channels <= 2) {
+					color.red = color.green = color.blue = src[0];
+					color.alpha = (channels == 2 ? src[1] : 255);
+				} else {
+					color.red = src[bgr ? 2 : 0];
+					color.green = src[1];
+					color.blue = src[bgr ? 0 : 2];
+					color.alpha = (channels == 4 ? src[3] : 255);
+				}
+			}
+			return map;
+		}
+
+		void jjCOLORMAP::AddRef()
+		{
+			_refCount++;
+		}
+
+		void jjCOLORMAP::Release()
+		{
+			if (--_refCount == 0) {
+				this->~jjCOLORMAP();
+				asFreeMem(this);
+			}
+		}
+
+		jjCOLORMAP& jjCOLORMAP::operator=(const jjCOLORMAP& o)
+		{
+			// Copy only the content, not the script proxy class
+			if (this != &o) {
+				std::size_t size = std::size_t(o.width) * o.height;
+				auto pixels = std::make_unique<jjPALCOLOR[]>(size);
+				std::memcpy(pixels.get(), o._pixels.get(), size * sizeof(jjPALCOLOR));
+				width = o.width;
+				height = o.height;
+				_pixels = Death::move(pixels);
+			}
+			return *this;
+		}
+
+		jjPALCOLOR* jjCOLORMAP::GetPixel(std::uint32_t x, std::uint32_t y) {
+			if (x >= width || y >= height) {
+				// As of jjPIXELMAP, what's written to a pixel out of the map is lost
+				_outOfRange = {};
+				return &_outOfRange;
+			}
+			return &_pixels[std::size_t(y) * width + x];
+		}
+
+		std::unique_ptr<std::uint8_t[]> jjCOLORMAP::ToIndices(const jjPAL& palette) const {
+			// The same color is looked up only once, an image has few of them
+			std::size_t count = std::size_t(width) * height;
+			std::unique_ptr<std::uint8_t[]> indices = std::make_unique<std::uint8_t[]>(count);
+			HashMap<std::uint32_t, std::uint8_t> nearest;
+			for (std::size_t i = 0; i < count; i++) {
+				const jjPALCOLOR& color = _pixels[i];
+				if (color.alpha == 0) {
+					continue;
+				}
+				std::uint32_t key = std::uint32_t(color.red) | (std::uint32_t(color.green) << 8) | (std::uint32_t(color.blue) << 16);
+				auto it = nearest.find(key);
+				if (it == nearest.end()) {
+					it = nearest.emplace(key, palette.FindNearestOpaqueColor(color)).first;
+				}
+				indices[i] = it->second;
+			}
+			return indices;
+		}
+
+		bool jjCOLORMAP::saveToTile(std::uint16_t tileID, bool hFlip) const {
+			constexpr std::uint32_t Size = TileSet::DefaultTileSize;
+
+			// Saving into an animated tile is undefined in JJ2+
+			if (width != Size || height != Size || (tileID & TileMap::TileFlagAnimated) != 0) {
+				return false;
+			}
+
+			// The image saved into a flipped tile is what the tile shows when it's drawn so, see jjPIXELMAP::saveToTile()
+			bool flipX = ((tileID & TileMap::TileFlagFlipX) != 0);
+			bool flipY = ((tileID & TileMap::TileFlagFlipY) != 0);
+			jjPALCOLOR image[Size * Size];
+			for (std::uint32_t y = 0; y < Size; y++) {
+				const jjPALCOLOR* src = &_pixels[(flipY ? Size - 1 - y : y) * Size];
+				for (std::uint32_t x = 0; x < Size; x++) {
+					image[y * Size + x] = src[flipX ? Size - 1 - x : x];
+				}
+			}
+
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			return owner->SetTileColors(tileID & TileMap::TileIndexMask, image);
+		}
+		bool jjCOLORMAP::saveToFrame(jjANIMFRAME* frame) const {
+			if (frame == nullptr) {
+				return false;
+			}
+
+			// As jjPIXELMAP::saveToFrame(), the frame keeps its spots and is a 32-bit one from now on
+			bool result = (width <= UINT16_MAX && height <= UINT16_MAX);
+			if (result) {
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				auto indices = ToIndices(owner->jjPalette);
+				owner->GetAnimationTables().SetFrameColors(*frame, _pixels.get(), indices.get(), width, height);
+			}
+			// A handle passed to a native function is the function's to release
+			frame->Release();
+			return result;
+		}
+		bool jjCOLORMAP::saveToFile(const String& filename, bool allowCompression) const {
+			noop();
+			return false;
+		}
+
+		void jjCOLORMAP::Reframe(std::int64_t left, std::int64_t top, std::uint32_t newWidth, std::uint32_t newHeight, jjPALCOLOR fill) {
+			auto pixels = std::make_unique<jjPALCOLOR[]>(std::size_t(newWidth) * newHeight);
+			for (std::uint32_t y = 0; y < newHeight; y++) {
+				std::int64_t sy = top + y;
+				jjPALCOLOR* dst = &pixels[std::size_t(y) * newWidth];
+				for (std::uint32_t x = 0; x < newWidth; x++) {
+					std::int64_t sx = left + x;
+					dst[x] = (sx >= 0 && sy >= 0 && sx < width && sy < height ? _pixels[std::size_t(sy) * width + std::size_t(sx)] : fill);
+				}
+			}
+			width = newWidth;
+			height = newHeight;
+			_pixels = Death::move(pixels);
+		}
+
+		jjCOLORMAP& jjCOLORMAP::addBorders(std::int32_t left, std::int32_t top, std::int32_t right, std::int32_t bottom, jjPALCOLOR borderColor) {
+			// The same as jjPIXELMAP::addBorders()
+			std::int64_t newWidth = std::int64_t(width) + left + right;
+			std::int64_t newHeight = std::int64_t(height) + top + bottom;
+			std::int64_t cropX = std::int64_t(std::max<std::int32_t>(0, -left)) + std::max<std::int32_t>(0, -right);
+			std::int64_t cropY = std::int64_t(std::max<std::int32_t>(0, -top)) + std::max<std::int32_t>(0, -bottom);
+			if (newWidth <= 0 || newHeight <= 0 || cropX > width || cropY > height ||
+				std::uint64_t(newWidth) * std::uint64_t(newHeight) > MaxPixelMapPixels) {
+				return *this;
+			}
+			Reframe(-std::int64_t(left), -std::int64_t(top), std::uint32_t(newWidth), std::uint32_t(newHeight), borderColor);
+			return *this;
+		}
+		jjCOLORMAP& jjCOLORMAP::crop(std::uint32_t left, std::uint32_t top, std::uint32_t newWidth, std::uint32_t newHeight) {
+			if (newWidth == 0 || newHeight == 0 || std::uint64_t(left) + newWidth > width || std::uint64_t(top) + newHeight > height) {
+				return *this;
+			}
+			Reframe(left, top, newWidth, newHeight, {});
+			return *this;
+		}
+		jjCOLORMAP& jjCOLORMAP::flip(std::int32_t directions) {
+			// SPRITE::Direction as jjPIXELMAP::flip() takes it
+			std::uint8_t value = std::uint8_t(directions);
+			bool flipX = ((value & 0x80) != 0);
+			bool flipY = (((value & 0x40) != 0) != flipX);
+			if (flipX) {
+				for (std::uint32_t y = 0; y < height; y++) {
+					jjPALCOLOR* row = &_pixels[std::size_t(y) * width];
+					std::reverse(row, row + width);
+				}
+			}
+			if (flipY) {
+				for (std::uint32_t y = 0; y < height / 2; y++) {
+					std::swap_ranges(&_pixels[std::size_t(y) * width], &_pixels[std::size_t(y) * width] + width,
+						&_pixels[std::size_t(height - 1 - y) * width]);
+				}
+			}
+			return *this;
+		}
+		jjCOLORMAP& jjCOLORMAP::resize(std::uint32_t newWidth, std::uint32_t newHeight) {
+			if (width == 0 || height == 0 || newWidth == 0 || newHeight == 0 || std::uint64_t(newWidth) * newHeight > MaxPixelMapPixels) {
+				return *this;
+			}
+			// Nearest neighbor
+			auto pixels = std::make_unique<jjPALCOLOR[]>(std::size_t(newWidth) * newHeight);
+			for (std::uint32_t y = 0; y < newHeight; y++) {
+				std::size_t sy = std::size_t(std::uint64_t(y) * height / newHeight);
+				jjPALCOLOR* dst = &pixels[std::size_t(y) * newWidth];
+				for (std::uint32_t x = 0; x < newWidth; x++) {
+					std::size_t sx = std::size_t(std::uint64_t(x) * width / newWidth);
+					dst[x] = _pixels[sy * width + sx];
+				}
+			}
+			width = newWidth;
+			height = newHeight;
+			_pixels = Death::move(pixels);
+			return *this;
+		}
+		jjCOLORMAP& jjCOLORMAP::rotate() {
+			// 90 degrees clockwise, the bottom-left pixel ends up at the top-left
+			auto pixels = std::make_unique<jjPALCOLOR[]>(std::size_t(width) * height);
+			for (std::uint32_t y = 0; y < width; y++) {
+				for (std::uint32_t x = 0; x < height; x++) {
+					pixels[std::size_t(y) * height + x] = _pixels[std::size_t(height - 1 - x) * width + y];
+				}
+			}
+			std::swap(width, height);
+			_pixels = Death::move(pixels);
+			return *this;
+		}
+		jjCOLORMAP& jjCOLORMAP::swizzle(std::uint32_t red, std::uint32_t green, std::uint32_t blue, std::uint32_t alpha) {
+			// COLOR::Component, RED to ALPHA
+			std::size_t count = std::size_t(width) * height;
+			for (std::size_t i = 0; i < count; i++) {
+				jjPALCOLOR& color = _pixels[i];
+				const std::uint8_t components[4] = { color.red, color.green, color.blue, color.alpha };
+				color.red = components[red & 3];
+				color.green = components[green & 3];
+				color.blue = components[blue & 3];
+				color.alpha = components[alpha & 3];
+			}
+			return *this;
+		}
+		jjCOLORMAP& jjCOLORMAP::trim(std::uint32_t& left, std::uint32_t& top, std::uint32_t& right, std::uint32_t& bottom, std::uint8_t trimAlpha) {
+			std::uint32_t minX = width, minY = height, maxX = 0, maxY = 0;
+			for (std::uint32_t y = 0; y < height; y++) {
+				const jjPALCOLOR* row = &_pixels[std::size_t(y) * width];
+				for (std::uint32_t x = 0; x < width; x++) {
+					if (row[x].alpha > trimAlpha) {
+						minX = std::min(minX, x);
+						maxX = std::max(maxX, x);
+						minY = std::min(minY, y);
+						maxY = std::max(maxY, y);
+					}
+				}
+			}
+
+			if (minX > maxX || minY > maxY) {
+				// Nothing to keep, as jjPIXELMAP::trim() the map is cropped to 1 × 1 instead of 0 × 0
+				left = right = width;
+				top = bottom = height;
+				if (width > 0 && height > 0) {
+					Reframe(0, 0, 1, 1, {});
+				}
+				return *this;
+			}
+
+			left = minX;
+			top = minY;
+			right = width - 1 - maxX;
+			bottom = height - 1 - maxY;
+			if (left != 0 || top != 0 || right != 0 || bottom != 0) {
+				Reframe(minX, minY, maxX - minX + 1, maxY - minY + 1, {});
+			}
+			return *this;
+		}
+		jjCOLORMAP& jjCOLORMAP::trimBasic(std::uint8_t trimAlpha) {
+			std::uint32_t left, top, right, bottom;
+			return trim(left, top, right, bottom, trimAlpha);
+		}
 
 		jjMASKMAP::jjMASKMAP() : _refCount(1), _mask{} {
 		}
@@ -2976,11 +3820,9 @@ namespace Jazz2::Scripting
 
 		bool* jjMASKMAP::GetPixel(std::uint32_t x, std::uint32_t y) {
 			if (x >= Size || y >= Size) {
-				asIScriptContext* ctx = asGetActiveContext();
-				if (ctx != nullptr) {
-					ctx->SetException("Index out of bounds");
-				}
-				return nullptr;
+				// The same as jjPIXELMAP::GetPixel()
+				_outOfRange = false;
+				return &_outOfRange;
 			}
 			return &_mask[y * Size + x];
 		}
@@ -3008,22 +3850,36 @@ namespace Jazz2::Scripting
 		}
 
 		jjLAYER::jjLAYER() : _refCount(1) {
-			noop();
+			BindTextureParams();
 		}
 		jjLAYER::~jjLAYER() {
-			noop();
 		}
 
 		jjLAYER* jjLAYER::CreateFromSize(std::uint32_t width, std::uint32_t height) {
-			// A standalone layer (not part of the level); _layerIndex stays -1 so the per-frame sync and tile access skip it
+			// A layer of the level that isn't drawn until it's in the order of the layers (see jjLayerOrderSet())
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			jjLAYER* layer = owner->CreateLayer(std::int32_t(std::min<std::uint32_t>(width, INT32_MAX)), std::int32_t(std::min<std::uint32_t>(height, INT32_MAX)));
+			if (layer != nullptr) {
+				return layer;
+			}
+
+			// A layer that can't be made is a standalone one (not part of the level), _layerIndex stays -1 so the per-frame
+			// sync and tile access skip it
 			void* mem = asAllocMem(sizeof(jjLAYER));
-			auto* layer = new(mem) jjLAYER();
+			layer = new(mem) jjLAYER();
 			layer->width = layer->widthReal = (std::int32_t)width;
 			layer->widthRounded = ((std::int32_t)width + 3) / 4;
 			layer->height = (std::int32_t)height;
 			return layer;
 		}
 		jjLAYER* jjLAYER::CreateCopy(jjLAYER* other) {
+			if (other != nullptr) {
+				// A copy of a layer of the level is one too, with the same tiles
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				if (jjLAYER* layer = owner->CopyLayer(*other)) {
+					return layer;
+				}
+			}
 
 			void* mem = asAllocMem(sizeof(jjLAYER));
 			auto* layer = new(mem) jjLAYER();
@@ -3059,8 +3915,25 @@ namespace Jazz2::Scripting
 			tileHeight = o.tileHeight; tileWidth = o.tileWidth; limitVisibleRegion = o.limitVisibleRegion;
 			hasTileMap = o.hasTileMap; hasTiles = o.hasTiles;
 			SpeedModeX = o.SpeedModeX; SpeedModeY = o.SpeedModeY;
-			// A level layer's proxy doesn't keep the mode itself, it's read off the layer
-			_spriteMode = o.get_spriteMode(); _spriteParam = o._spriteParam;
+			// A level layer's proxy doesn't keep the mode itself, it's read off the layer, unless a script set it
+			_spriteMode = o.get_spriteMode(); _spriteParam = o._spriteParam; _hasSpriteMode = o._hasSpriteMode;
+			// The texture, the parameters of the styles stay this layer's
+			_textureStyle = o._textureStyle; _texture = o._texture; _textureSurface = o._textureSurface;
+			std::memcpy(_textureColor, o._textureColor, sizeof(_textureColor)); _textureStars = o._textureStars;
+			_customTexture = nullptr;
+			if (o._customTexture != nullptr) {
+				constexpr std::size_t Size = std::size_t(Formats::TexturedLayerChunk::TextureSize) * Formats::TexturedLayerChunk::TextureSize;
+				_customTexture = std::make_unique<std::uint8_t[]>(Size);
+				std::memcpy(_customTexture.get(), o._customTexture.get(), Size);
+			}
+			TextureStyleParams* params[] = { &warpHorizon, &tunnel, &menu, &tileMenu, &wave, &cylinder, &reflection };
+			const TextureStyleParams* sources[] = { &o.warpHorizon, &o.tunnel, &o.menu, &o.tileMenu, &o.wave, &o.cylinder, &o.reflection };
+			for (std::size_t i = 0; i < arraySize(params); i++) {
+				params[i]->X = sources[i]->X;
+				params[i]->Y = sources[i]->Y;
+				params[i]->Fade = sources[i]->Fade;
+				params[i]->TintColor = sources[i]->TintColor;
+			}
 			return *this;
 		}
 
@@ -3081,7 +3954,7 @@ namespace Jazz2::Scripting
 		static constexpr float TranslucentLayerAlpha = 192.0f / 255.0f;
 
 		std::uint32_t jjLAYER::get_spriteMode() const {
-			if (_layerIndex < 0) {
+			if (_layerIndex < 0 || _hasSpriteMode) {
 				return _spriteMode;
 			}
 			// The mode of a level layer is what it's drawn as
@@ -3097,6 +3970,8 @@ namespace Jazz2::Scripting
 				case Tiles::LayerRendererType::Default: return (description->Color.W <= 0.0f ? spriteType_INVISIBLE : (translucent ? spriteType_TRANSLUCENT : spriteType_NORMAL));
 				case Tiles::LayerRendererType::Tinted: return spriteType_TINTED;
 				case Tiles::LayerRendererType::PaletteShift: return (translucent ? spriteType_TRANSLUCENTPALSHIFT : spriteType_PALSHIFT);
+				case Tiles::LayerRendererType::SingleColor: return (translucent ? spriteType_TRANSLUCENTCOLOR : spriteType_SINGLECOLOR);
+				case Tiles::LayerRendererType::ChromaKey: return spriteType_CHROMAKEY;
 				default: return spriteType_NORMAL;
 			}
 		}
@@ -3114,10 +3989,23 @@ namespace Jazz2::Scripting
 				return value;
 			}
 
-			// Only a layer drawn as tiles takes a mode. The others (textured backgrounds, x-ray, blur behind) are drawn by
-			// renderers of their own that read the color their own way, so a mode would turn them into plain tiles.
+			// A textured layer is drawn over what is behind it as the mode says, if it's one it can be drawn with
+			if (Tiles::LayerDescription::IsTexturedBackground(current->RendererType)) {
+				self->_spriteMode = value;
+				self->_hasSpriteMode = true;
+				Tiles::LayerDescription description = *current;
+				if (!SetTextureBlend(description)) {
+					LOGW("Sprite mode {} isn't supported for textured layers, layer {} is drawn as it is", value, _layerIndex);
+				}
+				tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+				return value;
+			}
+
+			// Only a layer drawn as tiles takes a mode. The others (x-ray, blur behind, reflection) are drawn by renderers of
+			// their own that read the color their own way, so a mode would turn them into plain tiles.
 			if (current->RendererType != Tiles::LayerRendererType::Default && current->RendererType != Tiles::LayerRendererType::Tinted &&
-				current->RendererType != Tiles::LayerRendererType::PaletteShift) {
+				current->RendererType != Tiles::LayerRendererType::PaletteShift && current->RendererType != Tiles::LayerRendererType::SingleColor &&
+				current->RendererType != Tiles::LayerRendererType::ChromaKey) {
 				LOGW("Sprite mode {} isn't supported for layer {}, it isn't drawn as tiles", value, _layerIndex);
 				return value;
 			}
@@ -3132,11 +4020,28 @@ namespace Jazz2::Scripting
 				case spriteType_TINTED: description.RendererType = Tiles::LayerRendererType::Tinted; description.Color = Vector4f(param, 0.0f, 0.0f, 1.0f); break;
 				case spriteType_PALSHIFT: description.RendererType = Tiles::LayerRendererType::PaletteShift; description.Color = Vector4f(param, 1.0f, 1.0f, 1.0f); break;
 				case spriteType_TRANSLUCENTPALSHIFT: description.RendererType = Tiles::LayerRendererType::PaletteShift; description.Color = Vector4f(param, 1.0f, 1.0f, TranslucentLayerAlpha); break;
+				// The parameter is how opaque the layer is
+				case spriteType_BLENDNORMAL: description.RendererType = Tiles::LayerRendererType::Default; description.Color = Vector4f(1.0f, 1.0f, 1.0f, param); break;
+				// The parameter is how bright the layer is, 128 as it is
+				case spriteType_BRIGHTNESS: {
+					const float brightness = _spriteParam / 128.0f;
+					description.RendererType = Tiles::LayerRendererType::Default;
+					description.Color = Vector4f(brightness, brightness, brightness, 1.0f);
+					break;
+				}
+				// Every tile is as translucent as a translucent tile
+				case spriteType_TRANSLUCENTTILE: description.RendererType = Tiles::LayerRendererType::Default; description.Color = Vector4f(1.0f, 1.0f, 1.0f, TranslucentLayerAlpha); break;
+				// The parameter is the entry of the palette of the color, or of the key
+				case spriteType_SINGLECOLOR: description.RendererType = Tiles::LayerRendererType::SingleColor; description.Color = Vector4f(param, 0.0f, 0.0f, 1.0f); break;
+				case spriteType_TRANSLUCENTCOLOR: description.RendererType = Tiles::LayerRendererType::SingleColor; description.Color = Vector4f(param, 0.0f, 0.0f, TranslucentLayerAlpha); break;
+				case spriteType_CHROMAKEY: description.RendererType = Tiles::LayerRendererType::ChromaKey; description.Color = Vector4f(param, 0.0f, 0.0f, 1.0f); break;
 				default:
 					LOGW("Sprite mode {} isn't supported for layers", value);
 					return value;
 			}
 			tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+			self->_spriteMode = value;
+			self->_hasSpriteMode = true;
 			return value;
 		}
 		std::uint8_t jjLAYER::get_spriteParam() const {
@@ -3153,12 +4058,52 @@ namespace Jazz2::Scripting
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			auto tileMap = owner->GetLevelHandler()->TileMap();
 			const Tiles::LayerDescription* current = (tileMap != nullptr ? tileMap->GetLayerDescription(_layerIndex) : nullptr);
-			if (current != nullptr && (current->RendererType == Tiles::LayerRendererType::Tinted || current->RendererType == Tiles::LayerRendererType::PaletteShift)) {
+			if (current != nullptr && Tiles::LayerDescription::IsTexturedBackground(current->RendererType)) {
+				if (_hasSpriteMode) {
+					Tiles::LayerDescription description = *current;
+					SetTextureBlend(description);
+					tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+				}
+			} else if (current != nullptr && (current->RendererType == Tiles::LayerRendererType::Tinted || current->RendererType == Tiles::LayerRendererType::PaletteShift ||
+				current->RendererType == Tiles::LayerRendererType::SingleColor || current->RendererType == Tiles::LayerRendererType::ChromaKey)) {
 				Tiles::LayerDescription description = *current;
 				description.Color.X = value / 255.0f;
 				tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+			} else if (current != nullptr && _hasSpriteMode && _spriteMode == spriteType_BLENDNORMAL && current->RendererType == Tiles::LayerRendererType::Default) {
+				Tiles::LayerDescription description = *current;
+				description.Color.W = value / 255.0f;
+				tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+			} else if (current != nullptr && _hasSpriteMode && _spriteMode == spriteType_BRIGHTNESS && current->RendererType == Tiles::LayerRendererType::Default) {
+				Tiles::LayerDescription description = *current;
+				const float brightness = value / 128.0f;
+				description.Color = Vector4f(brightness, brightness, brightness, description.Color.W);
+				tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
 			}
 			return value;
+		}
+
+		bool jjLAYER::SetTextureBlend(Tiles::LayerDescription& description) const {
+			// The modes a textured layer can be drawn with over what is behind it, others are drawn as it is
+			std::uint32_t mode = (_hasSpriteMode ? _spriteMode : std::uint32_t(spriteType_NORMAL));
+			description.TextureBlendParam = 255;
+			switch (mode) {
+				case spriteType_NORMAL: description.TextureBlend = Tiles::TexturedLayerBlend::Normal; return true;
+				// Half way between the texture and what is behind it, not as translucent tiles are, measured in JJ2+
+				case spriteType_TRANSLUCENT:
+				case spriteType_TRANSLUCENTTILE:
+					description.TextureBlend = Tiles::TexturedLayerBlend::Translucent;
+					description.TextureBlendParam = 128;
+					return true;
+				// The parameter is how opaque the layer is
+				case spriteType_BLENDNORMAL: description.TextureBlend = Tiles::TexturedLayerBlend::Translucent; description.TextureBlendParam = _spriteParam; return true;
+				case spriteType_INVISIBLE: description.TextureBlend = Tiles::TexturedLayerBlend::Translucent; description.TextureBlendParam = 0; return true;
+				// The parameter is the entry of the palette of the key
+				case spriteType_CHROMAKEY: description.TextureBlend = Tiles::TexturedLayerBlend::ChromaKey; description.TextureBlendParam = _spriteParam; return true;
+				// The parameter is how far the result is mixed over what is behind it, measured in JJ2+
+				case spriteType_BLENDSCREEN: description.TextureBlend = Tiles::TexturedLayerBlend::Screen; description.TextureBlendParam = _spriteParam; return true;
+				case spriteType_BLENDMULTIPLY: description.TextureBlend = Tiles::TexturedLayerBlend::Multiply; description.TextureBlendParam = _spriteParam; return true;
+				default: description.TextureBlend = Tiles::TexturedLayerBlend::Normal; return false;
+			}
 		}
 
 		void jjLAYER::setXSpeed(float newspeed, bool newSpeedIsAnAutoSpeed) const {
@@ -3186,7 +4131,7 @@ namespace Jazz2::Scripting
 				return position.X;
 			}
 			// A layer that isn't part of the level is approximated by its parallax and its offset alone
-			float cameraX = owner->GetLevelHandler()->GetCameraPos(player).X;
+			float cameraX = owner->GetLevelHandler()->GetCameraView(player).X;
 			return cameraX * xSpeed + xOffset;
 		}
 		float jjLAYER::getYPosition(const jjPLAYER* play) const {
@@ -3196,34 +4141,282 @@ namespace Jazz2::Scripting
 			if (GetLayerPositionInView(owner->GetLevelHandler(), player, _layerIndex, position)) {
 				return position.Y;
 			}
-			float cameraY = owner->GetLevelHandler()->GetCameraPos(player).Y;
+			float cameraY = owner->GetLevelHandler()->GetCameraView(player).Y;
 			return cameraY * ySpeed + yOffset;
 		}
 
 		std::int32_t jjLAYER::GetTextureMode() const {
-			noop();
-			return 0;
+			return _textureStyle;
 		}
-		void jjLAYER::SetTextureMode(std::int32_t value) const {
-			noop();
+		void jjLAYER::SetTextureMode(std::int32_t value) {
+			if (_textureStyle != value) {
+				_textureStyle = value;
+				if (value == tbgModeMENU) {
+					LOGW("Texture style MENU isn't supported, the layer is drawn as a warp horizon");
+				}
+				ApplyTexture();
+				// The image of the script is drawn from another half of the palette by another style
+				if (_texture == -1 && _customTexture != nullptr) {
+					SetCustomTexture(_customTexture.get());
+				}
+			}
+		}
+		bool jjLAYER::SetCustomTexture(const std::uint8_t* pixels) {
+			constexpr std::size_t Size = std::size_t(Formats::TexturedLayerChunk::TextureSize) * Formats::TexturedLayerChunk::TextureSize;
+			if (pixels != _customTexture.get()) {
+				_customTexture = std::make_unique<std::uint8_t[]>(Size);
+				std::memcpy(_customTexture.get(), pixels, Size);
+			}
+			auto* tileMap = (_layerIndex >= 0 ? ScriptLoader::FromActiveContext<LevelScriptLoader>()->GetLevelHandler()->TileMap() : nullptr);
+			if (tileMap == nullptr) {
+				return false;
+			}
+			const bool upperHalf = (_textureStyle == tbgModeWARPHORIZON || _textureStyle == tbgModeTUNNEL || _textureStyle == tbgModeCYLINDER);
+			std::unique_ptr<std::uint8_t[]> drawn = std::make_unique<std::uint8_t[]>(Size);
+			for (std::size_t i = 0; i < Size; i++) {
+				drawn[i] = std::uint8_t(upperHalf ? (_customTexture[i] | 0x80) : _customTexture[i]);
+			}
+			if (!tileMap->SetLayerTexture(_layerIndex, ArrayView<const std::uint8_t>(drawn.get(), Size))) {
+				return false;
+			}
+			// The textured passes are drawn again with it
+			tileMap->InvalidateTexturedBackground();
+			return true;
 		}
 		std::int32_t jjLAYER::GetTexture() const {
-			noop();
-			return 0;
+			return _texture;
 		}
-		void jjLAYER::SetTexture(std::int32_t value) const {
-			noop();
+		void jjLAYER::SetTexture(std::int32_t value) {
+			_texture = value;
+			// Not the image of the script any more, which it can't set again but by making it again
+			_customTexture = nullptr;
+			if (_layerIndex < 0) {
+				return;
+			}
+
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto tileMap = owner->GetLevelHandler()->TileMap();
+			if (tileMap == nullptr) {
+				return;
+			}
+			constexpr std::int32_t Size = Formats::TexturedLayerChunk::TextureSize;
+			if (value == 0) {
+				// TEXTURE::FROMTILES, the tiles at the top left of the layer
+				tileMap->SetLayerTexture(_layerIndex, {});
+			} else if (value > 0) {
+				// One of the textures of JJ2+, TEXTURE::CUSTOM is what jjPIXELMAP::makeTexture() sets
+				std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(std::size_t(Size) * Size);
+				if (!owner->GetPlusTexture(value, pixels.get())) {
+					LOGW("Texture {} of JJ2+ isn't available, \"Plus.j2d\" of JJ2+ is needed in the \"Source\" directory", value);
+					return;
+				}
+				tileMap->SetLayerTexture(_layerIndex, ArrayView<const std::uint8_t>(pixels.get(), std::size_t(Size) * Size));
+			}
+			tileMap->InvalidateTexturedBackground();
+		}
+		std::int32_t jjLAYER::GetTextureSurface() const {
+			return _textureSurface;
+		}
+		void jjLAYER::SetTextureSurface(std::int32_t value) {
+			if (_textureSurface != value) {
+				_textureSurface = value;
+				ApplyTexture();
+			}
+		}
+
+		void jjLAYER::SetTextureColor(std::int32_t index, std::uint8_t value) {
+			if (_textureColor[index] != value) {
+				_textureColor[index] = value;
+				ApplyTexture();
+			}
+		}
+
+		jjPALCOLOR jjLAYER::GetFadeColor(const TextureStyleParams* params) {
+			jjPALCOLOR color = {};
+			color.red = params->Owner->_textureColor[0];
+			color.green = params->Owner->_textureColor[1];
+			color.blue = params->Owner->_textureColor[2];
+			return color;
+		}
+		void jjLAYER::SetFadeColor(TextureStyleParams* params, jjPALCOLOR color) {
+			jjLAYER* layer = params->Owner;
+			if (layer->_textureColor[0] != color.red || layer->_textureColor[1] != color.green || layer->_textureColor[2] != color.blue) {
+				layer->_textureColor[0] = color.red;
+				layer->_textureColor[1] = color.green;
+				layer->_textureColor[2] = color.blue;
+				layer->ApplyTexture();
+			}
+		}
+
+		void jjLAYER::BindTextureParams() {
+			for (TextureStyleParams* params : { &warpHorizon, &tunnel, &menu, &tileMenu, &wave, &cylinder, &reflection }) {
+				params->Owner = this;
+			}
+		}
+
+		void jjLAYER::InitializeTexture(const Tiles::TileMapLayer& layer) {
+			const Tiles::LayerDescription& description = layer.Description;
+			const Tiles::LayerRendererType type = description.RendererType;
+			const std::uint8_t flags = description.TextureFlags;
+			auto toByte = [](float value) {
+				return std::uint8_t(std::clamp(value, 0.0f, 1.0f) * 255.0f + 0.5f);
+			};
+
+			_texture = (layer.TexturePixels.empty() ? 0 : -1);
+			xInnerSpeed = description.TextureInnerSpeed.X;
+			yInnerSpeed = description.TextureInnerSpeed.Y;
+			// Per tick of JJ2+, as scripts take them (see Tiles::LayerDescription::OriginalAutoSpeedScale)
+			xInnerAutoSpeed = description.TextureInnerAutoSpeed.X / Tiles::LayerDescription::OriginalAutoSpeedScale;
+			yInnerAutoSpeed = description.TextureInnerAutoSpeed.Y / Tiles::LayerDescription::OriginalAutoSpeedScale;
+			if (!Tiles::LayerDescription::IsTexturedBackground(type) && type != Tiles::LayerRendererType::Reflection) {
+				_textureSurface = Untextured;
+				_textureStyle = tbgModeWARPHORIZON;
+				return;
+			}
+
+			_textureStyle = std::int32_t(type) - std::int32_t(Tiles::LayerRendererType::Sky);
+			if ((flags & Formats::TexturedLayerParams::InnerLayer) != 0) {
+				_textureSurface = InnerLayer;
+			} else if ((flags & Formats::TexturedLayerParams::InnerWindow) != 0) {
+				_textureSurface = InnerWindow;
+			} else {
+				// Any layer without the perspective of JJ2+ is drawn as the sky layers always were here, the sky layer of the
+				// original game with it is LEGACY, which JJ2+ draws as FULLSCREEN there (see ApplyTexture())
+				_textureSurface = ((flags & Formats::TexturedLayerParams::Fullscreen) != 0 && layer.OriginalNumber != 8 ? FullScreen : Legacy);
+			}
+			_textureColor[0] = toByte(description.Color.X);
+			_textureColor[1] = toByte(description.Color.Y);
+			_textureColor[2] = toByte(description.Color.Z);
+
+			// The fade position and whether it fades are the same for all the styles, as in JJ2+ (see TextureStyleParams), a
+			// reflection keeps its tint color where the others have the fade
+			for (TextureStyleParams* params : { &warpHorizon, &tunnel, &menu, &tileMenu, &wave, &cylinder, &reflection }) {
+				params->X = description.TextureFadePosition.X;
+				params->Y = description.TextureFadePosition.Y;
+				if (_textureStyle != tbgModeREFLECTION) {
+					params->Fade = (description.TextureFade != 0);
+				}
+			}
+			switch (_textureStyle) {
+				case tbgModeTUNNEL: _textureStars = ((flags & Formats::TexturedLayerParams::Spiral) != 0); break;
+				case tbgModeWAVE: _textureStars = ((flags & Formats::TexturedLayerParams::DistortionAngle) != 0); break;
+				case tbgModeCYLINDER: _textureStars = ((flags & Formats::TexturedLayerParams::HalfSize) != 0); break;
+				case tbgModeREFLECTION:
+					_textureStars = (description.Color.W > 0.0f);
+					reflection.TintColor = description.TextureFade;
+					break;
+				// A warp horizon's stars, the full size of a tile menu
+				default: _textureStars = (description.Color.W > 0.0f); break;
+			}
+		}
+
+		void jjLAYER::ApplyTexture() {
+			if (_layerIndex < 0) {
+				return;
+			}
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto tileMap = owner->GetLevelHandler()->TileMap();
+			// The sprite layer is never drawn textured, SetLayerDescription() leaves it as it is
+			const Tiles::LayerDescription* current = (tileMap != nullptr ? tileMap->GetLayerDescription(_layerIndex) : nullptr);
+			if (current == nullptr) {
+				return;
+			}
+
+			const bool wasTextured = (Tiles::LayerDescription::IsTexturedBackground(current->RendererType) ||
+				current->RendererType == Tiles::LayerRendererType::Reflection);
+			Tiles::LayerDescription description = *current;
+			if (_textureSurface == Untextured) {
+				if (wasTextured) {
+					// Tiles again, as an ordinary layer
+					description.RendererType = Tiles::LayerRendererType::Default;
+					description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+					tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+				}
+				return;
+			}
+
+			// The game has no menu of JJ2+, it's a textured background at least (see SetTextureMode())
+			std::int32_t style = _textureStyle;
+			if (style == tbgModeMENU || style < tbgModeWARPHORIZON || style > tbgModeREFLECTION) {
+				style = tbgModeWARPHORIZON;
+			}
+			const float red = _textureColor[0] / 255.0f;
+			const float green = _textureColor[1] / 255.0f;
+			const float blue = _textureColor[2] / 255.0f;
+			const float stars = (_textureStars ? 1.0f : 0.0f);
+			// Any style but a wave can be drawn only where the layer is, and over the whole view in the perspective of JJ2+ or
+			// as the sky layers always were here (LEGACY) - but JJ2+ draws a sky, a tunnel or a cylinder of LEGACY of the sky
+			// layer of the original game exactly as FULLSCREEN (measured), which places it where layer 5 is by LAYER8
+			const bool isPlusLegacy = (_textureSurface == Legacy && tileMap->GetLayerOriginalNumber(_layerIndex) == 8 &&
+				(style == tbgModeWARPHORIZON || style == tbgModeTUNNEL || style == tbgModeCYLINDER));
+			std::uint8_t flags = 0;
+			if (style != tbgModeWAVE) {
+				if (_textureSurface == InnerLayer) {
+					flags = Formats::TexturedLayerParams::InnerLayer;
+				} else if (_textureSurface == InnerWindow) {
+					flags = Formats::TexturedLayerParams::InnerWindow;
+				} else if (_textureSurface == FullScreen || isPlusLegacy) {
+					flags = Formats::TexturedLayerParams::Fullscreen;
+				}
+			}
+			description.TextureFadePosition = Vector2f(0.5f, 0.5f);
+			description.TextureFade = Formats::TexturedLayerParams::DefaultFade;
+			switch (style) {
+				case tbgModeWARPHORIZON:
+					description.Color = Vector4f(red, green, blue, stars);
+					description.TextureFadePosition = Vector2f(warpHorizon.X, warpHorizon.Y);
+					description.TextureFade = (warpHorizon.Fade ? Formats::TexturedLayerParams::DefaultFade : 0);
+					break;
+				case tbgModeTUNNEL:
+					description.Color = Vector4f(red, green, blue, 0.0f);
+					description.TextureFadePosition = Vector2f(tunnel.X, tunnel.Y);
+					description.TextureFade = (tunnel.Fade ? Formats::TexturedLayerParams::DefaultFade : 0);
+					flags |= (_textureStars ? Formats::TexturedLayerParams::Spiral : 0);
+					break;
+				case tbgModeTILEMENU:
+					// Whether it's drawn at full size, the auto speeds turn and zoom it, or the inner ones where it's drawn only
+					// where the layer is
+					description.Color = Vector4f(red, green, blue, stars);
+					description.TextureFadePosition = Vector2f(tileMenu.X, tileMenu.Y);
+					break;
+				case tbgModeWAVE:
+					// The wavelengths and the speed, the amplitudes are where the others have the fade position
+					description.Color = Vector4f(red, green, blue, 0.0f);
+					description.TextureFadePosition = Vector2f(wave.X, wave.Y);
+					flags = (_textureStars ? Formats::TexturedLayerParams::DistortionAngle : 0);
+					break;
+				case tbgModeCYLINDER:
+					description.Color = Vector4f(red, green, blue, 0.0f);
+					description.TextureFadePosition = Vector2f(cylinder.X, cylinder.Y);
+					description.TextureFade = (cylinder.Fade ? Formats::TexturedLayerParams::DefaultFade : 0);
+					flags |= (_textureStars ? Formats::TexturedLayerParams::HalfSize : 0);
+					break;
+				case tbgModeREFLECTION:
+					// The tint opacity, the distance and the distortion, and the blur
+					description.Color = Vector4f(red, green, blue, stars);
+					description.TextureFadePosition = Vector2f(reflection.X, reflection.Y);
+					description.TextureFade = reflection.TintColor;
+					break;
+			}
+			description.TextureFlags = flags;
+			description.TextureInnerSpeed = Vector2f(xInnerSpeed, yInnerSpeed);
+			description.TextureInnerAutoSpeed = Vector2f(xInnerAutoSpeed, yInnerAutoSpeed) * Tiles::LayerDescription::OriginalAutoSpeedScale;
+			// The sprite mode a script set, also before the layer was textured
+			SetTextureBlend(description);
+			description.RendererType = Tiles::LayerRendererType(std::int32_t(Tiles::LayerRendererType::Sky) + style);
+			tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+			tileMap->InvalidateTexturedBackground();
 		}
 
 		CScriptArray* jjLAYER::jjLayerOrderGet() {
-			// Returns the level's layers (in engine index order) as proxies, so scripts can enumerate jjLayers
+			// The level's layers in the order they're drawn, from the front, as proxies
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			auto tileMap = owner->GetLevelHandler()->TileMap();
-			std::int32_t count = (tileMap != nullptr ? tileMap->GetLayerCount() : 0);
+			SmallVector<std::int32_t, 16> order;
+			owner->GetLayerOrder(order);
 			asITypeInfo* arrayType = owner->GetEngine()->GetTypeInfoByDecl("array<jjLAYER@>");
-			CScriptArray* arr = CScriptArray::Create(arrayType, (std::uint32_t)count);
-			for (std::int32_t i = 0; i < count; i++) {
-				jjLAYER* proxy = owner->GetLayerProxy(i);	// AddRef'd for us
+			CScriptArray* arr = CScriptArray::Create(arrayType, (std::uint32_t)order.size());
+			for (std::size_t i = 0; i < order.size(); i++) {
+				jjLAYER* proxy = owner->GetLayerProxy(order[i]);	// AddRef'd for us
 				if (proxy != nullptr) {
 					arr->SetValue((std::uint32_t)i, &proxy);	// AddRefs the handle into the array
 					proxy->Release();							// drop our extra reference
@@ -3232,17 +4425,122 @@ namespace Jazz2::Scripting
 			return arr;
 		}
 		bool jjLAYER::jjLayerOrderSet(const CScriptArray& order) {
-			noop();
-			return false;
+			// The layers a script made are layers of the level too, only a standalone one (one that couldn't be made) is
+			// left out, it isn't drawn
+			SmallVector<std::int32_t, 16> indices;
+			bool hasStandaloneLayers = false;
+			for (std::uint32_t i = 0; i < order.GetSize(); i++) {
+				const jjLAYER* layer = *static_cast<jjLAYER* const*>(order.At(i));
+				if (layer == nullptr) {
+					// As in JJ2+, a null handle makes the order invalid
+					return false;
+				}
+				if (layer->_layerIndex < 0) {
+					hasStandaloneLayers = true;
+					continue;
+				}
+				indices.push_back(layer->_layerIndex);
+			}
+			if (hasStandaloneLayers) {
+				noop();
+			}
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			return owner->SetLayerOrder(indices);
 		}
 		CScriptArray* jjLAYER::jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, std::int32_t tileIDAdjustmentFactor) {
-
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			return CScriptArray::Create(owner->GetEngine()->GetTypeInfoByDecl("array<jjLAYER@>"), 16);
+			SmallVector<std::uint32_t, 8> layerNumbers;
+			for (std::uint32_t i = 0; i < layerIDs.GetSize(); i++) {
+				layerNumbers.push_back(*static_cast<const std::uint32_t*>(layerIDs.At(i)));
+			}
+
+			// As in JJ2+, no layers at all if one of them can't be had
+			SmallVector<jjLAYER*, 8> layers;
+			owner->CreateLayersFromLevel(filename, layerNumbers, tileIDAdjustmentFactor, layers);
+
+			CScriptArray* arr = CScriptArray::Create(owner->GetEngine()->GetTypeInfoByDecl("array<jjLAYER@>"), std::uint32_t(layers.size()));
+			for (std::size_t i = 0; i < layers.size(); i++) {
+				arr->SetValue(std::uint32_t(i), &layers[i]);	// AddRefs the handle into the array
+				layers[i]->Release();
+			}
+			return arr;
 		}
 		bool jjLAYER::jjTilesFromTileset(const String& filename, std::uint32_t firstTileID, std::uint32_t tileCount, const CScriptArray* paletteColorMapping) {
-			noop();
-			return false;
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			// As in JJ2+, a mapping of fewer than 256 colors isn't applied
+			const std::uint8_t* mapping = (paletteColorMapping != nullptr && paletteColorMapping->GetSize() >= 256
+				? static_cast<const std::uint8_t*>(paletteColorMapping->At(0)) : nullptr);
+			bool result = owner->AddTilesFromTileSet(filename, firstTileID, tileCount, mapping);
+			// A handle passed by value is the function's to release
+			if (paletteColorMapping != nullptr) {
+				paletteColorMapping->Release();
+			}
+			return result;
+		}
+		bool jjLAYER::jjTilesFromTileset32(const String& filename, std::uint32_t firstTileID, std::uint32_t tileCount, const jjPAL* palette) {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			bool result = owner->AddTrueColorTilesFromTileSet(filename, firstTileID, tileCount, palette);
+			// A handle passed by value is the function's to release
+			if (palette != nullptr) {
+				const_cast<jjPAL*>(palette)->Release();
+			}
+			return result;
+		}
+
+		jjTILE::jjTILE(std::uint16_t tileID) : _refCount(1), _tileID(tileID) {
+		}
+
+		void jjTILE::AddRef() {
+			_refCount++;
+		}
+
+		void jjTILE::Release() {
+			if (--_refCount == 0) {
+				this->~jjTILE();
+				asFreeMem(this);
+			}
+		}
+
+		jjTILE* jjTILE::get_jjTiles(std::uint16_t tileID) {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			return owner->GetTileProxy(tileID);
+		}
+
+		jjTILE* jjTILE::get_jjAnimatedTiles(std::uint16_t tileID) {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			return owner->GetTileProxy(tileID | TileMap::TileFlagAnimated);
+		}
+
+		CScriptArray* jjTILE::getFrames() const {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			SmallVector<std::uint16_t, 16> frames;
+			owner->GetTileFrames(_tileID, frames);
+			CScriptArray* arr = CScriptArray::Create(owner->GetEngine()->GetTypeInfoByDecl("array<uint16>"), std::uint32_t(frames.size()));
+			for (std::size_t i = 0; i < frames.size(); i++) {
+				*static_cast<std::uint16_t*>(arr->At(std::uint32_t(i))) = frames[i];
+			}
+			return arr;
+		}
+
+		bool jjTILE::setFrames(const CScriptArray& frames, bool pingPong, std::uint16_t wait, std::uint16_t randomWait, std::uint16_t pingPongWait) {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			const std::uint16_t* data = (frames.GetSize() > 0 ? static_cast<const std::uint16_t*>(frames.At(0)) : nullptr);
+			return owner->SetTileFrames(_tileID, ArrayView<const std::uint16_t>(data, frames.GetSize()), pingPong, wait, randomWait, pingPongWait);
+		}
+
+		std::uint8_t jjTILE::get_fps() const {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			return owner->GetTileFps(_tileID);
+		}
+
+		std::uint8_t jjTILE::set_fps(std::uint8_t value) {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			owner->SetTileFps(_tileID, value);
+			return value;
+		}
+
+		std::uint16_t jjTILE::get_tileID() const {
+			return _tileID;
 		}
 
 		std::uint16_t jjLAYER::tileGet(int xTile, int yTile) {
@@ -3288,37 +4586,15 @@ namespace Jazz2::Scripting
 
 	jjOBJ* get_jjObjects(std::int32_t index)
 	{
+		// One persistent view of each object, what a script writes goes to the object (see LevelScriptLoader)
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		auto* actor = owner->GetScriptObject(index);
-
-		// Script-controlled objects return their persistent, writable jjOBJ (so edits affect the live object)
-		if (auto* wrapper = runtime_cast<Legacy::ScriptLegacyObject>(actor)) {
-			jjOBJ* obj = wrapper->GetObject();
-			obj->AddRef();
-			return obj;
-		}
-
-		// Otherwise (a natively-spawned object or an unknown ID) return a read-only position snapshot
-		void* mem = asAllocMem(sizeof(jjOBJ));
-		auto* obj = new(mem) jjOBJ();
-		obj->objectID = (std::int16_t)index;
-		if (actor != nullptr) {
-			Vector2f pos = actor->GetPos();
-			Vector2f speed = actor->GetSpeed();
-			obj->xPos = obj->xOrg = pos.X;
-			obj->yPos = obj->yOrg = pos.Y;
-			obj->xSpeed = speed.X;
-			obj->ySpeed = speed.Y;
-		}
-		return obj;
+		return owner->GetObjectById(index);
 	}
 
 	jjOBJ* get_jjObjectPresets(std::int8_t id)
 	{
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-
-		void* mem = asAllocMem(sizeof(jjOBJ));
-		return new(mem) jjOBJ();
+		return owner->GetObjectPreset(std::uint8_t(id));
 	}
 
 	void jjAddParticleTileExplosion(std::uint16_t xTile, std::uint16_t yTile, std::uint16_t tile, bool collapseSceneryStyle) {
@@ -3373,21 +4649,23 @@ namespace Jazz2::Scripting
 		return owner->GetPlayerBackingStore(index);
 	}
 
+	// The converter does what MLLE::Setup() and MLLE::SpawnOffgrids() do, when the level is converted - the layers, their
+	// properties and their order, the palette, the edited tiles and the off-grid events are all in the level already
 	bool mlleSetup() {
-		noop();
 		return true;
 	}
 
-	void mlleReapplyPalette() {
-		noop();
-	}
-
 	void mlleSpawnOffgrids() {
-		noop();
 	}
 
 	void mlleSpawnOffgridsLocal() {
-		noop();
+	}
+
+	Legacy::jjLAYER* mlleGetLayer(const String& name) {
+		// The names MLLE gives the layers are converted into the names of the layers
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::int32_t index = owner->FindLayerByName(name);
+		return (index >= 0 ? owner->GetLayerProxy(index) : nullptr);
 	}
 
 	float get_sinTable(std::uint32_t angle) {
@@ -3522,8 +4800,10 @@ namespace Jazz2::Scripting
 	}
 
 	String getLevelFileName() {
+		// The name of the file of the level as JJ2+ has it, which scripts take layers of (jjLayersFromLevel()), not the
+		// episode and the level the game knows it by
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return owner->GetLevelHandler()->GetLevelName();
+		return String(fs::GetFileName(owner->GetLevelHandler()->GetLevelName())) + ".j2l"_s;
 	}
 	String getCurrLevelName() {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -3735,7 +5015,9 @@ namespace Jazz2::Scripting
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		Legacy::jjLAYER* proxy;
 		auto* layer = _this->ResolveLayerNumber(id, &proxy);
-		return (proxy != nullptr ? proxy->xAutoSpeed : (layer != nullptr ? layer->Description.AutoSpeedX : 0.0f));
+		// Per tick of JJ2+, as scripts take them (see Tiles::LayerDescription::FromOriginalAutoSpeed())
+		return (proxy != nullptr ? proxy->xAutoSpeed : (layer != nullptr
+			? Tiles::LayerDescription::ToOriginalAutoSpeed(layer->Description.AutoSpeedX, layer->Description.SpeedModelX) : 0.0f));
 	}
 	float LevelScriptLoader::set_layerXAutoSpeed(std::uint8_t id, float value) {
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -3744,7 +5026,7 @@ namespace Jazz2::Scripting
 		if (layer == nullptr) {
 			return 0.0f;
 		}
-		layer->Description.AutoSpeedX = value;
+		layer->Description.AutoSpeedX = Tiles::LayerDescription::FromOriginalAutoSpeed(value, layer->Description.SpeedModelX);
 		if (proxy != nullptr) {
 			proxy->xAutoSpeed = value;
 		}
@@ -3754,7 +5036,8 @@ namespace Jazz2::Scripting
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		Legacy::jjLAYER* proxy;
 		auto* layer = _this->ResolveLayerNumber(id, &proxy);
-		return (proxy != nullptr ? proxy->yAutoSpeed : (layer != nullptr ? layer->Description.AutoSpeedY : 0.0f));
+		return (proxy != nullptr ? proxy->yAutoSpeed : (layer != nullptr
+			? Tiles::LayerDescription::ToOriginalAutoSpeed(layer->Description.AutoSpeedY, layer->Description.SpeedModelY) : 0.0f));
 	}
 	float LevelScriptLoader::set_layerYAutoSpeed(std::uint8_t id, float value) {
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -3763,7 +5046,7 @@ namespace Jazz2::Scripting
 		if (layer == nullptr) {
 			return 0.0f;
 		}
-		layer->Description.AutoSpeedY = value;
+		layer->Description.AutoSpeedY = Tiles::LayerDescription::FromOriginalAutoSpeed(value, layer->Description.SpeedModelY);
 		if (proxy != nullptr) {
 			proxy->yAutoSpeed = value;
 		}
@@ -3773,7 +5056,7 @@ namespace Jazz2::Scripting
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		Legacy::jjLAYER* proxy;
 		auto* layer = _this->ResolveLayerNumber(id, &proxy);
-		return (layer != nullptr && layer->Visible);
+		return (proxy != nullptr ? proxy->hasTiles : (layer != nullptr && layer->Visible));
 	}
 	bool LevelScriptLoader::set_layerHasTiles(std::uint8_t id, bool value) {
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -3782,7 +5065,12 @@ namespace Jazz2::Scripting
 		if (layer == nullptr) {
 			return false;
 		}
-		layer->Visible = value;
+		if (proxy != nullptr) {
+			// The proxy decides, together with the order of the layers (see SyncLayerProperties())
+			proxy->hasTiles = value;
+		} else {
+			layer->Visible = value;
+		}
 		return value;
 	}
 	bool LevelScriptLoader::get_layerTileHeight(std::uint8_t id) {
@@ -3869,36 +5157,99 @@ namespace Jazz2::Scripting
 
 	// TODO
 
+	// Draws in the level what a script draws by the functions of jjDraw*, see Legacy::ScriptWorldCanvas. The layer the
+	// coordinates follow (`layerXY`) and the player that sees it (`playerID`) aren't taken into account, the coordinates
+	// are those of the level and everyone sees it.
+	static void DrawWorldSprite(LevelScriptLoader* owner, GenericGraphicResource* graphics, std::int32_t cell, float x, float y,
+		std::int8_t direction, float scaleX, float scaleY, std::int32_t angle, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ)
+	{
+		if (graphics == nullptr || ContentResolver::Get().IsHeadless()) {
+			return;
+		}
+		Legacy::ScriptWorldCanvas::SpriteDraw draw = { graphics, cell, x, y, direction, scaleX, scaleY, angle, mode, param, owner->GetLayerDrawZ(layerZ) };
+		owner->GetWorldCanvas().AddSprite(draw);
+	}
+
+	static void DrawWorldSolid(LevelScriptLoader* owner, float x, float y, float width, float height, std::uint8_t color,
+		std::uint32_t mode, std::uint8_t param, std::int8_t layerZ)
+	{
+		if (ContentResolver::Get().IsHeadless()) {
+			return;
+		}
+		Legacy::ScriptWorldCanvas::SolidDraw draw = { x, y, width, height, color, mode, param, owner->GetLayerDrawZ(layerZ) };
+		owner->GetWorldCanvas().AddSolid(draw);
+	}
+
 	void LevelScriptLoader::jjDrawPixel(float xPixel, float yPixel, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		DrawWorldSolid(owner, xPixel, yPixel, 1.0f, 1.0f, color, mode, param, layerZ);
 	}
 
 	void LevelScriptLoader::jjDrawRectangle(float xPixel, float yPixel, std::int32_t width, std::int32_t height, std::uint8_t color, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		DrawWorldSolid(owner, xPixel, yPixel, float(width), float(height), color, mode, param, layerZ);
 	}
 
 	void LevelScriptLoader::jjDrawSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::int32_t cell = 0;
+		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, direction, 1.0f, 1.0f, 0, mode, param, layerZ);
 	}
 
 	void LevelScriptLoader::jjDrawSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::int32_t cell = 0;
+		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, direction, 1.0f, 1.0f, 0, mode, param, layerZ);
 	}
 
 	void LevelScriptLoader::jjDrawResizedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::int32_t cell = 0;
+		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, 0, mode, param, layerZ);
 	}
 
 	void LevelScriptLoader::jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::int32_t cell = 0;
+		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, 0, mode, param, layerZ);
 	}
 
 	void LevelScriptLoader::jjDrawRotatedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::int32_t cell = 0;
+		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, angle, mode, param, layerZ);
 	}
 
 	void LevelScriptLoader::jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::int32_t cell = 0;
+		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, angle, mode, param, layerZ);
+	}
+
+	Legacy::ScriptWorldCanvas& LevelScriptLoader::GetWorldCanvas()
+	{
+		if (_worldCanvas == nullptr) {
+			_worldCanvas = std::make_unique<Legacy::ScriptWorldCanvas>();
+			_worldCanvas->setParent(_levelHandler->_rootNode.get());
+		}
+		return *_worldCanvas;
+	}
+
+	std::uint16_t LevelScriptLoader::GetLayerDrawZ(std::int32_t layerNumber) const
+	{
+		// The sprite layer is where the objects are, the others are just in front of their tiles
+		Tiles::TileMap* tileMap = _levelHandler->_tileMap.get();
+		std::int32_t index = (layerNumber != 4 ? GetLayerIndex(layerNumber) : -1);
+		if (tileMap == nullptr || index < 0 || index >= std::int32_t(tileMap->_layers.size())) {
+			return std::uint16_t(ILevelHandler::SpritePlaneZ);
+		}
+		return std::uint16_t(tileMap->_layers[index].Description.Depth + 1);
 	}
 
 	void LevelScriptLoader::jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
@@ -3918,52 +5269,59 @@ namespace Jazz2::Scripting
 	}
 
 	std::int32_t LevelScriptLoader::jjGetStringWidth(const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& style) {
-		//noop();
-		
-		float scale;
-		switch (size) {
-			case 1:	// SMALL
-				scale = 0.6f;
-				break;
-			case 2:	// LARGE
-				scale = 1.1f;
-				break;
-			default:
-			case 0:	// MEDIUM
-				scale = 0.8f;
-				break;
-		}
-
-		// The font lives in ContentResolver (the HUD just borrows it), so this works even when called during script
+		// The fonts live in ContentResolver (the HUD just borrows them), so this works even when called during script
 		// initialization / onLevelLoad, before the HUD has been created
-		auto font = ContentResolver::Get().GetFont(FontType::Small);
-		if (font == nullptr) {
+		ScriptTextStyle textStyle = GetScriptTextStyle(size);
+		if (textStyle.Font == nullptr) {
 			return 0;
 		}
-		auto measuredSize = font->MeasureString(text, scale);
-		return (std::int32_t)measuredSize.X;
+		auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
+		return (std::int32_t)textStyle.Font->MeasureString(recodedText, textStyle.Scale, textStyle.CharSpacing, textStyle.LineSpacing).X;
 	}
 
 	void jjSetDarknessColor(jjPALCOLOR color) {
 		noop();
 	}
-	// The textured background of the level is layer 8, the textures that fade into a color are drawn by these renderers
-	static Tiles::LayerDescription* GetFadingTexturedBackground() {
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		Tiles::LayerDescription* description = owner->GetLayerDescription(8);
-		if (description == nullptr || (description->RendererType != LayerRendererType::Sky &&
-			description->RendererType != LayerRendererType::Tunnel && description->RendererType != LayerRendererType::Cylinder)) {
-			return nullptr;
-		}
-		return description;
+	// The textured background of the level is layer 8, its jjLAYER keeps how scripts set it (see jjLAYER::ApplyTexture()), the
+	// global properties of JJ2+ are those of it
+	namespace
+	{
+		struct TexturedBackgroundLayer
+		{
+			jjLAYER* Layer;
+
+			TexturedBackgroundLayer() {
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				Layer = owner->GetLayerProxy(owner->GetLayerIndex(8));
+			}
+			~TexturedBackgroundLayer() {
+				if (Layer != nullptr) {
+					Layer->Release();
+				}
+			}
+
+			// The fade position is of the style the layer has now
+			jjLAYER::TextureStyleParams& GetStyleParams() const {
+				switch (Layer->GetTextureMode()) {
+					case tbgModeTUNNEL: return Layer->tunnel;
+					case tbgModeWAVE: return Layer->wave;
+					case tbgModeCYLINDER: return Layer->cylinder;
+					case tbgModeREFLECTION: return Layer->reflection;
+					default: return Layer->warpHorizon;
+				}
+			}
+		};
 	}
 
 	void jjSetFadeColors(std::uint8_t red, std::uint8_t green, std::uint8_t blue) {
-		// Has no effect without a textured background, as in JJ2+; the alpha of the color shows the stars and stays
-		if (Tiles::LayerDescription* description = GetFadingTexturedBackground()) {
-			description->Color.X = red / 255.0f;
-			description->Color.Y = green / 255.0f;
-			description->Color.Z = blue / 255.0f;
+		// Without a textured background it's kept for when there's one, the alpha of the color shows the stars and stays
+		TexturedBackgroundLayer background;
+		if (background.Layer != nullptr) {
+			jjPALCOLOR color = {};
+			color.red = red;
+			color.green = green;
+			color.blue = blue;
+			jjLAYER::SetFadeColor(&background.Layer->warpHorizon, color);
 		}
 	}
 	void jjSetFadeColorsFromPalette(std::uint8_t paletteColorID) {
@@ -3975,53 +5333,86 @@ namespace Jazz2::Scripting
 		jjSetFadeColors(color.red, color.green, color.blue);
 	}
 	jjPALCOLOR jjGetFadeColors() {
-		jjPALCOLOR color = {};
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		if (Tiles::LayerDescription* description = owner->GetLayerDescription(8)) {
-			color.red = std::uint8_t(std::clamp(description->Color.X, 0.0f, 1.0f) * 255.0f + 0.5f);
-			color.green = std::uint8_t(std::clamp(description->Color.Y, 0.0f, 1.0f) * 255.0f + 0.5f);
-			color.blue = std::uint8_t(std::clamp(description->Color.Z, 0.0f, 1.0f) * 255.0f + 0.5f);
-		}
-		return color;
+		TexturedBackgroundLayer background;
+		return (background.Layer != nullptr ? jjLAYER::GetFadeColor(&background.Layer->warpHorizon) : jjPALCOLOR{});
 	}
 	void jjUpdateTexturedBG() {
-		noop();
+		// The tiles of layer 8 are drawn into the texture again
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		if (auto tileMap = owner->GetLevelHandler()->TileMap()) {
+			tileMap->InvalidateTexturedBackground();
+		}
 	}
 	std::int32_t get_jjTexturedBGTexture() {
-		noop(); return 0;
+		TexturedBackgroundLayer background;
+		return (background.Layer != nullptr ? background.Layer->GetTexture() : 0);
 	}
 	std::int32_t set_jjTexturedBGTexture(std::int32_t texture) {
-		noop(); return 0;
+		TexturedBackgroundLayer background;
+		if (background.Layer != nullptr && background.Layer->GetTexture() != texture) {
+			background.Layer->SetTexture(texture);
+		}
+		return texture;
 	}
 	std::int32_t get_jjTexturedBGStyle() {
-		noop(); return 0;
+		TexturedBackgroundLayer background;
+		return (background.Layer != nullptr ? background.Layer->GetTextureMode() : 0);
 	}
 	std::int32_t set_jjTexturedBGStyle(std::int32_t style) {
-		noop(); return 0;
+		TexturedBackgroundLayer background;
+		if (background.Layer != nullptr) {
+			background.Layer->SetTextureMode(style);
+		}
+		return style;
 	}
 	bool get_jjTexturedBGUsed() {
-		noop(); return false;
+		TexturedBackgroundLayer background;
+		return (background.Layer != nullptr && background.Layer->GetTextureSurface() != jjLAYER::Untextured);
 	}
 	bool set_jjTexturedBGUsed(bool used) {
-		noop(); return false;
+		TexturedBackgroundLayer background;
+		if (background.Layer != nullptr) {
+			std::int32_t surface = background.Layer->GetTextureSurface();
+			if (used && surface == jjLAYER::Untextured) {
+				background.Layer->SetTextureSurface(jjLAYER::Legacy);
+			} else if (!used) {
+				background.Layer->SetTextureSurface(jjLAYER::Untextured);
+			}
+		}
+		return used;
 	}
 	bool get_jjTexturedBGStars() {
-		noop(); return false;
+		TexturedBackgroundLayer background;
+		return (background.Layer != nullptr && jjLAYER::GetTextureStars(&background.Layer->warpHorizon));
 	}
 	bool set_jjTexturedBGStars(bool used) {
-		noop(); return false;
+		TexturedBackgroundLayer background;
+		if (background.Layer != nullptr) {
+			jjLAYER::SetTextureStars(&background.Layer->warpHorizon, used);
+		}
+		return used;
 	}
 	float get_jjTexturedBGFadePositionX() {
-		noop(); return 0.0f;
+		TexturedBackgroundLayer background;
+		return (background.Layer != nullptr ? background.GetStyleParams().X : 0.5f);
 	}
 	float set_jjTexturedBGFadePositionX(float value) {
-		noop(); return 0.0f;
+		TexturedBackgroundLayer background;
+		if (background.Layer != nullptr) {
+			jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::X>(&background.GetStyleParams(), value);
+		}
+		return value;
 	}
 	float get_jjTexturedBGFadePositionY() {
-		noop(); return 0.0f;
+		TexturedBackgroundLayer background;
+		return (background.Layer != nullptr ? background.GetStyleParams().Y : 0.5f);
 	}
 	float set_jjTexturedBGFadePositionY(float value) {
-		noop(); return 0.0f;
+		TexturedBackgroundLayer background;
+		if (background.Layer != nullptr) {
+			jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::Y>(&background.GetStyleParams(), value);
+		}
+		return value;
 	}
 
 	bool LevelScriptLoader::get_jjTriggers(std::uint8_t id) {
@@ -4204,6 +5595,15 @@ namespace Jazz2::Scripting
 				pair.second->Release();
 			}
 		}
+		for (auto& pair : _tileProxies) {
+			pair.second->Release();
+		}
+		// The objects of the game a script still drives stop now, while the script can still be released
+		ReleaseObjects();
+		// What the script drew refers to the graphics of the animation tables
+		_worldCanvas = nullptr;
+		// Gives the graphics of the game back as they were, before anything else of the level goes
+		_animTables = nullptr;
 	}
 
 	Legacy::jjLAYER* LevelScriptLoader::GetLayerProxy(std::int32_t index)
@@ -4229,19 +5629,24 @@ namespace Jazz2::Scripting
 			layer->height = src.LayoutSize.Y;
 			layer->xSpeed = src.Description.SpeedX;
 			layer->ySpeed = src.Description.SpeedY;
-			layer->xAutoSpeed = src.Description.AutoSpeedX;
-			layer->yAutoSpeed = src.Description.AutoSpeedY;
+			// Per tick of JJ2+, as scripts take them
+			layer->xAutoSpeed = Tiles::LayerDescription::ToOriginalAutoSpeed(src.Description.AutoSpeedX, src.Description.SpeedModelX);
+			layer->yAutoSpeed = Tiles::LayerDescription::ToOriginalAutoSpeed(src.Description.AutoSpeedY, src.Description.SpeedModelY);
 			layer->xOffset = layer->_syncedOffsetX = src.Description.OffsetX;
 			layer->yOffset = layer->_syncedOffsetY = src.Description.OffsetY;
 			layer->tileWidth = src.Description.RepeatX;
 			layer->tileHeight = src.Description.RepeatY;
+			layer->limitVisibleRegion = src.Description.UseInherentOffset;
 			layer->SpeedModeX = ToScriptSpeedModel(src.Description.SpeedModelX);
 			layer->SpeedModeY = ToScriptSpeedModel(src.Description.SpeedModelY);
-			layer->hasTileMap = true;
-			layer->hasTiles = !src.Layout.empty();
-			if (src.Description.RendererType == Tiles::LayerRendererType::Tinted || src.Description.RendererType == Tiles::LayerRendererType::PaletteShift) {
+			// A layer without a single tile is one JJ2+ keeps without its tile map, and draws nothing of it
+			layer->hasTileMap = src.Layout.HasAnyTile();
+			layer->hasTiles = src.Visible;
+			if (src.Description.RendererType == Tiles::LayerRendererType::Tinted || src.Description.RendererType == Tiles::LayerRendererType::PaletteShift ||
+				src.Description.RendererType == Tiles::LayerRendererType::SingleColor || src.Description.RendererType == Tiles::LayerRendererType::ChromaKey) {
 				layer->_spriteParam = std::uint8_t(src.Description.Color.X * 255.0f + 0.5f);
 			}
+			layer->InitializeTexture(src);
 
 			_layerProxies.emplace(index, layer);
 			// The map keeps one reference; AddRef again below for the one we hand to the script
@@ -4253,13 +5658,528 @@ namespace Jazz2::Scripting
 
 	std::int32_t LevelScriptLoader::GetLayerIndex(std::int32_t layerNumber) const
 	{
-		auto tileMap = _levelHandler->_tileMap.get();
-		if (tileMap == nullptr || tileMap->_sprLayerIndex < 0) {
+		constexpr std::int32_t Count = Formats::LayerNumbersChunk::OriginalLayerCount;
+		if (layerNumber < 1 || layerNumber > Count) {
 			return -1;
 		}
-		// TODO: The level should keep the number of each layer, a layer left out by the converter shifts the ones behind it
-		std::int32_t index = tileMap->_sprLayerIndex + (layerNumber - 4);
-		return (index >= 0 && index < std::int32_t(tileMap->_layers.size()) ? index : -1);
+
+		if (!_layerIndicesResolved) {
+			_layerIndicesResolved = true;
+			for (std::int32_t& index : _layerIndexByNumber) {
+				index = -1;
+			}
+			auto tileMap = _levelHandler->_tileMap.get();
+			if (tileMap != nullptr) {
+				// A converted level knows the number of each layer of the original, wherever it's drawn now
+				bool anyNumber = false;
+				for (std::int32_t i = 0; i < std::int32_t(tileMap->_layers.size()); i++) {
+					std::uint8_t number = tileMap->_layers[i].OriginalNumber;
+					if (number != 0) {
+						anyNumber = true;
+						if (_layerIndexByNumber[number] < 0) {
+							_layerIndexByNumber[number] = i;
+						}
+					}
+				}
+				// Without them the numbers are counted from the sprite layer, which is always layer 4
+				if (!anyNumber && tileMap->_sprLayerIndex >= 0) {
+					for (std::int32_t number = 1; number <= Count; number++) {
+						std::int32_t index = tileMap->_sprLayerIndex + (number - 4);
+						if (index >= 0 && index < std::int32_t(tileMap->_layers.size())) {
+							_layerIndexByNumber[number] = index;
+						}
+					}
+				}
+			}
+		}
+		return _layerIndexByNumber[layerNumber];
+	}
+
+	std::int32_t LevelScriptLoader::FindLayerByName(StringView name) const
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr || name.empty()) {
+			return -1;
+		}
+		for (std::int32_t i = 0; i < std::int32_t(tileMap->_layers.size()); i++) {
+			if (tileMap->_layers[i].Name == name) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	void LevelScriptLoader::GetLayerOrder(SmallVectorImpl<std::int32_t>& order) const
+	{
+		order.clear();
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr) {
+			return;
+		}
+		for (std::int32_t i = 0; i < std::int32_t(tileMap->_layers.size()); i++) {
+			if (std::size_t(i) >= _layersOutOfOrder.size() || !_layersOutOfOrder[i]) {
+				order.push_back(i);
+			}
+		}
+		// A layer with a greater depth is drawn later, so it's in front
+		std::stable_sort(order.begin(), order.end(), [tileMap](std::int32_t a, std::int32_t b) {
+			return (tileMap->_layers[a].Description.Depth > tileMap->_layers[b].Description.Depth);
+		});
+	}
+
+	bool LevelScriptLoader::SetLayerOrder(ArrayView<const std::int32_t> order)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr) {
+			return false;
+		}
+		const std::int32_t layerCount = std::int32_t(tileMap->_layers.size());
+		std::int32_t spritePosition = -1;
+		for (std::size_t i = 0; i < order.size(); i++) {
+			if (order[i] < 0 || order[i] >= layerCount) {
+				return false;
+			}
+			if (order[i] == tileMap->_sprLayerIndex && spritePosition < 0) {
+				spritePosition = std::int32_t(i);
+			}
+		}
+		if (spritePosition < 0) {
+			return false;
+		}
+
+		// Every layer gets a proxy, the proxies push what's drawn into the layers every frame (see SyncLayerProperties())
+		for (std::int32_t i = 0; i < layerCount; i++) {
+			if (Legacy::jjLAYER* proxy = GetLayerProxy(i)) {
+				proxy->Release();
+			}
+		}
+		_layersOutOfOrder.assign(std::size_t(layerCount), true);
+
+		// The sprite layer stays where the objects are, the others are spaced around it as the converter spaces the layers of
+		// the original, the farther ones closer together (see Compatibility::JJ2Level)
+		const std::int32_t spriteDepth = tileMap->_layers[tileMap->_sprLayerIndex].Description.Depth;
+		for (std::size_t i = 0; i < order.size(); i++) {
+			std::int32_t index = order[i];
+			if (!_layersOutOfOrder[index]) {
+				continue;	// Only the first of the same layer counts
+			}
+			_layersOutOfOrder[index] = false;
+			if (index == tileMap->_sprLayerIndex) {
+				continue;
+			}
+			std::int32_t depth = (std::int32_t(i) - spritePosition) * 100;
+			if (depth < -200) {
+				depth = -200 - (200 - depth) / 20;
+			} else if (depth > 300) {
+				depth = 300 + (depth - 300) / 20;
+			}
+			// The sprite layer itself is 50 below the main plane, a layer of depth 0 is at the main plane
+			tileMap->_layers[index].Description.Depth = std::uint16_t(std::clamp<std::int32_t>(spriteDepth + 50 - depth, 0, INT16_MAX));
+		}
+		SyncLayerProperties();
+		return true;
+	}
+
+	Legacy::jjLAYER* LevelScriptLoader::CreateLayer(std::int32_t width, std::int32_t height)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr || tileMap->_sprLayerIndex < 0) {
+			return nullptr;
+		}
+
+		// It doesn't move with the view, until the script says otherwise, as in JJ2+
+		Tiles::LayerDescription description = {};
+		description.Depth = tileMap->_layers[tileMap->_sprLayerIndex].Description.Depth;
+		description.SpeedX = 0.0f;
+		description.SpeedY = 0.0f;
+		description.SpeedModelX = Tiles::LayerSpeedModel::Default;
+		description.SpeedModelY = Tiles::LayerSpeedModel::Default;
+		description.RendererType = Tiles::LayerRendererType::Default;
+		description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+		std::int32_t index = AddScriptLayer(Vector2i(width, height), description);
+		return (index >= 0 ? MakeScriptLayerProxy(index, true) : nullptr);
+	}
+
+	Legacy::jjLAYER* LevelScriptLoader::CopyLayer(const Legacy::jjLAYER& source)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr || source._layerIndex < 0 || source._layerIndex >= std::int32_t(tileMap->_layers.size())) {
+			return nullptr;
+		}
+
+		// Taken first, adding a layer can move the layers in memory
+		Vector2i size = tileMap->_layers[source._layerIndex].LayoutSize;
+		Tiles::LayerDescription description = tileMap->_layers[source._layerIndex].Description;
+		std::int32_t index = AddScriptLayer(size, description);
+		if (index < 0) {
+			return nullptr;
+		}
+		CopyLayerTiles(source._layerIndex, index, 0);
+
+		Legacy::jjLAYER* layer = MakeScriptLayerProxy(index, source.hasTiles);
+		// What the proxy pushes into the layer, which a script may have changed since it was pushed last
+		*layer = source;
+		// The sprite mode is the one thing the copy doesn't take, as in JJ2+
+		layer->_spriteMode = Legacy::spriteType_NORMAL;
+		layer->_hasSpriteMode = false;
+		// The texture too, and how it's drawn - a layer of a script is made drawn as tiles (see TileMap::AddLayer())
+		tileMap->SetLayerTexture(index, tileMap->GetLayerTexture(source._layerIndex));
+		layer->ApplyTexture();
+		return layer;
+	}
+
+	bool LevelScriptLoader::CreateLayersFromLevel(StringView fileName, ArrayView<const std::uint32_t> layerNumbers, std::int32_t tileIdAdjustment,
+		SmallVectorImpl<Legacy::jjLAYER*>& layers)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr || layerNumbers.empty()) {
+			return false;
+		}
+		for (std::uint32_t number : layerNumbers) {
+			if (number < 1 || number > Formats::LayerNumbersChunk::OriginalLayerCount) {
+				return false;
+			}
+		}
+
+		std::size_t firstLayer = layers.size();
+		auto fail = [&layers, firstLayer]() {
+			// The layers made so far are used again, nothing refers to them
+			for (std::size_t i = firstLayer; i < layers.size(); i++) {
+				layers[i]->Release();
+			}
+			layers.erase(layers.begin() + firstLayer, layers.end());
+			return false;
+		};
+
+		if (IsCurrentLevelFile(fileName)) {
+			// The layers of this level are here already, as they are now
+			SmallVector<std::int32_t, Formats::LayerNumbersChunk::OriginalLayerCount> sources;
+			for (std::uint32_t number : layerNumbers) {
+				std::int32_t sourceIndex = GetLayerIndex(std::int32_t(number));
+				if (sourceIndex < 0) {
+					return false;
+				}
+				sources.push_back(sourceIndex);
+			}
+			for (std::int32_t sourceIndex : sources) {
+				Vector2i size = tileMap->_layers[sourceIndex].LayoutSize;
+				Tiles::LayerDescription description = tileMap->_layers[sourceIndex].Description;
+				bool hasTiles = tileMap->_layers[sourceIndex].Layout.HasAnyTile();
+				std::int32_t index = AddScriptLayer(size, description);
+				if (index < 0) {
+					return fail();
+				}
+				CopyLayerTiles(sourceIndex, index, tileIdAdjustment);
+				layers.push_back(MakeScriptLayerProxy(index, hasTiles));
+			}
+			return true;
+		}
+
+		// Any other level from its original file, which isn't converted
+		if (!IsScriptFileNameSafe(fileName)) {
+			return false;
+		}
+		String path = fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), fileName));
+		if (!fs::IsReadableFile(path)) {
+			LOGW("Cannot find level \"{}\" to take layers of", fileName);
+			return false;
+		}
+		Compatibility::JJ2Level level;
+		if (!level.Open(path, false)) {
+			return false;
+		}
+
+		const std::int32_t sourceAnimatedTilesOffset = level.GetAnimatedTilesOffset();
+		const std::int32_t animatedTilesOffset = std::int32_t(tileMap->_animatedTilesOffset);
+		SmallVector<Formats::TileRecord, 0> tiles;
+		for (std::uint32_t number : layerNumbers) {
+			Formats::LayerRecord record;
+			if (!level.ConvertLayer(std::int32_t(number) - 1, record, tiles)) {
+				return fail();
+			}
+			std::int32_t index = AddScriptLayer(Vector2i(record.Width, record.Height), Tiles::LayerDescription::FromRecord(record, ILevelHandler::MainPlaneZ));
+			if (index < 0) {
+				return fail();
+			}
+
+			// An animated tile is the animated tile of this level of the same index
+			Tiles::LayerLayout& layout = tileMap->_layers[index].Layout;
+			for (std::size_t i = 0; i < tiles.size(); i++) {
+				std::int32_t tileId = tiles[i].TileId;
+				if (tileId == 0) {
+					continue;
+				}
+				tileId = (tileId < sourceAnimatedTilesOffset ? tileId + tileIdAdjustment : animatedTilesOffset + (tileId - sourceAnimatedTilesOffset));
+				if (tileId > 0 && tileId <= UINT16_MAX) {
+					layout.Set(i, TileMap::MakeLayerTile(tiles[i].Flags, std::uint16_t(tileId)));
+				}
+			}
+			layers.push_back(MakeScriptLayerProxy(index, (record.Flags & Formats::LayerRecord::Visible) != 0));
+		}
+		return true;
+	}
+
+	bool LevelScriptLoader::AddTilesFromTileSet(StringView fileName, std::uint32_t firstTileId, std::uint32_t tileCount, const std::uint8_t* paletteRemapping)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr || firstTileId > UINT16_MAX || tileCount > UINT16_MAX) {
+			return false;
+		}
+
+		String name = GetTileSetName(fileName);
+		if (name.empty() || !tileMap->AppendTileSet(name, std::uint16_t(firstTileId), std::uint16_t(tileCount), paletteRemapping)) {
+			return false;
+		}
+		numberOfTiles = std::uint32_t(tileMap->GetLoadedTileCount());
+		return true;
+	}
+
+	Legacy::jjWEAPON* LevelScriptLoader::GetWeapon(std::int32_t number)
+	{
+		constexpr std::int32_t Count = std::int32_t(WeaponType::Count);
+		if (!_weaponsInitialized) {
+			_weaponsInitialized = true;
+			// As JJ2+ starts a level: the blaster has infinite ammo and gives way to a shield, the rest of them have the
+			// default maximum (-1, 99 in single player and 50 in multiplayer), as JJ2+ documents them
+			for (std::int32_t i = 0; i <= Count; i++) {
+				Legacy::jjWEAPON& weapon = _weapons[i];
+				weapon = {};
+				weapon.infinite = (i == 1);
+				weapon.replacedByShield = (i == 1);
+				weapon.comesFromGunCrates = (i >= 2 && i <= 6);
+				weapon.multiplier = 1;
+				weapon.maximum = -1;
+				weapon.defaultSample = true;
+				weapon.allowed = true;
+				weapon.allowedPowerup = true;
+				switch (i) {
+					case 3: weapon.spread = wspNORMALORDIRECTIONANDAIM; break;
+					case 4: weapon.style = wsMISSILE; break;
+					case 5: weapon.style = wsMISSILE; weapon.spread = wspDOUBLEORTRIPLE; break;
+					case 6: weapon.style = wsPOPCORN; weapon.spread = wspREFLECTSFASTFIRE; break;
+					case 7: weapon.style = wsCAPPED; break;
+					case 8: weapon.spread = wspNORMALORBBGUN; break;
+				}
+			}
+		}
+		// The entry 0 of JJ2+ is no weapon, it's the scratch one too
+		return &_weapons[number >= 1 && number <= Count ? number : 0];
+	}
+
+	bool LevelScriptLoader::AddTrueColorTilesFromTileSet(StringView fileName, std::uint32_t firstTileId, std::uint32_t tileCount, const Legacy::jjPAL* palette)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr || firstTileId > UINT16_MAX || tileCount > UINT16_MAX) {
+			return false;
+		}
+		String name = GetTileSetName(fileName);
+		if (name.empty()) {
+			return false;
+		}
+
+		// The colors of the 8-bit tiles, those of the palette or of the tile set's own, index 0 is transparent either way
+		auto colors = std::make_unique<std::uint32_t[]>(ContentResolver::ColorsPerPalette);
+		if (palette != nullptr) {
+			for (std::int32_t i = 0; i < ContentResolver::ColorsPerPalette; i++) {
+				const jjPALCOLOR& color = palette->getConstColor(std::uint8_t(i));
+				colors[i] = std::uint32_t(color.red) | (std::uint32_t(color.green) << 8) | (std::uint32_t(color.blue) << 16) |
+					(i == 0 ? 0u : 0xFF000000u);
+			}
+		} else {
+			auto s = ContentResolver::Get().OpenTileSetFile(name);
+			if (s == nullptr || !Formats::TileSetFile::ReadPalette(*s, colors.get())) {
+				return false;
+			}
+		}
+
+		if (!tileMap->AppendTileSet(name, std::uint16_t(firstTileId), std::uint16_t(tileCount), nullptr, colors.get())) {
+			return false;
+		}
+		// What scripts read of the tiles is in the same colors (see ResolveTileSetPixels())
+		std::size_t partCount = tileMap->_tileSets.size();
+		if (_tileSetPixels.size() < partCount) {
+			_tileSetPixels.resize(partCount);
+		}
+		_tileSetPixels[partCount - 1].TrueColorPalette = Death::move(colors);
+		numberOfTiles = std::uint32_t(tileMap->GetLoadedTileCount());
+		return true;
+	}
+
+	bool LevelScriptLoader::GetPlusTexture(std::int32_t index, std::uint8_t* pixels)
+	{
+		constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+		if (!_plusTexturesLoaded) {
+			_plusTexturesLoaded = true;
+			// As the converter takes them for the layers of the levels (see Compatibility::AssetConverter), only the textures
+			// are kept of the file
+			String path = fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), "Plus.j2d"_s));
+			Compatibility::JJ2Data data;
+			if (fs::IsReadableFile(path) && data.Open(path, false)) {
+				for (Compatibility::JJ2Data::Item& item : data.Items) {
+					if (item.Filename.hasPrefix("TextureBG."_s) && item.Size == TextureBytes) {
+						StringView number = item.Filename.exceptPrefix("TextureBG."_s);
+						_plusTextures.push_back({ std::int32_t(stou32(number.data(), number.size())), Death::move(item.Blob) });
+					}
+				}
+			}
+		}
+		for (const PlusTexture& texture : _plusTextures) {
+			if (texture.Index == index) {
+				std::memcpy(pixels, texture.Pixels.get(), TextureBytes);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	LevelScriptLoader::SpriteModeMapping& LevelScriptLoader::GetSpriteModeMapping(std::uint8_t index)
+	{
+		if (_spriteModeMappings == nullptr) {
+			_spriteModeMappings = std::make_unique<SpriteModeMapping[]>(256);
+		}
+		return _spriteModeMappings[index];
+	}
+
+	void LevelScriptLoader::jjSpriteModeSetMapping(std::uint8_t index, const CScriptArray& indexMapping, const jjPAL& rgbMapping)
+	{
+		jjSpriteModeSetIndexMapping(index, indexMapping);
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		SpriteModeMapping& mapping = _this->GetSpriteModeMapping(index);
+		mapping.HasPalette = true;
+		for (std::int32_t i = 0; i < 256; i++) {
+			mapping.Colors[i] = rgbMapping.getConstColor(std::uint8_t(i));
+		}
+	}
+
+	void LevelScriptLoader::jjSpriteModeSetIndexMapping(std::uint8_t index, const CScriptArray& indexMapping)
+	{
+		// Nothing is drawn by it yet, the mapping is kept for the scripts that read it back; the indices it doesn't have map
+		// to themselves
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		SpriteModeMapping& mapping = _this->GetSpriteModeMapping(index);
+		mapping.Used = true;
+		mapping.HasPalette = false;
+		for (std::uint32_t i = 0; i < 256; i++) {
+			mapping.Indices[i] = (i < indexMapping.GetSize() ? *static_cast<const std::uint8_t*>(indexMapping.At(i)) : std::uint8_t(i));
+		}
+	}
+
+	bool LevelScriptLoader::jjSpriteModeIsMappingUsed(std::uint8_t index)
+	{
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return (_this->_spriteModeMappings != nullptr && _this->_spriteModeMappings[index].Used);
+	}
+
+	std::int32_t LevelScriptLoader::jjSpriteModeFirstFreeMapping()
+	{
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		for (std::int32_t i = 0; i < 256; i++) {
+			if (_this->_spriteModeMappings == nullptr || !_this->_spriteModeMappings[i].Used) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	CScriptArray* LevelScriptLoader::jjSpriteModeGetIndexMapping(std::uint8_t index)
+	{
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		const SpriteModeMapping& mapping = _this->GetSpriteModeMapping(index);
+		CScriptArray* arr = CScriptArray::Create(_this->GetEngine()->GetTypeInfoByDecl("array<uint8>"), 256);
+		for (std::uint32_t i = 0; i < 256; i++) {
+			*static_cast<std::uint8_t*>(arr->At(i)) = (mapping.Used ? mapping.Indices[i] : std::uint8_t(i));
+		}
+		return arr;
+	}
+
+	jjPAL* LevelScriptLoader::jjSpriteModeGetColorMapping(std::uint8_t index)
+	{
+		// A mapping without a palette of its own maps the indices to the colors of the palette in effect
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		const SpriteModeMapping& mapping = _this->GetSpriteModeMapping(index);
+		jjPAL* palette = jjPAL::Create();
+		for (std::int32_t i = 0; i < 256; i++) {
+			jjPALCOLOR color = (mapping.HasPalette ? mapping.Colors[i] : _this->jjPalette.getConstColor(mapping.Used ? mapping.Indices[i] : std::uint8_t(i)));
+			palette->setColorEntry(std::uint8_t(i), color);
+		}
+		return palette;
+	}
+
+	std::int32_t LevelScriptLoader::AddScriptLayer(Vector2i size, const Tiles::LayerDescription& description)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr) {
+			return -1;
+		}
+		const std::int32_t layerCount = std::int32_t(tileMap->_layers.size());
+		if (_firstScriptLayer < 0) {
+			_firstScriptLayer = layerCount;
+		}
+
+		// A layer of a script that no script refers to and that isn't drawn can't be drawn ever again, so it's used again
+		for (std::int32_t i = _firstScriptLayer; i < layerCount; i++) {
+			auto it = _layerProxies.find(i);
+			if (it == _layerProxies.end() || it->second->_refCount > 1 || std::size_t(i) >= _layersOutOfOrder.size() || !_layersOutOfOrder[i]) {
+				continue;
+			}
+			if (tileMap->ResetLayer(i, size, description)) {
+				it->second->Release();
+				_layerProxies.erase(it);
+				return i;
+			}
+		}
+		return tileMap->AddLayer(size, description);
+	}
+
+	Legacy::jjLAYER* LevelScriptLoader::MakeScriptLayerProxy(std::int32_t index, bool hasTiles)
+	{
+		// Out of the order until a script puts it there, the layers before it stay as they are
+		std::size_t layerCount = _levelHandler->_tileMap->_layers.size();
+		if (_layersOutOfOrder.size() < layerCount) {
+			_layersOutOfOrder.resize(layerCount, false);
+		}
+		_layersOutOfOrder[index] = true;
+
+		Legacy::jjLAYER* layer = GetLayerProxy(index);
+		// JJ2+ has a tile map for every layer a script makes, empty or not
+		layer->hasTileMap = true;
+		layer->hasTiles = hasTiles;
+		return layer;
+	}
+
+	void LevelScriptLoader::CopyLayerTiles(std::int32_t sourceIndex, std::int32_t targetIndex, std::int32_t tileIdAdjustment)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		const Tiles::TileMapLayer& source = tileMap->_layers[sourceIndex];
+		Tiles::TileMapLayer& target = tileMap->_layers[targetIndex];
+		const std::int32_t animatedTilesOffset = std::int32_t(tileMap->_animatedTilesOffset);
+		const std::size_t count = std::min(source.Layout.size(), target.Layout.size());
+		for (std::size_t i = 0; i < count; i++) {
+			std::int32_t tileId = source.Layout.TileIDAt(i);
+			if (tileId == 0) {
+				continue;
+			}
+			if (tileId < animatedTilesOffset) {
+				tileId += tileIdAdjustment;
+				if (tileId <= 0 || tileId > UINT16_MAX) {
+					continue;
+				}
+			}
+			// Only what's drawn, the tiles of a copy aren't solid, destructible or anything else
+			const Tiles::LayerTile& tile = source.Layout[i];
+			Tiles::LayerTile copy = TileMap::MakeLayerTile(0, std::uint16_t(tileId));
+			copy.Flags = tile.Flags & (Tiles::LayerTileFlags::FlipX | Tiles::LayerTileFlags::FlipY | Tiles::LayerTileFlags::Heat);
+			copy.Alpha = tile.Alpha;
+			target.Layout.Set(i, copy);
+		}
+	}
+
+	bool LevelScriptLoader::IsCurrentLevelFile(StringView fileName) const
+	{
+		String name = fs::GetFileNameWithoutExtension(fileName);
+		StringUtils::lowercaseInPlace(name);
+		return (name == fs::GetFileName(_levelHandler->GetLevelName()));
 	}
 
 	Tiles::LayerDescription* LevelScriptLoader::GetLayerDescription(std::int32_t layerNumber)
@@ -4280,6 +6200,178 @@ namespace Jazz2::Scripting
 			*proxy = it->second;
 		}
 		return &_levelHandler->_tileMap->_layers[index];
+	}
+
+	std::int32_t LevelScriptLoader::ResolveAnimatedTile(std::uint16_t tileID) const
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr || (tileID & TileMap::TileFlagAnimated) == 0) {
+			return -1;
+		}
+		std::int32_t index = (tileID & TileMap::TileIndexMask);
+		return (index < std::int32_t(tileMap->_animatedTiles.size()) ? index : -1);
+	}
+
+	Legacy::jjTILE* LevelScriptLoader::GetTileProxy(std::uint16_t tileID)
+	{
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr) {
+			return nullptr;
+		}
+		// The flips are of where the tile is placed, not of the tile
+		std::uint16_t key = std::uint16_t(tileID & (TileMap::TileIndexMask | TileMap::TileFlagAnimated));
+		if ((key & TileMap::TileFlagAnimated) != 0 ? ResolveAnimatedTile(key) < 0 : key >= tileMap->GetStaticTileCount()) {
+			return nullptr;
+		}
+
+		Legacy::jjTILE* tile;
+		auto it = _tileProxies.find(key);
+		if (it != _tileProxies.end()) {
+			tile = it->second;
+		} else {
+			void* mem = asAllocMem(sizeof(Legacy::jjTILE));
+			tile = new(mem) Legacy::jjTILE(key);
+			// The map keeps this reference, the script gets another one below
+			_tileProxies.emplace(key, tile);
+		}
+		tile->AddRef();
+		return tile;
+	}
+
+	void LevelScriptLoader::GetTileFrames(std::uint16_t tileID, SmallVectorImpl<std::uint16_t>& frames) const
+	{
+		frames.clear();
+		std::int32_t index = ResolveAnimatedTile(tileID);
+		if (index < 0) {
+			// A static tile is its only frame
+			frames.push_back(tileID);
+			return;
+		}
+
+		auto tileMap = _levelHandler->_tileMap.get();
+		const AnimatedTile& animTile = tileMap->_animatedTiles[index];
+		const std::int32_t animatedTilesOffset = std::int32_t(tileMap->_animatedTilesOffset);
+		auto toScript = [animatedTilesOffset](std::uint16_t engineId) {
+			// A frame can be an animated tile itself in a level of this game
+			return (engineId >= animatedTilesOffset
+				? std::uint16_t(((engineId - animatedTilesOffset) & TileMap::TileIndexMask) | TileMap::TileFlagAnimated)
+				: std::uint16_t(engineId & TileMap::TileIndexMask));
+		};
+
+		// One loop as TileMap::OnUpdate() plays it, a frame for each frame duration: the first frame takes the wait too,
+		// and in ping-pong the animation turns at the last frame after its wait, and at the first one after the other
+		const std::int32_t count = std::int32_t(animTile.Tiles.size());
+		const std::int32_t delay = std::max<std::int32_t>(animTile.Delay, 0);
+		if (count < 2) {
+			for (const AnimatedTileFrame& frame : animTile.Tiles) {
+				frames.push_back(toScript(frame.TileID));
+			}
+			return;
+		}
+		if (!animTile.IsPingPong) {
+			for (std::int32_t i = 0; i < 1 + delay; i++) {
+				frames.push_back(toScript(animTile.Tiles[0].TileID));
+			}
+			for (std::int32_t i = 1; i < count; i++) {
+				frames.push_back(toScript(animTile.Tiles[i].TileID));
+			}
+		} else {
+			for (std::int32_t i = 0; i < 2 + delay; i++) {
+				frames.push_back(toScript(animTile.Tiles[0].TileID));
+			}
+			for (std::int32_t i = 1; i < count - 1; i++) {
+				frames.push_back(toScript(animTile.Tiles[i].TileID));
+			}
+			for (std::int32_t i = 0; i < 2 + std::max<std::int32_t>(animTile.PingPongDelay, 0); i++) {
+				frames.push_back(toScript(animTile.Tiles[count - 1].TileID));
+			}
+			for (std::int32_t i = count - 2; i > 0; i--) {
+				frames.push_back(toScript(animTile.Tiles[i].TileID));
+			}
+		}
+	}
+
+	bool LevelScriptLoader::SetTileFrames(std::uint16_t tileID, ArrayView<const std::uint16_t> frames, bool pingPong, std::uint16_t wait, std::uint16_t randomWait, std::uint16_t pingPongWait)
+	{
+		std::int32_t index = ResolveAnimatedTile(tileID);
+		if (index < 0 || frames.empty()) {
+			return false;
+		}
+
+		auto tileMap = _levelHandler->_tileMap.get();
+		const AnimatedTile& animTile = tileMap->_animatedTiles[index];
+		Formats::AnimatedTileRecord record;
+		// The speed stays as it was
+		record.FrameDuration16 = std::uint16_t(std::clamp(animTile.FrameDuration * 16.0f, 0.0f, float(UINT16_MAX)));
+		record.Delay = wait;
+		record.DelayJitter = randomWait;
+		record.PingPongDelay = pingPongWait;
+		record.IsPingPong = (pingPong ? 1 : 0);
+		// More than 64 frames are undefined in JJ2+, the file has room for 255
+		const std::size_t count = std::min<std::size_t>(frames.size(), UINT8_MAX);
+		for (std::size_t i = 0; i < count; i++) {
+			const std::uint16_t value = frames[i];
+			Formats::TileRecord& frame = record.Frames.emplace_back();
+			frame.TileId = std::uint16_t((value & TileMap::TileFlagAnimated) != 0
+				? tileMap->_animatedTilesOffset + (value & TileMap::TileIndexMask)
+				: (value & TileMap::TileIndexMask));
+			frame.Flags = std::uint8_t(((value & TileMap::TileFlagFlipX) != 0 ? Formats::TileRecord::FlipX : 0) |
+				((value & TileMap::TileFlagFlipY) != 0 ? Formats::TileRecord::FlipY : 0));
+		}
+		tileMap->SetAnimatedTile(index, record);
+		return true;
+	}
+
+	std::uint8_t LevelScriptLoader::GetTileFps(std::uint16_t tileID) const
+	{
+		std::int32_t index = ResolveAnimatedTile(tileID);
+		if (index < 0) {
+			return 0;
+		}
+		// The converter makes the duration of a frame 50 / fps (see Compatibility::JJ2Level)
+		float duration = _levelHandler->_tileMap->_animatedTiles[index].FrameDuration;
+		return (duration > 0.0f ? std::uint8_t(std::clamp(50.0f / duration + 0.5f, 0.0f, 255.0f)) : 0);
+	}
+
+	void LevelScriptLoader::SetTileFps(std::uint16_t tileID, std::uint8_t fps)
+	{
+		std::int32_t index = ResolveAnimatedTile(tileID);
+		if (index < 0) {
+			return;
+		}
+		AnimatedTile& animTile = _levelHandler->_tileMap->_animatedTiles[index];
+		animTile.FrameDuration = (fps > 0 ? 50.0f / fps : 0.0f);
+		animTile.FramesLeft = std::min(animTile.FramesLeft, animTile.FrameDuration);
+	}
+
+	// Makes the 8-bit tiles of a tile set true color tiles in the given colors, as jjTilesFromTileset32() imports them -
+	// except the empty ones, which aren't 32-bit tiles in JJ2+ either
+	static void MakeTrueColorTiles(Formats::TileSetData& data, const std::uint32_t* palette)
+	{
+		constexpr std::int32_t PixelCount = TileSet::DefaultTileSize * TileSet::DefaultTileSize;
+		for (std::int32_t tile = 0; tile < data.TileCount; tile++) {
+			if (data.TrueColor[tile] != 0) {
+				continue;
+			}
+			std::uint8_t* image = &data.Images[std::size_t(tile) * Formats::TileSetData::ImageBytesPerTile];
+			bool isEmpty = true;
+			for (std::int32_t i = 0; i < PixelCount && isEmpty; i++) {
+				isEmpty = (image[i] == 0);
+			}
+			if (isEmpty) {
+				continue;
+			}
+			// In place from the end, the indices are at the start of the room of the tile and a color takes 4 bytes
+			for (std::int32_t i = PixelCount - 1; i >= 0; i--) {
+				std::uint8_t index = image[i];
+				std::uint32_t color = (index != 0 ? (palette[index] | 0xFF000000u) : 0u);
+				image[i * 4] = std::uint8_t(color);
+				image[i * 4 + 1] = std::uint8_t(color >> 8);
+				image[i * 4 + 2] = std::uint8_t(color >> 16);
+				image[i * 4 + 3] = std::uint8_t(color >> 24);
+			}
+			data.TrueColor[tile] = 1;
+		}
 	}
 
 	Formats::TileSetData* LevelScriptLoader::ResolveTileSetPixels(std::int32_t tileId, std::int32_t& fileTileId)
@@ -4310,6 +6402,9 @@ namespace Jazz2::Scripting
 					if (s != nullptr) {
 						auto data = std::make_unique<Formats::TileSetData>();
 						if (Formats::TileSetFile::Read(*s, *data)) {
+							if (pixels.TrueColorPalette != nullptr) {
+								MakeTrueColorTiles(*data, pixels.TrueColorPalette.get());
+							}
 							pixels.Data = Death::move(data);
 						} else {
 							LOGW("Cannot read pixels of tile set \"{}\" for the script", part.Data->FilePath);
@@ -4384,6 +6479,84 @@ namespace Jazz2::Scripting
 		return true;
 	}
 
+	bool LevelScriptLoader::GetTileColors(std::int32_t tileId, Legacy::jjPALCOLOR* colors, const Legacy::jjPAL& palette)
+	{
+		constexpr std::int32_t PixelCount = TileSet::DefaultTileSize * TileSet::DefaultTileSize;
+
+		std::int32_t fileTileId;
+		Formats::TileSetData* data = ResolveTileSetPixels(tileId, fileTileId);
+		if (data == nullptr) {
+			return false;
+		}
+
+		const std::uint8_t* image = &data->Images[std::size_t(fileTileId) * Formats::TileSetData::ImageBytesPerTile];
+		bool trueColor = (std::size_t(fileTileId) < data->TrueColor.size() && data->TrueColor[fileTileId] != 0);
+		for (std::int32_t i = 0; i < PixelCount; i++) {
+			if (trueColor) {
+				const std::uint8_t* rgba = &image[i * 4];
+				colors[i] = jjPALCOLOR{rgba[0], rgba[1], rgba[2], rgba[3]};
+			} else if (image[i] != 0) {
+				colors[i] = palette.getConstColor(image[i]);
+				colors[i].alpha = 255;
+			} else {
+				colors[i] = jjPALCOLOR{};
+			}
+		}
+		return true;
+	}
+
+	bool LevelScriptLoader::SetTileColors(std::int32_t tileId, const Legacy::jjPALCOLOR* colors)
+	{
+		constexpr std::int32_t PixelCount = TileSet::DefaultTileSize * TileSet::DefaultTileSize;
+
+		auto tileMap = _levelHandler->_tileMap.get();
+		if (tileMap == nullptr || tileId < 0 || tileId >= tileMap->GetStaticTileCount()) {
+			return false;
+		}
+
+		if (tileMap->IsTileSetIndexed(tileId)) {
+			// JJ2+ draws every tile in true color from then on, a tile set drawn indexed here can't have such a tile
+			if (!_warnedIndexedTileColors) {
+				_warnedIndexedTileColors = true;
+				LOGW("Tile {} is drawn palette-indexed, a 32-bit image saved into it gets the nearest colors of the palette", tileId);
+			}
+			std::uint8_t indices[PixelCount];
+			for (std::int32_t i = 0; i < PixelCount; i++) {
+				indices[i] = (colors[i].alpha != 0 ? jjPalette.FindNearestOpaqueColor(colors[i]) : 0);
+			}
+			return SetTilePixels(tileId, indices);
+		}
+
+		std::uint8_t rgba[PixelCount * 4];
+		for (std::int32_t i = 0; i < PixelCount; i++) {
+			rgba[i * 4] = colors[i].red;
+			rgba[i * 4 + 1] = colors[i].green;
+			rgba[i * 4 + 2] = colors[i].blue;
+			rgba[i * 4 + 3] = colors[i].alpha;
+		}
+		if (!ContentResolver::Get().ApplyTileDiffuseOverrideRgba(*tileMap, tileId, rgba)) {
+			return false;
+		}
+
+		// Remembered, so a color map made of the tile later gets what was saved into it
+		std::int32_t fileTileId;
+		Formats::TileSetData* data = ResolveTileSetPixels(tileId, fileTileId);
+		if (data != nullptr) {
+			std::memcpy(&data->Images[std::size_t(fileTileId) * Formats::TileSetData::ImageBytesPerTile], rgba, sizeof(rgba));
+			if (std::size_t(fileTileId) < data->TrueColor.size()) {
+				data->TrueColor[fileTileId] = 1;
+			}
+		}
+		return true;
+	}
+
+	bool LevelScriptLoader::IsTileTrueColor(std::int32_t tileId)
+	{
+		std::int32_t fileTileId;
+		Formats::TileSetData* data = ResolveTileSetPixels(tileId, fileTileId);
+		return (data != nullptr && std::size_t(fileTileId) < data->TrueColor.size() && data->TrueColor[fileTileId] != 0);
+	}
+
 	void LevelScriptLoader::SyncLayerProperties()
 	{
 		if (_layerProxies.empty()) {
@@ -4401,14 +6574,21 @@ namespace Jazz2::Scripting
 			}
 			// These are static config the engine never changes itself, so a straight proxy -> engine push is safe
 			auto& desc = tileMap->_layers[index].Description;
-			desc.SpeedX = layer->xSpeed;
-			desc.SpeedY = layer->ySpeed;
-			desc.AutoSpeedX = layer->xAutoSpeed;
-			desc.AutoSpeedY = layer->yAutoSpeed;
-			desc.RepeatX = layer->tileWidth;
-			desc.RepeatY = layer->tileHeight;
 			desc.SpeedModelX = FromScriptSpeedModel(layer->SpeedModeX);
 			desc.SpeedModelY = FromScriptSpeedModel(layer->SpeedModeY);
+			desc.SpeedX = layer->xSpeed;
+			desc.SpeedY = layer->ySpeed;
+			// Per tick of JJ2+, the layer moves by its auto speed each frame (see Tiles::LayerDescription::FromOriginalAutoSpeed())
+			desc.AutoSpeedX = Tiles::LayerDescription::FromOriginalAutoSpeed(layer->xAutoSpeed, desc.SpeedModelX);
+			desc.AutoSpeedY = Tiles::LayerDescription::FromOriginalAutoSpeed(layer->yAutoSpeed, desc.SpeedModelY);
+			desc.RepeatX = layer->tileWidth;
+			desc.RepeatY = layer->tileHeight;
+			desc.UseInherentOffset = layer->limitVisibleRegion;
+			desc.TextureInnerSpeed = Vector2f(layer->xInnerSpeed, layer->yInnerSpeed);
+			desc.TextureInnerAutoSpeed = Vector2f(layer->xInnerAutoSpeed, layer->yInnerAutoSpeed) * Tiles::LayerDescription::OriginalAutoSpeedScale;
+			// Drawn if the script says so and it's in the order of the layers (see SetLayerOrder())
+			bool outOfOrder = (std::size_t(index) < _layersOutOfOrder.size() && _layersOutOfOrder[index]);
+			tileMap->_layers[index].Visible = (layer->hasTiles && !outOfOrder);
 
 			// The engine advances OffsetX/Y itself for auto-scrolling layers (TileMap::OnUpdate), so only push when the
 			// script actually changed the proxy; otherwise pull the engine's current value so reads stay live
@@ -4519,55 +6699,18 @@ namespace Jazz2::Scripting
 #endif
 	}
 
-	Resources::GenericGraphicResource* LevelScriptLoader::ResolveSpriteGraphic(std::int32_t setID, std::int32_t animation)
+	Legacy::AnimationTables& LevelScriptLoader::GetAnimationTables()
 	{
-		if (setID < 0 || animation < 0) {
-			return nullptr;
+		if (_animTables == nullptr) {
+			_animTables = std::make_unique<Legacy::AnimationTables>(versionTSF);
 		}
-
-		// Same mapping the content pipeline uses to convert the original animation sets, so the original (set, anim)
-		// index maps directly to the converted "Animations/{Category}/{Name}.aura" asset
-		if (_animMapping == nullptr) {
-			Compatibility::JJ2Version version = (versionTSF ? Compatibility::JJ2Version::TSF : Compatibility::JJ2Version::BaseGame);
-			_animMapping = std::make_unique<Compatibility::AnimSetMapping>(Compatibility::AnimSetMapping::GetAnimMapping(version));
-		}
-
-		auto* entry = _animMapping->Get((std::uint32_t)setID, (std::uint32_t)animation);
-		if (entry == nullptr || entry->Category == Compatibility::AnimSetMapping::Discard || entry->Name.empty()) {
-			return nullptr;
-		}
-
-		// Load as indexed (keepIndexed = true) so it recolors through the live sprite palette at draw time, like every
-		// other in-game sprite; ContentResolver caches the result, so repeated draws of the same animation don't reload
-		String path = entry->Category + '/' + entry->Name + ".aura"_s;
-		return ContentResolver::Get().RequestGraphics(path, 0, true);
+		return *_animTables;
 	}
 
 	std::int32_t LevelScriptLoader::AddObjectFromEvent(std::uint8_t eventId, float xPixel, float yPixel)
 	{
-		// A few original events are converted using import-time level context (tileset name, level name, ambient
-		// light, game version); their converters dereference a JJ2Level that doesn't exist at runtime, so they can't
-		// be spawned this way. They're level-structure events (checkpoints, end-of-level, scenery, lighting), not the
-		// game objects scripts normally spawn.
-		auto jj2Event = (Compatibility::JJ2Event)eventId;
-		switch (jj2Event) {
-			case Compatibility::JJ2Event::SAVE_POINT:
-			case Compatibility::JJ2Event::SCENERY_DESTRUCT:
-			case Compatibility::JJ2Event::AREA_EOL:
-			case Compatibility::JJ2Event::AREA_EOL_WARP:
-			case Compatibility::JJ2Event::AREA_SECRET_WARP:
-			case Compatibility::JJ2Event::LIGHT_RESET:
-			case Compatibility::JJ2Event::POWERUP_SWAP:
-				return 0;
-			default:
-				break;
-		}
-
-		if (_eventConverter == nullptr) {
-			_eventConverter = std::make_unique<Compatibility::EventConverter>();
-		}
-
-		auto result = _eventConverter->TryConvert(nullptr, jj2Event, 0);
+		// The converters that read the level get an empty one, see Legacy::EventTranslator
+		auto result = GetEventTranslator().FromOriginal(eventId, 0);
 		if (result.Type == EventType::Empty) {
 			return 0;
 		}
@@ -4577,21 +6720,19 @@ namespace Jazz2::Scripting
 		if (actor == nullptr) {
 			return 0;
 		}
-		_levelHandler->AddActor(actor);
 
-		std::int32_t id = _nextScriptObjectId++;
-		_scriptObjects.emplace(id, std::weak_ptr<Actors::ActorBase>(actor));
-		return id;
+		// The object gets its object ID as every object of an event, see OnActorAdded()
+		_levelHandler->AddActor(actor);
+		return _lastObjectId;
 	}
 
 	Actors::ActorBase* LevelScriptLoader::GetScriptObject(std::int32_t objectId)
 	{
-		auto it = _scriptObjects.find(objectId);
-		if (it == _scriptObjects.end()) {
+		if (objectId <= 0 || objectId >= std::int32_t(_objectSlots.size())) {
 			return nullptr;
 		}
 		// Returns nullptr if the actor has since been destroyed (the registry holds only weak references)
-		return it->second.lock().get();
+		return _objectSlots[objectId].Actor.lock().get();
 	}
 
 	std::int32_t LevelScriptLoader::AddScriptControlledObject(std::uint8_t eventId, float xPixel, float yPixel, asIScriptFunction* behaviorFunc)
@@ -4611,9 +6752,12 @@ namespace Jazz2::Scripting
 			Vector3i((std::int32_t)xPixel, (std::int32_t)yPixel, ILevelHandler::MainPlaneZ)));
 		_levelHandler->AddActor(wrapper);
 
-		std::int32_t id = _nextScriptObjectId++;
-		_scriptObjects.emplace(id, std::weak_ptr<Actors::ActorBase>(wrapper));
-		obj->objectID = (std::int16_t)id;
+		// The object ID keeps a reference of its own
+		obj->AddRef();
+		std::int32_t id = RegisterObject(wrapper, obj, eventId);
+		if (id == 0) {
+			obj->Release();
+		}
 		return id;
 	}
 
@@ -4648,8 +6792,8 @@ namespace Jazz2::Scripting
 	}
 
 	jjWEAPON* get_jjWEAPON(int index) {
-		static jjWEAPON dummy;
-		return &dummy;
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return owner->GetWeapon(index);
 	}
 
 	jjCHARACTER* get_jjCHARACTER(int index) {
@@ -4657,23 +6801,62 @@ namespace Jazz2::Scripting
 		return &dummy;
 	}
 
+	// Returns the bits of an event word a parameter of JJ2+ means, by its offset from the first bit of the parameters and
+	// its length, negative for a signed one, as JCS.ini writes them; `false` if they aren't in the word
+	static bool GetEventParamBits(std::int32_t offset, std::int32_t length, std::int32_t& shift, std::uint32_t& mask) {
+		std::int32_t bits = (length < 0 ? -length : length);
+		shift = Legacy::EventTranslator::ParamsShift + offset;
+		if (bits <= 0 || shift < 0 || shift + bits > 32) {
+			return false;
+		}
+		mask = (bits >= 32 ? UINT32_MAX : (1u << bits) - 1);
+		return true;
+	}
+
 	std::int32_t GetEvent(std::uint16_t tx, std::uint16_t ty) {
-		noop(); return 0;
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return std::int32_t(owner->GetOriginalEvent(tx, ty) & 0xFF);
 	}
 	std::int32_t GetEventParamWrapper(std::uint16_t tx, std::uint16_t ty, std::int32_t offset, std::int32_t length) {
-		noop(); return 0;
+		std::int32_t shift; std::uint32_t mask;
+		if (!GetEventParamBits(offset, length, shift, mask)) {
+			return 0;
+		}
+
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::uint32_t value = (owner->GetOriginalEvent(tx, ty) >> shift) & mask;
+		if (length < 0 && mask != UINT32_MAX && (value & ((mask >> 1) + 1)) != 0) {
+			// A signed parameter, two's complement in its own length
+			return std::int32_t(std::int64_t(value) - std::int64_t(mask) - 1);
+		}
+		return std::int32_t(value);
 	}
 	void SetEventByte(std::uint16_t tx, std::uint16_t ty, std::uint8_t newEventId) {
-		noop();
+		// Only the event changes, the parameters stay as they are
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::uint32_t word = owner->GetOriginalEvent(tx, ty);
+		owner->SetOriginalEvent(tx, ty, (word & ~0xFFu) | newEventId);
 	}
 	void SetEventParam(std::uint16_t tx, std::uint16_t ty, std::int8_t offset, std::int8_t length, std::int32_t newValue) {
-		noop();
+		std::int32_t shift; std::uint32_t mask;
+		if (!GetEventParamBits(offset, length, shift, mask)) {
+			return;
+		}
+
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		std::uint32_t word = owner->GetOriginalEvent(tx, ty);
+		word = (word & ~(mask << shift)) | ((std::uint32_t(newValue) & mask) << shift);
+		owner->SetOriginalEvent(tx, ty, word);
 	}
 	std::int8_t GetTileType(std::uint16_t tile) {
 		noop(); return 0;
 	}
 	std::int8_t SetTileType(std::uint16_t tile, std::uint16_t value) {
 		noop(); return 0;
+	}
+	bool GetTileIs32Bit(std::uint16_t tile) {
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return owner->IsTileTrueColor(tile);
 	}
 
 	// TODO
@@ -4773,7 +6956,7 @@ namespace Jazz2::Scripting
 	}
 
 	std::uint32_t getCustomSetID(std::uint8_t index) {
-		return mCOUNT + index;
+		return Legacy::AnimationTables::CustomFirstSetID + index;
 	}
 }
 

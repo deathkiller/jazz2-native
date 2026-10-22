@@ -72,9 +72,44 @@ namespace Jazz2::Editor
 }
 #endif
 
+#if defined(WITH_ANGELSCRIPT)
+namespace Jazz2::Scripting::Legacy
+{
+	class ScriptObjectHost;
+}
+#endif
+
 namespace Jazz2::Actors
 {
 	class Player;
+	class ActorBase;
+
+#if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/**
+		@brief Takes over the per-frame update of an object, see @ref ActorBase::SetUpdateOverride()
+
+		A level script can drive an object of the game by a behavior of its own, which decides when the object does
+		what it would do by itself.
+	*/
+	class IActorUpdateOverride
+	{
+	public:
+		virtual ~IActorUpdateOverride() {}
+
+		/** @brief Called instead of the per-frame update of the object */
+		virtual void OnUpdate(ActorBase* actor, float timeMult) = 0;
+		/** @brief Returns `false` if the object isn't drawn in this frame */
+		virtual bool IsDrawn() const = 0;
+		/**
+		 * @brief Called before the object and another one handle their collision themselves
+		 *
+		 * Returns `true` if the collision is handled, neither of them is told about it then.
+		 */
+		virtual bool OnCollision(ActorBase* actor, ActorBase* other) {
+			return false;
+		}
+	};
+#endif
 
 	/**
 		@brief Flags that modify behaviour of @ref ActorBase
@@ -353,6 +388,10 @@ namespace Jazz2::Actors
 		// Stops a player moved by hand, and destroys the objects of events changed while the level is played
 		friend class Jazz2::Editor::PlayTestDebug;
 #endif
+#if defined(WITH_ANGELSCRIPT)
+		// Drives an object by a behavior of a level script, running the object's own update when the behavior asks
+		friend class Jazz2::Scripting::Legacy::ScriptObjectHost;
+#endif
 
 	public:
 		/** @brief Creates a new instance */
@@ -448,6 +487,29 @@ namespace Jazz2::Actors
 		EventType GetSpawnEventType() const noexcept {
 			return _spawnEventType;
 		}
+
+		/** @brief Returns parameters of the event the object was spawned from, see @ref GetSpawnEventType() */
+		const std::uint8_t* GetSpawnEventParams() const noexcept {
+			return _spawnEventParams;
+		}
+
+#if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Hands the per-frame update of the object over to something else, or takes it back with `nullptr`
+		 *
+		 * The object doesn't update itself then, the override decides when it does (see @ref IActorUpdateOverride).
+		 */
+		void SetUpdateOverride(std::unique_ptr<IActorUpdateOverride> value);
+		/** @brief Returns what the per-frame update of the object is handed over to, or `nullptr` */
+		IActorUpdateOverride* GetUpdateOverride() const {
+			return _updateOverride.get();
+		}
+		/** @brief Lets the overrides of two colliding objects handle the collision, returns `true` if one did (see @ref IActorUpdateOverride::OnCollision()) */
+		static bool HandleCollisionByOverride(ActorBase* a, ActorBase* b) {
+			return (a->_updateOverride != nullptr && a->_updateOverride->OnCollision(a, b)) ||
+				(b->_updateOverride != nullptr && b->_updateOverride->OnCollision(b, a));
+		}
+#endif
 
 	protected:
 		/** @brief Actor renderer */
@@ -620,6 +682,10 @@ namespace Jazz2::Actors
 		EventType _spawnEventType;
 		/** @brief Event parameters the object was spawned with, valid only if @ref _spawnEventType is set */
 		std::uint8_t _spawnEventParams[SpawnParamsSize];
+#if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief What the per-frame update of the object is handed over to, see @ref SetUpdateOverride() */
+		std::unique_ptr<IActorUpdateOverride> _updateOverride;
+#endif
 		Metadata* _metadata;
 		ActorRenderer _renderer;
 		GraphicResource* _currentAnimation;

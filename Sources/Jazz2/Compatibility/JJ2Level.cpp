@@ -62,6 +62,7 @@ namespace Jazz2::Compatibility
 		std::uint16_t version = headerBlock.ReadUInt16();
 		_version = (version <= 0x202 ? JJ2Version::BaseGame : JJ2Version::TSF);
 
+		_isPlusLevel = false;
 		_darknessColor = 0;
 		_weatherType = WeatherType::None;
 		_weatherIntensity = 0;
@@ -105,6 +106,12 @@ namespace Jazz2::Compatibility
 
 			JJ2Block mlleBlock(s, mlleBlockPackedSize, mlleBlockUnpackedSize);
 			LoadMlleData(mlleBlock, mlleVersion, path, strictParser);
+			_isPlusLevel = true;
+		}
+		if (!_isPlusLevel) {
+			// JJ2+ runs the script of the same name next to the level
+			StringView foundDot = path.findLastOr('.', path.end());
+			_isPlusLevel = fs::IsReadableFile(fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + ".j2as"_s));
 		}
 
 		return true;
@@ -552,8 +559,7 @@ namespace Jazz2::Compatibility
 				layerOrder[idx] = i;
 
 				std::int32_t layerNameLength = block.ReadUint7bitEncoded();
-				//String layerName = block.ReadString(layerNameLength, false);
-				block.DiscardBytes(layerNameLength);
+				layer.Name = block.ReadString(layerNameLength, false);
 
 				layer.Visible = !block.ReadBool();
 				layer.SpriteMode = block.ReadByte();
@@ -987,19 +993,32 @@ namespace Jazz2::Compatibility
 
 		writer.WriteAnimatedTiles(lastTilesetTileIndex, animatedTiles);
 
-		// Layers
+		// Layers - every one of them, even one without tiles, which JJ2+ keeps too, only it never draws it (jjLAYER::hasTileMap),
+		// scripts refer to the layers by their numbers and names; only one of no size at all is left out, no level can have it
+		auto isWritten = [](const LayerSection& layer) {
+			return (layer.Width > 0 && layer.Height > 0);
+		};
 		std::int32_t layerCount = 0;
+		std::int32_t layersWithoutTiles = 0;
+		std::int64_t tilesWithoutTiles = 0;
 		for (std::int32_t i = 0; i < (std::int32_t)_layers.size(); i++) {
-			auto& layer = _layers[i];
-			if (layer.Width == 0 || layer.Height == 0) {
-				layer.Used = false;
-			}
-			if (layer.Used) {
+			const auto& layer = _layers[i];
+			if (isWritten(layer)) {
 				layerCount++;
+				if (!layer.Used || layer.Tiles == nullptr) {
+					layersWithoutTiles++;
+					tilesWithoutTiles += std::int64_t(layer.Width) * layer.Height;
+				}
 			}
+		}
+		if (layersWithoutTiles > 0) {
+			LOGD("Level \"{}\" has {} layers without tiles, {} tiles in total", LevelName, layersWithoutTiles, tilesWithoutTiles);
 		}
 
 		writer.WriteLayerCount(layerCount);
+		// What scripts know the layers by, in the order they are written
+		SmallVector<StringView, JJ2LayerCount> layerNames;
+		SmallVector<std::uint8_t, JJ2LayerCount> layerNumbers;
 
 		// The preview needs the converted layers whole
 		const bool makePreview = bool(tilesetLookup);
@@ -1013,131 +1032,22 @@ namespace Jazz2::Compatibility
 		SmallVector<Formats::TileRecord, 0> layerRow;
 		for (std::int32_t i = 0; i < (std::int32_t)_layers.size(); i++) {
 			auto& layer = _layers[i];
-			if (!layer.Used) {
+			if (!isWritten(layer)) {
 				continue;
 			}
 
-			bool isSky = (i == 7);
 			bool isSprite = (i == 3);
+			bool hasTiles = (layer.Used && layer.Tiles != nullptr);
 
-			Formats::LayerRecord record = {};
-			record.Kind = (isSprite ? Formats::LayerKind::Sprite : (isSky ? Formats::LayerKind::Sky : Formats::LayerKind::Other));
+			Formats::LayerRecord record;
 			// The texture of its own of a textured layer, empty if its tiles are
 			SmallVector<std::uint8_t, 0> texture;
-			// RepeatX, RepeatY, UseInherentOffset are mapped 1:1
-			record.Flags = (std::uint16_t)(layer.Flags & (Formats::LayerRecord::RepeatX | Formats::LayerRecord::RepeatY | Formats::LayerRecord::UseInherentOffset));
-			if (layer.Visible) {
-				record.Flags |= Formats::LayerRecord::Visible;
-			}
-			record.Width = layer.Width;
-			record.Height = layer.Height;
-
-			if (!isSprite) {
-				Tiles::LayerSpeedModel speedModelX = ConvertSpeedModel(layer.SpeedModelX);
-				Tiles::LayerSpeedModel speedModelY = ConvertSpeedModel(layer.SpeedModelY);
-				record.SpeedModels = (std::uint8_t)(((std::int32_t)speedModelX & 0x0f) | (((std::int32_t)speedModelY & 0x0f) << 4));
-
-				bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
-				// The type is TEXTURE::Style of JJ2+, the textured background of the sky layer is drawn in it, and a reflection of
-				// any other layer too. JJ2+ draws one of an inner surface of MLLE only where the layer is, placed as an ordinary one.
-				const bool isReflection = (hasTexturedBackground && layer.TexturedBackgroundType == TexturedStyleReflection);
-				const bool isInnerReflection = (isReflection && layer.TextureSurface >= 3);
-				const bool hasTexturedSpeeds = (hasTexturedBackground && !isInnerReflection);
-				record.OffsetX = layer.OffsetX;
-				record.OffsetY = layer.OffsetY;
-
-				// NORMAL of JJ2+ moves a layer by its auto speed, if it has one, or by its speed otherwise, which is the
-				// default model without the speed; BOTHSPEEDS moves it by both and a textured layer has its auto speed
-				// added to wherever the model places it. FITLEVEL ignores both.
-				float speedX = layer.SpeedX;
-				float speedY = layer.SpeedY;
-				float autoSpeedX = layer.AutoSpeedX;
-				float autoSpeedY = layer.AutoSpeedY;
-				if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel ||
-					(layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && !hasTexturedSpeeds && std::abs(autoSpeedX) > 0.0f)) {
-					speedX = 0.0f;
-				}
-				if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel ||
-					(layer.SpeedModelY <= LayerSectionSpeedModel::Legacy && !hasTexturedSpeeds && std::abs(autoSpeedY) > 0.0f)) {
-					speedY = 0.0f;
-				}
-				if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel) {
-					autoSpeedX = 0.0f;
-				}
-				if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel) {
-					autoSpeedY = 0.0f;
-				}
-
-				record.SpeedX = speedX;
-				record.SpeedY = speedY;
-				record.AutoSpeedX = autoSpeedX;
-				record.AutoSpeedY = autoSpeedY;
-				record.Depth = (std::int16_t)layer.Depth;
-
-				if (hasTexturedBackground && !isSky && !isReflection) {
-					LOGW("Layer {} of level \"{}\" has a textured background, only the sky layer can be drawn so, it's drawn as tiles", i, LevelName);
-				}
-				if ((isSky && hasTexturedBackground) || isReflection) {
-					record.RendererType = layer.TexturedBackgroundType + (std::uint8_t)Tiles::LayerRendererType::Sky;
-					// The fade color of a sky, a tunnel or a cylinder, the wavelengths and the speed of a wave, the tint opacity,
-					// distance and distortion of a reflection
-					record.Color[0] = layer.TexturedParams1;
-					record.Color[1] = layer.TexturedParams2;
-					record.Color[2] = layer.TexturedParams3;
-					// ParallaxStarsEnabled, which JJ2+ takes as the blur of a reflection
-					record.Color[3] = ((layer.Flags & 0x10) == 0x10 ? 255 : 0);
-					if (layer.TexturedBackgroundType == TexturedStyleTunnel || layer.TexturedBackgroundType == TexturedStyleWave ||
-						layer.TexturedBackgroundType == TexturedStyleCylinder || layer.TexturedBackgroundType == TexturedStyleReflection) {
-						if (layer.TexturedBackgroundType == TexturedStyleTunnel) {
-							// JJ2+ takes the stars as the spiral of a tunnel, which has no stars
-							record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::Spiral : 0);
-							record.Color[3] = 0;
-						} else if (layer.TexturedBackgroundType == TexturedStyleWave) {
-							// As the way the vertical waves of a wave move, which has no stars either
-							record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::DistortionAngle : 0);
-							record.Color[3] = 0;
-						} else if (layer.TexturedBackgroundType == TexturedStyleCylinder) {
-							// And as the half size of a cylinder, which has none either
-							record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::HalfSize : 0);
-							record.Color[3] = 0;
-						}
-						// A wave has no fade, the position of the fade is where JJ2+ keeps its amplitudes
-						if (layer.TexturedBackgroundType != TexturedStyleWave) {
-							record.Textured.Fade = layer.TextureFade;
-						}
-						record.Textured.FadeX = layer.TextureFadeX;
-						record.Textured.FadeY = layer.TextureFadeY;
-						if (isInnerReflection) {
-							// SURFACE::INNERWINDOW or SURFACE::INNERLAYER, the speeds place the layer then and the inner speeds
-							// move its texture inside it
-							record.Textured.Flags = std::uint8_t(record.Textured.Flags | (layer.TextureSurface == 3
-								? Formats::TexturedLayerParams::InnerWindow : Formats::TexturedLayerParams::InnerLayer));
-							// All of them finite already, see ReadFiniteFloat()
-							record.Textured.InnerSpeedX = layer.InnerSpeedX;
-							record.Textured.InnerSpeedY = layer.InnerSpeedY;
-							record.Textured.InnerAutoSpeedX = layer.InnerAutoSpeedX;
-							record.Textured.InnerAutoSpeedY = layer.InnerAutoSpeedY;
-						}
-					}
-					if (layer.TextureSource != 0) {
-						// A texture of JJ2+ (TEXTURE::Texture) instead of the tiles of the layer, or an image of its own made by MLLE
-						constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
-						texture.resize_for_overwrite(TextureBytes);
-						if (layer.TextureSource < 0 && layer.TextureImage != nullptr) {
-							std::memcpy(texture.data(), layer.TextureImage.get(), TextureBytes);
-						} else if (layer.TextureSource < 0 || !textureLookup || !textureLookup(layer.TextureSource, texture.data())) {
-							// The textures of JJ2+ come with it, not with the game, one that ripples a reflection alike is made up
-							LOGW("Layer {} of level \"{}\" has texture {} of JJ2+, which isn't available, a texture is made up instead", i, LevelName, layer.TextureSource);
-							MakeRippleTexture(texture.data());
-						}
-					}
-				} else {
-					ConvertSpriteMode(layer.SpriteMode, layer.SpriteParam, record);
-				}
-			} else {
+			MakeLayerRecord(i, record, texture, textureLookup, _isPlusLevel);
+			layerNames.push_back(layer.Name);
+			layerNumbers.push_back(record.OriginalNumber);
+			if (isSprite) {
 				// How the sprite layer is drawn isn't in its record, it goes into a chunk, see Formats::SpriteLayerChunk - none
 				// for one drawn as ordinary tiles
-				ConvertSpriteMode(layer.SpriteMode, layer.SpriteParam, record);
 				Formats::SpriteLayerChunk::Write(record, spriteLayerChunkData);
 			}
 
@@ -1159,55 +1069,7 @@ namespace Jazz2::Compatibility
 			layerRow.resize_for_overwrite(layer.Width);
 			for (std::int32_t y = 0; y < layer.Height; y++) {
 				for (std::int32_t x = 0; x < layer.Width; x++) {
-					std::uint16_t tileIdx = layer.Tiles[y * layer.InternalWidth + x];
-
-					bool flipX = false, flipY = false;
-					if ((tileIdx & 0x2000) != 0) {
-						flipY = true;
-						tileIdx -= 0x2000;
-					}
-
-					if ((tileIdx & ~(maxTiles | (maxTiles - 1))) != 0) {
-						// Fix of bug in updated Psych2.j2l
-						tileIdx = (std::uint16_t)((tileIdx & (maxTiles | (maxTiles - 1))) | maxTiles);
-					}
-
-					// Max. tiles is either 0x0400 or 0x1000 and doubles as a mask to separate flipped tiles.
-					// In J2L, each flipped tile had a separate entry in the tile list, probably to make
-					// the dictionary concept easier to handle.
-
-					if ((tileIdx & maxTiles) > 0) {
-						flipX = true;
-						tileIdx -= maxTiles;
-					}
-
-					bool legacyTranslucent = false;
-					bool invisible = false;
-					bool heat = false;
-					if (tileIdx < lastTilesetTileIndex) {
-						legacyTranslucent = (_staticTiles[tileIdx].Type == 1);
-						invisible = (_staticTiles[tileIdx].Type == 3);
-						heat = (_staticTiles[tileIdx].Type == TileTypeHeatEffect);
-					}
-
-					std::uint8_t tileFlags = 0;
-					if (flipX) {
-						tileFlags |= Formats::TileRecord::FlipX;
-					}
-					if (flipY) {
-						tileFlags |= Formats::TileRecord::FlipY;
-					}
-
-					if (legacyTranslucent) {
-						tileFlags |= Formats::TileRecord::ModifierTranslucent;
-					} else if (invisible) {
-						tileFlags |= Formats::TileRecord::ModifierInvisible;
-					} else if (heat) {
-						tileFlags |= Formats::TileRecord::ModifierHeat;
-					}
-
-					layerRow[x].Flags = tileFlags;
-					layerRow[x].TileId = tileIdx;
+					layerRow[x] = ConvertLayerTile(hasTiles ? layer.Tiles[y * layer.InternalWidth + x] : 0);
 				}
 				writer.WriteLayerTiles(layerRow);
 				if (previewLayerTiles != nullptr) {
@@ -1223,6 +1085,10 @@ namespace Jazz2::Compatibility
 				const auto& tileEvent = _events[x + y * _layers[3].Width];
 				Formats::EventRecord record = MakeEventRecord(tileEvent.Converted, tileEvent.Illuminate, tileEvent.Difficulty,
 					tileEvent.GeneratorFlags, tileEvent.GeneratorDelay);
+				if (tileEvent.GeneratorDelay == -1) {
+					// What the converted event has no room for, scripts read it (the parameters of a generator are its own)
+					EventConverter::KeepOriginalParams(tileEvent.Converted.Type, record.Params, tileEvent.TileParams);
+				}
 				writer.WriteEvent(record);
 				previewStart.Add(record, x, y);
 			}
@@ -1236,6 +1102,9 @@ namespace Jazz2::Compatibility
 			record.Y = offGridEvent.Y;
 			record.Event = MakeEventRecord(offGridEvent.Converted, offGridEvent.Illuminate, offGridEvent.Difficulty,
 				offGridEvent.GeneratorFlags, offGridEvent.GeneratorDelay);
+			if (offGridEvent.GeneratorDelay == -1) {
+				EventConverter::KeepOriginalParams(offGridEvent.Converted.Type, record.Event.Params, offGridEvent.TileParams);
+			}
 		}
 		writer.WriteOffGridEvents(offGridEvents);
 
@@ -1250,6 +1119,18 @@ namespace Jazz2::Compatibility
 			Formats::ChunkRecord& spriteLayerChunk = chunks.emplace_back();
 			spriteLayerChunk.Tag = Formats::SpriteLayerChunk::Tag;
 			spriteLayerChunk.Data = Death::move(spriteLayerChunkData);
+		}
+		Formats::ChunkRecord layerNamesChunk;
+		layerNamesChunk.Tag = Formats::LayerNamesChunk::Tag;
+		Formats::LayerNamesChunk::Write(layerNames, layerNamesChunk.Data);
+		if (!layerNamesChunk.Data.empty()) {
+			chunks.push_back(Death::move(layerNamesChunk));
+		}
+		Formats::ChunkRecord layerNumbersChunk;
+		layerNumbersChunk.Tag = Formats::LayerNumbersChunk::Tag;
+		Formats::LayerNumbersChunk::Write(layerNumbers, layerNumbersChunk.Data);
+		if (!layerNumbersChunk.Data.empty()) {
+			chunks.push_back(Death::move(layerNumbersChunk));
 		}
 
 		// Preview, drawn with the original tile sets, the level can't be shown without its default one
@@ -1511,6 +1392,247 @@ namespace Jazz2::Compatibility
 		}
 	}
 
+	bool JJ2Level::ConvertLayer(std::int32_t index, Formats::LayerRecord& record, SmallVectorImpl<Formats::TileRecord>& tiles) const
+	{
+		if (index < 0 || index >= std::int32_t(_layers.size()) || _layers[index].Width <= 0 || _layers[index].Height <= 0) {
+			return false;
+		}
+
+		const LayerSection& layer = _layers[index];
+		SmallVector<std::uint8_t, 0> texture;
+		Function<bool(std::int32_t, std::uint8_t*)> textureLookup;
+		// Into a level of JJ2+, whatever the level it's taken from
+		MakeLayerRecord(index, record, texture, textureLookup, true);
+
+		const bool hasTiles = (layer.Used && layer.Tiles != nullptr);
+		tiles.resize_for_overwrite(std::size_t(layer.Width) * std::size_t(layer.Height));
+		for (std::int32_t y = 0; y < layer.Height; y++) {
+			for (std::int32_t x = 0; x < layer.Width; x++) {
+				tiles[std::size_t(y) * std::size_t(layer.Width) + std::size_t(x)] = ConvertLayerTile(hasTiles ? layer.Tiles[y * layer.InternalWidth + x] : 0);
+			}
+		}
+		return true;
+	}
+
+	void JJ2Level::MakeLayerRecord(std::int32_t index, Formats::LayerRecord& record, SmallVectorImpl<std::uint8_t>& texture,
+		Function<bool(std::int32_t, std::uint8_t*)>& textureLookup, bool forPlusLevel) const
+	{
+		const LayerSection& layer = _layers[index];
+		bool isSky = (index == 7);
+		bool isSprite = (index == 3);
+		bool hasTiles = (layer.Used && layer.Tiles != nullptr);
+
+		record = {};
+		record.Kind = (isSprite ? Formats::LayerKind::Sprite : (isSky ? Formats::LayerKind::Sky : Formats::LayerKind::Other));
+		// RepeatX, RepeatY, UseInherentOffset are mapped 1:1
+		record.Flags = (std::uint16_t)(layer.Flags & (Formats::LayerRecord::RepeatX | Formats::LayerRecord::RepeatY | Formats::LayerRecord::UseInherentOffset));
+		// A layer without tiles isn't drawn, as in JJ2+ (jjLAYER::hasTiles is false for it unless a script says otherwise)
+		if (layer.Visible && (hasTiles || isSprite)) {
+			record.Flags |= Formats::LayerRecord::Visible;
+		}
+		// The first eight are the layers of the original, the rest the additional layers of MLLE
+		record.OriginalNumber = std::uint8_t(index < JJ2LayerCount ? index + 1 : 0);
+		record.Width = layer.Width;
+		record.Height = layer.Height;
+
+		if (isSprite) {
+			ConvertSpriteMode(layer.SpriteMode, layer.SpriteParam, record);
+			return;
+		}
+
+		bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
+		// The type is TEXTURE::Style of JJ2+, the textured background of the sky layer is drawn in it, a reflection of any
+		// other layer too, and any layer the MLLE stream gives a surface. JJ2+ draws one of an inner surface only where the
+		// layer is, placed as an ordinary one - any style but a wave, which is always placed so.
+		const bool isReflection = (hasTexturedBackground && layer.TexturedBackgroundType == TexturedStyleReflection);
+		const bool isTextured = (hasTexturedBackground && (isSky || isReflection || layer.TextureSurface != 0));
+		const bool isInnerSurface = (isTextured && layer.TextureSurface >= 3 && layer.TexturedBackgroundType != TexturedStyleWave);
+		const bool hasTexturedSpeeds = (isTextured && !isInnerSurface);
+		// A sky, a tunnel or a cylinder of SURFACE::FULLSCREEN is drawn in the perspective of JJ2+, and so is one of the sky
+		// layer of SURFACE::LEGACY in a level of JJ2+, which JJ2+ draws exactly as FULLSCREEN (measured), and a cylinder always
+		// (it has no other model, see Tiles::LayerDescription::HasPlusPerspective()). The sky layer of any other level, and
+		// LEGACY of another layer, which JJ2+ draws with properties of layer 8, keep the look the sky layers always had here.
+		const bool hasPlusStyle = (layer.TexturedBackgroundType == TexturedStyleWarpHorizon ||
+			layer.TexturedBackgroundType == TexturedStyleTunnel || layer.TexturedBackgroundType == TexturedStyleCylinder);
+		const bool hasPlusPerspective = (hasTexturedSpeeds && hasPlusStyle && (layer.TextureSurface == 2 ||
+			layer.TexturedBackgroundType == TexturedStyleCylinder || (forPlusLevel && isSky && layer.TextureSurface <= 1)));
+		if (hasTexturedSpeeds && hasPlusStyle && !hasPlusPerspective && !isSky && layer.TextureSurface == 1) {
+			LOGW("Layer {} of level \"{}\" is textured as SURFACE::LEGACY, which JJ2+ draws with properties of layer 8, it's drawn as the sky layers always were here instead", index, LevelName);
+		}
+		record.OffsetX = layer.OffsetX;
+		record.OffsetY = layer.OffsetY;
+
+		// NORMAL of JJ2+ moves a layer by its auto speed, if it has one, or by its speed otherwise, which is the
+		// default model without the speed; BOTHSPEEDS moves it by both and a textured layer has its auto speed
+		// added to wherever the model places it. FITLEVEL ignores both.
+		float speedX = layer.SpeedX;
+		float speedY = layer.SpeedY;
+		float autoSpeedX = layer.AutoSpeedX;
+		float autoSpeedY = layer.AutoSpeedY;
+		if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel ||
+			(layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && !hasTexturedSpeeds && std::abs(autoSpeedX) > 0.0f)) {
+			speedX = 0.0f;
+		}
+		if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel ||
+			(layer.SpeedModelY <= LayerSectionSpeedModel::Legacy && !hasTexturedSpeeds && std::abs(autoSpeedY) > 0.0f)) {
+			speedY = 0.0f;
+		}
+		if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel) {
+			autoSpeedX = 0.0f;
+		}
+		if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel) {
+			autoSpeedY = 0.0f;
+		}
+
+		Tiles::LayerSpeedModel speedModelX = ConvertSpeedModel(layer.SpeedModelX);
+		Tiles::LayerSpeedModel speedModelY = ConvertSpeedModel(layer.SpeedModelY);
+		record.SpeedModels = (std::uint8_t)(((std::int32_t)speedModelX & 0x0f) | (((std::int32_t)speedModelY & 0x0f) << 4));
+		record.SpeedX = speedX;
+		record.SpeedY = speedY;
+		// Per tick of the original, 70 a second, a layer here moves by its auto speed each of 60 frames a second
+		record.AutoSpeedX = Tiles::LayerDescription::FromOriginalAutoSpeed(autoSpeedX, speedModelX);
+		record.AutoSpeedY = Tiles::LayerDescription::FromOriginalAutoSpeed(autoSpeedY, speedModelY);
+		record.Depth = (std::int16_t)layer.Depth;
+
+		if (hasTexturedBackground && !isTextured) {
+			LOGW("Layer {} of level \"{}\" has a textured background, only the sky layer can be drawn so without MLLE, it's drawn as tiles", index, LevelName);
+		}
+		if (!isTextured) {
+			ConvertSpriteMode(layer.SpriteMode, layer.SpriteParam, record);
+			return;
+		}
+
+		record.RendererType = layer.TexturedBackgroundType + (std::uint8_t)Tiles::LayerRendererType::Sky;
+		// The fade color of a sky, a tunnel or a cylinder, the wavelengths and the speed of a wave, the tint opacity,
+		// distance and distortion of a reflection
+		record.Color[0] = layer.TexturedParams1;
+		record.Color[1] = layer.TexturedParams2;
+		record.Color[2] = layer.TexturedParams3;
+		// ParallaxStarsEnabled, which JJ2+ takes as the blur of a reflection
+		record.Color[3] = ((layer.Flags & 0x10) == 0x10 ? 255 : 0);
+		if (layer.TexturedBackgroundType == TexturedStyleTunnel || layer.TexturedBackgroundType == TexturedStyleWave ||
+			layer.TexturedBackgroundType == TexturedStyleCylinder || layer.TexturedBackgroundType == TexturedStyleReflection) {
+			if (layer.TexturedBackgroundType == TexturedStyleTunnel) {
+				// JJ2+ takes the stars as the spiral of a tunnel, which has no stars
+				record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::Spiral : 0);
+				record.Color[3] = 0;
+			} else if (layer.TexturedBackgroundType == TexturedStyleWave) {
+				// As the way the vertical waves of a wave move, which has no stars either
+				record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::DistortionAngle : 0);
+				record.Color[3] = 0;
+			} else if (layer.TexturedBackgroundType == TexturedStyleCylinder) {
+				// And as the half size of a cylinder, which has none either
+				record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::HalfSize : 0);
+				record.Color[3] = 0;
+			}
+			// A wave has no fade, the position of the fade is where JJ2+ keeps its amplitudes
+			if (layer.TexturedBackgroundType != TexturedStyleWave) {
+				record.Textured.Fade = layer.TextureFade;
+			}
+			record.Textured.FadeX = layer.TextureFadeX;
+			record.Textured.FadeY = layer.TextureFadeY;
+		} else {
+			// The vanishing point and the horizon of a warp horizon and whether it fades, the defaults without the MLLE stream,
+			// and the point a menu turns around, its rows of the palette, and whether they go from light to dark or a tile menu
+			// is drawn at full size, are in the color
+			if (layer.TexturedBackgroundType != TexturedStyleMenu && layer.TexturedBackgroundType != TexturedStyleTileMenu) {
+				record.Textured.Fade = layer.TextureFade;
+			}
+			record.Textured.FadeX = layer.TextureFadeX;
+			record.Textured.FadeY = layer.TextureFadeY;
+		}
+		if (isInnerSurface) {
+			// SURFACE::INNERWINDOW or SURFACE::INNERLAYER, the speeds place the layer then and the inner speeds move its
+			// texture inside it
+			record.Textured.Flags = std::uint8_t(record.Textured.Flags | (layer.TextureSurface == 3
+				? Formats::TexturedLayerParams::InnerWindow : Formats::TexturedLayerParams::InnerLayer));
+			// All of them finite already, see ReadFiniteFloat(), the auto speeds per tick of the original as those of the layer
+			record.Textured.InnerSpeedX = layer.InnerSpeedX;
+			record.Textured.InnerSpeedY = layer.InnerSpeedY;
+			record.Textured.InnerAutoSpeedX = layer.InnerAutoSpeedX * Tiles::LayerDescription::OriginalAutoSpeedScale;
+			record.Textured.InnerAutoSpeedY = layer.InnerAutoSpeedY * Tiles::LayerDescription::OriginalAutoSpeedScale;
+		} else if (hasPlusPerspective || (layer.TextureSurface == 2 && layer.TexturedBackgroundType != TexturedStyleWave)) {
+			// SURFACE::FULLSCREEN (or LEGACY of the sky layer, see above), in the perspective of JJ2+ with the texture placed
+			// as an ordinary layer, not as the sky layers have always been drawn here
+			record.Textured.Flags = std::uint8_t(record.Textured.Flags | Formats::TexturedLayerParams::Fullscreen);
+		}
+		if (layer.TextureSource != 0) {
+			// A texture of JJ2+ (TEXTURE::Texture) instead of the tiles of the layer, or an image of its own made by MLLE
+			constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+			texture.resize_for_overwrite(TextureBytes);
+			if (layer.TextureSource < 0 && layer.TextureImage != nullptr) {
+				std::memcpy(texture.data(), layer.TextureImage.get(), TextureBytes);
+			} else if (layer.TextureSource < 0 || !textureLookup || !textureLookup(layer.TextureSource, texture.data())) {
+				// The textures of JJ2+ come with it, not with the game, one that ripples a reflection alike is made up
+				LOGW("Layer {} of level \"{}\" has texture {} of JJ2+, which isn't available, a texture is made up instead", index, LevelName, layer.TextureSource);
+				MakeRippleTexture(texture.data());
+			}
+			if (hasPlusStyle && (hasPlusPerspective || isInnerSurface)) {
+				// JJ2+ draws a sky, a tunnel or a cylinder from the upper half of the palette, index | 128 (measured), a wave
+				// as it is - its own textures are there already, an image made by MLLE may not be
+				for (std::uint8_t& index : texture) {
+					index |= 0x80;
+				}
+			}
+		}
+	}
+
+	Formats::TileRecord JJ2Level::ConvertLayerTile(std::uint16_t tileIdx) const
+	{
+		const std::uint16_t maxTiles = std::uint16_t(GetMaxSupportedTiles());
+		const std::uint16_t lastTilesetTileIndex = std::uint16_t(maxTiles - _animCount);
+
+		bool flipX = false, flipY = false;
+		if ((tileIdx & 0x2000) != 0) {
+			flipY = true;
+			tileIdx -= 0x2000;
+		}
+
+		if ((tileIdx & ~(maxTiles | (maxTiles - 1))) != 0) {
+			// Fix of bug in updated Psych2.j2l
+			tileIdx = (std::uint16_t)((tileIdx & (maxTiles | (maxTiles - 1))) | maxTiles);
+		}
+
+		// Max. tiles is either 0x0400 or 0x1000 and doubles as a mask to separate flipped tiles.
+		// In J2L, each flipped tile had a separate entry in the tile list, probably to make
+		// the dictionary concept easier to handle.
+
+		if ((tileIdx & maxTiles) > 0) {
+			flipX = true;
+			tileIdx -= maxTiles;
+		}
+
+		bool legacyTranslucent = false;
+		bool invisible = false;
+		bool heat = false;
+		if (tileIdx < lastTilesetTileIndex) {
+			legacyTranslucent = (_staticTiles[tileIdx].Type == 1);
+			invisible = (_staticTiles[tileIdx].Type == 3);
+			heat = (_staticTiles[tileIdx].Type == TileTypeHeatEffect);
+		}
+
+		std::uint8_t tileFlags = 0;
+		if (flipX) {
+			tileFlags |= Formats::TileRecord::FlipX;
+		}
+		if (flipY) {
+			tileFlags |= Formats::TileRecord::FlipY;
+		}
+
+		if (legacyTranslucent) {
+			tileFlags |= Formats::TileRecord::ModifierTranslucent;
+		} else if (invisible) {
+			tileFlags |= Formats::TileRecord::ModifierInvisible;
+		} else if (heat) {
+			tileFlags |= Formats::TileRecord::ModifierHeat;
+		}
+
+		Formats::TileRecord tile;
+		tile.Flags = tileFlags;
+		tile.TileId = tileIdx;
+		return tile;
+	}
+
 	void JJ2Level::ConvertSpriteMode(std::uint8_t spriteMode, std::uint8_t spriteParam, Formats::LayerRecord& record)
 	{
 		// The modes the renderers can draw, any other is drawn as ordinary tiles. Translucent is as opaque as translucent
@@ -1533,6 +1655,20 @@ namespace Jazz2::Compatibility
 				break;
 			case 4:		// SPRITE::INVISIBLE
 				record.Color[3] = 0;
+				break;
+			case 5:		// SPRITE::SINGLECOLOR
+			case 14:	// SPRITE::TRANSLUCENTCOLOR
+				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::SingleColor;
+				record.Color[0] = spriteParam;
+				record.Color[1] = 0;
+				record.Color[2] = 0;
+				record.Color[3] = (spriteMode == 14 ? 192 : 255);
+				break;
+			case 38:	// SPRITE::CHROMAKEY
+				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::ChromaKey;
+				record.Color[0] = spriteParam;
+				record.Color[1] = 0;
+				record.Color[2] = 0;
 				break;
 			case 10:	// SPRITE::PALSHIFT
 			case 16:	// SPRITE::TRANSLUCENTPALSHIFT

@@ -194,6 +194,7 @@ namespace Jazz2
 
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
+		void OnReplacing() override;
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 		/** @brief Called when a console command is entered */
 		virtual bool OnConsoleCommand(StringView line);
@@ -239,7 +240,8 @@ namespace Jazz2
 		void OverrideLevelText(std::uint32_t textId, StringView value) override;
 		Vector2f GetCameraPos(Actors::Player* player) const override;
 		void LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width) override;
-		void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) override;
+		void OverrideCameraView(Actors::Player* player, CameraOverride modeX, float x, CameraOverride modeY, float y,
+			bool centered = false, bool instant = true) override;
 		void ShakeCameraView(Actors::Player* player, float duration) override;
 		void ShakeCameraViewNear(Vector2f pos, float duration) override;
 		bool GetTrigger(std::uint8_t triggerId) override;
@@ -305,6 +307,8 @@ namespace Jazz2
 			return _playTestDebug.get();
 		}
 #endif
+		/** @brief Returns the part of the level the view of a given player shows, from its top left corner, the whole view without one */
+		Rectf GetCameraView(Actors::Player* player) const;
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override {}
 		void OnTileFrozen(std::int32_t x, std::int32_t y) override;

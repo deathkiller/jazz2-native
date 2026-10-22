@@ -937,7 +937,8 @@ namespace Jazz2::AssetPacker
 		void AppendCraftedChunks(FuzzRandom& random, Bytes& body)
 		{
 			const std::uint32_t Tags[] = {
-				LevelFile::PreviewChunk, LevelFile::LayerNamesChunk, SpriteLayerChunk::Tag, TexturedLayerChunk::Tag, LevelFile::MakeChunkTag('e', 'd', 'o', 'c'),
+				LevelFile::PreviewChunk, LayerNamesChunk::Tag, LayerNumbersChunk::Tag, SpriteLayerChunk::Tag,
+				TexturedLayerChunk::Tag, LevelFile::MakeChunkTag('e', 'd', 'o', 'c'),
 				LevelFile::MakeChunkTag('a', 'n', 'n', 'o'), LevelFile::MakeChunkTag('s', 'p', 'l', 'n'),
 				LevelFile::MakeChunkTag('e', 'l', 'a', 'y'), LevelFile::MakeChunkTag('r', 'c', 'o', 'v'),
 				LevelFile::MakeChunkTag('G', 's', 'c', 'r'), LevelFile::MakeChunkTag('X', 'Y', 'Z', 'W')

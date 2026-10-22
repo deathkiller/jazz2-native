@@ -2153,19 +2153,23 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft)
+	void MpLevelHandler::OverrideCameraView(Actors::Player* player, CameraOverride modeX, float x, CameraOverride modeY, float y,
+		bool centered, bool instant)
 	{
 		// TODO: Include this state in initial sync
-		LevelHandler::OverrideCameraView(player, x, y, topLeft);
+		LevelHandler::OverrideCameraView(player, modeX, x, modeY, y, centered, instant);
 
 		if (_isServer) {
 			if (auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(player)) {
 				MemoryStream packet(14);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::OverrideCameraView);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)(x * 100.0f));
-				packet.WriteVariableInt32((std::int32_t)(y * 100.0f));
-				packet.WriteValue<std::uint8_t>(topLeft ? 1 : 0);
+				packet.WriteVariableInt32(modeX == CameraOverride::Fix ? (std::int32_t)(x * 100.0f) : 0);
+				packet.WriteVariableInt32(modeY == CameraOverride::Fix ? (std::int32_t)(y * 100.0f) : 0);
+				// Bit 0 is whether the position is the top left corner of the view, as it always was, the modes of the axes
+				// and whether it's instant are in the bits above it (see OverrideCameraViewModes)
+				packet.WriteValue<std::uint8_t>(std::uint8_t((centered ? 0 : 0x01) | (std::uint8_t(modeX) << 1) | (std::uint8_t(modeY) << 3) |
+					(instant ? 0x20 : 0) | OverrideCameraViewModes));
 				_networkManager->SendTo(mpPlayer->GetPeerDescriptor()->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}
@@ -6452,15 +6456,31 @@ namespace Jazz2::Multiplayer
 				break;
 			}
 			case PlayerPropertyType::OverrideCameraView: {
-				float x = packet.ReadVariableInt32() * 0.01f;
-				float y = packet.ReadVariableInt32() * 0.01f;
-				bool topLeft = packet.ReadValue<std::uint8_t>() != 0;
+				std::int32_t rawX = packet.ReadVariableInt32();
+				std::int32_t rawY = packet.ReadVariableInt32();
+				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				CameraOverride modeX, modeY;
+				bool instant;
+				if ((flags & OverrideCameraViewModes) != 0) {
+					modeX = CameraOverride((flags >> 1) & 0x03);
+					modeY = CameraOverride((flags >> 3) & 0x03);
+					instant = ((flags & 0x20) != 0);
+				} else {
+					// A server that sent only the position fixed the camera there, an axis it let go of came as the lowest number
+					modeX = (rawX == INT32_MIN ? CameraOverride::Follow : CameraOverride::Fix);
+					modeY = (rawY == INT32_MIN ? CameraOverride::Follow : CameraOverride::Fix);
+					instant = true;
+				}
+				float x = rawX * 0.01f;
+				float y = rawY * 0.01f;
+				bool centered = ((flags & 0x01) == 0);
 
-				LOGD("[MP] ServerPacketType::PlayerSetProperty::OverrideCameraView - x: {}, y: {}, topLeft: {}", x, y, topLeft);
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::OverrideCameraView - x: {} ({}), y: {} ({}), centered: {}, instant: {}",
+					x, std::int32_t(modeX), y, std::int32_t(modeY), centered, instant);
 
-				InvokeAsync([this, x, y, topLeft]() {
+				InvokeAsync([this, modeX, x, modeY, y, centered, instant]() {
 					if (!_players.empty()) {
-						OverrideCameraView(_players[0], x, y, topLeft);
+						OverrideCameraView(_players[0], modeX, x, modeY, y, centered, instant);
 					}
 				});
 				break;

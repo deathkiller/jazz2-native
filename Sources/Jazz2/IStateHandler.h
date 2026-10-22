@@ -69,6 +69,13 @@ namespace Jazz2
 
 		/** @brief Called when the application is about to be suspended, before the resumable state is saved */
 		virtual void OnSuspend() {}
+		/**
+		 * @brief Called when another handler is about to be made in its place, before it loads what it needs
+		 *
+		 * The handler can still be alive while the next one loads, and the resources are shared, so what it changed of
+		 * them goes back now. It isn't updated or drawn any more afterwards.
+		 */
+		virtual void OnReplacing() {}
 
 		/** @brief Returns how the mouse cursor should be shown while the handler is active */
 		virtual CursorPolicy GetCursorPolicy() const { return CursorPolicy::Default; }

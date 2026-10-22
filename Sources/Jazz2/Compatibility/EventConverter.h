@@ -57,7 +57,12 @@ namespace Jazz2::Compatibility
 		/** @brief Creates a new instance */
 		EventConverter();
 
-		/** @brief Converts the specified original event to an extended event description */
+		/**
+		 * @brief Converts the specified original event to an extended event description
+		 *
+		 * An event the game has no use for is kept as it is, see @ref MakePassthroughEvent(). Only @ref JJ2Event::EMPTY gives
+		 * @ref EventType::Empty.
+		 */
 		ConversionResult TryConvert(JJ2Level* level, JJ2Event old, std::uint32_t eventParams);
 		/** @brief Registers a converter for the specified original event */
 		void Add(JJ2Event originalEvent, ConversionFunction&& converter);
@@ -70,6 +75,33 @@ namespace Jazz2::Compatibility
 		ConversionFunction ConstantParamList(EventType ev, const std::array<std::uint8_t, 16>& eventParams);
 		/** @brief Returns a converter that maps to the specified event by extracting parameters from the original parameter integer */
 		ConversionFunction ParamIntToParamList(EventType ev, const std::array<Pair<std::int32_t, std::int32_t>, 6>& paramDefs);
+
+		/** @brief Number of bits of the parameters of an original event */
+		static constexpr std::int32_t OriginalParamBits = 20;
+
+		/** @brief Returns an original event as it is, as @ref EventType::PassthroughEvent */
+		static ConversionResult MakePassthroughEvent(JJ2Event event, std::uint32_t eventParams);
+		/** @brief Returns the original event and its parameters of the parameters of @ref EventType::PassthroughEvent */
+		static void ReadPassthroughEvent(const std::uint8_t* params, JJ2Event& event, std::uint32_t& eventParams);
+
+		/** @brief Returns whether the last bytes of the parameters of a converted event can keep the parameters of the original */
+		static bool CanKeepOriginalParams(EventType type);
+		/**
+		 * @brief Keeps the parameters of the original event in the last bytes of the converted one, for the scripts of JJ2+
+		 *
+		 * The game reads none of the last three bytes of the parameters of any event, but the name of the music of
+		 * @ref EventType::AreaActivateBoss, so the 20 bits of the original are kept there - scripts store data of their own
+		 * in the bits the game ignores. The converted event's own parameters take precedence, they aren't kept if it
+		 * uses those bytes. Returns `false` if they aren't kept.
+		 */
+		static bool KeepOriginalParams(EventType type, std::uint8_t* params, std::uint32_t eventParams);
+		/**
+		 * @brief Returns the parameters of the original event kept in a converted one, see @ref KeepOriginalParams()
+		 *
+		 * Returns `false` if there are none, a level converted before they were kept has none, and none are kept of an
+		 * original event of no parameters.
+		 */
+		static bool ReadOriginalParams(EventType type, const std::uint8_t* params, std::uint32_t& eventParams);
 
 		/** @brief Decodes a packed parameter integer into individual event parameters */
 		static void ConvertParamInt(std::uint32_t paramInt, const ArrayView<const Pair<std::int32_t, std::int32_t>>& paramTypes, std::uint8_t eventParams[16]);

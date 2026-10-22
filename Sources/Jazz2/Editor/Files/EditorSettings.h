@@ -45,6 +45,8 @@ namespace Jazz2::Editor
 		bool ShowGrid = true;
 		/** @brief Whether layers with an automatic speed stay still */
 		bool PauseLayerMovement = false;
+		/** @brief Whether a textured layer being edited is drawn as in the game instead of as plain tiles to be painted */
+		bool PreviewTexturedLayers = false;
 		/** @brief Tiles in a row of the tile picker */
 		std::int32_t TilePickerColumns = 10;
 		/** @brief Width of the panel on the right in units */

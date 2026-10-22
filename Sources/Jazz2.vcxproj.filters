@@ -1512,6 +1512,15 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Asserts.h">
       <Filter>Header Files\Shared</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\JJ2PlusAnimations.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\JJ2PlusObjects.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\JJ2PlusEvents.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h">
       <Filter>Header Files\Jazz2\Scripting</Filter>
     </ClInclude>
@@ -3463,6 +3472,15 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\FileSystem.cpp">
       <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\JJ2PlusAnimations.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\JJ2PlusObjects.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\JJ2PlusEvents.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp">
       <Filter>Source Files\Jazz2\Scripting</Filter>

@@ -74,6 +74,13 @@ namespace Jazz2::Actors
 	{
 	}
 
+#if defined(WITH_ANGELSCRIPT)
+	void ActorBase::SetUpdateOverride(std::unique_ptr<IActorUpdateOverride> value)
+	{
+		_updateOverride = Death::move(value);
+	}
+#endif
+
 	bool ActorBase::IsFacingLeft() const
 	{
 		return GetState(ActorState::IsFacingLeft);
@@ -2094,9 +2101,25 @@ namespace Jazz2::Actors
 		// took stays available to the swept tests that run afterwards (see ActorBase::HasCrossedOver())
 		_owner->_frameStartPos = _owner->_pos;
 
+#if defined(WITH_ANGELSCRIPT)
+		// An object a level script drives updates through the script, which runs the object's own update when it wants
+		if DEATH_UNLIKELY(_owner->_updateOverride != nullptr) {
+			_owner->_updateOverride->OnUpdate(_owner, timeMult);
+		} else {
+			_owner->OnUpdate(timeMult);
+		}
+#else
 		_owner->OnUpdate(timeMult);
+#endif
 
 		_owner->UpdateRendererPosition();
+
+#if defined(WITH_ANGELSCRIPT)
+		// A level script can make the graphics true color while they're drawn (see Scripting::Legacy::AnimationTables)
+		if DEATH_UNLIKELY(FrameSource != nullptr && _baseIndexed != ((FrameSource->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed)) {
+			SetIndexed(!_baseIndexed, _basePaletteOffset);
+		}
+#endif
 
 		if (IsAnimationRunning()) {
 			switch (LoopMode) {
@@ -2153,6 +2176,13 @@ namespace Jazz2::Actors
 
 	bool ActorBase::ActorRenderer::OnDraw(RenderQueue& renderQueue)
 	{
+#if defined(WITH_ANGELSCRIPT)
+		// A behavior of a level script draws the object only when it asks for it
+		if DEATH_UNLIKELY(_owner->_updateOverride != nullptr && !_owner->_updateOverride->IsDrawn()) {
+			return true;
+		}
+#endif
+
 		if (_owner->OnDraw(renderQueue)) {
 			return true;
 		}

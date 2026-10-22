@@ -531,6 +531,10 @@ namespace Jazz2::Resources
 		BatchedFrozenMaskPalette,			/**< Batched variant of @ref FrozenMaskPalette */
 		TintedPalette,						/**< Palette variant of @ref Tinted */
 		BatchedTintedPalette,				/**< Batched variant of @ref TintedPalette */
+		SingleColor,						/**< The shape of a sprite in a single color, see @ref Tiles::LayerRendererType::SingleColor */
+		BatchedSingleColor,					/**< Batched variant of @ref SingleColor */
+		SingleColorPalette,					/**< Palette variant of @ref SingleColor */
+		BatchedSingleColorPalette,			/**< Batched variant of @ref SingleColorPalette */
 		ShieldFire,							/**< Fire shield effect */
 		BatchedShieldFire,					/**< Batched variant of @ref ShieldFire */
 		ShieldLightning,					/**< Lightning shield effect */
@@ -543,7 +547,7 @@ namespace Jazz2::Resources
 		TileMapMeshPalette,					/**< Batched variant of @ref TileMapMesh */
 #endif
 #if defined(TILEMAP_LAYER_EFFECTS)
-		// The special tile layers (see Tiles::LayerRendererType::XRay, ::BlurBehind and ::Reflection) and the actor
+		// The special tile layers (see Tiles::LayerRendererType::XRay, ::BlurBehind, ::Reflection and ::ChromaKey) and the actor
 		// coverage the x-ray layers sample. Compiled only once a level that has such a layer is loaded, see
 		// ContentResolver::CompileLayerEffectShaders()
 		TileMapMeshXRay,					/**< Animated tiles of an x-ray layer */
@@ -553,6 +557,12 @@ namespace Jazz2::Resources
 		Silhouette,							/**< Coverage of the actors behind an x-ray layer */
 		SilhouettePalette,					/**< Palette variant of @ref Silhouette */
 		TexturedBackgroundReflection,		/**< Reflection layer */
+		TileMapMeshChromaKey,				/**< Chroma key layer */
+		TileMapMeshChromaKeyPalette,		/**< Palette variant of @ref TileMapMeshChromaKey */
+		TexturedBackgroundKeyed,			/**< Chroma key or translucent variant of @ref TexturedBackground */
+		TexturedBackgroundTunnelKeyed,		/**< Chroma key or translucent variant of @ref TexturedBackgroundTunnel */
+		TexturedBackgroundCylinderKeyed,	/**< Chroma key or translucent variant of @ref TexturedBackgroundCylinder */
+		TexturedBackgroundWaveKeyed,		/**< Chroma key or translucent variant of @ref TexturedBackgroundWave */
 #endif
 
 #if !defined(DISABLE_RESCALE_SHADERS)

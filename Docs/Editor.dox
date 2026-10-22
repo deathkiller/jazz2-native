@@ -220,7 +220,9 @@ The layer list is in the right panel:
 -   The <b>eye</b> hides a layer. <kbd>Alt</kbd>+click on it shows only that layer, or all layers again. The
     <b>lock</b> protects a layer from changes. Both only affect the editor, not the level.
 -   Drag a layer to reorder it, double-click it to rename it. An unnamed layer is named by what it is, such as
-    <em>Foreground</em> or <em>Background</em>. Layer names are editor-only.
+    <em>Foreground</em> or <em>Background</em>. Scripts can find a layer by its name, the names a level made in MLLE
+    gives its layers are kept. A layer of a level of the original game also keeps its number there, 1 to 8, which
+    scripts of JJ2+ refer to it by wherever it's moved; a duplicate of it doesn't get the number.
 -   <b>Duplicate Layer</b> and <b>Resize Layer</b> are in the <b>Layer</b> menu. Removing a layer asks first.
 
 @subsection editor-layers-properties Layer properties
@@ -258,21 +260,33 @@ Renderer | What it draws
 <b>Solid color</b> | The color of the layer where its tiles are
 <b>Tinted</b> | The tiles tinted by a palette entry
 <b>Palette shift</b> | Each pixel shows the color <b>Shift</b> entries further in the palette, as `SPRITE::PALSHIFT` of JJ2+. <b>Opacity</b> sets how opaque the layer is. True color tile sets aren't shifted
+<b>Single color</b> | Only the shapes of the tiles, every visible pixel in the palette entry <b>Color</b>, such as a shadow of another layer, as `SPRITE::SINGLECOLOR` of JJ2+. <b>Opacity</b> sets how opaque the layer is
 <b>X-ray</b> | The last frame of each animated tile only where an object is behind it, as its silhouette
 <b>Blur behind</b> | Not its tiles, but what is behind them, moved, mirrored or blurred by the colors of the tiles
+<b>Chroma key</b> | The tiles only where what is behind them has the color of the palette entry <b>Key</b>, so an area painted in that color is a window the layer shows through, as `SPRITE::CHROMAKEY` of JJ2+. <b>Opacity</b> sets how opaque the layer is. Backends that can't read what is behind a layer don't draw it
 <b>Sky</b> | The texture as two planes stretching to the horizon, as `TEXTURE::WARPHORIZON` of JJ2+
 <b>Tunnel</b> | The texture as circles getting smaller into the distance, as `TEXTURE::TUNNEL`
 <b>Wave</b> | The texture where the tiles would be, its rows and columns moved by sine waves, as `TEXTURE::WAVE`
 <b>Cylinder</b> | The texture as the inside of a horizontal tube, as `TEXTURE::CYLINDER`
 <b>Reflection</b> | What is behind it, mirrored below a horizon and rippled by the texture, as `TEXTURE::REFLECTION`
 
-The sprite layer can only be drawn as tiles, in a solid color, tinted, or with a palette shift.
+The sprite layer can only be drawn as tiles, in a solid color, tinted, with a palette shift, or in a single color.
 
 -   <b>Texture</b> of a sky, tunnel, wave, cylinder or reflection --- <em>Its tiles</em> (the 8×8 tiles at the top left of
     the layer), or an <em>Own image</em> of 256×256 pixels stored in the level and shown under the row. A level
     converted from JJ2+ gets an own image where it used a JJ2+ texture or an image made in MLLE. The menu of the row
     imports a PNG (its colors are matched to the palette), exports the image to edit it elsewhere, turns the tiles into
     an own image, or goes back to the tiles.
+-   <b>Sky</b> --- the <b>Vanishing point</b> and the <b>Horizon line</b> in percent of the view, and <b>Fade</b> into
+    the color of the horizon.
+-   <b>Area</b> of a sky, tunnel or cylinder --- the <em>Whole view, Resurrection</em> as this game drew sky layers
+    before version 4.0, the <em>Whole view, JJ2+</em> in the perspective of JJ2+ with the texture placed by the speeds of the
+    layer (`SURFACE::FULLSCREEN`), or only where the layer is, as a window (`SURFACE::INNERWINDOW`) or as part of the
+    layer (`SURFACE::INNERLAYER`). The texture then moves by <b>Inner speed</b> and <b>Inner auto</b> inside the layer.
+    JJ2+ draws the sky layer of a level saved by JCS (`SURFACE::LEGACY`) in its perspective too, placed where layer 5
+    is by the speed model of layer 8, so a converted level of JJ2+ (with MLLE data or a script) gets <em>Whole view,
+    JJ2+</em> and any other level <em>Whole view, Resurrection</em>. A cylinder is always drawn in the perspective of
+    JJ2+, so it has only one <em>Whole view</em>.
 -   <b>Tunnel</b> --- <b>Center</b> in percent of the view, <b>Fade</b> into the color of the horizon, and
     <b>Spiral</b>.
 -   <b>Wave</b> --- the <b>Wavelength</b> of the waves that move the rows left and right and of those that move the
@@ -289,11 +303,13 @@ The sprite layer can only be drawn as tiles, in a solid color, tinted, or with a
     the layer. Only the last reflection layer is drawn, and only on backends that support it.
 
 While a layer is selected, a sky, tunnel, wave, cylinder or reflection is shown as plain tiles so it can be painted --- except
-a reflection with its own image, which keeps rippling.
+a reflection with its own image, which keeps rippling. <b>Show Textured Layers</b> in the View menu (Ctrl+Shift+T), or
+<b>Show as in game</b> in the properties of the layer, draws it as in the game instead, to see what its properties do.
 
 Layers converted from MLLE keep their sprite mode: `PALSHIFT` and `TRANSLUCENTPALSHIFT` become a palette shift,
-`TINTED` a tinted layer, and `TRANSLUCENT` and `INVISIBLE` ordinary tiles with an alpha of 192 or 0 (an invisible
-layer is still solid).
+`TINTED` a tinted layer, `SINGLECOLOR` and `TRANSLUCENTCOLOR` a single color layer (the latter with an opacity of
+192), `CHROMAKEY` a chroma key layer, and `TRANSLUCENT` and `INVISIBLE` ordinary tiles with an alpha of 192 or 0 (an
+invisible layer is still solid).
 
 @subsection editor-layers-view How layers are shown
 
@@ -811,7 +827,7 @@ don't know. The case of the first two letters tells what a chunk is (@ref Format
 
 -   First letter lowercase --- editor-only: the game never reads it, and export drops it.
 -   Uppercase and lowercase, such as @cpp "Gscr" @ce --- <b>critical</b>: the level can't be played correctly without
-    it, so a reader since 3.9.1 that doesn't know it refuses the level (@ref Formats::LevelFile::IsCriticalChunk()).
+    it, so a reader since 4.0.0 that doesn't know it refuses the level (@ref Formats::LevelFile::IsCriticalChunk()).
     Older readers skip it, so it may only hold data whose absence breaks nothing worse than the look of the level.
 -   Both uppercase, such as @cpp "PRVW" @ce --- ancillary data of the game, skipped by a reader that doesn't know it.
     All chunks so far are ancillary or editor-only.
@@ -820,9 +836,10 @@ Tag | Contents
 --- | --------
 @cpp "PRVW" @ce | Preview for the custom level list, kept on export: @cpp u16 @ce width and height, then @cpp R, G, B @ce bytes row by row. The writer sets @ref LevelFlags::HasPreview with it
 @cpp "SPRL" @ce | How the sprite layer is drawn, kept on export (@ref Formats::SpriteLayerChunk): @cpp u8 @ce renderer type and the 4 bytes of the color. Written only when it isn't drawn as plain tiles
-@cpp "TXLP" @ce | Parameters of tunnels, waves, cylinders and reflections their color has no room for, and textures of their own, kept on export (@ref Formats::TexturedLayerChunk): @cpp varuint @ce count, then for each layer @cpp varuint @ce index in layer order, @cpp varuint @ce size, @cpp f32 @ce fade X and Y (the amplitudes of a wave), @cpp u8 @ce fade and @cpp u8 @ce flags (1 spiral, 2 window of the layer, 4 the layer, 8 half size, 16 swapped angles of a wave). A layer with inner speeds or its own texture goes on with @cpp f32 @ce inner speed X and Y, inner auto speed X and Y and @cpp u8 @ce texture (0 the tiles, 1 an image of 256×256 palette indices, which follows). Written only for layers without the defaults
+@cpp "TXLP" @ce | Parameters of skies, tunnels, waves, cylinders and reflections their color has no room for, and textures of their own, kept on export (@ref Formats::TexturedLayerChunk): @cpp varuint @ce count, then for each layer @cpp varuint @ce index in layer order, @cpp varuint @ce size, @cpp f32 @ce fade X and Y (the amplitudes of a wave), @cpp u8 @ce fade and @cpp u8 @ce flags (1 spiral, 2 window of the layer, 4 the layer, 8 half size, 16 swapped angles of a wave, 32 the perspective of JJ2+). A layer with inner speeds or its own texture goes on with @cpp f32 @ce inner speed X and Y, inner auto speed X and Y and @cpp u8 @ce texture (0 the tiles, 1 an image of 256×256 palette indices, which follows). Written only for layers without the defaults
 @cpp "LTXT" @ce | Translations of the level texts, kept on export (@ref Formats::LevelTextsChunk): @cpp u8 @ce version (1), @cpp varuint @ce number of languages, then each as a @cpp varuint @ce size and a record of @cpp str8 @ce language, @cpp varuint @ce number of texts, and for each @cpp varuint @ce text number, @cpp varuint @ce length and UTF-8 text
-@cpp "lnam" @ce | Layer names, one @cpp str8 @ce per layer, in layer order
+@cpp "LNAM" @ce | Layer names, kept on export (@ref Formats::LayerNamesChunk): one @cpp str8 @ce per layer, in layer order. Written only if a layer has a name
+@cpp "LNUM" @ce | Numbers of the layers in the original game, kept on export (@ref Formats::LayerNumbersChunk): one @cpp u8 @ce per layer, in layer order, 1 to 8 for the layers of a level of the original game, 0 for the others. Written only if a layer has a number
 @cpp "ela2" @ce | Layer editor state (@ref Editor::LevelDocument::LayerStateChunk): @cpp u8 @ce version (1), @cpp varuint @ce number of layers, @cpp varuint @ce bytes of each layer, then those bytes of each layer --- hidden and locked flags, and the editor opacity if any layer has one
 @cpp "ann2" @ce | Bookmarks and notes (@ref Editor::Annotation): @cpp u8 @ce version (2), @cpp varuint @ce count, then each as a @cpp varuint @ce size and a record of @cpp i32 @ce X and Y in pixels, @cpp u8 @ce bookmark number (0 = note), @cpp varuint @ce length and text. Version 2 adds @cpp u32 @ce color, the author, @cpp i64 @ce time, @cpp u8 @ce flags (1 = done) and the replies, each with its author, time and text
 @cpp "spl2" @ce | Ground lines (@ref Editor::TerrainSpline): @cpp u8 @ce version (1), @cpp varuint @ce count, then each as a @cpp varuint @ce size and a record of @cpp i32 @ce layer, @cpp u8 @ce depth, @cpp u8 @ce kind (ground, ceiling, band, shape), @cpp u8 @ce flags (1 = smooth), @cpp varuint @ce point count and @cpp f32 @ce X and Y of each in layer pixels, @cpp varuint @ce count of written tiles and for each @cpp i32 @ce X and Y, then the written and previous tile, each as @cpp u16 @ce index, @cpp u8 @ce source and @cpp u8 @ce flags
@@ -849,6 +866,9 @@ Levels move between this version and 3.9.0, with these differences:
 -   A cylinder or a reflection is drawn as tiles, a tunnel centered, a palette-shifted layer as an ordinary one tinted
     by its color, and the sprite layer always as plain tiles.
 -   A level saved by the editor of 3.9.0 shows no preview in the level list until it's saved again.
+-   The editor of 3.9.0 doesn't know the layer names (@cpp "LNAM" @ce) and the numbers of the layers in the original
+    game (@cpp "LNUM" @ce), so it shows the layers named by what they are. It keeps both chunks as they are, even when
+    it moves the layers, so they can belong to other layers then.
 
 @subsection editor-formats-limits Limits and checks
 
@@ -863,7 +883,7 @@ editor would write:
 -   Offsets and speeds of a layer, and parameters of a textured layer, that aren't finite are replaced by their
     defaults when a level is read or written, the level itself is still read.
 -   Flag bits that would change the layout of a record (those of an extra tile set outside of 0x07) and a layer kind
-    above the sprite layer (2) make a level unreadable since 3.9.1, instead of misread. The reserved event flag 0x08,
+    above the sprite layer (2) make a level unreadable since 4.0.0, instead of misread. The reserved event flag 0x08,
     which 3.9.0 could write, is dropped instead.
 -   A tile set path must be relative and must not go up, and no part of it may end with a dot or a space or be a
     device name of Windows (@ref Formats::LevelFile::IsSafeTileSetPath()).

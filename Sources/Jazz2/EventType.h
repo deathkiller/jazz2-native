@@ -170,6 +170,14 @@ namespace Jazz2
 		PowerUpShield,						/**< Shield power-up monitor */
 
 		RaceCheckpoint,						/**< Ordered track waypoint (passive minimap/race positioning marker, JJ2+ Text event with TextID >= 100) */
+		/**
+		 * @brief Event of the original game that the game doesn't use
+		 *
+		 * Kept as it is for the scripts of the level, which read the events of the level as the original game has them.
+		 * The number of the event is in the first byte of the parameters, its 20 bits of parameters in the next three
+		 * bytes, see @ref Compatibility::EventConverter::MakePassthroughEvent().
+		 */
+		PassthroughEvent,
 
 		// End of enumeration
 		Count,								/**< Number of well-known events */

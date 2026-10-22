@@ -18,6 +18,8 @@ using namespace nCine;
 
 namespace Jazz2::Compatibility
 {
+	class JJ2Block;
+
 	/**
 		@brief Parses original `.j2a` animation files
 		
@@ -29,9 +31,7 @@ namespace Jazz2::Compatibility
 	{
 	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		// 40: converted levels carry a version (see Formats::LevelFile), the unversioned ones are no longer read
-		// 41: the converted levels have the author of the level after its name
-		static constexpr std::uint16_t CacheVersion = 42;
+		static constexpr std::uint16_t CacheVersion = 43;
 #endif
 
 		/**
@@ -195,6 +195,65 @@ namespace Jazz2::Compatibility
 				(rect.H > 0 && rect.Y / SheetPageSize != (rect.Y + rect.H - 1) / SheetPageSize);
 		}
 
+		/**
+			@brief Frame of an animation as an animation file stores it
+
+			The spots are where the point lies in the frame, negated - the top left corner of the frame is at
+			@ref HotspotX, @ref HotspotY from the hotspot.
+		*/
+		struct AnimFrameSection {
+			/** @brief Size of the frame in pixels */
+			std::int16_t SizeX, SizeY;
+			/** @brief Coldspot, the point the frame rests on the ground by */
+			std::int16_t ColdspotX, ColdspotY;
+			/** @brief Hotspot, the point the frame is drawn at */
+			std::int16_t HotspotX, HotspotY;
+			/** @brief Gunspot, the point bullets leave from */
+			std::int16_t GunspotX, GunspotY;
+
+			/** @brief Palette indices of the frame, @ref SizeX × @ref SizeY of them, 0 is transparent */
+			std::unique_ptr<std::uint8_t[]> ImageData;
+			// TODO: Sprite mask
+			//std::unique_ptr<std::uint8_t[]> MaskData;
+			/** @brief Where the image is in the image block of its set */
+			std::int32_t ImageAddr;
+			/** @brief Where the mask is in the image block of its set */
+			std::int32_t MaskAddr;
+			/** @brief Whether the frame is drawn translucent */
+			bool DrawTransparent;
+		};
+
+		/** @brief Animation as an animation file stores it */
+		struct AnimSection {
+			/** @brief Number of frames */
+			std::uint16_t FrameCount;
+			/** @brief Playback speed in frames per second */
+			std::uint16_t FrameRate;
+			/** @brief Frames of the animation */
+			SmallVector<AnimFrameSection, 0> Frames;
+			/** @brief Index of the set in the file */
+			std::int32_t Set;
+			/** @brief Index of the animation in its set */
+			std::uint16_t Anim;
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+			// Worked out by the conversion, see NormalizeAnimation()
+			std::int16_t AdjustedSizeX, AdjustedSizeY;
+			std::int16_t LargestOffsetX, LargestOffsetY;
+			std::int16_t NormalizedHotspotX, NormalizedHotspotY;
+			std::int8_t FrameConfigurationX, FrameConfigurationY;
+#endif
+		};
+
+		/**
+			@brief Reads the animations of one set of an animation file with the images of their frames
+
+			For a file the game isn't converted from, e.g. one a level script loads (see `jjANIMSET::load()`). The
+			animations are appended to @p anims. Returns `false` if the stream isn't an animation file or the file
+			has no such set.
+		*/
+		static bool ReadAnimationSet(std::unique_ptr<Stream>& s, std::int32_t setIndex, SmallVectorImpl<AnimSection>& anims);
+
 	private:
 		// Transparent margin written around every exported frame, so a frame cannot bleed into its neighbour
 		// under bilinear filtering. The runtime reads it back as `GenericGraphicResource::FrameBorder` - hitboxes,
@@ -204,33 +263,6 @@ namespace Jazz2::Compatibility
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		struct AnimFrameSection {
-			std::int16_t SizeX, SizeY;
-			std::int16_t ColdspotX, ColdspotY;
-			std::int16_t HotspotX, HotspotY;
-			std::int16_t GunspotX, GunspotY;
-
-			std::unique_ptr<std::uint8_t[]> ImageData;
-			// TODO: Sprite mask
-			//std::unique_ptr<std::uint8_t[]> MaskData;
-			std::int32_t ImageAddr;
-			std::int32_t MaskAddr;
-			bool DrawTransparent;
-		};
-
-		struct AnimSection {
-			std::uint16_t FrameCount;
-			std::uint16_t FrameRate;
-			SmallVector<AnimFrameSection, 0> Frames;
-			std::int32_t Set;
-			std::uint16_t Anim;
-
-			std::int16_t AdjustedSizeX, AdjustedSizeY;
-			std::int16_t LargestOffsetX, LargestOffsetY;
-			std::int16_t NormalizedHotspotX, NormalizedHotspotY;
-			std::int8_t FrameConfigurationX, FrameConfigurationY;
-		};
-
 		struct SampleSection {
 			std::int32_t Set;
 			std::uint16_t IdInSet;
@@ -254,6 +286,9 @@ namespace Jazz2::Compatibility
 		static bool PackFramesTightly(const AnimSection& anim, std::int32_t border,
 			SmallVector<PackedFrame, 0>& packed, std::int32_t& sheetWidth, std::int32_t& sheetHeight);
 
+		// Reads the animations of a set out of its blocks, appending them to `anims`
+		static void ReadAnimations(std::int32_t setIndex, std::uint8_t animCount, JJ2Block& infoBlock, JJ2Block& frameDataBlock,
+			JJ2Block& imageDataBlock, SmallVectorImpl<AnimSection>& anims);
 		static void ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims, ConversionProgress progress);
 		// Works out the normalized hotspot and the size of the logical cell of an animation from the spots of its frames
 		static void NormalizeAnimation(AnimSection& anim);

@@ -177,6 +177,7 @@ namespace Jazz2::Editor
 		switch (Tiles::LayerRendererType(layer.Record.RendererType)) {
 			case Tiles::LayerRendererType::Sky:
 			case Tiles::LayerRendererType::Tunnel:
+			case Tiles::LayerRendererType::TileMenu:
 			case Tiles::LayerRendererType::Wave:
 			// TRANSLATORS: Name shown for an unnamed layer drawn as a 3D textured background (sky, tunnel, wave or cylinder)
 			case Tiles::LayerRendererType::Cylinder: return _x("editor", "Textured Background");
@@ -188,6 +189,10 @@ namespace Jazz2::Editor
 			case Tiles::LayerRendererType::XRay: return _x("editor", "Masked Layer");
 			case Tiles::LayerRendererType::Tinted: return _x("editor", "Tinted Layer");
 			case Tiles::LayerRendererType::PaletteShift: return _x("editor", "Palette Shifted Layer");
+			// TRANSLATORS: Name shown for an unnamed layer whose tiles are drawn as shapes of one color of the palette, such as a shadow
+			case Tiles::LayerRendererType::SingleColor: return _x("editor", "Single Color Layer");
+			// TRANSLATORS: Name shown for an unnamed layer drawn only over one color of what is behind it
+			case Tiles::LayerRendererType::ChromaKey: return _x("editor", "Chroma Key Layer");
 			// TRANSLATORS: Name shown for an unnamed layer whose tiles are drawn in one solid color
 			case Tiles::LayerRendererType::Solid: return _x("editor", "Solid Color");
 			default: break;
@@ -1150,6 +1155,13 @@ namespace Jazz2::Editor
 				? Formats::TexturedLayerParams::InnerLayer : (record.Textured.Flags & Formats::TexturedLayerParams::InnerWindow));
 		}
 
+		// Where a sky, a tunnel or a cylinder is drawn, and over the whole view whether in the perspective of JJ2+
+		std::uint8_t GetTexturedArea(const Formats::LayerRecord& record)
+		{
+			std::uint8_t area = GetReflectionArea(record);
+			return (area != 0 ? area : std::uint8_t(record.Textured.Flags & Formats::TexturedLayerParams::Fullscreen));
+		}
+
 		/** The name and the size of the layer */
 		void AddLayerNameRows(UiForm* rows, IEditorContext& session)
 		{
@@ -1338,8 +1350,10 @@ namespace Jazz2::Editor
 				{ NC_("editor", "Solid color"), std::int32_t(Tiles::LayerRendererType::Solid) },
 				{ NC_("editor", "Tinted"), std::int32_t(Tiles::LayerRendererType::Tinted) },
 				{ NC_("editor", "Palette shift"), std::int32_t(Tiles::LayerRendererType::PaletteShift) },
+				{ NC_("editor", "Single color"), std::int32_t(Tiles::LayerRendererType::SingleColor) },
 				{ NC_("editor", "X-ray"), std::int32_t(Tiles::LayerRendererType::XRay) },
 				{ NC_("editor", "Blur behind"), std::int32_t(Tiles::LayerRendererType::BlurBehind) },
+				{ NC_("editor", "Chroma key"), std::int32_t(Tiles::LayerRendererType::ChromaKey) },
 				{ NC_("editor", "Sky"), std::int32_t(Tiles::LayerRendererType::Sky) },
 				{ NC_("editor", "Tunnel"), std::int32_t(Tiles::LayerRendererType::Tunnel) },
 				{ NC_("editor", "Wave"), std::int32_t(Tiles::LayerRendererType::Wave) },
@@ -1373,6 +1387,16 @@ namespace Jazz2::Editor
 						// The shift isn't a color, the tiles would lose their red
 						record.Color[0] = 255;
 					}
+					auto takesPaletteEntry = [](std::uint8_t type) {
+						return (type == std::uint8_t(Tiles::LayerRendererType::Tinted) || type == std::uint8_t(Tiles::LayerRendererType::SingleColor) ||
+							type == std::uint8_t(Tiles::LayerRendererType::ChromaKey));
+					};
+					if (!takesPaletteEntry(value) && takesPaletteEntry(record.RendererType)) {
+						// An entry of the palette isn't a color, the tiles would be multiplied by it
+						record.Color[0] = 255;
+						record.Color[1] = 255;
+						record.Color[2] = 255;
+					}
 					if (value == Reflection && record.RendererType != Reflection) {
 						// Untinted, rippled a little by its tiles and not blurred at first (see Formats::LayerRecord::Color)
 						record.Color[0] = 0;
@@ -1400,7 +1424,7 @@ namespace Jazz2::Editor
 			dropdown->Flex = 1.0f;
 			// How it's drawn can be changed for the sprite layer too, unlike how it moves
 			dropdown->IsEnabledFunc = [s]() { return IsCurrentLayerUnlocked(*s); };
-			row->Tooltip = _x("editor", "How the tiles of the layer are drawn - the sprite layer only as tiles, in a solid color, tinted or with a palette shift, the others wouldn't show its tiles where they are");
+			row->Tooltip = _x("editor", "How the tiles of the layer are drawn - the sprite layer only as tiles, in a solid color, tinted, with a palette shift or in a single color, the others wouldn't show its tiles where they are");
 		}
 
 		/** What makes the layer drawn black, wrong or not at all, right under how it's drawn (see CheckLayerDrawing()) */
@@ -1541,9 +1565,9 @@ namespace Jazz2::Editor
 				}
 				row->Tooltip = _x("editor", "Red, green, blue and alpha, the tiles are multiplied by it - an alpha below 255 makes the layer translucent, 0 invisible but still solid; a solid color layer draws its tiles in it");
 				ShowRowWhen(row, [s]() {
-					return !RendererIs(*s, { Tiles::LayerRendererType::Tinted, Tiles::LayerRendererType::PaletteShift, Tiles::LayerRendererType::Sky,
-						Tiles::LayerRendererType::Tunnel, Tiles::LayerRendererType::Wave, Tiles::LayerRendererType::Cylinder,
-						Tiles::LayerRendererType::Reflection });
+					return !RendererIs(*s, { Tiles::LayerRendererType::Tinted, Tiles::LayerRendererType::PaletteShift, Tiles::LayerRendererType::SingleColor,
+						Tiles::LayerRendererType::ChromaKey, Tiles::LayerRendererType::Sky, Tiles::LayerRendererType::Tunnel, Tiles::LayerRendererType::Wave,
+						Tiles::LayerRendererType::Cylinder, Tiles::LayerRendererType::Reflection });
 				});
 			}
 			{
@@ -1557,12 +1581,14 @@ namespace Jazz2::Editor
 				auto* opacityRow = AddPropertyRow(rows, _x("editor", "Opacity"));
 				AddLayerColorByte(opacityRow, *s, 3)->IsEnabledFunc = isUnlocked;
 				opacityRow->Tooltip = _x("editor", "How opaque the layer is, 255 is fully");
-				ShowRowWhen(opacityRow, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::PaletteShift }); });
+				ShowRowWhen(opacityRow, [s]() {
+					return RendererIs(*s, { Tiles::LayerRendererType::PaletteShift, Tiles::LayerRendererType::SingleColor, Tiles::LayerRendererType::ChromaKey });
+				});
 			}
-			{
-				// A tinted layer takes the color from an entry of the palette, so it follows the palette as it changes
-				// TRANSLATORS: Label of a property in the layer properties panel, the palette entry the layer is tinted with (noun)
-				auto* row = AddPropertyRow(rows, _x("editor", "Tint"));
+			// A tinted, a single color and a chroma key layer take the color from an entry of the palette, so it follows the
+			// palette as it changes
+			auto addPaletteEntryRow = [rows, s](StringView label, StringView tooltip, Tiles::LayerRendererType type) {
+				auto* row = AddPropertyRow(rows, label);
 				row->Add<UiColorSwatch>([s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					if (layer == nullptr) {
@@ -1586,14 +1612,116 @@ namespace Jazz2::Editor
 					});
 				})->Tooltip = _x("editor", "Pick from the palette");
 				AddLayerColorByte(row, *s, 0)->Tooltip = _x("editor", "Index of the palette entry");
-				row->Tooltip = _x("editor", "Entry of the palette the layer is tinted with");
-				ShowRowWhen(row, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Tinted }); });
+				row->Tooltip = tooltip;
+				ShowRowWhen(row, [s, type]() { return RendererIs(*s, { type }); });
+			};
+			{
+				// TRANSLATORS: Label of a property in the layer properties panel, the palette entry the layer is tinted with (noun)
+				addPaletteEntryRow(_x("editor", "Tint"), _x("editor", "Entry of the palette the layer is tinted with"), Tiles::LayerRendererType::Tinted);
 
 				// TRANSLATORS: Label of a property in the layer properties panel, how strongly the layer is tinted
 				auto* strengthRow = AddPropertyRow(rows, _x("editor", "Strength"));
 				AddLayerColorByte(strengthRow, *s, 3);
 				strengthRow->Tooltip = _x("editor", "How much the layer is tinted, 255 is fully");
 				ShowRowWhen(strengthRow, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Tinted }); });
+			}
+			addPaletteEntryRow(_x("editor", "Color"), _x("editor", "Entry of the palette every visible pixel of the tiles is drawn in"),
+				Tiles::LayerRendererType::SingleColor);
+			// TRANSLATORS: Label of a property in the layer properties panel, the palette entry of the color a chroma key layer is drawn over (noun)
+			addPaletteEntryRow(_x("editor", "Key"), _x("editor", "Entry of the palette whose color the layer is drawn over, the layer is shown only where what is behind it has that color"),
+				Tiles::LayerRendererType::ChromaKey);
+		}
+
+		/** Where a sky, a tunnel or a cylinder is drawn, and how its texture moves inside the layer if only where the layer is */
+		void AddLayerSurfaceRows(UiForm* rows, IEditorContext& session)
+		{
+			IEditorContext* s = &session;
+			// The layer being edited is drawn as plain tiles to be painted on, or as in the game to see what its properties do
+			// (see EditorSettings::PreviewTexturedLayers)
+			// TRANSLATORS: Checkbox in the layer properties panel, the textured layer being edited is drawn as in the game instead of as plain tiles
+			auto* preview = rows->Add<UiCheckBox>(_x("editor", "Show as in game"), [s]() {
+				return s->GetSettings().PreviewTexturedLayers;
+			}, [s](bool) {
+				s->GetActions().Execute(ActionIds::ViewPreviewTextured);
+			});
+			preview->Tooltip = _x("editor", "Draws the layer as in the game while it's edited, instead of as plain tiles to paint on");
+			preview->IsVisibleFunc = [s]() {
+				return RendererIs(*s, { Tiles::LayerRendererType::Sky, Tiles::LayerRendererType::Tunnel, Tiles::LayerRendererType::Wave,
+					Tiles::LayerRendererType::Cylinder, Tiles::LayerRendererType::Reflection });
+			};
+
+			auto isSurfaced = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Sky, Tiles::LayerRendererType::Tunnel, Tiles::LayerRendererType::Cylinder }); };
+			{
+				static const PropertyChoice AreaChoices[] = {
+					// TRANSLATORS: Choices of the Area property of a sky, tunnel or cylinder layer, where it's drawn - over the whole view as Jazz² Resurrection always drew it or as JJ2+ (and the original game) does (SURFACE::FULLSCREEN), the window the layer would fill, or the layer itself
+					{ NC_("editor", "Whole view, Resurrection"), 0 },
+					{ NC_("editor", "Whole view, JJ2+"), Formats::TexturedLayerParams::Fullscreen },
+					{ NC_("editor", "Window of the layer"), Formats::TexturedLayerParams::InnerWindow },
+					{ NC_("editor", "The layer"), Formats::TexturedLayerParams::InnerLayer },
+				};
+				// TRANSLATORS: Label of a property in the layer properties panel, where a textured layer is drawn
+				auto* areaRow = AddPropertyRow(rows, _x("editor", "Area"));
+				auto* areaDropdown = AddChoiceDropdown(areaRow, AreaChoices, [s]() {
+					const DocumentLayer* layer = GetCurrentLayer(*s);
+					return std::int32_t(layer != nullptr ? GetTexturedArea(layer->Record) : 0);
+				}, [s](std::int32_t flags) {
+					ChangeLayer(*s, [flags](Formats::LayerRecord& record, String&) {
+						record.Textured.Flags = std::uint8_t((record.Textured.Flags & ~(Formats::TexturedLayerParams::InnerWindow |
+							Formats::TexturedLayerParams::InnerLayer | Formats::TexturedLayerParams::Fullscreen)) | flags);
+					});
+				});
+				areaDropdown->Flex = 1.0f;
+				areaRow->Tooltip = _x("editor", "Where the texture is drawn - over the whole view as Jazz² Resurrection always drew sky layers, or in the perspective of JJ2+ placed by the speeds of the layer, or only where the layer is placed as an ordinary layer, its horizon and center a part of the view or of the layer");
+				ShowRowWhen(areaRow, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Sky, Tiles::LayerRendererType::Tunnel }); });
+			}
+			{
+				// A cylinder is always drawn in the perspective of JJ2+ (see Tiles::LayerDescription::HasPlusPerspective())
+				static const PropertyChoice CylinderAreaChoices[] = {
+					{ NC_("editor", "Whole view"), 0 },
+					{ NC_("editor", "Window of the layer"), Formats::TexturedLayerParams::InnerWindow },
+					{ NC_("editor", "The layer"), Formats::TexturedLayerParams::InnerLayer },
+				};
+				auto* areaRow = AddPropertyRow(rows, _x("editor", "Area"));
+				auto* areaDropdown = AddChoiceDropdown(areaRow, CylinderAreaChoices, [s]() {
+					const DocumentLayer* layer = GetCurrentLayer(*s);
+					return std::int32_t(layer != nullptr ? GetReflectionArea(layer->Record) : 0);
+				}, [s](std::int32_t flags) {
+					ChangeLayer(*s, [flags](Formats::LayerRecord& record, String&) {
+						record.Textured.Flags = std::uint8_t((record.Textured.Flags & ~(Formats::TexturedLayerParams::InnerWindow |
+							Formats::TexturedLayerParams::InnerLayer | Formats::TexturedLayerParams::Fullscreen)) | flags);
+					});
+				});
+				areaDropdown->Flex = 1.0f;
+				areaRow->Tooltip = _x("editor", "Where the texture is drawn - over the whole view, placed by the speeds of the layer, or only where the layer is placed as an ordinary layer, its horizon a part of the view or of the layer");
+				ShowRowWhen(areaRow, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Cylinder }); });
+			}
+
+			// Drawn only where the layer is, its speeds place the layer, so the texture moves inside it by speeds of its own (see
+			// Formats::TexturedLayerParams::InnerSpeedX)
+			struct InnerSpeed { const char* Label; const char* Tooltip; float Formats::TexturedLayerParams::* Member; float Min, Max, Step; std::int32_t Decimals; };
+			static const InnerSpeed InnerSpeeds[] = {
+				// TRANSLATORS: Labels of properties of a textured layer drawn only where the layer is, speeds of its texture inside it (X horizontal, Y vertical), each followed by its tooltip
+				{ NC_("editor", "Inner speed X"), NC_("editor", "How fast the texture moves inside the layer as the view moves right"), &Formats::TexturedLayerParams::InnerSpeedX, -16.0f, 16.0f, 0.01f, 3 },
+				{ NC_("editor", "Inner speed Y"), NC_("editor", "How fast the texture moves inside the layer as the view moves down"), &Formats::TexturedLayerParams::InnerSpeedY, -16.0f, 16.0f, 0.01f, 3 },
+				{ NC_("editor", "Inner auto X"), NC_("editor", "How fast the texture moves sideways inside the layer by itself"), &Formats::TexturedLayerParams::InnerAutoSpeedX, -64.0f, 64.0f, 0.05f, 2 },
+				{ NC_("editor", "Inner auto Y"), NC_("editor", "How fast the texture moves into the distance inside the layer by itself"), &Formats::TexturedLayerParams::InnerAutoSpeedY, -64.0f, 64.0f, 0.05f, 2 },
+			};
+			auto isInner = [s, isSurfaced]() {
+				const DocumentLayer* layer = GetCurrentLayer(*s);
+				return (layer != nullptr && isSurfaced() && GetReflectionArea(layer->Record) != 0);
+			};
+			for (const InnerSpeed& property : InnerSpeeds) {
+				auto* row = AddPropertyRow(rows, _x("editor", property.Label));
+				float Formats::TexturedLayerParams::* member = property.Member;
+				auto* number = row->Add<UiNumberBox>([s, member]() {
+					const DocumentLayer* layer = GetCurrentLayer(*s);
+					return (layer != nullptr ? layer->Record.Textured.*member : 0.0f);
+				}, [s, member](float value, bool final) {
+					ChangeLayer(*s, [member, value](Formats::LayerRecord& record, String&) { record.Textured.*member = value; }, final);
+				}, property.Min, property.Max, property.Step, property.Decimals);
+				number->Flex = 1.0f;
+				row->Tooltip = _x("editor", property.Tooltip);
+				ShowRowWhen(row, isInner);
 			}
 		}
 
@@ -1610,6 +1738,29 @@ namespace Jazz2::Editor
 			}
 			row->Tooltip = _x("editor", "Red, green and blue of the horizon the background fades into");
 			ShowRowWhen(row, [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Sky, Tiles::LayerRendererType::Tunnel, Tiles::LayerRendererType::Cylinder }); });
+
+			// Where the texture meets at the horizon, and whether it fades into it, as the warp horizon of JJ2+ has them
+			auto isSky = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Sky }); };
+			auto* vanishingRow = AddPropertyRow(rows, _x("editor", "Vanishing point"));
+			AddTexturedFadePosition(vanishingRow, *s, 0);
+			vanishingRow->Tooltip = _x("editor", "Where the texture meets at the horizon, in percent of the width of the view, or of the layer if it's drawn where the layer is");
+			ShowRowWhen(vanishingRow, isSky);
+
+			auto* horizonRow = AddPropertyRow(rows, _x("editor", "Horizon line"));
+			AddTexturedFadePosition(horizonRow, *s, 1);
+			horizonRow->Tooltip = _x("editor", "How far down the view the horizon is in percent, or down the layer if it's drawn where the layer is");
+			ShowRowWhen(horizonRow, isSky);
+
+			auto* fade = rows->Add<UiCheckBox>(_x("editor", "Fade"), [s]() {
+				const DocumentLayer* layer = GetCurrentLayer(*s);
+				return (layer != nullptr && layer->Record.Textured.Fade != 0);
+			}, [s](bool value) {
+				ChangeLayer(*s, [value](Formats::LayerRecord& record, String&) {
+					record.Textured.Fade = (value ? Formats::TexturedLayerParams::DefaultFade : 0);
+				});
+			});
+			fade->Tooltip = _x("editor", "The texture fades into the color of the horizon in the distance, it goes on into the distance otherwise");
+			fade->IsVisibleFunc = isSky;
 
 			// TRANSLATORS: Checkbox in the layer properties panel, shows stars over the horizon of a sky or tunnel layer
 			auto* stars = rows->Add<UiCheckBox>(_x("editor", "Stars"), [s]() {
@@ -1948,6 +2099,7 @@ namespace Jazz2::Editor
 		AddLayerProblemRows(rows, session);
 		AddLayerTextureRows(rows, session);
 		AddLayerColorRows(rows, session);
+		AddLayerSurfaceRows(rows, session);
 		AddLayerHorizonRows(rows, session);
 		AddLayerTunnelRows(rows, session);
 		AddLayerWaveRows(rows, session);

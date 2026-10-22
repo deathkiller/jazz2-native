@@ -10,7 +10,7 @@ namespace Jazz2::Formats
 
 		The level texts are written in one language, this chunk holds their translations, so the game can show the
 		texts in the language it's in (see @ref LevelHandler::GetLevelText()). It's an ancillary chunk, a reader that
-		doesn't know it --- the game before 3.9.1 --- skips it and shows the texts of the level as they are. It's
+		doesn't know it --- the game before 4.0.0 --- skips it and shows the texts of the level as they are. It's
 		kept when the level is exported.
 
 		The payload is @cpp u8 @ce version (1), @cpp varuint @ce number of languages, then for each a @cpp varuint @ce

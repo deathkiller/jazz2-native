@@ -6,7 +6,9 @@
 ; builds with Mtx_OrthoTilt() for the top screen (whose framebuffer is rotated by 90 degrees) or with
 ; Mtx_Ortho() for a render-to-texture pass - and to hand the texture coordinates and the colour through.
 ; The colour arrives as four unsigned bytes and the PICA200 does not normalize a fixed-point attribute, so
-; the division by 255 happens here. Assembled by picasso at build time (see cmake/ncine_extra_sources.cmake).
+; the division by 255 happens here. The position is scaled by the w of the vertex - 1 but for a strip whose
+; texture coordinates are interpolated in perspective, the division by w puts it back where it was.
+; Assembled by picasso at build time (see cmake/ncine_extra_sources.cmake).
 
 ; Uniforms
 .fvec projection[4]
@@ -24,12 +26,14 @@
 .alias inpos v0  ; x, y in screen pixels (float2)
 .alias intex v1  ; u, v normalized to the bound page (float2)
 .alias inclr v2  ; r, g, b, a (four unsigned bytes)
+.alias inw   v3  ; w (float1)
 
 .entry sprite_main
 .proc sprite_main
-	; r0 = vec4(inpos.xy, 0.0, 1.0)
-	mov r0.xy, inpos.xy
-	mov r0.zw, consts.xxxy
+	; r0 = vec4(inpos.xy * inw, 0.0, inw)
+	mul r0.xy, inpos.xy, inw.xx
+	mov r0.z, consts.x
+	mov r0.w, inw.x
 
 	; outpos = projection * r0
 	dp4 outpos.x, projection[0], r0

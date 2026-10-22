@@ -568,7 +568,8 @@ $ff = [System.IO.File]::ReadAllText($ffOut)
 Assert ($ff -match '\{ "PipelinePasses", "",[^\n]*FixedFunctionIntrinsic::LightingCombine, &PipelinePasses_Effect \}') `
     'PipelinePasses: the table row does not carry both the LightingCombine stage and the effect function'
 Assert ($ff.Contains('UniformFloat(ctx, "uLevel")')) 'PipelinePasses: uniform_float() did not lower to the UniformFloat bridge'
-Assert ($ff.Contains('ctx.SubmitStripShaded(p, 4)')) 'PipelinePasses: the shaded strip was not emitted'
+# Through the support code's bridge, which cuts the strip first while strip_clip() is in effect
+Assert ($ff.Contains('SubmitStripShaded(ctx, p, 4)')) 'PipelinePasses: the shaded strip was not emitted'
 # An effect that only submits shaded strips never samples, so the dispatch must not require a texture
 # for it - the program declares uTexture purely for the fragment stage the console tiers never run
 $ffRow = ([regex]'\{ "PipelinePasses", "",[^\n]*').Match($ff).Value

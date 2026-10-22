@@ -562,6 +562,9 @@ quad-only core, so a shared description can never silently depend on one console
   of the sprite's (0,0) corner and the raster displacements of its local axes. Geometry synthesis
   (the iris circle, the warp bands) uses these instead of the post-scissor-clip corner arrays so
   clipping cannot distort it.
+- `quad_tex_rect()` — `vec4`, the instance's texRect (scale and bias of U, then of V): which part of
+  what the shader draws the quad shows. The warp lays its geometry out over the whole and cuts it to
+  the quad where the quad is only a part (an inner surface of JJ2+).
 - `has_uniform(uName)` (`bool`), `uniform_vec2(uName)`, `uniform_vec4(uName)` — the program's
   resolved uniforms by name, through the backend's existing `ResolveUniform` machinery (the warp
   consumes the same `uViewSize`/`uShift`/`uHorizonColor` its GLSL does). The argument is an
@@ -579,6 +582,15 @@ quad-only core, so a shared description can never silently depend on one console
   dropped and an oversized count clamped, which would silently draw the wrong geometry. A block
   serving several targets is held to the **minimum** capacity among them (a `pvr, gx` block gets the
   PVR's 8). Computed indices/counts stay unchecked.
+- `strip_q(i, <float>)` — a q per vertex of the next strip: its UVs are interpolated in perspective
+  (`u * q`, `v * q` and `q` across the screen, divided per pixel), the UVs given stay the true ones.
+  Each backend has its own way to it (`SetStripVertexQ`, see `FixedFunctionPass.h`); the GE draws the
+  strip affine. The perspective warp of JJ2+ sets the depth as q, which makes it exact at any size.
+- `strip_clip(<vec4>)` — every strip submitted after it is cut to the rectangle (min x, min y,
+  max x, max y in raster space) in the generated code, so no backend needs to support it: a strip
+  wholly inside goes out as it is, a rectangle stays a rectangle (the RDP draws such a band row by
+  row), anything else is cut quad by quad into convex polygons, the attributes on the cut edges in
+  perspective where the strip has a q.
 
 Two TEV presets need a programmable texture combiner (the CLX2 modulates a texel by the vertex
 colour and adds an offset colour — that is the whole vocabulary; the GE has five fixed texture

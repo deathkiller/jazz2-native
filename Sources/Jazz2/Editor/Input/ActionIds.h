@@ -134,6 +134,7 @@ namespace Jazz2::Editor
 		constexpr const char* ViewMasks = "view.masks";
 		constexpr const char* ViewEvents = "view.events";
 		constexpr const char* ViewPauseLayers = "view.pauseLayers";
+		constexpr const char* ViewPreviewTextured = "view.previewTextured";
 		constexpr const char* ViewZoomIn = "view.zoomIn";
 		constexpr const char* ViewZoomOut = "view.zoomOut";
 		constexpr const char* ViewZoomGame = "view.zoomGame";

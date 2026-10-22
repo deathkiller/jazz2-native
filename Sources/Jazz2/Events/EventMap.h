@@ -111,6 +111,20 @@ namespace Jazz2::Events
 		/** @brief Returns event description of specified tile position, or of the tile of an off-grid event */
 		const EventTile& GetEventTile(std::int32_t x, std::int32_t y) const;
 		/**
+		 * @brief Returns the event a generator on specified tile position spawns, its parameters and its delay in seconds
+		 *
+		 * Returns `false` if there's no generator on the tile.
+		 */
+		bool GetGeneratorEvent(std::int32_t x, std::int32_t y, EventType& type, const std::uint8_t*& params, std::uint8_t& delay) const;
+		/**
+		 * @brief Returns the start or the warp target on specified tile position, which aren't kept in the tiles
+		 *
+		 * Returns @ref EventType::LevelStart with the player types it's for, @ref EventType::WarpTarget with its ID, or
+		 * @ref EventType::Empty if there's neither. @p params gets the parameters of the event as far as they're kept, the
+		 * player types or the ID and the last bytes (see @ref Formats::EventRecord::OriginalParamsOffset), 16 bytes.
+		 */
+		EventType GetStartOrWarpTarget(std::int32_t x, std::int32_t y, std::uint8_t* params) const;
+		/**
 		 * @brief Returns the position in pixels the object of the event of a tile is spawned at
 		 *
 		 * The center of the tile, or the position of an off-grid event if the tile is one of theirs.
@@ -167,10 +181,10 @@ namespace Jazz2::Events
 		 * multiplayer). The tile modifiers among them are also applied to the sprite layer of @p tileMap.
 		 */
 		void LoadEvents(Formats::LevelReader& reader, Tiles::TileMap& tileMap, const LevelLoadOptions& options);
-		/** @brief Adds target position for specified warp */
-		void AddWarpTarget(std::uint16_t id, std::int32_t x, std::int32_t y);
-		/** @brief Adds spawn position with specified player type mask */
-		void AddSpawnPosition(std::uint8_t typeMask, std::int32_t x, std::int32_t y);
+		/** @brief Adds target position for specified warp, and the last bytes of the parameters of its event, see @ref GetStartOrWarpTarget() */
+		void AddWarpTarget(std::uint16_t id, std::int32_t x, std::int32_t y, const std::uint8_t* eventParams = nullptr);
+		/** @brief Adds spawn position with specified player type mask, and the last bytes of the parameters of its event, see @ref GetStartOrWarpTarget() */
+		void AddSpawnPosition(std::uint8_t typeMask, std::int32_t x, std::int32_t y, const std::uint8_t* eventParams = nullptr);
 
 		/**
 		 * @brief Initializes event map state from a stream
@@ -208,14 +222,18 @@ namespace Jazz2::Events
 			std::shared_ptr<Actors::ActorBase> SpawnedActor;
 		};
 
+		// Both keep the last bytes of the parameters of their event, where a converted level keeps the parameters of the
+		// original event for scripts (see Formats::EventRecord::OriginalParamsOffset)
 		struct SpawnPoint {
 			std::uint8_t PlayerTypeMask;
 			Vector2f Pos;
+			std::uint8_t KeptParams[3] = {};
 		};
 
 		struct WarpTarget {
 			std::uint16_t Id;
 			Vector2f Pos;
+			std::uint8_t KeptParams[3] = {};
 		};
 
 		// One event tile as it looked when the last checkpoint was taken. The checkpoint used to be a full copy

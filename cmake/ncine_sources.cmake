@@ -457,7 +457,10 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PolylineRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/XRayMaskRenderer.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusAnimations.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusEvents.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusObjects.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterDictionary.cpp

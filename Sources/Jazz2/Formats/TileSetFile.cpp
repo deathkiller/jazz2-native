@@ -118,6 +118,26 @@ namespace Jazz2::Formats
 		return bestColumns;
 	}
 
+	bool TileSetFile::ReadPalette(Stream& s, std::uint32_t* palette)
+	{
+		TileSetHeader header;
+		if (!ReadHeader(s, header)) {
+			return false;
+		}
+
+		// The palette comes first in the deflated block, the rest of it isn't needed
+		DeflateStream uc(s, header.BodySize);
+		std::uint8_t paletteBytes[256 * 4];
+		if (uc.Read(paletteBytes, sizeof(paletteBytes)) != std::int64_t(sizeof(paletteBytes))) {
+			return false;
+		}
+		for (std::int32_t i = 0; i < 256; i++) {
+			palette[i] = std::uint32_t(paletteBytes[i * 4]) | (std::uint32_t(paletteBytes[i * 4 + 1]) << 8) |
+				(std::uint32_t(paletteBytes[i * 4 + 2]) << 16) | (std::uint32_t(paletteBytes[i * 4 + 3]) << 24);
+		}
+		return true;
+	}
+
 	bool TileSetFile::Read(Stream& s, TileSetData& data)
 	{
 		TileSetHeader header;

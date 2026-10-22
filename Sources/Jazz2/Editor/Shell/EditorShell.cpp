@@ -518,7 +518,7 @@ namespace Jazz2::Editor
 		// The camera and the interface, what's drawn over the level is in "Show"
 		// TRANSLATORS: Menu in the menu bar of the editor, the camera and the look of the editor
 		_menuBar->AddMenu(_x("editor", "View"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { ActionIds::ViewZoomIn, ActionIds::ViewZoomOut, ActionIds::ViewZoomGame, ActionIds::ViewFit, nullptr, ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, nullptr,
+			addActions(entries, { ActionIds::ViewZoomIn, ActionIds::ViewZoomOut, ActionIds::ViewZoomGame, ActionIds::ViewFit, nullptr, ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewPreviewTextured, nullptr,
 				ActionIds::ViewNavigator, ActionIds::ViewAddNote, nullptr, ActionIds::ViewUiLarger, ActionIds::ViewUiSmaller, ActionIds::ViewUiAuto, nullptr, ActionIds::ViewLayoutAuto, ActionIds::ViewLayoutDesktop, ActionIds::ViewLayoutCompact,
 				nullptr, ActionIds::ViewExpert, nullptr, ActionIds::ViewHighContrast, ActionIds::ViewReducedMotion });
 		});

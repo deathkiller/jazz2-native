@@ -436,11 +436,14 @@ Built-in | Type | Meaning | Core?
 `submit_quad(p)` | statement | submits one pass over the current instance's quad | yes
 `quad_origin()` | `vec2` | <b>pre-clip</b> raster position of the sprite's (0,0) corner | no
 `quad_axis_x()`, `quad_axis_y()` | `vec2` | pre-clip raster displacements of the sprite's local axes. Use these for synthesized geometry so clipping cannot distort it | no
+`quad_tex_rect()` | `vec4` | the instance's `texRect` (scale and bias of U, then of V) - which part of what the shader draws the quad shows | no
 `has_uniform(uName)` | `bool` | whether the program resolved that uniform (unresolved ones load zeros) | no
 `uniform_vec2(uName)`, `uniform_vec4(uName)` | `vec2`, `vec4` | resolved uniform by name via `ResolveUniform`. The argument is an <b>identifier</b>, not a string | no
 `strip_position(i, <vec2>)` | statement | strip vertex position | no
 `strip_uv(i, <vec2>)` | statement | strip vertex UV in the shader's texture space | no
 `strip_color(i, <vec4>)` | statement | strip per-vertex colour | no
+`strip_q(i, <float>)` | statement | strip vertex q: the UVs of the strip are interpolated in perspective (`u * q`, `v * q` and `q` across the screen, divided per pixel), the UVs given stay the true ones. Only for the strip submitted next; ignored by the GE | no
+`strip_clip(<vec4>)` | statement | cuts every strip submitted after it to the rectangle (min x, min y, max x, max y in raster space), in the generated code - a rectangle stays one, the cut edges carry their attributes in perspective where the strip has a q | no
 `submit_strip(p, count)` | statement | submits the first `count` strip vertices textured, with the pass's flat colour | no
 `submit_strip_shaded(p, count)` | statement | submits them with per-vertex colours, <b>untextured</b> unless the preset consumes the texel (`TINT_MIX`) | no
 

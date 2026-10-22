@@ -59,8 +59,11 @@ namespace Jazz2::Tiles
 			case LayerRendererType::XRay:
 			case LayerRendererType::BlurBehind:
 			case LayerRendererType::PaletteShift:
+			case LayerRendererType::SingleColor:
+			case LayerRendererType::ChromaKey:
 			case LayerRendererType::Sky:
 			case LayerRendererType::Tunnel:
+			case LayerRendererType::TileMenu:
 			case LayerRendererType::Wave:
 			case LayerRendererType::Cylinder:
 			case LayerRendererType::Reflection:
@@ -72,10 +75,9 @@ namespace Jazz2::Tiles
 				break;
 		}
 
-		// A tinted layer keeps its palette index in red, it's resolved from the live palette when the layer is drawn, a
-		// palette-shifted one its shift. The color of an unknown renderer means something else to it - a textured
-		// background of JJ2+ not drawn here yet (MENU, TILEMENU) has its parameters there and the stars in alpha,
-		// which mostly hid the layer - so it's drawn as it is.
+		// A tinted, a single color and a chroma key layer keep a palette index in red, it's resolved from the live palette
+		// when the layer is drawn, a palette-shifted one its shift. The color of an unknown renderer means something else to it - a
+		// renderer of a later version may have its parameters there - so it's drawn as it is.
 		description.Color = (knownRenderer
 			? Vector4f(record.Color[0] / 255.0f, record.Color[1] / 255.0f, record.Color[2] / 255.0f, record.Color[3] / 255.0f)
 			: Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
@@ -99,10 +101,29 @@ namespace Jazz2::Tiles
 			case LayerRendererType::Solid:
 			case LayerRendererType::Tinted:
 			case LayerRendererType::PaletteShift:
+			case LayerRendererType::SingleColor:
 				return true;
 			default:
 				return false;
 		}
+	}
+
+	bool LayerDescription::HasInnerSurface() const
+	{
+		return ((TextureFlags & (Formats::TexturedLayerParams::InnerWindow | Formats::TexturedLayerParams::InnerLayer)) != 0 &&
+			(IsTexturedBackground(RendererType) || RendererType == LayerRendererType::Reflection) && RendererType != LayerRendererType::Wave);
+	}
+
+	bool LayerDescription::HasPlusPerspective() const
+	{
+		return (RendererType == LayerRendererType::Cylinder || (TextureFlags & (Formats::TexturedLayerParams::Fullscreen |
+			Formats::TexturedLayerParams::InnerWindow | Formats::TexturedLayerParams::InnerLayer)) != 0);
+	}
+
+	bool LayerDescription::IsTexturePlacedByLayer5(bool vertical) const
+	{
+		return ((RendererType == LayerRendererType::Sky || RendererType == LayerRendererType::Tunnel || RendererType == LayerRendererType::Cylinder) &&
+			HasPlusPerspective() && !HasInnerSurface() && (vertical ? SpeedModelY : SpeedModelX) == LayerSpeedModel::AlwaysOnTop);
 	}
 
 	Vector2f LayerDescription::GetGameplayOrigin(Vector2i layoutSize, Vector2i spriteLayoutSize, const Rectf& view) const

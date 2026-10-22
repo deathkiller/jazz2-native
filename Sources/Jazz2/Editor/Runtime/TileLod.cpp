@@ -358,7 +358,7 @@ namespace Jazz2::Editor
 	{
 		auto rendererType = LayerRendererType(layer.Record.RendererType);
 		return (rendererType != LayerRendererType::Solid && rendererType != LayerRendererType::XRay && rendererType != LayerRendererType::BlurBehind &&
-			rendererType != LayerRendererType::PaletteShift && layer.GetWidth() > 0 && layer.GetHeight() > 0);
+			rendererType != LayerRendererType::PaletteShift && rendererType != LayerRendererType::ChromaKey && layer.GetWidth() > 0 && layer.GetHeight() > 0);
 	}
 
 	std::uint8_t TileLod::GetRepeats(const DocumentLayer& layer)

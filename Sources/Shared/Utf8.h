@@ -83,17 +83,19 @@ namespace Death { namespace Utf8 {
 		@brief Length of the longest prefix of UTF-8 text that fits into a number of bytes
 
 		Returns the size of @p text if all of it fits, otherwise at most @p maxBytes so that no multi-byte sequence is
-		cut in two --- the sequence the limit falls into is left out whole.
+		cut in two --- the sequence the limit falls into is left out whole. Stray continuation bytes are treated
+		as single-byte characters, so malformed input never shortens the result by more than 3 bytes.
 	*/
 	inline std::size_t FitPrefix(Containers::StringView text, std::size_t maxBytes) {
 		if (text.size() <= maxBytes) {
 			return text.size();
 		}
 		std::size_t length = maxBytes;
-		while (length > 0 && (std::uint8_t(text[length]) & 0xC0) == 0x80) {
+		std::size_t stop = (maxBytes > 3 ? maxBytes - 3 : 0);
+		while (length > stop && (std::uint8_t(text[length]) & 0xC0) == 0x80) {
 			length--;
 		}
-		return length;
+		return (length + BytesOfLead[std::uint8_t(text[length])] > maxBytes ? length : maxBytes);
 	}
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)

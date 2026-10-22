@@ -138,7 +138,12 @@ namespace Death { namespace Utf8 {
 
 	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize)
 	{
-		if (sourceSize == 0) return 0;
+		if (sourceSize == 0) {
+			if (destinationSize > 0) {
+				destination[0] = L'\0';
+			}
+			return 0;
+		}
 
 		std::int32_t length = ::MultiByteToWideChar(CP_UTF8, 0, source, sourceSize, destination, destinationSize);
 		if (length > 0 && sourceSize == -1) {

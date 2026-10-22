@@ -479,7 +479,10 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PolylineRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/XRayMaskRenderer.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusAnimations.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusEvents.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusObjects.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterDictionary.h

@@ -714,6 +714,13 @@ namespace nCine::RHI::GU
 				StripAbgr[i] = PackAbgr(QuantizeChannel(r), QuantizeChannel(g), QuantizeChannel(b), QuantizeChannel(a));
 			}
 		}
+		// The GE draws everything in its through mode, which interpolates texture coordinates affinely - the gu blocks
+		// don't ask for a perspective strip (see FixedFunctionPass.h)
+		void SetStripVertexQ(std::int32_t i, float q)
+		{
+			static_cast<void>(i);
+			static_cast<void>(q);
+		}
 
 		// Whether a UV span can be mapped onto the screen at all (a zero texRect has no scale)
 		bool HasTexelStep() const { return TexRect[0] != 0.0f && TexRect[2] != 0.0f; }

@@ -130,9 +130,10 @@ namespace Jazz2::Editor
 	void RuntimeSync::ApplyEditorOpacity(const DocumentLayer& layer, Tiles::LayerDescription& description)
 	{
 		// The color of the other renderers means something else, a tinted layer or a sky has no opacity of its own, a
-		// palette-shifted one has it in alpha as an ordinary one
+		// palette-shifted, a single color or a chroma key one has it in alpha as an ordinary one
 		const auto hasOpacity = [](Tiles::LayerRendererType type) {
-			return (type == Tiles::LayerRendererType::Default || type == Tiles::LayerRendererType::PaletteShift);
+			return (type == Tiles::LayerRendererType::Default || type == Tiles::LayerRendererType::PaletteShift ||
+				type == Tiles::LayerRendererType::SingleColor || type == Tiles::LayerRendererType::ChromaKey);
 		};
 		if (!hasOpacity(description.RendererType)) {
 			return;

@@ -34,6 +34,7 @@ layout (std140) uniform InstanceBlock
 };
 
 out vec2 vTexCoords;
+out vec4 vColor;
 
 void main()
 {
@@ -42,6 +43,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 }
 )__SHDR__";
 #endif
@@ -63,6 +65,7 @@ uniform mat4 uViewMatrix;
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
+varying vec4 vColor;
 
 void main()
 {
@@ -71,6 +74,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 }
 )__SHDR__";
 #endif
@@ -88,6 +92,7 @@ precision mediump float;
 #endif
 
 in vec2 vTexCoords;
+in vec4 vColor;
 
 uniform sampler2D uTexture;
 uniform vec2 uViewSize;
@@ -96,12 +101,38 @@ uniform vec2 uCameraPos;
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 // The cylinder of JJ2+ (see Tiles::LayerRendererType::Cylinder) - xy: the center of its horizon as a fraction of the view,
-// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size
+// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size. It's always drawn in the perspective of JJ2+, the shift
+// is the pixel of the layer at the top left of the view, as an ordinary layer would be placed.
 uniform vec4 uCylinder;
 
-// How far up or down from the horizon the fade reaches, as an angle around the axis of the tube, and how strong it is there
-#define FADE_ANGLE 0.58
-#define FADE_STRENGTH 0.75
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
+// The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
+// an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
+// times 2 + cos of the angle (2 * (1 + 2 cos) at half size). It fades into the horizon color like the sky, to 65 % of it.
+#define FADE_ROWS 141.0
+#define FADE_STRENGTH 0.65
+#define PI 3.14159265359
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -112,29 +143,25 @@ vec2 hash2D(in vec2 p) {
 out vec4 COLOR;
 
 void main() {
-	// The inside of a horizontal tube, seen from its axis looking at the far wall: a row of the view is an angle around the axis,
-	// up or down from the horizon, a column a distance along it. The wall is as far away everywhere, but the rows further from
-	// the horizon see it at a steeper angle, so the texture gets larger towards the top and the bottom of the view.
-	// Half size sees more of the tube, more curved, with the texture four times across the view instead of once.
-	float fov = (uCylinder.w > 0.0 ? 2.0 : 1.0);
-	float repeats = (uCylinder.w > 0.0 ? 4.0 : 1.0);
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
 
-	// Position of the pixel relative to the center of the horizon, in pixels of the view - right of it, and up from it
-	float along = (vTexCoords.x - uCylinder.x) * uViewSize.x;
-	float up = (uCylinder.y - vTexCoords.y) * uViewSize.y;
-
-	// The angle around the axis, the edge of the view at the horizon in the center is at atan(fov)
-	float slope = up * fov / (0.5 * uViewSize.y);
-	float angle = atan(slope, 1.0);
-	float cosAngle = inversesqrt(1.0 + slope * slope);
-
-	// The texture as square at the horizon as it is, along the tube and around it (V runs up the layer), the shift moves
-	// along it and turns it
-	vec2 texturePos = vec2(
-		repeats * along * cosAngle / uViewSize.x + (uShift.x / 256.0),
-		repeats * angle * uViewSize.y / (2.0 * fov * uViewSize.x) - (uShift.y / 256.0)
+	// By the pixels of the view as JJ2+ counts them - the texture runs from the middle of the view down wherever the horizon is,
+	// the shift moves it along the tube a quarter as fast as an ordinary layer and around it as fast. V runs up the layer (see
+	// TileMap::TexturedBackgroundPass).
+	vec2 pixel = vTexCoords * uViewSize - vec2(0.5);
+	float row = pixel.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(PI * row / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
+		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
+	float rows = row / FADE_ROWS;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
 
+	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture(uTexture, texturePos);
 
 #ifdef DITHER
@@ -142,11 +169,13 @@ void main() {
 	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
 #endif
 
-	// Fainter than the sky, only the far wall fades into the color of the horizon, never fully
-	float fadeOpacity = clamp(1.0 - (angle * angle) / (FADE_ANGLE * FADE_ANGLE), 0.0, 1.0) * FADE_STRENGTH;
-
-	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fadeOpacity * uCylinder.z);
-	COLOR.a = 1.0;
+	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
+#ifdef KEYED
+	COLOR.a = keyedOpacity();
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+#endif
 }
 
 )__SHDR__";
@@ -163,6 +192,7 @@ precision mediump float;
 #endif
 
 varying vec2 vTexCoords;
+varying vec4 vColor;
 
 uniform sampler2D uTexture;
 uniform vec2 uViewSize;
@@ -171,46 +201,70 @@ uniform vec2 uCameraPos;
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 // The cylinder of JJ2+ (see Tiles::LayerRendererType::Cylinder) - xy: the center of its horizon as a fraction of the view,
-// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size
+// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size. It's always drawn in the perspective of JJ2+, the shift
+// is the pixel of the layer at the top left of the view, as an ordinary layer would be placed.
 uniform vec4 uCylinder;
 
-// How far up or down from the horizon the fade reaches, as an angle around the axis of the tube, and how strong it is there
-#define FADE_ANGLE 0.58
-#define FADE_STRENGTH 0.75
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
+// The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
+// an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
+// times 2 + cos of the angle (2 * (1 + 2 cos) at half size). It fades into the horizon color like the sky, to 65 % of it.
+#define FADE_ROWS 141.0
+#define FADE_STRENGTH 0.65
+#define PI 3.14159265359
 
 
 void main() {
 	vec4 COLOR;
-	// The inside of a horizontal tube, seen from its axis looking at the far wall: a row of the view is an angle around the axis,
-	// up or down from the horizon, a column a distance along it. The wall is as far away everywhere, but the rows further from
-	// the horizon see it at a steeper angle, so the texture gets larger towards the top and the bottom of the view.
-	// Half size sees more of the tube, more curved, with the texture four times across the view instead of once.
-	float fov = (uCylinder.w > 0.0 ? 2.0 : 1.0);
-	float repeats = (uCylinder.w > 0.0 ? 4.0 : 1.0);
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
 
-	// Position of the pixel relative to the center of the horizon, in pixels of the view - right of it, and up from it
-	float along = (vTexCoords.x - uCylinder.x) * uViewSize.x;
-	float up = (uCylinder.y - vTexCoords.y) * uViewSize.y;
-
-	// The angle around the axis, the edge of the view at the horizon in the center is at atan(fov)
-	float slope = up * fov / (0.5 * uViewSize.y);
-	float angle = atan(slope, 1.0);
-	float cosAngle = inversesqrt(1.0 + slope * slope);
-
-	// The texture as square at the horizon as it is, along the tube and around it (V runs up the layer), the shift moves
-	// along it and turns it
-	vec2 texturePos = vec2(
-		repeats * along * cosAngle / uViewSize.x + (uShift.x / 256.0),
-		repeats * angle * uViewSize.y / (2.0 * fov * uViewSize.x) - (uShift.y / 256.0)
+	// By the pixels of the view as JJ2+ counts them - the texture runs from the middle of the view down wherever the horizon is,
+	// the shift moves it along the tube a quarter as fast as an ordinary layer and around it as fast. V runs up the layer (see
+	// TileMap::TexturedBackgroundPass).
+	vec2 pixel = vTexCoords * uViewSize - vec2(0.5);
+	float row = pixel.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(PI * row / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
+		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
+	float rows = row / FADE_ROWS;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
 
+	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture2D(uTexture, texturePos);
 
-	// Fainter than the sky, only the far wall fades into the color of the horizon, never fully
-	float fadeOpacity = clamp(1.0 - (angle * angle) / (FADE_ANGLE * FADE_ANGLE), 0.0, 1.0) * FADE_STRENGTH;
-
-	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fadeOpacity * uCylinder.z);
-	COLOR.a = 1.0;
+	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
+#ifdef KEYED
+	COLOR.a = keyedOpacity();
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+#endif
 	gl_FragColor = COLOR;
 }
 
@@ -263,6 +317,7 @@ layout (std140) uniform InstanceBlock
 };
 
 out vec2 vTexCoords;
+out vec4 vColor;
 
 void main()
 {
@@ -271,6 +326,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 }
 )__SHDR__";
 #endif
@@ -293,6 +349,7 @@ uniform mat4 uViewMatrix;
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
+varying vec4 vColor;
 
 void main()
 {
@@ -301,6 +358,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 }
 )__SHDR__";
 #endif
@@ -319,6 +377,7 @@ precision mediump float;
 #endif
 
 in vec2 vTexCoords;
+in vec4 vColor;
 
 uniform sampler2D uTexture;
 uniform vec2 uViewSize;
@@ -327,12 +386,38 @@ uniform vec2 uCameraPos;
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 // The cylinder of JJ2+ (see Tiles::LayerRendererType::Cylinder) - xy: the center of its horizon as a fraction of the view,
-// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size
+// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size. It's always drawn in the perspective of JJ2+, the shift
+// is the pixel of the layer at the top left of the view, as an ordinary layer would be placed.
 uniform vec4 uCylinder;
 
-// How far up or down from the horizon the fade reaches, as an angle around the axis of the tube, and how strong it is there
-#define FADE_ANGLE 0.58
-#define FADE_STRENGTH 0.75
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
+// The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
+// an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
+// times 2 + cos of the angle (2 * (1 + 2 cos) at half size). It fades into the horizon color like the sky, to 65 % of it.
+#define FADE_ROWS 141.0
+#define FADE_STRENGTH 0.65
+#define PI 3.14159265359
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -343,29 +428,25 @@ vec2 hash2D(in vec2 p) {
 out vec4 COLOR;
 
 void main() {
-	// The inside of a horizontal tube, seen from its axis looking at the far wall: a row of the view is an angle around the axis,
-	// up or down from the horizon, a column a distance along it. The wall is as far away everywhere, but the rows further from
-	// the horizon see it at a steeper angle, so the texture gets larger towards the top and the bottom of the view.
-	// Half size sees more of the tube, more curved, with the texture four times across the view instead of once.
-	float fov = (uCylinder.w > 0.0 ? 2.0 : 1.0);
-	float repeats = (uCylinder.w > 0.0 ? 4.0 : 1.0);
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
 
-	// Position of the pixel relative to the center of the horizon, in pixels of the view - right of it, and up from it
-	float along = (vTexCoords.x - uCylinder.x) * uViewSize.x;
-	float up = (uCylinder.y - vTexCoords.y) * uViewSize.y;
-
-	// The angle around the axis, the edge of the view at the horizon in the center is at atan(fov)
-	float slope = up * fov / (0.5 * uViewSize.y);
-	float angle = atan(slope, 1.0);
-	float cosAngle = inversesqrt(1.0 + slope * slope);
-
-	// The texture as square at the horizon as it is, along the tube and around it (V runs up the layer), the shift moves
-	// along it and turns it
-	vec2 texturePos = vec2(
-		repeats * along * cosAngle / uViewSize.x + (uShift.x / 256.0),
-		repeats * angle * uViewSize.y / (2.0 * fov * uViewSize.x) - (uShift.y / 256.0)
+	// By the pixels of the view as JJ2+ counts them - the texture runs from the middle of the view down wherever the horizon is,
+	// the shift moves it along the tube a quarter as fast as an ordinary layer and around it as fast. V runs up the layer (see
+	// TileMap::TexturedBackgroundPass).
+	vec2 pixel = vTexCoords * uViewSize - vec2(0.5);
+	float row = pixel.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(PI * row / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
+		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
+	float rows = row / FADE_ROWS;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
 
+	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture(uTexture, texturePos);
 
 #ifdef DITHER
@@ -373,11 +454,13 @@ void main() {
 	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
 #endif
 
-	// Fainter than the sky, only the far wall fades into the color of the horizon, never fully
-	float fadeOpacity = clamp(1.0 - (angle * angle) / (FADE_ANGLE * FADE_ANGLE), 0.0, 1.0) * FADE_STRENGTH;
-
-	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fadeOpacity * uCylinder.z);
-	COLOR.a = 1.0;
+	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
+#ifdef KEYED
+	COLOR.a = keyedOpacity();
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+#endif
 }
 
 )__SHDR__";
@@ -395,6 +478,7 @@ precision mediump float;
 #endif
 
 varying vec2 vTexCoords;
+varying vec4 vColor;
 
 uniform sampler2D uTexture;
 uniform vec2 uViewSize;
@@ -403,46 +487,70 @@ uniform vec2 uCameraPos;
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 // The cylinder of JJ2+ (see Tiles::LayerRendererType::Cylinder) - xy: the center of its horizon as a fraction of the view,
-// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size
+// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size. It's always drawn in the perspective of JJ2+, the shift
+// is the pixel of the layer at the top left of the view, as an ordinary layer would be placed.
 uniform vec4 uCylinder;
 
-// How far up or down from the horizon the fade reaches, as an angle around the axis of the tube, and how strong it is there
-#define FADE_ANGLE 0.58
-#define FADE_STRENGTH 0.75
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
+// The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
+// an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
+// times 2 + cos of the angle (2 * (1 + 2 cos) at half size). It fades into the horizon color like the sky, to 65 % of it.
+#define FADE_ROWS 141.0
+#define FADE_STRENGTH 0.65
+#define PI 3.14159265359
 
 
 void main() {
 	vec4 COLOR;
-	// The inside of a horizontal tube, seen from its axis looking at the far wall: a row of the view is an angle around the axis,
-	// up or down from the horizon, a column a distance along it. The wall is as far away everywhere, but the rows further from
-	// the horizon see it at a steeper angle, so the texture gets larger towards the top and the bottom of the view.
-	// Half size sees more of the tube, more curved, with the texture four times across the view instead of once.
-	float fov = (uCylinder.w > 0.0 ? 2.0 : 1.0);
-	float repeats = (uCylinder.w > 0.0 ? 4.0 : 1.0);
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
 
-	// Position of the pixel relative to the center of the horizon, in pixels of the view - right of it, and up from it
-	float along = (vTexCoords.x - uCylinder.x) * uViewSize.x;
-	float up = (uCylinder.y - vTexCoords.y) * uViewSize.y;
-
-	// The angle around the axis, the edge of the view at the horizon in the center is at atan(fov)
-	float slope = up * fov / (0.5 * uViewSize.y);
-	float angle = atan(slope, 1.0);
-	float cosAngle = inversesqrt(1.0 + slope * slope);
-
-	// The texture as square at the horizon as it is, along the tube and around it (V runs up the layer), the shift moves
-	// along it and turns it
-	vec2 texturePos = vec2(
-		repeats * along * cosAngle / uViewSize.x + (uShift.x / 256.0),
-		repeats * angle * uViewSize.y / (2.0 * fov * uViewSize.x) - (uShift.y / 256.0)
+	// By the pixels of the view as JJ2+ counts them - the texture runs from the middle of the view down wherever the horizon is,
+	// the shift moves it along the tube a quarter as fast as an ordinary layer and around it as fast. V runs up the layer (see
+	// TileMap::TexturedBackgroundPass).
+	vec2 pixel = vTexCoords * uViewSize - vec2(0.5);
+	float row = pixel.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(PI * row / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
+		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
+	float rows = row / FADE_ROWS;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
 
+	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture2D(uTexture, texturePos);
 
-	// Fainter than the sky, only the far wall fades into the color of the horizon, never fully
-	float fadeOpacity = clamp(1.0 - (angle * angle) / (FADE_ANGLE * FADE_ANGLE), 0.0, 1.0) * FADE_STRENGTH;
-
-	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fadeOpacity * uCylinder.z);
-	COLOR.a = 1.0;
+	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
+#ifdef KEYED
+	COLOR.a = keyedOpacity();
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+#endif
 	gl_FragColor = COLOR;
 }
 
@@ -473,6 +581,296 @@ void main() {
 
 	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundCylinder_DITHER_Textures[] = {
 		{ "uTexture", 0 },
+	};
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundCylinder_KEYED_Vs[] =
+R"__SHDR__(#define KEYED (1)
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	float palOffset;
+};
+
+out vec2 vTexCoords;
+out vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundCylinder_KEYED_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#define KEYED (1)
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundCylinder_KEYED_Fs[] =
+R"__SHDR__(#define KEYED (1)
+#line 1
+
+#ifdef GL_ES
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+#endif
+
+in vec2 vTexCoords;
+in vec4 vColor;
+
+uniform sampler2D uTexture;
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
+
+uniform vec4 uHorizonColor;
+uniform vec2 uShift;
+// The cylinder of JJ2+ (see Tiles::LayerRendererType::Cylinder) - xy: the center of its horizon as a fraction of the view,
+// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size. It's always drawn in the perspective of JJ2+, the shift
+// is the pixel of the layer at the top left of the view, as an ordinary layer would be placed.
+uniform vec4 uCylinder;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
+// The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
+// an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
+// times 2 + cos of the angle (2 * (1 + 2 cos) at half size). It fades into the horizon color like the sky, to 65 % of it.
+#define FADE_ROWS 141.0
+#define FADE_STRENGTH 0.65
+#define PI 3.14159265359
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+out vec4 COLOR;
+
+void main() {
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+
+	// By the pixels of the view as JJ2+ counts them - the texture runs from the middle of the view down wherever the horizon is,
+	// the shift moves it along the tube a quarter as fast as an ordinary layer and around it as fast. V runs up the layer (see
+	// TileMap::TexturedBackgroundPass).
+	vec2 pixel = vTexCoords * uViewSize - vec2(0.5);
+	float row = pixel.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(PI * row / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
+		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
+	);
+	float rows = row / FADE_ROWS;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+
+	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
+	vec4 texColor = texture(uTexture, texturePos);
+
+#ifdef DITHER
+	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
+	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
+#endif
+
+	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
+#ifdef KEYED
+	COLOR.a = keyedOpacity();
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+#endif
+}
+
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundCylinder_KEYED_Fs100[] =
+R"__SHDR__(#define KEYED (1)
+#line 1
+
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
+
+uniform vec4 uHorizonColor;
+uniform vec2 uShift;
+// The cylinder of JJ2+ (see Tiles::LayerRendererType::Cylinder) - xy: the center of its horizon as a fraction of the view,
+// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size. It's always drawn in the perspective of JJ2+, the shift
+// is the pixel of the layer at the top left of the view, as an ordinary layer would be placed.
+uniform vec4 uCylinder;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
+// The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
+// an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
+// times 2 + cos of the angle (2 * (1 + 2 cos) at half size). It fades into the horizon color like the sky, to 65 % of it.
+#define FADE_ROWS 141.0
+#define FADE_STRENGTH 0.65
+#define PI 3.14159265359
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+
+	// By the pixels of the view as JJ2+ counts them - the texture runs from the middle of the view down wherever the horizon is,
+	// the shift moves it along the tube a quarter as fast as an ordinary layer and around it as fast. V runs up the layer (see
+	// TileMap::TexturedBackgroundPass).
+	vec2 pixel = vTexCoords * uViewSize - vec2(0.5);
+	float row = pixel.y - floor(uCylinder.y * uViewSize.y);
+	float rowCos = cos(PI * row / uViewSize.y);
+	float halfSize = step(0.5, uCylinder.w);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
+		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
+	);
+	float rows = row / FADE_ROWS;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+
+	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
+	vec4 texColor = texture2D(uTexture, texturePos);
+
+	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
+#ifdef KEYED
+	COLOR.a = keyedOpacity();
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+#endif
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+#endif
+
+	inline constexpr ShaderCompiler::Uniform TexturedBackgroundCylinder_KEYED_Uniforms[] = {
+		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewSize", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uHorizonColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uCylinder", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uOpacity", ShaderCompiler::UniformType::Float, 0 },
+	};
+
+	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundCylinder_KEYED_Block0_Members[] = {
+		{ "modelMatrix", ShaderCompiler::UniformType::Mat4, 0, 0 },
+		{ "color", ShaderCompiler::UniformType::Vec4, 0, 64 },
+		{ "texRect", ShaderCompiler::UniformType::Vec4, 0, 80 },
+		{ "spriteSize", ShaderCompiler::UniformType::Vec2, 0, 96 },
+		{ "palOffset", ShaderCompiler::UniformType::Float, 0, 104 },
+	};
+
+	inline constexpr ShaderCompiler::UniformBlock TexturedBackgroundCylinder_KEYED_Blocks[] = {
+		{ "InstanceBlock", 112, 0, 5, TexturedBackgroundCylinder_KEYED_Block0_Members },
+	};
+
+	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundCylinder_KEYED_Textures[] = {
+		{ "uTexture", 0 },
+		{ "uTextureBehind", 2 },
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant TexturedBackgroundCylinder_Variants[] = {
@@ -534,8 +932,37 @@ void main() {
 #else
 			nullptr, nullptr },
 #endif
+		{ "KEYED", "KEYED",
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundCylinder_KEYED_Vs, TexturedBackgroundCylinder_KEYED_Fs,
+#else
+			nullptr, nullptr,
+#endif
+			10, TexturedBackgroundCylinder_KEYED_Uniforms, 1, TexturedBackgroundCylinder_KEYED_Blocks, 2, TexturedBackgroundCylinder_KEYED_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundCylinder_KEYED_Vs100, TexturedBackgroundCylinder_KEYED_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
+			TexturedBackgroundCylinder_KEYED_VsHlsl, TexturedBackgroundCylinder_KEYED_FsHlsl,
+			TexturedBackgroundCylinder_KEYED_VsDxbc, TexturedBackgroundCylinder_KEYED_VsDxbcSize, TexturedBackgroundCylinder_KEYED_FsDxbc, TexturedBackgroundCylinder_KEYED_FsDxbcSize,
+#else
+			nullptr, nullptr,
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_VULKAN)
+			TexturedBackgroundCylinder_KEYED_VkVs, TexturedBackgroundCylinder_KEYED_VkVsSize, TexturedBackgroundCylinder_KEYED_VkFs, TexturedBackgroundCylinder_KEYED_VkFsSize,
+#else
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_METAL)
+			TexturedBackgroundCylinder_KEYED_VsMsl, TexturedBackgroundCylinder_KEYED_FsMsl },
+#else
+			nullptr, nullptr },
+#endif
 	};
 
-	inline constexpr ShaderCompiler::Program TexturedBackgroundCylinder = { "TexturedBackgroundCylinder", 0, 2, TexturedBackgroundCylinder_Variants };
+	inline constexpr ShaderCompiler::Program TexturedBackgroundCylinder = { "TexturedBackgroundCylinder", 0, 3, TexturedBackgroundCylinder_Variants };
 }
 #endif

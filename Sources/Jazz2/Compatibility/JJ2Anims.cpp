@@ -354,92 +354,7 @@ namespace Jazz2::Compatibility
 				continue;
 			}
 
-			for (std::uint16_t j = 0; j < animCount; j++) {
-				AnimSection& anim = anims.emplace_back();
-				anim.Set = i;
-				anim.Anim = j;
-				anim.FrameCount = infoBlock.ReadUInt16();
-				anim.FrameRate = infoBlock.ReadUInt16();
-				anim.Frames.resize(anim.FrameCount);
-
-				// Skip the rest, seems to be 0x00000000 for all headers
-				infoBlock.DiscardBytes(4);
-
-				if (anim.FrameCount > 0) {
-					for (std::uint16_t k = 0; k < anim.FrameCount; k++) {
-						AnimFrameSection& frame = anim.Frames[k];
-
-						frame.SizeX = frameDataBlock.ReadInt16();
-						frame.SizeY = frameDataBlock.ReadInt16();
-						frame.ColdspotX = frameDataBlock.ReadInt16();
-						frame.ColdspotY = frameDataBlock.ReadInt16();
-						frame.HotspotX = frameDataBlock.ReadInt16();
-						frame.HotspotY = frameDataBlock.ReadInt16();
-						frame.GunspotX = frameDataBlock.ReadInt16();
-						frame.GunspotY = frameDataBlock.ReadInt16();
-
-						frame.ImageAddr = frameDataBlock.ReadInt32();
-						frame.MaskAddr = frameDataBlock.ReadInt32();
-
-						std::int32_t dpos = (frame.ImageAddr + 4);
-
-						imageDataBlock.SeekTo(dpos - 4);
-						std::uint16_t width2 = imageDataBlock.ReadUInt16();
-						imageDataBlock.SeekTo(dpos - 2);
-						/*std::uint16_t height2 =*/ imageDataBlock.ReadUInt16();
-
-						frame.DrawTransparent = (width2 & 0x8000) > 0;
-
-						std::int32_t pxRead = 0;
-						std::int32_t pxTotal = (frame.SizeX * frame.SizeY);
-						bool lastOpEmpty = true;
-
-						frame.ImageData = std::make_unique<std::uint8_t[]>(pxTotal);
-
-						imageDataBlock.SeekTo(dpos);
-
-						while (pxRead < pxTotal) {
-							std::uint8_t op = imageDataBlock.ReadByte();
-							if (op < 0x80) {
-								// Skip the given number of pixels, writing them with the transparent color 0, array should be already zeroed
-								pxRead += op;
-							} else if (op == 0x80) {
-								// Skip until the end of the line, array should be already zeroed
-								std::uint16_t linePxLeft = (std::uint16_t)(frame.SizeX - pxRead % frame.SizeX);
-								if (pxRead % frame.SizeX == 0 && !lastOpEmpty) {
-									linePxLeft = 0;
-								}
-
-								pxRead += linePxLeft;
-							} else {
-								// Copy specified amount of pixels (ignoring the high bit)
-								std::uint16_t bytesToRead = (std::uint16_t)(op & 0x7F);
-								imageDataBlock.ReadRawBytes(frame.ImageData.get() + pxRead, bytesToRead);
-								pxRead += bytesToRead;
-							}
-
-							lastOpEmpty = (op == 0x80);
-						}
-
-						// TODO: Sprite mask
-						/*frame.MaskData = std::make_unique<std::uint8_t[]>(pxTotal);
-
-						if (frame.MaskAddr != 0xFFFFFFFF) {
-							imageDataBlock.SeekTo(frame.MaskAddr);
-							pxRead = 0;
-							while (pxRead < pxTotal) {
-								std::uint8_t b = imageDataBlock.ReadByte();
-								for (std::uint8_t bit = 0; bit < 8 && (pxRead + bit) < pxTotal; ++bit) {
-									frame.MaskData[pxRead + bit] = ((b & (1 << (7 - bit))) != 0);
-								}
-								pxRead += 8;
-							}
-						}*/
-					}
-
-					NormalizeAnimation(anim);
-				}
-			}
+			ReadAnimations(i, animCount, infoBlock, frameDataBlock, imageDataBlock, anims);
 
 			if (i == 65 && animCount > 5) {
 				seemsLikeCC = true;
@@ -551,6 +466,160 @@ namespace Jazz2::Compatibility
 		ImportAudioSamples(pakWriter, version, samples, progress.Narrow(0.9f, 1.0f));
 
 		return version;
+	}
+
+	bool JJ2Anims::ReadAnimationSet(std::unique_ptr<Stream>& s, std::int32_t setIndex, SmallVectorImpl<AnimSection>& anims)
+	{
+		// The header Convert() reads, but the version isn't checked - files made by other tools than the game's
+		// own may say anything there
+		std::uint32_t magic = s->ReadValueAsLE<std::uint32_t>();
+		std::uint32_t signature = s->ReadValueAsLE<std::uint32_t>();
+		if (magic != 0x42494C41 || signature != 0x00BEBA00) {
+			return false;
+		}
+
+		/*std::uint32_t headerLen =*/ s->ReadValueAsLE<std::uint32_t>();
+		/*std::uint32_t magicUnknown =*/ s->ReadValueAsLE<std::uint32_t>();
+		/*std::uint32_t fileLen =*/ s->ReadValueAsLE<std::uint32_t>();
+		/*std::uint32_t crc =*/ s->ReadValueAsLE<std::uint32_t>();
+		std::int32_t setCount = s->ReadValueAsLE<std::int32_t>();
+		if (setIndex < 0 || setIndex >= setCount) {
+			return false;
+		}
+
+		std::uint32_t setAddress = 0;
+		for (std::int32_t i = 0; i <= setIndex; i++) {
+			setAddress = s->ReadValueAsLE<std::uint32_t>();
+		}
+		if (setAddress == 0 || std::int64_t(setAddress) >= s->GetSize()) {
+			return false;
+		}
+		s->Seek(setAddress, SeekOrigin::Begin);
+
+		std::uint32_t magicANIM = s->ReadValueAsLE<std::uint32_t>();
+		std::uint8_t animCount = s->ReadValue<std::uint8_t>();
+		/*std::uint8_t sndCount =*/ s->ReadValue<std::uint8_t>();
+		/*std::uint16_t frameCount =*/ s->ReadValueAsLE<std::uint16_t>();
+		/*std::uint32_t cumulativeSndIndex =*/ s->ReadValueAsLE<std::uint32_t>();
+		std::int32_t infoBlockLenC = s->ReadValueAsLE<std::int32_t>();
+		std::int32_t infoBlockLenU = s->ReadValueAsLE<std::int32_t>();
+		std::int32_t frameDataBlockLenC = s->ReadValueAsLE<std::int32_t>();
+		std::int32_t frameDataBlockLenU = s->ReadValueAsLE<std::int32_t>();
+		std::int32_t imageDataBlockLenC = s->ReadValueAsLE<std::int32_t>();
+		std::int32_t imageDataBlockLenU = s->ReadValueAsLE<std::int32_t>();
+		if (magicANIM != 0x4D494E41) {
+			return false;
+		}
+
+		// The samples of the set are left where they are, the block isn't needed
+		s->Seek(8, SeekOrigin::Current);
+
+		JJ2Block infoBlock(s, infoBlockLenC, infoBlockLenU);
+		JJ2Block frameDataBlock(s, frameDataBlockLenC, frameDataBlockLenU);
+		JJ2Block imageDataBlock(s, imageDataBlockLenC, imageDataBlockLenU);
+
+		ReadAnimations(setIndex, animCount, infoBlock, frameDataBlock, imageDataBlock, anims);
+		return true;
+	}
+
+	void JJ2Anims::ReadAnimations(std::int32_t setIndex, std::uint8_t animCount, JJ2Block& infoBlock, JJ2Block& frameDataBlock,
+		JJ2Block& imageDataBlock, SmallVectorImpl<AnimSection>& anims)
+	{
+		for (std::uint16_t j = 0; j < animCount; j++) {
+			AnimSection& anim = anims.emplace_back();
+			anim.Set = setIndex;
+			anim.Anim = j;
+			anim.FrameCount = infoBlock.ReadUInt16();
+			anim.FrameRate = infoBlock.ReadUInt16();
+			anim.Frames.resize(anim.FrameCount);
+
+			// Skip the rest, seems to be 0x00000000 for all headers
+			infoBlock.DiscardBytes(4);
+
+			if (anim.FrameCount > 0) {
+				for (std::uint16_t k = 0; k < anim.FrameCount; k++) {
+					AnimFrameSection& frame = anim.Frames[k];
+
+					frame.SizeX = frameDataBlock.ReadInt16();
+					frame.SizeY = frameDataBlock.ReadInt16();
+					frame.ColdspotX = frameDataBlock.ReadInt16();
+					frame.ColdspotY = frameDataBlock.ReadInt16();
+					frame.HotspotX = frameDataBlock.ReadInt16();
+					frame.HotspotY = frameDataBlock.ReadInt16();
+					frame.GunspotX = frameDataBlock.ReadInt16();
+					frame.GunspotY = frameDataBlock.ReadInt16();
+
+					frame.ImageAddr = frameDataBlock.ReadInt32();
+					frame.MaskAddr = frameDataBlock.ReadInt32();
+
+					// A file that isn't the game's own can say anything, a frame of no size is only an empty one
+					if (frame.SizeX <= 0 || frame.SizeY <= 0) {
+						frame.SizeX = 0;
+						frame.SizeY = 0;
+					}
+
+					std::int32_t dpos = (frame.ImageAddr + 4);
+
+					imageDataBlock.SeekTo(dpos - 4);
+					std::uint16_t width2 = imageDataBlock.ReadUInt16();
+					imageDataBlock.SeekTo(dpos - 2);
+					/*std::uint16_t height2 =*/ imageDataBlock.ReadUInt16();
+
+					frame.DrawTransparent = (width2 & 0x8000) > 0;
+
+					std::int32_t pxRead = 0;
+					std::int32_t pxTotal = (frame.SizeX * frame.SizeY);
+					bool lastOpEmpty = true;
+
+					frame.ImageData = std::make_unique<std::uint8_t[]>(pxTotal);
+
+					imageDataBlock.SeekTo(dpos);
+
+					// The end of the block ends the image too, the rest stays transparent
+					while (pxRead < pxTotal && !imageDataBlock.ReachedEndOfStream()) {
+						std::uint8_t op = imageDataBlock.ReadByte();
+						if (op < 0x80) {
+							// Skip the given number of pixels, writing them with the transparent color 0, array should be already zeroed
+							pxRead += op;
+						} else if (op == 0x80) {
+							// Skip until the end of the line, array should be already zeroed
+							std::uint16_t linePxLeft = (std::uint16_t)(frame.SizeX - pxRead % frame.SizeX);
+							if (pxRead % frame.SizeX == 0 && !lastOpEmpty) {
+								linePxLeft = 0;
+							}
+
+							pxRead += linePxLeft;
+						} else {
+							// Copy specified amount of pixels (ignoring the high bit), never past the end of the frame
+							std::int32_t bytesToRead = (op & 0x7F);
+							std::int32_t bytesToCopy = std::min<std::int32_t>(bytesToRead, pxTotal - pxRead);
+							imageDataBlock.ReadRawBytes(frame.ImageData.get() + pxRead, bytesToCopy);
+							imageDataBlock.DiscardBytes(bytesToRead - bytesToCopy);
+							pxRead += bytesToRead;
+						}
+
+						lastOpEmpty = (op == 0x80);
+					}
+
+					// TODO: Sprite mask
+					/*frame.MaskData = std::make_unique<std::uint8_t[]>(pxTotal);
+
+					if (frame.MaskAddr != 0xFFFFFFFF) {
+						imageDataBlock.SeekTo(frame.MaskAddr);
+						pxRead = 0;
+						while (pxRead < pxTotal) {
+							std::uint8_t b = imageDataBlock.ReadByte();
+							for (std::uint8_t bit = 0; bit < 8 && (pxRead + bit) < pxTotal; ++bit) {
+								frame.MaskData[pxRead + bit] = ((b & (1 << (7 - bit))) != 0);
+							}
+							pxRead += 8;
+						}
+					}*/
+				}
+
+				NormalizeAnimation(anim);
+			}
+		}
 	}
 
 	void JJ2Anims::ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims, ConversionProgress progress)

@@ -94,6 +94,7 @@ namespace Jazz2::Editor
 		UiScale = std::clamp<float>(JsonAccess::GetFloat(doc, "UiScale", 0.0f), 0.0f, 8.0f);
 		ShowGrid = JsonAccess::GetBool(doc, "ShowGrid", true);
 		PauseLayerMovement = JsonAccess::GetBool(doc, "PauseLayerMovement", false);
+		PreviewTexturedLayers = JsonAccess::GetBool(doc, "PreviewTexturedLayers", false);
 		// The original tile sets have 10 tiles in a row, the key was renamed when the default became 10
 		TilePickerColumns = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "TileColumns", 10), 1, 32);
 		RightPanelWidth = std::clamp<float>(JsonAccess::GetFloat(doc, "RightPanelWidth", 165.0f), 80.0f, 600.0f);
@@ -168,6 +169,7 @@ namespace Jazz2::Editor
 		doc["UiScale"] = UiScale;
 		doc["ShowGrid"] = ShowGrid;
 		doc["PauseLayerMovement"] = PauseLayerMovement;
+		doc["PreviewTexturedLayers"] = PreviewTexturedLayers;
 		doc["TileColumns"] = Json::Int(TilePickerColumns);
 		doc["RightPanelWidth"] = RightPanelWidth;
 		doc["LayerListHeight"] = LayerListHeight;

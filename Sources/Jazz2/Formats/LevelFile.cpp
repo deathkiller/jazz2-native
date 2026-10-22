@@ -530,6 +530,8 @@ namespace Jazz2::Formats
 		layer.Flags = ReadUint16();
 		layer.Width = ReadInt32();
 		layer.Height = ReadInt32();
+		// Only LayerNumbersChunk gives it a number
+		layer.OriginalNumber = 0;
 
 		if (std::uint8_t(layer.Kind) > std::uint8_t(LayerKind::Sprite)) {
 			// The kind decides what follows, a kind of a later version could store anything there
@@ -1295,6 +1297,53 @@ namespace Jazz2::Formats
 					data.push_back(TexturedLayerTextureTiles);
 				}
 			}
+		}
+	}
+
+	StringView LayerNamesChunk::Read(ArrayView<const std::uint8_t> data, std::int32_t layer)
+	{
+		std::size_t pos = 0;
+		for (std::int32_t i = 0; pos < data.size(); i++) {
+			std::size_t length = std::min<std::size_t>(data[pos++], data.size() - pos);
+			if (i == layer) {
+				return StringView(reinterpret_cast<const char*>(data.data() + pos), length);
+			}
+			pos += length;
+		}
+		return {};
+	}
+
+	void LayerNamesChunk::Write(ArrayView<const StringView> names, SmallVectorImpl<std::uint8_t>& data)
+	{
+		data.clear();
+		if (std::none_of(names.begin(), names.end(), [](StringView name) { return !name.empty(); })) {
+			return;
+		}
+		for (StringView name : names) {
+			// Not in the middle of a character
+			std::size_t length = Death::Utf8::FitPrefix(name, MaxNameLength);
+			data.push_back(std::uint8_t(length));
+			data.append(reinterpret_cast<const std::uint8_t*>(name.data()), reinterpret_cast<const std::uint8_t*>(name.data()) + length);
+		}
+	}
+
+	std::uint8_t LayerNumbersChunk::Read(ArrayView<const std::uint8_t> data, std::int32_t layer)
+	{
+		if (layer < 0 || std::size_t(layer) >= data.size()) {
+			return 0;
+		}
+		std::uint8_t number = data[layer];
+		return (number >= 1 && number <= OriginalLayerCount ? number : 0);
+	}
+
+	void LayerNumbersChunk::Write(ArrayView<const std::uint8_t> numbers, SmallVectorImpl<std::uint8_t>& data)
+	{
+		data.clear();
+		if (std::none_of(numbers.begin(), numbers.end(), [](std::uint8_t number) { return number != 0; })) {
+			return;
+		}
+		for (std::uint8_t number : numbers) {
+			data.push_back(number >= 1 && number <= OriginalLayerCount ? number : 0);
 		}
 	}
 }

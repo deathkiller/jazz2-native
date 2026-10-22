@@ -142,6 +142,8 @@ namespace Jazz2::Formats
 		 * Returns `false` if the stream doesn't hold a tile set, or holds one in LZ4 and this build can't decode it.
 		 */
 		static bool Read(Stream& s, TileSetData& data);
+		/** @brief Reads only the palette of a tile set, as @ref TileSetData::Palette, returns `false` if the stream doesn't hold a tile set */
+		static bool ReadPalette(Stream& s, std::uint32_t* palette);
 
 		/**
 		 * @brief Writes a whole tile set

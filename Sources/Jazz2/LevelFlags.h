@@ -34,7 +34,7 @@ namespace Jazz2
 		 * @brief Level has a preview image (@ref Formats::LevelFile::PreviewChunk)
 		 *
 		 * Lets the list of custom levels skip the levels without one, the chunk is at the very end of the body. Readers
-		 * before 3.9.1 ignore it, as they do every bit of the header they don't know.
+		 * before 4.0.0 ignore it, as they do every bit of the header they don't know.
 		 */
 		HasPreview = 0x400
 	};

@@ -37,12 +37,65 @@ namespace Jazz2::Compatibility
 
 	ConversionResult EventConverter::TryConvert(JJ2Level* level, JJ2Event old, std::uint32_t eventParams)
 	{
+		ConversionResult result = { EventType::Empty };
 		auto it = _converters.find(old);
 		if (it != _converters.end()) {
-			return it->second(level, eventParams);
-		} else {
-			return { EventType::Empty };
+			result = it->second(level, eventParams);
 		}
+		// Scripts of JJ2+ read the events of the level as they are, also those the game has no use for
+		if (result.Type == EventType::Empty && old != JJ2Event::EMPTY) {
+			result = MakePassthroughEvent(old, eventParams);
+		}
+		return result;
+	}
+
+	ConversionResult EventConverter::MakePassthroughEvent(JJ2Event event, std::uint32_t eventParams)
+	{
+		eventParams &= (1u << OriginalParamBits) - 1;
+		return { EventType::PassthroughEvent, { std::uint8_t(event), std::uint8_t(eventParams), std::uint8_t(eventParams >> 8), std::uint8_t(eventParams >> 16) } };
+	}
+
+	bool EventConverter::CanKeepOriginalParams(EventType type)
+	{
+		switch (type) {
+			// Nothing to keep, or the whole original event already
+			case EventType::Empty:
+			case EventType::PassthroughEvent:
+			// A name that can take all the bytes
+			case EventType::AreaActivateBoss:
+				return false;
+			default:
+				return (type < EventType::Count);
+		}
+	}
+
+	bool EventConverter::KeepOriginalParams(EventType type, std::uint8_t* params, std::uint32_t eventParams)
+	{
+		eventParams &= (1u << OriginalParamBits) - 1;
+		std::uint8_t* tail = params + Formats::EventRecord::OriginalParamsOffset;
+		if (eventParams == 0 || !CanKeepOriginalParams(type) || tail[0] != 0 || tail[1] != 0 || tail[2] != 0) {
+			return false;
+		}
+		tail[0] = std::uint8_t(eventParams);
+		tail[1] = std::uint8_t(eventParams >> 8);
+		tail[2] = std::uint8_t(eventParams >> 16);
+		return true;
+	}
+
+	bool EventConverter::ReadOriginalParams(EventType type, const std::uint8_t* params, std::uint32_t& eventParams)
+	{
+		if (!CanKeepOriginalParams(type)) {
+			return false;
+		}
+		const std::uint8_t* tail = params + Formats::EventRecord::OriginalParamsOffset;
+		eventParams = (std::uint32_t(tail[0]) | (std::uint32_t(tail[1]) << 8) | (std::uint32_t(tail[2]) << 16)) & ((1u << OriginalParamBits) - 1);
+		return (eventParams != 0);
+	}
+
+	void EventConverter::ReadPassthroughEvent(const std::uint8_t* params, JJ2Event& event, std::uint32_t& eventParams)
+	{
+		event = JJ2Event(params[0]);
+		eventParams = (std::uint32_t(params[1]) | (std::uint32_t(params[2]) << 8) | (std::uint32_t(params[3]) << 16)) & ((1u << OriginalParamBits) - 1);
 	}
 
 	void EventConverter::Add(JJ2Event originalEvent, ConversionFunction&& converter)

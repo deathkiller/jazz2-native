@@ -4876,7 +4876,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 
 namespace Jazz2::ShadersGen
 {
-	inline constexpr char TexturedBackground_VsMsl[] =
+	inline constexpr char SingleColor_VsMsl[] =
 R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
 #include <metal_stdlib>
 using namespace metal;
@@ -4885,10 +4885,6 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
-	float2 uViewSize;
-	float2 uCameraPos;
-	float4 uHorizonColor;
-	float2 uShift;
 };
 
 struct InstanceBlock
@@ -4904,6 +4900,8 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -4914,6 +4912,300 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char SingleColor_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float alpha = src.w;
+	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char SingleColor_USE_PALETTE_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char SingleColor_USE_PALETTE_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTexturePalette [[texture(1)]], sampler uTexturePalette_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float palIndex = floor(_in.vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float alpha = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY)).w * src.w;
+	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char BatchedSingleColor_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+#define BATCH_SIZE 585
+
+struct Instance
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+};
+
+struct InstancesBlock
+{
+	Instance instances[BATCH_SIZE];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstancesBlock& _bInstancesBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float((gl_VertexID + 2) / 3 % 2), 1.0 - float((gl_VertexID + 1) / 3 % 2));
+	float4 position = float4(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].spriteSize.x, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstancesBlock.instances[gl_VertexID / 6].modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
+	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
+	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char BatchedSingleColor_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float alpha = src.w;
+	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char BatchedSingleColor_USE_PALETTE_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+#define BATCH_SIZE 585
+
+struct Instance
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+};
+
+struct InstancesBlock
+{
+	Instance instances[BATCH_SIZE];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstancesBlock& _bInstancesBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float((gl_VertexID + 2) / 3 % 2), 1.0 - float((gl_VertexID + 1) / 3 % 2));
+	float4 position = float4(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].spriteSize.x, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstancesBlock.instances[gl_VertexID / 6].modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
+	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
+	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char BatchedSingleColor_USE_PALETTE_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTexturePalette [[texture(1)]], sampler uTexturePalette_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float palIndex = floor(_in.vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float alpha = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY)).w * src.w;
+	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)__SHDR__";
+
+}
+
+namespace Jazz2::ShadersGen
+{
+	inline constexpr char TexturedBackground_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uCameraPos;
+	float4 uHorizonColor;
+	float2 uShift;
+	float4 uHorizonOffset;
+	float uModel;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
 	return _out;
 }
 )__SHDR__";
@@ -4931,12 +5223,15 @@ struct _Globals
 	float2 uCameraPos;
 	float4 uHorizonColor;
 	float2 uShift;
+	float4 uHorizonOffset;
+	float uModel;
 };
 
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 float2 hash2D(float2 p)
@@ -4979,16 +5274,44 @@ float addStarField(float2 samplePosition, float threshold)
 	return 0.0;
 }
 
+float3 legacyWarp(float2 uv, constant _Globals& _globals)
+{
+	float horizonY = clamp(0.5 + _globals.uHorizonOffset.y, 0.0, 1.0);
+	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
+	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
+	float distance_ = 1.3 - fromHorizon;
+	float horizonDepth = pow(distance_, 1.4);
+	float correction = _globals.uViewSize.x * 9.0 / (_globals.uViewSize.y * 16.0);
+	float2 texturePos = float2(_globals.uShift.x / 256.0 + (uv.x - 0.5 - _globals.uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, _globals.uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
+	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusWarp(float2 uv, constant _Globals& _globals)
+{
+	float2 pixel = uv * _globals.uViewSize - float2(0.5);
+	float row = pixel.y - floor((0.5 + _globals.uHorizonOffset.y) * _globals.uViewSize.y);
+	float below = step(0.0, row);
+	float distance_ = abs(row) + 8.0;
+	float2 texel = float2(_globals.uShift.x + (pixel.x - (0.5 + _globals.uHorizonOffset.x) * _globals.uViewSize.x) * 60.0 / distance_, _globals.uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
+	float rows = row / 141.0;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
+}
+
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
 {
 	float4 COLOR = float4(0);
-	float distance_ = 1.3 - abs(2.0 * _in.vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance_, 1.4);
-	float yShift = _in.vTexCoords.y > 0.5 ? 1.0 : 0.0;
-	float correction = _globals.uViewSize.x * 9.0 / (_globals.uViewSize.y * 16.0);
-	float2 texturePos = float2(_globals.uShift.x / 256.0 + (_in.vTexCoords.x - 0.5) * (0.5 + 1.5 * horizonDepth) * correction, _globals.uShift.y / 256.0 + (_in.vTexCoords.y - yShift) * 1.4 * distance_);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float3 warp = float3(0.0);
+	if (_globals.uModel > 0.5) {
+		warp = plusWarp(_in.vTexCoords, _globals);
+	} else {
+		warp = legacyWarp(_in.vTexCoords, _globals);
+	}
+	float2 texturePos = warp.xy;
 	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
-	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	float horizonOpacity = warp.z;
 	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
 	if (_globals.uHorizonColor.w > 0.0) {
 		float2 samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00012;
@@ -4996,8 +5319,8 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00018 + 0.5;
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
-	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
-	COLOR.w = 1.0;
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - _globals.uHorizonOffset.z));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
 )__SHDR__";
@@ -5015,6 +5338,8 @@ struct _Globals
 	float2 uCameraPos;
 	float4 uHorizonColor;
 	float2 uShift;
+	float4 uHorizonOffset;
+	float uModel;
 };
 
 struct InstanceBlock
@@ -5030,6 +5355,7 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -5040,6 +5366,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
 	return _out;
 }
 )__SHDR__";
@@ -5057,12 +5384,15 @@ struct _Globals
 	float2 uCameraPos;
 	float4 uHorizonColor;
 	float2 uShift;
+	float4 uHorizonOffset;
+	float uModel;
 };
 
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 float2 hash2D(float2 p)
@@ -5105,18 +5435,46 @@ float addStarField(float2 samplePosition, float threshold)
 	return 0.0;
 }
 
+float3 legacyWarp(float2 uv, constant _Globals& _globals)
+{
+	float horizonY = clamp(0.5 + _globals.uHorizonOffset.y, 0.0, 1.0);
+	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
+	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
+	float distance_ = 1.3 - fromHorizon;
+	float horizonDepth = pow(distance_, 1.4);
+	float correction = _globals.uViewSize.x * 9.0 / (_globals.uViewSize.y * 16.0);
+	float2 texturePos = float2(_globals.uShift.x / 256.0 + (uv.x - 0.5 - _globals.uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, _globals.uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
+	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusWarp(float2 uv, constant _Globals& _globals)
+{
+	float2 pixel = uv * _globals.uViewSize - float2(0.5);
+	float row = pixel.y - floor((0.5 + _globals.uHorizonOffset.y) * _globals.uViewSize.y);
+	float below = step(0.0, row);
+	float distance_ = abs(row) + 8.0;
+	float2 texel = float2(_globals.uShift.x + (pixel.x - (0.5 + _globals.uHorizonOffset.x) * _globals.uViewSize.x) * 60.0 / distance_, _globals.uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
+	float rows = row / 141.0;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
+}
+
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
 {
 	float4 COLOR = float4(0);
-	float distance_ = 1.3 - abs(2.0 * _in.vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance_, 1.4);
-	float yShift = _in.vTexCoords.y > 0.5 ? 1.0 : 0.0;
-	float correction = _globals.uViewSize.x * 9.0 / (_globals.uViewSize.y * 16.0);
-	float2 texturePos = float2(_globals.uShift.x / 256.0 + (_in.vTexCoords.x - 0.5) * (0.5 + 1.5 * horizonDepth) * correction, _globals.uShift.y / 256.0 + (_in.vTexCoords.y - yShift) * 1.4 * distance_);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float3 warp = float3(0.0);
+	if (_globals.uModel > 0.5) {
+		warp = plusWarp(_in.vTexCoords, _globals);
+	} else {
+		warp = legacyWarp(_in.vTexCoords, _globals);
+	}
+	float2 texturePos = warp.xy;
 	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
 	texturePos += hash2D(_in.vTexCoords * _globals.uViewSize + (_globals.uCameraPos + _globals.uShift) * 0.001).xy * 8.0 / _globals.uViewSize;
 	texColor = mix(texColor, uTexture.sample(uTexture_smplr, texturePos), 0.333);
-	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	float horizonOpacity = warp.z;
 	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
 	if (_globals.uHorizonColor.w > 0.0) {
 		float2 samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00012;
@@ -5124,8 +5482,182 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00018 + 0.5;
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
-	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
-	COLOR.w = 1.0;
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - _globals.uHorizonOffset.z));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackground_KEYED_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uCameraPos;
+	float4 uHorizonColor;
+	float2 uShift;
+	float4 uHorizonOffset;
+	float uModel;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+	float uOpacity;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackground_KEYED_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uCameraPos;
+	float4 uHorizonColor;
+	float2 uShift;
+	float4 uHorizonOffset;
+	float uModel;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+	float uOpacity;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+{
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	float3 difference = abs(behind - _globals.uKeyColor.xyz);
+	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+}
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+float3 voronoi(float2 p)
+{
+	float2 n = floor(p);
+	float2 f = fract(p);
+	float2 mg;
+	float2 mr;
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			float2 g = float2(float(i), float(j));
+			float2 o = hash2D(n + g);
+			float2 r = g + o - f;
+			float d = dot(r, r);
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return float3(md, mr);
+}
+
+float addStarField(float2 samplePosition, float threshold)
+{
+	float3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - starValue.x / threshold;
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+float3 legacyWarp(float2 uv, constant _Globals& _globals)
+{
+	float horizonY = clamp(0.5 + _globals.uHorizonOffset.y, 0.0, 1.0);
+	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
+	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
+	float distance_ = 1.3 - fromHorizon;
+	float horizonDepth = pow(distance_, 1.4);
+	float correction = _globals.uViewSize.x * 9.0 / (_globals.uViewSize.y * 16.0);
+	float2 texturePos = float2(_globals.uShift.x / 256.0 + (uv.x - 0.5 - _globals.uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, _globals.uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
+	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusWarp(float2 uv, constant _Globals& _globals)
+{
+	float2 pixel = uv * _globals.uViewSize - float2(0.5);
+	float row = pixel.y - floor((0.5 + _globals.uHorizonOffset.y) * _globals.uViewSize.y);
+	float below = step(0.0, row);
+	float distance_ = abs(row) + 8.0;
+	float2 texel = float2(_globals.uShift.x + (pixel.x - (0.5 + _globals.uHorizonOffset.x) * _globals.uViewSize.x) * 60.0 / distance_, _globals.uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
+	float rows = row / 141.0;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float3 warp = float3(0.0);
+	if (_globals.uModel > 0.5) {
+		warp = plusWarp(_in.vTexCoords, _globals);
+	} else {
+		warp = legacyWarp(_in.vTexCoords, _globals);
+	}
+	float2 texturePos = warp.xy;
+	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
+	float horizonOpacity = warp.z;
+	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
+	if (_globals.uHorizonColor.w > 0.0) {
+		float2 samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00012;
+		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
+		samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - _globals.uHorizonOffset.z));
+	COLOR.w = keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -5163,6 +5695,7 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -5173,6 +5706,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
 	return _out;
 }
 )__SHDR__";
@@ -5197,6 +5731,7 @@ struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 float2 hash2D(float2 p)
@@ -5209,18 +5744,19 @@ float2 hash2D(float2 p)
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
 {
 	float4 COLOR = float4(0);
-	float fov = _globals.uCylinder.w > 0.0 ? 2.0 : 1.0;
-	float repeats = _globals.uCylinder.w > 0.0 ? 4.0 : 1.0;
-	float along = (_in.vTexCoords.x - _globals.uCylinder.x) * _globals.uViewSize.x;
-	float up = (_globals.uCylinder.y - _in.vTexCoords.y) * _globals.uViewSize.y;
-	float slope = up * fov / (0.5 * _globals.uViewSize.y);
-	float angle = atan2(slope, 1.0);
-	float cosAngle = rsqrt(1.0 + slope * slope);
-	float2 texturePos = float2(repeats * along * cosAngle / _globals.uViewSize.x + _globals.uShift.x / 256.0, repeats * angle * _globals.uViewSize.y / (2.0 * fov * _globals.uViewSize.x) - _globals.uShift.y / 256.0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float2 pixel = _in.vTexCoords * _globals.uViewSize - float2(0.5);
+	float row = pixel.y - floor(_globals.uCylinder.y * _globals.uViewSize.y);
+	float rowCos = cos(3.14159265359 * row / _globals.uViewSize.y);
+	float halfSize = step(0.5, _globals.uCylinder.w);
+	float2 texel = float2(_globals.uShift.x * 0.25 + (pixel.x - _globals.uCylinder.x * _globals.uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / _globals.uViewSize.x, _globals.uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * _globals.uViewSize.y) * (256.0 + 256.0 * halfSize) / _globals.uViewSize.y);
+	float rows = row / 141.0;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
-	float fadeOpacity = clamp(1.0 - angle * angle / (0.58 * 0.58), 0.0, 1.0) * 0.75;
-	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fadeOpacity * _globals.uCylinder.z);
-	COLOR.w = 1.0;
+	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fade * _globals.uCylinder.z);
+	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
 )__SHDR__";
@@ -5254,6 +5790,7 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -5264,6 +5801,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
 	return _out;
 }
 )__SHDR__";
@@ -5288,6 +5826,7 @@ struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 float2 hash2D(float2 p)
@@ -5300,20 +5839,129 @@ float2 hash2D(float2 p)
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
 {
 	float4 COLOR = float4(0);
-	float fov = _globals.uCylinder.w > 0.0 ? 2.0 : 1.0;
-	float repeats = _globals.uCylinder.w > 0.0 ? 4.0 : 1.0;
-	float along = (_in.vTexCoords.x - _globals.uCylinder.x) * _globals.uViewSize.x;
-	float up = (_globals.uCylinder.y - _in.vTexCoords.y) * _globals.uViewSize.y;
-	float slope = up * fov / (0.5 * _globals.uViewSize.y);
-	float angle = atan2(slope, 1.0);
-	float cosAngle = rsqrt(1.0 + slope * slope);
-	float2 texturePos = float2(repeats * along * cosAngle / _globals.uViewSize.x + _globals.uShift.x / 256.0, repeats * angle * _globals.uViewSize.y / (2.0 * fov * _globals.uViewSize.x) - _globals.uShift.y / 256.0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float2 pixel = _in.vTexCoords * _globals.uViewSize - float2(0.5);
+	float row = pixel.y - floor(_globals.uCylinder.y * _globals.uViewSize.y);
+	float rowCos = cos(3.14159265359 * row / _globals.uViewSize.y);
+	float halfSize = step(0.5, _globals.uCylinder.w);
+	float2 texel = float2(_globals.uShift.x * 0.25 + (pixel.x - _globals.uCylinder.x * _globals.uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / _globals.uViewSize.x, _globals.uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * _globals.uViewSize.y) * (256.0 + 256.0 * halfSize) / _globals.uViewSize.y);
+	float rows = row / 141.0;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
 	texturePos += hash2D(_in.vTexCoords * _globals.uViewSize + (_globals.uCameraPos + _globals.uShift) * 0.001).xy * 8.0 / _globals.uViewSize;
 	texColor = mix(texColor, uTexture.sample(uTexture_smplr, texturePos), 0.333);
-	float fadeOpacity = clamp(1.0 - angle * angle / (0.58 * 0.58), 0.0, 1.0) * 0.75;
-	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fadeOpacity * _globals.uCylinder.z);
-	COLOR.w = 1.0;
+	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fade * _globals.uCylinder.z);
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackgroundCylinder_KEYED_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uCameraPos;
+	float4 uHorizonColor;
+	float2 uShift;
+	float4 uCylinder;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+	float uOpacity;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackgroundCylinder_KEYED_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uCameraPos;
+	float4 uHorizonColor;
+	float2 uShift;
+	float4 uCylinder;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+	float uOpacity;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+{
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	float3 difference = abs(behind - _globals.uKeyColor.xyz);
+	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+}
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float2 pixel = _in.vTexCoords * _globals.uViewSize - float2(0.5);
+	float row = pixel.y - floor(_globals.uCylinder.y * _globals.uViewSize.y);
+	float rowCos = cos(3.14159265359 * row / _globals.uViewSize.y);
+	float halfSize = step(0.5, _globals.uCylinder.w);
+	float2 texel = float2(_globals.uShift.x * 0.25 + (pixel.x - _globals.uCylinder.x * _globals.uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / _globals.uViewSize.x, _globals.uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * _globals.uViewSize.y) * (256.0 + 256.0 * halfSize) / _globals.uViewSize.y);
+	float rows = row / 141.0;
+	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
+	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
+	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fade * _globals.uCylinder.z);
+	COLOR.w = keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -5456,6 +6104,7 @@ struct _Globals
 	float4 uHorizonColor;
 	float2 uShift;
 	float4 uTunnel;
+	float uModel;
 };
 
 struct InstanceBlock
@@ -5471,6 +6120,7 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -5481,6 +6131,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
 	return _out;
 }
 )__SHDR__";
@@ -5499,12 +6150,14 @@ struct _Globals
 	float4 uHorizonColor;
 	float2 uShift;
 	float4 uTunnel;
+	float uModel;
 };
 
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 float2 hash2D(float2 p)
@@ -5547,17 +6200,43 @@ float addStarField(float2 samplePosition, float threshold)
 	return 0.0;
 }
 
-fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+float3 legacyTunnel(float2 uv, constant _Globals& _globals)
 {
-	float4 COLOR = float4(0);
-	float2 targetCoord = float2(2.0) * _in.vTexCoords - float2(2.0) * _globals.uTunnel.xy;
+	float2 targetCoord = float2(2.0) * uv - float2(2.0) * _globals.uTunnel.xy;
 	targetCoord.x *= _globals.uViewSize.x / _globals.uViewSize.y;
 	float distance_ = length(targetCoord);
 	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
 	float depth = 1.0 / distance_ * 1.4;
 	float2 texturePos = float2(xShift * 1.0 + _globals.uShift.x * 0.01 + (_globals.uTunnel.w > 0.0 ? depth * 0.5 : 0.0), depth + _globals.uShift.y * 0.002);
-	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
 	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusTunnel(float2 uv, constant _Globals& _globals)
+{
+	float2 fromCenter = uv * _globals.uViewSize - float2(0.5) - float2(_globals.uTunnel.x * _globals.uViewSize.x, floor(_globals.uTunnel.y * _globals.uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
+	float logRadius = log2(radius);
+	float2 texel = float2(_globals.uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (_globals.uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), _globals.uShift.y - 256.0 * logRadius);
+	float fade = 87.0 / radius;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = float3(0.0);
+	if (_globals.uModel > 0.5) {
+		tunnel = plusTunnel(_in.vTexCoords, _globals);
+	} else {
+		tunnel = legacyTunnel(_in.vTexCoords, _globals);
+	}
+	float2 texturePos = tunnel.xy;
+	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
+	float horizonOpacity = tunnel.z;
 	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
 	if (_globals.uHorizonColor.w > 0.0) {
 		float2 samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00012;
@@ -5566,7 +6245,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * _globals.uTunnel.z);
-	COLOR.w = 1.0;
+	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
 )__SHDR__";
@@ -5585,6 +6264,7 @@ struct _Globals
 	float4 uHorizonColor;
 	float2 uShift;
 	float4 uTunnel;
+	float uModel;
 };
 
 struct InstanceBlock
@@ -5600,6 +6280,7 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -5610,6 +6291,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
 	return _out;
 }
 )__SHDR__";
@@ -5628,12 +6310,14 @@ struct _Globals
 	float4 uHorizonColor;
 	float2 uShift;
 	float4 uTunnel;
+	float uModel;
 };
 
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 float2 hash2D(float2 p)
@@ -5676,19 +6360,45 @@ float addStarField(float2 samplePosition, float threshold)
 	return 0.0;
 }
 
-fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+float3 legacyTunnel(float2 uv, constant _Globals& _globals)
 {
-	float4 COLOR = float4(0);
-	float2 targetCoord = float2(2.0) * _in.vTexCoords - float2(2.0) * _globals.uTunnel.xy;
+	float2 targetCoord = float2(2.0) * uv - float2(2.0) * _globals.uTunnel.xy;
 	targetCoord.x *= _globals.uViewSize.x / _globals.uViewSize.y;
 	float distance_ = length(targetCoord);
 	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
 	float depth = 1.0 / distance_ * 1.4;
 	float2 texturePos = float2(xShift * 1.0 + _globals.uShift.x * 0.01 + (_globals.uTunnel.w > 0.0 ? depth * 0.5 : 0.0), depth + _globals.uShift.y * 0.002);
+	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusTunnel(float2 uv, constant _Globals& _globals)
+{
+	float2 fromCenter = uv * _globals.uViewSize - float2(0.5) - float2(_globals.uTunnel.x * _globals.uViewSize.x, floor(_globals.uTunnel.y * _globals.uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
+	float logRadius = log2(radius);
+	float2 texel = float2(_globals.uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (_globals.uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), _globals.uShift.y - 256.0 * logRadius);
+	float fade = 87.0 / radius;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = float3(0.0);
+	if (_globals.uModel > 0.5) {
+		tunnel = plusTunnel(_in.vTexCoords, _globals);
+	} else {
+		tunnel = legacyTunnel(_in.vTexCoords, _globals);
+	}
+	float2 texturePos = tunnel.xy;
 	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
 	texturePos += hash2D(_in.vTexCoords * _globals.uViewSize + (_globals.uCameraPos + _globals.uShift) * 0.001).xy * 8.0 / _globals.uViewSize;
 	texColor = mix(texColor, uTexture.sample(uTexture_smplr, texturePos), 0.333);
-	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	float horizonOpacity = tunnel.z;
 	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
 	if (_globals.uHorizonColor.w > 0.0) {
 		float2 samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00012;
@@ -5697,7 +6407,180 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * _globals.uTunnel.z);
-	COLOR.w = 1.0;
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackgroundTunnel_KEYED_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uCameraPos;
+	float4 uHorizonColor;
+	float2 uShift;
+	float4 uTunnel;
+	float uModel;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+	float uOpacity;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackgroundTunnel_KEYED_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uCameraPos;
+	float4 uHorizonColor;
+	float2 uShift;
+	float4 uTunnel;
+	float uModel;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+	float uOpacity;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+{
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	float3 difference = abs(behind - _globals.uKeyColor.xyz);
+	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+}
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+float3 voronoi(float2 p)
+{
+	float2 n = floor(p);
+	float2 f = fract(p);
+	float2 mg;
+	float2 mr;
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			float2 g = float2(float(i), float(j));
+			float2 o = hash2D(n + g);
+			float2 r = g + o - f;
+			float d = dot(r, r);
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return float3(md, mr);
+}
+
+float addStarField(float2 samplePosition, float threshold)
+{
+	float3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - starValue.x / threshold;
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+float3 legacyTunnel(float2 uv, constant _Globals& _globals)
+{
+	float2 targetCoord = float2(2.0) * uv - float2(2.0) * _globals.uTunnel.xy;
+	targetCoord.x *= _globals.uViewSize.x / _globals.uViewSize.y;
+	float distance_ = length(targetCoord);
+	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
+	float depth = 1.0 / distance_ * 1.4;
+	float2 texturePos = float2(xShift * 1.0 + _globals.uShift.x * 0.01 + (_globals.uTunnel.w > 0.0 ? depth * 0.5 : 0.0), depth + _globals.uShift.y * 0.002);
+	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	return float3(texturePos, horizonOpacity);
+}
+
+float3 plusTunnel(float2 uv, constant _Globals& _globals)
+{
+	float2 fromCenter = uv * _globals.uViewSize - float2(0.5) - float2(_globals.uTunnel.x * _globals.uViewSize.x, floor(_globals.uTunnel.y * _globals.uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
+	float logRadius = log2(radius);
+	float2 texel = float2(_globals.uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (_globals.uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), _globals.uShift.y - 256.0 * logRadius);
+	float fade = 87.0 / radius;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = float3(0.0);
+	if (_globals.uModel > 0.5) {
+		tunnel = plusTunnel(_in.vTexCoords, _globals);
+	} else {
+		tunnel = legacyTunnel(_in.vTexCoords, _globals);
+	}
+	float2 texturePos = tunnel.xy;
+	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
+	float horizonOpacity = tunnel.z;
+	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
+	if (_globals.uHorizonColor.w > 0.0) {
+		float2 samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00012;
+		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
+		samplePosition = _in.vTexCoords * _globals.uViewSize / _globals.uViewSize.xx + _globals.uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * _globals.uTunnel.z);
+	COLOR.w = keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -5734,6 +6617,7 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -5744,6 +6628,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
 	return _out;
 }
 )__SHDR__";
@@ -5767,16 +6652,112 @@ struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
 };
 
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
 {
 	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
 	float2 pos = (floor(_globals.uShift + _in.vTexCoords * _globals.uViewSize) - (256.0) * floor((floor(_globals.uShift + _in.vTexCoords * _globals.uViewSize)) / (256.0)));
 	float2 moved = floor(_globals.uWave.xy * float2(cos(6.28318530718 * (pos.y * _globals.uWave.z + _globals.uWavePhase.x)), sin(6.28318530718 * (pos.x * _globals.uWave.w + _globals.uWavePhase.y))));
 	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
 	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
-	COLOR = float4(uTexture.sample(uTexture_smplr, texturePos).xyz, 1.0);
+	COLOR = float4(uTexture.sample(uTexture_smplr, texturePos).xyz * opacity, opacity);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackgroundWave_KEYED_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uShift;
+	float4 uWave;
+	float2 uWavePhase;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+	float uOpacity;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackgroundWave_KEYED_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uShift;
+	float4 uWave;
+	float2 uWavePhase;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+	float uOpacity;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+{
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	float3 difference = abs(behind - _globals.uKeyColor.xyz);
+	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float2 pos = (floor(_globals.uShift + _in.vTexCoords * _globals.uViewSize) - (256.0) * floor((floor(_globals.uShift + _in.vTexCoords * _globals.uViewSize)) / (256.0)));
+	float2 moved = floor(_globals.uWave.xy * float2(cos(6.28318530718 * (pos.y * _globals.uWave.z + _globals.uWavePhase.x)), sin(6.28318530718 * (pos.x * _globals.uWave.w + _globals.uWavePhase.y))));
+	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
+	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
+	COLOR = float4(uTexture.sample(uTexture_smplr, texturePos).xyz, keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in));
 	return COLOR;
 }
 )__SHDR__";
@@ -6077,6 +7058,178 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
 	float3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
 	COLOR = float4(color / max(alpha, 0.0001), alpha * strength);
+	return COLOR;
+}
+)__SHDR__";
+
+}
+
+namespace Jazz2::ShadersGen
+{
+	inline constexpr char TileMapMeshChromaKey_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsIn
+{
+	float2 aPosition [[attribute(0)]];
+	float2 aTexCoords [[attribute(1)]];
+	float4 aColor [[attribute(2)]];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
+	_out.vTexCoords = _vin.aTexCoords;
+	_out.vColor = _vin.aColor * _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshChromaKey_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float4 tile = src;
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	float3 difference = abs(behind - _globals.uKeyColor.xyz);
+	float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
+	COLOR = float4(tile.xyz, tile.w * keyed) * _in.vColor;
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshChromaKey_USE_PALETTE_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsIn
+{
+	float2 aPosition [[attribute(0)]];
+	float2 aTexCoords [[attribute(1)]];
+	float4 aColor [[attribute(2)]];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
+	_out.vTexCoords = _vin.aTexCoords;
+	_out.vColor = _vin.aColor * _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshChromaKey_USE_PALETTE_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(1)]], sampler uTexture_smplr [[sampler(1)]], texture2d<float> uTexturePalette [[texture(0)]], sampler uTexturePalette_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(2)]], sampler uTextureBehind_smplr [[sampler(2)]])
+{
+	float4 COLOR = float4(0);
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float palIndex = floor(_in.vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float4 paletteColor = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY));
+	float4 tile = float4(paletteColor.xyz, paletteColor.w * src.w);
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	float3 difference = abs(behind - _globals.uKeyColor.xyz);
+	float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
+	COLOR = float4(tile.xyz, tile.w * keyed) * _in.vColor;
 	return COLOR;
 }
 )__SHDR__";

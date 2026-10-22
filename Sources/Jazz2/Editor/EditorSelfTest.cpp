@@ -114,7 +114,7 @@ namespace Jazz2::Editor
 			constexpr std::uint32_t TestChunk = Formats::LevelFile::MakeChunkTag('e', 't', 's', 't');
 			static const std::uint8_t TestChunkData[] = { 1, 2, 3, 4, 5 };
 
-			// Layer names, layer states and an editor chunk are saved...
+			// Layer names, numbers in the original game, layer states and an editor chunk are saved...
 			LevelDocument document;
 			{
 				MemoryStream copy;
@@ -122,9 +122,15 @@ namespace Jazz2::Editor
 				copy.Seek(0, SeekOrigin::Begin);
 				document.Load(copy, &library);
 			}
+			// A converted level has names and numbers of its own already, they're put back before the last comparison
+			SmallVector<String, 0> originalNames;
+			SmallVector<std::uint8_t, 0> originalNumbers;
 			for (std::size_t i = 0; i < document.Layers.size(); i++) {
+				originalNames.push_back(document.Layers[i].Name);
+				originalNumbers.push_back(document.Layers[i].Record.OriginalNumber);
 				char letter = char('A' + (i % 26));
 				document.Layers[i].Name = "Layer "_s + StringView(&letter, 1);
+				document.Layers[i].Record.OriginalNumber = std::uint8_t((i + 1) % (Formats::LayerNumbersChunk::OriginalLayerCount + 1));
 				document.Layers[i].EditorFlags = std::uint8_t(i & 3);
 			}
 			document.SetChunk(TestChunk, TestChunkData);
@@ -143,8 +149,9 @@ namespace Jazz2::Editor
 				return false;
 			}
 			for (std::size_t i = 0; i < reloaded.Layers.size(); i++) {
-				if (reloaded.Layers[i].Name != document.Layers[i].Name || reloaded.Layers[i].EditorFlags != document.Layers[i].EditorFlags) {
-					LOGE("[{}] Layer {} lost its name or state", path, i);
+				if (reloaded.Layers[i].Name != document.Layers[i].Name || reloaded.Layers[i].EditorFlags != document.Layers[i].EditorFlags ||
+					reloaded.Layers[i].Record.OriginalNumber != document.Layers[i].Record.OriginalNumber) {
+					LOGE("[{}] Layer {} lost its name, number or state", path, i);
 					return false;
 				}
 			}
@@ -154,20 +161,28 @@ namespace Jazz2::Editor
 				return false;
 			}
 
-			// The export drops the editor data, the layer names too, only the editor uses them
+			// The export drops the editor data, but keeps the names and the numbers, scripts find the layers by them
 			MemoryStream exported;
 			Export(reloaded, exported);
 			LevelDocument exportedDocument;
 			exported.Seek(0, SeekOrigin::Begin);
 			if (!exportedDocument.Load(exported, &library) || exportedDocument.FindChunk(TestChunk) != nullptr ||
-				exportedDocument.Layers.empty() || exportedDocument.Layers[0].EditorFlags != 0 || !exportedDocument.Layers[0].Name.empty()) {
+				exportedDocument.Layers.size() != reloaded.Layers.size() || exportedDocument.Layers[0].EditorFlags != 0) {
 				LOGE("[{}] Export kept the editor data", path);
 				return false;
 			}
+			for (std::size_t i = 0; i < exportedDocument.Layers.size(); i++) {
+				if (exportedDocument.Layers[i].Name != reloaded.Layers[i].Name ||
+					exportedDocument.Layers[i].Record.OriginalNumber != reloaded.Layers[i].Record.OriginalNumber) {
+					LOGE("[{}] Export lost the name or the number of layer {}", path, i);
+					return false;
+				}
+			}
 
-			for (DocumentLayer& layer : reloaded.Layers) {
-				layer.Name = {};
-				layer.EditorFlags = 0;
+			for (std::size_t i = 0; i < reloaded.Layers.size(); i++) {
+				reloaded.Layers[i].Name = originalNames[i];
+				reloaded.Layers[i].Record.OriginalNumber = originalNumbers[i];
+				reloaded.Layers[i].EditorFlags = 0;
 			}
 			reloaded.SetChunk(TestChunk, {});
 			Export(reloaded, exported);

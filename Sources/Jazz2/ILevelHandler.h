@@ -36,9 +36,17 @@ namespace Jazz2
 		class Player;
 	}
 
+	/** @brief How @ref ILevelHandler::OverrideCameraView() changes the camera of a player on an axis */
+	enum class CameraOverride : std::uint8_t
+	{
+		Keep,		/**< Stays as it is */
+		Follow,		/**< Follows the player again */
+		Fix			/**< Fixed at the given position */
+	};
+
 	/**
 		@brief Base interface of a level handler
-		
+
 		Abstracts the running level for the rest of the engine, exposing the tile map, event map, event spawner and
 		difficulty, together with queries about the session (local, server, pausable, reforged). Implemented by
 		@ref LevelHandler for local play and by the multiplayer variants.
@@ -231,8 +239,14 @@ namespace Jazz2
 		virtual Vector2f GetCameraPos(Actors::Player* player) const = 0;
 		/** @brief Limits camera viewport for a given player */
 		virtual void LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width) = 0;
-		/** @brief Override camera viewport for a given player */
-		virtual void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) = 0;
+		/**
+		 * @brief Fixes the camera of a given player at a position of the level, or lets it follow the player again, on each axis
+		 *
+		 * The position is where the top left corner of the view is, or its center if @p centered is `true`. Unless
+		 * @p instant is `true`, the camera takes half a second to get there, as `jjPLAYER::cameraFreeze()` of JJ2+.
+		 */
+		virtual void OverrideCameraView(Actors::Player* player, CameraOverride modeX, float x, CameraOverride modeY, float y,
+			bool centered = false, bool instant = true) = 0;
 		/** @brief Shake camera for a given player */
 		virtual void ShakeCameraView(Actors::Player* player, float duration) = 0;
 		/** @brief Shake camera for all players near a given position */

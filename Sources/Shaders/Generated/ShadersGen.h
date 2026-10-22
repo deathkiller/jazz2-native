@@ -35,6 +35,7 @@
 #include "ShieldFire.h"
 #include "ShieldLightning.h"
 #include "Silhouette.h"
+#include "SingleColor.h"
 #include "TexturedBackground.h"
 #include "TexturedBackgroundCylinder.h"
 #include "TexturedBackgroundReflection.h"
@@ -42,6 +43,7 @@
 #include "TexturedBackgroundWave.h"
 #include "TileMapMesh.h"
 #include "TileMapMeshBlur.h"
+#include "TileMapMeshChromaKey.h"
 #include "TileMapMeshHeat.h"
 #include "TileMapMeshPalette.h"
 #include "TileMapMeshXRay.h"
@@ -87,6 +89,8 @@ namespace Jazz2::ShadersGen
 		&ShieldFire,
 		&ShieldLightning,
 		&Silhouette,
+		&SingleColor,
+		&BatchedSingleColor,
 		&TexturedBackground,
 		&TexturedBackgroundCylinder,
 		&TexturedBackgroundReflection,
@@ -94,6 +98,7 @@ namespace Jazz2::ShadersGen
 		&TexturedBackgroundWave,
 		&TileMapMesh,
 		&TileMapMeshBlur,
+		&TileMapMeshChromaKey,
 		&TileMapMeshHeat,
 		&TileMapMeshPalette,
 		&TileMapMeshXRay,

@@ -34,6 +34,7 @@ layout (std140) uniform InstanceBlock
 };
 
 out vec2 vTexCoords;
+out vec4 vColor;
 
 void main()
 {
@@ -42,6 +43,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 }
 )__SHDR__";
 #endif
@@ -63,6 +65,7 @@ uniform mat4 uViewMatrix;
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
+varying vec4 vColor;
 
 void main()
 {
@@ -71,6 +74,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
 }
 )__SHDR__";
 #endif
@@ -88,6 +92,7 @@ precision mediump float;
 #endif
 
 in vec2 vTexCoords;
+in vec4 vColor;
 
 uniform sampler2D uTexture;
 // The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
@@ -105,12 +110,37 @@ uniform vec4 uWave;
 // How far the horizontal and the vertical waves have moved, in periods
 uniform vec2 uWavePhase;
 
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
 
 out vec4 COLOR;
 
 void main() {
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
 	// The pixel of the texture this pixel of the view shows, the texture repeats
 	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
 
@@ -120,7 +150,12 @@ void main() {
 
 	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	COLOR = vec4(texture(uTexture, texturePos).rgb, 1.0);
+#ifdef KEYED
+	COLOR = vec4(texture(uTexture, texturePos).rgb, keyedOpacity());
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(texture(uTexture, texturePos).rgb * opacity, opacity);
+#endif
 }
 
 )__SHDR__";
@@ -137,6 +172,7 @@ precision mediump float;
 #endif
 
 varying vec2 vTexCoords;
+varying vec4 vColor;
 
 uniform sampler2D uTexture;
 // The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
@@ -154,12 +190,37 @@ uniform vec4 uWave;
 // How far the horizontal and the vertical waves have moved, in periods
 uniform vec2 uWavePhase;
 
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
 
 
 void main() {
 	vec4 COLOR;
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
 	// The pixel of the texture this pixel of the view shows, the texture repeats
 	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
 
@@ -169,7 +230,12 @@ void main() {
 
 	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	COLOR = vec4(texture2D(uTexture, texturePos).rgb, 1.0);
+#ifdef KEYED
+	COLOR = vec4(texture2D(uTexture, texturePos).rgb, keyedOpacity());
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(texture2D(uTexture, texturePos).rgb * opacity, opacity);
+#endif
 	gl_FragColor = COLOR;
 }
 
@@ -199,6 +265,266 @@ void main() {
 
 	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundWave_Textures[] = {
 		{ "uTexture", 0 },
+	};
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundWave_KEYED_Vs[] =
+R"__SHDR__(#define KEYED (1)
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	float palOffset;
+};
+
+out vec2 vTexCoords;
+out vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundWave_KEYED_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#define KEYED (1)
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundWave_KEYED_Fs[] =
+R"__SHDR__(#define KEYED (1)
+#line 1
+
+#ifdef GL_ES
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+#endif
+
+in vec2 vTexCoords;
+in vec4 vColor;
+
+uniform sampler2D uTexture;
+// The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
+// row of it moved left or right by the horizontal waves and each column up or down by the vertical ones, as measured in
+// the original - by whole pixels, and by the waves of where the pixel is in the texture before it's moved, so the waves
+// follow the texture, not the view
+
+// Size of the view in the pixels of the level
+uniform vec2 uViewSize;
+// The pixel of the layer at the top left of the view, as its tiles would be drawn there
+uniform vec2 uShift;
+// xy: how far the horizontal and the vertical waves move the texture, in pixels (0 for no waves), zw: one over the period
+// of each, in pixels of the texture
+uniform vec4 uWave;
+// How far the horizontal and the vertical waves have moved, in periods
+uniform vec2 uWavePhase;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
+#define TEXTURE_SIZE 256.0
+#define TAU 6.28318530718
+
+out vec4 COLOR;
+
+void main() {
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	// The pixel of the texture this pixel of the view shows, the texture repeats
+	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
+
+	// A row moves by the horizontal waves at its row of the texture, a column by the vertical ones at its column
+	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
+	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
+
+	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
+	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
+#ifdef KEYED
+	COLOR = vec4(texture(uTexture, texturePos).rgb, keyedOpacity());
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(texture(uTexture, texturePos).rgb * opacity, opacity);
+#endif
+}
+
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundWave_KEYED_Fs100[] =
+R"__SHDR__(#define KEYED (1)
+#line 1
+
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+// The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
+// row of it moved left or right by the horizontal waves and each column up or down by the vertical ones, as measured in
+// the original - by whole pixels, and by the waves of where the pixel is in the texture before it's moved, so the waves
+// follow the texture, not the view
+
+// Size of the view in the pixels of the level
+uniform vec2 uViewSize;
+// The pixel of the layer at the top left of the view, as its tiles would be drawn there
+uniform vec2 uShift;
+// xy: how far the horizontal and the vertical waves move the texture, in pixels (0 for no waves), zw: one over the period
+// of each, in pixels of the texture
+uniform vec4 uWave;
+// How far the horizontal and the vertical waves have moved, in periods
+uniform vec2 uWavePhase;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+#ifdef KEYED
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+#endif
+
+#define TEXTURE_SIZE 256.0
+#define TAU 6.28318530718
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	// The pixel of the texture this pixel of the view shows, the texture repeats
+	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
+
+	// A row moves by the horizontal waves at its row of the texture, a column by the vertical ones at its column
+	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
+	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
+
+	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
+	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
+#ifdef KEYED
+	COLOR = vec4(texture2D(uTexture, texturePos).rgb, keyedOpacity());
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(texture2D(uTexture, texturePos).rgb * opacity, opacity);
+#endif
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+#endif
+
+	inline constexpr ShaderCompiler::Uniform TexturedBackgroundWave_KEYED_Uniforms[] = {
+		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewSize", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uWave", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uWavePhase", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uOpacity", ShaderCompiler::UniformType::Float, 0 },
+	};
+
+	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundWave_KEYED_Block0_Members[] = {
+		{ "modelMatrix", ShaderCompiler::UniformType::Mat4, 0, 0 },
+		{ "color", ShaderCompiler::UniformType::Vec4, 0, 64 },
+		{ "texRect", ShaderCompiler::UniformType::Vec4, 0, 80 },
+		{ "spriteSize", ShaderCompiler::UniformType::Vec2, 0, 96 },
+		{ "palOffset", ShaderCompiler::UniformType::Float, 0, 104 },
+	};
+
+	inline constexpr ShaderCompiler::UniformBlock TexturedBackgroundWave_KEYED_Blocks[] = {
+		{ "InstanceBlock", 112, 0, 5, TexturedBackgroundWave_KEYED_Block0_Members },
+	};
+
+	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundWave_KEYED_Textures[] = {
+		{ "uTexture", 0 },
+		{ "uTextureBehind", 2 },
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant TexturedBackgroundWave_Variants[] = {
@@ -231,8 +557,37 @@ void main() {
 #else
 			nullptr, nullptr },
 #endif
+		{ "KEYED", "KEYED",
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundWave_KEYED_Vs, TexturedBackgroundWave_KEYED_Fs,
+#else
+			nullptr, nullptr,
+#endif
+			9, TexturedBackgroundWave_KEYED_Uniforms, 1, TexturedBackgroundWave_KEYED_Blocks, 2, TexturedBackgroundWave_KEYED_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundWave_KEYED_Vs100, TexturedBackgroundWave_KEYED_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
+			TexturedBackgroundWave_KEYED_VsHlsl, TexturedBackgroundWave_KEYED_FsHlsl,
+			TexturedBackgroundWave_KEYED_VsDxbc, TexturedBackgroundWave_KEYED_VsDxbcSize, TexturedBackgroundWave_KEYED_FsDxbc, TexturedBackgroundWave_KEYED_FsDxbcSize,
+#else
+			nullptr, nullptr,
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_VULKAN)
+			TexturedBackgroundWave_KEYED_VkVs, TexturedBackgroundWave_KEYED_VkVsSize, TexturedBackgroundWave_KEYED_VkFs, TexturedBackgroundWave_KEYED_VkFsSize,
+#else
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_METAL)
+			TexturedBackgroundWave_KEYED_VsMsl, TexturedBackgroundWave_KEYED_FsMsl },
+#else
+			nullptr, nullptr },
+#endif
 	};
 
-	inline constexpr ShaderCompiler::Program TexturedBackgroundWave = { "TexturedBackgroundWave", 0, 1, TexturedBackgroundWave_Variants };
+	inline constexpr ShaderCompiler::Program TexturedBackgroundWave = { "TexturedBackgroundWave", 0, 2, TexturedBackgroundWave_Variants };
 }
 #endif

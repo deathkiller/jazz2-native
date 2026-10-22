@@ -989,8 +989,12 @@ namespace ShaderCompiler
 					return;
 				}
 				if (e->Kind == ExprKind::Call &&
-					(e->Text == "strip_position"_s || e->Text == "strip_uv"_s || e->Text == "strip_color"_s)) {
+					(e->Text == "strip_position"_s || e->Text == "strip_uv"_s || e->Text == "strip_color"_s || e->Text == "strip_q"_s)) {
 					out += indent + EmitStripSetter(e) + ";\n"_s;
+					return;
+				}
+				if (e->Kind == ExprKind::Call && e->Text == "strip_clip"_s) {
+					out += indent + EmitStripClip(e) + ";\n"_s;
 					return;
 				}
 				if (e->Kind == ExprKind::Assign) {
@@ -1001,7 +1005,7 @@ namespace ShaderCompiler
 					out += indent + EmitIncDec(e) + ";\n"_s;
 					return;
 				}
-				Fail("only assignments, '++'/'--', submit_quad/submit_strip[_shaded](...) and strip_*(...) can stand alone as statements"_s);
+				Fail("only assignments, '++'/'--', submit_quad/submit_strip[_shaded](...), strip_*(...) and strip_clip(...) can stand alone as statements"_s);
 			}
 
 			String EmitSubmitQuad(const Expr* e)
@@ -1054,19 +1058,41 @@ namespace ShaderCompiler
 				if (e->Text == "submit_strip"_s) {
 					Require(FixedFunctionRequirements::SamplesTexture);
 				}
+				// Through the support code, which clips the strip first while strip_clip() is in effect
 				const char* method = (e->Text == "submit_strip"_s ? "SubmitStrip" : "SubmitStripShaded");
-				return "ctx."_s + method + "("_s + name + ", "_s + count + ")"_s;
+				return String{method} + "(ctx, "_s + name + ", "_s + count + ")"_s;
 			}
 
-			// strip_position(i, vec2) / strip_uv(i, vec2) / strip_color(i, vec4) - the strip-builder
-			// vertex setters (UVs are given in the shader's texture space; the backend folds its
+			// strip_clip(vec4) - clips every strip submitted after it to the rectangle (x0, y0, x1, y1) of the
+			// quad's raster space, until the end of the block; an empty one (x1 <= x0) clips no more
+			String EmitStripClip(const Expr* e)
+			{
+				if (!RequireExtended(e->Text)) return {};
+				Require(FixedFunctionRequirements::NeedsStripBuilder);
+				if (e->Args.size() != 1) {
+					Fail("usage: strip_clip(<vec4 x0, y0, x1, y1>);"_s);
+					return {};
+				}
+				Ty rectTy;
+				String rect = EmitExpr(e->Args[0].get(), 0, rectTy);
+				if (!_ok) return {};
+				if (rectTy != Ty::Vec4) {
+					Fail("strip_clip() takes a vec4 rectangle (got "_s + TyName(rectTy) + ")"_s);
+					return {};
+				}
+				return "StripClip(ctx, "_s + rect + ")"_s;
+			}
+
+			// strip_position(i, vec2) / strip_uv(i, vec2) / strip_color(i, vec4) / strip_q(i, float) - the
+			// strip-builder vertex setters (UVs are given in the shader's texture space; the backend folds its
 			// padded-store scale, exactly like the quad corner synthesis does)
 			String EmitStripSetter(const Expr* e)
 			{
 				if (!RequireExtended(e->Text)) return {};
 				Require(FixedFunctionRequirements::NeedsStripBuilder);
 				const bool isColor = (e->Text == "strip_color"_s);
-				const Ty valueTy = (isColor ? Ty::Vec4 : Ty::Vec2);
+				const bool isQ = (e->Text == "strip_q"_s);
+				const Ty valueTy = (isColor ? Ty::Vec4 : (isQ ? Ty::Float : Ty::Vec2));
 				if (e->Args.size() != 2) {
 					Fail("usage: "_s + e->Text + "(<vertex index>, <"_s + TyName(valueTy) + ">);"_s);
 					return {};
@@ -1089,7 +1115,7 @@ namespace ShaderCompiler
 					return {};
 				}
 				const char* helper = (e->Text == "strip_position"_s ? "StripPosition"
-					: e->Text == "strip_uv"_s ? "StripUv" : "StripColor");
+					: e->Text == "strip_uv"_s ? "StripUv" : (isQ ? "StripQ" : "StripColor"));
 				return String{helper} + "(ctx, "_s + index + ", "_s + value + ")"_s;
 			}
 
@@ -1551,7 +1577,8 @@ namespace ShaderCompiler
 					return "ctx.HasTexelStep()"_s;
 				}
 				if (name == "submit_quad"_s || name == "submit_strip"_s || name == "submit_strip_shaded"_s ||
-					name == "strip_position"_s || name == "strip_uv"_s || name == "strip_color"_s) {
+					name == "strip_position"_s || name == "strip_uv"_s || name == "strip_color"_s || name == "strip_q"_s ||
+					name == "strip_clip"_s) {
 					Fail(name + "(...) is a statement, not a value"_s);
 					return {};
 				}
@@ -1568,6 +1595,15 @@ namespace ShaderCompiler
 					if (name == "quad_origin"_s) return "vec2(ctx.QuadOriginX(), ctx.QuadOriginY())"_s;
 					if (name == "quad_axis_x"_s) return "vec2(ctx.QuadAxisXx(), ctx.QuadAxisXy())"_s;
 					return "vec2(ctx.QuadAxisYx(), ctx.QuadAxisYy())"_s;
+				}
+				// The texRect of the instance (scale and bias of U, then of V), which maps the quad onto the texture
+				// space of the shader - a quad that is only a part of what the shader draws over a larger area
+				// (the textured background of a layer only partly in the view) has it smaller than (1, 0, 1, 0)
+				if (name == "quad_tex_rect"_s) {
+					if (!RequireExtended(name)) return {};
+					if (!e->Args.empty()) { Fail(name + "() takes no arguments"_s); return {}; }
+					t = Ty::Vec4;
+					return "vec4(ctx.TexRect[0], ctx.TexRect[1], ctx.TexRect[2], ctx.TexRect[3])"_s;
 				}
 
 				// Resolved uniforms by name (the geometry effects consume the same uViewSize/uShift/...
@@ -1690,7 +1726,7 @@ namespace ShaderCompiler
 					return name + "("_s + args + ")"_s;
 				}
 
-				Fail("unknown function '"_s + name + "' (supported: min, max, clamp, mix, ceil, floor, abs, sqrt, sin, cos, texel_size, has_texel_size, quad_origin, quad_axis_x, quad_axis_y, has_uniform, uniform_float, uniform_vec2, uniform_vec4, submit_quad, submit_strip[_shaded], strip_position/uv/color, vec/float/int constructors)"_s);
+				Fail("unknown function '"_s + name + "' (supported: min, max, clamp, mix, ceil, floor, abs, sqrt, sin, cos, texel_size, has_texel_size, quad_origin, quad_axis_x, quad_axis_y, quad_tex_rect, has_uniform, uniform_float, uniform_vec2, uniform_vec4, submit_quad, submit_strip[_shaded], strip_position/uv/color/q, strip_clip, vec/float/int constructors)"_s);
 				return {};
 			}
 
@@ -1855,6 +1891,10 @@ namespace ShaderCompiler
 		// out byte-identical, and Main.cpp can fold them into one shared emitted function
 		String out;
 		out += "\t\t\tusing namespace ff;\n"_s;
+		if ((std::uint8_t(emitter.Requirements()) & std::uint8_t(FixedFunctionRequirements::NeedsStripBuilder)) != 0) {
+			// Whatever the effect drawn before clipped to stays with it
+			out += "\t\t\tStripReset();\n"_s;
+		}
 		if (emitter.UsesColor()) {
 			out += "\t\t\tconst vec4 COLOR = LoadColor(ctx.Color());\n"_s;
 		}
@@ -2036,9 +2076,172 @@ namespace ShaderCompiler
 			inline float UniformFloat(EffectContext& ctx, const char* name) { float v = 0.0f; ctx.LoadUniform(name, &v, 1); return v; }
 			inline vec2 UniformVec2(EffectContext& ctx, const char* name) { float v[2] = { 0.0f, 0.0f }; ctx.LoadUniform(name, v, 2); return vec2(v[0], v[1]); }
 			inline vec4 UniformVec4(EffectContext& ctx, const char* name) { float v[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; ctx.LoadUniform(name, v, 4); return vec4(v[0], v[1], v[2], v[3]); }
-			inline void StripPosition(EffectContext& ctx, int i, const vec2& p) { ctx.SetStripVertexPosition(i, p.x, p.y); }
-			inline void StripUv(EffectContext& ctx, int i, const vec2& uv) { ctx.SetStripVertexUv(i, uv.x, uv.y); }
-			inline void StripColor(EffectContext& ctx, int i, const vec4& c) { ctx.SetStripVertexColor(i, c.x, c.y, c.z, c.w); }
+)SUPPORT" R"SUPPORT(
+			// While strip_clip() is in effect, a strip is kept here and handed to the context only when it's submitted,
+			// cut to the rectangle. Without it, the setters go straight to the context, as they always did.
+			// Every member initialized, so the state is constant-initialized - no guard is checked on each access
+			struct StripVertex { float X, Y, U, V, Q, C[4]; };
+			struct StripState
+			{
+				bool Clipping = false;
+				bool HasQ = false;
+				float Clip[4] = {};
+				StripVertex V[16] = {};
+			};
+			inline StripState& Strip() { static StripState state; return state; }
+			inline void StripReset() { Strip().Clipping = false; Strip().HasQ = false; }
+			inline void StripClip(EffectContext& ctx, const vec4& r)
+			{
+				(void)ctx;
+				StripState& s = Strip();
+				s.Clipping = (r.z > r.x && r.w > r.y);
+				s.Clip[0] = r.x; s.Clip[1] = r.y; s.Clip[2] = r.z; s.Clip[3] = r.w;
+			}
+			inline void StripPosition(EffectContext& ctx, int i, const vec2& p)
+			{
+				StripState& s = Strip();
+				if (!s.Clipping) { ctx.SetStripVertexPosition(i, p.x, p.y); return; }
+				if (unsigned(i) < 16u) { s.V[i].X = p.x; s.V[i].Y = p.y; }
+			}
+			inline void StripUv(EffectContext& ctx, int i, const vec2& uv)
+			{
+				StripState& s = Strip();
+				if (!s.Clipping) { ctx.SetStripVertexUv(i, uv.x, uv.y); return; }
+				if (unsigned(i) < 16u) { s.V[i].U = uv.x; s.V[i].V = uv.y; }
+			}
+			inline void StripColor(EffectContext& ctx, int i, const vec4& c)
+			{
+				StripState& s = Strip();
+				if (!s.Clipping) { ctx.SetStripVertexColor(i, c.x, c.y, c.z, c.w); return; }
+				if (unsigned(i) < 16u) { s.V[i].C[0] = c.x; s.V[i].C[1] = c.y; s.V[i].C[2] = c.z; s.V[i].C[3] = c.w; }
+			}
+			// The texture coordinates of a strip with a q per vertex are interpolated in perspective: as u * q, v * q and
+			// q along the screen, and divided by q at each pixel (see FixedFunctionPass.h)
+			inline void StripQ(EffectContext& ctx, int i, float q)
+			{
+				StripState& s = Strip();
+				if (!s.Clipping) { ctx.SetStripVertexQ(i, q); return; }
+				if (unsigned(i) < 16u) { s.V[i].Q = q; s.HasQ = true; }
+			}
+
+			// A point of an edge from a to b, t of the way along the screen
+			inline StripVertex StripLerp(const StripVertex& a, const StripVertex& b, float t, bool hasQ)
+			{
+				StripVertex r;
+				r.X = a.X + (b.X - a.X) * t;
+				r.Y = a.Y + (b.Y - a.Y) * t;
+				if (hasQ) {
+					r.Q = a.Q + (b.Q - a.Q) * t;
+					r.U = (a.U * a.Q + (b.U * b.Q - a.U * a.Q) * t) / r.Q;
+					r.V = (a.V * a.Q + (b.V * b.Q - a.V * a.Q) * t) / r.Q;
+				} else {
+					r.Q = 1.0f;
+					r.U = a.U + (b.U - a.U) * t;
+					r.V = a.V + (b.V - a.V) * t;
+				}
+				for (int k = 0; k < 4; k++) {
+					r.C[k] = a.C[k] + (b.C[k] - a.C[k]) * t;
+				}
+				return r;
+			}
+			// Cuts a convex polygon by one side of the rectangle, what is past the bound along the axis goes
+			inline int StripCutPolygon(const StripVertex* in, int n, StripVertex* out, bool alongY, float bound, bool keepAbove, bool hasQ)
+			{
+				int m = 0;
+				for (int i = 0; i < n; i++) {
+					const StripVertex& a = in[i];
+					const StripVertex& b = in[i + 1 < n ? i + 1 : 0];
+					float da = (alongY ? a.Y : a.X) - bound, db = (alongY ? b.Y : b.X) - bound;
+					if (!keepAbove) { da = -da; db = -db; }
+					if (da >= 0.0f) out[m++] = a;
+					if ((da >= 0.0f) != (db >= 0.0f)) out[m++] = StripLerp(a, b, da / (da - db), hasQ);
+				}
+				return m;
+			}
+			// Hands vertices to the context and submits them, the vertices in the order they're given
+			inline void StripSend(EffectContext& ctx, const FixedFunctionPass& pass, const StripVertex* p, const int* order, int n, bool hasQ, bool shaded)
+			{
+				for (int j = 0; j < n; j++) {
+					const StripVertex& v = p[order[j]];
+					ctx.SetStripVertexPosition(j, v.X, v.Y);
+					ctx.SetStripVertexUv(j, v.U, v.V);
+					ctx.SetStripVertexColor(j, v.C[0], v.C[1], v.C[2], v.C[3]);
+					if (hasQ) ctx.SetStripVertexQ(j, v.Q);
+				}
+				if (shaded) ctx.SubmitStripShaded(pass, n); else ctx.SubmitStrip(pass, n);
+			}
+			// Cuts a convex polygon to the rectangle and submits what is left, across it from both ends towards the middle
+			inline void StripSendPolygon(EffectContext& ctx, const FixedFunctionPass& pass, const StripVertex* polygon, int n, bool hasQ, bool shaded)
+			{
+				const float* clip = Strip().Clip;
+				StripVertex a[12], b[12];
+				int m = StripCutPolygon(polygon, n, a, false, clip[0], true, hasQ);
+				m = StripCutPolygon(a, m, b, false, clip[2], false, hasQ);
+				m = StripCutPolygon(b, m, a, true, clip[1], true, hasQ);
+				m = StripCutPolygon(a, m, b, true, clip[3], false, hasQ);
+				if (m < 3) return;
+				int order[12];
+				for (int j = 0; j < m; j++) order[j] = (j % 2 == 0 ? j / 2 : m - 1 - j / 2);
+				StripSend(ctx, pass, b, order, m, hasQ, shaded);
+			}
+			inline void StripSubmit(EffectContext& ctx, const FixedFunctionPass& pass, int count, bool shaded)
+			{
+				StripState& s = Strip();
+				const bool hasQ = s.HasQ;
+				s.HasQ = false;
+				count = (count < 16 ? count : 16);
+				if (count < 3) return;
+				const StripVertex* v = s.V;
+				const int identity[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+				float minX = v[0].X, maxX = v[0].X, minY = v[0].Y, maxY = v[0].Y;
+				for (int i = 1; i < count; i++) {
+					minX = min(minX, v[i].X); maxX = max(maxX, v[i].X); minY = min(minY, v[i].Y); maxY = max(maxY, v[i].Y);
+				}
+				if (maxX <= s.Clip[0] || minX >= s.Clip[2] || maxY <= s.Clip[1] || minY >= s.Clip[3]) return;
+				if (minX >= s.Clip[0] && maxX <= s.Clip[2] && minY >= s.Clip[1] && maxY <= s.Clip[3]) {
+					// Wholly inside, as it is
+					StripSend(ctx, pass, v, identity, count, hasQ, shaded);
+					return;
+				}
+				if (count == 4 && v[0].X == v[1].X && v[2].X == v[3].X && v[0].Y == v[2].Y && v[1].Y == v[3].Y) {
+					// A rectangle stays one, its vertices where they were (a backend may draw such a band row by row): the
+					// vertical edges cut first, then across between them
+					if (v[0].Y == v[1].Y || v[0].X == v[2].X) return;
+					const float y0 = max(min(v[0].Y, v[1].Y), s.Clip[1]), y1 = min(max(v[0].Y, v[1].Y), s.Clip[3]);
+					const float x0 = max(min(v[0].X, v[2].X), s.Clip[0]), x1 = min(max(v[0].X, v[2].X), s.Clip[2]);
+					const float yA = (v[0].Y < v[1].Y ? y0 : y1), yB = (v[0].Y < v[1].Y ? y1 : y0);
+					const float xA = (v[0].X < v[2].X ? x0 : x1), xB = (v[0].X < v[2].X ? x1 : x0);
+					StripVertex edge[4], out[4];
+					edge[0] = StripLerp(v[0], v[1], (yA - v[0].Y) / (v[1].Y - v[0].Y), hasQ);
+					edge[1] = StripLerp(v[0], v[1], (yB - v[0].Y) / (v[1].Y - v[0].Y), hasQ);
+					edge[2] = StripLerp(v[2], v[3], (yA - v[2].Y) / (v[3].Y - v[2].Y), hasQ);
+					edge[3] = StripLerp(v[2], v[3], (yB - v[2].Y) / (v[3].Y - v[2].Y), hasQ);
+					out[0] = StripLerp(edge[0], edge[2], (xA - edge[0].X) / (edge[2].X - edge[0].X), hasQ);
+					out[1] = StripLerp(edge[1], edge[3], (xA - edge[1].X) / (edge[3].X - edge[1].X), hasQ);
+					out[2] = StripLerp(edge[0], edge[2], (xB - edge[0].X) / (edge[2].X - edge[0].X), hasQ);
+					out[3] = StripLerp(edge[1], edge[3], (xB - edge[1].X) / (edge[3].X - edge[1].X), hasQ);
+					StripSend(ctx, pass, out, identity, 4, hasQ, shaded);
+					return;
+				}
+				// Each pair of the strip's vertices with the next pair is a convex quad, an odd one left at the end is a triangle
+				for (int i = 0; i + 2 < count; i += 2) {
+					if (i + 3 < count) {
+						const StripVertex quad[4] = { v[i], v[i + 1], v[i + 3], v[i + 2] };
+						StripSendPolygon(ctx, pass, quad, 4, hasQ, shaded);
+					} else {
+						const StripVertex triangle[3] = { v[i], v[i + 1], v[i + 2] };
+						StripSendPolygon(ctx, pass, triangle, 3, hasQ, shaded);
+					}
+				}
+			}
+			inline void SubmitStrip(EffectContext& ctx, const FixedFunctionPass& pass, int count)
+			{
+				if (Strip().Clipping) StripSubmit(ctx, pass, count, false); else ctx.SubmitStrip(pass, count);
+			}
+			inline void SubmitStripShaded(EffectContext& ctx, const FixedFunctionPass& pass, int count)
+			{
+				if (Strip().Clipping) StripSubmit(ctx, pass, count, true); else ctx.SubmitStripShaded(pass, count);
+			}
 		}
 )SUPPORT"};
 	}

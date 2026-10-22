@@ -201,6 +201,13 @@ namespace Jazz2::Editor::EventCatalogParts
 			UIntField(NC_("editor", "Group"), 1, 8, 0, 255).WithDescription(NC_("editor", "Split of the track, each group is a separate route")),
 		};
 
+		constexpr EventParamField PassthroughEventFields[] = {
+			// TRANSLATORS: Parameter of an event of the original game, its number there
+			UIntField(NC_("editor", "Event"), 0, 8, 1, 255, 1).WithDescription(NC_("editor", "Number of the event in the original game")),
+			// TRANSLATORS: Parameter of an event of the original game, all of its parameters as one number
+			UIntField(NC_("editor", "Parameters"), 1, 20, 0, 0xFFFFF).WithDescription(NC_("editor", "Parameters of the event in the original game, as one number")),
+		};
+
 		constexpr EventDescriptor Events[] = {
 			// TRANSLATORS: Name of an event, a collectible coin
 			DescribeEvent(EventType::Coin, "Coin", NC_("editor", "Coin"), EventCategory::Collectible, nullptr,
@@ -278,6 +285,11 @@ namespace Jazz2::Editor::EventCatalogParts
 			// TRANSLATORS: Name of an event, a point of the track in the race mode
 			DescribeEvent(EventType::RaceCheckpoint, "RaceCheckpoint", NC_("editor", "Race Waypoint"), EventCategory::Other, NC_("editor", "Ordered waypoint of the track for the minimap and the race ranking"),
 				RaceCheckpointFields, nullptr, std::uint32_t(AnimState::Default), EventTraits::MultiplayerOnly),
+
+			// TRANSLATORS: Name of an event, one of the original game that this game doesn't use
+			DescribeEvent(EventType::PassthroughEvent, "PassthroughEvent", NC_("editor", "Passthrough Event"), EventCategory::Other,
+				NC_("editor", "Event of the original game that the game doesn't use, kept for the scripts of the level, which read the events of the level"),
+				PassthroughEventFields, nullptr, std::uint32_t(AnimState::Default), EventTraits::Unused),
 		};
 	}
 

@@ -1969,6 +1969,7 @@ namespace Jazz2::Compatibility
 				_currentItem++;
 				_currentOrdinal++;
 			}
+			UpdateItemCount();
 		}
 	}
 
@@ -1976,6 +1977,7 @@ namespace Jazz2::Compatibility
 	{
 		_currentItem += advanceBy;
 		_currentOrdinal += advanceBy;
+		UpdateItemCount();
 	}
 
 	void AnimSetMapping::NextSet(std::uint32_t advanceBy, JJ2Version appliesTo)
@@ -2002,6 +2004,7 @@ namespace Jazz2::Compatibility
 
 			_currentItem++;
 			_currentOrdinal++;
+			UpdateItemCount();
 		}
 	}
 
@@ -2020,6 +2023,23 @@ namespace Jazz2::Compatibility
 
 		_currentItem++;
 		_currentOrdinal++;
+		UpdateItemCount();
+	}
+
+	void AnimSetMapping::UpdateItemCount()
+	{
+		auto it = _itemCounts.find(_currentSet);
+		if (it == _itemCounts.end()) {
+			_itemCounts.emplace(_currentSet, _currentItem);
+		} else if (it->second < _currentItem) {
+			it->second = _currentItem;
+		}
+	}
+
+	std::uint32_t AnimSetMapping::GetItemCount(std::uint32_t set) const
+	{
+		auto it = _itemCounts.find(set);
+		return (it != _itemCounts.end() ? it->second : 0);
 	}
 
 	AnimSetMapping::Entry* AnimSetMapping::Get(std::uint32_t set, std::uint32_t item)

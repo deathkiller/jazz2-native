@@ -35,11 +35,13 @@ namespace Jazz2::Editor
 		}
 
 		DocumentLayer copy = document.Layers[current];
-		// A layer of its own, only the sprite layer is the one the game plays on
+		// A layer of its own, only the sprite layer is the one the game plays on, and only the original is the layer of the
+		// original game scripts know by its number
 		copy.Id = MakeLayerId();
 		if (copy.IsSpriteLayer()) {
 			copy.Record.Kind = Formats::LayerKind::Other;
 		}
+		copy.Record.OriginalNumber = 0;
 		// TRANSLATORS: Name of a duplicated layer, {} is the name of the original layer
 		copy.Name = _fx("editor", "{} (copy)", GetLayerTitle(document, current));
 		if (copy.Name.size() > 64) {

@@ -612,7 +612,10 @@
     <ClInclude Include="Jazz2\PlayerType.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Resources.h" />
+    <ClInclude Include="Jazz2\Scripting\JJ2PlusAnimations.h" />
     <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h" />
+    <ClInclude Include="Jazz2\Scripting\JJ2PlusEvents.h" />
+    <ClInclude Include="Jazz2\Scripting\JJ2PlusObjects.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterDictionary.h" />
@@ -1099,7 +1102,10 @@
     <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp" />
     <ClCompile Include="Jazz2\Rendering\XRayMaskRenderer.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
+    <ClCompile Include="Jazz2\Scripting\JJ2PlusAnimations.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />
+    <ClCompile Include="Jazz2\Scripting\JJ2PlusEvents.cpp" />
+    <ClCompile Include="Jazz2\Scripting\JJ2PlusObjects.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterDictionary.cpp" />

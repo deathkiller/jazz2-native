@@ -987,6 +987,16 @@ namespace Jazz2
 		}
 	}
 
+	void LevelHandler::OnReplacing()
+	{
+#if defined(WITH_ANGELSCRIPT)
+		// The sprites a script redrew are the ones every level draws, the next level gets them as they were
+		if (_scripts != nullptr) {
+			_scripts->OnReplacing();
+		}
+#endif
+	}
+
 	void LevelHandler::OnEndFrame()
 	{
 		ZoneScopedC(0x4876AF);
@@ -1309,6 +1319,13 @@ namespace Jazz2
 			actor->UpdateAABB();
 			actor->_collisionProxyID = _collisions.CreateProxy(actor->AABB, actor.get());
 		}
+
+#if defined(WITH_ANGELSCRIPT)
+		// The objects of events become objects of the level script, which may drive them by its own behaviors
+		if (_scripts != nullptr) {
+			_scripts->OnActorAdded(actor);
+		}
+#endif
 
 		_actors.push_back(Death::move(actor));
 	}
@@ -2858,6 +2875,12 @@ namespace Jazz2
 				// the plain overlap test at the end positions cannot see (a spring or another small object
 				// is easy to jump clean over at a low frame rate)
 				if (actorA->IsCollidingWith(actorB) || actorA->HasCrossedOver(actorB) || actorB->HasCrossedOver(actorA)) {
+#if defined(WITH_ANGELSCRIPT)
+					// An object a level script drives may handle the collision itself
+					if (Actors::ActorBase::HandleCollisionByOverride(actorA, actorB)) {
+						return;
+					}
+#endif
 					if (!actorA->OnHandleCollision(actorB)) {
 						actorB->OnHandleCollision(actorA);
 					}
@@ -3032,13 +3055,27 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft)
+	void LevelHandler::OverrideCameraView(Actors::Player* player, CameraOverride modeX, float x, CameraOverride modeY, float y,
+		bool centered, bool instant)
 	{
 		for (auto& viewport : _assignedViewports) {
 			if (viewport->_targetActor == player) {
-				viewport->OverrideCamera(x, y, topLeft);
+				viewport->OverrideCamera(modeX, x, modeY, y, centered, instant);
 			}
 		}
+	}
+
+	Rectf LevelHandler::GetCameraView(Actors::Player* player) const
+	{
+		// The view is placed by its center, half of it from there in whole pixels (see PlayerViewport::UpdateCamera())
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_targetActor == player) {
+				Vector2i size = viewport->GetViewportSize();
+				return Rectf(viewport->_cameraPos.X - float(size.X / 2), viewport->_cameraPos.Y - float(size.Y / 2), float(size.X), float(size.Y));
+			}
+		}
+		Vector2i size = GetViewSize();
+		return Rectf(-float(size.X / 2), -float(size.Y / 2), float(size.X), float(size.Y));
 	}
 
 	void LevelHandler::ShakeCameraView(Actors::Player* player, float duration)

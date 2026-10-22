@@ -73,6 +73,9 @@ namespace Jazz2::Editor
 			mix(std::uint32_t(tileOverrideStateSize));
 			// The snapshots and the layers compressed by them are kept as they are, so how they're written counts too
 			mix(DocumentSnapshot::EncodingVersion);
+			// A field added to a record may take bytes that were padding, which leaves its size as it was
+			// 1 - LayerRecord::OriginalNumber
+			mix(1);
 			return hash;
 		}
 	}

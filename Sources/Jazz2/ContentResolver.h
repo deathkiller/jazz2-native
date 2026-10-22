@@ -287,6 +287,20 @@ namespace Jazz2
 		 */
 		GenericGraphicResource* RequestGraphics(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
 		/**
+		 * @brief Returns whether graphics @ref RequestGraphics() gave are still loaded, @ref EndLoading() frees them once nothing requested them
+		 *
+		 * The graphics aren't touched, so it can be asked of graphics that may be gone already. The arguments are those
+		 * of @ref RequestGraphics() (the palette offset of graphics kept indexed doesn't matter).
+		 */
+		bool IsGraphicsCached(const GenericGraphicResource* graphics, StringView path, std::uint16_t paletteOffset, bool keepIndexed = false) const;
+		/**
+		 * @brief Returns the path loaded graphics were requested by (see @ref RequestGraphics()), or an empty string
+		 *
+		 * The separators are those of the platform. Every loaded graphics is looked at, so it's for a caller that keeps
+		 * what it found.
+		 */
+		String FindGraphicsPath(const GenericGraphicResource* graphics) const;
+		/**
 		 * @brief Loads the graphics of a deferred animation entry and returns whether they are ready to be drawn
 		 *
 		 * Called by @ref Metadata::FindAnimation() the first time a deferred animation (see @ref metadata-deferred)
@@ -409,9 +423,11 @@ namespace Jazz2
 		 * @param withDiffuse       If `false`, only the collision masks are loaded and the tile set has no
 		 *                          textures --- for a caller that requests it again once it knows which tiles to
 		 *                          pack (see @ref Tiles::TileMap::PruneTilesetAtlas())
+		 * @param trueColorPalette  Optional 256 colors the 8-bit tiles are drawn in as true color tiles, so they
+		 *                          don't follow the live palette (as `jjTilesFromTileset32()` of JJ2+)
 		 */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr,
-			const BitArray* usedTiles = nullptr, bool withDiffuse = true);
+			const BitArray* usedTiles = nullptr, bool withDiffuse = true, const std::uint32_t* trueColorPalette = nullptr);
 		/**
 		 * @brief Loads a tile set from a stream
 		 *
@@ -419,7 +435,8 @@ namespace Jazz2
 		 * hands over the one it edits this way. The @p path is what the tile set is known as.
 		 */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(Stream& s, StringView path, std::uint16_t captionTileId, bool applyPalette,
-			const std::uint8_t* paletteRemapping = nullptr, const BitArray* usedTiles = nullptr, bool withDiffuse = true);
+			const std::uint8_t* paletteRemapping = nullptr, const BitArray* usedTiles = nullptr, bool withDiffuse = true,
+			const std::uint32_t* trueColorPalette = nullptr);
 		/**
 		 * @brief Opens the file of a tile set, found the same way as by @ref RequestTileSet()
 		 *
@@ -519,6 +536,50 @@ namespace Jazz2
 			return _palettes;
 		}
 
+		/**
+			@brief Sprite sheet of a graphics asset (`.aura`) as it's stored, see @ref ReadSpriteSheet()
+
+			The fields have the meaning of the same fields of @ref GenericGraphicResource, the frames are laid out the
+			same way. The pixels keep the channels of the file - 1 (palette index), 2 (palette index and alpha) or 4
+			(RGBA).
+		*/
+		struct SpriteSheet
+		{
+			/** @brief Size of the sheet in pixels */
+			Vector2i Size;
+			/** @brief Bytes per pixel of @ref Pixels */
+			std::int32_t ChannelCount;
+			/** @brief Whether the pixels are palette indices rather than colors */
+			bool IsIndexed;
+			/** @brief Size of the logical cell of a frame */
+			Vector2i FrameDimensions;
+			/** @brief Columns and rows of the regular grid */
+			Vector2i FrameConfiguration;
+			/** @brief Number of frames */
+			std::int32_t FrameCount;
+			/** @brief Animation duration (in normalized frames) */
+			float AnimDuration;
+			/** @brief Hotspot */
+			Vector2i Hotspot;
+			/** @brief Coldspot, @ref InvalidValue if there's none */
+			Vector2i Coldspot;
+			/** @brief Gunspot, @ref InvalidValue if there's none */
+			Vector2i Gunspot;
+			/** @brief Where each frame sits in a tightly packed sheet, empty for a regular grid */
+			SmallVector<Resources::FrameRect, 0> FrameRects;
+			/** @brief Pixels, @ref ChannelCount bytes each, rows packed continuously */
+			std::unique_ptr<std::uint8_t[]> Pixels;
+		};
+
+		/**
+			@brief Reads a sprite sheet (`.aura`, relative to `Animations`) into memory without making a texture of it
+
+			For what needs the pixels themselves, the level scripts edit the sprites this way. Without @p withPixels
+			only the header is read and @ref SpriteSheet::Pixels stays empty. Returns `false` if there's no such sprite
+			sheet or it can't be read.
+		*/
+		bool ReadSpriteSheet(StringView path, SpriteSheet& sheet, bool withPixels = true);
+
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -547,9 +608,31 @@ namespace Jazz2
 		// from any real paletteOffset so indexed and baked variants of the same sprite are cached separately
 		static constexpr std::uint16_t IndexedGraphicsCacheKey = UINT16_MAX;
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
+		struct AuraHeader
+		{
+			std::uint8_t Flags;
+			std::uint8_t ChannelCount;
+			Vector2i FrameDimensions;
+			Vector2i FrameConfiguration;
+			std::uint16_t FrameCount;
+			std::uint16_t AnimDuration;
+			std::uint16_t Hotspot[2];
+			std::uint16_t Coldspot[2];
+			std::uint16_t Gunspot[2];
+			SmallVector<Resources::FrameRect, 0> FrameRects;
+			// Size of the image that follows the header
+			std::uint32_t Width;
+			std::uint32_t Height;
+		};
+#endif
+
 		GenericGraphicResource* RequestGraphicsAura(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
 		// Reads just the frame size out of a sheet's header, for a deferred metadata's bounding box
 		bool ReadAuraFrameDimensions(StringView path, Vector2i& frameDimensions);
+		// Reads the header of a sheet up to its image, returns `false` if it isn't a sprite sheet
+		static bool ReadAuraHeader(Stream& s, AuraHeader& header);
 		// `contentEndsStream` states that the image is the last thing in the stream, which lets it be read into
 		// memory in one go; pass `false` when anything follows it, so the position is left right after the image.
 		// `lz4` says the content is one LZ4 block (see JJ2Anims::ImageContentLz4Flag); returns `false` if it could
@@ -577,7 +660,7 @@ namespace Jazz2
 		SmallVector<std::unique_ptr<Texture>, 1> BuildTilesetDiffuse(Stream& s, const char* name, std::uint8_t channelCount,
 			bool lz4Content, const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 			std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
-			const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
+			const std::uint8_t* paletteRemapping, const std::uint32_t* trueColorPalette, std::uint16_t captionTileId, bool& indexTiles,
 			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<std::uint8_t[]>& tileEffectInfo, std::unique_ptr<Color[]>& captionTile);
 		// Packs an indexed sprite/tile (palette index in the red/first channel) into the smallest texture format: R8
 		// when alpha is on/off only (4x less VRAM than RGBA8), or RG8 keeping the per-pixel alpha in green (sampled

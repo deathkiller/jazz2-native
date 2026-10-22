@@ -167,10 +167,26 @@ namespace Jazz2::Compatibility
 		std::int32_t GetMaxSupportedAnims() const {
 			return (_version == JJ2Version::BaseGame ? 128 : 256);
 		}
+		/** @brief Returns the first tile ID of the animated tiles, the IDs below it are the tiles of the tile sets */
+		std::int32_t GetAnimatedTilesOffset() const {
+			return GetMaxSupportedTiles() - _animCount;
+		}
+
+		/**
+		 * @brief Converts a layer as the converted level has it, returns `false` if there's no such layer or it has no size
+		 *
+		 * @p index is 0 to 7 for the layers of the original, more for the additional layers of MLLE. The tile IDs are those
+		 * of this level, the animated tiles from @ref GetAnimatedTilesOffset() up. A texture of its own of a textured
+		 * layer isn't converted. Meant for scripts, which take layers of other levels (`jjLayersFromLevel()` of JJ2+).
+		 */
+		bool ConvertLayer(std::int32_t index, Formats::LayerRecord& record, SmallVectorImpl<Formats::TileRecord>& tiles) const;
 
 	private:
-		// Types of the textured background of a layer as JJ2+ takes them (TEXTURE::Style), plain JJ2 knows only 0 (WARPHORIZON)
+		// Types of the textured background of a layer as JJ2+ takes them (TEXTURE::Style), plain JJ2 knows only the first
+		static constexpr std::uint8_t TexturedStyleWarpHorizon = 0;
 		static constexpr std::uint8_t TexturedStyleTunnel = 1;
+		static constexpr std::uint8_t TexturedStyleMenu = 2;
+		static constexpr std::uint8_t TexturedStyleTileMenu = 3;
 		static constexpr std::uint8_t TexturedStyleWave = 4;
 		static constexpr std::uint8_t TexturedStyleCylinder = 5;
 		static constexpr std::uint8_t TexturedStyleReflection = 6;
@@ -228,6 +244,8 @@ namespace Jazz2::Compatibility
 			std::int8_t TextureSource = 0;
 			std::unique_ptr<std::uint8_t[]> TextureImage;
 			std::unique_ptr<std::uint16_t[]> Tiles;
+			// The name MLLE gave the layer, which scripts find it by (MLLE::GetLayer())
+			String Name;
 		};
 
 		struct TileEventSection {
@@ -287,6 +305,7 @@ namespace Jazz2::Compatibility
 		std::uint16_t _animCount;
 		bool _isHidden, _verticalMPSplitscreen, _isMpLevel;
 		bool _hasPit, _hasPitInstantDeath, _hasCTF, _hasLaps;
+		bool _isPlusLevel;
 		std::uint32_t _darknessColor;
 		WeatherType _weatherType;
 		std::uint8_t _weatherIntensity;
@@ -314,6 +333,13 @@ namespace Jazz2::Compatibility
 		bool LoadLayers(JJ2Block& dictBlock, JJ2Block& layoutBlock, bool strictParser);
 		void LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser);
 		void CheckWaterLevelAroundStart();
+
+		// Makes the record of a layer as Convert() writes it, and its texture of its own, if it has one - for a level of JJ2+
+		// with the textured layers drawn as there
+		void MakeLayerRecord(std::int32_t index, Formats::LayerRecord& record, SmallVectorImpl<std::uint8_t>& texture,
+			Function<bool(std::int32_t, std::uint8_t*)>& textureLookup, bool forPlusLevel) const;
+		// Converts a tile of a layer, with the flips and the modifier of its tile type
+		Formats::TileRecord ConvertLayerTile(std::uint16_t tileIdx) const;
 
 		static String ConvertLevelName(StringView value, Function<LevelToken(StringView)>& levelTokenConversion);
 		static void ExpandPalette(const std::uint8_t* colors, std::uint32_t* palette);

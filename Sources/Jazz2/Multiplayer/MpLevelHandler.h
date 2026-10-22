@@ -176,7 +176,8 @@ namespace Jazz2::Multiplayer
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, StringView value) override;
 		void LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width) override;
-		void OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft = false) override;
+		void OverrideCameraView(Actors::Player* player, CameraOverride modeX, float x, CameraOverride modeY, float y,
+			bool centered = false, bool instant = true) override;
 		void ShakeCameraView(Actors::Player* player, float duration) override;
 		void ShakeCameraViewNear(Vector2f pos, float duration) override;
 		void SetTrigger(std::uint8_t triggerId, bool newState) override;
@@ -531,6 +532,9 @@ namespace Jazz2::Multiplayer
 		static constexpr float CtfTouchRadius = 40.0f;	// Pixel radius for picking up / returning / capturing flags
 		// A connected peer that doesn't authenticate in this time is kicked - a genuine client does it right away
 		static constexpr std::int32_t AuthTimeoutSecs = 20;
+		// Set in the flags of PlayerPropertyType::OverrideCameraView when they carry the modes of the axes and whether it's
+		// instant, a server of 3.9.0 sent only whether the position is the top left corner of the view
+		static constexpr std::uint8_t OverrideCameraViewModes = 0x40;
 
 		// Anti-cheat escalation, see AntiCheatState - a violation adds 0.5-4 points to the suspicion, which decays by
 		// AntiCheatDecayPerSec, so an honest player's occasional desync never comes close to the thresholds

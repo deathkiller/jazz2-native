@@ -37,6 +37,10 @@ namespace Jazz2::Actors::Weapons
 		Player* GetOwner();
 		/** @brief Returns weapon type */
 		virtual WeaponType GetWeaponType();
+		/** @brief Returns `true` if the shot is of the powered-up weapon */
+		bool IsUpgraded() const {
+			return ((_upgrades & 0x01) != 0);
+		}
 		/** @brief Triggers shot ricochet */
 		void TriggerRicochet(ActorBase* other);
 

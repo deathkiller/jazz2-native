@@ -12,12 +12,14 @@
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
+#include <IO/Stream.h>
 
 using namespace Death::Containers;
 using namespace nCine;
 
 namespace Jazz2::Actors
 {
+	class ActorBase;
 	class Player;
 }
 
@@ -26,12 +28,32 @@ namespace Jazz2::UI
 	class HUD;
 }
 
+namespace Jazz2::Resources
+{
+	struct GenericGraphicResource;
+}
+
+namespace Jazz2::Tiles
+{
+	struct LayerDescription;
+	struct TileMapLayer;
+}
+
 namespace Jazz2::Scripting
 {
 	class LevelScriptLoader;
 
+	/** @brief Logs that a script called a function that isn't implemented, with where it called it from */
+	void Unimplemented(const char* sourceName);
+	/** @brief Opens a file a script names, from the content or the directory of the original game */
+	std::unique_ptr<Death::IO::Stream> OpenScriptFile(StringView path);
+	/** @brief Returns whether a file name a script gives stays inside the data directory of the game */
+	bool IsScriptFileNameSafe(StringView filename);
+
 	namespace Legacy
 	{
+		class AnimationTables;
+
 		enum airjump {
 			airjumpNONE,
 			airjumpHELICOPTER,
@@ -156,16 +178,21 @@ namespace Jazz2::Scripting
 			mXTURTLE,
 			mZDOG,
 			mZSPARK,
+			// The sets of `plus.j2a` as JJ2+ 6 has them, in the order of the file
 			mZZAMMO,
 			mZZBETA,
 			mZZCOMMON,
 			mZZCONTINUE,
-
+			mZZEMOJI,
 			mZZFONT,
+			mZZHELP,
 			mZZMENUFONT,
+			mZZPLAYERSTATEICONS,
 			mZZREPLACEMENTS,
 			mZZRETICLES,
 			mZZSCENERY,
+			// A set the file has that scripts have no name for
+			mZZUNNAMED,
 			mZZWARP,
 
 			mCOUNT
@@ -212,285 +239,281 @@ namespace Jazz2::Scripting
 		enum object {
 			aUNKNOWN,
 
-			aPLAYERBULLET1,
-			aPLAYERBULLET2,
-			aPLAYERBULLET3,
-			aPLAYERBULLET4,
-			aPLAYERBULLET5,
-			aPLAYERBULLET6,
-			aPLAYERBULLET8,
-			aPLAYERBULLET9,
-			aPLAYERBULLETP1,
-			aPLAYERBULLETP2,
-			aPLAYERBULLETP3,
-			aPLAYERBULLETP4,
-			aPLAYERBULLETP5,
-			aPLAYERBULLETP6,
-			aPLAYERBULLETP8,
-			aPLAYERBULLETP9,
-			aPLAYERBULLETC1,
-			aPLAYERBULLETC2,
-			aPLAYERBULLETC3,
-			aBULLET,
-			aCATSMOKE,
-			aSHARD,
-			aEXPLOSION,
-			aBOUNCEONCE,
-			aREDGEMTEMP,
-			aPLAYERLASER,
-			aUTERUSEL,
-			aBIRD,
-			aBUBBLE,
-			aGUN3AMMO3,
-			aGUN2AMMO3,
-			aGUN4AMMO3,
-			aGUN5AMMO3,
-			aGUN6AMMO3,
-			aGUN7AMMO3,
-			aGUN8AMMO3,
-			aGUN9AMMO3,
-			aTURTLESHELL,
-			aSWINGVINE,
-			aBOMB,
-			aSILVERCOIN,
-			aGOLDCOIN,
-			aGUNCRATE,
-			aCARROTCRATE,
-			a1UPCRATE,
-			aGEMBARREL,
-			aCARROTBARREL,
-			a1UPBARREL,
-			aBOMBCRATE,
-			aGUN3AMMO15,
-			aGUN2AMMO15,
-			aGUN4AMMO15,
-			aGUN5AMMO15,
-			aGUN6AMMO15,
-			aTNT,
-			aAIRBOARDGENERATOR,
-			aFROZENGREENSPRING,
-			aGUNFASTFIRE,
-			aSPRINGCRATE,
-			aREDGEM,
-			aGREENGEM,
-			aBLUEGEM,
-			aPURPLEGEM,
-			aSUPERREDGEM,
-			aBIRDCAGE,
-			aGUNBARREL,
-			aGEMCRATE,
-			aMORPHMONITOR,
-			aENERGYUP,
-			aFULLENERGY,
-			aFIRESHIELD,
-			aWATERSHIELD,
-			aLIGHTSHIELD,
-			aFASTFEET,
-			aEXTRALIFE,
-			aENDOFLEVELPOST,
-			aSAVEPOST,
-			aBONUSLEVELPOST,
-			aREDSPRING,
-			aGREENSPRING,
-			aBLUESPRING,
-			aINVINCIBILITY,
-			aEXTRATIME,
-			aFREEZER,
-			aHREDSPRING,
-			aHGREENSPRING,
-			aHBLUESPRING,
-			aBIRDMORPHMONITOR,
-			aTRIGGERCRATE,
-			aFLYCARROT,
-			aRECTREDGEM,
-			aRECTGREENGEM,
-			aRECTBLUEGEM,
-			aTUFTURT,
-			aTUFBOSS,
-			aLABRAT,
-			aDRAGON,
-			aLIZARD,
-			aBUMBEE,
-			aRAPIER,
-			aSPARK,
-			aBAT,
-			aSUCKER,
-			aCATERPILLAR,
-			aCHESHIRE1,
-			aCHESHIRE2,
-			aHATTER,
-			aBILSYBOSS,
-			aSKELETON,
-			aDOGGYDOGG,
-			aNORMTURTLE,
-			aHELMUT,
-			aDEMON,
-			aDRAGONFLY,
-			aMONKEY,
-			aFATCHK,
-			aFENCER,
-			aFISH,
-			aMOTH,
-			aSTEAM,
-			aROCK,
-			aGUN1POWER,
-			aGUN2POWER,
-			aGUN3POWER,
-			aGUN4POWER,
-			aGUN5POWER,
-			aGUN6POWER,
-			aPINLEFTPADDLE,
-			aPINRIGHTPADDLE,
-			aPIN500BUMP,
-			aPINCARROTBUMP,
-			aAPPLE,
-			aBANANA,
-			aCHERRY,
-			aORANGE,
-			aPEAR,
-			aPRETZEL,
-			aSTRAWBERRY,
-			aSTEADYLIGHT,
-			aPULZELIGHT,
-			aFLICKERLIGHT,
-			aQUEENBOSS,
-			aFLOATSUCKER,
-			aBRIDGE,
-			aLEMON,
-			aLIME,
-			aTHING,
-			aWMELON,
-			aPEACH,
-			aGRAPES,
-			aLETTUCE,
-			aEGGPLANT,
-			aCUCUMB,
-			aCOKE,
-			aPEPSI,
-			aMILK,
-			aPIE,
-			aCAKE,
-			aDONUT,
-			aCUPCAKE,
-			aCHIPS,
-			aCANDY1,
-			aCHOCBAR,
-			aICECREAM,
-			aBURGER,
-			aPIZZA,
-			aFRIES,
-			aCHICKLEG,
-			aSANDWICH,
-			aTACOBELL,
-			aWEENIE,
-			aHAM,
-			aCHEESE,
-			aFLOATLIZARD,
-			aSTANDMONKEY,
-			aDESTRUCTSCENERY,
-			aDESTRUCTSCENERYBOMB,
-			aCOLLAPSESCENERY,
-			aSTOMPSCENERY,
-			aGEMSTOMP,
-			aRAVEN,
-			aTUBETURTLE,
-			aGEMRING,
-			aROTSMALLTREE,
-			aAMBIENTSOUND,
-			aUTERUS,
-			aCRAB,
-			aWITCH,
-			aROCKTURT,
-			aBUBBA,
-			aDEVILDEVAN,
-			aDEVANROBOT,
-			aROBOT,
-			aCARROTUSPOLE,
-			aPSYCHPOLE,
-			aDIAMONDUSPOLE,
-			aFRUITPLATFORM,
-			aBOLLPLATFORM,
-			aGRASSPLATFORM,
-			aPINKPLATFORM,
-			aSONICPLATFORM,
-			aSPIKEPLATFORM,
-			aSPIKEBOLL,
-			aGENERATOR,
-			aEVA,
-			aBUBBLER,
-			aTNTPOWER,
-			aGUN8POWER,
-			aGUN9POWER,
-			aSPIKEBOLL3D,
-			aSPRINGCORD,
-			aBEES,
-			aCOPTER,
-			aLASERSHIELD,
-			aSTOPWATCH,
-			aJUNGLEPOLE,
-			aBIGROCK,
-			aBIGBOX,
-			aTRIGGERSCENERY,
-			aSONICBOSS,
-			aBUTTERFLY,
-			aBEEBOY,
-			aSNOW,
-			aTWEEDLEBOSS,
-			aAIRBOARD,
-			aFLAG,
-			aXNORMTURTLE,
-			aXLIZARD,
-			aXFLOATLIZARD,
-			aXBILSYBOSS,
-			aZCAT,
-			aZGHOST,
-
-			areaONEWAY,
-			areaHURT,
-			areaVINE,
-			areaHOOK,
-			areaSLIDE,
-			areaHPOLE,
-			areaVPOLE,
-			areaFLYOFF,
-			areaRICOCHET,
-			areaBELTRIGHT,
-			areaBELTLEFT,
-			areaBELTACCRIGHT,
-			areaBELTACCLEFT,
-			areaSTOPENEMY,
-			areaWINDLEFT,
-			areaWINDRIGHT,
-			areaEOL,
-			areaWARPEOL,
-			areaENDMORPH,
-			areaFLOATUP,
-			areaROCKTRIGGER,
-			areaDIMLIGHT,
-			areaSETLIGHT,
-			areaLIMITXSCROLL,
-			areaRESETLIGHT,
-			areaWARPSECRET,
-			areaECHO,
-			areaBOSSTRIGGER,
-			areaJAZZLEVELSTART,
-			areaSPAZLEVELSTART,
-			areaMPLEVELSTART,
-			areaLORILEVELSTART,
-			areaWARP,
-			areaWARPTARGET,
-			areaAREAID,
-			areaNOFIREZONE,
-			areaTRIGGERZONE,
-
-			aSUCKERTUBE,
-			aTEXT,
-			aWATERLEVEL,
-			aMORPHFROG,
-			aWATERBLOCK,
-
-			aCOUNT
-		};
+			aPLAYERBULLET1 = 0x01,
+			aPLAYERBULLET2 = 0x02,
+			aPLAYERBULLET3 = 0x03,
+			aPLAYERBULLET4 = 0x04,
+			aPLAYERBULLET5 = 0x05,
+			aPLAYERBULLET6 = 0x06,
+			aPLAYERBULLET8 = 0x08,
+			aPLAYERBULLET9 = 0x09,
+			aPLAYERBULLETP1 = 0x0A,
+			aPLAYERBULLETP2 = 0x0B,
+			aPLAYERBULLETP3 = 0x0C,
+			aPLAYERBULLETP4 = 0x0D,
+			aPLAYERBULLETP5 = 0x0E,
+			aPLAYERBULLETP6 = 0x0F,
+			aPLAYERBULLETP8 = 0x11,
+			aPLAYERBULLETP9 = 0x12,
+			aPLAYERBULLETC1 = 0x13,
+			aPLAYERBULLETC2 = 0x14,
+			aPLAYERBULLETC3 = 0x15,
+			aBULLET = 0x16,
+			aCATSMOKE = 0x17,
+			aSHARD = 0x18,
+			aEXPLOSION = 0x19,
+			aBOUNCEONCE = 0x1A,
+			aREDGEMTEMP = 0x1B,
+			aPLAYERLASER = 0x1C,
+			aUTERUSEL = 0x1D,
+			aBIRD = 0x1E,
+			aBUBBLE = 0x1F,
+			aGUN3AMMO3 = 0x21,
+			aGUN2AMMO3 = 0x22,
+			aGUN4AMMO3 = 0x23,
+			aGUN5AMMO3 = 0x24,
+			aGUN6AMMO3 = 0x25,
+			aGUN7AMMO3 = 0x26,
+			aGUN8AMMO3 = 0x27,
+			aGUN9AMMO3 = 0x28,
+			aTURTLESHELL = 0x29,
+			aSWINGVINE = 0x2A,
+			aBOMB = 0x2B,
+			aSILVERCOIN = 0x2C,
+			aGOLDCOIN = 0x2D,
+			aGUNCRATE = 0x2E,
+			aCARROTCRATE = 0x2F,
+			a1UPCRATE = 0x30,
+			aGEMBARREL = 0x31,
+			aCARROTBARREL = 0x32,
+			a1UPBARREL = 0x33,
+			aBOMBCRATE = 0x34,
+			aGUN3AMMO15 = 0x35,
+			aGUN2AMMO15 = 0x36,
+			aGUN4AMMO15 = 0x37,
+			aGUN5AMMO15 = 0x38,
+			aGUN6AMMO15 = 0x39,
+			aTNT = 0x3A,
+			aAIRBOARDGENERATOR = 0x3B,
+			aFROZENGREENSPRING = 0x3C,
+			aGUNFASTFIRE = 0x3D,
+			aSPRINGCRATE = 0x3E,
+			aREDGEM = 0x3F,
+			aGREENGEM = 0x40,
+			aBLUEGEM = 0x41,
+			aPURPLEGEM = 0x42,
+			aSUPERREDGEM = 0x43,
+			aBIRDCAGE = 0x44,
+			aGUNBARREL = 0x45,
+			aGEMCRATE = 0x46,
+			aMORPHMONITOR = 0x47,
+			aENERGYUP = 0x48,
+			aFULLENERGY = 0x49,
+			aFIRESHIELD = 0x4A,
+			aWATERSHIELD = 0x4B,
+			aLIGHTSHIELD = 0x4C,
+			aFASTFEET = 0x4F,
+			aEXTRALIFE = 0x50,
+			aENDOFLEVELPOST = 0x51,
+			aSAVEPOST = 0x53,
+			aBONUSLEVELPOST = 0x54,
+			aREDSPRING = 0x55,
+			aGREENSPRING = 0x56,
+			aBLUESPRING = 0x57,
+			aINVINCIBILITY = 0x58,
+			aEXTRATIME = 0x59,
+			aFREEZER = 0x5A,
+			aHREDSPRING = 0x5B,
+			aHGREENSPRING = 0x5C,
+			aHBLUESPRING = 0x5D,
+			aBIRDMORPHMONITOR = 0x5E,
+			aTRIGGERCRATE = 0x5F,
+			aFLYCARROT = 0x60,
+			aRECTREDGEM = 0x61,
+			aRECTGREENGEM = 0x62,
+			aRECTBLUEGEM = 0x63,
+			aTUFTURT = 0x64,
+			aTUFBOSS = 0x65,
+			aLABRAT = 0x66,
+			aDRAGON = 0x67,
+			aLIZARD = 0x68,
+			aBUMBEE = 0x69,
+			aRAPIER = 0x6A,
+			aSPARK = 0x6B,
+			aBAT = 0x6C,
+			aSUCKER = 0x6D,
+			aCATERPILLAR = 0x6E,
+			aCHESHIRE1 = 0x6F,
+			aCHESHIRE2 = 0x70,
+			aHATTER = 0x71,
+			aBILSYBOSS = 0x72,
+			aSKELETON = 0x73,
+			aDOGGYDOGG = 0x74,
+			aNORMTURTLE = 0x75,
+			aHELMUT = 0x76,
+			aDEMON = 0x78,
+			aDRAGONFLY = 0x7B,
+			aMONKEY = 0x7C,
+			aFATCHK = 0x7D,
+			aFENCER = 0x7E,
+			aFISH = 0x7F,
+			aMOTH = 0x80,
+			aSTEAM = 0x81,
+			aROCK = 0x82,
+			aGUN1POWER = 0x83,
+			aGUN2POWER = 0x84,
+			aGUN3POWER = 0x85,
+			aGUN4POWER = 0x86,
+			aGUN5POWER = 0x87,
+			aGUN6POWER = 0x88,
+			aPINLEFTPADDLE = 0x89,
+			aPINRIGHTPADDLE = 0x8A,
+			aPIN500BUMP = 0x8B,
+			aPINCARROTBUMP = 0x8C,
+			aAPPLE = 0x8D,
+			aBANANA = 0x8E,
+			aCHERRY = 0x8F,
+			aORANGE = 0x90,
+			aPEAR = 0x91,
+			aPRETZEL = 0x92,
+			aSTRAWBERRY = 0x93,
+			aSTEADYLIGHT = 0x94,
+			aPULZELIGHT = 0x95,
+			aFLICKERLIGHT = 0x96,
+			aQUEENBOSS = 0x97,
+			aFLOATSUCKER = 0x98,
+			aBRIDGE = 0x99,
+			aLEMON = 0x9A,
+			aLIME = 0x9B,
+			aTHING = 0x9C,
+			aWMELON = 0x9D,
+			aPEACH = 0x9E,
+			aGRAPES = 0x9F,
+			aLETTUCE = 0xA0,
+			aEGGPLANT = 0xA1,
+			aCUCUMB = 0xA2,
+			aCOKE = 0xA3,
+			aPEPSI = 0xA4,
+			aMILK = 0xA5,
+			aPIE = 0xA6,
+			aCAKE = 0xA7,
+			aDONUT = 0xA8,
+			aCUPCAKE = 0xA9,
+			aCHIPS = 0xAA,
+			aCANDY1 = 0xAB,
+			aCHOCBAR = 0xAC,
+			aICECREAM = 0xAD,
+			aBURGER = 0xAE,
+			aPIZZA = 0xAF,
+			aFRIES = 0xB0,
+			aCHICKLEG = 0xB1,
+			aSANDWICH = 0xB2,
+			aTACOBELL = 0xB3,
+			aWEENIE = 0xB4,
+			aHAM = 0xB5,
+			aCHEESE = 0xB6,
+			aFLOATLIZARD = 0xB7,
+			aSTANDMONKEY = 0xB8,
+			aDESTRUCTSCENERY = 0xB9,
+			aDESTRUCTSCENERYBOMB = 0xBA,
+			aCOLLAPSESCENERY = 0xBB,
+			aSTOMPSCENERY = 0xBC,
+			aGEMSTOMP = 0xBD,
+			aRAVEN = 0xBE,
+			aTUBETURTLE = 0xBF,
+			aGEMRING = 0xC0,
+			aROTSMALLTREE = 0xC1,
+			aAMBIENTSOUND = 0xC2,
+			aUTERUS = 0xC3,
+			aCRAB = 0xC4,
+			aWITCH = 0xC5,
+			aROCKTURT = 0xC6,
+			aBUBBA = 0xC7,
+			aDEVILDEVAN = 0xC8,
+			aDEVANROBOT = 0xC9,
+			aROBOT = 0xCA,
+			aCARROTUSPOLE = 0xCB,
+			aPSYCHPOLE = 0xCC,
+			aDIAMONDUSPOLE = 0xCD,
+			aFRUITPLATFORM = 0xD1,
+			aBOLLPLATFORM = 0xD2,
+			aGRASSPLATFORM = 0xD3,
+			aPINKPLATFORM = 0xD4,
+			aSONICPLATFORM = 0xD5,
+			aSPIKEPLATFORM = 0xD6,
+			aSPIKEBOLL = 0xD7,
+			aGENERATOR = 0xD8,
+			aEVA = 0xD9,
+			aBUBBLER = 0xDA,
+			aTNTPOWER = 0xDB,
+			aGUN8POWER = 0xDC,
+			aGUN9POWER = 0xDD,
+			aSPIKEBOLL3D = 0xDF,
+			aSPRINGCORD = 0xE0,
+			aBEES = 0xE1,
+			aCOPTER = 0xE2,
+			aLASERSHIELD = 0xE3,
+			aSTOPWATCH = 0xE4,
+			aJUNGLEPOLE = 0xE5,
+			aBIGROCK = 0xE7,
+			aBIGBOX = 0xE8,
+			aTRIGGERSCENERY = 0xEA,
+			aSONICBOSS = 0xEB,
+			aBUTTERFLY = 0xEC,
+			aBEEBOY = 0xED,
+			aSNOW = 0xEE,
+			aTWEEDLEBOSS = 0xF1,
+			aAIRBOARD = 0xF3,
+			aFLAG = 0xF4,
+			aXNORMTURTLE = 0xF8,
+			aXLIZARD = 0xF9,
+			aXFLOATLIZARD = 0xFA,
+			aXBILSYBOSS = 0xFB,
+			aZCAT = 0xFC,
+			aZGHOST = 0xFD,
+			areaONEWAY = 0x01,
+			areaHURT = 0x02,
+			areaVINE = 0x03,
+			areaHOOK = 0x04,
+			areaSLIDE = 0x05,
+			areaHPOLE = 0x06,
+			areaVPOLE = 0x07,
+			areaFLYOFF = 0x08,
+			areaRICOCHET = 0x09,
+			areaBELTRIGHT = 0x0A,
+			areaBELTLEFT = 0x0B,
+			areaBELTACCRIGHT = 0x0C,
+			areaBELTACCLEFT = 0x0D,
+			areaSTOPENEMY = 0x0E,
+			areaWINDLEFT = 0x0F,
+			areaWINDRIGHT = 0x10,
+			areaEOL = 0x11,
+			areaWARPEOL = 0x12,
+			areaENDMORPH = 0x13,
+			areaFLOATUP = 0x14,
+			areaROCKTRIGGER = 0x15,
+			areaDIMLIGHT = 0x16,
+			areaSETLIGHT = 0x17,
+			areaLIMITXSCROLL = 0x18,
+			areaRESETLIGHT = 0x19,
+			areaWARPSECRET = 0x1A,
+			areaECHO = 0x1B,
+			areaBOSSTRIGGER = 0x1C,
+			areaJAZZLEVELSTART = 0x1D,
+			areaSPAZLEVELSTART = 0x1E,
+			areaMPLEVELSTART = 0x1F,
+			areaLORILEVELSTART = 0x20,
+			areaWARP = 0xE6,
+			areaWARPTARGET = 0xF0,
+			areaAREAID = 0xF2,
+			areaNOFIREZONE = 0xF5,
+			areaTRIGGERZONE = 0xF6,
+			aSUCKERTUBE = 0xCE,
+			aTEXT = 0xCF,
+			aWATERLEVEL = 0xD0,
+			aMORPHFROG = 0xDE,
+			aWATERBLOCK = 0xE9,
+			aCOUNT = 0x100};
 
 		enum particle {
 			particleNONE,
@@ -1258,11 +1281,21 @@ namespace Jazz2::Scripting
 			std::uint8_t green;
 			/** @brief Blue component */
 			std::uint8_t blue;
+			/**
+			 * @brief Alpha component, only colors of 32-bit images use it in JJ2+, left 0 otherwise
+			 *
+			 * It also makes the color 4 bytes, which the x64 calling convention of MSVC passes and returns in a register
+			 * as AngelScript does - a color of 3 bytes is passed by a pointer to it there, and a script's color then
+			 * arrives as an address.
+			 */
+			std::uint8_t alpha;
 
 			/** @brief Constructs a black color in place */
 			static void Create(void* self);
 			/** @brief Constructs a color from red, green and blue components in place */
 			static void CreateFromRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue, void* self);
+			/** @brief Constructs a color from red, green, blue and alpha components in place */
+			static void CreateFromRgba(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t alpha, void* self);
 
 			/** @brief Returns the hue component of the color */
 			std::uint8_t getHue();
@@ -1336,6 +1369,8 @@ namespace Jazz2::Scripting
 			void copyFrom(std::uint8_t start, std::uint8_t length, std::uint8_t start2, const jjPAL& source, float opacity);
 			/** @brief Returns the palette index closest to the given color */
 			std::uint8_t findNearestColor(jjPALCOLOR color);
+			/** @brief Returns the palette index closest to the given color but the transparent one, index 0 */
+			std::uint8_t FindNearestOpaqueColor(const jjPALCOLOR& color) const;
 
 		private:
 			std::int32_t _refCount;
@@ -1548,15 +1583,19 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief A single frame of a sprite animation
 		 *
-		 * Reference-counted handle to one frame within the global animation frame table, exposing its dimensions and
-		 * the hotspot, coldspot and gun-muzzle offsets used when the frame is drawn or aimed. Also provides
-		 * pixel-perfect collision testing against another frame. Obtained via `jjAnimFrames[index]`.
+		 * One entry of the frame table, `jjAnimFrames[index]`, with its image, its size and its hotspot, coldspot and
+		 * gunspot. There's only one instance of an entry, as in JJ2+, so what a script changes stays - and the sprites
+		 * the game draws of the frame show it too, once the script returns (see @ref AnimationTables).
 		 */
 		class jjANIMFRAME
 		{
+			friend class AnimationTables;
+			friend class jjPIXELMAP;
+			friend class jjCOLORMAP;
+
 		public:
-			/** @brief Creates a new instance */
-			jjANIMFRAME();
+			/** @brief Creates a new instance, the entry at the given index of the frame table */
+			explicit jjANIMFRAME(std::uint32_t index);
 			~jjANIMFRAME();
 
 			/** @brief Increments the reference count */
@@ -1564,51 +1603,72 @@ namespace Jazz2::Scripting
 			/** @brief Decrements the reference count */
 			void Release();
 
+			/** @brief Copies the image, the size and the spots of another frame */
 			jjANIMFRAME& operator=(const jjANIMFRAME& o);
 
 			/** @brief Returns the animation frame at the specified global index */
 			static jjANIMFRAME* get_jjAnimFrames(std::uint32_t index);
 
 			/** @brief Horizontal hotspot offset */
-			int16_t hotSpotX = 0;
+			std::int16_t hotSpotX = 0;
 			/** @brief Vertical hotspot offset */
-			int16_t hotSpotY = 0;
+			std::int16_t hotSpotY = 0;
 			/** @brief Horizontal coldspot offset */
-			int16_t coldSpotX = 0;
+			std::int16_t coldSpotX = 0;
 			/** @brief Vertical coldspot offset */
-			int16_t coldSpotY = 0;
+			std::int16_t coldSpotY = 0;
 			/** @brief Horizontal gun muzzle offset */
-			int16_t gunSpotX = 0;
+			std::int16_t gunSpotX = 0;
 			/** @brief Vertical gun muzzle offset */
-			int16_t gunSpotY = 0;
+			std::int16_t gunSpotY = 0;
 			/** @brief Frame width in pixels */
-			int16_t width = 0;
+			std::uint16_t width = 0;
 			/** @brief Frame height in pixels */
-			int16_t height = 0;
+			std::uint16_t height = 0;
 
-			/** @brief Returns whether the frame contains transparency */
+			/** @brief Returns whether the frame is drawn translucent */
 			bool get_transparent() const;
-			/** @brief Sets whether the frame contains transparency */
-			bool set_transparent(bool value) const;
+			/** @brief Sets whether the frame is drawn translucent */
+			bool set_transparent(bool value);
+			/** @brief Returns whether the frame has colors of its own instead of palette indices, see @ref jjCOLORMAP */
+			bool get_is32Bit() const;
 			/** @brief Returns whether this frame collides with another frame at the given positions */
 			bool doesCollide(std::int32_t xPos, std::int32_t yPos, std::int32_t direction, const jjANIMFRAME* frame2, std::int32_t xPos2, std::int32_t yPos2, std::int32_t direction2, bool always) const;
 
 		private:
 			std::int32_t _refCount;
+			std::uint32_t _index;
+			// Palette indices, width * height of them, 0 is transparent
+			std::unique_ptr<std::uint8_t[]> _pixels;
+			// Colors with alpha of a 32-bit frame, width * height of them, or null - `_pixels` has the nearest palette indices
+			// of them then, for what reads the frame as indices (collisions, jjPIXELMAP)
+			std::unique_ptr<jjPALCOLOR[]> _colors;
+			bool _transparent;
+			// Whether the frame is in the list of frames AnimationTables::Flush() looks at
+			bool _watched;
+			// Index of the animation whose sprite sheet has the image of the frame, read on first use, -1 once read
+			std::int32_t _source;
+			// Index of the animation the frame was made for, which draws it best
+			std::uint32_t _owner;
+			// Distinguishes every change of the frame from any other, 0 for the frame as the game has it
+			std::uint32_t _version;
+			// The spots as AnimationTables::Flush() saw them last, the ones a script writes are told apart by them
+			std::int16_t _seenSpots[6];
 		};
 
 		/**
 		 * @brief A sprite animation consisting of a sequence of frames
 		 *
-		 * Reference-counted handle to one animation within the global animation table, exposing its frame count,
-		 * playback speed and the index of its first @ref jjANIMFRAME. Scripts can load frames from a file into it or
-		 * save it out. Obtained via `jjAnimations[index]`.
+		 * One entry of the animation table, `jjAnimations[index]`: the number of frames, the playback speed and the
+		 * index of the first frame in the frame table. There's only one instance of an entry, as in JJ2+.
 		 */
 		class jjANIMATION
 		{
+			friend class AnimationTables;
+
 		public:
-			/** @brief Creates a new instance wrapping the animation at the given index */
-			jjANIMATION(std::uint32_t index);
+			/** @brief Creates a new instance, the entry at the given index of the animation table */
+			explicit jjANIMATION(std::uint32_t index);
 			~jjANIMATION();
 
 			/** @brief Increments the reference count */
@@ -1616,6 +1676,7 @@ namespace Jazz2::Scripting
 			/** @brief Decrements the reference count */
 			void Release();
 
+			/** @brief Copies the frame count, the speed and the first frame of another animation */
 			jjANIMATION& operator=(const jjANIMATION& o);
 
 			/** @brief Saves the animation to a file using the given palette */
@@ -1634,7 +1695,7 @@ namespace Jazz2::Scripting
 			/** @brief Returns the global index of the first frame */
 			std::uint32_t get_firstFrame() const;
 			/** @brief Sets the global index of the first frame */
-			std::uint32_t set_firstFrame(std::uint32_t index) const;
+			std::uint32_t set_firstFrame(std::uint32_t index);
 
 			/** @brief Returns the global index of the first frame of the animation */
 			std::uint32_t getAnimFirstFrame();
@@ -1642,20 +1703,32 @@ namespace Jazz2::Scripting
 		private:
 			std::int32_t _refCount;
 			std::uint32_t _index;
+			std::uint32_t _firstFrame;
+			// Whether the animation is in the list of animations AnimationTables::Flush() looks at
+			bool _watched;
+			// The frame count as AnimationTables::Flush() saw it last
+			std::uint16_t _seenFrameCount;
+			// Index of the graphics of the game the animation is shown in (see AnimationTables), -1 if it's in none
+			std::int32_t _native;
+			// The sprite sheet a script draws the animation with when it isn't in the graphics of the game, made on
+			// first use, and what it was made of
+			std::unique_ptr<Resources::GenericGraphicResource> _graphics;
+			std::uint64_t _graphicsSignature;
 		};
 
 		/**
 		 * @brief A set of related sprite animations
 		 *
-		 * Reference-counted handle to one animation set (e.g., an original JJ2 sprite set) within the global table,
-		 * grouping a contiguous run of @ref jjANIMATION starting at `firstAnim`. Scripts can allocate empty animations
-		 * or load them from a file into the set. Obtained via `jjAnimSets[index]`.
+		 * One entry of the set table, `jjAnimSets[setID]`, with the index of its first @ref jjANIMATION. A set of the
+		 * original is always loaded, a custom one (`ANIM::CUSTOM[n]`) once a script loads or allocates it.
 		 */
 		class jjANIMSET
 		{
+			friend class AnimationTables;
+
 		public:
-			/** @brief Creates a new instance wrapping the animation set at the given index */
-			jjANIMSET(std::uint32_t index);
+			/** @brief Creates a new instance, the entry of the given set ID */
+			explicit jjANIMSET(std::uint32_t index);
 			~jjANIMSET();
 
 			/** @brief Increments the reference count */
@@ -1666,7 +1739,7 @@ namespace Jazz2::Scripting
 			/** @brief Returns the animation set at the specified global index */
 			static jjANIMSET* get_jjAnimSets(std::uint32_t index);
 
-			/** @brief Returns the index of this animation set as an unsigned integer */
+			/** @brief Returns the index of the first animation of the set */
 			std::uint32_t convertAnimSetToUint();
 
 			/** @brief Loads animations from a file into this set, overwriting starting at the given animation */
@@ -1674,13 +1747,19 @@ namespace Jazz2::Scripting
 			/** @brief Allocates animations in this set with the given per-animation frame counts */
 			jjANIMSET* allocate(const CScriptArray& frameCounts);
 
-			// Index of the first jjANIMATION belonging to this set (exposed as the `firstAnim` script property). Stored
-			// explicitly so the property has real backing storage instead of aliasing the reference count.
+			/** @brief Index of the first animation of the set in the animation table, 0 if the set isn't loaded */
 			std::uint32_t firstAnim = 0;
 
 		private:
 			std::int32_t _refCount;
 			std::uint32_t _index;
+			// Whether the set of the original was looked up already (see AnimationTables::ResolveSet()), and how many
+			// animations it has
+			bool _resolved;
+			std::uint32_t _animCount = 0;
+			// Whether the set is in the list of sets AnimationTables::Flush() looks at, and firstAnim as it saw it last
+			bool _watched;
+			std::uint32_t _seenFirstAnim;
 		};
 
 		/**
@@ -1695,9 +1774,14 @@ namespace Jazz2::Scripting
 			UI::HUD* Hud;
 			/** @brief The visible view rectangle */
 			Rectf View;
+			/** @brief Counts the draws into the HUD in this frame, each is drawn over the ones before it, as in JJ2+ */
+			std::uint16_t* DrawCount;
 
-			/** @brief Creates a new instance bound to the given HUD and view */
-			jjCANVAS(UI::HUD* hud, const Rectf& view);
+			/** @brief Creates a new instance bound to the given HUD and view, @p drawCount is shared by the canvases of the frame */
+			jjCANVAS(UI::HUD* hud, const Rectf& view, std::uint16_t* drawCount);
+
+			/** @brief Returns the HUD layer of the next draw, above every draw before it */
+			std::uint16_t NextLayer();
 
 			/** @brief Draws a single colored pixel */
 			void DrawPixel(std::int32_t xPixel, std::int32_t yPixel, std::uint8_t color, std::uint32_t mode, std::uint8_t param);
@@ -1743,6 +1827,8 @@ namespace Jazz2::Scripting
 		class jjPLAYER;
 		// Native actor that hosts a script-controlled jjOBJ (defined in JJ2PlusDefinitions.cpp)
 		class ScriptLegacyObject;
+		// Drives an object of the game by a behavior of the script (see JJ2PlusObjects.h)
+		class ScriptObjectHost;
 
 		using jjVOIDFUNCOBJ = void(*)(jjOBJ* obj);
 
@@ -1757,6 +1843,9 @@ namespace Jazz2::Scripting
 		class jjOBJ
 		{
 			friend class ScriptLegacyObject;
+			friend class ScriptObjectHost;
+			friend class jjPLAYER;
+			friend class Scripting::LevelScriptLoader;
 
 		public:
 			/** @brief Creates a new instance */
@@ -1844,6 +1933,8 @@ namespace Jazz2::Scripting
 
 			/** @brief Selects and returns the current animation, optionally changing it */
 			int16_t determineCurAnim(std::uint8_t setID, std::uint8_t animation, bool change);
+			/** @brief The same for a set given by `ANIM::Set`, which can be a custom one */
+			int16_t determineCurAnimOfSet(std::int32_t setID, std::uint8_t animation, bool change);
 
 			/** @brief Animation played when the object is killed */
 			std::uint16_t killAnim = 0;
@@ -1988,6 +2079,32 @@ namespace Jazz2::Scripting
 			bool _triggersTNT = false;
 			bool _deactivates = true;
 			bool _scriptedCollisions = false;
+
+			// Whether a script set how the object is handled, the game handles it itself otherwise (see ScriptObjectHost::OnCollision())
+			bool _bulletHandlingSet = false;
+			bool _playerHandlingSet = false;
+
+			// The object of the game this is the script view of (see LevelScriptLoader::GetObjectById()), none for a template
+			// or an object a script controls entirely (see _wrapper)
+			std::weak_ptr<Actors::ActorBase> _actor;
+			// While a behavior of the script drives the object of the game
+			ScriptObjectHost* _host = nullptr;
+			// The animation of its own a script gave the object of the game, which shows its frames in place of the ones of
+			// its own animation, 0 for none (see ScriptObjectHost::PullFromActor())
+			std::int32_t _skinAnim = 0;
+			// The properties as the object of the game had them last, the ones a script writes are told apart by them
+			struct SyncedState {
+				float XPos, YPos, XSpeed, YSpeed;
+				std::int8_t Direction, Energy, State;
+				// The animation of the animation table the object shows by itself, 0 for none of the original
+				std::int32_t NativeAnim;
+				std::int16_t CurAnim;
+				std::uint32_t CurFrame;
+			};
+			SyncedState _synced = {};
+
+			// Takes over what an object gets of its template (jjObjectPresets), all but what makes it this object
+			void CopyTemplate(const jjOBJ& preset);
 		};
 
 		/** @brief Per-particle data for a pixel particle */
@@ -2586,6 +2703,15 @@ namespace Jazz2::Scripting
 			/** @brief Returns whether the given player is an enemy of this player */
 			bool isEnemy(const jjPLAYER* victim) const;
 
+			/** @brief Returns how the player is drawn (`SPRITE::Mode`) */
+			std::uint32_t get_spriteMode() const;
+			/** @brief Sets how the player is drawn (`SPRITE::Mode`) */
+			std::uint32_t set_spriteMode(std::uint32_t value);
+			/** @brief Returns the parameter of the sprite mode */
+			std::uint8_t get_spriteParam() const;
+			/** @brief Sets the parameter of the sprite mode */
+			std::uint8_t set_spriteParam(std::uint8_t value);
+
 			/** @brief The player's current character */
 			std::uint32_t charCurr = 0;
 			/** @brief Current animation index */
@@ -2605,6 +2731,10 @@ namespace Jazz2::Scripting
 			bool _timerPersists;
 
 			bool _backingStoreDirty = false;
+
+			// SPRITE::NORMAL and its parameter
+			std::uint32_t _spriteMode = 0;
+			std::uint8_t _spriteParam = 0;
 
 			void SyncPropertiesToBackingStore();
 			void SyncPropertiesFromBackingStore();
@@ -2685,6 +2815,7 @@ namespace Jazz2::Scripting
 		};
 
 		class jjLAYER;
+		class jjCOLORMAP;
 
 		/**
 		 * @brief A rectangular buffer of palette-indexed pixels
@@ -2716,6 +2847,8 @@ namespace Jazz2::Scripting
 			static jjPIXELMAP* CreateFromTexture(std::uint32_t texture, const jjPAL* palette);
 			/** @brief Returns a new instance built from an image file, mapped onto the given palette */
 			static jjPIXELMAP* CreateFromFilename(const String& filename, const jjPAL* palette, std::uint8_t threshold);
+			/** @brief Returns a new instance of a color map in the nearest colors of a palette, a pixel of no alpha is transparent */
+			static jjPIXELMAP* CreateFromColorMap(const jjCOLORMAP& other, const jjPAL* palette);
 
 			/** @brief Increments the reference count */
 			void AddRef();
@@ -2724,7 +2857,7 @@ namespace Jazz2::Scripting
 
 			jjPIXELMAP& operator=(const jjPIXELMAP& o);
 
-			/** @brief Returns the pixel at the given position, raises a script exception if it's out of the map */
+			/** @brief Returns the pixel at the given position, a scratch one if it's out of the map */
 			std::uint8_t* GetPixel(std::uint32_t x, std::uint32_t y);
 
 			/** @brief Width in pixels */
@@ -2738,6 +2871,8 @@ namespace Jazz2::Scripting
 			bool saveToFrame(jjANIMFRAME* frame) const;
 			/** @brief Saves the pixel map to an image file using the given palette */
 			bool saveToFile(const String& filename, const jjPAL& palette) const;
+			/** @brief Makes the pixel map, 256 × 256 pixels, the texture of a layer, of `jjLayers[8]` without one */
+			bool makeTexture(jjLAYER* layer) const;
 
 			/** @brief Extends (positive) or crops (negative) each edge by a number of pixels */
 			jjPIXELMAP& addBorders(std::int32_t left, std::int32_t top, std::int32_t right, std::int32_t bottom, std::uint8_t borderColor);
@@ -2759,6 +2894,8 @@ namespace Jazz2::Scripting
 		private:
 			std::int32_t _refCount;
 			std::unique_ptr<std::uint8_t[]> _pixels;
+			// The pixel GetPixel() gives for a position out of the map
+			std::uint8_t _outOfRange = 0;
 
 			// Returns a new transparent map, or nullptr with a script exception if it would be too large
 			static jjPIXELMAP* Create(std::uint32_t width, std::uint32_t height);
@@ -2766,6 +2903,102 @@ namespace Jazz2::Scripting
 			static jjPIXELMAP* CreateFromEngineLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::int32_t layerIndex, const jjPAL* palette);
 			// Replaces the image by the given rectangle of it, the part out of the image is filled with `fill`
 			void Reframe(std::int64_t left, std::int64_t top, std::uint32_t newWidth, std::uint32_t newHeight, std::uint8_t fill);
+		};
+
+		/**
+		 * @brief A rectangular image of colors with alpha, `jjCOLORMAP` of JJ2+
+		 *
+		 * The true color counterpart of @ref jjPIXELMAP. A palette index of an image of the game becomes the color the
+		 * palette has for it, index 0 is transparent. Saved into a tile or a frame, its colors become the nearest colors
+		 * of the palette, the game draws them indexed (see @ref saveToTile()).
+		 */
+		class jjCOLORMAP
+		{
+			friend class jjPIXELMAP;
+
+		public:
+			/** @brief Creates a new instance */
+			jjCOLORMAP();
+			~jjCOLORMAP();
+
+			/** @brief Returns a new transparent instance of the given size */
+			static jjCOLORMAP* CreateFromSize(std::uint32_t width, std::uint32_t height);
+			/** @brief Returns a new instance of a pixel map in the colors of a palette */
+			static jjCOLORMAP* CreateFromPixelMap(const jjPIXELMAP& other, const jjPAL& palette);
+			/** @brief Returns a new instance with the same image as another one */
+			static jjCOLORMAP* CreateFromOther(const jjCOLORMAP& other);
+			/** @brief Returns a new instance of an animation frame in the colors of a palette */
+			static jjCOLORMAP* CreateFromFrame(const jjANIMFRAME* animFrame, const jjPAL& palette);
+			/** @brief Returns a new instance of a texture of a textured background in the colors of a palette */
+			static jjCOLORMAP* CreateFromTexture(std::uint32_t texture, const jjPAL& palette);
+			/** @brief Returns a new instance of a tile in the colors of a palette, a tile in true color in its own */
+			static jjCOLORMAP* CreateFromTile(std::uint16_t tileID, const jjPAL& palette);
+			/** @brief Returns a new instance of a region of a level layer by its number in the colors of a palette */
+			static jjCOLORMAP* CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer, const jjPAL& palette);
+			/** @brief Returns a new instance of a region of a layer in the colors of a palette */
+			static jjCOLORMAP* CreateFromLayerObject(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, const jjLAYER& layer, const jjPAL& palette);
+			/** @brief Returns a new instance of an image file */
+			static jjCOLORMAP* CreateFromFilename(const String& filename);
+
+			/** @brief Increments the reference count */
+			void AddRef();
+			/** @brief Decrements the reference count */
+			void Release();
+
+			jjCOLORMAP& operator=(const jjCOLORMAP& o);
+
+			/** @brief Returns the pixel at the given position, a scratch one if it's out of the map */
+			jjPALCOLOR* GetPixel(std::uint32_t x, std::uint32_t y);
+
+			/** @brief Width in pixels */
+			std::uint32_t width = 0;
+			/** @brief Height in pixels */
+			std::uint32_t height = 0;
+
+			/**
+			 * @brief Saves the color map into a tile
+			 *
+			 * The colors become the nearest ones of `jjPalette`, a pixel of any alpha but none is opaque - the game draws the
+			 * tiles of a level indexed, so they follow the palette as it changes.
+			 */
+			bool saveToTile(std::uint16_t tileID, bool hFlip) const;
+			/** @brief Saves the color map into an animation frame, its colors become the nearest ones of `jjPalette`, as @ref saveToTile() */
+			bool saveToFrame(jjANIMFRAME* frame) const;
+			/** @brief Saves the color map to an image file, not supported */
+			bool saveToFile(const String& filename, bool allowCompression) const;
+
+			/** @brief Extends (positive) or crops (negative) each edge by a number of pixels */
+			jjCOLORMAP& addBorders(std::int32_t left, std::int32_t top, std::int32_t right, std::int32_t bottom, jjPALCOLOR borderColor);
+			/** @brief Crops the map to the given rectangle */
+			jjCOLORMAP& crop(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height);
+			/** @brief Flips the image across one or both axes (`SPRITE::Direction`) */
+			jjCOLORMAP& flip(std::int32_t directions);
+			/** @brief Resizes the image by nearest-neighbor sampling */
+			jjCOLORMAP& resize(std::uint32_t width, std::uint32_t height);
+			/** @brief Rotates the image by 90 degrees clockwise */
+			jjCOLORMAP& rotate();
+			/** @brief Swaps the components of every color, see `jjPALCOLOR::swizzle()` */
+			jjCOLORMAP& swizzle(std::uint32_t red, std::uint32_t green, std::uint32_t blue, std::uint32_t alpha);
+			/** @brief Trims the rows and columns of no more alpha than given from all edges, returning how many of them */
+			jjCOLORMAP& trim(std::uint32_t& left, std::uint32_t& top, std::uint32_t& right, std::uint32_t& bottom, std::uint8_t trimAlpha);
+			/** @brief Trims the rows and columns of no more alpha than given from all edges */
+			jjCOLORMAP& trimBasic(std::uint8_t trimAlpha);
+
+			/** @brief Returns the palette indices of the image, the nearest colors of a palette, 0 where there's no alpha */
+			std::unique_ptr<std::uint8_t[]> ToIndices(const jjPAL& palette) const;
+
+		private:
+			std::int32_t _refCount;
+			std::unique_ptr<jjPALCOLOR[]> _pixels;
+			// The pixel GetPixel() gives for a position out of the map
+			jjPALCOLOR _outOfRange = {};
+
+			// Returns a new transparent map, or nullptr with a script exception if it would be too large
+			static jjCOLORMAP* Create(std::uint32_t width, std::uint32_t height);
+			// Returns a new map of palette indices in the colors of a palette, index 0 transparent
+			static jjCOLORMAP* CreateFromIndices(const std::uint8_t* indices, std::uint32_t width, std::uint32_t height, const jjPAL& palette);
+			// Replaces the image by the given rectangle of it, the part out of the image is filled with `fill`
+			void Reframe(std::int64_t left, std::int64_t top, std::uint32_t newWidth, std::uint32_t newHeight, jjPALCOLOR fill);
 		};
 
 		/** @brief A rectangular collision mask of solid/empty pixels */
@@ -2791,7 +3024,7 @@ namespace Jazz2::Scripting
 
 			jjMASKMAP& operator=(const jjMASKMAP& o);
 
-			/** @brief Returns the pixel at the given position, raises a script exception if it's out of the mask */
+			/** @brief Returns the pixel at the given position, a scratch one if it's out of the mask */
 			bool* GetPixel(std::uint32_t x, std::uint32_t y);
 
 			/** @brief Saves the mask into a tile's collision mask */
@@ -2800,6 +3033,8 @@ namespace Jazz2::Scripting
 		private:
 			std::int32_t _refCount;
 			bool _mask[Size * Size];
+			// The pixel GetPixel() gives for a position out of the map
+			bool _outOfRange = false;
 		};
 
 		/**
@@ -2879,14 +3114,158 @@ namespace Jazz2::Scripting
 			/** @brief Returns the layer's vertical position for the given player's camera */
 			float getYPosition(const jjPLAYER* play) const;
 
+			/** @brief Where a textured layer is drawn, `SURFACE::Surface` of JJ2+ */
+			enum TextureSurfaceStyles : std::int32_t {
+				Untextured,		/**< Drawn as tiles */
+				Legacy,			/**< Over the whole view, as layer 8 of the original game */
+				FullScreen,		/**< Over the whole view */
+				InnerWindow,	/**< Only where the layer is, as a window into one over the whole view */
+				InnerLayer		/**< Only where the layer is, the horizon and the vanishing point a fraction of the layer */
+			};
+
+			/**
+			 * @brief Parameters of one texture style of a layer, `jjLAYERWARPHORIZON` and the others of JJ2+
+			 *
+			 * What they mean depends on the style - the fade position of a warp horizon, a tunnel and a cylinder, the pivot of
+			 * a menu, the amplitudes of a wave, the vanishing point and the top of a reflection - but as in JJ2+, they're
+			 * the same values for all the styles, a value set for one is the value of the others too (see @ref SetStyleValue()),
+			 * only the tint color is a reflection's own. The fade color and the stars, which each style takes in its own way
+			 * too, are of the layer as well (see @ref ApplyTexture()).
+			 */
+			struct TextureStyleParams {
+				/** @brief Layer the parameters are of */
+				jjLAYER* Owner = nullptr;
+				/** @brief Horizontal value, as a fraction of the view (of the layer for @ref InnerLayer), or the horizontal amplitude */
+				float X = 0.5f;
+				/** @brief Vertical value, as a fraction of the view (of the layer for @ref InnerLayer), or the vertical amplitude */
+				float Y = 0.5f;
+				/** @brief Whether it fades into the fade color */
+				bool Fade = true;
+				/** @brief Palette entry a reflection is tinted with */
+				std::uint8_t TintColor = 192;
+			};
+
+			/** @brief Parameters of `TEXTURE::WARPHORIZON` */
+			TextureStyleParams warpHorizon;
+			/** @brief Parameters of `TEXTURE::TUNNEL` */
+			TextureStyleParams tunnel;
+			/** @brief Parameters of `TEXTURE::MENU` */
+			TextureStyleParams menu;
+			/** @brief Parameters of `TEXTURE::TILEMENU` */
+			TextureStyleParams tileMenu;
+			/** @brief Parameters of `TEXTURE::WAVE` */
+			TextureStyleParams wave;
+			/** @brief Parameters of `TEXTURE::CYLINDER` */
+			TextureStyleParams cylinder;
+			/** @brief Parameters of `TEXTURE::REFLECTION` */
+			TextureStyleParams reflection;
+
 			/** @brief Returns the textured-background mode of the layer */
 			std::int32_t GetTextureMode() const;
 			/** @brief Sets the textured-background mode of the layer */
-			void SetTextureMode(std::int32_t value) const;
+			void SetTextureMode(std::int32_t value);
 			/** @brief Returns the texture used by the layer */
 			std::int32_t GetTexture() const;
 			/** @brief Sets the texture used by the layer */
-			void SetTexture(std::int32_t value) const;
+			void SetTexture(std::int32_t value);
+			/** @brief Returns where the layer is drawn textured, see @ref TextureSurfaceStyles */
+			std::int32_t GetTextureSurface() const;
+			/** @brief Sets where the layer is drawn textured, see @ref TextureSurfaceStyles */
+			void SetTextureSurface(std::int32_t value);
+			/**
+			 * @brief Makes the layer of the level drawn as its texture properties say
+			 *
+			 * A style the game can't draw (`TEXTURE::MENU`) is drawn as a warp horizon, a wave is drawn over the whole view
+			 * whatever its surface.
+			 */
+			void ApplyTexture();
+			/**
+			 * @brief Sets how a textured layer is drawn over what is behind it by the sprite mode a script set
+			 *
+			 * Returns `false` if the mode isn't one a textured layer can be drawn with, it's drawn as it is then.
+			 */
+			bool SetTextureBlend(Tiles::LayerDescription& description) const;
+
+			/** @brief Returns a value of the parameters of a texture style */
+			template<float TextureStyleParams::*Member>
+			static float GetStyleValue(const TextureStyleParams* params) {
+				return params->*Member;
+			}
+			/** @brief Sets a value of the parameters of a texture style, of all of them as in JJ2+ */
+			template<float TextureStyleParams::*Member>
+			static float SetStyleValue(TextureStyleParams* params, float value) {
+				if (params->*Member != value) {
+					jjLAYER* owner = params->Owner;
+					for (TextureStyleParams* style : { &owner->warpHorizon, &owner->tunnel, &owner->menu, &owner->tileMenu, &owner->wave, &owner->cylinder, &owner->reflection }) {
+						style->*Member = value;
+					}
+					owner->ApplyTexture();
+				}
+				return value;
+			}
+			/** @brief Returns whether a texture style fades */
+			static bool GetStyleFade(const TextureStyleParams* params) {
+				return params->Fade;
+			}
+			/** @brief Sets whether a texture style fades, all of them as in JJ2+ */
+			static bool SetStyleFade(TextureStyleParams* params, bool value) {
+				if (params->Fade != value) {
+					jjLAYER* owner = params->Owner;
+					for (TextureStyleParams* style : { &owner->warpHorizon, &owner->tunnel, &owner->menu, &owner->tileMenu, &owner->wave, &owner->cylinder, &owner->reflection }) {
+						style->Fade = value;
+					}
+					owner->ApplyTexture();
+				}
+				return value;
+			}
+			/** @brief Returns the palette entry a reflection is tinted with */
+			static std::uint8_t GetStyleTintColor(const TextureStyleParams* params) {
+				return params->TintColor;
+			}
+			/** @brief Sets the palette entry a reflection is tinted with */
+			static std::uint8_t SetStyleTintColor(TextureStyleParams* params, std::uint8_t value) {
+				if (params->TintColor != value) {
+					params->TintColor = value;
+					params->Owner->ApplyTexture();
+				}
+				return value;
+			}
+			/** @brief Returns a component of the fade color, or what the style takes it as */
+			template<std::int32_t Index>
+			static std::uint8_t GetTextureComponent(const TextureStyleParams* params) {
+				return params->Owner->_textureColor[Index];
+			}
+			/** @brief Sets a component of the fade color, or what the style takes it as */
+			template<std::int32_t Index>
+			static std::uint8_t SetTextureComponent(TextureStyleParams* params, std::uint8_t value) {
+				params->Owner->SetTextureColor(Index, value);
+				return value;
+			}
+			/** @brief Returns the speed of a wave, the blue of the fade color as a signed byte */
+			static std::int8_t GetWaveSpeed(const TextureStyleParams* params) {
+				return std::int8_t(params->Owner->_textureColor[2]);
+			}
+			/** @brief Sets the speed of a wave, the blue of the fade color as a signed byte */
+			static std::int8_t SetWaveSpeed(TextureStyleParams* params, std::int8_t value) {
+				params->Owner->SetTextureColor(2, std::uint8_t(value));
+				return value;
+			}
+			/** @brief Returns the stars of a warp horizon, or what the style takes them as */
+			static bool GetTextureStars(const TextureStyleParams* params) {
+				return params->Owner->_textureStars;
+			}
+			/** @brief Sets the stars of a warp horizon, or what the style takes them as */
+			static bool SetTextureStars(TextureStyleParams* params, bool value) {
+				if (params->Owner->_textureStars != value) {
+					params->Owner->_textureStars = value;
+					params->Owner->ApplyTexture();
+				}
+				return value;
+			}
+			/** @brief Returns the fade color */
+			static jjPALCOLOR GetFadeColor(const TextureStyleParams* params);
+			/** @brief Sets the fade color */
+			static void SetFadeColor(TextureStyleParams* params, jjPALCOLOR color);
 
 			/** @brief Rotation angle of the layer */
 			std::int32_t rotationAngle = 0;
@@ -2911,6 +3290,8 @@ namespace Jazz2::Scripting
 			static CScriptArray* jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, int32_t tileIDAdjustmentFactor);
 			/** @brief Imports tiles from another tileset into the current one */
 			static bool jjTilesFromTileset(const String& filename, std::uint32_t firstTileID, std::uint32_t tileCount, const CScriptArray* paletteColorMapping);
+			/** @brief Imports tiles from another tileset as 32-bit tiles, in the colors of a palette or of the tileset's own */
+			static bool jjTilesFromTileset32(const String& filename, std::uint32_t firstTileID, std::uint32_t tileCount, const jjPAL* palette);
 
 			/** @brief Returns the tile at the given tile coordinates */
 			std::uint16_t tileGet(int xTile, int yTile);
@@ -2936,12 +3317,74 @@ namespace Jazz2::Scripting
 			float _syncedOffsetX = 0.0f;
 			float _syncedOffsetY = 0.0f;
 			// The sprite mode of a standalone layer, and the parameter of any layer - it's kept even while the mode doesn't use it,
-			// as in JJ2+. The mode of a level layer is its renderer type, see get_spriteMode().
+			// as in JJ2+. The mode of a level layer is its renderer type, see get_spriteMode(), unless a script set one, some
+			// modes are only like the renderer type they're drawn with.
 			std::uint32_t _spriteMode = 0;
 			std::uint8_t _spriteParam = 0;
+			bool _hasSpriteMode = false;
+			// The texture of the layer as scripts see it, the layer of the level is drawn as it says (see ApplyTexture()) - a
+			// style the game can't draw is still kept as the script set it. The fade color and the stars are shared by the
+			// styles, as in JJ2+, each takes them in its own way.
+			std::int32_t _textureStyle = 0;
+			std::int32_t _texture = 0;
+			std::int32_t _textureSurface = Untextured;
+			std::uint8_t _textureColor[3] = {};
+			bool _textureStars = false;
+			// The image jjPIXELMAP::makeTexture() gave the layer (TEXTURE::CUSTOM) as the script made it, see SetCustomTexture()
+			std::unique_ptr<std::uint8_t[]> _customTexture;
+
+			// Sets a component of the fade color and makes the layer drawn with it
+			void SetTextureColor(std::int32_t index, std::uint8_t value);
+			// Gives the layer of the level the image the script made, or the one it has again after the style changed - a sky, a
+			// tunnel or a cylinder of JJ2+ is drawn from the upper half of the palette, index | 128 (measured), a wave and the
+			// other styles as it is. Returns `false` if the layer isn't one of the level.
+			bool SetCustomTexture(const std::uint8_t* pixels);
+			// Takes the texture properties of the layer of the level as it's drawn now, when the proxy is made
+			void InitializeTexture(const Tiles::TileMapLayer& layer);
+			// Points the parameters of the texture styles to this layer
+			void BindTextureParams();
 
 			friend class LevelScriptLoader;
 			friend class jjPIXELMAP;	// A pixel map can be made of the tiles of a layer
+			friend class jjCOLORMAP;
+		};
+
+		/**
+		 * @brief A tile of the level, static or animated
+		 *
+		 * There's one instance for every tile ID, `jjTiles[id]`, which a script reads the frames and the speed of an
+		 * animated tile through, and changes them through `jjAnimatedTiles[id]`. A static tile is its only frame.
+		 */
+		class jjTILE
+		{
+		public:
+			/** @brief Creates a new instance for a tile ID, with @ref TILE::ANIMATED for an animated tile and without flips */
+			explicit jjTILE(std::uint16_t tileID);
+
+			/** @brief Increments the reference count */
+			void AddRef();
+			/** @brief Decrements the reference count */
+			void Release();
+
+			/** @brief Returns the tile for a tile ID of `jjTiles`, or `nullptr` if the level has no such tile */
+			static jjTILE* get_jjTiles(std::uint16_t tileID);
+			/** @brief Returns the animated tile of the given index, or `nullptr` if the level has no such animated tile */
+			static jjTILE* get_jjAnimatedTiles(std::uint16_t tileID);
+
+			/** @brief Returns the frames of the tile as it plays them, with the wait and ping-pong frames */
+			CScriptArray* getFrames() const;
+			/** @brief Replaces the frames of an animated tile, returns `false` for a static one or no frames */
+			bool setFrames(const CScriptArray& frames, bool pingPong, std::uint16_t wait, std::uint16_t randomWait, std::uint16_t pingPongWait);
+			/** @brief Returns the frames per second of an animated tile, 0 for a static one */
+			std::uint8_t get_fps() const;
+			/** @brief Sets the frames per second of an animated tile */
+			std::uint8_t set_fps(std::uint8_t value);
+			/** @brief Returns the tile ID, as `jjTiles` takes it */
+			std::uint16_t get_tileID() const;
+
+		private:
+			std::int32_t _refCount;
+			std::uint16_t _tileID;
 		};
 
 		/** @brief Controls which parts of a player are drawn and how */
@@ -3056,12 +3499,12 @@ namespace Jazz2::Scripting
 
 	/** @brief Runs MLLE (level editor) level setup */
 	bool mlleSetup();
-	/** @brief Reapplies the MLLE-defined palette */
-	void mlleReapplyPalette();
 	/** @brief Spawns MLLE off-grid objects */
 	void mlleSpawnOffgrids();
 	/** @brief Spawns MLLE off-grid objects for the local player */
 	void mlleSpawnOffgridsLocal();
+	/** @brief Returns the layer of the given name, as MLLE named it, or `nullptr` */
+	Legacy::jjLAYER* mlleGetLayer(const String& name);
 
 	/** @brief Returns the sine of the given table angle */
 	float get_sinTable(std::uint32_t angle);
@@ -3205,6 +3648,8 @@ namespace Jazz2::Scripting
 	std::int8_t GetTileType(std::uint16_t tile);
 	/** @brief Sets the collision type of the given tile */
 	std::int8_t SetTileType(std::uint16_t tile, std::uint16_t value);
+	/** @brief Returns whether the given tile uses 32-bit colors, `jjTileIs32Bit[]` */
+	bool GetTileIs32Bit(std::uint16_t tile);
 
 	// TODO
 

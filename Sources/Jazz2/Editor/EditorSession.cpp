@@ -981,11 +981,12 @@ namespace Jazz2::Editor
 		}
 	}
 
-	bool EditorSession::NeedsLayerOverride(const DocumentLayer& layer)
+	bool EditorSession::NeedsLayerOverride(const DocumentLayer& layer) const
 	{
-		// A reflection with an image of its own doesn't show its tiles at all, so it's shown as it is, rippling as in the game
-		if (!layer.IsSpriteLayer() && Tiles::LayerRendererType(layer.Record.RendererType) == Tiles::LayerRendererType::Reflection &&
-			!layer.Texture.empty()) {
+		// A reflection with an image of its own doesn't show its tiles at all, so it's shown as it is, rippling as in the game,
+		// and any textured layer is if the settings say so - moving as in the game too, it's seen rather than painted then
+		if (RuntimeSync::IsTexturedBackground(layer) && (_settings.PreviewTexturedLayers ||
+			(Tiles::LayerRendererType(layer.Record.RendererType) == Tiles::LayerRendererType::Reflection && !layer.Texture.empty()))) {
 			return false;
 		}
 		return (RuntimeSync::IsTexturedBackground(layer) || layer.Record.AutoSpeedX != 0.0f || layer.Record.AutoSpeedY != 0.0f);

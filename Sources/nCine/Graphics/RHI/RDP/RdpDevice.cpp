@@ -1415,15 +1415,23 @@ namespace nCine::RHI::RDP
 			The per-vertex tint rides PRIM, set per row with the TintMix combiner instead of SHADE, and a band whose
 			tint is complete is the tint colour alone: one flat rectangle, no texels at all.
 
+			With @p pq, a q per vertex constant along each row, the texture coordinates are in perspective (see
+			FixedFunctionPass.h): each row then takes its start, its step and its texel row exactly, worked out from the
+			edges for that row, and wrapped into one period of the texture, so a band can span any number of them.
+
 			Returns false for any other strip, which keeps the triangle path.
 		*/
 		bool SubmitRowBandStrip(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
-			const float* colors, float dx, float dy)
+			const float* colors, float dx, float dy, const float* pq = nullptr)
 		{
 			// Two vertical edges (0-1 and 2-3), two horizontal ones (0-2 and 1-3), the vertical texel coordinate and
 			// the colour constant along each row, and a wrapping texture, whose windows are whole rows
 			if (state.Texture == nullptr || state.RepeatMaskS == 0 || state.RepeatMaskT != 0 ||
 				px[0] != px[1] || px[2] != px[3] || py[0] != py[2] || py[1] != py[3] || pv[0] != pv[2] || pv[1] != pv[3]) {
+				return false;
+			}
+			const bool perspective = (pq != nullptr);
+			if (perspective && (pq[0] != pq[2] || pq[1] != pq[3] || pq[0] <= 0.0f || pq[1] <= 0.0f)) {
 				return false;
 			}
 			if (colors != nullptr) {
@@ -1458,7 +1466,8 @@ namespace nCine::RHI::RDP
 			// Everything has to stay inside those encodings, which a strip of the warp always does.
 			const float invWidth = 1.0f / (xR - xL);
 			const float dsdxA = (pu[right] - pu[left]) * invWidth, dsdxB = (pu[right + 1] - pu[left + 1]) * invWidth;
-			for (std::int32_t i = 0; i < 4; i++) {
+			// In perspective each row is wrapped into a period anyway
+			for (std::int32_t i = 0; i < 4 && !perspective; i++) {
 				if (std::abs(pu[i]) > 1000.0f || std::abs(pv[i]) > 1000.0f) {
 					return false;
 				}
@@ -1493,7 +1502,9 @@ namespace nCine::RHI::RDP
 			surface_t everyOtherRow;
 			const surface_t* source = state.Texture;
 			std::int32_t rowStep = 1;
-			if (std::abs((pv[1] - pv[0]) * invHeight) >= 2.0f && (surfH & 1) == 0) {
+			// In perspective, where the band moves on slowest
+			const float rowRate = std::abs((pv[1] - pv[0]) * invHeight) * (perspective ? std::min(pq[1] / pq[0], pq[0] / pq[1]) : 1.0f);
+			if (rowRate >= 2.0f && (surfH & 1) == 0) {
 				everyOtherRow = *state.Texture;
 				everyOtherRow.stride *= 2;
 				everyOtherRow.height /= 2;
@@ -1506,6 +1517,30 @@ namespace nCine::RHI::RDP
 			firstAndStep(pu[left], pu[left + 1], 32.0f, sFix, sStep);
 			firstAndStep(dsdxA, dsdxB, 1024.0f, dsdxFix, dsdxStep);
 			const auto fromFixed = [](std::int32_t v) { return (v + 0x8000) >> 16; };
+			// In perspective, the texel row, the start and the step of a row as the fixed-point values above, each of them
+			// u * q, v * q and q linear down the band and divided per row, the start and the texel row wrapped into a period
+			const float qA = (perspective ? pq[0] : 1.0f), qB = (perspective ? pq[1] : 1.0f);
+			const auto perspectiveAt = [&](std::int32_t row, std::int32_t& t, std::int32_t& s, std::int32_t& dsdx) {
+				const float f = (float(row) + 0.5f - yA) * invHeight;
+				const float invQ = 1.0f / (qA + (qB - qA) * f);
+				const auto at = [&](float a, float b) { return (a * qA + (b * qB - a * qA) * f) * invQ; };
+				float tv = at(pv[0], pv[1]);
+				tv -= std::floor(tv / float(surfH)) * float(surfH);
+				float sv = at(pu[left], pu[left + 1]);
+				sv -= std::floor(sv / float(surfW)) * float(surfW);
+				t = toFixed(tv * 32.0f / float(rowStep));
+				s = toFixed(sv * 32.0f);
+				dsdx = toFixed((at(pu[right], pu[right + 1]) - at(pu[left], pu[left + 1])) * invWidth * 1024.0f);
+			};
+			const auto perspectiveT = [&](std::int32_t row) {
+				std::int32_t t, s, dsdx;
+				perspectiveAt(row, t, s, dsdx);
+				return t;
+			};
+			if (perspective) {
+				// Which way the windows go along the band, before the wrapping
+				tStep = (pv[1] > pv[0] ? 1 : -1);
+			}
 
 			DrawState rowState = state;
 			rowState.Texture = source;
@@ -1564,6 +1599,9 @@ namespace nCine::RHI::RDP
 				win1 = tmemWindow.T1;
 			}
 			for (std::int32_t row = rowFirst; row < rowEnd; row++) {
+				if (perspective) {
+					perspectiveAt(row, tFix, sFix, dsdxFix);
+				}
 				std::int32_t n0, n1;
 				const std::int32_t qt = rowTexelsAt(tFix, n0, n1);
 				if (n0 < win0 || n1 > win1) {
@@ -1573,7 +1611,7 @@ namespace nCine::RHI::RDP
 					win1 = n1;
 					std::int32_t tAhead = tFix;
 					for (std::int32_t ahead = row + 1; ahead < rowEnd; ahead++) {
-						tAhead += tStep;
+						tAhead = (perspective ? perspectiveT(ahead) : tAhead + tStep);
 						std::int32_t a0, a1;
 						rowTexelsAt(tAhead, a0, a1);
 						const std::int32_t lo = std::min(win0, a0), hi = std::max(win1, a1);
@@ -1616,9 +1654,11 @@ namespace nCine::RHI::RDP
 				__rdpq_texture_rectangle_raw_fx(CurrentTile(), std::uint16_t(qx0), std::uint16_t(row * 4), std::uint16_t(qx1),
 					std::uint16_t(row * 4 + 4), std::uint16_t(qs), std::uint16_t(qt), std::int16_t(qdsdx), 0);
 				if (TraceDrawStatistics) { stats.Rects++; }
-				tFix += tStep;
-				sFix += sStep;
-				dsdxFix += dsdxStep;
+				if (!perspective) {
+					tFix += tStep;
+					sFix += sStep;
+					dsdxFix += dsdxStep;
+				}
 			}
 			return true;
 		}
@@ -1632,12 +1672,23 @@ namespace nCine::RHI::RDP
 			strip shaped like the warp's bands goes out row by row instead (see SubmitRowBandStrip).
 		*/
 		void SubmitStripPrimitive(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
-			std::int32_t count, const float* colors, float dx, float dy)
+			std::int32_t count, const float* colors, float dx, float dy, const float* pq = nullptr)
 		{
-			if (count == 4 && SubmitRowBandStrip(state, px, py, pu, pv, colors, dx, dy)) {
+			if (count == 4 && SubmitRowBandStrip(state, px, py, pu, pv, colors, dx, dy, pq)) {
 				return;
 			}
 			const bool textured = (state.Texture != nullptr);
+			// With a q per vertex (see FixedFunctionPass.h) the triangles carry it as their 1/w, normalized to the largest,
+			// with the perspective correction on for them alone
+			const bool perspective = (textured && pq != nullptr);
+			float qScale = 1.0f;
+			if (perspective) {
+				float qMax = pq[0];
+				for (std::int32_t i = 1; i < count; i++) {
+					qMax = (pq[i] > qMax ? pq[i] : qMax);
+				}
+				qScale = (qMax > 0.0f ? 1.0f / qMax : 1.0f);
+			}
 			// One window for the whole strip is the fast path (the band pieces the effects build usually
 			// sample small spans, and then the strip costs a single upload). A strip whose combined span
 			// does not fit TMEM - the textured-background warp reaches across its source - is uploaded
@@ -1705,6 +1756,9 @@ namespace nCine::RHI::RDP
 			// Vertex layouts of the TRIFMT_* formats: FILL {x,y}, SHADE {x,y,r,g,b,a}, TEX {x,y,s,t,w},
 			// SHADE_TEX {x,y,r,g,b,a,s,t,w}
 			float verts[3][9];
+			if (perspective) {
+				rdpq_mode_persp(true);
+			}
 			for (std::int32_t i = 2; i < count; i++) {
 				const std::int32_t idx[3] = { i - 2, i - 1, i };
 				for (std::int32_t k = 0; k < 3; k++) {
@@ -1722,7 +1776,7 @@ namespace nCine::RHI::RDP
 					if (textured) {
 						out[n++] = pu[v];
 						out[n++] = pv[v];
-						out[n++] = 1.0f;
+						out[n++] = (perspective ? pq[v] * qScale : 1.0f);
 					}
 				}
 				const rdpq_trifmt_t* fmt = (colors != nullptr
@@ -1730,6 +1784,9 @@ namespace nCine::RHI::RDP
 					: (textured ? &triFmtTex[tmemCurrentSlot] : &TRIFMT_FILL));
 				rdpq_triangle(fmt, verts[0], verts[1], verts[2]);
 				if (TraceDrawStatistics) { stats.Triangles++; }
+			}
+			if (perspective) {
+				rdpq_mode_persp(false);
 			}
 		}
 
@@ -1894,6 +1951,9 @@ namespace nCine::RHI::RDP
 		float StripU[MaxStripVertices];
 		float StripV[MaxStripVertices];
 		float StripColor[MaxStripVertices][4];
+		// The q of a strip in perspective (see SetStripVertexQ()), for the next submitted strip only
+		float StripQ[MaxStripVertices];
+		bool StripHasQ = false;
 
 		// The pending merged quad (see SubmitQuad): the first pass's descriptor and the running sum of
 		// every pass's colour accumulated into it
@@ -1952,6 +2012,13 @@ namespace nCine::RHI::RDP
 				StripColor[i][1] = Saturate(g);
 				StripColor[i][2] = Saturate(b);
 				StripColor[i][3] = Saturate(a);
+			}
+		}
+		void SetStripVertexQ(std::int32_t i, float q)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripQ[i] = q;
+				StripHasQ = true;
 			}
 		}
 
@@ -2180,6 +2247,8 @@ namespace nCine::RHI::RDP
 		// Textured strip out of the builder scratch: the pass's flat colour over the material state
 		void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
@@ -2190,7 +2259,7 @@ namespace nCine::RHI::RDP
 			DrawState state = *Material;
 			ApplyPassToState(state, pass, pass.Color);
 			SubmitStripPrimitive(state, StripX, StripY, StripU, StripV, count, nullptr,
-				pass.ScreenOffset[0], pass.ScreenOffset[1]);
+				pass.ScreenOffset[0], pass.ScreenOffset[1], (hasQ ? StripQ : nullptr));
 		}
 
 		// Shaded (per-vertex-colour) strip out of the builder scratch: UNTEXTURED - a gradient has no
@@ -2198,6 +2267,8 @@ namespace nCine::RHI::RDP
 		// which case the strip keeps its texture and its UVs, with the tint per vertex in SHADE
 		void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
@@ -2219,7 +2290,7 @@ namespace nCine::RHI::RDP
 			if (pass.Tev == FixedFunctionPass::TevPreset::TintMix && state.Texture != nullptr) {
 				state.Combiner = CombShadeTintMix;
 				SubmitStripPrimitive(state, StripX, StripY, StripU, StripV, count, &StripColor[0][0],
-					pass.ScreenOffset[0], pass.ScreenOffset[1]);
+					pass.ScreenOffset[0], pass.ScreenOffset[1], (hasQ ? StripQ : nullptr));
 			} else {
 				state.Texture = nullptr;
 				state.Tlut = nullptr;

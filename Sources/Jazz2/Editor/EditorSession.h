@@ -509,8 +509,9 @@ namespace Jazz2::Editor
 		 *
 		 * A sky or a tunnel is a picture made of the tiles of the layer, its tiles couldn't be told apart in it, and a
 		 * reflection doesn't show its tiles at all, so they're drawn as plain tiles --- but not those of a reflection with
-		 * an image of its own, which is shown as it is, as its tiles aren't any part of it. A layer with an automatic
-		 * speed stays where its offset puts it. With @p restore the
+		 * an image of its own, which is shown as it is, as its tiles aren't any part of it, nor any of them while
+		 * @ref EditorSettings::PreviewTexturedLayers is set. A layer with an automatic speed stays where its offset puts
+		 * it. With @p restore the
 		 * layer is drawn as the game draws it again whichever layer is edited. Layers are kept still as a whole too if
 		 * the settings say so. If the layers of the document were moved since, but not those of the shown level yet,
 		 * @p layerOrder tells where they went (see @ref DocumentChanges::GetLayerOrder()).
@@ -524,7 +525,7 @@ namespace Jazz2::Editor
 		// Cuts ground to the ground line chosen last into tiles of this level, so the collision follows it exactly
 		void BakeGroundLine();
 		/** @brief Returns `true` if a layer is drawn differently while it's edited, see @ref UpdateLayerOverride() */
-		static bool NeedsLayerOverride(const DocumentLayer& layer);
+		bool NeedsLayerOverride(const DocumentLayer& layer) const;
 		/** @brief Returns the handler that gets the frames and the input */
 		LevelHandler* GetActiveHandler() const;
 

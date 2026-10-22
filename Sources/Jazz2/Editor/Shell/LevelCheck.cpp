@@ -705,6 +705,12 @@ namespace Jazz2::Editor
 				}
 				break;
 			}
+			case Tiles::LayerRendererType::SingleColor:
+			case Tiles::LayerRendererType::ChromaKey:
+				if (color[3] == 0) {
+					add(LevelProblemSeverity::Info, _x("editor", "Alpha is 0, it isn't drawn"));
+				}
+				break;
 			case Tiles::LayerRendererType::XRay: {
 				// The last frame of an animated tile is its mask, one of a single frame shows nothing (see LayerRendererType::XRay)
 				SmallVector<std::uint16_t, 8> reported;

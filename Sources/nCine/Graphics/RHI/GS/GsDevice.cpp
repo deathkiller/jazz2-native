@@ -774,14 +774,14 @@ namespace nCine::RHI::GS
 		// two so it reads better after the common case
 		void SubmitVertexPrimitive(std::int32_t primType, const DrawState& state, const float* sx, const float* sy,
 			const float* tu, const float* tv, const std::uint64_t* colors, const color_t& flat,
-			std::int32_t count, float offsetX, float offsetY);
+			std::int32_t count, float offsetX, float offsetY, const float* tq = nullptr);
 
 		/** @brief A triangle strip out of a vertex list (see @ref SubmitVertexPrimitive()) */
 		inline void SubmitStripPrimitive(const DrawState& state, const float* sx, const float* sy,
 			const float* tu, const float* tv, const std::uint64_t* colors, const color_t& flat,
-			std::int32_t count, float offsetX, float offsetY)
+			std::int32_t count, float offsetX, float offsetY, const float* tq = nullptr)
 		{
-			SubmitVertexPrimitive(PRIM_TRIANGLE_STRIP, state, sx, sy, tu, tv, colors, flat, count, offsetX, offsetY);
+			SubmitVertexPrimitive(PRIM_TRIANGLE_STRIP, state, sx, sy, tu, tv, colors, flat, count, offsetX, offsetY, tq);
 		}
 
 		/** @brief A connected line strip out of a vertex list (the weapon wheel) */
@@ -898,10 +898,14 @@ namespace nCine::RHI::GS
 			Emitted as one packed GIF list rather than through a libdraw helper, because `libdraw` has no
 			primitive that takes UVs and per-vertex colours together - `draw_prim_start`/`_end` build the whole
 			vertex format from a `prim_t`, which is the same PRMODE juggling the quad paths avoid.
+
+			With @p tq, a q per vertex, the texture coordinates are interpolated in perspective (see
+			FixedFunctionPass.h): they always go out through `ST` then, as `s * q` and `t * q` with the `Q` of
+			each vertex's `RGBAQ` - normalized to the largest of the strip, only their ratios matter.
 		*/
 		void SubmitVertexPrimitive(std::int32_t primType, const DrawState& state, const float* sx, const float* sy,
 			const float* tu, const float* tv, const std::uint64_t* colors, const color_t& flat,
-			std::int32_t count, float offsetX, float offsetY)
+			std::int32_t count, float offsetX, float offsetY, const float* tq)
 		{
 			// A line strip is the one primitive here that means something with two vertices
 			const std::int32_t minVertices = (primType == PRIM_LINE_STRIP || primType == PRIM_LINE ? 2 : 3);
@@ -923,8 +927,17 @@ namespace nCine::RHI::GS
 			// PRIM, then a REGLIST of `regsPerVertex` registers repeated once per vertex. ABE comes from the
 			// same library-wide blending flag draw_enable_blending() set, so a strip blends like a quad.
 			const std::int32_t tme = (textured ? 1 : 0);
-			const bool useUv = (!textured ||
-				FitsUvRegister(tu, tv, count, float(state.SampledWidth), float(state.SampledHeight)));
+			const bool perspective = (textured && tq != nullptr);
+			float qScale = 1.0f;
+			if (perspective) {
+				float qMax = tq[0];
+				for (std::int32_t i = 1; i < count; i++) {
+					qMax = (tq[i] > qMax ? tq[i] : qMax);
+				}
+				qScale = (qMax > 0.0f ? 1.0f / qMax : 1.0f);
+			}
+			const bool useUv = (!textured || (!perspective &&
+				FitsUvRegister(tu, tv, count, float(state.SampledWidth), float(state.SampledHeight))));
 			q->dw[0] = GIF_SET_TAG(1, 0, 0, 0, GIF_FLG_PACKED, 1);
 			q->dw[1] = GIF_REG_AD;
 			q++;
@@ -945,7 +958,21 @@ namespace nCine::RHI::GS
 
 			std::uint64_t* dw = reinterpret_cast<std::uint64_t*>(q);
 			for (std::int32_t i = 0; i < count; i++) {
-				*dw++ = (colors != nullptr ? colors[i] : flat.rgbaq);
+				const std::uint64_t rgbaq = (colors != nullptr ? colors[i] : flat.rgbaq);
+				if (perspective) {
+					// Q is the upper half of RGBAQ, as a float
+					const float vq = tq[i] * qScale;
+					const float s = tu[i] * vq, tt = tv[i] * vq;
+					std::uint32_t qBits, sBits, tBits;
+					std::memcpy(&qBits, &vq, sizeof(qBits));
+					std::memcpy(&sBits, &s, sizeof(sBits));
+					std::memcpy(&tBits, &tt, sizeof(tBits));
+					*dw++ = (rgbaq & 0xFFFFFFFFull) | (std::uint64_t(qBits) << 32);
+					*dw++ = GIF_SET_ST(sBits, tBits);
+					*dw++ = GIF_SET_XYZ(ftoi4(sx[i] + offsetX + 2048.0f), ftoi4(sy[i] + offsetY + 2048.0f), 0);
+					continue;
+				}
+				*dw++ = rgbaq;
 				if (textured) {
 					if (useUv) {
 						*dw++ = GIF_SET_UV(ftoi4(tu[i] * float(state.SampledWidth)),
@@ -2182,6 +2209,9 @@ namespace nCine::RHI::GS
 		float StripU[MaxStripVertices];
 		float StripV[MaxStripVertices];
 		std::uint64_t StripRgbaq[MaxStripVertices];
+		// The q of a strip in perspective (see SetStripVertexQ()), for the next submitted strip only
+		float StripQ[MaxStripVertices];
+		bool StripHasQ = false;
 
 		const float* Color() const { return InstanceColor; }
 		float TexelWidth() const { return TexelW; }
@@ -2229,6 +2259,13 @@ namespace nCine::RHI::GS
 			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
 				const float rgba[4] = { r, g, b, a };
 				StripRgbaq[i] = PackVertexColor(rgba).rgbaq;
+			}
+		}
+		void SetStripVertexQ(std::int32_t i, float q)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripQ[i] = q;
+				StripHasQ = true;
 			}
 		}
 
@@ -2331,6 +2368,8 @@ namespace nCine::RHI::GS
 		// Textured strip out of the builder scratch: the pass's flat colour over the material state
 		void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
@@ -2350,13 +2389,16 @@ namespace nCine::RHI::GS
 			const DrawState* state = (silhouette && Coverage != nullptr ? Coverage : Material);
 			ApplyBlendEquation(PassEquation(MaterialBlend, effective.Blend));
 			SubmitStripPrimitive(*state, StripX, StripY, StripU, StripV, nullptr,
-				PackStateColor(*state, effective.Color), count, pass.ScreenOffset[0], pass.ScreenOffset[1]);
+				PackStateColor(*state, effective.Color), count, pass.ScreenOffset[0], pass.ScreenOffset[1],
+				(hasQ ? StripQ : nullptr));
 		}
 
 		// Shaded (per-vertex-colour) strip out of the builder scratch: always UNTEXTURED - a gradient has no
 		// texture to modulate - whose blend comes from the pass
 		void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			// Untextured, a q has nothing to divide
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}

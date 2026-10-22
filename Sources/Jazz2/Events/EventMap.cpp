@@ -556,6 +556,48 @@ namespace Jazz2::Events
 		return (IsInLayout(x, y) ? _eventLayout[x + y * _layoutSize.X] : Empty);
 	}
 
+	bool EventMap::GetGeneratorEvent(std::int32_t x, std::int32_t y, EventType& type, const std::uint8_t*& params, std::uint8_t& delay) const
+	{
+		const EventTile& tile = GetEventTile(x, y);
+		if (tile.Event != EventType::Generator) {
+			return false;
+		}
+
+		std::uint32_t generatorIdx = Actors::EventParamsReader(tile.EventParams).GetUint32(0);
+		if (generatorIdx >= _generators.size()) {
+			return false;
+		}
+
+		const GeneratorInfo& generator = _generators[generatorIdx];
+		type = generator.Event;
+		params = generator.EventParams;
+		delay = generator.Delay;
+		return true;
+	}
+
+	EventType EventMap::GetStartOrWarpTarget(std::int32_t x, std::int32_t y, std::uint8_t* params) const
+	{
+		// Where AddWarpTarget() and AddSpawnPosition() put them from the tile
+		constexpr float TileSize = float(Tiles::TileSet::DefaultTileSize);
+		std::memset(params, 0, Formats::LevelFile::EventParamsSize);
+		for (const WarpTarget& target : _warpTargets) {
+			if (std::int32_t(std::floor(target.Pos.X / TileSize)) == x && std::int32_t(std::floor(target.Pos.Y / TileSize)) == y) {
+				params[0] = std::uint8_t(target.Id);
+				params[1] = std::uint8_t(target.Id >> 8);
+				std::memcpy(params + Formats::EventRecord::OriginalParamsOffset, target.KeptParams, sizeof(target.KeptParams));
+				return EventType::WarpTarget;
+			}
+		}
+		for (const SpawnPoint& spawnPoint : _spawnPoints) {
+			if (std::int32_t(std::floor(spawnPoint.Pos.X / TileSize)) == x && std::int32_t(std::floor((spawnPoint.Pos.Y + 8.0f) / TileSize)) == y) {
+				params[0] = spawnPoint.PlayerTypeMask;
+				std::memcpy(params + Formats::EventRecord::OriginalParamsOffset, spawnPoint.KeptParams, sizeof(spawnPoint.KeptParams));
+				return EventType::LevelStart;
+			}
+		}
+		return EventType::Empty;
+	}
+
 	EventType EventMap::GetEventByPosition(float x, float y, std::uint8_t** eventParams)
 	{
 		return GetEventByPosition((std::int32_t)x / Tiles::TileSet::DefaultTileSize, (std::int32_t)y / Tiles::TileSet::DefaultTileSize, eventParams);
@@ -781,7 +823,7 @@ namespace Jazz2::Events
 					break;
 
 				case EventType::LevelStart: {
-					AddSpawnPosition(eventParams[0], x, y);
+					AddSpawnPosition(eventParams[0], x, y, eventParams);
 					break;
 				}
 
@@ -801,7 +843,7 @@ namespace Jazz2::Events
 				}
 
 				case EventType::WarpTarget:
-					AddWarpTarget(eventParams[0], x, y);
+					AddWarpTarget(eventParams[0], x, y, eventParams);
 					break;
 
 				default:
@@ -914,6 +956,7 @@ namespace Jazz2::Events
 						SpawnPoint& target = _spawnPoints.emplace_back();
 						target.PlayerTypeMask = eventParams[0];
 						target.Pos = Vector2f((float)pos.X - 16.0f, (float)pos.Y - 24.0f);
+						std::memcpy(target.KeptParams, eventParams + Formats::EventRecord::OriginalParamsOffset, sizeof(target.KeptParams));
 					}
 					break;
 				}
@@ -922,6 +965,7 @@ namespace Jazz2::Events
 					WarpTarget& target = _warpTargets.emplace_back();
 					target.Id = eventParams[0];
 					target.Pos = Vector2f((float)pos.X, (float)pos.Y);
+					std::memcpy(target.KeptParams, eventParams + Formats::EventRecord::OriginalParamsOffset, sizeof(target.KeptParams));
 					break;
 				}
 
@@ -944,14 +988,17 @@ namespace Jazz2::Events
 		}
 	}
 
-	void EventMap::AddWarpTarget(std::uint16_t id, std::int32_t x, std::int32_t y)
+	void EventMap::AddWarpTarget(std::uint16_t id, std::int32_t x, std::int32_t y, const std::uint8_t* eventParams)
 	{
 		WarpTarget& target = _warpTargets.emplace_back();
 		target.Id = id;
 		target.Pos = Vector2f((float)x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, (float)y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
+		if (eventParams != nullptr) {
+			std::memcpy(target.KeptParams, eventParams + Formats::EventRecord::OriginalParamsOffset, sizeof(target.KeptParams));
+		}
 	}
 
-	void EventMap::AddSpawnPosition(std::uint8_t typeMask, std::int32_t x, std::int32_t y)
+	void EventMap::AddSpawnPosition(std::uint8_t typeMask, std::int32_t x, std::int32_t y, const std::uint8_t* eventParams)
 	{
 		if (typeMask == 0) {
 			return;
@@ -959,6 +1006,9 @@ namespace Jazz2::Events
 
 		SpawnPoint& target = _spawnPoints.emplace_back();
 		target.PlayerTypeMask = typeMask;
+		if (eventParams != nullptr) {
+			std::memcpy(target.KeptParams, eventParams + Formats::EventRecord::OriginalParamsOffset, sizeof(target.KeptParams));
+		}
 		target.Pos = Vector2f((float)x * Tiles::TileSet::DefaultTileSize, (float)y * Tiles::TileSet::DefaultTileSize - 8.0f);
 	}
 

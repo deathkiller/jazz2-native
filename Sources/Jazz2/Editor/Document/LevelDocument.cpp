@@ -227,8 +227,12 @@ namespace Jazz2::Editor
 		const Formats::ChunkRecord* legacyLayerStates = nullptr;
 		std::int32_t spriteLayer = GetSpriteLayerIndex();
 		for (Formats::ChunkRecord& chunk : chunks) {
-			if (chunk.Tag == Formats::LevelFile::LayerNamesChunk) {
+			if (chunk.Tag == Formats::LayerNamesChunk::Tag) {
 				LoadLayerNames(chunk);
+			} else if (chunk.Tag == Formats::LayerNumbersChunk::Tag) {
+				for (std::int32_t i = 0; i < std::int32_t(Layers.size()); i++) {
+					Layers[i].Record.OriginalNumber = Formats::LayerNumbersChunk::Read(chunk.Data, i);
+				}
 			} else if (chunk.Tag == Formats::SpriteLayerChunk::Tag) {
 				// How the sprite layer is drawn is kept in its record as for any other layer, a damaged one leaves the defaults;
 				// without a sprite layer it means nothing, and it's written from the record of the sprite layer only
@@ -359,10 +363,20 @@ namespace Jazz2::Editor
 			chunks.push_back(Death::move(texturedLayersChunk));
 		}
 		Formats::ChunkRecord layerNames;
-		layerNames.Tag = Formats::LevelFile::LayerNamesChunk;
+		layerNames.Tag = Formats::LayerNamesChunk::Tag;
 		WriteLayerNames(layerNames.Data);
 		if (!layerNames.Data.empty()) {
 			chunks.push_back(Death::move(layerNames));
+		}
+		SmallVector<std::uint8_t, 16> layerNumbers;
+		for (const DocumentLayer& layer : Layers) {
+			layerNumbers.push_back(layer.Record.OriginalNumber);
+		}
+		Formats::ChunkRecord layerNumbersChunk;
+		layerNumbersChunk.Tag = Formats::LayerNumbersChunk::Tag;
+		Formats::LayerNumbersChunk::Write(layerNumbers, layerNumbersChunk.Data);
+		if (!layerNumbersChunk.Data.empty()) {
+			chunks.push_back(Death::move(layerNumbersChunk));
 		}
 		if (!exportOnly) {
 			Formats::ChunkRecord layerStates;
@@ -873,7 +887,7 @@ namespace Jazz2::Editor
 
 	void LevelDocument::SetChunk(std::uint32_t tag, ArrayView<const std::uint8_t> data)
 	{
-		DEATH_DEBUG_ASSERT(tag != Formats::LevelFile::LayerNamesChunk && tag != LayerStateChunk && tag != LegacyLayerStateChunk &&
+		DEATH_DEBUG_ASSERT(tag != Formats::LayerNamesChunk::Tag && tag != Formats::LayerNumbersChunk::Tag && tag != LayerStateChunk && tag != LegacyLayerStateChunk &&
 			tag != Formats::SpriteLayerChunk::Tag && tag != Formats::TexturedLayerChunk::Tag, "The chunk is held by the document itself", );
 
 		for (std::size_t i = 0; i < Chunks.size(); i++) {
@@ -896,7 +910,7 @@ namespace Jazz2::Editor
 
 	void LevelDocument::ReplaceChunk(std::uint32_t tag, SmallVector<std::uint8_t, 0>&& data)
 	{
-		DEATH_DEBUG_ASSERT(tag != Formats::LevelFile::LayerNamesChunk && tag != LayerStateChunk && tag != LegacyLayerStateChunk &&
+		DEATH_DEBUG_ASSERT(tag != Formats::LayerNamesChunk::Tag && tag != Formats::LayerNumbersChunk::Tag && tag != LayerStateChunk && tag != LegacyLayerStateChunk &&
 			tag != Formats::SpriteLayerChunk::Tag && tag != Formats::TexturedLayerChunk::Tag, "The chunk is held by the document itself", );
 
 		for (std::size_t i = 0; i < Chunks.size(); i++) {
@@ -978,15 +992,8 @@ namespace Jazz2::Editor
 
 	void LevelDocument::LoadLayerNames(const Formats::ChunkRecord& chunk)
 	{
-		std::size_t pos = 0;
-		for (DocumentLayer& layer : Layers) {
-			if (pos >= chunk.Data.size()) {
-				break;
-			}
-			std::size_t length = chunk.Data[pos++];
-			length = std::min(length, chunk.Data.size() - pos);
-			layer.Name = String(reinterpret_cast<const char*>(chunk.Data.data() + pos), length);
-			pos += length;
+		for (std::int32_t i = 0; i < std::int32_t(Layers.size()); i++) {
+			Layers[i].Name = Formats::LayerNamesChunk::Read(chunk.Data, i);
 		}
 	}
 
@@ -1021,20 +1028,11 @@ namespace Jazz2::Editor
 
 	void LevelDocument::WriteLayerNames(SmallVectorImpl<std::uint8_t>& data) const
 	{
-		bool anyName = false;
+		SmallVector<StringView, 16> names;
 		for (const DocumentLayer& layer : Layers) {
-			if (!layer.Name.empty()) {
-				anyName = true;
-				break;
-			}
+			names.push_back(layer.Name);
 		}
-		if (!anyName) {
-			return;
-		}
-
-		for (const DocumentLayer& layer : Layers) {
-			AppendString8(data, layer.Name);
-		}
+		Formats::LayerNamesChunk::Write(names, data);
 	}
 
 	void LevelDocument::WriteLayerStates(SmallVectorImpl<std::uint8_t>& data) const

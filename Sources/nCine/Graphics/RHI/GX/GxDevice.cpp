@@ -254,6 +254,30 @@ namespace nCine::RHI::GX
 			g_tevMode = TevMode::Modulate;
 		}
 
+		// A strip in perspective (see FixedFunctionPass.h) takes its texture coordinates from the NORMAL attribute: a texture
+		// coordinate attribute reaches the generation only as (s, t, 1, 1), a normal as (x, y, z, 1), which the 3x4 identity
+		// hands on as (s * q, t * q, q) for the division per pixel - nothing here lights anything. Only from the textured
+		// layout, which EndPerspectiveStrip() puts back.
+		void BeginPerspectiveStrip()
+		{
+			GX_ClearVtxDesc();
+			GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+			GX_SetVtxDesc(GX_VA_NRM, GX_DIRECT);
+			GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+			GX_SetVtxAttrFmt(GX_VTXFMT1, GX_VA_POS, GX_POS_XY, GX_F32, 0);
+			GX_SetVtxAttrFmt(GX_VTXFMT1, GX_VA_NRM, GX_NRM_XYZ, GX_F32, 0);
+			GX_SetVtxAttrFmt(GX_VTXFMT1, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+			GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX3x4, GX_TG_NRM, GX_IDENTITY);
+		}
+		void EndPerspectiveStrip()
+		{
+			GX_ClearVtxDesc();
+			GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+			GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+			GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+			GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+		}
+
 		// How many TEV stages a mode's program occupies
 		std::uint8_t TevStageCount(TevMode mode)
 		{
@@ -493,6 +517,9 @@ namespace nCine::RHI::GX
 		float StripU[MaxStripVertices];
 		float StripV[MaxStripVertices];
 		std::uint32_t StripRgba[MaxStripVertices];
+		// The q of a strip in perspective (see SetStripVertexQ()), for the next submitted strip only
+		float StripQ[MaxStripVertices];
+		bool StripHasQ = false;
 
 		const float* Color() const { return InstanceColor; }
 		float TexelWidth() const { return TexelW; }
@@ -539,6 +566,33 @@ namespace nCine::RHI::GX
 			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
 				StripRgba[i] = PackRgba(QuantizeChannel(r), QuantizeChannel(g), QuantizeChannel(b), QuantizeChannel(a));
 			}
+		}
+		void SetStripVertexQ(std::int32_t i, float q)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripQ[i] = q;
+				StripHasQ = true;
+			}
+		}
+
+		// Sends the strip in perspective, its q normalized to the largest (only their ratios matter)
+		void SendPerspectiveStrip(std::int32_t count, std::uint32_t flatRgba, const std::uint32_t* rgba, float dx, float dy)
+		{
+			float qMax = StripQ[0];
+			for (std::int32_t i = 1; i < count; i++) {
+				qMax = (StripQ[i] > qMax ? StripQ[i] : qMax);
+			}
+			const float qScale = (qMax > 0.0f ? 1.0f / qMax : 1.0f);
+			BeginPerspectiveStrip();
+			GX_Begin(GX_TRIANGLESTRIP, GX_VTXFMT1, std::uint16_t(count));
+			for (std::int32_t i = 0; i < count; i++) {
+				const float q = StripQ[i] * qScale;
+				GX_Position2f32(StripX[i] + dx, StripY[i] + dy);
+				GX_Normal3f32(StripU[i] * q, StripV[i] * q, q);
+				GX_Color1u32(rgba != nullptr ? rgba[i] : flatRgba);
+			}
+			GX_End();
+			EndPerspectiveStrip();
 		}
 
 		// Whether a UV span can be mapped onto the screen at all (a zero texRect has no scale)
@@ -798,6 +852,8 @@ namespace nCine::RHI::GX
 		// state, drawn through the GP's native triangle strip
 		void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			// A strip is different geometry - a buffered quad pass can no longer find its partner
 			FlushPendingQuad();
 			if (count > MaxStripVertices) {
@@ -818,6 +874,10 @@ namespace nCine::RHI::GX
 			}
 			const std::uint32_t rgba = PackRgba(QuantizeChannel(cr), QuantizeChannel(cg), QuantizeChannel(cb), QuantizeChannel(pass.Color[3]));
 			const float dx = pass.ScreenOffset[0], dy = pass.ScreenOffset[1];
+			if (hasQ && HasTexture) {
+				SendPerspectiveStrip(count, rgba, nullptr, dx, dy);
+				return;
+			}
 			GX_Begin(GX_TRIANGLESTRIP, GX_VTXFMT0, std::uint16_t(count));
 			for (std::int32_t i = 0; i < count; i++) {
 				GX_Position2f32(StripX[i] + dx, StripY[i] + dy);
@@ -838,6 +898,8 @@ namespace nCine::RHI::GX
 		// band's own draw instead of needing a second gradient pass over it.
 		void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			// A strip is different geometry - a buffered quad pass can no longer find its partner
 			FlushPendingQuad();
 			if (count > MaxStripVertices) {
@@ -858,6 +920,10 @@ namespace nCine::RHI::GX
 				ApplyPassTev(pass);
 			}
 			const float dx = pass.ScreenOffset[0], dy = pass.ScreenOffset[1];
+			if (hasQ && textured) {
+				SendPerspectiveStrip(count, 0, StripRgba, dx, dy);
+				return;
+			}
 			GX_Begin(GX_TRIANGLESTRIP, GX_VTXFMT0, std::uint16_t(count));
 			for (std::int32_t i = 0; i < count; i++) {
 				GX_Position2f32(StripX[i] + dx, StripY[i] + dy);

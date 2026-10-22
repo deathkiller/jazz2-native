@@ -1,5 +1,6 @@
 program TexturedBackgroundTunnel;
 variant DITHER;
+variant KEYED;
 
 shader_type canvas_item;
 precision highp;
@@ -10,8 +11,22 @@ uniform vec2 uCameraPos;
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uTunnel;
+// 1 for the tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
+// top left of the view, as an ordinary layer would be placed - 0 draws it as it always was
+uniform float uModel;
+
+#include "Include/TexturedBackgroundKey.inc"
 
 #define INV_PI 0.31830988618379067153776752675
+
+// The tunnel of JJ2+, measured in it: the texture once around the center, and once more into the distance each time the
+// distance from the center halves, so it never ends. Its spiral turns it by 356 / r^0.15 - 91 pixels of the texture at r
+// pixels from the center, it fades into the horizon color from 87 pixels away from the center down to 4 % of it further out.
+#define PLUS_SPIRAL_SCALE 356.2
+#define PLUS_SPIRAL_POWER -0.15
+#define PLUS_SPIRAL_OFFSET -91.0
+#define PLUS_FADE_RADIUS 87.0
+#define PLUS_FADE_FLOOR 0.0414
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -53,9 +68,10 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
-void fragment() {
+// The tunnel as it was always drawn: xy the position in the texture, z how far it fades into the color of the horizon
+vec3 legacyTunnel(vec2 uv) {
 	// Position of pixel relative to the center of the tunnel (between -1 and 1 across the screen for the center in the middle)
-	vec2 targetCoord = vec2(2.0) * UV - vec2(2.0) * uTunnel.xy;
+	vec2 targetCoord = vec2(2.0) * uv - vec2(2.0) * uTunnel.xy;
 
 	// Aspect ratio correction, so display circle instead of ellipse
 	targetCoord.x *= uViewSize.x / uViewSize.y;
@@ -74,13 +90,6 @@ void fragment() {
 		depth                  + (uShift.y * 0.002)
 	);
 
-	vec4 texColor = texture(TEXTURE, texturePos);
-
-#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
-#endif
-
 #if SOFTWARE_RENDERER
 	// Software-renderer variant: the tunnel keeps its atan()-based warp geometry and the horizon
 	// tint, but the per-pixel pow() curve, the dithering second texture sample and the voronoi
@@ -94,6 +103,48 @@ void fragment() {
 #else
 	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
 #endif
+	return vec3(texturePos, horizonOpacity);
+}
+
+// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
+// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
+// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
+vec3 plusTunnel(vec2 uv) {
+	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
+	float logRadius = log2(radius);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
+			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
+		uShift.y - 256.0 * logRadius
+	);
+	float fade = PLUS_FADE_RADIUS / radius;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
+}
+
+void fragment() {
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	// Only the one drawn is worked out where the target branches, both are where it can't
+#if NO_DYNAMIC_BRANCHING
+	vec3 tunnel = mix(legacyTunnel(UV), plusTunnel(UV), step(0.5, uModel));
+#else
+	vec3 tunnel = vec3(0.0);
+	if (uModel > 0.5) {
+		tunnel = plusTunnel(UV);
+	} else {
+		tunnel = legacyTunnel(UV);
+	}
+#endif
+	vec2 texturePos = tunnel.xy;
+	vec4 texColor = texture(TEXTURE, texturePos);
+
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
+	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
+	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
+#endif
+	float horizonOpacity = tunnel.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 #if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING && !LOW_POWER_GPU
@@ -108,21 +159,30 @@ void fragment() {
 
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
-	COLOR.a = 1.0;
+#if KEYED
+	COLOR.a = keyedOpacity();
+#else
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+#endif
 }
 
 void fixed_function(pvr, gs) {
 	// The tunnel keeps the same planar geometry rebuild on this tier (shared
 	// with TexturedBackground.shader), with the include taken exactly as it is for the same reasons as
 	// there: the PVR and the GS have no combiner stage to fold the horizon tint into, so it is the
-	// include's own second gradient pass, and the bands are cut into pieces at the texture's edges.
+	// include's own second gradient pass, and the bands are cut into pieces at the texture's edges. The tunnel
+	// of JJ2+ is cut coarsely, every vertex counts on the Dreamcast and the PS2.
+#define WARP_LOW_DETAIL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
 void fixed_function(gu) {
 	// The GE keeps the second gradient pass but wraps the render target in hardware, so each band is one
-	// textured strip (see TexturedBackground.shader)
+	// textured strip (see TexturedBackground.shader). The tunnel of JJ2+ is cut coarsely, every vertex
+	// counts on the PSP.
 #define WARP_TEXTURE_REPEAT
+#define WARP_LOW_DETAIL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -134,9 +194,11 @@ void fixed_function(rdp) {
 	// on CPUs where every strip costs more than the GPU's time to draw it. The horizon tint rides the
 	// band's own strip as a per-vertex colour through the TINT_MIX combiner, exactly like the GX block:
 	// one strip per band instead of a textured one and a gradient one, and no combiner change between them.
+	// The tunnel of JJ2+ is cut coarsely, every vertex counts on the N64.
 #define WARP_TEXTURE_REPEAT
 #define WARP_TEXTURE_REPEAT_IN_PASS
 #define WARP_TINT_IN_VERTEX_COLOR
+#define WARP_LOW_DETAIL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -144,6 +206,7 @@ void fixed_function(pica) {
 	// The rdp block's rebuild exactly, with the wrap taken from the render target's sampler state
 #define WARP_TEXTURE_REPEAT
 #define WARP_TINT_IN_VERTEX_COLOR
+#define WARP_LOW_DETAIL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 

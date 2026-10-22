@@ -78,12 +78,20 @@ namespace Jazz2::Rendering
 		Vector2f _centerOnTargetOffset;
 		float _shakeDuration;
 		Vector2f _shakeOffset;
+		// The center of the view a script fixed on an axis (cameraFreeze() of JJ2+, see _cameraFixedX), and where the camera
+		// eases from towards where it should be since then, how far it got from 0 to 1 (see UpdateCamera()) - the camera is
+		// in whole pixels, so where it started can't be told from where it is
+		Vector2f _cameraFixedPos;
+		Vector2f _cameraEaseFrom;
+		float _cameraEaseProgress;
 		float _ambientLightTarget;
 		Vector4f _ambientLight;
 		// How many view pixels a world pixel takes, 1 in the game - only the free camera of the level editor zooms
 		float _cameraScale;
 		// Whether the camera stays where it's put (see SetFreeCamera()) instead of following the target actor
 		bool _freeCamera;
+		// Whether a script fixed the camera on each axis, see _cameraFixedPos
+		bool _cameraFixedX, _cameraFixedY;
 #endif
 
 		/**
@@ -106,7 +114,7 @@ namespace Jazz2::Rendering
 		/** @brief Registers the viewport and its render passes into the viewport chain */
 		void Register();
 
-		/** @brief Returns bounds of the viewport */
+		/** @brief Returns bounds of the viewport, empty until it's initialized */
 		Rectf GetBounds() const;
 		/** @brief Returns size of the viewport */
 		Vector2i GetViewportSize() const;
@@ -128,8 +136,8 @@ namespace Jazz2::Rendering
 		void UpdateCamera(float timeMult);
 		/** @brief Shakes the camera view for a given duration */
 		void ShakeCameraView(float duration);
-		/** @brief Overrides the camera position */
-		void OverrideCamera(float x, float y, bool topLeft = false);
+		/** @brief Fixes the camera at a position of the level, or lets it follow the target actor again, on each axis, see @ref ILevelHandler::OverrideCameraView() */
+		void OverrideCamera(CameraOverride modeX, float x, CameraOverride modeY, float y, bool centered, bool instant);
 		/** @brief Instantly moves the camera to the target actor */
 		void WarpCameraToTarget(bool fast);
 		/** @brief Places the look-ahead where it rests for the target actor as it stands now, instead of easing into it */
@@ -203,6 +211,9 @@ namespace Jazz2::Rendering
 		// pixel-by-pixel crawl.
 		static constexpr float VerticalRecenter = 0.05f;
 		static constexpr float VerticalRecenterThreshold = 4.0f;
+		// How long (in frames at 60 FPS) the camera takes to get where a script fixed it, or back onto the target, unless
+		// it's instant - "roughly half a second" in JJ2+
+		static constexpr float CameraFixEaseDuration = 30.0f;
 
 		// --- The original's camera, used when PreferencesCache::EnableReforgedCamera is off ---
 		// Measured off the original tick by tick; see the camera section of Docs/MovementAccuracyReference.dox.

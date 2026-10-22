@@ -2,6 +2,7 @@
 #include "AudioLoaderWav.h"
 #include "../../Main.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include <Base/Memory.h>
@@ -12,8 +13,8 @@ using namespace Death::Memory;
 
 namespace nCine
 {
-	AudioReaderWav::AudioReaderWav(std::unique_ptr<Stream> fileHandle, std::int32_t bytesPerSample)
-		: _fileHandle(Death::move(fileHandle)), _bytesPerSample(bytesPerSample)
+	AudioReaderWav::AudioReaderWav(std::unique_ptr<Stream> fileHandle, std::int32_t bytesPerSample, std::int64_t dataOffset, std::int64_t dataSize)
+		: _fileHandle(Death::move(fileHandle)), _bytesPerSample(bytesPerSample), _dataOffset(dataOffset), _dataSize(dataSize)
 	{
 		DEATH_ASSERT(_fileHandle->IsValid());
 	}
@@ -23,14 +24,23 @@ namespace nCine
 		DEATH_ASSERT(buffer);
 		DEATH_ASSERT(bufferSize > 0);
 
+		// Whatever follows the samples in the file isn't sound
+		std::int64_t bytesLeft = _dataOffset + _dataSize - _fileHandle->GetPosition();
+		if (bytesLeft < bufferSize) {
+			bufferSize = std::int32_t(std::max<std::int64_t>(bytesLeft, 0));
+		}
+
 		std::int32_t bytes = 0;
 		std::int32_t bufferSeek = 0;
 
-		do {
+		while (bufferSize - bufferSeek > 0) {
 			// Read up to a buffer's worth of decoded sound data
-			bytes = _fileHandle->Read(static_cast<std::uint8_t*>(buffer) + bufferSeek, bufferSize - bufferSeek);
+			bytes = std::int32_t(_fileHandle->Read(static_cast<std::uint8_t*>(buffer) + bufferSeek, bufferSize - bufferSeek));
+			if (bytes <= 0) {
+				break;
+			}
 			bufferSeek += bytes;
-		} while (bytes > 0 && bufferSize - bufferSeek > 0);
+		}
 
 #if defined(DEATH_TARGET_BIG_ENDIAN)
 		// The samples are stored little-endian in the file, but the buffer formats of IAudioDevice are
@@ -48,6 +58,6 @@ namespace nCine
 
 	void AudioReaderWav::rewind() const
 	{
-		_fileHandle->Seek(AudioLoaderWav::HeaderSize, SeekOrigin::Begin);
+		_fileHandle->Seek(_dataOffset, SeekOrigin::Begin);
 	}
 }

@@ -628,12 +628,12 @@
 					"name": "support.function.submit.deathshader"
 				},
 				{
-					"match": "\\b(strip_position|strip_uv|strip_color)\\b(?=\\s*\\()",
+					"match": "\\b(strip_position|strip_uv|strip_color|strip_q|strip_clip)\\b(?=\\s*\\()",
 					"name": "support.function.strip.deathshader"
 				},
 				{
 					"comment": "Optional EffectContext facilities - the generated table records which ones an effect calls",
-					"match": "\\b(texel_size|has_texel_size|quad_origin|quad_axis_x|quad_axis_y|has_uniform|uniform_float|uniform_vec2|uniform_vec4)\\b(?=\\s*\\()",
+					"match": "\\b(texel_size|has_texel_size|quad_origin|quad_axis_x|quad_axis_y|quad_tex_rect|has_uniform|uniform_float|uniform_vec2|uniform_vec4)\\b(?=\\s*\\()",
 					"name": "support.function.context.deathshader"
 				},
 				{

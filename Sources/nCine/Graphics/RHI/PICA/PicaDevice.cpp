@@ -46,10 +46,10 @@ namespace nCine::RHI::PICA
 		// is already being built: frame N+1 writes the arena frame N-1 used, and C3D_FrameBegin() has waited
 		// for frame N-1's commands to finish before frame N+1's first draw touches it.
 		//
-		// 384 KB holds ~19600 vertices at 20 bytes each. A busy frame (the weapon wheel open over a level) is
+		// 464 KB holds ~19800 vertices at 24 bytes each. A busy frame (the weapon wheel open over a level) is
 		// ~90 draw calls of a few hundred quads at six vertices each, well inside that; the arena reports when
 		// it fills and drops the rest of the frame rather than writing past its end.
-		constexpr std::size_t FrameArenaBytes = 384 * 1024;
+		constexpr std::size_t FrameArenaBytes = 464 * 1024;
 		// Per-frame data that is not vertices (the lightmap texture the lighting hook generates), tiled and
 		// 128-byte aligned the way the texture unit wants it; doubled for the same reason as the arenas
 		constexpr std::size_t FrameDataBytes = 128 * 1024;
@@ -59,6 +59,9 @@ namespace nCine::RHI::PICA
 			float X, Y;
 			float U, V;
 			std::uint32_t Color;
+			// The w the vertex program scales the position by, so the texture coordinates are interpolated in perspective
+			// (a strip with a q per vertex, see FixedFunctionPass.h) - 1 for everything else
+			float W = 1.0f;
 		};
 
 		// The GPU takes texture coordinates normalized to the bound texture, so the texel coordinates the
@@ -521,7 +524,7 @@ namespace nCine::RHI::PICA
 			off, so the winding the strip would have alternated does not matter.
 		*/
 		void SubmitStripPrimitive(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
-			std::int32_t count, const std::uint32_t* rgba, std::uint32_t flatRgba, float dx, float dy)
+			std::int32_t count, const std::uint32_t* rgba, std::uint32_t flatRgba, float dx, float dy, const float* pq = nullptr)
 		{
 			if (count < 3) {
 				return;
@@ -530,9 +533,17 @@ namespace nCine::RHI::PICA
 			if (v == nullptr) {
 				return;
 			}
+			// With a q per vertex, its w is 1 / q, normalized to the smallest (only the ratios matter, see FixedFunctionPass.h)
+			float qMax = 0.0f;
+			if (pq != nullptr) {
+				for (std::int32_t i = 0; i < count; i++) {
+					qMax = (pq[i] > qMax ? pq[i] : qMax);
+				}
+			}
 			const auto corner = [&](std::int32_t i) -> Vertex {
 				return { px[i] + dx, py[i] + dy, (pu != nullptr ? pu[i] * state.InvTextureWidth : 0.0f),
-					(pv != nullptr ? pv[i] * state.InvTextureHeight : 0.0f), (rgba != nullptr ? rgba[i] : flatRgba) };
+					(pv != nullptr ? pv[i] * state.InvTextureHeight : 0.0f), (rgba != nullptr ? rgba[i] : flatRgba),
+					(pq != nullptr && pq[i] > 0.0f ? qMax / pq[i] : 1.0f) };
 			};
 			for (std::int32_t i = 0; i < count - 2; i++) {
 				v[i * 3] = corner(i);
@@ -648,6 +659,9 @@ namespace nCine::RHI::PICA
 		float StripU[MaxStripVertices];
 		float StripV[MaxStripVertices];
 		std::uint32_t StripRgba[MaxStripVertices];
+		// The q of a strip in perspective (see SetStripVertexQ()), for the next submitted strip only
+		float StripQ[MaxStripVertices];
+		bool StripHasQ = false;
 
 		const float* Color() const { return InstanceColor; }
 		float TexelWidth() const { return TexelW; }
@@ -692,6 +706,13 @@ namespace nCine::RHI::PICA
 		{
 			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
 				StripRgba[i] = PackRgba(QuantizeChannel(r), QuantizeChannel(g), QuantizeChannel(b), QuantizeChannel(a));
+			}
+		}
+		void SetStripVertexQ(std::int32_t i, float q)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripQ[i] = q;
+				StripHasQ = true;
 			}
 		}
 
@@ -756,6 +777,8 @@ namespace nCine::RHI::PICA
 		// Textured strip out of the builder scratch: the pass's flat colour over the material state
 		void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
@@ -779,7 +802,7 @@ namespace nCine::RHI::PICA
 			const std::uint32_t rgba = PackRgba(QuantizeChannel(effective.Color[0]), QuantizeChannel(effective.Color[1]),
 				QuantizeChannel(effective.Color[2]), QuantizeChannel(effective.Color[3]));
 			SubmitStripPrimitive(state, StripX, StripY, StripU, StripV, count, nullptr, rgba,
-				pass.ScreenOffset[0], pass.ScreenOffset[1]);
+				pass.ScreenOffset[0], pass.ScreenOffset[1], (hasQ ? StripQ : nullptr));
 		}
 
 		// Shaded (per-vertex-colour) strip out of the builder scratch: UNTEXTURED - a gradient has no texture
@@ -787,6 +810,8 @@ namespace nCine::RHI::PICA
 		// from the pass
 		void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
@@ -800,7 +825,7 @@ namespace nCine::RHI::PICA
 			}
 			ApplyPassToState(state, pass);
 			SubmitStripPrimitive(state, StripX, StripY, textured ? StripU : nullptr, textured ? StripV : nullptr,
-				count, StripRgba, 0, pass.ScreenOffset[0], pass.ScreenOffset[1]);
+				count, StripRgba, 0, pass.ScreenOffset[0], pass.ScreenOffset[1], (hasQ && textured ? StripQ : nullptr));
 		}
 	};
 }
@@ -916,11 +941,12 @@ namespace nCine::RHI::PICA
 		C3D_BindProgram(&shaderProgram);
 		projectionUniform = shaderInstanceGetUniformLocation(shaderProgram.vertexShader, "projection");
 
-		// The vertex layout (see Vertex): two floats of position, two of texture coordinates, four bytes of colour
+		// The vertex layout (see Vertex): two floats of position, two of texture coordinates, four bytes of colour, and the w
 		AttrInfo_Init(&vertexAttributes);
 		AttrInfo_AddLoader(&vertexAttributes, 0, GPU_FLOAT, 2);
 		AttrInfo_AddLoader(&vertexAttributes, 1, GPU_FLOAT, 2);
 		AttrInfo_AddLoader(&vertexAttributes, 2, GPU_UNSIGNED_BYTE, 4);
+		AttrInfo_AddLoader(&vertexAttributes, 3, GPU_FLOAT, 1);
 		C3D_SetAttrInfo(&vertexAttributes);
 
 		for (std::int32_t i = 0; i < 2; i++) {
@@ -1026,7 +1052,7 @@ namespace nCine::RHI::PICA
 		// state comparison below is ours and nothing about the previous frame's binding can be relied upon
 		C3D_BufInfo* bufInfo = C3D_GetBufInfo();
 		BufInfo_Init(bufInfo);
-		BufInfo_Add(bufInfo, frameArena[arenaIndex], sizeof(Vertex), 3, 0x210);
+		BufInfo_Add(bufInfo, frameArena[arenaIndex], sizeof(Vertex), 4, 0x3210);
 		C3D_BindProgram(&shaderProgram);
 		appliedStateValid = false;
 		appliedTargetValid = false;

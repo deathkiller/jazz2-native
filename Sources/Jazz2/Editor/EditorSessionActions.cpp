@@ -248,6 +248,15 @@ namespace Jazz2::Editor
 			});
 			pauseLayers.Key = { Keys::P, KeyMod::Ctrl | KeyMod::Shift };
 			pauseLayers.IsChecked = [this]() { return _settings.PauseLayerMovement; };
+
+			// TRANSLATORS: Toggle in the View menu and the properties of a textured layer, the layer being edited is drawn as in the game instead of as plain tiles
+			auto& previewTextured = a.Add(ActionIds::ViewPreviewTextured, _x("editor", "Show Textured Layers"), EditorIcon::Eye, [this]() {
+				_settings.PreviewTexturedLayers = !_settings.PreviewTexturedLayers;
+				_settings.Save();
+				UpdateLayerOverride();
+			});
+			previewTextured.Key = { Keys::T, KeyMod::Ctrl | KeyMod::Shift };
+			previewTextured.IsChecked = [this]() { return _settings.PreviewTexturedLayers; };
 			flat.IsChecked = [this]() {
 				Tiles::TileMap* tileMap = GetTileMap();
 				return (tileMap != nullptr && tileMap->GetViewOptions().FlatAmount > 0.5f);

@@ -26,7 +26,12 @@ namespace Jazz2::Tiles
 	enum class LayerSpeedModel {
 		/** @brief Default model, as `LAYERSPEEDMODEL::BOTHSPEEDS` --- moves by the speed and the auto speed, with the origin depending on the size of the view */
 		Default,
-		/** @brief Ignores all speed and offset settings to be tied to the top/left side of the screen, as `LAYERSPEEDMODEL::LAYER8` */
+		/**
+			Ignores all speed and offset settings to be tied to the top/left side of the screen, as `LAYERSPEEDMODEL::LAYER8`.
+			A textured layer in the perspective of JJ2+ (@ref Formats::TexturedLayerParams::Fullscreen) is placed where
+			layer 5 of the original game is drawn instead, or at the screen without one, and moved by its own auto speed,
+			as there. Since 4.0.0.
+		*/
 		AlwaysOnTop,
 		/** @brief Ignores the speed and auto speed properties, and instead ensures that the full extent of this layer will be visible and no blank space outside of it will be shown */
 		FitLevel,
@@ -34,7 +39,7 @@ namespace Jazz2::Tiles
 		SpeedMultipliers,
 		/**
 			As @ref Default, but with the origin at the top/left side of the level whatever the size of the view, and
-			without the inherent offset, as `LAYERSPEEDMODEL::FROMSTART`. Since 3.9.1, earlier versions place such a
+			without the inherent offset, as `LAYERSPEEDMODEL::FROMSTART`. Since 4.0.0, earlier versions place such a
 			layer as one of @ref Default.
 		*/
 		FromStart
@@ -53,8 +58,8 @@ namespace Jazz2::Tiles
 		or a reflection layer isn't drawn at all, so a level looks as it would without the effects.
 
 		The textured background effects take the values the textured layers of JJ2+ have (`TEXTURE::Style`, the type
-		of the textured background of a layer of the original game). A level has a single textured background of
-		@ref Sky, @ref Tunnel, @ref Wave or @ref Cylinder and a single @ref Reflection, those of the last layer of each kind.
+		of the textured background of a layer of the original game). Any number of layers can be textured or reflections,
+		each is drawn with a texture of its own, made of its tiles.
 	*/
 	enum class LayerRendererType {
 		Default,				/**< Default rendering */
@@ -84,16 +89,40 @@ namespace Jazz2::Tiles
 			of entries further in the palette, wrapping around after its end. The shift is the red of the layer's
 			color (0 to 255, as a byte), its alpha how opaque the layer is. The transparent pixels (index 0) stay
 			transparent, a pixel moved onto index 0 shows its color. It follows the palette as it changes. Tiles
-			stored in true color aren't changed. Readers before 3.9.1 draw such a layer as an ordinary one.
+			stored in true color aren't changed. Readers before 4.0.0 draw such a layer as an ordinary one.
 		*/
 		PaletteShift,
+		/**
+			Single color, as `SPRITE::SINGLECOLOR` of JJ2+ --- every visible pixel of the tiles takes the same color, the
+			entry of the palette the red of the layer's color is (0 to 255, as a byte), so only the shapes of the tiles
+			are seen, e.g. a shadow of another layer. It follows the palette as it changes, but only the color of the
+			entry is taken, not its alpha. The alpha is how opaque the layer is. Readers before 4.0.0 draw such a layer as
+			an ordinary one.
+		*/
+		SingleColor,
+		/**
+			Chroma key, as `SPRITE::CHROMAKEY` of JJ2+ --- the tiles are drawn as they are, but only over the pixels of
+			what is behind the layer that have the color of the entry of the palette the red of the layer's color is (0
+			to 255, as a byte), so a part of the scene painted in that color is a window the layer shows through. The
+			alpha is how opaque the layer is. Where the scene behind the layers can't be read, the layer isn't drawn.
+			Readers before 4.0.0 draw such a layer as an ordinary one.
+		*/
+		ChromaKey,
 
 		/**
 			Textured background --- sky, as `TEXTURE::WARPHORIZON` of JJ2+: the tiles of a layer of 8×8 tiles as two planes
 			stretching to the horizon, fading into the red, green and blue of the layer's color there; non-zero alpha
-			shows stars over the horizon. A layer of another size is drawn as ordinary tiles, unless it has a texture of
-			its own (see @ref Formats::TexturedLayerChunk::Entry::Texture), which any textured background takes instead
-			of its tiles.
+			shows stars over the horizon. Where the vanishing point and the horizon are (@ref LayerDescription::TextureFadePosition)
+			and whether it fades out (@ref LayerDescription::TextureFade) are kept apart from the color (see
+			@ref Formats::TexturedLayerParams), readers before 4.0.0 draw them in the middle, fading. A layer of another
+			size is drawn as ordinary tiles, unless it has a texture of its own (see
+			@ref Formats::TexturedLayerChunk::Entry::Texture), which any textured background takes instead of its tiles.
+
+			Any textured background can also be drawn only where the layer is placed, as an ordinary layer would be, as
+			`SURFACE::INNERWINDOW` and `SURFACE::INNERLAYER` of JJ2+ (@ref LayerDescription::TextureFlags), but a wave.
+			Over the whole view, a sky, a tunnel and a cylinder are drawn as the sky layers always were here, or in the
+			perspective of JJ2+ with the texture placed by the speeds of the layer as `SURFACE::FULLSCREEN` (see
+			@ref Formats::TexturedLayerParams::Fullscreen), which the inner surfaces are always drawn in.
 		*/
 		Sky = 10,
 		/**
@@ -106,6 +135,19 @@ namespace Jazz2::Tiles
 		*/
 		Tunnel,
 
+		// 12 is `TEXTURE::MENU` of JJ2+ (Sky + its style), which isn't drawn yet, a layer of it is drawn as ordinary tiles
+
+		/**
+			Textured background --- tile menu, as `TEXTURE::TILEMENU` of JJ2+: the rotating background of the main menu of
+			the original, three layers repeated over the view, each turning and zooming in and out at its own pace. The
+			frontmost is the texture of the layer (its 8×8 tiles at the top left, or its texture of its own, see @ref Sky),
+			the middle one the 2×2 tiles at the top left of the sprite layer and the back one its tile (0, 2). They're
+			drawn at half their size, at their own size with non-zero alpha of the layer's color. The point all of them
+			turn around is a fraction of the view (@ref LayerDescription::TextureFadePosition), they turn and zoom at the
+			pace of JJ2+, whatever the speeds of the layer are. Readers before 4.0.0 draw such a layer as ordinary tiles.
+		*/
+		TileMenu = 13,
+
 		/**
 			Textured background --- wave, as `TEXTURE::WAVE` of JJ2+: the tiles of a layer of 8×8 tiles as a texture
 			repeated where the layer's own tiles would be, with each row moved left or right and each column up or down by
@@ -116,20 +158,21 @@ namespace Jazz2::Tiles
 			waves move (@ref LayerDescription::TextureFlags) are kept apart from the color (see @ref Formats::TexturedLayerParams).
 			As measured in the original, the waves follow the texture, not the view, and a texel moves by the waves of
 			where it is in the texture. A layer of another size is drawn as ordinary tiles, unless it has a texture of
-			its own (see @ref Sky). Readers before 3.9.1 draw such a layer as ordinary tiles.
+			its own (see @ref Sky). Readers before 4.0.0 draw such a layer as ordinary tiles.
 		*/
 		Wave = 14,
 
 		/**
-			Textured background --- cylinder, as `TEXTURE::CYLINDER` of JJ2+: the tiles of a layer of 8×8 tiles as the inside
-			of a horizontal tube, seen from its axis looking at the far wall. They go once across the view along the horizon,
-			larger towards the top and the bottom, where the wall is seen at a steeper angle; the horizontal scroll moves
-			along the tube, the vertical one turns it. The far wall fades a little into the red, green and blue of the
-			layer's color, the alpha isn't taken. Where the center of the horizon is (@ref LayerDescription::TextureFadePosition),
+			Textured background --- cylinder, as `TEXTURE::CYLINDER` of JJ2+, always drawn in its perspective (it has no other
+			model, see @ref LayerDescription::HasPlusPerspective()): the tiles of a layer of 8×8 tiles as the inside of a
+			horizontal tube. They go once from the top of the view to the bottom, narrower across towards the top and the
+			bottom, a row an angle of half a turn over the view from the horizon; the horizontal scroll moves along the tube
+			a quarter as fast as an ordinary layer, the vertical one turns it. Near the horizon it fades into the red, green
+			and blue of the layer's color, to 65 % of it, the alpha isn't taken. Where the center of the horizon is (@ref LayerDescription::TextureFadePosition),
 			whether it fades (@ref LayerDescription::TextureFade) and whether it's drawn at half size, four times across
 			the view and more curved (@ref LayerDescription::TextureFlags), are kept apart from the color (see
 			@ref Formats::TexturedLayerParams). A layer of another size is drawn as ordinary tiles, unless it has a texture
-			of its own (see @ref Sky). Readers before 3.9.1 draw such a layer as an ordinary one modulated by its color.
+			of its own (see @ref Sky). Readers before 4.0.0 draw such a layer as an ordinary one modulated by its color.
 		*/
 		Cylinder = 15,
 
@@ -155,10 +198,30 @@ namespace Jazz2::Tiles
 			only where the layer is, the speeds place the layer, and the texture moves inside it by the inner speeds and
 			the inner auto speeds instead (@ref LayerDescription::TextureInnerSpeed, @ref LayerDescription::TextureInnerAutoSpeed)
 			--- a positive one moves it to the left and away towards the horizon, as in JJ2+. Where there are more rows below the horizon than above it, the
-			top row of the view is repeated, a horizon at the top of the view reflects black. Readers before 3.9.1 draw such
+			top row of the view is repeated, a horizon at the top of the view reflects black. Readers before 4.0.0 draw such
 			a layer as an ordinary one modulated by its color.
 		*/
 		Reflection = 16
+	};
+
+	/**
+		@brief How a textured background is drawn over what is behind it
+
+		The sprite modes of JJ2+ a textured layer can be drawn with (see @ref LayerDescription::TextureBlend). Only scripts
+		set it, a level file doesn't store it. @ref Translucent and @ref ChromaKey need a backend that can sample a render
+		target in a shader, elsewhere such a layer is drawn opaque.
+	*/
+	enum class TexturedLayerBlend : std::uint8_t {
+		/** @brief Opaque */
+		Normal,
+		/** @brief As opaque as @ref LayerDescription::TextureBlendParam is, from 0 to 255 */
+		Translucent,
+		/** @brief Only over the pixels behind it of the color of the palette entry @ref LayerDescription::TextureBlendParam, as `SPRITE::CHROMAKEY` */
+		ChromaKey,
+		/** @brief Lightens what is behind it, mixed over it as far as @ref LayerDescription::TextureBlendParam is from 0 to 255, as `SPRITE::BLEND_SCREEN` */
+		Screen,
+		/** @brief Darkens what is behind it, mixed over it as far as @ref LayerDescription::TextureBlendParam is from 0 to 255, as `SPRITE::BLEND_MULTIPLY` */
+		Multiply
 	};
 
 	/**
@@ -175,6 +238,13 @@ namespace Jazz2::Tiles
 	struct LayerDescription {
 		/** @brief Hardcoded offset for layer positioning */
 		static constexpr std::int32_t HardcodedOffset = 70;
+		/**
+		 * @brief How much further an auto speed of the original game moves a layer each frame than the same auto speed here
+		 *
+		 * The original game and JJ2+ move a layer by its auto speed each of their 70 ticks a second, a layer here moves by
+		 * its auto speed each of the 60 frames a second (see @ref TileMap::OnUpdate()), see @ref FromOriginalAutoSpeed().
+		 */
+		static constexpr float OriginalAutoSpeedScale = 70.0f / 60.0f;
 
 		/** @brief Layer depth (Z position) */
 		std::uint16_t Depth;
@@ -205,16 +275,20 @@ namespace Jazz2::Tiles
 		LayerRendererType RendererType;
 		/** @brief Layer color parameter */
 		nCine::Vector4f Color;
-		/** @brief Center of a tunnel or of the horizon of a cylinder, or the vanishing point and the horizon of a reflection, as a fraction of the view, the amplitudes of a wave */
+		/** @brief Vanishing point and horizon of a sky, center of a tunnel or of the horizon of a cylinder, pivot of a tile menu, or the vanishing point and the horizon of a reflection, as a fraction of the view, the amplitudes of a wave */
 		nCine::Vector2f TextureFadePosition = nCine::Vector2f(0.5f, 0.5f);
-		/** @brief Non-zero if a tunnel fades out into its center or a cylinder into its horizon, the palette entry a reflection is tinted with */
+		/** @brief Non-zero if a sky fades out into its horizon, a tunnel into its center or a cylinder into its horizon, the palette entry a reflection is tinted with */
 		std::uint8_t TextureFade = 192;
-		/** @brief Combination of the flags of @ref Formats::TexturedLayerParams, whether a tunnel spirals, whether a cylinder is drawn at half size, which way the waves of a wave move and where a reflection is drawn */
+		/** @brief Combination of the flags of @ref Formats::TexturedLayerParams, whether a tunnel spirals, whether a cylinder is drawn at half size, which way the waves of a wave move and where a textured layer is drawn */
 		std::uint8_t TextureFlags = 0;
-		/** @brief Speeds of the texture of a reflection drawn only where the layer is, against the view, see @ref Formats::TexturedLayerParams::InnerSpeedX */
+		/** @brief Speeds of the texture of a textured layer drawn only where the layer is, against the view, see @ref Formats::TexturedLayerParams::InnerSpeedX */
 		nCine::Vector2f TextureInnerSpeed = nCine::Vector2f(0.0f, 0.0f);
-		/** @brief Speeds the texture of a reflection drawn only where the layer is moves at by itself, see @ref Formats::TexturedLayerParams::InnerAutoSpeedX */
+		/** @brief Speeds the texture of a textured layer drawn only where the layer is moves at by itself, see @ref Formats::TexturedLayerParams::InnerAutoSpeedX */
 		nCine::Vector2f TextureInnerAutoSpeed = nCine::Vector2f(0.0f, 0.0f);
+		/** @brief How a textured background is drawn over what is behind it, never stored in a level file */
+		TexturedLayerBlend TextureBlend = TexturedLayerBlend::Normal;
+		/** @brief Opacity of a translucent, screened or multiplied textured background, or the palette entry of its key (see @ref TextureBlend) */
+		std::uint8_t TextureBlendParam = 255;
 
 		/**
 		 * @brief Makes the description of a layer from a layer of a level file
@@ -237,20 +311,58 @@ namespace Jazz2::Tiles
 		 * @brief Returns `true` if the sprite layer can be drawn with a renderer type
 		 *
 		 * Only those that draw each tile where it is --- @ref LayerRendererType::Default, @ref LayerRendererType::Solid,
-		 * @ref LayerRendererType::Tinted and @ref LayerRendererType::PaletteShift. An x-ray layer hides its tiles
-		 * away from the objects and changes its animated tiles, a blur or a reflection layer doesn't show its tiles at
-		 * all, a sky, a tunnel or a cylinder is drawn far away from where its tiles are, and a wave moves them, while the
-		 * objects of the level walk on the tiles of the sprite layer.
+		 * @ref LayerRendererType::Tinted, @ref LayerRendererType::PaletteShift and @ref LayerRendererType::SingleColor.
+		 * An x-ray layer hides its tiles away from the objects and changes its animated tiles, a blur or a reflection
+		 * layer doesn't show its tiles at all and a chroma key one only partly, a sky, a tunnel or a cylinder is drawn
+		 * far away from where its tiles are, and a wave moves them, while the objects of the level walk on the tiles of
+		 * the sprite layer.
 		 */
 		static bool IsSpriteLayerRenderer(LayerRendererType type);
 		/**
-		 * @brief Returns `true` if a renderer type is a textured background, @ref LayerRendererType::Sky, @ref LayerRendererType::Tunnel, @ref LayerRendererType::Wave or @ref LayerRendererType::Cylinder
+		 * @brief Returns `true` if a renderer type is a textured background, @ref LayerRendererType::Sky, @ref LayerRendererType::Tunnel, @ref LayerRendererType::TileMenu, @ref LayerRendererType::Wave or @ref LayerRendererType::Cylinder
 		 *
 		 * A @ref LayerRendererType::Reflection isn't one, though it takes the tiles of its layer as a texture too.
 		 */
 		static bool IsTexturedBackground(LayerRendererType type) {
-			return (type == LayerRendererType::Sky || type == LayerRendererType::Tunnel || type == LayerRendererType::Wave ||
-				type == LayerRendererType::Cylinder);
+			return (type == LayerRendererType::Sky || type == LayerRendererType::Tunnel || type == LayerRendererType::TileMenu ||
+				type == LayerRendererType::Wave || type == LayerRendererType::Cylinder);
+		}
+
+		/**
+		 * @brief Returns `true` if the texture of the layer is drawn only where the layer is placed as an ordinary one
+		 *
+		 * A textured background other than a wave, or a reflection, with @ref Formats::TexturedLayerParams::InnerWindow or
+		 * @ref Formats::TexturedLayerParams::InnerLayer --- `SURFACE::INNERWINDOW` and `INNERLAYER` of JJ2+.
+		 */
+		bool HasInnerSurface() const;
+		/**
+		 * @brief Returns `true` if the texture of the layer is drawn in the perspective of JJ2+
+		 *
+		 * Over the whole view with @ref Formats::TexturedLayerParams::Fullscreen, and always only where the layer is (see
+		 * @ref HasInnerSurface()). A @ref LayerRendererType::Cylinder is always drawn so, it has no other model.
+		 */
+		bool HasPlusPerspective() const;
+		/**
+		 * @brief Returns `true` if the texture of a sky, a tunnel or a cylinder over the whole view is placed where layer 5 is on an axis
+		 *
+		 * In the perspective of JJ2+ (see @ref HasPlusPerspective()) and with @ref LayerSpeedModel::AlwaysOnTop on the
+		 * axis --- `LAYERSPEEDMODEL::LAYER8` of JJ2+, the default of the sky layer of the original game. The texture then
+		 * moves there only by its own auto speed, see @ref TileMap::OnUpdate().
+		 */
+		bool IsTexturePlacedByLayer5(bool vertical) const;
+
+		/**
+		 * @brief Converts an auto speed of the original game or of JJ2+ to one of a layer, on an axis of a speed model
+		 *
+		 * Multiplied by @ref OriginalAutoSpeedScale, so the layer moves as far each second as there. The auto speed of
+		 * @ref LayerSpeedModel::SpeedMultipliers isn't a speed but where the layer is at the end of the level, it's kept.
+		 */
+		static float FromOriginalAutoSpeed(float autoSpeed, LayerSpeedModel model) {
+			return (model == LayerSpeedModel::SpeedMultipliers ? autoSpeed : autoSpeed * OriginalAutoSpeedScale);
+		}
+		/** @brief Converts an auto speed of a layer back to one of the original game or of JJ2+, see @ref FromOriginalAutoSpeed() */
+		static float ToOriginalAutoSpeed(float autoSpeed, LayerSpeedModel model) {
+			return (model == LayerSpeedModel::SpeedMultipliers ? autoSpeed : autoSpeed / OriginalAutoSpeedScale);
 		}
 
 		/**

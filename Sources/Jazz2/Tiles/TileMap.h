@@ -196,6 +196,12 @@ namespace Jazz2::Tiles
 		scratch tiles, so a returned reference stays valid for the next few lookups, which is longer than
 		any reader here holds one --- and it is written through @ref Set(), which is the only way to change
 		a compact tile.
+
+		A sparse layout allocates a block only once a tile that isn't empty is written into it, every other
+		block is one block of empty tiles all sparse layouts share --- a level of the original game has an
+		empty layer in five levels of six, which the converter keeps (JJ2+ has the layers without tiles too,
+		scripts refer to them), up to 330000 tiles of them in a level. Only a layer whose every writer goes
+		through @ref Set() can be sparse, the shared block must never be written through @ref operator[]().
 	*/
 	class LayerLayout {
 	public:
@@ -217,14 +223,29 @@ namespace Jazz2::Tiles
 		/** @brief Tiles per allocated block */
 		static constexpr std::size_t BlockTiles = std::size_t(1) << BlockShift;
 
-		/** @brief Allocates @p count tiles, in the compact form if @p compact, returning `false` if the memory is not there */
-		bool Allocate(std::size_t count, bool compact);
+		LayerLayout() = default;
+		~LayerLayout();
+
+		LayerLayout(const LayerLayout&) = delete;
+		LayerLayout& operator=(const LayerLayout&) = delete;
+		LayerLayout(LayerLayout&& other) noexcept;
+		LayerLayout& operator=(LayerLayout&& other) noexcept;
+
+		/**
+		 * @brief Allocates @p count empty tiles, in the compact form if @p compact, returning `false` if the memory is not there
+		 *
+		 * An empty tile is the one a level stores as tile 0 without any flags (see @ref TileMap::MakeLayerTile()). With
+		 * @p sparse the blocks are allocated only as tiles that aren't empty are written into them (see the class description).
+		 */
+		bool Allocate(std::size_t count, bool compact, bool sparse = false);
 		/** @brief Returns the number of tiles */
 		std::size_t size() const { return _count; }
 		/** @brief Returns `true` if no tiles are allocated */
 		bool empty() const { return _count == 0; }
 		/** @brief Returns `true` if the tiles are stored in the four-byte form */
 		bool IsCompact() const { return _compact; }
+		/** @brief Returns `true` if any tile has an ID other than 0, which is quick for the blocks of a sparse layout never written */
+		bool HasAnyTile() const;
 		/**
 			@brief Returns a stamp that changes with every write through @ref Set() or @ref Allocate()
 
@@ -265,14 +286,33 @@ namespace Jazz2::Tiles
 		void Set(std::size_t i, const LayerTile& tile) {
 			_version++;
 			if (!_compact) {
-				_full[i >> BlockShift][i & (BlockTiles - 1)] = tile;
+				LayerTile* block = _full[i >> BlockShift];
+				if (block == _sharedFull && !(block = OwnFullBlock(i >> BlockShift, tile))) {
+					return;
+				}
+				block[i & (BlockTiles - 1)] = tile;
 			} else {
-				_packed[i >> BlockShift][i & (BlockTiles - 1)] = Encode(tile);
+				std::uint32_t* block = _packed[i >> BlockShift];
+				const std::uint32_t packed = Encode(tile);
+				if (block == _sharedPacked && !(block = OwnPackedBlock(i >> BlockShift, packed))) {
+					return;
+				}
+				block[i & (BlockTiles - 1)] = packed;
 			}
 		}
 
 	private:
 		static constexpr std::uint32_t ScratchCount = 8;
+
+		// The blocks of empty tiles all sparse layouts share, made on first use and kept for the whole run
+		static LayerTile* _sharedFull;
+		static std::uint32_t* _sharedPacked;
+
+		// Gives a shared block of a sparse layout a block of its own before a tile is written into it, returns nullptr if the
+		// tile is empty (the block stays shared, there's nothing to write) or the memory isn't there
+		LayerTile* OwnFullBlock(std::size_t blockIndex, const LayerTile& tile);
+		std::uint32_t* OwnPackedBlock(std::size_t blockIndex, std::uint32_t packed);
+		void Free();
 
 		static std::uint32_t Encode(const LayerTile& tile) {
 			return std::uint32_t(tile.TileID) | (std::uint32_t(std::uint8_t(tile.Flags)) << 16) | (std::uint32_t(tile.Alpha) << 24);
@@ -287,8 +327,9 @@ namespace Jazz2::Tiles
 
 		bool _compact = false;
 		std::uint32_t _version = 0;
-		SmallVector<std::unique_ptr<LayerTile[]>, 0> _full;
-		SmallVector<std::unique_ptr<std::uint32_t[]>, 0> _packed;
+		// Blocks of their own (owned) or the shared one of empty tiles (see Allocate())
+		SmallVector<LayerTile*, 0> _full;
+		SmallVector<std::uint32_t*, 0> _packed;
 		std::size_t _count = 0;
 		mutable LayerTile _scratch[ScratchCount] = {};
 		mutable std::uint32_t _scratchNext = 0;
@@ -325,6 +366,14 @@ namespace Jazz2::Tiles
 		 * For a wave, X is how far its waves have moved, in periods, from 0 to 1.
 		 */
 		Vector2f TextureOffset;
+		/** @brief Name of the layer, which scripts may find it by, or empty (see @ref Formats::LayerNamesChunk) */
+		String Name;
+		/**
+		 * @brief Number of the layer in the original game, 1 to 8 from the front, or 0 for a layer of another origin
+		 *
+		 * Scripts of JJ2+ refer to the layers by it (see @ref Formats::LayerNumbersChunk).
+		 */
+		std::uint8_t OriginalNumber = 0;
 	};
 
 	/**
@@ -624,8 +673,28 @@ namespace Jazz2::Tiles
 		void AddTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
 		/** @brief Adds an additional tile set read from a stream, as one stored in the level, as a continuation of the previous one */
 		void AddTileSet(Stream& s, StringView name, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
+		/**
+		 * @brief Adds tiles of a tile set after the tiles of the others while the level is played
+		 *
+		 * The tiles from @p offset of the tile set get the tile IDs from @ref GetLoadedTileCount() on. Returns `false`
+		 * and adds nothing if they don't fit below the animated tiles or the tile set can't be loaded. Meant for scripts.
+		 * With @p trueColorPalette, the 8-bit tiles are true color tiles in its 256 colors (see
+		 * @ref ContentResolver::RequestTileSet()).
+		 */
+		bool AppendTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr,
+			const std::uint32_t* trueColorPalette = nullptr);
 		/** @brief Reads the next layer of a level, its description and its tiles, and adds it */
 		void LoadLayer(Formats::LevelReader& reader);
+		/**
+		 * @brief Adds a layer of no tiles after the others, which isn't drawn, returns its index or `-1` if the memory isn't there
+		 *
+		 * A layer drawn other than tile by tile (see @ref LayerDescription::IsSpriteLayerRenderer()) is drawn as ordinary
+		 * tiles, the textured background, the x-ray, the blur and the reflection are only the layers of the level. Its tiles
+		 * are written through @ref SetTile(). Meant for scripts, which make layers of their own.
+		 */
+		std::int32_t AddLayer(Vector2i size, const LayerDescription& description);
+		/** @brief Replaces a layer added by @ref AddLayer() with one of no tiles, which isn't drawn */
+		bool ResetLayer(std::int32_t layerIndex, Vector2i size, const LayerDescription& description);
 		/** @brief Whether reading the layers ran out of memory (the level cannot be played) */
 		bool HasLoadFailed() const { return _loadFailed; }
 		/**
@@ -865,6 +934,12 @@ namespace Jazz2::Tiles
 		bool ReorderLayers(ArrayView<const std::int32_t> order);
 		/** @brief Returns `true` if a layer is drawn */
 		bool IsLayerVisible(std::int32_t layerIndex) const;
+		/** @brief Returns the name of a layer (see @ref TileMapLayer::Name), empty if it has none or the layer doesn't exist */
+		StringView GetLayerName(std::int32_t layerIndex) const;
+		/** @brief Returns the number of a layer in the original game (see @ref TileMapLayer::OriginalNumber), 0 if it has none */
+		std::uint8_t GetLayerOriginalNumber(std::int32_t layerIndex) const;
+		/** @brief Sets the name and the number in the original game of a layer, which only scripts use */
+		void SetLayerIdentity(std::int32_t layerIndex, StringView name, std::uint8_t originalNumber);
 		/**
 		 * @brief Returns the texture and texture coordinates a tile is drawn with
 		 *
@@ -899,6 +974,8 @@ namespace Jazz2::Tiles
 		std::int32_t GetStaticTileCount() const {
 			return std::int32_t(_animatedTilesOffset);
 		}
+		/** @brief Returns the number of tiles the tile sets give, the IDs from it up to @ref GetStaticTileCount() are empty tiles */
+		std::int32_t GetLoadedTileCount() const;
 		/** @brief Returns the tile an animated tile shows now, or the tile itself if it isn't animated */
 		std::int32_t ResolveStaticTileId(std::int32_t tileId) const;
 		/** @brief Returns the packed collision mask of a tile that isn't animated (@ref TileSet::MaskBytesPerTile bytes), or `nullptr` */
@@ -912,9 +989,9 @@ namespace Jazz2::Tiles
 		/** @brief Returns `true` if a @ref LayerRendererType::BlurBehind layer has a tile that reflects or displaces, which needs a sharp copy of the scene behind it */
 		bool BlurBehindLayersNeedSharpCopy();
 		/** @brief Returns `true` if any layer is a @ref LayerRendererType::Reflection layer, which needs a sharp copy of the scene behind it */
-		bool HasReflectionLayers() const {
-			return (_reflectionLayer >= 0);
-		}
+		bool HasReflectionLayers() const;
+		/** @brief Returns `true` if any layer is a @ref LayerRendererType::ChromaKey layer or a textured one drawn translucent or keyed (see @ref TexturedLayerBlend), which needs a sharp copy of the scene behind it */
+		bool HasChromaKeyLayers() const;
 #endif
 
 		/** @brief Creates a checkpoint for eventual rollback */
@@ -971,18 +1048,21 @@ namespace Jazz2::Tiles
 			LayerTile Tile;
 		};
 
-		// Renders the tiles at the top left of a layer, or its texture of its own, into a texture, the layer of the index
-		// it's given, which the tile map keeps up to date (-1 if there's none). With `drawsIndices`, the palette indices
-		// of the indexed tiles are rendered instead of their colors, as the ripples of a reflection take them.
+		// Renders the tiles at the top left of a layer, or its texture of its own, into a texture. With `drawsIndices`, the
+		// palette indices of the indexed tiles are rendered instead of their colors, as the ripples of a reflection take
+		// them. With `source`, the tiles of that area of the layer are rendered instead, never a texture of its own.
 		class TexturedBackgroundPass : public SceneNode
 		{
 			friend class TileMap;
 
 		public:
-			TexturedBackgroundPass(TileMap* owner, const std::int32_t& layerIndex, bool drawsIndices)
-				: _owner(owner), _layerIndex(layerIndex), _imageRevision(0), _drawsIndices(drawsIndices), _alreadyRendered(false)
+			// With `withAlpha`, the texture keeps where the tiles are transparent, as a tile menu needs it
+			TexturedBackgroundPass(TileMap* owner, std::int32_t layerIndex, bool drawsIndices, const Recti& source = {}, bool withAlpha = false)
+				: _owner(owner), _layerIndex(layerIndex), _source(source), _imageRevision(0), _drawsIndices(drawsIndices), _withAlpha(withAlpha),
+					_alreadyRendered(false)
 			{
 			}
+			~TexturedBackgroundPass() override;
 
 			void Initialize();
 			// Draws the texture again, after the tiles of the layer changed
@@ -992,7 +1072,8 @@ namespace Jazz2::Tiles
 
 		private:
 			TileMap* _owner;
-			const std::int32_t& _layerIndex;
+			std::int32_t _layerIndex;
+			Recti _source;
 			std::unique_ptr<Texture> _target;
 			std::unique_ptr<Viewport> _view;
 			std::unique_ptr<Camera> _camera;
@@ -1001,7 +1082,11 @@ namespace Jazz2::Tiles
 			std::unique_ptr<Texture> _image;
 			std::uint32_t _imageRevision;
 			bool _drawsIndices;
+			bool _withAlpha;
 			bool _alreadyRendered;
+
+			// The size of the texture the pass renders
+			Vector2i GetTargetSize() const;
 		};
 #endif
 
@@ -1145,13 +1230,24 @@ namespace Jazz2::Tiles
 #	endif
 #endif
 
-		std::int32_t _texturedBackgroundLayer;
-		TexturedBackgroundPass _texturedBackgroundPass;
-		// The reflection layer and its texture, apart from the textured background, as the two are often in a level together
-		std::int32_t _reflectionLayer;
-		TexturedBackgroundPass _reflectionPass;
+		// The texture a textured layer or a reflection layer is drawn with, or one of the two parts of the sprite layer a tile menu
+		// takes (see LayerRendererType::TileMenu), made only for the layers that need one (see UpdateTexturedLayers())
+		struct LayerPass {
+			std::int32_t LayerIndex;
+			Recti Source;
+			bool DrawsIndices;
+			bool WithAlpha;
+			std::unique_ptr<TexturedBackgroundPass> Pass;
+		};
+		SmallVector<LayerPass, 0> _layerPasses;
+		// Whether a layer is keyed (see HasChromaKeyLayers()), the colors of the textured layers have to stay exact then, so
+		// they're neither dithered nor filtered (see UpdateTexturedLayers())
+		bool _hasKeyedLayers = false;
 		// The last revision given to a texture of its own of a layer, see TileMapLayer::TextureRevision
 		std::uint32_t _lastTextureRevision = 0;
+		// Whether the passes were set up with the viewports already, a layer that becomes the textured background later needs
+		// them set up again (see UpdateTexturedLayers())
+		bool _viewportsInitialized = false;
 
 #if defined(TILEMAP_OPAQUE_COVERAGE)
 		/**
@@ -1289,6 +1385,15 @@ namespace Jazz2::Tiles
 		// The layer is placed by `placementRect` (its parallax), and the tiles that cover `cullingRect` are drawn; the two
 		// are the same unless the view options say otherwise (see TileMapViewOptions)
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, const Rectf& placementRect, Vector2f viewCenter);
+		// Draws a textured background, a tile menu or a reflection as a whole, returns `false` if the layer is to be drawn as
+		// tiles instead (where its pass or its texture isn't there), `layerOffsets` are its draw offsets
+		bool DrawTexturedLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, const Rectf& placementRect,
+			Vector2f viewCenter, Vector2f layerOffsets);
+		// Draws the images the view options draw in place of tiles of a layer (see TileMapViewOptions::LayerOverride), whose
+		// tile (0, 0) is at `layerOrigin` of the view, returns `true` if there are any - the tiles are then drawn only in the
+		// areas of `_layerTileAreas`
+		bool DrawLayerImages(RenderQueue& renderQueue, const TileMapLayer& layer, LayerRendererType rendererType, const Vector4f& layerColor,
+			const Rectf& cullingRect, Vector2f layerOrigin);
 		// Returns the color of a tinted layer, whose description keeps a palette index in red and the strength in alpha
 		static Vector4f ResolveTintColor(const Vector4f& description);
 		// Returns the palette offset of the sprite palette shifted by `shift` entries for a palette-shifted layer drawn now,
@@ -1296,7 +1401,9 @@ namespace Jazz2::Tiles
 		std::int32_t AcquireShiftedPalette(std::uint8_t shift);
 		// Gives back the rows of the shifted palettes no layer was drawn with in this frame or the one before, all of them with `all`
 		void ReleaseShiftedPalettes(bool all);
-		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr);
+		// With `keyed`, a textured background gets the variant of its shader that's drawn translucent or keyed (see
+		// TexturedLayerBlend), if there is one
+		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr, bool keyed = false);
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Appends one tile's two triangles (6 vertices, 8 floats each: position.xy, texcoords.xy, color.rgba) to a
 		// layer mesh buffer. Color is (1,1,1,alpha); the layer tint is applied via the command's instance color.
@@ -1341,7 +1448,8 @@ namespace Jazz2::Tiles
 		enum class EffectMeshKind : std::uint8_t {
 			Unmasked,		//< The current frame of x-ray tiles outside the mask, as an ordinary layer mesh - with no mask in this frame
 			XRay,			//< That frame and the mask frame of x-ray tiles, chosen per pixel by the mask (12-float vertices)
-			Blur			//< Tiles of a blur-behind layer, the amount of blur behind them
+			Blur,			//< Tiles of a blur-behind layer, the amount of blur behind them
+			ChromaKey		//< Tiles of a chroma key layer, drawn where the scene behind them has the key color
 		};
 
 		/** @brief Tiles of a special layer accumulated into one mesh, one per texture and kind */
@@ -1358,6 +1466,8 @@ namespace Jazz2::Tiles
 			LayerEffectsTarget* Target = nullptr;
 			std::uint16_t Depth = 0;
 			bool MaskAvailable = false;
+			// The color of the palette a chroma key layer is drawn over
+			Vector3f KeyColor;
 		};
 
 		/** @brief A column of the window of the blur layer being walked: the last row it had a reflective tile in, and that tile's mirror line */
@@ -1408,8 +1518,8 @@ namespace Jazz2::Tiles
 			float& texScaleX, float& texBiasX, float& texScaleY, float& texBiasY);
 		/** @brief Derives the animations the x-ray tiles of a layer show outside the mask, see @ref GetXRayUnmaskedAnimation() */
 		void PrepareXRayLayer(const TileMapLayer& layer);
-		/** @brief Draws the reflection layer below its horizon, inside @p area of the view, with its texture moved by @p shift of its pixels */
-		void DrawReflection(RenderQueue& renderQueue, const Rectf& cullingRect, const Rectf& area, const TileMapLayer& layer, Vector2f shift);
+		/** @brief Draws a reflection layer below its horizon, inside @p area of the view, with its @p texture moved by @p shift of its pixels */
+		void DrawReflection(RenderQueue& renderQueue, const Rectf& cullingRect, const Rectf& area, const TileMapLayer& layer, Texture* texture, Vector2f shift);
 #else
 		/** @brief Turns the animated tiles of an x-ray layer into what they show outside the mask, see @ref LayerRendererType::XRay */
 		void ReduceXRayLayer(TileMapLayer& layer);
@@ -1443,9 +1553,17 @@ namespace Jazz2::Tiles
 		void UpdateDebris(float timeMult);
 		void DrawDebris(RenderQueue& renderQueue);
 
-		void RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer, float x, float y);
-		// Finds the layers the textured background pass and the reflection pass draw again, after a renderer type changed
+		// Draws a textured layer inside `area` of the view, its horizon, center or vanishing point a fraction of `reference`
+		// (both from the top left of the view), its texture moved by `x` and `y`
+		void RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer,
+			Texture& texture, const Rectf& area, const Rectf& reference, float x, float y);
+		// Draws a tile menu inside `area` of the view, its three layers turning and zooming around a point of `reference`
+		// (see LayerRendererType::TileMenu)
+		void DrawMenuBackground(RenderQueue& renderQueue, const Rectf& cullingRect, const TileMapLayer& layer, const Rectf& area, const Rectf& reference);
+		// Makes a pass for each layer that needs one and removes those no layer needs anymore, after a renderer type changed
 		void UpdateTexturedLayers();
+		// Returns the texture of the pass of a layer, or of an area of it, `nullptr` if it has none yet
+		Texture* GetLayerPassTarget(std::int32_t layerIndex, bool drawsIndices, const Recti& source = {}) const;
 		// Size of the texture a textured layer is drawn with in pixels, its own or the tiles at its top left
 		static Vector2i GetLayerTextureSize(const TileMapLayer& layer);
 
@@ -1460,5 +1578,9 @@ namespace Jazz2::Tiles
 		std::int32_t ResolveTileID(const LayerTile& tile) const;
 		/** @brief Loads the whole atlas of the main tileset if it was deferred, see @ref _diffuseDeferred */
 		void LoadDeferredDiffuse();
+		// Makes a layer of no tiles, not drawn, see AddLayer()
+		bool InitializeLayer(TileMapLayer& layer, Vector2i size, const LayerDescription& description);
+		// The caches are kept by the index of a layer, they'd show another one after the layers changed places or contents
+		void InvalidateLayerCaches();
 	};
 }

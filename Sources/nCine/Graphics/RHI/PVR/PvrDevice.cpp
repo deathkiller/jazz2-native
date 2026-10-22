@@ -201,7 +201,7 @@ namespace nCine::RHI::PVR
 		// `fmov.s FRm, @-Rn` is one - and a vertex is written for every corner of every tile and sprite. The
 		// block is complete before `pref` sends it, so the order the words are stored in makes no difference.
 		DEATH_ALWAYS_INLINE std::uint32_t* SubmitVertex(std::uint32_t* DEATH_RESTRICT sq, std::uint32_t command,
-			float x, float y, float u, float v, std::uint32_t argb, std::uint32_t oargb = 0)
+			float x, float y, float u, float v, std::uint32_t argb, std::uint32_t oargb = 0, float z = 1.0f)
 		{
 			std::uint32_t* end = sq + 8;
 			__asm__ __volatile__(
@@ -215,7 +215,7 @@ namespace nCine::RHI::PVR
 				"mov.l %[cmd], @-%[p]\n\t"
 				"pref @%[p]"
 				: [p] "+r"(end)
-				: [x] "f"(x), [y] "f"(y), [u] "f"(u), [v] "f"(v), [z] "f"(1.0f),
+				: [x] "f"(x), [y] "f"(y), [u] "f"(u), [v] "f"(v), [z] "f"(z),
 				  [argb] "r"(argb), [oargb] "r"(oargb), [cmd] "r"(command)
 				: "memory");
 			return sq + 8;
@@ -233,8 +233,12 @@ namespace nCine::RHI::PVR
 		// pointer advances a block at a time exactly as sq_cpy() does, which alternates the two hardware
 		// banks so a bank is never rewritten while its write-back is still in flight. The PVR driver has
 		// already pointed the queues at the TA FIFO (pvr_prim() itself relies on that), so no lock is taken.
+		//
+		// With `pz`, each vertex carries its own 1/w: the texture coordinates are then interpolated in perspective by it,
+		// the only use the z of a vertex has here (every polygon compares depth ALWAYS and the list isn't sorted)
 		void SubmitStrip(const pvr_poly_hdr_t& hdr, const float* px, const float* py, const float* pu, const float* pv,
-			std::int32_t count, std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f)
+			std::int32_t count, std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f,
+			const float* pz = nullptr)
 		{
 			static_assert(sizeof(pvr_vertex_t) == 32 && sizeof(pvr_poly_hdr_t) == 32,
 				"The store queues submit whole 32 byte blocks");
@@ -243,7 +247,7 @@ namespace nCine::RHI::PVR
 
 			for (std::int32_t i = 0; i < count; i++) {
 				sq = SubmitVertex(sq, (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX),
-					px[i] + dx, py[i] + dy, pu[i], pv[i], argb, oargb);
+					px[i] + dx, py[i] + dy, pu[i], pv[i], argb, oargb, (pz != nullptr ? pz[i] : 1.0f));
 			}
 		}
 
@@ -335,6 +339,9 @@ namespace nCine::RHI::PVR
 		float StripU[MaxStripVertices];
 		float StripV[MaxStripVertices];
 		std::uint32_t StripArgb[MaxStripVertices];
+		// The q of a strip in perspective (see SetStripVertexQ()), for the next submitted strip only
+		float StripQ[MaxStripVertices];
+		bool StripHasQ = false;
 
 		const float* Color() const { return InstanceColor; }
 		float TexelWidth() const { return TexelW; }
@@ -380,6 +387,13 @@ namespace nCine::RHI::PVR
 		{
 			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
 				StripArgb[i] = PackArgb(QuantizeChannel(r), QuantizeChannel(g), QuantizeChannel(b), QuantizeChannel(a));
+			}
+		}
+		void SetStripVertexQ(std::int32_t i, float q)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripQ[i] = q;
+				StripHasQ = true;
 			}
 		}
 
@@ -461,6 +475,8 @@ namespace nCine::RHI::PVR
 		// hidden by this member's own name.
 		void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			const bool hasQ = StripHasQ;
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
@@ -470,8 +486,20 @@ namespace nCine::RHI::PVR
 			const pvr_poly_hdr_t* hdr = MaterialHeaderFor(pass.Blend);
 			const std::uint32_t argb = PackArgb(QuantizeChannel(pass.Color[0]), QuantizeChannel(pass.Color[1]),
 				QuantizeChannel(pass.Color[2]), QuantizeChannel(pass.Color[3]));
+			// In perspective, the q of the vertices is their 1/w, normalized to the largest (only their ratios matter)
+			float invW[MaxStripVertices];
+			if (hasQ) {
+				float qMax = StripQ[0];
+				for (std::int32_t i = 1; i < count; i++) {
+					qMax = (StripQ[i] > qMax ? StripQ[i] : qMax);
+				}
+				const float qScale = (qMax > 0.0f ? 1.0f / qMax : 1.0f);
+				for (std::int32_t i = 0; i < count; i++) {
+					invW[i] = StripQ[i] * qScale;
+				}
+			}
 			nCine::RHI::PVR::SubmitStrip(*hdr, StripX, StripY, StripU, StripV, count, argb,
-				PackOffsetColor(pass), pass.ScreenOffset[0], pass.ScreenOffset[1]);
+				PackOffsetColor(pass), pass.ScreenOffset[0], pass.ScreenOffset[1], (hasQ ? invW : nullptr));
 		}
 
 		// Shaded (per-vertex-colour) strip out of the builder scratch: always an UNTEXTURED colour
@@ -481,6 +509,8 @@ namespace nCine::RHI::PVR
 		// what the handwritten iris did).
 		void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count)
 		{
+			// Untextured, a q has nothing to divide
+			StripHasQ = false;
 			if (count > MaxStripVertices) {
 				count = MaxStripVertices;
 			}
