@@ -595,6 +595,66 @@ function messagesOf(findings) {
 		analysis.builtinChecks(fragment, null, { isIncludeFragment: false }).length, asShader.length);
 })();
 
+// ---------------------------------------------------------------- variant combinations
+
+(function () {
+	// One more variant, named as the compiler names it, whose parts are the macros it is compiled with
+	var head = 'program P;\nvariant PLUS;\nvariant DITHER;\n';
+	var tail = 'void vertex() {}\nvoid fragment() {}\n';
+	var scan = analysis.scanDocument(head + 'variant PLUS + DITHER;\nvariant DITHER+PLUS;\n' + tail);
+	equal('combinations are variants', scan.variants.length, 4);
+	equal('a single variant is its own only part', scan.variants[0].parts.join(','), 'PLUS');
+	equal('combination name', scan.variants[2].name, 'PLUS_DITHER');
+	equal('combination parts', scan.variants[2].parts.join(','), 'PLUS,DITHER');
+	equal('combination line', scan.variants[2].line, 3);
+	equal('spacing around + is free', scan.variants[3].name, 'DITHER_PLUS');
+
+	var good = analysis.builtinChecks(head + 'variant PLUS + DITHER;\n' + tail);
+	equal('a combination of declared variants is fine', good.length, 0, messagesOf(good));
+	var undeclared = analysis.builtinChecks('program P;\nvariant PLUS;\nvariant PLUS + DITHER;\n' + tail);
+	contains('an undeclared part is reported', messagesOf(undeclared), "'DITHER' is not a variant declared before the combination");
+	var later = analysis.builtinChecks('program P;\nvariant PLUS + DITHER;\nvariant PLUS;\nvariant DITHER;\n' + tail);
+	equal('parts declared only after it are reported, each', later.length, 2, messagesOf(later));
+	var self = analysis.builtinChecks('program P;\nvariant PLUS;\nvariant PLUS + PLUS;\n' + tail);
+	contains('a part named twice is reported', messagesOf(self), "Variant 'PLUS' is combined with itself");
+	var duplicate = analysis.builtinChecks(head + 'variant PLUS_DITHER;\nvariant PLUS + DITHER;\n' + tail);
+	contains('a combination named like a variant is a duplicate', messagesOf(duplicate), "Duplicate variant 'PLUS_DITHER'");
+	// The parts may come from an #include above the combination, which is expanded before it is parsed
+	var included = analysis.builtinChecks('program P;\n#include "Variants.inc"\nvariant PLUS + DITHER;\n' + tail);
+	equal('an #include above may declare the parts', included.length, 0, messagesOf(included));
+})();
+
+// Every shader of the tree that combines variants passes the checks (skipped outside the tree)
+(function () {
+	if (typeof require !== 'function') {
+		return;
+	}
+	var fs = require('fs');
+	var path = require('path');
+	var dir = path.join(__dirname, '..', '..', '..', 'Shaders');
+	var entries;
+	try {
+		entries = fs.readdirSync(dir);
+	} catch (e) {
+		log('SKIP: the shaders of the tree are not next to the extension');
+		return;
+	}
+	var combining = 0;
+	for (var i = 0; i < entries.length; i++) {
+		if (!/\.shader$/.test(entries[i])) {
+			continue;
+		}
+		var source = fs.readFileSync(path.join(dir, entries[i]), 'utf8');
+		if (!/^[ \t]*variant[^;\n]*\+/m.test(source)) {
+			continue;
+		}
+		combining++;
+		var findings = analysis.builtinChecks(source);
+		equal(entries[i] + ' passes the checks', findings.length, 0, messagesOf(findings));
+	}
+	check('the tree has shaders that combine variants', combining !== 0);
+})();
+
 // ---------------------------------------------------------------- summary
 
 log('');

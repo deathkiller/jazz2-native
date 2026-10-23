@@ -46,10 +46,10 @@ namespace nCine::RHI::PICA
 		// is already being built: frame N+1 writes the arena frame N-1 used, and C3D_FrameBegin() has waited
 		// for frame N-1's commands to finish before frame N+1's first draw touches it.
 		//
-		// 464 KB holds ~19800 vertices at 24 bytes each. A busy frame (the weapon wheel open over a level) is
+		// 384 KB holds ~19600 vertices at 20 bytes each. A busy frame (the weapon wheel open over a level) is
 		// ~90 draw calls of a few hundred quads at six vertices each, well inside that; the arena reports when
 		// it fills and drops the rest of the frame rather than writing past its end.
-		constexpr std::size_t FrameArenaBytes = 464 * 1024;
+		constexpr std::size_t FrameArenaBytes = 384 * 1024;
 		// Per-frame data that is not vertices (the lightmap texture the lighting hook generates), tiled and
 		// 128-byte aligned the way the texture unit wants it; doubled for the same reason as the arenas
 		constexpr std::size_t FrameDataBytes = 128 * 1024;
@@ -59,9 +59,19 @@ namespace nCine::RHI::PICA
 			float X, Y;
 			float U, V;
 			std::uint32_t Color;
-			// The w the vertex program scales the position by, so the texture coordinates are interpolated in perspective
-			// (a strip with a q per vertex, see FixedFunctionPass.h) - 1 for everything else
-			float W = 1.0f;
+		};
+
+		// A vertex of a strip whose texture coordinates are interpolated in perspective (a strip with a q per vertex, see
+		// FixedFunctionPass.h): the w the vertex program scales the position by. Every other vertex takes its w of 1 from a
+		// fixed attribute instead of carrying it, which keeps the vertices of the sprites and the tiles - nearly all of a
+		// frame - at 20 bytes: a fifth less for the CPU to write, for the data cache to write back and for the GPU to fetch.
+		// These go out in batches of their own (see AllocPerspectiveVertices()), under a vertex layout of their own.
+		struct PerspectiveVertex
+		{
+			float X, Y;
+			float U, V;
+			std::uint32_t Color;
+			float W;
 		};
 
 		// The GPU takes texture coordinates normalized to the bound texture, so the texel coordinates the
@@ -270,6 +280,7 @@ namespace nCine::RHI::PICA
 		std::int8_t projectionUniform = -1;
 		C3D_Mtx screenProjection;
 		C3D_AttrInfo vertexAttributes;
+		C3D_AttrInfo perspectiveAttributes;
 
 		// citro3d keeps a POINTER to the bound texture descriptor and reads it when the next draw call is
 		// issued, so one descriptor per unit, rewritten before each bind, is all the binding costs
@@ -291,6 +302,8 @@ namespace nCine::RHI::PICA
 		GPU_Primitive_t batchPrim = GPU_TRIANGLES;
 		std::size_t batchFirstVertex = 0;
 		std::int32_t batchVertexCount = 0;
+		// Whether the open batch holds PerspectiveVertex instead of Vertex, from batchFirstVertex on - part of the batch key
+		bool batchPerspective = false;
 
 		DrawState appliedState;
 		bool appliedStateValid = false;
@@ -395,7 +408,23 @@ namespace nCine::RHI::PICA
 			ApplyDrawState(batchState);
 			// The vertices are not written back here: the GPU reads none of them before the command list is
 			// submitted, and FlushPendingWrites() covers the whole frame's worth in one go at that point
-			C3D_DrawArrays(batchPrim, std::int32_t(batchFirstVertex), batchVertexCount);
+			if (batchPerspective) {
+				// The draw takes the layout of its vertices with it, from a buffer that starts at them (they are laid
+				// out by their own size, which isn't a multiple of a Vertex), and the next one gets the arena back.
+				// citro3d sends the layout with the draw call, so changing it afterwards changes only what follows.
+				C3D_SetAttrInfo(&perspectiveAttributes);
+				C3D_BufInfo* bufInfo = C3D_GetBufInfo();
+				BufInfo_Init(bufInfo);
+				BufInfo_Add(bufInfo, frameArena[arenaIndex] + batchFirstVertex, sizeof(PerspectiveVertex), 4, 0x3210);
+				C3D_DrawArrays(batchPrim, 0, batchVertexCount);
+				C3D_SetAttrInfo(&vertexAttributes);
+				bufInfo = C3D_GetBufInfo();
+				BufInfo_Init(bufInfo);
+				BufInfo_Add(bufInfo, frameArena[arenaIndex], sizeof(Vertex), 3, 0x210);
+				batchPerspective = false;
+			} else {
+				C3D_DrawArrays(batchPrim, std::int32_t(batchFirstVertex), batchVertexCount);
+			}
 			frameDrawCalls++;
 			frameVertices += std::uint32_t(batchVertexCount);
 			batchVertexCount = 0;
@@ -438,13 +467,14 @@ namespace nCine::RHI::PICA
 		/** @brief Reserves @p count vertices of the open (or a new) batch of @p prim drawn under @p state */
 		Vertex* AllocVertices(const DrawState& state, GPU_Primitive_t prim, std::int32_t count)
 		{
-			if (batchVertexCount > 0 && (batchPrim != prim || !SameDrawState(batchState, state))) {
+			if (batchVertexCount > 0 && (batchPerspective || batchPrim != prim || !SameDrawState(batchState, state))) {
 				FlushBatch();
 			}
 			if (batchVertexCount == 0) {
 				batchFirstVertex = frameArenaUsed;
 				batchState = state;
 				batchPrim = prim;
+				batchPerspective = false;
 			}
 			if ((frameArenaUsed + std::size_t(count)) * sizeof(Vertex) > FrameArenaBytes) {
 				FlushBatch();
@@ -471,18 +501,53 @@ namespace nCine::RHI::PICA
 		*/
 		Vertex* BeginVertexRun(const DrawState& state, GPU_Primitive_t prim, std::int32_t maxCount)
 		{
-			if (batchVertexCount > 0 && (batchPrim != prim || !SameDrawState(batchState, state))) {
+			if (batchVertexCount > 0 && (batchPerspective || batchPrim != prim || !SameDrawState(batchState, state))) {
 				FlushBatch();
 			}
 			if (batchVertexCount == 0) {
 				batchFirstVertex = frameArenaUsed;
 				batchState = state;
 				batchPrim = prim;
+				batchPerspective = false;
 			}
 			if ((frameArenaUsed + std::size_t(maxCount)) * sizeof(Vertex) > FrameArenaBytes) {
 				return nullptr;
 			}
 			return frameArena[arenaIndex] + frameArenaUsed;
+		}
+
+		/**
+			@brief Reserves @p count vertices in perspective of the open (or a new) batch of triangles drawn under @p state
+
+			They take the arena from where the batch starts, by their own size, and as many whole Vertex slots as that
+			covers. A batch is either of these or of Vertex, never both, so a batch of them is closed by anything else
+			and closes anything else (see FlushBatch()).
+		*/
+		PerspectiveVertex* AllocPerspectiveVertices(const DrawState& state, std::int32_t count)
+		{
+			if (batchVertexCount > 0 && (!batchPerspective || batchPrim != GPU_TRIANGLES || !SameDrawState(batchState, state))) {
+				FlushBatch();
+			}
+			if (batchVertexCount == 0) {
+				batchFirstVertex = frameArenaUsed;
+				batchState = state;
+				batchPrim = GPU_TRIANGLES;
+				batchPerspective = true;
+			}
+			const std::size_t endBytes = batchFirstVertex * sizeof(Vertex) + std::size_t(batchVertexCount + count) * sizeof(PerspectiveVertex);
+			const std::size_t endVertices = (endBytes + sizeof(Vertex) - 1) / sizeof(Vertex);
+			if (endVertices * sizeof(Vertex) > FrameArenaBytes) {
+				FlushBatch();
+				if (!warnedFrameArenaFull) {
+					warnedFrameArenaFull = true;
+					LOGW("The {} KB per-frame vertex arena is full; the rest of the frame is dropped", FrameArenaBytes / 1024);
+				}
+				return nullptr;
+			}
+			PerspectiveVertex* const result = reinterpret_cast<PerspectiveVertex*>(frameArena[arenaIndex] + batchFirstVertex) + batchVertexCount;
+			frameArenaUsed = endVertices;
+			batchVertexCount += count;
+			return result;
 		}
 
 		/** @brief Commits the @p count vertices written into the run BeginVertexRun() opened */
@@ -529,21 +594,35 @@ namespace nCine::RHI::PICA
 			if (count < 3) {
 				return;
 			}
+			if (pq != nullptr) {
+				PerspectiveVertex* const v = AllocPerspectiveVertices(state, (count - 2) * 3);
+				if (v == nullptr) {
+					return;
+				}
+				// With a q per vertex, its w is 1 / q, normalized to the smallest (only the ratios matter, see FixedFunctionPass.h)
+				float qMax = 0.0f;
+				for (std::int32_t i = 0; i < count; i++) {
+					qMax = (pq[i] > qMax ? pq[i] : qMax);
+				}
+				const auto corner = [&](std::int32_t i) -> PerspectiveVertex {
+					return { px[i] + dx, py[i] + dy, (pu != nullptr ? pu[i] * state.InvTextureWidth : 0.0f),
+						(pv != nullptr ? pv[i] * state.InvTextureHeight : 0.0f), (rgba != nullptr ? rgba[i] : flatRgba),
+						(pq[i] > 0.0f ? qMax / pq[i] : 1.0f) };
+				};
+				for (std::int32_t i = 0; i < count - 2; i++) {
+					v[i * 3] = corner(i);
+					v[i * 3 + 1] = corner(i + 1);
+					v[i * 3 + 2] = corner(i + 2);
+				}
+				return;
+			}
 			Vertex* const v = AllocVertices(state, GPU_TRIANGLES, (count - 2) * 3);
 			if (v == nullptr) {
 				return;
 			}
-			// With a q per vertex, its w is 1 / q, normalized to the smallest (only the ratios matter, see FixedFunctionPass.h)
-			float qMax = 0.0f;
-			if (pq != nullptr) {
-				for (std::int32_t i = 0; i < count; i++) {
-					qMax = (pq[i] > qMax ? pq[i] : qMax);
-				}
-			}
 			const auto corner = [&](std::int32_t i) -> Vertex {
 				return { px[i] + dx, py[i] + dy, (pu != nullptr ? pu[i] * state.InvTextureWidth : 0.0f),
-					(pv != nullptr ? pv[i] * state.InvTextureHeight : 0.0f), (rgba != nullptr ? rgba[i] : flatRgba),
-					(pq != nullptr && pq[i] > 0.0f ? qMax / pq[i] : 1.0f) };
+					(pv != nullptr ? pv[i] * state.InvTextureHeight : 0.0f), (rgba != nullptr ? rgba[i] : flatRgba) };
 			};
 			for (std::int32_t i = 0; i < count - 2; i++) {
 				v[i * 3] = corner(i);
@@ -941,12 +1020,18 @@ namespace nCine::RHI::PICA
 		C3D_BindProgram(&shaderProgram);
 		projectionUniform = shaderInstanceGetUniformLocation(shaderProgram.vertexShader, "projection");
 
-		// The vertex layout (see Vertex): two floats of position, two of texture coordinates, four bytes of colour, and the w
+		// The vertex layout (see Vertex): two floats of position, two of texture coordinates, four bytes of colour, and the
+		// w a fixed attribute (set when a frame begins); the vertices in perspective carry their w instead (see PerspectiveVertex)
 		AttrInfo_Init(&vertexAttributes);
 		AttrInfo_AddLoader(&vertexAttributes, 0, GPU_FLOAT, 2);
 		AttrInfo_AddLoader(&vertexAttributes, 1, GPU_FLOAT, 2);
 		AttrInfo_AddLoader(&vertexAttributes, 2, GPU_UNSIGNED_BYTE, 4);
-		AttrInfo_AddLoader(&vertexAttributes, 3, GPU_FLOAT, 1);
+		AttrInfo_AddFixed(&vertexAttributes, 3);
+		AttrInfo_Init(&perspectiveAttributes);
+		AttrInfo_AddLoader(&perspectiveAttributes, 0, GPU_FLOAT, 2);
+		AttrInfo_AddLoader(&perspectiveAttributes, 1, GPU_FLOAT, 2);
+		AttrInfo_AddLoader(&perspectiveAttributes, 2, GPU_UNSIGNED_BYTE, 4);
+		AttrInfo_AddLoader(&perspectiveAttributes, 3, GPU_FLOAT, 1);
 		C3D_SetAttrInfo(&vertexAttributes);
 
 		for (std::int32_t i = 0; i < 2; i++) {
@@ -1050,9 +1135,11 @@ namespace nCine::RHI::PICA
 
 		// A fresh frame re-sends everything: citro3d tracks its own dirty state across frames, but the batch
 		// state comparison below is ours and nothing about the previous frame's binding can be relied upon
+		C3D_SetAttrInfo(&vertexAttributes);
 		C3D_BufInfo* bufInfo = C3D_GetBufInfo();
 		BufInfo_Init(bufInfo);
-		BufInfo_Add(bufInfo, frameArena[arenaIndex], sizeof(Vertex), 4, 0x3210);
+		BufInfo_Add(bufInfo, frameArena[arenaIndex], sizeof(Vertex), 3, 0x210);
+		C3D_FixedAttribSet(3, 1.0f, 1.0f, 1.0f, 1.0f);
 		C3D_BindProgram(&shaderProgram);
 		appliedStateValid = false;
 		appliedTargetValid = false;

@@ -284,6 +284,20 @@ var FIXTURES = [
 		]
 	},
 	{
+		name: 'a variant combination reads as one directive',
+		// Every part is a variant name and the '+' an operator; a line still missing its ';' ends at the line
+		text: 'program P;\nvariant PLUS;\nvariant PLUS + DITHER;\nvariant A + B\nuniform vec4 uAfter;\n',
+		expect: [
+			['variant', 2, 'keyword.other.directive.variant.deathshader'],
+			['PLUS', 2, 'entity.name.constant.variant.deathshader'],
+			['+', 3, 'keyword.operator.deathshader'],
+			['DITHER', 3, 'entity.name.constant.variant.deathshader'],
+			[';', 3, 'punctuation.terminator.deathshader'],
+			['B', 4, 'entity.name.constant.variant.deathshader'],
+			['uniform', 5, 'storage.modifier.uniform.deathshader']
+		]
+	},
+	{
 		name: 'a block accepts only its own maths subset',
 		// The body is transpiled to C++ once per draw - the GLSL built-ins are not its vocabulary
 		text: 'program P;\nvoid fixed_function() {\n\tfloat a = clamp(0.0, 0.0, 1.0);\n\tfloat b = smoothstep(0.0, 1.0, a);\n}\n',

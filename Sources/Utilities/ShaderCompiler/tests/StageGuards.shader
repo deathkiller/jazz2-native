@@ -16,7 +16,7 @@ uniform sampler2D uTexture : texture_unit(0);
 
 varying vec2 vTexCoords;
 
-// Stage guard nested inside an unknown conditional -- still resolved in place
+// Stage guard nested inside a variant conditional -- still resolved in place, the variant one after it
 #ifdef TINT
 #ifdef FRAGMENT_STAGE
 uniform vec4 uTintColor;
@@ -24,7 +24,7 @@ uniform vec4 uTintColor;
 uniform float uTintStrength;
 #endif
 
-// Unknown conditional nested inside a stage guard -- kept/dropped with the block
+// Variant conditional nested inside a stage guard -- kept/dropped with the block
 #ifdef VERTEX_STAGE
 #ifdef TINT
 uniform vec2 uTintShift;
@@ -38,7 +38,7 @@ uniform vec2 uVertexExpr;
 #endif
 
 // An expression mixing a stage macro with one this pass does not own: only the stage macro folds
-// away, and what is left is lowered to "#ifdef TINT" for the GLSL compiler to finish
+// away, and what is left is resolved for each variant when its sources are built
 #if FRAGMENT_STAGE && TINT
 uniform vec3 uTintExpr;
 #endif

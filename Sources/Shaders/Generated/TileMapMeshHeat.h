@@ -52,9 +52,6 @@ layout (std140) uniform InstanceBlock
 
 
 
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // How many rows the table has scrolled, 0 to 31
 
 void main()
@@ -102,9 +99,6 @@ uniform mat4 uViewMatrix;
 
 
 
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // How many rows the table has scrolled, 0 to 31
 
 void main()
@@ -145,9 +139,6 @@ in highp float vPaletteOffset;
 // pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
@@ -173,13 +164,6 @@ void main() {
 	float inside = step(0.0, source) * step(source, 31.999);
 
 	vec4 src = texture(uTexture, vec2(vTexCoords.x + shift * vHeat.z, vTexCoords.y));
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 palColor = texture(uTexturePalette, vec2(palX, palY));
-	src = vec4(palColor.rgb, palColor.a * src.a);
-#endif
 	COLOR = vec4(src.rgb, src.a * inside) * vColor;
 }
 
@@ -211,9 +195,6 @@ varying highp float vPaletteOffset;
 // pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
@@ -239,13 +220,6 @@ void main() {
 	float inside = step(0.0, source) * step(source, 31.999);
 
 	vec4 src = texture2D(uTexture, vec2(vTexCoords.x + shift * vHeat.z, vTexCoords.y));
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 palColor = texture2D(uTexturePalette, vec2(palX, palY));
-	src = vec4(palColor.rgb, palColor.a * src.a);
-#endif
 	COLOR = vec4(src.rgb, src.a * inside) * vColor;
 	gl_FragColor = COLOR;
 }
@@ -284,8 +258,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshHeat_USE_PALETTE_Vs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 in vec2 aPosition;
 in vec2 aTexCoords;
@@ -320,9 +293,7 @@ layout (std140) uniform InstanceBlock
 
 
 
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // How many rows the table has scrolled, 0 to 31
 
 void main()
@@ -338,8 +309,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshHeat_USE_PALETTE_Vs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 attribute vec2 aPosition;
 attribute vec2 aTexCoords;
@@ -371,9 +341,7 @@ uniform mat4 uViewMatrix;
 
 
 
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // How many rows the table has scrolled, 0 to 31
 
 void main()
@@ -389,8 +357,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshHeat_USE_PALETTE_Fs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -415,9 +382,7 @@ in highp float vPaletteOffset;
 // pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
@@ -443,13 +408,11 @@ void main() {
 	float inside = step(0.0, source) * step(source, 31.999);
 
 	vec4 src = texture(uTexture, vec2(vTexCoords.x + shift * vHeat.z, vTexCoords.y));
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 palColor = texture(uTexturePalette, vec2(palX, palY));
 	src = vec4(palColor.rgb, palColor.a * src.a);
-#endif
 	COLOR = vec4(src.rgb, src.a * inside) * vColor;
 }
 
@@ -458,8 +421,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshHeat_USE_PALETTE_Fs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -482,9 +444,7 @@ varying highp float vPaletteOffset;
 // pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
@@ -510,13 +470,11 @@ void main() {
 	float inside = step(0.0, source) * step(source, 31.999);
 
 	vec4 src = texture2D(uTexture, vec2(vTexCoords.x + shift * vHeat.z, vTexCoords.y));
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 palColor = texture2D(uTexturePalette, vec2(palX, palY));
 	src = vec4(palColor.rgb, palColor.a * src.a);
-#endif
 	COLOR = vec4(src.rgb, src.a * inside) * vColor;
 	gl_FragColor = COLOR;
 }

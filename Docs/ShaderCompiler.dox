@@ -160,7 +160,7 @@ Directive | Meaning
 --------- | -------
 `program <Name>;` | <b>Required, exactly once</b>, before `shader_type`, `variant`, `batched`, `precision` and the entry points --- write it first. A C++/GLSL identifier naming the emitted `Program` (and keying the console tables)
 `shader_type canvas_item;` `shader_type custom;` | Optional, default `custom`. `canvas_item` opts into the sprite template
-`variant <NAME>;` | May repeat. Output holds the unnamed base variant (`Variants[0]`) plus one entry per declaration, compiled with `#define <NAME> (1)`. <b>No cross-products</b>
+`variant <NAME>;` | May repeat. Output holds the unnamed base variant (`Variants[0]`) plus one entry per declaration, compiled with `<NAME>` defined --- its conditionals are resolved in the variant's emitted sources. <b>No cross-products</b> on their own: `variant <A> + <B>;` declares one, named `A_B`, with the defines of both (each part declared as a variant before it)
 `render_mode <mode>[, <mode>];` | Any of `blend_mix`, `blend_add`, `blend_sub`, `blend_mul`, `blend_premul_alpha`, `unshaded`, OR-ed into `RenderModes`. May repeat
 `precision mediump;` `precision highp;` | Optional (default `mediump`), only these spellings: precision of the auto-emitted @cpp "#ifdef GL_ES" @ce fragment prologue (`precision highp float;` is plain GLSL). `highp` is guarded by @cpp "GL_FRAGMENT_PRECISION_HIGH" @ce, falling back to `mediump` on ES 2.0 devices without it
 `batched <Name>;` | `canvas_item` only --- also emits the batched twin (`InstancesBlock` + 6-vertex corner formula), sharing the fragment stage, variants and `fixed_function` blocks
@@ -225,8 +225,9 @@ Built-in | Vertex stage | Fragment stage
 Reflection runs per variant through a mini preprocessor implementing the object-like C subset
 (@cpp #define @ce / @cpp #undef @ce, @cpp #if @ce / @cpp #ifdef @ce / @cpp #ifndef @ce /
 @cpp #elif @ce / @cpp #else @ce / @cpp #endif @ce with integer constant expressions). It only feeds
-reflection: emitted sources keep the original text verbatim, with the variant define and
-@cpp "#line 1" @ce at the top. `GL_ES` is never predefined (reflection uses the desktop GL view).
+reflection: emitted sources keep the original text verbatim, with the stage, backend and variant
+conditionals resolved and @cpp "#line 1" @ce at the top (after a `#define <NAME> (1)` only
+for a variant macro the text still names outside a conditional). `GL_ES` is never predefined (reflection uses the desktop GL view).
 `BATCH_SIZE` evaluates as 1 in @cpp #if @ce but stays symbolic as an array size.
 
 These macros are resolved by the tool and never survive into an emitted source:
@@ -237,13 +238,16 @@ Macro | Defined for | Use
 `SOFTWARE_RENDERER` | `--emit-sw-generated` only | a cheaper CPU path that leaves every other backend unchanged (@cpp "TexturedBackground.shader" @ce)
 `NO_DYNAMIC_BRANCHING` | `--emit-rsx` only | gate every dynamically branching fragment block on it --- NV40 `IF`/`LOOP`/`BRK` miscompiles (the branch body overwrites live registers)
 `LOW_POWER_GPU` | `--emit-cg` (PS Vita) and the ESSL 100 lowering | a cheaper approximation of an expensive path, not a capability limit. In a per-shader header only `_Vs100`/`_Fs100` are built with it. The engine's `RHI_LOW_POWER_GPU` (`RhiFwd.h`) mirrors which view a binary compiled
+the `variant` names | each variant's own sources, after the backend macros | the code of one variant: in its GLSL an `#if <NAME>` block is plain code, in the others' it is gone, and so is a helper function only it calls. A combined variant defines all of its parts
 
 @m_class{m-noindent}
 
 -   They work in @cpp #ifdef @ce / @cpp #ifndef @ce <b>and</b> @cpp #if @ce / @cpp #elif @ce
     expressions (`#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING`): each family folds the top-level
     @cpp && @ce terms naming only its macros and leaves the rest. Defining or undefining them is an
-    error. Variant names resolve per variant the same way, also in @cpp fixed_function @ce blocks.
+    error. Variant names resolve per variant the same way, also in @cpp fixed_function @ce blocks, and
+    a term that names a flag no pass owns as well is decided whenever that flag can no longer change it
+    (@cpp "#if KEYED || SLOPE" @ce is plain code in `KEYED`).
 -   Around <b>global-scope `varying` declarations</b>, `SOFTWARE_RENDERER` / `LOW_POWER_GPU` give those
     emissions their own varyings. Such a conditional may hold only `varying` declarations, no nested
     directives --- except that its `LOW_POWER_GPU` side may also hold a `canvas_item` shader's
@@ -260,8 +264,8 @@ A surviving @cpp #if @ce is real GLSL, and <b>GLSL ES rejects an undefined macro
 desktop GLSL, HLSL and the `#version 450` Vulkan transform accept it, so `--hlsl-check` and
 `--spirv-check` do not catch it. A macro with an <b>empty</b> body (@cpp "#if SLOPE" @ce) fails even on
 desktop. The tool therefore lowers a purely boolean surviving @cpp #if @ce: one term becomes
-@cpp #ifdef @ce / @cpp #ifndef @ce (@cpp "#if DITHER && !SOFTWARE_RENDERER" @ce emits
-@cpp "#ifdef DITHER" @ce), longer ones wrap each flag in @cpp defined(...) @ce. `tests/GlslSweep.ps1`
+@cpp #ifdef @ce / @cpp #ifndef @ce (@cpp "#if SLOPE && !SOFTWARE_RENDERER" @ce emits
+@cpp "#ifdef SLOPE" @ce), longer ones wrap each flag in @cpp defined(...) @ce. `tests/GlslSweep.ps1`
 compiles every generated stage source in all three injected profiles and catches anything that slips
 through.
 
@@ -292,7 +296,7 @@ runtime computes the batch size as `maxUniformBlockSize / InstanceStride` @m_spa
 Each header is self-contained (`<cstdint>` / `<cstddef>` plus the types header) and carries per variant:
 
 -   <b>Stage sources</b> as raw string literals --- `<Program>_Vs` / `_Fs`, or
-    `<Program>_<VARIANT>_Vs` / `_Fs` --- each starting with the variant define and @cpp "#line 1" @ce
+    `<Program>_<VARIANT>_Vs` / `_Fs` --- each starting with @cpp "#line 1" @ce, the variant's conditionals resolved
 -   The <b>ESSL 100</b> and <b>HLSL</b> lowerings (`_Vs100` / `_Fs100`, `_HlslVs` / `_HlslFs`), and
     <b>SPIR-V</b> words when glslang was available
 -   <b>Reflection</b> as @cpp constexpr @ce arrays (`Uniform`, `BlockMember`, `UniformBlock`,

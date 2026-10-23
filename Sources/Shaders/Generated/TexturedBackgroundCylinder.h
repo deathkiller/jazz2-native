@@ -108,24 +108,6 @@ uniform vec4 uCylinder;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 // The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
 // an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
@@ -133,12 +115,6 @@ float keyedOpacity() {
 #define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
-
-vec2 hash2D(in vec2 p) {
-	float h = dot(p, vec2(12.9898, 78.233));
-	float h2 = dot(p, vec2(37.271, 377.632));
-	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
-}
 
 out vec4 COLOR;
 
@@ -164,18 +140,9 @@ void main() {
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture(uTexture, texturePos);
 
-#ifdef DITHER
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
-#endif
-
 	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
-#ifdef KEYED
-	COLOR.a = keyedOpacity();
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 }
 
 )__SHDR__";
@@ -208,24 +175,6 @@ uniform vec4 uCylinder;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 // The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
 // an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
@@ -259,12 +208,8 @@ void main() {
 	vec4 texColor = texture2D(uTexture, texturePos);
 
 	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
-#ifdef KEYED
-	COLOR.a = keyedOpacity();
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 	gl_FragColor = COLOR;
 }
 
@@ -299,8 +244,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundCylinder_DITHER_Vs[] =
-R"__SHDR__(#define DITHER (1)
-#line 1
+R"__SHDR__(#line 1
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -334,7 +278,6 @@ void main()
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundCylinder_DITHER_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
-#define DITHER (1)
 #line 1
 
 uniform mat4 uProjectionMatrix;
@@ -365,8 +308,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundCylinder_DITHER_Fs[] =
-R"__SHDR__(#define DITHER (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -393,24 +335,6 @@ uniform vec4 uCylinder;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 // The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
 // an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
@@ -449,18 +373,12 @@ void main() {
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture(uTexture, texturePos);
 
-#ifdef DITHER
 	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
 	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
-#endif
 
 	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
-#ifdef KEYED
-	COLOR.a = keyedOpacity();
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 }
 
 )__SHDR__";
@@ -468,8 +386,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundCylinder_DITHER_Fs100[] =
-R"__SHDR__(#define DITHER (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -494,24 +411,6 @@ uniform vec4 uCylinder;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 // The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
 // an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
@@ -545,12 +444,8 @@ void main() {
 	vec4 texColor = texture2D(uTexture, texturePos);
 
 	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
-#ifdef KEYED
-	COLOR.a = keyedOpacity();
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 	gl_FragColor = COLOR;
 }
 
@@ -585,8 +480,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundCylinder_KEYED_Vs[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -620,7 +514,6 @@ void main()
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundCylinder_KEYED_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
-#define KEYED (1)
 #line 1
 
 uniform mat4 uProjectionMatrix;
@@ -651,8 +544,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundCylinder_KEYED_Fs[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -679,7 +571,6 @@ uniform vec4 uCylinder;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
 // A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
@@ -696,7 +587,6 @@ float keyedOpacity() {
 	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
-#endif
 
 // The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
 // an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
@@ -704,12 +594,6 @@ float keyedOpacity() {
 #define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
-
-vec2 hash2D(in vec2 p) {
-	float h = dot(p, vec2(12.9898, 78.233));
-	float h2 = dot(p, vec2(37.271, 377.632));
-	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
-}
 
 out vec4 COLOR;
 
@@ -735,18 +619,8 @@ void main() {
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture(uTexture, texturePos);
 
-#ifdef DITHER
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
-#endif
-
 	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
-#ifdef KEYED
 	COLOR.a = keyedOpacity();
-#else
-	// Premultiplied, which the blending of the sprite modes takes as it is
-	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 }
 
 )__SHDR__";
@@ -754,8 +628,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundCylinder_KEYED_Fs100[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -780,7 +653,6 @@ uniform vec4 uCylinder;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
 // A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
@@ -797,7 +669,6 @@ float keyedOpacity() {
 	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
-#endif
 
 // The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
 // an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
@@ -831,12 +702,7 @@ void main() {
 	vec4 texColor = texture2D(uTexture, texturePos);
 
 	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
-#ifdef KEYED
 	COLOR.a = keyedOpacity();
-#else
-	// Premultiplied, which the blending of the sprite modes takes as it is
-	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 	gl_FragColor = COLOR;
 }
 

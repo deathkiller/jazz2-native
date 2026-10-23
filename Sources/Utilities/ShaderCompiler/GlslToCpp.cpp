@@ -1326,6 +1326,12 @@ namespace ShaderCompiler
 							return String{name};
 					}
 				}
+				if (name.hasPrefix("gl_"_s)) {
+					// A built-in input such as gl_FragCoord has no counterpart in FragmentShaderInput, so the C++
+					// would name an undeclared variable - declined with a reason instead
+					Fail("reads built-in '"_s + name + "', which the software fragment does not provide"_s);
+					return String{name};
+				}
 				return String{name};		// local variable or function parameter
 			}
 

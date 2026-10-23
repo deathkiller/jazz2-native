@@ -72,6 +72,7 @@ void fixed_function(pvr, gs) {
 	// bands are cut into pieces at the texture's edges. It's cut coarsely, every vertex counts on the Dreamcast
 	// and the PS2.
 #define WARP_LOW_DETAIL
+#define WARP_CYLINDER
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -80,6 +81,7 @@ void fixed_function(gu) {
 	// textured strip (see TexturedBackground.shader). It's cut coarsely, every vertex counts on the PSP.
 #define WARP_TEXTURE_REPEAT
 #define WARP_LOW_DETAIL
+#define WARP_CYLINDER
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -93,6 +95,7 @@ void fixed_function(rdp) {
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_LOW_DETAIL
 #define WARP_ROW_BANDS
+#define WARP_CYLINDER
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -101,11 +104,13 @@ void fixed_function(pica) {
 #define WARP_TEXTURE_REPEAT
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_LOW_DETAIL
+#define WARP_CYLINDER
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
 void fixed_function(gx, legacygl) {
 	// The same banded rebuild, with the horizon tint folded into the band pieces' own draw (see the include)
 #define WARP_TINT_IN_VERTEX_COLOR
+#define WARP_CYLINDER
 #include "Include/TexturedBackgroundWarp.inc"
 }

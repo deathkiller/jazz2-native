@@ -2307,8 +2307,11 @@ namespace Jazz2::Tiles
 		// a few hundred of them - and fed flat tiles through a shader that samples a whole warped sheet.
 		bool hasShader;
 		switch (type) {
-			case LayerRendererType::Sky: hasShader = SupportsTexturedBackground; break;
-			case LayerRendererType::Tunnel: hasShader = SupportsTexturedBackgroundTunnel; break;
+			// The variants in the perspective of JJ2+ may be missing as the cylinder may (see ContentResolver::CompileShaders())
+			case LayerRendererType::Sky: hasShader = (SupportsTexturedBackground && (!layer.Description.HasPlusPerspective() ||
+				ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundPlus) != nullptr)); break;
+			case LayerRendererType::Tunnel: hasShader = (SupportsTexturedBackgroundTunnel && (!layer.Description.HasPlusPerspective() ||
+				ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundTunnelPlus) != nullptr)); break;
 			// Its shader may be missing where the offline tables of the backend predate it (see ContentResolver::CompileShaders())
 			case LayerRendererType::Cylinder: hasShader = (SupportsTexturedBackgroundCylinder &&
 				ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundCylinder) != nullptr); break;
@@ -2457,7 +2460,7 @@ namespace Jazz2::Tiles
 		return layer.Description.GetGameplayOrigin(layer.LayoutSize, _layers[_sprLayerIndex].LayoutSize, view);
 	}
 
-	RenderCommand* TileMap::RentRenderCommand(LayerRendererType type, bool indexed, TileCommandUniforms** uniforms, bool keyed)
+	RenderCommand* TileMap::RentRenderCommand(LayerRendererType type, bool indexed, TileCommandUniforms** uniforms, bool keyed, bool plus)
 	{
 		RenderCommand* command;
 		bool freshSlot = false;
@@ -2482,8 +2485,8 @@ namespace Jazz2::Tiles
 #if defined(TILEMAP_LAYER_EFFECTS)
 		if (keyed) {
 			switch (type) {
-				case LayerRendererType::Sky: keyedShader = ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundKeyed); break;
-				case LayerRendererType::Tunnel: keyedShader = ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundTunnelKeyed); break;
+				case LayerRendererType::Sky: keyedShader = ContentResolver::Get().GetShader(plus ? PrecompiledShader::TexturedBackgroundPlusKeyed : PrecompiledShader::TexturedBackgroundKeyed); break;
+				case LayerRendererType::Tunnel: keyedShader = ContentResolver::Get().GetShader(plus ? PrecompiledShader::TexturedBackgroundTunnelPlusKeyed : PrecompiledShader::TexturedBackgroundTunnelKeyed); break;
 				case LayerRendererType::Cylinder: keyedShader = ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundCylinderKeyed); break;
 				case LayerRendererType::Wave: keyedShader = ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundWaveKeyed); break;
 				default: break;
@@ -2508,8 +2511,12 @@ namespace Jazz2::Tiles
 				shaderChanged = command->GetMaterial().SetShader(shader);
 				break;
 			}
-			case LayerRendererType::Sky: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(dither ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground)); break;
-			case LayerRendererType::Tunnel: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(dither ? PrecompiledShader::TexturedBackgroundTunnelDither : PrecompiledShader::TexturedBackgroundTunnel)); break;
+			case LayerRendererType::Sky: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(plus
+				? (dither ? PrecompiledShader::TexturedBackgroundPlusDither : PrecompiledShader::TexturedBackgroundPlus)
+				: (dither ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground))); break;
+			case LayerRendererType::Tunnel: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(plus
+				? (dither ? PrecompiledShader::TexturedBackgroundTunnelPlusDither : PrecompiledShader::TexturedBackgroundTunnelPlus)
+				: (dither ? PrecompiledShader::TexturedBackgroundTunnelDither : PrecompiledShader::TexturedBackgroundTunnel))); break;
 			case LayerRendererType::Cylinder: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(dither ? PrecompiledShader::TexturedBackgroundCylinderDither : PrecompiledShader::TexturedBackgroundCylinder)); break;
 			// Whole pixels of the texture, nothing to dither
 			case LayerRendererType::Wave: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundWave)); break;
@@ -5824,7 +5831,9 @@ namespace Jazz2::Tiles
 		}
 #endif
 
-		auto* command = RentRenderCommand(layer.Description.RendererType, false, nullptr, keyed);
+		// The perspective of JJ2+ is a variant of the shaders of the sky and the tunnel, any other sky layer is drawn as the sky
+		// layers always were here (see LayerDescription::HasPlusPerspective())
+		auto* command = RentRenderCommand(layer.Description.RendererType, false, nullptr, keyed, layer.Description.HasPlusPerspective());
 
 		auto* instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((right - left) / reference.W, (left - reference.X) / reference.W,
@@ -5838,10 +5847,6 @@ namespace Jazz2::Tiles
 
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue(reference.W, reference.H);
 		command->GetMaterial().Uniform("uShift")->SetFloatValue(x, y);
-		if (auto* modelUniform = command->GetMaterial().Uniform("uModel")) {
-			// The perspective of JJ2+, any other sky layer is drawn as the sky layers always were here (see LayerDescription::HasPlusPerspective())
-			modelUniform->SetFloatValue(layer.Description.HasPlusPerspective() ? 1.0f : 0.0f);
-		}
 		// A wave has neither, its color holds its parameters
 		if (auto* cameraUniform = command->GetMaterial().Uniform("uCameraPos")) {
 			cameraUniform->SetFloatVector(viewCenter.Data());

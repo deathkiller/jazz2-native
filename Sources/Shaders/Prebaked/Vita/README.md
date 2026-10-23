@@ -10,12 +10,18 @@ which cost about **3.3 s of a 6.8 s cold start**. With the pack shipped, that be
 
 ## Refreshing it
 
-The pack can only be produced by a console, so the flow is: run the game, then pull back what it wrote.
+The pack can only be produced by the console's own compiler, so the flow is: run the game, then pull back
+what it wrote.
 
 1. Run the Vita build and go through the parts of the game you want covered — see *Coverage* below.
 2. Copy `ux0:/data/jazz2/Cache/Shaders/ShadersGxm.bin` off the console (vitacompanion's FTP on port
    1337, or any other means) over this file.
 3. Commit it.
+
+Vita3K runs that compiler too when the same `libshacccg.suprx` is in its `ur0:/data` — it executes the
+module itself rather than imitating it — so a pack written there carries the console's fingerprint and
+binaries byte-for-byte identical to the console's. That is how the current one was made, and it is the
+way to refresh the pack without the console at hand.
 
 Nothing needs to be kept in sync by hand. Each entry is keyed by a 64-bit hash of the exact Cg source
 string it was compiled from, so:
@@ -33,10 +39,11 @@ is never something a build has to have.
 ## Coverage
 
 A run only compiles the stages it actually reaches, and the pack is written from what the run used, so
-what you play is what gets cached. The 72 entries committed here come from a run that reached the main
-menu (59) and then loaded a level with x-ray and blur-behind layers, whose shaders are compiled only then
-(the other 13, see `ContentResolver::CompileLayerEffectShaders()`); playing further and re-pulling can
-only add to them.
+what you play is what gets cached. The 89 entries committed here come from a run that reached the main
+menu (65) with `ContentResolver::CompileLayerEffectShaders()` called once at startup, whose shaders are
+otherwise compiled only when a level has layers that need them (the other 24: the x-ray, blur-behind,
+reflection and chroma key layers, and the textured backgrounds drawn translucent or keyed); playing
+further and re-pulling can only add to them.
 
 **Commit the file exactly as the console wrote it — do not try to "clean" it.** It is tempting to drop
 entries that no source in `CgGeneratedShaders.h` hashes to, on the assumption they are leftovers from an

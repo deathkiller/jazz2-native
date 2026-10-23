@@ -192,19 +192,32 @@
 					}
 				},
 				{
-					"comment": "variant <NAME>; - one extra program variant compiled with #define <NAME> (1)",
-					"match": "^\\s*(variant)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(;)?",
-					"captures": {
+					"comment": "variant <NAME>; - one extra program variant compiled with #define <NAME> (1); variant <A> + <B>; - one more that combines variants declared before it, with the defines of all of them. Ends at the end of the line too, as render_mode does",
+					"begin": "^\\s*(variant)(?=\\s+[A-Za-z_])",
+					"beginCaptures": {
 						"1": {
 							"name": "keyword.other.directive.variant.deathshader"
-						},
-						"2": {
-							"name": "entity.name.constant.variant.deathshader"
-						},
-						"3": {
+						}
+					},
+					"end": "(;)|$",
+					"endCaptures": {
+						"1": {
 							"name": "punctuation.terminator.deathshader"
 						}
-					}
+					},
+					"patterns": [
+						{
+							"include": "#comments"
+						},
+						{
+							"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+							"name": "entity.name.constant.variant.deathshader"
+						},
+						{
+							"match": "\\+",
+							"name": "keyword.operator.deathshader"
+						}
+					]
 				},
 				{
 					"comment": "render_mode <mode>[, <mode>]; - the end alternation also takes the end of the line, so a directive still missing its ';' cannot paint the rest of the file as an unknown mode",

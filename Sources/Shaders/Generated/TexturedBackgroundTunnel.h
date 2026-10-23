@@ -95,37 +95,20 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uTunnel;
-// 1 for the tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - 0 draws it as it always was
-uniform float uModel;
 
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -204,43 +187,16 @@ vec3 legacyTunnel(vec2 uv) {
 	return vec3(texturePos, horizonOpacity);
 }
 
-// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
-// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
-// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
-vec3 plusTunnel(vec2 uv) {
-	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
-	float logRadius = log2(radius);
-	vec2 texel = vec2(
-		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
-			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
-		uShift.y - 256.0 * logRadius
-	);
-	float fade = PLUS_FADE_RADIUS / radius;
-	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
-}
-
 out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// Only the one drawn is worked out where the target branches, both are where it can't
-	vec3 tunnel = vec3(0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	vec3 tunnel = legacyTunnel(vTexCoords);
 	vec2 texturePos = tunnel.xy;
 	vec4 texColor = texture(uTexture, texturePos);
 
-#ifdef DITHER
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
-#endif
 	float horizonOpacity = tunnel.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -254,12 +210,8 @@ void main() {
 
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
-#ifdef KEYED
-	COLOR.a = keyedOpacity();
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 }
 
 )__SHDR__";
@@ -279,37 +231,20 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 
 uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uTunnel;
-// 1 for the tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - 0 draws it as it always was
-uniform float uModel;
 
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -350,36 +285,13 @@ vec3 legacyTunnel(vec2 uv) {
 	return vec3(texturePos, horizonOpacity);
 }
 
-// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
-// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
-// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
-vec3 plusTunnel(vec2 uv) {
-	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
-	float logRadius = log2(radius);
-	vec2 texel = vec2(
-		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
-			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
-		uShift.y - 256.0 * logRadius
-	);
-	float fade = PLUS_FADE_RADIUS / radius;
-	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
-}
-
 
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// Only the one drawn is worked out where the target branches, both are where it can't
-	vec3 tunnel = vec3(0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	vec3 tunnel = legacyTunnel(vTexCoords);
 	vec2 texturePos = tunnel.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
 
@@ -389,12 +301,8 @@ void main() {
 
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
-#ifdef KEYED
-	COLOR.a = keyedOpacity();
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 	gl_FragColor = COLOR;
 }
 
@@ -409,7 +317,6 @@ void main() {
 		{ "uHorizonColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uTunnel", ShaderCompiler::UniformType::Vec4, 0 },
-		{ "uModel", ShaderCompiler::UniformType::Float, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundTunnel_Block0_Members[] = {
@@ -430,8 +337,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundTunnel_DITHER_Vs[] =
-R"__SHDR__(#define DITHER (1)
-#line 1
+R"__SHDR__(#line 1
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -465,7 +371,6 @@ void main()
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundTunnel_DITHER_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
-#define DITHER (1)
 #line 1
 
 uniform mat4 uProjectionMatrix;
@@ -496,8 +401,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundTunnel_DITHER_Fs[] =
-R"__SHDR__(#define DITHER (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -511,37 +415,20 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uTunnel;
-// 1 for the tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - 0 draws it as it always was
-uniform float uModel;
 
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -620,43 +507,18 @@ vec3 legacyTunnel(vec2 uv) {
 	return vec3(texturePos, horizonOpacity);
 }
 
-// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
-// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
-// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
-vec3 plusTunnel(vec2 uv) {
-	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
-	float logRadius = log2(radius);
-	vec2 texel = vec2(
-		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
-			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
-		uShift.y - 256.0 * logRadius
-	);
-	float fade = PLUS_FADE_RADIUS / radius;
-	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
-}
-
 out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// Only the one drawn is worked out where the target branches, both are where it can't
-	vec3 tunnel = vec3(0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	vec3 tunnel = legacyTunnel(vTexCoords);
 	vec2 texturePos = tunnel.xy;
 	vec4 texColor = texture(uTexture, texturePos);
 
-#ifdef DITHER
 	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
 	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
-#endif
 	float horizonOpacity = tunnel.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -670,12 +532,8 @@ void main() {
 
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
-#ifdef KEYED
-	COLOR.a = keyedOpacity();
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 }
 
 )__SHDR__";
@@ -683,8 +541,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundTunnel_DITHER_Fs100[] =
-R"__SHDR__(#define DITHER (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -696,37 +553,20 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 
 uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uTunnel;
-// 1 for the tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - 0 draws it as it always was
-uniform float uModel;
 
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -767,36 +607,13 @@ vec3 legacyTunnel(vec2 uv) {
 	return vec3(texturePos, horizonOpacity);
 }
 
-// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
-// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
-// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
-vec3 plusTunnel(vec2 uv) {
-	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
-	float logRadius = log2(radius);
-	vec2 texel = vec2(
-		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
-			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
-		uShift.y - 256.0 * logRadius
-	);
-	float fade = PLUS_FADE_RADIUS / radius;
-	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
-}
-
 
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// Only the one drawn is worked out where the target branches, both are where it can't
-	vec3 tunnel = vec3(0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	vec3 tunnel = legacyTunnel(vTexCoords);
 	vec2 texturePos = tunnel.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
 
@@ -806,12 +623,8 @@ void main() {
 
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
-#ifdef KEYED
-	COLOR.a = keyedOpacity();
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 	gl_FragColor = COLOR;
 }
 
@@ -826,7 +639,6 @@ void main() {
 		{ "uHorizonColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uTunnel", ShaderCompiler::UniformType::Vec4, 0 },
-		{ "uModel", ShaderCompiler::UniformType::Float, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundTunnel_DITHER_Block0_Members[] = {
@@ -847,8 +659,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundTunnel_KEYED_Vs[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -882,7 +693,6 @@ void main()
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundTunnel_KEYED_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
-#define KEYED (1)
 #line 1
 
 uniform mat4 uProjectionMatrix;
@@ -913,8 +723,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundTunnel_KEYED_Fs[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -928,20 +737,20 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uTunnel;
-// 1 for the tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - 0 draws it as it always was
-uniform float uModel;
 
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
 // A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
@@ -958,7 +767,6 @@ float keyedOpacity() {
 	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
-#endif
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -1037,43 +845,16 @@ vec3 legacyTunnel(vec2 uv) {
 	return vec3(texturePos, horizonOpacity);
 }
 
-// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
-// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
-// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
-vec3 plusTunnel(vec2 uv) {
-	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
-	float logRadius = log2(radius);
-	vec2 texel = vec2(
-		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
-			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
-		uShift.y - 256.0 * logRadius
-	);
-	float fade = PLUS_FADE_RADIUS / radius;
-	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
-}
-
 out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// Only the one drawn is worked out where the target branches, both are where it can't
-	vec3 tunnel = vec3(0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	vec3 tunnel = legacyTunnel(vTexCoords);
 	vec2 texturePos = tunnel.xy;
 	vec4 texColor = texture(uTexture, texturePos);
 
-#ifdef DITHER
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
-#endif
 	float horizonOpacity = tunnel.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -1087,12 +868,7 @@ void main() {
 
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
-#ifdef KEYED
 	COLOR.a = keyedOpacity();
-#else
-	// Premultiplied, which the blending of the sprite modes takes as it is
-	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 }
 
 )__SHDR__";
@@ -1100,8 +876,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundTunnel_KEYED_Fs100[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -1113,20 +888,20 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 
 uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uTunnel;
-// 1 for the tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - 0 draws it as it always was
-uniform float uModel;
 
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
 // A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
@@ -1143,7 +918,6 @@ float keyedOpacity() {
 	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
-#endif
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -1184,36 +958,13 @@ vec3 legacyTunnel(vec2 uv) {
 	return vec3(texturePos, horizonOpacity);
 }
 
-// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
-// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
-// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
-vec3 plusTunnel(vec2 uv) {
-	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
-	float logRadius = log2(radius);
-	vec2 texel = vec2(
-		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
-			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
-		uShift.y - 256.0 * logRadius
-	);
-	float fade = PLUS_FADE_RADIUS / radius;
-	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
-}
-
 
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// Only the one drawn is worked out where the target branches, both are where it can't
-	vec3 tunnel = vec3(0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	vec3 tunnel = legacyTunnel(vTexCoords);
 	vec2 texturePos = tunnel.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
 
@@ -1223,12 +974,7 @@ void main() {
 
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
-#ifdef KEYED
 	COLOR.a = keyedOpacity();
-#else
-	// Premultiplied, which the blending of the sprite modes takes as it is
-	COLOR = vec4(COLOR.rgb * opacity, opacity);
-#endif
 	gl_FragColor = COLOR;
 }
 
@@ -1243,7 +989,6 @@ void main() {
 		{ "uHorizonColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uTunnel", ShaderCompiler::UniformType::Vec4, 0 },
-		{ "uModel", ShaderCompiler::UniformType::Float, 0 },
 		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uOpacity", ShaderCompiler::UniformType::Float, 0 },
@@ -1266,6 +1011,948 @@ void main() {
 		{ "uTextureBehind", 2 },
 	};
 
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_Vs[] =
+R"__SHDR__(#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	float palOffset;
+};
+
+out vec2 vTexCoords;
+out vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_Fs[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_ES
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+#endif
+
+in vec2 vTexCoords;
+in vec4 vColor;
+
+uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
+
+uniform vec4 uHorizonColor;
+uniform vec2 uShift;
+uniform vec4 uTunnel;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+
+#define INV_PI 0.31830988618379067153776752675
+
+// The tunnel of JJ2+, measured in it: the texture once around the center, and once more into the distance each time the
+// distance from the center halves, so it never ends. Its spiral turns it by 356 / r^0.15 - 91 pixels of the texture at r
+// pixels from the center, it fades into the horizon color from 87 pixels away from the center down to 4 % of it further out.
+#define PLUS_SPIRAL_SCALE 356.2
+#define PLUS_SPIRAL_POWER -0.15
+#define PLUS_SPIRAL_OFFSET -91.0
+#define PLUS_FADE_RADIUS 87.0
+#define PLUS_FADE_FLOOR 0.0414
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec3 voronoi(in vec2 p) {
+	vec2 n = floor(p);
+	vec2 f = fract(p);
+
+	vec2 mg, mr;
+
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			vec2 g = vec2(float(i), float(j));
+			vec2 o = hash2D(n + g);
+
+			vec2 r = g + o - f;
+			float d = dot(r, r);
+
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return vec3(md, mr);
+}
+
+float addStarField(vec2 samplePosition, float threshold) {
+	vec3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - (starValue.x / threshold);
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
+// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
+// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
+// xy the position in the texture, z how far it fades into the color of the horizon
+vec3 plusTunnel(vec2 uv) {
+	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
+	float logRadius = log2(radius);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
+			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
+		uShift.y - 256.0 * logRadius
+	);
+	float fade = PLUS_FADE_RADIUS / radius;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
+}
+
+out vec4 COLOR;
+
+void main() {
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	vec3 tunnel = plusTunnel(vTexCoords);
+	vec2 texturePos = tunnel.xy;
+	vec4 texColor = texture(uTexture, texturePos);
+
+	float horizonOpacity = tunnel.z;
+
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
+		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+
+		samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+
+	// Without the fade, the circles go on into the center
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+}
+
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_Fs100[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
+
+uniform vec4 uHorizonColor;
+uniform vec2 uShift;
+uniform vec4 uTunnel;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+
+#define INV_PI 0.31830988618379067153776752675
+
+// The tunnel of JJ2+, measured in it: the texture once around the center, and once more into the distance each time the
+// distance from the center halves, so it never ends. Its spiral turns it by 356 / r^0.15 - 91 pixels of the texture at r
+// pixels from the center, it fades into the horizon color from 87 pixels away from the center down to 4 % of it further out.
+#define PLUS_SPIRAL_SCALE 356.2
+#define PLUS_SPIRAL_POWER -0.15
+#define PLUS_SPIRAL_OFFSET -91.0
+#define PLUS_FADE_RADIUS 87.0
+#define PLUS_FADE_FLOOR 0.0414
+
+// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
+// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
+// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
+// xy the position in the texture, z how far it fades into the color of the horizon
+vec3 plusTunnel(vec2 uv) {
+	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
+	float logRadius = log2(radius);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
+			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
+		uShift.y - 256.0 * logRadius
+	);
+	float fade = PLUS_FADE_RADIUS / radius;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	vec3 tunnel = plusTunnel(vTexCoords);
+	vec2 texturePos = tunnel.xy;
+	vec4 texColor = texture2D(uTexture, texturePos);
+
+	float horizonOpacity = tunnel.z;
+
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+
+	// Without the fade, the circles go on into the center
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+#endif
+
+	inline constexpr ShaderCompiler::Uniform TexturedBackgroundTunnel_PLUS_Uniforms[] = {
+		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewSize", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uHorizonColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uTunnel", ShaderCompiler::UniformType::Vec4, 0 },
+	};
+
+	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundTunnel_PLUS_Block0_Members[] = {
+		{ "modelMatrix", ShaderCompiler::UniformType::Mat4, 0, 0 },
+		{ "color", ShaderCompiler::UniformType::Vec4, 0, 64 },
+		{ "texRect", ShaderCompiler::UniformType::Vec4, 0, 80 },
+		{ "spriteSize", ShaderCompiler::UniformType::Vec2, 0, 96 },
+		{ "palOffset", ShaderCompiler::UniformType::Float, 0, 104 },
+	};
+
+	inline constexpr ShaderCompiler::UniformBlock TexturedBackgroundTunnel_PLUS_Blocks[] = {
+		{ "InstanceBlock", 112, 0, 5, TexturedBackgroundTunnel_PLUS_Block0_Members },
+	};
+
+	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundTunnel_PLUS_Textures[] = {
+		{ "uTexture", 0 },
+	};
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_DITHER_Vs[] =
+R"__SHDR__(#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	float palOffset;
+};
+
+out vec2 vTexCoords;
+out vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_DITHER_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_DITHER_Fs[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_ES
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+#endif
+
+in vec2 vTexCoords;
+in vec4 vColor;
+
+uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
+
+uniform vec4 uHorizonColor;
+uniform vec2 uShift;
+uniform vec4 uTunnel;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+
+#define INV_PI 0.31830988618379067153776752675
+
+// The tunnel of JJ2+, measured in it: the texture once around the center, and once more into the distance each time the
+// distance from the center halves, so it never ends. Its spiral turns it by 356 / r^0.15 - 91 pixels of the texture at r
+// pixels from the center, it fades into the horizon color from 87 pixels away from the center down to 4 % of it further out.
+#define PLUS_SPIRAL_SCALE 356.2
+#define PLUS_SPIRAL_POWER -0.15
+#define PLUS_SPIRAL_OFFSET -91.0
+#define PLUS_FADE_RADIUS 87.0
+#define PLUS_FADE_FLOOR 0.0414
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec3 voronoi(in vec2 p) {
+	vec2 n = floor(p);
+	vec2 f = fract(p);
+
+	vec2 mg, mr;
+
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			vec2 g = vec2(float(i), float(j));
+			vec2 o = hash2D(n + g);
+
+			vec2 r = g + o - f;
+			float d = dot(r, r);
+
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return vec3(md, mr);
+}
+
+float addStarField(vec2 samplePosition, float threshold) {
+	vec3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - (starValue.x / threshold);
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
+// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
+// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
+// xy the position in the texture, z how far it fades into the color of the horizon
+vec3 plusTunnel(vec2 uv) {
+	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
+	float logRadius = log2(radius);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
+			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
+		uShift.y - 256.0 * logRadius
+	);
+	float fade = PLUS_FADE_RADIUS / radius;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
+}
+
+out vec4 COLOR;
+
+void main() {
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	vec3 tunnel = plusTunnel(vTexCoords);
+	vec2 texturePos = tunnel.xy;
+	vec4 texColor = texture(uTexture, texturePos);
+
+	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
+	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
+	float horizonOpacity = tunnel.z;
+
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
+		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+
+		samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+
+	// Without the fade, the circles go on into the center
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+}
+
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_DITHER_Fs100[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
+
+uniform vec4 uHorizonColor;
+uniform vec2 uShift;
+uniform vec4 uTunnel;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+
+#define INV_PI 0.31830988618379067153776752675
+
+// The tunnel of JJ2+, measured in it: the texture once around the center, and once more into the distance each time the
+// distance from the center halves, so it never ends. Its spiral turns it by 356 / r^0.15 - 91 pixels of the texture at r
+// pixels from the center, it fades into the horizon color from 87 pixels away from the center down to 4 % of it further out.
+#define PLUS_SPIRAL_SCALE 356.2
+#define PLUS_SPIRAL_POWER -0.15
+#define PLUS_SPIRAL_OFFSET -91.0
+#define PLUS_FADE_RADIUS 87.0
+#define PLUS_FADE_FLOOR 0.0414
+
+// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
+// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
+// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
+// xy the position in the texture, z how far it fades into the color of the horizon
+vec3 plusTunnel(vec2 uv) {
+	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
+	float logRadius = log2(radius);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
+			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
+		uShift.y - 256.0 * logRadius
+	);
+	float fade = PLUS_FADE_RADIUS / radius;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	vec3 tunnel = plusTunnel(vTexCoords);
+	vec2 texturePos = tunnel.xy;
+	vec4 texColor = texture2D(uTexture, texturePos);
+
+	float horizonOpacity = tunnel.z;
+
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+
+	// Without the fade, the circles go on into the center
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
+	// Premultiplied, which the blending of the sprite modes takes as it is
+	COLOR = vec4(COLOR.rgb * opacity, opacity);
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+#endif
+
+	inline constexpr ShaderCompiler::Uniform TexturedBackgroundTunnel_PLUS_DITHER_Uniforms[] = {
+		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewSize", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uHorizonColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uTunnel", ShaderCompiler::UniformType::Vec4, 0 },
+	};
+
+	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundTunnel_PLUS_DITHER_Block0_Members[] = {
+		{ "modelMatrix", ShaderCompiler::UniformType::Mat4, 0, 0 },
+		{ "color", ShaderCompiler::UniformType::Vec4, 0, 64 },
+		{ "texRect", ShaderCompiler::UniformType::Vec4, 0, 80 },
+		{ "spriteSize", ShaderCompiler::UniformType::Vec2, 0, 96 },
+		{ "palOffset", ShaderCompiler::UniformType::Float, 0, 104 },
+	};
+
+	inline constexpr ShaderCompiler::UniformBlock TexturedBackgroundTunnel_PLUS_DITHER_Blocks[] = {
+		{ "InstanceBlock", 112, 0, 5, TexturedBackgroundTunnel_PLUS_DITHER_Block0_Members },
+	};
+
+	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundTunnel_PLUS_DITHER_Textures[] = {
+		{ "uTexture", 0 },
+	};
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_KEYED_Vs[] =
+R"__SHDR__(#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	float palOffset;
+};
+
+out vec2 vTexCoords;
+out vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_KEYED_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_KEYED_Fs[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_ES
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+#endif
+
+in vec2 vTexCoords;
+in vec4 vColor;
+
+uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
+
+uniform vec4 uHorizonColor;
+uniform vec2 uShift;
+uniform vec4 uTunnel;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+
+#define INV_PI 0.31830988618379067153776752675
+
+// The tunnel of JJ2+, measured in it: the texture once around the center, and once more into the distance each time the
+// distance from the center halves, so it never ends. Its spiral turns it by 356 / r^0.15 - 91 pixels of the texture at r
+// pixels from the center, it fades into the horizon color from 87 pixels away from the center down to 4 % of it further out.
+#define PLUS_SPIRAL_SCALE 356.2
+#define PLUS_SPIRAL_POWER -0.15
+#define PLUS_SPIRAL_OFFSET -91.0
+#define PLUS_FADE_RADIUS 87.0
+#define PLUS_FADE_FLOOR 0.0414
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec3 voronoi(in vec2 p) {
+	vec2 n = floor(p);
+	vec2 f = fract(p);
+
+	vec2 mg, mr;
+
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			vec2 g = vec2(float(i), float(j));
+			vec2 o = hash2D(n + g);
+
+			vec2 r = g + o - f;
+			float d = dot(r, r);
+
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return vec3(md, mr);
+}
+
+float addStarField(vec2 samplePosition, float threshold) {
+	vec3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - (starValue.x / threshold);
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
+// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
+// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
+// xy the position in the texture, z how far it fades into the color of the horizon
+vec3 plusTunnel(vec2 uv) {
+	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
+	float logRadius = log2(radius);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
+			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
+		uShift.y - 256.0 * logRadius
+	);
+	float fade = PLUS_FADE_RADIUS / radius;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
+}
+
+out vec4 COLOR;
+
+void main() {
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	vec3 tunnel = plusTunnel(vTexCoords);
+	vec2 texturePos = tunnel.xy;
+	vec4 texColor = texture(uTexture, texturePos);
+
+	float horizonOpacity = tunnel.z;
+
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
+		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+
+		samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+
+	// Without the fade, the circles go on into the center
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
+	COLOR.a = keyedOpacity();
+}
+
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundTunnel_PLUS_KEYED_Fs100[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+
+
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
+
+uniform vec4 uHorizonColor;
+uniform vec2 uShift;
+uniform vec4 uTunnel;
+
+// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
+// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
+// through a part of the scene painted in the key color
+// A sharp copy of what is behind the layer, without a key it's never read
+uniform sampler2D uTextureBehind;
+// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+uniform vec2 uTargetSizeInv;
+// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
+// fewer bits per channel than the palette has - or a negative alpha for no key
+uniform vec4 uKeyColor;
+// How opaque the layer is where it's shown
+uniform float uOpacity;
+
+float keyedOpacity() {
+	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	vec3 difference = abs(behind - uKeyColor.rgb);
+	// Over the key color, or everywhere without a key
+	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+}
+
+#define INV_PI 0.31830988618379067153776752675
+
+// The tunnel of JJ2+, measured in it: the texture once around the center, and once more into the distance each time the
+// distance from the center halves, so it never ends. Its spiral turns it by 356 / r^0.15 - 91 pixels of the texture at r
+// pixels from the center, it fades into the horizon color from 87 pixels away from the center down to 4 % of it further out.
+#define PLUS_SPIRAL_SCALE 356.2
+#define PLUS_SPIRAL_POWER -0.15
+#define PLUS_SPIRAL_OFFSET -91.0
+#define PLUS_FADE_RADIUS 87.0
+#define PLUS_FADE_FLOOR 0.0414
+
+// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
+// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
+// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
+// xy the position in the texture, z how far it fades into the color of the horizon
+vec3 plusTunnel(vec2 uv) {
+	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
+	float logRadius = log2(radius);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
+			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
+		uShift.y - 256.0 * logRadius
+	);
+	float fade = PLUS_FADE_RADIUS / radius;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	float opacity = COLOR.a;
+	vec3 tunnel = plusTunnel(vTexCoords);
+	vec2 texturePos = tunnel.xy;
+	vec4 texColor = texture2D(uTexture, texturePos);
+
+	float horizonOpacity = tunnel.z;
+
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+
+	// Without the fade, the circles go on into the center
+	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
+	COLOR.a = keyedOpacity();
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+#endif
+
+	inline constexpr ShaderCompiler::Uniform TexturedBackgroundTunnel_PLUS_KEYED_Uniforms[] = {
+		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewSize", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uHorizonColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uTunnel", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uOpacity", ShaderCompiler::UniformType::Float, 0 },
+	};
+
+	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundTunnel_PLUS_KEYED_Block0_Members[] = {
+		{ "modelMatrix", ShaderCompiler::UniformType::Mat4, 0, 0 },
+		{ "color", ShaderCompiler::UniformType::Vec4, 0, 64 },
+		{ "texRect", ShaderCompiler::UniformType::Vec4, 0, 80 },
+		{ "spriteSize", ShaderCompiler::UniformType::Vec2, 0, 96 },
+		{ "palOffset", ShaderCompiler::UniformType::Float, 0, 104 },
+	};
+
+	inline constexpr ShaderCompiler::UniformBlock TexturedBackgroundTunnel_PLUS_KEYED_Blocks[] = {
+		{ "InstanceBlock", 112, 0, 5, TexturedBackgroundTunnel_PLUS_KEYED_Block0_Members },
+	};
+
+	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundTunnel_PLUS_KEYED_Textures[] = {
+		{ "uTexture", 0 },
+		{ "uTextureBehind", 2 },
+	};
+
 	inline constexpr ShaderCompiler::ProgramVariant TexturedBackgroundTunnel_Variants[] = {
 		{ "", "",
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
@@ -1273,7 +1960,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			8, TexturedBackgroundTunnel_Uniforms, 1, TexturedBackgroundTunnel_Blocks, 1, TexturedBackgroundTunnel_Textures, 0, nullptr,
+			7, TexturedBackgroundTunnel_Uniforms, 1, TexturedBackgroundTunnel_Blocks, 1, TexturedBackgroundTunnel_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TexturedBackgroundTunnel_Vs100, TexturedBackgroundTunnel_Fs100,
 #else
@@ -1302,7 +1989,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			8, TexturedBackgroundTunnel_DITHER_Uniforms, 1, TexturedBackgroundTunnel_DITHER_Blocks, 1, TexturedBackgroundTunnel_DITHER_Textures, 0, nullptr,
+			7, TexturedBackgroundTunnel_DITHER_Uniforms, 1, TexturedBackgroundTunnel_DITHER_Blocks, 1, TexturedBackgroundTunnel_DITHER_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TexturedBackgroundTunnel_DITHER_Vs100, TexturedBackgroundTunnel_DITHER_Fs100,
 #else
@@ -1331,7 +2018,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			11, TexturedBackgroundTunnel_KEYED_Uniforms, 1, TexturedBackgroundTunnel_KEYED_Blocks, 2, TexturedBackgroundTunnel_KEYED_Textures, 0, nullptr,
+			10, TexturedBackgroundTunnel_KEYED_Uniforms, 1, TexturedBackgroundTunnel_KEYED_Blocks, 2, TexturedBackgroundTunnel_KEYED_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TexturedBackgroundTunnel_KEYED_Vs100, TexturedBackgroundTunnel_KEYED_Fs100,
 #else
@@ -1354,8 +2041,95 @@ void main() {
 #else
 			nullptr, nullptr },
 #endif
+		{ "PLUS", "PLUS",
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundTunnel_PLUS_Vs, TexturedBackgroundTunnel_PLUS_Fs,
+#else
+			nullptr, nullptr,
+#endif
+			7, TexturedBackgroundTunnel_PLUS_Uniforms, 1, TexturedBackgroundTunnel_PLUS_Blocks, 1, TexturedBackgroundTunnel_PLUS_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundTunnel_PLUS_Vs100, TexturedBackgroundTunnel_PLUS_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
+			TexturedBackgroundTunnel_PLUS_VsHlsl, TexturedBackgroundTunnel_PLUS_FsHlsl,
+			TexturedBackgroundTunnel_PLUS_VsDxbc, TexturedBackgroundTunnel_PLUS_VsDxbcSize, TexturedBackgroundTunnel_PLUS_FsDxbc, TexturedBackgroundTunnel_PLUS_FsDxbcSize,
+#else
+			nullptr, nullptr,
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_VULKAN)
+			TexturedBackgroundTunnel_PLUS_VkVs, TexturedBackgroundTunnel_PLUS_VkVsSize, TexturedBackgroundTunnel_PLUS_VkFs, TexturedBackgroundTunnel_PLUS_VkFsSize,
+#else
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_METAL)
+			TexturedBackgroundTunnel_PLUS_VsMsl, TexturedBackgroundTunnel_PLUS_FsMsl },
+#else
+			nullptr, nullptr },
+#endif
+		{ "PLUS_DITHER", "PLUS DITHER",
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundTunnel_PLUS_DITHER_Vs, TexturedBackgroundTunnel_PLUS_DITHER_Fs,
+#else
+			nullptr, nullptr,
+#endif
+			7, TexturedBackgroundTunnel_PLUS_DITHER_Uniforms, 1, TexturedBackgroundTunnel_PLUS_DITHER_Blocks, 1, TexturedBackgroundTunnel_PLUS_DITHER_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundTunnel_PLUS_DITHER_Vs100, TexturedBackgroundTunnel_PLUS_DITHER_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
+			TexturedBackgroundTunnel_PLUS_DITHER_VsHlsl, TexturedBackgroundTunnel_PLUS_DITHER_FsHlsl,
+			TexturedBackgroundTunnel_PLUS_DITHER_VsDxbc, TexturedBackgroundTunnel_PLUS_DITHER_VsDxbcSize, TexturedBackgroundTunnel_PLUS_DITHER_FsDxbc, TexturedBackgroundTunnel_PLUS_DITHER_FsDxbcSize,
+#else
+			nullptr, nullptr,
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_VULKAN)
+			TexturedBackgroundTunnel_PLUS_DITHER_VkVs, TexturedBackgroundTunnel_PLUS_DITHER_VkVsSize, TexturedBackgroundTunnel_PLUS_DITHER_VkFs, TexturedBackgroundTunnel_PLUS_DITHER_VkFsSize,
+#else
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_METAL)
+			TexturedBackgroundTunnel_PLUS_DITHER_VsMsl, TexturedBackgroundTunnel_PLUS_DITHER_FsMsl },
+#else
+			nullptr, nullptr },
+#endif
+		{ "PLUS_KEYED", "PLUS KEYED",
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundTunnel_PLUS_KEYED_Vs, TexturedBackgroundTunnel_PLUS_KEYED_Fs,
+#else
+			nullptr, nullptr,
+#endif
+			10, TexturedBackgroundTunnel_PLUS_KEYED_Uniforms, 1, TexturedBackgroundTunnel_PLUS_KEYED_Blocks, 2, TexturedBackgroundTunnel_PLUS_KEYED_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundTunnel_PLUS_KEYED_Vs100, TexturedBackgroundTunnel_PLUS_KEYED_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
+			TexturedBackgroundTunnel_PLUS_KEYED_VsHlsl, TexturedBackgroundTunnel_PLUS_KEYED_FsHlsl,
+			TexturedBackgroundTunnel_PLUS_KEYED_VsDxbc, TexturedBackgroundTunnel_PLUS_KEYED_VsDxbcSize, TexturedBackgroundTunnel_PLUS_KEYED_FsDxbc, TexturedBackgroundTunnel_PLUS_KEYED_FsDxbcSize,
+#else
+			nullptr, nullptr,
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_VULKAN)
+			TexturedBackgroundTunnel_PLUS_KEYED_VkVs, TexturedBackgroundTunnel_PLUS_KEYED_VkVsSize, TexturedBackgroundTunnel_PLUS_KEYED_VkFs, TexturedBackgroundTunnel_PLUS_KEYED_VkFsSize,
+#else
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_METAL)
+			TexturedBackgroundTunnel_PLUS_KEYED_VsMsl, TexturedBackgroundTunnel_PLUS_KEYED_FsMsl },
+#else
+			nullptr, nullptr },
+#endif
 	};
 
-	inline constexpr ShaderCompiler::Program TexturedBackgroundTunnel = { "TexturedBackgroundTunnel", 0, 3, TexturedBackgroundTunnel_Variants };
+	inline constexpr ShaderCompiler::Program TexturedBackgroundTunnel = { "TexturedBackgroundTunnel", 0, 6, TexturedBackgroundTunnel_Variants };
 }
 #endif

@@ -8,6 +8,8 @@
 namespace Death {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+/** @{ @name Build configuration */
+
 /**
 	@brief Whether the current build is for debugging purposes
 	
@@ -89,30 +91,9 @@ namespace Death {
 #define DEATH_CPU_USE_IFUNC
 #undef DEATH_CPU_USE_IFUNC
 
-/**
-	@brief MSVC 2015 compatibility
+/** @} */
 
-	Defined if compatibility mode for Microsoft Visual C++ 2015 is enabled.
-*/
-#define DEATH_MSVC2015_COMPATIBILITY
-#undef DEATH_MSVC2015_COMPATIBILITY
-
-/**
-	@brief MSVC 2017 compatibility
-
-	Defined if compatibility mode for Microsoft Visual C++ 2017 is enabled.
-*/
-#define DEATH_MSVC2017_COMPATIBILITY
-#undef DEATH_MSVC2017_COMPATIBILITY
-
-/**
-	@brief MSVC 2019 compatibility
-
-	Defined if compatibility mode for Microsoft Visual C++ 2019 (or later) *without*
-	the `/permissive-` flag set is enabled.
-*/
-#define DEATH_MSVC2019_COMPATIBILITY
-#undef DEATH_MSVC2019_COMPATIBILITY
+/** @{ @name Targeted operating systems */
 
 /**
 	@brief Unix target
@@ -182,6 +163,10 @@ namespace Death {
 */
 #define DEATH_TARGET_ANDROID
 #undef DEATH_TARGET_ANDROID
+
+/** @} */
+
+/** @{ @name Targeted game consoles and other systems */
 
 /**
 	@brief Nintendo 64 target
@@ -324,6 +309,10 @@ namespace Death {
 #define DEATH_TARGET_MORPHOS
 #undef DEATH_TARGET_MORPHOS
 
+/** @} */
+
+/** @{ @name Targeted CPU architectures */
+
 /**
 	@brief x86 target
 
@@ -426,6 +415,10 @@ namespace Death {
 #define DEATH_TARGET_WASM
 #undef DEATH_TARGET_WASM
 
+/** @} */
+
+/** @{ @name Platform traits */
+
 /**
 	@brief Whether the library is built for a 32-bit target
 
@@ -458,6 +451,10 @@ namespace Death {
 */
 #define DEATH_TARGET_CONSTRAINED_MEMORY
 #undef DEATH_TARGET_CONSTRAINED_MEMORY
+
+/** @} */
+
+/** @{ @name Compilers */
 
 /**
 	@brief GCC compiler
@@ -584,6 +581,35 @@ namespace Death {
 #undef DEATH_TARGET_MINGW
 
 /**
+	@brief MSVC 2015 compatibility
+
+	Defined if compatibility mode for Microsoft Visual C++ 2015 is enabled.
+*/
+#define DEATH_MSVC2015_COMPATIBILITY
+#undef DEATH_MSVC2015_COMPATIBILITY
+
+/**
+	@brief MSVC 2017 compatibility
+
+	Defined if compatibility mode for Microsoft Visual C++ 2017 is enabled.
+*/
+#define DEATH_MSVC2017_COMPATIBILITY
+#undef DEATH_MSVC2017_COMPATIBILITY
+
+/**
+	@brief MSVC 2019 compatibility
+
+	Defined if compatibility mode for Microsoft Visual C++ 2019 (or later) *without*
+	the `/permissive-` flag set is enabled.
+*/
+#define DEATH_MSVC2019_COMPATIBILITY
+#undef DEATH_MSVC2019_COMPATIBILITY
+
+/** @} */
+
+/** @{ @name Standard libraries */
+
+/**
 	@brief STL libc++ target
 
 	Defined if the library is built against Clang [libc++](https://libcxx.llvm.org/)
@@ -635,6 +661,10 @@ namespace Death {
 */
 #define DEATH_TARGET_DINKUMWARE
 #undef DEATH_TARGET_DINKUMWARE
+
+/** @} */
+
+/** @{ @name Targeted CPU instruction sets */
 
 /**
 	@brief SSE2 target
@@ -894,5 +924,7 @@ namespace Death {
 */
 #define DEATH_TARGET_SIMD128
 #undef DEATH_TARGET_SIMD128
+
+/** @} */
 
 }

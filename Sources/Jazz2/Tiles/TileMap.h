@@ -1402,8 +1402,10 @@ namespace Jazz2::Tiles
 		// Gives back the rows of the shifted palettes no layer was drawn with in this frame or the one before, all of them with `all`
 		void ReleaseShiftedPalettes(bool all);
 		// With `keyed`, a textured background gets the variant of its shader that's drawn translucent or keyed (see
-		// TexturedLayerBlend), if there is one
-		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr, bool keyed = false);
+		// TexturedLayerBlend), if there is one, and with `plus` a sky or a tunnel the one in the perspective of JJ2+ (see
+		// LayerDescription::HasPlusPerspective())
+		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr, bool keyed = false,
+			bool plus = false);
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Appends one tile's two triangles (6 vertices, 8 floats each: position.xy, texcoords.xy, color.rgba) to a
 		// layer mesh buffer. Color is (1,1,1,alpha); the layer tint is applied via the command's instance color.

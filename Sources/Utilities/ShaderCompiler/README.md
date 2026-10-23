@@ -85,7 +85,7 @@ emitted sources.
 | --- | --- |
 | `program <Name>;` | Required, exactly once, and it has to precede `shader_type`, `variant`, `batched`, `precision` and the entry points — in practice, write it first. C++/GLSL identifier. |
 | `shader_type canvas_item;` or `shader_type custom;` | Optional — the **default is `custom`**. `canvas_item` opts into the sprite-template lowering (see below). |
-| `variant <NAME>;` | Declares an optional variant; may appear multiple times. The output contains the **unnamed base variant** (no variant defines, `Name` is `""`, always `Variants[0]`) plus **one** additional entry per variant, compiled with `#define <NAME> (1)` baked in. No cross-products. Test one with a plain `#if <NAME>`; the emitted GLSL gets the `#ifdef` form automatically — see [Which conditional to write](#which-conditional-to-write). |
+| `variant <NAME>;` | Declares an optional variant; may appear multiple times. The output contains the **unnamed base variant** (no variant defines, `Name` is `""`, always `Variants[0]`) plus **one** additional entry per variant, compiled with `<NAME>` defined — its conditionals are resolved in the variant's emitted sources, see [The variant defines](#the-variant-defines). No cross-products are made on their own: `variant <A> + <B>;` declares one, a variant named `A_B` compiled with the defines of both (each part has to be a variant declared before it). Test one with a plain `#if <NAME>` — see [Which conditional to write](#which-conditional-to-write). |
 | `render_mode <mode>[, <mode>];` | Zero or more of `blend_mix`, `blend_add`, `blend_sub`, `blend_mul`, `blend_premul_alpha`, `unshaded`. Stored as the `RenderModes` bitmask on the emitted `Program` (`ShaderCompiler::RenderMode` flags) and shown in the `--check` dump. |
 | `precision mediump;` or `precision highp;` | Optional (default `mediump`) — selects the float precision of the auto-emitted `#ifdef GL_ES precision X float; #endif` fragment prologue in both modes; anything else is an error. **Only the two-token form is a directive**: a real GLSL global precision statement with a type (`precision highp float;`) passes through as ordinary GLSL. `highp` is emitted guarded by `GL_FRAGMENT_PRECISION_HIGH`, because fragment `highp` is optional in GLSL ES 1.00 — ESSL 300 always defines the macro, so ES 3.0 and WebGL 2.0 keep it and only an ES 2.0 device without it falls back to `mediump`. Reach for it when a `std140` block reaches both stages: every global does, and GLSL ES requires a named block's members to agree on precision across stages, which a `mediump` prologue breaks against the vertex stage's `highp` default. |
 | `batched <Name>;` | `canvas_item` only — also emits the batched twin program (`InstancesBlock` + 6-vertex corner formula) into the same header, sharing the fragment stage and variants. An error in custom mode. Offline-only for now — the runtime `CompileRuntimeProgram` compiles just the primary program. |
@@ -124,7 +124,8 @@ These conditionals are **evaluated during stage assembly**: the guarded lines ar
 for the stage being built and the directive lines disappear — the emitted sources contain **no
 stage macros at all** (no baked `#define`, no `#if VERTEX_STAGE` text), and the reflection
 preprocessor needs no stage predefines because it runs on the pre-resolved streams. All other
-conditionals (`#ifdef GL_ES`, variant defines, `BATCH_SIZE`) pass through textually untouched.
+conditionals (`#ifdef GL_ES`, variant defines, `BATCH_SIZE`) pass through assembly textually untouched
+(the variant defines are resolved later, see [The variant defines](#the-variant-defines)).
 Nesting works in both directions: an unknown conditional inside a stage block is kept/dropped
 with the block, and a stage conditional inside an unknown conditional is still resolved in place.
 `#define`/`#undef` of a stage macro is an error — they are resolved at compile time and never
@@ -190,10 +191,32 @@ all (`tests/LowPowerCanvasVertex.shader`, `Blur.shader`). This spot accepts only
 `#ifdef`/`#ifndef` and the plain `#if [!]MACRO` expression, nothing more — the two sides are what it
 tags declarations with.
 
+### The variant defines
+
+The conditionals on a variant's own macros are resolved when each variant's stage sources are built,
+right after the backend macros, the same way: in the `KEYED` variant of `TexturedBackground.shader` an
+`#if KEYED` block is plain code and an `#if PLUS` block is gone, directives and all, so the GLSL of a
+variant holds only what it compiles (`#if !DITHER && !SOFTWARE_RENDERER` names both families and is
+folded by both). A combined variant resolves all of its parts. The other backends' emitters preprocess
+the source they are handed anyway, so their output does not change; it is the `_Vs`/`_Fs` and
+`_Vs100`/`_Fs100` text the GL backend compiles at runtime that loses the dead branches.
+
+A term that also names a flag no pass owns is decided whenever that flag can no longer change it:
+`#if KEYED || SLOPE` is plain code in the `KEYED` variant, and survives elsewhere as
+`#if 0 || defined(SLOPE)` for the GLSL compiler. A variant's `#define <NAME> (1)` is baked in at the
+top only while the source still names the macro (outside a conditional, say), so a variant's source
+normally starts with `#line 1`. Unused-function elimination then runs once more, so a helper only the
+other variants call is gone as well (`hash2D` from the non-`DITHER` variants of
+`TexturedBackgroundCylinder.shader`). That part can reach the text of the other backends too — the
+cylinder's HLSL and MSL lose the same helper — but no compiled code changes: no compiler keeps an
+uncalled function, and the SPIR-V, the PlayStation 3 microcode and the PS Vita's Cg came out
+identical.
+
 ### Compile-time macros in `#if` expressions
 
-Both families — the stage macros and the backend macros above — may be written in `#if`/`#elif`
-expressions, not just `#ifdef`/`#ifndef`, so one directive replaces a nest of them:
+All three families — the stage macros, the backend macros and the variant defines above — may be
+written in `#if`/`#elif` expressions, not just `#ifdef`/`#ifndef`, so one directive replaces a nest of
+them:
 
 ```glsl
 #if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING
@@ -206,11 +229,11 @@ expressions, not just `#ifdef`/`#ifndef`, so one directive replaces a nest of th
 The expression is split into its top-level `&&` terms and each term naming a macro of the family
 being resolved is folded away. When nothing else is left the whole conditional is **resolved** —
 its directive lines disappear along with the losing branch, exactly like the `#ifdef` form. When a
-term names something the resolver does not own the conditional **survives** with only the macro
-folded out, for the GLSL compiler to finish:
+term names something no resolver owns — a flag an includer or the engine sets — the conditional
+**survives** with only the owned macros folded out, for the GLSL compiler to finish:
 
 ```glsl
-#if DITHER && !SOFTWARE_RENDERER   →   #ifdef DITHER      (every other emission)
+#if SLOPE && !SOFTWARE_RENDERER    →   #ifdef SLOPE       (every other emission)
                                    →   (block removed)    (--emit-sw-generated)
 ```
 
@@ -220,7 +243,7 @@ write](#which-conditional-to-write).
 
 That fold is what keeps the guarantee that no compile-time macro ever reaches an emitted source,
 where it would be silently read as *undefined* instead of as *resolved*. `defined(X)` works, and
-because each family is folded by its own pass, an expression may name macros of both.
+because each family is folded by its own pass, an expression may name macros of several.
 
 An `#if` / `#elif` / `#else` **chain** is resolved as a whole, so a multi-way choice between backends
 is one flat chain rather than a nest of two-way conditionals:
@@ -262,29 +285,30 @@ conditions share one directive:
 The compiler makes the result safe. This matters because the surviving directive is evaluated by a
 real GLSL preprocessor, and
 
-> **GLSL ES rejects an undefined macro in an `#if` expression.** A bare `#if USE_PALETTE` emitted
-> into a variant that does not define `USE_PALETTE` is `'preprocessor evaluation' : undefined macro
+> **GLSL ES rejects an undefined macro in an `#if` expression.** A bare `#if SLOPE` emitted
+> into a source that does not define `SLOPE` is `'preprocessor evaluation' : undefined macro
 > in expression not allowed in es profile`. Desktop GLSL substitutes `0` like C does, HLSL accepts
 > it, and the Vulkan transform is `#version 450` **desktop** GLSL — so the mistake passes
 > `--hlsl-check` *and* `--spirv-check` while breaking every ES2/ES3/WebGL/Emscripten target. A macro
 > with an **empty** body (`#define SLOPE`) is worse still: `#if SLOPE` is a `bad expression` even on
 > desktop.
 
-So a **purely boolean** `#if` — identifiers combined with only `!`, `&&`, `||` and parentheses — is
-lowered on the way out: one term collapses to the `#ifdef`/`#ifndef` form, and anything longer keeps
+So a **purely boolean** `#if` — identifiers (and the `0`/`1` a fold leaves of a resolved macro)
+combined with only `!`, `&&`, `||` and parentheses — is lowered on the way out: one term collapses to the `#ifdef`/`#ifndef` form, and anything longer keeps
 its shape with each flag wrapped in `defined(...)`, the operator that consumes an identifier so
 nothing undefined is left to evaluate.
 
 | Written in the `.shader` | Emitted GLSL |
 | --- | --- |
-| `#if USE_PALETTE` | `#ifdef USE_PALETTE` |
+| `#if SLOPE` | `#ifdef SLOPE` |
 | `#if !SOFTWARE_RENDERER` | *(resolved away — the compiler owns this one)* |
-| `#if DITHER && !SOFTWARE_RENDERER` | `#ifdef DITHER` |
+| `#if USE_PALETTE`, of a variant | *(resolved for each variant — the compiler owns this one too)* |
+| `#if SLOPE && !SOFTWARE_RENDERER` | `#ifdef SLOPE` |
 | `#if SLOPE && CLEANUP` | `#if defined(SLOPE) && defined(CLEANUP)` |
 
 The rewrite is meaning-preserving rather than a guess, because for a macro used as a *flag* `NAME`
 and `defined(NAME)` agree whenever it is absent or defined to anything nonzero — which is every
-variant define (baked as `(1)`), every valueless marker, and every `#define DEATH_TARGET_ANDROID`
+variant define (baked as `(1)` where one survives), every valueless marker, and every `#define DEATH_TARGET_ANDROID`
 -style flag the engine injects at runtime. The moment a literal, comparison or arithmetic appears
 the expression is asking for a *value*, so it is left exactly as written; so are macros the document
 defines with a real body, like `BATCH_SIZE`. That leaves one case for `#ifdef`:
@@ -681,9 +705,9 @@ they used to carry two byte-identical bodies each.
 
 Reflection must run per variant, so the tool contains a mini C preprocessor that produces the
 *declaration stream* fed to the reflection parser. The **emitted** GLSL sources are NOT
-preprocessed output — they keep the original text verbatim (with only the compile-time stage
-conditionals already resolved away — see above), plus the variant define (`#define <NAME> (1)`)
-and `#line 1` baked at the top.
+preprocessed output — they keep the original text verbatim (with only the stage, backend and variant
+conditionals already resolved away — see above), plus `#line 1` baked at the top, after a
+`#define <NAME> (1)` for each variant macro the text still names.
 
 Supported: `#define`/`#undef` (object-like only), `#if`/`#ifdef`/`#ifndef`/`#elif`/`#else`/`#endif`
 with integer constant expressions supporting `defined(X)`, `!`, `&&`, `||`, `==`, `!=`, `<`, `>`,
@@ -752,9 +776,10 @@ A self-contained header (only `<cstdint>`/`<cstddef>`):
 - `inline constexpr char <Program>_<Variant>_Vs[] = R"__SHDR__(...)__SHDR__";` (and `_Fs`), where
   `<Variant>` is the variant name — the **unnamed base variant carries no infix** (`Lighting_Vs`,
   `Lighting_Uniforms`, `Lighting_Block0_Members`, …; named variants keep theirs:
-  `Tinted_USE_PALETTE_Vs`). Sources start with `#define <NAME> (1)` (named variants
-  only) and `#line 1`; the lowered GLSL body is verbatim user text with the stage conditionals
-  resolved away (no `VERTEX_STAGE`/`FRAGMENT_STAGE` text survives into the output).
+  `Tinted_USE_PALETTE_Vs`). Sources start with `#line 1` (after a `#define <NAME> (1)` only for a
+  variant macro the text still names, see [The variant defines](#the-variant-defines)); the lowered GLSL body
+  is verbatim user text with the stage, backend and variant conditionals resolved away (no
+  `VERTEX_STAGE`/`FRAGMENT_STAGE` text survives into the output).
 - The per-backend lowerings of those same sources, side by side in the same header, so one artifact
   serves every GLSL-family backend: `_Vs100`/`_Fs100` (ESSL 100, consumed under the OpenGL|ES 2.0
   profile with `#version 100`), `_HlslVs`/`_HlslFs` (Shader Model 4/5, consumed by the D3D11

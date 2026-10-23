@@ -30,10 +30,12 @@
 
 .entry sprite_main
 .proc sprite_main
-	; r0 = vec4(inpos.xy * inw, 0.0, inw)
-	mul r0.xy, inpos.xy, inw.xx
+	; r0 = vec4(inpos.xy * inw, 0.0, inw) - an instruction can't read two different input registers, so the w
+	; goes through a temporary first
+	mov r1.x, inw.x
+	mul r0.xy, inpos.xy, r1.xx
 	mov r0.z, consts.x
-	mov r0.w, inw.x
+	mov r0.w, r1.x
 
 	; outpos = projection * r0
 	dp4 outpos.x, projection[0], r0

@@ -54,9 +54,6 @@ layout (std140) uniform InstanceBlock
 
 
 
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 // One over the size of the target being drawn into. The textures behind are smaller or the same size, but they
@@ -109,9 +106,6 @@ uniform mat4 uViewMatrix;
 
 
 
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 // One over the size of the target being drawn into. The textures behind are smaller or the same size, but they
@@ -179,9 +173,6 @@ layout (std140) uniform InstanceBlock
 
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 uniform sampler2D uTextureBehind;
@@ -194,15 +185,7 @@ out vec4 COLOR;
 
 void main() {
 	vec4 src = texture(uTexture, vTexCoords);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
-	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
-#else
 	vec4 tile = src;
-#endif
 	// Alpha switches a texel on, so one with none does nothing whatever its colour - which image editors and palette
 	// index 0 leave black, the largest displacement there is. Above that, it's the blur
 	float on = step(0.5 / 255.0, tile.a);
@@ -276,9 +259,6 @@ varying highp vec4 vScale;
 
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 uniform sampler2D uTextureBehind;
@@ -291,15 +271,7 @@ uniform vec2 uTargetSizeInv;
 void main() {
 	vec4 COLOR;
 	vec4 src = texture2D(uTexture, vTexCoords);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 paletteColor = texture2D(uTexturePalette, vec2(palX, palY));
-	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
-#else
 	vec4 tile = src;
-#endif
 	// The same as below with the screen-space terms from the vertex stage (see vertex()), and the arithmetic in fewer
 	// steps: a channel of an 8-bit texture times 255 is an integer already, well within the 0.5 the test of a
 	// displacement allows, so it isn't rounded
@@ -362,8 +334,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshBlur_USE_PALETTE_Vs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 in vec2 aPosition;
 in vec2 aTexCoords;
@@ -400,9 +371,7 @@ layout (std140) uniform InstanceBlock
 
 
 
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 // One over the size of the target being drawn into. The textures behind are smaller or the same size, but they
@@ -422,8 +391,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshBlur_USE_PALETTE_Vs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 attribute vec2 aPosition;
 attribute vec2 aTexCoords;
@@ -456,9 +424,7 @@ uniform mat4 uViewMatrix;
 
 
 
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 // One over the size of the target being drawn into. The textures behind are smaller or the same size, but they
@@ -488,8 +454,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshBlur_USE_PALETTE_Fs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -527,9 +492,7 @@ layout (std140) uniform InstanceBlock
 
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 uniform sampler2D uTextureBehind;
@@ -542,15 +505,11 @@ out vec4 COLOR;
 
 void main() {
 	vec4 src = texture(uTexture, vTexCoords);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
 	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
-#else
-	vec4 tile = src;
-#endif
 	// Alpha switches a texel on, so one with none does nothing whatever its colour - which image editors and palette
 	// index 0 leave black, the largest displacement there is. Above that, it's the blur
 	float on = step(0.5 / 255.0, tile.a);
@@ -592,8 +551,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshBlur_USE_PALETTE_Fs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -625,9 +583,7 @@ varying highp vec4 vScale;
 
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 uniform sampler2D uTextureBehind;
@@ -640,15 +596,11 @@ uniform vec2 uTargetSizeInv;
 void main() {
 	vec4 COLOR;
 	vec4 src = texture2D(uTexture, vTexCoords);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 paletteColor = texture2D(uTexturePalette, vec2(palX, palY));
 	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
-#else
-	vec4 tile = src;
-#endif
 	// The same as below with the screen-space terms from the vertex stage (see vertex()), and the arithmetic in fewer
 	// steps: a channel of an 8-bit texture times 255 is an integer already, well within the 0.5 the test of a
 	// displacement allows, so it isn't rounded

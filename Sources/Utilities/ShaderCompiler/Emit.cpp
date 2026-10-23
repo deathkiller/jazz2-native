@@ -233,7 +233,7 @@ namespace ShaderCompiler
 	struct ProgramVariant
 	{
 		const char* Name;				// "" for the base variant, otherwise the variant name
-		const char* Defines;			// "" or the name of the baked "#define <NAME> (1)"
+		const char* Defines;			// "" or the names of the baked "#define <NAME> (1)", separated by spaces
 		const char* VsSource;
 		const char* FsSource;
 		std::size_t UniformCount;

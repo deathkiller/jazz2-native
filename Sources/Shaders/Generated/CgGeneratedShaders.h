@@ -5501,6 +5501,9 @@ float4 main(PsInput _input) : COLOR
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonOffset;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -5512,6 +5515,7 @@ static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
 static float4 vColor;
+static float4 vWarpTerms;
 
 struct VsInput
 {
@@ -5523,35 +5527,42 @@ struct VsOutput
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
 	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
 };
 
 VsOutput main(VsInput _input)
 {
 	aQuadCorner = _input.aQuadCorner;
 	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
-	vColor = color;
+	float2 VERTEX = float2(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y);
+	float2 UV = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	float4 COLOR = color;
+	float PALETTE_OFFSET = palOffset;
+	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
+	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
+	vWarpTerms = float4((horizonY - UV.y) / max(horizonY, 0.0001), (UV.y - horizonY) / max(1.0 - horizonY, 0.0001), (UV.x - 0.5 - uHorizonOffset.x) * correction, COLOR.w);
+	gl_Position = mul(float4(VERTEX, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = UV;
+	vColor = COLOR;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
 	_output.vColor = vColor;
+	_output.vWarpTerms = vWarpTerms;
 	return _output;
 }
 )",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
-uniform float uModel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
+static float4 vWarpTerms;
 static float4 COLOR;
 
 struct PsInput
@@ -5559,45 +5570,21 @@ struct PsInput
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
 	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
 };
-
-float3 legacyWarp(float2 uv)
-{
-	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
-	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
-	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
-	float distance_ = 1.3 - fromHorizon;
-	float distancePow15 = distance_ * sqrt(distance_);
-	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
-	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
-	float2 texturePos = float2(uShift.x / 256.0 + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
-	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
-	return float3(texturePos, horizonOpacity);
-}
-
-float3 plusWarp(float2 uv)
-{
-	float2 pixel_ = uv * uViewSize - ((float2)0.5);
-	float row_ = pixel_.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
-	float below = step(0.0, row_);
-	float distance_ = abs(row_) + 8.0;
-	float2 texel = float2(uShift.x + (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * 60.0 / distance_, uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
-	float rows = row_ / 141.0;
-	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
-}
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	vColor = _input.vColor;
+	vWarpTerms = _input.vWarpTerms;
 	COLOR = vColor;
-	float opacity = COLOR.w;
-	float3 warp = ((float3)0.0);
-	if (uModel > 0.5) {
-		warp = plusWarp(vTexCoords);
-	} else {
-		warp = legacyWarp(vTexCoords);
-	}
+	float opacity = vWarpTerms.w;
+	float m = max(vWarpTerms.x, vWarpTerms.y);
+	float distance_ = 1.3 - m;
+	float distancePow15 = distance_ * sqrt(distance_);
+	float side = vWarpTerms.x >= 0.0 ? 1.0 : -1.0;
+	float3 warp = float3(uShift.x / 256.0 + vWarpTerms.z * (0.5 + 1.2 * distancePow15 + 0.3 * distance_), uShift.y / 256.0 + side * 0.7 * (1.0 - m) * distance_, clamp(distancePow15 - 0.3, 0.0, 1.0));
 	float2 texturePos = warp.xy;
 	float4 texColor = tex2D(uTexture, texturePos);
 	float horizonOpacity = warp.z;
@@ -5611,6 +5598,9 @@ float4 main(PsInput _input) : COLOR
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonOffset;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -5622,6 +5612,7 @@ static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
 static float4 vColor;
+static float4 vWarpTerms;
 
 struct VsInput
 {
@@ -5633,35 +5624,42 @@ struct VsOutput
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
 	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
 };
 
 VsOutput main(VsInput _input)
 {
 	aQuadCorner = _input.aQuadCorner;
 	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
-	vColor = color;
+	float2 VERTEX = float2(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y);
+	float2 UV = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	float4 COLOR = color;
+	float PALETTE_OFFSET = palOffset;
+	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
+	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
+	vWarpTerms = float4((horizonY - UV.y) / max(horizonY, 0.0001), (UV.y - horizonY) / max(1.0 - horizonY, 0.0001), (UV.x - 0.5 - uHorizonOffset.x) * correction, COLOR.w);
+	gl_Position = mul(float4(VERTEX, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = UV;
+	vColor = COLOR;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
 	_output.vColor = vColor;
+	_output.vWarpTerms = vWarpTerms;
 	return _output;
 }
 )",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
-uniform float uModel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
+static float4 vWarpTerms;
 static float4 COLOR;
 
 struct PsInput
@@ -5669,45 +5667,21 @@ struct PsInput
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
 	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
 };
-
-float3 legacyWarp(float2 uv)
-{
-	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
-	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
-	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
-	float distance_ = 1.3 - fromHorizon;
-	float distancePow15 = distance_ * sqrt(distance_);
-	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
-	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
-	float2 texturePos = float2(uShift.x / 256.0 + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
-	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
-	return float3(texturePos, horizonOpacity);
-}
-
-float3 plusWarp(float2 uv)
-{
-	float2 pixel_ = uv * uViewSize - ((float2)0.5);
-	float row_ = pixel_.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
-	float below = step(0.0, row_);
-	float distance_ = abs(row_) + 8.0;
-	float2 texel = float2(uShift.x + (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * 60.0 / distance_, uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
-	float rows = row_ / 141.0;
-	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
-}
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	vColor = _input.vColor;
+	vWarpTerms = _input.vWarpTerms;
 	COLOR = vColor;
-	float opacity = COLOR.w;
-	float3 warp = ((float3)0.0);
-	if (uModel > 0.5) {
-		warp = plusWarp(vTexCoords);
-	} else {
-		warp = legacyWarp(vTexCoords);
-	}
+	float opacity = vWarpTerms.w;
+	float m = max(vWarpTerms.x, vWarpTerms.y);
+	float distance_ = 1.3 - m;
+	float distancePow15 = distance_ * sqrt(distance_);
+	float side = vWarpTerms.x >= 0.0 ? 1.0 : -1.0;
+	float3 warp = float3(uShift.x / 256.0 + vWarpTerms.z * (0.5 + 1.2 * distancePow15 + 0.3 * distance_), uShift.y / 256.0 + side * 0.7 * (1.0 - m) * distance_, clamp(distancePow15 - 0.3, 0.0, 1.0));
 	float2 texturePos = warp.xy;
 	float4 texColor = tex2D(uTexture, texturePos);
 	float horizonOpacity = warp.z;
@@ -5721,6 +5695,12 @@ float4 main(PsInput _input) : COLOR
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonOffset;
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+uniform float uOpacity;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -5728,10 +5708,13 @@ uniform float4 texRect;
 uniform float2 spriteSize;
 uniform float palOffset;
 
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
 static float4 vColor;
+static float4 vWarpTerms;
 
 struct VsInput
 {
@@ -5743,30 +5726,36 @@ struct VsOutput
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
 	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
 };
 
 VsOutput main(VsInput _input)
 {
 	aQuadCorner = _input.aQuadCorner;
 	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
-	vColor = color;
+	float2 VERTEX = float2(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y);
+	float2 UV = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	float4 COLOR = color;
+	float PALETTE_OFFSET = palOffset;
+	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
+	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
+	vWarpTerms = float4((horizonY - UV.y) / max(horizonY, 0.0001), (UV.y - horizonY) / max(1.0 - horizonY, 0.0001), (UV.x - 0.5 - uHorizonOffset.x) * correction, COLOR.w);
+	gl_Position = mul(float4(VERTEX, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = UV;
+	vColor = COLOR;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
 	_output.vColor = vColor;
+	_output.vWarpTerms = vWarpTerms;
 	return _output;
 }
 )",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
-uniform float uModel;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
@@ -5777,6 +5766,7 @@ uniform sampler2D uTextureBehind : TEXUNIT2;
 static float4 gl_FragCoord;
 static float2 vTexCoords;
 static float4 vColor;
+static float4 vWarpTerms;
 static float4 COLOR;
 
 struct PsInput
@@ -5784,6 +5774,7 @@ struct PsInput
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
 	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
 };
 
 float keyedOpacity()
@@ -5793,29 +5784,309 @@ float keyedOpacity()
 	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
 }
 
-float3 legacyWarp(float2 uv)
+float4 main(PsInput _input) : COLOR
 {
-	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
-	float aboveHorizon = uv.y <= horizonY ? 1.0 : 0.0;
-	float fromHorizon = aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001);
-	float distance_ = 1.3 - fromHorizon;
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vWarpTerms = _input.vWarpTerms;
+	COLOR = vColor;
+	float opacity = vWarpTerms.w;
+	float m = max(vWarpTerms.x, vWarpTerms.y);
+	float distance_ = 1.3 - m;
 	float distancePow15 = distance_ * sqrt(distance_);
-	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
-	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
-	float2 texturePos = float2(uShift.x / 256.0 + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance_);
-	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
-	return float3(texturePos, horizonOpacity);
+	float side = vWarpTerms.x >= 0.0 ? 1.0 : -1.0;
+	float3 warp = float3(uShift.x / 256.0 + vWarpTerms.z * (0.5 + 1.2 * distancePow15 + 0.3 * distance_), uShift.y / 256.0 + side * 0.7 * (1.0 - m) * distance_, clamp(distancePow15 - 0.3, 0.0, 1.0));
+	float2 texturePos = warp.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = warp.z;
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * (1.0 - uHorizonOffset.z))));
+	COLOR.w = keyedOpacity();
+	return COLOR;
 }
+)" },
+			{ "TexturedBackground", "PLUS",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonOffset;
 
-float3 plusWarp(float2 uv)
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 vWarpTerms;
+
+struct VsInput
 {
-	float2 pixel_ = uv * uViewSize - ((float2)0.5);
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float2 VERTEX = float2(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y);
+	float2 UV = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	float4 COLOR = color;
+	float PALETTE_OFFSET = palOffset;
+	float2 pixel_ = UV * uViewSize - ((float2)0.5);
 	float row_ = pixel_.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
-	float below = step(0.0, row_);
-	float distance_ = abs(row_) + 8.0;
-	float2 texel = float2(uShift.x + (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * 60.0 / distance_, uShift.y + 128.0 + (1.0 - 2.0 * below) * 15360.0 / distance_);
-	float rows = row_ / 141.0;
-	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
+	vWarpTerms = float4(row_, row_ / 141.0, (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * (60.0 / 256.0), COLOR.w);
+	gl_Position = mul(float4(VERTEX, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = UV;
+	vColor = COLOR;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vWarpTerms = vWarpTerms;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uHorizonOffset;
+
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float4 vWarpTerms;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vWarpTerms = _input.vWarpTerms;
+	COLOR = vColor;
+	float opacity = vWarpTerms.w;
+	float qInv = 1.0 / (abs(vWarpTerms.x) + 8.0);
+	float side = vWarpTerms.x >= 0.0 ? 1.0 : -1.0;
+	float3 warp = float3(uShift.x / 256.0 + vWarpTerms.z * qInv, 1.0 - (uShift.y + 128.0) / 256.0 + side * 60.0 * qInv, clamp(1.0 - vWarpTerms.y * vWarpTerms.y, 0.0, 1.0));
+	float2 texturePos = warp.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = warp.z;
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * (1.0 - uHorizonOffset.z))));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackground", "PLUS_DITHER",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonOffset;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 vWarpTerms;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float2 VERTEX = float2(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y);
+	float2 UV = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	float4 COLOR = color;
+	float PALETTE_OFFSET = palOffset;
+	float2 pixel_ = UV * uViewSize - ((float2)0.5);
+	float row_ = pixel_.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
+	vWarpTerms = float4(row_, row_ / 141.0, (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * (60.0 / 256.0), COLOR.w);
+	gl_Position = mul(float4(VERTEX, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = UV;
+	vColor = COLOR;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vWarpTerms = vWarpTerms;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uHorizonOffset;
+
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float4 vWarpTerms;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vWarpTerms = _input.vWarpTerms;
+	COLOR = vColor;
+	float opacity = vWarpTerms.w;
+	float qInv = 1.0 / (abs(vWarpTerms.x) + 8.0);
+	float side = vWarpTerms.x >= 0.0 ? 1.0 : -1.0;
+	float3 warp = float3(uShift.x / 256.0 + vWarpTerms.z * qInv, 1.0 - (uShift.y + 128.0) / 256.0 + side * 60.0 * qInv, clamp(1.0 - vWarpTerms.y * vWarpTerms.y, 0.0, 1.0));
+	float2 texturePos = warp.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = warp.z;
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * (1.0 - uHorizonOffset.z))));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackground", "PLUS_KEYED",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonOffset;
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+uniform float uOpacity;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 vWarpTerms;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float2 VERTEX = float2(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y);
+	float2 UV = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	float4 COLOR = color;
+	float PALETTE_OFFSET = palOffset;
+	float2 pixel_ = UV * uViewSize - ((float2)0.5);
+	float row_ = pixel_.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
+	vWarpTerms = float4(row_, row_ / 141.0, (pixel_.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * (60.0 / 256.0), COLOR.w);
+	gl_Position = mul(float4(VERTEX, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = UV;
+	vColor = COLOR;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vWarpTerms = vWarpTerms;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uHorizonOffset;
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+uniform float uOpacity;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 vWarpTerms;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float4 vWarpTerms : TEXCOORD2;
+};
+
+float keyedOpacity()
+{
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
 }
 
 float4 main(PsInput _input) : COLOR
@@ -5823,14 +6094,12 @@ float4 main(PsInput _input) : COLOR
 	gl_FragCoord = _input._fragCoord;
 	vTexCoords = _input.vTexCoords;
 	vColor = _input.vColor;
+	vWarpTerms = _input.vWarpTerms;
 	COLOR = vColor;
-	float opacity = COLOR.w;
-	float3 warp = ((float3)0.0);
-	if (uModel > 0.5) {
-		warp = plusWarp(vTexCoords);
-	} else {
-		warp = legacyWarp(vTexCoords);
-	}
+	float opacity = vWarpTerms.w;
+	float qInv = 1.0 / (abs(vWarpTerms.x) + 8.0);
+	float side = vWarpTerms.x >= 0.0 ? 1.0 : -1.0;
+	float3 warp = float3(uShift.x / 256.0 + vWarpTerms.z * qInv, 1.0 - (uShift.y + 128.0) / 256.0 + side * 60.0 * qInv, clamp(1.0 - vWarpTerms.y * vWarpTerms.y, 0.0, 1.0));
 	float2 texturePos = warp.xy;
 	float4 texColor = tex2D(uTexture, texturePos);
 	float horizonOpacity = warp.z;
@@ -6255,7 +6524,6 @@ uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uTunnel;
-uniform float uModel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
@@ -6282,29 +6550,13 @@ float3 legacyTunnel(float2 uv)
 	return float3(texturePos, horizonOpacity);
 }
 
-float3 plusTunnel(float2 uv)
-{
-	float2 fromCenter = uv * uViewSize - ((float2)0.5) - float2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
-	float logRadius = log2(radius);
-	float2 texel = float2(uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), uShift.y - 256.0 * logRadius);
-	float fade = 87.0 / radius;
-	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
-}
-
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	vColor = _input.vColor;
 	COLOR = vColor;
 	float opacity = COLOR.w;
-	float3 tunnel = ((float3)0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	float3 tunnel = legacyTunnel(vTexCoords);
 	float2 texturePos = tunnel.xy;
 	float4 texColor = tex2D(uTexture, texturePos);
 	float horizonOpacity = tunnel.z;
@@ -6363,7 +6615,6 @@ uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uTunnel;
-uniform float uModel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
@@ -6390,29 +6641,13 @@ float3 legacyTunnel(float2 uv)
 	return float3(texturePos, horizonOpacity);
 }
 
-float3 plusTunnel(float2 uv)
-{
-	float2 fromCenter = uv * uViewSize - ((float2)0.5) - float2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
-	float logRadius = log2(radius);
-	float2 texel = float2(uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), uShift.y - 256.0 * logRadius);
-	float fade = 87.0 / radius;
-	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
-}
-
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	vColor = _input.vColor;
 	COLOR = vColor;
 	float opacity = COLOR.w;
-	float3 tunnel = ((float3)0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	float3 tunnel = legacyTunnel(vTexCoords);
 	float2 texturePos = tunnel.xy;
 	float4 texColor = tex2D(uTexture, texturePos);
 	float horizonOpacity = tunnel.z;
@@ -6471,7 +6706,6 @@ uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uTunnel;
-uniform float uModel;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
@@ -6510,6 +6744,278 @@ float3 legacyTunnel(float2 uv)
 	return float3(texturePos, horizonOpacity);
 }
 
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = legacyTunnel(vTexCoords);
+	float2 texturePos = tunnel.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = tunnel.z;
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * uTunnel.z)));
+	COLOR.w = keyedOpacity();
+	return COLOR;
+}
+)" },
+			{ "TexturedBackgroundTunnel", "PLUS",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uTunnel;
+
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float3 plusTunnel(float2 uv)
+{
+	float2 fromCenter = uv * uViewSize - ((float2)0.5) - float2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
+	float logRadius = log2(radius);
+	float2 texel = float2(uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), uShift.y - 256.0 * logRadius);
+	float fade = 87.0 / radius;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = plusTunnel(vTexCoords);
+	float2 texturePos = tunnel.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = tunnel.z;
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * uTunnel.z)));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackgroundTunnel", "PLUS_DITHER",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uTunnel;
+
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float3 plusTunnel(float2 uv)
+{
+	float2 fromCenter = uv * uViewSize - ((float2)0.5) - float2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan2(fromCenter.y, fromCenter.x);
+	float logRadius = log2(radius);
+	float2 texel = float2(uShift.x * 0.25 + 64.0 + angle * (128.0 * 0.31830988618379067153776752675) + (uTunnel.w > 0.0 ? 356.2 * exp2(-0.15 * logRadius) + -91.0 : 0.0), uShift.y - 256.0 * logRadius);
+	float fade = 87.0 / radius;
+	return float3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - 0.0414, 0.0, 1.0));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float3 tunnel = plusTunnel(vTexCoords);
+	float2 texturePos = tunnel.xy;
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = tunnel.z;
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * uTunnel.z)));
+	COLOR = float4(COLOR.xyz * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackgroundTunnel", "PLUS_KEYED",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+uniform float4 uTunnel;
+uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+uniform float uOpacity;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float keyedOpacity()
+{
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+}
+
 float3 plusTunnel(float2 uv)
 {
 	float2 fromCenter = uv * uViewSize - ((float2)0.5) - float2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
@@ -6528,12 +7034,7 @@ float4 main(PsInput _input) : COLOR
 	vColor = _input.vColor;
 	COLOR = vColor;
 	float opacity = COLOR.w;
-	float3 tunnel = ((float3)0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(vTexCoords);
-	} else {
-		tunnel = legacyTunnel(vTexCoords);
-	}
+	float3 tunnel = plusTunnel(vTexCoords);
 	float2 texturePos = tunnel.xy;
 	float4 texColor = tex2D(uTexture, texturePos);
 	float horizonOpacity = tunnel.z;

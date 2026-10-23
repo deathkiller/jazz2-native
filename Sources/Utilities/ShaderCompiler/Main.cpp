@@ -266,9 +266,7 @@ namespace
 		ShaderParser::StripComments(lines);
 
 		Preprocessor preprocessor;
-		if (!define.empty()) {
-			preprocessor.Define(define, "1");
-		}
+		preprocessor.DefineVariant(define);
 		SmallVector<SourceLine, 0> preprocessed;
 		if (!preprocessor.Run(lines, preprocessed, diag)) {
 			return false;
@@ -631,10 +629,10 @@ namespace
 			ProgramReflection program;
 			program.Document = &document;
 			program.Variants.emplace_back();
-			for (const String& name : document.Variants) {
+			for (const VariantDirective& variant : document.Variants) {
 				VariantReflection v;
-				v.Name = name;
-				v.Define = name;
+				v.Name = variant.Name;
+				v.Define = variant.Define;
 				program.Variants.push_back(Death::move(v));
 			}
 			for (VariantReflection& v : program.Variants) {
@@ -1408,7 +1406,7 @@ namespace
 	struct GeneratedEffectEntry
 	{
 		String Program;		// program name, e.g. "WhiteMask"
-		String Variant;		// variant define name ("" for the base variant)
+		String Variant;		// variant name ("" for the base variant)
 		String Prefix;		// mangled prefix, e.g. "WhiteMask" or "WhiteMask_USE_PALETTE" (for the summary log)
 		String Intrinsic;	// FixedFunctionIntrinsic member name from a "pipeline <name>;" block ("" = none)
 		bool UsesOffsetColor = false;	// whether the function can ever write a pass offset colour
@@ -1687,9 +1685,10 @@ namespace
 				for (std::size_t vi = 0; vi < document.Variants.size() + 1; vi++) {
 					// The unnamed base variant first, then one entry per declared variant — the same
 					// per-variant expansion (and prefix mangling) the Sw generated functions use
-					String variant = (vi == 0 ? String{} : document.Variants[vi - 1]);
+					String variant = (vi == 0 ? String{} : document.Variants[vi - 1].Name);
 					String prefix = (variant.empty() ? document.ProgramName : String(document.ProgramName + "_" + variant));
-					FixedFunctionResult r = ConsoleFixedFunction::TranspileBlock(*block, variant, backend);
+					FixedFunctionResult r = ConsoleFixedFunction::TranspileBlock(*block,
+						(vi == 0 ? StringView{} : StringView{document.Variants[vi - 1].Define}), backend);
 					if (!r.Ok) {
 						std::fprintf(stderr, "%s:%d: error: %s\n", inputPath, r.Line, r.Error.data());
 						return 1;
@@ -3003,12 +3002,12 @@ int main(int argc, char* argv[])
 		program.Document = &document;
 
 		// The unnamed base variant (Name "", always Variants[0]) plus one additional entry
-		// per declared variant (no cross-products)
+		// per declared variant (a combination is declared as a variant of its own)
 		program.Variants.emplace_back();
-		for (const String& name : document.Variants) {
+		for (const VariantDirective& variant : document.Variants) {
 			VariantReflection v;
-			v.Name = name;
-			v.Define = name;
+			v.Name = variant.Name;
+			v.Define = variant.Define;
 			program.Variants.push_back(Death::move(v));
 		}
 

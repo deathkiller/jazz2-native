@@ -25,17 +25,29 @@ void fragment() {
 	}
 #endif
 
-	// Mixed with a variant define: only the backend macro folds away, and what is left is lowered to
-	// "#ifdef DITHER" for the GLSL compiler (the whole block still disappears from the software
-	// transpile). The lowering is what makes the bare "DITHER" safe to write here - left as-is it
+	// Mixed with a macro no pass owns: only the backend macro folds away, and what is left is lowered to
+	// "#ifdef MISSING_FLAG" for the GLSL compiler (the whole block still disappears from the software
+	// transpile). The lowering is what makes the bare "MISSING_FLAG" safe to write here - left as-is it
 	// would compile on desktop and break every ES2/ES3/WebGL target
-#if DITHER && !SOFTWARE_RENDERER
+#if MISSING_FLAG && !SOFTWARE_RENDERER
 	c.rgb += vec3(0.01);
 #endif
 
 	// Two flags in one expression cannot collapse to "#ifdef", so each is wrapped instead
-#if DITHER && MISSING_FLAG
+#if MISSING_FLAG && OTHER_FLAG
 	c.rgb += vec3(0.02);
+#endif
+
+	// A variant define is resolved for each variant, after the backend macros: the body is all that is left of
+	// the block in the DITHER variant, and nothing is in the base one
+#if DITHER && !SOFTWARE_RENDERER
+	c.rgb += vec3(0.06);
+#endif
+
+	// A variant define in an "||" with a flag no pass owns: decided where the flag can't matter any more (the
+	// DITHER variant keeps the body as it is), lowered where it still can (the "0" left of DITHER included)
+#if DITHER || SLOPE
+	c.rgb += vec3(0.07);
 #endif
 
 	// The "defined(...)" spelling, with an "#else" side

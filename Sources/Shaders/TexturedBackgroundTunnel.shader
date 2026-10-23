@@ -1,6 +1,11 @@
 program TexturedBackgroundTunnel;
 variant DITHER;
 variant KEYED;
+// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
+// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+variant PLUS;
+variant PLUS + DITHER;
+variant PLUS + KEYED;
 
 shader_type canvas_item;
 precision highp;
@@ -11,9 +16,6 @@ uniform vec2 uCameraPos;
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uTunnel;
-// 1 for the tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - 0 draws it as it always was
-uniform float uModel;
 
 #include "Include/TexturedBackgroundKey.inc"
 
@@ -68,6 +70,25 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
+#if PLUS
+// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
+// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
+// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
+// xy the position in the texture, z how far it fades into the color of the horizon
+vec3 plusTunnel(vec2 uv) {
+	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
+	float radius = max(length(fromCenter), 0.5);
+	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
+	float logRadius = log2(radius);
+	vec2 texel = vec2(
+		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
+			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
+		uShift.y - 256.0 * logRadius
+	);
+	float fade = PLUS_FADE_RADIUS / radius;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
+}
+#else
 // The tunnel as it was always drawn: xy the position in the texture, z how far it fades into the color of the horizon
 vec3 legacyTunnel(vec2 uv) {
 	// Position of pixel relative to the center of the tunnel (between -1 and 1 across the screen for the center in the middle)
@@ -105,37 +126,15 @@ vec3 legacyTunnel(vec2 uv) {
 #endif
 	return vec3(texturePos, horizonOpacity);
 }
-
-// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
-// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
-// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
-vec3 plusTunnel(vec2 uv) {
-	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
-	float radius = max(length(fromCenter), 0.5);
-	float angle = (fromCenter.x == 0.0 ? sign(fromCenter.y) * 1.5707963 : atan(fromCenter.y, fromCenter.x));
-	float logRadius = log2(radius);
-	vec2 texel = vec2(
-		uShift.x * 0.25 + 64.0 + angle * (128.0 * INV_PI) +
-			(uTunnel.w > 0.0 ? PLUS_SPIRAL_SCALE * exp2(PLUS_SPIRAL_POWER * logRadius) + PLUS_SPIRAL_OFFSET : 0.0),
-		uShift.y - 256.0 * logRadius
-	);
-	float fade = PLUS_FADE_RADIUS / radius;
-	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
-}
+#endif
 
 void fragment() {
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// Only the one drawn is worked out where the target branches, both are where it can't
-#if NO_DYNAMIC_BRANCHING
-	vec3 tunnel = mix(legacyTunnel(UV), plusTunnel(UV), step(0.5, uModel));
+#if PLUS
+	vec3 tunnel = plusTunnel(UV);
 #else
-	vec3 tunnel = vec3(0.0);
-	if (uModel > 0.5) {
-		tunnel = plusTunnel(UV);
-	} else {
-		tunnel = legacyTunnel(UV);
-	}
+	vec3 tunnel = legacyTunnel(UV);
 #endif
 	vec2 texturePos = tunnel.xy;
 	vec4 texColor = texture(TEXTURE, texturePos);
@@ -174,6 +173,7 @@ void fixed_function(pvr, gs) {
 	// include's own second gradient pass, and the bands are cut into pieces at the texture's edges. The tunnel
 	// of JJ2+ is cut coarsely, every vertex counts on the Dreamcast and the PS2.
 #define WARP_LOW_DETAIL
+#define WARP_TUNNEL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -183,6 +183,7 @@ void fixed_function(gu) {
 	// counts on the PSP.
 #define WARP_TEXTURE_REPEAT
 #define WARP_LOW_DETAIL
+#define WARP_TUNNEL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -199,6 +200,7 @@ void fixed_function(rdp) {
 #define WARP_TEXTURE_REPEAT_IN_PASS
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_LOW_DETAIL
+#define WARP_TUNNEL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -207,6 +209,7 @@ void fixed_function(pica) {
 #define WARP_TEXTURE_REPEAT
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_LOW_DETAIL
+#define WARP_TUNNEL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
@@ -214,5 +217,6 @@ void fixed_function(gx, legacygl) {
 	// The tunnel borrows the same planar rebuild on this tier as well, with the
 	// horizon tint folded into the band pieces' own draw (see the include)
 #define WARP_TINT_IN_VERTEX_COLOR
+#define WARP_TUNNEL
 #include "Include/TexturedBackgroundWarp.inc"
 }

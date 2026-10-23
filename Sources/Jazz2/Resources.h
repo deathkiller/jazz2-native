@@ -500,6 +500,10 @@ namespace Jazz2::Resources
 		TexturedBackgroundDither,			/**< Textured background with dithering */
 		TexturedBackgroundTunnel,			/**< Tunnel textured background */
 		TexturedBackgroundTunnelDither,		/**< Tunnel textured background with dithering */
+		TexturedBackgroundPlus,				/**< Textured background in the perspective of JJ2+ */
+		TexturedBackgroundPlusDither,		/**< Textured background in the perspective of JJ2+ with dithering */
+		TexturedBackgroundTunnelPlus,		/**< Tunnel textured background of JJ2+ */
+		TexturedBackgroundTunnelPlusDither,	/**< Tunnel textured background of JJ2+ with dithering */
 		TexturedBackgroundCylinder,			/**< Cylinder textured background */
 		TexturedBackgroundCylinderDither,	/**< Cylinder textured background with dithering */
 		TexturedBackgroundWave,				/**< Wave textured background, it has no dithering */
@@ -561,6 +565,8 @@ namespace Jazz2::Resources
 		TileMapMeshChromaKeyPalette,		/**< Palette variant of @ref TileMapMeshChromaKey */
 		TexturedBackgroundKeyed,			/**< Chroma key or translucent variant of @ref TexturedBackground */
 		TexturedBackgroundTunnelKeyed,		/**< Chroma key or translucent variant of @ref TexturedBackgroundTunnel */
+		TexturedBackgroundPlusKeyed,		/**< Chroma key or translucent variant of @ref TexturedBackgroundPlus */
+		TexturedBackgroundTunnelPlusKeyed,	/**< Chroma key or translucent variant of @ref TexturedBackgroundTunnelPlus */
 		TexturedBackgroundCylinderKeyed,	/**< Chroma key or translucent variant of @ref TexturedBackgroundCylinder */
 		TexturedBackgroundWaveKeyed,		/**< Chroma key or translucent variant of @ref TexturedBackgroundWave */
 #endif

@@ -143,7 +143,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set - bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 17;
+	static constexpr std::uint64_t ShadersVersion = 18;
 
 	ContentResolver& ContentResolver::Get()
 	{
@@ -3323,6 +3323,34 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundTunnel] = CompileShader("TexturedBackgroundTunnel", ShadersGen::TexturedBackgroundTunnel);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundTunnelDither] = CompileShader("TexturedBackgroundTunnelDither", ShadersGen::TexturedBackgroundTunnel, "DITHER");
 		{
+			// The perspective of JJ2+ may be newer than the offline tables of some backends as the cylinder below, such a sky or
+			// tunnel is drawn as tiles where either of its variants is missing (see TileMap)
+			struct PlusShader {
+				PrecompiledShader Type;
+				PrecompiledShader DitherType;
+				const char* Name;
+				const char* DitherName;
+				const ShaderCompiler::Program& Program;
+			};
+			const PlusShader plusShaders[] = {
+				{ PrecompiledShader::TexturedBackgroundPlus, PrecompiledShader::TexturedBackgroundPlusDither,
+					"TexturedBackgroundPlus", "TexturedBackgroundPlusDither", ShadersGen::TexturedBackground },
+				{ PrecompiledShader::TexturedBackgroundTunnelPlus, PrecompiledShader::TexturedBackgroundTunnelPlusDither,
+					"TexturedBackgroundTunnelPlus", "TexturedBackgroundTunnelPlusDither", ShadersGen::TexturedBackgroundTunnel }
+			};
+			for (const PlusShader& plus : plusShaders) {
+				auto& shader = _precompiledShaders[(std::int32_t)plus.Type];
+				auto& ditherShader = _precompiledShaders[(std::int32_t)plus.DitherType];
+				shader = CompileShader(plus.Name, plus.Program, "PLUS");
+				ditherShader = CompileShader(plus.DitherName, plus.Program, "PLUS_DITHER");
+				if (!shader->IsLinked() || !ditherShader->IsLinked()) {
+					LOGW("Shader \"{}\" is not available, the layers in the perspective of JJ2+ are drawn as tiles", plus.Name);
+					shader = nullptr;
+					ditherShader = nullptr;
+				}
+			}
+		}
+		{
 			// The cylinder may be newer than the offline tables of some backends (a table like the PlayStation 3's has no
 			// microcode of it until it's generated again), its layers are drawn as tiles where either variant is missing (see TileMap)
 			auto& cylinderShader = _precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCylinder];
@@ -3585,16 +3613,19 @@ namespace Jazz2
 				PrecompiledShader Type;
 				const char* Name;
 				const ShaderCompiler::Program& Program;
+				const char* Variant;
 			};
 			const KeyedShader keyedShaders[] = {
-				{ PrecompiledShader::TexturedBackgroundKeyed, "TexturedBackgroundKeyed", ShadersGen::TexturedBackground },
-				{ PrecompiledShader::TexturedBackgroundTunnelKeyed, "TexturedBackgroundTunnelKeyed", ShadersGen::TexturedBackgroundTunnel },
-				{ PrecompiledShader::TexturedBackgroundCylinderKeyed, "TexturedBackgroundCylinderKeyed", ShadersGen::TexturedBackgroundCylinder },
-				{ PrecompiledShader::TexturedBackgroundWaveKeyed, "TexturedBackgroundWaveKeyed", ShadersGen::TexturedBackgroundWave }
+				{ PrecompiledShader::TexturedBackgroundKeyed, "TexturedBackgroundKeyed", ShadersGen::TexturedBackground, "KEYED" },
+				{ PrecompiledShader::TexturedBackgroundTunnelKeyed, "TexturedBackgroundTunnelKeyed", ShadersGen::TexturedBackgroundTunnel, "KEYED" },
+				{ PrecompiledShader::TexturedBackgroundPlusKeyed, "TexturedBackgroundPlusKeyed", ShadersGen::TexturedBackground, "PLUS_KEYED" },
+				{ PrecompiledShader::TexturedBackgroundTunnelPlusKeyed, "TexturedBackgroundTunnelPlusKeyed", ShadersGen::TexturedBackgroundTunnel, "PLUS_KEYED" },
+				{ PrecompiledShader::TexturedBackgroundCylinderKeyed, "TexturedBackgroundCylinderKeyed", ShadersGen::TexturedBackgroundCylinder, "KEYED" },
+				{ PrecompiledShader::TexturedBackgroundWaveKeyed, "TexturedBackgroundWaveKeyed", ShadersGen::TexturedBackgroundWave, "KEYED" }
 			};
 			for (const KeyedShader& keyed : keyedShaders) {
 				auto& shader = _precompiledShaders[(std::int32_t)keyed.Type];
-				shader = CompileShader(keyed.Name, keyed.Program, "KEYED");
+				shader = CompileShader(keyed.Name, keyed.Program, keyed.Variant);
 				if (shader != nullptr && !shader->IsLinked()) {
 					LOGW("Shader \"{}\" is not available, the textured layers drawn translucent or keyed are drawn opaque", keyed.Name);
 					shader = nullptr;

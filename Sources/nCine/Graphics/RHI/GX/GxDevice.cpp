@@ -258,8 +258,20 @@ namespace nCine::RHI::GX
 		// coordinate attribute reaches the generation only as (s, t, 1, 1), a normal as (x, y, z, 1), which the 3x4 identity
 		// hands on as (s * q, t * q, q) for the division per pixel - nothing here lights anything. Only from the textured
 		// layout, which EndPerspectiveStrip() puts back.
+		//
+		// The layout stays set from one strip in perspective to the next: a warp in perspective sends dozens of them in a row,
+		// and every change of the vertex descriptor, the attribute format and the texture coordinate generation is sent down
+		// the pipe again at the next GX_Begin(), twice a strip when each strip put the textured layout back. Whatever draws in
+		// the textured layout after them ends it first - the other submissions of the effect context, and the dispatch of
+		// every effect once its instances are drawn, so it never outlives the draw call it began in.
+		bool g_perspectiveLayout = false;
+
 		void BeginPerspectiveStrip()
 		{
+			if (g_perspectiveLayout) {
+				return;
+			}
+			g_perspectiveLayout = true;
 			GX_ClearVtxDesc();
 			GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
 			GX_SetVtxDesc(GX_VA_NRM, GX_DIRECT);
@@ -271,6 +283,10 @@ namespace nCine::RHI::GX
 		}
 		void EndPerspectiveStrip()
 		{
+			if (!g_perspectiveLayout) {
+				return;
+			}
+			g_perspectiveLayout = false;
 			GX_ClearVtxDesc();
 			GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
 			GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
@@ -592,7 +608,6 @@ namespace nCine::RHI::GX
 				GX_Color1u32(rgba != nullptr ? rgba[i] : flatRgba);
 			}
 			GX_End();
-			EndPerspectiveStrip();
 		}
 
 		// Whether a UV span can be mapped onto the screen at all (a zero texRect has no scale)
@@ -611,6 +626,7 @@ namespace nCine::RHI::GX
 		void Emit(float dx, float dy, float cr, float cg, float cb, float ca) const
 		{
 			const std::uint32_t rgba = PackRgba(QuantizeChannel(cr), QuantizeChannel(cg), QuantizeChannel(cb), QuantizeChannel(ca));
+			EndPerspectiveStrip();
 			// Strip order (v0, v1, v2, v3) forms the quad perimeter (v0, v1, v3, v2)
 			GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 			if (HasTexture) {
@@ -878,6 +894,7 @@ namespace nCine::RHI::GX
 				SendPerspectiveStrip(count, rgba, nullptr, dx, dy);
 				return;
 			}
+			EndPerspectiveStrip();
 			GX_Begin(GX_TRIANGLESTRIP, GX_VTXFMT0, std::uint16_t(count));
 			for (std::int32_t i = 0; i < count; i++) {
 				GX_Position2f32(StripX[i] + dx, StripY[i] + dy);
@@ -910,6 +927,9 @@ namespace nCine::RHI::GX
 			}
 			ApplyPassBlend(pass);
 			const bool textured = (HasTexture && pass.Tev == FixedFunctionPass::TevPreset::TintMix);
+			if (!(hasQ && textured)) {
+				EndPerspectiveStrip();
+			}
 			if (HasTexture) {
 				// A gradient must not carry texture coordinates and a tinted strip must; either way
 				// the format is only reprogrammed when it actually differs from the current one
@@ -2357,7 +2377,8 @@ namespace nCine::RHI::GX
 			ctx.FlushPendingQuad();
 		}
 
-		// Leave the pipe in the default combine for the next draw
+		// Leave the pipe in the textured layout and the default combine for the next draw
+		EndPerspectiveStrip();
 		SetTevMode(TevMode::Modulate);
 	}
 }

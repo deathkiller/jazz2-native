@@ -703,7 +703,7 @@ namespace ShaderCompiler
 			String ProgramName;
 			String BatchedName;
 			String FragmentPrecision = "mediump";	// "precision mediump|highp;" directive (GL ES float precision of the fragment stage)
-			SmallVector<String, 0> Variants;
+			SmallVector<VariantDirective, 0> Variants;
 			SmallVector<TextureDirective, 0> Textures;
 			std::uint32_t RenderModes = 0;
 			SmallVector<VaryingDecl, 0> Varyings;
@@ -919,19 +919,57 @@ R"GLSL(void main()
 				src.BatchedName = Death::move(name);
 				src.BatchedLine = lineNumber;
 			} else {	// "variant"
-				String name = WordAt(bare, cursor);
-				if (!IsIdentifier(name)) {
-					return Fail(diag, "usage: variant <NAME>; (identifier)", lineNumber);
+				// "variant <NAME>;", or "variant <A> + <B>;" - one more variant that defines all of the variants it
+				// names, "A_B" (variants are never combined otherwise)
+				SmallVector<String, 0> parts;
+				while (true) {
+					String name = WordAt(bare, cursor);
+					if (!IsIdentifier(name)) {
+						return Fail(diag, "usage: variant <NAME>; or variant <NAME> + <NAME>; (identifiers)", lineNumber);
+					}
+					parts.push_back(Death::move(name));
+					while (cursor < bare.size() && IsSpace(bare[cursor])) {
+						cursor++;
+					}
+					if (cursor >= bare.size() || bare[cursor] != '+') {
+						break;
+					}
+					cursor++;
 				}
 				if (!ExpectSemicolon(bare, cursor, "variant <NAME>", lineNumber, diag)) {
 					return false;
 				}
-				for (const String& v : src.Variants) {
-					if (v == name) {
-						return Fail(diag, "duplicate variant \""_s + name + "\""_s, lineNumber);
+				VariantDirective variant;
+				for (std::size_t i = 0; i < parts.size(); i++) {
+					if (parts.size() > 1) {
+						// Each part has to be a variant of its own declared before, so a misspelled one isn't a macro
+						// that nothing tests
+						bool declared = false;
+						for (const VariantDirective& v : src.Variants) {
+							declared |= (v.Define == parts[i]);
+						}
+						if (!declared) {
+							return Fail(diag, "\""_s + parts[i] + "\" is not a variant declared before the combination"_s, lineNumber);
+						}
+						for (std::size_t j = 0; j < i; j++) {
+							if (parts[j] == parts[i]) {
+								return Fail(diag, "variant \""_s + parts[i] + "\" is combined with itself"_s, lineNumber);
+							}
+						}
+						if (i > 0) {
+							variant.Name += "_"_s;
+							variant.Define += " "_s;
+						}
+					}
+					variant.Name += parts[i];
+					variant.Define += parts[i];
+				}
+				for (const VariantDirective& v : src.Variants) {
+					if (v.Name == variant.Name) {
+						return Fail(diag, "duplicate variant \""_s + variant.Name + "\""_s, lineNumber);
 					}
 				}
-				src.Variants.push_back(Death::move(name));
+				src.Variants.push_back(Death::move(variant));
 			}
 			return true;
 		}
@@ -3489,9 +3527,90 @@ R"GLSL(void main()
 		}
 
 		/**
+			Returns true when @p expression is a pure BOOLEAN expression - identifiers (or "defined(...)") and the
+			literals 0 and 1 (what folding leaves of a macro a pass owns, "0 || SLOPE") combined with only "!", "&&",
+			"||" and parentheses. No other integer literal, comparison or arithmetic may appear, because those are
+			exactly what makes a macro's numeric value matter.
+		*/
+		bool IsBooleanCondition(StringView expression)
+		{
+			std::size_t i = 0;
+			char previous = '\0';
+			while (i < expression.size()) {
+				char c = expression[i];
+				if (IsIdentStart(c) && !IsIdentChar(previous)) {
+					while (i < expression.size() && IsIdentChar(expression[i])) {
+						i++;
+					}
+					previous = expression[i - 1];
+					continue;
+				}
+				if (IsDigit(c)) {
+					if ((c != '0' && c != '1') || IsIdentChar(previous) || (i + 1 < expression.size() && IsIdentChar(expression[i + 1]))) {
+						return false;
+					}
+				} else if (c == '&' || c == '|') {
+					// Only the doubled forms - "a & b" is arithmetic
+					if (i + 1 >= expression.size() || expression[i + 1] != c) {
+						return false;
+					}
+					i++;
+				} else if (c != '!' && c != '(' && c != ')' && !IsSpace(c)) {
+					return false;
+				}
+				previous = c;
+				i++;
+			}
+			return true;
+		}
+
+		/**
+			Evaluates @p expression - a term of a condition once the macros a pass owns are substituted - for every
+			combination of the flags it still names, defined or not, and reports its value when they all agree ("1 || SLOPE"
+			is true whatever SLOPE is). Gives up on anything that is not boolean or names more than a few flags.
+		*/
+		bool DecidedForEveryFlag(StringView expression, std::int64_t& value)
+		{
+			if (!IsBooleanCondition(expression)) {
+				return false;
+			}
+			SmallVector<StringView, 0> flags;
+			ForEachIdentifier(expression, [&](std::size_t begin, std::size_t end) {
+				StringView id = Substr(expression, begin, end - begin);
+				if (id != "defined" && std::find(flags.begin(), flags.end(), id) == flags.end()) {
+					flags.push_back(id);
+				}
+			});
+			if (flags.size() > 6) {
+				return false;
+			}
+			for (std::uint32_t mask = 0; mask < (1u << flags.size()); mask++) {
+				Preprocessor pp;
+				for (std::size_t i = 0; i < flags.size(); i++) {
+					if ((mask & (1u << i)) != 0) {
+						pp.Define(flags[i], "1"_s);
+					}
+				}
+				std::int64_t result = 0;
+				Diagnostic ignored;
+				if (!pp.EvaluateExpression(expression, 0, 0, result, ignored)) {
+					return false;
+				}
+				result = (result != 0 ? 1 : 0);
+				if (mask == 0) {
+					value = result;
+				} else if (result != value) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		/**
 			Folds the macros a pass owns out of one "#if"/"#elif" expression. The expression is split into its
 			top-level "&&" terms, and each term that names an owned macro is either evaluated (when it names
-			nothing else) or has its macros substituted; a term evaluating to false settles the whole
+			nothing else, or when what it names else can no longer change it - "1 || SLOPE", see
+			DecidedForEveryFlag()) or has its macros substituted; a term evaluating to false settles the whole
 			expression, a term evaluating to true simply drops out of the chain. So
 			"!SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING" comes out determined, "DITHER && !SOFTWARE_RENDERER"
 			comes out as "DITHER" (or determined false), and an expression naming no owned macro is reported
@@ -3557,7 +3676,16 @@ R"GLSL(void main()
 					}
 					continue;
 				}
-				kept.push_back(SubstituteCompileTimeMacros(text, macros));
+				// What is left may not depend on the flags no pass owns at all ("1 || SLOPE"), then it is decided
+				String substituted = SubstituteCompileTimeMacros(text, macros);
+				std::int64_t decided = 0;
+				if (DecidedForEveryFlag(substituted, decided)) {
+					if (decided == 0) {
+						return FoldedCondition::False;
+					}
+					continue;
+				}
+				kept.push_back(Death::move(substituted));
 			}
 			if (kept.empty()) {
 				return FoldedCondition::True;
@@ -3860,31 +3988,23 @@ R"GLSL(void main()
 
 		/**
 			Partial preprocessing of an assembled stage stream (BuildStageSource): resolves ONLY the
-			conditionals that name SOFTWARE_RENDERER, NO_DYNAMIC_BRANCHING or LOW_POWER_GPU - the
-			"#ifdef"/"#ifndef" forms (with an optional "#else" and the matching "#endif") and "#if"/"#elif"
-			expressions built from them - keeping or dropping the enclosed lines according to
-			@p softwareRenderer, @p noDynamicBranching and @p lowPowerGpu, the backend the source is
-			being built for. Every other
+			conditionals that name one of @p macros - the "#ifdef"/"#ifndef" forms (with an optional
+			"#else" and the matching "#endif") and "#if"/"#elif" expressions built from them - keeping or
+			dropping the enclosed lines according to their values. Every other
 			preprocessor conditional passes through textually untouched (nesting works in both
 			directions, exactly like ResolveStageConditionals), so the built sources never contain
-			either macro and shaders without such blocks come out byte-for-byte unchanged. An
-			expression that also names a macro this pass does not own ("DITHER && !SOFTWARE_RENDERER")
-			keeps its conditional and loses only the backend macros, which is what stops the name from
-			reaching a compiler that would silently read it as undefined rather than as resolved.
+			those macros in a conditional and shaders without such blocks come out byte-for-byte
+			unchanged. An expression that also names a macro this pass does not own
+			("DITHER && !SOFTWARE_RENDERER" resolving the backend macros) keeps its conditional and loses
+			only the owned macros, which is what stops the name from reaching a compiler that would
+			silently read it as undefined rather than as resolved.
 
 			Unlike the stage-macro resolver this runs on already assembled/validated streams and
 			carries no diagnostics: on a malformed conditional structure the stream is left untouched
 			(a leaked block is then caught by the generated-header staleness checks).
 		*/
-		void ResolveBackendConditionals(SmallVectorImpl<SourceLine>& lines, bool softwareRenderer,
-			bool noDynamicBranching, bool lowPowerGpu)
+		void ResolveCompileTimeConditionals(SmallVectorImpl<SourceLine>& lines, ArrayView<const CompileTimeMacro> macros)
 		{
-			const CompileTimeMacro macros[] = {
-				{ "SOFTWARE_RENDERER"_s, softwareRenderer },
-				{ "NO_DYNAMIC_BRANCHING"_s, noDynamicBranching },
-				{ "LOW_POWER_GPU"_s, lowPowerGpu }
-			};
-
 			struct Cond
 			{
 				bool Resolved;		// true = a resolved backend conditional (its directive lines are removed)
@@ -4017,6 +4137,36 @@ R"GLSL(void main()
 			lines = Death::move(output);
 		}
 
+		/** Resolves the conditionals that name SOFTWARE_RENDERER, NO_DYNAMIC_BRANCHING or LOW_POWER_GPU for the backend a source is built for */
+		void ResolveBackendConditionals(SmallVectorImpl<SourceLine>& lines, bool softwareRenderer,
+			bool noDynamicBranching, bool lowPowerGpu)
+		{
+			const CompileTimeMacro macros[] = {
+				{ "SOFTWARE_RENDERER"_s, softwareRenderer },
+				{ "NO_DYNAMIC_BRANCHING"_s, noDynamicBranching },
+				{ "LOW_POWER_GPU"_s, lowPowerGpu }
+			};
+			ResolveCompileTimeConditionals(lines, macros);
+		}
+
+		/**
+			Collects the macros of the variants of @p document - every variant that is not a combination is one - each
+			defined or not as @p define (a variant's defines, separated by spaces) says
+		*/
+		void CollectVariantMacros(const ShaderDocument& document, StringView define, SmallVectorImpl<CompileTimeMacro>& macros)
+		{
+			for (const VariantDirective& variant : document.Variants) {
+				if (variant.Define.contains(' ')) {
+					continue;
+				}
+				bool defined = false;
+				ForEachIdentifier(define, [&](std::size_t begin, std::size_t end) {
+					defined = (defined || Substr(define, begin, end - begin) == variant.Define);
+				});
+				macros.push_back({ variant.Define, defined });
+			}
+		}
+
 		// ── Lowering the Conditionals That Survive into an Emitted Source ────────────────────────
 
 		/**
@@ -4047,47 +4197,11 @@ R"GLSL(void main()
 		}
 
 		/**
-			Returns true when @p expression is a pure BOOLEAN expression - identifiers (or "defined(...)")
-			combined with only "!", "&&", "||" and parentheses. No integer literal, comparison or arithmetic
-			may appear, because those are exactly what makes a macro's numeric value matter.
-		*/
-		bool IsBooleanCondition(StringView expression)
-		{
-			std::size_t i = 0;
-			char previous = '\0';
-			while (i < expression.size()) {
-				char c = expression[i];
-				if (IsIdentStart(c) && !IsIdentChar(previous)) {
-					while (i < expression.size() && IsIdentChar(expression[i])) {
-						i++;
-					}
-					previous = expression[i - 1];
-					continue;
-				}
-				if (IsDigit(c)) {
-					return false;
-				}
-				if (c == '&' || c == '|') {
-					// Only the doubled forms - "a & b" is arithmetic
-					if (i + 1 >= expression.size() || expression[i + 1] != c) {
-						return false;
-					}
-					i++;
-				} else if (c != '!' && c != '(' && c != ')' && !IsSpace(c)) {
-					return false;
-				}
-				previous = c;
-				i++;
-			}
-			return true;
-		}
-
-		/**
 			Lowers one "#if"/"#elif" that SURVIVES into an emitted source, so that every GLSL profile can
 			evaluate it. The problem it solves: GLSL ES rejects an undefined macro in an "#if" expression
 			("undefined macro in expression not allowed in es profile") while desktop GLSL substitutes 0 like
-			C, HLSL accepts it and the Vulkan transform is desktop GLSL - so "#if DITHER" on a variant that
-			does not define DITHER passes --hlsl-check AND --spirv-check and breaks only ES2/ES3/WebGL. A
+			C, HLSL accepts it and the Vulkan transform is desktop GLSL - so "#if SLOPE" where nothing
+			defines SLOPE passes --hlsl-check AND --spirv-check and breaks only ES2/ES3/WebGL. A
 			macro with an empty body ("#define SLOPE") is a "bad expression" even on desktop.
 
 			The fix is to rewrite the identifiers of a purely BOOLEAN expression into "defined(...)", the
@@ -4095,7 +4209,7 @@ R"GLSL(void main()
 			the single-term case to the shorter "#ifdef"/"#ifndef" a reader expects. Restricting it to
 			boolean expressions is what makes the rewrite meaning-preserving rather than a guess: for a macro
 			used as a flag, "NAME" and "defined(NAME)" agree whenever it is absent or defined to anything
-			nonzero, which covers the variant defines (baked as "(1)"), the valueless markers a shader or an
+			nonzero, which covers the variant defines (baked as "(1)" where one survives), the valueless markers a shader or an
 			includer sets, and the valueless "#define DEATH_TARGET_ANDROID"-style flags the engine injects at
 			runtime. The moment a literal, comparison or arithmetic appears the value itself is being asked
 			for, so the expression is left exactly as written - as are the identifiers @p valueMacros lists,
@@ -4728,6 +4842,18 @@ R"GLSL(void main()
 		_macros[name] = Death::move(m);
 	}
 
+	void Preprocessor::DefineVariant(StringView define)
+	{
+		for (std::size_t begin = 0; begin < define.size(); ) {
+			std::size_t end = begin;
+			while (end < define.size() && define[end] != ' ') {
+				end++;
+			}
+			Define(define.slice(begin, end), "1");
+			begin = end + 1;
+		}
+	}
+
 	bool Preprocessor::IsDefined(StringView name) const
 	{
 		if (name == "BATCH_SIZE") {
@@ -5051,7 +5177,22 @@ R"GLSL(void main()
 		};
 		bool lowerConditionals = (hasBooleanCondition(document.Prelude) || hasBooleanCondition(stage));
 
-		if (useResolved || lowerConditionals) {
+		// The conditionals naming a variant are resolved for the one being built too, so its source holds only what
+		// the variant compiles - with the helper functions only the other variants call removed as well. After the
+		// backend macros, whose uniform trimming needs the other stage as the compilers see it.
+		SmallVector<CompileTimeMacro, 0> variantMacros;
+		CollectVariantMacros(document, define, variantMacros);
+		auto referencesVariant = [&variantMacros](const SmallVectorImpl<SourceLine>& lines) {
+			for (const SourceLine& line : lines) {
+				if (ContainsCompileTimeMacro(line.Text, variantMacros)) {
+					return true;
+				}
+			}
+			return false;
+		};
+		bool resolveVariants = (referencesVariant(document.Prelude) || referencesVariant(stage));
+
+		if (useResolved || lowerConditionals || resolveVariants) {
 			resolved.reserve(document.Prelude.size() + stage.size());
 			resolved.insert(resolved.end(), document.Prelude.begin(), document.Prelude.end());
 			resolved.insert(resolved.end(), stage.begin(), stage.end());
@@ -5062,8 +5203,8 @@ R"GLSL(void main()
 				// "#if !SOFTWARE_RENDERER" still had a textual reference there and counted as used, so
 				// resolving the conditional away removed the call and left the definition behind - which
 				// is how the software renderer ended up carrying a transpiled voronoi nothing calls. The
-				// reference scan is textual and this stream still holds the variant conditionals, so it
-				// stays conservative about those; it only collects what THIS backend just dropped.
+				// variant conditionals are still in the stream here, the pass after resolving those collects
+				// what only the other variants call.
 				EliminateUnusedFunctions(resolved);
 
 				// The same for the uniform declarations of the stage, which needs the other stage of this
@@ -5077,17 +5218,46 @@ R"GLSL(void main()
 				EliminateUnusedFunctions(other);
 				TrimUniformsResolvedAway(resolved, other);
 			}
+			if (resolveVariants) {
+				ResolveCompileTimeConditionals(resolved, variantMacros);
+				// And once more for the helpers only the other variants call (a hash only the DITHER code uses)
+				EliminateUnusedFunctions(resolved);
+			}
 			if (lowerConditionals) {
 				LowerEmittedConditionals(resolved, valueMacros);
 			}
 			useResolved = true;
 		}
 
+		// A macro of the variant is defined only where the source still names it - a conditional is resolved above unless
+		// it also names a macro the pass doesn't own ("KEYED || defined(GL_ES)"), one line for each macro of a combined
+		// variant ("PLUS DITHER")
+		SmallVector<SourceLine, 0> stripped;
+		if (useResolved) {
+			stripped.assign(resolved);
+		} else {
+			stripped.reserve(document.Prelude.size() + stage.size());
+			stripped.insert(stripped.end(), document.Prelude.begin(), document.Prelude.end());
+			stripped.insert(stripped.end(), stage.begin(), stage.end());
+		}
+		ShaderParser::StripComments(stripped);
 		Array<char> out;
-		if (!define.empty()) {
-			arrayAppend(out, "#define "_s);
-			arrayAppend(out, define);
-			arrayAppend(out, " (1)\n"_s);
+		for (std::size_t begin = 0; begin < define.size(); ) {
+			std::size_t end = begin;
+			while (end < define.size() && define[end] != ' ') {
+				end++;
+			}
+			const CompileTimeMacro macro[] = { { define.slice(begin, end), true } };
+			bool referenced = false;
+			for (std::size_t i = 0; i < stripped.size() && !referenced; i++) {
+				referenced = ContainsCompileTimeMacro(stripped[i].Text, macro);
+			}
+			if (referenced) {
+				arrayAppend(out, "#define "_s);
+				arrayAppend(out, define.slice(begin, end));
+				arrayAppend(out, " (1)\n"_s);
+			}
+			begin = end + 1;
 		}
 		arrayAppend(out, "#line 1\n"_s);
 		if (useResolved) {

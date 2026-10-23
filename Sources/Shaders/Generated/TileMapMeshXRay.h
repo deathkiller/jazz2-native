@@ -54,9 +54,6 @@ layout (std140) uniform InstanceBlock
 
 
 
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // One over the size of the target being drawn into, which the mask has too
 
 void main()
@@ -107,9 +104,6 @@ uniform mat4 uViewMatrix;
 
 
 
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // One over the size of the target being drawn into, which the mask has too
 
 void main()
@@ -163,24 +157,13 @@ layout (std140) uniform InstanceBlock
 
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 uniform sampler2D uTextureMask;
 // One over the size of the target being drawn into, which the mask has too
 uniform vec2 uTargetSizeInv;
 
 vec4 tileSample(vec2 uv) {
 	vec4 src = texture(uTexture, uv);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 color = texture(uTexturePalette, vec2(palX, palY));
-	return vec4(color.rgb, color.a * src.a);
-#else
 	return src;
-#endif
 }
 
 out vec4 COLOR;
@@ -235,24 +218,13 @@ varying highp float vPaletteOffset;
 
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 uniform sampler2D uTextureMask;
 // One over the size of the target being drawn into, which the mask has too
 uniform vec2 uTargetSizeInv;
 
 vec4 tileSample(vec2 uv) {
 	vec4 src = texture2D(uTexture, uv);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 color = texture2D(uTexturePalette, vec2(palX, palY));
-	return vec4(color.rgb, color.a * src.a);
-#else
 	return src;
-#endif
 }
 
 
@@ -307,8 +279,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshXRay_USE_PALETTE_Vs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 in vec2 aPosition;
 in vec2 aTexCoords;
@@ -345,9 +316,7 @@ layout (std140) uniform InstanceBlock
 
 
 
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // One over the size of the target being drawn into, which the mask has too
 
 void main()
@@ -364,8 +333,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshXRay_USE_PALETTE_Vs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 attribute vec2 aPosition;
 attribute vec2 aTexCoords;
@@ -399,9 +367,7 @@ uniform mat4 uViewMatrix;
 
 
 
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // One over the size of the target being drawn into, which the mask has too
 
 void main()
@@ -418,8 +384,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshXRay_USE_PALETTE_Fs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -456,24 +421,18 @@ layout (std140) uniform InstanceBlock
 
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 uniform sampler2D uTextureMask;
 // One over the size of the target being drawn into, which the mask has too
 uniform vec2 uTargetSizeInv;
 
 vec4 tileSample(vec2 uv) {
 	vec4 src = texture(uTexture, uv);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 color = texture(uTexturePalette, vec2(palX, palY));
 	return vec4(color.rgb, color.a * src.a);
-#else
-	return src;
-#endif
 }
 
 out vec4 COLOR;
@@ -496,8 +455,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshXRay_USE_PALETTE_Fs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -529,24 +487,18 @@ varying highp float vPaletteOffset;
 
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 uniform sampler2D uTextureMask;
 // One over the size of the target being drawn into, which the mask has too
 uniform vec2 uTargetSizeInv;
 
 vec4 tileSample(vec2 uv) {
 	vec4 src = texture2D(uTexture, uv);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 color = texture2D(uTexturePalette, vec2(palX, palY));
 	return vec4(color.rgb, color.a * src.a);
-#else
-	return src;
-#endif
 }
 
 

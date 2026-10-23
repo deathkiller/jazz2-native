@@ -159,8 +159,28 @@ function documentSymbolItems(scan) {
 		out.push(item(scan.defines[i].name, vscode.CompletionItemKind.Constant, '#define', 'Defined in this file.', null, '1'));
 	}
 	for (i = 0; i < scan.variants.length; i++) {
-		out.push(item(scan.variants[i].name, vscode.CompletionItemKind.Constant, 'variant',
-			'A variant of this program - compiled with `#define ' + scan.variants[i].name + ' (1)`, so guard code with `#ifdef`.', null, '1'));
+		// A combination defines the macros of its parts, its own name is no macro at all
+		if (scan.variants[i].parts.length === 1) {
+			out.push(item(scan.variants[i].name, vscode.CompletionItemKind.Constant, 'variant',
+				'A variant of this program - compiled with it defined, so code under `#if ' + scan.variants[i].name + '` is resolved for each variant and its sources hold only its own code.', null, '1'));
+		}
+	}
+	return out;
+}
+
+/** The variants a combination may still name after a '+': those declared above it, less the ones it already has. */
+function variantPartItems(scan, line, linePrefix) {
+	var written = linePrefix.replace(/^[ \t]*variant\b/, '').split('+');
+	for (var w = 0; w < written.length; w++) {
+		written[w] = written[w].replace(/^[ \t]+|[ \t]+$/g, '');
+	}
+	var out = [];
+	for (var i = 0; i < scan.variants.length; i++) {
+		var variant = scan.variants[i];
+		if (variant.line < line && variant.parts.length === 1 && written.indexOf(variant.name) < 0) {
+			out.push(item(variant.name, vscode.CompletionItemKind.Constant, 'variant',
+				'Combined with the variants before the `+` - the combination is compiled with the defines of all of them.', null, '0'));
+		}
 	}
 	return out;
 }
@@ -264,6 +284,9 @@ var completionProvider = {
 				}
 				if (context.directive === 'precision') {
 					return itemsFromTable(language.PRECISION_QUALIFIERS, vscode.CompletionItemKind.EnumMember, '0', 'precision');
+				}
+				if (context.directive === 'variant' && context.linePrefix.indexOf('+') >= 0) {
+					return variantPartItems(scan, position.line, context.linePrefix);
 				}
 				return [];			// program / variant / batched take a fresh identifier
 
@@ -525,7 +548,8 @@ var symbolProvider = {
 			push(scan.batched[i].name, 'batched twin', vscode.SymbolKind.Module, scan.batched[i].line);
 		}
 		for (i = 0; i < scan.variants.length; i++) {
-			push(scan.variants[i].name, 'variant', vscode.SymbolKind.Constant, scan.variants[i].line);
+			push(scan.variants[i].name, 'variant' + (scan.variants[i].parts.length > 1 ? ' ' + scan.variants[i].parts.join(' + ') : ''),
+				vscode.SymbolKind.Constant, scan.variants[i].line);
 		}
 		for (i = 0; i < scan.blocks.length; i++) {
 			push(scan.blocks[i].name, 'uniform block', vscode.SymbolKind.Struct, scan.blocks[i].line);

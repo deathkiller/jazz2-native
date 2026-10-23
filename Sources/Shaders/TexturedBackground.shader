@@ -1,6 +1,11 @@
 program TexturedBackground;
 variant DITHER;
 variant KEYED;
+// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
+// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
+variant PLUS;
+variant PLUS + DITHER;
+variant PLUS + KEYED;
 
 shader_type canvas_item;
 precision highp;
@@ -14,9 +19,6 @@ uniform vec2 uShift;
 // fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
 // fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
-// 1 for the perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at
-// the top left of the view, as an ordinary layer would be placed - 0 draws it as the sky layers always were
-uniform float uModel;
 
 #include "Include/TexturedBackgroundKey.inc"
 
@@ -28,6 +30,30 @@ uniform float uModel;
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
 #define PLUS_FADE_ROWS 141.0
+#if LOW_POWER_GPU
+
+// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile): the horizon that may be anywhere cost the
+// old warp two divisions and a comparison more per pixel. All of that is linear across the quad, so the vertex stage works
+// it out, and the fragment only takes the curves of the distance (see fragment()).
+// The old warp: how far a row is from the horizon towards the edge of the half above it and of the half below it (only
+// the one of its own half isn't negative) and the horizontal term; JJ2+: the row from the horizon, the same over the rows
+// of the fade and the horizontal term, the pixels from the vanishing point. And how opaque the layer is, the alpha of the
+// instance color.
+varying vec4 vWarpTerms;
+
+void vertex() {
+#if PLUS
+	vec2 pixel = UV * uViewSize - vec2(0.5);
+	float row = pixel.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
+	vWarpTerms = vec4(row, row / PLUS_FADE_ROWS, (pixel.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * (PLUS_SCALE / 256.0), COLOR.a);
+#else
+	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
+	float correction = ((uViewSize.x * 9.0) / (uViewSize.y * 16.0));
+	vWarpTerms = vec4((horizonY - UV.y) / max(horizonY, 0.0001), (UV.y - horizonY) / max(1.0 - horizonY, 0.0001),
+		(UV.x - 0.5 - uHorizonOffset.x) * correction, COLOR.a);
+#endif
+}
+#endif
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -69,6 +95,23 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
+#if PLUS
+// The perspective of JJ2+, by the pixels of the view as it counts them - the row of the horizon is the first one of the plane
+// below it. The texture is half of it further down than the shift, V runs up the layer (see TileMap::TexturedBackgroundPass).
+// xy the position in the texture, z how far it fades into the color of the horizon
+vec3 plusWarp(vec2 uv) {
+	vec2 pixel = uv * uViewSize - vec2(0.5);
+	float row = pixel.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
+	float below = step(0.0, row);
+	float distance = abs(row) + PLUS_GAP;
+	vec2 texel = vec2(
+		uShift.x + (pixel.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * PLUS_SCALE / distance,
+		uShift.y + 128.0 + (1.0 - 2.0 * below) * PLUS_DEPTH / distance
+	);
+	float rows = row / PLUS_FADE_ROWS;
+	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
+}
+#else
 // The sky layers as this game always drew them, its own approximation of the original game: xy the position in the texture,
 // z how far it fades into the color of the horizon
 vec3 legacyWarp(vec2 uv) {
@@ -86,16 +129,6 @@ vec3 legacyWarp(vec2 uv) {
 	// approximates the pow() curves with plain polynomials and drops the dither sample and the star
 	// field entirely; the visible loss is the faint stars and a slightly different horizon falloff.
 	float horizonDepth = distance;	// Approximates pow(distance, 1.4)
-#elif LOW_POWER_GPU
-	// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile): pow() is two
-	// transcendentals on parts like the SGX543's USSE and this shader ran two of them per pixel over a
-	// full-screen background. sqrt() is one cheap instruction and gives pow(distance, 1.5) EXACTLY as
-	// distance * sqrt(distance), which is the second curve below for free; blending that against the
-	// linear term lands on pow(distance, 1.4) to within 0.007 over the whole range this takes ([0.3, 1.3]),
-	// which is far closer than the plain `distance` the software branch settles for - that one is a
-	// different shape, and it is what made the horizon read as too sharp.
-	float distancePow15 = distance * sqrt(distance);
-	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance;
 #else
 	float horizonDepth = pow(distance, 1.4);
 #endif
@@ -110,42 +143,52 @@ vec3 legacyWarp(vec2 uv) {
 
 #if SOFTWARE_RENDERER
 	float horizonOpacity = clamp(distance * distance - 0.3, 0.0, 1.0);	// Approximates pow(distance, 1.5)
-#elif LOW_POWER_GPU
-	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);	// distance * sqrt(distance) IS pow(distance, 1.5)
 #else
 	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
 #endif
 	return vec3(texturePos, horizonOpacity);
 }
-
-// The perspective of JJ2+, by the pixels of the view as it counts them - the row of the horizon is the first one of the plane
-// below it. The texture is half of it further down than the shift, V runs up the layer (see TileMap::TexturedBackgroundPass).
-vec3 plusWarp(vec2 uv) {
-	vec2 pixel = uv * uViewSize - vec2(0.5);
-	float row = pixel.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
-	float below = step(0.0, row);
-	float distance = abs(row) + PLUS_GAP;
-	vec2 texel = vec2(
-		uShift.x + (pixel.x - (0.5 + uHorizonOffset.x) * uViewSize.x) * PLUS_SCALE / distance,
-		uShift.y + 128.0 + (1.0 - 2.0 * below) * PLUS_DEPTH / distance
-	);
-	float rows = row / PLUS_FADE_ROWS;
-	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
-}
+#endif
 
 void fragment() {
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
-	float opacity = COLOR.a;
-	// Only the one drawn is worked out where the target branches, both are where it can't
-#if NO_DYNAMIC_BRANCHING
-	vec3 warp = mix(legacyWarp(UV), plusWarp(UV), step(0.5, uModel));
+#if LOW_POWER_GPU
+	float opacity = vWarpTerms.w;
 #else
-	vec3 warp = vec3(0.0);
-	if (uModel > 0.5) {
-		warp = plusWarp(UV);
-	} else {
-		warp = legacyWarp(UV);
-	}
+	float opacity = COLOR.a;
+#endif
+#if LOW_POWER_GPU
+#if PLUS
+	// See vertex(): the distance, |row| + 8 rows, and its reciprocal; below the horizon (its row too) the texture runs down
+	float qInv = 1.0 / (abs(vWarpTerms.x) + PLUS_GAP);
+	float side = (vWarpTerms.x >= 0.0 ? 1.0 : -1.0);
+	vec3 warp = vec3(
+		(uShift.x / 256.0) + vWarpTerms.z * qInv,
+		1.0 - (uShift.y + 128.0) / 256.0 + side * PLUS_SCALE * qInv,
+		clamp(1.0 - vWarpTerms.y * vWarpTerms.y, 0.0, 1.0)
+	);
+#else
+	// See vertex(): m how far the row is from the horizon and the distance 1.3 - m. pow() is two transcendentals on parts
+	// like the SGX543's USSE, the square root gives pow(distance, 1.5) exactly, and blending that against the linear term
+	// lands on pow(distance, 1.4) to within 0.007 over the range it takes ([0.3, 1.3]) - far closer than the plain distance
+	// the software branch settles for, which is a different shape and made the horizon read as too sharp. Above the horizon
+	// the texture runs up.
+	float m = max(vWarpTerms.x, vWarpTerms.y);
+	float distance = 1.3 - m;
+	float distancePow15 = distance * sqrt(distance);
+	float side = (vWarpTerms.x >= 0.0 ? 1.0 : -1.0);
+	vec3 warp = vec3(
+		(uShift.x / 256.0) + vWarpTerms.z * (0.5 + 1.2 * distancePow15 + 0.3 * distance),
+		(uShift.y / 256.0) + side * 0.7 * (1.0 - m) * distance,
+		clamp(distancePow15 - 0.3, 0.0, 1.0)
+	);
+#endif
+#else
+#if PLUS
+	vec3 warp = plusWarp(UV);
+#else
+	vec3 warp = legacyWarp(UV);
+#endif
 #endif
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture(TEXTURE, texturePos);

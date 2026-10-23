@@ -27,7 +27,7 @@ namespace ShaderCompiler
 	{
 		/** @brief Variant name; empty for the unnamed base variant */
 		String Name;
-		/** @brief Baked variant define; empty for the unnamed base variant */
+		/** @brief Baked variant defines, separated by spaces; empty for the unnamed base variant */
 		String Define;
 		/** @brief Lowered vertex-stage GLSL source */
 		String VsSource;

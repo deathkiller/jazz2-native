@@ -32,7 +32,7 @@
 // pow(distance, 1.4), distance squared for pow(distance, 1.5)), which is what every tier without
 // real shaders already draws; it drops the per-pixel star field along with them.
 //
-// In the perspective of JJ2+ (uModel, SURFACE::FULLSCREEN and the inner surfaces) the warp horizon and the cylinder are
+// In the perspective of JJ2+ (PLUS, SURFACE::FULLSCREEN and the inner surfaces) the warp horizon and the cylinder are
 // affine along every row as well, so their bands carry the exact coordinates of the rows at their edges - only the curves
 // down a band (the depth of the warp horizon, thinner bands towards its horizon; the curve of the cylinder) are straight
 // within it. The tunnel of JJ2+ is radial instead: rings a quarter of a texture deep cut into 32 sectors, each corner with
@@ -44,6 +44,9 @@
 // without any perspective) draws the warp horizon of JJ2+ in perspective instead: the depth is the q of the vertices
 // (see FixedFunctionPass.h), which makes it exact at any size, so the bands are only as many as the tint and the whole
 // textures need - see below.
+//
+// Only what a program draws is rebuilt by its effect: the variant says which perspective (PLUS defined for JJ2+), and the
+// blocks of the tunnel and the cylinder define WARP_TUNNEL or WARP_CYLINDER before including this file.
 //
 // An inner surface of JJ2+ (and the part of any surface that is in the view) is a quad that shows only a part of the whole,
 // which its texRect says. The geometry is laid out over the whole, only what is seen of it is made, and the strips are cut to
@@ -59,18 +62,6 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 	vec2 shift = uniform_vec2(uShift);
 	vec4 horizon = uniform_vec4(uHorizonColor);
 
-	// The perspective of JJ2+, 0 for the sky layers as this game always drew them (a program of a table that predates it has none);
-	// a cylinder has no other
-	float plusModel = 0.0;
-	if (has_uniform(uModel)) {
-		plusModel = uniform_float(uModel);
-	}
-	if (has_uniform(uCylinder)) {
-		plusModel = 1.0;
-	}
-	float viewW = max(viewSize.x, 1.0);
-	float viewH = max(viewSize.y, 1.0);
-
 	// The band geometry comes from the transformed sprite axes rather than the corner array, so
 	// scissor clipping of the quad cannot distort the warp
 	float leftX = quad_origin().x;
@@ -78,28 +69,27 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 	float topY = quad_origin().y;
 	float spanY = quad_axis_y().y;
 	// The quad is only a part of what the shader draws where its texRect says so - an inner surface, or a surface only partly
-	// in the view (see TileMap::RenderTexturedBackground()). The geometry is then laid out over the whole and cut to the quad,
-	// and what lies wholly outside isn't made at all: the part that is seen, in pixels of the whole
-	float visLeft = 0.0;
-	float visRight = viewW;
-	float visTop = 0.0;
-	float visBottom = viewH;
+	// in the view (see TileMap::RenderTexturedBackground()). The geometry is then laid out over the whole and cut to the quad
 	vec4 texRect = quad_tex_rect();
-	if (texRect.x > 0.0 && texRect.z > 0.0 && (texRect.x < 0.9999 || texRect.z < 0.9999 || abs(texRect.y) > 0.0001 || abs(texRect.w) > 0.0001)) {
+	bool partial = (texRect.x > 0.0 && texRect.z > 0.0 && (texRect.x < 0.9999 || texRect.z < 0.9999 || abs(texRect.y) > 0.0001 || abs(texRect.w) > 0.0001));
+	if (partial) {
 		strip_clip(vec4(min(leftX, leftX + spanX), min(topY, topY + spanY), max(leftX, leftX + spanX), max(topY, topY + spanY)));
-		visLeft = texRect.y * viewW;
-		visRight = (texRect.y + texRect.x) * viewW;
-		visTop = texRect.w * viewH;
-		visBottom = (texRect.w + texRect.z) * viewH;
 		spanX = spanX / texRect.x;
 		spanY = spanY / texRect.z;
 		leftX = leftX - texRect.y * spanX;
 		topY = topY - texRect.w * spanY;
 	}
+#if defined(PLUS) || defined(WARP_CYLINDER)
+	// In the perspective of JJ2+, what lies wholly outside isn't made at all: the part that is seen, in pixels of the whole
+	float viewW = max(viewSize.x, 1.0);
+	float viewH = max(viewSize.y, 1.0);
+	float visLeft = (partial ? texRect.y * viewW : 0.0);
+	float visRight = (partial ? (texRect.y + texRect.x) * viewW : viewW);
+	float visTop = (partial ? texRect.w * viewH : 0.0);
+	float visBottom = (partial ? (texRect.w + texRect.z) * viewH : viewH);
 	float scaleX = spanX / viewW;
 	float scaleY = spanY / viewH;
-	float screenLeft = leftX + visLeft * scaleX;
-	float screenRight = leftX + visRight * scaleX;
+#endif
 
 	pass warp;				// Textured band pieces under the material state
 #ifdef WARP_TEXTURE_REPEAT_IN_PASS
@@ -129,31 +119,34 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 #endif
 
 	// How finely the perspective of JJ2+ is cut: a block that defines WARP_LOW_DETAIL (the N64, the Dreamcast and the PS2)
-	// draws it with about as many vertices as the old warp, a few texels off its curves, the others within a texel
+	// draws it with about as many vertices as the old warp, a few texels off its curves, the others within a texel. Macros,
+	// as each is taken by one part of the rebuild only.
 #ifdef WARP_LOW_DETAIL
-	int bandCount = 16;			// Bands each side of the horizon
-	int pieceColumns = 1;		// Columns a piece between two whole textures is drawn in
-	int repeatColumns = 2;		// Columns a band is drawn in where the texture repeats
-	float ringStep = 0.5;		// How deep a ring of the tunnel is, in textures
-	int sectorCount = 16;		// Sectors a ring of the tunnel is cut into
-	bool tinyRings = false;		// Whether the rings start under a pixel from the center, or at 2 pixels
-	int maxPieces = 8;			// Pieces a band in perspective is cut into at most, more is squeezed into one
+#define WARP_BAND_COUNT 16			// Bands each side of the horizon
+#define WARP_PIECE_COLUMNS 1		// Columns a piece between two whole textures is drawn in
+#define WARP_REPEAT_COLUMNS 2		// Columns a band is drawn in where the texture repeats
+#define WARP_RING_STEP 0.5			// How deep a ring of the tunnel is, in textures
+#define WARP_SECTOR_COUNT 16		// Sectors a ring of the tunnel is cut into
+#define WARP_TINY_RINGS false		// Whether the rings start under a pixel from the center, or at 2 pixels
+#define WARP_MAX_PIECES 8			// Pieces a band in perspective is cut into at most, more is squeezed into one
 #else
-	int bandCount = 32;
-	int pieceColumns = 3;
-	int repeatColumns = 7;
-	float ringStep = 0.25;
-	int sectorCount = 32;
-	bool tinyRings = true;
-	int maxPieces = 24;
+#define WARP_BAND_COUNT 32
+#define WARP_PIECE_COLUMNS 3
+#define WARP_REPEAT_COLUMNS 7
+#define WARP_RING_STEP 0.25
+#define WARP_SECTOR_COUNT 32
+#define WARP_TINY_RINGS true
+#define WARP_MAX_PIECES 24
 #endif
 #ifdef WARP_ROW_BANDS
 	// A block that defines WARP_ROW_BANDS (the RDP) draws a band of 4 vertices row by row, each row exactly as it maps,
 	// so a band is one column there - more would make it triangles
-	repeatColumns = 1;
+#undef WARP_REPEAT_COLUMNS
+#define WARP_REPEAT_COLUMNS 1
 #endif
 
-	if (plusModel > 0.5 && has_uniform(uTunnel)) {
+#if defined(WARP_TUNNEL) && defined(PLUS)
+	{
 		// The tunnel of JJ2+ (see TexturedBackgroundTunnel.shader): u = X / 4 + 64 + 256 * angle / 2pi (+ the spiral),
 		// v = Y - 256 * log2(r), the angle clockwise from the right around the center
 		vec4 tunnel = uniform_vec4(uTunnel);
@@ -173,10 +166,10 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 		// The texture coordinate 1 - v / 256 = c + log2(r) is a multiple of a ring's depth s (a quarter or a half) at
 		// r = 2^(-f) * 2^(j s), f being what c has over whole rings - 2^(-f) of f < 0.5 as a polynomial; r^-0.15 of the
 		// spiral there likewise, 2^(0.15 f) at j = 0 and then 2^(-0.15 s) each ring
-		bool quarterRings = (ringStep < 0.3);
+		bool quarterRings = (WARP_RING_STEP < 0.3);
 		float vC = 1.0 - shift.y / 256.0;
-		float vSteps = floor(vC / ringStep);
-		float f = vC - vSteps * ringStep;
+		float vSteps = floor(vC / WARP_RING_STEP);
+		float f = vC - vSteps * WARP_RING_STEP;
 		float firstRadius = 1.0 - f * (0.693147 - f * (0.240227 - f * (0.0555041 - f * 0.0096181)));
 		float g = 0.15 * f;
 		float firstSpiral = 1.0 + g * (0.693147 + g * (0.240227 + g * 0.0555041));
@@ -184,17 +177,17 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 		float spiralFactor = (quarterRings ? 0.974342 : 0.949342);
 		// The first ring reaches from the center to about 0.7 pixels (j s = -0.5), or to about 2.8 (j s = 1, the rings in
 		// the middle are too small to see the tunnel in anyway); the radius and r^-0.15 there, 2^(j s) and 2^(-0.15 j s)
-		int ringCount = (quarterRings ? 52 : (tinyRings ? 26 : 23));
-		int ringStart = (quarterRings ? (tinyRings ? -2 : 4) : (tinyRings ? -1 : 2));
-		float startRadius = (tinyRings ? 0.707107 : 2.0);
-		float startSpiral = (tinyRings ? 1.05330 : 0.901250);
+		int ringCount = (quarterRings ? 52 : (WARP_TINY_RINGS ? 26 : 23));
+		int ringStart = (quarterRings ? (WARP_TINY_RINGS ? -2 : 4) : (WARP_TINY_RINGS ? -1 : 2));
+		float startRadius = (WARP_TINY_RINGS ? 0.707107 : 2.0);
+		float startSpiral = (WARP_TINY_RINGS ? 1.05330 : 0.901250);
 		// The outer corners 1 / cos(pi / sectors) further out, and log2 of that
-		bool fineSectors = (sectorCount > 16);
+		bool fineSectors = (WARP_SECTOR_COUNT > 16);
 		float cornerFactor = (fineSectors ? 1.0048386 : 1.0195911);
 		float cornerLog = (fineSectors ? 0.0069638 : 0.0279914);
-		int groupCount = (sectorCount + 2) / 3;
+		int groupCount = (WARP_SECTOR_COUNT + 2) / 3;
 		float uOrigin = (shift.x * 0.25 + 64.0) / 256.0;
-		float sectorStep = 6.28318531 / float(sectorCount);
+		float sectorStep = 6.28318531 / float(WARP_SECTOR_COUNT);
 
 		// The sectors turn by the same angle each, the direction of each edge is the one before turned by it
 		float stepCos = cos(sectorStep);
@@ -230,10 +223,10 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 				bool flatSeen = (drawsFlat && innerCorner > nearest && stage == stageCount - 1);
 				if (!isFlat && (ringSeen || flatSeen)) {
 					// The ring is a quarter or a half of a texture deep, inside one period
-					float tvInner = ringStep * (vSteps + float(ring + ringStart));
-					float tvBase = floor(tvInner + 0.5 * ringStep);
+					float tvInner = WARP_RING_STEP * (vSteps + float(ring + ringStart));
+					float tvBase = floor(tvInner + 0.5 * WARP_RING_STEP);
 					float v0 = tvInner - tvBase;
-					float v1 = tvInner + ringStep + cornerLog - tvBase;
+					float v1 = tvInner + WARP_RING_STEP + cornerLog - tvBase;
 					// The sectors start where the texture repeats around the inner edge, so the seam falls between two of
 					// them; the spiral turns the outer edge against it
 					float twistInner = spiral * (356.2 * innerS - 91.0) / 256.0;
@@ -248,15 +241,15 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 						// The color inside the inner edge of the ring, its corners exactly, across the polygon from both ends
 						// towards the middle, eight vertices a strip that starts with the last two of the one before (what the PVR
 						// holds) - under the ring where the tint is folded into the pieces, with the tint of the rings otherwise
-						int flatStrips = (sectorCount + 3) / 6;
+						int flatStrips = (WARP_SECTOR_COUNT + 3) / 6;
 						for (int flatStrip = 0; flatStrip < 6; flatStrip++) {
 							if (flatStrip < flatStrips) {
 								int first = flatStrip * 6;
-								int count = min(8, sectorCount - first);
+								int count = min(8, WARP_SECTOR_COUNT - first);
 								for (int j = 0; j < 8; j++) {
 									if (j < count) {
 										int z = first + j;
-										int corner = (z - 2 * (z / 2) == 0 ? z / 2 : sectorCount - 1 - (z - 1) / 2);
+										int corner = (z - 2 * (z / 2) == 0 ? z / 2 : WARP_SECTOR_COUNT - 1 - (z - 1) / 2);
 										float angle = startAngle + float(corner) * sectorStep;
 										strip_position(j, vec2(screenX + innerCorner * cos(angle) * scaleX, screenY + innerCorner * sin(angle) * scaleY));
 										strip_uv(j, vec2(0.0, 0.0));
@@ -279,7 +272,7 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 						// Three sectors a strip (8 vertices, what the PVR holds)
 						for (int group = 0; group < groupCount; group++) {
 							int firstSector = group * 3;
-							int sectors = min(3, sectorCount - firstSector);
+							int sectors = min(3, WARP_SECTOR_COUNT - firstSector);
 							if (stage == 0 || tintInner > 0.0 || tintOuter > 0.0) {
 								for (int k = 0; k < 4; k++) {
 									if (k <= sectors) {
@@ -288,7 +281,7 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 											sa = sa * stepCos + ca * stepSin;
 											ca = turnedCos;
 										}
-										float u = float(firstSector + k) / float(sectorCount);
+										float u = float(firstSector + k) / float(WARP_SECTOR_COUNT);
 										strip_position(2 * k, vec2(screenX + innerCorner * ca * scaleX, screenY + innerCorner * sa * scaleY));
 										strip_position(2 * k + 1, vec2(screenX + outerCorner * ca * scaleX, screenY + outerCorner * sa * scaleY));
 										strip_uv(2 * k, vec2(u, v0));
@@ -312,8 +305,9 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 				}
 			}
 		}
-#ifdef WARP_PERSPECTIVE
-	} else if (plusModel > 0.5 && !has_uniform(uCylinder)) {
+	}
+#elif defined(PLUS) && defined(WARP_PERSPECTIVE)
+	{
 		// The warp horizon of JJ2+ in perspective (see TexturedBackground.shader): d = |row - horizon| + 8 rows away, the row
 		// maps u to X + (x - center) * 60 / d and v to Y + 128 -/+ 15360 / d below/above the horizon. So u * d, v * d and d are
 		// all linear across the view and down it, and with d as the q of the vertices a piece of any size has the texture
@@ -321,6 +315,8 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 		// tint is (it curves down the view, the colors are interpolated linearly) every 30 rows. The targets that can't repeat
 		// the texture cut a band into pieces along the lines the horizontal coordinate crosses a whole texture on - straight
 		// lines too, from the vanishing point.
+		float screenLeft = leftX + visLeft * scaleX;
+		float screenRight = leftX + visRight * scaleX;
 		vec4 offsets = vec4(0.0, 0.0, 0.0, 0.0);
 		if (has_uniform(uHorizonOffset)) {
 			offsets = uniform_vec4(uHorizonOffset);
@@ -442,7 +438,7 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 #else
 							int firstPiece = int(floor(min(uLeft0, uLeft1)));
 							int lastPiece = int(ceil(max(uRight0, uRight1)));
-							if (lastPiece - firstPiece > maxPieces) {
+							if (lastPiece - firstPiece > WARP_MAX_PIECES) {
 								// More periods across than pieces, only right at the horizon without the fade: one strip with the
 								// row squeezed into a single period, as much noise as the texture would be there
 								strip_position(0, vec2(screenRight, y0));
@@ -520,12 +516,19 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 				}
 			}
 		}
-#endif
-	} else if (plusModel > 0.5) {
+	}
+#elif defined(PLUS) || defined(WARP_CYLINDER)
+	{
 		// The warp horizon of JJ2+ (see TexturedBackground.shader): d = |row - horizon| + 8 rows away, the row maps u to
 		// X + (x - center) * 60 / d and v to Y + 128 -/+ 15360 / d below/above the horizon; or the cylinder of JJ2+ (see
 		// TexturedBackgroundCylinder.shader): u = X / 4 + (x - center) * the slope of the row, v running down the view
-		bool isCylinder = has_uniform(uCylinder);
+		float screenLeft = leftX + visLeft * scaleX;
+		float screenRight = leftX + visRight * scaleX;
+#ifdef WARP_CYLINDER
+		bool isCylinder = true;
+#else
+		bool isCylinder = false;
+#endif
 		vec4 cylinder = vec4(0.5, 0.5, 1.0, 0.0);
 		if (isCylinder) {
 			cylinder = uniform_vec4(uCylinder);
@@ -585,17 +588,17 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 				// The distances of the warp grow by the same ratio from band to band, so a band is as wide on the screen as it
 				// is bent by the depth straightened within it - the 16th or the 32nd root of the whole range, square roots
 				float bandRatio = sqrt(sqrt(sqrt(sqrt(max(dFar, 8.0) / max(dNear, 8.0)))));
-				if (bandCount > 16) {
+				if (WARP_BAND_COUNT > 16) {
 					bandRatio = sqrt(bandRatio);
 				}
 				float bandDistance = dNear;
 				if (isCylinder ? rowTo > rowFrom : dFar > dNear) {
-					for (int band = 0; band < bandCount; band++) {
-						float fa = float(band) / float(bandCount);
-						float fb = float(band + 1) / float(bandCount);
+					for (int band = 0; band < WARP_BAND_COUNT; band++) {
+						float fa = float(band) / float(WARP_BAND_COUNT);
+						float fb = float(band + 1) / float(WARP_BAND_COUNT);
 						// Along the band: the distance of the warp, the row (continuous, 0 at the top of the view) of the cylinder
 						float pBandA = (isCylinder ? rowFrom + (rowTo - rowFrom) * fa : bandDistance);
-						float pBandB = (isCylinder ? rowFrom + (rowTo - rowFrom) * fb : (band == bandCount - 1 ? dFar : bandDistance * bandRatio));
+						float pBandB = (isCylinder ? rowFrom + (rowTo - rowFrom) * fb : (band == WARP_BAND_COUNT - 1 ? dFar : bandDistance * bandRatio));
 						bandDistance = pBandB;
 						// What's in the color alone isn't drawn textured, the bands are spaced as without it
 						pBandA = max(pBandA, flatDistance);
@@ -688,8 +691,8 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 									// columns: the slope of a row changes down the part, which two triangles across the whole row
 									// would bend (up to 16 vertices, these targets hold them)
 									float uBase = floor(min(uLeft0, uLeft1));
-									for (int column = 0; column <= repeatColumns; column++) {
-										float across = float(column) / float(repeatColumns);
+									for (int column = 0; column <= WARP_REPEAT_COLUMNS; column++) {
+										float across = float(column) / float(WARP_REPEAT_COLUMNS);
 										strip_position(2 * column, vec2(screenLeft + across * screenSpan, y0));
 										strip_position(2 * column + 1, vec2(screenLeft + across * screenSpan, y1));
 										strip_uv(2 * column, vec2(uLeft0 + across * (uRight0 - uLeft0) - uBase, v0));
@@ -698,9 +701,9 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 										strip_color(2 * column + 1, vec4(horizon.xyz, tint1));
 									}
 #ifdef WARP_TINT_IN_VERTEX_COLOR
-									submit_strip_shaded(warp, 2 * (repeatColumns + 1));
+									submit_strip_shaded(warp, 2 * (WARP_REPEAT_COLUMNS + 1));
 #else
-									submit_strip(warp, 2 * (repeatColumns + 1));
+									submit_strip(warp, 2 * (WARP_REPEAT_COLUMNS + 1));
 #endif
 #else
 									int firstPiece = int(floor(min(uLeft0, uLeft1)));
@@ -737,8 +740,8 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 											if (!((topB <= 0.0 && botB <= 0.0) || (topA >= 1.0 && botA >= 1.0))) {
 												// In columns, the slope of a row changes down the part, which two triangles across the
 												// whole piece would bend (up to 8 vertices, what the PVR holds)
-												for (int column = 0; column <= pieceColumns; column++) {
-													float across = float(column) / float(pieceColumns);
+												for (int column = 0; column <= WARP_PIECE_COLUMNS; column++) {
+													float across = float(column) / float(WARP_PIECE_COLUMNS);
 													float topF = topA + across * (topB - topA);
 													float botF = botA + across * (botB - botA);
 													strip_position(2 * column, vec2(screenLeft + topF * screenSpan, y0));
@@ -749,9 +752,9 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 													strip_color(2 * column + 1, vec4(horizon.xyz, tint1));
 												}
 #ifdef WARP_TINT_IN_VERTEX_COLOR
-												submit_strip_shaded(warp, 2 * (pieceColumns + 1));
+												submit_strip_shaded(warp, 2 * (WARP_PIECE_COLUMNS + 1));
 #else
-												submit_strip(warp, 2 * (pieceColumns + 1));
+												submit_strip(warp, 2 * (WARP_PIECE_COLUMNS + 1));
 #endif
 											}
 										}
@@ -778,7 +781,9 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 				}
 			}
 		}
-	} else {
+	}
+#else
+	{
 		float correction = (viewSize.y > 0.0 ? (viewSize.x * 9.0) / (viewSize.y * 16.0) : 1.0);
 		float shiftU = shift.x / 256.0;
 		float shiftV = shift.y / 256.0;
@@ -946,4 +951,5 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 			}
 		}
 	}
+#endif
 }

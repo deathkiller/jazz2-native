@@ -1796,9 +1796,7 @@ namespace ShaderCompiler
 		SmallVector<SourceLine, 0> lines = block.Lines;
 		ShaderParser::StripComments(lines);
 		Preprocessor preprocessor;
-		if (!define.empty()) {
-			preprocessor.Define(define, "1");
-		}
+		preprocessor.DefineVariant(define);
 		SmallVector<SourceLine, 0> preprocessed;
 		Diagnostic diag;
 		if (!preprocessor.Run(lines, preprocessed, diag)) {
@@ -2124,10 +2122,16 @@ namespace ShaderCompiler
 				if (unsigned(i) < 16u) { s.V[i].Q = q; s.HasQ = true; }
 			}
 
-			// A point of an edge from a to b, t of the way along the screen
-			inline StripVertex StripLerp(const StripVertex& a, const StripVertex& b, float t, bool hasQ)
+			// A vertex copied member by member - an assignment of the whole struct is a memcpy() call on some compilers (GCC
+			// for the PowerPC), which costs more than the copy itself, and the clipping copies every vertex several times
+			inline void StripCopy(StripVertex& d, const StripVertex& s)
 			{
-				StripVertex r;
+				d.X = s.X; d.Y = s.Y; d.U = s.U; d.V = s.V; d.Q = s.Q;
+				d.C[0] = s.C[0]; d.C[1] = s.C[1]; d.C[2] = s.C[2]; d.C[3] = s.C[3];
+			}
+			// A point of an edge from a to b, t of the way along the screen, made right where it goes (see StripCopy())
+			inline void StripLerp(StripVertex& r, const StripVertex& a, const StripVertex& b, float t, bool hasQ)
+			{
 				r.X = a.X + (b.X - a.X) * t;
 				r.Y = a.Y + (b.Y - a.Y) * t;
 				if (hasQ) {
@@ -2142,7 +2146,6 @@ namespace ShaderCompiler
 				for (int k = 0; k < 4; k++) {
 					r.C[k] = a.C[k] + (b.C[k] - a.C[k]) * t;
 				}
-				return r;
 			}
 			// Cuts a convex polygon by one side of the rectangle, what is past the bound along the axis goes
 			inline int StripCutPolygon(const StripVertex* in, int n, StripVertex* out, bool alongY, float bound, bool keepAbove, bool hasQ)
@@ -2153,10 +2156,20 @@ namespace ShaderCompiler
 					const StripVertex& b = in[i + 1 < n ? i + 1 : 0];
 					float da = (alongY ? a.Y : a.X) - bound, db = (alongY ? b.Y : b.X) - bound;
 					if (!keepAbove) { da = -da; db = -db; }
-					if (da >= 0.0f) out[m++] = a;
-					if ((da >= 0.0f) != (db >= 0.0f)) out[m++] = StripLerp(a, b, da / (da - db), hasQ);
+					if (da >= 0.0f) StripCopy(out[m++], a);
+					if ((da >= 0.0f) != (db >= 0.0f)) StripLerp(out[m++], a, b, da / (da - db), hasQ);
 				}
 				return m;
+			}
+			// Whether a vertex of a polygon is past one side of the rectangle - exactly when StripCutPolygon() would drop it
+			inline bool StripPolygonPast(const StripVertex* p, int n, bool alongY, float bound, bool keepAbove)
+			{
+				for (int i = 0; i < n; i++) {
+					float d = (alongY ? p[i].Y : p[i].X) - bound;
+					if (!keepAbove) d = -d;
+					if (!(d >= 0.0f)) return true;
+				}
+				return false;
 			}
 			// Hands vertices to the context and submits them, the vertices in the order they're given
 			inline void StripSend(EffectContext& ctx, const FixedFunctionPass& pass, const StripVertex* p, const int* order, int n, bool hasQ, bool shaded)
@@ -2174,15 +2187,20 @@ namespace ShaderCompiler
 			inline void StripSendPolygon(EffectContext& ctx, const FixedFunctionPass& pass, const StripVertex* polygon, int n, bool hasQ, bool shaded)
 			{
 				const float* clip = Strip().Clip;
+				// A side no vertex is past would only copy the polygon as it is, so it isn't cut by at all - the pieces of a
+				// perspective rarely reach past more than one side, and every cut copies all the vertices
 				StripVertex a[12], b[12];
-				int m = StripCutPolygon(polygon, n, a, false, clip[0], true, hasQ);
-				m = StripCutPolygon(a, m, b, false, clip[2], false, hasQ);
-				m = StripCutPolygon(b, m, a, true, clip[1], true, hasQ);
-				m = StripCutPolygon(a, m, b, true, clip[3], false, hasQ);
+				const StripVertex* p = polygon;
+				StripVertex* next = a;
+				int m = n;
+				if (StripPolygonPast(p, m, false, clip[0], true)) { m = StripCutPolygon(p, m, next, false, clip[0], true, hasQ); p = next; next = (next == a ? b : a); }
+				if (StripPolygonPast(p, m, false, clip[2], false)) { m = StripCutPolygon(p, m, next, false, clip[2], false, hasQ); p = next; next = (next == a ? b : a); }
+				if (StripPolygonPast(p, m, true, clip[1], true)) { m = StripCutPolygon(p, m, next, true, clip[1], true, hasQ); p = next; next = (next == a ? b : a); }
+				if (StripPolygonPast(p, m, true, clip[3], false)) { m = StripCutPolygon(p, m, next, true, clip[3], false, hasQ); p = next; }
 				if (m < 3) return;
 				int order[12];
 				for (int j = 0; j < m; j++) order[j] = (j % 2 == 0 ? j / 2 : m - 1 - j / 2);
-				StripSend(ctx, pass, b, order, m, hasQ, shaded);
+				StripSend(ctx, pass, p, order, m, hasQ, shaded);
 			}
 			inline void StripSubmit(EffectContext& ctx, const FixedFunctionPass& pass, int count, bool shaded)
 			{
@@ -2192,7 +2210,7 @@ namespace ShaderCompiler
 				count = (count < 16 ? count : 16);
 				if (count < 3) return;
 				const StripVertex* v = s.V;
-				const int identity[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+				static const int identity[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 				float minX = v[0].X, maxX = v[0].X, minY = v[0].Y, maxY = v[0].Y;
 				for (int i = 1; i < count; i++) {
 					minX = min(minX, v[i].X); maxX = max(maxX, v[i].X); minY = min(minY, v[i].Y); maxY = max(maxY, v[i].Y);
@@ -2212,24 +2230,26 @@ namespace ShaderCompiler
 					const float yA = (v[0].Y < v[1].Y ? y0 : y1), yB = (v[0].Y < v[1].Y ? y1 : y0);
 					const float xA = (v[0].X < v[2].X ? x0 : x1), xB = (v[0].X < v[2].X ? x1 : x0);
 					StripVertex edge[4], out[4];
-					edge[0] = StripLerp(v[0], v[1], (yA - v[0].Y) / (v[1].Y - v[0].Y), hasQ);
-					edge[1] = StripLerp(v[0], v[1], (yB - v[0].Y) / (v[1].Y - v[0].Y), hasQ);
-					edge[2] = StripLerp(v[2], v[3], (yA - v[2].Y) / (v[3].Y - v[2].Y), hasQ);
-					edge[3] = StripLerp(v[2], v[3], (yB - v[2].Y) / (v[3].Y - v[2].Y), hasQ);
-					out[0] = StripLerp(edge[0], edge[2], (xA - edge[0].X) / (edge[2].X - edge[0].X), hasQ);
-					out[1] = StripLerp(edge[1], edge[3], (xA - edge[1].X) / (edge[3].X - edge[1].X), hasQ);
-					out[2] = StripLerp(edge[0], edge[2], (xB - edge[0].X) / (edge[2].X - edge[0].X), hasQ);
-					out[3] = StripLerp(edge[1], edge[3], (xB - edge[1].X) / (edge[3].X - edge[1].X), hasQ);
+					StripLerp(edge[0], v[0], v[1], (yA - v[0].Y) / (v[1].Y - v[0].Y), hasQ);
+					StripLerp(edge[1], v[0], v[1], (yB - v[0].Y) / (v[1].Y - v[0].Y), hasQ);
+					StripLerp(edge[2], v[2], v[3], (yA - v[2].Y) / (v[3].Y - v[2].Y), hasQ);
+					StripLerp(edge[3], v[2], v[3], (yB - v[2].Y) / (v[3].Y - v[2].Y), hasQ);
+					StripLerp(out[0], edge[0], edge[2], (xA - edge[0].X) / (edge[2].X - edge[0].X), hasQ);
+					StripLerp(out[1], edge[1], edge[3], (xA - edge[1].X) / (edge[3].X - edge[1].X), hasQ);
+					StripLerp(out[2], edge[0], edge[2], (xB - edge[0].X) / (edge[2].X - edge[0].X), hasQ);
+					StripLerp(out[3], edge[1], edge[3], (xB - edge[1].X) / (edge[3].X - edge[1].X), hasQ);
 					StripSend(ctx, pass, out, identity, 4, hasQ, shaded);
 					return;
 				}
 				// Each pair of the strip's vertices with the next pair is a convex quad, an odd one left at the end is a triangle
 				for (int i = 0; i + 2 < count; i += 2) {
 					if (i + 3 < count) {
-						const StripVertex quad[4] = { v[i], v[i + 1], v[i + 3], v[i + 2] };
+						StripVertex quad[4];
+						StripCopy(quad[0], v[i]); StripCopy(quad[1], v[i + 1]); StripCopy(quad[2], v[i + 3]); StripCopy(quad[3], v[i + 2]);
 						StripSendPolygon(ctx, pass, quad, 4, hasQ, shaded);
 					} else {
-						const StripVertex triangle[3] = { v[i], v[i + 1], v[i + 2] };
+						StripVertex triangle[3];
+						StripCopy(triangle[0], v[i]); StripCopy(triangle[1], v[i + 1]); StripCopy(triangle[2], v[i + 2]);
 						StripSendPolygon(ctx, pass, triangle, 3, hasQ, shaded);
 					}
 				}

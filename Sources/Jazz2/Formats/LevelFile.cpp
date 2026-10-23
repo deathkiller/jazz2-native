@@ -1304,7 +1304,9 @@ namespace Jazz2::Formats
 	{
 		std::size_t pos = 0;
 		for (std::int32_t i = 0; pos < data.size(); i++) {
-			std::size_t length = std::min<std::size_t>(data[pos++], data.size() - pos);
+			// The length byte first, the rest of the chunk is measured after it
+			std::size_t length = data[pos++];
+			length = std::min<std::size_t>(length, data.size() - pos);
 			if (i == layer) {
 				return StringView(reinterpret_cast<const char*>(data.data() + pos), length);
 			}

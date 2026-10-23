@@ -50,9 +50,6 @@ layout (std140) uniform InstanceBlock
 
 
 
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // A sharp copy of the scene behind the layer
 // One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
 // The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
@@ -100,9 +97,6 @@ uniform mat4 uViewMatrix;
 
 
 
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // A sharp copy of the scene behind the layer
 // One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
 // The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
@@ -143,9 +137,6 @@ in highp float vPaletteOffset;
 // of it
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
@@ -158,15 +149,7 @@ out vec4 COLOR;
 
 void main() {
 	vec4 src = texture(uTexture, vTexCoords);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
-	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
-#else
 	vec4 tile = src;
-#endif
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
 	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
@@ -199,9 +182,6 @@ varying highp float vPaletteOffset;
 // of it
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 // A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
@@ -214,15 +194,7 @@ uniform vec4 uKeyColor;
 void main() {
 	vec4 COLOR;
 	vec4 src = texture2D(uTexture, vTexCoords);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 paletteColor = texture2D(uTexturePalette, vec2(palX, palY));
-	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
-#else
 	vec4 tile = src;
-#endif
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
 	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
@@ -265,8 +237,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshChromaKey_USE_PALETTE_Vs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 in vec2 aPosition;
 in vec2 aTexCoords;
@@ -299,9 +270,7 @@ layout (std140) uniform InstanceBlock
 
 
 
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // A sharp copy of the scene behind the layer
 // One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
 // The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
@@ -319,8 +288,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshChromaKey_USE_PALETTE_Vs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 attribute vec2 aPosition;
 attribute vec2 aTexCoords;
@@ -350,9 +318,7 @@ uniform mat4 uViewMatrix;
 
 
 
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // A sharp copy of the scene behind the layer
 // One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
 // The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
@@ -370,8 +336,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshChromaKey_USE_PALETTE_Fs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -394,9 +359,7 @@ in highp float vPaletteOffset;
 // of it
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
@@ -409,15 +372,11 @@ out vec4 COLOR;
 
 void main() {
 	vec4 src = texture(uTexture, vTexCoords);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
 	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
-#else
-	vec4 tile = src;
-#endif
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
 	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
@@ -429,8 +388,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshChromaKey_USE_PALETTE_Fs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -451,9 +409,7 @@ varying highp float vPaletteOffset;
 // of it
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 // A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
@@ -466,15 +422,11 @@ uniform vec4 uKeyColor;
 void main() {
 	vec4 COLOR;
 	vec4 src = texture2D(uTexture, vTexCoords);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 paletteColor = texture2D(uTexturePalette, vec2(palX, palY));
 	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
-#else
-	vec4 tile = src;
-#endif
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
 	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);

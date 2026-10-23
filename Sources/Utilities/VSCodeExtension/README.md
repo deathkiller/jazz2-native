@@ -43,8 +43,8 @@ body colour correctly even though it is pasted into a block that lives in anothe
 
 Beyond ordinary GLSL it knows the language's own vocabulary and colours it distinctly:
 
-- the top-level directives `program`, `shader_type`, `variant`, `render_mode`, `precision`,
-  `batched`, `attribute`, `varying`, and the `uniform … : hint` hint list
+- the top-level directives `program`, `shader_type`, `variant` (and its `variant A + B;` combinations),
+  `render_mode`, `precision`, `batched`, `attribute`, `varying`, and the `uniform … : hint` hint list
 - the entry points `void vertex()`, `void fragment()` and `void fixed_function([pvr, gx, pica, gu, gs, rdp, legacygl])`
 - the fixed-function DSL inside a `fixed_function` block: `pass`, `pipeline`, `submit_quad`,
   `submit_strip`, `submit_strip_shaded`, the pass fields (`color`, `offset_color`, `screen_offset`,
@@ -71,6 +71,7 @@ Offered per cursor context rather than as one flat list:
 | --- | --- |
 | brace depth 0 | the directives, the entry points, `#include`, types, and the names this file declares |
 | after `shader_type` / `render_mode` / `precision` | only that directive's legal values |
+| after the `+` of a `variant A + …` combination | the variants declared above it that it does not name yet |
 | after the `:` of a uniform | only the seven uniform hints |
 | inside `void fixed_function(…)`'s parentheses | `pvr`, `gx`, `pica`, `gu`, `gs`, `rdp`, `legacygl` |
 | inside a `fixed_function` body | the fixed-function DSL, the pass fields and the small maths subset the transpiler accepts |
@@ -132,7 +133,8 @@ Two independent layers:
    executable around: a missing/duplicate `program`, a missing `void fragment()` (or `void vertex()`
    in custom mode), directives written before `program`, `batched` without `shader_type canvas_item`,
    a `#version` line, a reference to `fragColor`, `#define`/`#undef` of a compile-time macro, a
-   `return;` in a canvas-mode `vertex()`, and an unsupported canvas built-in.
+   `return;` in a canvas-mode `vertex()`, an unsupported canvas built-in, a duplicate variant, and a
+   `variant A + B;` combination naming a part twice or one that is not a variant declared above it.
    Every structural check stands down for a file containing `#include`, because the includes are
    expanded textually before parsing and may legitimately carry the program or an entry point.
    Turn the layer off with `deathShader.validate.builtinChecks`.

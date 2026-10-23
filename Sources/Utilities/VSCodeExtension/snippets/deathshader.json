@@ -54,6 +54,11 @@
 		"description": "One extra program variant, compiled with #define <NAME> (1)",
 		"body": "variant ${1:USE_PALETTE};$0"
 	},
+	"variant combination": {
+		"prefix": "variant",
+		"description": "One more variant combining variants declared before it, compiled with the defines of all of them (named A_B)",
+		"body": "variant ${1:A} + ${2:B};$0"
+	},
 	"batched directive": {
 		"prefix": "batched",
 		"description": "canvas_item only - also emit the batched twin program",

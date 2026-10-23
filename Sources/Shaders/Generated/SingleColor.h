@@ -96,9 +96,6 @@ in vec4 vColor;
 in highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 
 // The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
 // looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
@@ -109,14 +106,7 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 src = texture(uTexture, vTexCoords);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	float alpha = texture(uTexturePalette, vec2(palX, palY)).a * src.a;
-#else
 	float alpha = src.a;
-#endif
 	COLOR = vec4(COLOR.r, COLOR.g, COLOR.b, alpha * COLOR.a);
 }
 
@@ -134,9 +124,6 @@ varying vec4 vColor;
 varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 
 // The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
 // looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
@@ -147,14 +134,7 @@ void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	vec4 src = texture2D(uTexture, vTexCoords);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	float alpha = texture2D(uTexturePalette, vec2(palX, palY)).a * src.a;
-#else
 	float alpha = src.a;
-#endif
 	COLOR = vec4(COLOR.r, COLOR.g, COLOR.b, alpha * COLOR.a);
 	gl_FragColor = COLOR;
 }
@@ -185,8 +165,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char SingleColor_USE_PALETTE_Vs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -222,7 +201,6 @@ void main()
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char SingleColor_USE_PALETTE_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
-#define USE_PALETTE (1)
 #line 1
 
 uniform mat4 uProjectionMatrix;
@@ -255,8 +233,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char SingleColor_USE_PALETTE_Fs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 precision mediump float;
@@ -267,9 +244,7 @@ in vec4 vColor;
 in highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 
 // The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
 // looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
@@ -280,14 +255,10 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 src = texture(uTexture, vTexCoords);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	float alpha = texture(uTexturePalette, vec2(palX, palY)).a * src.a;
-#else
-	float alpha = src.a;
-#endif
 	COLOR = vec4(COLOR.r, COLOR.g, COLOR.b, alpha * COLOR.a);
 }
 
@@ -296,8 +267,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char SingleColor_USE_PALETTE_Fs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 precision mediump float;
 
@@ -306,9 +276,7 @@ varying vec4 vColor;
 varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 
 // The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
 // looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
@@ -319,14 +287,10 @@ void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	vec4 src = texture2D(uTexture, vTexCoords);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	float alpha = texture2D(uTexturePalette, vec2(palX, palY)).a * src.a;
-#else
-	float alpha = src.a;
-#endif
 	COLOR = vec4(COLOR.r, COLOR.g, COLOR.b, alpha * COLOR.a);
 	gl_FragColor = COLOR;
 }
@@ -519,9 +483,6 @@ in vec4 vColor;
 in highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 
 // The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
 // looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
@@ -532,14 +493,7 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 src = texture(uTexture, vTexCoords);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	float alpha = texture(uTexturePalette, vec2(palX, palY)).a * src.a;
-#else
 	float alpha = src.a;
-#endif
 	COLOR = vec4(COLOR.r, COLOR.g, COLOR.b, alpha * COLOR.a);
 }
 
@@ -557,9 +511,6 @@ varying vec4 vColor;
 varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
-uniform sampler2D uTexturePalette;
-#endif
 
 // The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
 // looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
@@ -570,14 +521,7 @@ void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	vec4 src = texture2D(uTexture, vTexCoords);
-#ifdef USE_PALETTE
-	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	float alpha = texture2D(uTexturePalette, vec2(palX, palY)).a * src.a;
-#else
 	float alpha = src.a;
-#endif
 	COLOR = vec4(COLOR.r, COLOR.g, COLOR.b, alpha * COLOR.a);
 	gl_FragColor = COLOR;
 }
@@ -604,8 +548,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedSingleColor_USE_PALETTE_Vs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -651,7 +594,6 @@ void main()
 	inline constexpr char BatchedSingleColor_USE_PALETTE_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
-#define USE_PALETTE (1)
 #line 1
 
 uniform mat4 uProjectionMatrix;
@@ -693,8 +635,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedSingleColor_USE_PALETTE_Fs[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 precision mediump float;
@@ -705,9 +646,7 @@ in vec4 vColor;
 in highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 
 // The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
 // looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
@@ -718,14 +657,10 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 src = texture(uTexture, vTexCoords);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	float alpha = texture(uTexturePalette, vec2(palX, palY)).a * src.a;
-#else
-	float alpha = src.a;
-#endif
 	COLOR = vec4(COLOR.r, COLOR.g, COLOR.b, alpha * COLOR.a);
 }
 
@@ -734,8 +669,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedSingleColor_USE_PALETTE_Fs100[] =
-R"__SHDR__(#define USE_PALETTE (1)
-#line 1
+R"__SHDR__(#line 1
 
 precision mediump float;
 
@@ -744,9 +678,7 @@ varying vec4 vColor;
 varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-#ifdef USE_PALETTE
 uniform sampler2D uTexturePalette;
-#endif
 
 // The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
 // looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
@@ -757,14 +689,10 @@ void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	vec4 src = texture2D(uTexture, vTexCoords);
-#ifdef USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	float alpha = texture2D(uTexturePalette, vec2(palX, palY)).a * src.a;
-#else
-	float alpha = src.a;
-#endif
 	COLOR = vec4(COLOR.r, COLOR.g, COLOR.b, alpha * COLOR.a);
 	gl_FragColor = COLOR;
 }

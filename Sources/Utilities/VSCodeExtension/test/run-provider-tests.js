@@ -443,6 +443,24 @@ const uTintColumn = SRC.split('\n')[8].indexOf('uTint') + 1;
 	check('an .inc fragment is offered the sprite contract', has(incItems, 'vTexCoords'));
 	check('an .inc fragment still offers its own uniforms', has(incItems, 'uTexture'));
 
+	// ----- variant combinations: one more variant, whose name is no macro - its parts are
+	const comboSrc = 'program P;\nvariant PLUS;\nvariant DITHER;\nvariant PLUS + DITHER;\nvariant PLUS + \nvariant KEYED;\n' +
+		'void vertex() {}\nvoid fragment() {\n\tCOLOR = vec4(1.0);\n}\n';
+	const comboDoc = makeDocument(comboSrc, '/x/c.shader');
+	const comboFrag = await I.completionProvider.provideCompletionItems(comboDoc, new Position(8, 2));
+	check('fragment offers the variants of a combination', has(comboFrag, 'PLUS') && has(comboFrag, 'DITHER'));
+	check('fragment does NOT offer the combination name, it is no macro', !has(comboFrag, 'PLUS_DITHER'));
+	const partItems = await I.completionProvider.provideCompletionItems(comboDoc, new Position(4, 15));
+	check('after the + of a combination the variants above are offered', has(partItems, 'DITHER'), labels(partItems).join(','));
+	check('...but not one it already names', !has(partItems, 'PLUS'), labels(partItems).join(','));
+	check('...nor one declared below it', !has(partItems, 'KEYED'), labels(partItems).join(','));
+	check('...nor another combination', !has(partItems, 'PLUS_DITHER'), labels(partItems).join(','));
+	const fresh = await I.completionProvider.provideCompletionItems(makeDocument('variant N\n', '/x/v.shader'), new Position(0, 9));
+	check('a plain variant still takes a fresh identifier', fresh.length === 0, labels(fresh).join(','));
+	const comboSymbols = I.symbolProvider.provideDocumentSymbols(comboDoc).filter(s => s.name === 'PLUS_DITHER');
+	check('outline lists the combination with its parts', comboSymbols.length === 1 && comboSymbols[0].detail === 'variant PLUS + DITHER',
+		comboSymbols.length && comboSymbols[0].detail);
+
 	// ----- dump modes cover every documented inspection flag
 	const flags = Object.keys(I.DUMP_MODES).map(k => I.DUMP_MODES[k].flag).sort().join(' ');
 	check('all six dump flags wired', flags === '--cg --check --essl100-check --hlsl --msl --vulkan', flags);

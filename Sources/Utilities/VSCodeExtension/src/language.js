@@ -25,8 +25,8 @@ const DIRECTIVES = [
 	{
 		name: 'variant',
 		insert: 'variant ${1:NAME};',
-		detail: 'variant <NAME>;',
-		doc: 'Declares one optional variant; may appear several times. The output contains the unnamed base variant (always `Variants[0]`) plus one entry per variant, compiled with `#define <NAME> (1)` baked in. No cross-products.'
+		detail: 'variant <NAME>; | variant <A> + <B>;',
+		doc: 'Declares one optional variant; may appear several times. The output contains the unnamed base variant (always `Variants[0]`) plus one entry per variant, compiled with `<NAME>` defined — the conditionals on it are resolved in the emitted sources of each variant, so its GLSL holds only its own code. No cross-products are made on their own: `variant <A> + <B>;` declares one, a variant named `A_B` compiled with the defines of both - each part has to be a variant declared before it.'
 	},
 	{
 		name: 'render_mode',
@@ -175,8 +175,9 @@ const UNSUPPORTED_BUILTINS = ['NORMAL', 'SCREEN_UV', 'SCREEN_PIXEL_SIZE', 'TIME'
 // of them work in `#ifdef` / `#ifndef` and in `#if` / `#elif` expressions; only `#define` / `#undef`
 // of one is an error. The first two are resolved during stage assembly, the rest when a stage source
 // is built for a given emission. A `.shader` writes every conditional as `#if` - including the ones
-// on variant defines and other flags, which the compiler lowers to `#ifdef` / `defined(...)` on the
-// way out so the emitted GLSL stays legal on the ES profiles.
+// on variant defines, which are resolved for each variant as its sources are built, and on other flags,
+// which the compiler lowers to `#ifdef` / `defined(...)` on the way out so the emitted GLSL stays legal
+// on the ES profiles.
 const CONVENTION = ' Written `#if X` / `#if !X`, so a second condition can join the same directive.';
 const STAGE_MACROS = [
 	{ name: 'VERTEX_STAGE', doc: 'Kept for the vertex stage, dropped for the fragment stage. Resolved during stage assembly — `#define` and `#undef` are errors.' + CONVENTION },

@@ -113,24 +113,6 @@ uniform vec2 uWavePhase;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
@@ -150,12 +132,8 @@ void main() {
 
 	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-#ifdef KEYED
-	COLOR = vec4(texture(uTexture, texturePos).rgb, keyedOpacity());
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(texture(uTexture, texturePos).rgb * opacity, opacity);
-#endif
 }
 
 )__SHDR__";
@@ -193,24 +171,6 @@ uniform vec2 uWavePhase;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
-// A sharp copy of what is behind the layer, without a key it's never read
-uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
-uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
-uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
-uniform float uOpacity;
-
-float keyedOpacity() {
-	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
-}
-#endif
 
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
@@ -230,12 +190,8 @@ void main() {
 
 	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-#ifdef KEYED
-	COLOR = vec4(texture2D(uTexture, texturePos).rgb, keyedOpacity());
-#else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(texture2D(uTexture, texturePos).rgb * opacity, opacity);
-#endif
 	gl_FragColor = COLOR;
 }
 
@@ -269,8 +225,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundWave_KEYED_Vs[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -304,7 +259,6 @@ void main()
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundWave_KEYED_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
-#define KEYED (1)
 #line 1
 
 uniform mat4 uProjectionMatrix;
@@ -335,8 +289,7 @@ void main()
 
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundWave_KEYED_Fs[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_ES
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -368,7 +321,6 @@ uniform vec2 uWavePhase;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
 // A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
@@ -385,7 +337,6 @@ float keyedOpacity() {
 	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
-#endif
 
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
@@ -405,12 +356,7 @@ void main() {
 
 	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-#ifdef KEYED
 	COLOR = vec4(texture(uTexture, texturePos).rgb, keyedOpacity());
-#else
-	// Premultiplied, which the blending of the sprite modes takes as it is
-	COLOR = vec4(texture(uTexture, texturePos).rgb * opacity, opacity);
-#endif
 }
 
 )__SHDR__";
@@ -418,8 +364,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackgroundWave_KEYED_Fs100[] =
-R"__SHDR__(#define KEYED (1)
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -449,7 +394,6 @@ uniform vec2 uWavePhase;
 // The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
 // it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
 // through a part of the scene painted in the key color
-#ifdef KEYED
 // A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
 // One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
@@ -466,7 +410,6 @@ float keyedOpacity() {
 	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
-#endif
 
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
@@ -486,12 +429,7 @@ void main() {
 
 	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-#ifdef KEYED
 	COLOR = vec4(texture2D(uTexture, texturePos).rgb, keyedOpacity());
-#else
-	// Premultiplied, which the blending of the sprite modes takes as it is
-	COLOR = vec4(texture2D(uTexture, texturePos).rgb * opacity, opacity);
-#endif
 	gl_FragColor = COLOR;
 }
 

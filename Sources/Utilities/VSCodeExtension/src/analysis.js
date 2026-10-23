@@ -179,10 +179,17 @@ function scanDocument(rawText) {
 		scan.batched.push({ name: e.m[1], line: lineOfOffset(text, e.index) });
 	}
 
-	var variantMatches = allMatches(/^[ \t]*variant[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*;/gm, text);
+	// 'variant <NAME>;', or 'variant <A> + <B>;' - one more variant that combines variants declared before it, named
+	// as the compiler names it ("A_B") and compiled with the defines of all of its parts
+	var variantMatches = allMatches(
+		/^[ \t]*variant[ \t]+([A-Za-z_][A-Za-z0-9_]*(?:[ \t]*\+[ \t]*[A-Za-z_][A-Za-z0-9_]*)*)[ \t]*;/gm, text);
 	for (i = 0; i < variantMatches.length; i++) {
 		e = variantMatches[i];
-		scan.variants.push({ name: e.m[1], line: lineOfOffset(text, e.index) });
+		var parts = e.m[1].split('+');
+		for (var p = 0; p < parts.length; p++) {
+			parts[p] = parts[p].replace(/^[ \t]+|[ \t]+$/g, '');
+		}
+		scan.variants.push({ name: parts.join('_'), parts: parts, line: lineOfOffset(text, e.index) });
 	}
 
 	var typeMatch = /^[ \t]*shader_type[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*;/m.exec(text);
@@ -524,6 +531,41 @@ function builtinChecks(rawText, scanned, options) {
 		for (i = 1; i < scan.programs.length; i++) {
 			report(scan.programs[i].line, 0, lineLength(scan.programs[i].line),
 				"Duplicate 'program' directive - it must appear exactly once (the batched twin is declared with 'batched').");
+		}
+	}
+
+	// A combination names variants of their own declared before it, each once, and no two variants share a name. A part
+	// may come from an #include above the combination, which is expanded before it is parsed.
+	for (i = 0; i < scan.variants.length; i++) {
+		var variant = scan.variants[i];
+		var variantLine = variant.line;
+		for (var other = 0; other < i; other++) {
+			if (scan.variants[other].name === variant.name) {
+				report(variantLine, 0, lineLength(variantLine), "Duplicate variant '" + variant.name + "'.");
+				break;
+			}
+		}
+		if (variant.parts.length < 2) {
+			continue;
+		}
+		var includedAbove = false;
+		for (var inc = 0; inc < scan.includes.length; inc++) {
+			includedAbove = (includedAbove || scan.includes[inc].line < variantLine);
+		}
+		for (var part = 0; part < variant.parts.length; part++) {
+			var partName = variant.parts[part];
+			if (variant.parts.indexOf(partName) !== part) {
+				report(variantLine, 0, lineLength(variantLine), "Variant '" + partName + "' is combined with itself.");
+				continue;
+			}
+			var declared = false;
+			for (var single = 0; single < i; single++) {
+				declared = (declared || (scan.variants[single].parts.length === 1 && scan.variants[single].name === partName));
+			}
+			if (!declared && !includedAbove) {
+				report(variantLine, 0, lineLength(variantLine),
+					"'" + partName + "' is not a variant declared before the combination - write 'variant " + partName + ";' above it.");
+			}
 		}
 	}
 

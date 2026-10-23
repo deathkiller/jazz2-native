@@ -51,6 +51,7 @@ $errorCases = @{
     'VertexEarlyReturn' = @(9, 'not allowed in vertex()')
     'StageDefine' = @(6, 'cannot be defined or undefined')
     'LowPowerVertexElse' = @(6, 'may only contain varying declarations')
+    'VariantCombinationUndeclared' = @(3, 'is not a variant declared before the combination')
 }
 
 foreach ($shader in Get-ChildItem (Join-Path $testsDir 'errors\*.shader')) {
@@ -107,7 +108,7 @@ $fs = Get-Source $h 'PrecisionHighp_Fs'
 $vs = Get-Source $h 'PrecisionHighp_Vs'
 # A "highp" fragment prologue falls back to mediump where the ES implementation has no high
 # precision in the fragment stage, so the prologue is the GL_FRAGMENT_PRECISION_HIGH pair
-Assert ($fs.Contains("#ifdef GL_ES`n#	ifdef GL_FRAGMENT_PRECISION_HIGH`nprecision highp float;`n#	else`nprecision mediump float;`n#	endif`n#endif")) 'PrecisionHighp: FS prologue is not the highp/mediump GL_FRAGMENT_PRECISION_HIGH pair'
+Assert ($fs.Contains("#ifdef GL_ES`n#ifdef GL_FRAGMENT_PRECISION_HIGH`nprecision highp float;`n#else`nprecision mediump float;`n#endif`n#endif")) 'PrecisionHighp: FS prologue is not the highp/mediump GL_FRAGMENT_PRECISION_HIGH pair'
 Assert (([regex]::Matches($fs, [regex]::Escape('precision highp float;'))).Count -eq 2) 'PrecisionHighp: three-token passthrough missing from FS globals'
 Assert ($vs.Contains("precision highp float;")) 'PrecisionHighp: three-token passthrough missing from VS globals'
 
@@ -134,12 +135,16 @@ Assert (-not $h.Contains('VERTEX_STAGE') -and -not $h.Contains('FRAGMENT_STAGE')
 # CanvasVertex: canvas vertex() body spliced VERBATIM (source indentation, no scope block)
 # between the template prologue locals and the epilogue; the FS defaults COLOR (the output
 # variable) to the instance color, with the body following directly; the named WAVE variant
-# keeps its "_WAVE" symbol infix while the base variant carries none
+# keeps its "_WAVE" symbol infix while the base variant carries none, and its "#ifdef WAVE"
+# is resolved for each variant - the body in WAVE, nothing in the base one, no directive in either
 $h = Emit 'CanvasVertex'
 $vs = Get-Source $h 'CanvasVertex_Vs'
 $fs = Get-Source $h 'CanvasVertex_Fs'
 Assert (-not $vs.Contains('void vertex(')) 'CanvasVertex: vertex() wrapper still emitted'
-Assert ($vs.Contains("	highp float PALETTE_OFFSET = palOffset;`n`n#ifdef WAVE`n	VERTEX += vec2(0.0, sin(UV.x * 6.28318) * uAmplitude);`n#endif`n	vOrigin = VERTEX;`n`n	gl_Position = ")) 'CanvasVertex: verbatim vertex body between prologue and epilogue'
+$vsWave = Get-Source $h 'CanvasVertex_WAVE_Vs'
+Assert ($vs.Contains("	highp float PALETTE_OFFSET = palOffset;`n`n	vOrigin = VERTEX;`n`n	gl_Position = ")) 'CanvasVertex: verbatim vertex body between prologue and epilogue (base variant)'
+Assert ($vsWave.Contains("	highp float PALETTE_OFFSET = palOffset;`n`n	VERTEX += vec2(0.0, sin(UV.x * 6.28318) * uAmplitude);`n	vOrigin = VERTEX;`n`n	gl_Position = ")) 'CanvasVertex: verbatim vertex body between prologue and epilogue (WAVE variant)'
+Assert (-not ($h -match '(?m)^\s*#\s*(if|ifdef|ifndef|elif|define)\b.*\bWAVE\b')) 'CanvasVertex: the WAVE variant define reached an emitted source'
 Assert ($fs.Contains('out vec4 COLOR;')) 'CanvasVertex: FS does not declare COLOR as the output'
 Assert ($fs.Contains("void main() {`n	COLOR = vColor;`n	vec4 c = texture(uTexture, vTexCoords);")) 'CanvasVertex: FS default is not the instance color (or the body is not verbatim after it)'
 Assert (-not $h.Contains('fragColor')) 'CanvasVertex: fragColor appears in the emitted header'
@@ -157,27 +162,31 @@ Assert ($vs.Contains('flat out highp vec2 vOrigin;')) 'CanvasVertex: read varyin
 Assert ($fs.Contains('flat in highp vec2 vOrigin;')) 'CanvasVertex: read varying vOrigin lost its FS declaration'
 
 # StageGuards: compile-time resolution of #ifdef/#ifndef VERTEX_STAGE|FRAGMENT_STAGE (+#else) and
-# of the "#if" expression spelling, nested in both directions; unknown conditionals (#ifdef TINT)
-# pass through textually, and an expression mixing a stage macro with an unknown one keeps its
-# conditional and loses only the stage macro
+# of the "#if" expression spelling, nested in both directions; a conditional on the TINT variant
+# keeps what the stage resolution left of it in the TINT variant and nothing in the base one, and
+# an expression mixing a stage macro with the variant loses the stage macro first
 $h = Emit 'StageGuards'
 $vs = Get-Source $h 'StageGuards_Vs'
 $fs = Get-Source $h 'StageGuards_Fs'
-Assert ($null -ne $vs -and $null -ne $fs) 'StageGuards: sources missing'
+$vsTint = Get-Source $h 'StageGuards_TINT_Vs'
+$fsTint = Get-Source $h 'StageGuards_TINT_Fs'
+Assert ($null -ne $vs -and $null -ne $fs -and $null -ne $vsTint -and $null -ne $fsTint) 'StageGuards: sources missing'
 Assert ($vs.Contains("in vec2 aPosition;`nin vec2 aTexCoords;")) 'StageGuards: VS lost its attributes'
 Assert ($vs.Contains('uniform vec2 uVertexOnly;')) 'StageGuards: VS lost the #ifndef FRAGMENT_STAGE branch'
 Assert (-not $vs.Contains('uniform sampler2D uTexture;')) 'StageGuards: #else branch leaked into VS'
-Assert ($vs.Contains("#ifdef TINT`nuniform vec2 uTintShift;`n#endif")) 'StageGuards: unknown conditional inside a VS stage guard not preserved'
-Assert ($vs.Contains("#ifdef TINT`nuniform float uTintStrength;`n#endif")) 'StageGuards: stage guard inside #ifdef TINT not resolved in VS'
-Assert (-not $vs.Contains('uTintColor')) 'StageGuards: FS-only declaration inside #ifdef TINT leaked into VS'
+Assert ($vsTint.Contains('uniform vec2 uTintShift;')) 'StageGuards: TINT conditional inside a VS stage guard not preserved'
+Assert ($vsTint.Contains('uniform float uTintStrength;')) 'StageGuards: stage guard inside #ifdef TINT not resolved in VS'
+Assert (-not $vsTint.Contains('uTintColor')) 'StageGuards: FS-only declaration inside #ifdef TINT leaked into VS'
+Assert (-not $vs.Contains('uTint') -and -not $fs.Contains('uTint')) 'StageGuards: a TINT block survived in the base variant'
+Assert (-not ($h -match '(?m)^\s*#\s*(if|ifdef|ifndef|elif|define)\b.*\bTINT\b')) 'StageGuards: the TINT variant define reached an emitted source'
 Assert ($fs.Contains('uniform sampler2D uTexture;')) 'StageGuards: FS lost the #else branch'
 Assert (-not $fs.Contains('uVertexOnly')) 'StageGuards: #ifndef FRAGMENT_STAGE branch leaked into FS'
-Assert ($fs.Contains("#ifdef TINT`nuniform vec4 uTintColor;`nuniform float uTintStrength;`n#endif")) 'StageGuards: stage guard inside #ifdef TINT not resolved in FS'
-Assert (-not $fs.Contains('uTintShift')) 'StageGuards: VS-only block leaked into FS'
+Assert ($fsTint.Contains("uniform vec4 uTintColor;`nuniform float uTintStrength;")) 'StageGuards: stage guard inside #ifdef TINT not resolved in FS'
+Assert (-not $fsTint.Contains('uTintShift')) 'StageGuards: VS-only block leaked into FS'
 Assert ($vs.Contains('uniform vec2 uVertexExpr;') -and -not $vs.Contains('#if VERTEX_STAGE')) 'StageGuards: "#if VERTEX_STAGE && !FRAGMENT_STAGE" not resolved in the VS'
 Assert (-not $fs.Contains('uVertexExpr')) 'StageGuards: "#if VERTEX_STAGE && !FRAGMENT_STAGE" block leaked into the FS'
-Assert ($fs.Contains("#ifdef TINT`nuniform vec3 uTintExpr;`n#endif")) 'StageGuards: "#if FRAGMENT_STAGE && TINT" not folded and lowered down to "#ifdef TINT" in the FS'
-Assert (-not $vs.Contains('uTintExpr')) 'StageGuards: "#if FRAGMENT_STAGE && TINT" block leaked into the VS'
+Assert ($fsTint.Contains('uniform vec3 uTintExpr;')) 'StageGuards: "#if FRAGMENT_STAGE && TINT" not folded down to TINT in the FS'
+Assert (-not $vsTint.Contains('uTintExpr')) 'StageGuards: "#if FRAGMENT_STAGE && TINT" block leaked into the VS'
 Assert (-not $fs.Contains('aPosition') -and -not $fs.Contains('aTexCoords')) 'StageGuards: attributes leaked into FS'
 Assert (-not $h.Contains('VERTEX_STAGE') -and -not $h.Contains('FRAGMENT_STAGE')) 'StageGuards: stage macros leaked into the emitted header'
 
@@ -441,6 +450,16 @@ Assert (-not $swText.Contains('swTexture(in, 0, vec2(in.u, in.v))')) 'SwEmission
 Assert ($swText.Contains('swTexture(in, 2, vec2(in.u, in.v))')) 'SwEmission: a non-primary sampler (TEXTURE, unit 2) must keep the generic swTexture()'
 Assert (($swText.IndexOf('swTexturePrimary') -eq $swText.LastIndexOf('swTexturePrimary'))) 'SwEmission: swTexturePrimary emitted for a sampler other than uTexture'
 
+# --- software emission of a built-in input: the software fragment has no gl_FragCoord (nor any other gl_
+# input), so a shader reading one is declined with a reason instead of emitted as C++ that names an
+# undeclared variable - which broke every software build once a shader without a SOFTWARE_RENDERER branch
+# read it
+$swOut3 = Join-Path $tempDir 'SwGeneratedFragCoord.h'
+$swLog3 = & $tool --emit-sw-generated $swOut3 (Join-Path $testsDir 'SwFragCoord.shader') | Out-String
+$swText3 = [System.IO.File]::ReadAllText($swOut3)
+Assert (-not $swText3.Contains('gl_FragCoord')) 'SwFragCoord: the gl_FragCoord read was emitted into the software transpile'
+Assert ($swLog3.Contains("declined: SwFragCoord - reads built-in 'gl_FragCoord'")) 'SwFragCoord: not declined with a reason'
+
 # --- software-only varyings: a global-scope SOFTWARE_RENDERER conditional around varying
 # declarations selects per-backend declarations (spelled "#if !SOFTWARE_RENDERER" here, "#ifndef
 # SOFTWARE_RENDERER" in the bodies - both spellings must be recognized). The GL/ES2/HLSL/SPIR-V
@@ -502,23 +521,28 @@ Assert (-not $h.Contains('LOW_POWER_GPU')) 'LowPowerCanvasVertex: LOW_POWER_GPU 
 # --- BackendConditionals: "#if"/"#elif" expressions over SOFTWARE_RENDERER/NO_DYNAMIC_BRANCHING.
 # An expression naming only those is RESOLVED (its directive lines disappear with the losing
 # branch); one that also names a macro the pass does not own keeps its conditional and loses only
-# the backend macros, so neither name can reach a compiler that would read it as undefined.
+# the backend macros, so neither name can reach a compiler that would read it as undefined. The
+# variant defines are resolved the same way for each variant, after the backend macros.
 $h = Emit 'BackendConditionals'
 $fs = Get-Source $h 'BackendConditionals_Fs'
 $fsDither = Get-Source $h 'BackendConditionals_DITHER_Fs'
 Assert ($null -ne $fs -and $null -ne $fsDither) 'BackendConditionals: sources missing'
 Assert ($fs.Contains("	if (uTint.w > 0.0) {")) 'BackendConditionals: "#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING" body missing from the GL FS'
 Assert (-not $fs.Contains('#if !')) 'BackendConditionals: the resolved conditional left its directive lines behind'
-Assert ($fs.Contains("#ifdef DITHER`n	c.rgb += vec3(0.01);`n#endif")) 'BackendConditionals: "#if DITHER && !SOFTWARE_RENDERER" not folded and lowered down to "#ifdef DITHER"'
-Assert ($fs.Contains("#if defined(DITHER) && defined(MISSING_FLAG)`n	c.rgb += vec3(0.02);`n#endif")) 'BackendConditionals: a two-flag expression must keep its shape with each flag wrapped in defined(...)'
-Assert (-not $fs.Contains('#if DITHER') -and -not $fs.Contains('&& MISSING_FLAG')) 'BackendConditionals: a bare flag left in an emitted #if - GLSL ES rejects an undefined macro there'
+Assert ($fs.Contains("#ifdef MISSING_FLAG`n	c.rgb += vec3(0.01);`n#endif")) 'BackendConditionals: "#if MISSING_FLAG && !SOFTWARE_RENDERER" not folded and lowered down to "#ifdef MISSING_FLAG"'
+Assert ($fs.Contains("#if defined(MISSING_FLAG) && defined(OTHER_FLAG)`n	c.rgb += vec3(0.02);`n#endif")) 'BackendConditionals: a two-flag expression must keep its shape with each flag wrapped in defined(...)'
+Assert (-not $fs.Contains('#if MISSING_FLAG') -and -not $fs.Contains('&& OTHER_FLAG')) 'BackendConditionals: a bare flag left in an emitted #if - GLSL ES rejects an undefined macro there'
+Assert ($fsDither.Contains("	c.rgb += vec3(0.06);") -and -not $fs.Contains('0.06')) 'BackendConditionals: "#if DITHER && !SOFTWARE_RENDERER" not resolved for each variant'
+Assert (-not ($h -match '(?m)^\s*#\s*(if|ifdef|ifndef|elif|define)\b.*\bDITHER\b')) 'BackendConditionals: the DITHER variant define reached an emitted source'
+Assert ($fs.Contains("#if 0 || defined(SLOPE)`n	c.rgb += vec3(0.07);`n#endif") -and $fsDither.Contains("`n	c.rgb += vec3(0.07);`n") -and
+    -not ($fsDither -match '(?m)^\s*#.*\bSLOPE\b')) 'BackendConditionals: "#if DITHER || SLOPE" not decided in the DITHER variant and lowered in the base one'
 Assert ($fs.Contains('c.rgb = c.rgb * c.rgb;') -and -not $fs.Contains('clamp')) 'BackendConditionals: "#if defined(SOFTWARE_RENDERER)" did not resolve to its #else side'
 Assert (-not $h.Contains('SOFTWARE_RENDERER') -and -not $h.Contains('NO_DYNAMIC_BRANCHING')) 'BackendConditionals: a backend macro leaked into the emitted header'
 $swOut3 = Join-Path $tempDir 'SwGeneratedBackend.h'
 & $tool --emit-sw-generated $swOut3 (Join-Path $testsDir 'BackendConditionals.shader') | Out-Null
 $swText3 = [System.IO.File]::ReadAllText($swOut3)
 Assert ($swText3.Contains('clamp')) 'BackendConditionals: the SW transpile did not take the "#if defined(SOFTWARE_RENDERER)" side'
-Assert (-not $swText3.Contains('0.01')) 'BackendConditionals: "#if DITHER && !SOFTWARE_RENDERER" survived into the SW transpile'
+Assert (-not $swText3.Contains('0.01') -and -not $swText3.Contains('0.06')) 'BackendConditionals: a "&& !SOFTWARE_RENDERER" block survived into the SW transpile'
 Assert (-not $swText3.Contains('SOFTWARE_RENDERER')) 'BackendConditionals: a backend macro leaked into the SW transpile'
 
 # --- MultiOutput: multiple fragment outputs (MRT) across the offline targets ----------------------
@@ -584,6 +608,30 @@ $ffErrExit = $LASTEXITCODE
 $ErrorActionPreference = $previousPreference
 Assert ($ffErrExit -ne 0) 'PipelineNotFirst: a pipeline binding after a pass should be rejected'
 Assert ($ffErr.Contains('must be the first statement')) "PipelineNotFirst: unexpected diagnostic: $ffErr"
+
+# --- combined variants: "variant PLUS + DITHER;" is one more variant, PLUS_DITHER, compiled with both defines - its
+# GL source is resolved for both (and holds neither define, nothing names them any more, nor a helper only other
+# variants call), the ProgramVariant initializer names both and the fixed_function block takes the path of both; no
+# combination is made that isn't declared
+$h = Emit 'VariantCombination'
+$fs = Get-Source $h 'Combined_PLUS_DITHER_Fs'
+$fsKeyed = Get-Source $h 'Combined_PLUS_KEYED_Fs'
+Assert ($null -ne $fs -and $fs.StartsWith("#line 1`n") -and $fs.Contains('uv *= uPlusScale;') -and $fs.Contains('0.333') -and
+    -not $fs.Contains('uOpacity') -and -not ($fs -match '(?m)^\s*#\s*(if|ifdef|ifndef|elif|define)\b.*\b(PLUS|DITHER|KEYED)\b')) `
+    'VariantCombination: PLUS_DITHER is not resolved for both of its defines'
+Assert ($null -ne $fsKeyed -and $fsKeyed.Contains('uv *= uPlusScale;') -and $fsKeyed.Contains('uOpacity') -and -not $fsKeyed.Contains('0.333')) `
+    'VariantCombination: PLUS_KEYED is not resolved for both of its defines'
+Assert ($fs.Contains('vec4 ditherTap(vec2 uv)') -and -not (Get-Source $h 'Combined_Fs').Contains('ditherTap') -and -not $fsKeyed.Contains('ditherTap')) `
+    'VariantCombination: a helper only the DITHER variants call was not removed from the others'
+Assert ($h.Contains('{ "PLUS_DITHER", "PLUS DITHER",')) 'VariantCombination: the ProgramVariant initializer does not name the combination and its defines'
+Assert (-not $h.Contains('DITHER_KEYED') -and -not $h.Contains('KEYED_DITHER')) 'VariantCombination: a combination that was not declared was emitted'
+$ffOut2 = Join-Path $tempDir 'PvrVariantCombination.h'
+& $tool --emit-fixed-function pvr $ffOut2 (Join-Path $testsDir 'VariantCombination.shader') | Out-Null
+$ffText2 = [System.IO.File]::ReadAllText($ffOut2)
+Assert ($ffText2.Contains('{ "Combined", "PLUS_DITHER", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Combined_PLUS_DITHER_Effect }')) `
+    'VariantCombination: the fixed_function block of the combination did not see both defines'
+Assert ($ffText2.Contains('{ "Combined", "PLUS_KEYED", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Combined_Effect }')) `
+    'VariantCombination: a combination without DITHER took the path of both'
 
 Write-Host ''
 if ($failures -eq 0) {

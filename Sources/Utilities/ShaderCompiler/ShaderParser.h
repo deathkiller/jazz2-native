@@ -28,7 +28,8 @@
 	verbatim before the real epilogue (gl_Position + varying stores), so "return"
 	inside canvas vertex() is a parse error. Every program's variant list starts with
 	the unnamed base variant (Name "", no defines, always Variants[0]); "variant
-	<NAME>;" adds one named variant per declaration. A canvas document that references TEXTURE without
+	<NAME>;" adds one named variant per declaration, and "variant <A> + <B>;" one that
+	combines variants declared before it (named "A_B", defining both). A canvas document that references TEXTURE without
 	declaring uTexture gets "uniform sampler2D uTexture;" auto-declared (with texture
 	unit 0) — explicit declarations, with or without a "texture_unit(N)" hint,
 	win. Conditionals naming VERTEX_STAGE|FRAGMENT_STAGE around shared globals —
@@ -81,6 +82,15 @@ namespace ShaderCompiler
 		String Message;
 		/** @brief 1-based line number the error points to in the input file */
 		std::int32_t Line = 0;
+	};
+
+	/** @brief Named variant from a "variant" directive */
+	struct VariantDirective
+	{
+		/** @brief Variant name, e.g. "DITHER", or "PLUS_DITHER" for "variant PLUS + DITHER;" */
+		String Name;
+		/** @brief Macros the variant is compiled with, separated by spaces (see Preprocessor::DefineVariant()) */
+		String Define;
 	};
 
 	/** @brief Texture unit assignment for a sampler uniform — from a "texture_unit(N)" uniform hint or the implicit canvas TEXTURE registration */
@@ -179,8 +189,8 @@ namespace ShaderCompiler
 	{
 		/** @brief Program name from the "program" directive */
 		String ProgramName;
-		/** @brief Variant names; the unnamed base variant is always `Variants[0]` (empty name) */
-		SmallVector<String, 0> Variants;
+		/** @brief Named variants, in declaration order (the unnamed base variant isn't listed) */
+		SmallVector<VariantDirective, 0> Variants;
 		/** @brief Sampler texture-unit assignments (explicit hints and the implicit canvas TEXTURE) */
 		SmallVector<TextureDirective, 0> Textures;
 		/** @brief Shared globals emitted before both stage bodies */
@@ -230,16 +240,17 @@ namespace ShaderCompiler
 		static bool ExpandIncludes(String& content, StringView baseDir, FileReader& reader, std::int32_t depth, String& error);
 
 		/**
-			Builds the compilable GLSL source of one stage (baked variant define + "#line 1" + shared
-			prelude + stage body). The conditionals naming SOFTWARE_RENDERER, NO_DYNAMIC_BRANCHING or
+			Builds the compilable GLSL source of one stage (the variant defines it still names + "#line 1" +
+			shared prelude + stage body). The conditionals naming SOFTWARE_RENDERER, NO_DYNAMIC_BRANCHING or
 			LOW_POWER_GPU are resolved here according to @p softwareRenderer, @p noDynamicBranching
 			and @p lowPowerGpu, like the stage macros are at assembly time - the built sources never
-			contain any of the macros themselves. Both the
+			contain any of the macros themselves - and then the ones naming a variant of the document, for the
+			variant @p define says, so its source holds only the code it compiles. Both the
 			"#ifdef"/"#ifndef" forms (with an optional "#else" and the matching "#endif") and "#if"/"#elif"
 			expressions built from them are recognized, so one directive can replace a nest of them
-			("#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING"). An expression that also names a macro this
-			resolver does not own ("#if DITHER && !SOFTWARE_RENDERER") keeps its conditional for the GLSL
-			compiler and loses only the backend macros.
+			("#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING"). An expression that also names a macro no
+			resolver owns ("#if SLOPE && !SOFTWARE_RENDERER") keeps its conditional for the GLSL compiler and
+			loses only the macros that are resolved.
 
 			Whatever conditional survives is then lowered for the GLSL preprocessor that will read it: a
 			purely boolean "#if" collapses to "#ifdef"/"#ifndef" or has its flags wrapped in "defined(...)",
@@ -280,6 +291,9 @@ namespace ShaderCompiler
 	public:
 		/** Predefines an object-like macro (used to bake variant defines, e.g. DITHER=1) */
 		void Define(StringView name, StringView body);
+
+		/** Predefines every macro of a variant's @ref VariantDirective::Define as 1 (nothing for an empty one) */
+		void DefineVariant(StringView define);
 
 		/** Runs the preprocessor, appending active (macro-expanded) lines to @p output */
 		bool Run(const SmallVectorImpl<SourceLine>& input, SmallVectorImpl<SourceLine>& output, Diagnostic& diag);

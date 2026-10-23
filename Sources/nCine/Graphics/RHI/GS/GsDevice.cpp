@@ -660,9 +660,21 @@ namespace nCine::RHI::GS
 			return true;
 		}
 
-		/** @brief libdraw's pixel-centre offsets of a SPRITE's two corners (`draw2d.c`), which a batch has to match */
+		/**
+			@brief The pixel-centre offsets of a SPRITE's two corners
+
+			The GS draws a SPRITE's pixels from its first corner up to, but not including, its second, and spreads
+			the texture coordinates of the two corners evenly across that span. libdraw's `draw_rect_*()` take the
+			second corner as the LAST pixel, inclusive, and add 2048.5625 to it (`draw2d.c`) - which is the same
+			edge as 2047.5625 on the corner past it, the one every caller here has. Adding libdraw's offset to that
+			made each sprite a pixel wider and taller than its rectangle: a 32-texel tile spread over 33 pixels,
+			one of its texel rows and columns shown twice and its last one covered by the next tile, or left
+			showing past it where the next tile was drawn first - so the order of the draws showed at the edges.
+		*/
 		constexpr float SpriteStartOffset = 2047.5625f;
-		constexpr float SpriteEndOffset = 2048.5625f;
+		constexpr float SpriteEndOffset = 2047.5625f;
+		/** @brief What libdraw's `draw_rect_*()` take as the second corner: the last pixel, not the one past it */
+		constexpr float LibdrawEndCorner = -1.0f;
 
 		/**
 			@brief Textured SPRITEs sharing their texture, colour and blending, written as one GIF register list
@@ -847,8 +859,8 @@ namespace nCine::RHI::GS
 				rect.v0.x = x0 + offsetX;
 				rect.v0.y = y0 + offsetY;
 				rect.v0.z = 0;
-				rect.v1.x = x1 + offsetX;
-				rect.v1.y = y1 + offsetY;
+				rect.v1.x = x1 + offsetX + LibdrawEndCorner;
+				rect.v1.y = y1 + offsetY + LibdrawEndCorner;
 				rect.v1.z = 0;
 				rect.color = color;
 				q = draw_rect_filled(q, 0, &rect);
@@ -870,8 +882,8 @@ namespace nCine::RHI::GS
 			rect.v0.x = x0 + offsetX;
 			rect.v0.y = y0 + offsetY;
 			rect.v0.z = 0;
-			rect.v1.x = x1 + offsetX;
-			rect.v1.y = y1 + offsetY;
+			rect.v1.x = x1 + offsetX + LibdrawEndCorner;
+			rect.v1.y = y1 + offsetY + LibdrawEndCorner;
 			rect.v1.z = 0;
 			// UVs arrive normalized; the GS addresses texels, so they scale by the sampled extent
 			rect.t0.u = u0 * float(state.SampledWidth);
