@@ -18,8 +18,8 @@ msgstr ""
 "X-Poedit-SearchPath-1: .fake/Translations\n"
 "X-Poedit-SearchPath-2: Sources/Main.cpp\n"
 
-#: .fake/Translations/flash/01_diam1.j2l.h:1
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:1
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Spaz ate the dopefish."
@@ -27,8 +27,8 @@ msgstr ""
 "\n"
 "СПАЗ СОЖРАЛ ДОПФИША."
 
-#: .fake/Translations/flash/01_diam1.j2l.h:2
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:2
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Find the gopher."
@@ -36,8 +36,8 @@ msgstr ""
 "\n"
 "НАЙДИ СУСЛИКА."
 
-#: .fake/Translations/flash/01_diam1.j2l.h:3
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:3
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Dragons live in burbank."
@@ -45,8 +45,8 @@ msgstr ""
 "\n"
 "ДРАКОНЫ ЖИВУТ В БУРБАНКЕ."
 
-#: .fake/Translations/flash/01_diam1.j2l.h:4
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:4
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Mark wears briefs. \n"
@@ -56,8 +56,8 @@ msgstr ""
 "МАРК НОСИТ ТРУСЫ.\n"
 "ХА-ХА!"
 
-#: .fake/Translations/flash/01_diam1.j2l.h:5
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:5
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Nick loves shiny. \n"
@@ -66,8 +66,8 @@ msgstr ""
 "\n"
 "НИК ПО ПРЕЖНЕМУ ЛЮБИТ БЛЕСТЯШКИ!"
 
-#: .fake/Translations/flash/02_diam3.j2l.h:1
-msgctxt "flash/02_diam3"
+#: .fake/Translations/flash/diam3.j2l.h:1
+msgctxt "flash/diam3"
 msgid ""
 "\n"
 "Send Tim new socks."
@@ -75,8 +75,8 @@ msgstr ""
 "\n"
 "ОТПРАВЬТЕ ТИМУ НОВЫЕ НОСКИ."
 
-#: .fake/Translations/flash/02_diam3.j2l.h:2
-msgctxt "flash/02_diam3"
+#: .fake/Translations/flash/diam3.j2l.h:2
+msgctxt "flash/diam3"
 msgid ""
 "\n"
 "Send Nigel a green card."
@@ -84,8 +84,8 @@ msgstr ""
 "\n"
 "ОТПРАВЬТЕ НАЙДЖЕЛУ ГРИН-КАРТУ."
 
-#: .fake/Translations/flash/02_diam3.j2l.h:3
-msgctxt "flash/02_diam3"
+#: .fake/Translations/flash/diam3.j2l.h:3
+msgctxt "flash/diam3"
 msgid ""
 "\n"
 "Beware of chainsaw schmalz."
@@ -93,8 +93,8 @@ msgstr ""
 "\n"
 "ОСТЕРЕГАЙТЕСЬ БЕНЗОПИЛЫ ШМАЛЬЦ."
 
-#: .fake/Translations/flash/02_diam3.j2l.h:4
-msgctxt "flash/02_diam3"
+#: .fake/Translations/flash/diam3.j2l.h:4
+msgctxt "flash/diam3"
 msgid ""
 "\n"
 "Dont give mark a burrito."
@@ -102,8 +102,8 @@ msgstr ""
 "\n"
 "МАРКУ БУРРИТО НЕ ДАВАТЬ."
 
-#: .fake/Translations/flash/05_medivo1.j2l.h:1
-msgctxt "flash/05_medivo1"
+#: .fake/Translations/flash/medivo1.j2l.h:1
+msgctxt "flash/medivo1"
 msgid ""
 "\n"
 "Beware of falling enemies."
@@ -111,8 +111,8 @@ msgstr ""
 "\n"
 "ОСТЕРЕГАЙТЕСЬ ПАДАЮЩИХ ВРАГОВ."
 
-#: .fake/Translations/flash/05_medivo1.j2l.h:2
-msgctxt "flash/05_medivo1"
+#: .fake/Translations/flash/medivo1.j2l.h:2
+msgctxt "flash/medivo1"
 msgid ""
 "\n"
 "Craig is still a doofus!"
@@ -121,8 +121,8 @@ msgstr ""
 "КРЕЙГ КАК БЫЛ ДУРАЧКОМ,\n"
 "ТАК ИМ И ОСТАЛСЯ!"
 
-#: .fake/Translations/flash/05_medivo1.j2l.h:3
-msgctxt "flash/05_medivo1"
+#: .fake/Translations/flash/medivo1.j2l.h:3
+msgctxt "flash/medivo1"
 msgid ""
 "\n"
 "Secret Level Time!!!"
@@ -130,8 +130,8 @@ msgstr ""
 "\n"
 "НАСТАЛО ВРЕМЯ СЕКРЕТНОГО УРОВНЯ!!!"
 
-#: .fake/Translations/flash/bonus_garglair.j2l.h:1
-msgctxt "flash/bonus_garglair"
+#: .fake/Translations/flash/garglair.j2l.h:1
+msgctxt "flash/garglair"
 msgid ""
 "\n"
 "Buttstomp A Silver Crate\n"
@@ -141,8 +141,8 @@ msgstr ""
 "ОБРУШЬСЯ НА СЕРЕБРЯНЫЙ ЯЩИК,\n"
 "ЧТОБЫ ОЧИСТИТЬ СЕБЕ ПУТЬ."
 
-#: .fake/Translations/flash/bonus_garglair.j2l.h:2
-msgctxt "flash/bonus_garglair"
+#: .fake/Translations/flash/garglair.j2l.h:2
+msgctxt "flash/garglair"
 msgid ""
 "\n"
 "Crates can also make platforms appear..."
@@ -150,8 +150,8 @@ msgstr ""
 "\n"
 "ЯЩИКИ ТОЖЕ МОГУТ СКРЫВАТЬ ПЛАТФОРМЫ."
 
-#: .fake/Translations/flash/bonus_garglair.j2l.h:3
-msgctxt "flash/bonus_garglair"
+#: .fake/Translations/flash/garglair.j2l.h:3
+msgctxt "flash/garglair"
 msgid ""
 "\n"
 "Melt the Spring..."
@@ -159,8 +159,8 @@ msgstr ""
 "\n"
 "РАЗМРОЗЬ ПРУЖИНУ..."
 
-#: .fake/Translations/flash/bonus_garglair.j2l.h:4
-msgctxt "flash/bonus_garglair"
+#: .fake/Translations/flash/garglair.j2l.h:4
+msgctxt "flash/garglair"
 msgid ""
 "\n"
 "Leh is a Camper"
@@ -168,8 +168,8 @@ msgstr ""
 "\n"
 "А ЛЕХ - КЕМПЕР"
 
-#: .fake/Translations/monk/01_jung1.j2l.h:1
-msgctxt "monk/01_jung1"
+#: .fake/Translations/monk/jung1.j2l.h:1
+msgctxt "monk/jung1"
 msgid ""
 "\n"
 "Falling boulders can \n"
@@ -179,8 +179,8 @@ msgstr ""
 "ПАДАЮЩИЕ КАМНИ МОГУТ\n"
 "СОЗДАТЬ ВАМ ГОЛОВНЯКА."
 
-#: .fake/Translations/monk/01_jung1.j2l.h:2
-msgctxt "monk/01_jung1"
+#: .fake/Translations/monk/jung1.j2l.h:2
+msgctxt "monk/jung1"
 msgid ""
 "\n"
 "A Flamethrower works\n"
@@ -190,8 +190,8 @@ msgstr ""
 "ОГНЕМЁТ ОТЛИЧНО\n"
 "СПРАВЛЯЕТСЯ С ЖУКАМИ."
 
-#: .fake/Translations/monk/03_hell.j2l.h:1
-msgctxt "monk/03_hell"
+#: .fake/Translations/monk/hell.j2l.h:1
+msgctxt "monk/hell"
 msgid ""
 "\n"
 "Long live the ice level."
@@ -199,8 +199,8 @@ msgstr ""
 "\n"
 "ДА ЗДРАВСТВУЕТ ЛЕДЯНОЙ УРОВЕНЬ."
 
-#: .fake/Translations/monk/03_hell.j2l.h:2
-msgctxt "monk/03_hell"
+#: .fake/Translations/monk/hell.j2l.h:2
+msgctxt "monk/hell"
 msgid ""
 "\n"
 "Goodnight, bubba!"
@@ -208,8 +208,8 @@ msgstr ""
 "\n"
 "СПОКОЙНОЙ НОЧИ, БУБА!"
 
-#: .fake/Translations/monk/06_damn2.j2l.h:2
-msgctxt "monk/06_damn2"
+#: .fake/Translations/monk/damn2.j2l.h:2
+msgctxt "monk/damn2"
 msgid ""
 "\n"
 "What the heck? Aaaah! No!  \n"
@@ -219,8 +219,8 @@ msgstr ""
 "ЧТО ЗА?? АААА! НЕТ!\n"
 "ЭТО ЕЩЁ НЕ КОНЕЦ!"
 
-#: .fake/Translations/prince/01_castle1.j2l.h:1
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:1
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "Poles spin you around so\n"
@@ -230,8 +230,8 @@ msgstr ""
 "ПОПАДАЯ НА ШЕСТЫ, ВЫ РАСКРУЧИВАЕТЕСЬ,\n"
 "ЧТО ПРИДАЁТ ВАМ УСКОРЕНИЕ."
 
-#: .fake/Translations/prince/01_castle1.j2l.h:2
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:2
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "You found a secret area."
@@ -239,8 +239,8 @@ msgstr ""
 "\n"
 "ВЫ НАШЛИ СЕКРЕТНУЮ ОБЛАСТЬ."
 
-#: .fake/Translations/prince/01_castle1.j2l.h:3
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:3
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "Secret Treasure Room."
@@ -248,8 +248,8 @@ msgstr ""
 "\n"
 "ПОТАЙНАЯ СОКРОВИЩНИЦА."
 
-#: .fake/Translations/prince/01_castle1.j2l.h:4
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:4
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "Nothing to see here."
@@ -257,8 +257,8 @@ msgstr ""
 "\n"
 "ЗДЕСЬ НИЧЕГО НЕТ."
 
-#: .fake/Translations/prince/01_castle1.j2l.h:5
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:5
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "Collect coins to activate \n"
@@ -268,8 +268,8 @@ msgstr ""
 "СОБИРАЙТЕ МОНЕТКИ ДЛЯ\n"
 "АКТИВАЦИИ ТЕЛЕПОРТОВ."
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:1
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:1
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Cheese is green on tuesday."
@@ -277,8 +277,8 @@ msgstr ""
 "\n"
 "ВО ВТОРНИК СЫР ЗЕЛЕНЫЙ."
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:2
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:2
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Craig is king doofus."
@@ -286,8 +286,8 @@ msgstr ""
 "\n"
 "КРЕЙГ - КОРОЛЬ ДУРАКОВ."
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:3
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:3
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "To beat the queen \n"
@@ -297,8 +297,8 @@ msgstr ""
 "ДЛЯ ПОБЕДЫ НАД КОРОЛЕВОЙ\n"
 "СБЕЙ ЕЁ ВЫСТРЕЛАМИ С УСТУПА."
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:4
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:4
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Good job! \n"
@@ -308,8 +308,8 @@ msgstr ""
 "ОТЛИЧНАЯ РАБОТА!\n"
 "А ТЕПЕРЬ ОТПРАВЛЯЙТЕСЬ ЗА ДЕВАН ШЕЛЛОМ!"
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:5
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:5
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "To kick through these\n"
@@ -319,8 +319,8 @@ msgstr ""
 "ЧТОБЫ РАЗБИТЬ ЭТИ БЛОКИ,\n"
 "НАЖМИТЕ ВНИЗ И ПРЫЖОК!"
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:6
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:6
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Press down and jump beneath \n"
@@ -330,8 +330,8 @@ msgstr ""
 "НАЖМИТЕ ВНИЗ И ПРЫЖОК,\n"
 "ЧТОБЫ РАЗБИТЬ ЭТИ БЛОКИ!"
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:7
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:7
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Buttstomp the metal box \n"
@@ -341,8 +341,8 @@ msgstr ""
 "ОБРУШЬСЯ НА ЯЩИК, ЧТОБЫ СЛОМАТЬ ЕГО.\n"
 "ЭТО ОТКРОЕТ БЛОКИ С ЗАМОЧНОЙ СКВАЖИНОЙ!"
 
-#: .fake/Translations/prince/03_carrot1.j2l.h:1
-msgctxt "prince/03_carrot1"
+#: .fake/Translations/prince/carrot1.j2l.h:1
+msgctxt "prince/carrot1"
 msgid ""
 "\n"
 "Stomp your booty to exit."
@@ -350,8 +350,8 @@ msgstr ""
 "\n"
 "ДЛЯ ВЫХОДА РАСТОПЧИ СВОЮ ДОБЫЧУ."
 
-#: .fake/Translations/prince/03_carrot1.j2l.h:2
-msgctxt "prince/03_carrot1"
+#: .fake/Translations/prince/carrot1.j2l.h:2
+msgctxt "prince/carrot1"
 msgid ""
 "\n"
 "This spring is frozen."
@@ -359,8 +359,8 @@ msgstr ""
 "\n"
 "ЭТА ПРУЖИНА ЗАМОРОЖЕНА."
 
-#: .fake/Translations/prince/04_carrot1n.j2l.h:1
-msgctxt "prince/04_carrot1n"
+#: .fake/Translations/prince/carrot1n.j2l.h:1
+msgctxt "prince/carrot1n"
 msgid ""
 "\n"
 "Super dooper secret."
@@ -368,8 +368,8 @@ msgstr ""
 "\n"
 "СУПЕР-ПУПЕР СЕКРЕТ."
 
-#: .fake/Translations/prince/04_carrot1n.j2l.h:2
-msgctxt "prince/04_carrot1n"
+#: .fake/Translations/prince/carrot1n.j2l.h:2
+msgctxt "prince/carrot1n"
 msgid ""
 "\n"
 "Shields will give you unlimited \n"
@@ -379,8 +379,8 @@ msgstr ""
 "ЩИТЫ НА НЕКОТОРОЕ ВРЕМЯ ДАДУТ ВАМ\n"
 "НЕОГРАНИЧЕННОЕ КОЛИЧЕСТВО ОСОБЫХ БОЕПРИПАСОВ."
 
-#: .fake/Translations/prince/04_carrot1n.j2l.h:4
-msgctxt "prince/04_carrot1n"
+#: .fake/Translations/prince/carrot1n.j2l.h:4
+msgctxt "prince/carrot1n"
 msgid ""
 "\n"
 "Stopwatches will add time to\n"
@@ -390,8 +390,8 @@ msgstr ""
 "ЧАСЫ ПРОДЛЯТ ВРЕМЯ\n"
 "ДЕЙСТВИЯ ЩИТА."
 
-#: .fake/Translations/prince/04_carrot1n.j2l.h:5
-msgctxt "prince/04_carrot1n"
+#: .fake/Translations/prince/carrot1n.j2l.h:5
+msgctxt "prince/carrot1n"
 msgid ""
 "\n"
 "This schwartzenguard is toast!"
@@ -399,8 +399,8 @@ msgstr ""
 "\n"
 "ЭТОТ ШВАРЦЕНГАРД ПОДЖАРЕН!"
 
-#: .fake/Translations/prince/06_labrat2.j2l.h:1
-msgctxt "prince/06_labrat2"
+#: .fake/Translations/prince/labrat2.j2l.h:1
+msgctxt "prince/labrat2"
 msgid ""
 "\n"
 "\n"
@@ -412,8 +412,8 @@ msgstr ""
 "ТЫ НЕ ПОБЕДИШЬ МЕНЯ, ДЖАЗ!\n"
 "ГОТОВЬСЯ К ВСТРЕЧЕ С МОИМ СУПЕРБОТОМ!"
 
-#: .fake/Translations/prince/06_labrat2.j2l.h:2
-msgctxt "prince/06_labrat2"
+#: .fake/Translations/prince/labrat2.j2l.h:2
+msgctxt "prince/labrat2"
 msgid ""
 "\n"
 "\n"
@@ -423,8 +423,8 @@ msgstr ""
 "\n"
 "БЛИН! Я СВАЛИВАЮ!"
 
-#: .fake/Translations/prince/06_labrat2.j2l.h:3
-msgctxt "prince/06_labrat2"
+#: .fake/Translations/prince/labrat2.j2l.h:3
+msgctxt "prince/labrat2"
 msgid ""
 "\n"
 "These blocks are speed blocks.\n"
@@ -606,8 +606,8 @@ msgstr ""
 "ТЕПЕРЬ ВЫ ГОТОВЫ.\n"
 "ПРИЯТНОЙ ИГРЫ."
 
-#: .fake/Translations/rescue/01_colon1.j2l.h:1
-msgctxt "rescue/01_colon1"
+#: .fake/Translations/rescue/colon1.j2l.h:1
+msgctxt "rescue/colon1"
 msgid ""
 "\n"
 "Buttstomp the manhole cover!"
@@ -615,8 +615,8 @@ msgstr ""
 "\n"
 "ОБРУШЬСЯ НА КРЫШКУ ЛЮКА!"
 
-#: .fake/Translations/rescue/03_psych1.j2l.h:1
-msgctxt "rescue/03_psych1"
+#: .fake/Translations/rescue/psych1.j2l.h:1
+msgctxt "rescue/psych1"
 msgid ""
 "\n"
 "Smoke rings will \n"
@@ -626,8 +626,8 @@ msgstr ""
 "КОЛЬЦА ДЫМА\n"
 "ВЫЗЫВАЮТ ГОЛОВОКРУЖЕНИЕ."
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:1
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:1
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "You can't buttstomp\n"
@@ -637,8 +637,8 @@ msgstr ""
 "ВЫ НЕ МОЖЕТЕ ТУТ ОБРУШИТСЯ\n"
 "ТАК ЧТО ОБХОДИТЕ ЧЕРЕЗ ВЕРХ!"
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:2
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:2
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "No rewards to those\n"
@@ -648,8 +648,8 @@ msgstr ""
 "НИКАКИХ НАГРАД ТЕМ, У КОГО ДРОЖАТ\n"
 "ПАЛЬЦЫ НА СПУСКОВОМ КРЮЧКЕ."
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:3
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:3
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Todays Forcast: Strong Winds!"
@@ -658,8 +658,8 @@ msgstr ""
 "ПО ПРОГНОЗУ,\n"
 "СЕГОДНЯ СИЛЬНЫЙ ВЕТЕР!"
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:4
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:4
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Find the crate\n"
@@ -669,8 +669,8 @@ msgstr ""
 "НАЙДИТЕ ЯЩИК, ЧТОБЫ\n"
 "ОЧИСТИТЬ СЕБЕ ПУТЬ."
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:5
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:5
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Welcome to\n"
@@ -682,8 +682,8 @@ msgstr ""
 "Jazz Jackrabbit 2:\n"
 "СЕКРЕТНЫЕ МАТЕРИАЛЫ!"
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:6
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:6
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Only Spaz can get to\n"
@@ -697,8 +697,8 @@ msgstr ""
 "ЕМУ МОЖЕТ ПОНАДОБИТЬСЯ\n"
 "НА ЧТО МОЖНО ВСТАТЬ ПОВЫШЕ."
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:7
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:7
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Don't beat Nigel at pool.\n"
@@ -708,8 +708,8 @@ msgstr ""
 "НЕ ОБЫГРЫВАЙТЕ НАЙДЖЕЛА В БИЛЬЯРД.\n"
 "МЫ ВАС ПРЕДУПРЕДИЛИ. :)"
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:16
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:16
+msgctxt "secretf/easter1"
 msgid ""
 "Eating too many chocolate\n"
 "eggs can make you sick :p"
@@ -717,8 +717,8 @@ msgstr ""
 "ЕСЛИ ЕСТЬ СЛИШКОМ МНОГО ШОКОЛАДНЫХ\n"
 "ЯИЦ, ТО МОЖНО И ЗАБОЛЕТЬ :p"
 
-#: .fake/Translations/secretf/02_easter2.j2l.h:1
-msgctxt "secretf/02_easter2"
+#: .fake/Translations/secretf/easter2.j2l.h:1
+msgctxt "secretf/easter2"
 msgid ""
 "\n"
 "Sloping Tunnel Entrance"
@@ -726,8 +726,8 @@ msgstr ""
 "\n"
 "ВХОД В ПОЛОГИЙ ТУННЕЛЬ"
 
-#: .fake/Translations/secretf/02_easter2.j2l.h:2
-msgctxt "secretf/02_easter2"
+#: .fake/Translations/secretf/easter2.j2l.h:2
+msgctxt "secretf/easter2"
 msgid ""
 "\n"
 "To access the tunnels above\n"
@@ -737,8 +737,8 @@ msgstr ""
 "ДЛЯ ДОСТУП К ТУННЕЛЯМ ВЫШЕ\n"
 "НАЙДИТЕ ТОЧКУ ТЕЛЕПОРТА."
 
-#: .fake/Translations/secretf/02_easter2.j2l.h:3
-msgctxt "secretf/02_easter2"
+#: .fake/Translations/secretf/easter2.j2l.h:3
+msgctxt "secretf/easter2"
 msgid ""
 "\n"
 "One route leads to riches.\n"
@@ -748,8 +748,8 @@ msgstr ""
 "ОДИН ПУТЬ ВЕДЕТ К БОГАТСТВУ.\n"
 "ДРУГОЙ ПУТЬ ВЕДЕТ К БИТВЕ."
 
-#: .fake/Translations/secretf/03_easter3.j2l.h:1
-msgctxt "secretf/03_easter3"
+#: .fake/Translations/secretf/easter3.j2l.h:1
+msgctxt "secretf/easter3"
 msgid ""
 "\n"
 "Only those who can double-jump\n"
@@ -759,8 +759,8 @@ msgstr ""
 "ТОЛЬКО ТОТ, КТО МОЖЕТ СДЕЛАТЬ ДВОЙНОЙ ПРЫЖОК\n"
 "СМОЖЕТ ДОБРАТЬСЯ ДО ВКУСНЯШЕК!"
 
-#: .fake/Translations/secretf/03_easter3.j2l.h:2
-msgctxt "secretf/03_easter3"
+#: .fake/Translations/secretf/easter3.j2l.h:2
+msgctxt "secretf/easter3"
 msgid ""
 "\n"
 "Find the crate to make\n"
@@ -770,8 +770,8 @@ msgstr ""
 "НАЙДИТЕ ЯЩИК, ЧТОБЫ ПОЯВИЛИСЬ\n"
 "БЛОКИ ДЛЯ ЛАЗАНИЯ"
 
-#: .fake/Translations/secretf/03_easter3.j2l.h:3
-msgctxt "secretf/03_easter3"
+#: .fake/Translations/secretf/easter3.j2l.h:3
+msgctxt "secretf/easter3"
 msgid ""
 "\n"
 "Stomping this crate also\n"
@@ -781,8 +781,8 @@ msgstr ""
 "РАЗРУШЕНИЕ ЭТОГО ЯЩИКА ПРИВЕДЁТ\n"
 "К ОСВОБОЖДЕНИЮ НЕКОТОРЫХ ВРАГОВ :)"
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:1
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:1
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "Enter the house with caution....."
@@ -790,8 +790,8 @@ msgstr ""
 "\n"
 "ВХОДИТЕ В ДОМ ОСТОРОЖНО..."
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:3
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:3
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "Silver Crates can't be broken underwater..."
@@ -799,8 +799,8 @@ msgstr ""
 "\n"
 "СЕРЕБРЯНЫЕ ЯЩИКИ НЕЛЬЗЯ РАЗБИТЬ ПОД ВОДОЙ..."
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:4
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:4
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "Water Level control crate above."
@@ -809,8 +809,8 @@ msgstr ""
 "ЯЩИК УПРАВЛЕНИЯ УРОВНЕМ ВОДЫ\n"
 "НАХОДИТСЯ ВЫШЕ."
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:5
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:5
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "Stomping crates can be good and bad..."
@@ -819,8 +819,8 @@ msgstr ""
 "РАЗРУШЕНИЕ ЯЩИКОВ МОЖЕТ БЫТЬ\n"
 "КАК ПОЛЕЗНО, ТАК И НАВРЕДИТЬ..."
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:7
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:7
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "But you need a way to get up there..."
@@ -828,8 +828,8 @@ msgstr ""
 "\n"
 "НО ТЕБЕ НУЖНО НАЙТИ СПОСОБ ПОДНЯТЬСЯ ТУДА..."
 
-#: .fake/Translations/secretf/06_haunted3.j2l.h:16
-msgctxt "secretf/06_haunted3"
+#: .fake/Translations/secretf/haunted3.j2l.h:16
+msgctxt "secretf/haunted3"
 msgid ""
 "\n"
 "Michelle,\n"
@@ -839,8 +839,8 @@ msgstr ""
 "МИШЕЛЬ,\n"
 "Я БУДУ ЛЮБИТЬ ТЕБЯ ВЕЧНО :)"
 
-#: .fake/Translations/secretf/07_town1.j2l.h:1
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:1
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Take to the roof tops!"
@@ -848,8 +848,8 @@ msgstr ""
 "\n"
 "ЗАБЕРИТЕСЬ НА САМЫЙ ВЕРХ КРЫШИ!"
 
-#: .fake/Translations/secretf/07_town1.j2l.h:2
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:2
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "The skies above will reward\n"
@@ -859,8 +859,8 @@ msgstr ""
 "НЕБЕСА ВЫШЕ ВОЗНАГРАДЯТ ТЕХ,\n"
 "КТО ОБРУШИТСЯ ВНИЗ..."
 
-#: .fake/Translations/secretf/07_town1.j2l.h:3
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:3
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Jump as far over to the\n"
@@ -869,8 +869,8 @@ msgstr ""
 "\n"
 "ПРЫГНИТЕ КАК МОЖНО ДАЛЬШЕ ВПРАВО..."
 
-#: .fake/Translations/secretf/07_town1.j2l.h:4
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:4
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Didn't make the jump huh? :)"
@@ -878,8 +878,8 @@ msgstr ""
 "\n"
 "ЧТО, НЕ СМОГ ПРЫГНУТЬ? :)"
 
-#: .fake/Translations/secretf/07_town1.j2l.h:5
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:5
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Well Done!"
@@ -887,8 +887,8 @@ msgstr ""
 "\n"
 "ОТЛИЧНАЯ РАБОТА!"
 
-#: .fake/Translations/secretf/07_town1.j2l.h:6
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:6
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Use your Special Moves to get up the air cons!\n"
@@ -900,8 +900,8 @@ msgstr ""
 "ДЛЯ ДЖАЗА НАЖМИТЕ «ВНИЗ И ПРЫЖОК».\n"
 "ДЛЯ СПЭЗА ДВАЖДЫ НАЖМИТЕ «ПРЫЖОК»!"
 
-#: .fake/Translations/secretf/08_town2.j2l.h:1
-msgctxt "secretf/08_town2"
+#: .fake/Translations/secretf/town2.j2l.h:1
+msgctxt "secretf/town2"
 msgid ""
 "\n"
 "Find the crate and the gems are yours!"
@@ -909,8 +909,8 @@ msgstr ""
 "\n"
 "НАЙДИТЕ ЯЩИК И САМОЦВЕТЫ ВАШИ!"
 
-#: .fake/Translations/secretf/08_town2.j2l.h:2
-msgctxt "secretf/08_town2"
+#: .fake/Translations/secretf/town2.j2l.h:2
+msgctxt "secretf/town2"
 msgid ""
 "\n"
 "Springs Don't Work When Frozen..."
@@ -918,8 +918,8 @@ msgstr ""
 "\n"
 "ЗАМЁРЗШИЕ ПРУЖИНЫ ПЕРЕСТАЮТ ФУНКЦИОНИРОВАТЬ..."
 
-#: .fake/Translations/secretf/08_town2.j2l.h:3
-msgctxt "secretf/08_town2"
+#: .fake/Translations/secretf/town2.j2l.h:3
+msgctxt "secretf/town2"
 msgid ""
 "\n"
 "Collecting 20 coins is more rewarding..."
@@ -927,8 +927,8 @@ msgstr ""
 "\n"
 "СОБРАТЬ 20 МОНЕТ НАМНОГО ВЫГОДНЕЕ..."
 
-#: .fake/Translations/secretf/09_town3.j2l.h:1
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:1
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "Find the crate to clear the blocks...."
@@ -936,8 +936,8 @@ msgstr ""
 "\n"
 "НАЙДИТЕ ЯЩИК ЧТОБЫ РАСЧИСТИТЬ ПУТЬ ОТ БЛОКОВ..."
 
-#: .fake/Translations/secretf/09_town3.j2l.h:2
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:2
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "BEWARE! Flocks of Ravens can\n"
@@ -947,8 +947,8 @@ msgstr ""
 "ОСТЕРЕГАЙТЕСЬ ВОРОНЬИХ СТАЙ,\n"
 "ОНИ МОГУТ БЫТЬ ОЧЕНЬ ОПАСНЫМИ."
 
-#: .fake/Translations/secretf/09_town3.j2l.h:3
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:3
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "The remove the blocks\n"
@@ -958,8 +958,8 @@ msgstr ""
 "ЧТОБЫ РАСЧИСТИТЬ БЛОКИ\n"
 "ВЗГЛЯНИТЕ НА САМОЕ ВЫСОКОЕ СТРОЕНИЕ."
 
-#: .fake/Translations/secretf/09_town3.j2l.h:4
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:4
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "Choose a cover and stomp away!"
@@ -967,8 +967,8 @@ msgstr ""
 "\n"
 "ВЫБИРАЙ УКРЫТИЕ И ТОПАЙ ПРОЧЬ!"
 
-#: .fake/Translations/secretf/09_town3.j2l.h:5
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:5
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "Hi GeoBunny :)"
@@ -976,8 +976,8 @@ msgstr ""
 "\n"
 "ПРИВЕТ ГЕОКРОЛИК :)"
 
-#: .fake/Translations/secretf/09_town3.j2l.h:6
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:6
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "Goto www.project2.com\n"
@@ -989,8 +989,8 @@ msgstr ""
 "И ИСПОЛЬЗУЙТЕ\n"
 "ПАРОЛЬ: «BUNNYLOVER»\n"
 
-#: .fake/Translations/share/01_share1.j2l.h:1
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:1
+msgctxt "share/share1"
 msgid ""
 "\n"
 "Shoot these blocks!"
@@ -998,8 +998,8 @@ msgstr ""
 "\n"
 "СТРЕЛЯЙТЕ В ЭТИ БЛОКИ!"
 
-#: .fake/Translations/share/01_share1.j2l.h:2
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:2
+msgctxt "share/share1"
 msgid ""
 "\n"
 "When in the air, press down\n"
@@ -1009,8 +1009,8 @@ msgstr ""
 "НАХОДЯСЬ В ВОЗДУХЕ, НАЖМИТЕ ВНИЗ,\n"
 "ЧТОБЫ ОБРУШИТЬСЯ."
 
-#: .fake/Translations/share/01_share1.j2l.h:3
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:3
+msgctxt "share/share1"
 msgid ""
 "\n"
 "To pass this area, stomp\n"
@@ -1020,8 +1020,8 @@ msgstr ""
 "ЧТОБЫ ПРОЙТИ ЭТУ ОБЛАСТЬ,\n"
 "ОБРУШТЕСЬ СВЕРХУ НА СЕКРЕТНЫЙ ЯЩИК."
 
-#: .fake/Translations/share/01_share1.j2l.h:4
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:4
+msgctxt "share/share1"
 msgid ""
 "\n"
 "You need twenty coins to pass \n"
@@ -1031,8 +1031,8 @@ msgstr ""
 "ВАМ НУЖНО 20 МОНЕТ, ЧТОБЫ ПРОЙТИ\n"
 "ЧЕРЕЗ ЭТОТ СЕКРЕТНЫЙ ПОРТАЛ!"
 
-#: .fake/Translations/share/01_share1.j2l.h:5
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:5
+msgctxt "share/share1"
 msgid ""
 "\n"
 "Coins give you access to \n"
@@ -1042,8 +1042,8 @@ msgstr ""
 "МОНЕТЫ ДАЮТ ВАМ ДОСТУП К ПОРТАЛАМ,\n"
 "КОТОРЫЕ ПОЯВЛЯЮТСЯ ПОЗЖЕ."
 
-#: .fake/Translations/share/01_share1.j2l.h:6
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:6
+msgctxt "share/share1"
 msgid ""
 "\n"
 "Stomp in the right place and\n"
@@ -1053,8 +1053,8 @@ msgstr ""
 "ОБРУШИВШИСЬ СВЕРХУ В НУЖНОМ МЕСТЕ,\n"
 "ВЫ МОЖЕТЕ ОБНАРУЖИТЬ СЮРПРИЗ!"
 
-#: .fake/Translations/share/01_share1.j2l.h:7
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:7
+msgctxt "share/share1"
 msgid ""
 "\n"
 "Some crates contain\n"
@@ -1064,8 +1064,8 @@ msgstr ""
 "НЕКОТОРЫЕ ЯЩИКИ СОДЕРЖАТ\n"
 "БОМБЫ ИЛИ ВРАГОВ!"
 
-#: .fake/Translations/share/02_share2.j2l.h:1
-msgctxt "share/02_share2"
+#: .fake/Translations/share/share2.j2l.h:1
+msgctxt "share/share2"
 msgid ""
 "\n"
 "You need twenty coins to pass \n"
@@ -1075,8 +1075,8 @@ msgstr ""
 "ВАМ НУЖНО 20 МОНЕТ, ЧТОБЫ ПРОЙТИ\n"
 "ЧЕРЕЗ ЭТОТ СЕКРЕТНЫЙ ПОРТАЛ!"
 
-#: .fake/Translations/share/02_share2.j2l.h:2
-msgctxt "share/02_share2"
+#: .fake/Translations/share/share2.j2l.h:2
+msgctxt "share/share2"
 msgid ""
 "\n"
 "A flamethrower works well \n"
@@ -1086,8 +1086,8 @@ msgstr ""
 "ОГНЁМЕТ ОЧЕНЬ ЭФФЕКТИВЕН\n"
 "ПРОТИВ ЭТИХ МЕРЗКИХ ЖУКОВ."
 
-#: .fake/Translations/share/02_share2.j2l.h:3
-msgctxt "share/02_share2"
+#: .fake/Translations/share/share2.j2l.h:3
+msgctxt "share/share2"
 msgid ""
 "\n"
 "Smoke rings will make\n"
@@ -1097,8 +1097,8 @@ msgstr ""
 "КОЛЬЦА ДЫМА\n"
 "ВЫЗЫВАЮТ ГОЛОВОКРУЖЕНИЕ!"
 
-#: .fake/Translations/share/03_share3.j2l.h:1
-msgctxt "share/03_share3"
+#: .fake/Translations/share/share3.j2l.h:1
+msgctxt "share/share3"
 msgid ""
 "\n"
 "Beware the witch! She can\n"
@@ -1108,8 +1108,8 @@ msgstr ""
 "ОСТОРЕГАЙСЯ ВЕДЬМЫ!\n"
 "ОНА МОЖЕТ ПРЕВРАТИТЬ ТЕБЯ В ЛЯГУШКУ."
 
-#: .fake/Translations/share/03_share3.j2l.h:2
-msgctxt "share/03_share3"
+#: .fake/Translations/share/share3.j2l.h:2
+msgctxt "share/share3"
 msgid ""
 "\n"
 "If you are turned into a frog\n"
@@ -1119,8 +1119,8 @@ msgstr ""
 "ЕСЛИ ВЫ ПРЕВРАТИЛИСЬ В ЛЯГУШКУ,\n"
 "ЕВА ДЛИННОУХ СМОЖЕТ ПОМОЧЬ!"
 
-#: .fake/Translations/share/03_share3.j2l.h:3
-msgctxt "share/03_share3"
+#: .fake/Translations/share/share3.j2l.h:3
+msgctxt "share/share3"
 msgid ""
 "\n"
 "You made it! This is the end\n"
@@ -1134,8 +1134,8 @@ msgstr ""
 "А ТЕПЕРЬ ОЗНАКОМЬТЕСЬ С ИНФОРМАЦИЕЙ,\n"
 "КАК ПРИОБРЕСТИ ПОЛНУЮ ВЕРСИЮ!"
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:1
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:1
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "Watch out for the spikes below!"
@@ -1143,8 +1143,8 @@ msgstr ""
 "\n"
 "ОСТЕРЕГАЙТЕСЬ ШИПОВ ВНИЗУ!"
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:2
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:2
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "You can buttstomp through\n"
@@ -1156,8 +1156,8 @@ msgstr ""
 "НЕКОТОРЫЕ ПРЕПЯТСТВИЯ,\n"
 "ОБРУШИВАЯСЬ НА НИХ СВЕРХУ!"
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:3
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:3
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "Some blocks can only\n"
@@ -1169,8 +1169,8 @@ msgstr ""
 "БЫТЬ РАЗРУШЕНЫ ТОЛЬКО\n"
 "ОПРЕДЕЛЕННЫМ ТИПОМ ОРУЖИЯ."
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:4
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:4
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "Welcome to Christmas Chronicles!"
@@ -1179,8 +1179,8 @@ msgstr ""
 "ДОБРО ПОЖАЛОВАТЬ В\n"
 "«РОЖДЕСТВЕНСКИЕ ХРОНИКИ»!"
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:5
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:5
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "Seasons Greetings from\n"
@@ -1194,8 +1194,8 @@ msgstr ""
 "Orange Games И\n"
 "Project 2 Interactive!"
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:1
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:1
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "You can stand on top\n"
@@ -1205,8 +1205,8 @@ msgstr ""
 "ВЫ МОЖЕТЕ СТОЯТЬ НА\n"
 "МАКУШКАХ НЕКОТОРЫХ ДЕРЕВЬЕВ!"
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:2
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:2
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "You can buttstomp through\n"
@@ -1218,8 +1218,8 @@ msgstr ""
 "НЕКОТОРЫЕ ПРЕПЯТСТВИЯ,\n"
 "ОБРУШИВАЯСЬ НА НИХ СВЕРХУ!"
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:3
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:3
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "Punching the blocks above you\n"
@@ -1229,8 +1229,8 @@ msgstr ""
 "ВЫ МОЖЕТЕ ПОЛУЧИТЬ НАГРАДУ,\n"
 "РАЗРУШИВ БЛОКИ ВЫШЕ."
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:6
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:6
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "Gem Trail Entry Crate."
@@ -1239,8 +1239,8 @@ msgstr ""
 "ЯЩИК, СКРЫВАЮЩИЙ ПРОХОД\n"
 "К ТРОПЕ САМОЦВЕТОВ."
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:7
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:7
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "Gem Trail Entrance.\n"
@@ -1252,8 +1252,8 @@ msgstr ""
 "ЗАБЕРИТЕСЬ НА МАКУШКИ ДЕРЕВЬЕВ,\n"
 "ЧТОБЫ НАЙТИ ЯЩИК, ОТКРЫВАЮЩИЙ ВХОД."
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:14
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:14
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "\n"
@@ -1266,8 +1266,8 @@ msgstr ""
 "\n"
 "- ПУПИ"
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:15
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:15
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "\n"
@@ -1283,8 +1283,8 @@ msgstr ""
 "ПОЭТОМУ ДАННЫЙ ПРОЕКТ Я ПОСВЯЩАЮ ТЕБЕ.\n"
 "Я ТЕБЯ ОЧЕНЬ ЛЮБЛЮ."
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:16
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:16
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "\n"
@@ -1300,8 +1300,8 @@ msgstr ""
 "НО ВСЕ СЛОВА СВОДЯТСЯ К ОДНОМУ:\n"
 "Я ЛЮБЛЮ ТЕБЯ, Я ТАК ТЕБЯ ЛЮБЛЮ."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:1
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:1
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Please use your TNT wisely."
@@ -1309,8 +1309,8 @@ msgstr ""
 "\n"
 "ИСПОЛЬЗУЙТЕ ДИНАМИТ С УМОМ, ПОЖАЛУЙСТА."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:2
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:2
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Don't lose your grip!"
@@ -1318,8 +1318,8 @@ msgstr ""
 "\n"
 "НЕ ТЕРЯЙТЕ ХВАТКУ!"
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:3
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:3
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Welcome to Burrowsville\n"
@@ -1329,8 +1329,8 @@ msgstr ""
 "ДОБРО ПОЖАЛОВАТЬ В БЕРРОУСВИЛЛ\n"
 "ПОЖАЛУЙСТА, СОБЛЮДАЙТЕ ПДД."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:4
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:4
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "That bridge doesnt\n"
@@ -1340,8 +1340,8 @@ msgstr ""
 "ЭТОТ МОСТ НЕ ВЫГЛЯДИТ\n"
 "БЕЗОПАСНЫМ..."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:5
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:5
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Robert and Craig:\n"
@@ -1351,8 +1351,8 @@ msgstr ""
 "РОБЕРТ И КРЕЙГ:\n"
 "ПРУЖИНЫ РУЛЯТ! :)"
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:6
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:6
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Now leaving Burrowsville\n"
@@ -1362,8 +1362,8 @@ msgstr ""
 "ПОКИДАЕМ БЕРРОУСВИЛЛ\n"
 "ПРИХОДИТЕ СНОВА."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:7
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:7
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Password: xmasbunny\n"
@@ -2837,7 +2837,7 @@ msgstr ""
 "ДОСТУПНЫ, И ПОПРОБУЙТЕ ЕЩЕ РАЗ."
 
 #: Sources/Main.cpp:1404
-msgid "Unnamed server"
+msgid "Untitled server"
 msgstr "НЕНАЗВАННЫЙ СЕРВЕР"
 
 #: Sources/Main.cpp:1561

@@ -456,7 +456,7 @@ namespace Jazz2::Editor
 			// The texel of the tile of an event in the color of its category
 			void PlotEvent(const Formats::EventRecord& event, std::int32_t x, std::int32_t y)
 			{
-				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 				std::int32_t tx = x / _step, ty = y / _step;
 				if (descriptor == nullptr || tx < 0 || ty < 0 || tx >= _textureSize.X || ty >= _textureSize.Y) {
 					return;
@@ -479,7 +479,7 @@ namespace Jazz2::Editor
 					if (EventType(event.Type) != EventType::ModifierLimitCameraView) {
 						return;
 					}
-					const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+					const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 					std::int32_t tx = x / _step, ty = y / _step;
 					if (descriptor == nullptr || descriptor->FieldCount <= 1 || tx < 0 || ty < 0 || tx >= _textureSize.X || ty >= _textureSize.Y) {
 						return;

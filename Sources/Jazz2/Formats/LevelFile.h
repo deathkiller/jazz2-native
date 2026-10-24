@@ -391,6 +391,14 @@ namespace Jazz2::Formats
 		 * Since 4.0.0.
 		 */
 		static constexpr std::uint8_t Fullscreen = 0x20;
+		/**
+		 * @brief Only the ground of a sky is drawn, below its horizon, and only in the tiles of layer 8
+		 *
+		 * As JJ2+ draws a textured layer other than the sky layer of a level without extended layer data (`SURFACE::LEGACY`),
+		 * measured: it shows only where layer 8 (see @ref LayerNumbersChunk) has tiles, layer 8 fixed to the view and
+		 * repeating as it does. Readers before 4.0.0 draw the sky too.
+		 */
+		static constexpr std::uint8_t FloorOnly = 0x40;
 
 		/** @brief Default of @ref Fade, a tunnel fades out into its center and a cylinder into its horizon, a reflection is tinted with the middle of the gradient of the textures of the original game */
 		static constexpr std::uint8_t DefaultFade = 192;
@@ -666,7 +674,7 @@ namespace Jazz2::Formats
 			 * @brief Texture of its own, @ref TextureSize × @ref TextureSize palette indices row by row
 			 *
 			 * The 8×8 tiles at the top left of the layer are its texture if it's empty, as `TEXTURE::FROMTILES` of JJ2+. A
-			 * layer of JJ2+ with one of its own textures, or with an image of its own made by MLLE, has it here. It stays
+			 * layer of JJ2+ with one of its own textures, or with an image of its own, has it here. It stays
 			 * indexed, so it follows changes of the palette as the tiles do.
 			 */
 			SmallVector<std::uint8_t, 0> Texture;
@@ -688,9 +696,8 @@ namespace Jazz2::Formats
 	/**
 		@brief Chunk with the names of the layers
 
-		The level editor shows them, and scripts find layers by them --- `MLLE::GetLayer()` of JJ2+, the names a level
-		made in MLLE gives its layers are converted into them. Written only if a layer has a name, and kept when the level
-		is exported.
+		The level editor shows them, and scripts find layers by them, the names a converted level gives its layers are
+		converted into them. Written only if a layer has a name, and kept when the level is exported.
 
 		The payload is @cpp str8 @ce per layer in file order. A layer after the last one has an empty name, the names after
 		the last layer are ignored.
@@ -715,8 +722,8 @@ namespace Jazz2::Formats
 
 		A script of JJ2+ refers to the eight layers of a level of the original game by their numbers, 1 to 8 from the front
 		(`jjLayers[n]`), whatever order they are drawn in. The converter keeps all eight of them, even an empty one, and
-		gives them their numbers here; a layer of another origin --- an additional layer of MLLE, a layer added in the
-		editor --- has 0. Without the chunk, scripts count the layers from the sprite layer, which is layer 4. Written only
+		gives them their numbers here; a layer of another origin --- an additional layer of a converted level, a layer added
+		in the editor --- has 0. Without the chunk, scripts count the layers from the sprite layer, which is layer 4. Written only
 		if a layer has a number, and kept when the level is exported.
 
 		The payload is @cpp u8 @ce per layer in file order (see @ref LayerRecord::OriginalNumber). A layer after the last
@@ -735,6 +742,74 @@ namespace Jazz2::Formats
 		static std::uint8_t Read(ArrayView<const std::uint8_t> data, std::int32_t layer);
 		/** @brief Writes the payload of the numbers of all layers in file order, nothing if no layer has a number */
 		static void Write(ArrayView<const std::uint8_t> numbers, SmallVectorImpl<std::uint8_t>& data);
+	};
+
+	/**
+		@brief Chunk with the texts of a level as the original game had them, for its script
+
+		The texts of a level of the original game are kept with their formatting converted, which drops the characters
+		that formatting uses, such as `|`. A script of JJ2+ reads them as they were (`jjHelpStrings`), and some split them
+		by those characters. The converter writes the chunk for a level with a script only, and it's kept when the level
+		is exported.
+
+		The payload is @cpp u16 @ce length and the bytes of each text in order, as the original game has them. A text
+		after the last one is empty.
+	*/
+	struct ScriptTextsChunk
+	{
+		/** @brief Tag of the chunk */
+		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('S', 'T', 'X', 'T');
+
+		ScriptTextsChunk() = delete;
+
+		/** @brief Reads the text at the given index from the payload, empty if there's none */
+		static StringView Read(ArrayView<const std::uint8_t> data, std::int32_t index);
+		/** @brief Writes the payload of all texts in order, nothing if all are empty */
+		static void Write(ArrayView<const StringView> texts, SmallVectorImpl<std::uint8_t>& data);
+	};
+
+	/**
+		@brief Chunk with the custom weapons a level sets up, for its script
+
+		A level of JJ2+ can keep how it changes the weapons, which its script sets up together with weapons of its own
+		(see @ref Scripting::LevelScriptLoader). The converter writes the chunk for a level with such weapons, and it's
+		kept when the level is exported.
+
+		The payload is @cpp i16 @ce the argument of the hook of the weapons of the script (-1 for none), then for each
+		of the 9 weapons: @cpp u8 @ce 1 if it's a weapon of the script, @cpp i32 @ce the most ammo, @cpp u8 @ce whether
+		it comes from birds (2 if powered up), from gun crates, the gems lost, the gems lost powered up, 1 if it's
+		infinite and 2 if it replenishes, the event of its ammo crate (0 for none), the style of the 8th weapon (255 for
+		none), and @cpp u32 @ce the length and the bytes of the parameters of a weapon of the script. That's how
+		`jjSTREAM` of JJ2+ reads them.
+	*/
+	struct CustomWeaponsChunk
+	{
+		/** @brief Tag of the chunk */
+		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('C', 'W', 'P', 'N');
+		/** @brief Number of weapons */
+		static constexpr std::int32_t WeaponCount = 9;
+
+		CustomWeaponsChunk() = delete;
+	};
+
+	/**
+		@brief Chunk with the sprites a level recolors, for its script
+
+		A level of JJ2+ can recolor some sprites of the game, platforms, poles and the like, which its script does when it
+		sets up (see @ref Scripting::LevelScriptLoader). The converter writes the chunk for a level with such sprites, and
+		it's kept when the level is exported.
+
+		The payload is, for each recolored sprite, @cpp u8 @ce its slot in the list of the sprites the editor of the
+		level can recolor and @cpp u8 @ce the new palette index of each of the 256 indices.
+	*/
+	struct SpriteRecolorsChunk
+	{
+		/** @brief Tag of the chunk */
+		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('S', 'R', 'C', 'L');
+		/** @brief Size of one recolored sprite in the payload */
+		static constexpr std::size_t RecordSize = 1 + 256;
+
+		SpriteRecolorsChunk() = delete;
 	};
 
 	/**

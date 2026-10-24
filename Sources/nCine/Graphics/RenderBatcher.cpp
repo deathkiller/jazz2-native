@@ -132,9 +132,26 @@ namespace nCine
 		batchCommand->SetVisitOrder(refCommand->GetVisitOrder());
 	}
 
+#if defined(RHI_CAP_POSTPROCESSING)
 	void RenderBatcher::CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue,
-		std::uint32_t splitLayer)
+		ArrayView<const std::uint32_t> splitLayers)
+#else
+	void RenderBatcher::CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
+#endif
 	{
+#if defined(RHI_CAP_POSTPROCESSING)
+		// Whether a split layer lies between two layers, which the queue sort keeps adjacent
+		const auto isSplitBetween = [splitLayers](std::uint32_t prevLayer, std::uint32_t layer) {
+			const std::uint32_t lower = std::min(prevLayer, layer), upper = std::max(prevLayer, layer);
+			for (std::uint32_t splitLayer : splitLayers) {
+				if (splitLayer > lower) {
+					return (splitLayer <= upper);
+				}
+			}
+			return false;
+		};
+#endif
+
 		std::uint32_t minBatchSize, maxBatchSize;
 		GetBatchSizeLimits(minBatchSize, maxBatchSize);
 
@@ -149,10 +166,14 @@ namespace nCine
 
 			// Should split if material sort key (that takes into account shader program, textures and blending) or primitive type differs
 			// GL_LINE_STRIP is split always, because it cannot be batched
-			// The layer isn't part of that key, so neighbours on two sides of the split layer have to be told apart
-			// on their own - a batch spanning it would be drawn whole in the first part of a split queue
+			// The layer isn't part of that key, so neighbours on two sides of a split layer have to be told apart
+			// on their own - a batch spanning it would be drawn whole in the earlier part of a split queue
 			const bool shouldSplit = (command->GetLowerMaterialSortKey() != prevCommand->GetLowerMaterialSortKey() || prevPrimitive != primitive ||
-				primitive == PrimitiveType::LineStrip || (prevCommand->GetLayer() < splitLayer) != (command->GetLayer() < splitLayer));
+				primitive == PrimitiveType::LineStrip
+#if defined(RHI_CAP_POSTPROCESSING)
+				|| (prevCommand->GetLayer() != command->GetLayer() && isSplitBetween(prevCommand->GetLayer(), command->GetLayer()))
+#endif
+				);
 
 			// Also collect the very last command if it can be batched with the previous one
 			std::uint32_t endSplit = (i == srcQueue.size() - 1 && !shouldSplit ? i + 1 : i);

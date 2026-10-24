@@ -70,6 +70,7 @@ namespace Jazz2::Editor
 			std::int32_t OffGrid;
 			std::int32_t Value;
 			std::uint16_t Type;
+			const std::uint8_t* Params;
 		};
 
 		ProblemGroup& FindGroup(SmallVectorImpl<ProblemGroup>& groups, std::uint64_t key, const CheckedEvent& at, std::int32_t value = 0)
@@ -80,7 +81,7 @@ namespace Jazz2::Editor
 					return group;
 				}
 			}
-			return groups.emplace_back(ProblemGroup{ key, 1, at.Cell, at.OffGrid, value, at.Record->Type });
+			return groups.emplace_back(ProblemGroup{ key, 1, at.Cell, at.OffGrid, value, at.Record->Type, at.Record->Params });
 		}
 	}
 
@@ -133,7 +134,7 @@ namespace Jazz2::Editor
 				// A tile without an event that keeps only its flags, nothing the game would spawn
 				continue;
 			}
-			const EventDescriptor* descriptor = EventCatalog::Find(type);
+			const EventDescriptor* descriptor = EventCatalog::Find(type, event.Params);
 			if (descriptor == nullptr) {
 				FindGroup(unknownEvents, event.Type, checked);
 				continue;
@@ -165,7 +166,7 @@ namespace Jazz2::Editor
 				}
 				std::int32_t value = EventCatalog::ReadField(event, field);
 				if (value < field.Min || value > field.Max) {
-					FindGroup(outOfRange, (std::uint64_t(event.Type) << 8) | i, checked, value);
+					FindGroup(outOfRange, (std::uint64_t(descriptor->OriginalEvent != 0 ? (0x10000u | descriptor->OriginalEvent) : event.Type) << 8) | i, checked, value);
 				}
 			}
 
@@ -224,7 +225,7 @@ namespace Jazz2::Editor
 				: _fx("editor", "Unknown event {} - the game doesn't know it", group.Type), group.Cell, group.OffGrid);
 		}
 		for (const ProblemGroup& group : outOfRange) {
-			const EventDescriptor* descriptor = EventCatalog::Find(EventType(group.Type));
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(group.Type), group.Params);
 			std::uint8_t fieldIndex = std::uint8_t(group.Key & 0xFF);
 			if (descriptor == nullptr || fieldIndex >= descriptor->FieldCount) {
 				continue;
@@ -489,7 +490,7 @@ namespace Jazz2::Editor
 		std::int32_t exits = 0, reachedExits = 0, lostItems = 0, lostWaypoints = 0;
 		Vector2i firstExit(-1, -1), firstLostItem(-1, -1), firstLostWaypoint(-1, -1);
 		for (const DocumentEvent& event : document.Events) {
-			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Record.Type));
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Record.Type), event.Record.Params);
 			Vector2i cell(std::int32_t(event.Cell % std::uint32_t(gridSize.X)), std::int32_t(event.Cell / std::uint32_t(gridSize.X)));
 			if (EventType(event.Record.Type) == EventType::RaceCheckpoint) {
 				if (!reached(event.Cell)) {
@@ -667,6 +668,44 @@ namespace Jazz2::Editor
 			renderer = Tiles::LayerRendererType::Default;
 		}
 
+		// Hidden in the game, and so in the editor too (see RuntimeSync::IsLayerShown()), as an empty layer of the original
+		// game is converted; one with nothing to show is told only about itself (in its properties, as a warning too, it
+		// isn't seen at all), a converted level often has such layers
+		if ((layer.Record.Flags & Formats::LayerRecord::Visible) == 0) {
+			bool hasContent = (!layer.Texture.empty() || renderer == Tiles::LayerRendererType::Reflection ||
+				std::any_of(layer.Tiles.begin(), layer.Tiles.end(), [](const TileRef& tile) { return !tile.IsEmpty(); }));
+			if (hasContent) {
+				add(LevelProblemSeverity::Warning, layer.IsSpriteLayer()
+					? String(_x("editor", "Hidden in the game - Visible in game is off, it isn't drawn in the game nor here, but its tiles are still solid"))
+					: String(_x("editor", "Hidden in the game - Visible in game is off, so it isn't drawn in the game nor here")));
+			} else if (aboutOthers) {
+				add(LevelProblemSeverity::Warning, _x("editor", "Hidden in the game - Visible in game is off, so it isn't drawn in the game nor here"));
+			}
+		} else if (!layer.IsSpriteLayer() && layer.Texture.empty() && !Tiles::LayerDescription::IsTexturedBackground(renderer) &&
+			renderer != Tiles::LayerRendererType::Reflection) {
+			// Visible, but drawn of tiles that show nothing --- a textured background, a reflection and the sprite layer are
+			// told about by themselves; an empty layer only in its properties, a new level has a few of them
+			bool anyTile = false, anyShown = false;
+			for (const TileRef& tile : layer.Tiles) {
+				if (!tile.IsEmpty()) {
+					anyTile = true;
+					if ((tile.Flags & Formats::TileRecord::ModifierMask) != Formats::TileRecord::ModifierInvisible) {
+						anyShown = true;
+						break;
+					}
+				}
+			}
+			if (!anyTile) {
+				if (aboutOthers) {
+					// TRANSLATORS: Warning in the layer properties, the layer is drawn in the game but has nothing to draw
+					add(LevelProblemSeverity::Warning, _x("editor", "Visible in game, but it has no tiles, so nothing is drawn"));
+				}
+			} else if (!anyShown) {
+				// TRANSLATORS: Warning in the layer properties, every tile of the layer has the Invisible modifier
+				add(LevelProblemSeverity::Warning, _x("editor", "Visible in game, but all its tiles are invisible, so nothing is drawn"));
+			}
+		}
+
 		// Whether a later layer of the same kind is the one that's drawn, there is only one of each (see Tiles::LayerRendererType)
 		auto hasLaterLayer = [&document, layerIndex](bool (*isKind)(Tiles::LayerRendererType)) {
 			for (std::size_t l = std::size_t(layerIndex) + 1; l < document.Layers.size(); l++) {
@@ -679,8 +718,9 @@ namespace Jazz2::Editor
 
 		switch (renderer) {
 			case Tiles::LayerRendererType::Default:
+				// Visible in the game, but not seen, as an empty layer is told about above
 				if (color[3] == 0) {
-					add(LevelProblemSeverity::Info, layer.IsSpriteLayer()
+					add(LevelProblemSeverity::Warning, layer.IsSpriteLayer()
 						? String(_x("editor", "Alpha is 0, it isn't drawn, but its tiles are still solid"))
 						: String(_x("editor", "Alpha is 0, it isn't drawn")));
 				} else if (std::max({ color[0], color[1], color[2] }) < 24) {
@@ -691,7 +731,7 @@ namespace Jazz2::Editor
 			case Tiles::LayerRendererType::Solid:
 			case Tiles::LayerRendererType::PaletteShift:
 				if (color[3] == 0) {
-					add(LevelProblemSeverity::Info, _x("editor", "Alpha is 0, it isn't drawn"));
+					add(LevelProblemSeverity::Warning, _x("editor", "Alpha is 0, it isn't drawn"));
 				}
 				break;
 			case Tiles::LayerRendererType::Tinted: {
@@ -699,7 +739,7 @@ namespace Jazz2::Editor
 				const std::uint32_t* palettes = ContentResolver::Get().GetPalettes();
 				const std::uint32_t entry = (palettes != nullptr ? palettes[color[0]] : 0xFFFFFFFFu);
 				if (color[3] == 0) {
-					add(LevelProblemSeverity::Info, _x("editor", "Strength is 0, it isn't drawn"));
+					add(LevelProblemSeverity::Warning, _x("editor", "Strength is 0, it isn't drawn"));
 				} else if ((entry >> 24) == 0) {
 					add(LevelProblemSeverity::Warning, _fx("editor", "Palette entry {} is transparent, so the layer isn't drawn", color[0]));
 				}
@@ -708,7 +748,7 @@ namespace Jazz2::Editor
 			case Tiles::LayerRendererType::SingleColor:
 			case Tiles::LayerRendererType::ChromaKey:
 				if (color[3] == 0) {
-					add(LevelProblemSeverity::Info, _x("editor", "Alpha is 0, it isn't drawn"));
+					add(LevelProblemSeverity::Warning, _x("editor", "Alpha is 0, it isn't drawn"));
 				}
 				break;
 			case Tiles::LayerRendererType::XRay: {
@@ -726,7 +766,7 @@ namespace Jazz2::Editor
 			}
 			case Tiles::LayerRendererType::BlurBehind:
 				if (color[3] == 0) {
-					add(LevelProblemSeverity::Info, _x("editor", "Alpha is 0, it does nothing"));
+					add(LevelProblemSeverity::Warning, _x("editor", "Alpha is 0, it does nothing"));
 				}
 				break;
 			case Tiles::LayerRendererType::Sky:
@@ -808,7 +848,7 @@ namespace Jazz2::Editor
 			};
 			SmallVector<ProblemGroup, 0> embedded, embeddedTargets;
 			auto check = [&](const Formats::EventRecord& event, Vector2i cell, std::int32_t offGrid) {
-				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 				if (descriptor == nullptr || !isSolid(cell)) {
 					return;
 				}
@@ -941,7 +981,7 @@ namespace Jazz2::Editor
 				if (EventType(event.Type) == EventType::WarpTarget) {
 					return false;
 				}
-				const EventParamField* field = FindEventField(EventCatalog::Find(EventType(event.Type)), ParamType::WarpId);
+				const EventParamField* field = FindEventField(EventCatalog::Find(EventType(event.Type), event.Params), ParamType::WarpId);
 				return (field != nullptr && EventCatalog::ReadField(event, *field) == value);
 			};
 			// TRANSLATORS: Name of an undo step in the history, a warp removed from the Check Level dialog

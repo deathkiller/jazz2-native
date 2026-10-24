@@ -5,6 +5,7 @@
 #else
 
 #include "../../Asserts.h"
+#include "../../Base/Move.h"
 
 #if defined(WITH_ZLIB) && defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	if defined(_M_X64)
@@ -23,7 +24,7 @@ namespace Death { namespace IO { namespace Compression {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	DeflateStream::DeflateStream()
-		: _inputStream(nullptr), _size(Stream::Invalid), _inputSize(-1), _state(State::Unknown)
+		: _inputStream(nullptr), _size(Stream::Invalid), _inputSize(-1), _outputPos(0), _outputLength(0), _state(State::Unknown), _rawInflate(true)
 	{
 	}
 
@@ -39,35 +40,52 @@ namespace Death { namespace IO { namespace Compression {
 	}
 
 	DeflateStream::DeflateStream(DeflateStream&& other) noexcept
+		: DeflateStream()
 	{
-		_inputStream = other._inputStream;
-		_strm = other._strm;
-		_inputSize = other._inputSize;
-		_state = other._state;
-		_rawInflate = other._rawInflate;
-		std::memcpy(_buffer, other._buffer, sizeof(_buffer));
-
-		// Original instance will be disabled
-		if (other._state == State::Created || other._state == State::Initialized || other._state == State::Read) {
-			other._state = State::Failed;
-		}
+		*this = Death::move(other);
 	}
 
 	DeflateStream& DeflateStream::operator=(DeflateStream&& other) noexcept
 	{
+		if (this == &other) {
+			return *this;
+		}
+
 		Dispose();
 
 		_inputStream = other._inputStream;
-		_strm = other._strm;
+		_size = other._size;
 		_inputSize = other._inputSize;
 		_state = other._state;
 		_rawInflate = other._rawInflate;
 		std::memcpy(_buffer, other._buffer, sizeof(_buffer));
+		_outputPos = 0;
+		_outputLength = other._outputLength - other._outputPos;
+		std::memcpy(_outputBuffer, &other._outputBuffer[other._outputPos], std::size_t(_outputLength));
+
+		if (other._state == State::Initialized || other._state == State::Read) {
+#if defined(WITH_MINIZ)
+			_strm = other._strm;
+#else
+			// zlib's state points back to the stream
+			if (inflateCopy(&_strm, &other._strm) != Z_OK) {
+				_state = State::Failed;
+			}
+			inflateEnd(&other._strm);
+#endif
+			if (_state != State::Failed && _strm.next_in != Z_NULL) {
+				_strm.next_in = _buffer + (other._strm.next_in - other._buffer);
+			}
+		} else {
+			_strm = other._strm;
+		}
 
 		// Original instance will be disabled
 		if (other._state == State::Created || other._state == State::Initialized || other._state == State::Read) {
 			other._state = State::Failed;
 		}
+		other._outputPos = 0;
+		other._outputLength = 0;
 
 		return *this;
 	}
@@ -88,7 +106,7 @@ namespace Death { namespace IO { namespace Compression {
 					offset -= bytesRead;
 				}
 
-				return static_cast<std::int64_t>(_strm.total_out);
+				return GetPosition();
 			}
 		}
 
@@ -97,7 +115,7 @@ namespace Death { namespace IO { namespace Compression {
 
 	std::int64_t DeflateStream::GetPosition() const
 	{
-		return static_cast<std::int64_t>(_strm.total_out);
+		return static_cast<std::int64_t>(_strm.total_out) - (_outputLength - _outputPos);
 	}
 
 	std::int64_t DeflateStream::Read(void* destination, std::int64_t bytesToRead)
@@ -111,9 +129,35 @@ namespace Death { namespace IO { namespace Compression {
 		std::int64_t bytesReadTotal = 0;
 
 		do {
-			// ReadInternal() can read only up to DeflateStream::BufferSize bytes
-			std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
-			std::int32_t bytesRead = ReadInternal(&typedBuffer[bytesReadTotal], partialBytesToRead);
+			if (_outputPos < _outputLength) {
+				std::int32_t bytesBuffered = _outputLength - _outputPos;
+				std::int32_t bytesToCopy = (bytesToRead < bytesBuffered ? std::int32_t(bytesToRead) : bytesBuffered);
+				std::memcpy(&typedBuffer[bytesReadTotal], &_outputBuffer[_outputPos], std::size_t(bytesToCopy));
+				_outputPos += bytesToCopy;
+				bytesReadTotal += bytesToCopy;
+				bytesToRead -= bytesToCopy;
+				continue;
+			}
+
+			std::int32_t bytesRead;
+			if (bytesToRead < OutputBufferSize) {
+				// Small reads go through the buffer
+				bytesRead = ReadInternal(_outputBuffer, OutputBufferSize);
+				if DEATH_LIKELY(bytesRead > 0) {
+					_outputPos = 0;
+					_outputLength = bytesRead;
+					continue;
+				}
+			} else {
+				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
+				bytesRead = ReadInternal(&typedBuffer[bytesReadTotal], partialBytesToRead);
+				if DEATH_LIKELY(bytesRead > 0) {
+					bytesReadTotal += bytesRead;
+					bytesToRead -= bytesRead;
+					continue;
+				}
+			}
+
 			if DEATH_UNLIKELY(bytesRead < 0) {
 				// Whatever was already decompressed into the caller's buffer is returned rather than thrown
 				// away with the error: a corrupted stream can fail on the very call that gathers its final
@@ -123,11 +167,8 @@ namespace Death { namespace IO { namespace Compression {
 					break;
 				}
 				return bytesRead;
-			} else if DEATH_UNLIKELY(bytesRead == 0) {
-				break;
 			}
-			bytesReadTotal += bytesRead;
-			bytesToRead -= bytesRead;
+			break;
 		} while (bytesToRead > 0);
 
 		return bytesReadTotal;
@@ -169,6 +210,8 @@ namespace Death { namespace IO { namespace Compression {
 
 		_inputStream = &inputStream;
 		_inputSize = inputSize;
+		_outputPos = 0;
+		_outputLength = 0;
 		_state = State::Created;
 		_rawInflate = rawInflate;
 		_size = Stream::NotSeekable;
@@ -185,6 +228,8 @@ namespace Death { namespace IO { namespace Compression {
 	{
 		CeaseReading();
 		_inputStream = nullptr;
+		_outputPos = 0;
+		_outputLength = 0;
 		_state = State::Unknown;
 		_size = Stream::Invalid;
 	}

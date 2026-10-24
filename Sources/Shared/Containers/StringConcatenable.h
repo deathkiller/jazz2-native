@@ -158,12 +158,9 @@ namespace Death { namespace Containers {
 				return N;
 			}
 			static inline void appendTo(const char a[N], char*& out) {
-				for (std::size_t i = 0; i < N; i++) {
-					if (a[i] == '\0') {
-						break;
-					}
-					*out++ = a[i];
-				}
+				const std::size_t n = size(a);
+				std::memcpy(out, a, n);
+				out += n;
 			}
 		};
 
@@ -183,9 +180,9 @@ namespace Death { namespace Containers {
 				return std::strlen(a);
 			}
 			static inline void appendTo(const char* a, char*& out) {
-				while (*a != '\0') {
-					*out++ = *a++;
-				}
+				const std::size_t n = std::strlen(a);
+				std::memcpy(out, a, n);
+				out += n;
 			}
 		};
 
@@ -205,11 +202,11 @@ namespace Death { namespace Containers {
 				return a.size();
 			}
 			static inline void appendTo(const ArrayView<const char>& a, char*& out) {
-				const char* d = a.data();
-				const char* const end = a.end();
-				while (d != end) {
-					*out++ = *d++;
+				const std::size_t n = a.size();
+				if (n != 0) {
+					std::memcpy(out, a.data(), n);
 				}
+				out += n;
 			}
 		};
 
@@ -247,9 +244,21 @@ namespace Death { namespace Containers {
 	{
 		std::size_t prevLength = a.size();
 		std::size_t length = prevLength + Implementation::StringConcatenable<StringBuilder<A, B>>::size(b);
-		std::size_t doubleCapacity = 2 * arrayCapacity(a);
+		std::size_t capacity = arrayCapacity(a);
 
-		arrayReserve(a, length < doubleCapacity ? doubleCapacity : length);
+		if (length > capacity) {
+			std::size_t doubleCapacity = 2 * capacity;
+			Array<char> grown;
+			arrayReserve(grown, length < doubleCapacity ? doubleCapacity : length);
+			arrayResize(grown, NoInit, length);
+			if (prevLength != 0) {
+				std::memcpy(grown.data(), a.data(), prevLength);
+			}
+			char* it = grown.data() + prevLength;
+			Implementation::StringConcatenable<StringBuilder<A, B>>::appendTo(b, it);
+			a = Death::move(grown);
+			return a;
+		}
 
 		char* it = a.data() + prevLength;
 		Implementation::StringConcatenable<StringBuilder<A, B>>::appendTo(b, it);

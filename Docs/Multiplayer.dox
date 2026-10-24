@@ -134,6 +134,9 @@ Operations | @cpp "AllowAssetStreaming" @ce (clients download missing levels fro
 entry doesn't set are inherited from the root, so the root holds common rules and entries only override
 (see @ref Jazz2::Multiplayer::PlaylistEntry).
 
+-   @cpp "LevelName" @ce is a level of no episode (@cpp "battle1" @ce), a level of an episode
+    (@cpp "prince/castle1" @ce), or an episode with a trailing slash (@cpp "prince/" @ce), which starts at its
+    first level.
 -   Play starts at @cpp "PlaylistIndex" @ce and advances after each round, wrapping around at the end.
 -   @cpp "RandomizePlaylist" @ce shuffles the list on start and on every wrap.
 -   A Cooperation entry with a story level continues through its episode's next levels with the same
@@ -289,7 +292,7 @@ an admin):
 Command | Description
 ------- | -----------
 `/set mode <mode>` | Changes the game mode and restarts the round. Same values as @cpp "GameMode" @ce
-`/set level <level>` | Loads another level and leaves the playlist
+`/set level <level>` | Loads another level and leaves the playlist. Same values as @cpp "LevelName" @ce, so `prince/` starts the first level of the episode
 `/set name <name>` | Renames the server. An empty name stops publishing to the online list
 `/set welcome <message>` | Changes the lobby welcome message, `\n` starts a new line
 `/set kills`, `/set laps`, `/set treasure <n>` | Changes the win target of the current round

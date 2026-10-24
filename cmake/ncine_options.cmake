@@ -745,9 +745,15 @@ else()
 endif()
 cmake_dependent_option(DEATH_CPU_USE_IFUNC "Allow using GNU IFUNC for runtime CPU dispatch" ${_DEATH_CPU_USE_IFUNC_DEFAULT} "_DEATH_CPU_CAN_USE_IFUNC" OFF)
 
-# Runtime CPU dispatch. Because going through a function pointer may have negative perf consequences,
-# enable it by default only on platforms that have IFUNC, and thus can avoid the function pointer indirection.
-option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-dependent functionality" ${_DEATH_CPU_CAN_USE_IFUNC})
+# Runtime CPU dispatch. Enabled by default everywhere except on Emscripten because there a dispatch through
+# a function pointer is prohibitively slow. Elsewhere dispatch through a function pointer or through IFUNC adds
+# only a minimal overhead over a compile-time dispatch, and the benefits are significant.
+if(EMSCRIPTEN)
+	set(_DEATH_CPU_USE_RUNTIME_DISPATCH_DEFAULT OFF)
+else()
+	set(_DEATH_CPU_USE_RUNTIME_DISPATCH_DEFAULT ON)
+endif()
+option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-dependent functionality" ${_DEATH_CPU_USE_RUNTIME_DISPATCH_DEFAULT})
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)

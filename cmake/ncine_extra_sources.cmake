@@ -2111,6 +2111,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/TileShapes.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tests/FakeToolHost.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tests/ToolTests.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/BlockGrab.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/EditorContext.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/EditorTool.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/EventTools.h
@@ -2250,6 +2251,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/TileShapes.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tests/FakeToolHost.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tests/ToolTests.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/BlockGrab.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/EventTools.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/GroundLineTool.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/MeasureTool.cpp

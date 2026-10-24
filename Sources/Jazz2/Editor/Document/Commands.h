@@ -306,6 +306,16 @@ namespace Jazz2::Editor
 		String GetName() const override;
 		std::size_t GetMemoryUsage() const override;
 
+		/**
+		 * @brief Lets a change of other fields of the layer merge into it, if that one lets it too
+		 *
+		 * As moving a layer by its frame changes either of its offsets or both as it's dragged, but is one step. Without
+		 * it, only a change of the same fields merges, as a value dragged in the properties.
+		 */
+		void SetMergesAnyField(bool value) {
+			_mergesAnyField = value;
+		}
+
 	private:
 		friend class CommandArchive;
 
@@ -315,8 +325,10 @@ namespace Jazz2::Editor
 		Formats::LayerRecord _newRecord;
 		String _oldName;
 		String _newName;
-		// What the change changes, only a change of the same is merged into it
+		// What the change changes, only a change of the same is merged into it, unless _mergesAnyField
 		std::uint32_t _changedFields;
+		// See SetMergesAnyField(), only while it's being made, it isn't archived
+		bool _mergesAnyField = false;
 
 		static std::uint32_t GetChangedFields(const Formats::LayerRecord& a, const Formats::LayerRecord& b, StringView nameA, StringView nameB);
 		// Puts a record into a layer, its size stays that of the tiles

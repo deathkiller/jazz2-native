@@ -261,6 +261,9 @@ namespace Jazz2::Scripting
 			return true;
 		}
 		bool jjSTREAM::push(const jjSTREAM& value) {
+			// Length-prefixed as a string, as measured in JJ2+ (and as MLLE keeps the parameters of a weapon)
+			std::uint32_t length = value.getSize();
+			PushValue(length);
 			return write(value);
 		}
 
@@ -302,12 +305,11 @@ namespace Jazz2::Scripting
 		bool jjSTREAM::pop(double& value) {
 			return PopValue(value);
 		}
-		bool jjSTREAM::pop(String& value) {
+		bool jjSTREAM::PopLength(std::uint32_t& length) {
 			// The length prefix is validated before it is consumed, so a truncated payload leaves the stream
 			// exactly where it was. Reading it first and rolling back afterwards cannot work: `Take()` may
 			// compact the buffer and reset `_readPos` to 0 during that read, and the rollback then underflows
 			// the unsigned position to ~4 GB instead of pointing at the length again.
-			std::uint32_t length;
 			const std::uint8_t* front = PeekFront(sizeof(length));
 			if (front == nullptr) {
 				return false;
@@ -316,15 +318,20 @@ namespace Jazz2::Scripting
 
 			// `PeekFront()` above proved there are at least `sizeof(length)` bytes left, so this cannot underflow
 			if (length > getSize() - sizeof(length)) {
-				// Truncated or not written by push(String)
+				// Truncated or not written by push()
 				return false;
 			}
 
 			_readPos += sizeof(length);
-			return get(value, length);
+			return true;
+		}
+		bool jjSTREAM::pop(String& value) {
+			std::uint32_t length;
+			return PopLength(length) && get(value, length);
 		}
 		bool jjSTREAM::pop(jjSTREAM& value) {
-			return get(value, getSize());
+			std::uint32_t length;
+			return PopLength(length) && get(value, length);
 		}
 
 		jjRNG::jjRNG(std::uint64_t seed) : _refCount(1) {
@@ -410,7 +417,7 @@ namespace Jazz2::Scripting
 
 		engine->RegisterObjectMethod("jjSTREAM", "bool pop(bool &out value)", asMETHODPR(jjSTREAM, pop, (bool&), bool), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjSTREAM", "bool pop(uint8 &out value)", asMETHODPR(jjSTREAM, pop, (uint8_t&), bool), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjSTREAM", "bool pop(int8 &out value)", asMETHODPR(jjSTREAM, pop, (int64_t&), bool), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjSTREAM", "bool pop(int8 &out value)", asMETHODPR(jjSTREAM, pop, (int8_t&), bool), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjSTREAM", "bool pop(uint16 &out value)", asMETHODPR(jjSTREAM, pop, (uint16_t&), bool), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjSTREAM", "bool pop(int16 &out value)", asMETHODPR(jjSTREAM, pop, (int16_t&), bool), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjSTREAM", "bool pop(uint32 &out value)", asMETHODPR(jjSTREAM, pop, (uint32_t&), bool), asCALL_THISCALL);

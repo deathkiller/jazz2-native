@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <cmath>
 
+#include <IO/FileSystem.h>
+
+using namespace Death::IO;
 using namespace nCine;
 
 namespace Jazz2::Formats
@@ -63,7 +66,7 @@ namespace Jazz2::Formats
 		}
 
 		// The layers the preview draws, in the order the game draws them: by their depth, whatever order the level stores
-		// them in, as an extra layer of MLLE comes after the eight of the original format; the ones of the same depth from
+		// them in, as an extra layer of a converted level comes after the eight of the original format; the ones of the same depth from
 		// the last one on. Not the hidden ones and the layers of effects (x-ray, blur behind and chroma key).
 		SmallVector<std::int32_t, 16> GetDrawnLayers(LevelPreview::ISource& source)
 		{
@@ -441,5 +444,52 @@ namespace Jazz2::Formats
 				data.push_back(std::uint8_t(b / (Samples * Samples)));
 			}
 		}
+	}
+
+	bool LevelPreview::Read(StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size)
+	{
+		// The editor and the converter store previews of at most 128x72 pixels, anything much larger isn't one of them
+		constexpr std::int32_t MaxSize = 256;
+
+		rgba.clear();
+		size = Vector2i();
+
+		auto s = fs::Open(path, FileAccess::Read);
+		LevelHeader header;
+		if (!s->IsValid() || !LevelFile::ReadHeader(*s, header)) {
+			return false;
+		}
+		LevelReader reader(*s, header);
+		LevelProperties properties;
+		reader.ReadProperties(properties);
+		if (!reader.SkipToChunks()) {
+			return false;
+		}
+		SmallVector<ChunkRecord, 0> chunks;
+		reader.ReadSelectedChunks(chunks, [](std::uint32_t tag, std::uint32_t) {
+			return (tag == LevelFile::PreviewChunk);
+		});
+		for (const ChunkRecord& chunk : chunks) {
+			if (chunk.Tag != LevelFile::PreviewChunk || chunk.Data.size() < 4) {
+				continue;
+			}
+			std::int32_t width = chunk.Data[0] | (chunk.Data[1] << 8);
+			std::int32_t height = chunk.Data[2] | (chunk.Data[3] << 8);
+			if (width <= 0 || height <= 0 || width > MaxSize || height > MaxSize ||
+				chunk.Data.size() < 4 + std::size_t(width) * std::size_t(height) * 3) {
+				return false;
+			}
+			const std::size_t pixelCount = std::size_t(width) * std::size_t(height);
+			rgba.resize_for_overwrite(pixelCount * 4);
+			for (std::size_t i = 0; i < pixelCount; i++) {
+				rgba[i * 4] = chunk.Data[4 + i * 3];
+				rgba[i * 4 + 1] = chunk.Data[4 + i * 3 + 1];
+				rgba[i * 4 + 2] = chunk.Data[4 + i * 3 + 2];
+				rgba[i * 4 + 3] = 255;
+			}
+			size = Vector2i(width, height);
+			return true;
+		}
+		return false;
 	}
 }

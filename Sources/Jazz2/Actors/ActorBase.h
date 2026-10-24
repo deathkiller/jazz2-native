@@ -119,8 +119,9 @@ namespace Jazz2::Actors
 		/** @brief Called after the object emitted its own lights, see @ref ActorBase::EmitLights() */
 		virtual void OnEmitLights(ActorBase* actor, SmallVectorImpl<LightEmitter>& lights) {
 		}
-		/** @brief Called when the object runs out of health, right before it perishes, see @ref ActorBase::DecreaseHealth() */
-		virtual void OnPerish(ActorBase* actor, ActorBase* collider) {
+		/** @brief Called when the object runs out of health, right before it perishes, returns `true` if it lives on, see @ref ActorBase::DecreaseHealth() */
+		virtual bool OnPerish(ActorBase* actor, ActorBase* collider) {
+			return false;
 		}
 		/** @brief Returns `true` if the object doesn't break into debris by itself, what drives it makes its own */
 		virtual bool OwnsDebris() const {
@@ -171,7 +172,8 @@ namespace Jazz2::Actors
 		/** @brief Actor is facing left */
 		IsFacingLeft = 0x1000,
 
-		//Reserved = 0x2000,
+		/** @brief Actor keeps moving by its horizontal speed while frozen, which slowly decays, instead of stopping dead */
+		KeepsMomentumWhenFrozen = 0x2000,
 
 		/** @brief Actor should be preserved when state is rolled back to checkpoint */
 		PreserveOnRollback = 0x4000,
@@ -437,6 +439,8 @@ namespace Jazz2::Actors
 
 		/** @brief Returns `true` if the object is invulnerable */
 		bool IsInvulnerable();
+		/** @brief Returns `true` if the object is frozen */
+		bool IsFrozen() const;
 		/** @brief Returns current health */
 		std::int32_t GetHealth();
 		/** @brief Sets current health */
@@ -549,14 +553,14 @@ namespace Jazz2::Actors
 			 */
 			ActorRenderer(ActorBase* owner);
 
-			/** @brief Whether the animation is paused */
-			bool AnimPaused;
+			/** @brief Sheet the frames come from, or `nullptr` when the frames form a regular grid */
+			const Resources::GenericGraphicResource* FrameSource;
 			/** @brief Frame configuration */
 			Vector2i FrameConfiguration;
 			/** @brief Frame dimensions */
 			Vector2i FrameDimensions;
-			/** @brief Sheet the frames come from, or `nullptr` when the frames form a regular grid */
-			const Resources::GenericGraphicResource* FrameSource;
+			/** @brief Hotspot of the current animation, as authored (never mirrored - see UpdateAnchor()) */
+			Vector2f Hotspot;
 			/** @brief Animation loop mode */
 			AnimationLoopMode LoopMode;
 			/** @brief Frame offset */
@@ -569,8 +573,8 @@ namespace Jazz2::Actors
 			float AnimTime;
 			/** @brief Current animation frame */
 			std::int32_t CurrentFrame;
-			/** @brief Hotspot of the current animation, as authored (never mirrored - see UpdateAnchor()) */
-			Vector2f Hotspot;
+			/** @brief Whether the animation is paused */
+			bool AnimPaused;
 
 			/** @brief Initializes the renderer to the specified renderer type */
 			void Initialize(ActorRendererType type);
@@ -615,13 +619,13 @@ namespace Jazz2::Actors
 			void textureHasChanged(Texture* newTexture) override;
 
 		private:
-			ActorBase* _owner;
+			// Whether the current graphic is indexed (uses the palette shader even without a recolor override)
+			bool _baseIndexed;
 			ActorRendererType _rendererType;
+			ActorBase* _owner;
 			float _rendererTransition;
 			// Recolor palette override: flat offset into the shared palette texture, or -1 for none
 			std::int32_t _paletteOffset;
-			// Whether the current graphic is indexed (uses the palette shader even without a recolor override)
-			bool _baseIndexed;
 			// Palette offset of the current indexed graphic (the animation's PaletteOffset; 0 = default sprite palette)
 			std::int32_t _basePaletteOffset;
 
@@ -660,7 +664,15 @@ namespace Jazz2::Actors
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
+		// Ordered by alignment, so there is no padding between them
 		ILevelHandler* _levelHandler;
+		Metadata* _metadata;
+		GraphicResource* _currentAnimation;
+		GraphicResource* _currentTransition;
+#if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief What the per-frame update of the object is handed over to, see @ref SetUpdateOverride() */
+		std::unique_ptr<IActorUpdateOverride> _updateOverride;
+#endif
 
 		Vector2f _pos;
 		/** @brief Position the object had when the current frame started, i.e. the beginning of the path it took */
@@ -702,19 +714,14 @@ namespace Jazz2::Actors
 		float _spawnFrames;
 		/** @brief Position (and layer) the object was activated at, used to recreate the object from a state snapshot */
 		Vector3i _spawnPos;
-		/** @brief Event type the object was spawned from (see @ref ActorActivationDetails::Type), or @ref EventType::Empty */
-		EventType _spawnEventType;
 		/** @brief Event parameters the object was spawned with, valid only if @ref _spawnEventType is set */
 		std::uint8_t _spawnEventParams[SpawnParamsSize];
-#if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
-		/** @brief What the per-frame update of the object is handed over to, see @ref SetUpdateOverride() */
-		std::unique_ptr<IActorUpdateOverride> _updateOverride;
-#endif
-		Metadata* _metadata;
-		ActorRenderer _renderer;
-		GraphicResource* _currentAnimation;
-		GraphicResource* _currentTransition;
+		/** @brief Event type the object was spawned from (see @ref ActorActivationDetails::Type), or @ref EventType::Empty */
+		EventType _spawnEventType;
+		bool _thawPending = false;
 		bool _currentTransitionCancellable;
+
+		ActorRenderer _renderer;
 #endif
 
 		/** @brief Sets internal parent node */
@@ -802,6 +809,8 @@ namespace Jazz2::Actors
 		virtual bool IsIlluminatedStateRemoted() const {
 			return false;
 		}
+		/** @brief Returns how fast the object moves horizontally by itself while it's frozen, see @ref ActorState::KeepsMomentumWhenFrozen */
+		float GetFrozenMomentumX() const;
 		/** @brief Called when the object hits a floor */
 		virtual void OnHitFloor(float timeMult);
 		/** @brief Called when the object hits a ceiling */
@@ -843,8 +852,10 @@ namespace Jazz2::Actors
 		bool TryUnstuck();
 		/** @brief Updates hitbox to a given size */
 		void UpdateHitbox(std::int32_t w, std::int32_t h);
-		/** @brief Updates frozen state of the object */
-		void UpdateFrozenState(float timeMult);
+		/** @brief Updates frozen state of the object, returns `true` if it thawed in this frame */
+		bool UpdateFrozenState(float timeMult);
+		/** @brief Ends the freeze at once, the ice breaks in the next @ref UpdateFrozenState() */
+		void ThawOnNextUpdate();
 		/** @brief Handles change of frozen state after collision with other object */
 		void HandleFrozenStateChange(ActorBase* shot);
 

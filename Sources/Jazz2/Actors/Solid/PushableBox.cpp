@@ -4,9 +4,7 @@
 
 #include "../Explosion.h"
 #include "../Player.h"
-#include "../Weapons/ShotBase.h"
-
-#include "../../../nCine/Base/FrameTimer.h"
+#include "../Weapons/FreezerShot.h"
 
 namespace Jazz2::Actors::Solid
 {
@@ -50,7 +48,8 @@ namespace Jazz2::Actors::Solid
 				weaponType == WeaponType::Seeker || weaponType == WeaponType::Pepper) {
 				shotBase->DecreaseHealth(INT32_MAX);
 			} else if (weaponType == WeaponType::Freezer) {
-				_frozenTimeLeft = 10.0f * FrameTimer::FramesPerSecond;
+				_frozenTimeLeft = static_cast<Weapons::FreezerShot*>(shotBase)->GetFrozenDuration() * 4.0f;
+				_renderer.AnimPaused = true;
 				shotBase->DecreaseHealth(INT32_MAX);
 			} else if (weaponType == WeaponType::Toaster) {
 				_frozenTimeLeft = std::min(1.0f, _frozenTimeLeft);

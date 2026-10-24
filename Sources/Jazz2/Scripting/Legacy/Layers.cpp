@@ -1,7 +1,10 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "Layers.h"
+#include "AnimationTables.h"
+#include "Enums.h"
 #include "Internal.h"
+#include "Stream.h"
 
 #include "../../Actors/ActorBase.h"
 #include "../../Actors/Player.h"
@@ -564,6 +567,8 @@ namespace Jazz2::Scripting
 					description.Color = Vector4f(red, green, blue, stars);
 					description.TextureFadePosition = Vector2f(warpHorizon.X, warpHorizon.Y);
 					description.TextureFade = (warpHorizon.Fade ? Formats::TexturedLayerParams::DefaultFade : 0);
+					// Of a layer other than the sky layer of the original game, as the level has it (see JJ2Level::MakeLayerRecord())
+					flags |= (description.TextureFlags & Formats::TexturedLayerParams::FloorOnly);
 					break;
 				case tbgModeTUNNEL:
 					description.Color = Vector4f(red, green, blue, 0.0f);
@@ -621,6 +626,16 @@ namespace Jazz2::Scripting
 				}
 			}
 			return arr;
+		}
+		float jjLAYER::ToStoredOffset(float value) {
+			constexpr double FixedOne = 65536.0;
+			constexpr double FixedLimit = 2147483648.0;
+			double fixed = double(value) * FixedOne;
+			if (fixed > FixedLimit || fixed < -FixedLimit) {
+				return 0.0f;
+			}
+			std::int32_t stored = std::int32_t(std::uint32_t(std::int64_t(fixed)));
+			return float(double(stored) / FixedOne);
 		}
 		bool jjLAYER::jjLayerOrderSet(const CScriptArray& order) {
 			// The layers a script made are layers of the level too, only a standalone one (one that couldn't be made) is
@@ -772,7 +787,66 @@ namespace Jazz2::Scripting
 	// The converter does what MLLE::Setup() and MLLE::SpawnOffgrids() do, when the level is converted - the layers, their
 	// properties and their order, the palette, the edited tiles and the off-grid events are all in the level already
 	bool mlleSetup() {
+		// Except the sprites it recolors, which the frames of the animations have to show
+		ScriptLoader::FromActiveContext<LevelScriptLoader>()->ApplySpriteRecolors();
 		return true;
+	}
+
+	void LevelScriptLoader::ApplySpriteRecolors()
+	{
+		// The sprites MLLE can recolor, by their slot (see Formats::SpriteRecolorsChunk) - the set, the animation of the first
+		// frame and the number of frames from it
+		static constexpr struct {
+			Legacy::anim Set;
+			std::uint8_t Animation;
+			std::uint8_t FrameCount;
+		} RecolorableSprites[] = {
+			{ Legacy::mPINBALL, 0, 4 }, { Legacy::mPINBALL, 2, 4 }, { Legacy::mCARROTPOLE, 0, 1 }, { Legacy::mDIAMPOLE, 0, 1 },
+			{ Legacy::mPINBALL, 4, 8 }, { Legacy::mJUNGLEPOLE, 0, 1 }, { Legacy::mZZSCENERY, 0, 17 }, { Legacy::mPSYCHPOLE, 0, 1 },
+			{ Legacy::mSMALTREE, 0, 1 }, { Legacy::mSNOW, 0, 8 }, { Legacy::mCOMMON, 2, 18 }, { Legacy::mBOLLPLAT, 0, 2 },
+			{ Legacy::mFRUITPLAT, 0, 2 }, { Legacy::mGRASSPLAT, 0, 2 }, { Legacy::mPINKPLAT, 0, 2 }, { Legacy::mSONICPLAT, 0, 2 },
+			{ Legacy::mSPIKEPLAT, 0, 2 }, { Legacy::mSPIKEBOLL, 0, 2 }, { Legacy::mSPIKEBOLL3D, 0, 2 }, { Legacy::mVINE, 1, 1 }
+		};
+
+		ArrayView<const std::uint8_t> recolors = _levelHandler->_spriteRecolors;
+		auto& tables = GetAnimationTables();
+		for (std::size_t i = 0; i + Formats::SpriteRecolorsChunk::RecordSize <= recolors.size(); i += Formats::SpriteRecolorsChunk::RecordSize) {
+			std::uint8_t slot = recolors[i];
+			if (slot >= std::size(RecolorableSprites)) {
+				continue;
+			}
+			const auto& sprite = RecolorableSprites[slot];
+			std::uint32_t firstAnim = tables.GetFirstAnim(Legacy::AnimationTables::GetSetID(sprite.Set, versionTSF));
+			std::uint32_t frameCount, firstFrame;
+			if (firstAnim == 0 || !tables.GetAnimationFrames(firstAnim + sprite.Animation, frameCount, firstFrame)) {
+				continue;
+			}
+			// As jjPIXELMAP(frame).recolor(colors).save(frame) of the include
+			const std::uint8_t* colors = &recolors[i + 1];
+			for (std::uint32_t j = 0; j < sprite.FrameCount; j++) {
+				Legacy::jjANIMFRAME* frame = tables.GetFrame(firstFrame + j);
+				if (frame == nullptr) {
+					break;
+				}
+				tables.RecolorFrame(*frame, colors);
+				frame->Release();
+			}
+		}
+	}
+
+	bool mlleGetWeapons(Legacy::jjSTREAM* data) {
+		// What the include of weapons of MLLE reads of the level, see Formats::CustomWeaponsChunk
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		ArrayView<const std::uint8_t> weapons = owner->GetLevelHandler()->GetCustomWeapons();
+		bool hasWeapons = (data != nullptr && !weapons.empty());
+		if (hasWeapons) {
+			data->write(String(reinterpret_cast<const char*>(weapons.data()), weapons.size()));
+		}
+		// A handle passed to a native function is the function's to release
+		if (data != nullptr) {
+			data->Release();
+		}
+		return hasWeapons;
 	}
 
 	void mlleSpawnOffgrids() {
@@ -805,6 +879,7 @@ namespace Jazz2::Scripting
 		if (layer == nullptr) {
 			return 0.0f;
 		}
+		value = Legacy::jjLAYER::ToStoredOffset(value);
 		layer->Description.OffsetX = value;
 		if (proxy != nullptr) {
 			proxy->xOffset = value;
@@ -824,6 +899,7 @@ namespace Jazz2::Scripting
 		if (layer == nullptr) {
 			return 0.0f;
 		}
+		value = Legacy::jjLAYER::ToStoredOffset(value);
 		layer->Description.OffsetY = value;
 		if (proxy != nullptr) {
 			proxy->yOffset = value;
@@ -1034,16 +1110,34 @@ namespace Jazz2::Scripting
 		noop();
 	}
 	// The textured background of the level is layer 8, its jjLAYER keeps how scripts set it (see jjLAYER::ApplyTexture()), the
-	// global properties of JJ2+ are those of it
+	// global properties of JJ2+ are those of it. JJ2+ draws the other textured layers of a level without the MLLE stream in
+	// them (see JJ2Level::MakeLayerRecord()), so without a textured layer 8 they're those of the first of them.
 	namespace
 	{
 		struct TexturedBackgroundLayer
 		{
 			jjLAYER* Layer;
 
-			TexturedBackgroundLayer() {
+			explicit TexturedBackgroundLayer(bool skyLayerOnly = false) {
 				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 				Layer = owner->GetLayerProxy(owner->GetLayerIndex(8));
+				if (skyLayerOnly || (Layer != nullptr && Layer->GetTextureSurface() != jjLAYER::Untextured)) {
+					return;
+				}
+				for (std::int32_t number = 7; number >= 1; number--) {
+					jjLAYER* other = owner->GetLayerProxy(owner->GetLayerIndex(number));
+					if (other == nullptr) {
+						continue;
+					}
+					if (other->GetTextureSurface() != jjLAYER::Untextured) {
+						if (Layer != nullptr) {
+							Layer->Release();
+						}
+						Layer = other;
+						return;
+					}
+					other->Release();
+				}
 			}
 			~TexturedBackgroundLayer() {
 				if (Layer != nullptr) {
@@ -1117,11 +1211,11 @@ namespace Jazz2::Scripting
 		return style;
 	}
 	bool get_jjTexturedBGUsed() {
-		TexturedBackgroundLayer background;
+		TexturedBackgroundLayer background(true);
 		return (background.Layer != nullptr && background.Layer->GetTextureSurface() != jjLAYER::Untextured);
 	}
 	bool set_jjTexturedBGUsed(bool used) {
-		TexturedBackgroundLayer background;
+		TexturedBackgroundLayer background(true);
 		if (background.Layer != nullptr) {
 			std::int32_t surface = background.Layer->GetTextureSurface();
 			if (used && surface == jjLAYER::Untextured) {
@@ -1838,10 +1932,12 @@ namespace Jazz2::Scripting
 
 		// The same walk as TileMap::ResolveTileSet()
 		std::int32_t partCount = std::int32_t(tileMap->_tileSets.size());
+		std::int32_t partFirst = 0;
 		for (std::int32_t i = 0; i < partCount; i++) {
 			auto& part = tileMap->_tileSets[i];
 			if (tileId >= part.Count) {
 				tileId -= part.Count;
+				partFirst += part.Count;
 				continue;
 			}
 
@@ -1857,8 +1953,30 @@ namespace Jazz2::Scripting
 					if (s != nullptr) {
 						auto data = std::make_unique<Formats::TileSetData>();
 						if (Formats::TileSetFile::Read(*s, *data)) {
+							if (part.PaletteRemapping != nullptr) {
+								// In the colors of the level, as they're drawn (ThreedRealms' trapezes are chains of a tile of an extra tile set)
+								for (std::int32_t tile = 0; tile < data->TileCount; tile++) {
+									if (std::size_t(tile) < data->TrueColor.size() && data->TrueColor[tile] != 0) {
+										continue;
+									}
+									std::uint8_t* image = &data->Images[std::size_t(tile) * Formats::TileSetData::ImageBytesPerTile];
+									for (std::int32_t i = 0; i < TileSet::DefaultTileSize * TileSet::DefaultTileSize; i++) {
+										image[i] = (image[i] != 0 ? part.PaletteRemapping[image[i]] : 0);
+									}
+								}
+							}
 							if (pixels.TrueColorPalette != nullptr) {
 								MakeTrueColorTiles(*data, pixels.TrueColorPalette.get());
+							}
+							// The images the level replaces (MLLE edited tiles) are what JJ2+ reads of the tiles
+							for (const Formats::TileDiffuseOverride& tile : _levelHandler->_tileDiffuseOverrides) {
+								std::int32_t fileTile = std::int32_t(tile.TileId) - partFirst + part.Offset;
+								if (tile.TileId >= partFirst && tile.TileId < partFirst + part.Count && fileTile < data->TileCount) {
+									std::memcpy(&data->Images[std::size_t(fileTile) * Formats::TileSetData::ImageBytesPerTile], tile.Indices, sizeof(tile.Indices));
+									if (std::size_t(fileTile) < data->TrueColor.size()) {
+										data->TrueColor[fileTile] = 0;
+									}
+								}
 							}
 							pixels.Data = Death::move(data);
 						} else {
@@ -1916,7 +2034,8 @@ namespace Jazz2::Scripting
 		constexpr std::int32_t PixelCount = TileSet::DefaultTileSize * TileSet::DefaultTileSize;
 
 		auto tileMap = _levelHandler->_tileMap.get();
-		if (tileMap == nullptr || tileId < 0 || tileId >= tileMap->GetStaticTileCount()) {
+		// JJ2+ has room for tiles after those of the tile sets, scripts save images into them (SwitchTestV2)
+		if (tileMap == nullptr || tileId < 0 || !tileMap->AppendBlankTiles(tileId)) {
 			return false;
 		}
 
@@ -1965,7 +2084,7 @@ namespace Jazz2::Scripting
 		constexpr std::int32_t PixelCount = TileSet::DefaultTileSize * TileSet::DefaultTileSize;
 
 		auto tileMap = _levelHandler->_tileMap.get();
-		if (tileMap == nullptr || tileId < 0 || tileId >= tileMap->GetStaticTileCount()) {
+		if (tileMap == nullptr || tileId < 0 || !tileMap->AppendBlankTiles(tileId)) {
 			return false;
 		}
 
@@ -2048,25 +2167,32 @@ namespace Jazz2::Scripting
 			// The engine advances OffsetX/Y itself for auto-scrolling layers (TileMap::OnUpdate), so only push when the
 			// script actually changed the proxy; otherwise pull the engine's current value so reads stay live
 			if (layer->xOffset != layer->_syncedOffsetX) {
+				layer->xOffset = Legacy::jjLAYER::ToStoredOffset(layer->xOffset);
 				desc.OffsetX = layer->xOffset;
 			} else {
 				layer->xOffset = desc.OffsetX;
 			}
 			layer->_syncedOffsetX = layer->xOffset;
 			if (layer->yOffset != layer->_syncedOffsetY) {
+				layer->yOffset = Legacy::jjLAYER::ToStoredOffset(layer->yOffset);
 				desc.OffsetY = layer->yOffset;
 			} else {
 				layer->yOffset = desc.OffsetY;
 			}
 			layer->_syncedOffsetY = layer->yOffset;
 		}
+		// The speed models of layer 8 were pushed above as they're without it
+		if (_layer8Fixed >= 0) {
+			ApplyUseLayer8Speeds();
+		}
 	}
 
 	bool getUseLayer8Speeds() {
-		noop(); return false;
+		return ScriptLoader::FromActiveContext<LevelScriptLoader>()->GetUseLayer8Speeds();
 	}
 	bool setUseLayer8Speeds(bool value) {
-		noop(); return false;
+		ScriptLoader::FromActiveContext<LevelScriptLoader>()->SetUseLayer8Speeds(value);
+		return value;
 	}
 
 	// TODO
@@ -2094,37 +2220,77 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	bool jjMaskedPixel(std::int32_t xPixel, std::int32_t yPixel) {
+	// The event at the masked pixel the functions below found last, see jjEventAtLastMaskedPixel
+	static std::uint8_t _eventAtLastMaskedPixel = 0;
+
+	static bool IsPixelMasked(std::int32_t xPixel, std::int32_t yPixel) {
 		return IsRegionMasked(AABBf((float)xPixel, (float)yPixel, (float)xPixel, (float)yPixel));
+	}
+	static void FoundMaskedPixel(std::int32_t xPixel, std::int32_t yPixel) {
+		if (xPixel >= 0 && yPixel >= 0) {
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			_eventAtLastMaskedPixel = std::uint8_t(owner->GetOriginalEvent(std::uint16_t(xPixel / 32), std::uint16_t(yPixel / 32)));
+		}
+	}
+	// The first masked pixel of a line, by steps of one pixel, false if there's none
+	static bool FindMaskedPixel(std::int32_t xPixel, std::int32_t yPixel, std::int32_t stepX, std::int32_t stepY, std::int32_t lineLength, std::int32_t& found) {
+		for (std::int32_t i = 0; i < lineLength; i++) {
+			if (IsPixelMasked(xPixel + i * stepX, yPixel + i * stepY)) {
+				found = i;
+				FoundMaskedPixel(xPixel + i * stepX, yPixel + i * stepY);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	std::uint8_t get_jjEventAtLastMaskedPixel() {
+		return _eventAtLastMaskedPixel;
+	}
+	bool jjMaskedPixel(std::int32_t xPixel, std::int32_t yPixel) {
+		if (!IsPixelMasked(xPixel, yPixel)) {
+			return false;
+		}
+		FoundMaskedPixel(xPixel, yPixel);
+		return true;
 	}
 	bool jjMaskedPixelLayer(std::int32_t xPixel, std::int32_t yPixel, std::uint8_t layer) {
 		// Only the sprite layer has collision masks in this engine, so the layer argument is ignored
 		return jjMaskedPixel(xPixel, yPixel);
 	}
 	bool jjMaskedHLine(std::int32_t xPixel, std::int32_t lineLength, std::int32_t yPixel) {
-		if (lineLength <= 0) {
+		if (lineLength <= 0 || !IsRegionMasked(AABBf((float)xPixel, (float)yPixel, (float)(xPixel + lineLength - 1), (float)yPixel))) {
 			return false;
 		}
-		return IsRegionMasked(AABBf((float)xPixel, (float)yPixel, (float)(xPixel + lineLength - 1), (float)yPixel));
+		std::int32_t found;
+		FindMaskedPixel(xPixel, yPixel, 1, 0, lineLength, found);
+		return true;
 	}
 	bool jjMaskedHLineLayer(std::int32_t xPixel, std::int32_t lineLength, std::int32_t yPixel, std::uint8_t layer) {
 		return jjMaskedHLine(xPixel, lineLength, yPixel);
 	}
 	bool jjMaskedVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength) {
-		if (lineLength <= 0) {
+		if (lineLength <= 0 || !IsRegionMasked(AABBf((float)xPixel, (float)yPixel, (float)xPixel, (float)(yPixel + lineLength - 1)))) {
 			return false;
 		}
-		return IsRegionMasked(AABBf((float)xPixel, (float)yPixel, (float)xPixel, (float)(yPixel + lineLength - 1)));
+		std::int32_t found;
+		FindMaskedPixel(xPixel, yPixel, 0, 1, lineLength, found);
+		return true;
 	}
 	bool jjMaskedVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer) {
 		return jjMaskedVLine(xPixel, yPixel, lineLength);
 	}
-	bool jjMaskedTopVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength) {
-		// The "top" variant behaves like a regular vertical line here; one-way (top-solid) tiles aren't distinguished
-		return jjMaskedVLine(xPixel, yPixel, lineLength);
+	std::int32_t jjMaskedTopVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength) {
+		// As measured in JJ2+, the topmost masked pixel of the line counted from 1, `lineLength + 1` if there's none
+		std::int32_t found;
+		if (lineLength <= 0 || !IsRegionMasked(AABBf((float)xPixel, (float)yPixel, (float)xPixel, (float)(yPixel + lineLength - 1))) ||
+			!FindMaskedPixel(xPixel, yPixel, 0, 1, lineLength, found)) {
+			return std::max(lineLength, 0) + 1;
+		}
+		return found + 1;
 	}
-	bool jjMaskedTopVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer) {
-		return jjMaskedVLine(xPixel, yPixel, lineLength);
+	std::int32_t jjMaskedTopVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer) {
+		return jjMaskedTopVLine(xPixel, yPixel, lineLength);
 	}
 
 	void LevelScriptLoader::RegisterLegacyLayerGlobals(asIScriptEngine* engine)
@@ -2412,7 +2578,7 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedTopVLine), asCALL_CDECL);
 		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength,uint8 layer)", asFUNCTION(jjMaskedTopVLineLayer), asCALL_CDECL);
 		//engine->RegisterObjectMethod("jjLAYER", "int maskedTopVLine(int xPixel,int yPixel, int lineLength) const", asMETHOD(jjLAYER, CheckVLine), asCALL_THISCALL);
-		//engine->RegisterGlobalProperty("uint8 jjEventAtLastMaskedPixel", tileAttr);
+		engine->RegisterGlobalFunction("uint8 get_jjEventAtLastMaskedPixel()", asFUNCTION(get_jjEventAtLastMaskedPixel), asCALL_CDECL);
 	}
 
 	void LevelScriptLoader::RegisterLegacyMlle(asIScriptEngine* engine)
@@ -2421,6 +2587,8 @@ namespace Jazz2::Scripting
 		// when the level is loaded, so only what scripts use of it afterwards is here
 		engine->SetDefaultNamespace("MLLE");
 		engine->RegisterGlobalFunction("bool Setup()", asFUNCTION(mlleSetup), asCALL_CDECL);
+		// For the include of weapons, see LevelScriptLoader::OnProcessInclude()
+		engine->RegisterGlobalFunction("bool _GetWeapons(jjSTREAM@ data)", asFUNCTION(mlleGetWeapons), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void ReapplyPalette()", asMETHOD(jjPAL, apply), asCALL_THISCALL_ASGLOBAL, &_mllePalette);
 		engine->RegisterGlobalFunction("void SpawnOffgrids()", asFUNCTION(mlleSpawnOffgrids), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void SpawnOffgridsLocal()", asFUNCTION(mlleSpawnOffgridsLocal), asCALL_CDECL);

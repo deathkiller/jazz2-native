@@ -70,6 +70,9 @@
     <Filter Include="Source Files\nCine\Graphics">
       <UniqueIdentifier>{3c9a5e17-8b42-4f6d-a1c3-6e0b2d7f9a45}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\nCine\Threading">
+      <UniqueIdentifier>{8f2d6c41-3a75-4e19-b6d0-2c9e7a1f5b38}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\nCine">
       <UniqueIdentifier>{9d1f7b38-2e64-4a05-b8c7-4f3e6a1d0c92}</UniqueIdentifier>
     </Filter>
@@ -179,6 +182,12 @@
     </ClCompile>
     <ClCompile Include="..\..\nCine\Base\Algorithms.cpp">
       <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\nCine\Threading\Thread.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\nCine\Threading\WindowsThreadSync.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Shared\Cpu.cpp">
       <Filter>Source Files\Shared</Filter>

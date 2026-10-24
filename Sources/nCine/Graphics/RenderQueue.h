@@ -2,6 +2,7 @@
 
 #include "RenderCommand.h"
 
+#include <Containers/ArrayView.h>
 #include <Containers/SmallVector.h>
 
 using namespace Death::Containers;
@@ -29,19 +30,44 @@ namespace nCine
 		/** @brief Adds a draw command to the queue */
 		void AddCommand(RenderCommand* command);
 
+#if defined(RHI_CAP_POSTPROCESSING) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Commands of a range of layers, a part of a queue drawn in parts (see @ref NextPart()) */
+		struct Part
+		{
+			/** @brief Range of the opaque commands, sorted front to back, so a later part lies before an earlier one */
+			std::uint32_t OpaqueBegin, OpaqueEnd;
+			/** @brief Range of the transparent commands */
+			std::uint32_t TransparentBegin, TransparentEnd;
+
+			/** @brief Returns `true` if the part has no commands */
+			bool IsEmpty() const {
+				return (OpaqueBegin == OpaqueEnd && TransparentBegin == TransparentEnd);
+			}
+		};
+
 		/**
 		 * @brief Sorts the queues, builds batches and commits the commands
 		 *
-		 * No batch spans @p splitLayer, so the queue can then be drawn in two parts, the commands below it and the
-		 * rest (see @ref Draw()).
+		 * No batch spans any of @p splitLayers (in ascending order), so the queue can then be drawn in parts between
+		 * them (see @ref NextPart()).
 		 */
-		void SortAndCommit(std::uint32_t splitLayer = NoSplitLayer);
+		void SortAndCommit(ArrayView<const std::uint32_t> splitLayers = {});
+		/** @brief Returns the empty part the first one follows, to start @ref NextPart() with */
+		Part StartPart() const;
 		/**
-		 * @brief Issues the render commands of the given layers in order
+		 * @brief Returns the part that follows @p previous
 		 *
-		 * Draws the commands from @p minLayer up to (but not including) @p endLayer, every command by default.
+		 * Contains the commands from where @p previous ends up to (but not including) @p endLayer, the rest of the
+		 * queue with @ref NoSplitLayer. Only what @p previous left is searched, so the parts have to be taken in order.
 		 */
-		void Draw(std::uint32_t minLayer = 0, std::uint32_t endLayer = NoSplitLayer);
+		Part NextPart(const Part& previous, std::uint32_t endLayer) const;
+		/** @brief Issues the render commands of the given part in order */
+		void Draw(const Part& part);
+#else
+		void SortAndCommit();
+#endif
+		/** @brief Issues all the render commands in order */
+		void Draw();
 
 		/** @brief Clears all the queues and resets the render batcher */
 		void Clear();
@@ -55,6 +81,16 @@ namespace nCine
 		SmallVector<RenderCommand*, 0> _transparentQueue;
 		/** @brief Array of transparent batched render command pointers */
 		SmallVector<RenderCommand*, 0> _transparentBatchedQueue;
+#if defined(RHI_CAP_POSTPROCESSING)
+		// A queue drawn in parts counts its draw calls only once, set by the first part drawn in a frame
+		bool _drawCallsCounted;
+#endif
+
+		// The queues that are drawn, the batched ones if batching is enabled
+		ArrayView<RenderCommand* const> GetOpaques() const;
+		ArrayView<RenderCommand* const> GetTransparents() const;
+		void CountDrawCalls();
+		void DrawCommands(ArrayView<RenderCommand* const> opaques, ArrayView<RenderCommand* const> transparents);
 	};
 
 }

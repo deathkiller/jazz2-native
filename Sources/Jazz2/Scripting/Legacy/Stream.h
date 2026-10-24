@@ -80,7 +80,7 @@ namespace Jazz2::Scripting
 			bool push(double value);
 			/** @brief Appends a length-prefixed string to the stream */
 			bool push(const String& value);
-			/** @brief Appends the contents of another stream */
+			/** @brief Appends the contents of another stream, prefixed with their length */
 			bool push(const jjSTREAM& value);
 
 			/** @brief Reads a boolean value from the front of the stream */
@@ -107,7 +107,7 @@ namespace Jazz2::Scripting
 			bool pop(double& value);
 			/** @brief Reads a length-prefixed string from the front of the stream */
 			bool pop(String& value);
-			/** @brief Reads stream contents from the front into another stream */
+			/** @brief Reads a length-prefixed stream from the front of the stream into another stream */
 			bool pop(jjSTREAM& value);
 
 		private:
@@ -116,6 +116,8 @@ namespace Jazz2::Scripting
 			// Reads advance this instead of erasing from the front, so reading a large stream stays linear
 			std::uint32_t _readPos;
 
+			// Reads the length before a string or a stream, if that many bytes follow it
+			bool PopLength(std::uint32_t& length);
 			const std::uint8_t* PeekFront(std::uint32_t count) const;
 			bool Take(void* target, std::uint32_t count);
 			void Append(const void* source, std::uint32_t count);

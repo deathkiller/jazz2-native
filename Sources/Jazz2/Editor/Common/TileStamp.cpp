@@ -66,6 +66,16 @@ namespace Jazz2::Editor
 
 	bool TileStamp::GetPatternTile(std::int32_t x, std::int32_t y, Vector2i origin, TileRef& tile) const
 	{
+		std::size_t index;
+		if (!GetPatternIndex(x, y, origin, index)) {
+			return false;
+		}
+		tile = Tiles[index];
+		return true;
+	}
+
+	bool TileStamp::GetPatternIndex(std::int32_t x, std::int32_t y, Vector2i origin, std::size_t& index) const
+	{
 		if (IsEmpty()) {
 			return false;
 		}
@@ -79,7 +89,7 @@ namespace Jazz2::Editor
 			if (count == 0) {
 				return false;
 			}
-			std::size_t index = std::size_t(h % std::uint32_t(count));
+			index = std::size_t(h % std::uint32_t(count));
 			if (Weights.size() == count) {
 				// A tile with a larger weight takes a larger part of the range the hash falls in
 				float total = 0.0f;
@@ -99,19 +109,12 @@ namespace Jazz2::Editor
 					}
 				}
 			}
-			if (!Present[index]) {
-				return false;
-			}
-			tile = Tiles[index];
-			return true;
+			return Present[index];
 		}
 		std::int32_t sx = PositiveModulo(x - origin.X, Width);
 		std::int32_t sy = PositiveModulo(y - origin.Y, Height);
-		if (!IsPresent(sx, sy)) {
-			return false;
-		}
-		tile = GetTile(sx, sy);
-		return true;
+		index = std::size_t(sy) * Width + sx;
+		return Present[index];
 	}
 
 	void TileStamp::FlipX()
@@ -127,12 +130,20 @@ namespace Jazz2::Editor
 				if (Weights.size() == Tiles.size()) {
 					std::swap(Weights[a], Weights[b]);
 				}
+				// The events go with their tiles, as they're turned when mirrored isn't known of a stamp
+				if (HasEvents()) {
+					std::swap(Events[a], Events[b]);
+				}
 			}
 		}
 		for (TileRef& tile : Tiles) {
 			if (!tile.IsEmpty()) {
 				tile.Flags ^= Formats::TileRecord::FlipX;
 			}
+		}
+		// Mirrored as Mirror Selection mirrors them, the edge of the stamp stays in it
+		for (OffGridEvent& event : OffGridEvents) {
+			event.Offset.X = std::clamp<std::int32_t>(Width * 32 - event.Offset.X, 0, Width * 32 - 1);
 		}
 	}
 
@@ -149,12 +160,18 @@ namespace Jazz2::Editor
 				if (Weights.size() == Tiles.size()) {
 					std::swap(Weights[a], Weights[b]);
 				}
+				if (HasEvents()) {
+					std::swap(Events[a], Events[b]);
+				}
 			}
 		}
 		for (TileRef& tile : Tiles) {
 			if (!tile.IsEmpty()) {
 				tile.Flags ^= Formats::TileRecord::FlipY;
 			}
+		}
+		for (OffGridEvent& event : OffGridEvents) {
+			event.Offset.Y = std::clamp<std::int32_t>(Height * 32 - event.Offset.Y, 0, Height * 32 - 1);
 		}
 	}
 
@@ -164,16 +181,28 @@ namespace Jazz2::Editor
 			return;
 		}
 		bool hasWeights = (Weights.size() == Tiles.size());
+		bool hasEvents = HasEvents();
 		SmallVector<TileRef, 0> tiles;
 		SmallVector<bool, 0> present;
 		SmallVector<float, 0> weights;
+		SmallVector<Formats::EventRecord, 0> events;
 		tiles.resize(Tiles.size());
 		present.resize(Present.size());
 		if (hasWeights) {
 			weights.resize(Weights.size());
 		}
+		if (hasEvents) {
+			events.resize(Events.size());
+		}
 		// The new stamp is as wide as the old one was high
 		std::int32_t newWidth = Height, newHeight = Width;
+		// The events off the grid turn with the tiles, by their positions in pixels
+		for (OffGridEvent& event : OffGridEvents) {
+			Vector2i from = event.Offset;
+			event.Offset = (clockwise ? Vector2i(Height * 32 - from.Y, from.X) : Vector2i(from.Y, Width * 32 - from.X));
+			event.Offset.X = std::clamp<std::int32_t>(event.Offset.X, 0, newWidth * 32 - 1);
+			event.Offset.Y = std::clamp<std::int32_t>(event.Offset.Y, 0, newHeight * 32 - 1);
+		}
 		for (std::int32_t y = 0; y < Height; y++) {
 			for (std::int32_t x = 0; x < Width; x++) {
 				std::int32_t nx = (clockwise ? Height - 1 - y : y);
@@ -184,6 +213,9 @@ namespace Jazz2::Editor
 				if (hasWeights) {
 					weights[to] = Weights[from];
 				}
+				if (hasEvents) {
+					events[to] = Events[from];
+				}
 			}
 		}
 		Width = newWidth;
@@ -192,6 +224,9 @@ namespace Jazz2::Editor
 		Present = Death::move(present);
 		if (hasWeights) {
 			Weights = Death::move(weights);
+		}
+		if (hasEvents) {
+			Events = Death::move(events);
 		}
 	}
 
@@ -256,6 +291,23 @@ namespace Jazz2::Editor
 		if (maxX >= minX) {
 			IncludeInBounds(Recti(minX, minY, maxX - minX + 1, maxY - minY + 1));
 		}
+	}
+
+	void TileSelection::Deselect(const Recti& area)
+	{
+		if (IsEmpty()) {
+			return;
+		}
+		Touch();
+		std::int32_t x1 = std::max<std::int32_t>(area.X, _bounds.X), y1 = std::max<std::int32_t>(area.Y, _bounds.Y);
+		std::int32_t x2 = std::min(area.X + area.W, _bounds.X + _bounds.W), y2 = std::min(area.Y + area.H, _bounds.Y + _bounds.H);
+		for (std::int32_t y = y1; y < y2; y++) {
+			for (std::int32_t x = x1; x < x2; x++) {
+				_mask.reset(std::size_t(y) * _layerSize.X + x);
+			}
+		}
+		// Only the bounds can have become smaller
+		UpdateBounds(_bounds);
 	}
 
 	void TileSelection::Invert(std::int32_t layer, Vector2i layerSize)

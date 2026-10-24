@@ -286,7 +286,9 @@ namespace Jazz2::Scripting::Legacy
 
 		_sets.resize(SetCount, nullptr);
 		// The empty first entries, see the header
-		AddAnimation();
+		while (_animations.size() < FirstSetAnim) {
+			AddAnimation();
+		}
 		AddFrame(0);
 	}
 
@@ -385,6 +387,24 @@ namespace Jazz2::Scripting::Legacy
 		return true;
 	}
 
+	std::int32_t AnimationTables::FindChangedFrame(std::int32_t setID, std::uint32_t animation, std::uint32_t frame) const
+	{
+		// Without loading the set, a set nothing loaded has no frame a script changed
+		if (setID < 0 || std::uint32_t(setID) >= _sets.size() || _sets[setID] == nullptr || !_sets[setID]->_resolved) {
+			return -1;
+		}
+		std::uint32_t animIndex = _sets[setID]->firstAnim + animation;
+		if (_sets[setID]->firstAnim == 0 || animIndex >= _animations.size()) {
+			return -1;
+		}
+		const jjANIMATION* anim = _animations[animIndex];
+		std::uint32_t frameIndex = anim->_firstFrame + frame;
+		if (frame >= anim->frameCount || frameIndex >= _frames.size() || _frames[frameIndex]->_version == 0) {
+			return -1;
+		}
+		return std::int32_t(frameIndex);
+	}
+
 	bool AnimationTables::GetFrameBounds(std::uint32_t frameIndex, Recti& frameRect, Recti& pixelBounds)
 	{
 		if (frameIndex >= _frames.size()) {
@@ -423,6 +443,19 @@ namespace Jazz2::Scripting::Legacy
 		}
 
 		pixelBounds = Recti(frame.hotSpotX + minX, frame.hotSpotY + minY, maxX - minX + 1, maxY - minY + 1);
+		return true;
+	}
+
+	bool AnimationTables::GetFrameSpots(std::uint32_t frameIndex, Recti& frameRect, Vector2i& coldSpot)
+	{
+		if (frameIndex >= _frames.size()) {
+			return false;
+		}
+
+		jjANIMFRAME& frame = *_frames[frameIndex];
+		EnsureFrameImage(frame);
+		frameRect = Recti(frame.hotSpotX, frame.hotSpotY, frame.width, frame.height);
+		coldSpot = Vector2i(frame.coldSpotX, frame.coldSpotY);
 		return true;
 	}
 
@@ -613,6 +646,19 @@ namespace Jazz2::Scripting::Legacy
 		frame._colors = nullptr;
 		frame.width = std::uint16_t(width);
 		frame.height = std::uint16_t(height);
+		MarkChanged(frame);
+	}
+
+	void AnimationTables::RecolorFrame(jjANIMFRAME& frame, const std::uint8_t* colors)
+	{
+		EnsureFrameImage(frame);
+		if (frame._pixels != nullptr) {
+			std::size_t count = std::size_t(frame.width) * frame.height;
+			for (std::size_t i = 0; i < count; i++) {
+				frame._pixels[i] = colors[frame._pixels[i]];
+			}
+		}
+		frame._colors = nullptr;
 		MarkChanged(frame);
 	}
 
@@ -813,9 +859,22 @@ namespace Jazz2::Scripting::Legacy
 					std::uint32_t count = (mapping != nullptr ? mapping->GetItemCount(fileSet) : 0);
 					for (std::uint32_t i = 0; i < count && i <= 0xFFFF; i++) {
 						auto* entry = mapping->Get(fileSet, i);
-						if (entry != nullptr && entry->Category != Compatibility::AnimSetMapping::Discard && !entry->Name.empty()) {
+						if (entry == nullptr || entry->Name.empty()) {
+							continue;
+						}
+						if (entry->Category != Compatibility::AnimSetMapping::Discard) {
 							String path = entry->Category + '/' + entry->Name + ".aura"_s;
 							_pathAnimations.emplace(fs::ToNativeSeparators(path), (setID << 16) | i);
+						} else {
+							// The objects of the game show the graphics as this item of the original (the gems of a level, not
+							// those of the HUD), whatever else shows them too
+							String path = fs::ToNativeSeparators(entry->Name + ".aura"_s);
+							auto existing = _pathAnimations.find(path);
+							if (existing != _pathAnimations.end()) {
+								existing->second = (setID << 16) | i;
+							} else {
+								_pathAnimations.emplace(Death::move(path), (setID << 16) | i);
+							}
 						}
 					}
 				}
@@ -974,8 +1033,12 @@ namespace Jazz2::Scripting::Legacy
 		// Most of `plus.j2a` isn't converted (warp, reticles, the fonts...), what isn't comes from the file itself if it's there,
 		// as does a set of the original that isn't converted at all (the fonts, which scripts draw as sprites too)
 		SmallVector<Compatibility::JJ2Anims::AnimSection, 0> fileAnims;
+		// JJ2+ draws the font of the original with its own of more characters (127 is ∞, SwitchTestV2 draws it so)
+		bool isFont = (std::int32_t(set._index) == GetSetID(mFONT, _plusFirstSetID == AnimsSetCountTSF));
 		if (set._index >= _plusFirstSetID && set._index - _plusFirstSetID < _plusSetCount &&
 			ReadPlusAnimationSet(set._index - _plusFirstSetID, fileAnims)) {
+			animCount = std::max(animCount, std::uint32_t(fileAnims.size()));
+		} else if (isFont && ReadPlusAnimationSet(mZZFONT - mZZAMMO, fileAnims)) {
 			animCount = std::max(animCount, std::uint32_t(fileAnims.size()));
 		} else if (set._index < _plusFirstSetID && mapping != nullptr && animCount > 0 && !HasConvertedAnimations(*mapping, fileSet) &&
 			ReadOriginalAnimationSet(fileSet, fileAnims)) {
@@ -1002,8 +1065,9 @@ namespace Jazz2::Scripting::Legacy
 			native.ShownAnim = anim->_index;
 
 			auto* entry = (mapping != nullptr && i < mapping->GetItemCount(fileSet) ? mapping->Get(fileSet, i) : nullptr);
-			if (entry != nullptr && entry->Category != Compatibility::AnimSetMapping::Discard && !entry->Name.empty()) {
-				String path = entry->Category + '/' + entry->Name + ".aura"_s;
+			if (entry != nullptr && !entry->Name.empty()) {
+				// A discarded item the game draws with the graphics of another one has them too (see AnimSetMapping::DiscardItemAs())
+				String path = (entry->Category != Compatibility::AnimSetMapping::Discard ? entry->Category + '/' + entry->Name : String(entry->Name)) + ".aura"_s;
 				ContentResolver::SpriteSheet sheet;
 				if (resolver.ReadSpriteSheet(path, sheet, false) && sheet.FrameCount > 0 &&
 					_frames.size() + std::uint32_t(sheet.FrameCount) <= MaxFrames) {

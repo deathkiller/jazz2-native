@@ -178,7 +178,7 @@ The log goes to stdout unbuffered, so redirect it to keep a full trace across cr
 
 @code
 Jazz2:Jazz2 >Jazz2:jazz2-log.txt
-Jazz2:Jazz2 /level prince/01_castle1 >Jazz2:jazz2-log.txt
+Jazz2:Jazz2 /level prince/castle1 >Jazz2:jazz2-log.txt
 @endcode
 
 @subsection amiga-presets Performance presets and autodetection

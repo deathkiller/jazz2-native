@@ -2334,7 +2334,7 @@ namespace Death { namespace Cpu {
 		@m_class{m-note m-info}
 
 		@par
-			If you target GCC 4.8 or Clang < 7, you may also want to use @ref IntrinsicsSse4.h instead of
+			If you target Clang < 7, you may also want to use @ref IntrinsicsSse4.h instead of
 			@cpp #include <nmmintrin.h> @ce to be able to access the intrinsics on this
 			compiler.
 	*/
@@ -2375,13 +2375,6 @@ namespace Death { namespace Cpu {
 		Neither a superset nor implied by any other `DEATH_ENABLE_*` macro (not even
 		@ref DEATH_TARGET_BMI2, although the name would suggest that), so you may
 		need to specify it together with others.
-
-		@m_class{m-note m-info}
-
-		@par
-			If you target GCC 4.8, you may also want to use @ref IntrinsicsAvx.h instead of
-			@cpp #include <immintrin.h> @ce to be able to access the intrinsics on this
-			compiler.
 	*/
 #if defined(DEATH_TARGET_LZCNT) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_LZCNT
@@ -2424,13 +2417,6 @@ namespace Death { namespace Cpu {
 		Neither a superset nor implied by any other `DEATH_ENABLE_*` macro, so you
 		may need to specify it together with others. See
 		@ref Cpu-usage-target-attributes for more information.
-
-		@m_class{m-note m-info}
-
-		@par
-			If you target GCC 4.8, you may also want to use @ref IntrinsicsAvx.h instead of
-			@cpp #include <immintrin.h> @ce to be able to access the intrinsics on this
-			compiler.
 	*/
 #if defined(DEATH_TARGET_BMI1) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_BMI1
@@ -2473,13 +2459,6 @@ namespace Death { namespace Cpu {
 		Neither a superset nor implied by any other `DEATH_ENABLE_*` macro (not even
 		@ref DEATH_TARGET_BMI1, although the name would suggest that), so you may
 		need to specify it together with others.
-
-		@m_class{m-note m-info}
-
-		@par
-			If you target GCC 4.8, you may also want to use @ref IntrinsicsAvx.h instead of
-			@cpp #include <immintrin.h> @ce to be able to access the intrinsics on this
-			compiler.
 	*/
 #if defined(DEATH_TARGET_BMI2) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_BMI2
@@ -2568,13 +2547,6 @@ namespace Death { namespace Cpu {
 		portably implied by any other `DEATH_ENABLE_*` macro so you may need to
 		specify it together with others. See @ref Cpu-usage-target-attributes for more
 		information.
-
-		@m_class{m-note m-info}
-
-		@par
-			If you target GCC 4.8, you may also want to use @ref IntrinsicsAvx.h instead of
-			@cpp #include <immintrin.h> @ce to be able to access the intrinsics on this
-			compiler.
 	*/
 #if defined(DEATH_TARGET_AVX_F16C) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define DEATH_ENABLE_AVX_F16C

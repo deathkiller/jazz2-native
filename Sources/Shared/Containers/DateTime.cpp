@@ -122,8 +122,10 @@ namespace Death { namespace Containers {
 
 			std::memcpy(temp, result, sizeof(struct tm));
 			return temp;
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || \
+		(defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_CONSTRAINED_MEMORY))
+			return localtime_r(ticks, temp);
 #else
-			// TODO: This function is not thread-safe on Unix - use localtime_r instead
 			const tm* const result = localtime(ticks);
 			if (result == nullptr) {
 				return nullptr;
@@ -231,8 +233,10 @@ namespace Death { namespace Containers {
 
 #if defined(DEATH_TARGET_WINDOWS)
 			return (gmtime_s(temp, &t) == 0 ? temp : nullptr);
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || \
+		(defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_CONSTRAINED_MEMORY))
+			return gmtime_r(&t, temp);
 #else
-			// TODO: This function is not thread-safe on Unix - use gmtime_r instead
 			const tm* const result = gmtime(&t);
 			if (result == nullptr) {
 				return nullptr;
@@ -1102,7 +1106,7 @@ namespace Death { namespace Containers {
 #else
 		struct timeval tp{};
 		gettimeofday(&tp, nullptr);
-		return DateTime::FromUnixMilliseconds((tp.tv_sec * 1000) + (tp.tv_usec / 1000));
+		return DateTime::FromUnixMilliseconds((std::int64_t(tp.tv_sec) * 1000) + (tp.tv_usec / 1000));
 #endif
 	}
 

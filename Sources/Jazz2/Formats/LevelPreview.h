@@ -168,5 +168,12 @@ namespace Jazz2::Formats
 		 * are shown in. Leaves @p data empty if the level has no sprite layer.
 		 */
 		static void Make(ISource& source, nCine::Vector2f start, const std::uint32_t* palette, SmallVectorImpl<std::uint8_t>& data);
+
+		/**
+		 * @brief Reads the preview of a level file as RGBA pixels, row by row
+		 *
+		 * Returns `false` if the level has none, or one too large to be one of them.
+		 */
+		static bool Read(StringView path, SmallVectorImpl<std::uint8_t>& rgba, nCine::Vector2i& size);
 	};
 }

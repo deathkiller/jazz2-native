@@ -30,7 +30,8 @@ namespace Death { namespace IO { namespace Compression {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	ZstdStream::ZstdStream()
-		: _inputStream(nullptr), _strm(nullptr), _size(Stream::Invalid), _inputSize(-1), _state(State::Unknown)
+		: _inputStream(nullptr), _strm(nullptr), _size(Stream::Invalid), _inputSize(-1), _state(State::Unknown),
+			_inBufferPos(0), _inBufferLength(0), _inBufferCapacity(0), _outBufferPos(0), _outPosTotal(0), _outBufferLength(0), _outBufferCapacity(0)
 	{
 	}
 
@@ -46,36 +47,26 @@ namespace Death { namespace IO { namespace Compression {
 	}
 
 	ZstdStream::ZstdStream(ZstdStream&& other) noexcept
+		: ZstdStream()
 	{
-		_inputStream = other._inputStream;
-		_strm = other._strm;
-		_inputSize = other._inputSize;
-		_state = other._state;
-
-		_buffer = Death::move(other._buffer);
-		_inBufferPos = other._inBufferPos;
-		_inBufferLength = other._inBufferLength;
-		_inBufferCapacity = other._inBufferCapacity;
-		_outBufferPos = other._outBufferPos;
-		_outPosTotal = other._outPosTotal;
-		_outBufferLength = other._outBufferLength;
-		_outBufferCapacity = other._outBufferCapacity;
-
-		// Original instance will be disabled
-		if (other._state == State::Created || other._state == State::Initialized) {
-			other._state = State::Failed;
-		}
+		*this = Death::move(other);
 	}
 
 	ZstdStream& ZstdStream::operator=(ZstdStream&& other) noexcept
 	{
+		if (this == &other) {
+			return *this;
+		}
+
 		Dispose();
 
 		_inputStream = other._inputStream;
 		_strm = other._strm;
+		_size = other._size;
 		_inputSize = other._inputSize;
 		_state = other._state;
-		
+		other._strm = nullptr;
+
 		_buffer = Death::move(other._buffer);
 		_inBufferPos = other._inBufferPos;
 		_inBufferLength = other._inBufferLength;
@@ -84,6 +75,11 @@ namespace Death { namespace IO { namespace Compression {
 		_outPosTotal = other._outPosTotal;
 		_outBufferLength = other._outBufferLength;
 		_outBufferCapacity = other._outBufferCapacity;
+
+		other._inBufferPos = 0;
+		other._inBufferLength = 0;
+		other._outBufferPos = 0;
+		other._outBufferLength = 0;
 
 		// Original instance will be disabled
 		if (other._state == State::Created || other._state == State::Initialized) {
@@ -150,7 +146,6 @@ namespace Death { namespace IO { namespace Compression {
 			bytesToRead -= bytesRead;
 		} while (bytesToRead > 0);
 
-		_outPosTotal += bytesReadTotal;
 		return bytesReadTotal;
 	}
 
@@ -219,12 +214,18 @@ namespace Death { namespace IO { namespace Compression {
 
 	void ZstdStream::InitializeInternal()
 	{
+		if (_strm == nullptr) {
+			_state = State::Failed;
+			return;
+		}
+
 		std::size_t result = ZSTD_initDStream(_strm);
 		if (ZSTD_isError(result)) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("ZSTD_initDStream() failed with error 0x{:x} ({})", result, ZSTD_getErrorName(result));
 #endif
 			_state = State::Failed;
+			return;
 		}
 
 		if (_buffer == nullptr) {
@@ -239,7 +240,7 @@ namespace Death { namespace IO { namespace Compression {
 		if (_state == State::Created) {
 			InitializeInternal();
 		}
-		if (size <= 0 || _state == State::Finished) {
+		if (size <= 0) {
 			return 0;
 		}
 		if (_state == State::Unknown || _state >= State::Failed) {
@@ -248,26 +249,38 @@ namespace Death { namespace IO { namespace Compression {
 
 		std::int32_t n = (_outBufferLength - _outBufferPos);
 		while (n == 0) {
-			if (_inBufferPos >= _inBufferLength) {
-				std::int32_t bytesRead = _inputSize;
-				if (bytesRead < 0 || bytesRead > _inBufferCapacity) {
-					bytesRead = _inBufferCapacity;
+			if (_state == State::Finished) {
+				return 0;
+			}
+
+			// A full output buffer may have left decoded data in the decoder, so it's drained before reading more input
+			if (_inBufferPos >= _inBufferLength && _outBufferLength < _outBufferCapacity) {
+				std::int32_t bytesToRead = _inputSize;
+				if (bytesToRead < 0 || bytesToRead > _inBufferCapacity) {
+					bytesToRead = _inBufferCapacity;
 				}
 
-				bytesRead = (std::int32_t)_inputStream->Read(&_buffer[0], bytesRead);
+				std::int64_t bytesRead = (bytesToRead > 0 ? _inputStream->Read(&_buffer[0], bytesToRead) : 0);
 				if (bytesRead <= 0) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
+					LOGE("Compressed stream ended prematurely");
+#endif
+					_inBufferPos = 0;
+					_inBufferLength = 0;
+					_state = State::Failed;
 					return Stream::Invalid;
 				}
 
 				if (_inputSize > 0) {
-					_inputSize -= bytesRead;
+					_inputSize -= std::int32_t(bytesRead);
 				}
 
 				_inBufferPos = 0;
+				_inBufferLength = std::int32_t(bytesRead);
 			}
 
-			ZSTD_inBuffer inBuffer = { &_buffer[0], _inBufferCapacity, _inBufferLength };
-			ZSTD_outBuffer outBuffer = { &_buffer[_inBufferCapacity], _outBufferCapacity, _outBufferLength };
+			ZSTD_inBuffer inBuffer = { &_buffer[0], std::size_t(_inBufferLength), std::size_t(_inBufferPos) };
+			ZSTD_outBuffer outBuffer = { &_buffer[_inBufferCapacity], std::size_t(_outBufferCapacity), 0 };
 			std::size_t result = ZSTD_decompressStream(_strm, &outBuffer, &inBuffer);
 			if (ZSTD_isError(result)) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
@@ -277,10 +290,14 @@ namespace Death { namespace IO { namespace Compression {
 				return Stream::Invalid;
 			}
 
-			_inBufferLength = inBuffer.pos;
-			_outBufferLength = outBuffer.pos;
+			_inBufferPos = std::int32_t(inBuffer.pos);
+			_outBufferPos = 0;
+			_outBufferLength = std::int32_t(outBuffer.pos);
+			n = _outBufferLength;
 
-			n = (_outBufferLength - _outBufferPos);
+			if (result == 0 && !HasNextFrame()) {
+				CeaseReading();
+			}
 		}
 
 		if (n > size) {
@@ -288,7 +305,42 @@ namespace Death { namespace IO { namespace Compression {
 		}
 		std::memcpy(ptr, &_buffer[_inBufferCapacity + _outBufferPos], n);
 		_outBufferPos += n;
+		_outPosTotal += n;
 		return n;
+	}
+
+	bool ZstdStream::HasNextFrame()
+	{
+		// Concatenated frames are valid, the magic number tells the next one from unrelated trailing data
+		std::int32_t available = _inBufferLength - _inBufferPos;
+		if (available < 4 && _inputSize != 0) {
+			std::memmove(&_buffer[0], &_buffer[_inBufferPos], available);
+			_inBufferPos = 0;
+			_inBufferLength = available;
+			while (_inBufferLength < 4 && _inputSize != 0) {
+				std::int32_t bytesToRead = _inBufferCapacity - _inBufferLength;
+				if (_inputSize > 0 && bytesToRead > _inputSize) {
+					bytesToRead = _inputSize;
+				}
+				std::int64_t bytesRead = _inputStream->Read(&_buffer[_inBufferLength], bytesToRead);
+				if (bytesRead <= 0) {
+					break;
+				}
+				if (_inputSize > 0) {
+					_inputSize -= std::int32_t(bytesRead);
+				}
+				_inBufferLength += std::int32_t(bytesRead);
+			}
+			available = _inBufferLength;
+		}
+		if (available < 4) {
+			return false;
+		}
+
+		const std::uint8_t* p = reinterpret_cast<const std::uint8_t*>(&_buffer[_inBufferPos]);
+		std::uint32_t magic = std::uint32_t(p[0]) | (std::uint32_t(p[1]) << 8) | (std::uint32_t(p[2]) << 16) | (std::uint32_t(p[3]) << 24);
+		// Zstandard frame or skippable frame
+		return (magic == 0xFD2FB528u || (magic & 0xFFFFFFF0u) == 0x184D2A50u);
 	}
 
 	bool ZstdStream::CeaseReading()
@@ -297,21 +349,32 @@ namespace Death { namespace IO { namespace Compression {
 			return true;
 		}
 
-		std::int64_t seekToEnd = _inBufferLength - _inBufferPos;
+		std::int64_t seekToEnd = (_inputSize >= 0 ? std::int64_t(_inputSize) : -std::int64_t(_inBufferLength - _inBufferPos));
 		if (seekToEnd != 0) {
 			_inputStream->Seek(seekToEnd, SeekOrigin::Current);
 		}
+		_inBufferPos = 0;
+		_inBufferLength = 0;
+		if (_inputSize > 0) {
+			_inputSize = 0;
+		}
 
 		_state = State::Finished;
-		_size = static_cast<std::int64_t>(_outPosTotal);
+		_size = static_cast<std::int64_t>(_outPosTotal) + (_outBufferLength - _outBufferPos);
 		return true;
 	}
 
 	ZstdWriter::ZstdWriter(Stream& outputStream, std::int32_t compressionLevel)
 		: _outputStream(&outputStream), _state(State::Created), _outBufferPos(0), _outBufferLength(0)
 	{
+		_inBufferCapacity = static_cast<std::int32_t>(ZSTD_CStreamInSize());	// Recommended input buffer size
+		_outBufferCapacity = static_cast<std::int32_t>(ZSTD_CStreamOutSize());	// Recommended output buffer size
+
 		_strm = ZSTD_createCStream();
-		DEATH_DEBUG_ASSERT(_strm != nullptr);
+		if (_strm == nullptr) {
+			_state = State::Failed;
+			return;
+		}
 
 		std::size_t result = ZSTD_initCStream(_strm, compressionLevel);
 		if (ZSTD_isError(result)) {
@@ -320,9 +383,6 @@ namespace Death { namespace IO { namespace Compression {
 #endif
 			_state = State::Failed;
 		}
-
-		_inBufferCapacity = static_cast<std::int32_t>(ZSTD_CStreamInSize());	// Recommended input buffer size
-		_outBufferCapacity = static_cast<std::int32_t>(ZSTD_CStreamOutSize());	// Recommended output buffer size
 
 		_buffer = std::make_unique<char[]>(_outBufferCapacity);
 	}
@@ -334,18 +394,13 @@ namespace Death { namespace IO { namespace Compression {
 
 	void ZstdWriter::Dispose()
 	{
-		if (_state != State::Created && _state != State::Initialized) {
-			return;
-		}
-
-		if (_state == State::Initialized) {
+		if (_state == State::Created || _state == State::Initialized) {
 			WriteInternal(nullptr, 0, true);
+			_state = State::Finished;
 		}
 
 		ZSTD_freeCStream(_strm);
 		_strm = nullptr;
-
-		_state = State::Finished;
 	}
 
 	std::int64_t ZstdWriter::Seek(std::int64_t offset, SeekOrigin origin)
@@ -395,7 +450,28 @@ namespace Death { namespace IO { namespace Compression {
 
 	bool ZstdWriter::Flush()
 	{
-		return (WriteInternal(nullptr, 0, false) >= 0);
+		if (_state != State::Created && _state != State::Initialized) {
+			return false;
+		}
+
+		std::size_t remaining;
+		do {
+			ZSTD_outBuffer outBuffer = { &_buffer[0], std::size_t(_outBufferCapacity), 0 };
+			remaining = ZSTD_flushStream(_strm, &outBuffer);
+			if (ZSTD_isError(remaining)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("ZSTD_flushStream() failed with error 0x{:x} ({})", remaining, ZSTD_getErrorName(remaining));
+#endif
+				_state = State::Failed;
+				return false;
+			}
+			if (outBuffer.pos > 0 && _outputStream->Write(&_buffer[0], std::int64_t(outBuffer.pos)) != std::int64_t(outBuffer.pos)) {
+				_state = State::Failed;
+				return false;
+			}
+		} while (remaining != 0);
+
+		return true;
 	}
 
 	bool ZstdWriter::IsValid()
@@ -420,8 +496,8 @@ namespace Death { namespace IO { namespace Compression {
 				bytesToWrite = _inBufferCapacity;
 			}
 
-			ZSTD_inBuffer inBuffer = { buffer, bytesToWrite, 0 };
-			ZSTD_outBuffer outBuffer = { &_buffer[0], _outBufferCapacity, 0 };
+			ZSTD_inBuffer inBuffer = { buffer, std::size_t(bytesToWrite), 0 };
+			ZSTD_outBuffer outBuffer = { &_buffer[0], std::size_t(_outBufferCapacity), 0 };
 			std::size_t result = ZSTD_compressStream(_strm, &outBuffer, &inBuffer);
 			if (ZSTD_isError(result)) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
@@ -431,25 +507,31 @@ namespace Death { namespace IO { namespace Compression {
 				return Stream::Invalid;
 			}
 
-			if (outBuffer.pos > 0) {
-				_outputStream->Write(&_buffer[0], outBuffer.pos);
-			}
-
-			bytesToWrite = inBuffer.pos;
-		}
-
-		if (finish) {
-			ZSTD_outBuffer outBuffer = { &_buffer[0], _outBufferCapacity, 0 };
-			std::size_t result = ZSTD_endStream(_strm, &outBuffer);
-			if (ZSTD_isError(result)) {
-#if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("ZSTD_endStream() failed with error 0x{:x} ({})", result, ZSTD_getErrorName(result));
-#endif
+			if (outBuffer.pos > 0 && _outputStream->Write(&_buffer[0], std::int64_t(outBuffer.pos)) != std::int64_t(outBuffer.pos)) {
 				_state = State::Failed;
 				return Stream::Invalid;
 			}
 
-			_outputStream->Write(&_buffer[0], outBuffer.pos);
+			bytesToWrite = std::int32_t(inBuffer.pos);
+		}
+
+		if (finish) {
+			std::size_t remaining;
+			do {
+				ZSTD_outBuffer outBuffer = { &_buffer[0], std::size_t(_outBufferCapacity), 0 };
+				remaining = ZSTD_endStream(_strm, &outBuffer);
+				if (ZSTD_isError(remaining)) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
+					LOGE("ZSTD_endStream() failed with error 0x{:x} ({})", remaining, ZSTD_getErrorName(remaining));
+#endif
+					_state = State::Failed;
+					return Stream::Invalid;
+				}
+				if (outBuffer.pos > 0 && _outputStream->Write(&_buffer[0], std::int64_t(outBuffer.pos)) != std::int64_t(outBuffer.pos)) {
+					_state = State::Failed;
+					return Stream::Invalid;
+				}
+			} while (remaining != 0);
 		}
 
 		return bytesToWrite;

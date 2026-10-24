@@ -48,26 +48,21 @@ namespace Death { namespace Containers {
 
 	// Reports that MinSize doesn't fit into this vector's size type
 	static void reportSizeOverflow(std::size_t minSize, std::size_t maxSize) {
-		//std::string reason = "SmallVector unable to grow. Requested capacity (" +
-		//	std::to_string(minSize) +
-		//	") is larger than maximum value for size type (" +
-		//	std::to_string(maxSize) + ")";
-		//throw std::length_error(reason);
-
 #if defined(__cpp_exceptions) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
 		throw std::length_error("Containers::SmallVector capacity unable to grow");
+#else
+		LOGF("Containers::SmallVector capacity unable to grow to {} (maximum is {})", minSize, maxSize);
+		std::abort();
 #endif
 	}
 
 	// Reports that this vector is already at maximum capacity
 	static void reportAtMaximumCapacity(std::size_t maxSize) {
-		//std::string reason =
-		//	"SmallVector capacity unable to grow. Already at maximum size " +
-		//	std::to_string(maxSize);
-		//throw std::length_error(reason);
-
 #if defined(__cpp_exceptions) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
 		throw std::length_error("Containers::SmallVector capacity already at maximum size");
+#else
+		LOGF("Containers::SmallVector capacity already at maximum size {}", maxSize);
+		std::abort();
 #endif
 	}
 

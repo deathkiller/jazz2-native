@@ -2,9 +2,11 @@
 
 #if defined(WITH_EDITOR)
 
+#include "FxTileGenerator.h"
 #include "ProgressDialog.h"
 #include "ShellCommon.h"
 #include "TextPrompt.h"
+#include "TileSetImportDialog.h"
 #include "TileSetLayoutDialog.h"
 #include "../Tools/EditorContext.h"
 #include "../Common/TileStamp.h"
@@ -47,8 +49,8 @@ namespace Jazz2::Editor
 	{
 		struct TileSetsSelection
 		{
-			// Index of the selected extra tile set
-			std::int32_t Index = 0;
+			// Index of the selected extra tile set, -1 while the default one is chosen
+			std::int32_t Index = -1;
 			// Tile set shown in the preview, 0 for the default one, otherwise 1 + index of the extra one
 			std::int32_t Preview = 0;
 		};
@@ -156,7 +158,7 @@ namespace Jazz2::Editor
 						result = result.exceptSuffix(std::size_t(4));
 					}
 					onPicked(result);
-				});
+				}, false);
 		}
 
 		// Returns whether a tile set has any true color tile, which isn't remapped to the palette
@@ -279,6 +281,66 @@ namespace Jazz2::Editor
 			IEditorContext& _session;
 			std::shared_ptr<TileSetsSelection> _selection;
 			std::int32_t _index;
+		};
+
+		/** The default tile set with its number of tiles, chosen by a click as an extra one is, it's shown in the preview then */
+		class DefaultTileSetRow : public UiElement
+		{
+		public:
+			DefaultTileSetRow(IEditorContext& session, std::shared_ptr<TileSetsSelection> selection)
+				: _session(session), _selection(Death::move(selection))
+			{
+			}
+
+			Vector2f Measure(const UiContext& context, Vector2f available) override
+			{
+				return Vector2f(available.X, context.Px(UiTheme::RowHeight + 2.0f));
+			}
+
+			void Draw(UiPainter& painter) override
+			{
+				const LevelDocument& document = _session.GetDocument();
+				if (_selection->Index < 0 && _selection->Preview == 0) {
+					painter.RoundRect(Bounds, UiTheme::Selection);
+				} else if (_hoverAmount > 0.0f) {
+					Colorf hover = UiTheme::Hover;
+					hover.A *= _hoverAmount;
+					painter.RoundRect(Bounds, hover);
+				}
+				float padding = painter.Px(UiTheme::Padding);
+				Rectf rect(Bounds.X + padding, Bounds.Y, Bounds.W - padding * 2.0f, Bounds.H);
+				String text = document.Properties.DefaultTileSet;
+				if (document.DefaultTileCount >= 0) {
+					text += " ("_s + _fnx("editor", "{} tile", "{} tiles", document.DefaultTileCount, document.DefaultTileCount) + ")"_s;
+				}
+				painter.PushClip(rect);
+				painter.TextInRect(text, rect, UiTheme::Text);
+				painter.PopClip();
+			}
+
+			bool AcceptsPointer() const override
+			{
+				return true;
+			}
+
+			bool OnPointerDown(const UiPointerEvent& event) override
+			{
+				if (event.Button == MouseButton::Left) {
+					// No extra tile set is selected then, what changes one is for none
+					_selection->Index = -1;
+					_selection->Preview = 0;
+				}
+				return false;
+			}
+
+			StringView GetTooltip(Vector2f pos) const override
+			{
+				return _x("editor", "Click to show its tiles in the preview");
+			}
+
+		private:
+			IEditorContext& _session;
+			std::shared_ptr<TileSetsSelection> _selection;
 		};
 
 		/** Tiles of the tile set shown in the preview as the level shows them, as many in a row as fit */
@@ -408,9 +470,9 @@ namespace Jazz2::Editor
 				Vector2f units(available.X / scale, available.Y * MaxScreenHeightFraction / scale);
 				if (Preview != nullptr) {
 					// Next to the settings, which take about 300 units with the padding, and as tall as the window may be
-					// without the title, the header of the preview and the padding
+					// without the title, the buttons above, the header of the preview and the padding
 					Preview->Width = std::floor(std::clamp(std::min(units.X * 0.45f, units.X - 340.0f), 120.0f, 640.0f));
-					Preview->Height = std::floor(std::clamp(units.Y - 110.0f, 120.0f, 640.0f));
+					Preview->Height = std::floor(std::clamp(units.Y - 140.0f, 120.0f, 640.0f));
 					if (PreviewColumn != nullptr) {
 						PreviewColumn->Width = Preview->Width;
 					}
@@ -526,6 +588,67 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		auto selection = std::make_shared<TileSetsSelection>();
 		auto dialog = std::make_unique<TileSetsWindow>();
+
+		// Making tile sets and changing their files, the level then uses them as any other
+		{
+			auto* tools = dialog->GetContent()->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto showMenu = [s](UiButton* button, SmallVectorImpl<UiMenuEntry>&& entries) {
+				if (UiSurface* surface = s->GetSurface()) {
+					UiPopupMenu::Show(*surface, Death::move(entries), Vector2f(button->Bounds.X, button->Bounds.Y + button->Bounds.H));
+				}
+			};
+			auto makeEntry = [](StringView label, EditorIcon icon, Function<void()>&& execute) {
+				UiMenuEntry entry;
+				entry.Label = label;
+				entry.Icon = icon;
+				entry.Execute = Death::move(execute);
+				return entry;
+			};
+
+			// TRANSLATORS: Button at the top of the Tile Sets dialog, opens a menu of the ways a new tile set can be made
+			auto* newButton = tools->Add<UiButton>(_x("editor", "New Tile Set"), EditorIcon::New);
+			newButton->Tooltip = _x("editor", "Make a new tile set, it's saved in the user content");
+			newButton->OnClick = [s, newButton, showMenu, makeEntry]() {
+				SmallVector<UiMenuEntry, 0> entries;
+				// TRANSLATORS: Item of the New Tile Set menu in the Tile Sets dialog, a tile set of empty tiles
+				entries.push_back(makeEntry(_x("editor", "Empty"), EditorIcon::New, [s]() { ShowNewTileSetDialog(*s); }));
+				// TRANSLATORS: Item of the New Tile Set menu in the Tile Sets dialog, a tile set cut out of an image
+				entries.push_back(makeEntry(_x("editor", "From Image"), EditorIcon::File, [s]() { ShowImportTileSetDialog(*s); }));
+				// TRANSLATORS: Item of the New Tile Set menu in the Tile Sets dialog, a tile set file of the original game (.j2t) converted, or a tile set file of this game copied
+				entries.push_back(makeEntry(_x("editor", "From Tile Set File (.j2t)"), EditorIcon::Folder, [s]() { ShowImportTileSetFileDialog(*s); }));
+				showMenu(newButton, Death::move(entries));
+			};
+
+			// TRANSLATORS: Button at the top of the Tile Sets dialog, opens a menu of the ways tiles can be added to a tile set
+			auto* addButton = tools->Add<UiButton>(_x("editor", "Add Tiles"), EditorIcon::Plus);
+			addButton->Tooltip = _x("editor", "Add tiles to the end of a tile set, the tiles that are there keep their places");
+			addButton->OnClick = [s, addButton, showMenu, makeEntry]() {
+				SmallVector<UiMenuEntry, 0> entries;
+				// TRANSLATORS: Item of the Add Tiles menu in the Tile Sets dialog, tiles cut out of an image
+				entries.push_back(makeEntry(_x("editor", "From Image"), EditorIcon::File, [s]() { ShowAddTilesFromImageDialog(*s); }));
+				// TRANSLATORS: Item of the Add Tiles menu in the Tile Sets dialog, generated tiles for a layer with a blur or glass effect
+				entries.push_back(makeEntry(_x("editor", "Effect Tiles"), EditorIcon::None, [s]() { ShowFxTileGeneratorDialog(*s); }));
+				showMenu(addButton, Death::move(entries));
+			};
+
+			// TRANSLATORS: Button at the top of the Tile Sets dialog, saves the tiles of the tile set in the preview as an image
+			auto* exportButton = tools->Add<UiButton>(_x("editor", "Export Image"), EditorIcon::Export, [s, selection]() {
+				std::int32_t preview = selection->Preview;
+				std::uint8_t source = std::uint8_t(preview > 0 && preview <= std::int32_t(s->GetDocument().ExtraTileSets.size()) ? preview : TileRef::DefaultTileSet);
+				ShowExportTileSetImageDialog(*s, source);
+			});
+			exportButton->Tooltip = _x("editor", "Save the tiles of the tile set in the preview as an image, with an image of their masks next to it");
+
+			// TRANSLATORS: Button at the top of the Tile Sets dialog, deletes tiles of the default tile set and puts them in another order
+			auto* rearrangeButton = tools->Add<UiButton>(_x("editor", "Rearrange"), EditorIcon::Tiles, [s]() { ShowTileSetLayoutDialog(*s); });
+			rearrangeButton->Tooltip = _x("editor", "Delete tiles of the default tile set and put them in another order, the levels that use it follow");
+
+			for (UiButton* button : { newButton, addButton, exportButton, rearrangeButton }) {
+				button->Style = UiButtonStyle::Flat;
+			}
+			dialog->GetContent()->Add<UiSeparator>();
+		}
+
 		// The settings on the left, the tiles of a tile set on the right
 		auto* columns = dialog->GetContent()->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 2.0f);
 		auto* content = columns->Add<UiForm>(UiTheme::Spacing);
@@ -552,10 +675,9 @@ namespace Jazz2::Editor
 						: String(FormatInteger(i) + ". "_s + GetTileSetLabel(document.ExtraTileSets[i - 1].Name)));
 					entry.IsChecked = [selection, i]() { return (selection->Preview == i); };
 					entry.Execute = [selection, i]() {
+						// The default one is chosen as by a click on it, no extra tile set is selected then
 						selection->Preview = i;
-						if (i > 0) {
-							selection->Index = i - 1;
-						}
+						selection->Index = i - 1;
 					};
 					entries.push_back(Death::move(entry));
 				}
@@ -590,16 +712,7 @@ namespace Jazz2::Editor
 
 		{
 			auto* row = content->AddRow(_("Default"));
-			auto* name = row->Add<UiLabel>();
-			name->Flex = 1.0f;
-			name->TextFunc = [s]() {
-				const LevelDocument& document = s->GetDocument();
-				String text = document.Properties.DefaultTileSet;
-				if (document.DefaultTileCount >= 0) {
-					text += " ("_s + _fnx("editor", "{} tile", "{} tiles", document.DefaultTileCount, document.DefaultTileCount) + ")"_s;
-				}
-				return text;
-			};
+			row->Add<DefaultTileSetRow>(session, selection)->Flex = 1.0f;
 			auto* pick = row->Add<UiButton>(StringView(), EditorIcon::Folder, [s]() {
 				// TRANSLATORS: Title of the file picker that chooses the default tile set of the level
 				PickTileSet(*s, _x("editor", "Default Tile Set"), s->GetDocument().Properties.DefaultTileSet, [s](StringView name) {
@@ -669,7 +782,8 @@ namespace Jazz2::Editor
 					}
 					return true;
 				});
-				selection->Index = std::max<std::int32_t>(0, std::min<std::int32_t>(index, std::int32_t(s->GetDocument().ExtraTileSets.size()) - 1));
+				// The one after it, or the last one, none if it was the only one
+				selection->Index = std::min<std::int32_t>(index, std::int32_t(s->GetDocument().ExtraTileSets.size()) - 1);
 				// The preview of the removed one goes back to the default tile set, others keep showing the same tile set
 				if (selection->Preview == source) {
 					selection->Preview = 0;
@@ -916,6 +1030,71 @@ namespace Jazz2::Editor
 		}
 
 		ShowModal(*surface, Death::move(dialog));
+	}
+
+	void ShowExportTileSetImageDialog(IEditorContext& session, std::uint8_t source)
+	{
+		UiSurface* surface = session.GetSurface();
+		if (surface == nullptr) {
+			return;
+		}
+		auto tileSet = std::make_shared<Formats::TileSetData>();
+		if (!ReadTileSetOf(session, source, *tileSet)) {
+			session.ShowMessage(_x("editor", "The tile set can't be read"));
+			return;
+		}
+		const LevelDocument& document = session.GetDocument();
+		String initialName;
+		if (IsLevelTileSet(document, source)) {
+			// The tiles of the level are named after it
+			StringView levelPath = session.GetFilePath();
+			initialName = String((levelPath.empty() ? "level"_s : fs::GetFileNameWithoutExtension(levelPath)) + "-tiles.png"_s);
+		} else {
+			StringView name = (source == TileRef::DefaultTileSet ? StringView(document.Properties.DefaultTileSet) : StringView(document.ExtraTileSets[std::size_t(source) - 1].Name));
+			initialName = String(fs::GetFileName(name) + ".png"_s);
+		}
+		// The 8-bit tiles of an image that needs true color are in the colors they're shown in, those of the default tile set
+		// in the palette of the level, those of an extra one in its own
+		auto palette = std::make_shared<SmallVector<std::uint32_t, 256>>();
+		const std::uint32_t* colors = (source == TileRef::DefaultTileSet ? ContentResolver::Get().GetPalettes().data() : tileSet->Palette);
+		palette->assign(colors, colors + 256);
+
+		SmallVector<UiFileRoot, 4> roots;
+		session.GetImageRoots(true, roots);
+		IEditorContext* s = &session;
+		// TRANSLATORS: Title of the file dialog that saves the tiles of a tile set as an image
+		UiFileDialog::Show(*surface, _x("editor", "Export Tile Set Image"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, {}, initialName, [s, tileSet, palette](StringView path) {
+			// Rows of 10, as the original tile sets were drawn, the masks into an image of their own next to it
+			constexpr std::int32_t Columns = 10;
+			PngImage sheet = MakeTileSetSheet(*tileSet, palette->data(), Columns);
+			PngImage masks = MakeTileSetMaskSheet(*tileSet, Columns);
+			String maskPath = PngCodec::GetMasksPath(path);
+			// Through temporary files, a failed write leaves the images that were there, and neither is replaced
+			// unless both were written whole
+			bool saved = AtomicFile::Stage(path, [&sheet](Stream& st) { return PngCodec::Encode(st, sheet); });
+			if (saved && !AtomicFile::Stage(maskPath, [&masks](Stream& st) { return PngCodec::Encode(st, masks); })) {
+				AtomicFile::Discard(path);
+				saved = false;
+			}
+			if (saved && !AtomicFile::Commit(path)) {
+				AtomicFile::Discard(path);
+				AtomicFile::Discard(maskPath);
+				saved = false;
+			}
+			if (saved && !AtomicFile::Commit(maskPath)) {
+				AtomicFile::Discard(maskPath);
+				saved = false;
+			}
+			if (!saved) {
+				s->ShowMessage(_x("editor", "The images couldn't be saved"));
+				return;
+			}
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			fs::SyncToPersistent();
+#endif
+			// TRANSLATORS: Status message after exporting a tile set image, {} are the file names of the image and of its masks
+			s->ShowMessage(_fx("editor", "Saved {} and {}", fs::GetFileName(path), fs::GetFileName(maskPath)));
+		});
 	}
 
 	String GetTileSetLabel(StringView name)

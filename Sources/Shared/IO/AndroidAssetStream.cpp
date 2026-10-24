@@ -123,10 +123,10 @@ namespace Death { namespace IO {
 			}
 
 			while (bytesToRead > 0) {
-				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? bytesToRead : INT32_MAX);
-				std::int32_t bytesRead = ::read(&typedBuffer[bytesReadTotal], partialBytesToRead);
+				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? std::int32_t(bytesToRead) : INT32_MAX);
+				std::int32_t bytesRead = std::int32_t(::read(_fileDescriptor, &typedBuffer[bytesReadTotal], partialBytesToRead));
 				if DEATH_UNLIKELY(bytesRead < 0) {
-					return bytesRead;
+					return (bytesReadTotal > 0 ? bytesReadTotal : Stream::Invalid);
 				} else if DEATH_UNLIKELY(bytesRead == 0) {
 					break;
 				}

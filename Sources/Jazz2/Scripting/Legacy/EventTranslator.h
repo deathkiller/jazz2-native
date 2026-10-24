@@ -33,6 +33,8 @@ namespace Jazz2::Scripting::Legacy
 		static constexpr std::int32_t ParamBits = 20;
 		/** @brief Bit of the event word that makes the object of the event illuminated */
 		static constexpr std::uint32_t IlluminateBit = (1u << 10);
+		/** @brief Bit of the event word that tells the object of the event exists, so the level doesn't make another */
+		static constexpr std::uint32_t ActiveBit = (1u << 11);
 
 		/** @brief Creates a new instance, probing all the converters */
 		EventTranslator();

@@ -97,7 +97,7 @@ namespace Jazz2::Scripting
 #endif
 	}
 
-	std::shared_ptr<AudioBufferPlayer> LevelScriptLoader::PlaySample(const Vector2f& pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency, bool sourceRelative, std::int32_t loopChannel)
+	std::shared_ptr<AudioBufferPlayer> LevelScriptLoader::PlaySample(const Vector2f& pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency, bool sourceRelative)
 	{
 #if defined(WITH_AUDIO)
 		AudioBuffer* buffer = ResolveSampleBuffer(sampleId);
@@ -109,24 +109,53 @@ namespace Jazz2::Scripting
 		float gain = (volume <= 0 ? 0.0f : volume / 64.0f);
 		float pitch = (frequency <= 0 || buffer->frequency() <= 0 ? 1.0f : (float)frequency / (float)buffer->frequency());
 
-		auto player = _levelHandler->PlaySfx(nullptr, {}, buffer, Vector3f(pos.X, pos.Y, 0.0f), sourceRelative, gain, pitch, SfxFlags::None);
-		if (player != nullptr && loopChannel >= 0) {
-			player->setLooping(true);
-
-			auto prev = _loopedSamples.find(loopChannel);
-			if (prev != _loopedSamples.end()) {
-				if (prev->second != nullptr) {
-					prev->second->stop();
-				}
-				prev->second = player;
-			} else {
-				_loopedSamples.emplace(loopChannel, player);
-			}
-		}
-		return player;
+		return _levelHandler->PlaySfx(nullptr, {}, buffer, Vector3f(pos.X, pos.Y, 0.0f), sourceRelative, gain, pitch, SfxFlags::None);
 #else
 		return nullptr;
 #endif
+	}
+
+	std::int32_t LevelScriptLoader::PlayLoopedSample(const Vector2f& pos, std::int32_t sampleId, std::int32_t channel, std::int32_t volume, std::int32_t frequency)
+	{
+#if defined(WITH_AUDIO)
+		auto it = (channel > 0 ? _loopedSamples.find(channel) : _loopedSamples.end());
+		if (it != _loopedSamples.end() && it->second.Player != nullptr && it->second.Player->isPlaying()) {
+			// Goes on where the object is now
+			it->second.Player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
+			it->second.Tick = GetGameTick();
+			return channel;
+		}
+
+		auto player = PlaySample(pos, sampleId, volume, frequency, false);
+		if (player == nullptr) {
+			return 0;
+		}
+		player->setLooping(true);
+		if (it == _loopedSamples.end()) {
+			channel = ++_lastLoopChannel;
+			it = _loopedSamples.emplace(channel, LoopedSample{}).first;
+		}
+		it->second.Player = Death::move(player);
+		it->second.Tick = GetGameTick();
+		return channel;
+#else
+		return 0;
+#endif
+	}
+
+	void LevelScriptLoader::StopUnusedLoopedSamples()
+	{
+		std::int32_t currentTick = GetGameTick();
+		for (auto it = _loopedSamples.begin(); it != _loopedSamples.end(); ) {
+			if (currentTick - it->second.Tick > 1) {
+				if (it->second.Player != nullptr) {
+					it->second.Player->stop();
+				}
+				it = _loopedSamples.erase(it);
+			} else {
+				++it;
+			}
+		}
 	}
 
 	bool LevelScriptLoader::IsSampleLoaded(std::int32_t sampleId)
@@ -157,17 +186,16 @@ namespace Jazz2::Scripting
 
 	void playSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t volume, std::int32_t frequency) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		owner->PlaySample(Vector2f(xPixel, yPixel), sample, volume, frequency, false, -1);
+		owner->PlaySample(Vector2f(xPixel, yPixel), sample, volume, frequency, false);
 	}
 	int32_t playLoopedSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t channel, std::int32_t volume, std::int32_t frequency) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		owner->PlaySample(Vector2f(xPixel, yPixel), sample, volume, frequency, false, channel);
-		return channel;
+		return owner->PlayLoopedSample(Vector2f(xPixel, yPixel), sample, channel, volume, frequency);
 	}
 	void playPrioritySample(std::int32_t sample) {
 		// Priority samples play non-positionally (relative to the listener) at full volume
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		owner->PlaySample(Vector2f(0.0f, 0.0f), sample, 63, 0, true, -1);
+		owner->PlaySample(Vector2f(0.0f, 0.0f), sample, 63, 0, true);
 	}
 	bool isSampleLoaded(std::int32_t sample) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();

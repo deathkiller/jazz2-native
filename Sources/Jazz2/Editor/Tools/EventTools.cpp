@@ -48,7 +48,7 @@ namespace Jazz2::Editor
 		// Calls a function for each field of a link channel of an event and of those inside of it, as the catalog
 		// describes them, see EventParamField::LinkChannel
 		auto forEachLink = [](Formats::EventRecord& event, auto&& visit) -> bool {
-			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 			if (descriptor == nullptr) {
 				return false;
 			}
@@ -393,7 +393,7 @@ namespace Jazz2::Editor
 	}
 
 	EventTool::EventTool(IToolHost& host)
-		: EditorTool(host), _mode(Mode::None), _marquee(MarqueeKind::Replace), _overwrite(false), _offGridIndex(-1)
+		: EditorTool(host), _mode(Mode::None), _marquee(MarqueeKind::Replace), _overwrite(false), _offGridIndex(-1), _snapX(false), _snapY(false)
 	{
 	}
 
@@ -492,6 +492,10 @@ namespace Jazz2::Editor
 			_offGridIndex = offGrid;
 			_gizmoGrab = Vector2f(float(record.X), float(record.Y)) - view.ScreenToWorld(pointer.Screen);
 			_offGridTarget = Vector2f(float(record.X), float(record.Y));
+			_offGridPointer = pointer;
+			// Only the keys pressed while it's dragged snap it, a key pressed before went to its action
+			_snapX = false;
+			_snapY = false;
 			return;
 		}
 
@@ -663,6 +667,7 @@ namespace Jazz2::Editor
 				_current = cell;
 				break;
 			case Mode::MoveOffGrid:
+				_offGridPointer = pointer;
 				_offGridTarget = GetOffGridTarget(pointer);
 				break;
 			case Mode::Gizmo: {
@@ -723,7 +728,19 @@ namespace Jazz2::Editor
 	{
 		LayerView view = _host.GetLayerView(_host.GetDocument().GetSpriteLayerIndex());
 		Vector2f world = view.ScreenToWorld(pointer.Screen) + _gizmoGrab;
-		if ((pointer.Modifiers & KeyMod::Shift) != 0) {
+		bool shift = ((pointer.Modifiers & KeyMod::Shift) != 0);
+		if (_snapX || _snapY) {
+			// Only the axis held, to the middle of the tile, with Shift to the nearest edge or middle of a tile, as in MLLE
+			auto snap = [shift](float value) {
+				return (shift ? std::round(value / 16.0f) * 16.0f : std::floor(value / 32.0f) * 32.0f + 16.0f);
+			};
+			if (_snapX) {
+				world.X = snap(world.X);
+			}
+			if (_snapY) {
+				world.Y = snap(world.Y);
+			}
+		} else if (shift) {
 			// The center of the tile, where an event on the grid is
 			world = Vector2f(std::floor(world.X / 32.0f) * 32.0f + 16.0f, std::floor(world.Y / 32.0f) * 32.0f + 16.0f);
 		}
@@ -898,6 +915,40 @@ namespace Jazz2::Editor
 		}
 		selection.Assign(Death::move(cells));
 		selection.AssignOffGrid(Death::move(offGrid));
+	}
+
+	bool EventTool::OnKeyPressed(const KeyboardEvent& event)
+	{
+		if (_mode != Mode::MoveOffGrid) {
+			return false;
+		}
+		// Shift pressed or released while it's dragged moves it at once, not with the next move of the pointer
+		_offGridPointer.Modifiers = event.mod;
+		bool taken = false;
+		if ((event.mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
+			if (event.sym == Keys::X) {
+				_snapX = true;
+				taken = true;
+			} else if (event.sym == Keys::Y) {
+				_snapY = true;
+				taken = true;
+			}
+		}
+		_offGridTarget = GetOffGridTarget(_offGridPointer);
+		return taken;
+	}
+
+	void EventTool::OnKeyReleased(const KeyboardEvent& event)
+	{
+		if (event.sym == Keys::X) {
+			_snapX = false;
+		} else if (event.sym == Keys::Y) {
+			_snapY = false;
+		}
+		if (_mode == Mode::MoveOffGrid) {
+			_offGridPointer.Modifiers = event.mod;
+			_offGridTarget = GetOffGridTarget(_offGridPointer);
+		}
 	}
 
 	void EventTool::Cancel()
@@ -1430,6 +1481,10 @@ namespace Jazz2::Editor
 
 	StringView EventTool::GetHint() const
 	{
+		if (_mode == Mode::MoveOffGrid) {
+			// TRANSLATORS: Hint while an event off the grid is dragged, X and Y are the keys held to snap only one axis
+			return _x("editor", "Shift: to the middle of the tile - hold X or Y: snap only that axis, with Shift to half tiles");
+		}
 		switch (GetSettings().EventMode) {
 			case EventPlaceMode::Rectangle: return _x("editor", "Drag over empty tiles: place the event on all of them - Shift: over events too - click an event: select it");
 			case EventPlaceMode::Fill: return _x("editor", "Click an empty tile: place the event on the area of such tiles joined to it - click an event: select it");

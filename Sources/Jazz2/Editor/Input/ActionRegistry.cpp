@@ -61,6 +61,9 @@ namespace Jazz2::Editor
 				case Keys::PageDown: return "PgDn"_s;
 				case Keys::Plus: case Keys::NumPadPlus: case Keys::Equals: return "+"_s;
 				case Keys::Minus: case Keys::NumPadMinus: return "-"_s;
+				// The comma picks the tile under the pointer in the Multi-Layer Level Editor
+				case Keys::Comma: return ","_s;
+				case Keys::Period: return "."_s;
 				case Keys::Left: return "Left"_s;
 				case Keys::Right: return "Right"_s;
 				case Keys::Up: return "Up"_s;
@@ -439,21 +442,41 @@ namespace Jazz2::Editor
 
 	void ActionRegistry::ApplyPreset(KeymapPreset preset, SmallVectorImpl<String>* cleared)
 	{
-		struct Binding { const char* Id; Keys Key; std::int32_t Modifiers; };
+		// With Alternate the other shortcut of the action is set, the one it has stays
+		struct Binding { const char* Id; Keys Key; std::int32_t Modifiers; bool Alternate; };
 		// Like Jazz Creation Station: F flips a tile horizontally and I vertically. The eyedropper leaves I, Alt picks
-		// with any tool anyway. The number keys choose the layers as they do by default.
+		// with any tool anyway. The number keys choose the layers, B grabs a block and Ctrl+E / Shift+E take and place the
+		// event under the pointer as they do by default.
 		static const Binding JcsBindings[] = {
-			{ ActionIds::StampFlipX, Keys::F, 0 }, { ActionIds::StampFlipY, Keys::I, 0 }, { ActionIds::ToolEyedropper, Keys::Unknown, 0 },
+			{ ActionIds::StampFlipX, Keys::F, 0, false }, { ActionIds::StampFlipY, Keys::I, 0, false }, { ActionIds::ToolEyedropper, Keys::Unknown, 0, false },
 		};
-		// Like the Multi-Layer Level Editor: as JCS, R rotates the stamp where the editor offers it, the rectangle moves to Shift+R
+		// Like the Multi-Layer Level Editor, as JCS and: Ctrl+C and Ctrl+X make the selection the brush (it has no other
+		// clipboard), Ctrl+V shows the events, Ctrl+R plays, Ctrl+Shift+R from the pointer, Ctrl+L and Shift+L go
+		// through the layers, Ctrl+plus and minus zoom, the comma picks the tile under the pointer (with Shift its event
+		// too), Backspace makes the brush an empty tile, E chooses an event for the tile under the pointer and M held shows
+		// the masks. It can't turn the stamp, R stays the rectangle.
 		static const Binding MlleBindings[] = {
-			{ ActionIds::StampRotate, Keys::R, 0 }, { ActionIds::ToolRectangle, Keys::R, KeyMod::Shift },
+			{ ActionIds::EditCopyToBrush, Keys::C, KeyMod::Ctrl, false }, { ActionIds::EditCutToBrush, Keys::X, KeyMod::Ctrl, false },
+			{ ActionIds::ViewEvents, Keys::V, KeyMod::Ctrl, true },
+			{ ActionIds::PlayResume, Keys::R, KeyMod::Ctrl, true }, { ActionIds::PlayHere, Keys::R, KeyMod::Ctrl | KeyMod::Shift, true },
+			{ ActionIds::LayerPrevious, Keys::L, KeyMod::Ctrl, true }, { ActionIds::LayerNext, Keys::L, KeyMod::Shift, true },
+			{ ActionIds::ViewZoomIn, Keys::Plus, KeyMod::Ctrl, true }, { ActionIds::ViewZoomOut, Keys::Minus, KeyMod::Ctrl, true },
+			{ ActionIds::StampPickTile, Keys::Comma, 0, false }, { ActionIds::StampPickTileEvent, Keys::Comma, KeyMod::Shift, false },
+			{ ActionIds::StampBlank, Keys::Backspace, 0, false }, { ActionIds::EventsChooseAtPointer, Keys::E, 0, false },
+			{ ActionIds::ViewPeekMasks, Keys::M, 0, false },
 		};
 
 		ResetToDefaults();
 		auto apply = [this, cleared](const Binding* bindings, std::size_t count) {
 			for (std::size_t i = 0; i < count; i++) {
-				EditorAction* action = Find(StringView(bindings[i].Id));
+				// Not Find(), a preset may name actions a build leaves out, which isn't worth a warning
+				EditorAction* action = nullptr;
+				for (auto& candidate : _actions) {
+					if (candidate->Id == StringView(bindings[i].Id)) {
+						action = candidate.get();
+						break;
+					}
+				}
 				if (action == nullptr) {
 					continue;
 				}
@@ -474,7 +497,11 @@ namespace Jazz2::Editor
 						}
 					}
 				}
-				action->Key = shortcut;
+				if (bindings[i].Alternate) {
+					action->AlternateKey = shortcut;
+				} else {
+					action->Key = shortcut;
+				}
 			}
 		};
 		if (preset == KeymapPreset::Jcs || preset == KeymapPreset::Mlle) {
@@ -495,6 +522,7 @@ namespace Jazz2::Editor
 			{ "Ctrl+S", Keys::S, KeyMod::Ctrl }, { "ctrl+shift+z", Keys::Z, KeyMod::Ctrl | KeyMod::Shift }, { "Ctrl++", Keys::Plus, KeyMod::Ctrl },
 			{ "F5", Keys::F5, 0 }, { "Alt+F5", Keys::F5, KeyMod::Alt }, { "Cmd+O", Keys::O, KeyMod::Ctrl }, { "PgDn", Keys::PageDown, 0 },
 			{ "Num 0", Keys::NumPad0, 0 }, { "ctrl+num 7", Keys::NumPad7, KeyMod::Ctrl }, { "Num *", Keys::NumPadMultiply, 0 },
+			{ ",", Keys::Comma, 0 }, { "Shift+,", Keys::Comma, KeyMod::Shift },
 			{ "Mouse 4", Shortcut::Mouse4, 0 }, { "ctrl+mouse 5", Shortcut::Mouse5, KeyMod::Ctrl },
 		};
 		for (const ParseCase& c : Cases) {
@@ -549,6 +577,34 @@ namespace Jazz2::Editor
 		if (!registry.MatchesWhileTyping(save) || registry.MatchesWhileTyping(other)) {
 			LOGE("Shortcuts that work while typing aren't told apart");
 			problems++;
+		}
+
+		// The preset of MLLE gives the key of copying to the copy into the brush, and an action that keeps its key another
+		// one; an action that ignores a key repeating runs once while the key is held
+		{
+			ActionRegistry mlle;
+			mlle.Add(ActionIds::EditCopy, "Copy"_s, EditorIcon::None, []() {}).Key = { Keys::C, KeyMod::Ctrl };
+			mlle.Add(ActionIds::EditCopyToBrush, "Copy into Brush"_s, EditorIcon::None, []() {});
+			mlle.Add(ActionIds::PlayResume, "Play"_s, EditorIcon::None, []() {}).Key = { Keys::F5, 0 };
+			std::int32_t grabbed = 0;
+			EditorAction& grab = mlle.Add(ActionIds::EditGrabBlock, "Grab Block"_s, EditorIcon::None, [&grabbed]() { grabbed++; });
+			grab.Key = { Keys::B, 0 };
+			grab.IgnoresRepeat = true;
+			mlle.CaptureDefaults();
+			mlle.ApplyPreset(KeymapPreset::Mlle);
+			const EditorAction* play = mlle.Find(ActionIds::PlayResume);
+			if (mlle.Find(ActionIds::EditCopyToBrush)->Key.Key != Keys::C || mlle.Find(ActionIds::EditCopy)->Key.Key != Keys::Unknown ||
+				play->Key.Key != Keys::F5 || play->AlternateKey.Key != Keys::R || play->AlternateKey.Modifiers != KeyMod::Ctrl) {
+				LOGE("The MLLE preset of shortcuts isn't applied right");
+				problems++;
+			}
+			KeyboardEvent b;
+			b.sym = Keys::B;
+			b.mod = 0;
+			if (!mlle.HandleKey(b) || !mlle.HandleKey(b, ActionScope::Edit, true) || grabbed != 1) {
+				LOGE("A key held runs an action that ignores repeating more than once");
+				problems++;
+			}
 		}
 
 		// One key runs an action while editing and another while playing, they don't conflict, and a key of the editor
@@ -662,15 +718,21 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	bool ActionRegistry::HandleKey(const KeyboardEvent& event, ActionScope scope)
+	bool ActionRegistry::HandleKey(const KeyboardEvent& event, ActionScope scope, bool repeat, EditorAction** ran)
 	{
+		if (ran != nullptr) {
+			*ran = nullptr;
+		}
 		for (auto& action : _actions) {
 			if (!ScopesOverlap(action->Scope, scope)) {
 				continue;
 			}
 			if (action->Key.Matches(event) || action->AlternateKey.Matches(event)) {
-				if (action->CanExecute()) {
+				if ((!repeat || !action->IgnoresRepeat) && action->CanExecute()) {
 					action->Execute();
+					if (ran != nullptr) {
+						*ran = action.get();
+					}
 				}
 				return true;
 			}

@@ -58,7 +58,8 @@ namespace Jazz2::Actors::Multiplayer
 		// (handled below), so they don't bump. Separation runs every overlapping frame so players can't
 		// pass through each other; only the network resync is throttled (see _bumpCooldown).
 		if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other)) {
-			if (_health > 0 && anotherPlayer->_health > 0 && !IsAttacking() && !anotherPlayer->IsAttacking()) {
+			if (_health > 0 && anotherPlayer->_health > 0 && !IsAttacking() && !anotherPlayer->IsAttacking() &&
+				!IsRammingFrozen(anotherPlayer) && !anotherPlayer->IsRammingFrozen(this)) {
 				auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
 				// Shared separation/impulse physics (see Player::ApplyPlayerBump). When stacking is enabled, vertical
 				// overlap is left to the local stacking resolver, so the server must NOT bump them apart or resync it.
@@ -83,9 +84,12 @@ namespace Jazz2::Actors::Multiplayer
 			bool canHit = (otherPlayerOnServer != this) && (friendlyFire || GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team);
 			if (_health > 0 && canHit) {
 				bool otherIsPlayer = false;
+				// Running fast into a frozen player hurts it like an attack does (see Player::FrozenRamSpeed)
+				bool rammedFrozen = false;
 				if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other)) {
-					bool isAttacking = IsAttacking();
-					if (!isAttacking && !anotherPlayer->IsAttacking()) {
+					bool isAttacking = (IsAttacking() || IsRammingFrozen(anotherPlayer));
+					rammedFrozen = (!anotherPlayer->IsAttacking() && anotherPlayer->IsRammingFrozen(this));
+					if (!isAttacking && !anotherPlayer->IsAttacking() && !rammedFrozen) {
 						return true;
 					}
 					if (isAttacking) {
@@ -96,6 +100,17 @@ namespace Jazz2::Actors::Multiplayer
 
 				_lastAttacker = otherPlayerOnServer->shared_from_this();
 				_lastAttackerTimeout = 300.0f;
+
+				if (rammedFrozen) {
+					// As off a frozen enemy: the ice breaks, and the rammer bounces back at half its speed. Thawed first,
+					// so the hurt below still takes the controls away.
+					Freeze(0.0f);
+					auto* rammer = static_cast<PlayerOnServer*>(other);
+					rammer->_speed.X *= -0.5f;
+					rammer->_speed.Y = FrozenRamBounceSpeedY;
+					rammer->SetState(ActorState::CanJump, false);
+					static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerBumped(rammer);
+				}
 
 				// Decrease remaining shield time by 5 secs
 				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {

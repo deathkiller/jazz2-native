@@ -176,11 +176,15 @@ namespace Jazz2::Rendering
 		// The passes that blur what is behind the blur layers are drawn by the scene view itself, in the middle of its
 		// queue, so they are only in the chain to be visited and committed with the rest
 		_view->RemoveSplitPasses();
+		_layerEffects.CopyPasses = 0;
+		_layerEffects.BlurPasses = 0;
 		if (_layerEffects.BehindBlur != nullptr || _layerEffects.BehindCopy != nullptr) {
 			for (BlurRenderPass* pass : { &_behindCopyPass, &_behindDownsamplePass, &_behindBlurPass1, &_behindBlurPass2 }) {
 				if (pass->GetView() != nullptr) {
 					pass->Register();
-					_view->AddSplitPass(pass->GetView());
+					std::uint32_t bit = _view->AddSplitPass(pass->GetView());
+					// A layer asks only for the passes of what it samples
+					(pass == &_behindCopyPass ? _layerEffects.CopyPasses : _layerEffects.BlurPasses) |= bit;
 				}
 			}
 		}
@@ -540,7 +544,9 @@ namespace Jazz2::Rendering
 		}
 		if (_viewBounds.H > halfView.Y * 2) {
 			const float minY = _viewBounds.Y + halfView.Y - 1.0f, maxY = _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f;
-			const float cameraY = std::clamp(viewCenterY + roundFast(lookAhead.Y), minY, maxY);
+			// The vertical anchor is off the player by whole pixels too - floored on its own while it eases back onto the
+			// player, it stepped in other frames than the player did, which shook by a pixel on a moving platform
+			const float cameraY = std::clamp(focusPos.Y + roundFast(viewCenterY - focusPos.Y + lookAhead.Y), minY, maxY);
 			_cameraPos.Y = alignView(cameraY + _shakeOffset.Y);
 			_centerOnTargetOffset.Y = alignView(std::clamp(focusPos.Y, minY, maxY)) - alignView(cameraY);
 		} else {

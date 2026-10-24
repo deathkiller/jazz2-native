@@ -62,6 +62,11 @@ namespace Jazz2::Scripting
 		}
 	}
 
+	void ScriptLoader::AddScriptSection(const char* name, StringView code)
+	{
+		_module->AddScriptSection(name, code.data(), code.size(), 0);
+	}
+
 	ScriptContextType ScriptLoader::AddScriptFromFile(StringView path, const HashMap<String, bool>& definedSymbols)
 	{
 		String absolutePath = fs::GetAbsolutePath(path);

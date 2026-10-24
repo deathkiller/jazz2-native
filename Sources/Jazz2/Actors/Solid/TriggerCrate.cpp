@@ -43,7 +43,9 @@ namespace Jazz2::Actors::Solid
 
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			WeaponType weaponType = shotBase->GetWeaponType();
-			if (_levelHandler->IsReforged() &&
+			if (weaponType == WeaponType::Freezer) {
+				HandleFrozenStateChange(shotBase);
+			} else if (_levelHandler->IsReforged() &&
 				(weaponType == WeaponType::RF || weaponType == WeaponType::Seeker ||
 				 weaponType == WeaponType::Pepper || weaponType == WeaponType::Electro)) {
 				DecreaseHealth(shotBase->GetStrength(), shotBase);

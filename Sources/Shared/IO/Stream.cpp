@@ -45,17 +45,13 @@ namespace Death { namespace IO {
 	std::uint32_t Stream::ReadVariableUint32()
 	{
 		std::uint32_t result = 0;
-		std::uint32_t shift = 0;
-		while (true) {
+		for (std::uint32_t shift = 0; shift < 35; shift += 7) {
 			std::uint8_t byte;
-			if (Read(&byte, 1) == 0) {
+			if (Read(&byte, 1) != 1) {
 				break;
 			}
 
-			if DEATH_LIKELY(shift < 32) {
-				result |= (std::uint32_t)(byte & 0x7f) << shift;
-				shift += 7;
-			}
+			result |= (std::uint32_t)(byte & 0x7f) << shift;
 			if ((byte & 0x80) == 0) {
 				break;
 			}
@@ -66,17 +62,13 @@ namespace Death { namespace IO {
 	std::uint64_t Stream::ReadVariableUint64()
 	{
 		std::uint64_t result = 0;
-		std::uint64_t shift = 0;
-		while (true) {
+		for (std::uint32_t shift = 0; shift < 70; shift += 7) {
 			std::uint8_t byte;
-			if (Read(&byte, 1) == 0) {
+			if (Read(&byte, 1) != 1) {
 				break;
 			}
 
-			if DEATH_LIKELY(shift < 64) {
-				result |= (std::uint64_t)(byte & 0x7f) << shift;
-				shift += 7;
-			}
+			result |= (std::uint64_t)(byte & 0x7f) << shift;
 			if ((byte & 0x80) == 0) {
 				break;
 			}

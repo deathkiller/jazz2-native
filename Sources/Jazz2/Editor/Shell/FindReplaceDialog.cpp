@@ -84,8 +84,11 @@ namespace Jazz2::Editor
 			// Another kind, with the parameters of a new event, or those of an event of the kind
 			void SetEvent(bool find, EventType type, const Formats::EventRecord* values = nullptr)
 			{
+				// One of the original game chosen in the list is the passthrough event it's placed as, with its number
+				Formats::EventRecord made = EventCatalog::MakeDefault(type);
+				type = EventType(made.Type);
 				(find ? FindEvent : ReplaceEvent) = type;
-				GetValues(find) = (values != nullptr && values->Type == std::uint16_t(type) ? *values : EventCatalog::MakeDefault(type));
+				GetValues(find) = (values != nullptr && values->Type == std::uint16_t(type) ? *values : made);
 				if (find) {
 					FindMask = 0;
 				}
@@ -520,7 +523,7 @@ namespace Jazz2::Editor
 			return 0;
 		}
 		const EventDescriptor* oldDescriptor = EventCatalog::Find(find.Type);
-		const EventDescriptor* newDescriptor = EventCatalog::Find(EventType(replace.Type));
+		const EventDescriptor* newDescriptor = EventCatalog::Find(EventType(replace.Type), replace.Params);
 		auto replaceEvent = [&replace, keepParams, oldDescriptor, newDescriptor](const Formats::EventRecord& event) {
 			Formats::EventRecord result = replace;
 			result.Flags = event.Flags;

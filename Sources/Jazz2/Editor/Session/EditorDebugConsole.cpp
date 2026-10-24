@@ -293,6 +293,29 @@ namespace Jazz2::Editor
 			_session.Execute(Death::move(paint));
 			return DebugResult::Done;
 		} });
+		commands.push_back({ "/stamp"_s, 0, "/stamp"_s, [this](const Args&) {
+			// The brush, as a block grabbed by B makes it, and the cell under the pointer
+			const TileStamp& stamp = _session.GetStamp();
+			std::int32_t present = 0, empty = 0, events = 0;
+			for (std::size_t i = 0; i < stamp.Tiles.size() && i < stamp.Present.size(); i++) {
+				if (stamp.Present[i]) {
+					present++;
+					empty += (stamp.Tiles[i].IsEmpty() ? 1 : 0);
+				}
+			}
+			for (const Formats::EventRecord& event : stamp.Events) {
+				events += (LevelDocument::IsEmptyEvent(event) ? 0 : 1);
+			}
+			ToolPointer hover;
+			bool hoverValid = _session.GetHoverPointer(hover);
+			LOGI("Tool {}, picker {}", std::int32_t(_session.GetTools().GetChosenType()), _session.GetPickerPanel() == PickerPanel::Events ? "events" : "tiles");
+			LOGI("Stamp {}x{}: {} tiles ({} empty), {} events of {}, {} off the grid, empty transparent {}, block grab {}, masks {}, pointer {} at {}, {}", stamp.Width, stamp.Height,
+				present, empty, events, std::int32_t(stamp.Events.size()), std::int32_t(stamp.OffGridEvents.size()), stamp.EmptyIsTransparent ? "yes" : "no",
+				_session.GetBlockGrab().IsActive() ? "marked" : "none", _session.GetMaskMode(),
+				hoverValid ? "over the view" : "off the view",
+				hover.Cell.X, hover.Cell.Y);
+			return DebugResult::Done;
+		} });
 		// Not through the actions of Undo and Redo, those end what the pointer is in the middle of and do nothing without
 		// a step to undo, a test that presses, undoes and releases checks what the history does meanwhile
 		commands.push_back({ "/undo"_s, 0, "/undo"_s, [this](const Args&) {
@@ -762,6 +785,10 @@ namespace Jazz2::Editor
 					event.sym = name.Key;
 				}
 			}
+			// A letter for itself, as B grabbing a block or M held showing the masks
+			if (key.size() == 1 && key[0] >= 'a' && key[0] <= 'z') {
+				event.sym = Keys(std::int32_t(Keys::A) + (key[0] - 'a'));
+			}
 			if (event.sym == Keys::Unknown) {
 				return DebugResult::Failed;
 			}
@@ -777,7 +804,7 @@ namespace Jazz2::Editor
 			}
 			return DebugResult::Done;
 		};
-		commands.push_back({ "/key"_s, 1, "/key enter|escape|delete|f5|left|right|up|down|space|ctrl|shift|alt"_s, keyEvent });
+		commands.push_back({ "/key"_s, 1, "/key enter|escape|delete|f5|left|right|up|down|space|ctrl|shift|alt|<a-z>"_s, keyEvent });
 		commands.push_back({ "/keydown"_s, 1, "/keydown <key>, as /key"_s, keyEvent });
 		commands.push_back({ "/keyup"_s, 1, "/keyup <key>, as /key"_s, keyEvent });
 		commands.push_back({ "/type"_s, 1, "/type <text>, a space written as +"_s, [this](const Args& args) {
@@ -972,6 +999,17 @@ namespace Jazz2::Editor
 			ImportTileSetImage(_session, args[1], args[2], use != "save"_s, use == "default"_s, colors, args.size() >= 6 && args[5] == "dither"_s);
 			return DebugResult::Done;
 		} });
+		commands.push_back({ "/importtilesetfile"_s, 2, "/importtilesetfile <file.j2t> <name> [extra|default|save]"_s, [this](const Args& args) {
+			// A tile set file of the original game converted, or one of this game copied, as the dialog does
+			Formats::TileSetData data;
+			bool original = false;
+			if (!ReadTileSetFile(args[1], data, original)) {
+				return DebugResult::Failed;
+			}
+			StringView use = (args.size() >= 4 ? args[3] : "extra"_s);
+			LOGI("Tile set file \"{}\" read, {} tiles, {}", args[1], data.TileCount, original ? "original"_s : "converted"_s);
+			return (ImportTileSetFile(_session, data, args[2], use != "save"_s, use == "default"_s) ? DebugResult::Done : DebugResult::Failed);
+		} });
 		commands.push_back({ "/exportrules"_s, 1, "/exportrules <tile set> [<tile set> ...], a space in a name written as +"_s, [this](const Args& args) {
 			// Rules of tile sets made from what the levels use the most, as a start for rules shipped with the game
 			for (std::size_t i = 1; i < args.size(); i++) {
@@ -1012,8 +1050,11 @@ namespace Jazz2::Editor
 			const LevelDocument& document = _session.GetDocument();
 			for (std::size_t i = 0; i < document.Layers.size(); i++) {
 				const DocumentLayer& layer = document.Layers[i];
-				LOGI("Layer {}: kind {}, {}x{}, depth {}, speed {}x{}, flags 0x{:x}, name \"{}\"", i, std::int32_t(layer.Record.Kind),
-					layer.GetWidth(), layer.GetHeight(), layer.Record.Depth, layer.Record.SpeedX, layer.Record.SpeedY, layer.Record.Flags, layer.Name);
+				LOGI("Layer {}: kind {}, {}x{}, depth {}, speed {}x{}, offset {}x{}, flags 0x{:x}, editor 0x{:x}, renderer {}, color {} {} {} {}, texture {} bytes, name \"{}\"", i, std::int32_t(layer.Record.Kind),
+					layer.GetWidth(), layer.GetHeight(), layer.Record.Depth, layer.Record.SpeedX, layer.Record.SpeedY, layer.Record.OffsetX, layer.Record.OffsetY,
+					layer.Record.Flags, layer.EditorFlags,
+					std::int32_t(layer.Record.RendererType), layer.Record.Color[0], layer.Record.Color[1], layer.Record.Color[2], layer.Record.Color[3],
+					std::int32_t(layer.Texture.size()), layer.Name);
 			}
 			return DebugResult::Done;
 		} });

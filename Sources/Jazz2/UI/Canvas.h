@@ -56,7 +56,7 @@ namespace Jazz2::UI
 		 * @brief Whether primitives of the same layer are drawn in the order they were drawn in
 		 *
 		 * Otherwise their order is unspecified, so overlapping primitives have to be on different layers. Off by
-		 * default, as nothing but the level editor needs it.
+		 * default, as only the level editor and what level scripts draw need it.
 		 */
 		bool OrderedDraws = false;
 

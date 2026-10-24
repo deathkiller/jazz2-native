@@ -98,11 +98,12 @@ namespace Jazz2::Editor
 	/**
 		@brief Adds what makes a layer drawn black, wrong or not at all, the texts without the name of the layer
 
-		A color that multiplies its tiles nearly black, a layer that isn't drawn by its alpha or the transparent entry it's
-		tinted with, a textured background that isn't 8x8 tiles or whose tiles are all empty, a wave without waves, the
-		horizon of a reflection at its top or its bottom, x-ray tiles of a single frame. With @p aboutOthers also that a
-		textured background or a reflection after it keeps it from being drawn (@ref CheckLevel() tells those once for the
-		level). The problems need no tile sets to tell, see @ref CountPaletteColorTiles() for those that do.
+		A layer hidden in the game that has something to show, a color that multiplies its tiles nearly black, a layer that
+		isn't drawn by its alpha or the transparent entry it's tinted with, a textured background that isn't 8x8 tiles or
+		whose tiles are all empty, a wave without waves, the horizon of a reflection at its top or its bottom, x-ray tiles of
+		a single frame. With @p aboutOthers also that a textured background or a reflection after it keeps it from being
+		drawn (@ref CheckLevel() tells those once for the level), and that an empty layer is hidden in the game. The
+		problems need no tile sets to tell, see @ref CountPaletteColorTiles() for those that do.
 	*/
 	void CheckLayerDrawing(const LevelDocument& document, std::int32_t layerIndex, bool aboutOthers, SmallVectorImpl<LevelProblem>& problems);
 

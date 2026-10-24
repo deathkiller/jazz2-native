@@ -38,6 +38,15 @@ namespace Jazz2::Editor
 		/** @brief Uses a prefab: its tiles become the brush, and a prefab with more layers or events is pasted with them next */
 		bool UsePrefab(IEditorContext& session, const TilePrefab& prefab);
 
+		/** @brief Makes the event under the pointer the one the event tool places and puts it in the clipboard, the tool chosen stays, as <kbd>Ctrl</kbd>+<kbd>E</kbd> of the editors of the original game */
+		bool TakeEventAtPointer(IEditorContext& session);
+		/** @brief Places the events the event tool places at the tile under the pointer, replacing the one there, as one step */
+		bool PlaceEventAtPointer(IEditorContext& session);
+		/** @brief Lets the next event chosen in the list be placed at the tile under the pointer, and be the one placed from then on */
+		bool ChooseEventAtPointer(IEditorContext& session);
+		/** @brief Makes the tile under the pointer the brush, with @p withEvent with the event there, placed with it on the sprite layer */
+		bool PickTileAtPointer(IEditorContext& session, bool withEvent);
+
 		/** @brief Mirrors the selected tiles, or events, in place, with their flips and the parameters of the events */
 		bool MirrorSelection(IEditorContext& session, bool horizontal);
 		/** @brief Sets the modifier of the selected tiles, see @ref TileModifierMode */

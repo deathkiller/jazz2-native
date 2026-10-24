@@ -24,6 +24,8 @@ namespace Jazz2::Editor
 		Function<bool()> IsEnabled;
 		/** @brief Returns whether it's shown checked */
 		Function<bool()> IsChecked;
+		/** @brief Fills the submenu it opens instead of running @ref Execute, when it's opened */
+		Function<void(SmallVectorImpl<UiMenuEntry>&)> Submenu;
 
 		/** @brief Returns `true` if it's a separator */
 		bool IsSeparator() const {
@@ -40,7 +42,8 @@ namespace Jazz2::Editor
 		@brief Menu shown over the interface
 
 		<kbd>Up</kbd> and <kbd>Down</kbd> go through its items, <kbd>Enter</kbd> runs one, a letter goes to the next
-		item starting with it.
+		item starting with it. An item with a submenu opens it when it's pointed at for a while, clicked, or by
+		<kbd>Enter</kbd> or <kbd>Right</kbd>, <kbd>Left</kbd> or <kbd>Esc</kbd> closes it again.
 	*/
 	class UiPopupMenu : public UiPanel
 	{
@@ -58,6 +61,10 @@ namespace Jazz2::Editor
 
 		/** @brief Highlights the item <kbd>Enter</kbd> runs, the one shown checked or the first one that can be used */
 		void HighlightFirst();
+		/** @brief Opens the submenu of a row of this menu next to it, @p fromKeyboard highlights its first item */
+		void OpenSubmenu(UiMenuRow* row, bool fromKeyboard);
+		/** @brief Closes the submenu shown from this menu, if any */
+		void CloseSubmenu();
 
 		void Arrange(const UiContext& context, const Rectf& bounds) override;
 		void Update(float timeMult) override;
@@ -73,11 +80,18 @@ namespace Jazz2::Editor
 		UiStack* _rows;
 		// The highlighted row is scrolled to once the rows are placed
 		bool _revealHighlight;
+		UiPopupMenu* _submenu;
+		UiMenuRow* _submenuRow;
+		// The row the pointer rests on, its submenu opens, or the open one closes, after a while
+		UiMenuRow* _hoverRow;
+		float _hoverTime;
 
 		// Rows that can be run, in their order, separators are left out
 		void GetRows(SmallVectorImpl<UiMenuRow*>& rows) const;
 		// Highlights a row, and scrolls to it if it's to be revealed, as by the keys, not by the pointer
 		void SetHighlight(std::int32_t index, bool reveal);
+		// Puts the submenu next to its row, again whenever this menu is placed
+		void PlaceSubmenu();
 	};
 
 	/**

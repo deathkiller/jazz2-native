@@ -53,7 +53,7 @@ namespace Jazz2::Scripting
 			auto written = _writtenEvents.find(x + y * size.X);
 			if (written != _writtenEvents.end()) {
 				if (written->second.Type == tile.Event && std::memcmp(written->second.Params, tile.EventParams, sizeof(written->second.Params)) == 0) {
-					return written->second.Word;
+					return (written->second.Word & ~Legacy::EventTranslator::ActiveBit) | (tile.IsEventActive ? Legacy::EventTranslator::ActiveBit : 0);
 				}
 				// The tile changed since, e.g. its object was collected
 				_writtenEvents.erase(written);
@@ -73,6 +73,9 @@ namespace Jazz2::Scripting
 
 		if ((tile.EventFlags & Actors::ActorState::Illuminated) == Actors::ActorState::Illuminated) {
 			word |= Legacy::EventTranslator::IlluminateBit;
+		}
+		if (tile.IsEventActive) {
+			word |= Legacy::EventTranslator::ActiveBit;
 		}
 		return word;
 	}
@@ -100,6 +103,12 @@ namespace Jazz2::Scripting
 		Compatibility::EventConverter::KeepOriginalParams(converted.Type, converted.Params, eventWord >> Legacy::EventTranslator::ParamsShift);
 		Actors::ActorState flags = ((eventWord & Legacy::EventTranslator::IlluminateBit) != 0 ? Actors::ActorState::Illuminated : Actors::ActorState::None);
 		eventMap->StoreTileEvent(x, y, converted.Type, flags, converted.Params);
+		// A script marks the event of an object it made itself as active, so the level doesn't make one there (Threed puppets)
+		if ((eventWord & Legacy::EventTranslator::ActiveBit) != 0) {
+			eventMap->Activate(x, y);
+		} else {
+			eventMap->Deactivate(x, y);
+		}
 
 		// What the script wrote is read back as it is, see GetOriginalEvent()
 		WrittenEvent& written = _writtenEvents[x + y * size.X];

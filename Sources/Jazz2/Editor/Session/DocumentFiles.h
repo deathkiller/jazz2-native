@@ -132,8 +132,6 @@ namespace Jazz2::Editor
 		void ShowSaveAsDialog(bool exportOnly, Function<void()>&& onSaved = {});
 		/** @brief Checks the level and shows a dialog to export it */
 		void ShowExportDialog();
-		/** @brief Shows a dialog to save the default tile set as images, of its tiles and of their masks */
-		void ShowExportTileSetImageDialog();
 		/** @brief Tells that a level file was moved or renamed outside of Save As, its place among the recent files goes along */
 		void NoteLevelFileMoved(StringView from, StringView to);
 		/** @brief Sets whether the next export is marked so the editor doesn't open it, `LevelFlags::NotEditable` */
@@ -183,8 +181,8 @@ namespace Jazz2::Editor
 		/** @brief Releases the lock of the level file, if it's the lock of this editor */
 		void ReleaseLock();
 
-		/** @brief Updates the title of the window, it's made again only when the name, the file or the unsaved changes changed */
-		void UpdateWindowTitle();
+		/** @brief Updates the title of the window, it's made again only when the name, the file or the unsaved changes changed, or with @p force (after something else set it, as a play-test) */
+		void UpdateWindowTitle(bool force = false);
 
 	private:
 		struct WatchedTileSet

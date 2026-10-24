@@ -4,6 +4,7 @@
 
 #include "Canvas.h"
 #include "Objects.h"
+#include "../../WeaponType.h"
 
 namespace Jazz2::Scripting
 {
@@ -428,6 +429,8 @@ namespace Jazz2::Scripting
 			std::uint32_t get_spriteMode() const;
 			/** @brief Sets how the player is drawn (`SPRITE::Mode`) */
 			std::uint32_t set_spriteMode(std::uint32_t value);
+			/** @brief Hides the player while `onPlayerDraw()` of the script draws it in another frame */
+			void SetDrawnByScript(bool value);
 			/** @brief Returns the parameter of the sprite mode */
 			std::uint8_t get_spriteParam() const;
 			/** @brief Sets the parameter of the sprite mode */
@@ -453,16 +456,30 @@ namespace Jazz2::Scripting
 			struct SyncedState {
 				std::int32_t Lives, SpecialJump, Helicopter, Idle;
 				std::int8_t Direction, Frozen;
+				bool BossActive;
 			};
 			SyncedState _synced = {};
 			bool _syncedOnce = false;
 
 			// Finds the animation of the original the player shows and the frame of it, false if it's none of them
 			bool FindShownFrame(std::uint32_t& anim, std::uint32_t& position, std::uint32_t& firstFrame) const;
+			// Returns the count of gems of a GEM::Color, `nullptr` if there's no such color or player
+			std::int32_t* GetGemCount(std::uint32_t type) const;
 
 			// SPRITE::NORMAL and its parameter
 			std::uint32_t _spriteMode = 0;
 			std::uint8_t _spriteParam = 0;
+			// `onPlayerDraw()` of the script draws the player in this tick, the player doesn't draw itself (see SetDrawnByScript())
+			bool _drawnByScript = false;
+
+			// Hands the update of a player of SPRITE::INVISIBLE back to the player, which isn't drawn then
+			class InvisibleOverride;
+			static void RunPlayerUpdate(Actors::Player* player, float timeMult);
+			// Installs or removes the override, the player is hidden while it's invisible or drawn by the script
+			void UpdateDrawOverride();
+
+			// The ammo JJ2+ shows of each weapon of `jjWEAPON::infinite`, the player has unlimited ammo of it
+			std::uint16_t _infiniteAmmo[std::int32_t(WeaponType::Count)] = {};
 
 			// Gives the properties what the player is now, except the ones a script changed since and didn't hand over yet
 			void SyncPropertiesToBackingStore();
@@ -589,6 +606,8 @@ namespace Jazz2::Scripting
 			float yScale;
 			/** @brief Capture-the-flag flag state */
 			std::int32_t flag;
+			/** @brief The player this draw configuration belongs to */
+			jjPLAYER* _player;
 
 			/** @brief Returns whether the given shield effect is drawn */
 			bool get_shield(std::int32_t shield) const;

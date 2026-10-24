@@ -21,6 +21,11 @@ namespace Jazz2::Actors::Solid
 		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
+		/** @brief Returns how long until the bumper can throw a player again, more than zero right after it threw one */
+		float GetCooldown() const {
+			return _cooldown;
+		}
+
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;

@@ -17,8 +17,8 @@ msgstr ""
 "X-Poedit-SearchPath-1: .fake/Translations\n"
 "X-Poedit-SearchPath-2: Sources/Main.cpp\n"
 
-#: .fake/Translations/flash/01_diam1.j2l.h:1
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:1
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Spaz ate the dopefish."
@@ -26,8 +26,8 @@ msgstr ""
 "\n"
 "Spaz dopefish'i yedi."
 
-#: .fake/Translations/flash/01_diam1.j2l.h:2
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:2
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Find the gopher."
@@ -35,8 +35,8 @@ msgstr ""
 "\n"
 "Sincabı bul."
 
-#: .fake/Translations/flash/01_diam1.j2l.h:3
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:3
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Dragons live in burbank."
@@ -44,8 +44,8 @@ msgstr ""
 "\n"
 "Ejderhalar Burbank'te yaşar."
 
-#: .fake/Translations/flash/01_diam1.j2l.h:4
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:4
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Mark wears briefs. \n"
@@ -55,8 +55,8 @@ msgstr ""
 "Mark külot giyiyor.\n"
 "Hoo Hah!"
 
-#: .fake/Translations/flash/01_diam1.j2l.h:5
-msgctxt "flash/01_diam1"
+#: .fake/Translations/flash/diam1.j2l.h:5
+msgctxt "flash/diam1"
 msgid ""
 "\n"
 "Nick loves shiny. \n"
@@ -66,8 +66,8 @@ msgstr ""
 "Nick her zaman olduğu\n"
 "gibi parlak şeyleri sever!"
 
-#: .fake/Translations/flash/02_diam3.j2l.h:1
-msgctxt "flash/02_diam3"
+#: .fake/Translations/flash/diam3.j2l.h:1
+msgctxt "flash/diam3"
 msgid ""
 "\n"
 "Send Tim new socks."
@@ -75,8 +75,8 @@ msgstr ""
 "\n"
 "Tim'e yeni çorap yolla."
 
-#: .fake/Translations/flash/02_diam3.j2l.h:2
-msgctxt "flash/02_diam3"
+#: .fake/Translations/flash/diam3.j2l.h:2
+msgctxt "flash/diam3"
 msgid ""
 "\n"
 "Send Nigel a green card."
@@ -84,8 +84,8 @@ msgstr ""
 "\n"
 "Nigel'a yeşil kart yolla."
 
-#: .fake/Translations/flash/02_diam3.j2l.h:3
-msgctxt "flash/02_diam3"
+#: .fake/Translations/flash/diam3.j2l.h:3
+msgctxt "flash/diam3"
 msgid ""
 "\n"
 "Beware of chainsaw schmalz."
@@ -93,8 +93,8 @@ msgstr ""
 "\n"
 "Testere yağına dikkat et."
 
-#: .fake/Translations/flash/02_diam3.j2l.h:4
-msgctxt "flash/02_diam3"
+#: .fake/Translations/flash/diam3.j2l.h:4
+msgctxt "flash/diam3"
 msgid ""
 "\n"
 "Dont give mark a burrito."
@@ -102,8 +102,8 @@ msgstr ""
 "\n"
 "Mark'a burrito verme."
 
-#: .fake/Translations/flash/05_medivo1.j2l.h:1
-msgctxt "flash/05_medivo1"
+#: .fake/Translations/flash/medivo1.j2l.h:1
+msgctxt "flash/medivo1"
 msgid ""
 "\n"
 "Beware of falling enemies."
@@ -111,8 +111,8 @@ msgstr ""
 "\n"
 "Düşen düşmanlara dikkat et."
 
-#: .fake/Translations/flash/05_medivo1.j2l.h:2
-msgctxt "flash/05_medivo1"
+#: .fake/Translations/flash/medivo1.j2l.h:2
+msgctxt "flash/medivo1"
 msgid ""
 "\n"
 "Craig is still a doofus!"
@@ -120,8 +120,8 @@ msgstr ""
 "\n"
 "Craig hâlâ bir şapşal!"
 
-#: .fake/Translations/flash/05_medivo1.j2l.h:3
-msgctxt "flash/05_medivo1"
+#: .fake/Translations/flash/medivo1.j2l.h:3
+msgctxt "flash/medivo1"
 msgid ""
 "\n"
 "Secret Level Time!!!"
@@ -129,8 +129,8 @@ msgstr ""
 "\n"
 "Gizli Bölüm Zamanı!!!"
 
-#: .fake/Translations/flash/bonus_garglair.j2l.h:1
-msgctxt "flash/bonus_garglair"
+#: .fake/Translations/flash/garglair.j2l.h:1
+msgctxt "flash/garglair"
 msgid ""
 "\n"
 "Buttstomp A Silver Crate\n"
@@ -140,8 +140,8 @@ msgstr ""
 "Yolunu Açmak İçin\n"
 "Gümüş Kutuyu Ez"
 
-#: .fake/Translations/flash/bonus_garglair.j2l.h:2
-msgctxt "flash/bonus_garglair"
+#: .fake/Translations/flash/garglair.j2l.h:2
+msgctxt "flash/garglair"
 msgid ""
 "\n"
 "Crates can also make platforms appear..."
@@ -149,8 +149,8 @@ msgstr ""
 "\n"
 "Kutular platformların görünmesini sağlayabilir..."
 
-#: .fake/Translations/flash/bonus_garglair.j2l.h:3
-msgctxt "flash/bonus_garglair"
+#: .fake/Translations/flash/garglair.j2l.h:3
+msgctxt "flash/garglair"
 msgid ""
 "\n"
 "Melt the Spring..."
@@ -158,8 +158,8 @@ msgstr ""
 "\n"
 "İlkbaharı Erit..."
 
-#: .fake/Translations/flash/bonus_garglair.j2l.h:4
-msgctxt "flash/bonus_garglair"
+#: .fake/Translations/flash/garglair.j2l.h:4
+msgctxt "flash/garglair"
 msgid ""
 "\n"
 "Leh is a Camper"
@@ -167,8 +167,8 @@ msgstr ""
 "\n"
 "Leh bir Pusucu"
 
-#: .fake/Translations/monk/01_jung1.j2l.h:1
-msgctxt "monk/01_jung1"
+#: .fake/Translations/monk/jung1.j2l.h:1
+msgctxt "monk/jung1"
 msgid ""
 "\n"
 "Falling boulders can \n"
@@ -178,8 +178,8 @@ msgstr ""
 "Düşen kaya parçaları\n"
 "başını ağrıtabilir."
 
-#: .fake/Translations/monk/01_jung1.j2l.h:2
-msgctxt "monk/01_jung1"
+#: .fake/Translations/monk/jung1.j2l.h:2
+msgctxt "monk/jung1"
 msgid ""
 "\n"
 "A Flamethrower works\n"
@@ -189,8 +189,8 @@ msgstr ""
 "Bir Alev Makinesi \n"
 "böceklere karşı çok iyi çalışır."
 
-#: .fake/Translations/monk/03_hell.j2l.h:1
-msgctxt "monk/03_hell"
+#: .fake/Translations/monk/hell.j2l.h:1
+msgctxt "monk/hell"
 msgid ""
 "\n"
 "Long live the ice level."
@@ -198,8 +198,8 @@ msgstr ""
 "\n"
 "Buzlu bölüm çok yaşa."
 
-#: .fake/Translations/monk/03_hell.j2l.h:2
-msgctxt "monk/03_hell"
+#: .fake/Translations/monk/hell.j2l.h:2
+msgctxt "monk/hell"
 msgid ""
 "\n"
 "Goodnight, bubba!"
@@ -207,8 +207,8 @@ msgstr ""
 "\n"
 "İyi geceler, canım!"
 
-#: .fake/Translations/monk/06_damn2.j2l.h:2
-msgctxt "monk/06_damn2"
+#: .fake/Translations/monk/damn2.j2l.h:2
+msgctxt "monk/damn2"
 msgid ""
 "\n"
 "What the heck? Aaaah! No!  \n"
@@ -218,8 +218,8 @@ msgstr ""
 "Nasıl ya? Aaaah! Hayır!\n"
 "Bu burada bitmedi!"
 
-#: .fake/Translations/prince/01_castle1.j2l.h:1
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:1
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "Poles spin you around so\n"
@@ -229,8 +229,8 @@ msgstr ""
 "Direkler seni döndürerek\n"
 "daha hızlı ilerlemeni sağlar."
 
-#: .fake/Translations/prince/01_castle1.j2l.h:2
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:2
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "You found a secret area."
@@ -238,8 +238,8 @@ msgstr ""
 "\n"
 "Gizli bir bölge buldun."
 
-#: .fake/Translations/prince/01_castle1.j2l.h:3
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:3
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "Secret Treasure Room."
@@ -247,8 +247,8 @@ msgstr ""
 "\n"
 "Gizli Hazine Odası."
 
-#: .fake/Translations/prince/01_castle1.j2l.h:4
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:4
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "Nothing to see here."
@@ -256,8 +256,8 @@ msgstr ""
 "\n"
 "Burada görülecek bir şey yok."
 
-#: .fake/Translations/prince/01_castle1.j2l.h:5
-msgctxt "prince/01_castle1"
+#: .fake/Translations/prince/castle1.j2l.h:5
+msgctxt "prince/castle1"
 msgid ""
 "\n"
 "Collect coins to activate \n"
@@ -267,8 +267,8 @@ msgstr ""
 "Jeton toplayarak ışınlanma \n"
 "cihazlarını aktive edebilirsin."
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:1
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:1
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Cheese is green on tuesday."
@@ -276,8 +276,8 @@ msgstr ""
 "\n"
 "Peynirler, Salı günleri yeşil olur."
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:2
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:2
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Craig is king doofus."
@@ -285,8 +285,8 @@ msgstr ""
 "\n"
 "Craig şapşal bir kral."
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:3
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:3
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "To beat the queen \n"
@@ -296,8 +296,8 @@ msgstr ""
 "Kraliçe'yi yenebilmek için\n"
 "ona ateş ederek çıkıntıdan düşür."
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:4
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:4
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Good job! \n"
@@ -307,8 +307,8 @@ msgstr ""
 "Aferin!\n"
 "Şimdi gidip Devan Shell'i yakala!"
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:5
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:5
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "To kick through these\n"
@@ -318,8 +318,8 @@ msgstr ""
 "Bu blokların içinden geçmek için\n"
 "aşağıya bas ve ardından zıpla!"
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:6
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:6
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Press down and jump beneath \n"
@@ -329,8 +329,8 @@ msgstr ""
 "Kutuları kırmak için onların\n"
 "altındayken aşağıya bas ve zıpla!"
 
-#: .fake/Translations/prince/02_castle1n.j2l.h:7
-msgctxt "prince/02_castle1n"
+#: .fake/Translations/prince/castle1n.j2l.h:7
+msgctxt "prince/castle1n"
 msgid ""
 "\n"
 "Buttstomp the metal box \n"
@@ -340,8 +340,8 @@ msgstr ""
 "Metal kutuyu ezerek bloklarla \n"
 "kilitlenmiş bölgeleri açabilirsin!"
 
-#: .fake/Translations/prince/03_carrot1.j2l.h:1
-msgctxt "prince/03_carrot1"
+#: .fake/Translations/prince/carrot1.j2l.h:1
+msgctxt "prince/carrot1"
 msgid ""
 "\n"
 "Stomp your booty to exit."
@@ -349,8 +349,8 @@ msgstr ""
 "\n"
 "Buradan çıkmak için bloğu ez."
 
-#: .fake/Translations/prince/03_carrot1.j2l.h:2
-msgctxt "prince/03_carrot1"
+#: .fake/Translations/prince/carrot1.j2l.h:2
+msgctxt "prince/carrot1"
 msgid ""
 "\n"
 "This spring is frozen."
@@ -358,8 +358,8 @@ msgstr ""
 "\n"
 "Bu yay donmuş."
 
-#: .fake/Translations/prince/04_carrot1n.j2l.h:1
-msgctxt "prince/04_carrot1n"
+#: .fake/Translations/prince/carrot1n.j2l.h:1
+msgctxt "prince/carrot1n"
 msgid ""
 "\n"
 "Super dooper secret."
@@ -367,8 +367,8 @@ msgstr ""
 "\n"
 "Müthiş gizli oda."
 
-#: .fake/Translations/prince/04_carrot1n.j2l.h:2
-msgctxt "prince/04_carrot1n"
+#: .fake/Translations/prince/carrot1n.j2l.h:2
+msgctxt "prince/carrot1n"
 msgid ""
 "\n"
 "Shields will give you unlimited \n"
@@ -378,8 +378,8 @@ msgstr ""
 "Kalkanlar sana belli bir süre\n"
 "için sınırsız özel mermi verir."
 
-#: .fake/Translations/prince/04_carrot1n.j2l.h:4
-msgctxt "prince/04_carrot1n"
+#: .fake/Translations/prince/carrot1n.j2l.h:4
+msgctxt "prince/carrot1n"
 msgid ""
 "\n"
 "Stopwatches will add time to\n"
@@ -389,8 +389,8 @@ msgstr ""
 "Saatler senin kalkanına\n"
 "süre ekler."
 
-#: .fake/Translations/prince/04_carrot1n.j2l.h:5
-msgctxt "prince/04_carrot1n"
+#: .fake/Translations/prince/carrot1n.j2l.h:5
+msgctxt "prince/carrot1n"
 msgid ""
 "\n"
 "This schwartzenguard is toast!"
@@ -398,8 +398,8 @@ msgstr ""
 "\n"
 "Bu gardiyan yalan oldu!"
 
-#: .fake/Translations/prince/06_labrat2.j2l.h:1
-msgctxt "prince/06_labrat2"
+#: .fake/Translations/prince/labrat2.j2l.h:1
+msgctxt "prince/labrat2"
 msgid ""
 "\n"
 "\n"
@@ -411,8 +411,8 @@ msgstr ""
 "Beni yenemezsin, Jazz!\n"
 "Süperbotum ile yüzleşmeye hazır ol!"
 
-#: .fake/Translations/prince/06_labrat2.j2l.h:2
-msgctxt "prince/06_labrat2"
+#: .fake/Translations/prince/labrat2.j2l.h:2
+msgctxt "prince/labrat2"
 msgid ""
 "\n"
 "\n"
@@ -422,8 +422,8 @@ msgstr ""
 "\n"
 "Aman be! Buradan gidiyorum!"
 
-#: .fake/Translations/prince/06_labrat2.j2l.h:3
-msgctxt "prince/06_labrat2"
+#: .fake/Translations/prince/labrat2.j2l.h:3
+msgctxt "prince/labrat2"
 msgid ""
 "\n"
 "These blocks are speed blocks.\n"
@@ -605,8 +605,8 @@ msgstr ""
 "Şimdi oynamaya hazırsın.\n"
 "Bol şans ve iyi eğlenceler."
 
-#: .fake/Translations/rescue/01_colon1.j2l.h:1
-msgctxt "rescue/01_colon1"
+#: .fake/Translations/rescue/colon1.j2l.h:1
+msgctxt "rescue/colon1"
 msgid ""
 "\n"
 "Buttstomp the manhole cover!"
@@ -614,8 +614,8 @@ msgstr ""
 "\n"
 "Rögar kapağını ez!"
 
-#: .fake/Translations/rescue/03_psych1.j2l.h:1
-msgctxt "rescue/03_psych1"
+#: .fake/Translations/rescue/psych1.j2l.h:1
+msgctxt "rescue/psych1"
 msgid ""
 "\n"
 "Smoke rings will \n"
@@ -625,8 +625,8 @@ msgstr ""
 "Duman halkaları\n"
 "başını döndürür."
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:1
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:1
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "You can't buttstomp\n"
@@ -636,8 +636,8 @@ msgstr ""
 "Burada ezme hareketini \n"
 "yapamazsın. Yukarıdan devam et!"
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:2
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:2
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "No rewards to those\n"
@@ -647,8 +647,8 @@ msgstr ""
 "Aceleci davrananlara\n"
 "ödül yok."
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:3
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:3
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Todays Forcast: Strong Winds!"
@@ -656,8 +656,8 @@ msgstr ""
 "\n"
 "Bugünün Hava Durumu: Güçlü Rüzgarlar!"
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:4
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:4
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Find the crate\n"
@@ -667,8 +667,8 @@ msgstr ""
 "Yolu açmak için\n"
 "kutuyu bul."
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:5
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:5
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Welcome to\n"
@@ -679,8 +679,8 @@ msgstr ""
 "Jazz Jackrabbit 2:\n"
 "The Secret Files'a hoş geldin!"
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:6
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:6
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Only Spaz can get to\n"
@@ -693,8 +693,8 @@ msgstr ""
 "Spaz ulaşabilir. Üstünde durması \n"
 "gereken bir şeye ihtiyacı olabilir."
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:7
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:7
+msgctxt "secretf/easter1"
 msgid ""
 "\n"
 "Don't beat Nigel at pool.\n"
@@ -704,8 +704,8 @@ msgstr ""
 "Nigel'ı bilardoda yenme.\n"
 "Ben uyarımı yapayım. :)"
 
-#: .fake/Translations/secretf/01_easter1.j2l.h:16
-msgctxt "secretf/01_easter1"
+#: .fake/Translations/secretf/easter1.j2l.h:16
+msgctxt "secretf/easter1"
 msgid ""
 "Eating too many chocolate\n"
 "eggs can make you sick :p"
@@ -713,8 +713,8 @@ msgstr ""
 "Çok fazla çikolatalı yumurta\n"
 "yemek seni rahatsız eder :p"
 
-#: .fake/Translations/secretf/02_easter2.j2l.h:1
-msgctxt "secretf/02_easter2"
+#: .fake/Translations/secretf/easter2.j2l.h:1
+msgctxt "secretf/easter2"
 msgid ""
 "\n"
 "Sloping Tunnel Entrance"
@@ -722,8 +722,8 @@ msgstr ""
 "\n"
 "Eğimli Tünel Girişi"
 
-#: .fake/Translations/secretf/02_easter2.j2l.h:2
-msgctxt "secretf/02_easter2"
+#: .fake/Translations/secretf/easter2.j2l.h:2
+msgctxt "secretf/easter2"
 msgid ""
 "\n"
 "To access the tunnels above\n"
@@ -733,8 +733,8 @@ msgstr ""
 "Yukarıdaki tünele ulaşabilmek için\n"
 "oraya ışınlanılacak yeri bul."
 
-#: .fake/Translations/secretf/02_easter2.j2l.h:3
-msgctxt "secretf/02_easter2"
+#: .fake/Translations/secretf/easter2.j2l.h:3
+msgctxt "secretf/easter2"
 msgid ""
 "\n"
 "One route leads to riches.\n"
@@ -744,8 +744,8 @@ msgstr ""
 "Yollardan biri zenginliğe götürür.\n"
 "Diğeri ise savaşa götürür."
 
-#: .fake/Translations/secretf/03_easter3.j2l.h:1
-msgctxt "secretf/03_easter3"
+#: .fake/Translations/secretf/easter3.j2l.h:1
+msgctxt "secretf/easter3"
 msgid ""
 "\n"
 "Only those who can double-jump\n"
@@ -755,8 +755,8 @@ msgstr ""
 "Sadece iki kere zıplayabilenler\n"
 "ödüllere erişebilir!"
 
-#: .fake/Translations/secretf/03_easter3.j2l.h:2
-msgctxt "secretf/03_easter3"
+#: .fake/Translations/secretf/easter3.j2l.h:2
+msgctxt "secretf/easter3"
 msgid ""
 "\n"
 "Find the crate to make\n"
@@ -766,8 +766,8 @@ msgstr ""
 "Tırmanma bloklarını\n"
 "ortaya çıkartacak kutuyu bul"
 
-#: .fake/Translations/secretf/03_easter3.j2l.h:3
-msgctxt "secretf/03_easter3"
+#: .fake/Translations/secretf/easter3.j2l.h:3
+msgctxt "secretf/easter3"
 msgid ""
 "\n"
 "Stomping this crate also\n"
@@ -777,8 +777,8 @@ msgstr ""
 "Bu kutuyu ezmek aynı zamanda\n"
 "bazı düşmanları ortaya çıkarır :)"
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:1
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:1
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "Enter the house with caution....."
@@ -786,8 +786,8 @@ msgstr ""
 "\n"
 "Eve dikkatlice gir....."
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:3
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:3
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "Silver Crates can't be broken underwater..."
@@ -795,8 +795,8 @@ msgstr ""
 "\n"
 "Suyun altında Gümüş Kutuları kıramazsın..."
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:4
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:4
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "Water Level control crate above."
@@ -805,8 +805,8 @@ msgstr ""
 "Su seviyesini kontrol eden kutu\n"
 "yakınlarda bir yerde."
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:5
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:5
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "Stomping crates can be good and bad..."
@@ -814,8 +814,8 @@ msgstr ""
 "\n"
 "Kutuları ezmek hem iyi hem de kötü olabilir..."
 
-#: .fake/Translations/secretf/04_haunted1.j2l.h:7
-msgctxt "secretf/04_haunted1"
+#: .fake/Translations/secretf/haunted1.j2l.h:7
+msgctxt "secretf/haunted1"
 msgid ""
 "\n"
 "But you need a way to get up there..."
@@ -823,8 +823,8 @@ msgstr ""
 "\n"
 "Ama yukarıya gitmek için bir yola ihtiyacın var.."
 
-#: .fake/Translations/secretf/06_haunted3.j2l.h:16
-msgctxt "secretf/06_haunted3"
+#: .fake/Translations/secretf/haunted3.j2l.h:16
+msgctxt "secretf/haunted3"
 msgid ""
 "\n"
 "Michelle,\n"
@@ -834,8 +834,8 @@ msgstr ""
 "Michelle,\n"
 "Seni her zaman ve sonsuza dek seveceğim :)"
 
-#: .fake/Translations/secretf/07_town1.j2l.h:1
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:1
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Take to the roof tops!"
@@ -843,8 +843,8 @@ msgstr ""
 "\n"
 "Çatıya çık!"
 
-#: .fake/Translations/secretf/07_town1.j2l.h:2
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:2
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "The skies above will reward\n"
@@ -853,8 +853,8 @@ msgstr ""
 "\n"
 "Gökyüzü, ezenleri ödüllendirecek..."
 
-#: .fake/Translations/secretf/07_town1.j2l.h:3
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:3
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Jump as far over to the\n"
@@ -864,8 +864,8 @@ msgstr ""
 "Mümkün olduğu kadar\n"
 "sağa doğru atla..."
 
-#: .fake/Translations/secretf/07_town1.j2l.h:4
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:4
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Didn't make the jump huh? :)"
@@ -873,8 +873,8 @@ msgstr ""
 "\n"
 "Zıplayamadın di'mi? :)"
 
-#: .fake/Translations/secretf/07_town1.j2l.h:5
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:5
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Well Done!"
@@ -882,8 +882,8 @@ msgstr ""
 "\n"
 "Aferin!"
 
-#: .fake/Translations/secretf/07_town1.j2l.h:6
-msgctxt "secretf/07_town1"
+#: .fake/Translations/secretf/town1.j2l.h:6
+msgctxt "secretf/town1"
 msgid ""
 "\n"
 "Use your Special Moves to get up the air cons!\n"
@@ -895,8 +895,8 @@ msgstr ""
 "Jazz isen, önce Eğil ve sonra Zıpla.\n"
 "Spaz isen, iki kere Zıpla!"
 
-#: .fake/Translations/secretf/08_town2.j2l.h:1
-msgctxt "secretf/08_town2"
+#: .fake/Translations/secretf/town2.j2l.h:1
+msgctxt "secretf/town2"
 msgid ""
 "\n"
 "Find the crate and the gems are yours!"
@@ -904,8 +904,8 @@ msgstr ""
 "\n"
 "Kutuyu bul ve mücevherler senin olsun!"
 
-#: .fake/Translations/secretf/08_town2.j2l.h:2
-msgctxt "secretf/08_town2"
+#: .fake/Translations/secretf/town2.j2l.h:2
+msgctxt "secretf/town2"
 msgid ""
 "\n"
 "Springs Don't Work When Frozen..."
@@ -913,8 +913,8 @@ msgstr ""
 "\n"
 "Yaylar Donukken Çalışmaz..."
 
-#: .fake/Translations/secretf/08_town2.j2l.h:3
-msgctxt "secretf/08_town2"
+#: .fake/Translations/secretf/town2.j2l.h:3
+msgctxt "secretf/town2"
 msgid ""
 "\n"
 "Collecting 20 coins is more rewarding..."
@@ -922,8 +922,8 @@ msgstr ""
 "\n"
 "20 adet jeton toplamak daha ödüllendirici..."
 
-#: .fake/Translations/secretf/09_town3.j2l.h:1
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:1
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "Find the crate to clear the blocks...."
@@ -931,8 +931,8 @@ msgstr ""
 "\n"
 "Blokları temizlemek için kutuyu bul...."
 
-#: .fake/Translations/secretf/09_town3.j2l.h:2
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:2
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "BEWARE! Flocks of Ravens can\n"
@@ -942,8 +942,8 @@ msgstr ""
 "DİKKAT! Bir grup karga çok\n"
 "tehlikeli olabilir."
 
-#: .fake/Translations/secretf/09_town3.j2l.h:3
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:3
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "The remove the blocks\n"
@@ -953,8 +953,8 @@ msgstr ""
 "Blokları temizlemek için\n"
 "en uzun binaya doğru bak."
 
-#: .fake/Translations/secretf/09_town3.j2l.h:4
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:4
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "Choose a cover and stomp away!"
@@ -962,8 +962,8 @@ msgstr ""
 "\n"
 "Saklanacak yer bul ve ezmeye başla!"
 
-#: .fake/Translations/secretf/09_town3.j2l.h:5
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:5
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "Hi GeoBunny :)"
@@ -971,8 +971,8 @@ msgstr ""
 "\n"
 "Merhaba GeoBunny :)"
 
-#: .fake/Translations/secretf/09_town3.j2l.h:6
-msgctxt "secretf/09_town3"
+#: .fake/Translations/secretf/town3.j2l.h:6
+msgctxt "secretf/town3"
 msgid ""
 "\n"
 "Goto www.project2.com\n"
@@ -984,8 +984,8 @@ msgstr ""
 "ve\n"
 "BUNNYLOVER şifresini kullan\n"
 
-#: .fake/Translations/share/01_share1.j2l.h:1
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:1
+msgctxt "share/share1"
 msgid ""
 "\n"
 "Shoot these blocks!"
@@ -993,8 +993,8 @@ msgstr ""
 "\n"
 "Bloklara ateş et!"
 
-#: .fake/Translations/share/01_share1.j2l.h:2
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:2
+msgctxt "share/share1"
 msgid ""
 "\n"
 "When in the air, press down\n"
@@ -1004,8 +1004,8 @@ msgstr ""
 "Zıpladıktan sonra aşağıya basarak\n"
 "yeri ezebilirsin."
 
-#: .fake/Translations/share/01_share1.j2l.h:3
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:3
+msgctxt "share/share1"
 msgid ""
 "\n"
 "To pass this area, stomp\n"
@@ -1015,8 +1015,8 @@ msgstr ""
 "Burayı geçebilmek için\n"
 "metal kutuyu ez."
 
-#: .fake/Translations/share/01_share1.j2l.h:4
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:4
+msgctxt "share/share1"
 msgid ""
 "\n"
 "You need twenty coins to pass \n"
@@ -1026,8 +1026,8 @@ msgstr ""
 "Bu ışınlanma cihazından geçebilmek için\n"
 "20 adet jetona ihtiyacın var!"
 
-#: .fake/Translations/share/01_share1.j2l.h:5
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:5
+msgctxt "share/share1"
 msgid ""
 "\n"
 "Coins give you access to \n"
@@ -1037,8 +1037,8 @@ msgstr ""
 "Jetonlar senin ışınlanma\n"
 "cihazlarından geçmeni sağlar."
 
-#: .fake/Translations/share/01_share1.j2l.h:6
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:6
+msgctxt "share/share1"
 msgid ""
 "\n"
 "Stomp in the right place and\n"
@@ -1048,8 +1048,8 @@ msgstr ""
 "Doğru yeri ezersen\n"
 "belki bir sürpriz bulabilirsin!"
 
-#: .fake/Translations/share/01_share1.j2l.h:7
-msgctxt "share/01_share1"
+#: .fake/Translations/share/share1.j2l.h:7
+msgctxt "share/share1"
 msgid ""
 "\n"
 "Some crates contain\n"
@@ -1059,8 +1059,8 @@ msgstr ""
 "Bazı kutularda bombalar\n"
 "ve daha kötü şeyler olabilir!"
 
-#: .fake/Translations/share/02_share2.j2l.h:1
-msgctxt "share/02_share2"
+#: .fake/Translations/share/share2.j2l.h:1
+msgctxt "share/share2"
 msgid ""
 "\n"
 "You need twenty coins to pass \n"
@@ -1070,8 +1070,8 @@ msgstr ""
 "Bu gizli ışınlanma cihazından geçebilmek için \n"
 "20 adet jetona ihtiyacın var!"
 
-#: .fake/Translations/share/02_share2.j2l.h:2
-msgctxt "share/02_share2"
+#: .fake/Translations/share/share2.j2l.h:2
+msgctxt "share/share2"
 msgid ""
 "\n"
 "A flamethrower works well \n"
@@ -1081,8 +1081,8 @@ msgstr ""
 "Alev makinesi,\n"
 "böceklere karşı iyi çalışır."
 
-#: .fake/Translations/share/02_share2.j2l.h:3
-msgctxt "share/02_share2"
+#: .fake/Translations/share/share2.j2l.h:3
+msgctxt "share/share2"
 msgid ""
 "\n"
 "Smoke rings will make\n"
@@ -1092,8 +1092,8 @@ msgstr ""
 "Duman halkaları\n"
 "başını döndürür!"
 
-#: .fake/Translations/share/03_share3.j2l.h:1
-msgctxt "share/03_share3"
+#: .fake/Translations/share/share3.j2l.h:1
+msgctxt "share/share3"
 msgid ""
 "\n"
 "Beware the witch! She can\n"
@@ -1103,8 +1103,8 @@ msgstr ""
 "Cadıya dikkat et! Seni bir\n"
 "kurbağaya çevirebilir."
 
-#: .fake/Translations/share/03_share3.j2l.h:2
-msgctxt "share/03_share3"
+#: .fake/Translations/share/share3.j2l.h:2
+msgctxt "share/share3"
 msgid ""
 "\n"
 "If you are turned into a frog\n"
@@ -1114,8 +1114,8 @@ msgstr ""
 "Eğer kurbağaya dönüştüysen\n"
 "Eva Earlong sana yardımcı olabilir!"
 
-#: .fake/Translations/share/03_share3.j2l.h:3
-msgctxt "share/03_share3"
+#: .fake/Translations/share/share3.j2l.h:3
+msgctxt "share/share3"
 msgid ""
 "\n"
 "You made it! This is the end\n"
@@ -1128,8 +1128,8 @@ msgstr ""
 "sonuydu. Daha fazlası için ana menüden\n"
 "tam sürümü oynayabilirsin!"
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:1
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:1
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "Watch out for the spikes below!"
@@ -1137,8 +1137,8 @@ msgstr ""
 "\n"
 "Aşağıdaki iğnelere dikkat et!"
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:2
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:2
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "You can buttstomp through\n"
@@ -1149,8 +1149,8 @@ msgstr ""
 "Yolundaki bazı hassas yerleri\n"
 "ezebilirsin!"
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:3
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:3
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "Some blocks can only\n"
@@ -1161,8 +1161,8 @@ msgstr ""
 "Bazı bloklar spesifik\n"
 "silahlarla kırılabilir."
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:4
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:4
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "Welcome to Christmas Chronicles!"
@@ -1170,8 +1170,8 @@ msgstr ""
 "\n"
 "Christmas Chronicles'a hoş geldin!"
 
-#: .fake/Translations/xmas99/01_xmas1.j2l.h:5
-msgctxt "xmas99/01_xmas1"
+#: .fake/Translations/xmas99/xmas1.j2l.h:5
+msgctxt "xmas99/xmas1"
 msgid ""
 "\n"
 "Seasons Greetings from\n"
@@ -1185,8 +1185,8 @@ msgstr ""
 "Project 2 Interactive'den\n"
 "İyi Noeller!"
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:1
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:1
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "You can stand on top\n"
@@ -1196,8 +1196,8 @@ msgstr ""
 "Bazı ağaçların üzerinde\n"
 "durabilirsin!"
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:2
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:2
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "You can buttstomp through\n"
@@ -1208,8 +1208,8 @@ msgstr ""
 "Yolundaki bazı hassas yerleri\n"
 "ezebilirsin!"
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:3
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:3
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "Punching the blocks above you\n"
@@ -1219,8 +1219,8 @@ msgstr ""
 "Yukardaki blokları ezmek\n"
 "ödüllendirici olabilir."
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:6
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:6
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "Gem Trail Entry Crate."
@@ -1228,8 +1228,8 @@ msgstr ""
 "\n"
 "Mücevher İzi Giriş Kutusu."
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:7
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:7
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "Gem Trail Entrance.\n"
@@ -1241,8 +1241,8 @@ msgstr ""
 "Giriş Sandığını bulup ezmek\n"
 "için ağaçların tepelerine tırman."
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:14
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:14
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "\n"
@@ -1256,8 +1256,8 @@ msgstr ""
 "\n"
 "- Kakacık"
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:15
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:15
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "\n"
@@ -1273,8 +1273,8 @@ msgstr ""
 "Bu projeyi sana ithaf ediyorum.\n"
 "Seni çok seviyorum."
 
-#: .fake/Translations/xmas99/02_xmas2.j2l.h:16
-msgctxt "xmas99/02_xmas2"
+#: .fake/Translations/xmas99/xmas2.j2l.h:16
+msgctxt "xmas99/xmas2"
 msgid ""
 "\n"
 "\n"
@@ -1290,8 +1290,8 @@ msgstr ""
 "Ama sözlerim hep aynı yola çıkıyor\n"
 "Seni Seviyorum, Seni Seviyorum."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:1
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:1
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Please use your TNT wisely."
@@ -1299,8 +1299,8 @@ msgstr ""
 "\n"
 "Lütfen TNT'lerini dikkatli kullan."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:2
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:2
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Don't lose your grip!"
@@ -1308,8 +1308,8 @@ msgstr ""
 "\n"
 "Sıkı tutun!"
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:3
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:3
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Welcome to Burrowsville\n"
@@ -1319,8 +1319,8 @@ msgstr ""
 "Burrowsville'e hoş geldiniz.\n"
 "Lütfen dikkatli sürün."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:4
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:4
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "That bridge doesnt\n"
@@ -1330,8 +1330,8 @@ msgstr ""
 "O köprü pek güvenli\n"
 "gözükmüyor..."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:5
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:5
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Robert and Craig:\n"
@@ -1341,8 +1341,8 @@ msgstr ""
 "Robert ve Craig:\n"
 "Bahar EN İYİSİ! :)"
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:6
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:6
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Now leaving Burrowsville\n"
@@ -1352,8 +1352,8 @@ msgstr ""
 "Burrowsville'den çıkıyorsunuz.\n"
 "Lütfen tekrar gelin."
 
-#: .fake/Translations/xmas99/03_xmas3.j2l.h:7
-msgctxt "xmas99/03_xmas3"
+#: .fake/Translations/xmas99/xmas3.j2l.h:7
+msgctxt "xmas99/xmas3"
 msgid ""
 "\n"
 "Password: xmasbunny\n"
@@ -2857,7 +2857,7 @@ msgstr ""
 "olduğundan emin olun ve tekrar deneyin."
 
 #: Sources/Main.cpp:1404
-msgid "Unnamed server"
+msgid "Untitled server"
 msgstr "İsimsiz sunucu"
 
 #: Sources/Main.cpp:1561

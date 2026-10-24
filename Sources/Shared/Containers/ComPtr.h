@@ -7,6 +7,7 @@
 #include "../CommonWindows.h"
 #include "../Asserts.h"
 
+#include <memory>
 #include <type_traits>
 
 // Forward declaration from <unknwn.h>
@@ -134,11 +135,12 @@ namespace Death { namespace Containers {
 
 		/** @brief Move assignment */
 		ComPtr& operator=(ComPtr&& other) noexcept {
-			if (_pointer != other._pointer) {
-				if (_pointer != nullptr) {
-					_pointer->Release();
-				}
+			if (this != std::addressof(other)) {
+				T* prev = _pointer;
 				_pointer = other.detach();
+				if (prev != nullptr) {
+					prev->Release();
+				}
 			}
 
 			return *this;
@@ -147,11 +149,10 @@ namespace Death { namespace Containers {
 		/** @overload */
 		template<typename U, std::enable_if_t<std::is_convertible<U*, T*>::value, int> = 0>
 		ComPtr& operator=(ComPtr<U>&& other) noexcept {
-			if (_pointer != other._pointer) {
-				if (_pointer != nullptr) {
-					_pointer->Release();
-				}
-				_pointer = other.detach();
+			T* prev = _pointer;
+			_pointer = other.detach();
+			if (prev != nullptr) {
+				prev->Release();
 			}
 
 			return *this;

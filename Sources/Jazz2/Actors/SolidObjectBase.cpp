@@ -54,7 +54,14 @@ namespace Jazz2::Actors
 
 	void SolidObjectBase::OnUpdate(float timeMult)
 	{
+		bool wasFrozen = (_frozenTimeLeft > 0.0f);
+
 		ActorBase::OnUpdate(timeMult);
+
+		// A frozen object slides on by the push it had until it thaws, then stops at once
+		if (wasFrozen && _frozenTimeLeft <= 0.0f) {
+			_pushingTime = 0.0f;
+		}
 
 		Vector2f lastPos = _pos;
 

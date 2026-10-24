@@ -2800,12 +2800,7 @@ namespace Jazz2::Multiplayer
 				} else if (variableName == "level"_s) {
 					LevelInitialization levelInit;
 					PrepareNextLevelInitialization(levelInit);
-					auto level = value.partition('/');
-					if (value.contains('/')) {
-						levelInit.LevelName = value;
-					} else {
-						levelInit.LevelName = "unknown/"_s + value;
-					}
+					levelInit.LevelName = ContentResolver::Get().ResolveLevelName(value.trimmed());
 					if (ContentResolver::Get().LevelExists(levelInit.LevelName)) {
 						LOGD("Changing level to \"{}\"", levelInit.LevelName);
 
@@ -7093,7 +7088,7 @@ namespace Jazz2::Multiplayer
 			// Checked against the tileset rather than applied blind - see LevelHandler::FindClearSpawnPosition(),
 			// which the single-player path shares. This is the path **local splitscreen co-op actually takes**,
 			// the menu selecting it through `LocalMultiplayerGameMode`, and its 30 px lift buried the second
-			// player in the ceiling wherever a level starts in a tight space. Reported on `rescue/02_colon2`,
+			// player in the ceiling wherever a level starts in a tight space. Reported on `rescue/colon2`,
 			// and it survived a fix to the other handler entirely because a `/level` start does not come
 			// through here at all - the two paths are reached by different routes and look alike.
 			Vector2f playerPos = FindClearSpawnPosition(spawnPosition, Vector2f((float)(i * 30), (float)(-i * 30)));
@@ -11112,19 +11107,15 @@ namespace Jazz2::Multiplayer
 
 		_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
 
-		if (_levelName == playlistEntry.LevelName) {
+		String levelName = ContentResolver::Get().ResolveLevelName(playlistEntry.LevelName);
+		if (_levelName == levelName) {
 			// Level is the same, just change game mode
 			SetGameMode(playlistEntry.GameMode);
 		} else {
 			// Level is different, new level handler needs to be created
 			LevelInitialization levelInit;
 			PrepareNextLevelInitialization(levelInit);
-			auto level = playlistEntry.LevelName.partition('/');
-			if (playlistEntry.LevelName.contains('/')) {
-				levelInit.LevelName = playlistEntry.LevelName;
-			} else {
-				levelInit.LevelName = "unknown/"_s + playlistEntry.LevelName;
-			}
+			levelInit.LevelName = Death::move(levelName);
 			if (!ContentResolver::Get().LevelExists(levelInit.LevelName)) {
 				return false;
 			}

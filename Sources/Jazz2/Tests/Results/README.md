@@ -10,8 +10,8 @@ written as `.csv` when only the `.gz` is present, so nothing needs to know which
 
 | Path | Captured from | Settings |
 |---|---|---|
-| `original/` | Original Jazz Jackrabbit 2 with JJ2+ Beta v6.6h, driven by `Level/_pt.j2as` | Its own fixed tick rate, measured at 70.021 Hz. 539 scenarios, 341 850 rows across 23 category files (counted 2026-10-18). |
-| `engine/` | This engine, driven by `PhysicsProbe.cpp` | **`/max-fps:60`**, Debug x64 (see below for when it was 144). 548 scenarios, 299 187 rows across 24 category files (counted 2026-10-18). |
+| `original/` | Original Jazz Jackrabbit 2 with JJ2+ Beta v6.6h, driven by `Level/_pt.j2as` | Its own fixed tick rate, measured at 70.021 Hz. 601 scenarios, 357 350 rows across 24 category files (counted 2026-10-27). |
+| `engine/` | This engine, driven by `PhysicsProbe.cpp` | **`/max-fps:60`**, Debug x64 (see below for when it was 144). 610 scenarios, 312 516 rows across 25 category files (counted 2026-10-27). |
 | `diam3-original.csv.gz`, `diam3-engine.csv.gz` | The same two probes in a **different level** — the original game's own Diamondus 3 — for the single `dm_chain` scenario | Kept apart from the pair above on purpose: a trace holds one level's geometry, and merging two would make the level-version caveat below meaningless. See *Running it in another level* in `../README.md`. |
 
 **Split by category, one file per category on each side.** A full sweep is about eighty minutes a side, so
@@ -43,6 +43,13 @@ the engine's side is one capture of the **whole** category (`bd_,b2_`) at 60 FPS
 `bd_*` scenario on this side. Against the previous engine file the 43 older scenarios kept a speed-distribution error of
 0 px/s each. Their `AnimSame` drops are the renumbered bird poses (the charge was `0x20000048` and is `0x20900000`) and
 the charge now carrying the wing frame over, not a change of movement.
+
+**The `freeze` category (`fz_*`, 62 scenarios) was added on 2026-10-26**, at 60 FPS. The original's file is nine
+filtered captures merged scenario by scenario, latest last: the first 29, the `fz_b_*` again after the probe learned
+to thaw the pushable it puts back (a box thaws four times slower than anything else, so the previous scenario's
+freeze was still on), the crates, the `*_away` ones again with the freeze moved to tick 60, the three crate
+shots, the seven Fire/Jump-while-frozen ones in two runs, and the eight `fz_r_*` rams in two runs (2026-10-27; a
+`fz_r_drop` from the second was left out - the player landed on a ledge above the turtle and never reached it). The engine's is one capture of the whole category from the build where frozen actors follow the original.
 
 Six scenarios were added after that sweep — `an_crouch_hold`, `an_crouch_hold_walk`, `an_crouch_carry`,
 `an_crouch_spring`, `an_crouch_pole_e` and `an_crouch_spring_l` — and the pole, spring and rev-up families

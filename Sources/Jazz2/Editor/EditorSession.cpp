@@ -22,6 +22,22 @@ namespace Jazz2::Editor
 		_tileLod = std::make_unique<TileLod>(_document, _tileSetData);
 		// The tools only keep the session, they're told about the level once it's open
 		_tools = std::make_unique<ToolManager>(*this);
+		// The panel at the bottom offers what the tool chosen uses, however it's chosen, the hand and the measure leave it
+		_tools->OnChosen = [this](EditorToolType type) {
+			switch (type) {
+				case EditorToolType::Event:
+				case EditorToolType::Path:
+					_pickerPanel = PickerPanel::Events;
+					break;
+				case EditorToolType::Hand:
+				case EditorToolType::Measure:
+					break;
+				default:
+					_pickerPanel = PickerPanel::Tiles;
+					break;
+			}
+		};
+		_blockGrab = std::make_unique<BlockGrab>(*this);
 		_files = std::make_unique<DocumentFiles>(*this, static_cast<IDocumentFilesHost&>(*this), *root);
 		_comparison = std::make_unique<SavedComparison>(*this);
 		_playOverlays = std::make_unique<PlayOverlays>(*this);
@@ -190,6 +206,11 @@ namespace Jazz2::Editor
 	ToolManager& EditorSession::GetTools()
 	{
 		return *_tools;
+	}
+
+	BlockGrab& EditorSession::GetBlockGrab()
+	{
+		return *_blockGrab;
 	}
 
 	MaskOverlay& EditorSession::GetMaskOverlay()

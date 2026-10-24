@@ -8,9 +8,14 @@
 #include "../Base/FrameStatistics.h"
 #include "../tracy_opengl.h"
 
+#include <algorithm>
+
 namespace nCine
 {
 	RenderQueue::RenderQueue()
+#if defined(RHI_CAP_POSTPROCESSING)
+		: _drawCallsCounted(false)
+#endif
 	{
 		_opaqueQueue.reserve(16);
 		_opaqueBatchedQueue.reserve(16);
@@ -71,12 +76,19 @@ namespace nCine
 #endif
 	}
 
-	void RenderQueue::SortAndCommit(std::uint32_t splitLayer)
+#if defined(RHI_CAP_POSTPROCESSING)
+	void RenderQueue::SortAndCommit(ArrayView<const std::uint32_t> splitLayers)
+#else
+	void RenderQueue::SortAndCommit()
+#endif
 	{
 #if defined(DEATH_DEBUG)
 		static char debugString[128];
 #endif
 		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
+#if defined(RHI_CAP_POSTPROCESSING)
+		_drawCallsCounted = false;
+#endif
 
 		// Sorting the queues with the relevant orders
 		sort(_opaqueQueue.begin(), _opaqueQueue.end(), descendingOrder);
@@ -88,8 +100,13 @@ namespace nCine
 		if (batchingEnabled) {
 			ZoneScopedNC("Batching", 0x81A861);
 			// Always create batches after sorting
-			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue, splitLayer);
-			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue, splitLayer);
+#if defined(RHI_CAP_POSTPROCESSING)
+			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue, splitLayers);
+			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue, splitLayers);
+#else
+			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue);
+			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue);
+#endif
 		}
 
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
@@ -116,25 +133,81 @@ namespace nCine
 		}
 	}
 
-	void RenderQueue::Draw(std::uint32_t minLayer, std::uint32_t endLayer)
+#if defined(RHI_CAP_POSTPROCESSING)
+	RenderQueue::Part RenderQueue::StartPart() const
+	{
+		// The opaque queue is drawn front to back, so it's the end of it where the first part ends
+		const std::uint32_t opaqueCount = std::uint32_t(GetOpaques().size());
+		return { opaqueCount, opaqueCount, 0, 0 };
+	}
+
+	RenderQueue::Part RenderQueue::NextPart(const Part& previous, std::uint32_t endLayer) const
+	{
+		const ArrayView<RenderCommand* const> opaques = GetOpaques();
+		const ArrayView<RenderCommand* const> transparents = GetTransparents();
+
+		Part part;
+		part.OpaqueEnd = previous.OpaqueBegin;
+		part.TransparentBegin = previous.TransparentEnd;
+		if (endLayer >= NoSplitLayer) {
+			part.OpaqueBegin = 0;
+			part.TransparentEnd = std::uint32_t(transparents.size());
+		} else {
+			// The queues are sorted by the layer first (see RenderCommand::CalculateMaterialSortKey()), a batch takes the layer
+			// of its first command, so the commands of the layers drawn are a range of each queue - found by halving
+			part.OpaqueBegin = std::uint32_t(std::partition_point(opaques.begin(), opaques.begin() + part.OpaqueEnd,
+				[endLayer](const RenderCommand* command) { return command->GetLayer() >= endLayer; }) - opaques.begin());
+			part.TransparentEnd = std::uint32_t(std::partition_point(transparents.begin() + part.TransparentBegin, transparents.end(),
+				[endLayer](const RenderCommand* command) { return command->GetLayer() < endLayer; }) - transparents.begin());
+		}
+		return part;
+	}
+
+	void RenderQueue::Draw(const Part& part)
+	{
+		// A queue drawn in parts is counted once, with the first part drawn
+		if (!_drawCallsCounted) {
+			CountDrawCalls();
+			_drawCallsCounted = true;
+		}
+		DrawCommands(GetOpaques().slice(part.OpaqueBegin, part.OpaqueEnd),
+			GetTransparents().slice(part.TransparentBegin, part.TransparentEnd));
+	}
+#endif
+
+	void RenderQueue::Draw()
+	{
+		CountDrawCalls();
+		DrawCommands(GetOpaques(), GetTransparents());
+	}
+
+	void RenderQueue::CountDrawCalls()
+	{
+		// Every command left after batching is one draw call, while the unbatched queues still hold what was
+		// submitted - the two together say how well the batching does. Tested here rather than left to the call,
+		// so a frame that collects nothing does not pay for a call per render queue.
+		if (FrameStatistics::IsEnabled()) {
+			FrameStatistics::AddDrawCalls(std::uint32_t(GetOpaques().size() + GetTransparents().size()),
+				std::uint32_t(_opaqueQueue.size() + _transparentQueue.size()));
+		}
+	}
+
+	ArrayView<RenderCommand* const> RenderQueue::GetOpaques() const
+	{
+		const SmallVectorImpl<RenderCommand*>& queue = (theApplication().GetRenderingSettings().batchingEnabled ? _opaqueBatchedQueue : _opaqueQueue);
+		return { queue.data(), queue.size() };
+	}
+
+	ArrayView<RenderCommand* const> RenderQueue::GetTransparents() const
+	{
+		const SmallVectorImpl<RenderCommand*>& queue = (theApplication().GetRenderingSettings().batchingEnabled ? _transparentBatchedQueue : _transparentQueue);
+		return { queue.data(), queue.size() };
+	}
+
+	void RenderQueue::DrawCommands(ArrayView<RenderCommand* const> opaques, ArrayView<RenderCommand* const> transparents)
 	{
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		static char debugString[128];
-#endif
-		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
-		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &_opaqueBatchedQueue : &_opaqueQueue;
-		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &_transparentBatchedQueue : &_transparentQueue;
-
-		// Every command left after batching is one draw call, while the unbatched queues still hold what was
-		// submitted - the two together say how well the batching does. Tested here rather than left to the call,
-		// so a frame that collects nothing does not pay for a call per render queue. A queue drawn in parts is
-		// counted once, with its first part.
-		if (minLayer == 0 && FrameStatistics::IsEnabled()) {
-			FrameStatistics::AddDrawCalls(std::uint32_t(opaques->size() + transparents->size()),
-				std::uint32_t(_opaqueQueue.size() + _transparentQueue.size()));
-		}
-
-#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		std::uint32_t commandIndex = 0;
 #endif
 		// The camera is constant within a single queue draw, so its uniforms only need to be
@@ -142,10 +215,7 @@ namespace nCine
 		const RHI::ShaderProgram* lastCommittedShader = nullptr;
 
 		// Rendering opaque nodes front to back
-		for (RenderCommand* opaqueRenderCommand : *opaques) {
-			if (opaqueRenderCommand->GetLayer() < minLayer || opaqueRenderCommand->GetLayer() >= endLayer) {
-				continue;
-			}
+		for (RenderCommand* opaqueRenderCommand : opaques) {
 			TracyGpuZone("Opaque");
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 			const std::int32_t numInstances = opaqueRenderCommand->GetInstanceCount();
@@ -182,10 +252,7 @@ namespace nCine
 		RHI::Device::SetBlendingEnabled(true);
 		RHI::Device::SetDepthMaskEnabled(false);
 		// Rendering transparent nodes back to front
-		for (RenderCommand* transparentRenderCommand : *transparents) {
-			if (transparentRenderCommand->GetLayer() < minLayer || transparentRenderCommand->GetLayer() >= endLayer) {
-				continue;
-			}
+		for (RenderCommand* transparentRenderCommand : transparents) {
 			TracyGpuZone("Transparent");
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 			const std::int32_t numInstances = transparentRenderCommand->GetInstanceCount();

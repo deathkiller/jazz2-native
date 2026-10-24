@@ -1156,6 +1156,8 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "BIGOBJECT", aCOUNT + 27);
 		// Both bumpers of pinball, as PLATFORM is all the platforms
 		engine->RegisterEnumValue("Behavior", "BUMP", aCOUNT + 28);
+		// The spray of the pepper spray, a bullet of a script moves as any other here
+		engine->RegisterEnumValue("Behavior", "PEPPERBULLET", aCOUNT + 29);
 
 		engine->SetDefaultNamespace("ANIM");
 		engine->RegisterEnumValue("Set", "AMMO", Legacy::AnimationTables::GetSetID(mAMMO, versionTSF));

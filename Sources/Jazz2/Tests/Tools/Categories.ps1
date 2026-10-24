@@ -54,6 +54,8 @@ $script:ProbeCategories = @(
 	# Both bird morphs - the flight, the perch and the two attacks. Its own file because it is a character of its own:
 	# nothing else in the suite runs as a bird, and nothing in it runs as a rabbit.
 	@{ Name = 'bird';       Prefixes = @('bd_', 'b2_') }
+	# Frozen players, enemies and the pushable - what a freeze does to momentum, gravity and pushing
+	@{ Name = 'freeze';     Prefixes = @('fz_') }
 	# Its own file because it is its own *level*: `dm_chain` runs in the original game's Diamondus 3 and is
 	# guarded off in `_pt`, so a sweep of the test level never produces it and must not appear to delete it.
 	@{ Name = 'diam3';      Prefixes = @('dm_') }

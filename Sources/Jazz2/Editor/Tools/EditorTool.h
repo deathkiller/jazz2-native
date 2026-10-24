@@ -141,10 +141,12 @@ namespace Jazz2::Editor
 		 * @brief Returns the tile a stamp paints at a position of a layer with these options, `false` if it paints none there
 		 *
 		 * @p existing is the tile there now, @p options whether the options apply, not for erasing, and @p onlyEmpty
-		 * whether only empty tiles are painted.
+		 * whether only empty tiles are painted. The empty tiles of a stamp whose empty tiles are transparent (see
+		 * @ref TileStamp::EmptyIsTransparent) are painted only with @p emptyToo, as with <kbd>Shift</kbd> held.
+		 * @p stampIndex, if given, gets the index of the tile of the stamp that is painted, for its event.
 		 */
 		bool ResolveTile(const TileStamp& stamp, Vector2i position, Vector2i origin, const TileRef& existing, bool options,
-			bool onlyEmpty, TileRef& result) const;
+			bool onlyEmpty, TileRef& result, bool emptyToo = false, std::size_t* stampIndex = nullptr) const;
 	};
 
 	/** @brief A value of an option of a tool, or a toggle, see @ref ToolOptionsBuilder */
@@ -219,6 +221,10 @@ namespace Jazz2::Editor
 		virtual void OnPointerMove(const ToolPointer& pointer);
 		/** @brief Called when the pointer is released */
 		virtual void OnPointerUp(const ToolPointer& pointer);
+		/** @brief Called when a key is pressed over the view, returns `true` if the tool takes it, no action runs by it then */
+		virtual bool OnKeyPressed(const KeyboardEvent& event);
+		/** @brief Called when a key is released, whatever got it when it was pressed */
+		virtual void OnKeyReleased(const KeyboardEvent& event);
 		/** @brief Cancels what the tool is doing */
 		virtual void Cancel();
 		/** @brief Returns `true` if the tool is in the middle of something */
@@ -251,8 +257,14 @@ namespace Jazz2::Editor
 
 		/** @brief Draws the outline of cells of a layer on the screen */
 		void DrawCellsOutline(UiPainter& painter, const LayerView& view, Vector2i from, Vector2i to, const Colorf& color);
-		/** @brief Draws a stamp on the screen, its cell at the anchor at a cell of a layer */
-		void DrawStampGhost(UiPainter& painter, const LayerView& view, const TileStamp& stamp, Vector2i cell, Vector2i anchor, float alpha);
+		/**
+		 * @brief Draws a stamp on the screen, its cell at the anchor at a cell of a layer
+		 *
+		 * Its events are drawn too while the sprite layer is edited. Empty tiles that are transparent (see
+		 * @ref TileStamp::EmptyIsTransparent) are left out unless @p emptyToo, as they're painted.
+		 */
+		void DrawStampGhost(UiPainter& painter, const LayerView& view, const TileStamp& stamp, Vector2i cell, Vector2i anchor, float alpha,
+			bool emptyToo = false);
 
 		/** @brief Adds the options of the stamp to the options of a tool --- flipping, turning and painting its tiles at random */
 		static void AddStampOptions(ToolOptionsBuilder& builder);
@@ -297,6 +309,9 @@ namespace Jazz2::Editor
 		ToolSettings& GetSettings() {
 			return _settings;
 		}
+
+		/** @brief Called whenever a tool is chosen by @ref SetActive(), the same one again too, not for a tool used for a while */
+		Function<void(EditorToolType)> OnChosen;
 
 	private:
 		ToolSettings _settings;

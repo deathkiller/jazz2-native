@@ -233,6 +233,10 @@ namespace Death { namespace Trace {
 		static constexpr TraceLevel InitializeBacktraceRequested = TraceLevel(UINT8_MAX - 1);
 		/** @brief Special value for level to force immediate flushing of backtrace storage */
 		static constexpr TraceLevel FlushBacktraceRequested = TraceLevel(UINT8_MAX - 2);
+		/** @brief Special value for level to attach a sink while the background worker is running */
+		static constexpr TraceLevel AttachSinkRequested = TraceLevel(UINT8_MAX - 3);
+		/** @brief Special value for level to remove a sink while the background worker is running */
+		static constexpr TraceLevel RemoveSinkRequested = TraceLevel(UINT8_MAX - 4);
 
 		static constexpr std::size_t CacheLineSize = 64u;
 		static constexpr std::size_t CacheLineAligned = 2 * CacheLineSize;
@@ -1311,9 +1315,19 @@ namespace Death { namespace Trace {
 		LoggerBackend(LoggerBackend const&) = delete;
 		LoggerBackend& operator=(LoggerBackend const&) = delete;
 
-		/** @brief Registers the sink */
+		/**
+			@brief Adds the sink to the list right away, the first one starts the background worker
+
+			While the background worker is running, only the worker may change the list, @ref Logger
+			sends the change through the queue then.
+		*/
 		void AttachSink(ITraceSink* sink);
-		/** @brief Unregisters the sink */
+		/**
+			@brief Removes the sink from the list right away, the background worker stops once no sink is left
+
+			While the background worker is running, only the worker may change the list, @ref Logger
+			sends the change through the queue then.
+		*/
 		void RemoveSink(ITraceSink* sink);
 
 		/** @brief Notifies the background worker about new entries in the queue */
@@ -1456,9 +1470,19 @@ namespace Death { namespace Trace {
 		Logger(Logger const&) = delete;
 		Logger& operator=(Logger const&) = delete;
 
-		/** @brief Registers the sink */
+		/**
+			@brief Registers the sink
+
+			The sink receives every entry logged after it returns. It must not be called from a sink callback.
+		*/
 		void AttachSink(ITraceSink* sink);
-		/** @brief Unregisters the sink */
+		/**
+			@brief Unregisters the sink
+
+			The sink still receives every entry logged before, and once it returns, the sink is no longer called.
+			It waits for the background worker, so it must not be called from a sink callback, or from a thread
+			that a sink callback blocks on, e.g. by invoking synchronously on the UI thread.
+		*/
 		void RemoveSink(ITraceSink* sink);
 
 		/** @brief Writes the specified entry to all sinks */
@@ -1482,6 +1506,9 @@ namespace Death { namespace Trace {
 		LoggerBackend _backend;
 
 #if defined(DEATH_TRACE_ASYNC)
+		// Serializes attaching and removing sinks with starting and stopping the background worker
+		Threading::Spinlock _sinksLifecycleLock;
+
 		static inline DEATH_THREAD_LOCAL ThreadContext* _threadContext = nullptr;
 
 		static ThreadContext* GetLocalThreadContext() noexcept;

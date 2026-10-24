@@ -110,7 +110,7 @@ namespace Jazz2::Editor
 		PlayPlayerCount = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "PlayPlayerCount", 2), 1, 4);
 		Theme = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "Theme", 0), 0, 1);
 		ReducedMotion = JsonAccess::GetBool(doc, "ReducedMotion", false);
-		ReadableFont = JsonAccess::GetBool(doc, "ReadableFont", false);
+		ReadableFont = JsonAccess::GetBool(doc, "ReadableFont", true);
 		ScriptEditor = JsonAccess::ToString(JsonAccess::Member(doc, "ScriptEditor"));
 		{
 			const Json::Value& tools = JsonAccess::Member(doc, "Tools");

@@ -11,7 +11,8 @@ namespace Jazz2::Editor
 		@brief Base of the tools that paint tiles
 
 		What is painted is shown right away, but it's a single change of the level only once the pointer is released.
-		Only selected tiles are painted while something is selected on the layer.
+		Only selected tiles are painted while something is selected on the layer. A stamp with events (see
+		@ref TileStamp::Events) places them with its tiles on the sprite layer, in the same step.
 	*/
 	class StrokeTool : public EditorTool
 	{
@@ -24,6 +25,10 @@ namespace Jazz2::Editor
 
 	protected:
 		std::unique_ptr<SetTilesCommand> _stroke;
+		// The events of the stamp the stroke places with its tiles, made once the first of them is
+		std::unique_ptr<SetEventsCommand> _eventStroke;
+		// The events off the grid of the stamp the stroke places, added to those of the level once it's released
+		SmallVector<Formats::OffGridEventRecord, 0> _pendingOffGrid;
 		std::int32_t _strokeLayer;
 		// How the layer of the stroke wraps, which doesn't change while the view moves
 		LayerView _strokeView;
@@ -33,6 +38,8 @@ namespace Jazz2::Editor
 		bool _strokeOptions;
 		// Whether the stroke paints only empty tiles
 		bool _strokeOnlyEmpty;
+		// Whether the stroke paints the empty tiles of a stamp whose empty tiles are transparent too, as with Shift
+		bool _strokeEmptyToo;
 		// Where PaintStamp() painted the stamp the last time in the stroke, the cells it covered aren't painted again
 		const TileStamp* _lastStamp;
 		Recti _lastStampArea;
@@ -44,8 +51,12 @@ namespace Jazz2::Editor
 		 * A stroke without @p preview is completed right away, its tiles are only shown as a change of the level.
 		 */
 		bool BeginStroke(String name, bool preview = true);
-		/** @brief Paints a tile of the layer, given a cell of the view */
-		void PaintCell(Vector2i cell, const TileRef& tile);
+		/** @brief Paints a tile of the layer, given a cell of the view, returns `false` if it's outside of the layer or the selection */
+		bool PaintCell(Vector2i cell, const TileRef& tile);
+		/** @brief Places an event on the sprite layer with the stroke, given a tile of the layer, see @ref TileStamp::Events */
+		void PaintEvent(Vector2i layerTile, const Formats::EventRecord& event);
+		/** @brief Places the events off the grid on a tile of a stamp with the stroke, the tile painted at a tile of the sprite layer, see @ref TileStamp::OffGridEvents */
+		void PaintOffGrid(const TileStamp& stamp, std::size_t index, Vector2i layerTile);
 		/** @brief Paints the tile a stamp repeated from an origin has at a cell of the view, with the options of the tools */
 		void PaintStampCell(const TileStamp& stamp, Vector2i cell, Vector2i patternOrigin);
 		/** @brief Paints a stamp at a cell of the view, repeated from an origin, the cells it covered the last time in the stroke are left as they are */
@@ -185,6 +196,16 @@ namespace Jazz2::Editor
 	 * of the screen, so they go on around corners, and move on with @p animTime, see @ref IToolHost::GetAnimTime().
 	 */
 	void DrawSelectionEdge(UiPainter& painter, float x, float y, float length, bool horizontal, float animTime);
+
+	/**
+	 * @brief Splits a rectangle of cells of the view into rectangles of a layer, returns how many there are, at most 4
+	 *
+	 * A rectangle dragged over a layer that repeats is of the copy of the layer it was dragged over, while a selection
+	 * is of the layer itself, and so of every copy. On an axis the layer repeats in, the rectangle is wrapped into the
+	 * layer --- into two parts if it goes over the end of a copy into the next one, all of it if it's as long as the
+	 * layer. On the other axes it's as it is, what's outside of the layer is left to the one who takes it.
+	 */
+	std::int32_t WrapViewRect(const Recti& rect, Vector2i layerSize, const LayerView& view, Recti (&parts)[4]);
 
 	/**
 	 * @brief Moves the selected tiles of the layer being edited by an offset, as one step, the selection with them

@@ -34,6 +34,17 @@ namespace Jazz2::Tiles
 		// moves single rows and columns, the fixed-function tiers draw its tiles instead, where its texture is.
 		constexpr bool SupportsTexturedBackground = true;
 
+		// Kept for what reads the pixels of the tiles again (the scripts), the texture is in the colors of the level already
+		std::unique_ptr<std::uint8_t[]> CopyPaletteRemapping(const std::uint8_t* paletteRemapping)
+		{
+			if (paletteRemapping == nullptr) {
+				return nullptr;
+			}
+			std::unique_ptr<std::uint8_t[]> copy = std::make_unique<std::uint8_t[]>(256);
+			std::memcpy(copy.get(), paletteRemapping, 256);
+			return copy;
+		}
+
 		/**
 			@brief Whether a level's tileset atlas is repacked around the tiles the level references
 
@@ -2301,6 +2312,46 @@ namespace Jazz2::Tiles
 		}
 		const Rectf reference = ((layer.Description.TextureFlags & Formats::TexturedLayerParams::InnerLayer) != 0 && isInner
 			? area : Rectf(0.0f, 0.0f, cullingRect.W, cullingRect.H));
+		// The parts of the area a ground only is drawn in, see below
+		SmallVector<Rectf, 16> floorParts;
+		bool hasFloorMask = false;
+		if (type == LayerRendererType::Sky && (layer.Description.TextureFlags & Formats::TexturedLayerParams::FloorOnly) != 0) {
+			// Only the ground below the horizon, and JJ2+ shows it only in the tiles layer 8 has, layer 8 fixed to the view as a
+			// textured one is and repeating as it does (measured, SwitchTestV2 leaves its first 10 rows empty)
+			float horizon = reference.Y + std::floor(std::clamp(layer.Description.TextureFadePosition.Y, 0.0f, 1.0f) * reference.H);
+			if (horizon > area.Y) {
+				area.H = std::max(area.Y + area.H - horizon, 0.0f);
+				area.Y = horizon;
+			}
+			for (const TileMapLayer& mask : _layers) {
+				if (mask.OriginalNumber != 8 || &mask == &layer || mask.LayoutSize.X <= 0 || mask.LayoutSize.Y <= 0) {
+					continue;
+				}
+				hasFloorMask = true;
+				constexpr float TileSize = float(TileSet::DefaultTileSize);
+				const std::int32_t width = mask.LayoutSize.X, height = mask.LayoutSize.Y;
+				const std::int32_t rows = std::int32_t(std::ceil(reference.H / TileSize));
+				const std::int32_t columns = std::int32_t(std::ceil(reference.W / TileSize));
+				for (std::int32_t r = 0; r < rows; r++) {
+					if (r >= height && !mask.Description.RepeatY) {
+						break;
+					}
+					const std::size_t rowStart = std::size_t(r % height) * std::size_t(width);
+					// Runs of tiles in the row, each drawn as one part
+					std::int32_t runStart = -1;
+					for (std::int32_t c = 0; c <= columns; c++) {
+						bool filled = (c < columns && (c < width || mask.Description.RepeatX) && mask.Layout.TileIDAt(rowStart + std::size_t(c % width)) != 0);
+						if (filled && runStart < 0) {
+							runStart = c;
+						} else if (!filled && runStart >= 0) {
+							floorParts.push_back(Rectf(reference.X + runStart * TileSize, reference.Y + r * TileSize, (c - runStart) * TileSize, TileSize));
+							runStart = -1;
+						}
+					}
+				}
+				break;
+			}
+		}
 
 		if DEATH_UNLIKELY(type == LayerRendererType::TileMenu) {
 			DrawMenuBackground(renderQueue, cullingRect, layer, area, reference);
@@ -2405,7 +2456,17 @@ namespace Jazz2::Tiles
 			constexpr float PerspectiveSpeedY = 0.16f;
 			shift = Vector2f(px1 * PerspectiveSpeedX + loX, py1 * PerspectiveSpeedY + loY);
 		}
-		RenderTexturedBackground(renderQueue, cullingRect, viewCenter, layer, *passTarget, area, reference, shift.X, shift.Y);
+		if (hasFloorMask) {
+			for (const Rectf& part : floorParts) {
+				Rectf clipped = part;
+				clipped.Intersect(area);
+				if (clipped.W > 0.0f && clipped.H > 0.0f) {
+					RenderTexturedBackground(renderQueue, cullingRect, viewCenter, layer, *passTarget, clipped, reference, shift.X, shift.Y);
+				}
+			}
+		} else {
+			RenderTexturedBackground(renderQueue, cullingRect, viewCenter, layer, *passTarget, area, reference, shift.X, shift.Y);
+		}
 		return true;
 	}
 
@@ -3580,6 +3641,7 @@ namespace Jazz2::Tiles
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, 0, false, paletteRemapping);
 		tileSetPart.Offset = offset;
 		tileSetPart.Count = count;
+		tileSetPart.PaletteRemapping = CopyPaletteRemapping(paletteRemapping);
 
 		if (tileSetPart.Data == nullptr) {
 			LOGE("Cannot load extra tileset \"{}\"", tileSetPath);
@@ -3589,12 +3651,13 @@ namespace Jazz2::Tiles
 	bool TileMap::AppendTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping,
 		const std::uint32_t* trueColorPalette)
 	{
-		if (GetLoadedTileCount() + std::int32_t(count) > std::int32_t(_animatedTilesOffset)) {
+		std::int32_t neededCount = GetLoadedTileCount() + std::int32_t(count);
+		if (neededCount > TileIndexMask + 1) {
 			return false;
 		}
 
 		std::unique_ptr<TileSet> data = ContentResolver::Get().RequestTileSet(tileSetPath, 0, false, paletteRemapping, nullptr, true, trueColorPalette);
-		if (data == nullptr) {
+		if (data == nullptr || !ReserveStaticTiles(neededCount)) {
 			return false;
 		}
 
@@ -3604,6 +3667,30 @@ namespace Jazz2::Tiles
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = Death::move(data);
 		tileSetPart.Offset = offset;
+		tileSetPart.Count = count;
+		tileSetPart.PaletteRemapping = CopyPaletteRemapping(paletteRemapping);
+		return true;
+	}
+
+	bool TileMap::AppendBlankTiles(std::int32_t tileId)
+	{
+		std::int32_t loadedCount = GetLoadedTileCount();
+		if (tileId < loadedCount) {
+			return true;
+		}
+		if (tileId > TileIndexMask || !ReserveStaticTiles(tileId + 1)) {
+			return false;
+		}
+
+		LoadDeferredDiffuse();
+
+		// A few at a time, a script saves into them one after another
+		constexpr std::int32_t Granularity = 256;
+		std::int32_t count = std::min((tileId - loadedCount) / Granularity * Granularity + Granularity, std::int32_t(_animatedTilesOffset) - loadedCount);
+		bool indexed = (!_tileSets.empty() && _tileSets[0].Data != nullptr && _tileSets[0].Data->IsIndexed);
+		auto& tileSetPart = _tileSets.emplace_back();
+		tileSetPart.Data = ContentResolver::Get().CreateBlankTileSet(std::uint16_t(count), indexed);
+		tileSetPart.Offset = 0;
 		tileSetPart.Count = count;
 		return true;
 	}
@@ -3617,6 +3704,7 @@ namespace Jazz2::Tiles
 		tileSetPart.Offset = offset;
 		tileSetPart.Count = count;
 		tileSetPart.Embedded = true;
+		tileSetPart.PaletteRemapping = CopyPaletteRemapping(paletteRemapping);
 
 		if (tileSetPart.Data == nullptr) {
 			LOGE("Cannot load tileset \"{}\" of the level", name);
@@ -4734,6 +4822,26 @@ namespace Jazz2::Tiles
 		}
 	}
 
+	void TileMap::ClearTileTrigger(std::int32_t x, std::int32_t y)
+	{
+		TileMapLayer& layer = _layers[_sprLayerIndex];
+		if (x < 0 || y < 0 || x >= layer.LayoutSize.X || y >= layer.LayoutSize.Y) {
+			return;
+		}
+		std::int32_t layoutIndex = y * layer.LayoutSize.X + x;
+		LayerTile tile = layer.Layout[layoutIndex];
+		if (tile.DestructType != TileDestructType::Trigger) {
+			return;
+		}
+		// A rollback brings the trigger back, as it brings back the tiles a script set (see SetTile())
+		if (_hasRollbackCheckpoint) {
+			SaveTileForRollback((std::uint32_t)layoutIndex, tile);
+		}
+		tile.DestructType = TileDestructType::None;
+		tile.TileParams = 0;
+		layer.Layout.Set(layoutIndex, tile);
+	}
+
 	Vector2i TileMap::GetLayerSize(std::int32_t layerIndex) const
 	{
 		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
@@ -4808,6 +4916,34 @@ namespace Jazz2::Tiles
 		tile.Flags = (LayerTileFlags)flags;
 		layer.Layout.Set(layoutIndex, tile);
 		return true;
+	}
+
+	void TileMap::SetTileModifier(std::int32_t tileId, std::uint8_t alpha, bool heat)
+	{
+		if (tileId <= 0 || tileId >= std::int32_t(_animatedTilesOffset)) {
+			return;
+		}
+		bool changed = false;
+		for (TileMapLayer& layer : _layers) {
+			std::size_t count = layer.Layout.size();
+			for (std::size_t i = 0; i < count; i++) {
+				if (layer.Layout.TileIDAt(i) != tileId) {
+					continue;
+				}
+				LayerTile tile = layer.Layout[i];
+				LayerTileFlags flags = (heat ? (tile.Flags | LayerTileFlags::Heat) : (tile.Flags & ~LayerTileFlags::Heat));
+				if (tile.Alpha != alpha || tile.Flags != flags) {
+					tile.Alpha = alpha;
+					tile.Flags = flags;
+					layer.Layout.Set(i, tile);
+					changed = true;
+				}
+			}
+		}
+		// The caches of the windows compare only the IDs of the tiles
+		if (changed) {
+			InvalidateLayerCaches();
+		}
 	}
 
 	LayerRendererType TileMap::GetLayerRendererType(std::int32_t layerIndex) const
@@ -5290,7 +5426,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::EmitEffectMeshes(RenderQueue& renderQueue, const Vector4f& color, std::uint16_t depth)
 	{
-		bool sceneSampled = false;
+		// The passes that make what the meshes sample, a blur layer reflects the sharp copy too
+		std::uint32_t passes = 0;
 		for (const auto& group : _effectMeshGroups) {
 			auto& vertices = _meshVertices[group.VerticesIndex];
 			if (vertices.empty()) {
@@ -5300,14 +5437,18 @@ namespace Jazz2::Tiles
 				EmitMesh(renderQueue, vertices, *group.DiffuseTexture, group.Indexed, 0, color, depth, RenderCommand::Type::TileMap, false);
 			} else {
 				EmitEffectMesh(renderQueue, vertices, *group.DiffuseTexture, group.Indexed, group.Kind, color, depth);
-				sceneSampled |= (group.Kind == EffectMeshKind::Blur || group.Kind == EffectMeshKind::ChromaKey);
+				if (group.Kind == EffectMeshKind::Blur) {
+					passes |= _effectLayer.Target->BlurPasses | _effectLayer.Target->CopyPasses;
+				} else if (group.Kind == EffectMeshKind::ChromaKey) {
+					passes |= _effectLayer.Target->CopyPasses;
+				}
 			}
 		}
 		_effectMeshGroups.clear();
 
-		if (sceneSampled) {
+		if (passes != 0) {
 			// Everything below the layer is drawn first and copied (and blurred) before the rest of the scene is drawn over it
-			_effectLayer.Target->View->RequestSplit(depth);
+			_effectLayer.Target->View->RequestSplit(depth, passes);
 		}
 	}
 
@@ -5522,6 +5663,45 @@ namespace Jazz2::Tiles
 		}
 
 		_sprLayerForRollback.insert(_sprLayerForRollback.begin() + lo, RollbackTile { tileIndex, tile });
+	}
+
+	bool TileMap::ReserveStaticTiles(std::int32_t count)
+	{
+		const std::int32_t oldOffset = std::int32_t(_animatedTilesOffset);
+		if (count <= oldOffset) {
+			return true;
+		}
+		// Straight to as many as JJ2+ allows, so the tiles move once, however many times a script adds some
+		constexpr std::int32_t NewOffset = TileIndexMask + 1;
+		if (count > NewOffset || NewOffset + std::int32_t(_animatedTiles.size()) > INT16_MAX) {
+			return false;
+		}
+
+		const std::int32_t delta = NewOffset - oldOffset;
+		auto moveTile = [oldOffset, delta](LayerTile& tile) {
+			if (tile.TileID >= oldOffset) {
+				tile.TileID = std::uint16_t(tile.TileID + delta);
+			}
+			if (tile.DestructAnimation >= oldOffset) {
+				tile.DestructAnimation = std::int16_t(tile.DestructAnimation + delta);
+			}
+		};
+		for (TileMapLayer& layer : _layers) {
+			LayerLayout& layout = layer.Layout;
+			for (std::size_t i = 0; i < layout.size(); i++) {
+				if (layout.TileIDAt(i) < oldOffset && (layout.IsCompact() || layout[i].DestructAnimation < oldOffset)) {
+					continue;
+				}
+				LayerTile tile = layout[i];
+				moveTile(tile);
+				layout.Set(i, tile);
+			}
+		}
+		for (RollbackTile& saved : _sprLayerForRollback) {
+			moveTile(saved.Tile);
+		}
+		_animatedTilesOffset = std::uint32_t(NewOffset);
+		return true;
 	}
 
 	void TileMap::CreateCheckpointForRollback()
@@ -5945,7 +6125,7 @@ namespace Jazz2::Tiles
 			command->GetMaterial().SetTexture(2, isChromaKey ? *effectsTarget->BehindCopy : texture);
 			if (isChromaKey) {
 				// Everything below the layer is drawn and copied first, before the layer itself
-				effectsTarget->View->RequestSplit(layer.Description.Depth);
+				effectsTarget->View->RequestSplit(layer.Description.Depth, effectsTarget->CopyPasses);
 			}
 		}
 #endif
@@ -6082,7 +6262,8 @@ namespace Jazz2::Tiles
 #if defined(TILEMAP_LAYER_EFFECTS)
 		if (keyed) {
 			// Everything below the layer is drawn and copied first, before the layer itself
-			_effectLayer.Target->View->RequestSplit(std::uint16_t(std::max<std::int32_t>(std::int32_t(layer.Description.Depth) - 2, 0)));
+			_effectLayer.Target->View->RequestSplit(std::uint16_t(std::max<std::int32_t>(std::int32_t(layer.Description.Depth) - 2, 0)),
+				_effectLayer.Target->CopyPasses);
 		}
 #endif
 	}
@@ -6180,20 +6361,20 @@ namespace Jazz2::Tiles
 		renderQueue.AddCommand(command);
 
 		// Everything below the layer is drawn and copied first, before the rest of the scene is drawn over it
-		effectsTarget->View->RequestSplit(layer.Description.Depth);
+		effectsTarget->View->RequestSplit(layer.Description.Depth, effectsTarget->CopyPasses);
 	}
 #endif
 
 	void TileMap::PruneTilesetAtlas()
 	{
 		if (!PruneAtlasToUsedTiles || _tileSets.size() != 1 || _tileSets[0].Data == nullptr) {
-			// More than one part means the level brought its own extra tiles (MLLE); the ids then span several
+			// More than one part means the level brought its own extra tiles; the ids then span several
 			// sets and the mapping below would not describe them, so those are left whole
 			LoadDeferredDiffuse();
 			return;
 		}
 		if (_tilesOverridden) {
-			// The level's per-tile overrides (MLLE) were already patched into this atlas and its masks;
+			// The level's per-tile overrides were already patched into this atlas and its masks;
 			// rebuilding from the source sheet would silently revert them - both the graphics and the
 			// collision - so such a level keeps its whole atlas
 			LoadDeferredDiffuse();

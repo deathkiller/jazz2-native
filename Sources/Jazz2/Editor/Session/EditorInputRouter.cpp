@@ -10,6 +10,7 @@
 #include "../Runtime/EditorLevelHandler.h"
 #include "../Runtime/PlayTestController.h"
 #include "../Shell/ShellCommon.h"
+#include "../Tools/BlockGrab.h"
 #include "../Tools/EditorTool.h"
 #include "../UI/UiRadialMenu.h"
 #include "../UI/UiSurface.h"
@@ -51,6 +52,17 @@ namespace Jazz2::Editor
 
 	void EditorInputRouter::Update(float timeMult)
 	{
+		// A key released while the window didn't have the focus isn't told, it's held no more once it's up
+		if (!_heldKeys.empty()) {
+			const KeyboardState& keyboard = theApplication().GetInputManager().keyboardState();
+			for (std::size_t i = _heldKeys.size(); i > 0; i--) {
+				Keys key = _heldKeys[i - 1];
+				if (!keyboard.isKeyDown(key)) {
+					_heldKeys.erase(_heldKeys.begin() + (i - 1));
+					ReleaseHeldActions(key);
+				}
+			}
+		}
 		UpdateGamepad(timeMult);
 		if (_playTest.IsEditing()) {
 			_touch.Update(timeMult);
@@ -90,6 +102,14 @@ namespace Jazz2::Editor
 		ActionRegistry& actions = _context.GetActions();
 		_modifiers = event.mod;
 		SetInputModality(InputModality::KeyboardMouse);
+		// A key held is pressed again and again as it repeats, the side buttons of a mouse aren't, nor are they released
+		bool repeat = false;
+		if (event.sym < Keys::Count) {
+			repeat = (std::find(_heldKeys.begin(), _heldKeys.end(), event.sym) != _heldKeys.end());
+			if (!repeat) {
+				_heldKeys.push_back(event.sym);
+			}
+		}
 		if (_playTest.IsInGame()) {
 			// The actions of playing have keys the game doesn't use, going back and the debug toggles, everything else
 			// is the game's. No action has F11 by default, the application switches fullscreen with it before the editor
@@ -128,7 +148,10 @@ namespace Jazz2::Editor
 				}
 				return;
 			case Keys::Escape:
-				if (_context.IsPickingEvent()) {
+				if (_context.GetBlockGrab().IsActive()) {
+					// The corner of a block marked is forgotten first, nothing else is
+					_context.GetBlockGrab().Cancel();
+				} else if (_context.IsPickingEvent()) {
 					// The event list is back to choosing the event to place
 					_context.CancelEventPick();
 				} else if (tools.GetActive()->IsBusy()) {
@@ -139,6 +162,13 @@ namespace Jazz2::Editor
 				return;
 			default:
 				break;
+		}
+		// A key the tool uses while it's dragged, as X and Y snapping an event off the grid, runs no action
+		_toolCallbackDepth++;
+		bool takenByTool = tools.GetActive()->OnKeyPressed(event);
+		_toolCallbackDepth--;
+		if (takenByTool) {
+			return;
 		}
 
 		if (noModifiers) {
@@ -154,8 +184,12 @@ namespace Jazz2::Editor
 		}
 
 		_handlingShortcut = true;
-		bool handled = actions.HandleKey(event, ActionScope::Edit);
+		EditorAction* ran = nullptr;
+		bool handled = actions.HandleKey(event, ActionScope::Edit, repeat, &ran);
 		_handlingShortcut = false;
+		if (ran != nullptr && ran->Release && event.sym < Keys::Count) {
+			_heldActions.push_back(HeldAction{ event.sym, ran });
+		}
 
 		// The number keys choose a layer by their actions, with Shift they hide it, unless an action was given the key
 		if (!handled && (event.mod & KeyMod::Shift) != 0 && (event.mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0 &&
@@ -167,6 +201,8 @@ namespace Jazz2::Editor
 	void EditorInputRouter::OnKeyReleased(const KeyboardEvent& event)
 	{
 		_modifiers = event.mod;
+		_heldKeys.erase(std::remove(_heldKeys.begin(), _heldKeys.end(), event.sym), _heldKeys.end());
+		ReleaseHeldActions(event.sym);
 		if (_playTest.IsInGame()) {
 			// The game knows no key past the last one, as those of the side buttons of a mouse
 			if (event.sym < Keys::Count && _playTest.GetPlayTest() != nullptr) {
@@ -175,10 +211,28 @@ namespace Jazz2::Editor
 			return;
 		}
 		ToolManager& tools = _context.GetTools();
+		_toolCallbackDepth++;
+		tools.GetActive()->OnKeyReleased(event);
+		_toolCallbackDepth--;
 		if (event.sym == Keys::Space) {
 			tools.EndTemporary(EditorToolType::Hand);
 		} else if (event.sym == Keys::LAlt) {
 			tools.EndTemporary(EditorToolType::Eyedropper);
+		}
+	}
+
+	void EditorInputRouter::ReleaseHeldActions(Keys key)
+	{
+		// Taken out first, an action ended may run another one
+		SmallVector<EditorAction*, 2> ended;
+		for (std::size_t i = _heldActions.size(); i > 0; i--) {
+			if (_heldActions[i - 1].Key == key) {
+				ended.push_back(_heldActions[i - 1].Action);
+				_heldActions.erase(_heldActions.begin() + (i - 1));
+			}
+		}
+		for (EditorAction* action : ended) {
+			action->Release();
 		}
 	}
 
@@ -297,7 +351,7 @@ namespace Jazz2::Editor
 	void EditorInputRouter::SetupTouchGestures()
 	{
 		_touch.IsOverInterface = [this](Vector2f pos) {
-			return _context.GetSurface()->IsOverInterface(pos);
+			return _context.GetSurface()->TakesTouchAt(pos);
 		};
 		_touch.PointerDown = [this](Vector2f pos) {
 			PointerMove(pos);
@@ -316,8 +370,8 @@ namespace Jazz2::Editor
 			}
 		};
 		_touch.PointerCancel = [this]() {
-			// Two fingers move the view, what one of them started isn't done
-			CancelInteractions(false);
+			// Two fingers move the view, what one of them started isn't done, a layer handle dragged included
+			CancelInteractions(true);
 		};
 		_touch.PanZoom = [this](Vector2f center, Vector2f pan, float zoom) {
 			EditorCamera& camera = _context.GetEditHandler()->GetCamera();

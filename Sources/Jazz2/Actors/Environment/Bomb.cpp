@@ -74,6 +74,14 @@ namespace Jazz2::Actors::Environment
 		UpdateHitbox(6, 6);
 	}
 
+	void Bomb::OnHitFloor(float timeMult)
+	{
+		ActorBase::OnHitFloor(timeMult);
+
+		// It turns only until it lands, the bounces after that don't turn it again
+		_renderer.AnimPaused = true;
+	}
+
 	bool Bomb::OnPerish(ActorBase* collider)
 	{
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 40.0f, [this](ActorBase* actor) {

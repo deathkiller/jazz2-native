@@ -138,6 +138,9 @@ namespace Jazz2::Editor
 		void OnPointerDown(const ToolPointer& pointer) override;
 		void OnPointerMove(const ToolPointer& pointer) override;
 		void OnPointerUp(const ToolPointer& pointer) override;
+		/** @brief While events off the grid are dragged, <kbd>X</kbd> or <kbd>Y</kbd> held snaps that axis, see @ref GetOffGridTarget() */
+		bool OnKeyPressed(const KeyboardEvent& event) override;
+		void OnKeyReleased(const KeyboardEvent& event) override;
 		void Cancel() override;
 		bool IsBusy() const override;
 		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
@@ -191,6 +194,11 @@ namespace Jazz2::Editor
 		// The off-grid event dragged, or clicked to be added to the selection or taken out of it, and where it's dropped
 		std::int32_t _offGridIndex;
 		Vector2f _offGridTarget;
+		// The pointer dragging it last, where it's dropped is found again when a key snaps it
+		ToolPointer _offGridPointer;
+		// X or Y held while it's dragged, that axis snaps to the middle of the tile, with Shift to half tiles, as in MLLE
+		bool _snapX;
+		bool _snapY;
 
 		// Returns `true` if the tool only selects events, see EventPlaceMode::Select
 		bool IsSelectOnly() const;
@@ -207,7 +215,12 @@ namespace Jazz2::Editor
 		std::int32_t FindGizmo(ArrayView<const EventGizmo> gizmos, Vector2f screen);
 		/** @brief Returns the event off the grid under the pointer, the one drawn last if more are, `-1` if there's none */
 		std::int32_t FindOffGrid(Vector2f screen);
-		/** @brief Returns where an off-grid event dragged by the pointer is dropped */
+		/**
+		 * @brief Returns where an off-grid event dragged by the pointer is dropped
+		 *
+		 * With <kbd>Shift</kbd> in the middle of a tile. With <kbd>X</kbd> or <kbd>Y</kbd> held, only that axis is
+		 * snapped, to the middle of the tile, or with <kbd>Shift</kbd> to the nearest edge or middle of a tile.
+		 */
 		Vector2f GetOffGridTarget(const ToolPointer& pointer);
 
 		/** @brief Returns the tile of the event grid under the pointer */

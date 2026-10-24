@@ -34,6 +34,7 @@ namespace Jazz2::Editor
 		constexpr const char* EditRedo = "edit.redo";
 		constexpr const char* EditCut = "edit.cut";
 		constexpr const char* EditCopy = "edit.copy";
+		constexpr const char* EditCopyWithEvents = "edit.copyWithEvents";
 		constexpr const char* EditPaste = "edit.paste";
 		constexpr const char* EditDelete = "edit.delete";
 		constexpr const char* EditSelectAll = "edit.selectAll";
@@ -57,6 +58,12 @@ namespace Jazz2::Editor
 		constexpr const char* EditModifierTranslucent = "edit.modifierTranslucent";
 		constexpr const char* EditModifierInvisible = "edit.modifierInvisible";
 		constexpr const char* EditModifierHeat = "edit.modifierHeat";
+		// A block grabbed by its corners as the stamp, see BlockGrab
+		constexpr const char* EditGrabBlock = "edit.grabBlock";
+		constexpr const char* EditGrabBlockAdd = "edit.grabBlockAdd";
+		constexpr const char* EditGrabBlockSubtract = "edit.grabBlockSubtract";
+		constexpr const char* EditCopyToBrush = "edit.copyToBrush";
+		constexpr const char* EditCutToBrush = "edit.cutToBrush";
 
 		// Selection
 		constexpr const char* SelectInvert = "select.invert";
@@ -77,6 +84,9 @@ namespace Jazz2::Editor
 		constexpr const char* EventsModeRectangle = "events.modeRectangle";
 		constexpr const char* EventsModeFill = "events.modeFill";
 		constexpr const char* EventsModeSelect = "events.modeSelect";
+		constexpr const char* EventsTakeAtPointer = "events.takeAtPointer";
+		constexpr const char* EventsPlaceAtPointer = "events.placeAtPointer";
+		constexpr const char* EventsChooseAtPointer = "events.chooseAtPointer";
 
 		// Stamp
 		constexpr const char* StampFlipX = "stamp.flipX";
@@ -88,6 +98,9 @@ namespace Jazz2::Editor
 		constexpr const char* StampRandomFlipX = "stamp.randomFlipX";
 		constexpr const char* StampRandomFlipY = "stamp.randomFlipY";
 		constexpr const char* StampWeights = "stamp.weights";
+		constexpr const char* StampPickTile = "stamp.pickTile";
+		constexpr const char* StampPickTileEvent = "stamp.pickTileEvent";
+		constexpr const char* StampBlank = "stamp.blank";
 
 		// Tools
 		constexpr const char* ToolBrush = "tool.brush";
@@ -132,6 +145,7 @@ namespace Jazz2::Editor
 		constexpr const char* ViewGrid = "view.grid";
 		constexpr const char* ViewFlat = "view.flat";
 		constexpr const char* ViewMasks = "view.masks";
+		constexpr const char* ViewPeekMasks = "view.peekMasks";
 		constexpr const char* ViewEvents = "view.events";
 		constexpr const char* ViewPauseLayers = "view.pauseLayers";
 		constexpr const char* ViewPreviewTextured = "view.previewTextured";
@@ -197,6 +211,7 @@ namespace Jazz2::Editor
 		constexpr const char* LevelExportTileSet = "level.exportTileSet";
 		constexpr const char* LevelNewTileSet = "level.newTileSet";
 		constexpr const char* LevelImportTileSet = "level.importTileSet";
+		constexpr const char* LevelImportTileSetFile = "level.importTileSetFile";
 		constexpr const char* LevelAddTiles = "level.addTiles";
 		constexpr const char* LevelFxTiles = "level.fxTiles";
 		constexpr const char* LevelApplyTileChanges = "level.applyTileChanges";

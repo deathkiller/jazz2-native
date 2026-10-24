@@ -107,7 +107,7 @@ namespace Jazz2::Editor
 		/** @brief Whether movement of the interface and the view is kept to the least --- panels and lists don't glide, the view doesn't fly */
 		bool ReducedMotion = false;
 		/** @brief Whether text is in a plain readable font instead of the pixel font of the game, see @ref UiReadableFont */
-		bool ReadableFont = false;
+		bool ReadableFont = true;
 		/**
 		 * @brief Program the script of a level is edited in, empty for the one the system opens such files with
 		 *

@@ -13,7 +13,7 @@ namespace nCine
 
 		pspdev does ship an OpenAL, but it is an OpenAL Soft 1.6 from 2008 whose mixer filters and resamples
 		every source in floating point under one global lock, and on this console's single 333 MHz core its
-		thread alone measured 12-24% of the CPU in game (per-thread run clocks, `prince/03_carrot1`) - as much
+		thread alone measured 12-24% of the CPU in game (per-thread run clocks, `prince/carrot1`) - as much
 		as the whole module decoder. The game does not need any of what that buys: no effects, no HRTF, no
 		filters, and its sounds are 8- and 16-bit samples at 11-22 kHz.
 
@@ -37,7 +37,7 @@ namespace nCine
 		11-22 kHz samples to begin with, and the interpolation is one multiply-add per output sample, whatever
 		the number of sources. @ref nativeFrequency() reports the mixing rate, so the module decoder renders at
 		it too - and that is the larger half of what the lower rate saves: rendering a module is the most
-		expensive thing the Allegrex does outside the renderer. Measured at 44100 Hz in `prince/02_castle1n`, it
+		expensive thing the Allegrex does outside the renderer. Measured at 44100 Hz in `prince/castle1n`, it
 		was once around 420 ms of every second, more CPU than the whole renderer; once the module player's
 		double-precision math was taken over (see `nCine/Base/LibmOverrides.cpp`) and the renderer had become
 		cheaper, the game held 60 fps at the full rate on hardware, which is why that is the default now.

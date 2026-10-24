@@ -311,6 +311,27 @@ namespace Jazz2::Editor::StampClipboard
 		String text = Prefix + "1,\"w\":"_s + ToText(stamp.Width) + ",\"h\":"_s + ToText(stamp.Height) + ",\"t\":["_s;
 		AppendTiles(text, stamp);
 		text += "]"_s;
+		// The events on the tiles, by their offsets, only those that aren't empty, the list being there means the stamp
+		// has events, the empty ones erase too; older versions read only the tiles
+		if (stamp.HasEvents()) {
+			text += ",\"events\":["_s;
+			bool first = true;
+			for (std::size_t i = 0; i < stamp.Events.size(); i++) {
+				if (!LevelDocument::IsEmptyEvent(stamp.Events[i])) {
+					Vector2i offset(std::int32_t(i % std::size_t(stamp.Width)), std::int32_t(i / std::size_t(stamp.Width)));
+					AppendEvent(text, first, offset, stamp.Events[i]);
+					first = false;
+				}
+			}
+			text += "]"_s;
+		}
+		if (!stamp.OffGridEvents.empty()) {
+			text += ",\"offgrid\":["_s;
+			for (std::size_t i = 0; i < stamp.OffGridEvents.size(); i++) {
+				AppendEvent(text, i == 0, stamp.OffGridEvents[i].Offset, stamp.OffGridEvents[i].Event);
+			}
+			text += "]"_s;
+		}
 		if (document != nullptr) {
 			AppendSources(text, *document);
 		}
@@ -336,6 +357,30 @@ namespace Jazz2::Editor::StampClipboard
 		TileStamp result;
 		if (!ReadTileValues(p, std::int32_t(width), std::int32_t(height), result)) {
 			return false;
+		}
+		// The events on the tiles and off the grid, see WriteTiles(), those outside of the stamp are left out
+		StringView foundEvents = text.find("\"events\":["_s);
+		if (!foundEvents.empty()) {
+			result.Events.resize(result.Tiles.size(), LevelDocument::GetEmptyEvent());
+			String eventValues = text.suffix(foundEvents.end());
+			if (!ReadEventList(eventValues.data(), MaxSide, [&result](Vector2i offset, const Formats::EventRecord& event) {
+				if (offset.X >= 0 && offset.Y >= 0 && offset.X < result.Width && offset.Y < result.Height) {
+					result.Events[std::size_t(offset.Y) * std::size_t(result.Width) + std::size_t(offset.X)] = event;
+				}
+			})) {
+				return false;
+			}
+		}
+		StringView foundOffGrid = text.find("\"offgrid\":["_s);
+		if (!foundOffGrid.empty()) {
+			String offGridValues = text.suffix(foundOffGrid.end());
+			if (!ReadEventList(offGridValues.data(), MaxSide * 32, [&result](Vector2i offset, const Formats::EventRecord& event) {
+				if (offset.X >= 0 && offset.Y >= 0 && offset.X < result.Width * 32 && offset.Y < result.Height * 32) {
+					result.OffGridEvents.push_back(TileStamp::OffGridEvent{ offset, event });
+				}
+			})) {
+				return false;
+			}
 		}
 		SmallVector<SourceInfo, 0> sources;
 		if (document != nullptr && ReadSources(text, sources)) {

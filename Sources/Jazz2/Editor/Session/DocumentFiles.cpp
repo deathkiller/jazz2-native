@@ -25,6 +25,7 @@
 #include "../../ContentResolver.h"
 #include "../../IRootController.h"
 #include "../../PreferencesCache.h"
+#include "../../Formats/LevelPreview.h"
 #include "../../Formats/TileSetFile.h"
 
 #include "../../../nCine/Application.h"
@@ -627,6 +628,9 @@ namespace Jazz2::Editor
 		};
 		// TRANSLATORS: Title of the file dialog that opens a level to edit
 		UiFileDialog* dialog = UiFileDialog::Show(*_context.GetSurface(), _x("editor", "Open Level"), UiFileDialogMode::Open, Death::move(roots), ".j2l"_s, directory, {}, open);
+		dialog->PreviewFunc = [](StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size) {
+			return Formats::LevelPreview::Read(path, rgba, size);
+		};
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		// The browser has the files of the computer, a level is uploaded into the game
 		// TRANSLATORS: Button in the Open Level dialog of the web version, picks a level file of the computer to upload
@@ -634,8 +638,6 @@ namespace Jazz2::Editor
 			dialog->Close();
 			WebFileBridge::PickFile(".j2l"_s, Death::move(open));
 		})->Tooltip = _x("editor", "Upload a level, saving it downloads it back");
-#else
-		static_cast<void>(dialog);
 #endif
 	}
 
@@ -1011,52 +1013,6 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void DocumentFiles::ShowExportTileSetImageDialog()
-	{
-		StringView tileSetName = _context.GetDocument().Properties.DefaultTileSet;
-		const Formats::TileSetData* tileSet = _context.GetTileSetData(tileSetName);
-		if (tileSet == nullptr) {
-			_context.ShowMessage(_x("editor", "The tile set can't be read"));
-			return;
-		}
-		SmallVector<UiFileRoot, 4> roots;
-		GetImageRoots(true, roots);
-		String initialName = fs::GetFileName(tileSetName) + ".png"_s;
-		// TRANSLATORS: Title of the file dialog that saves the tiles of a tile set as an image
-		UiFileDialog::Show(*_context.GetSurface(), _x("editor", "Export Tile Set Image"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, {}, initialName, [this, tileSet](StringView path) {
-			// Rows of 10, as the original tile sets were drawn, the masks into an image of their own next to it
-			constexpr std::int32_t Columns = 10;
-			PngImage sheet = MakeTileSetSheet(*tileSet, ContentResolver::Get().GetPalettes().data(), Columns);
-			PngImage masks = MakeTileSetMaskSheet(*tileSet, Columns);
-			String maskPath = PngCodec::GetMasksPath(path);
-			// Through temporary files, a failed write leaves the images that were there, and neither is replaced
-			// unless both were written whole
-			bool saved = AtomicFile::Stage(path, [&sheet](Stream& s) { return PngCodec::Encode(s, sheet); });
-			if (saved && !AtomicFile::Stage(maskPath, [&masks](Stream& s) { return PngCodec::Encode(s, masks); })) {
-				AtomicFile::Discard(path);
-				saved = false;
-			}
-			if (saved && !AtomicFile::Commit(path)) {
-				AtomicFile::Discard(path);
-				AtomicFile::Discard(maskPath);
-				saved = false;
-			}
-			if (saved && !AtomicFile::Commit(maskPath)) {
-				AtomicFile::Discard(maskPath);
-				saved = false;
-			}
-			if (!saved) {
-				_context.ShowMessage(_x("editor", "The images couldn't be saved"));
-				return;
-			}
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-			fs::SyncToPersistent();
-#endif
-			// TRANSLATORS: Status message after exporting a tile set image, {} are the file names of the image and of its masks
-			_context.ShowMessage(_fx("editor", "Saved {} and {}", fs::GetFileName(path), fs::GetFileName(maskPath)));
-		});
-	}
-
 	void DocumentFiles::NoteLevelFileMoved(StringView from, StringView to)
 	{
 		// In its place in the list, the level is still as recently used as it was
@@ -1122,8 +1078,8 @@ namespace Jazz2::Editor
 			String text = "// Script of the level \""_s + name + "\", it runs while the level is played\r\n"_s
 				"//\r\n"_s
 				"// Events the script reacts to can be described for the level editor, each by a line such as this one,\r\n"_s
-				"// without the slashes, see the event packs in Content/Editor/Events for all that can be described:\r\n"_s
-				"// #pragma editor-event {\"type\": 255, \"name\": \"My Event\", \"category\": \"other\", \"params\": [{\"name\": \"Speed\", \"type\": \"uint\", \"offset\": 0, \"bits\": 4}]}\r\n"_s
+				"// without the slashes, see the documentation of the level editor for all that can be described:\r\n"_s
+				"// #pragma editor-event {\"Type\": 255, \"Name\": \"My Event\", \"Category\": \"Other\", \"Params\": [{\"Name\": \"Speed\", \"Type\": \"UInt\", \"Offset\": 0, \"Bits\": 4}]}\r\n"_s
 				"\r\n"_s
 				"void onLevelBegin()\r\n"_s
 				"{\r\n"_s
@@ -1193,7 +1149,8 @@ namespace Jazz2::Editor
 			}
 		}
 
-		// The script of the level describes the events it reacts to, each by a line "#pragma editor-event {...}"
+		// The script of the level describes the events it reacts to, each by a line "#pragma editor-event {...}", or those
+		// of the original game as MLLE does, by "///@Event" lines, which the pragmas replace
 		EventCatalog::ClearExtensions(EventExtensionScope::Level);
 		String scriptPath = GetScriptPath();
 		if ((scriptPath.empty() || !fs::IsReadableFile(scriptPath)) && !_levelName.empty()) {
@@ -1201,6 +1158,7 @@ namespace Jazz2::Editor
 		}
 		if (!scriptPath.empty() && fs::IsReadableFile(scriptPath)) {
 			String script = readText(scriptPath);
+			count += EventCatalog::LoadMlleEvents(script, scriptPath, EventExtensionScope::Level);
 			constexpr StringView Pragma = "#pragma editor-event"_s;
 			StringView rest = script;
 			while (!rest.empty()) {
@@ -1370,25 +1328,30 @@ namespace Jazz2::Editor
 		_lockPath = {};
 	}
 
-	void DocumentFiles::UpdateWindowTitle()
+	void DocumentFiles::UpdateWindowTitle(bool force)
 	{
 		// Called for every change, as each step of a stroke, the title is made again only when what it shows changed
 		const LevelDocument& document = _context.GetDocument();
 		bool dirty = _context.GetHistory().IsDirty();
-		if (!_windowTitle.empty() && dirty == _windowTitleDirty && document.Properties.DisplayName == _windowTitleName && _filePath == _windowTitlePath) {
+		if (!force && !_windowTitle.empty() && dirty == _windowTitleDirty && document.Properties.DisplayName == _windowTitleName && _filePath == _windowTitlePath) {
 			return;
 		}
 		_windowTitleDirty = dirty;
 		_windowTitleName = document.Properties.DisplayName;
 		_windowTitlePath = _filePath;
 
-		String name = (!document.Properties.DisplayName.empty() ? document.Properties.DisplayName : String(fs::GetFileName(_filePath)));
+		StringView fileName = fs::GetFileName(_filePath);
+		String name = (!document.Properties.DisplayName.empty() ? document.Properties.DisplayName : String(fileName));
 		if (dirty) {
 			name += "*"_s;
 		}
+		// The file the level is in, unless the name is the file already, a new level has none yet
+		if (!document.Properties.DisplayName.empty() && !fileName.empty()) {
+			name += String(" ("_s + fileName + ")"_s);
+		}
 		// The window is told only when the title is another one
 		String title = String(NCINE_APP_NAME " - "_s + _("Level Editor") + " - "_s + name);
-		if (title != _windowTitle) {
+		if (force || title != _windowTitle) {
 			theApplication().GetGfxDevice().setWindowTitle(title);
 			_windowTitle = Death::move(title);
 		}

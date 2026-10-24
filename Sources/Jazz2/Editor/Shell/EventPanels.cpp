@@ -37,7 +37,7 @@ namespace Jazz2::Editor
 	{
 		// Size of an item of the event grid in units
 		constexpr float ChipWidth = 104.0f;
-		constexpr float ChipHeight = 24.0f;
+		constexpr float ChipHeight = 26.0f;
 
 		UiStack* AddRow(UiElement* parent, StringView label, StringView tooltip = {})
 		{
@@ -197,7 +197,7 @@ namespace Jazz2::Editor
 		// The type of the event inside of a crate resets its parameters, which mean something else for another type
 		void WriteEventTypeField(Formats::EventRecord& event, const EventParamField& field, std::uint16_t type)
 		{
-			if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type))) {
+			if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params)) {
 				EventCatalog::SetContentsType(*descriptor, field, event, type);
 			} else {
 				EventCatalog::WriteField(event, field, std::int32_t(type));
@@ -243,7 +243,7 @@ namespace Jazz2::Editor
 				Rectf text(x, Bounds.Y, Bounds.X + Bounds.W - x, lineHeight);
 				painter.PushClip(Rectf(x, Bounds.Y, text.W, Bounds.H));
 				// TRANSLATORS: Instead of the name of the selected events in the event properties, when they're of different kinds
-				painter.TextInRect(mixedKinds ? String(_x("editor", "Different kinds")) : EventPreviews::GetEventName(event.Type), text, UiTheme::TextHeader);
+				painter.TextInRect(mixedKinds ? String(_x("editor", "Different kinds")) : EventPreviews::GetEventName(event.Type, event.Params), text, UiTheme::TextHeader);
 
 				const EventSelection& selection = _session.GetEventSelection();
 				std::int32_t count = selection.GetTotalCount();
@@ -255,7 +255,7 @@ namespace Jazz2::Editor
 					// TRANSLATORS: Under the name of the event in the event properties, the event isn't selected but about to be placed
 					subtitle = _x("editor", "To place");
 				} else if (count == 1) {
-					const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+					const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 					// TRANSLATORS: Under the name of the event in the event properties instead of its category, when the event isn't known
 					subtitle = (descriptor != nullptr ? String(EventCatalog::GetCategoryName(descriptor->Category)) : String(_x("editor", "Unknown event")));
 				} else {
@@ -277,7 +277,7 @@ namespace Jazz2::Editor
 				if (!_panel.GetPrimary(event) || _panel.HasMixedKinds()) {
 					return {};
 				}
-				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 				if (descriptor == nullptr || descriptor->Description == nullptr) {
 					return {};
 				}
@@ -328,8 +328,8 @@ namespace Jazz2::Editor
 			if (_category != AllCategories && std::int32_t(descriptor->Category) != _category) {
 				continue;
 			}
-			// Events the game doesn't use are found only by searching
-			if ((descriptor->Traits & EventTraits::Unused) == EventTraits::Unused && _search.empty()) {
+			// Events the game doesn't use, and those the script of the level hides, are found only by searching
+			if (((descriptor->Traits & EventTraits::Unused) == EventTraits::Unused || EventCatalog::IsHidden(descriptor)) && _search.empty()) {
 				continue;
 			}
 			if (!MatchesSearch(descriptor->Name, _search) && !MatchesSearch(descriptor->Key, _search)) {
@@ -607,7 +607,7 @@ namespace Jazz2::Editor
 		}
 		// The fields of the shown kind among the events of that kind, the rest among all selected events, as Change() does;
 		// those of the grid and those off it alike
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(primary.Type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(primary.Type), primary.Params);
 		auto effectiveDifficulties = [](const Formats::EventRecord& event) {
 			std::uint8_t difficulties = event.Flags & Formats::EventRecord::DifficultyMask;
 			return (difficulties == 0 ? std::uint8_t(Formats::EventRecord::DifficultyMask) : difficulties);
@@ -702,6 +702,11 @@ namespace Jazz2::Editor
 			// The events could have changed while the event was being chosen, the field is theirs only while they're shown
 			if (!self->IsPickTargetShown(*target)) {
 				self->_session.ShowMessage(_x("editor", "The events changed meanwhile, choose the event for the parameter again"));
+				return;
+			}
+			if (EventCatalog::GetPickedOriginal(type) != 0) {
+				// A parameter holds only the type, the passthrough event needs the number of the original one too
+				self->_session.ShowMessage(_x("editor", "An event of the original game can't be chosen for a parameter"));
 				return;
 			}
 			const EventParamField* f = target->Field;
@@ -856,7 +861,7 @@ namespace Jazz2::Editor
 		if (_shownMixedKinds) {
 			// Not the parameters of any of them, the difficulties and the flags below are all they have in common
 			rows->Add<UiWrappedLabel>(_x("editor", "Events of different kinds are selected - only what they have in common can be changed"), UiTheme::TextDim);
-		} else if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type))) {
+		} else if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params)) {
 			for (std::uint8_t i = 0; i < descriptor->FieldCount; i++) {
 				AddField(rows, *descriptor, i);
 			}
@@ -955,6 +960,7 @@ namespace Jazz2::Editor
 				}, false, final);
 			}, 0.0f, 255.0f, 1.0f, 0);
 			number->Flex = 1.0f;
+			number->DefaultValue = []() { return 0.0f; };
 			AddMixedMark(row, MixedDelay);
 			// The whole row, with its label
 			ShowRowWhen(row, isGenerator);
@@ -1059,7 +1065,7 @@ namespace Jazz2::Editor
 
 	std::uint32_t EventInspectorPanel::GetContentsSignature(const Formats::EventRecord& event) const
 	{
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 		if (descriptor == nullptr) {
 			return 0;
 		}
@@ -1189,6 +1195,8 @@ namespace Jazz2::Editor
 					}, float(EventCatalog::ToDisplayValue(*f, f->Min)), float(EventCatalog::ToDisplayValue(*f, f->Max)), float(std::max<std::int32_t>(f->DisplayScale, 1)), 0);
 					number->Flex = 1.0f;
 					number->Tooltip = tooltip;
+					// The wheel pressed sets the value a new event has
+					number->DefaultValue = [f]() { return float(EventCatalog::ToDisplayValue(*f, f->Default)); };
 					break;
 				}
 				default:
@@ -1373,6 +1381,8 @@ namespace Jazz2::Editor
 				}, float(EventCatalog::ToDisplayValue(field, field.Min)), float(EventCatalog::ToDisplayValue(field, field.Max)), float(std::max<std::int32_t>(field.DisplayScale, 1)), 0);
 				number->Flex = 1.0f;
 				number->Tooltip = tooltip;
+				// The wheel pressed sets the value a new event has
+				number->DefaultValue = [f]() { return float(EventCatalog::ToDisplayValue(*f, f->Default)); };
 				addMixedMark(row);
 
 				if (field.Type == ParamType::TextId) {

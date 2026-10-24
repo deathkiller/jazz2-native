@@ -162,7 +162,8 @@ namespace Jazz2::Editor
 		_input->ReleasePointer(false);
 		_selection.Clear();
 		_eventSelection.Clear();
-		// What the event was picked for is in the old level
+		// The corner of a block marked is in the old level, as is what the event was picked for
+		_blockGrab->Cancel();
 		_eventPick = {};
 		_maskOverlay->Invalidate();
 		_overriddenLayer = -1;

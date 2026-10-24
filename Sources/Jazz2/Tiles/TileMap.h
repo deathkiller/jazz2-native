@@ -678,13 +678,21 @@ namespace Jazz2::Tiles
 		/**
 		 * @brief Adds tiles of a tile set after the tiles of the others while the level is played
 		 *
-		 * The tiles from @p offset of the tile set get the tile IDs from @ref GetLoadedTileCount() on. Returns `false`
-		 * and adds nothing if they don't fit below the animated tiles or the tile set can't be loaded. Meant for scripts.
+		 * The tiles from @p offset of the tile set get the tile IDs from @ref GetLoadedTileCount() on. The animated tiles
+		 * move behind them if they don't fit before them, as JJ2+ has room for 4096 tiles in any level. Returns `false` and
+		 * adds nothing if there are more or the tile set can't be loaded. Meant for scripts.
 		 * With @p trueColorPalette, the 8-bit tiles are true color tiles in its 256 colors (see
 		 * @ref ContentResolver::RequestTileSet()).
 		 */
 		bool AppendTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr,
 			const std::uint32_t* trueColorPalette = nullptr);
+		/**
+		 * @brief Makes the empty tile IDs after the tiles of the tile sets up to @p tileId real, transparent tiles
+		 *
+		 * JJ2+ has room for tiles there and scripts save images into them, see @ref GetLoadedTileCount(). Returns
+		 * `false` if @p tileId isn't below 4096, the animated tiles move behind it as in @ref AppendTileSet().
+		 */
+		bool AppendBlankTiles(std::int32_t tileId);
 		/** @brief Reads the next layer of a level, its description and its tiles, and adds it */
 		void LoadLayer(Formats::LevelReader& reader);
 		/**
@@ -840,6 +848,8 @@ namespace Jazz2::Tiles
 		bool GetTrigger(std::uint8_t triggerId);
 		/** @brief Sets state of a given trigger */
 		void SetTrigger(std::uint8_t triggerId, bool newState);
+		/** @brief Makes a tile of the sprite layer switched by a trigger an ordinary one, as it shows now, what drives it switches it then */
+		void ClearTileTrigger(std::int32_t x, std::int32_t y);
 
 		/** @brief Returns number of layers */
 		std::int32_t GetLayerCount() const {
@@ -869,6 +879,12 @@ namespace Jazz2::Tiles
 		 * Returns `false` if out of range.
 		 */
 		bool SetTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y, std::uint16_t tileValue);
+		/**
+		 * @brief Gives every placed tile of an ID that isn't animated a transparency and the heat effect, or not
+		 *
+		 * As a tile type of the original game changes all of them (see @ref Formats::TileRecord::ModifierMask).
+		 */
+		void SetTileModifier(std::int32_t tileId, std::uint8_t alpha, bool heat);
 
 		/** @brief Returns the renderer type of a given layer, or @ref LayerRendererType::Default if the layer doesn't exist */
 		LayerRendererType GetLayerRendererType(std::int32_t layerIndex) const;
@@ -1037,6 +1053,8 @@ namespace Jazz2::Tiles
 			std::int32_t MeshSlotBase = 0;
 			// Stored in the level itself, its name isn't a file in "Tilesets/"
 			bool Embedded = false;
+			// The colors of the file in the palette of the level, 256 of them, `nullptr` if they're the same
+			std::unique_ptr<std::uint8_t[]> PaletteRemapping;
 		};
 
 		// One sprite-layer tile as it looked when the last checkpoint was taken. The checkpoint used to be a
@@ -1118,7 +1136,7 @@ namespace Jazz2::Tiles
 		// Kept so the atlas can be repacked once the level's tile usage is known (see PruneTilesetAtlas())
 		String _tileSetPath;
 		std::uint16_t _captionTileId;
-		// Whether any tile's graphics or mask was overridden (MLLE) - such an atlas must not be repacked,
+		// Whether any tile's graphics or mask was overridden by the level - such an atlas must not be repacked,
 		// the rebuild would silently revert the overrides
 		bool _tilesOverridden;
 		// Whether the main tileset was loaded without its atlas (masks only), because the atlas is built once
@@ -1545,6 +1563,8 @@ namespace Jazz2::Tiles
 #endif
 
 		void SaveTileForRollback(std::uint32_t tileIndex, const LayerTile& tile);
+		// Makes room for `count` tiles before the animated tiles, moving their IDs, returns `false` if the tile IDs aren't there
+		bool ReserveStaticTiles(std::int32_t count);
 
 		static void WriteLayerTile(Stream& dest, const LayerTile& tile);
 		static void ReadLayerTile(Stream& src, LayerTile& tile);

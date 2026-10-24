@@ -46,6 +46,8 @@
 #include "Shell/TileSetLayoutDialog.h"
 #include "Shell/TileSetImportDialog.h"
 #include "Shell/TileSetsDialog.h"
+#include "Shell/ShellPanels.h"
+#include "Tools/BlockGrab.h"
 #include "Tools/EditorTool.h"
 #include "Tools/GroundLineTool.h"
 #include "Tools/TileTools.h"

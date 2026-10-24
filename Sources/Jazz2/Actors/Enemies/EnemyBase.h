@@ -31,11 +31,6 @@ namespace Jazz2::Actors::Enemies
 			return (_canHurtPlayer && _frozenTimeLeft <= 0.0f);
 		}
 
-		/** @brief Whether the enemy is currently frozen */
-		bool IsFrozen() const {
-			return (_frozenTimeLeft > 0.0f);
-		}
-
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring

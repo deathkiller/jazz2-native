@@ -238,6 +238,14 @@ namespace Jazz2
 		void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, StringView value) override;
+		/** @brief Returns a level text as the original game had it, for scripts, the level text if the level has none (see @ref Formats::ScriptTextsChunk) */
+		StringView GetScriptText(std::uint32_t textId);
+		/** @brief Sets a level text as the original game has it, which scripts read back, the text shown has to be set too */
+		void OverrideScriptText(std::uint32_t textId, StringView value);
+		/** @brief Returns the custom weapons the level sets up for its script, empty if it has none (see @ref Formats::CustomWeaponsChunk) */
+		ArrayView<const std::uint8_t> GetCustomWeapons() const {
+			return _customWeapons;
+		}
 		Vector2f GetCameraPos(Actors::Player* player) const override;
 		void LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width) override;
 		void OverrideCameraView(Actors::Player* player, CameraOverride modeX, float x, CameraOverride modeY, float y,
@@ -401,6 +409,15 @@ namespace Jazz2
 		SmallVector<String, 0> _levelTexts;
 		// Translations of the level texts the level carries, see Formats::LevelTextsChunk
 		SmallVector<LocalizedLevelTexts, 0> _localizedLevelTexts;
+		// The level texts as the original game had them, see Formats::ScriptTextsChunk
+		SmallVector<String, 0> _scriptTexts;
+		SmallVector<std::uint8_t, 0> _customWeapons;
+#if defined(WITH_ANGELSCRIPT)
+		// Tile images the level replaces, for the script to read (see LevelScriptLoader::ResolveTileSetPixels())
+		SmallVector<Formats::TileDiffuseOverride, 0> _tileDiffuseOverrides;
+		// Sprites the level recolors, for the script to apply, see Formats::SpriteRecolorsChunk
+		SmallVector<std::uint8_t, 0> _spriteRecolors;
+#endif
 
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
@@ -504,7 +521,7 @@ namespace Jazz2
 
 			The offset exists only so players do not start standing inside one another, and applying it blind
 			puts the second one inside the tileset wherever the level starts in a tight space --- reported on
-			`rescue/02_colon2`, where the start is barely taller than the player and the lift buried them from
+			`rescue/colon2`, where the start is barely taller than the player and the lift buried them from
 			the first frame. Tried at full strength, then at half, then not at all.
 
 			Shared with @ref Multiplayer::MpLevelHandler, which spawns local splitscreen players through its

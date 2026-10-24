@@ -5,6 +5,7 @@
 #include "UiSurface.h"
 
 #include "../../../nCine/I18n.h"
+#include "../../../nCine/Graphics/Texture.h"
 
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
@@ -12,6 +13,10 @@
 
 #include <algorithm>
 #include <cmath>
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	include <CommonWindows.h>
+#endif
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
@@ -327,9 +332,61 @@ namespace Jazz2::Editor
 		return dialogPtr;
 	}
 
+	class UiFileDialog::FilePreview : public UiElement
+	{
+	public:
+		std::unique_ptr<Texture> Image;
+
+		FilePreview()
+		{
+			Visible = false;
+		}
+
+		Vector2f Measure(const UiContext& context, Vector2f available) override
+		{
+			if (Image == nullptr) {
+				return Vector2f::Zero;
+			}
+			// Twice as large as it's stored, as large as the list is high at most, and its border
+			Vector2i size = Image->GetSize();
+			float scale = std::min(2.0f, context.Px(UiTheme::RowHeight * 6.0f) / float(size.Y));
+			float border = GetBorder(context.Px(1.0f));
+			return Vector2f(std::floor(size.X * scale) + border * 2.0f, std::floor(size.Y * scale) + border * 2.0f);
+		}
+
+		void Draw(UiPainter& painter) override
+		{
+			if (Image == nullptr) {
+				return;
+			}
+			// The row may stretch it, it's kept as it's shaped, at the top - as the level select of the game shows it, in a
+			// thin black border with its corners rounded off by leaving them out
+			float border = GetBorder(painter.Px(1.0f));
+			Vector2i size = Image->GetSize();
+			float scale = std::min((Bounds.W - border * 2.0f) / float(size.X), (Bounds.H - border * 2.0f) / float(size.Y));
+			Rectf rect(std::round(Bounds.X) + border, std::round(Bounds.Y) + border, std::floor(size.X * scale), std::floor(size.Y * scale));
+			if (rect.W <= 0.0f || rect.H <= 0.0f) {
+				return;
+			}
+			const Colorf borderColor(0.0f, 0.0f, 0.0f, 1.0f);
+			painter.FillRect(Rectf(rect.X, rect.Y - border, rect.W, border), borderColor, UiLayer::Content);
+			painter.FillRect(Rectf(rect.X, rect.Y + rect.H, rect.W, border), borderColor, UiLayer::Content);
+			painter.FillRect(Rectf(rect.X - border, rect.Y, border, rect.H), borderColor, UiLayer::Content);
+			painter.FillRect(Rectf(rect.X + rect.W, rect.Y, border, rect.H), borderColor, UiLayer::Content);
+			painter.Image(*Image, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Content);
+		}
+
+	private:
+		static float GetBorder(float pixel)
+		{
+			return std::max(1.0f, std::round(pixel));
+		}
+	};
+
 	UiFileDialog::UiFileDialog(StringView title, UiFileDialogMode mode, SmallVectorImpl<UiFileRoot>&& roots, StringView extension,
-		StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen)
-		: UiDialog(title), _mode(mode), _rootIndex(0), _extension(extension), _selected(-1), _rows(nullptr), _nameBox(nullptr), _onChosen(Death::move(onChosen))
+		StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen, bool anywhere)
+		: UiDialog(title), _mode(mode), _rootIndex(0), _computerRoot(-1), _extension(extension), _selected(-1), _rows(nullptr), _nameBox(nullptr),
+			_onChosen(Death::move(onChosen)), _preview(nullptr)
 	{
 		_roots = Death::move(roots);
 		for (UiFileRoot& root : _roots) {
@@ -339,37 +396,77 @@ namespace Jazz2::Editor
 				root.Path = String(trimmed);
 			}
 		}
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || (defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_IOS)) || \
+	((defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)) && !defined(DEATH_TARGET_ANDROID))
+		// Only a desktop lets the files anywhere be reached, the places are where the game looks for them
+		if (anywhere) {
+			_computerRoot = std::int32_t(_roots.size());
+#	if defined(DEATH_TARGET_WINDOWS)
+			// TRANSLATORS: Name of a place in the file dialog, the whole computer with all its drives and folders
+			_roots.push_back({ _x("editor", "Computer"), String(), true });
+#	else
+			_roots.push_back({ _x("editor", "Computer"), "/"_s, true });
+#	endif
+		}
+#else
+		static_cast<void>(anywhere);
+#endif
 
-		// Starts in the root the initial directory is in, the innermost one if they're inside of each other
-		std::int32_t bestLength = -1;
-		for (std::size_t i = 0; i < _roots.size(); i++) {
-			if (!initialDirectory.empty() && IsInRoot(initialDirectory, _roots[i].Path) && std::int32_t(_roots[i].Path.size()) > bestLength) {
-				_rootIndex = std::int32_t(i);
-				bestLength = std::int32_t(_roots[i].Path.size());
+		// Starts in the root the initial directory is in, the innermost one if they're inside of each other, the whole
+		// computer only if it's in none of the others
+		if (!initialDirectory.empty()) {
+			std::int32_t found = FindRoot(initialDirectory);
+			if (found >= 0) {
+				_rootIndex = found;
 			}
 		}
 
 		auto* rootRow = _content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 		for (std::size_t i = 0; i < _roots.size(); i++) {
 			std::int32_t index = std::int32_t(i);
+			if (index == _computerRoot && index > 0) {
+				// Apart from the places of the game
+				rootRow->Add<UiSeparator>(UiOrientation::Vertical);
+			}
 			auto* button = rootRow->Add<UiButton>(_roots[i].Name, EditorIcon::Folder, [this, index]() {
 				_rootIndex = index;
 				Navigate(_roots[index].Path);
 			});
 			button->Style = UiButtonStyle::Flat;
+			button->Height = UiTheme::ButtonHeight + 2.0f;
 			button->IsCheckedFunc = [this, index]() { return (_rootIndex == index); };
 			if (!_roots[i].Writable) {
 				button->Tooltip = _x("editor", "Files here can't be changed");
 			}
 		}
 
-		auto* pathLabel = _content->Add<UiLabel>(StringView(), UiTheme::TextDim);
-		pathLabel->TextFunc = [this]() { return GetRelativeDirectory(); };
+		// Where the list is, a path can be typed there too
+		auto* pathBox = _content->Add<UiTextBox>();
+		pathBox->MaxLength = 1024;
+		pathBox->TextFunc = [this]() { return GetRelativeDirectory(); };
+		pathBox->OnKeyPreview = [this, pathBox](const KeyboardEvent& event) {
+			if (event.sym != Keys::Return && event.sym != Keys::NumPadEnter) {
+				return false;
+			}
+			// Only Enter goes there, and it doesn't also confirm the dialog with the file chosen before; deferred like going
+			// into a directory, the box is still being edited now
+			_pendingTyped = String(pathBox->Text.trimmed());
+			if (UiSurface* surface = GetSurface()) {
+				surface->SetFocus(_rows);
+			}
+			return true;
+		};
+		pathBox->Tooltip = _x("editor", "Type a path and press Enter to go there");
 
-		_list = _content->Add<UiScrollView>();
+		auto* listRow = _content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+		_list = listRow->Add<UiScrollView>();
+		_list->Flex = 1.0f;
 		_list->Height = 150.0f;
+		_preview = listRow->Add<FilePreview>();
 		// Only the rows that are seen are drawn, a directory may have thousands of files
 		_rows = _list->SetContent<UiVirtualList>();
+		// A little taller than other lists, it's what the dialog is for, and easier to hit
+		_rows->RowHeight = UiTheme::RowHeight + 4.0f;
 		_rows->CountFunc = [this]() { return std::int32_t(_entries.size()); };
 		_rows->DrawRow = [this](UiPainter& painter, std::int32_t index, const Rectf& rect, bool selected, float hover) {
 			const Entry& entry = _entries[index];
@@ -419,9 +516,19 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Button in the dialog to open or save a file, closes it without a change
 		AddButton(_x("editor", "Cancel"), [this]() { Close(); });
 
+		// Left of the buttons, before the space that pushes them to the right
+		// TRANSLATORS: Check box at the bottom of the file dialog, lists also files and folders the system hides
+		auto showHidden = std::make_unique<UiCheckBox>(_x("editor", "Show hidden files"), []() { return ShowHiddenFiles; }, [this](bool value) {
+			ShowHiddenFiles = value;
+			// The same directory listed again, its path is replaced by itself
+			String directory = _directory;
+			Navigate(directory);
+		});
+		_buttons->InsertChild(0, Death::move(showHidden));
+
 		// A directory to save to doesn't have to exist yet, it's created along with the file
 		bool useInitial = (!initialDirectory.empty() && (fs::DirectoryExists(initialDirectory) ||
-			(_mode == UiFileDialogMode::Save && !_roots.empty() && IsInRoot(initialDirectory, _roots[_rootIndex].Path))));
+			(_mode == UiFileDialogMode::Save && !_roots.empty() && IsInRoot(initialDirectory, _rootIndex))));
 		Navigate(useInitial ? initialDirectory : StringView(_roots.empty() ? String() : _roots[_rootIndex].Path));
 
 		// The file chosen before is selected, it's scrolled to once the list is laid out
@@ -437,9 +544,9 @@ namespace Jazz2::Editor
 	}
 
 	UiFileDialog* UiFileDialog::Show(UiSurface& surface, StringView title, UiFileDialogMode mode, SmallVectorImpl<UiFileRoot>&& roots,
-		StringView extension, StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen)
+		StringView extension, StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen, bool anywhere)
 	{
-		auto dialog = std::make_unique<UiFileDialog>(title, mode, Death::move(roots), extension, initialDirectory, initialName, Death::move(onChosen));
+		auto dialog = std::make_unique<UiFileDialog>(title, mode, Death::move(roots), extension, initialDirectory, initialName, Death::move(onChosen), anywhere);
 		UiFileDialog* dialogPtr = dialog.get();
 		UiOverlayOptions options;
 		options.Centered = true;
@@ -476,9 +583,25 @@ namespace Jazz2::Editor
 
 		const UiFileRoot* root = (_rootIndex < std::int32_t(_roots.size()) ? &_roots[_rootIndex] : nullptr);
 		// Up only as far as the root, not above it
-		if (root != nullptr && _directory != root->Path && IsInRoot(_directory, root->Path)) {
+		if (root != nullptr && _directory != root->Path && IsInRoot(_directory, _rootIndex)) {
 			_entries.push_back({ ".."_s, true });
 		}
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		if (_rootIndex == _computerRoot && _directory.empty()) {
+			// The whole computer starts at its drives
+			DWORD drives = ::GetLogicalDrives();
+			for (std::int32_t i = 0; i < 26; i++) {
+				if ((drives & (DWORD(1) << i)) != 0) {
+					char name[2] = { char('A' + i), ':' };
+					_entries.push_back({ String(name, 2), true });
+				}
+			}
+			_rows->SetSelected(-1, false);
+			_list->ScrollTo(0.0f, true);
+			return;
+		}
+#endif
 
 		// Sorted by the name in small letters, made once for each, not on every comparison
 		struct SortedEntry
@@ -487,15 +610,22 @@ namespace Jazz2::Editor
 			Entry Item;
 		};
 		SmallVector<SortedEntry, 0> directories, files;
+		// Hidden by the system, or by a dot as the convention of Unix has it, those are mostly settings of programs
+		auto isHidden = [](StringView path, StringView name) {
+			return (!ShowHiddenFiles && (name.hasPrefix('.') || fs::IsHidden(path)));
+		};
 		if (fs::DirectoryExists(_directory)) {
 			for (auto item : fs::Directory(_directory, fs::EnumerationOptions::SkipFiles)) {
 				String name = fs::GetFileName(item);
+				if (isHidden(item, name)) {
+					continue;
+				}
 				String key = StringUtils::lowercase(name);
 				directories.push_back({ Death::move(key), { Death::move(name), true } });
 			}
 			for (auto item : fs::Directory(_directory, fs::EnumerationOptions::SkipDirectories)) {
 				String name = fs::GetFileName(item);
-				if (MatchesExtension(name)) {
+				if (MatchesExtension(name) && !isHidden(item, name)) {
 					String key = StringUtils::lowercase(name);
 					files.push_back({ Death::move(key), { Death::move(name), false } });
 				}
@@ -539,9 +669,12 @@ namespace Jazz2::Editor
 		const Entry& entry = _entries[index];
 		if (entry.IsDirectory) {
 			if (confirm) {
-				String target = (entry.Name == ".."_s ? String(fs::GetDirectoryName(_directory)) : fs::CombinePath(_directory, entry.Name));
+				// Up from the root of a drive are the drives, which are entered at their roots
+				String target = (entry.Name == ".."_s ? String(fs::GetDirectoryName(_directory))
+					: (_directory.empty() ? String(entry.Name + "\\"_s) : fs::CombinePath(_directory, entry.Name)));
 				// Deferred, this row is destroyed by navigating
 				_pendingNavigation = Death::move(target);
+				_navigationPending = true;
 			}
 			return;
 		}
@@ -557,12 +690,126 @@ namespace Jazz2::Editor
 
 	void UiFileDialog::Update(float timeMult)
 	{
-		if (!_pendingNavigation.empty()) {
+		// The path may be empty, up from the root of a drive are the drives
+		if (_navigationPending) {
+			_navigationPending = false;
 			String target = Death::move(_pendingNavigation);
 			_pendingNavigation = {};
 			Navigate(target);
 		}
+		if (!_pendingTyped.empty()) {
+			String typed = Death::move(_pendingTyped);
+			_pendingTyped = {};
+			NavigateToTyped(typed);
+		}
+		UpdatePreview(timeMult);
 		UiDialog::Update(timeMult);
+	}
+
+	void UiFileDialog::UpdatePreview(float timeMult)
+	{
+		if (!PreviewFunc) {
+			return;
+		}
+		String path;
+		if (_selected >= 0 && _selected < std::int32_t(_entries.size()) && !_entries[_selected].IsDirectory) {
+			path = fs::CombinePath(_directory, _entries[_selected].Name);
+		}
+		if (path != _previewPath) {
+			// Read once the selection rests, not for every file the keys go through; the one shown stays until then
+			_previewPath = Death::move(path);
+			_previewDelay = 8.0f;
+			if (_previewPath.empty()) {
+				_preview->Visible = false;
+			}
+			return;
+		}
+		if (_previewDelay <= 0.0f || (_previewDelay -= timeMult) > 0.0f || _previewPath.empty()) {
+			return;
+		}
+
+		SmallVector<std::uint8_t, 0> rgba;
+		Vector2i size;
+		if (!PreviewFunc(_previewPath, rgba, size)) {
+			_preview->Visible = false;
+			return;
+		}
+		if (_preview->Image == nullptr || _preview->Image->GetSize() != size) {
+			_preview->Image = std::make_unique<Texture>("FilePreview", Texture::Format::RGBA8, size.X, size.Y);
+		}
+		_preview->Image->LoadFromTexels(rgba.data(), 0, 0, size.X, size.Y);
+		_preview->Visible = true;
+	}
+
+	void UiFileDialog::NavigateToTyped(StringView text)
+	{
+		// A path as the box shows it, starting with the name of a place, is in that place
+		for (std::int32_t i = 0; i < std::int32_t(_roots.size()); i++) {
+			const UiFileRoot& root = _roots[i];
+			if (!text.hasPrefix(root.Name) || (text.size() > root.Name.size() && text[root.Name.size()] != '/' && text[root.Name.size()] != '\\')) {
+				continue;
+			}
+			StringView rest = text.exceptPrefix(root.Name.size()).trimmedPrefix("/\\"_s);
+			if (root.Path.empty()) {
+				// The drives
+				if (rest.empty()) {
+					_rootIndex = i;
+					Navigate({});
+					return;
+				}
+				continue;
+			}
+			String path = (rest.empty() ? root.Path : fs::CombinePath(root.Path, fs::ToNativeSeparators(rest)));
+			if (fs::DirectoryExists(path)) {
+				_rootIndex = i;
+				Navigate(path);
+				return;
+			}
+		}
+
+		// Relative to the directory shown, or a path of its own
+		String path = (fs::IsAbsolutePath(text) ? String(text) : fs::CombinePath(_directory, text));
+		String directory, fileName;
+		if (fs::DirectoryExists(path)) {
+			directory = path;
+		} else if (fs::IsReadableFile(path) && MatchesExtension(path)) {
+			directory = fs::GetDirectoryName(path);
+			fileName = fs::GetFileName(path);
+		} else if (_mode == UiFileDialogMode::Save && fs::DirectoryExists(fs::GetDirectoryName(path)) && !fs::GetFileName(path).empty()) {
+			// A new file in a directory that is there
+			directory = fs::GetDirectoryName(path);
+			fileName = fs::GetFileName(path);
+		} else {
+			if (UiSurface* surface = GetSurface()) {
+				surface->ShowToast(_x("editor", "There is no such folder"), EditorIcon::Warning);
+			}
+			return;
+		}
+
+		std::int32_t root = FindRoot(directory);
+		if (root < 0) {
+			if (UiSurface* surface = GetSurface()) {
+				surface->ShowToast(_x("editor", "The file has to be in one of the places above"), EditorIcon::Warning);
+			}
+			return;
+		}
+		_rootIndex = root;
+		Navigate(directory);
+		if (fileName.empty()) {
+			return;
+		}
+		if (_nameBox != nullptr) {
+			_nameBox->Text = fileName;
+			_nameBox->BeginEdit();
+			return;
+		}
+		for (std::int32_t i = 0; i < std::int32_t(_entries.size()); i++) {
+			if (!_entries[i].IsDirectory && StringUtils::equalsIgnoreCase(_entries[i].Name, fileName)) {
+				_selected = i;
+				_rows->SetSelected(i, true);
+				break;
+			}
+		}
 	}
 
 	void UiFileDialog::Confirm()
@@ -603,8 +850,36 @@ namespace Jazz2::Editor
 
 	bool UiFileDialog::IsWritable() const
 	{
-		// Only inside of the root, a directory outside of it isn't one files may be saved to
-		return (_rootIndex < std::int32_t(_roots.size()) && _roots[_rootIndex].Writable && IsInRoot(_directory, _roots[_rootIndex].Path));
+		// Only inside of the root, a directory outside of it isn't one files may be saved to, nor the list of drives
+		return (_rootIndex < std::int32_t(_roots.size()) && _roots[_rootIndex].Writable && !_directory.empty() && IsInRoot(_directory, _rootIndex));
+	}
+
+	bool UiFileDialog::IsInRoot(StringView path, std::int32_t rootIndex) const
+	{
+		if (rootIndex < 0 || rootIndex >= std::int32_t(_roots.size())) {
+			return false;
+		}
+		if (rootIndex == _computerRoot) {
+			// The drives are listed at an empty path
+			return (path.empty() || fs::IsAbsolutePath(path));
+		}
+		return IsInRoot(path, _roots[rootIndex].Path);
+	}
+
+	std::int32_t UiFileDialog::FindRoot(StringView path) const
+	{
+		std::int32_t found = -1;
+		std::size_t bestLength = 0;
+		for (std::int32_t i = 0; i < std::int32_t(_roots.size()); i++) {
+			if (i != _computerRoot && IsInRoot(path, _roots[i].Path) && (found < 0 || _roots[i].Path.size() > bestLength)) {
+				found = i;
+				bestLength = _roots[i].Path.size();
+			}
+		}
+		if (found < 0 && IsInRoot(path, _computerRoot)) {
+			found = _computerRoot;
+		}
+		return found;
 	}
 
 	bool UiFileDialog::IsInRoot(StringView path, StringView root)
@@ -622,6 +897,10 @@ namespace Jazz2::Editor
 
 	String UiFileDialog::GetRelativeDirectory() const
 	{
+		if (_rootIndex == _computerRoot) {
+			// The whole path, as the system shows it, it can be typed over
+			return (_directory.empty() ? _roots[_rootIndex].Name : _directory);
+		}
 		if (_rootIndex < std::int32_t(_roots.size())) {
 			const UiFileRoot& root = _roots[_rootIndex];
 			if (IsInRoot(_directory, root.Path)) {

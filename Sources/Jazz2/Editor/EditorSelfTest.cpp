@@ -563,6 +563,80 @@ namespace Jazz2::Editor
 					EventCatalog::FromDisplayValue(width, 136) == 9, "scaled values");
 			}
 
+			// Events of the original game described from outside, each by its number in the passthrough event
+			std::size_t errorCount = EventCatalog::GetExtensionErrors().size();
+			EventCatalog::LoadExtensions("[{\"Original\":254,\"Name\":\"A\",\"Params\":[{\"Name\":\"X\",\"Bits\":2},{\"Name\":\"Y\",\"Bits\":5}]},"
+				"{\"Original\":82,\"Name\":\"B\"}]"_s, "test"_s, EventExtensionScope::Level);
+			expect(EventCatalog::GetExtensionErrors().size() == errorCount, "original events without errors");
+			{
+				Formats::EventRecord passthrough = EventCatalog::MakeDefault(EventType::PassthroughEvent);
+				passthrough.Params[0] = 254;
+				passthrough.Params[1] = 0x0E;
+				const EventDescriptor* remapped = EventCatalog::Find(EventType::PassthroughEvent, passthrough.Params);
+				expect(remapped != nullptr && remapped->OriginalEvent == 254 && remapped->FieldCount == 3 &&
+					EventCatalog::ReadField(passthrough, remapped->Fields[1]) == 2 && EventCatalog::ReadField(passthrough, remapped->Fields[2]) == 3, "original event described");
+				passthrough.Params[0] = 82;
+				expect(EventCatalog::Find(EventType::PassthroughEvent, passthrough.Params) != remapped, "both original events kept");
+				passthrough.Params[0] = 83;
+				expect(EventCatalog::Find(EventType::PassthroughEvent, passthrough.Params) == EventCatalog::Find(EventType::PassthroughEvent), "other original event plain");
+			}
+			EventCatalog::ClearExtensions(EventExtensionScope::Level);
+
+			// As MLLE describes them in the script of the level
+			EventCatalog::LoadMlleEvents("void f() {}\n\t///@Event 240=Warp Target |+|Area      |Warp   |Target |WarpID:8|Character:{Any,Jazz,Spaz,Lori}2|Color:{Yellow,Blue}1|Par:5\r\n"
+				"///@Event 242=Corner|+|Area|Corner||WarpID:8\n///@Event 82=Thing|+|Scenery|Thing||Speed:4\n"_s, "test"_s, EventExtensionScope::Level);
+			expect(EventCatalog::GetExtensionErrors().size() == errorCount, "MLLE events without errors");
+			{
+				Formats::EventRecord passthrough = EventCatalog::MakeDefault(EventType::PassthroughEvent);
+				passthrough.Params[0] = 240;
+				const EventDescriptor* warpTarget = EventCatalog::Find(EventType::PassthroughEvent, passthrough.Params);
+				expect(warpTarget != nullptr && StringView(warpTarget->Name) == "Warp Target"_s && warpTarget->Category == EventCategory::Area &&
+					warpTarget->FieldCount == 5 && warpTarget->Fields[2].Type == ParamType::Enum && warpTarget->Fields[2].OptionCount == 4 &&
+					warpTarget->Fields[4].Shift == 11 && warpTarget->Fields[4].Bits == 5, "MLLE event described");
+				passthrough.Params[0] = 242;
+				const EventDescriptor* corner = EventCatalog::Find(EventType::PassthroughEvent, passthrough.Params);
+				expect(corner != nullptr && corner != warpTarget && corner->FieldCount == 2, "second MLLE event described");
+
+				// Offered in the list by a type of its own, one the game keeps as the passthrough event placed as that, one it
+				// turns into its own event as that event
+				EventType picked = EventType(EventCatalog::FirstOriginalPickType + 82);
+				auto all = EventCatalog::GetAll();
+				expect(std::find(all.begin(), all.end(), EventCatalog::Find(picked)) != all.end() && EventCatalog::GetPickedOriginal(picked) == 82 &&
+					EventCatalog::GetPickedOriginal(EventType::PassthroughEvent) == 0, "MLLE event offered");
+				expect(EventCatalog::MakeDefault(EventType(EventCatalog::FirstOriginalPickType + 240)).Type == std::uint16_t(EventType::WarpTarget),
+					"converted MLLE event offered");
+				Formats::EventRecord placed = EventCatalog::MakeDefault(picked);
+				passthrough.Params[0] = 82;
+				expect(placed.Type == std::uint16_t(EventType::PassthroughEvent) && placed.Params[0] == 82 &&
+					EventCatalog::Find(EventType(placed.Type), placed.Params) == EventCatalog::Find(EventType::PassthroughEvent, passthrough.Params) &&
+					StringView(EventCatalog::Find(picked)->Name) == "Thing"_s, "MLLE event placed");
+			}
+			EventCatalog::ClearExtensions(EventExtensionScope::Level);
+
+			// One the game turns into its own event is placed as that, and described with its parameters in the kept bytes
+			EventCatalog::LoadMlleEvents("///@Event 141=Clown|-|Enemy|Clown||Speed:4\n"_s, "test"_s, EventExtensionScope::Level);
+			{
+				EventType picked = EventType(EventCatalog::FirstOriginalPickType + 141);
+				Formats::EventRecord placed = EventCatalog::MakeDefault(picked);
+				const EventDescriptor* clown = EventCatalog::Find(EventType(placed.Type), placed.Params);
+				expect(EventCatalog::GetPickedOriginal(picked) == 141 && placed.Type != std::uint16_t(EventType::PassthroughEvent) &&
+					clown != nullptr && StringView(clown->Name) == "Clown"_s && clown->FieldCount == 1 &&
+					clown->Fields[0].Offset == Formats::EventRecord::OriginalParamsOffset, "converted MLLE event described");
+				EventCatalog::WriteField(placed, clown->Fields[0], 9);
+				expect(placed.Params[Formats::EventRecord::OriginalParamsOffset] == 9 && EventCatalog::Find(EventType(placed.Type), placed.Params) == clown,
+					"converted MLLE event parameter");
+				placed.Params[0] ^= 0x7F;
+				expect(EventCatalog::Find(EventType(placed.Type), placed.Params) != clown, "other event of the game not described");
+			}
+			EventCatalog::ClearExtensions(EventExtensionScope::Level);
+
+			// Nothing after `=` hides what the event of the original game becomes, until the descriptions of the level go
+			EventCatalog::LoadMlleEvents("///@Event 100=\n///@Event 101= \n"_s, "test"_s, EventExtensionScope::Level);
+			expect(EventCatalog::GetExtensionErrors().size() == errorCount && EventCatalog::IsHidden(EventCatalog::Find(EventType::EnemyTurtleTough)) &&
+				!EventCatalog::IsHidden(EventCatalog::Find(EventType::EnemyTurtle)), "MLLE event hidden");
+			EventCatalog::ClearExtensions(EventExtensionScope::Level);
+			expect(!EventCatalog::IsHidden(EventCatalog::Find(EventType::EnemyTurtleTough)), "MLLE event shown again");
+
 			// Links: a warp of two tiles next to each other to its target, a warp to nowhere, a rock trigger to its rock
 			LevelDocument document;
 			document.CreateNew("test"_s, 100, Vector2i(20, 10));
@@ -583,10 +657,10 @@ namespace Jazz2::Editor
 			for (const EventLink& link : links) {
 				if (link.Missing) {
 					missingLinks++;
-				} else if (StringView(link.Channel) == "warp"_s) {
+				} else if (StringView(link.Channel) == "Warp"_s) {
 					warpLinks++;
 					expect(link.From.W == 64.0f && link.From.H == 32.0f && link.To.X == 320.0f && link.To.Y == 160.0f, "warp link ends");
-				} else if (StringView(link.Channel) == "rollingRock"_s) {
+				} else if (StringView(link.Channel) == "RollingRock"_s) {
 					rockLinks++;
 				}
 			}
@@ -761,7 +835,7 @@ namespace Jazz2::Editor
 			{
 				TypeStats& stats = Types[event.Type];
 				stats.Count++;
-				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 				if (descriptor == nullptr) {
 					return;
 				}

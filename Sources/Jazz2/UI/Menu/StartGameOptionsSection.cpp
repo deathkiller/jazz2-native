@@ -338,7 +338,7 @@ namespace Jazz2::UI::Menu
 
 	void StartGameOptionsSection::OnAfterTransition()
 	{
-		bool playTutorial = (!PreferencesCache::TutorialCompleted && _levelName == "prince/01_castle1"_s);
+		bool playTutorial = (!PreferencesCache::TutorialCompleted && _levelName == "prince/castle1"_s);
 		if (playTutorial && !ContentResolver::Get().LevelExists("prince/trainer"_s)) {
 			LOGW("Tutorial level \"prince/trainer.j2l\" not found, skipping tutorial");
 			playTutorial = false;
@@ -371,7 +371,7 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		if (PreferencesCache::EnableReforgedGameplay && _levelName.hasSuffix("/01_xmas1"_s)) {
+		if (PreferencesCache::EnableReforgedGameplay && _levelName.hasSuffix("/xmas1"_s)) {
 			levelInit.LastExitType = ExitType::Warp | ExitType::Frozen;
 		}
 

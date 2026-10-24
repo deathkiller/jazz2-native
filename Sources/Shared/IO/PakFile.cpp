@@ -32,6 +32,8 @@ static constexpr std::uint16_t Version = 1;
 static constexpr std::int32_t FooterSize = sizeof(Signature) + 2 + 2 + 8;
 static constexpr std::uint32_t MaxDepth = 64;
 static constexpr std::uint32_t HashIndexLength = 8;
+static constexpr std::uint32_t MaxItemCount = 1 << 20;
+static constexpr std::uint32_t MaxNameLength = 4096;
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -368,23 +370,38 @@ namespace Death { namespace IO {
 	PakFile::PakFile(StringView path)
 	{
 		std::unique_ptr<FileStream> s = std::make_unique<FileStream>(path, FileAccess::Read);
-		DEATH_ASSERT(s->GetSize() > FooterSize + 8, "Invalid .pak file", );
+		if DEATH_UNLIKELY(s->GetSize() <= FooterSize + 8) {
+			LOGE("Invalid .pak file \"{}\"", path);
+			return;
+		}
 
 		// Header size is 18 bytes
 		std::int64_t footerPosition = s->Seek(-FooterSize, SeekOrigin::End);
-		DEATH_ASSERT(footerPosition >= 0, ".pak file must be opened from seekable stream", );
+		if DEATH_UNLIKELY(footerPosition < 0) {
+			LOGE(".pak file \"{}\" must be opened from seekable stream", path);
+			return;
+		}
 
 		std::uint8_t signature[sizeof(Signature)];
-		s->Read(signature, sizeof(signature));
-		
+		if DEATH_UNLIKELY(s->Read(signature, sizeof(signature)) != std::int64_t(sizeof(signature))) {
+			LOGE("Invalid .pak file \"{}\"", path);
+			return;
+		}
+
 		// If signature doesn't match, try to find .pak embedded in PE/ELF executable
 		if DEATH_UNLIKELY(std::memcmp(signature, Signature, sizeof(Signature)) != 0) {
 			footerPosition = FindRelocatedFooter(s.get());
-			DEATH_ASSERT(footerPosition >= 0, "Invalid .pak file", );
+			if DEATH_UNLIKELY(footerPosition < 0) {
+				LOGE("Invalid .pak file \"{}\"", path);
+				return;
+			}
 		}
 
 		std::uint16_t fileVersion = s->ReadValueAsLE<std::uint16_t>();
-		DEATH_ASSERT(fileVersion == Version, "Unsupported .pak file version", );
+		if DEATH_UNLIKELY(fileVersion != Version) {
+			LOGE("Unsupported version {} of .pak file \"{}\"", fileVersion, path);
+			return;
+		}
 
 		PakFileFlags fileFlags = (PakFileFlags)s->ReadValueAsLE<std::uint16_t>();
 		std::uint64_t rootIndexOffset = s->ReadValueAsLE<std::uint64_t>();
@@ -394,21 +411,32 @@ namespace Death { namespace IO {
 			rootIndexOffset = std::uint64_t(footerPosition + std::int64_t(rootIndexOffset));
 		}
 
-		DEATH_ASSERT(rootIndexOffset < std::uint64_t(s->GetSize()), "Invalid root index offset", );
+		if DEATH_UNLIKELY(rootIndexOffset >= std::uint64_t(s->GetSize())) {
+			LOGE("Invalid root index offset in .pak file \"{}\"", path);
+			return;
+		}
 #if !defined(WITH_ZLIB) && !defined(WITH_MINIZ)
 		// Otherwise the file would be opened with no items in it
-		DEATH_ASSERT((fileFlags & PakFileFlags::DeflateCompressedIndex) != PakFileFlags::DeflateCompressedIndex,
-			".pak file index was compressed with an unsupported method (Deflate)", );
+		if DEATH_UNLIKELY((fileFlags & PakFileFlags::DeflateCompressedIndex) == PakFileFlags::DeflateCompressedIndex) {
+			LOGE(".pak file \"{}\" index was compressed with an unsupported method (Deflate)", path);
+			return;
+		}
 #endif
 		s->Seek(std::int64_t(rootIndexOffset), SeekOrigin::Begin);
 
-		_streamPool = std::make_shared<FileStreamPool>(path);
 		_useHashIndex = (fileFlags & PakFileFlags::HashIndex) == PakFileFlags::HashIndex;
 
-		ConstructsItemsFromIndex(*s, nullptr,
+		std::uint32_t itemBudget = MaxItemCount;
+		if DEATH_UNLIKELY(!ConstructsItemsFromIndex(*s, nullptr,
 			(fileFlags & PakFileFlags::DeflateCompressedIndex) == PakFileFlags::DeflateCompressedIndex,
-			useRelativeOffsets, 0);
+			useRelativeOffsets, 0, itemBudget)) {
+			LOGE("Malformed index in .pak file \"{}\"", path);
+			_mountPoint = {};
+			_rootItems = {};
+			return;
+		}
 
+		_streamPool =std::make_shared<FileStreamPool>(path);
 		// Park the stream in the pool, so the first resource opened afterwards doesn't reopen the archive
 		_streamPool->Release(Death::move(s));
 	}
@@ -532,40 +560,55 @@ namespace Death { namespace IO {
 		}
 	}
 
-	void PakFile::ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, bool useRelativeOffsets, std::uint32_t depth)
+	bool PakFile::ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, bool useRelativeOffsets, std::uint32_t depth, std::uint32_t& itemBudget)
 	{
-		DEATH_ASSERT(depth < MaxDepth, "Maximum directory structure depth reached", );
+		if DEATH_UNLIKELY(depth >= MaxDepth) {
+			LOGE("Maximum directory structure depth reached");
+			return false;
+		}
 
 		std::int64_t indexStartPosition = s.GetPosition();
-		
-		auto* items = (deflateCompressed
-			? ReadIndexFromStreamDeflateCompressed(s, parentItem, useRelativeOffsets, indexStartPosition)
-			: ReadIndexFromStream(s, parentItem, useRelativeOffsets, indexStartPosition));
 
-		if DEATH_LIKELY(items != nullptr) {
-			for (auto& item : *items) {
-				if ((item.Flags & ItemFlags::Directory) == ItemFlags::Directory) {
-					s.Seek(std::int64_t(item.Offset), SeekOrigin::Begin);
-					ConstructsItemsFromIndex(s, &item, deflateCompressed, useRelativeOffsets, depth + 1);
+		auto* items = (deflateCompressed
+			? ReadIndexFromStreamDeflateCompressed(s, parentItem, useRelativeOffsets, indexStartPosition, itemBudget)
+			: ReadIndexFromStream(s, parentItem, useRelativeOffsets, indexStartPosition, itemBudget));
+		if DEATH_UNLIKELY(items == nullptr) {
+			return false;
+		}
+
+		for (auto& item : *items) {
+			if ((item.Flags & ItemFlags::Directory) == ItemFlags::Directory) {
+				if DEATH_UNLIKELY(s.Seek(std::int64_t(item.Offset), SeekOrigin::Begin) < 0 ||
+					!ConstructsItemsFromIndex(s, &item, deflateCompressed, useRelativeOffsets, depth + 1, itemBudget)) {
+					return false;
 				}
 			}
 		}
+		return true;
 	}
 
-	Array<PakFile::Item>* PakFile::ReadIndexFromStream(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition)
+	Array<PakFile::Item>* PakFile::ReadIndexFromStream(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition, std::uint32_t& itemBudget)
 	{
 		if DEATH_UNLIKELY(parentItem == nullptr) {
 			// Root index contains mount point
 			std::uint32_t mountPointLength = s.ReadVariableUint32();
-			DEATH_ASSERT(mountPointLength < INT16_MAX, "Invalid mount point", nullptr);
+			if DEATH_UNLIKELY(mountPointLength > MaxNameLength) {
+				return nullptr;
+			}
 			_mountPoint = String{NoInit, mountPointLength};
-			s.Read(_mountPoint.data(), std::int32_t(mountPointLength));
+			if DEATH_UNLIKELY(s.Read(_mountPoint.data(), std::int32_t(mountPointLength)) != std::int64_t(mountPointLength)) {
+				return nullptr;
+			}
 			if (!_mountPoint.empty() && _mountPoint[_mountPoint.size() - 1] != '/' && _mountPoint[_mountPoint.size() - 1] != '\\') {
 				_mountPoint += FileSystem::PathSeparator;
 			}
 		}
 
 		std::uint32_t itemCount = s.ReadVariableUint32();
+		if DEATH_UNLIKELY(itemCount > itemBudget) {
+			return nullptr;
+		}
+		itemBudget -= itemCount;
 
 		Array<Item>* items;
 		if (parentItem != nullptr) {
@@ -583,14 +626,22 @@ namespace Death { namespace IO {
 			bool isDirectory = (item.Flags & PakFile::ItemFlags::Directory) == PakFile::ItemFlags::Directory;
 
 			if (_useHashIndex) {
-				DEATH_DEBUG_ASSERT(!isDirectory);
+				if DEATH_UNLIKELY(isDirectory) {
+					return nullptr;
+				}
 				item.Name = String{NoInit, HashIndexLength};
-				s.Read(item.Name.data(), HashIndexLength);
+				if DEATH_UNLIKELY(s.Read(item.Name.data(), HashIndexLength) != HashIndexLength) {
+					return nullptr;
+				}
 			} else {
 				std::uint32_t nameLength = s.ReadVariableUint32();
-				DEATH_ASSERT(nameLength == 0 || nameLength < INT32_MAX, "Malformed .pak file", nullptr);
+				if DEATH_UNLIKELY(nameLength > MaxNameLength) {
+					return nullptr;
+				}
 				item.Name = String{NoInit, nameLength};
-				s.Read(item.Name.data(), std::int32_t(nameLength));
+				if DEATH_UNLIKELY(s.Read(item.Name.data(), std::int32_t(nameLength)) != std::int64_t(nameLength)) {
+					return nullptr;
+				}
 			}
 
 			if (useRelativeOffsets) {
@@ -612,11 +663,11 @@ namespace Death { namespace IO {
 		return items;
 	}
 
-	Array<PakFile::Item>* PakFile::ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition)
+	Array<PakFile::Item>* PakFile::ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition, std::uint32_t& itemBudget)
 	{
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 		DeflateStream ds(s);
-		return ReadIndexFromStream(ds, parentItem, useRelativeOffsets, indexStartPosition);
+		return ReadIndexFromStream(ds, parentItem, useRelativeOffsets, indexStartPosition, itemBudget);
 #else
 		return nullptr;
 #endif

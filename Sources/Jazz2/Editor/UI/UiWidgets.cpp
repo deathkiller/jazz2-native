@@ -243,7 +243,7 @@ namespace Jazz2::Editor
 			float padding = context.Px(UiTheme::Padding) * 1.5f;
 			width = padding * 2.0f + GetTextWidth(context);
 			if (Icon != EditorIcon::None) {
-				width += context.Px(UiTheme::IconSize) + context.Px(UiTheme::Spacing);
+				width += context.Px(UiTheme::IconSize) + context.Px(UiTheme::Spacing + IconGap);
 			}
 		}
 
@@ -301,7 +301,7 @@ namespace Jazz2::Editor
 		float padding = painter.Px(UiTheme::Padding) * 1.5f;
 		float contentWidth = (Text.empty() ? 0.0f : GetTextWidth(painter));
 		if (Icon != EditorIcon::None) {
-			contentWidth += painter.Px(UiTheme::IconSize) + painter.Px(UiTheme::Spacing);
+			contentWidth += painter.Px(UiTheme::IconSize) + painter.Px(UiTheme::Spacing + IconGap);
 		}
 		// Squeezed narrower than the icon and the text take, the icon alone says what it is better than a cut text
 		_neededWidth = (Text.empty() ? 0.0f : contentWidth + padding * 2.0f);
@@ -322,7 +322,7 @@ namespace Jazz2::Editor
 		if (Icon != EditorIcon::None) {
 			float iconSize = painter.Px(UiTheme::IconSize);
 			painter.Icon(Icon, Rectf(x, Bounds.Y + offset, iconSize, Bounds.H), iconColor);
-			x += iconSize + painter.Px(UiTheme::Spacing);
+			x += iconSize + painter.Px(UiTheme::Spacing + IconGap);
 		}
 		painter.TextInRect(Text, Rectf(x, Bounds.Y + offset, Bounds.X + Bounds.W - x, Bounds.H), textColor, Alignment::Left);
 	}
@@ -566,7 +566,7 @@ namespace Jazz2::Editor
 			if (OverlayBar) {
 				// Only a thin mark of where the content is scrolled to, over its edge
 				float width = std::max(1.0f, std::round(thumb.W * 0.5f));
-				thumb = Rectf(Bounds.X + Bounds.W - width - std::max(1.0f, painter.Px(1.0f)), thumb.Y, width, thumb.H);
+				thumb = Rectf(Bounds.X + Bounds.W - width - std::max(1.0f, painter.Px(1.0f)) + std::round(painter.Px(OverlayBarOffset)), thumb.Y, width, thumb.H);
 			}
 			painter.RoundRect(thumb, _draggingThumb ? UiTheme::Accent : Colorf(1.0f, 1.0f, 1.0f, 0.22f + 0.15f * _hoverAmount), UiLayer::Overlay);
 		}
@@ -813,8 +813,8 @@ namespace Jazz2::Editor
 	void UiDragBar::Update(float timeMult)
 	{
 		UiStack::Update(timeMult);
-		// What is moved by it is being moved, a window by its title
-		if (_pressed && _moved && OnDrag) {
+		// What is moved by it can be moved or is being moved, a window by its title, so it's seen before it's grabbed
+		if ((_hovered || (_pressed && _moved)) && ShowMoveArrows && OnDrag) {
 			if (UiSurface* surface = GetSurface()) {
 				surface->SetCursorOverlay(UiCursorOverlay::Move);
 			}
@@ -1732,6 +1732,20 @@ namespace Jazz2::Editor
 
 	bool UiNumberBox::OnPointerDown(const UiPointerEvent& event)
 	{
+		// The wheel pressed resets it, also while it's typed into, what was typed is left then
+		if (event.Button == MouseButton::Middle && DefaultValue && Setter && IsUsable()) {
+			if (_focused) {
+				if (UiSurface* surface = GetSurface()) {
+					surface->SetFocus(nullptr);
+					// What was typed may have rebuilt the part of the interface the box is in, a box taken out of it is left
+					if (GetSurface() != surface) {
+						return false;
+					}
+				}
+			}
+			Setter(std::clamp(DefaultValue(), MinValue, MaxValue), true);
+			return false;
+		}
 		if (_focused) {
 			return UiTextBox::OnPointerDown(event);
 		}

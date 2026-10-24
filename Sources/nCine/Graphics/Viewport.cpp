@@ -86,12 +86,10 @@ namespace nCine
 		// Neither side of a split may be left pointing at the other one
 		RemoveSplitPasses();
 		if (_splitOwner != nullptr) {
-			auto& ownerPasses = _splitOwner->_splitPasses;
-			for (auto it = ownerPasses.begin(); it != ownerPasses.end();) {
-				if (*it == this) {
-					it = ownerPasses.erase(it);
-				} else {
-					++it;
+			// The slot stays, the bits of the other passes don't change
+			for (Viewport*& pass : _splitOwner->_splitPasses) {
+				if (pass == this) {
+					pass = nullptr;
 				}
 			}
 		}
@@ -99,17 +97,38 @@ namespace nCine
 	}
 
 #if defined(RHI_CAP_POSTPROCESSING)
-	void Viewport::AddSplitPass(Viewport* pass)
+	std::uint32_t Viewport::AddSplitPass(Viewport* pass)
 	{
-		DEATH_ASSERT(pass != nullptr && pass != this && pass->_type == Type::WithTexture && pass->_splitOwner == nullptr, "Invalid split pass", );
+		DEATH_ASSERT(pass != nullptr && pass != this && pass->_type == Type::WithTexture && pass->_splitOwner == nullptr &&
+			_splitPasses.size() < MaxSplitPasses, "Invalid split pass", 0);
 		pass->_splitOwner = this;
 		_splitPasses.push_back(pass);
+		return (1u << (_splitPasses.size() - 1));
+	}
+
+	void Viewport::RequestSplit(std::uint16_t layer, std::uint32_t passes)
+	{
+		if (passes == 0) {
+			return;
+		}
+		std::size_t i = 0;
+		while (i < _splitLayers.size() && _splitLayers[i] < layer) {
+			i++;
+		}
+		if (i < _splitLayers.size() && _splitLayers[i] == layer) {
+			_splitLayerPasses[i] |= passes;
+		} else {
+			_splitLayers.insert(_splitLayers.begin() + i, layer);
+			_splitLayerPasses.insert(_splitLayerPasses.begin() + i, passes);
+		}
 	}
 
 	void Viewport::RemoveSplitPasses()
 	{
 		for (Viewport* pass : _splitPasses) {
-			pass->_splitOwner = nullptr;
+			if (pass != nullptr) {
+				pass->_splitOwner = nullptr;
+			}
 		}
 		_splitPasses.clear();
 	}
@@ -365,7 +384,7 @@ namespace nCine
 			ZoneScopedC(0x81A861);
 #if defined(RHI_CAP_POSTPROCESSING)
 			// The split was requested while the scene was visited, which is over by now
-			_renderQueue.SortAndCommit(_splitPasses.empty() ? RenderQueue::NoSplitLayer : _splitLayer);
+			_renderQueue.SortAndCommit(IsSplit() ? ArrayView<const std::uint32_t>(_splitLayers) : ArrayView<const std::uint32_t>());
 #else
 			_renderQueue.SortAndCommit();
 #endif
@@ -485,10 +504,28 @@ namespace nCine
 			}
 
 #if defined(RHI_CAP_POSTPROCESSING)
-			if (_splitLayer < RenderQueue::NoSplitLayer && !_splitPasses.empty() && _type == Type::WithTexture) {
-				_renderQueue.Draw(0, _splitLayer);
-				DrawSplitPasses();
-				_renderQueue.Draw(_splitLayer, RenderQueue::NoSplitLayer);
+			if (IsSplit()) {
+				// The passes are held back until a part with something to draw comes, the scene stays the same until then,
+				// so the passes of all the splits in between are drawn at once and those with nothing after them not at all.
+				// Up to date are the passes whose images are of the scene as it is now, they aren't drawn again until it changes.
+				RenderQueue::Part part = _renderQueue.StartPart();
+				std::uint32_t pending = 0, upToDate = 0;
+				for (std::size_t i = 0; i <= _splitLayers.size(); i++) {
+					part = _renderQueue.NextPart(part, i < _splitLayers.size() ? _splitLayers[i] : RenderQueue::NoSplitLayer);
+					if (!part.IsEmpty()) {
+						if (pending != 0) {
+							DrawSplitPasses(pending);
+							pending = 0;
+						}
+						_renderQueue.Draw(part);
+						upToDate = 0;
+					}
+					if (i < _splitLayers.size()) {
+						const std::uint32_t passes = (_splitLayerPasses[i] & ~upToDate);
+						pending |= passes;
+						upToDate |= passes;
+					}
+				}
 			} else
 #endif
 			{
@@ -532,19 +569,27 @@ namespace nCine
 
 #if defined(RHI_CAP_POSTPROCESSING)
 		// A split lasts only for the frame it was requested in
-		_splitLayer = RenderQueue::NoSplitLayer;
+		_splitLayers.clear();
+		_splitLayerPasses.clear();
 #endif
 	}
 
 #if defined(RHI_CAP_POSTPROCESSING)
-	void Viewport::DrawSplitPasses()
+	bool Viewport::IsSplit() const
+	{
+		return (!_splitLayers.empty() && !_splitPasses.empty() && _type == Type::WithTexture);
+	}
+
+	void Viewport::DrawSplitPasses(std::uint32_t passes)
 	{
 		ZoneScopedNC("Split passes", 0x81A861);
 
 		// Each pass binds its own target, which is what lets it sample this one's texture, and leaves the screen
 		// bound when it's done - it never draws the chain after it, that already happened (see Draw())
-		for (Viewport* pass : _splitPasses) {
-			pass->DrawContents(nullptr, 0);
+		for (std::size_t i = 0; i < _splitPasses.size(); i++) {
+			if ((passes & (1u << i)) != 0 && _splitPasses[i] != nullptr) {
+				_splitPasses[i]->DrawContents(nullptr, 0);
+			}
 		}
 
 		// Back to what the first part of the queue was drawn with. The target is bound without clearing, so the

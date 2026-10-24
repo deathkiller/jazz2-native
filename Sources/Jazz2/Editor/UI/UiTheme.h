@@ -114,7 +114,7 @@ namespace Jazz2::Editor
 		 *
 		 * See @ref UiReadableFont. It's measured as the pixel font is, so the layout stays.
 		 */
-		static inline bool ReadableFont = false;
+		static inline bool ReadableFont = true;
 		/**
 		 * @brief Changes whenever text is measured in another font, set by @ref Apply()
 		 *
@@ -157,7 +157,7 @@ namespace Jazz2::Editor
 		static constexpr float IconSize = 16.0f;
 		static constexpr float MenuBarHeight = 15.0f;
 		static constexpr float ToolbarHeight = 22.0f;
-		static constexpr float StatusBarHeight = 13.0f;
+		static constexpr float StatusBarHeight = 15.0f;
 		static constexpr float ScrollBarWidth = 5.0f;
 		static constexpr float ShadowSize = 6.0f;
 

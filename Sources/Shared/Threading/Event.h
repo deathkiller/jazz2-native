@@ -80,8 +80,8 @@ namespace Death { namespace Threading {
 				result = !!_isSignaled.exchange(0);
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)
-				result = !!_isSignaled.exchange(0);
 				::ResetEvent(_fallbackEvent);
+				result = !!_isSignaled.exchange(0);
 #elif !defined(__DEATH_ALWAYS_USE_WAKEONADDRESS)
 				pthread_mutex_lock(&_mutex);
 				result = !!_isSignaled;

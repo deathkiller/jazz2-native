@@ -62,7 +62,8 @@ namespace Jazz2::Compatibility
 		std::uint16_t version = headerBlock.ReadUInt16();
 		_version = (version <= 0x202 ? JJ2Version::BaseGame : JJ2Version::TSF);
 
-		_isPlusLevel = false;
+		_hasMlleData = false;
+		_hasScript = false;
 		_darknessColor = 0;
 		_weatherType = WeatherType::None;
 		_weatherIntensity = 0;
@@ -116,14 +117,38 @@ namespace Jazz2::Compatibility
 
 			JJ2Block mlleBlock(s, mlleBlockPackedSize, mlleBlockUnpackedSize);
 			LoadMlleData(mlleBlock, mlleVersion, path, strictParser);
-			_isPlusLevel = true;
+			_hasMlleData = true;
 		}
-		if (!_isPlusLevel) {
-			// JJ2+ runs the script of the same name next to the level
-			StringView foundDot = path.findLastOr('.', path.end());
-			_isPlusLevel = fs::IsReadableFile(fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + ".j2as"_s));
+		// JJ2+ runs the script of the same name next to the level
+		StringView foundDot = path.findLastOr('.', path.end());
+		_hasScript = fs::IsReadableFile(fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + ".j2as"_s));
+
+		return true;
+	}
+
+	bool JJ2Level::ReadExits(StringView path, String& nextLevel, String& secretLevel, String& bonusLevel)
+	{
+		auto s = fs::Open(path, FileAccess::Read);
+		if (!s->IsValid()) {
+			return false;
 		}
 
+		s->Seek(180, SeekOrigin::Current);
+		JJ2Block headerBlock(s, 262 - 180);
+		if (headerBlock.ReadUInt32() != 0x4C56454C /*LEVL*/) {
+			return false;
+		}
+		// Password hash, hidden flag, name, version, file size and CRC
+		headerBlock.DiscardBytes(3 + 1 + 32 + 2 + 4 + 4);
+		std::int32_t infoBlockPackedSize = headerBlock.ReadInt32();
+
+		// Only the start of the info block is unpacked, up to the names of the levels (see LoadMetadata())
+		constexpr std::int32_t NamesOffset = 19 + 2 * 32;
+		JJ2Block infoBlock(s, infoBlockPackedSize, NamesOffset + 3 * 32);
+		infoBlock.DiscardBytes(NamesOffset);
+		bonusLevel = infoBlock.ReadString(32, true);
+		nextLevel = infoBlock.ReadString(32, true);
+		secretLevel = infoBlock.ReadString(32, true);
 		return true;
 	}
 
@@ -500,12 +525,14 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Recolorable sprites
+		// Recolorable sprites, kept for the script (see Formats::SpriteRecolorsChunk); the list was expanded in MLLE-Include-1.5
 		std::int32_t recolorableSpriteListSize = (version >= 0x105 ? 20 : 11);
 		for (std::int32_t i = 0; i < recolorableSpriteListSize; ++i) {
-			// NOTE: Recolorable sprite list was expanded in MLLE-Include-1.5
 			if (block.ReadBool()) {
-				block.DiscardBytes(256);
+				std::size_t offset = _mlleSpriteRecolors.size();
+				_mlleSpriteRecolors.resize(offset + Formats::SpriteRecolorsChunk::RecordSize);
+				_mlleSpriteRecolors[offset] = std::uint8_t(i);
+				block.ReadRawBytes(&_mlleSpriteRecolors[offset + 1], 256);
 			}
 		}
 
@@ -648,36 +675,52 @@ namespace Jazz2::Compatibility
 				}
 			}
 
-			// TODO: Weapons were added in MLLE-Include-1.5(w)
+			// Weapons were added in MLLE-Include-1.5(w), kept for the script (see Formats::CustomWeaponsChunk)
 			if (version >= 0x105) {
-				// TODO: DefaultWeaponHook constructor argument was added in MLLE-Include-1.6(w)
-				if (version >= 0x106) {
-					std::int16_t weaponHookPrefix = block.ReadInt16();
-				}
-				for (std::int32_t weaponId = 0; weaponId < 9; weaponId++) {
-					bool customWeapon = block.ReadBool();
+				SmallVector<std::uint8_t, 0> weapons;
+				auto write = [&weapons](const void* value, std::size_t size) {
+					weapons.append(static_cast<const std::uint8_t*>(value), static_cast<const std::uint8_t*>(value) + size);
+				};
+				// The argument of DefaultWeaponHook was added in MLLE-Include-1.6(w)
+				std::int16_t hookArgument = (version >= 0x106 ? block.ReadInt16() : -1);
+				write(&hookArgument, sizeof(hookArgument));
+				for (std::int32_t weaponId = 0; weaponId < Formats::CustomWeaponsChunk::WeaponCount; weaponId++) {
+					std::uint8_t customWeapon = (block.ReadBool() ? 1 : 0);
 					std::int32_t maximum = block.ReadInt32();
+					write(&customWeapon, 1);
+					write(&maximum, sizeof(maximum));
 
-					// comesFromBirds, comesFromBirdsPowerup, comesFromGunCrates, gemsLost, gemsLostPowerup, infinite, replenishes
+					// comesFromBirds (2 powered up), comesFromGunCrates, gemsLost, gemsLostPowerup, infinite (1) and replenishes (2)
 					constexpr std::int32_t NumberOfCommonOptions = 5;
 					for (std::int32_t optionId = 0; optionId < NumberOfCommonOptions; optionId++) {
 						std::uint8_t optionValue = block.ReadByte();
+						write(&optionValue, 1);
 					}
 
-					if (weaponId >= 6) {
-						std::uint8_t ammoCrate = block.ReadByte();
-					}
+					std::uint8_t ammoCrate = (weaponId >= 6 ? block.ReadByte() : 0);
+					write(&ammoCrate, 1);
 
+					std::uint8_t gun8Style = UINT8_MAX;
+					std::uint32_t weaponParamsLength = 0;
+					SmallVector<std::uint8_t, 0> weaponParams;
 					if (customWeapon) {
+						// The name of the weapon in MLLE isn't needed
 						std::int32_t weaponNameLength = std::clamp<std::int32_t>(block.ReadUint7bitEncoded(), 0, block.GetRemainingLength());
-						String weaponName{NoInit, (std::size_t)weaponNameLength};
-						block.ReadRawBytes((std::uint8_t*)weaponName.data(), weaponNameLength);
+						block.DiscardBytes(weaponNameLength);
 
-						std::int32_t weaponParamsLength = block.ReadInt32();
-						block.DiscardBytes(weaponParamsLength);
+						weaponParamsLength = std::uint32_t(std::clamp<std::int32_t>(block.ReadInt32(), 0, block.GetRemainingLength()));
+						weaponParams.resize_for_overwrite(weaponParamsLength);
+						block.ReadRawBytes(weaponParams.data(), std::int32_t(weaponParamsLength));
 					} else if (weaponId == 7) {
-						std::uint8_t gun8Style = block.ReadByte(); // Pepper style
+						// The style of the pepper spray
+						gun8Style = block.ReadByte();
 					}
+					write(&gun8Style, 1);
+					write(&weaponParamsLength, sizeof(weaponParamsLength));
+					weapons.append(weaponParams.begin(), weaponParams.end());
+				}
+				if (!block.ReachedEndOfStream()) {
+					_mlleWeapons = Death::move(weapons);
 				}
 			}
 
@@ -1069,7 +1112,7 @@ namespace Jazz2::Compatibility
 			Formats::LayerRecord record;
 			// The texture of its own of a textured layer, empty if its tiles are
 			SmallVector<std::uint8_t, 0> texture;
-			MakeLayerRecord(i, record, texture, textureLookup, _isPlusLevel);
+			MakeLayerRecord(i, record, texture, textureLookup, _hasMlleData || _hasScript);
 			layerNames.push_back(layer.Name);
 			layerNumbers.push_back(record.OriginalNumber);
 			if (isSprite) {
@@ -1164,6 +1207,31 @@ namespace Jazz2::Compatibility
 		Formats::LayerNumbersChunk::Write(layerNumbers, layerNumbersChunk.Data);
 		if (!layerNumbersChunk.Data.empty()) {
 			chunks.push_back(Death::move(layerNumbersChunk));
+		}
+		if (_hasScript) {
+			// What the script reads by jjHelpStrings, the texts above have lost the characters of the formatting
+			StringView scriptTexts[TextEventStringsCount];
+			for (std::int32_t i = 0; i < TextEventStringsCount; i++) {
+				scriptTexts[i] = _textEventStrings[i];
+			}
+			Formats::ChunkRecord scriptTextsChunk;
+			scriptTextsChunk.Tag = Formats::ScriptTextsChunk::Tag;
+			Formats::ScriptTextsChunk::Write(scriptTexts, scriptTextsChunk.Data);
+			if (!scriptTextsChunk.Data.empty()) {
+				chunks.push_back(Death::move(scriptTextsChunk));
+			}
+			if (!_mlleWeapons.empty()) {
+				Formats::ChunkRecord weaponsChunk;
+				weaponsChunk.Tag = Formats::CustomWeaponsChunk::Tag;
+				weaponsChunk.Data.append(_mlleWeapons.begin(), _mlleWeapons.end());
+				chunks.push_back(Death::move(weaponsChunk));
+			}
+			if (!_mlleSpriteRecolors.empty()) {
+				Formats::ChunkRecord recolorsChunk;
+				recolorsChunk.Tag = Formats::SpriteRecolorsChunk::Tag;
+				recolorsChunk.Data.append(_mlleSpriteRecolors.begin(), _mlleSpriteRecolors.end());
+				chunks.push_back(Death::move(recolorsChunk));
+			}
 		}
 
 		// Preview, drawn with the original tile sets, the level can't be shown without its default one
@@ -1449,21 +1517,25 @@ namespace Jazz2::Compatibility
 		}
 
 		bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
+		// Without the MLLE stream, JJ2+ draws a textured layer that isn't the sky layer as SURFACE::LEGACY - in the style, the
+		// fade and the stars of layer 8, its own tiles as the texture
+		const bool isLegacyOfSky = (forPlusLevel && !_hasMlleData && hasTexturedBackground && !isSky);
+		const LayerSection& look = (isLegacyOfSky ? _layers[7] : layer);
 		// The type is TEXTURE::Style of JJ2+, the textured background of the sky layer is drawn in it, a reflection of any
 		// other layer too, and any layer the MLLE stream gives a surface. JJ2+ draws one of an inner surface only where the
 		// layer is, placed as an ordinary one - any style but a wave, which is always placed so.
-		const bool isReflection = (hasTexturedBackground && layer.TexturedBackgroundType == TexturedStyleReflection);
-		const bool isTextured = (hasTexturedBackground && (isSky || isReflection || layer.TextureSurface != 0));
-		const bool isInnerSurface = (isTextured && layer.TextureSurface >= 3 && layer.TexturedBackgroundType != TexturedStyleWave);
+		const bool isReflection = (hasTexturedBackground && look.TexturedBackgroundType == TexturedStyleReflection);
+		const bool isTextured = (hasTexturedBackground && (isSky || isReflection || isLegacyOfSky || layer.TextureSurface != 0));
+		const bool isInnerSurface = (isTextured && layer.TextureSurface >= 3 && look.TexturedBackgroundType != TexturedStyleWave);
 		const bool hasTexturedSpeeds = (isTextured && !isInnerSurface);
 		// A sky, a tunnel or a cylinder of SURFACE::FULLSCREEN is drawn in the perspective of JJ2+, and so is one of the sky
 		// layer of SURFACE::LEGACY in a level of JJ2+, which JJ2+ draws exactly as FULLSCREEN (measured), and a cylinder always
 		// (it has no other model, see Tiles::LayerDescription::HasPlusPerspective()). The sky layer of any other level, and
 		// LEGACY of another layer, which JJ2+ draws with properties of layer 8, keep the look the sky layers always had here.
-		const bool hasPlusStyle = (layer.TexturedBackgroundType == TexturedStyleWarpHorizon ||
-			layer.TexturedBackgroundType == TexturedStyleTunnel || layer.TexturedBackgroundType == TexturedStyleCylinder);
-		const bool hasPlusPerspective = (hasTexturedSpeeds && hasPlusStyle && (layer.TextureSurface == 2 ||
-			layer.TexturedBackgroundType == TexturedStyleCylinder || (forPlusLevel && isSky && layer.TextureSurface <= 1)));
+		const bool hasPlusStyle = (look.TexturedBackgroundType == TexturedStyleWarpHorizon ||
+			look.TexturedBackgroundType == TexturedStyleTunnel || look.TexturedBackgroundType == TexturedStyleCylinder);
+		const bool hasPlusPerspective = (hasTexturedSpeeds && hasPlusStyle && (layer.TextureSurface == 2 || isLegacyOfSky ||
+			look.TexturedBackgroundType == TexturedStyleCylinder || (forPlusLevel && isSky && layer.TextureSurface <= 1)));
 		if (hasTexturedSpeeds && hasPlusStyle && !hasPlusPerspective && !isSky && layer.TextureSurface == 1) {
 			LOGW("Layer {} of level \"{}\" is textured as SURFACE::LEGACY, which JJ2+ draws with properties of layer 8, it's drawn as the sky layers always were here instead", index, LevelName);
 		}
@@ -1510,44 +1582,44 @@ namespace Jazz2::Compatibility
 			return;
 		}
 
-		record.RendererType = layer.TexturedBackgroundType + (std::uint8_t)Tiles::LayerRendererType::Sky;
+		record.RendererType = look.TexturedBackgroundType + (std::uint8_t)Tiles::LayerRendererType::Sky;
 		// The fade color of a sky, a tunnel or a cylinder, the wavelengths and the speed of a wave, the tint opacity,
 		// distance and distortion of a reflection
-		record.Color[0] = layer.TexturedParams1;
-		record.Color[1] = layer.TexturedParams2;
-		record.Color[2] = layer.TexturedParams3;
+		record.Color[0] = look.TexturedParams1;
+		record.Color[1] = look.TexturedParams2;
+		record.Color[2] = look.TexturedParams3;
 		// ParallaxStarsEnabled, which JJ2+ takes as the blur of a reflection
-		record.Color[3] = ((layer.Flags & 0x10) == 0x10 ? 255 : 0);
-		if (layer.TexturedBackgroundType == TexturedStyleTunnel || layer.TexturedBackgroundType == TexturedStyleWave ||
-			layer.TexturedBackgroundType == TexturedStyleCylinder || layer.TexturedBackgroundType == TexturedStyleReflection) {
-			if (layer.TexturedBackgroundType == TexturedStyleTunnel) {
+		record.Color[3] = ((look.Flags & 0x10) == 0x10 ? 255 : 0);
+		if (look.TexturedBackgroundType == TexturedStyleTunnel || look.TexturedBackgroundType == TexturedStyleWave ||
+			look.TexturedBackgroundType == TexturedStyleCylinder || look.TexturedBackgroundType == TexturedStyleReflection) {
+			if (look.TexturedBackgroundType == TexturedStyleTunnel) {
 				// JJ2+ takes the stars as the spiral of a tunnel, which has no stars
 				record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::Spiral : 0);
 				record.Color[3] = 0;
-			} else if (layer.TexturedBackgroundType == TexturedStyleWave) {
+			} else if (look.TexturedBackgroundType == TexturedStyleWave) {
 				// As the way the vertical waves of a wave move, which has no stars either
 				record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::DistortionAngle : 0);
 				record.Color[3] = 0;
-			} else if (layer.TexturedBackgroundType == TexturedStyleCylinder) {
+			} else if (look.TexturedBackgroundType == TexturedStyleCylinder) {
 				// And as the half size of a cylinder, which has none either
 				record.Textured.Flags = std::uint8_t(record.Color[3] != 0 ? Formats::TexturedLayerParams::HalfSize : 0);
 				record.Color[3] = 0;
 			}
 			// A wave has no fade, the position of the fade is where JJ2+ keeps its amplitudes
-			if (layer.TexturedBackgroundType != TexturedStyleWave) {
-				record.Textured.Fade = layer.TextureFade;
+			if (look.TexturedBackgroundType != TexturedStyleWave) {
+				record.Textured.Fade = look.TextureFade;
 			}
-			record.Textured.FadeX = layer.TextureFadeX;
-			record.Textured.FadeY = layer.TextureFadeY;
+			record.Textured.FadeX = look.TextureFadeX;
+			record.Textured.FadeY = look.TextureFadeY;
 		} else {
 			// The vanishing point and the horizon of a warp horizon and whether it fades, the defaults without the MLLE stream,
 			// and the point a menu turns around, its rows of the palette, and whether they go from light to dark or a tile menu
 			// is drawn at full size, are in the color
-			if (layer.TexturedBackgroundType != TexturedStyleMenu && layer.TexturedBackgroundType != TexturedStyleTileMenu) {
-				record.Textured.Fade = layer.TextureFade;
+			if (look.TexturedBackgroundType != TexturedStyleMenu && look.TexturedBackgroundType != TexturedStyleTileMenu) {
+				record.Textured.Fade = look.TextureFade;
 			}
-			record.Textured.FadeX = layer.TextureFadeX;
-			record.Textured.FadeY = layer.TextureFadeY;
+			record.Textured.FadeX = look.TextureFadeX;
+			record.Textured.FadeY = look.TextureFadeY;
 		}
 		if (isInnerSurface) {
 			// SURFACE::INNERWINDOW or SURFACE::INNERLAYER, the speeds place the layer then and the inner speeds move its
@@ -1559,10 +1631,13 @@ namespace Jazz2::Compatibility
 			record.Textured.InnerSpeedY = layer.InnerSpeedY;
 			record.Textured.InnerAutoSpeedX = layer.InnerAutoSpeedX * Tiles::LayerDescription::OriginalAutoSpeedScale;
 			record.Textured.InnerAutoSpeedY = layer.InnerAutoSpeedY * Tiles::LayerDescription::OriginalAutoSpeedScale;
-		} else if (hasPlusPerspective || (layer.TextureSurface == 2 && layer.TexturedBackgroundType != TexturedStyleWave)) {
+		} else if (hasPlusPerspective || (layer.TextureSurface == 2 && look.TexturedBackgroundType != TexturedStyleWave)) {
 			// SURFACE::FULLSCREEN (or LEGACY of the sky layer, see above), in the perspective of JJ2+ with the texture placed
 			// as an ordinary layer, not as the sky layers have always been drawn here
 			record.Textured.Flags = std::uint8_t(record.Textured.Flags | Formats::TexturedLayerParams::Fullscreen);
+		}
+		if (isLegacyOfSky && look.TexturedBackgroundType == TexturedStyleWarpHorizon) {
+			record.Textured.Flags = std::uint8_t(record.Textured.Flags | Formats::TexturedLayerParams::FloorOnly);
 		}
 		if (layer.TextureSource != 0) {
 			// A texture of JJ2+ (TEXTURE::Texture) instead of the tiles of the layer, or an image of its own made by MLLE

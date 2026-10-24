@@ -1536,18 +1536,12 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 	if (serverInit.Configuration.ServerName.empty()) {
 		// TRANSLATORS: Default name of a multiplayer server created without a name, shown in the server list
-		serverInit.Configuration.ServerName = _("Unnamed server");
+		serverInit.Configuration.ServerName = _("Untitled server");
 	}
 
 	if (serverInit.Configuration.PlaylistIndex >= 0 && serverInit.Configuration.PlaylistIndex < serverInit.Configuration.Playlist.size()) {
 		auto& playlistEntry = serverInit.Configuration.Playlist[serverInit.Configuration.PlaylistIndex];
-
-		auto level = playlistEntry.LevelName.partition('/');
-		if (playlistEntry.LevelName.contains('/')) {
-			serverInit.InitialLevel.LevelName = playlistEntry.LevelName;
-		} else {
-			serverInit.InitialLevel.LevelName = "unknown/"_s + playlistEntry.LevelName;
-		}
+		serverInit.InitialLevel.LevelName = ContentResolver::Get().ResolveLevelName(playlistEntry.LevelName);
 
 		// Override properties
 		NetworkManager::ApplyPlaylistEntry(serverInit.Configuration, playlistEntry);

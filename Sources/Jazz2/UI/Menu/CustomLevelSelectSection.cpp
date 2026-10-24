@@ -2,6 +2,7 @@
 #include "StartGameOptionsSection.h"
 #include "MenuResources.h"
 #include "../../Formats/LevelFile.h"
+#include "../../Formats/LevelPreview.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
@@ -360,48 +361,7 @@ namespace Jazz2::UI::Menu
 
 	void CustomLevelSelectSection::ReadPreview(PreviewData& preview)
 	{
-		// The editor and the converter store previews of at most 128x72 pixels, anything much larger isn't one of them
-		constexpr std::int32_t MaxPreviewSize = 256;
-
-		preview.Texels.clear();
-		preview.Size = Vector2i();
-
-		auto s = fs::Open(preview.Path, FileAccess::Read);
-		Formats::LevelHeader header;
-		if (!s->IsValid() || !Formats::LevelFile::ReadHeader(*s, header)) {
-			return;
-		}
-		Formats::LevelReader reader(*s, header);
-		Formats::LevelProperties properties;
-		reader.ReadProperties(properties);
-		if (!reader.SkipToChunks()) {
-			return;
-		}
-		SmallVector<Formats::ChunkRecord, 0> chunks;
-		reader.ReadSelectedChunks(chunks, [](std::uint32_t tag, std::uint32_t) {
-			return (tag == Formats::LevelFile::PreviewChunk);
-		});
-		for (const Formats::ChunkRecord& chunk : chunks) {
-			if (chunk.Tag != Formats::LevelFile::PreviewChunk || chunk.Data.size() < 4) {
-				continue;
-			}
-			std::int32_t width = chunk.Data[0] | (chunk.Data[1] << 8);
-			std::int32_t height = chunk.Data[2] | (chunk.Data[3] << 8);
-			if (width <= 0 || height <= 0 || width > MaxPreviewSize || height > MaxPreviewSize ||
-				chunk.Data.size() < 4 + std::size_t(width) * std::size_t(height) * 3) {
-				return;
-			}
-			const std::size_t pixelCount = std::size_t(width) * std::size_t(height);
-			preview.Texels.resize_for_overwrite(pixelCount * 4);
-			for (std::size_t i = 0; i < pixelCount; i++) {
-				preview.Texels[i * 4] = chunk.Data[4 + i * 3];
-				preview.Texels[i * 4 + 1] = chunk.Data[4 + i * 3 + 1];
-				preview.Texels[i * 4 + 2] = chunk.Data[4 + i * 3 + 2];
-				preview.Texels[i * 4 + 3] = 255;
-			}
-			preview.Size = Vector2i(width, height);
-			return;
-		}
+		Formats::LevelPreview::Read(preview.Path, preview.Texels, preview.Size);
 	}
 
 	void CustomLevelSelectSection::OnDrawClipped(Canvas* canvas)

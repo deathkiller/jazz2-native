@@ -405,6 +405,32 @@ namespace Jazz2
 		 */
 		std::int32_t AcquireGemPaletteOffset(std::uint8_t gem);
 		/**
+		 * @brief Acquires a reference-counted palette offset of a single color of the sprite palette, its opacity by the index
+		 *
+		 * Index `i` of the row is the color of index @p color of the sprite palette with the alpha of `i`, as
+		 * `SPRITE::ALPHAMAP` of JJ2+ draws it. The row is built again whenever the sprite palette changes. Callers with the
+		 * same @p color share one row. Returns the offset, or -1 if no row is free. Release it with @ref ReleasePaletteOffset.
+		 */
+		std::int32_t AcquireAlphaMapPaletteOffset(std::uint8_t color);
+		/**
+		 * @brief Acquires a reference-counted palette offset of a color of the sprite palette for indices below a density
+		 *
+		 * Index `i` of the row is the color of index @p color of the sprite palette if `i` is less than @p density, transparent
+		 * otherwise, so a texture of noise drawn through it shows as many pixels as `SPRITE::BLEND_DISSOLVE` of JJ2+. The row is
+		 * built again whenever the sprite palette changes. Returns the offset, or -1 if no row is free. Release it with
+		 * @ref ReleasePaletteOffset.
+		 */
+		std::int32_t AcquireDissolvePaletteOffset(std::uint8_t color, std::uint8_t density);
+		/**
+		 * @brief Acquires a reference-counted palette offset of the brightness of the sprite palette in color channels
+		 *
+		 * Index `i` of the row is a half of the brightness JJ2 has for index `i` of the sprite palette in the channels that
+		 * @p channels picks (0 red, 1 green, 2 blue, 3 red and blue, 4 red and green, 5 green and blue, others all three),
+		 * black in the others, so drawn additively it's `SPRITE::NEONGLOW` of JJ2+. The row is built again whenever the
+		 * sprite palette changes. Returns the offset, or -1 if no row is free. Release it with @ref ReleasePaletteOffset.
+		 */
+		std::int32_t AcquireNeonGlowPaletteOffset(std::uint8_t channels);
+		/**
 		 * @brief Returns entry @p index of the gradient of a gem as `SPRITE::GEM` of JJ2+ draws it
 		 *
 		 * Gems 0 to 3 are the red, green, blue and purple gems of the game (the gradients the gems are drawn with),
@@ -464,6 +490,8 @@ namespace Jazz2
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(Stream& s, StringView path, std::uint16_t captionTileId, bool applyPalette,
 			const std::uint8_t* paletteRemapping = nullptr, const BitArray* usedTiles = nullptr, bool withDiffuse = true,
 			const std::uint32_t* trueColorPalette = nullptr);
+		/** @brief Creates a tile set of transparent tiles without collision, palette-indexed if @p indexed, for images saved into them later */
+		std::unique_ptr<Tiles::TileSet> CreateBlankTileSet(std::uint16_t tileCount, bool indexed);
 		/**
 		 * @brief Opens the file of a tile set, found the same way as by @ref RequestTileSet()
 		 *
@@ -473,6 +501,14 @@ namespace Jazz2
 		std::unique_ptr<Stream> OpenTileSetFile(StringView path);
 		/** @brief Returns `true` if specified level exists */
 		bool LevelExists(StringView levelName);
+		/**
+		 * @brief Returns the full name of a level that a server configuration or an admin command names
+		 *
+		 * A name without an episode (`battle1`) is a level of no episode, a name ending with a slash (`prince/`) is
+		 * the first level of that episode. If there's no such episode, the name is returned as it is, so it can be
+		 * reported.
+		 */
+		String ResolveLevelName(StringView name);
 		/**
 		 * @brief Loads specified level into a level descriptor
 		 *
@@ -630,6 +666,8 @@ namespace Jazz2
 		void DetectUserContent();
 		// Returns where the user-accessible "Content" directory is or would be, empty where the platform has none
 		String GetUserContentCandidate() const;
+		// Opens the file FindContentFile() would find
+		std::unique_ptr<Stream> OpenFoundContentFile(StringView path, String& fullPath, std::int32_t bufferSize) const;
 
 		// Cache key offset for indexed graphics (palette indices kept in the texture instead of baked), distinct
 		// from any real paletteOffset so indexed and baked variants of the same sprite are cached separately
@@ -722,10 +760,16 @@ namespace Jazz2
 		void BuildSingleHuePalette(std::uint8_t gradientStart, std::uint32_t* outPalette) const;
 		// Builds the sprite palette as a gem of the given color, see AcquireGemPaletteOffset()
 		void BuildGemPalette(std::uint8_t gem, std::uint32_t* outPalette) const;
+		// Builds a single color of the sprite palette with the alpha of each index, see AcquireAlphaMapPaletteOffset()
+		void BuildAlphaMapPalette(std::uint8_t color, std::uint32_t* outPalette) const;
+		// Builds a color of the sprite palette for the indices below a density, see AcquireDissolvePaletteOffset()
+		void BuildDissolvePalette(std::uint32_t value, std::uint32_t* outPalette) const;
+		// Builds the brightness of the sprite palette in color channels, see AcquireNeonGlowPaletteOffset()
+		void BuildNeonGlowPalette(std::uint8_t channels, std::uint32_t* outPalette) const;
 		// Builds the gradient of 128 entries a gem is drawn with from its 5 stops in the sprite palette, 32 entries each
 		void BuildGemGradient(const std::uint8_t* stops, std::uint32_t* outGradient) const;
 		// Returns a dynamic palette row derived from the sprite palette by a scheme of its own and a value, see AcquireShiftedPaletteOffset()
-		std::int32_t AcquireDerivedPaletteOffset(std::uint8_t scheme, std::uint8_t value);
+		std::int32_t AcquireDerivedPaletteOffset(std::uint8_t scheme, std::uint32_t value);
 #if defined(DEATH_DEBUG)
 		void MigrateGraphics(StringView path);
 #endif

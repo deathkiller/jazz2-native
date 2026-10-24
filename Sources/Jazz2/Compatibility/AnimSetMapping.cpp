@@ -1,5 +1,7 @@
 ﻿#include "AnimSetMapping.h"
 
+#include <Containers/StringConcatenable.h>
+
 namespace Jazz2::Compatibility
 {
 	AnimSetMapping::AnimSetMapping(JJ2Version version)
@@ -833,8 +835,8 @@ namespace Jazz2::Compatibility
 			m.Add("Pickup"_s, "fast_feet"_s);
 			m.Add("Object"_s, "gem_giant"_s, JJ2DefaultPalette::Sprite, false, true);
 
-			//m.Add("Pickup"_s, "gem2"_s, keepIndexed: true);
-			m.DiscardItems(1);
+			// The gems of the level show this one in the original, the one before is of the HUD
+			m.DiscardItemAs("Pickup"_s, "gem"_s);
 
 			m.Add("Pickup"_s, "airboard"_s);
 			m.Add("Pickup"_s, "coin_gold"_s);
@@ -1971,6 +1973,20 @@ namespace Jazz2::Compatibility
 			}
 			UpdateItemCount();
 		}
+	}
+
+	void AnimSetMapping::DiscardItemAs(StringView category, StringView name)
+	{
+		Entry entry;
+		entry.Category = Discard;
+		entry.Name = category + '/' + name;
+
+		std::int32_t key = (_currentSet << 16) | _currentItem;
+		_entries.emplace(key, Death::move(entry));
+
+		_currentItem++;
+		_currentOrdinal++;
+		UpdateItemCount();
 	}
 
 	void AnimSetMapping::SkipItems(std::uint32_t advanceBy)

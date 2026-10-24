@@ -14,7 +14,8 @@ namespace Jazz2::Editor
 		@brief Camera of the level editor
 
 		Moves freely over the level at any scale --- how many pixels of the view one pixel of the level takes.
-		Zooming goes through steps that keep pixels crisp, and is animated, keeping still the point it zooms at.
+		Zooming goes through steps of round percentages of how large the game shows the level (see
+		@ref GetGameplayScale()), and is animated, keeping still the point it zooms at.
 		A dragged view keeps moving for a while after it's let go, and @ref FlyTo() zooms out and back in on
 		the way to a distant place (the smooth zoom and pan of van Wijk and Nuij).
 

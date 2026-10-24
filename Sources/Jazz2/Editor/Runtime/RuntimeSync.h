@@ -28,7 +28,7 @@ namespace Jazz2::Editor
 		static void ApplyTiles(const LevelDocument& document, Tiles::TileMap& tileMap, std::int32_t layerIndex, const Recti& area);
 		/** @brief Makes the tile the shown level has for a tile of the document */
 		static Tiles::LayerTile MakeLayerTile(const LevelDocument& document, const TileRef& tile);
-		/** @brief Returns `true` if the editor shows a layer */
+		/** @brief Returns `true` if the editor shows a layer, which it doesn't if it's hidden in the editor or in the game (@ref Formats::LayerRecord::Visible) */
 		static bool IsLayerShown(const DocumentLayer& layer);
 		/** @brief Makes a layer of the shown level as opaque as the editor shows it, see @ref DocumentLayer::EditorOpacity */
 		static void ApplyEditorOpacity(const DocumentLayer& layer, Tiles::LayerDescription& description);

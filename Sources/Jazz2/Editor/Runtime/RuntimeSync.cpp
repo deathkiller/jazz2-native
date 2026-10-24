@@ -201,8 +201,9 @@ namespace Jazz2::Editor
 
 	bool RuntimeSync::IsLayerShown(const DocumentLayer& layer)
 	{
-		// A layer hidden in the game is still shown, so it can be edited
-		return ((layer.EditorFlags & DocumentLayer::EditorHidden) == 0);
+		// As the game shows it, a layer hidden in the game isn't shown either, so what is seen is what is played; it's
+		// still edited, the layer list and its properties tell it's hidden
+		return ((layer.EditorFlags & DocumentLayer::EditorHidden) == 0 && (layer.Record.Flags & Formats::LayerRecord::Visible) != 0);
 	}
 }
 

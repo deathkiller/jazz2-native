@@ -26,8 +26,8 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		/** @brief Returns duration of freeze effect */
-		float FrozenDuration() const {
-			return ((_upgrades & 0x1) != 0 ? 280.0f : 180.0f);
+		float GetFrozenDuration() const {
+			return ((_upgrades & 0x1) != 0 ? 280.0f : 200.0f * 60.0f / 70.0f);
 		}
 
 	protected:

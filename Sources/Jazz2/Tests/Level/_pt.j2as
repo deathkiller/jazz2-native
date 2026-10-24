@@ -42,7 +42,7 @@ const int ScenarioTicks = 250;
 // ground speed first, which is what makes the speed-dependent launch boost measurable.
 const int J = 45;
 
-const int ScenarioCount = 539;
+const int ScenarioCount = 601;
 // Only scenarios from here on are run. Set to 0 for a full sweep; raise it to re-measure just the newest
 // ones, which turns a seven-minute run into half a minute while iterating.
 //
@@ -345,6 +345,11 @@ int ScenarioTicksFor(int s) {
 		return 100;
 	}
 	if (s >= 509 && s <= 538) {
+		return ScenarioTicks;
+	}
+	// The freeze set: 100 ticks of freeze from tick 60 at the latest leaves 90 after the thaw. Kept identical to
+	// GetScenarioTicks() in this engine's probe.
+	if (IsFreezeScenario(s)) {
 		return ScenarioTicks;
 	}
 	if (s == 52 || s == 53 || s >= 82) {
@@ -1327,6 +1332,94 @@ string ScenarioName(int i) {
 		case 434: return "cp_mod_diag";
 		case 435: return "cp_mod_run";
 		case 436: return "cp_mod_fire";
+		// Freezing - see FzTick. A frozen player first, by speed and by what is held while frozen: nothing, the
+		// same keys, or the other way
+		case 539: return "fz_p_stand";
+		case 540: return "fz_p_walk";
+		case 541: return "fz_p_walk_rel";
+		case 542: return "fz_p_dash";
+		case 543: return "fz_p_dash_rel";
+		case 544: return "fz_p_dash_opp";
+		// Frozen for only 20 ticks at the dash cap, so what the thaw gives back can be read
+		case 545: return "fz_p_short";
+		// Frozen in the air: rising out of a dash jump, falling out of it, rising out of a standing hop, dropped
+		case 546: return "fz_p_jump";
+		case 547: return "fz_p_jump_fall";
+		case 548: return "fz_p_rise";
+		case 549: return "fz_p_drop";
+		// On the long slope down, whether a frozen player slides down it
+		case 550: return "fz_p_slope";
+		case 551: return "fz_p_slope_rel";
+		// Enemies, spawned 15 tiles east of the origin (the three flying ones 3 tiles up) and frozen at tick 60
+		case 552: return "fz_e_turtle";
+		case 553: return "fz_e_lizard";
+		case 554: return "fz_e_labrat";
+		case 555: return "fz_e_doggy";
+		case 556: return "fz_e_bee";
+		case 557: return "fz_e_floatsucker";
+		case 558: return "fz_e_dragonfly";
+		// A turtle lifted 3 tiles at tick 60, left alone and frozen on the same tick - does a frozen enemy fall
+		case 559: return "fz_e_turtle_lift";
+		case 560: return "fz_e_turtle_liftfz";
+		// The level's pushable: frozen while being pushed, frozen before it, pushed by a player who freezes,
+		// and lifted 2 tiles with and without a freeze
+		case 561: return "fz_b_push";
+		case 562: return "fz_b_frozen";
+		case 563: return "fz_b_pfreeze";
+		case 564: return "fz_b_lift";
+		case 565: return "fz_b_liftfz";
+		// A real Freezer shot at a turtle 4 tiles away, the check on how the others freeze an object
+		case 566: return "fz_e_turtle_shot";
+		// And at the pushable, which is pushed from tick 40 on
+		case 567: return "fz_b_shot";
+		// The pushable frozen for 30 ticks as it is let go of, which is 120 for a box - does it slide on
+		case 568: return "fz_b_push_rel";
+		// Frozen at tick 60 while it's being pushed, and walked away from at 100 - for 100 and for 15 ticks, and after
+		// a real Freezer shot. Frozen on the tick it is let go of, as fz_b_push_rel does, it stops at once; frozen
+		// before, it slides on at the push speed until it thaws.
+		case 569: return "fz_b_away";
+		case 570: return "fz_b_away_short";
+		case 571: return "fz_b_shot_away";
+		// Crates, put 42 tiles east of the origin with the player 3 tiles short of them: pushed, and pushed, frozen
+		// and walked away from - see FzPlacedEvent
+		case 572: return "fz_c_ammo_push";
+		case 573: return "fz_c_ammo_away";
+		case 574: return "fz_c_carrot_push";
+		case 575: return "fz_c_carrot_away";
+		case 576: return "fz_c_bomb_push";
+		case 577: return "fz_c_bomb_away";
+		case 578: return "fz_c_gem_push";
+		case 579: return "fz_c_gem_away";
+		case 580: return "fz_c_trigger_push";
+		case 581: return "fz_c_trigger_away";
+		case 582: return "fz_c_trigger_shot";
+		// A real Freezer at the other crates too - does it freeze them or break them
+		case 583: return "fz_c_ammo_shot";
+		case 584: return "fz_c_carrot_shot";
+		case 585: return "fz_c_gem_shot";
+		// Fire while frozen, with the Blaster: tapped while sliding, held since before the freeze, tapped standing -
+		// does it break the ice, and does a shot come out (objy counts the player's live bullets)
+		case 586: return "fz_p_fire_tap";
+		case 587: return "fz_p_fire_hold";
+		case 588: return "fz_p_fire_stand";
+		// Each tick Fire is down shortens the freeze, but not if it's been held since before it - so Jump tapped, Fire
+		// mashed, held for 20 ticks, and held from before the freeze, let go and pressed again
+		case 589: return "fz_p_jump_tap";
+		case 590: return "fz_p_fire_mash";
+		case 591: return "fz_p_fire_long";
+		case 592: return "fz_p_fire_rehold";
+		// Running into the level's own kind of turtle (placed like the crates, 50 energy, frozen from tick 10 on),
+		// walking from 3 tiles and dashing from 3, 5, 7, 9 and 12, so it's met at a range of speeds - how fast it has
+		// to be to hurt it, by how much, and what it does to the player (objy is its energy)
+		case 593: return "fz_r_walk03";
+		case 594: return "fz_r_run03";
+		case 595: return "fz_r_run05";
+		case 596: return "fz_r_run07";
+		case 597: return "fz_r_run09";
+		case 598: return "fz_r_run12";
+		// The threshold, between the 3-tile dash that goes through it and the 5-tile one that doesn't: 12 px/tick
+		case 599: return "fz_r_run04";
+		case 600: return "fz_r_run045";
 		// NOTE: the rt_* run-in-place scenarios are deliberately NOT mirrored here. The wind-up reads the raw
 		// Run key, so scripted taps wind it up at no cadence at all - rt_hold leaves the player standing at
 		// x=4512 with xSpeed 0 for its whole 800 ticks. Measuring one needs FreeRun and a human.
@@ -1377,6 +1470,20 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		MorphedAtReset = true;
 	}
 
+	// The real Freezer shots of the freeze set, a finite weapon so the ammo says it fired
+	if (s == 566 || s == 567 || s == 571 || (s >= 582 && s <= 585)) {
+		play.ammo[WEAPON::ICE] = 50;
+		play.currWeapon = WEAPON::ICE;
+	} else if (s >= 586 && s <= 592) {
+		play.currWeapon = WEAPON::BLASTER;
+	}
+	// A crate is spawned from its event, which the game only does when the region around it is first scanned - so
+	// it is written here, at the reset, 42 tiles east where the settle at the origin is nowhere near it, and the
+	// player is put next to it at the run start (see the ob_spring_* parameter scenarios for why it has to be so)
+	if (IsFreezeScenario(s) && FzPlacedEvent(s - FzFirst) != 0) {
+		PlaceFreezeObject(s - FzFirst);
+	}
+
 	// The pushable scenarios start beside the object the level itself contains - a spawned one never became
 	// solid. Moved here rather than after the settle so the player actually comes to rest on that ground.
 
@@ -1393,7 +1500,7 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		// Six tiles back, so the impact lands late in the ramp where the speed is highest
 		play.xPos = PushableX - 192;
 		play.yPos = GroundY - 64;
-	} else if ((s == 54 || s == 55 || s == 378 || s == 381) && PushableX > 0) {
+	} else if ((s == 54 || s == 55 || s == 378 || s == 381 || (s >= 561 && s <= 565) || (s >= 567 && s <= 571)) && PushableX > 0) {
 		play.xPos = PushableX - 96;
 		// A couple of tiles clear of the floor - dropped in level with it, the player ends up embedded and
 		// cannot move at all. The settle then lowers it onto whatever ground is actually there.
@@ -1402,7 +1509,7 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 
 	// The level's slopes, by tile coordinate. Placed a couple of tiles short of each so the player is up to
 	// speed by the time it reaches the incline, and slightly above the floor so the settle drops it on.
-	if (s == 73 || s == 74 || s == 75) {
+	if (s == 73 || s == 74 || s == 75 || s == 550 || s == 551) {
 		// Long slope down, tiles (193,41) to (210,57)
 		play.xPos = 190 * 32 + 16;
 		play.yPos = 41 * 32;
@@ -1631,6 +1738,203 @@ void PlaceSpring(int tx, int ty, uint8 ev, int orientation, int keepX, int keepY
 	jjParameterSet(tx, ty, 3, 4, delay);
 	jjParameterSet(tx, ty, 7, 1, reverse);
 }
+// The freeze set, 539-600 here. On tick FzTick of the run its subject is lifted by FzLift px and frozen for
+// FzLength ticks (0 = lifted only, -1 tick = nothing, a real Freezer shot does it). FzTarget 0 freezes the
+// player, 1 the object FreezeSubject() names - the enemy the scenario spawned, or the level's pushable. An
+// object is frozen as a Freezer bullet does it, through STATE::FREEZE with the state it had kept in oldState;
+// fz_e_turtle_shot and fz_b_shot are the check on that. Kept identical to the tables in this engine's probe.
+const int FzFirst = 539, FzCount = 62;
+const array<int> FzTarget = { 0,0,0,0,0,0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,1, 1,1,0,1,1, 1,1, 1, 1,1,1, 1,1,1,1,1,1,1,1,1,1,1, 1,1,1, 0,0,0, 0,0,0,0, 1,1,1,1,1,1,1,1 };
+const array<int> FzTick = { 20,45,45,60,60,60,60,52,80,16,10,50,50, 60,60,60,60,60,60,60,60,60, 100,0,100,60,60, -1,-1, 100, 60,60,-1, -1,60,-1,60,-1,60,-1,60,-1,60,-1, -1,-1,-1, 60,60,20, 20,20,20,20, 10,10,10,10,10,10,10,10 };
+const array<int> FzLength = { 100,100,100,100,100,100,20,100,100,100,100,100,100, 100,100,100,100,100,100,100,0,100, 100,100,100,0,100, 0,0, 30, 100,15,0, 0,100,0,100,0,100,0,100,0,100,0, 0,0,0, 100,100,100, 100,100,100,100, 250,250,250,250,250,250,250,250 };
+const array<int> FzLift = { 0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,96,96, 0,0,0,64,64, 0,0, 0, 0,0,0, 0,0,0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0 };
+// Where the crate and ram scenarios put their object as a tile event, in tiles east of the origin - an object made by
+// a script is inert to the player here, so one it runs into has to be the level's own
+const int FzPlaceDX = 42;
+// How many px short of it the player starts: 96 for the crates, the run-up for the fz_r_* ones (k = 54..61)
+const array<int> FzRamRunUp = { 96, 96, 160, 224, 288, 384, 128, 144 };
+float FzPlacedPlayerX(int k) {
+	return (int(GroundX) / 32 + FzPlaceDX) * 32 + 16 - (k >= 54 ? FzRamRunUp[k - 54] : 96);
+}
+// The event of each crate and ram scenario (k = 33..46, 54..61), or 0 for the others
+uint8 FzPlacedEvent(int k) {
+	if (k >= 54 && k <= 61) {
+		return uint8(OBJECT::NORMTURTLE);
+	}
+	if (k < 33 || k > 46) {
+		return 0;
+	}
+	if (k == 44) return uint8(OBJECT::GUNCRATE);
+	if (k == 45) return uint8(OBJECT::CARROTCRATE);
+	if (k == 46) return uint8(OBJECT::GEMCRATE);
+	if (k <= 34) return uint8(OBJECT::GUNCRATE);
+	if (k <= 36) return uint8(OBJECT::CARROTCRATE);
+	if (k <= 38) return uint8(OBJECT::BOMBCRATE);
+	if (k <= 40) return uint8(OBJECT::GEMCRATE);
+	return uint8(OBJECT::TRIGGERCRATE);
+}
+// Writes the event of a crate or ram scenario, with its spawned bit clear. A gem crate holds one red gem, a trigger
+// crate switches trigger 0 on, as their zero parameters would also say.
+void PlaceFreezeObject(int k) {
+	int tx = int(GroundX) / 32 + FzPlaceDX, ty = int(GroundY) / 32;
+	PlaceTileEvent(tx, ty, FzPlacedEvent(k));
+	jjParameterSet(tx, ty, 0, 16, (k == 39 || k == 40 || k == 46) ? 1 : 0);
+	jjParameterSet(tx, ty, -1, 1, 0);
+}
+// The object of the current crate or ram scenario, the live object of that event nearest its tile
+jjOBJ@ FindPlacedObject(int k) {
+	uint8 ev = FzPlacedEvent(k);
+	float cx = (int(GroundX) / 32 + FzPlaceDX) * 32 + 15;
+	jjOBJ@ best = null;
+	float bestDistance = 600;
+	for (int i = 1; i < jjObjectCount; i++) {
+		jjOBJ@ o = jjObjects[i];
+		if (o.isActive && o.eventID == ev && abs(o.xPos - cx) < bestDistance) {
+			bestDistance = abs(o.xPos - cx);
+			@best = o;
+		}
+	}
+	return best;
+}
+// Whether this scenario's freeze has been done, so it happens once
+bool FzActionDone = false;
+// Where the pushable is put back to at the start of each scenario that uses it, taken the first time one does -
+// it is pushed further every time otherwise, and each one would start further from it
+float BoxHomeX = -1, BoxHomeY = -1;
+
+bool IsFreezeScenario(int s) {
+	return (s >= FzFirst && s < FzFirst + FzCount);
+}
+
+jjOBJ@ FindPushable() {
+	for (int i = 1; i < jjObjectCount; i++) {
+		jjOBJ@ o = jjObjects[i];
+		if (o.isActive && (o.eventID == EV_PUSHABLE_BOX || o.eventID == EV_PUSHABLE_ROCK)) {
+			return o;
+		}
+	}
+	return null;
+}
+
+// The object a freeze scenario is about, or null for the ones only about the player
+jjOBJ@ FreezeSubject(int s) {
+	int k = s - FzFirst;
+	if ((k >= 22 && k <= 26) || (k >= 28 && k <= 32)) {
+		return FindPushable();
+	}
+	if (FzPlacedEvent(k) != 0) {
+		return FindPlacedObject(k);
+	}
+	if (((k >= 13 && k <= 21) || k == 27) && SpawnedObject >= 0 && jjObjects[SpawnedObject].isActive) {
+		return jjObjects[SpawnedObject];
+	}
+	return null;
+}
+
+// Puts a freeze scenario's object in place at the run start, after the settle
+void SetupFreezeProps(jjPLAYER@ play, int s) {
+	if (!IsFreezeScenario(s)) {
+		return;
+	}
+	int k = s - FzFirst;
+	int tx = int(GroundX) / 32, ty = int(GroundY) / 32;
+	uint8 enemy = 0;
+	int dx = 15, dy = 0;
+	switch (k) {
+		case 13: case 20: case 21: enemy = uint8(OBJECT::NORMTURTLE); break;
+		case 14: enemy = uint8(OBJECT::LIZARD); break;
+		case 15: enemy = uint8(OBJECT::LABRAT); break;
+		case 16: enemy = uint8(OBJECT::DOGGYDOGG); break;
+		case 17: enemy = uint8(OBJECT::BEE); dy = -3; break;
+		case 18: enemy = uint8(OBJECT::FLOATSUCKER); dy = -3; break;
+		case 19: enemy = uint8(OBJECT::DRAGONFLY); dy = -3; break;
+		case 27: enemy = uint8(OBJECT::NORMTURTLE); dx = 4; break;
+	}
+	if (enemy != 0) {
+		// 15 px into the tile, where this game puts a level's own objects
+		SpawnedObject = jjAddObject(enemy, (tx + dx) * 32 + 15, (ty + dy) * 32 + 15);
+	}
+	if (k == 10) {
+		play.yPos = GroundY - 420;
+		play.xSpeed = 0;
+		play.ySpeed = 0;
+	}
+	if (FzPlacedEvent(k) != 0) {
+		play.xPos = FzPlacedPlayerX(k);
+		play.yPos = GroundY;
+		play.xSpeed = 0;
+		play.ySpeed = 0;
+	}
+	if ((k >= 22 && k <= 26) || (k >= 28 && k <= 32)) {
+		jjOBJ@ box = FindPushable();
+		if (box !is null) {
+			if (BoxHomeX < 0) {
+				BoxHomeX = box.xPos;
+				BoxHomeY = box.yPos;
+			} else {
+				box.xPos = BoxHomeX;
+				box.yPos = BoxHomeY;
+				box.xSpeed = 0;
+				box.ySpeed = 0;
+			}
+			// A box thaws four times slower than an enemy, so the previous scenario's freeze can still be on
+			if (box.state == STATE::FREEZE) {
+				box.state = box.oldState;
+			}
+			box.freeze = 0;
+		}
+	}
+}
+
+void ApplyFreezeAction(jjPLAYER@ play, int s, int t) {
+	if (!IsFreezeScenario(s) || FzActionDone) {
+		return;
+	}
+	int k = s - FzFirst;
+	if (FzTick[k] < 0 || t < FzTick[k]) {
+		return;
+	}
+	if (FzTarget[k] == 0) {
+		FzActionDone = true;
+		play.frozen = FzLength[k];
+		return;
+	}
+	// Waited for if it isn't there yet - a placed object only appears once the player is near enough
+	jjOBJ@ o = FreezeSubject(s);
+	if (o is null) {
+		return;
+	}
+	FzActionDone = true;
+	o.yPos -= FzLift[k];
+	// The fz_r_* turtles get 50 energy so a hit can be read off it, once their start has run (frozen before it, an
+	// object never gets a frame and the player runs straight through it)
+	if (k >= 54) {
+		o.energy = 50;
+	}
+	if (FzLength[k] > 0) {
+		if (o.freeze == 0) {
+			o.oldState = o.state;
+		}
+		o.state = STATE::FREEZE;
+		o.freeze = FzLength[k];
+	}
+}
+
+// The freeze set's own line, which no column carries: the player's freeze counter and the subject object's
+// position, speed, freeze counter, state, old state, activity and facing. `#` lines are passed by ExtractTrace.ps1.
+void LogFreezeDetail(jjPLAYER@ play, string name) {
+	jjOBJ@ o = FreezeSubject(Scenario);
+	string line = "#fz," + name + "," + Tick + "," + play.frozen + ",";
+	if (o is null) {
+		line += "-2,-2,0,0,0,0,0,0,0";
+	} else {
+		line += formatFloat(o.xPos, "", 0, 3) + "," + formatFloat(o.yPos, "", 0, 3) + "," +
+			formatFloat(o.xSpeed, "", 0, 4) + "," + formatFloat(o.ySpeed, "", 0, 4) + "," +
+			o.freeze + "," + o.state + "," + o.oldState + "," + (o.isActive ? 1 : 0) + "," + o.direction;
+	}
+	Log.write(line + "," + play.health + "\n");
+}
+
 // Takes out whatever the previous scenario put in the world. Called at the RESET rather than just before
 // the run: a pole left behind by the scenario before is still grabbable during the settle, and the player
 // then starts the next scenario hanging on it, several tiles up, with a launch already under way. That is
@@ -1658,6 +1962,16 @@ void ClearProps() {
 		}
 		float odx = o.xPos - GroundX, ody = o.yPos - GroundY;
 		if (odx > -400 && odx < 1600 && ody > -400 && ody < 400) {
+			o.delete();
+		}
+	}
+	// The freeze set's crates and turtles likewise, around where PlaceFreezeObject() puts them
+	for (int i = 1; i < jjObjectCount; i++) {
+		jjOBJ@ o = jjObjects[i];
+		if (o.isActive && (o.eventID == uint8(OBJECT::GUNCRATE) || o.eventID == uint8(OBJECT::CARROTCRATE) ||
+			o.eventID == uint8(OBJECT::BOMBCRATE) || o.eventID == uint8(OBJECT::GEMCRATE) || o.eventID == uint8(OBJECT::TRIGGERCRATE) ||
+			o.eventID == uint8(OBJECT::NORMTURTLE)) &&
+			abs(o.xPos - (GroundX + FzPlaceDX * 32)) < 800) {
 			o.delete();
 		}
 	}
@@ -2436,6 +2750,34 @@ void ApplyInput(jjPLAYER@ play, int s, int t) {
 		case 536: left = true; fire = true; break;
 		case 537: right = (t < 70); left = (t >= 70); fire = (t >= 40 && t < 100); break;
 		case 538: right = (t < 40); left = (t >= 40); fire = (t >= 44); break;
+		// The freeze set - when each one freezes is in FzTick
+		case 539: right = (t >= 30); break;
+		case 540: right = true; break;
+		case 541: right = (t < 45); break;
+		case 542: case 545: right = true; run = true; break;
+		case 543: right = (t < 60); run = (t < 60); break;
+		case 544: run = true; right = (t < 60); left = (t >= 60); break;
+		case 546: case 547: right = true; run = true; jump = (t >= J && t < 52); break;
+		case 548: jump = (t >= 10 && t < 16); break;
+		case 550: right = true; break;
+		case 551: right = (t < 50); break;
+		case 561: case 562: case 563: right = true; break;
+		// Tapped right first so the player faces the turtle whatever the scenario before left it facing
+		case 566: right = (t < 2); fire = (t >= 60 && t < 63); break;
+		case 567: right = (t < 2) || (t >= 40); fire = (t >= 10 && t < 13); break;
+		case 568: right = (t < 100); break;
+		case 569: case 570: case 573: case 575: case 577: case 579: case 581: right = (t < 100); left = (t >= 100 && t < 130); break;
+		case 571: case 582: case 583: case 584: case 585: right = (t < 2) || (t >= 40 && t < 120); left = (t >= 120 && t < 150); fire = (t >= 10 && t < 13); break;
+		case 572: case 574: case 576: case 578: case 580: right = true; break;
+		case 586: right = true; run = true; fire = (t >= 80 && t < 83); break;
+		case 587: right = true; run = true; fire = (t >= 50 && t < 120); break;
+		case 588: fire = (t >= 40 && t < 43); break;
+		case 589: jump = (t >= 40 && t < 43); break;
+		case 590: fire = (t >= 40 && t < 60 && ((t - 40) % 4) < 2); break;
+		case 591: fire = (t >= 40 && t < 60); break;
+		case 592: fire = (t >= 10 && t < 40) || (t >= 50 && t < 53); break;
+		case 593: right = true; break;
+		case 594: case 595: case 596: case 597: case 598: case 599: case 600: right = true; run = true; break;
 		case 347: jump = (t >= 20 && t < 50) || (t >= 62 && t < 66); break;
 		case 348: right = true; run = true; down = (t >= 80 && t < 84); jump = (t >= 80 && t < 84); break;
 		case 349: right = (t < 90); run = (t < 90); break;
@@ -2726,6 +3068,7 @@ void onPlayerInput(jjPLAYER@ play) {
 			StillTicks = 0;
 			CopterAttachTick = -1;
 			CopterEndTick = -1;
+			FzActionDone = false;
 			State = StateSettle;
 			return;
 		}
@@ -2741,6 +3084,7 @@ void onPlayerInput(jjPLAYER@ play) {
 			if ((morphSettled && CheckAtRest(play)) || SettleWaited >= MaxSettleTicks) {
 				MorphedAtReset = false;
 				SetupProps(play, Scenario);
+				SetupFreezeProps(play, Scenario);
 				State = StateRun;
 			}
 			return;
@@ -2779,6 +3123,7 @@ void onPlayerInput(jjPLAYER@ play) {
 		}
 	}
 
+	ApplyFreezeAction(play, Scenario, Tick);
 	ApplyInput(play, Scenario, Tick);
 
 	ObjX = ObjY = -1;
@@ -2867,6 +3212,30 @@ void onPlayerInput(jjPLAYER@ play) {
 				break;
 			}
 		}
+	} else if (IsFreezeScenario(Scenario)) {
+		// The freeze set: the object it is about, -2 while there is none, or the player's own freeze counter for
+		// the ones only about the player. The rest is in the `#fz` line. Ahead of the open-ended weapon branch.
+		jjOBJ@ o = FreezeSubject(Scenario);
+		int k = Scenario - FzFirst;
+		if ((k >= 13 && k <= 46) || k >= 54) {
+			ObjX = ObjY = -2;
+			if (o !is null) {
+				ObjX = o.xPos;
+				ObjY = (k >= 54 ? o.energy : o.yPos);
+			}
+		} else {
+			ObjX = play.frozen;
+			ObjY = -1;
+			if (k >= 47) {
+				ObjY = 0;
+				for (int i = 1; i < jjObjectCount; i++) {
+					jjOBJ@ b = jjObjects[i];
+					if (b.isActive && b.creatorType == CREATOR::PLAYER && b.creatorID == uint16(play.playerID)) {
+						ObjY += 1;
+					}
+				}
+			}
+		}
 	} else if (Scenario >= 465 && Scenario <= 538) {
 		// The bird set: the character, which is the proof the morph took - a trace of a rabbit walking right
 		// would otherwise read as a bird that flies at the walk cap - and the ammo, which is the only thing that
@@ -2897,7 +3266,7 @@ void onPlayerInput(jjPLAYER@ play) {
 	}
 	// Only if nothing above claimed the two columns - the pushable is far away in those scenarios, but a
 	// silent overwrite here would be indistinguishable from the thing it is meant to be reporting
-	if (ObjX < 0) {
+	if (ObjX < 0 && !IsFreezeScenario(Scenario)) {
 		for (int i = 1; i < 512; i++) {
 			jjOBJ@ o = jjObjects[i];
 			if (o.eventID == EV_PUSHABLE_BOX || o.eventID == EV_PUSHABLE_ROCK) {
@@ -2911,6 +3280,9 @@ void onPlayerInput(jjPLAYER@ play) {
 	LogRow(play, ScenarioName(Scenario));
 	if (Scenario >= 465 && Scenario <= 538) {
 		LogBirdDetail(play, ScenarioName(Scenario));
+	}
+	if (IsFreezeScenario(Scenario)) {
+		LogFreezeDetail(play, ScenarioName(Scenario));
 	}
 
 	Tick++;

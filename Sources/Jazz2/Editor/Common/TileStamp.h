@@ -16,6 +16,15 @@ namespace Jazz2::Editor
 	*/
 	struct TileStamp
 	{
+		/** @brief An event of the stamp off the grid, see @ref OffGridEvents */
+		struct OffGridEvent
+		{
+			/** @brief Position in pixels from the top left corner of the stamp */
+			Vector2i Offset;
+			/** @brief The event */
+			Formats::EventRecord Event;
+		};
+
 		/** @brief Width in tiles */
 		std::int32_t Width = 0;
 		/** @brief Height in tiles */
@@ -39,10 +48,36 @@ namespace Jazz2::Editor
 		 * One for each of @ref Tiles, a tile with twice the weight comes twice as often, zero never.
 		 */
 		SmallVector<float, 0> Weights;
+		/**
+		 * @brief Events on the tiles, one for each of @ref Tiles, or empty if the stamp has none
+		 *
+		 * A block grabbed from the sprite layer has them, see @ref BlockGrab. They're placed only on the sprite layer,
+		 * each with its tile --- where a tile is painted, its event replaces the one there, even an empty one.
+		 */
+		SmallVector<Formats::EventRecord, 0> Events;
+		/**
+		 * @brief Events off the grid on the tiles of the stamp, each placed with the tile it's on
+		 *
+		 * As @ref Events, of a block grabbed from the sprite layer and placed only on the sprite layer. They're added to
+		 * the events off the grid there, one the same as an event already at its position isn't placed again. A stamp
+		 * painting its tiles at random places none of them.
+		 */
+		SmallVector<OffGridEvent, 0> OffGridEvents;
+		/**
+		 * @brief Whether the empty tiles of the stamp leave the tiles under them as they are
+		 *
+		 * As a block grabbed from a layer is painted in Jazz Creation Station, the empty tiles and their events are
+		 * painted too only with <kbd>Shift</kbd>, see @ref ToolSettings::ResolveTile().
+		 */
+		bool EmptyIsTransparent = false;
 
 		/** @brief Returns `true` if there's nothing to paint */
 		bool IsEmpty() const {
 			return (Width <= 0 || Height <= 0);
+		}
+		/** @brief Returns `true` if the stamp has events on its tiles, see @ref Events */
+		bool HasEvents() const {
+			return (!Events.empty() && Events.size() == Tiles.size());
 		}
 		/** @brief Makes a stamp of a single tile */
 		static TileStamp FromTile(const TileRef& tile);
@@ -61,6 +96,8 @@ namespace Jazz2::Editor
 		}
 		/** @brief Returns the tile of a pattern of the stamp repeated from an origin, for a position of a layer */
 		bool GetPatternTile(std::int32_t x, std::int32_t y, Vector2i origin, TileRef& tile) const;
+		/** @brief Returns the index in @ref Tiles of the tile of a pattern of the stamp repeated from an origin, for a position of a layer, `false` if none is painted there */
+		bool GetPatternIndex(std::int32_t x, std::int32_t y, Vector2i origin, std::size_t& index) const;
 
 		/** @brief Flips the stamp horizontally, the tiles themselves too */
 		void FlipX();
@@ -102,6 +139,8 @@ namespace Jazz2::Editor
 		void Select(std::int32_t layer, Vector2i layerSize, const Recti& area, bool add);
 		/** @brief Selects tiles given by a function, replacing or adding to what was selected */
 		void Select(std::int32_t layer, Vector2i layerSize, const BitArray& mask, bool add);
+		/** @brief Takes the tiles of an area of the layer of the selection out of it */
+		void Deselect(const Recti& area);
 		/** @brief Selects the tiles of a layer that aren't selected, and only them */
 		void Invert(std::int32_t layer, Vector2i layerSize);
 		/** @brief Adds the tiles around the selected ones, or with @p shrink takes away the selected tiles at its edge */

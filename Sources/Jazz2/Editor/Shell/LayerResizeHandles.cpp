@@ -4,11 +4,14 @@
 
 #include "LayerDialogs.h"
 #include "ShellCommon.h"
+#include "../Document/Commands.h"
 #include "../Tools/EditorContext.h"
 #include "../UI/UiSurface.h"
 #include "../../Formats/LevelFile.h"
 
+#include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
+#include "../../../nCine/Input/IInputManager.h"
 
 #include <Containers/StringConcatenable.h>
 
@@ -38,6 +41,25 @@ namespace Jazz2::Editor
 		{
 			return (delta > 0 ? String("+"_s + FormatInteger(delta)) : FormatInteger(delta));
 		}
+
+		// The modifier keys held now, for what a handle only pointed at would do; on Apple platforms Cmd is Ctrl, as for shortcuts
+		std::int32_t GetHeldModifiers()
+		{
+			const KeyboardState& keyboard = theApplication().GetInputManager().keyboardState();
+			std::int32_t modifiers = 0;
+			if (keyboard.isKeyDown(Keys::LCtrl) || keyboard.isKeyDown(Keys::RCtrl)) {
+				modifiers |= KeyMod::Ctrl;
+			}
+	#if defined(DEATH_TARGET_APPLE)
+			if (keyboard.isKeyDown(Keys::LSuper) || keyboard.isKeyDown(Keys::RSuper)) {
+				modifiers |= KeyMod::Ctrl;
+			}
+	#endif
+			if (keyboard.isKeyDown(Keys::LShift) || keyboard.isKeyDown(Keys::RShift)) {
+				modifiers |= KeyMod::Shift;
+			}
+			return modifiers;
+		}
 	}
 
 	LayerResizeHandles::LayerResizeHandles(IEditorContext& session, Function<Rectf()>&& getViewRect, Function<Rectf(const LayerView&)>&& getFrame)
@@ -63,6 +85,35 @@ namespace Jazz2::Editor
 		const LevelDocument& document = _session.GetDocument();
 		std::int32_t layer = _session.GetCurrentLayer();
 		return (layer >= 0 && layer < std::int32_t(document.Layers.size()) && !IsLayerLocked(document, layer) && _session.IsLayerEditable(layer));
+	}
+
+	bool LayerResizeHandles::WantsMove(std::int32_t modifiers) const
+	{
+		const LevelDocument& document = _session.GetDocument();
+		std::int32_t layer = _session.GetCurrentLayer();
+		// The sprite layer is always where the game places it, it has no offsets
+		return ((modifiers & KeyMod::Ctrl) != 0 && layer >= 0 && layer < std::int32_t(document.Layers.size()) && !document.Layers[layer].IsSpriteLayer());
+	}
+
+	void LayerResizeHandles::SetLayerOffset(Vector2f offset)
+	{
+		const LevelDocument& document = _session.GetDocument();
+		if (_layer < 0 || _layer >= std::int32_t(document.Layers.size())) {
+			return;
+		}
+		const DocumentLayer& layer = document.Layers[_layer];
+		if (layer.Record.OffsetX == offset.X && layer.Record.OffsetY == offset.Y) {
+			return;
+		}
+		Formats::LayerRecord record = layer.Record;
+		record.OffsetX = offset.X;
+		record.OffsetY = offset.Y;
+		// Merged with the moves before it into one step, which undoes to where it started, see EndDrag(); either offset or both
+		// change as it's dragged
+		// TRANSLATORS: Name of an undo step in the history, a layer moved by dragging its frame with Ctrl, which changes its offsets
+		auto command = std::make_unique<SetLayerPropertiesCommand>(document, _layer, record, layer.Name, _x("editor", "Move layer"));
+		command->SetMergesAnyField(true);
+		_session.Execute(Death::move(command), true);
 	}
 
 	bool LayerResizeHandles::GetFrame(Rectf& frame, Rectf& viewRect) const
@@ -128,6 +179,11 @@ namespace Jazz2::Editor
 		return true;
 	}
 
+	bool LayerResizeHandles::YieldsToViewGestures() const
+	{
+		return true;
+	}
+
 	bool LayerResizeHandles::OnPointerDown(const UiPointerEvent& event)
 	{
 		if (event.Button != MouseButton::Left || _dragging || !IsActive()) {
@@ -144,6 +200,13 @@ namespace Jazz2::Editor
 		_size = _startSize;
 		_offset = Vector2i(0, 0);
 		_edges = edges;
+		_moving = WantsMove(event.Modifiers);
+		_pressPos = event.Pos;
+		_startLayerOffset = Vector2f(layer.Record.OffsetX, layer.Record.OffsetY);
+		if (_moving) {
+			// A step of its own, not merged with a change of the properties just before
+			_session.GetHistory().BreakMerge();
+		}
 		_grab = Vector2f((edges & EdgeLeft) != 0 ? event.Pos.X - frame.X : ((edges & EdgeRight) != 0 ? event.Pos.X - (frame.X + frame.W) : 0.0f),
 			(edges & EdgeTop) != 0 ? event.Pos.Y - frame.Y : ((edges & EdgeBottom) != 0 ? event.Pos.Y - (frame.Y + frame.H) : 0.0f));
 		_dragging = true;
@@ -157,6 +220,17 @@ namespace Jazz2::Editor
 	{
 		Rectf frame, viewRect;
 		if (!_dragging || !GetFrame(frame, viewRect) || _startSize.X <= 0 || _startSize.Y <= 0) {
+			return;
+		}
+		if (_moving) {
+			// By whole pixels of the level, or tiles with Shift, from where it was pressed; a larger offset moves the layer to
+			// the left and up (see Tiles::LayerDescription::GetGameplayOrigin())
+			float scale = std::max(_session.GetLayerView(_layer).Scale, 0.001f);
+			Vector2f delta((event.Pos.X - _pressPos.X) / scale, (event.Pos.Y - _pressPos.Y) / scale);
+			float unit = ((event.Modifiers & KeyMod::Shift) != 0 ? float(Formats::LevelFile::TileSize) : 1.0f);
+			delta = Vector2f(std::round(delta.X / unit) * unit, std::round(delta.Y / unit) * unit);
+			Vector2f offset(std::clamp(_startLayerOffset.X - delta.X, -32768.0f, 32767.0f), std::clamp(_startLayerOffset.Y - delta.Y, -32768.0f, 32767.0f));
+			SetLayerOffset(offset);
 			return;
 		}
 		// By whole tiles, measured from the edge that stays, as the view is now
@@ -194,6 +268,11 @@ namespace Jazz2::Editor
 			return;
 		}
 		OnPointerMove(event);
+		if (_moving) {
+			// It was moved as it was dragged, the step ends here
+			EndDrag();
+			return;
+		}
 		std::int32_t layerIndex = _layer;
 		Vector2i size = _size, offset = _offset, startSize = _startSize;
 		EndDrag();
@@ -218,12 +297,17 @@ namespace Jazz2::Editor
 
 	void LayerResizeHandles::OnPointerCancel()
 	{
+		// A layer moved stays where it was moved, as a number dragged in the properties does
 		EndDrag();
 	}
 
 	bool LayerResizeHandles::OnKeyPressed(const KeyboardEvent& event)
 	{
 		if (_dragging && event.sym == Keys::Escape) {
+			if (_moving) {
+				// Back where it was, within the same step
+				SetLayerOffset(_startLayerOffset);
+			}
 			EndDrag();
 			return true;
 		}
@@ -242,11 +326,20 @@ namespace Jazz2::Editor
 
 	StringView LayerResizeHandles::GetTooltip(Vector2f pos) const
 	{
-		return (_dragging ? StringView() : _x("editor", "Drag to resize the layer - Esc cancels"));
+		if (_dragging) {
+			return {};
+		}
+		// The sprite layer can't be moved
+		return (WantsMove(KeyMod::Ctrl) ? _x("editor", "Drag to resize the layer - Ctrl+drag moves it, with Shift by whole tiles - Esc cancels")
+			: _x("editor", "Drag to resize the layer - Esc cancels"));
 	}
 
 	void LayerResizeHandles::EndDrag()
 	{
+		if (_dragging && _moving) {
+			_session.GetHistory().BreakMerge();
+		}
+		_moving = false;
 		_dragging = false;
 		if (IsFocused()) {
 			if (UiSurface* surface = GetSurface()) {
@@ -271,9 +364,12 @@ namespace Jazz2::Editor
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
 		painter.PushClip(viewRect);
 
+		// Moved by its offsets, the layer moves as it's dragged, so its frame does too
+		bool moving = (_dragging ? _moving : WantsMove(GetHeldModifiers()));
+
 		// The frame as it will be, by whole tiles
 		Rectf target = frame;
-		if (_dragging && _startSize.X > 0 && _startSize.Y > 0) {
+		if (_dragging && !_moving && _startSize.X > 0 && _startSize.Y > 0) {
 			float tileX = frame.W / float(_startSize.X), tileY = frame.H / float(_startSize.Y);
 			target = Rectf(frame.X - _offset.X * tileX, frame.Y - _offset.Y * tileY, _size.X * tileX, _size.Y * tileY);
 			Rectf outer(std::round(target.X) - thickness, std::round(target.Y) - thickness, std::round(target.W) + thickness * 2.0f, std::round(target.H) + thickness * 2.0f);
@@ -304,12 +400,18 @@ namespace Jazz2::Editor
 		// Arrows by the pointer, which way the edge goes, as the cursor of a window would show it (the surface draws them
 		// over everything and leaves them out for a finger)
 		if (highlighted != 0 && surface != nullptr) {
-			surface->SetCursorOverlay(UiSurface::GetResizeOverlay((highlighted & EdgeLeft) != 0, (highlighted & EdgeTop) != 0,
+			surface->SetCursorOverlay(moving ? UiCursorOverlay::Move : UiSurface::GetResizeOverlay((highlighted & EdgeLeft) != 0, (highlighted & EdgeTop) != 0,
 				(highlighted & EdgeRight) != 0, (highlighted & EdgeBottom) != 0));
 		}
 
-		// The size it will have, in a tooltip by the pointer (the surface keeps it below the arrows and on the screen)
-		if (_dragging && surface != nullptr) {
+		// The offsets it has now, or the size it will have, in a tooltip by the pointer (the surface keeps it below the arrows
+		// and on the screen)
+		const LevelDocument& document = _session.GetDocument();
+		if (_dragging && _moving && surface != nullptr && _layer >= 0 && _layer < std::int32_t(document.Layers.size())) {
+			const Formats::LayerRecord& record = document.Layers[_layer].Record;
+			// TRANSLATORS: Tooltip while a layer is moved by dragging its frame with Ctrl, its offsets in pixels
+			surface->SetPointerTooltip(_fx("editor", "Offset {}, {}", std::int32_t(std::round(record.OffsetX)), std::int32_t(std::round(record.OffsetY))));
+		} else if (_dragging && surface != nullptr) {
 			// TRANSLATORS: Tooltip while a layer is resized by dragging its edge, the new width and height of the layer in tiles
 			String text = _fx("editor", "{} x {} tiles", _size.X, _size.Y);
 			Vector2i delta(_size.X - _startSize.X, _size.Y - _startSize.Y);

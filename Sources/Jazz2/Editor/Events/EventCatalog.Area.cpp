@@ -166,8 +166,8 @@ namespace Jazz2::Editor::EventCatalogParts
 
 		// Crates and zones set triggers, the tiles of trigger areas change by them; warp origins lead to warp targets.
 		// The editor links them by lines, see EventPreviews::CollectLinks().
-		constexpr const char* TriggerChannel = "trigger";
-		constexpr const char* WarpChannel = "warp";
+		constexpr const char* TriggerChannel = "Trigger";
+		constexpr const char* WarpChannel = "Warp";
 
 		static const EventParamField TriggerCrateFields[] = {
 			// TRANSLATORS: Parameter of an event in the event properties, a noun, the number of the trigger it changes or that changes it

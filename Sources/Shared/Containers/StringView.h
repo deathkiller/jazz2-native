@@ -1094,7 +1094,8 @@ namespace Death { namespace Containers {
 		const char* stringFindLastString(const char* data, std::size_t size, const char* substring, std::size_t substringSize);
 		extern const char* DEATH_CPU_DISPATCHED_DECLARATION(stringFindCharacter)(const char* data, std::size_t size, char character);
 		DEATH_CPU_DISPATCHER_DECLARATION(stringFindCharacter)
-		const char* stringFindLastCharacter(const char* data, std::size_t size, char character);
+		extern const char* DEATH_CPU_DISPATCHED_DECLARATION(stringFindLastCharacter)(const char* data, std::size_t size, char character);
+		DEATH_CPU_DISPATCHER_DECLARATION(stringFindLastCharacter)
 		const char* stringFindAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
 		const char* stringFindLastAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
 		const char* stringFindNotAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);

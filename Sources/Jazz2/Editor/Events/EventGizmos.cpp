@@ -123,7 +123,7 @@ namespace Jazz2::Editor
 
 	void EventGizmos::Collect(const Formats::EventRecord& event, Vector2i cell, std::int32_t levelWidth, SmallVectorImpl<EventGizmo>& gizmos)
 	{
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 		if (descriptor == nullptr) {
 			return;
 		}
@@ -213,7 +213,7 @@ namespace Jazz2::Editor
 
 	bool EventGizmos::Apply(Formats::EventRecord& event, Vector2i cell, std::int32_t levelWidth, const EventGizmo& gizmo, Vector2f world, bool snap)
 	{
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 		const EventParamField* field = GetField(descriptor, gizmo.Field);
 		if (field == nullptr) {
 			return false;
@@ -351,7 +351,7 @@ namespace Jazz2::Editor
 				return Vector2f(0.0f, 1.0f);
 			case EventGizmoKind::Direction: {
 				// Along the only axis of the group, a group of both goes any way
-				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 				const EventParamField* field = GetField(descriptor, gizmo.Field);
 				DirectionFields fields;
 				if (field == nullptr || !GetDirectionFields(descriptor, GetDirectionGroup(*field), fields)) {

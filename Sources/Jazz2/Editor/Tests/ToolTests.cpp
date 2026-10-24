@@ -6,6 +6,7 @@
 #include "../Document/Commands.h"
 #include "../Events/EventCatalog.h"
 #include "../Runtime/RuntimeSync.h"
+#include "../Tools/BlockGrab.h"
 #include "../Tools/ShapeTool.h"
 #include "../Common/StampClipboard.h"
 #include "../Tools/TileTools.h"
@@ -403,6 +404,206 @@ namespace Jazz2::Editor::ToolTests
 			return expect.GetProblems();
 		}
 
+		// A block grabbed from the sprite layer has the events on its tiles; its empty tiles are skipped where it's painted,
+		// with Shift they're painted too with their events, other layers get only the tiles, the events go with flipping
+		// and turning, and a block of a selection has only the selected tiles
+		std::int32_t TestGrabbedBlock()
+		{
+			Expect expect("Grabbed block");
+			LevelDocument document;
+			document.CreateNew("test"_s, 100, Vector2i(32, 24));
+			FakeToolHost host(document);
+			ToolManager tools(host);
+			std::int32_t sprite = document.GetSpriteLayerIndex();
+			std::int32_t other = (sprite == 0 ? 1 : 0);
+			host.SetCurrentLayer(sprite);
+			DocumentLayer& layer = document.Layers[sprite];
+			const std::uint16_t gem = std::uint16_t(EventType::Gem);
+			Formats::EventRecord gemEvent = EventCatalog::MakeDefault(EventType::Gem);
+			// A at the top left with no event, nothing with a gem at the top right, C with a gem and D below them
+			layer.GetTile(2, 2) = TileA;
+			layer.GetTile(2, 3) = TileC;
+			layer.GetTile(3, 3) = TileD;
+			document.SetEvent(3, 2, gemEvent);
+			document.SetEvent(2, 3, gemEvent);
+
+			TileStamp stamp = BlockGrab::MakeStamp(document, sprite, host.GetLayerView(sprite), Recti(2, 2, 2, 2));
+			expect(stamp.Width == 2 && stamp.Height == 2 && stamp.EmptyIsTransparent && stamp.HasEvents() && stamp.Tiles[0] == TileA &&
+				stamp.Tiles[1].IsEmpty() && LevelDocument::IsEmptyEvent(stamp.Events[0]) && stamp.Events[1].Type == gem && stamp.Events[2].Type == gem,
+				"a block of the sprite layer with its events");
+
+			// Painted with its middle at the pointer, the empty tile leaves the wall there and its event isn't placed, the
+			// empty event of A replaces the one there
+			layer.GetTile(11, 10) = Wall;
+			document.SetEvent(10, 10, gemEvent);
+			host.SetStamp(TileStamp(stamp));
+			tools.SetActive(EditorToolType::Brush);
+			EditorTool& brush = *tools.GetActive();
+			std::int32_t doneCount = host.GetHistory().GetDoneCount();
+			host.Click(brush, Vector2i(11, 11));
+			expect(layer.GetTile(10, 10) == TileA && layer.GetTile(11, 10) == Wall && layer.GetTile(10, 11) == TileC && layer.GetTile(11, 11) == TileD,
+				"the empty tile of a block skipped");
+			expect(LevelDocument::IsEmptyEvent(document.GetEvent(10, 10)) && document.GetEvent(10, 11).Type == gem && LevelDocument::IsEmptyEvent(document.GetEvent(11, 10)) &&
+				host.GetHistory().GetDoneCount() == doneCount + 1, "the events of a block placed with its tiles, as one step");
+			expect(host.Undo() && layer.GetTile(10, 10).IsEmpty() && document.GetEvent(10, 10).Type == gem && LevelDocument::IsEmptyEvent(document.GetEvent(10, 11)),
+				"a block undone with its events");
+
+			// With Shift the whole block, its empty tile with the event on it too
+			host.Click(brush, Vector2i(11, 11), MouseButton::Left, KeyMod::Shift);
+			expect(layer.GetTile(11, 10).IsEmpty() && document.GetEvent(11, 10).Type == gem && layer.GetTile(10, 10) == TileA,
+				"Shift paints the empty tiles of a block with their events");
+
+			// Another layer gets only the tiles
+			host.SetCurrentLayer(other);
+			host.Click(brush, Vector2i(21, 11));
+			expect(document.Layers[other].GetTile(20, 10) == TileA && LevelDocument::IsEmptyEvent(document.GetEvent(20, 11)), "only the tiles of a block on another layer");
+			host.SetCurrentLayer(sprite);
+
+			// The events go with the tiles when the block is flipped or turned
+			TileStamp flipped = stamp;
+			flipped.FlipX();
+			expect(flipped.Events[0].Type == gem && LevelDocument::IsEmptyEvent(flipped.Events[1]) && flipped.Events[3].Type == gem, "the events of a block flipped");
+			TileStamp turned = stamp;
+			turned.Rotate(true);
+			expect(turned.Events[0].Type == gem && turned.Events[3].Type == gem && LevelDocument::IsEmptyEvent(turned.Events[1]), "the events of a block turned");
+
+			// Of a selection, only the selected tiles are in it
+			TileSelection selection;
+			selection.Select(sprite, Vector2i(layer.GetWidth(), layer.GetHeight()), Recti(2, 2, 2, 2), false);
+			selection.Deselect(Recti(3, 2, 1, 2));
+			expect(selection.GetBounds() == Recti(2, 2, 1, 2), "a part taken out of the selection");
+			TileStamp part = BlockGrab::MakeStamp(document, sprite, host.GetLayerView(sprite), selection.GetBounds(), &selection);
+			expect(part.Width == 1 && part.Height == 2 && part.Tiles[0] == TileA && part.Tiles[1] == TileC && part.Events[1].Type == gem, "a block of a selection");
+
+			// Events off the grid go with the tile they're on: on D and on the empty tile of the block
+			{
+				SmallVector<Formats::OffGridEventRecord, 0> offGrid = CopyOffGridEvents(document);
+				Formats::OffGridEventRecord& onD = offGrid.emplace_back();
+				onD.X = 3 * 32 + 5;
+				onD.Y = 3 * 32 + 7;
+				onD.Event = gemEvent;
+				Formats::OffGridEventRecord& onEmpty = offGrid.emplace_back();
+				onEmpty.X = 3 * 32 + 20;
+				onEmpty.Y = 2 * 32 + 1;
+				onEmpty.Event = gemEvent;
+				host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(offGrid), "Place"_s));
+			}
+			std::size_t offGridBefore = document.OffGridEvents.size();
+			TileStamp withOffGrid = BlockGrab::MakeStamp(document, sprite, host.GetLayerView(sprite), Recti(2, 2, 2, 2));
+			expect(withOffGrid.OffGridEvents.size() == 2 && withOffGrid.OffGridEvents[0].Offset == Vector2i(37, 39), "a block with its events off the grid");
+			host.SetStamp(TileStamp(withOffGrid));
+			// Without Shift only the one on a tile painted, at the same place on its tile, as one step with the tiles
+			doneCount = host.GetHistory().GetDoneCount();
+			host.Click(brush, Vector2i(6, 16));
+			expect(document.OffGridEvents.size() == offGridBefore + 1 && document.OffGridEvents.back().X == 6 * 32 + 5 &&
+				document.OffGridEvents.back().Y == 16 * 32 + 7 && host.GetHistory().GetDoneCount() == doneCount + 1, "an event off the grid placed with its tile");
+			// Painted at the same place again, it isn't placed twice
+			host.Click(brush, Vector2i(6, 16));
+			expect(document.OffGridEvents.size() == offGridBefore + 1, "an event off the grid not placed twice at the same place");
+			// With Shift the one on the empty tile too
+			host.Click(brush, Vector2i(6, 20), MouseButton::Left, KeyMod::Shift);
+			expect(document.OffGridEvents.size() == offGridBefore + 3, "events off the grid on empty tiles placed with Shift");
+			expect(host.Undo() && document.OffGridEvents.size() == offGridBefore + 1, "events off the grid undone with the tiles");
+
+			// Flipped and turned, they stay at their places on the tiles
+			TileStamp flippedOffGrid = withOffGrid;
+			flippedOffGrid.FlipX();
+			expect(flippedOffGrid.OffGridEvents[0].Offset == Vector2i(64 - 37, 39), "an event off the grid flipped");
+			TileStamp turnedOffGrid = withOffGrid;
+			turnedOffGrid.Rotate(true);
+			expect(turnedOffGrid.OffGridEvents[0].Offset == Vector2i(64 - 39, 37), "an event off the grid turned");
+
+			// Through the clipboard of the system with the events on the tiles and off the grid, tiles alone stay without them
+			TileStamp copied;
+			expect(StampClipboard::ReadTiles(StampClipboard::WriteTiles(withOffGrid), copied) && copied.HasEvents() && copied.Events[1].Type == gem &&
+				LevelDocument::IsEmptyEvent(copied.Events[0]) && copied.OffGridEvents.size() == 2 && copied.OffGridEvents[0].Offset == Vector2i(37, 39),
+				"tiles with their events through the clipboard");
+			TileStamp plain;
+			expect(StampClipboard::ReadTiles(StampClipboard::WriteTiles(MakeStamp(1, 1, { TileA })), plain) && !plain.HasEvents() && plain.OffGridEvents.empty(),
+				"tiles without events through the clipboard");
+			return expect.GetProblems();
+		}
+
+		// A layer moved by its frame changes either offset or both as it's dragged, but it's one step that undoes to where it
+		// started; a value dragged in the properties merges only with changes of the same field
+		std::int32_t TestLayerMoveMerge()
+		{
+			Expect expect("Layer move merge");
+			LevelDocument document;
+			document.CreateNew("test"_s, 100, Vector2i(32, 24));
+			FakeToolHost host(document);
+			CommandHistory& history = host.GetHistory();
+			std::int32_t doneCount = history.GetDoneCount();
+			auto move = [&document, &host](float x, float y, bool anyField) {
+				Formats::LayerRecord record = document.Layers[0].Record;
+				record.OffsetX = x;
+				record.OffsetY = y;
+				auto command = std::make_unique<SetLayerPropertiesCommand>(document, 0, record, document.Layers[0].Name, "Move"_s);
+				command->SetMergesAnyField(anyField);
+				host.Execute(Death::move(command), true);
+			};
+			move(10.0f, 0.0f, true);
+			move(20.0f, 5.0f, true);
+			move(20.0f, 9.0f, true);
+			expect(history.GetDoneCount() == doneCount + 1 && document.Layers[0].Record.OffsetX == 20.0f && document.Layers[0].Record.OffsetY == 9.0f,
+				"a layer moved is one step");
+			expect(host.Undo() && document.Layers[0].Record.OffsetX == 0.0f && document.Layers[0].Record.OffsetY == 0.0f, "a layer moved undone to where it started");
+
+			history.BreakMerge();
+			move(10.0f, 0.0f, false);
+			move(10.0f, 5.0f, false);
+			expect(history.GetDoneCount() == doneCount + 2, "changes of other fields aren't merged otherwise");
+			return expect.GetProblems();
+		}
+
+		// An event off the grid dragged with X or Y held snaps only that axis, to the middle of the tile, with Shift to the
+		// nearest edge or middle of a tile, the key runs no action then
+		std::int32_t TestOffGridSnap()
+		{
+			Expect expect("Off-grid snap");
+			LevelDocument document;
+			document.CreateNew("test"_s, 100, Vector2i(32, 24));
+			FakeToolHost host(document);
+			ToolManager tools(host);
+			tools.SetActive(EditorToolType::Event);
+			EditorTool& tool = *tools.GetActive();
+			{
+				SmallVector<Formats::OffGridEventRecord, 0> offGrid;
+				Formats::OffGridEventRecord& record = offGrid.emplace_back();
+				record.X = 100;
+				record.Y = 100;
+				record.Event = EventCatalog::MakeDefault(EventType::Gem);
+				host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(offGrid), "Place"_s));
+			}
+			auto keyEvent = [](Keys key, std::int32_t mod) {
+				KeyboardEvent event;
+				event.sym = key;
+				event.mod = mod;
+				return event;
+			};
+
+			// X held snaps only the horizontal position, to the middle of the tile
+			tool.OnPointerDown(host.MakePointerAt(Vector2f(100.0f, 100.0f)));
+			tool.OnPointerMove(host.MakePointerAt(Vector2f(150.0f, 77.0f)));
+			bool taken = tool.OnKeyPressed(keyEvent(Keys::X, 0));
+			tool.OnPointerUp(host.MakePointerAt(Vector2f(150.0f, 77.0f)));
+			tool.OnKeyReleased(keyEvent(Keys::X, 0));
+			expect(taken && document.OffGridEvents.size() == 1 && document.OffGridEvents[0].X == 144 && document.OffGridEvents[0].Y == 77,
+				"X snaps only the horizontal position");
+
+			// Y with Shift snaps only the vertical position, to the nearest half of a tile
+			tool.OnPointerDown(host.MakePointerAt(Vector2f(144.0f, 77.0f)));
+			tool.OnPointerMove(host.MakePointerAt(Vector2f(170.0f, 91.0f), MouseButton::Left, KeyMod::Shift));
+			tool.OnKeyPressed(keyEvent(Keys::Y, KeyMod::LShift));
+			tool.OnPointerUp(host.MakePointerAt(Vector2f(170.0f, 91.0f), MouseButton::Left, KeyMod::Shift));
+			tool.OnKeyReleased(keyEvent(Keys::Y, KeyMod::LShift));
+			expect(document.OffGridEvents[0].X == 170 && document.OffGridEvents[0].Y == 96, "Shift+Y snaps only the vertical position to half tiles");
+
+			// Not dragging, the keys are left to their actions
+			expect(!tool.OnKeyPressed(keyEvent(Keys::X, 0)), "X is left to its action while nothing is dragged");
+			return expect.GetProblems();
+		}
+
 		// A line across a large layer paints each of its tiles once, the part of it outside of the layer is left out, and
 		// a shape far larger than a layer could be paints nothing
 		std::int32_t TestShape()
@@ -579,6 +780,9 @@ namespace Jazz2::Editor::ToolTests
 		problems += TestEyedropper();
 		problems += TestSelectMove();
 		problems += TestEvents();
+		problems += TestGrabbedBlock();
+		problems += TestOffGridSnap();
+		problems += TestLayerMoveMerge();
 		problems += TestShape();
 		problems += TestStampClipboard();
 		if (problems == 0) {

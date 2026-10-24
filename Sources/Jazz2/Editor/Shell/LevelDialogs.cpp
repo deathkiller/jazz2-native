@@ -20,6 +20,7 @@
 #include "../UI/UiMenu.h"
 #include "../UI/UiSurface.h"
 #include "../../ContentResolver.h"
+#include "../../Formats/LevelPreview.h"
 #include "../../Formats/TileSetFile.h"
 #include "../../PreferencesCache.h"
 #include "../../WeatherType.h"
@@ -135,10 +136,13 @@ namespace Jazz2::Editor
 						}
 					}
 				}
-				UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".j2l"_s, directory, fileName, [s, member](StringView path) {
+				UiFileDialog* dialog = UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".j2l"_s, directory, fileName, [s, member](StringView path) {
 					// The level is looked up by its name, so it doesn't matter which root it was picked from
 					SetTextProperty(*s, member, MakeLevelReference(IEditorContext::MakeLevelName(path), s->GetLevelName()));
-				});
+				}, false);
+				dialog->PreviewFunc = [](StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size) {
+					return Formats::LevelPreview::Read(path, rgba, size);
+				};
 			});
 			pick->Tooltip = _x("editor", "Choose a level");
 		}
@@ -205,7 +209,7 @@ namespace Jazz2::Editor
 							}
 						}
 						SetTextProperty(*s, member, value);
-					});
+					}, false);
 			});
 			pick->Tooltip = _x("editor", "Choose music, it starts playing right away");
 		}
@@ -433,7 +437,7 @@ namespace Jazz2::Editor
 
 				// The events showing them, on the grid and off it
 				auto remap = [a, b](Formats::EventRecord& event) {
-					const EventParamField* field = FindEventField(EventCatalog::Find(EventType(event.Type)), ParamType::TextId);
+					const EventParamField* field = FindEventField(EventCatalog::Find(EventType(event.Type), event.Params), ParamType::TextId);
 					if (field == nullptr) {
 						return false;
 					}
@@ -1126,7 +1130,7 @@ namespace Jazz2::Editor
 			std::int32_t index = std::int32_t(count) - 1;
 			std::int32_t users = 0;
 			auto countUser = [index, &users](const Formats::EventRecord& event) {
-				if (const EventParamField* field = FindEventField(EventCatalog::Find(EventType(event.Type)), ParamType::TextId)) {
+				if (const EventParamField* field = FindEventField(EventCatalog::Find(EventType(event.Type), event.Params), ParamType::TextId)) {
 					users += (EventCatalog::ReadField(event, *field) == index ? 1 : 0);
 				}
 			};

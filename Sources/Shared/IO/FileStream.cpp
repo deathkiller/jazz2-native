@@ -166,40 +166,25 @@ namespace Death { namespace IO {
 				// them somewhere else entirely
 				return Stream::Invalid;
 			}
-		} else if (origin == SeekOrigin::Current) {
-			offset -= (_readLength - _readPos);
+		} else if (_readLength > 0 && origin != SeekOrigin::End) {
+			// The file position is at the end of the buffer, a target inside it needs no system call
+			const std::int64_t bufferStart = _filePos - _readLength;
+			const std::int64_t target = (origin == SeekOrigin::Begin ? offset : bufferStart + _readPos + offset);
+			if (target >= bufferStart && target <= _filePos) {
+				_readPos = std::int32_t(target - bufferStart);
+				return target;
+			}
+			offset = target;
+			origin = SeekOrigin::Begin;
 		}
 
-		std::int64_t oldPos = _filePos + (_readPos - _readLength);
 		std::int64_t pos = SeekInternal(offset, origin);
 		if (pos < 0) {
 			return pos;
 		}
 
-		if (_readLength > 0) {
-			if (oldPos == pos) {
-				// Seek after the buffered part, so the position is still correct
-				if (SeekInternal(_readLength - _readPos, SeekOrigin::Current) < 0) {
-					// This shouldn't fail, but if it does, invalidate the buffer
-					_readPos = 0;
-					_readLength = 0;
-				}
-			} else if (oldPos - _readPos <= pos && pos < oldPos + _readLength - _readPos) {
-				// Some part of the buffer is still valid
-				std::int32_t diff = std::int32_t(pos - oldPos);
-				_readPos += diff;
-				// Seek after the buffered part, so the position is still correct
-				if (SeekInternal(_readLength - _readPos, SeekOrigin::Current) < 0) {
-					// This shouldn't fail, but if it does, invalidate the buffer
-					_readPos = 0;
-					_readLength = 0;
-				}
-			} else {
-				_readPos = 0;
-				_readLength = 0;
-			}
-		}
-
+		_readPos = 0;
+		_readLength = 0;
 		return pos;
 	}
 
@@ -271,6 +256,25 @@ namespace Death { namespace IO {
 			DEATH_DEBUG_ASSERT(_readPos == _readLength);
 			_readPos = 0;
 			_readLength = 0;
+
+			// A small remainder refills the buffer
+			if (bytesToRead < _bufferSize) {
+				InitializeBuffer();
+				std::int32_t bytesRead = ReadInternal(BufferForIo(), _bufferSize);
+				if (bytesRead <= 0) {
+					return n;
+				}
+				std::int32_t bytesToCopy = (bytesRead < bytesToRead ? bytesRead : std::int32_t(bytesToRead));
+				std::memcpy(&typedBuffer[n], BufferForIo(), std::size_t(bytesToCopy));
+				n += bytesToCopy;
+				bytesToRead -= bytesToCopy;
+				if (bytesToRead == 0) {
+					_readPos = bytesToCopy;
+					_readLength = bytesRead;
+					return n;
+				}
+				// A short read (pipe, terminal) used up the whole buffer, the rest is read below
+			}
 
 			while (bytesToRead > 0) {
 				std::int32_t bytesRead;

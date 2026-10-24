@@ -99,6 +99,8 @@ namespace Jazz2::Scripting
 	protected:
 		/** @brief Adds a script path from file to the main module */
 		ScriptContextType AddScriptFromFile(StringView path, const HashMap<String, bool>& definedSymbols);
+		/** @brief Adds a script of the game itself to the main module, it's not preprocessed */
+		void AddScriptSection(const char* name, StringView code);
 		/** @brief Builds the main module and extracts metadata */
 		ScriptBuildResult Build();
 		/** @brief Sets context type */

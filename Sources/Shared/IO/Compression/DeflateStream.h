@@ -77,17 +77,22 @@ namespace Death { namespace IO { namespace Compression {
 
 #if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
 		static constexpr std::int32_t BufferSize = 8192;
+		static constexpr std::int32_t OutputBufferSize = 2048;
 #else
 		static constexpr std::int32_t BufferSize = 16384;
+		static constexpr std::int32_t OutputBufferSize = 4096;
 #endif
 
 		Stream* _inputStream;
 		z_stream _strm;
 		std::int64_t _size;
 		std::int32_t _inputSize;
+		std::int32_t _outputPos;
+		std::int32_t _outputLength;
 		State _state;
 		bool _rawInflate;
 		std::uint8_t _buffer[BufferSize];
+		std::uint8_t _outputBuffer[OutputBufferSize];
 
 		void InitializeInternal();
 		std::int32_t ReadInternal(void* ptr, std::int32_t size);

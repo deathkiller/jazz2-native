@@ -150,19 +150,37 @@ namespace Jazz2::Editor
 		Only files with the extension are listed, several can be separated by `;`, e.g. `".it;.xm"`. The first one is
 		added to a name typed without it. If it's empty, all files are listed. When opening, a file of the initial name
 		is selected.
+
+		On a desktop, the whole computer can be browsed too, as the last place --- the drives on Windows, `/` elsewhere ---
+		unless the file has to be in one of the places, see @p anywhere. A path can be typed into the row above the list.
 	*/
 	class UiFileDialog : public UiDialog
 	{
 		DEATH_RUNTIME_OBJECT(UiDialog);
 
 	public:
-		/** @brief Creates a new instance */
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * If @p anywhere is `false`, files only of the places can be chosen, for a file that is referred to by its path
+		 * in one of them.
+		 */
 		UiFileDialog(StringView title, UiFileDialogMode mode, SmallVectorImpl<UiFileRoot>&& roots, StringView extension,
-			StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen);
+			StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen, bool anywhere = true);
+
+		/** @brief Whether files and folders hidden by the system, or named with a dot first, are listed, until the editor is closed */
+		static inline bool ShowHiddenFiles = false;
+
+		/**
+		 * @brief Reads the picture of a file shown next to the list, RGBA row by row, returns `false` if the file has none
+		 *
+		 * Asked once a file stays selected for a moment.
+		 */
+		Function<bool(StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size)> PreviewFunc;
 
 		/** @brief Shows a file dialog */
 		static UiFileDialog* Show(UiSurface& surface, StringView title, UiFileDialogMode mode, SmallVectorImpl<UiFileRoot>&& roots,
-			StringView extension, StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen);
+			StringView extension, StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen, bool anywhere = true);
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
 		void Update(float timeMult) override;
@@ -177,6 +195,9 @@ namespace Jazz2::Editor
 		UiFileDialogMode _mode;
 		SmallVector<UiFileRoot, 4> _roots;
 		std::int32_t _rootIndex;
+		// Index of the place of the whole computer, -1 if it has none; its path is empty on Windows, the drives are
+		// listed there
+		std::int32_t _computerRoot;
 		String _extension;
 		String _directory;
 		SmallVector<Entry, 0> _entries;
@@ -186,13 +207,28 @@ namespace Jazz2::Editor
 		UiTextBox* _nameBox;
 		Function<void(StringView)> _onChosen;
 		String _pendingNavigation;
+		bool _navigationPending = false;
+		String _pendingTyped;
+		// The picture of the selected file, see PreviewFunc, and the file it waits to show
+		class FilePreview;
+		FilePreview* _preview;
+		String _previewPath;
+		float _previewDelay = 0.0f;
+
+		void UpdatePreview(float timeMult);
 
 		void Navigate(StringView directory);
+		// Goes to a typed path, a directory or the directory of a file, which is chosen then
+		void NavigateToTyped(StringView text);
 		bool MatchesExtension(StringView name) const;
 		void Choose(std::int32_t index, bool confirm);
 		void Confirm();
 		bool IsWritable() const;
 		String GetRelativeDirectory() const;
+		// Whether a path is in a place, the place of the whole computer has every path
+		bool IsInRoot(StringView path, std::int32_t rootIndex) const;
+		// The innermost place a path is in, -1 if none
+		std::int32_t FindRoot(StringView path) const;
 		// Whether a path is a root or a directory in it
 		static bool IsInRoot(StringView path, StringView root);
 	};

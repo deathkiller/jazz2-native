@@ -643,10 +643,11 @@ namespace Death { namespace Containers {
 		/**
 		 * @brief String concatenation
 		 *
-		 * For joining more than one string prefer to use @ref StringView::join() to avoid
-		 * needless temporary allocations.
+		 * Appends @p other and returns a reference to this string. For joining more
+		 * than one string prefer to use @ref StringView::join() to avoid needless
+		 * temporary allocations.
 		 */
-		String operator+=(const StringView& other);
+		String& operator+=(const StringView& other);
 
 		/**
 		 * @brief View on a slice

@@ -18,6 +18,7 @@
 #include "../Files/TileSetDataCache.h"
 #include "../Input/ActionRegistry.h"
 #include "../Smart/SmartTileModel.h"
+#include "../Tools/BlockGrab.h"
 #include "../Tools/EditorTool.h"
 #include "../Common/TileSource.h"
 #include "../Files/AtomicFile.h"
@@ -41,6 +42,7 @@
 #include "../../../nCine/I18n.h"
 
 #include <Containers/StringConcatenable.h>
+#include <Containers/StringUtils.h>
 #include <IO/FileSystem.h>
 
 #include <algorithm>
@@ -332,33 +334,129 @@ namespace Jazz2::Editor
 			return texture;
 		}
 
-		void ImportLayerTexture(IEditorContext& session)
+		// Images textured layers can take are put into "Editor/Textures" of the content, of the user content first, a file
+		// there takes the place of one of the same name of the game
+		void GetLayerTextureFolders(SmallVectorImpl<String>& folders)
 		{
-			if (session.GetSurface() == nullptr || GetCurrentLayer(session) == nullptr || !CheckLayerUnlocked(session, session.GetCurrentLayer())) {
+			auto& resolver = ContentResolver::Get();
+			for (StringView root : { resolver.GetUserContentPath(), resolver.GetContentPath() }) {
+				if (root.empty()) {
+					continue;
+				}
+				String path = fs::CombinePath({ root, "Editor"_s, "Textures"_s });
+				if (fs::DirectoryExists(path) && std::find(folders.begin(), folders.end(), path) == folders.end()) {
+					folders.push_back(Death::move(path));
+				}
+			}
+		}
+
+		// The folder textures are exported to by default, it's made once a texture is saved into it
+		String GetWritableLayerTextureFolder()
+		{
+			StringView root = ContentResolver::Get().GetWritableContentPath(false);
+			return (root.empty() ? String() : fs::CombinePath({ root, "Editor"_s, "Textures"_s }));
+		}
+
+		struct LayerTextureFile
+		{
+			String Name;
+			String Path;
+		};
+
+		// The images of the folders of textures, by name
+		void FindLayerTextures(SmallVectorImpl<LayerTextureFile>& files)
+		{
+			SmallVector<String, 2> folders;
+			GetLayerTextureFolders(folders);
+			SmallVector<String, 0> keys;
+			for (const String& folder : folders) {
+				for (auto item : fs::Directory(folder, fs::EnumerationOptions::SkipDirectories)) {
+					StringView fileName = fs::GetFileName(item);
+					if (!StringUtils::lowercase(fileName).hasSuffix(".png"_s) || StringUtils::lowercase(fileName).hasSuffix(".mask.png"_s)) {
+						continue;
+					}
+					String key = StringUtils::lowercase(fs::GetFileNameWithoutExtension(item));
+					if (std::find(keys.begin(), keys.end(), key) != keys.end()) {
+						continue;
+					}
+					keys.push_back(key);
+					files.push_back({ String(fs::GetFileNameWithoutExtension(item)), String(item) });
+				}
+			}
+			std::sort(files.begin(), files.end(), [](const LayerTextureFile& a, const LayerTextureFile& b) {
+				return (StringUtils::lowercase(a.Name) < StringUtils::lowercase(b.Name));
+			});
+		}
+
+		// Textures the current layer with an image file as one undoable step
+		void ImportLayerTextureFile(IEditorContext& session, StringView path)
+		{
+			if (GetCurrentLayer(session) == nullptr || !CheckLayerUnlocked(session, session.GetCurrentLayer())) {
 				return;
 			}
+			PngImage image;
+			String error;
+			if (!PngCodec::Load(path, image, &error)) {
+				session.ShowMessage(error);
+				return;
+			}
+			if (image.Width != LayerTextureSize || image.Height != LayerTextureSize) {
+				session.ShowMessage(_fx("editor", "The image has to be {} x {} pixels", LayerTextureSize, LayerTextureSize));
+				return;
+			}
+			// The palette indices of an image with the palette of the level, the closest entries of other colors
+			SmallVector<std::uint8_t, 0> texture;
+			texture.resize_for_overwrite(std::size_t(LayerTextureSize) * std::size_t(LayerTextureSize));
+			bool changed = ReadTextureFromImage(image, LayerTextureSize, ContentResolver::Get().GetPalettes().data(), texture.data());
+			// TRANSLATORS: Name of an undo step in the history, an image imported as the texture of a layer
+			SetCurrentLayerTexture(session, Death::move(texture), _x("editor", "Import layer texture"));
+			if (changed) {
+				session.ShowMessage(_x("editor", "Some colors aren't in the palette, the closest ones were taken"));
+			}
+		}
+
+		// Adds the folders of textures as the first places of a file dialog
+		void AddLayerTextureRoots(SmallVectorImpl<UiFileRoot>& roots, bool forSaving)
+		{
+			SmallVector<UiFileRoot, 4> textureRoots;
+			if (forSaving) {
+				String writable = GetWritableLayerTextureFolder();
+				if (!writable.empty()) {
+					// TRANSLATORS: Name of a place in the file dialog, the folder of images textured layers can take
+					textureRoots.push_back({ _x("editor", "Textures"), Death::move(writable), true });
+				}
+			} else {
+				SmallVector<String, 2> folders;
+				GetLayerTextureFolders(folders);
+				for (String& folder : folders) {
+					// The one of the game apart from the one of the user, if both are there
+					textureRoots.push_back({ textureRoots.empty() ? String(_x("editor", "Textures"))
+						// TRANSLATORS: Name of a place in the file dialog, the folder of images textured layers can take that came with the game
+						: String(_x("editor", "Game textures")), folder, fs::IsWritable(folder) });
+				}
+			}
+			for (UiFileRoot& root : roots) {
+				textureRoots.push_back(Death::move(root));
+			}
+			roots.clear();
+			for (UiFileRoot& root : textureRoots) {
+				roots.push_back(Death::move(root));
+			}
+		}
+
+		void ImportLayerTexture(IEditorContext& session)
+		{
+			UiSurface* surface = session.GetSurface();
+			if (surface == nullptr || GetCurrentLayer(session) == nullptr || !CheckLayerUnlocked(session, session.GetCurrentLayer())) {
+				return;
+			}
+			SmallVector<UiFileRoot, 4> roots;
+			session.GetImageRoots(false, roots);
+			AddLayerTextureRoots(roots, false);
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the file dialog that opens an image to texture a layer with
-			ShowOpenImageDialog(session, _x("editor", "Import Layer Texture"), [s](StringView path) {
-				PngImage image;
-				String error;
-				if (!PngCodec::Load(path, image, &error)) {
-					s->ShowMessage(error);
-					return;
-				}
-				if (image.Width != LayerTextureSize || image.Height != LayerTextureSize) {
-					s->ShowMessage(_fx("editor", "The image has to be {} x {} pixels", LayerTextureSize, LayerTextureSize));
-					return;
-				}
-				// The palette indices of an image with the palette of the level, the closest entries of other colors
-				SmallVector<std::uint8_t, 0> texture;
-				texture.resize_for_overwrite(std::size_t(LayerTextureSize) * std::size_t(LayerTextureSize));
-				bool changed = ReadTextureFromImage(image, LayerTextureSize, ContentResolver::Get().GetPalettes().data(), texture.data());
-				// TRANSLATORS: Name of an undo step in the history, an image imported as the texture of a layer
-				SetCurrentLayerTexture(*s, Death::move(texture), _x("editor", "Import layer texture"));
-				if (changed) {
-					s->ShowMessage(_x("editor", "Some colors aren't in the palette, the closest ones were taken"));
-				}
+			UiFileDialog::Show(*surface, _x("editor", "Import Layer Texture"), UiFileDialogMode::Open, Death::move(roots), ".png"_s, {}, {}, [s](StringView path) {
+				ImportLayerTextureFile(*s, path);
 			});
 		}
 
@@ -371,6 +469,8 @@ namespace Jazz2::Editor
 			}
 			SmallVector<UiFileRoot, 4> roots;
 			session.GetImageRoots(true, roots);
+			// The folder of textures first, an exported texture is listed with the others then
+			AddLayerTextureRoots(roots, true);
 			if (roots.empty()) {
 				session.ShowMessage(_x("editor", "There is no place to save files to"));
 				return;
@@ -384,8 +484,11 @@ namespace Jazz2::Editor
 			}
 			IEditorContext* s = &session;
 			String name = GetLayerTitle(session.GetDocument(), session.GetCurrentLayer()) + ".png"_s;
-			UiFileDialog::Show(*surface, _x("editor", "Export Layer Texture"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, {}, name, [s, texture](StringView path) {
+			String directory = GetWritableLayerTextureFolder();
+			UiFileDialog::Show(*surface, _x("editor", "Export Layer Texture"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, directory, name, [s, texture](StringView path) {
 				PngImage png = MakeTextureImage(texture->data(), LayerTextureSize, ContentResolver::Get().GetPalettes().data());
+				// The folder of textures may not be there yet
+				fs::CreateDirectories(fs::GetDirectoryName(path));
 				if (!AtomicFile::Write(path, [&png](Stream& stream) { return PngCodec::Encode(stream, png); })) {
 					s->ShowMessage(_x("editor", "The file couldn't be written"));
 					return;
@@ -478,7 +581,9 @@ namespace Jazz2::Editor
 				}
 				const DocumentLayer& layer = document.Layers[_index];
 				bool selected = (_session.GetCurrentLayer() == _index);
-				bool hidden = (layer.EditorFlags & DocumentLayer::EditorHidden) != 0;
+				// Hidden in the game, it isn't shown in the editor either, whatever its eye says (see RuntimeSync::IsLayerShown())
+				bool hiddenInGame = (layer.Record.Flags & Formats::LayerRecord::Visible) == 0;
+				bool hidden = hiddenInGame || (layer.EditorFlags & DocumentLayer::EditorHidden) != 0;
 				bool locked = (layer.EditorFlags & DocumentLayer::EditorLocked) != 0;
 
 				if (selected) {
@@ -493,7 +598,12 @@ namespace Jazz2::Editor
 				float iconSize = painter.Px(UiTheme::IconSize);
 				Rectf eye = GetEyeRect(painter.GetScale());
 				Rectf lock = GetLockRect(painter.GetScale());
-				painter.Icon(hidden ? EditorIcon::EyeClosed : EditorIcon::Eye, eye, hidden ? UiTheme::IconDisabled : UiTheme::IconColor);
+				if (hiddenInGame) {
+					// In its own colors, the red line over the grey eye
+					painter.Icon(EditorIcon::EyeOff, eye, Colorf::White);
+				} else {
+					painter.Icon(hidden ? EditorIcon::EyeClosed : EditorIcon::Eye, eye, hidden ? UiTheme::IconDisabled : UiTheme::IconColor);
+				}
 				painter.Icon(locked ? EditorIcon::Lock : EditorIcon::Unlock, lock, locked ? UiTheme::Accent : Colorf(1.0f, 1.0f, 1.0f, 0.25f));
 
 				// A small picture of the layer, on a dark backdrop so its empty tiles can be told
@@ -606,6 +716,10 @@ namespace Jazz2::Editor
 			{
 				float scale = (GetSurface() != nullptr ? GetSurface()->GetScale() : 1.0f);
 				if (GetEyeRect(scale).Contains(pos)) {
+					const LevelDocument& document = _session.GetDocument();
+					if (_index < std::int32_t(document.Layers.size()) && (document.Layers[_index].Record.Flags & Formats::LayerRecord::Visible) == 0) {
+						return _x("editor", "Hidden in the game, so it isn't shown here either - turn on Visible in game in the layer properties");
+					}
 					return _x("editor", "Show or hide the layer in the editor, Alt+click shows only this one");
 				}
 				if (GetLockRect(scale).Contains(pos)) {
@@ -752,6 +866,8 @@ namespace Jazz2::Editor
 				}, final);
 			}, 0.0f, 100.0f, 1.0f, 1);
 			number->Flex = 1.0f;
+			// The middle of the view, as JJ2+ has it
+			number->DefaultValue = []() { return 50.0f; };
 			return number;
 		}
 
@@ -1279,15 +1395,17 @@ namespace Jazz2::Editor
 				float Formats::LayerRecord::* Member;
 				float Min, Max, Step;
 				std::int32_t Decimals;
+				// What the wheel pressed resets it to, as a new layer has it
+				float Default;
 			};
 			static const FloatProperty FloatProperties[] = {
 				// TRANSLATORS: Labels of properties in the layer properties panel - speed with the view, speed by itself and offset, X is horizontal and Y vertical
-				{ _x("editor", "Speed X"), &Formats::LayerRecord::SpeedX, -16.0f, 16.0f, 0.01f, 3 },
-				{ _x("editor", "Speed Y"), &Formats::LayerRecord::SpeedY, -16.0f, 16.0f, 0.01f, 3 },
-				{ _x("editor", "Auto X"), &Formats::LayerRecord::AutoSpeedX, -64.0f, 64.0f, 0.05f, 2 },
-				{ _x("editor", "Auto Y"), &Formats::LayerRecord::AutoSpeedY, -64.0f, 64.0f, 0.05f, 2 },
-				{ _x("editor", "Offset X"), &Formats::LayerRecord::OffsetX, -32768.0f, 32767.0f, 1.0f, 0 },
-				{ _x("editor", "Offset Y"), &Formats::LayerRecord::OffsetY, -32768.0f, 32767.0f, 1.0f, 0 },
+				{ _x("editor", "Speed X"), &Formats::LayerRecord::SpeedX, -16.0f, 16.0f, 0.01f, 3, 1.0f },
+				{ _x("editor", "Speed Y"), &Formats::LayerRecord::SpeedY, -16.0f, 16.0f, 0.01f, 3, 1.0f },
+				{ _x("editor", "Auto X"), &Formats::LayerRecord::AutoSpeedX, -64.0f, 64.0f, 0.05f, 2, 0.0f },
+				{ _x("editor", "Auto Y"), &Formats::LayerRecord::AutoSpeedY, -64.0f, 64.0f, 0.05f, 2, 0.0f },
+				{ _x("editor", "Offset X"), &Formats::LayerRecord::OffsetX, -32768.0f, 32767.0f, 1.0f, 0, 0.0f },
+				{ _x("editor", "Offset Y"), &Formats::LayerRecord::OffsetY, -32768.0f, 32767.0f, 1.0f, 0, 0.0f },
 			};
 			for (const FloatProperty& property : FloatProperties) {
 				auto* row = AddPropertyRow(rows, property.Label);
@@ -1300,6 +1418,8 @@ namespace Jazz2::Editor
 				}, property.Min, property.Max, property.Step, property.Decimals);
 				number->Flex = 1.0f;
 				number->IsEnabledFunc = isMovable;
+				float defaultValue = property.Default;
+				number->DefaultValue = [defaultValue]() { return defaultValue; };
 			}
 			{
 				// TRANSLATORS: Label of a property in the layer properties panel, the order the layers are drawn in
@@ -1531,6 +1651,25 @@ namespace Jazz2::Editor
 				// TRANSLATORS: Name of an undo step in the history, the image of its own of a layer removed
 				useTiles.Execute = [s]() { SetCurrentLayerTexture(*s, {}, _x("editor", "Remove layer texture")); };
 				entries.push_back(Death::move(useTiles));
+
+				// The images put into the folders of textures, picked as they are, the level keeps its own copy
+				entries.push_back(UiMenuEntry::Separator());
+				SmallVector<LayerTextureFile, 0> files;
+				FindLayerTextures(files);
+				for (LayerTextureFile& file : files) {
+					UiMenuEntry entry;
+					entry.Label = file.Name;
+					entry.Icon = EditorIcon::File;
+					entry.Execute = [s, path = Death::move(file.Path)]() { ImportLayerTextureFile(*s, path); };
+					entries.push_back(Death::move(entry));
+				}
+				if (files.empty()) {
+					UiMenuEntry hint;
+					// TRANSLATORS: Disabled entry in the Texture choice of a layer while no images are in the folder of textures, keep "Editor/Textures" as it is
+					hint.Label = _x("editor", "Images in \"Content/Editor/Textures\" are listed here");
+					hint.IsEnabled = []() { return false; };
+					entries.push_back(Death::move(hint));
+				}
 			});
 			dropdown->Flex = 1.0f;
 			dropdown->IsEnabledFunc = [s]() { return IsCurrentLayerUnlocked(*s); };
@@ -1720,6 +1859,7 @@ namespace Jazz2::Editor
 					ChangeLayer(*s, [member, value](Formats::LayerRecord& record, String&) { record.Textured.*member = value; }, final);
 				}, property.Min, property.Max, property.Step, property.Decimals);
 				number->Flex = 1.0f;
+				number->DefaultValue = []() { return 0.0f; };
 				row->Tooltip = property.Tooltip;
 				ShowRowWhen(row, isInner);
 			}
@@ -2015,6 +2155,7 @@ namespace Jazz2::Editor
 					ChangeLayer(*s, [member, value](Formats::LayerRecord& record, String&) { record.Textured.*member = value; }, final);
 				}, property.Min, property.Max, property.Step, property.Decimals);
 				number->Flex = 1.0f;
+				number->DefaultValue = []() { return 0.0f; };
 				row->Tooltip = property.Tooltip;
 				ShowRowWhen(row, isInnerReflection);
 			}
@@ -2046,10 +2187,36 @@ namespace Jazz2::Editor
 				SetLayerEditorOpacity(*s, s->GetCurrentLayer(), opacity);
 			}, 0.0f, 100.0f, 5.0f, 0);
 			number->Flex = 1.0f;
+			number->DefaultValue = []() { return 100.0f; };
 			row->Tooltip = _x("editor", "How opaque the editor shows the layer in percent, the level isn't changed by it");
 		}
 
-		/** How the layer repeats, whether it has the inherent offset and whether it's shown in the game */
+		/** Whether the layer is shown in the game, first, as a layer hidden in it isn't shown in the editor either */
+		void AddLayerVisibleRow(UiForm* rows, IEditorContext& session)
+		{
+			IEditorContext* s = &session;
+			// TRANSLATORS: Checkbox in the layer properties panel, whether the game draws the layer
+			auto* check = rows->Add<UiCheckBox>(_x("editor", "Visible in game"), [s]() {
+				const DocumentLayer* layer = GetCurrentLayer(*s);
+				return (layer != nullptr && (layer->Record.Flags & Formats::LayerRecord::Visible) != 0);
+			}, [s](bool value) {
+				ChangeLayer(*s, [value](Formats::LayerRecord& record, String&) {
+					record.Flags = (value ? (record.Flags | Formats::LayerRecord::Visible) : (record.Flags & ~Formats::LayerRecord::Visible));
+				});
+				// Made visible in the game, it's meant to be seen, so it's shown in the editor too; hidden again, the eye of the
+				// editor stays as it is
+				std::int32_t layerIndex = s->GetCurrentLayer();
+				const DocumentLayer* layer = GetCurrentLayer(*s);
+				if (value && layer != nullptr && (layer->EditorFlags & DocumentLayer::EditorHidden) != 0) {
+					s->ToggleLayerFlag(layerIndex, DocumentLayer::EditorHidden);
+				}
+			});
+			// It can be changed for the sprite layer too, unlike how it moves
+			check->IsEnabledFunc = [s]() { return IsCurrentLayerUnlocked(*s); };
+			check->Tooltip = _x("editor", "Whether the game draws the layer, a layer hidden in the game isn't shown in the editor either");
+		}
+
+		/** How the layer repeats and whether it has the inherent offset, whether it's shown in the game is at the top, see AddLayerVisibleRow() */
 		void AddLayerFlagRows(UiForm* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
@@ -2062,7 +2229,6 @@ namespace Jazz2::Editor
 				{ _x("editor", "Repeat horizontally"), Formats::LayerRecord::RepeatX },
 				{ _x("editor", "Repeat vertically"), Formats::LayerRecord::RepeatY },
 				{ _x("editor", "Inherent offset"), Formats::LayerRecord::UseInherentOffset },
-				{ _x("editor", "Visible in game"), Formats::LayerRecord::Visible },
 			};
 			for (const FlagProperty& property : FlagProperties) {
 				std::uint16_t flag = property.Flag;
@@ -2074,10 +2240,7 @@ namespace Jazz2::Editor
 						record.Flags = (value ? (record.Flags | flag) : (record.Flags & ~flag));
 					});
 				});
-				// Whether it's shown in the game can be changed for the sprite layer too, unlike how it moves
-				check->IsEnabledFunc = (flag != Formats::LayerRecord::Visible
-					? Function<bool()>([s]() { return IsMovableLayer(*s); })
-					: Function<bool()>([s]() { return IsCurrentLayerUnlocked(*s); }));
+				check->IsEnabledFunc = [s]() { return IsMovableLayer(*s); };
 			}
 		}
 	}
@@ -2092,7 +2255,9 @@ namespace Jazz2::Editor
 		scroll->Flex = 1.0f;
 		auto* rows = scroll->SetContent<UiForm>(2.0f, UiThickness(0.0f, 0.0f, 2.0f, 0.0f));
 
-		// How the layer is placed and moves, how it's drawn by each renderer, then what only the editor uses and the flags
+		// Whether it's shown in the game first, then how the layer is placed and moves, how it's drawn by each renderer, then
+		// what only the editor uses and the flags
+		AddLayerVisibleRow(rows, session);
 		AddLayerNameRows(rows, session);
 		AddLayerMovementRows(rows, session);
 		AddLayerRendererRow(rows, session);
@@ -2323,10 +2488,20 @@ namespace Jazz2::Editor
 		}
 
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
-		if (_dragging) {
-			std::int32_t x1 = std::min(_dragStart.X, _dragEnd.X), y1 = std::min(_dragStart.Y, _dragEnd.Y);
-			std::int32_t x2 = std::max(_dragStart.X, _dragEnd.X), y2 = std::max(_dragStart.Y, _dragEnd.Y);
+		// A corner of a block marked with a key, the block goes to the tile under the pointer, see BlockGrab
+		Vector2i grabCorner, grabEnd;
+		bool grabbing = (!_dragging && _session.GetBlockGrab().GetTileSetCorner(_source, columns, grabCorner));
+		if (grabbing && (!_hovered || !GetCellUnderPointer(grabEnd))) {
+			grabEnd = grabCorner;
+		}
+		if (_dragging || grabbing) {
+			Vector2i a = (_dragging ? _dragStart : grabCorner), b = (_dragging ? _dragEnd : grabEnd);
+			std::int32_t x1 = std::min(a.X, b.X), y1 = std::min(a.Y, b.Y);
+			std::int32_t x2 = std::max(a.X, b.X), y2 = std::max(a.Y, b.Y);
 			Rectf rect(Bounds.X + x1 * _tileSize, Bounds.Y + y1 * _tileSize, (x2 - x1 + 1) * _tileSize, (y2 - y1 + 1) * _tileSize);
+			if (grabbing) {
+				painter.FillRect(rect, UiTheme::Selection, UiLayer::Overlay);
+			}
 			painter.Frame(rect, UiTheme::Accent, thickness, UiLayer::Overlay);
 		} else if (_hovered) {
 			if (UiSurface* surface = GetSurface()) {
@@ -2363,6 +2538,8 @@ namespace Jazz2::Editor
 			ShowTileEditor(_session, TileRef{ std::uint16_t(cell.Y * columns + cell.X), _source, 0 });
 			return false;
 		}
+		// Tiles picked by the pointer instead of a block by its corners
+		_session.GetBlockGrab().Cancel();
 		_dragging = true;
 		_dragStart = _dragEnd = cell;
 		return true;
@@ -2395,9 +2572,24 @@ namespace Jazz2::Editor
 			return;
 		}
 		_dragging = false;
+		PickBlock(_dragStart, _dragEnd);
+	}
 
-		std::int32_t x1 = std::min(_dragStart.X, _dragEnd.X), y1 = std::min(_dragStart.Y, _dragEnd.Y);
-		std::int32_t x2 = std::max(_dragStart.X, _dragEnd.X), y2 = std::max(_dragStart.Y, _dragEnd.Y);
+	bool TileGrid::GetCellUnderPointer(Vector2i& cell) const
+	{
+		UiSurface* surface = GetSurface();
+		if (surface == nullptr || _tileSize <= 0.0f) {
+			return false;
+		}
+		cell = GetCellAt(surface->GetPointerPos());
+		std::int32_t columns = GetColumns();
+		return (cell.X >= 0 && cell.X < columns && cell.Y >= 0 && cell.Y * columns + cell.X < GetTileCount());
+	}
+
+	void TileGrid::PickBlock(Vector2i from, Vector2i to)
+	{
+		std::int32_t x1 = std::min(from.X, to.X), y1 = std::min(from.Y, to.Y);
+		std::int32_t x2 = std::max(from.X, to.X), y2 = std::max(from.Y, to.Y);
 		TileStamp stamp = TileStamp::FromTileSet(_source, GetColumns(), Recti(x1, y1, x2 - x1 + 1, y2 - y1 + 1));
 		std::int32_t count = GetTileCount();
 		for (std::size_t i = 0; i < stamp.Tiles.size(); i++) {
@@ -2882,13 +3074,19 @@ namespace Jazz2::Editor
 				if (cell.X >= 0 && cell.Y >= 0 && cell.X < gridSize.X && cell.Y < gridSize.Y) {
 					const Formats::EventRecord& event = document.GetEvent(cell.X, cell.Y);
 					if (!LevelDocument::IsEmptyEvent(event)) {
-						info += "   "_s + EventPreviews::GetEventName(event.Type);
+						info += "   "_s + EventPreviews::GetEventName(event.Type, event.Params);
 					}
 				}
 			}
 		}
 		if (EditorCamera* camera = _session.GetCamera()) {
-			info += "   "_s + FormatInteger(std::int32_t(std::round(camera->GetScale() / camera->GetGameplayScale() * 100.0f))) + "%"_s;
+			// The steps of the zoom below 10 % aren't all whole percentages (see EditorCamera::SnapScale())
+			float zoom = camera->GetScale() / camera->GetGameplayScale() * 100.0f;
+			char buffer[16];
+			std::int32_t length = (zoom < 9.95f && std::abs(zoom - std::round(zoom)) >= 0.05f
+				? std::snprintf(buffer, sizeof(buffer), "%.1f%%", zoom)
+				: std::snprintf(buffer, sizeof(buffer), "%d%%", std::int32_t(std::round(zoom))));
+			info += "   "_s + StringView(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
 		}
 		painter.TextInRect(info, inner, UiTheme::Text, Alignment::Right);
 

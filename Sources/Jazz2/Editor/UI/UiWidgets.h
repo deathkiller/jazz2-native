@@ -110,6 +110,8 @@ namespace Jazz2::Editor
 		Colorf IconColor;
 		/** @brief Smallest width in units */
 		float MinWidth;
+		/** @brief Room added between the icon and the text, in units */
+		float IconGap = 0.0f;
 		/** @brief Where the text and the icon are in a button wider than them, centered, at the left or at the right */
 		Alignment TextAlign;
 		/** @brief Color of the text instead of the usual one, a text color (see @ref UiTheme::Text), unused if its alpha is 0 */
@@ -253,6 +255,8 @@ namespace Jazz2::Editor
 		 * by the wheel or a finger.
 		 */
 		bool OverlayBar = false;
+		/** @brief How far right of the edge of the content the thin mark of @ref OverlayBar is moved, in units, into the padding around it */
+		float OverlayBarOffset = 0.0f;
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override;
 		void Arrange(const UiContext& context, const Rectf& bounds) override;
@@ -340,6 +344,8 @@ namespace Jazz2::Editor
 		Function<void(Vector2f)> OnDragEnd;
 		/** @brief Called when the row is double clicked */
 		Function<void()> OnDoubleClick;
+		/** @brief Whether the arrows of moving are shown by the pointer while it's over the row, `false` when dragging it doesn't move anything now */
+		bool ShowMoveArrows = true;
 
 		bool AcceptsPointer() const override;
 		bool OnPointerDown(const UiPointerEvent& event) override;
@@ -349,7 +355,7 @@ namespace Jazz2::Editor
 
 	private:
 		Vector2f _startPos;
-		// Whether it was dragged since it was pressed, the arrows of moving are shown by the pointer then
+		// Whether it was dragged since it was pressed
 		bool _moved = false;
 	};
 
@@ -579,6 +585,8 @@ namespace Jazz2::Editor
 		float Step;
 		/** @brief Number of decimal places shown */
 		std::int32_t Decimals;
+		/** @brief Returns the value the middle button (the wheel pressed) resets it to, it isn't reset if empty */
+		Function<float()> DefaultValue;
 
 		void Draw(UiPainter& painter) override;
 		bool OnPointerDown(const UiPointerEvent& event) override;

@@ -48,9 +48,10 @@ namespace Jazz2::Actors
 			@brief Spawns an explosion effect of a given type at a given position
 			
 			Smoke variants are decorative only and are skipped entirely when @ref PreferencesCache::Particles
-			is set to @ref ParticleQuality::Off.
+			is set to @ref ParticleQuality::Off. A moving effect (@ref Type::IceShrapnel) also gets @p speed, the speed
+			of what it comes from.
 		*/
-		static void Create(ILevelHandler* levelHandler, const Vector3i& pos, Type type, float scale = 1.0f);
+		static void Create(ILevelHandler* levelHandler, const Vector3i& pos, Type type, float scale = 1.0f, Vector2f speed = Vector2f::Zero);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

@@ -35,8 +35,9 @@ namespace Jazz2::Scripting
 	std::int32_t LevelScriptLoader::SetDifficulty(std::int32_t value) {
 
 		if (value >= 0 && value <= 2) {
+			// As GetDifficulty() gives it, the difficulties of the game start after the default one
 			auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			_this->_levelHandler->_difficulty = (GameDifficulty)value;
+			_this->_levelHandler->_difficulty = (GameDifficulty)(std::int32_t(GameDifficulty::Easy) + value);
 		}
 		return value;
 	}
@@ -73,12 +74,14 @@ namespace Jazz2::Scripting
 	String LevelScriptLoader::get_jjHelpStrings(std::uint32_t index) {
 
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return _this->_levelHandler->GetLevelText(index);
+		return _this->_levelHandler->GetScriptText(index);
 	}
 	void LevelScriptLoader::set_jjHelpStrings(std::uint32_t index, const String& text) {
 
+		// Read back as it is, shown in the formatting of the original game as the texts of the level
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		_this->_levelHandler->OverrideLevelText(index, text);
+		_this->_levelHandler->OverrideScriptText(index, text);
+		_this->_levelHandler->OverrideLevelText(index, Compatibility::JJ2Strings::RecodeString(text));
 	}
 
 	std::int32_t get_gameState() {
@@ -377,8 +380,7 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("bool set_jjVerticalSplitscreen(bool)", asFUNCTION(setSplitscreenType), asCALL_CDECL);
 
 		// TODO
-		/*engine->RegisterGlobalProperty("const bool jjAllowsFireball", &checkedFireball);
-		engine->RegisterGlobalProperty("const bool jjAllowsMouseAim", &checkedAllowMouseAim);
+		/*engine->RegisterGlobalProperty("const bool jjAllowsMouseAim", &checkedAllowMouseAim);
 		engine->RegisterGlobalProperty("const bool jjAllowsReady", &checkedAllowReady);
 		engine->RegisterGlobalProperty("const bool jjAllowsWalljump", &checkedAllowWalljump);
 		engine->RegisterGlobalProperty("const bool jjAlwaysRunning", &alwaysRunning);
@@ -388,8 +390,12 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalProperty("const bool jjNoBlink", &checkedNoBlink);
 		engine->RegisterGlobalProperty("const bool jjNoMovement", &checkedNoMovement);
 		engine->RegisterGlobalProperty("const bool jjQuirks", &testQuirksMode);
-		engine->RegisterGlobalProperty("const bool jjShowMaxHealth", &showEmptyHearts);
-		engine->RegisterGlobalProperty("const bool jjStrongPowerups", &checkedStrongPowerups);*/
+		engine->RegisterGlobalProperty("const bool jjShowMaxHealth", &showEmptyHearts);*/
+
+		// Options of a server of JJ2+, off as they're without one
+		static bool allowsFireball = false, strongPowerups = false;
+		engine->RegisterGlobalProperty("const bool jjAllowsFireball", &allowsFireball);
+		engine->RegisterGlobalProperty("const bool jjStrongPowerups", &strongPowerups);
 
 		engine->RegisterGlobalProperty("const int jjMaxScore", &maxScore);
 		engine->RegisterGlobalFunction("int get_jjTeamScore(TEAM::Color)", asFUNCTION(get_teamScore), asCALL_CDECL);

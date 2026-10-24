@@ -1150,7 +1150,7 @@ The clearing rows show only the usual standing-jump residual (as in `sp_jazz_dj`
 @par The top of the level is a ceiling too
 Tile ceilings stop the ascent because @ref Jazz2::Actors::ActorBase::TryMoveSubstep() zeroes @cpp _speed.Y @ce. The
 level's top bound, a clamp in @ref Jazz2::Actors::Player::OnUpdate(), used to move only the position, so the player
-hung there while the rise bled off (`secretf/03_easter3`, tile (216, 16), spring into pole: -15.43, -14.92,
+hung there while the rise bled off (`secretf/easter3`, tile (216, 16), spring into pole: -15.43, -14.92,
 -14.41, -13.90 px/tick, about half a second). It now zeroes an upward @cpp _speed.Y @ce and @cpp _internalForceY @ce
 and calls @ref Jazz2::Actors::Player::OnHitCeiling(). The frames read -16.07, 0, +0.17.
 

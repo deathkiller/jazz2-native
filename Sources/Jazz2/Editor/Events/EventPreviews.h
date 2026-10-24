@@ -49,7 +49,7 @@ namespace Jazz2::Editor
 		Rectf From;
 		/** @brief Where the line ends, in pixels of the level, empty for a source with no target */
 		Rectf To;
-		/** @brief Channel of the link, as @ref EventParamField::LinkChannel names it, e.g. `"warp"` or `"trigger"` */
+		/** @brief Channel of the link, as @ref EventParamField::LinkChannel names it, e.g. `"Warp"` or `"Trigger"` */
 		const char* Channel;
 		/** @brief The value the events share */
 		std::int32_t Id;
@@ -179,7 +179,7 @@ namespace Jazz2::Editor
 		 * them into their center, see `MpLevelHandler::ConsolidateOrderedRaceCheckpoints()`. An order that's skipped breaks
 		 * the track there, as on the minimap of the game. The last waypoint of each group leads to what ends a lap ---
 		 * a warp or a coin warp with Set Lap, or a level exit, the game counts a lap at each; those on tiles next to each other are one
-		 * end. Off-grid waypoints are at their own position. The links are of the channel `"race"` with the group as
+		 * end. Off-grid waypoints are at their own position. The links are of the channel `"Race"` with the group as
 		 * @ref EventLink::Id, at most @p maxLinks are found.
 		 */
 		static void CollectRaceTrack(const LevelDocument& document, SmallVectorImpl<EventLink>& links, std::size_t maxLinks = 4096);
@@ -249,7 +249,7 @@ namespace Jazz2::Editor
 		/** @brief Returns the color of a category */
 		static Colorf GetCategoryColor(EventCategory category);
 		/** @brief Returns the translated name of an event type, or its number if it isn't known */
-		static String GetEventName(std::uint16_t type);
+		static String GetEventName(std::uint16_t type, const std::uint8_t* params = nullptr);
 
 	private:
 		struct SpriteEntry
@@ -318,7 +318,7 @@ namespace Jazz2::Editor
 		/** @brief Draws a frame at its hotspot, or centered at the position, the current frame for -1 */
 		void DrawSprite(const DrawTarget& target, GraphicResource* resource, const EventPreviewSpec& spec, Vector2f pos, float alpha, float animTime,
 			std::int32_t frame = -1, bool centered = false);
-		void DrawBox(UiPainter& painter, std::uint16_t type, const Rectf& rect, float alpha, bool withLabel);
+		void DrawBox(UiPainter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel);
 		static void LayoutBoxLabel(UiPainter& painter, StringView name, const Rectf& inner, float boxWidth, BoxLabel& label);
 	};
 }

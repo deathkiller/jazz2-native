@@ -8,7 +8,8 @@ precision highp;
 // A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
 // but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
 // layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it
+// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
+// key stay for the layers in front
 
 #include "Include/TileMapVs.inc"
 
@@ -38,5 +39,5 @@ void fragment() {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
 	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
-	COLOR = vec4(tile.rgb, tile.a * keyed) * vColor;
+	COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
 }

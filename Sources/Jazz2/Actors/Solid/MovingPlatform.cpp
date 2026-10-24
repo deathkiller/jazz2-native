@@ -42,7 +42,7 @@ namespace Jazz2::Actors::Solid
 		_type = (PlatformType)params.GetUint8(0);
 
 		std::uint8_t length = params.GetUint8(3);
-		_speed = params.GetInt8(2) * 0.0072f;
+		_speed = params.GetInt8(2) * SpeedUnit;
 		std::uint8_t sync = params.GetUint8(1);
 		_isSwing = params.GetBool(4);
 		_phase = sync * fPiOver2 - _speed * _levelHandler->GetElapsedFrames();
@@ -117,35 +117,47 @@ namespace Jazz2::Actors::Solid
 		AABBf aabb = AABBInner;
 		aabb.T -= 4.0f;
 
-		if (_type != PlatformType::SpikeBall) {
+		if (_bodyHidden) {
+			// Only the chain is there, nothing to stand on
+			for (auto* player : _levelHandler->GetPlayers()) {
+				if (player->GetCarryingObject() == this) {
+					player->CancelCarryingObject();
+				}
+			}
+			SetState(ActorState::IsSolidObject, false);
+		} else if (_type != PlatformType::SpikeBall) {
 			auto players = _levelHandler->GetPlayers();
 			for (auto* player : players) {
 				if (player->GetCarryingObject() == this) {
 					AABBf aabb3 = aabb;
 					aabb3.T -= 4.0f;
 					if (aabb3.Overlaps(player->AABBInner) && player->GetState(ActorState::ApplyGravitation)) {
-						// Try to adjust Y, because it collides with carrying platform sometimes
-						bool success = false;
+						// The feet stand right on the top, the player moves along with the platform - checked against the
+						// tiles only, the platform would stop it itself (it was lifted up step by step and fell back, it
+						// shook and hovered above the platform), a wall stops it going along, otherwise it falls off
 						Vector2f playerPos = player->GetPos();
-						Vector2f adjustedPos = Vector2f(playerPos.X + diff.X, playerPos.Y + diff.Y);
-						for (std::int32_t i = 0; i < 8; i++) {
-							if (player->MoveInstantly(adjustedPos, MoveType::Absolute)) {
-								success = true;
-								break;
-							}
-							adjustedPos.Y -= 0.5f * timeMult;
+						float standingY = AABBInner.T - (player->AABBInner.B - playerPos.Y);
+						float carriedX = playerPos.X + diff.X;
+						if (player->GetSpeed().X == 0.0f) {
+							// Whole pixels off the platform while standing still - both are drawn at whole pixels, at a fraction
+							// apart they took turns stepping and the player wobbled on it by a pixel
+							carriedX = _pos.X + std::round(carriedX - _pos.X);
 						}
-
-						if (!success) {
-							player->MoveInstantly(Vector2f(0.0f, diff.Y), MoveType::Relative);
+						if (TryCarryPlayer(player, Vector2f(carriedX, standingY)) ||
+							TryCarryPlayer(player, Vector2f(playerPos.X, standingY))) {
+							player->UpdateCarryingObject(this);
+						} else {
+							player->CancelCarryingObject();
+							SetState(ActorState::IsSolidObject, false);
 						}
-
-						player->UpdateCarryingObject(this);
 					} else {
 						player->CancelCarryingObject();
 						SetState(ActorState::IsSolidObject, false);
 					}
-				} else if (aabb.Overlaps(player->AABBInner) && player->GetSpeed().Y >= diff.Y * timeMult && !player->CanMoveVertically()) {
+				} else if (aabb.Overlaps(player->AABBInner) && player->GetSpeed().Y >= diff.Y * timeMult && !player->CanMoveVertically() &&
+					player->AABBInner.B - player->GetSpeed().Y * timeMult <= aabb.T - diff.Y + 8.0f) {
+					// Caught only from above (the last condition), a player the platform swings into from a side would be caught
+					// inside it, where it couldn't carry them anymore
 					player->UpdateCarryingObject(this);
 					SetState(ActorState::IsSolidObject, true);
 				}
@@ -220,6 +232,17 @@ namespace Jazz2::Actors::Solid
 		return SolidObjectBase::OnPerish(collider);
 	}
 
+	bool MovingPlatform::TryCarryPlayer(Player* player, Vector2f pos)
+	{
+		if (auto* tiles = _levelHandler->TileMap()) {
+			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, false };
+			if (!tiles->IsTileEmpty(player->AABBInner + (pos - player->GetPos()), params)) {
+				return false;
+			}
+		}
+		return player->MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+	}
+
 	void MovingPlatform::OnUpdateHitbox()
 	{
 		SolidObjectBase::OnUpdateHitbox();
@@ -227,41 +250,36 @@ namespace Jazz2::Actors::Solid
 		switch (_type) {
 			case PlatformType::CarrotusFruit:
 				AABBInner.L -= 10.0f;
-				AABBInner.T -= 14.0f;
 				AABBInner.R += 10.0f;
-				AABBInner.B = AABBInner.T + 16.0f;
 				break;
 			case PlatformType::Lab:
 				AABBInner.L -= 18.0f;
-				AABBInner.T -= 2.0f;
 				AABBInner.R += 18.0f;
-				AABBInner.B = AABBInner.T + 16.0f;
 				break;
 			case PlatformType::Sonic:
 				AABBInner.L -= 14.0f;
-				AABBInner.T -= 16.0f;
 				AABBInner.R += 14.0f;
-				AABBInner.B = AABBInner.T + 16.0f;
 				break;
 			case PlatformType::Spike:
 				AABBInner.L -= 16.0f;
-				AABBInner.T -= 30.0f;
 				AABBInner.R += 16.0f;
-				AABBInner.B = AABBInner.T + 20.0f;
 				break;
 			case PlatformType::SpikeBall:
 				AABBInner.L -= 8.0f;
 				AABBInner.T -= 8.0f;
 				AABBInner.R += 8.0f;
 				AABBInner.B += 8.0f;
-				break;
+				return;
 			default:
 				AABBInner.L -= 8.0f;
-				AABBInner.T -= 10.0f;
 				AABBInner.R += 8.0f;
-				AABBInner.B = AABBInner.T + 16.0f;
 				break;
 		}
+
+		// As measured in JJ2+, a player stands 24 pixels above any platform whatever it looks like (fruit, grass and spike
+		// alike), the feet 5 pixels above the position of it here
+		AABBInner.T = _pos.Y - StandingTop;
+		AABBInner.B = AABBInner.T + (_type == PlatformType::Spike ? 20.0f : 16.0f);
 	}
 
 	bool MovingPlatform::OnDraw(RenderQueue& renderQueue)
@@ -299,6 +317,10 @@ namespace Jazz2::Actors::Solid
 			}
 		}
 
+		if (_bodyHidden) {
+			return true;
+		}
+
 		return SolidObjectBase::OnDraw(renderQueue);
 	}
 
@@ -316,9 +338,17 @@ namespace Jazz2::Actors::Solid
 		float multiX, multiY;
 		sincosApprox(effectivePhase, multiY, multiX);
 
+		float linkDistance;
+		switch (_type) {
+			case PlatformType::CarrotusFruit: linkDistance = 13.0f; break;
+			case PlatformType::CarrotusGrass: linkDistance = 25.0f; break;
+			case PlatformType::Lab: linkDistance = 12.0f; break;
+			default: linkDistance = 11.0f; break;
+		}
+
 		return Vector2f(
-			std::round(_originPos.X + multiX * distance * 12.0f),
-			std::round(_originPos.Y + multiY * distance * 12.0f)
+			_originPos.X + multiX * distance * linkDistance,
+			_originPos.Y + multiY * distance * linkDistance
 		);
 	}
 }

@@ -477,6 +477,85 @@ namespace Jazz2::Editor
 		}
 	}
 
+	void EditorSession::CopyTilesAndEvents()
+	{
+		std::int32_t spriteLayer = _document.GetSpriteLayerIndex();
+		Vector2i gridSize = _document.GetEventGridSize();
+		if (spriteLayer < 0 || gridSize.X <= 0) {
+			return;
+		}
+		TileStamp stamp;
+		if (IsEditingEvents()) {
+			// The rectangle around the selected events, with the tiles of the sprite layer in it, but only the events selected
+			if (_eventSelection.IsEmpty()) {
+				ShowMessage(_x("editor", "Select the tiles or the events to copy first"));
+				return;
+			}
+			Vector2i from(INT32_MAX, INT32_MAX), to(INT32_MIN, INT32_MIN);
+			auto include = [&from, &to](Vector2i cell) {
+				from = Vector2i(std::min(from.X, cell.X), std::min(from.Y, cell.Y));
+				to = Vector2i(std::max(to.X, cell.X), std::max(to.Y, cell.Y));
+			};
+			for (std::uint32_t cell : _eventSelection.GetCells()) {
+				include(Vector2i(std::int32_t(cell % std::uint32_t(gridSize.X)), std::int32_t(cell / std::uint32_t(gridSize.X))));
+			}
+			for (std::int32_t index : _eventSelection.GetOffGrid()) {
+				if (index < std::int32_t(_document.OffGridEvents.size())) {
+					const Formats::OffGridEventRecord& record = _document.OffGridEvents[index];
+					include(Vector2i(std::int32_t(record.X / 32), std::int32_t(record.Y / 32)));
+				}
+			}
+			if (to.X < from.X) {
+				return;
+			}
+			Recti bounds(from.X, from.Y, to.X - from.X + 1, to.Y - from.Y + 1);
+			if (std::int64_t(bounds.W) * std::int64_t(bounds.H) > StampClipboard::MaxStampTiles) {
+				ShowMessage(_fx("editor", "The area is too large to pick, a brush can have {} tiles at most", StampClipboard::MaxStampTiles));
+				return;
+			}
+			stamp = BlockGrab::MakeStamp(_document, spriteLayer, GetLayerView(spriteLayer), bounds);
+			for (std::int32_t y = 0; y < bounds.H; y++) {
+				for (std::int32_t x = 0; x < bounds.W; x++) {
+					std::uint32_t cell = std::uint32_t(bounds.X + x + (bounds.Y + y) * gridSize.X);
+					if (stamp.HasEvents() && !_eventSelection.Contains(cell)) {
+						stamp.Events[std::size_t(y) * std::size_t(bounds.W) + std::size_t(x)] = LevelDocument::GetEmptyEvent();
+					}
+				}
+			}
+			stamp.OffGridEvents.clear();
+			for (std::int32_t index : _eventSelection.GetOffGrid()) {
+				if (index < std::int32_t(_document.OffGridEvents.size())) {
+					const Formats::OffGridEventRecord& record = _document.OffGridEvents[index];
+					stamp.OffGridEvents.push_back(TileStamp::OffGridEvent{
+						Vector2i(std::int32_t(record.X) - bounds.X * 32, std::int32_t(record.Y) - bounds.Y * 32), record.Event });
+				}
+			}
+		} else {
+			if (_selection.IsEmpty() || _selection.GetLayer() != _currentLayer) {
+				ShowMessage(_x("editor", "Select the tiles or the events to copy first"));
+				return;
+			}
+			if (_currentLayer != spriteLayer) {
+				// Events are on the sprite layer only, they'd be lost where tiles of another layer are pasted
+				CopySelection(false);
+				ShowMessage(_x("editor", "Only the sprite layer has events, the tiles were copied without them"));
+				return;
+			}
+			const Recti& bounds = _selection.GetBounds();
+			if (std::int64_t(bounds.W) * std::int64_t(bounds.H) > StampClipboard::MaxStampTiles) {
+				ShowMessage(_fx("editor", "The area is too large to pick, a brush can have {} tiles at most", StampClipboard::MaxStampTiles));
+				return;
+			}
+			stamp = BlockGrab::MakeStamp(_document, _currentLayer, GetLayerView(_currentLayer), bounds, &_selection);
+		}
+		// Pasted as copied, the empty tiles too, unlike a block grabbed
+		stamp.EmptyIsTransparent = false;
+		theApplication().GetInputManager().setClipboardText(StampToClipboardText(stamp, _document));
+		_clipboard = Death::move(stamp);
+		// TRANSLATORS: Status message after the selected tiles were copied with the events on them
+		ShowMessage(_x("editor", "Copied with the events"));
+	}
+
 	void EditorSession::DeleteSelection()
 	{
 		if (IsEditingEvents()) {
@@ -562,6 +641,20 @@ namespace Jazz2::Editor
 		_selection.Clear();
 		_tools->SetActive(EditorToolType::Brush);
 		ShowMessage(_x("editor", "Click to place what was copied"));
+	}
+
+	void EditorSession::GrabBlock(BlockGrab::Mode mode)
+	{
+		// Over the tiles of the picker a block of them, otherwise of the layer being edited
+		UiElement* hover = (_surface != nullptr ? _surface->GetHover() : nullptr);
+		if (TileGrid* grid = (hover != nullptr ? runtime_cast<TileGrid>(hover) : nullptr)) {
+			Vector2i cell, start;
+			if (grid->GetCellUnderPointer(cell) && _blockGrab->PressTileSet(grid->GetSource(), grid->GetColumns(), cell, start)) {
+				grid->PickBlock(start, cell);
+			}
+			return;
+		}
+		_blockGrab->PressLevel(mode);
 	}
 
 	void EditorSession::SelectAll()

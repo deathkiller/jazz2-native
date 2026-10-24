@@ -116,7 +116,7 @@ namespace Jazz2::Editor
 			frame.IsChecked = [settings]() { return settings->ShowScreenFrame; };
 			struct FrameKind { const char* Id; String Label; };
 			static const FrameKind Kinds[] = {
-				// TRANSLATORS: Choices in the Show menu of the size of the frame around the pointer that shows what the game screen would show,
+				// TRANSLATORS: Choices in the Game Screen Frame submenu of the View menu of the size of the frame around the pointer that shows what the game screen would show,
 				// {} is the size - Game View, Split Screen (for two players), or an aspect ratio (4:3 or 16:9) that isn't translated
 				{ ActionIds::ViewScreenFrameGame, _fx("editor", "Screen Frame: {}", _x("editor", "Game View")) },
 				{ ActionIds::ViewScreenFrame4x3, _fx("editor", "Screen Frame: {}", "4:3") },

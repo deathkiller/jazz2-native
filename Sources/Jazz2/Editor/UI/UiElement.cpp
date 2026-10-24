@@ -101,6 +101,13 @@ namespace Jazz2::Editor
 		return _children.back().get();
 	}
 
+	UiElement* UiElement::InsertChild(std::size_t index, std::unique_ptr<UiElement> child)
+	{
+		child->_parent = this;
+		index = std::min(index, _children.size());
+		return _children.insert(_children.begin() + index, Death::move(child))->get();
+	}
+
 	void UiElement::ClearChildren()
 	{
 		if (_children.empty()) {
@@ -245,6 +252,11 @@ namespace Jazz2::Editor
 	}
 
 	bool UiElement::DragsAfterHold() const
+	{
+		return false;
+	}
+
+	bool UiElement::YieldsToViewGestures() const
 	{
 		return false;
 	}

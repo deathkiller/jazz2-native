@@ -49,7 +49,7 @@ namespace Jazz2::Editor
 
 		String DescribeParams(const Formats::EventRecord& event)
 		{
-			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 			if (descriptor == nullptr) {
 				return {};
 			}
@@ -328,7 +328,7 @@ namespace Jazz2::Editor
 				item.Position = position;
 				if (!state->Filter.empty()) {
 					Describe(item);
-					const EventDescriptor* descriptor = EventCatalog::Find(EventType(record.Type));
+					const EventDescriptor* descriptor = EventCatalog::Find(EventType(record.Type), record.Params);
 					String haystack = state->GetName(record.Type) + " "_s + item.Details + " "_s + (descriptor != nullptr ? StringView(descriptor->Key) : StringView());
 					if (!MatchesSearch(haystack, state->Filter)) {
 						return;

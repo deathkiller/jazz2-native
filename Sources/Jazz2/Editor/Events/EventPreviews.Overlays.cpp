@@ -1,4 +1,4 @@
-#include "EventPreviews.h"
+﻿#include "EventPreviews.h"
 
 #if defined(WITH_EDITOR)
 
@@ -45,7 +45,7 @@ namespace Jazz2::Editor
 		// Adds the ends of the links of an event, one for each of its link fields
 		void AddLinkEnds(const Formats::EventRecord& event, std::uint32_t cell, bool offGrid, Vector2f position, SmallVectorImpl<LinkEnd>& ends)
 		{
-			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 			if (descriptor == nullptr) {
 				return;
 			}
@@ -343,7 +343,7 @@ namespace Jazz2::Editor
 					EventLink& link = links.emplace_back();
 					link.From = from.Area;
 					link.To = waypoints[i + 1].Area;
-					link.Channel = "race";
+					link.Channel = "Race";
 					link.Id = from.Group;
 					link.Directed = true;
 					link.Missing = false;
@@ -354,7 +354,7 @@ namespace Jazz2::Editor
 				EventLink& link = links.emplace_back();
 				link.From = from.Area;
 				link.To = finishes[f];
-				link.Channel = "race";
+				link.Channel = "Race";
 				link.Id = from.Group;
 				link.Directed = true;
 				link.Missing = false;
@@ -364,7 +364,7 @@ namespace Jazz2::Editor
 
 	std::int32_t EventPreviews::CollectDirections(const Formats::EventRecord& event, EventDirection (&directions)[4])
 	{
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 		if (descriptor == nullptr) {
 			return 0;
 		}
@@ -398,7 +398,7 @@ namespace Jazz2::Editor
 	bool EventPreviews::GetLight(const Formats::EventRecord& event, EventLightShape& light)
 	{
 		light = EventLightShape();
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 		// The parameters as the lights of the game read them, an event pack may mean something else by them
 		if (descriptor == nullptr || EventCatalog::IsExtension(descriptor)) {
 			return false;
@@ -485,7 +485,7 @@ namespace Jazz2::Editor
 
 	bool EventPreviews::DescribeDefaultLevel(const LevelDocument& document, const Formats::EventRecord& event, const EventParamField& field, String& text, bool brief)
 	{
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 		// The name of the next level as Player::HandleAreaEventAt() reads it, only a text that isn't 0; an event pack may
 		// mean something else by the parameter
 		if (descriptor == nullptr || EventCatalog::IsExtension(descriptor) || EventType(event.Type) != EventType::AreaEndOfLevel ||

@@ -43,6 +43,7 @@
 
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStlView.h>
+#include <Containers/StringUtils.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
 
@@ -143,7 +144,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set - bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 18;
+	static constexpr std::uint64_t ShadersVersion = 19;
 
 	ContentResolver& ContentResolver::Get()
 	{
@@ -257,6 +258,13 @@ namespace Jazz2
 #endif
 	}
 
+	// No usable stat() there, a check would be an extra open
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+	static constexpr bool CheckContentFileFirst = false;
+#else
+	static constexpr bool CheckContentFileFirst = true;
+#endif
+
 	String ContentResolver::FindContentFile(StringView path) const
 	{
 		String fullPath;
@@ -279,6 +287,38 @@ namespace Jazz2
 		}
 
 		return {};
+	}
+
+	std::unique_ptr<Stream> ContentResolver::OpenFoundContentFile(StringView path, String& fullPath, std::int32_t bufferSize) const
+	{
+		// Only regular files have a size
+		auto tryOpen = [&](StringView directory) -> std::unique_ptr<Stream> {
+			fullPath = fs::CombinePath(directory, path);
+			if (CheckContentFileFirst && !fs::IsReadableFile(fullPath)) {
+				return nullptr;
+			}
+			auto s = fs::Open(fullPath, FileAccess::Read, bufferSize);
+			if (!s->IsValid() || s->GetSize() < 0) {
+				return nullptr;
+			}
+			return s;
+		};
+
+		StringView userContentPath = GetUserContentPath();
+		if (!userContentPath.empty()) {
+			if (auto s = tryOpen(userContentPath)) {
+				return s;
+			}
+		}
+		if (auto s = tryOpen(GetContentPath())) {
+			return s;
+		}
+		if (auto s = tryOpen(GetCachePath())) {
+			return s;
+		}
+
+		fullPath = {};
+		return nullptr;
 	}
 
 	StringView ContentResolver::GetCachePath() const
@@ -831,15 +871,22 @@ namespace Jazz2
 			return packedFile;
 		}
 
-		String fullPath;
+		auto tryOpen = [&](StringView directory) -> std::unique_ptr<Stream> {
+			String fullPath = fs::CombinePath(directory, path);
+			if (CheckContentFileFirst && !fs::IsReadableFile(fullPath)) {
+				return nullptr;
+			}
+			auto realFile = fs::Open(fullPath, FileAccess::Read, bufferSize);
+			if (!realFile->IsValid() || realFile->GetSize() < 0) {
+				return nullptr;
+			}
+			return realFile;
+		};
+
 		StringView userContentPath = GetUserContentPath();
 		if (!userContentPath.empty()) {
-			fullPath = fs::CombinePath(userContentPath, path);
-			if (fs::IsReadableFile(fullPath)) {
-				auto realFile = fs::Open(fullPath, FileAccess::Read, bufferSize);
-				if (realFile->IsValid()) {
-					return realFile;
-				}
+			if (auto realFile = tryOpen(userContentPath)) {
+				return realFile;
 			}
 		}
 
@@ -847,16 +894,11 @@ namespace Jazz2
 			return packedFile;
 		}
 
-		fullPath = fs::CombinePath(GetContentPath(), path);
-		if (fs::IsReadableFile(fullPath)) {
-			auto realFile = fs::Open(fullPath, FileAccess::Read, bufferSize);
-			if (realFile->IsValid()) {
-				return realFile;
-			}
+		if (auto realFile = tryOpen(GetContentPath())) {
+			return realFile;
 		}
 
-		fullPath = fs::CombinePath(GetCachePath(), path);
-		return fs::Open(fullPath, FileAccess::Read, bufferSize);
+		return fs::Open(fs::CombinePath(GetCachePath(), path), FileAccess::Read, bufferSize);
 	}
 
 	std::unique_ptr<Stream> ContentResolver::OpenSourceFile(StringView path, std::int32_t bufferSize)
@@ -2107,10 +2149,7 @@ namespace Jazz2
 			fullPath = _pathHandler(String(path + ".j2t"_s));
 		}
 		if (fullPath.empty()) {
-			fullPath = FindContentFile(fs::CombinePath("Tilesets"_s, String(path + ".j2t"_s)));
-			if (fullPath.empty()) {
-				return nullptr;
-			}
+			return OpenFoundContentFile(fs::CombinePath("Tilesets"_s, String(path + ".j2t"_s)), fullPath, 16 * 1024);
 		}
 
 		auto s = fs::Open(fullPath, FileAccess::Read, 16 * 1024);
@@ -2198,6 +2237,34 @@ namespace Jazz2
 #if defined(TILEMAP_LAYER_EFFECTS)
 		tileSet->SetTileEffectInfo(Death::move(tileEffectInfo));
 #endif
+		return tileSet;
+	}
+
+	std::unique_ptr<Tiles::TileSet> ContentResolver::CreateBlankTileSet(std::uint16_t tileCount, bool indexed)
+	{
+		SmallVector<std::unique_ptr<Texture>, 1> textureDiffuse;
+		if (!_isHeadless && tileCount > 0) {
+			std::int32_t tilesPerRow = std::max(1, std::int32_t(std::ceil(std::sqrt(float(tileCount)))));
+			std::int32_t width = tilesPerRow * TileSet::PaddedTileSize;
+			std::int32_t height = ((std::int32_t(tileCount) + tilesPerRow - 1) / tilesPerRow) * TileSet::PaddedTileSize;
+			std::unique_ptr<Texture> texture;
+			if (indexed) {
+				std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(std::size_t(width) * height);
+				bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
+				texture = CreateIndexedTexture("BlankTiles", pixels.get(), width, height, 1, paletteBaseTransparent);
+			} else {
+				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(std::size_t(width) * height);
+				texture = std::make_unique<Texture>("BlankTiles", Texture::Format::RGBA8, width, height);
+				texture->LoadFromTexels((std::uint8_t*)pixels.get(), 0, 0, width, height);
+			}
+			texture->SetMinFiltering(SamplerFilter::Nearest);
+			texture->SetMagFiltering(SamplerFilter::Nearest);
+			textureDiffuse.push_back(Death::move(texture));
+		}
+
+		bool hasDiffuse = !textureDiffuse.empty();
+		auto tileSet = std::make_unique<Tiles::TileSet>(StringView(), tileCount, Death::move(textureDiffuse), nullptr, 0, nullptr);
+		tileSet->IsIndexed = (indexed && hasDiffuse);
 		return tileSet;
 	}
 
@@ -2434,7 +2501,7 @@ namespace Jazz2
 		//
 		// The PlayStation 2 has the same hard ceiling one octave up: `TEX0.TW`/`TH` are log2 fields capped
 		// at 10, so 1024 texels per axis is all the GS can ADDRESS. Keeping the source sheet's row width
-		// broke on the wider tilesets - secretf/04_haunted1 is laid out 32 tiles across, which is 1088 px
+		// broke on the wider tilesets - secretf/haunted1 is laid out 32 tiles across, which is 1088 px
 		// padded, and the sampled extent silently clamped to 1024 while the texture coordinates still ran
 		// to 1088. That is not a dropped tileset, it is a wrapped one: every tile past the clamp sampled
 		// somebody else's pixels.
@@ -2447,7 +2514,7 @@ namespace Jazz2
 		// The legacy OpenGL backend joins them for both reasons at once, which is why this is keyed on the
 		// BACKEND there rather than on a platform: what it runs on is a GL that may well sample only
 		// power-of-two textures (TinyGL on MorphOS), and the source sheet's own row width is exactly what
-		// broke on the PlayStation 2 above - secretf/04_haunted1's 32-tile row is 1088 px padded, which no
+		// broke on the PlayStation 2 above - secretf/haunted1's 32-tile row is 1088 px padded, which no
 		// limit that is a power of two can hold.
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
@@ -2725,6 +2792,27 @@ namespace Jazz2
 		return !FindContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s))).empty();
 	}
 
+	String ContentResolver::ResolveLevelName(StringView name)
+	{
+		auto p = name.partition('/');
+		if (!p[2].empty()) {
+			return String(name);
+		}
+
+		if (p[1].empty()) {
+			return String("unknown/"_s + p[0]);
+		}
+
+		String episodeName = StringUtils::lowercase(p[0]);
+		if (auto episode = GetEpisode(episodeName)) {
+			// "home" has an instruction to the game there, not a level
+			if (!episode->FirstLevel.empty() && episode->FirstLevel[0] != ':') {
+				return (episode->FirstLevel.contains('/') ? Death::move(episode->FirstLevel) : String(episodeName + "/"_s + episode->FirstLevel));
+			}
+		}
+		return String(name);
+	}
+
 	bool ContentResolver::TryGetNextLevelName(StringView path, String& nextLevel)
 	{
 		// Try user "Content" directory first, then "Content" directory and "Cache" directory, the same way as TryLoadLevel()
@@ -2733,15 +2821,13 @@ namespace Jazz2
 		if (_pathHandler) {
 			fullPath = _pathHandler(String(pathNormalized + ".j2l"_s));
 		}
+		std::unique_ptr<Stream> s;
 		if (fullPath.empty()) {
-			fullPath = FindContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s)));
-			if (fullPath.empty()) {
-				return false;
-			}
+			s = OpenFoundContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s)), fullPath, 8192);
+		} else {
+			s = fs::Open(fullPath, FileAccess::Read);
 		}
-
-		auto s = fs::Open(fullPath, FileAccess::Read);
-		if (!s->IsValid()) {
+		if (s == nullptr || !s->IsValid()) {
 			return false;
 		}
 
@@ -2770,15 +2856,13 @@ namespace Jazz2
 		if (_pathHandler) {
 			fullPath = _pathHandler(String(pathNormalized + ".j2l"_s));
 		}
+		std::unique_ptr<Stream> s;
 		if (fullPath.empty()) {
-			fullPath = FindContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s)));
-			if (fullPath.empty()) {
-				return false;
-			}
+			s = OpenFoundContentFile(fs::CombinePath("Episodes"_s, String(pathNormalized + ".j2l"_s)), fullPath, 16 * 1024);
+		} else {
+			s = fs::Open(fullPath, FileAccess::Read, 16 * 1024);
 		}
-
-		auto s = fs::Open(fullPath, FileAccess::Read, 16 * 1024);
-		if (!s->IsValid()) {
+		if (s == nullptr || !s->IsValid()) {
 			return false;
 		}
 
@@ -2880,14 +2964,11 @@ namespace Jazz2
 		}
 
 		// Overriden tiles (diffuse and mask)
+		reader.ReadTileDiffuseOverrides(&descriptor.TileDiffuseOverrides);
 		if (!_isHeadless) {
-			SmallVector<Formats::TileDiffuseOverride, 0> diffuseOverrides;
-			reader.ReadTileDiffuseOverrides(&diffuseOverrides);
-			for (const Formats::TileDiffuseOverride& tile : diffuseOverrides) {
+			for (const Formats::TileDiffuseOverride& tile : descriptor.TileDiffuseOverrides) {
 				ApplyTileDiffuseOverride(*descriptor.TileMap, tile.TileId, tile.Indices);
 			}
-		} else {
-			reader.ReadTileDiffuseOverrides(nullptr);
 		}
 
 		SmallVector<Formats::TileMaskOverride, 0> maskOverrides;
@@ -2936,7 +3017,8 @@ namespace Jazz2
 			SmallVector<Formats::ChunkRecord, 0> chunks;
 			reader.ReadSelectedChunks(chunks, [](std::uint32_t tag, std::uint32_t) {
 				return (tag == Formats::LevelTextsChunk::Tag || tag == Formats::SpriteLayerChunk::Tag || tag == Formats::TexturedLayerChunk::Tag ||
-					tag == Formats::LayerNamesChunk::Tag || tag == Formats::LayerNumbersChunk::Tag);
+					tag == Formats::LayerNamesChunk::Tag || tag == Formats::LayerNumbersChunk::Tag || tag == Formats::ScriptTextsChunk::Tag ||
+					tag == Formats::CustomWeaponsChunk::Tag || tag == Formats::SpriteRecolorsChunk::Tag);
 			});
 			if (!reader.IsValid()) {
 				LOGE("Level \"{}\" cannot be read: {}", fullPath, reader.GetError());
@@ -2988,6 +3070,14 @@ namespace Jazz2
 					layerNames = &chunk;
 				} else if (chunk.Tag == Formats::LayerNumbersChunk::Tag) {
 					layerNumbers = &chunk;
+				} else if (chunk.Tag == Formats::ScriptTextsChunk::Tag) {
+					for (std::size_t i = 0; i < descriptor.LevelTexts.size(); i++) {
+						descriptor.ScriptTexts.emplace_back(Formats::ScriptTextsChunk::Read(chunk.Data, std::int32_t(i)));
+					}
+				} else if (chunk.Tag == Formats::CustomWeaponsChunk::Tag) {
+					descriptor.CustomWeapons.append(chunk.Data.begin(), chunk.Data.end());
+				} else if (chunk.Tag == Formats::SpriteRecolorsChunk::Tag) {
+					descriptor.SpriteRecolors.append(chunk.Data.begin(), chunk.Data.end());
 				}
 			}
 			if (layerNames != nullptr || layerNumbers != nullptr) {
@@ -3196,6 +3286,7 @@ namespace Jazz2
 		}
 
 		String fullPath;
+		bool found = false;
 		if (_pathHandler) {
 			fullPath = _pathHandler(path);
 		}
@@ -3208,6 +3299,7 @@ namespace Jazz2
 			for (StringView extension : { "xm64"_s, "wav64"_s }) {
 				fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, String(stem + "."_s + extension) });
 				if (fs::IsReadableFile(fullPath)) {
+					found = true;
 					break;
 				}
 			}
@@ -3215,17 +3307,22 @@ namespace Jazz2
 			StringView userContentPath = GetUserContentPath();
 			if (!userContentPath.empty()) {
 				fullPath = fs::CombinePath({ userContentPath, "Music"_s, path });
+				found = fs::IsReadableFile(fullPath);
 			}
-			if (!fs::IsReadableFile(fullPath)) {
+			if (!found) {
 				fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
+				found = fs::IsReadableFile(fullPath);
 			}
-			if (!fs::IsReadableFile(fullPath)) {
+			if (!found) {
 				// "Source" directory must be case in-sensitive
 				fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));
+				found = fs::IsReadableFile(fullPath);
 			}
 #	endif
+		} else {
+			found = fs::IsReadableFile(fullPath);
 		}
-		if (!fs::IsReadableFile(fullPath)) {
+		if (!found) {
 			return nullptr;
 		}
 		return std::make_unique<AudioStreamPlayer>(fullPath);
@@ -4160,6 +4257,9 @@ namespace Jazz2
 	static constexpr std::uint8_t ShiftedPaletteScheme = 0xFF;
 	static constexpr std::uint8_t SingleHuePaletteScheme = 0xFE;
 	static constexpr std::uint8_t GemPaletteScheme = 0xFD;
+	static constexpr std::uint8_t AlphaMapPaletteScheme = 0xFC;
+	static constexpr std::uint8_t DissolvePaletteScheme = 0xFB;
+	static constexpr std::uint8_t NeonGlowPaletteScheme = 0xFA;
 
 	std::int32_t ContentResolver::AcquireShiftedPaletteOffset(std::uint8_t shift)
 	{
@@ -4180,6 +4280,21 @@ namespace Jazz2
 		return AcquireDerivedPaletteOffset(GemPaletteScheme, gem);
 	}
 
+	std::int32_t ContentResolver::AcquireAlphaMapPaletteOffset(std::uint8_t color)
+	{
+		return AcquireDerivedPaletteOffset(AlphaMapPaletteScheme, color);
+	}
+
+	std::int32_t ContentResolver::AcquireDissolvePaletteOffset(std::uint8_t color, std::uint8_t density)
+	{
+		return AcquireDerivedPaletteOffset(DissolvePaletteScheme, std::uint32_t(color) | (std::uint32_t(density) << 8));
+	}
+
+	std::int32_t ContentResolver::AcquireNeonGlowPaletteOffset(std::uint8_t channels)
+	{
+		return AcquireDerivedPaletteOffset(NeonGlowPaletteScheme, std::min<std::uint8_t>(channels, 6));
+	}
+
 	std::uint32_t ContentResolver::GetGemColor(std::uint8_t gem, std::uint8_t index) const
 	{
 		if (gem >= arraySize(GemGradientStops)) {
@@ -4190,7 +4305,7 @@ namespace Jazz2
 		return gradient[index & (GemGradientSize - 1)];
 	}
 
-	std::int32_t ContentResolver::AcquireDerivedPaletteOffset(std::uint8_t scheme, std::uint8_t value)
+	std::int32_t ContentResolver::AcquireDerivedPaletteOffset(std::uint8_t scheme, std::uint32_t value)
 	{
 		if (_isHeadless) {
 			return -1;
@@ -4216,11 +4331,17 @@ namespace Jazz2
 		_paletteRowColor[freeRow] = value;
 		_paletteRowScheme[freeRow] = scheme;
 		if (scheme == SingleHuePaletteScheme) {
-			BuildSingleHuePalette(value, _palettes + freeRow * ColorsPerPalette);
+			BuildSingleHuePalette(std::uint8_t(value), _palettes + freeRow * ColorsPerPalette);
 		} else if (scheme == GemPaletteScheme) {
-			BuildGemPalette(value, _palettes + freeRow * ColorsPerPalette);
+			BuildGemPalette(std::uint8_t(value), _palettes + freeRow * ColorsPerPalette);
+		} else if (scheme == AlphaMapPaletteScheme) {
+			BuildAlphaMapPalette(std::uint8_t(value), _palettes + freeRow * ColorsPerPalette);
+		} else if (scheme == DissolvePaletteScheme) {
+			BuildDissolvePalette(value, _palettes + freeRow * ColorsPerPalette);
+		} else if (scheme == NeonGlowPaletteScheme) {
+			BuildNeonGlowPalette(std::uint8_t(value), _palettes + freeRow * ColorsPerPalette);
 		} else {
-			BuildShiftedPalette(value, _palettes + freeRow * ColorsPerPalette);
+			BuildShiftedPalette(std::uint8_t(value), _palettes + freeRow * ColorsPerPalette);
 		}
 		MarkPaletteDirty(freeRow, freeRow);
 		return freeRow * ColorsPerPalette;
@@ -4245,6 +4366,40 @@ namespace Jazz2
 		for (std::int32_t i = 1; i < ColorsPerPalette; i++) {
 			const std::int32_t from = (gradientStart + (i & 7)) & (ColorsPerPalette - 1);
 			outPalette[i] = (from == 0 ? (_palettes[0] | 0xFF000000u) : _palettes[from]);
+		}
+	}
+
+	void ContentResolver::BuildAlphaMapPalette(std::uint8_t color, std::uint32_t* outPalette) const
+	{
+		// As JJ2+ draws SPRITE::ALPHAMAP: every pixel in the color of the entry, the index is how opaque it is
+		const std::uint32_t rgb = (_palettes[color] & 0x00FFFFFFu);
+		for (std::int32_t i = 0; i < ColorsPerPalette; i++) {
+			outPalette[i] = rgb | (std::uint32_t(i) << 24);
+		}
+	}
+
+	void ContentResolver::BuildDissolvePalette(std::uint32_t value, std::uint32_t* outPalette) const
+	{
+		// An index of noise below the density is drawn in the color, so as many pixels as BLEND_DISSOLVE of JJ2+ draws
+		const std::uint32_t color = (_palettes[value & 0xFF] | 0xFF000000u);
+		const std::uint32_t density = ((value >> 8) & 0xFF);
+		for (std::int32_t i = 0; i < ColorsPerPalette; i++) {
+			outPalette[i] = (std::uint32_t(i) < density ? color : 0);
+		}
+	}
+
+	void ContentResolver::BuildNeonGlowPalette(std::uint8_t channels, std::uint32_t* outPalette) const
+	{
+		// As JJ2+ draws SPRITE::NEONGLOW (measured): a half of the brightness of the index added to the channels of the
+		// parameter, the brightness as JJ2 has it, with the blue of the entry before (TrueColor.asc recreates it so)
+		static constexpr std::uint32_t ChannelMasks[] = { 0x0000FFu, 0x00FF00u, 0xFF0000u, 0xFF00FFu, 0x00FFFFu, 0xFFFF00u, 0xFFFFFFu };
+		const std::uint32_t mask = ChannelMasks[std::min<std::uint8_t>(channels, 6)];
+		outPalette[0] = 0;
+		for (std::int32_t i = 1; i < ColorsPerPalette; i++) {
+			const std::uint32_t c = _palettes[i];
+			const std::uint32_t brightness = (19591u * (c & 0xFF) + 38446u * ((c >> 8) & 0xFF) + 7499u * ((_palettes[i - 1] >> 16) & 0xFF)) >> 16;
+			const std::uint32_t half = (brightness / 2) * 0x010101u;
+			outPalette[i] = (half & mask) | 0xFF000000u;
 		}
 	}
 
@@ -4288,6 +4443,12 @@ namespace Jazz2
 					BuildSingleHuePalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
 				} else if (_paletteRowScheme[row] == GemPaletteScheme) {
 					BuildGemPalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
+				} else if (_paletteRowScheme[row] == AlphaMapPaletteScheme) {
+					BuildAlphaMapPalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
+				} else if (_paletteRowScheme[row] == DissolvePaletteScheme) {
+					BuildDissolvePalette(_paletteRowColor[row], _palettes + row * ColorsPerPalette);
+				} else if (_paletteRowScheme[row] == NeonGlowPaletteScheme) {
+					BuildNeonGlowPalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
 				} else {
 					BuildPlayerColorPaletteForScheme(_paletteRowColor[row], _paletteRowScheme[row], _palettes + row * ColorsPerPalette);
 				}

@@ -196,6 +196,9 @@ namespace Jazz2::Editor
 
 	void EditorSession::OnPlayTestViewChanged()
 	{
+		// Registered again from scratch, as after a resize - the viewports registered twice would draw the scene twice, and
+		// the second time without the split of the queue the special layers need (see Viewport::RequestSplit())
+		Viewport::GetChain().clear();
 		Vector2i res = theApplication().GetResolution();
 		OnInitializeViewport(res.X, res.Y);
 	}
@@ -204,7 +207,8 @@ namespace Jazz2::Editor
 	{
 		std::uint32_t buildCount = _runtimeBuildCount;
 		FlushDocumentChanges();
-		_files->UpdateWindowTitle();
+		// The level played set a title of its own
+		_files->UpdateWindowTitle(true);
 		return (_runtimeBuildCount != buildCount);
 	}
 

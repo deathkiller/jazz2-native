@@ -425,7 +425,7 @@ namespace Jazz2::Multiplayer
 		// The box is tried at several positions across the tile, not only at its middle, and the one it fits at is
 		// kept in feetXMap. A gap exactly one tile wide that is offset half a tile from the grid - which is what a
 		// passage between the solid halves of two tiles is - has nothing at either tile's middle and used to read
-		// as solid rock on both sides, so the tracer walled itself out of whole sections: on `flash/06_medivo2`
+		// as solid rock on both sides, so the tracer walled itself out of whole sections: on `flash/medivo2`
 		// that is the way out of the starting chamber, right above the vines and beside the warp, and with it
 		// invisible the only route out was the warp itself.
 		constexpr std::int32_t FirstFeetOffset = BoxHeight / 2 + CellSize / 2;	// Relative to the tile's top
@@ -533,7 +533,7 @@ namespace Jazz2::Multiplayer
 		// of its tile means - so somewhere the body has to fit across the boundary as well, at any height within
 		// the row. Walking and falling always tested this; the sideways step off a spring did not, and once the
 		// body was allowed off-centre that let the route step clean through a wall two tiles thick
-		// (`flash/06_medivo2`, straight out of the starting chamber at tiles 17-18).
+		// (`flash/medivo2`, straight out of the starting chamber at tiles 17-18).
 		auto canCrossSideways = [&](std::int32_t tx, std::int32_t dir, std::int32_t ty) -> bool {
 			std::int32_t edgeX = tx * TS + TS / 2 + dir * (TS / 2);
 			for (std::int32_t r = 0; r < CellsPerTile; r++) {
@@ -646,7 +646,7 @@ namespace Jazz2::Multiplayer
 		// as a ceiling and the player could never jump up to it
 		// Judged the same way as every other move in the search, at sub-tile precision: a whole-tile test reads a
 		// slope, a half tile or a passage that lies across a tile boundary as solid rock, and the arc through it
-		// is then refused outright. On `flash/06_medivo2` that is what kept the player from jumping off the top
+		// is then refused outright. On `flash/medivo2` that is what kept the player from jumping off the top
 		// of the vines into the one-tile gap beside the warp - the only way out of the starting chamber that
 		// isn't the warp - so the route had no choice but to take the warp.
 		auto arcFree = [&](std::int32_t tx, std::int32_t ty) -> bool {
@@ -750,8 +750,8 @@ namespace Jazz2::Multiplayer
 		// level: crossing a valley in one hop is a shorter line than walking down into it and out again. Jazz's
 		// copter is the extreme case - it descends at about a pixel a tick while the run carries on at eight, so a
 		// single glide sails 30 tiles across at nearly constant height, and the route sails with it, over the top
-		// of the level rather than through it (reported on `monk/05_damn`, and as an unreachable jump shortcut on
-		// `secretf/01_easter1`).
+		// of the level rather than through it (reported on `monk/damn`, and as an unreachable jump shortcut on
+		// `secretf/easter1`).
 		//
 		// So a flight is charged for how far it carries the player *sideways* beyond an ordinary jump. Sideways
 		// only: dropping down a shaft is free however deep it is, because a fall costs the player nothing either,
@@ -766,7 +766,7 @@ namespace Jazz2::Multiplayer
 		};
 		// What taking a warp costs, in the same tenths of a tile. It used to be 10 - one tile, the cheapest
 		// edge in the graph - which made a warp very nearly *free* however far it teleported, so the route
-		// went through every secret warp it could find. Reported on `flash/06_medivo2`, where it detours
+		// went through every secret warp it could find. Reported on `flash/medivo2`, where it detours
 		// through secret warps to save almost nothing.
 		//
 		// The minimap is meant to show the track, not the fastest way through the level, so a warp has to be
@@ -1344,7 +1344,7 @@ namespace Jazz2::Multiplayer
 				// until a Fly Off area takes it away (a Reforged copter runs out after 10 seconds, but that's far
 				// enough anyway). Moved through a tile at a time, like swimming: the flight used to be one edge from
 				// the pickup to every tile it could reach, which the minimap then drew as a straight line from the
-				// pickup across whatever stood in the way - reported on `prince/06_labrat2`, where the line cut
+				// pickup across whatever stood in the way - reported on `prince/labrat2`, where the line cut
 				// 39 tiles diagonally through the middle of the level from the airboard at [134, 32]. Tile by tile
 				// the route follows the air the player actually flies through, and a long flight costs what it
 				// really travels instead of the straight line between its ends.
@@ -1395,7 +1395,7 @@ namespace Jazz2::Multiplayer
 						cap = BoostHeight;
 					}
 					// A lift used to ride the whole clear column above it, which turns one vine tile into a lift to
-					// the roof of the level: on `flash/05_medivo1` a handful of scattered vines in a shaft carried the
+					// the roof of the level: on `flash/medivo1` a handful of scattered vines in a shaft carried the
 					// route 40 tiles up and along the top of the level, where the player can climb nowhere near that
 					// high. What a vine or a float-up area actually covers is its own tiles, so the ride follows them
 					// and stops where they stop - with a tile of slack, because the events are often laid out with
@@ -1598,7 +1598,7 @@ namespace Jazz2::Multiplayer
 		// The far tile above was found with warps enabled, so on a level whose warps reach a pocket the geometry
 		// doesn't, the farthest tile lands in that pocket. Nothing can then be traced to it warp-free, so both arms
 		// fall back to warps and the track threads every secret door on the way. That is the reported
-		// `flash/06_medivo2`, where the detour through the secret warps saves almost nothing: the shortcut was never
+		// `flash/medivo2`, where the detour through the secret warps saves almost nothing: the shortcut was never
 		// really about distance, it was that the destination had been picked through a warp in the first place.
 		//
 		// So when the level is essentially walkable - the warp-free search reaching most of what the warp-enabled one
@@ -1836,7 +1836,7 @@ namespace Jazz2::Multiplayer
 		// The route so far is the cheapest way from the spawn to the finish, and the cheapest way is not the track.
 		// A level whose start sits next to a spring or a set of poles lets the line climb straight out and run to
 		// the exit along the top, leaving the whole section the player is meant to run first untouched - reported
-		// on `monk/05_damn`, where the track should sweep east along the floor, ride the spring at its end and come
+		// on `monk/damn`, where the track should sweep east along the floor, ride the spring at its end and come
 		// back west along the shelf before it climbs, and the traced line instead turned round at the spawn and
 		// went up. The two are both walkable; the one the level is built around is simply longer, so no pricing of
 		// edges will ever choose it.
@@ -1845,7 +1845,7 @@ namespace Jazz2::Multiplayer
 		// the walkable region, so a pocket behind a wall is far away even where it looks close - and gather what is
 		// left over into the sections it forms. A section big enough to be a part of the level rather than a corner
 		// of it is one the line is missing, so the line is laid out through it as well, and the whole is measured
-		// again. A lab like `prince/06_labrat2` has its rooms spread over half a dozen of these and needs several
+		// again. A lab like `prince/labrat2` has its rooms spread over half a dozen of these and needs several
 		// passes before the line runs where the level does; a route that already covers its level gains nothing on
 		// the first pass and is left exactly as it was.
 		//
@@ -1974,7 +1974,7 @@ namespace Jazz2::Multiplayer
 					// The drawn arc is looked for the way the search itself decides what the player can pass
 					// through, at sub-tile precision: jumpApex() is deliberately stricter, because it also
 					// *validates* jumps, and a step it refuses here left the line as a straight diagonal from
-					// take-off to landing - which is what drew it through the walls on `prince/06_labrat2`. Where
+					// take-off to landing - which is what drew it through the walls on `prince/labrat2`. Where
 					// the two disagree it is the search that was right: the step is in the route because a path
 					// through those tiles exists, so the line has to be drawn going round rather than not at all.
 					std::int32_t apexY = jumpApex(a.X, a.Y, ddx, ddy, BoostHeight);
@@ -1995,7 +1995,7 @@ namespace Jazz2::Multiplayer
 		// an up-over-down corner, which cannot describe a flight that rises and travels at once - a spring launch
 		// is a parabola, and trace() finds it by simulating the physics, not by any shape the minimap can draw - so
 		// a step like that kept its straight line from take-off to landing and cut through everything between
-		// (`prince/06_labrat2`). Since the step is in the route, a way through does exist; searching the open tiles
+		// (`prince/labrat2`). Since the step is in the route, a way through does exist; searching the open tiles
 		// between its ends finds one, and drawing that keeps the line inside the level even where it cannot look
 		// like the jump it stands for.
 		{

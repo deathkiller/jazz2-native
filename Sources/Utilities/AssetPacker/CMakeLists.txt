@@ -124,7 +124,7 @@ target_sources(AssetPacker PRIVATE ${SOURCES})
 # output. NCINE_VERSION matches the game so the cache index it writes isn't seen as coming from another build,
 # and NCINE_APP_NAME and NCINE_GAMECUBE_GAME_ID are the title and the game ID a GameCube disc image is given
 # unless others are named.
-target_compile_definitions(AssetPacker PRIVATE "CMAKE_BUILD" "DEATH_NO_THREADS" "DEATH_TRACE" "NCINE_VERSION=\"${NCINE_VERSION}\""
+target_compile_definitions(AssetPacker PRIVATE "CMAKE_BUILD" "DEATH_TRACE" "NCINE_VERSION=\"${NCINE_VERSION}\""
 	"NCINE_APP_NAME=\"${NCINE_APP_NAME}\"" "NCINE_GAMECUBE_GAME_ID=\"${GAMECUBE_GAME_ID}\"")
 # The PNG codec writes images only where asked to, the game itself never does (see nCine/Graphics/PngCodec.h)
 target_compile_definitions(AssetPacker PRIVATE "WITH_PNG_ENCODER")
@@ -159,6 +159,17 @@ if(TARGET ZLIB::ZLIB)
 endif()
 if(TARGET Threads::Threads)
 	target_link_libraries(AssetPacker PRIVATE Threads::Threads)
+	# The levels and tilesets are converted several at once (see AssetConverter::ConvertLevels()), the web version
+	# stays single-threaded, see below
+	if(NOT EMSCRIPTEN)
+		target_compile_definitions(AssetPacker PRIVATE "WITH_THREADS")
+		target_sources(AssetPacker PRIVATE ${NCINE_SOURCE_DIR}/nCine/Threading/Thread.cpp)
+		if(WIN32)
+			target_sources(AssetPacker PRIVATE ${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThreadSync.cpp)
+		else()
+			target_sources(AssetPacker PRIVATE ${NCINE_SOURCE_DIR}/nCine/Threading/PosixThreadSync.cpp)
+		endif()
+	endif()
 endif()
 
 # LZ4 writes the sprite sheets and tilesets of the trees for the consoles that read them that way (see

@@ -812,6 +812,19 @@ namespace Jazz2::Events
 					generator.Delay = event.GeneratorDelay;
 					generator.TimeLeft = timeLeft;
 
+					// JJ2 makes the tile of generated destructible scenery destructible as it is, showing the first frame of its
+					// animation until it's destroyed (with no delay, it wasn't made again in JJ2+ either)
+					switch (eventType) {
+						case EventType::SceneryDestruct:
+						case EventType::SceneryDestructButtstomp:
+						case EventType::SceneryDestructSpeed:
+						case EventType::SceneryCollapse:
+							tileMap.SetTileEventFlags(x, y, eventType, generator.EventParams);
+							break;
+						default:
+							break;
+					}
+
 					Actors::EventParamsWriter(eventParams).SetUint32(0, generatorIdx);
 					StoreTileEvent(x, y, EventType::Generator, actorFlags, eventParams);
 				}

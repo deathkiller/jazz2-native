@@ -6,17 +6,20 @@
 #include "Legacy/Definitions.h"
 #include "../ILevelHandler.h"
 #include "../Formats/LevelFile.h"
+#include "../Input/ControlScheme.h"
 #include "../Formats/TileSetFile.h"
 #include "../../nCine/Base/BitArray.h"
 
 namespace Jazz2::UI
 {
+	class Canvas;
 	class HUD;
 }
 
 namespace nCine
 {
 	class AudioBuffer;
+	class Texture;
 }
 
 namespace Jazz2::Compatibility
@@ -42,6 +45,7 @@ namespace Jazz2::Scripting
 		class jjPLAYER;
 		class EventTranslator;
 		class ScriptWorldCanvas;
+		class ScriptLayerCanvas;
 	}
 
 	/**
@@ -95,7 +99,14 @@ namespace Jazz2::Scripting
 		 *
 		 * Loads and caches the sample on first use. Returns the player, or `nullptr` if the sample couldn't be played.
 		 */
-		std::shared_ptr<AudioBufferPlayer> PlaySample(const Vector2f& pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency, bool sourceRelative, std::int32_t loopChannel);
+		std::shared_ptr<AudioBufferPlayer> PlaySample(const Vector2f& pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency, bool sourceRelative);
+		/**
+		 * @brief Keeps a looped sample playing on a channel for this tick, as `jjSampleLooped()`
+		 *
+		 * As JJ2+ has it, channel 0 starts it on a new channel, which is returned - the script passes it again in every tick
+		 * it wants to hear it (where the object is now), a loop no script played in a tick stops.
+		 */
+		std::int32_t PlayLoopedSample(const Vector2f& pos, std::int32_t sampleId, std::int32_t channel, std::int32_t volume, std::int32_t frequency);
 		/** @brief Returns `true` if the given built-in sample is available (loading it on first query) */
 		bool IsSampleLoaded(std::int32_t sampleId);
 		/** @brief Loads a custom sample from the given content path, overriding the sample at the given index */
@@ -136,6 +147,10 @@ namespace Jazz2::Scripting
 		 * Returns `nullptr` if it no longer exists. Used by `jjObjects`.
 		 */
 		Actors::ActorBase* GetScriptObject(std::int32_t objectId);
+		/** @brief Returns the tick of the scripts the object got its object ID in, 0 if the ID isn't given */
+		std::int32_t GetObjectSpawnTick(std::int32_t objectId) const;
+		/** @brief Returns the translator between the events of the game and those of the original, made on first use */
+		Legacy::EventTranslator& GetEventTranslator();
 
 		/**
 		 * @brief Called when an object is added to the level
@@ -150,6 +165,8 @@ namespace Jazz2::Scripting
 
 		/** @brief Returns what the script draws in the level (`jjDrawSprite()` and the like), attached to the level on first use */
 		Legacy::ScriptWorldCanvas& GetWorldCanvas();
+		/** @brief Calls `onDrawLayer1()` to `onDrawLayer8()` of the script for the view being drawn, see @ref Legacy::ScriptLayerCanvas */
+		void OnDrawLayers(UI::Canvas* canvas);
 		/**
 		 * @brief Returns the palette offset a palette-indexed sprite is drawn with in a sprite mode (`SPRITE::Mode`)
 		 *
@@ -158,6 +175,13 @@ namespace Jazz2::Scripting
 		 * sprite palette, 0.
 		 */
 		std::int32_t GetSpritePaletteOffset(std::uint32_t mode, std::uint8_t param);
+		/**
+		 * @brief Returns how `SPRITE::BLEND_DISSOLVE` draws a color, as many random pixels as @p density says
+		 *
+		 * Returns a repeating texture of noise and sets @p paletteOffset to the palette it's drawn through, or `nullptr`
+		 * where it can't be drawn so.
+		 */
+		Texture* GetDissolveNoise(std::uint8_t color, std::uint8_t density, std::int32_t& paletteOffset);
 		/** @brief Returns the depth something drawn on a layer of the original, 1 to 8, is drawn at */
 		std::uint16_t GetLayerDrawZ(std::int32_t layerNumber) const;
 		/**
@@ -172,6 +196,31 @@ namespace Jazz2::Scripting
 		Vector2i GetPlayerSubscreenPosition(Actors::Player* player) const;
 		/** @brief Returns the object ID of the boss that's active (`jjPLAYER::boss`), 0 for none */
 		std::int32_t GetActiveBossObjectID();
+		/**
+		 * @brief Called when a player activates the boss of a level without a boss of the game
+		 *
+		 * A script of JJ2+ drives a boss of its own (HH17's and HH18's guardians), it learns the boss is activated by
+		 * `jjPLAYER::bossActivated`. Returns `false` if the context isn't of JJ2+, the level has no boss then.
+		 */
+		bool OnBossAreaActivated();
+		/** @brief Recolors the frames of the sprites the level recolors (see @ref Formats::SpriteRecolorsChunk), as `MLLE::Setup()` does */
+		void ApplySpriteRecolors();
+		/** @brief Draws text in the level until the next tick, as `jjDrawString()` does */
+		void AddWorldText(float xPixel, float yPixel, StringView text, std::uint32_t size, const Colorf& color, std::int8_t layerZ);
+		/** @brief Returns a particle of `jjParticles`, `nullptr` out of range */
+		Legacy::jjPARTICLE* GetScriptParticle(std::int32_t index);
+		/** @brief Makes a particle of a type (`PARTICLE::Type`) as `jjAddParticle()` does, `nullptr` if all are in use */
+		Legacy::jjPARTICLE* AddScriptParticle(std::uint32_t type);
+		/**
+		 * @brief Returns the health of the boss a script activated for a player (`jjPLAYER::boss`), `false` if there's none
+		 *
+		 * The energy of the object against the one of its template, as JJ2+ shows the health of a boss.
+		 */
+		bool GetScriptBossHealth(std::int32_t& health, std::int32_t& maxHealth);
+		/** @brief Returns `true` once a boss of a script was activated, see @ref OnBossAreaActivated() */
+		bool IsBossAreaActivated() const {
+			return _bossAreaActivated;
+		}
 
 		/** @brief Methods of a class of a script that implements `jjBEHAVIORINTERFACE`, `nullptr` for the ones it doesn't have */
 		struct BehaviorMethods {
@@ -205,6 +254,13 @@ namespace Jazz2::Scripting
 		 * It's done in the next update of the scripts, see @ref Legacy::ScriptObjectHost::OnPerish().
 		 */
 		void BreakObject(std::int32_t objectId);
+		/**
+		 * @brief Makes the object of the game of an object ID the object of another event, which keeps its object ID and view
+		 *
+		 * As JJ2+ has an object behave as another one (ThreedRealms' food behaves as a dog), the object of the game is that
+		 * object then. It's done in the next update of the scripts, see @ref Legacy::ScriptObjectHost::RunGameBehavior().
+		 */
+		void SwapActor(std::int32_t objectId, std::uint8_t eventId);
 
 		/**
 		 * @brief Returns the persistent `jjLAYER` proxy bound to the given level layer index
@@ -222,6 +278,21 @@ namespace Jazz2::Scripting
 		 * if the level has no such layer.
 		 */
 		std::int32_t GetLayerIndex(std::int32_t layerNumber) const;
+		/** @brief Returns the type of a tile of the original game (`jjTileType[]`), 1 translucent, 3 invisible, 5 heat, 0 ordinary */
+		std::uint8_t GetOriginalTileType(std::int32_t tileId);
+		/** @brief Changes the type of a tile of the original game, every placed tile of it is drawn so */
+		void SetOriginalTileType(std::int32_t tileId, std::uint8_t type);
+		/** @brief Returns whether layer 8 moves by its own speeds (`jjUseLayer8Speeds`) instead of staying fixed */
+		bool GetUseLayer8Speeds() const {
+			return _useLayer8Speeds;
+		}
+		/**
+		 * @brief Sets whether layer 8 moves by its own speeds (`jjUseLayer8Speeds`) instead of staying fixed
+		 *
+		 * Only a layer 8 the level left fixed is changed. A value set while the layers are drawn takes effect after
+		 * `onDrawLayer8()`, where JJ2+ reads it.
+		 */
+		void SetUseLayer8Speeds(bool value);
 		/** @brief Returns the index of the first level layer of a given name (see @ref Formats::LayerNamesChunk), or -1 */
 		std::int32_t FindLayerByName(StringView name) const;
 		/**
@@ -325,8 +396,15 @@ namespace Jazz2::Scripting
 		/** @brief Returns list of players */
 		ArrayView<Actors::Player* const> GetPlayers() const;
 
-		/** @brief Overrides what the specified player believes one of its controls is doing for the rest of the frame */
+		/**
+		 * @brief Overrides what the specified player believes one of its controls is doing until the next tick of the scripts
+		 *
+		 * As a tick of JJ2+ is what the player does in it, the frames without a tick (the display is faster than the 70
+		 * ticks of a second) keep it too.
+		 */
 		void OverridePlayerInput(Actors::Player* player, PlayerAction action, bool value);
+		/** @brief Applies what the scripts set the controls of a local player to in the last tick to the input of this frame */
+		void ApplyInputOverrides(std::int32_t playerIndex);
 
 		/** @brief Returns script backing store for specified player */
 		jjPLAYER* GetPlayerBackingStore(Actors::Player* player);
@@ -385,9 +463,21 @@ namespace Jazz2::Scripting
 		asIScriptFunction* _onDrawPlayerTimer;
 		asIScriptFunction* _onDrawScore;
 		asIScriptFunction* _onDrawGameModeHUD;
+		// `onDrawLayer1()` to `onDrawLayer8()`, and where they draw, made in the first update if the script has any of them
+		asIScriptFunction* _onDrawLayer[8] = {};
+		std::unique_ptr<Legacy::ScriptLayerCanvas> _layerCanvas;
+		bool _drawingLayers = false;
+		// `jjTileType[]` of every tile, read from the placed tiles on first use
+		SmallVector<std::uint8_t, 0> _tileTypes;
+		// `jjUseLayer8Speeds`, and whether the level left layer 8 fixed, -1 until it's looked at
+		bool _useLayer8Speeds = false;
+		std::int8_t _layer8Fixed = -1;
+
+		void ApplyUseLayer8Speeds();
 		// The global callbacks of JJ2+ looked up once, a declaration is parsed on every lookup
 		asIScriptFunction* _onPlayer = nullptr;
 		asIScriptFunction* _onPlayerInput = nullptr;
+		asIScriptFunction* _onPlayerDraw = nullptr;
 		asIScriptFunction* _onObjectHit = nullptr;
 		// The same for the classes of behaviors, see GetBehaviorMethods()
 		HashMap<asITypeInfo*, BehaviorMethods> _behaviorMethods;
@@ -398,11 +488,16 @@ namespace Jazz2::Scripting
 		HashMap<std::int32_t, asITypeInfo*> _eventTypeToTypeInfo;
 		BitArray _enabledCallbacks;
 		HashMap<std::uint8_t, std::unique_ptr<jjPLAYER>> _playerBackingStore;
+		// The controls of each local player the scripts set in the last tick and what to, see OverridePlayerInput()
+		std::uint64_t _inputOverrideMask[Input::ControlScheme::MaxSupportedPlayers] = {};
+		std::uint64_t _inputOverrideValue[Input::ControlScheme::MaxSupportedPlayers] = {};
 		// What `jjPlayers` gives for the players that aren't in the game, it's inactive and its methods do nothing
 		std::unique_ptr<jjPLAYER> _absentPlayer;
 		// `jjWeapons[]` by the numbers of JJ2+, entry 0 is the scratch one (see GetWeapon())
 		Legacy::jjWEAPON _weapons[(std::int32_t)WeaponType::Count + 1];
 		bool _weaponsInitialized = false;
+		// Whether `MLLE::Setup()` of the include of weapons is in the module already, see OnProcessInclude()
+		bool _mlleWeaponsAdded = false;
 
 		// Lazily-built mapping of original JJ2 sample indices to converted asset paths (only allocated once a script
 		// actually plays a sample, so non-scripting and silent sessions pay nothing)
@@ -410,8 +505,15 @@ namespace Jazz2::Scripting
 		// Cache of loaded sample buffers keyed by sample index (a null entry marks a sample that failed to load, to
 		// avoid repeatedly trying to open a missing file)
 		HashMap<std::int32_t, std::unique_ptr<nCine::AudioBuffer>> _scriptSamples;
-		// Currently playing looped samples keyed by their channel, so a later call on the same channel can replace them
-		HashMap<std::int32_t, std::shared_ptr<AudioBufferPlayer>> _loopedSamples;
+		// Looped samples playing by their channels, and the tick a script played each in last (see PlayLoopedSample())
+		struct LoopedSample {
+			std::shared_ptr<AudioBufferPlayer> Player;
+			std::int32_t Tick;
+		};
+		HashMap<std::int32_t, LoopedSample> _loopedSamples;
+		std::int32_t _lastLoopChannel = 0;
+		// Stops the looped samples no script played in the last tick
+		void StopUnusedLoopedSamples();
 
 		// The animation tables, made once a script uses an animation (see GetAnimationTables()), they're destroyed first as
 		// they give the graphics of the game back as they were
@@ -467,11 +569,31 @@ namespace Jazz2::Scripting
 		// What the script draws in the level, made on first use, and the tick it was cleared in last
 		std::unique_ptr<Legacy::ScriptWorldCanvas> _worldCanvas;
 		std::int32_t _canvasClearTick = -1;
+		// The particles of the script (`jjParticles`), made on first use, the tick they moved in last and where the search for
+		// a free one starts (see UpdateParticles())
+		std::unique_ptr<Legacy::jjPARTICLE[]> _particles;
+		std::int32_t _particlesTick = -1;
+		std::int32_t _nextParticle = 0;
+
+		// Moves the particles by the ticks since the last update and draws them in the level
+		void UpdateParticles(std::int32_t currentTick);
 		// Palette offsets of the sprite modes by the mode (0 for PALSHIFT, 1 for SINGLEHUE) and the parameter, -1 if no row
 		// was free, each holds a reference (see GetSpritePaletteOffset())
-		HashMap<std::uint16_t, std::int32_t> _spritePaletteOffsets;
+		HashMap<std::uint32_t, std::int32_t> _spritePaletteOffsets;
+		// Random indices that SPRITE::BLEND_DISSOLVE is drawn through, made on first use
+		std::unique_ptr<Texture> _noiseTexture;
 		// The scenery events whose templates need an object, a bit each (see RefreshSceneryObjects())
 		std::uint8_t _sceneryObjectsMask = 0;
+		// Objects of the game to be made the objects of other events, by their object IDs (see SwapActor()), and the one being
+		// added in place of another, which keeps its object ID
+		struct ActorSwap {
+			std::int32_t ObjectID;
+			std::uint8_t EventID;
+		};
+		SmallVector<ActorSwap, 0> _actorSwaps;
+		Actors::ActorBase* _swappingActor = nullptr;
+		// A player activated the boss of the level, which is one of the script, see OnBossAreaActivated()
+		bool _bossAreaActivated = false;
 
 		// Gives an object of the level an object ID, `object` is its script view if it has one already (taken over)
 		std::int32_t RegisterObject(const std::shared_ptr<Actors::ActorBase>& actor, Legacy::jjOBJ* object, std::uint8_t eventId);
@@ -492,6 +614,9 @@ namespace Jazz2::Scripting
 		void UpdateWaterLevel(std::int32_t currentTick);
 		// Releases the script views of the objects and the templates, the objects of the game stop running behaviors of the script
 		void ReleaseObjects();
+		// Deletes the objects scripts made (`jjAddObject()`), those of the event map a behavior of a script drives start again
+		// (see OnLevelReload())
+		void DeleteObjectsOfScripts();
 
 		// Persistent jjLAYER proxies keyed by engine layer index, created lazily when a script first accesses jjLayers[i].
 		// Each holds one AddRef'd reference (released in the destructor); SyncLayerProperties pushes their writable fields
@@ -503,9 +628,6 @@ namespace Jazz2::Scripting
 		void SyncLayerProperties();
 		// Sets jjResolutionWidth/Height and jjSubscreenWidth/Height to the size of the view, every frame
 		void UpdateViewSize();
-
-		// Returns the translator of the events, made on first use
-		Legacy::EventTranslator& GetEventTranslator();
 
 		// Returns the engine layer a script means by a layer number of the original (see GetLayerIndex()), or nullptr, and
 		// in `proxy` its jjLAYER proxy if a script asked for one (not AddRef'd) - the global layer properties are the
@@ -621,7 +743,8 @@ namespace Jazz2::Scripting
 		std::uint32_t numberOfTiles = 0;
 
 		bool parLowDetail = false;
-		std::int32_t colorDepth = 0;
+		// JJ2+ runs in 8 or 16 bits, scripts show their effects in 16 (ThreedRealms its fog)
+		std::int32_t colorDepth = 16;
 		std::int32_t checkedMaxSubVideoWidth = 0;
 		std::int32_t checkedMaxSubVideoHeight = 0;
 		std::int32_t realVideoW = 0;
@@ -699,6 +822,10 @@ namespace Jazz2::Scripting
 		static std::shared_ptr<Actors::ActorBase> asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details);
 		// Spawns the object of scenery where the template of its event needs one, see Legacy::ScriptSceneryObject
 		static std::shared_ptr<Actors::ActorBase> SpawnSceneryObject(const Actors::ActorActivationDetails& details);
+		// Spawns the object of an event the game has nothing of where its template needs one, see Legacy::ScriptEventObject
+		static std::shared_ptr<Actors::ActorBase> SpawnPassthroughObject(const Actors::ActorActivationDetails& details);
+		// Makes the objects of the game the objects of the events SwapActor() asked for
+		void ProcessActorSwaps();
 		// Returns the scenery events whose templates need an object, a bit each, see Legacy::ScriptSceneryObject
 		std::uint8_t GetSceneryObjectsMask() const;
 		// Activates the scenery again whose template came to need an object since, so it gets one

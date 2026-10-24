@@ -88,6 +88,7 @@ namespace Death { namespace IO { namespace Compression {
 
 		void InitializeInternal();
 		std::int32_t ReadInternal(void* ptr, std::int32_t size);
+		bool HasNextFrame();
 	};
 
 	/**
@@ -130,8 +131,6 @@ namespace Death { namespace IO { namespace Compression {
 		Stream* _outputStream;
 		LZ4F_cctx* _ctx;
 		State _state;
-
-		char _buffer[ChunkSize];
 
 		std::unique_ptr<char[]> _outBuffer;
 		std::int32_t _outCapacity;

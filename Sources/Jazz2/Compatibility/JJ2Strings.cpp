@@ -324,7 +324,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Strings::AppendChar(char* buffer, std::size_t& j, char c)
 	{
-		const std::uint16_t u = Windows1250_Utf8[(std::uint8_t)c];
+		// `^` is ∞ in the fonts of the original (`x^` is infinite ammo)
+		const std::uint16_t u = (c == '^' ? 0x221E : Windows1250_Utf8[(std::uint8_t)c]);
 		if (u < 0x80) {
 			buffer[j++] = (char)u;
 		} else if (u < 0x800) {

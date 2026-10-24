@@ -205,7 +205,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	{
 		if (timeoutMilliseconds == Infinite) {
 			int r = WaitOnAddressInner(futex, expectedValue);
-			return (r == 0);
+			return (r == 0 || errno == EINTR);
 		} else {
 			struct _umtx_time tm = {};
 
@@ -281,7 +281,7 @@ namespace Death { namespace Threading { namespace Implementation {
 	{
 		if (timeoutMilliseconds == Infinite) {
 			long r = FutexOp(GetFutexAddress(&futex), FUTEX_WAIT, (std::uintptr_t)expectedValue);
-			return (r == 0);
+			return (r == 0 || errno == EAGAIN || errno == EINTR);
 		} else {
 			struct timespec ts;
 			clock_gettime(CLOCK_MONOTONIC, &ts);

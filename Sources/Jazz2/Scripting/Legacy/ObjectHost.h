@@ -70,6 +70,21 @@ namespace Jazz2::Scripting::Legacy
 	};
 
 	/**
+		@brief Object of an event the game has no object of (@ref EventType::PassthroughEvent)
+
+		JJ2+ makes an object of every event, a script drives some of them (ThreedRealms spawns its cars from one) - this
+		one is made only where the template of the event has a behavior of a script, which moves and draws it.
+	*/
+	class ScriptEventObject : public Actors::ActorBase
+	{
+		DEATH_RUNTIME_OBJECT(Actors::ActorBase);
+
+	protected:
+		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;
+		bool OnDraw(RenderQueue& renderQueue) override;
+	};
+
+	/**
 		@brief Adds the light a `jjOBJ` has by its `lightType` and `light` at a position of the level
 
 		The lights are shaped after the ones JJ2+ draws (as measured), with the falloff the lights of the game have.
@@ -144,10 +159,11 @@ namespace Jazz2::Scripting::Legacy
 		 *
 		 * The object of the game breaks (and gives what's in it), but the object of the script stays - in `STATE::ACTION`,
 		 * as JJ2+ has a crate that was hit, so `BEHAVIOR::CRATE` breaks it into pieces of `OBJECT::SHARD` and the behavior
-		 * can keep what remains of it (see @ref LevelScriptLoader::BreakObjects()). Anything else perishes as in the game.
+		 * can keep what remains of it (see @ref LevelScriptLoader::BreakObjects()). Anything else perishes as in the game,
+		 * unless a behavior of the script brings it back (ThreedRealms' puppet hands).
 		 */
-		void OnPerish(Actors::ActorBase* actor, Actors::ActorBase* collider) override;
-		/** @brief Returns `true` once a crate breaks as in JJ2+, its pieces are objects then (see @ref OnPerish()) */
+		bool OnPerish(Actors::ActorBase* actor, Actors::ActorBase* collider) override;
+		/** @brief Returns `true` once a crate breaks as in JJ2+, its pieces are objects then (see @ref OnPerish()), or for an object showing an animation of a script */
 		bool OwnsDebris() const override;
 		/**
 		 * @brief Returns `true` for an object the level illuminates, which lights as JJ2+ has it (`LIGHT::LASER`)
@@ -156,8 +172,41 @@ namespace Jazz2::Scripting::Legacy
 		 */
 		bool OwnsLights() const override;
 
+		/**
+		 * @brief Makes the object a platform for this tick, as `jjOBJ::bePlatform()`
+		 *
+		 * As measured in JJ2+, a player stands 24 pixels above the object over the width of its frame (or @p width) and goes
+		 * along with it by how far it moved since @p xOld and @p yOld, it's one only while the behavior makes it one.
+		 */
+		void BePlatform(float xOld, float yOld, std::int32_t width);
+		/** @brief Lets go of the players standing on the object, as `jjOBJ::clearPlatform()` */
+		void ClearPlatform();
 		/** @brief Runs the object's own update, as `jjOBJ::behave()` with a behavior of the game */
 		void RunOwnBehavior(bool draw);
+		/**
+		 * @brief Runs a behavior of the game, as `jjOBJ::behave()`
+		 *
+		 * The behavior of the object of another event makes the object of the game that object from the next update of the
+		 * scripts (see @ref LevelScriptLoader::SwapActor()), the object's own update runs until then.
+		 */
+		void RunGameBehavior(std::uint32_t behavior, bool draw);
+		/** @brief Runs `BEHAVIOR::SWINGINGVINE` of JJ2+, the object is the end of the vine */
+		void RunSwingingVine(bool draw);
+		/** @brief Spawns the object of an event where an object of the game is, as made of the same event, `nullptr` if it has none */
+		static std::shared_ptr<Actors::ActorBase> SpawnInPlace(LevelScriptLoader* levelScripts, Actors::ActorBase& actor, std::uint8_t eventId);
+		/**
+		 * @brief Runs `BEHAVIOR::MONITOR` of JJ2+ on the object of the game, which is pushed as it is
+		 *
+		 * The object falls when there's no ground right below its frame, it's in `STATE::FALL` then and in `STATE::SLEEP`
+		 * when it rests on the ground.
+		 */
+		void RunMonitor(bool draw);
+		/**
+			@brief Makes the object of the game follow a behavior that moves the object itself (`BEHAVIOR::WALKINGENEMY`)
+
+			It's put where the `jjOBJ` is, without gravity of its own and without the speeds, which are the behavior's.
+		*/
+		void FollowScriptMovement();
 		/** @brief Draws the object in this frame, as `jjOBJ::draw()` */
 		void Draw();
 		/** @brief Removes the object, the event it comes from isn't spawned again */
@@ -172,12 +221,18 @@ namespace Jazz2::Scripting::Legacy
 		 * runs, the behavior of the script counts the frames itself otherwise.
 		 */
 		static void PullFromActor(LevelScriptLoader* levelScripts, jjOBJ& obj, Actors::ActorBase& actor, bool withAnimation = true);
-		/** @brief Gives the object of the game the properties a script changed since @ref PullFromActor() */
-		static void PushToActor(jjOBJ& obj, Actors::ActorBase& actor);
+		/**
+		 * @brief Gives the object of the game the properties a script changed since @ref PullFromActor()
+		 *
+		 * With @p deferKill, `STATE::KILL` doesn't kill it yet, its behavior is to see it first.
+		 */
+		static void PushToActor(jjOBJ& obj, Actors::ActorBase& actor, bool deferKill = false);
 		/** @brief Takes the animation a script gave the object since @ref PullFromActor() as the one it shows */
 		static void UpdateSkin(jjOBJ& obj);
 		/** @brief Returns `true` if a script gave an object (or its template) what only a host can do, a behavior, an animation, collisions or a light of its own */
 		static bool NeedsHost(const jjOBJ& obj);
+		/** @brief Returns how much lower `yPos` of a walker with an animation a script gave it is than the object of the game, so its frame stands on the ground by its coldspot */
+		static float GetSkinOffsetY(LevelScriptLoader* levelScripts, const jjOBJ& obj, const Actors::ActorBase& actor);
 		/** @brief Returns the vertical position of an object of the game, of a floating collectible the one it rests at */
 		static float GetRestingY(const Actors::ActorBase& actor);
 		/** @brief Returns where the object of the game was spawned */
@@ -200,8 +255,8 @@ namespace Jazz2::Scripting::Legacy
 		 * Returns `true` if the method of the behavior returned `true` or a global one was called.
 		 */
 		static bool CallObjectHit(LevelScriptLoader* levelScripts, jjOBJ& obj, jjOBJ* bullet, jjPLAYER* player, std::int32_t force);
-		/** @brief Draws the current frame of a `jjOBJ` where it is in the level, as `jjOBJ::draw()` */
-		static void DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj);
+		/** @brief Draws the current frame of a `jjOBJ` where it is in the level (@p offsetY lower), as `jjOBJ::draw()` */
+		static void DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj, float offsetY = 0.0f);
 
 	private:
 		LevelScriptLoader* _levelScripts;
@@ -223,6 +278,21 @@ namespace Jazz2::Scripting::Legacy
 		bool _breaking;
 		// The level illuminates the object, its light is the one of the script view (see OwnsLights())
 		bool _ownsLights;
+		// The object of the game is to be the object of another event (see RunGameBehavior())
+		bool _swapRequested = false;
+		// How far the behavior moved the origin in the last tick, and the time of it the platform moved on by since (see OnUpdate())
+		Vector2f _originStep;
+		float _originStepTime = 0.0f;
+		// The behavior hung the platform where the platform it was made by is in the last tick (see GetCreatorPlatform())
+		bool _hangsFromCreator = false;
+		// The tick a player touching a special object last told its behavior of it in (see OnCollision())
+		std::int32_t _playerHitTick = INT32_MIN;
+		// The bullet hits what its frame collides with right now, the collision isn't swallowed then (see CollideByFrame())
+		bool _collidingByFrame = false;
+		// The tick the behavior made the object a platform in, and how wide (0 as its frame), see BePlatform()
+		static constexpr std::int32_t NoPlatform = INT32_MIN;
+		std::int32_t _platformTick = NoPlatform;
+		std::int16_t _platformWidth = 0;
 		// The frame _frameRect and _pixelBounds are of (from its hotspot), both empty if it has no pixels
 		std::uint32_t _boundsFrame;
 		Recti _frameRect;
@@ -236,10 +306,20 @@ namespace Jazz2::Scripting::Legacy
 		bool GetFrameHitbox(const Actors::ActorBase& actor, AABBf& hitbox);
 		// Returns how far down the object goes onto the ground by its frame, `false` if there's none near
 		bool FindFrameGround(const Actors::ActorBase& actor, float& offset);
+		// Returns `true` if the pixel right below the frame of the object is in the ground, in the column of its hotspot
+		bool IsFrameOnGround(const Actors::ActorBase& actor);
 		// Makes the hitbox of the object the one of its frame, puts the object on the ground by its frame the first time
 		void UpdateFrameHitbox(Actors::ActorBase& actor);
+		// Returns where the feet of the players standing on the object are, while the behavior makes it a platform
+		bool GetPlatformBox(AABBf& box);
+		// Returns `true` for a bullet of a player with a behavior of the script and a frame, which collides by the pixels of it
+		bool CollidesByFrame() const;
+		// Hits what the frame of the bullet collides with, as JJ2 has bullets hit objects (ThreedRealms' sword)
+		void CollideByFrame();
 		// Draws the object as the last tick left it, by itself or its frame
 		void FinishTicks();
+		// Returns the platform of the game an object made this platform, `nullptr` if this isn't one or it wasn't made so
+		Actors::ActorBase* GetCreatorPlatform() const;
 	};
 }
 

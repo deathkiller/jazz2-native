@@ -5,9 +5,14 @@
 #include "EventTranslator.h"
 #include "ObjectHost.h"
 #include "Internal.h"
+#include "Layers.h"
+#include "WorldCanvas.h"
 
 #include "../../Actors/ActorBase.h"
 #include "../../Actors/Player.h"
+#include "../../Actors/Weapons/ShotBase.h"
+#include "../../Tiles/TileMap.h"
+#include "../../UI/Font.h"
 
 #include "../../../nCine/Base/Algorithms.h"
 
@@ -151,13 +156,42 @@ namespace Jazz2::Scripting
 			/** @brief Runs the behavior of the object for one tick of the scripts */
 			void RunTick()
 			{
+				// JJ2 counts it down for every object, the behaviors only set it
+				if (_obj->justHit > 0) {
+					_obj->justHit--;
+				}
 				// A copy keeps the behavior alive while it runs, it may replace itself
 				jjBEHAVIOR behavior = _obj->behavior;
 				_drawnByBehavior = ScriptObjectHost::CallScriptBehavior(_levelScripts, *_obj, behavior);
 				if (!_drawnByBehavior) {
-					switch (behavior.behaviorId) {
+					// BEHAVIOR::DEFAULT, the behavior of the event, has the ID of the event in JJ2 (a shard flies off as a shard)
+					constexpr std::uint32_t BehaviorDefault = UINT32_MAX;
+					std::uint32_t behaviorId = behavior.behaviorId;
+					if (behaviorId == BehaviorDefault && _obj->eventID == aBULLET) {
+						// As measured in JJ2+, a bullet nobody gave a behavior is gone (see jjOBJ::jjAddObject())
+						Remove();
+						return;
+					}
+					if (behaviorId == BehaviorDefault && (_obj->eventID == aSHARD || _obj->eventID == aEXPLOSION)) {
+						behaviorId = _obj->eventID;
+					} else if (behaviorId == BehaviorDefault && _obj->eventID >= aPLAYERBULLET1 && _obj->eventID <= aPLAYERBULLETC3) {
+						// A bullet of a weapon flies as a bullet, a flame of the toaster as one - also in the tick it's made in, so a
+						// script that gives it another behavior next has it flying already (as measured in JJ2+, HH17's dragon
+						// breathes fire by speeds of its own)
+						behaviorId = (_obj->eventID == aPLAYERBULLET6 || _obj->eventID == aPLAYERBULLETP6 ? aPLAYERBULLET6 : aBULLET);
+					}
+					switch (behaviorId) {
+						case BehaviorPepperBullet:
 						case aBULLET:
 							RunBullet(true);
+							_drawnByBehavior = true;
+							break;
+						case BehaviorBilsyBullet:
+							RunBilsyBullet(true);
+							_drawnByBehavior = true;
+							break;
+						case aPLAYERBULLET6:
+							RunToasterBullet(true);
 							_drawnByBehavior = true;
 							break;
 						case aSHARD:
@@ -172,8 +206,11 @@ namespace Jazz2::Scripting
 								Remove();
 							}
 							break;
-						case aUNKNOWN:		// BEHAVIOR::INACTIVE
 						case aEXPLOSION:
+							RunExplosion(true);
+							_drawnByBehavior = true;
+							break;
+						case aUNKNOWN:		// BEHAVIOR::INACTIVE
 						case BehaviorExplosion2:
 							// What's left of a broken crate (see BreakCrate()), unless a behavior of the script keeps it
 							Remove();
@@ -226,6 +263,44 @@ namespace Jazz2::Scripting
 				obj.state = sKILL;
 				obj.behavior = BehaviorExplosion2;
 				obj._bulletHandling = HandlingIgnoreBullet;
+			}
+
+			/**
+			 * @brief Runs `BEHAVIOR::EXPLOSION` once, its `curAnim` plays once where it is and it's gone then
+			 *
+			 * A frame in 4 ticks and its state stays `STATE::START`, as measured in JJ2+.
+			 */
+			void RunExplosion(bool draw)
+			{
+				constexpr std::int32_t TicksPerFrame = 4;
+
+				jjOBJ& obj = *_obj;
+				auto& tables = _levelScripts->GetAnimationTables();
+				std::uint32_t frameCount, firstFrame;
+				if (obj.curAnim <= 0 || !tables.GetAnimationFrames(std::uint32_t(obj.curAnim), frameCount, firstFrame) || frameCount == 0) {
+					// A new one from jjAddObject() runs before its script gives it the animation, it gets one more tick
+					if (obj.state == sSTART && _explosionAnim == 0) {
+						_explosionAnim = -1;
+						return;
+					}
+					Remove();
+					return;
+				}
+				if (obj.curAnim != _explosionAnim) {
+					// From the start of the animation a script gave it, also after the first tick it ran in
+					obj.counter = 0;
+					_explosionAnim = obj.curAnim;
+				}
+				std::int32_t frame = obj.counter++ / TicksPerFrame;
+				if (frame >= std::int32_t(frameCount)) {
+					Remove();
+					return;
+				}
+				obj.frameID = std::int8_t(frame);
+				obj.curFrame = firstFrame + std::uint32_t(frame);
+				if (draw) {
+					ScriptObjectHost::DrawFrame(_levelScripts, obj);
+				}
 			}
 
 			/**
@@ -282,6 +357,145 @@ namespace Jazz2::Scripting
 			 * passes `counterEnd` or it's in a wall and explodes then, its `killAnim` plays once, a frame in 8 ticks, and
 			 * the bullet is gone after it.
 			 */
+			/**
+			 * @brief Runs `BEHAVIOR::BILSYBULLET` once, as measured in JJ2+
+			 *
+			 * It heads for the nearest player in every tick, `var[0]` and `var[1]` are the way in 1024 steps of a circle. The
+			 * speed is in eighths of a pixel, from 0 it goes half the way to 31 in a tick (rounded up), 16 first - and starts lower
+			 * again when it turns (5 after a turn of 58 degrees, taken as the speed along the new way, cubed, nothing else is
+			 * measured). A frame in 4 ticks, it explodes in a wall and on a player (see HitPlayers()).
+			 */
+			void RunBilsyBullet(bool draw)
+			{
+				constexpr float MaxSpeed = 31.0f;
+				constexpr float StartSpeed = 0.0f;
+
+				jjOBJ& obj = *_obj;
+				if (obj.state == sKILL || obj.state == sEXPLODE) {
+					RunBullet(draw);
+					return;
+				}
+
+				Vector2f target = Vector2f(obj.xPos, obj.yPos);
+				float nearest = FLT_MAX;
+				for (Actors::Player* player : _levelScripts->GetPlayers()) {
+					float distance = (player->GetPos() - Vector2f(obj.xPos, obj.yPos)).SqrLength();
+					if (distance < nearest) {
+						nearest = distance;
+						target = player->GetPos();
+					}
+				}
+				float radians = std::atan2(target.Y - obj.yPos, target.X - obj.xPos);
+				std::int32_t angle = std::int32_t(std::round(radians * 512.0f / fPi)) & 1023;
+
+				float speed;
+				if (obj.state == sSTART || (obj.get_var(0) == 0 && obj.get_var(1) == 0)) {
+					speed = StartSpeed;
+					obj.state = sFLY;
+				} else {
+					speed = std::sqrt(obj.xSpeed * obj.xSpeed + obj.ySpeed * obj.ySpeed) * 8.0f;
+					if (angle != obj.get_var(1)) {
+						float turn = std::cos((angle - obj.get_var(1)) * fPi / 512.0f);
+						speed *= std::max(turn, 0.0f) * std::max(turn, 0.0f) * std::max(turn, 0.0f);
+					}
+				}
+				speed = std::round(speed);
+				speed = std::min(speed + std::ceil((MaxSpeed - speed) * 0.5f), MaxSpeed);
+				obj.set_var(0, angle);
+				obj.set_var(1, angle);
+				obj.xSpeed = std::cos(radians) * speed / 8.0f;
+				obj.ySpeed = std::sin(radians) * speed / 8.0f;
+
+				if (IsMasked(obj.xPos + obj.xSpeed, obj.yPos + obj.ySpeed)) {
+					obj.state = sEXPLODE;
+					obj.counter = 1;
+				} else {
+					obj.xPos += obj.xSpeed;
+					obj.yPos += obj.ySpeed;
+					obj.counter = (obj.counter + 1) & 3;
+					auto& tables = _levelScripts->GetAnimationTables();
+					std::uint32_t frameCount, firstFrame;
+					if (obj.curAnim > 0 && tables.GetAnimationFrames(std::uint32_t(obj.curAnim), frameCount, firstFrame) && frameCount > 0) {
+						if (obj.counter == 0) {
+							obj.frameID = std::int8_t((obj.frameID + 1) % std::int32_t(frameCount));
+						}
+						obj.curFrame = firstFrame + std::uint32_t(obj.frameID % std::int32_t(frameCount));
+					}
+				}
+
+				if (draw && obj.curFrame != 0) {
+					ScriptObjectHost::DrawFrame(_levelScripts, obj);
+				}
+			}
+
+			/**
+			 * @brief Runs `BEHAVIOR::TOASTERBULLET` once, as measured in JJ2+
+			 *
+			 * It turns the way a bullet does (see RunBullet()), but stays in that tick. It goes 6 pixels a tick at most, slowing
+			 * down by 1/64 before it moves, and rises by 1/64 more in a tick while it flies left (to the right it doesn't). A
+			 * frame in 8 ticks, the first one after it starts, it's gone when its animation ends (57 ticks, whatever its
+			 * `counterEnd` is), and explodes in a wall.
+			 */
+			void RunToasterBullet(bool draw)
+			{
+				constexpr float MaxSpeed = 6.0f;
+				constexpr float Slowdown = 1.0f / 64.0f;
+				constexpr std::int32_t TicksPerFrame = 8;
+				// Of the animation of the game, if it has none
+				constexpr std::uint32_t DefaultFrameCount = 8;
+
+				jjOBJ& obj = *_obj;
+				if (obj.state == sKILL || obj.state == sEXPLODE) {
+					// The kill and the explosion are those of a bullet
+					RunBullet(draw);
+					return;
+				}
+				if (obj.state == sSTART) {
+					std::int8_t direction;
+					float creatorSpeed;
+					GetCreatorMotion(direction, creatorSpeed);
+					obj.direction = (direction != 0 ? direction : 1);
+					obj.xSpeed = obj.direction * obj.xSpeed + creatorSpeed;
+					obj.state = sFLY;
+					// It moves from the next tick on
+					if (draw && obj.curFrame != 0) {
+						ScriptObjectHost::DrawFrame(_levelScripts, obj);
+					}
+					return;
+				}
+
+				auto& tables = _levelScripts->GetAnimationTables();
+				std::uint32_t frameCount = 0, firstFrame = 0;
+				bool hasFrames = (obj.curAnim > 0 && tables.GetAnimationFrames(std::uint32_t(obj.curAnim), frameCount, firstFrame) && frameCount > 0);
+				std::int32_t frame = obj.counter / TicksPerFrame + 1;
+				if (frame >= std::int32_t(hasFrames ? frameCount : DefaultFrameCount)) {
+					Remove();
+					return;
+				}
+				if (IsMasked(obj.xPos, obj.yPos)) {
+					obj.state = sEXPLODE;
+					obj.counter = 1;
+					RunBullet(draw);
+					return;
+				}
+				obj.counter++;
+				obj.xSpeed = (obj.xSpeed > 0.0f ? std::max(obj.xSpeed - Slowdown, 0.0f) : std::min(obj.xSpeed + Slowdown, 0.0f));
+				obj.xSpeed = std::clamp(obj.xSpeed, -MaxSpeed, MaxSpeed);
+				if (obj.xSpeed < 0.0f) {
+					obj.ySpeed -= Slowdown;
+				}
+				obj.xPos += obj.xSpeed;
+				obj.yPos += obj.ySpeed;
+
+				if (hasFrames) {
+					obj.frameID = std::int8_t(frame);
+					obj.curFrame = firstFrame + std::uint32_t(frame);
+				}
+				if (draw && obj.curFrame != 0) {
+					ScriptObjectHost::DrawFrame(_levelScripts, obj);
+				}
+			}
+
 			void RunBullet(bool draw)
 			{
 				// Measured in JJ2+, the acceleration doesn't make a bullet faster than this
@@ -296,6 +510,12 @@ namespace Jazz2::Scripting
 					obj.xSpeed = obj.direction * obj.xSpeed + creatorSpeed;
 					obj.xAcc = obj.direction * obj.xAcc;
 					obj.state = sFLY;
+				}
+
+				if (obj.state == sKILL) {
+					// Killed by an attack of a player, as an enemy a script made of it (ThreedRealms' bees)
+					Remove();
+					return;
 				}
 
 				auto& tables = _levelScripts->GetAnimationTables();
@@ -339,9 +559,13 @@ namespace Jazz2::Scripting
 			}
 
 		private:
-			// BEHAVIOR::CRATE, BEHAVIOR::EXPLOSION2, HANDLING::PARTICLE and HANDLING::IGNOREBULLET of JJ2+
+			// BEHAVIOR::CRATE, BEHAVIOR::EXPLOSION2, BEHAVIOR::PEPPERBULLET, HANDLING::PARTICLE and HANDLING::IGNOREBULLET of JJ2+
 			static constexpr std::uint32_t BehaviorCrate = aCOUNT + 9;
 			static constexpr std::uint32_t BehaviorExplosion2 = aCOUNT + 21;
+		public:
+			static constexpr std::uint32_t BehaviorPepperBullet = aCOUNT + 29;
+			static constexpr std::uint32_t BehaviorBilsyBullet = aCOUNT + 14;
+		private:
 			static constexpr std::uint32_t HandlingParticle = 3;
 			static constexpr std::uint32_t HandlingIgnoreBullet = 1;
 
@@ -352,6 +576,8 @@ namespace Jazz2::Scripting
 			std::int32_t _nextTick = -1;
 			// Ticks a piece of a broken crate is still there for (see RunShard())
 			std::int32_t _ticksLeft = 0;
+			// The animation an explosion plays (see RunExplosion())
+			std::int16_t _explosionAnim = 0;
 			// A behavior draws the object, its animation isn't drawn by itself
 			bool _drawnByBehavior = false;
 
@@ -360,7 +586,7 @@ namespace Jazz2::Scripting
 			{
 				// CREATOR::Type of JJ2+
 				constexpr std::uint32_t CreatorObject = 0;
-				constexpr std::uint32_t CreatorPlayer = 2;
+				constexpr std::uint32_t CreatorPlayer = 0x8000;
 
 				direction = 0;
 				speed = 0.0f;
@@ -392,19 +618,35 @@ namespace Jazz2::Scripting
 			}
 
 			// A bullet of an enemy (HANDLING::ENEMYBULLET) explodes on a player it touches and hurts the player by its
-			// `animSpeed`, as measured in JJ2+ - unless the player can't be hurt then
+			// `animSpeed`, as measured in JJ2+ - unless the player can't be hurt then. It goes through a frozen player, which
+			// it doesn't hurt either, it's after the behavior: HH17's ice bullets freeze the player they touch and push it
 			void HitPlayers()
 			{
+				constexpr std::uint32_t HandlingEnemy = 0;
 				constexpr std::uint32_t HandlingEnemyBullet = 2;
 
 				jjOBJ& obj = *_obj;
-				if (obj._playerHandling != HandlingEnemyBullet || obj.state == sEXPLODE || obj.state == sKILL ||
+				bool isEnemy = (obj._playerHandlingSet && obj._playerHandling == HandlingEnemy);
+				if ((obj._playerHandling != HandlingEnemyBullet && !isEnemy) || obj.state == sEXPLODE || obj.state == sKILL ||
 					GetState(Actors::ActorState::IsDestroyed)) {
 					return;
 				}
 				for (Actors::Player* player : _levelScripts->GetPlayers()) {
-					if (player->GetHealth() <= 0 || !DoesObjectTouch(_levelScripts, obj, player->AABBInner)) {
+					if (player->GetHealth() <= 0 || player->IsFrozen() || !DoesObjectTouch(_levelScripts, obj, player->AABBInner)) {
 						continue;
+					}
+					if (isEnemy) {
+						// An enemy a script made of another object hurts a player who touches it, an attack hurts it instead, as
+						// measured in JJ2+ (ThreedRealms' bees are bullets), its behavior isn't told of it
+						if (player->HasSugarRush() || player->GetSpecialMove() != Actors::Player::SpecialMoveType::None) {
+							obj.energy = std::int8_t(std::max(obj.energy - 4, 0));
+							if (obj.energy <= 0) {
+								obj.state = sKILL;
+							}
+						} else if (!player->IsInvulnerable()) {
+							player->TakeDamage(1, 4.0f * (player->GetPos().X > obj.xPos ? 1.0f : -1.0f));
+						}
+						break;
 					}
 					if (!player->IsInvulnerable()) {
 						player->TakeDamage(std::max(obj.animSpeed, 1), 4.0f * (player->GetPos().X > obj.xPos ? 1.0f : -1.0f));
@@ -546,8 +788,13 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjOBJ::get_isActive() const {
-			// Active while its object exists, the one a script controls or the one of the game
-			return (_wrapper != nullptr || !_actor.expired());
+			// Active while its object exists, the one a script controls or the one of the game - a deleted one is gone at once, as
+			// in JJ2+, the object of the game is removed only after the frame
+			if (_wrapper != nullptr) {
+				return true;
+			}
+			std::shared_ptr<Actors::ActorBase> actor = _actor.lock();
+			return (actor != nullptr && !actor->GetState(Actors::ActorState::IsDestroyed));
 		}
 		std::uint32_t jjOBJ::get_lightType() const {
 			noop();
@@ -574,26 +821,135 @@ namespace Jazz2::Scripting
 			return target;
 		}
 		void jjOBJ::blast(std::int32_t maxDistance, bool blastObjects) {
-			noop();
+			// Hurts the players nearer than the square root of `maxDistance` (ThreedRealms' pumpkin bombs pass 100*100), pushed
+			// away from it - what it does to objects (`blastObjects`) isn't done
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			for (Actors::Player* player : owner->GetPlayers()) {
+				Vector2f diff = player->GetPos() - Vector2f(xPos, yPos);
+				if (player->GetHealth() > 0 && diff.SqrLength() < float(maxDistance) && !player->IsInvulnerable()) {
+					player->TakeDamage(1, 4.0f * (diff.X >= 0.0f ? 1.0f : -1.0f));
+				}
+			}
+		}
+
+		void jjOBJ::RunWalkingEnemy(bool draw) {
+			// BEHAVIOR::WALKINGENEMY, as measured in JJ2+: the row of the cold spot of its frame stands on the ground, without
+			// it the object falls (0.125 a tick); it goes by xSpeed and faces the way it goes, it turns round on the spot if
+			// the row under where it'd go isn't masked or the row above is 38 px further (it turns every tick in the air);
+			// its frames go every 8 ticks of the game
+			constexpr float Gravity = 0.125f;
+			constexpr float MaxFallSpeed = 8.0f;
+			constexpr std::int32_t WallDistance = 38;
+
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto& tables = owner->GetAnimationTables();
+			std::int32_t feet = 0;
+			Recti frameRect; Vector2i coldSpot;
+			if (curFrame != 0 && tables.GetFrameSpots(curFrame, frameRect, coldSpot)) {
+				feet = frameRect.Y - coldSpot.Y;
+			}
+
+			if (state == sSTART) {
+				state = sWALK;
+				yAcc = (jjMaskedPixel(std::int32_t(xPos), std::int32_t(yPos) + feet) ? 0.0f : Gravity);
+			} else if (state == sFREEZE) {
+				if (freeze > 0) {
+					freeze--;
+				}
+				if (freeze == 0) {
+					state = oldState;
+				}
+			} else if (state == sWALK) {
+				bool falling = (ySpeed > 0.0f);
+				yPos += ySpeed;
+				if (jjMaskedPixel(std::int32_t(xPos), std::int32_t(yPos) + feet)) {
+					// Its feet on the first masked row, a fall can end deeper - only then, one pushed into a wall (ThreedRealms'
+					// puppets stagger back) would rise through it
+					for (std::int32_t i = 0; falling && i < 8 && jjMaskedPixel(std::int32_t(xPos), std::int32_t(yPos) + feet - 1); i++) {
+						yPos -= 1.0f;
+					}
+					ySpeed = 0.0f;
+					yAcc = 0.0f;
+				} else {
+					yAcc = Gravity;
+					ySpeed = std::min(ySpeed + yAcc, MaxFallSpeed);
+				}
+
+				float targetX = xPos + xSpeed;
+				std::int32_t way = (xSpeed < 0.0f ? -1 : 1);
+				std::int32_t feetRow = std::int32_t(yPos) + feet;
+				if (!jjMaskedPixel(std::int32_t(targetX), feetRow) || jjMaskedPixel(std::int32_t(targetX) + way * WallDistance, feetRow - 1)) {
+					xSpeed = -xSpeed;
+				} else {
+					xPos = targetX;
+				}
+				if (xSpeed != 0.0f) {
+					direction = std::int8_t(xSpeed < 0.0f ? -1 : 1);
+				}
+			}
+
+			if ((owner->GetGameTick() & 7) == 0) {
+				frameID++;
+			}
+			std::uint32_t frameCount, firstFrame;
+			if (curAnim > 0 && tables.GetAnimationFrames(std::uint32_t(curAnim), frameCount, firstFrame) && frameCount > 0) {
+				frameID = std::int8_t(std::uint32_t(frameID) % frameCount);
+				curFrame = firstFrame + std::uint32_t(frameID);
+			}
+
+			if (_host != nullptr) {
+				_host->FollowScriptMovement();
+			}
+			if (draw && curFrame != 0) {
+				ScriptObjectHost::DrawFrame(owner, *this);
+			}
 		}
 
 		void jjOBJ::behave1(std::uint32_t behavior, bool draw) {
+			// BEHAVIOR::DEFAULT is the behavior the object has (`obj.behave()` of JJ2+ runs a behavior of the script given to
+			// it, the puppets of ThreedRealms start so) - but not again from within itself, the one of the game runs then
+			constexpr std::uint32_t BehaviorDefault = UINT32_MAX;
+			if (behavior == BehaviorDefault) {
+				const void* own = (this->behavior.object != nullptr ? static_cast<const void*>(this->behavior.object) : static_cast<const void*>(this->behavior.function));
+				if (own != nullptr && own != _runningBehavior) {
+					jjBEHAVIOR ownBehavior = this->behavior;
+					ScriptObjectHost::CallScriptBehavior(ScriptLoader::FromActiveContext<LevelScriptLoader>(), *this, ownBehavior, draw);
+					return;
+				}
+				if (own == nullptr) {
+					behavior = this->behavior.behaviorId;
+				}
+			}
 			// Runs a behavior once, it doesn't become the behavior of the object. A behavior of the game is the object's own
 			// update, the object has no other; an object a script controls entirely can be a bullet.
+			// BEHAVIOR::WALKINGENEMY of JJ2+, which the game has only in the objects of its own enemies
+			constexpr std::uint32_t BehaviorWalkingEnemy = aCOUNT + 1;
+			if (behavior == BehaviorWalkingEnemy && (_host != nullptr || _wrapper != nullptr)) {
+				RunWalkingEnemy(draw);
+				return;
+			}
 			if (_host != nullptr) {
+				// BEHAVIOR::MONITOR of JJ2+
+				constexpr std::uint32_t BehaviorMonitor = aCOUNT + 8;
 				if (behavior == aUNKNOWN) {
 					// BEHAVIOR::INACTIVE
 					_host->Delete();
+				} else if (behavior == BehaviorMonitor) {
+					_host->RunMonitor(draw);
 				} else {
-					_host->RunOwnBehavior(draw);
+					_host->RunGameBehavior(behavior, draw);
 				}
 			} else if (_wrapper != nullptr) {
 				// BEHAVIOR::CRATE of JJ2+
 				constexpr std::uint32_t BehaviorCrate = aCOUNT + 9;
 				switch (behavior) {
 					case aUNKNOWN: _wrapper->Remove(); break;
-					case aBULLET: _wrapper->RunBullet(draw); break;
+					case aBULLET:
+					case ScriptLegacyObject::BehaviorPepperBullet: _wrapper->RunBullet(draw); break;
+					case ScriptLegacyObject::BehaviorBilsyBullet: _wrapper->RunBilsyBullet(draw); break;
+					case aPLAYERBULLET6: _wrapper->RunToasterBullet(draw); break;
 					case aSHARD: _wrapper->RunShard(draw); break;
+					case aEXPLOSION: _wrapper->RunExplosion(draw); break;
 					case BehaviorCrate: _wrapper->BreakCrate(); break;
 				}
 			}
@@ -614,9 +970,40 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjOBJ::jjAddObject(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, std::uint32_t behavior) {
-			// The spawned actor runs its own native behavior; the custom `behavior`/creator arguments aren't applied
+			// The object of the game the event has, with its creator, which its behavior may look at (an object that spawns
+			// one of its own kind tells the copy by it, or the copies spawn more forever)
+			constexpr std::uint32_t BehaviorDefault = UINT32_MAX;
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			return owner->AddObjectFromEvent(eventID, xPixel, yPixel);
+			std::int32_t id = owner->AddObjectFromEvent(eventID, xPixel, yPixel);
+			if (id > 0) {
+				jjOBJ* obj = owner->GetObjectById(id);
+				obj->_creatorID = creatorID;
+				obj->_creatorType = creatorType;
+				if (behavior != BehaviorDefault) {
+					obj->behavior = behavior;
+				}
+				obj->Release();
+				return id;
+			}
+
+			// The event has no object in the game (OBJECT::SHARD, OBJECT::EXPLOSION...), a script-controlled one stands in, as
+			// JJ2+ makes every object a script asks for
+			id = owner->AddScriptControlledObject(eventID, xPixel, yPixel, nullptr);
+			if (auto* wrapper = runtime_cast<ScriptLegacyObject>(owner->GetScriptObject(id))) {
+				jjOBJ* obj = wrapper->GetObject();
+				obj->_creatorID = creatorID;
+				obj->_creatorType = creatorType;
+				if (behavior != BehaviorDefault) {
+					obj->behavior = behavior;
+				}
+				// BEHAVIOR::INACTIVE keeps the object as it is until the script gives it a behavior (ThreedRealms' pulses of
+				// its trigger crates), it would be gone at once - so does a bullet, as measured in JJ2+, its behavior does
+				// nothing then (HH17's dragon gives its fire the homing behavior next)
+				if (behavior != aUNKNOWN && !(behavior == BehaviorDefault && eventID == aBULLET)) {
+					wrapper->RunTick();
+				}
+			}
+			return id;
 		}
 		std::int32_t jjOBJ::jjAddObjectEx(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, jjVOIDFUNCOBJ behavior) {
 			// The funcdef handle is passed by AngelScript as an asIScriptFunction*, with a reference that is this function's
@@ -805,39 +1192,67 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 		void jjOBJ::bePlatform(float xOld, float yOld, std::int32_t width, std::int32_t height) {
-			noop();
+			// Only an object of the game can carry a player, one the script controls entirely has none
+			if (_host != nullptr) {
+				_host->BePlatform(xOld, yOld, width);
+			}
 		}
 		void jjOBJ::clearPlatform() {
-			noop();
+			if (_host != nullptr) {
+				_host->ClearPlatform();
+			}
 		}
 		void jjOBJ::putOnGround(bool precise) {
-			// Snap the object down onto (or up out of) the nearest solid ground below its reference point.
-			// `precise` scans pixel-by-pixel; the coarse mode steps in 4px increments (faster, tile-ish accuracy).
-			// Masks live only on the sprite layer here, so this works regardless of the object's own layer.
-			const float x = xPos;
-			float y = yPos;
-			const float step = precise ? 1.0f : 4.0f;
-			const float maxSearch = 256.0f;	// guard against an off-map object scanning the whole level
-			float searched = 0.0f;
-			if (IsRegionMasked(AABBf(x, y, x, y))) {
-				// Embedded in ground: rise until the reference pixel is clear
-				while (searched < maxSearch && IsRegionMasked(AABBf(x, y, x, y))) {
-					y -= step;
-					searched += step;
+			// As measured in JJ2+, in the column of the middle of the frame: the precise mode rests the row of the coldspot (at
+			// most the last row of the frame) on the topmost masked pixel under it - up out of the ground by 15 px at most, down
+			// to it if it's less than 50 px below - and lowers the frame in 4 px steps until the pixel below it is masked then,
+			// the coarse mode lowers the last row in 4 px steps until it's masked and doesn't lift an object out of the ground
+			constexpr std::int32_t MaxSearch = 512;
+			constexpr std::int32_t MaxPreciseRise = 15;
+			constexpr std::int32_t MaxPreciseDrop = 50;
+
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			Recti frameRect; Vector2i coldSpot;
+			if (curFrame == 0 || !owner->GetAnimationTables().GetFrameSpots(curFrame, frameRect, coldSpot)) {
+				frameRect = Recti(0, 0, 1, 1);
+				coldSpot = Vector2i::Zero;
+			}
+			std::int32_t x = std::int32_t(xPos) + frameRect.X + frameRect.W / 2;
+			std::int32_t lastY = frameRect.Y + std::max(frameRect.H, 1) - 1;
+
+			std::int32_t y = std::int32_t(yPos);
+			if (precise) {
+				std::int32_t offset = std::min(frameRect.Y - coldSpot.Y, lastY);
+				if (jjMaskedPixel(x, y + offset)) {
+					for (std::int32_t i = 0; i < MaxPreciseRise && jjMaskedPixel(x, y + offset - 1); i++) {
+						y--;
+					}
+				} else {
+					std::int32_t distance = jjMaskedTopVLine(x, y + offset, MaxPreciseDrop) - 1;
+					if (distance < MaxPreciseDrop) {
+						y += distance;
+					}
+				}
+				for (std::int32_t searched = 0; searched < MaxSearch && !jjMaskedPixel(x, y + lastY + 1); searched += 4) {
+					y += 4;
 				}
 			} else {
-				// Floating: descend until the pixel directly below becomes solid
-				while (searched < maxSearch && !IsRegionMasked(AABBf(x, y + 1.0f, x, y + 1.0f))) {
-					y += step;
-					searched += step;
+				for (std::int32_t searched = 0; searched < MaxSearch && !jjMaskedPixel(x, y + lastY); searched += 4) {
+					y += 4;
 				}
 			}
-			yPos = y;
+			yPos += float(y - std::int32_t(yPos));
 			ySpeed = 0.0f;
 		}
 		bool jjOBJ::ricochet() {
-			noop();
-			return false;
+			// A shot of the game turns around as off a wall, an object of a script isn't one
+			std::shared_ptr<Actors::ActorBase> actor = _actor.lock();
+			auto* shot = runtime_cast<Actors::Weapons::ShotBase>(actor.get());
+			if (shot == nullptr) {
+				return false;
+			}
+			shot->TriggerRicochet(nullptr);
+			return true;
 		}
 		std::int32_t jjOBJ::unfreeze(std::int32_t style) {
 			// Thaw a frozen object; the shatter `style` effect isn't emulated for script-controlled objects
@@ -868,11 +1283,39 @@ namespace Jazz2::Scripting
 			noop();
 		}
 		int32_t jjOBJ::fireBullet(std::uint8_t eventID) {
-			noop();
-			return 0;
+			// As measured in JJ2+, an object of the event at the gun spot of the frame this one shows (hot spot less gun spot, HH17's
+			// dragon breathes fire from its mouth), made by it - the speed of its template goes the way this one faces (see
+			// ScriptLegacyObject::RunBullet()), its handling is the one of the template
+			constexpr std::uint32_t CreatorObject = 0;
+			constexpr std::uint32_t BehaviorDefault = UINT32_MAX;
+			float x = xPos, y = yPos;
+			if (curFrame != 0) {
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				if (jjANIMFRAME* frame = owner->GetAnimationTables().GetFrame(curFrame)) {
+					float offsetX = float(frame->hotSpotX - frame->gunSpotX);
+					x += (direction < 0 ? -offsetX : offsetX);
+					y += float(frame->hotSpotY - frame->gunSpotY);
+					frame->Release();
+				}
+			}
+			return jjAddObject(eventID, x, y, std::uint16_t(objectID), CreatorObject, BehaviorDefault);
 		}
 		void jjOBJ::particlePixelExplosion(std::int32_t style) {
-			noop();
+			AddPixelExplosion(ScriptLoader::FromActiveContext<LevelScriptLoader>(), xPos, yPos, curFrame, direction);
+		}
+		void jjOBJ::AddPixelExplosion(LevelScriptLoader* owner, float xPixel, float yPixel, std::uint32_t frame, std::int32_t direction) {
+			// The frame bursts into pieces of its pixels, as the debris of an object of the game - the styles of JJ2+ (colored
+			// or burning ones) aren't told apart
+			auto* tileMap = owner->GetLevelHandler()->TileMap();
+			std::int32_t cell = 0;
+			auto* graphics = (frame != 0 ? owner->GetAnimationTables().ResolveFrame(frame, cell) : nullptr);
+			if (tileMap == nullptr || graphics == nullptr) {
+				return;
+			}
+			GraphicResource res{};
+			res.Base = graphics;
+			tileMap->CreateParticleDebris(&res, Vector3f(xPixel + ScriptObjectHost::PositionOffset, yPixel + ScriptObjectHost::PositionOffset,
+				float(ILevelHandler::MainPlaneZ)), Vector2f::Zero, cell, direction < 0);
 		}
 		void jjOBJ::grantPickup(jjPLAYER* player, std::int32_t frequency) {
 			noop();
@@ -903,8 +1346,30 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjOBJ::doesCollide(const jjOBJ* object, bool always) const {
-			noop();
-			return false;
+			// By the pixels of the frames the two show, as JJ2 has bullets hit objects - a single pixel is enough for a bullet
+			constexpr std::uint32_t HandlingPlayerBullet = 1;
+			constexpr std::uint32_t HandlingEnemyBullet = 2;
+			bool result = false;
+			if (object != nullptr && curFrame != 0 && object->curFrame != 0) {
+				auto& tables = ScriptLoader::FromActiveContext<LevelScriptLoader>()->GetAnimationTables();
+				jjANIMFRAME* frame = tables.GetFrame(curFrame);
+				jjANIMFRAME* otherFrame = (frame != nullptr ? tables.GetFrame(object->curFrame) : nullptr);
+				if (otherFrame != nullptr) {
+					bool bullet = (_playerHandling == HandlingPlayerBullet || _playerHandling == HandlingEnemyBullet ||
+						object->_playerHandling == HandlingPlayerBullet || object->_playerHandling == HandlingEnemyBullet);
+					result = tables.DoFramesCollide(*frame, std::int32_t(xPos), std::int32_t(yPos), direction, *otherFrame,
+						std::int32_t(object->xPos), std::int32_t(object->yPos), object->direction, always || bullet);
+					otherFrame->Release();
+				}
+				if (frame != nullptr) {
+					frame->Release();
+				}
+			}
+			if (object != nullptr) {
+				// A handle passed to a native function is the function's to release
+				const_cast<jjOBJ*>(object)->Release();
+			}
+			return result;
 		}
 		bool jjOBJ::doesCollidePlayer(const jjPLAYER* object, bool always) const {
 			// The pixels of the frame the object shows against the hitbox of the player
@@ -915,25 +1380,42 @@ namespace Jazz2::Scripting
 			return DoesObjectTouch(owner, *this, object->_player->AABBInner);
 		}
 
+		// The data of a particle of a type is in its 9 bytes, at the offsets RegisterLegacyParticles() gives the fields - the
+		// colors of a pixel follow its size, the text of a string fills them
+		constexpr std::size_t ParticleDataSize = 9;
+
 		std::uint8_t jjPARTICLEPIXEL::get_color(std::int32_t i) const {
-			noop(); return 0;
+			const std::uint8_t* data = reinterpret_cast<const std::uint8_t*>(this);
+			return (i >= 0 && i < std::int32_t(ParticleDataSize - 1) ? data[1 + i] : 0);
 		}
 		std::uint8_t jjPARTICLEPIXEL::set_color(std::int32_t i, std::uint8_t value) {
-			noop(); return 0;
+			std::uint8_t* data = reinterpret_cast<std::uint8_t*>(this);
+			if (i >= 0 && i < std::int32_t(ParticleDataSize - 1)) {
+				data[1 + i] = value;
+			}
+			return value;
 		}
 
 		String jjPARTICLESTRING::get_text() const {
-			noop(); return {};
+			const char* data = reinterpret_cast<const char*>(this);
+			std::size_t length = 0;
+			while (length < ParticleDataSize && data[length] != '\0') {
+				length++;
+			}
+			return String(data, length);
 		}
 		void jjPARTICLESTRING::set_text(String text) {
-			noop();
+			char* data = reinterpret_cast<char*>(this);
+			std::size_t length = std::min(text.size(), ParticleDataSize);
+			std::memcpy(data, text.data(), length);
+			std::memset(data + length, 0, ParticleDataSize - length);
 		}
 
-		jjPARTICLE::jjPARTICLE() : _refCount(1) {
-			noop();
+		jjPARTICLE::jjPARTICLE()
+			: xPos(0.0f), yPos(0.0f), xSpeed(0.0f), ySpeed(0.0f), particleType(particleNONE), active(false), GENERIC{},
+				_refCount(1), _age(0), _scale(0.0f) {
 		}
 		jjPARTICLE::~jjPARTICLE() {
-			noop();
 		}
 
 		void jjPARTICLE::AddRef() {
@@ -965,32 +1447,309 @@ namespace Jazz2::Scripting
 		noop();
 	}
 	void jjAddParticlePixelExplosion(float xPixel, float yPixel, int curFrame, int direction, int mode) {
-		noop();
+		jjOBJ::AddPixelExplosion(ScriptLoader::FromActiveContext<LevelScriptLoader>(), xPixel, yPixel, std::uint32_t(curFrame), direction);
 	}
 
 	jjPARTICLE* GetParticle(std::int32_t index) {
-		noop();
-		// TODO
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-
-		void* mem = asAllocMem(sizeof(jjPARTICLE));
-		return new(mem) jjPARTICLE();
+		return ScriptLoader::FromActiveContext<LevelScriptLoader>()->GetScriptParticle(index);
 	}
 
 	jjPARTICLE* AddParticle(std::int32_t particleType) {
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return ScriptLoader::FromActiveContext<LevelScriptLoader>()->AddScriptParticle(std::uint32_t(particleType));
+	}
 
-		void* mem = asAllocMem(sizeof(jjPARTICLE));
-		return new(mem) jjPARTICLE();
+	// As many as JJ2+ has (`jjParticles`)
+	static constexpr std::int32_t MaxParticles = 1024;
+
+	Legacy::jjPARTICLE* LevelScriptLoader::GetScriptParticle(std::int32_t index)
+	{
+		if (index < 0 || index >= MaxParticles) {
+			if (asIScriptContext* ctx = asGetActiveContext()) {
+				ctx->SetException("Index out of bounds");
+			}
+			return nullptr;
+		}
+		if (_particles == nullptr) {
+			_particles = std::make_unique<Legacy::jjPARTICLE[]>(MaxParticles);
+			_particlesTick = GetGameTick();
+		}
+		return &_particles[index];
+	}
+
+	Legacy::jjPARTICLE* LevelScriptLoader::AddScriptParticle(std::uint32_t type)
+	{
+		if (type == Legacy::particleNONE || type > Legacy::particleTILE) {
+			return nullptr;
+		}
+		if (_particles == nullptr) {
+			_particles = std::make_unique<Legacy::jjPARTICLE[]>(MaxParticles);
+			_particlesTick = GetGameTick();
+		}
+
+		Legacy::jjPARTICLE* particle = nullptr;
+		for (std::int32_t i = 0; i < MaxParticles; i++) {
+			std::int32_t index = (_nextParticle + i) % MaxParticles;
+			if (_particles[index].particleType == Legacy::particleNONE) {
+				particle = &_particles[index];
+				_nextParticle = (index + 1) % MaxParticles;
+				break;
+			}
+		}
+		if (particle == nullptr) {
+			return nullptr;
+		}
+
+		// What JJ2+ gives a new particle of the type, as measured
+		particle->xPos = particle->yPos = particle->xSpeed = particle->ySpeed = 0.0f;
+		particle->particleType = std::uint8_t(type);
+		particle->active = true;
+		particle->_age = 0;
+		particle->_scale = 0.0f;
+		std::uint8_t* data = particle->GENERIC.raw;
+		std::memset(data, 0, sizeof(particle->GENERIC.raw));
+		auto setU16 = [data](std::size_t offset, std::uint16_t value) {
+			std::memcpy(&data[offset], &value, sizeof(value));
+		};
+		switch (type) {
+			case Legacy::particleFIRE: data[0] = 3; data[1] = 40; data[2] = 48; data[3] = 1; break;
+			case Legacy::particleSMOKE: data[0] = 71; break;
+			case Legacy::particleICETRAIL: data[0] = 32; data[1] = 40; data[2] = 1; break;
+			case Legacy::particleSPARK: data[0] = 40; data[1] = 46; data[2] = 1; break;
+			case Legacy::particleSNOW: data[2] = 35; break;
+			case Legacy::particleRAIN: particle->ySpeed = 6.0f; break;
+			case Legacy::particleFLOWER: particle->ySpeed = 0.5f; data[0] = 64; data[1] = 16; data[4] = 5; break;
+			case Legacy::particleSTAR: data[0] = 16; data[1] = 40; particle->_scale = 16.0f; break;
+			case Legacy::particleLEAF: {
+				// The leaves of JJ2+ are the first animation of its scenery set (17 frames, the one MLLE recolors)
+				particle->ySpeed = 1.0f;
+				data[3] = 2;
+				auto& tables = GetAnimationTables();
+				std::uint32_t firstAnim = tables.GetFirstAnim(Legacy::AnimationTables::GetSetID(Legacy::mZZSCENERY, versionTSF));
+				std::uint32_t frameCount, firstFrame;
+				if (firstAnim != 0 && tables.GetAnimationFrames(firstAnim, frameCount, firstFrame)) {
+					setU16(4, std::uint16_t(std::min<std::uint32_t>(firstFrame, UINT16_MAX)));
+				}
+				break;
+			}
+		}
+		return particle;
+	}
+
+	void LevelScriptLoader::UpdateParticles(std::int32_t currentTick)
+	{
+		// As measured in JJ2+ - most fall by their speeds, the colored ones change their color now and then and are gone at the
+		// last one, a string speeds up and is gone above the view, a leaf drifts down by itself and lies on the ground a while
+		constexpr std::int32_t LeafFrames = 17;
+		Tiles::TileMap* tileMap = _levelHandler->TileMap();
+		auto isMasked = [tileMap](float x, float y) {
+			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
+			float px = std::floor(x), py = std::floor(y);
+			return (tileMap != nullptr && !tileMap->IsTileEmpty(AABBf(px, py, px, py), params));
+		};
+		if (_particlesTick >= currentTick) {
+			// Drawn already in this tick, the level keeps what was drawn until the next one
+			return;
+		}
+		while (_particlesTick < currentTick) {
+			_particlesTick++;
+			for (std::int32_t i = 0; i < MaxParticles; i++) {
+				Legacy::jjPARTICLE& p = _particles[i];
+				if (p.particleType == Legacy::particleNONE) {
+					continue;
+				}
+				std::uint8_t* data = p.GENERIC.raw;
+				bool remove = false;
+				auto advanceColor = [&](std::uint8_t colorIndex, std::int32_t chance) {
+					std::uint8_t& color = data[colorIndex];
+					std::uint8_t stop = data[colorIndex + 1];
+					std::int8_t delta = std::int8_t(data[colorIndex + 2]);
+					if (Random().Next(0, chance) == 0) {
+						color = std::uint8_t(color + delta);
+					}
+					if (delta == 0 || (delta > 0 ? color >= stop : color <= stop)) {
+						remove = true;
+					}
+				};
+				p._age = std::uint16_t(std::min<std::int32_t>(p._age + 1, UINT16_MAX));
+
+				switch (p.particleType) {
+					case Legacy::particlePIXEL:
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						p.ySpeed += 1.0f / 16.0f;
+						p.xSpeed = (p.xSpeed > 0.0f ? std::max(p.xSpeed - 1.0f / 256.0f, 0.0f) : std::min(p.xSpeed + 1.0f / 256.0f, 0.0f));
+						if (p.ySpeed > 0.0f && isMasked(p.xPos, p.yPos)) {
+							p.yPos -= p.ySpeed;
+							p.ySpeed *= -0.5f;
+							p.xSpeed *= -0.6f;
+						}
+						remove = (p._age >= 190);
+						break;
+					case Legacy::particleFIRE:
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						p.ySpeed += 1.0f / 64.0f;
+						advanceColor(1, 6);
+						break;
+					case Legacy::particleICETRAIL:
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						p.ySpeed += 1.0f / 32.0f;
+						advanceColor(0, 6);
+						break;
+					case Legacy::particleSPARK:
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						p.ySpeed += 1.0f / 64.0f;
+						advanceColor(0, 3);
+						break;
+					case Legacy::particleSMOKE:
+						p.xPos += p.xSpeed + Random().FastFloat(-0.5f, 0.5f);
+						p.yPos += p.ySpeed + Random().FastFloat(-0.9f, 0.0f);
+						if (p._age % 25 == 0 && data[0] > 0) {
+							data[0]--;
+						}
+						remove = (p._age >= 102);
+						break;
+					case Legacy::particleSCORE:
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						p.xSpeed *= 1.0625f;
+						p.ySpeed *= 1.0625f;
+						remove = (p._age >= 43);
+						break;
+					case Legacy::particleSNOW: {
+						std::uint16_t frameBase;
+						std::memcpy(&frameBase, &data[3], sizeof(frameBase));
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						remove = (frameBase == 0 || data[2] == 0 || --data[2] == 0);
+						break;
+					}
+					case Legacy::particleRAIN:
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						data[0] = std::uint8_t(Random().Next(0, 8));
+						remove = (p._age >= 122);
+						break;
+					case Legacy::particleFLOWER:
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						data[2] = std::uint8_t(data[2] + data[3]);
+						remove = (data[0] == 0 || --data[0] == 0);
+						break;
+					case Legacy::particleSTAR:
+						p.xPos += p.xSpeed;
+						p.yPos += p.ySpeed;
+						p.ySpeed += 1.0f / 64.0f;
+						data[2] = std::uint8_t(data[2] + data[3]);
+						p._scale *= 0.97f;
+						data[0] = std::uint8_t(p._scale);
+						remove = (p._scale < 2.0f);
+						break;
+					case Legacy::particleLEAF: {
+						// `countup` counts the ticks it lies on the ground
+						if (data[1] > 0) {
+							remove = (++data[1] >= 140);
+							break;
+						}
+						p.xPos -= Random().FastFloat(0.0f, 2.3f);
+						p.yPos += Random().FastFloat(-0.25f, 2.05f);
+						if ((p._age & 1) == 0) {
+							data[0] = std::uint8_t((data[0] + 1) % (LeafFrames * 2));
+						}
+						if (data[2] == 0 && isMasked(p.xPos, p.yPos + 1.0f)) {
+							data[1] = 1;
+						}
+						remove = (p._age >= 320);
+						break;
+					}
+					default:
+						remove = true;
+						break;
+				}
+
+				if (remove) {
+					p.particleType = Legacy::particleNONE;
+					p.active = false;
+				}
+			}
+		}
+
+		if (ContentResolver::Get().IsHeadless()) {
+			return;
+		}
+		// Drawn in the sprite layer, as JJ2+ draws them, until the next tick
+		auto& canvas = GetWorldCanvas();
+		auto& tables = GetAnimationTables();
+		std::uint16_t z = GetLayerDrawZ(4);
+		std::int32_t paletteOffset = GetSpritePaletteOffset(Legacy::spriteType_NORMAL, 0);
+		auto drawSolid = [&](float x, float y, float size, std::uint8_t color, std::uint32_t mode) {
+			if (color != 0 && size > 0.0f) {
+				canvas.AddSolid({ x - size * 0.5f, y - size * 0.5f, size, size, color, mode, 0, z });
+			}
+		};
+		for (std::int32_t i = 0; i < MaxParticles; i++) {
+			const Legacy::jjPARTICLE& p = _particles[i];
+			const std::uint8_t* data = p.GENERIC.raw;
+			switch (p.particleType) {
+				case Legacy::particlePIXEL: drawSolid(p.xPos, p.yPos, float(data[0] + 1), data[1], Legacy::spriteType_NORMAL); break;
+				case Legacy::particleFIRE: drawSolid(p.xPos, p.yPos, float(data[0]), data[1], Legacy::spriteType_NORMAL); break;
+				case Legacy::particleICETRAIL:
+				case Legacy::particleSPARK: drawSolid(p.xPos, p.yPos, 2.0f, data[0], Legacy::spriteType_NORMAL); break;
+				case Legacy::particleSMOKE: drawSolid(p.xPos, p.yPos, 3.0f, 72, Legacy::spriteType_TRANSLUCENT); break;
+				case Legacy::particleFLOWER: drawSolid(p.xPos, p.yPos, std::max(float(data[0]) / 8.0f, 1.0f), data[1], Legacy::spriteType_NORMAL); break;
+				case Legacy::particleSTAR: drawSolid(p.xPos, p.yPos, std::max(float(data[0]) / 2.0f, 1.0f), data[1], Legacy::spriteType_NORMAL); break;
+				case Legacy::particleSCORE: {
+					const Legacy::jjPARTICLESTRING& text = p.GENERIC.string;
+					AddWorldText(p.xPos, p.yPos, text.get_text(), 1, UI::Font::DefaultColor, 4);
+					break;
+				}
+				case Legacy::particleSNOW:
+				case Legacy::particleRAIN:
+				case Legacy::particleLEAF: {
+					std::uint16_t frameBase;
+					std::uint32_t frame;
+					if (p.particleType == Legacy::particleLEAF) {
+						std::memcpy(&frameBase, &data[4], sizeof(frameBase));
+						frame = (frameBase != 0 ? frameBase + (data[0] / 2) % LeafFrames : 0);
+					} else if (p.particleType == Legacy::particleSNOW) {
+						std::memcpy(&frameBase, &data[3], sizeof(frameBase));
+						frame = (frameBase != 0 ? frameBase + data[0] : 0);
+					} else {
+						std::memcpy(&frameBase, &data[1], sizeof(frameBase));
+						frame = (frameBase != 0 ? frameBase + data[0] : 0);
+					}
+					std::int32_t cell = 0;
+					if (auto* graphics = (frame != 0 ? tables.ResolveFrame(frame, cell) : nullptr)) {
+						canvas.AddSprite({ graphics, cell, p.xPos, p.yPos, 1, 1.0f, 1.0f, 0, Legacy::spriteType_NORMAL, 0, z, paletteOffset });
+					} else if (p.particleType == Legacy::particleRAIN) {
+						// No frames of rain, a streak of the color of the drops
+						canvas.AddSolid({ p.xPos, p.yPos - 3.0f, 1.0f, 6.0f, 34, Legacy::spriteType_TRANSLUCENT, 0, z });
+					}
+					break;
+				}
+			}
+		}
 	}
 
 	std::int32_t LevelScriptLoader::AddObjectFromEvent(std::uint8_t eventId, float xPixel, float yPixel)
 	{
-		// The converters that read the level get an empty one, see Legacy::EventTranslator
-		auto result = GetEventTranslator().FromOriginal(eventId, 0);
+		// Objects below the first ammo are bullets and particles (OBJECT::SHARD, OBJECT::EXPLOSION...), the same IDs
+		// as events of a level are areas (AREA::DIMLIGHT...), which aren't objects
+		if (eventId < Legacy::aGUN3AMMO3) {
+			return 0;
+		}
+
+		// An object of JJ2 reads its parameters of the tile it's made at, ThreedRealms makes a platform at the tile of
+		// another (the converters that read the level get an empty one, see Legacy::EventTranslator)
+		std::uint32_t tileWord = GetOriginalEvent(std::int32_t(xPixel) >> 5, std::int32_t(yPixel) >> 5);
+		std::uint32_t params = ((tileWord & 0xFF) == eventId ? tileWord >> Legacy::EventTranslator::ParamsShift : 0);
+		auto result = GetEventTranslator().FromOriginal(eventId, params);
 		if (result.Type == EventType::Empty) {
 			return 0;
 		}
+		Compatibility::EventConverter::KeepOriginalParams(result.Type, result.Params, params);
 
 		// The object of the game is a bit further than the object of JJ2+ would be, see Legacy::ScriptObjectHost::PositionOffset
 		auto actor = _levelHandler->EventSpawner()->SpawnEvent(result.Type, result.Params, Actors::ActorState::None,
@@ -1014,6 +1773,11 @@ namespace Jazz2::Scripting
 		return _objectSlots[objectId].Actor.lock().get();
 	}
 
+	std::int32_t LevelScriptLoader::GetObjectSpawnTick(std::int32_t objectId) const
+	{
+		return (objectId > 0 && objectId < std::int32_t(_objectSlots.size()) ? _objectSlots[objectId].SpawnTick : 0);
+	}
+
 	std::int32_t LevelScriptLoader::AddScriptControlledObject(std::uint8_t eventId, float xPixel, float yPixel, asIScriptFunction* behaviorFunc)
 	{
 		// The script-facing object, built from its template as in JJ2+; one reference is created here and handed to the
@@ -1023,7 +1787,6 @@ namespace Jazz2::Scripting
 		Legacy::jjOBJ* preset = GetObjectPreset(eventId);
 		obj->CopyTemplate(*preset);
 		preset->Release();
-		obj->eventID = eventId;
 		obj->xPos = obj->xOrg = xPixel;
 		obj->yPos = obj->yOrg = yPixel;
 		if (behaviorFunc != nullptr) {
@@ -1099,13 +1862,80 @@ namespace Jazz2::Scripting
 		_brokenObjects.clear();
 	}
 
+	bool LevelScriptLoader::GetScriptBossHealth(std::int32_t& health, std::int32_t& maxHealth)
+	{
+		for (Actors::Player* player : _levelHandler->_players) {
+			auto it = _playerBackingStore.find(std::uint8_t(player->GetPlayerIndex()));
+			if (it == _playerBackingStore.end()) {
+				continue;
+			}
+			const Legacy::jjPLAYER& p = *it->second;
+			if (!p.bossActive || p.bossNumber <= 0 || p.bossNumber >= std::int32_t(_objectSlots.size())) {
+				continue;
+			}
+			Legacy::jjOBJ* obj = _objectSlots[p.bossNumber].Object;
+			if (obj == nullptr || !obj->get_isActive()) {
+				continue;
+			}
+			Legacy::jjOBJ* preset = _objectPresets[obj->eventID];
+			maxHealth = (preset != nullptr && preset->energy > 0 ? preset->energy : 100);
+			health = obj->energy;
+			return true;
+		}
+		return false;
+	}
+
+	bool LevelScriptLoader::OnBossAreaActivated()
+	{
+		if (GetContextType() != ScriptContextType::Legacy) {
+			return false;
+		}
+		_bossAreaActivated = true;
+		return true;
+	}
+
+	void LevelScriptLoader::SwapActor(std::int32_t objectId, std::uint8_t eventId)
+	{
+		_actorSwaps.push_back({ objectId, eventId });
+	}
+
+	void LevelScriptLoader::ProcessActorSwaps()
+	{
+		for (const ActorSwap& swap : _actorSwaps) {
+			if (swap.ObjectID <= 0 || swap.ObjectID >= std::int32_t(_objectSlots.size())) {
+				continue;
+			}
+			ObjectSlot& slot = _objectSlots[swap.ObjectID];
+			Legacy::jjOBJ* obj = slot.Object;
+			std::shared_ptr<Actors::ActorBase> previous = slot.Actor.lock();
+			if (obj == nullptr || previous == nullptr || previous->GetState(Actors::ActorState::IsDestroyed)) {
+				continue;
+			}
+			std::shared_ptr<Actors::ActorBase> actor = Legacy::ScriptObjectHost::SpawnInPlace(this, *previous, swap.EventID);			if (actor == nullptr) {
+				continue;
+			}
+
+			// The new object keeps the object ID and the view, the behavior drives it from now on
+			_swappingActor = actor.get();
+			_levelHandler->AddActor(actor);
+			_swappingActor = nullptr;
+			SetSlotActor(swap.ObjectID, actor);
+			obj->_actor = actor;
+			previous->SetUpdateOverride(nullptr);
+			Legacy::ScriptObjectHost::DeleteActor(*previous);
+			HostObject(obj, actor.get());
+		}
+		_actorSwaps.clear();
+	}
+
 	void LevelScriptLoader::RegisterLegacyObjects(asIScriptEngine* engine)
 	{
 		engine->SetDefaultNamespace("CREATOR");
 		engine->RegisterEnum("Type");
 		engine->RegisterEnumValue("Type", "OBJECT", 0);
-		engine->RegisterEnumValue("Type", "LEVEL", 1);
-		engine->RegisterEnumValue("Type", "PLAYER", 2);
+		// As measured in JJ2+
+		engine->RegisterEnumValue("Type", "LEVEL", 0x4000);
+		engine->RegisterEnumValue("Type", "PLAYER", 0x8000);
 		engine->SetDefaultNamespace("AREA");
 		engine->RegisterEnum("Area");
 		engine->SetDefaultNamespace("OBJECT");

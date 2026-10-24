@@ -154,9 +154,9 @@ namespace Death { namespace IO {
 		Containers::Array<Item> _rootItems;
 		bool _useHashIndex;
 
-		void ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, bool useRelativeOffsets, std::uint32_t depth);
-		Containers::Array<Item>* ReadIndexFromStream(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition);
-		DEATH_NEVER_INLINE Containers::Array<Item>* ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition);
+		bool ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, bool useRelativeOffsets, std::uint32_t depth, std::uint32_t& itemBudget);
+		Containers::Array<Item>* ReadIndexFromStream(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition, std::uint32_t& itemBudget);
+		DEATH_NEVER_INLINE Containers::Array<Item>* ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition, std::uint32_t& itemBudget);
 		Item* FindItem(Containers::StringView path);
 		Item* FindItemByHash(std::uint64_t hashedPath);
 		std::unique_ptr<Stream> OpenItem(const Item& item, std::int32_t bufferSize);

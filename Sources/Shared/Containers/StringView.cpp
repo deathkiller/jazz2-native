@@ -12,10 +12,15 @@
 
 // Clang-CL has DEATH_ENABLE_BMI1 enabled only when explicitly specified on command line, so the includes have to be
 // complicated like this to still include the headers for count() implementation which needs just POPCNT and not BMI1
-#if ((defined(DEATH_ENABLE_SSE2) || defined(DEATH_ENABLE_AVX)) && defined(DEATH_ENABLE_BMI1)) || (defined(DEATH_ENABLE_AVX) && defined(DEATH_ENABLE_POPCNT))
+#if ((defined(DEATH_ENABLE_SSE2) || defined(DEATH_ENABLE_AVX)) && defined(DEATH_ENABLE_BMI1)) || (defined(DEATH_ENABLE_AVX) && defined(DEATH_ENABLE_POPCNT)) || defined(DEATH_ENABLE_AVX2)
 #	include "../IntrinsicsAvx.h" /* TZCNT is in AVX headers :( */
 #elif defined(DEATH_ENABLE_SSE2) && defined(DEATH_ENABLE_POPCNT)
 #	include "../IntrinsicsSse4.h"
+#elif defined(DEATH_ENABLE_SSE2)
+#	include "../IntrinsicsSse2.h"
+#endif
+#if defined(DEATH_ENABLE_SSE2) && defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+#	include <intrin.h>
 #endif
 #if defined(DEATH_ENABLE_NEON) && !defined(DEATH_TARGET_32BIT)
 #	include <arm_neon.h>
@@ -77,27 +82,28 @@ namespace Death { namespace Containers {
 		const char* stringFindString(const char* data, const std::size_t size, const char* const substring, const std::size_t substringSize) {
 			// If the substring is not larger than the string we search in
 			if (substringSize > 0 && substringSize <= size) {
-				if (size == 0) return data;
+				const std::size_t substringSize_1 = substringSize - 1;
+				const char first = substring[0];
+				const char last = substring[substringSize_1];
+				const char* const end = data + size - substringSize_1;
 
-				// Otherwise compare it with the string at all possible positions in the string until we have a match
-				/*for (const char* const max = data + size - substringSize; data <= max; ++data) {
-					if (std::memcmp(data, substring, substringSize) == 0)
-						return data;
-				}*/
-
-				// Simplified Boyer-Moore algorithm should be faster than std::memcmp()
-				std::size_t substringSize_1 = substringSize - 1;
-				char lastNeedle = substring[substringSize_1];
-
-				// Boyer-Moore skip value for the last char in the needle
-				// Zero is not a valid value, skip will be computed the first time it's needed
-				std::size_t skip = 0;
+				// Jump between candidates via SIMD lookup of the first char, go scalar if they're too dense
 				const char* begin = data;
-				const char* end = data + size - substringSize_1;
+				for (std::size_t candidates = 1; ; ++candidates) {
+					const char* const found = stringFindCharacter(begin, end - begin, first);
+					if (!found) return {};
+					if (found[substringSize_1] == last && std::memcmp(found + 1, substring + 1, substringSize_1) == 0)
+						return found;
+					begin = found + 1;
+					if (candidates >= 8 && std::size_t(begin - data) < candidates * 16)
+						break;
+				}
 
+				// Simplified Boyer-Moore, zero skip means not computed yet
+				std::size_t skip = 0;
 				while (begin < end) {
 					// Boyer-Moore: match the last element in the needle
-					while (begin[substringSize_1] != lastNeedle) {
+					while (begin[substringSize_1] != last) {
 						if (++begin == end) {
 							return {};
 						}
@@ -108,7 +114,7 @@ namespace Death { namespace Containers {
 							// Not found, we can skip, compute the skip value lazily
 							if (skip == 0) {
 								skip = 1;
-								while (skip <= substringSize_1 && substring[substringSize_1 - skip] != lastNeedle) {
+								while (skip <= substringSize_1 && substring[substringSize_1 - skip] != last) {
 									++skip;
 								}
 							}
@@ -153,12 +159,33 @@ namespace Death { namespace Containers {
 		const char* stringFindLastString(const char* const data, const std::size_t size, const char* const substring, const std::size_t substringSize) {
 			// If the substring is not larger than the string we search in
 			if (substringSize <= size) {
-				if (!size) return data;
+				// Empty substring matches at the end
+				if (!substringSize) return data + size;
 
-				// Otherwise compare it with the string at all possible positions in the string until we have a match.
-				for (const char* i = data + size - substringSize; i >= data; --i) {
-					if (std::memcmp(i, substring, substringSize) == 0)
-						return i;
+				const std::size_t substringSize_1 = substringSize - 1;
+				const char first = substring[0];
+				const char last = substring[substringSize_1];
+				const char* const min = data + substringSize_1;
+
+				// Same as stringFindString(), but backwards via the last char
+				const char* end = data + size;
+				for (std::size_t candidates = 1; ; ++candidates) {
+					const char* const found = stringFindLastCharacter(min, end - min, last);
+					if (!found) return {};
+					const char* const candidate = found - substringSize_1;
+					if (*candidate == first && std::memcmp(candidate, substring, substringSize_1) == 0)
+						return candidate;
+					end = found;
+					if (candidates >= 8 && std::size_t(data + size - end) < candidates * 16)
+						break;
+				}
+
+				while (end != min) {
+					if (*--end == last) {
+						const char* const candidate = end - substringSize_1;
+						if (*candidate == first && std::memcmp(candidate, substring, substringSize_1) == 0)
+							return candidate;
+					}
 				}
 			}
 
@@ -404,7 +431,7 @@ namespace Death { namespace Containers {
 #endif
 
 #if defined(DEATH_ENABLE_NEON) && !defined(DEATH_TARGET_32BIT)
-			// `vshrn_n_u16` and `vaddvq_u8` are missing in `armeabi-v7a` on Android, so enable it only on ARM64.
+			// `vshrn_n_u16` and `vmaxvq_u8` are missing in `armeabi-v7a` on Android, so enable it only on ARM64.
 			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE(NEON) typename std::decay<decltype(stringFindCharacter)>::type stringFindCharacterImplementation(DEATH_CPU_DECLARE(Cpu::Neon)) {
 				// Can't use trailing return type due to a GCC 9.3 bug, which is the default on Ubuntu 20.04: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90333
 				return [](const char* const data, const std::size_t size, const char character) DEATH_ENABLE(NEON) {
@@ -497,8 +524,9 @@ namespace Death { namespace Containers {
 						const uint8x8_t maskC = vshrn_n_u16(vreinterpretq_u16_u8(eqC), 4);
 						const uint8x16_t maskCD = vshrn_high_n_u16(maskC, vreinterpretq_u16_u8(eqD), 4);
 
-						// Which makes it possible to test with just one OR and a horizontal add instead of three ORs and a horizontal add
-						if (vaddvq_u8(vorrq_u8(maskAB, maskCD))) {
+						// Which makes it possible to test with just one OR and a horizontal max instead of three ORs and a horizontal max.
+						// Not an add, sixteen 0xf0 bytes would wrap to zero
+						if (vmaxvq_u8(vorrq_u8(maskAB, maskCD))) {
 							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskAB), 0))
 								return i + 0 * 16 + /* The clz instruction, see comment above */
 #	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
@@ -688,14 +716,378 @@ namespace Death { namespace Containers {
 			return stringFindCharacterImplementation(DEATH_CPU_SELECT(Cpu::Default))(data, size, character);
 		})
 
-		const char* stringFindLastCharacter(const char* const data, const std::size_t size, const char character) {
-			// Linux has a memrchr() function but other OSes not. So let's just do it myself, that way I also don't need
-			// to worry about null pointers being allowed or not ... haha, well, except that if data is nullptr,
-			// `*(data - 1)` blows up, so I actually need to.
-			if (data) for (const char* i = data + size - 1; i >= data; --i)
-				if (*i == character) return i;
-			return {};
+		namespace
+		{
+			// Mirror image of stringFindCharacterImplementation(), going from the end
+
+#if defined(DEATH_ENABLE_SSE2) || defined(DEATH_ENABLE_SIMD128)
+			// `mask` must not be zero
+			DEATH_ALWAYS_INLINE unsigned int highestSetBit(const unsigned int mask) {
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+				unsigned long index;
+				_BitScanReverse(&index, mask);
+				return index;
+#	else
+				return 31 - __builtin_clz(mask);
+#	endif
+			}
+#endif
+
+#if defined(DEATH_ENABLE_SSE2)
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SSE2 typename std::decay<decltype(stringFindLastCharacter)>::type stringFindLastCharacterImplementation(Cpu::Sse2T) {
+				// No trailing return type due to the GCC 9.3 bug above
+				return [](const char* const data, const std::size_t size, const char character) DEATH_ENABLE_SSE2 {
+					const char* const end = data + size;
+
+					// Less than 16 bytes, check one by one
+					{
+						const char* j = end;
+						switch (size) {
+							case 15: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 14: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 13: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 12: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 11: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 10: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  9: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  8: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  7: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  6: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  5: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  4: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  3: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  2: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  1: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  0: return static_cast<const char*>(nullptr);
+						}
+					}
+
+					const __m128i vn1 = _mm_set1_epi8(character);
+
+					// Unaligned lookup in the last vector
+					{
+						const __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(end - 16));
+						if (const int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, vn1)))
+							return end - 16 + highestSetBit(mask);
+					}
+
+					// Previous aligned position, may overlap with the last vector
+					const char* i = reinterpret_cast<const char*>(reinterpret_cast<std::uintptr_t>(end - 1) & ~0xf);
+					DEATH_DEBUG_ASSERT(i < end && reinterpret_cast<std::uintptr_t>(i) % 16 == 0);
+
+					// Four aligned vectors at a time, ending at `i`
+					for (; i - data >= 4 * 16; i -= 4 * 16) {
+						const __m128i a = _mm_load_si128(reinterpret_cast<const __m128i*>(i) - 4);
+						const __m128i b = _mm_load_si128(reinterpret_cast<const __m128i*>(i) - 3);
+						const __m128i c = _mm_load_si128(reinterpret_cast<const __m128i*>(i) - 2);
+						const __m128i d = _mm_load_si128(reinterpret_cast<const __m128i*>(i) - 1);
+
+						const __m128i eqA = _mm_cmpeq_epi8(vn1, a);
+						const __m128i eqB = _mm_cmpeq_epi8(vn1, b);
+						const __m128i eqC = _mm_cmpeq_epi8(vn1, c);
+						const __m128i eqD = _mm_cmpeq_epi8(vn1, d);
+
+						const __m128i or1 = _mm_or_si128(eqA, eqB);
+						const __m128i or2 = _mm_or_si128(eqC, eqD);
+						const __m128i or3 = _mm_or_si128(or1, or2);
+						if (_mm_movemask_epi8(or3)) {
+							if (const int mask = _mm_movemask_epi8(eqD))
+								return i - 1 * 16 + highestSetBit(mask);
+							if (const int mask = _mm_movemask_epi8(eqC))
+								return i - 2 * 16 + highestSetBit(mask);
+							if (const int mask = _mm_movemask_epi8(eqB))
+								return i - 3 * 16 + highestSetBit(mask);
+							if (const int mask = _mm_movemask_epi8(eqA))
+								return i - 4 * 16 + highestSetBit(mask);
+							// Unreachable
+						}
+					}
+
+					// Handle remaining less than four vectors
+					for (; i - data >= 16; i -= 16) {
+						const __m128i chunk = _mm_load_si128(reinterpret_cast<const __m128i*>(i) - 1);
+						if (const int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, vn1)))
+							return i - 16 + highestSetBit(mask);
+					}
+
+					// Unaligned lookup in the first vector, may overlap
+					if (i > data) {
+						DEATH_DEBUG_ASSERT(i - data < 16);
+						const __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data));
+						if (const int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, vn1)))
+							return data + highestSetBit(mask);
+					}
+
+					return static_cast<const char*>(nullptr);
+				};
+			}
+#endif
+
+#if defined(DEATH_ENABLE_AVX2)
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_AVX2 typename std::decay<decltype(stringFindLastCharacter)>::type stringFindLastCharacterImplementation(Cpu::Avx2T) {
+				// No trailing return type due to the GCC 9.3 bug above
+				return [](const char* const data, const std::size_t size, const char character) DEATH_ENABLE_AVX2 {
+					// If we have less than 32 bytes, fall back to the SSE variant
+					if (size < 32)
+						return stringFindLastCharacterImplementation(Cpu::Sse2)(data, size, character);
+
+					const char* const end = data + size;
+					const __m256i vn1 = _mm256_set1_epi8(character);
+
+					// Unaligned lookup in the last vector
+					{
+						const __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(end - 32));
+						if (const int mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, vn1)))
+							return end - 32 + highestSetBit(mask);
+					}
+
+					// Previous aligned position, may overlap with the last vector
+					const char* i = reinterpret_cast<const char*>(reinterpret_cast<std::uintptr_t>(end - 1) & ~0x1f);
+					DEATH_DEBUG_ASSERT(i < end && reinterpret_cast<std::uintptr_t>(i) % 32 == 0);
+
+					// Four aligned vectors at a time, ending at `i`
+					for (; i - data >= 4 * 32; i -= 4 * 32) {
+						const __m256i a = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) - 4);
+						const __m256i b = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) - 3);
+						const __m256i c = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) - 2);
+						const __m256i d = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) - 1);
+
+						const __m256i eqA = _mm256_cmpeq_epi8(vn1, a);
+						const __m256i eqB = _mm256_cmpeq_epi8(vn1, b);
+						const __m256i eqC = _mm256_cmpeq_epi8(vn1, c);
+						const __m256i eqD = _mm256_cmpeq_epi8(vn1, d);
+
+						const __m256i or1 = _mm256_or_si256(eqA, eqB);
+						const __m256i or2 = _mm256_or_si256(eqC, eqD);
+						const __m256i or3 = _mm256_or_si256(or1, or2);
+						if (_mm256_movemask_epi8(or3)) {
+							if (const int mask = _mm256_movemask_epi8(eqD))
+								return i - 1 * 32 + highestSetBit(mask);
+							if (const int mask = _mm256_movemask_epi8(eqC))
+								return i - 2 * 32 + highestSetBit(mask);
+							if (const int mask = _mm256_movemask_epi8(eqB))
+								return i - 3 * 32 + highestSetBit(mask);
+							if (const int mask = _mm256_movemask_epi8(eqA))
+								return i - 4 * 32 + highestSetBit(mask);
+							// Unreachable
+						}
+					}
+
+					// Handle remaining less than four vectors
+					for (; i - data >= 32; i -= 32) {
+						const __m256i chunk = _mm256_load_si256(reinterpret_cast<const __m256i*>(i) - 1);
+						if (const int mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, vn1)))
+							return i - 32 + highestSetBit(mask);
+					}
+
+					// Unaligned lookup in the first vector, may overlap
+					if (i > data) {
+						DEATH_DEBUG_ASSERT(i - data < 32);
+						const __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(data));
+						if (const int mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, vn1)))
+							return data + highestSetBit(mask);
+					}
+
+					return static_cast<const char*>(nullptr);
+				};
+			}
+#endif
+
+#if defined(DEATH_ENABLE_NEON) && !defined(DEATH_TARGET_32BIT)
+			// Last matching byte of a non-zero "shift right and narrow" mask
+			DEATH_ALWAYS_INLINE unsigned int highestSetNibble(const std::uint64_t mask) {
+#	if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG)
+				return (63 - _CountLeadingZeros64(mask)) >> 2;
+#	else
+				return (63 - __builtin_clzll(mask)) >> 2;
+#	endif
+			}
+
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE(NEON) typename std::decay<decltype(stringFindLastCharacter)>::type stringFindLastCharacterImplementation(Cpu::NeonT) {
+				// No trailing return type due to the GCC 9.3 bug above
+				return [](const char* const data, const std::size_t size, const char character) DEATH_ENABLE(NEON) {
+					const char* const end = data + size;
+
+					// Less than 16 bytes, check one by one
+					if (size < 16) {
+						for (const char* i = end; i != data; )
+							if (*--i == character) return i;
+						return static_cast<const char*>(nullptr);
+					}
+
+					const uint8x16_t vn1 = vdupq_n_u8(character);
+
+					// Unaligned lookup in the last vector
+					{
+						const uint8x16_t chunk = vld1q_u8(reinterpret_cast<const std::uint8_t*>(end - 16));
+						const uint16x8_t eq16 = vreinterpretq_u16_u8(vceqq_u8(chunk, vn1));
+						const uint64x1_t shrn64 = vreinterpret_u64_u8(vshrn_n_u16(eq16, 4));
+						if (const std::uint64_t mask = vget_lane_u64(shrn64, 0))
+							return end - 16 + highestSetNibble(mask);
+					}
+
+					// Previous aligned position, may overlap with the last vector
+					const char* i = reinterpret_cast<const char*>(reinterpret_cast<std::uintptr_t>(end - 1) & ~0xf);
+					DEATH_DEBUG_ASSERT(i < end && reinterpret_cast<std::uintptr_t>(i) % 16 == 0);
+
+					// Four aligned vectors at a time, ending at `i`
+					for (; i - data >= 4 * 16; i -= 4 * 16) {
+						const uint8x16_t a = vld1q_u8(reinterpret_cast<const std::uint8_t*>(i) - 4 * 16);
+						const uint8x16_t b = vld1q_u8(reinterpret_cast<const std::uint8_t*>(i) - 3 * 16);
+						const uint8x16_t c = vld1q_u8(reinterpret_cast<const std::uint8_t*>(i) - 2 * 16);
+						const uint8x16_t d = vld1q_u8(reinterpret_cast<const std::uint8_t*>(i) - 1 * 16);
+
+						const uint8x16_t eqA = vceqq_u8(vn1, a);
+						const uint8x16_t eqB = vceqq_u8(vn1, b);
+						const uint8x16_t eqC = vceqq_u8(vn1, c);
+						const uint8x16_t eqD = vceqq_u8(vn1, d);
+
+						const uint8x8_t maskA = vshrn_n_u16(vreinterpretq_u16_u8(eqA), 4);
+						const uint8x16_t maskAB = vshrn_high_n_u16(maskA, vreinterpretq_u16_u8(eqB), 4);
+						const uint8x8_t maskC = vshrn_n_u16(vreinterpretq_u16_u8(eqC), 4);
+						const uint8x16_t maskCD = vshrn_high_n_u16(maskC, vreinterpretq_u16_u8(eqD), 4);
+
+						if (vmaxvq_u8(vorrq_u8(maskAB, maskCD))) {
+							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskCD), 1))
+								return i - 1 * 16 + highestSetNibble(mask);
+							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskCD), 0))
+								return i - 2 * 16 + highestSetNibble(mask);
+							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskAB), 1))
+								return i - 3 * 16 + highestSetNibble(mask);
+							if (const std::uint64_t mask = vgetq_lane_u64(vreinterpretq_u64_u8(maskAB), 0))
+								return i - 4 * 16 + highestSetNibble(mask);
+							// Unreachable
+						}
+					}
+
+					// Handle remaining less than four vectors
+					for (; i - data >= 16; i -= 16) {
+						const uint8x16_t chunk = vld1q_u8(reinterpret_cast<const std::uint8_t*>(i) - 16);
+						const uint16x8_t eq16 = vreinterpretq_u16_u8(vceqq_u8(chunk, vn1));
+						const uint64x1_t shrn64 = vreinterpret_u64_u8(vshrn_n_u16(eq16, 4));
+						if (const std::uint64_t mask = vget_lane_u64(shrn64, 0))
+							return i - 16 + highestSetNibble(mask);
+					}
+
+					// Unaligned lookup in the first vector, may overlap
+					if (i > data) {
+						DEATH_DEBUG_ASSERT(i - data < 16);
+						const uint8x16_t chunk = vld1q_u8(reinterpret_cast<const std::uint8_t*>(data));
+						const uint16x8_t eq16 = vreinterpretq_u16_u8(vceqq_u8(chunk, vn1));
+						const uint64x1_t shrn64 = vreinterpret_u64_u8(vshrn_n_u16(eq16, 4));
+						if (const std::uint64_t mask = vget_lane_u64(shrn64, 0))
+							return data + highestSetNibble(mask);
+					}
+
+					return static_cast<const char*>(nullptr);
+				};
+			}
+#endif
+
+#if defined(DEATH_ENABLE_SIMD128)
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SIMD128 typename std::decay<decltype(stringFindLastCharacter)>::type stringFindLastCharacterImplementation(Cpu::Simd128T) {
+				return [](const char* const data, const std::size_t size, const char character) DEATH_ENABLE_SIMD128 -> const char* {
+					const char* const end = data + size;
+
+					// Less than 16 bytes, check one by one
+					{
+						const char* j = end;
+						switch (size) {
+							case 15: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 14: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 13: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 12: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 11: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case 10: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  9: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  8: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  7: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  6: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  5: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  4: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  3: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  2: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  1: if (*--j == character) return j; DEATH_FALLTHROUGH
+							case  0: return {};
+						}
+					}
+
+					const v128_t vn1 = wasm_i8x16_splat(character);
+
+					// Unaligned lookup in the last vector
+					{
+						const v128_t chunk = wasm_v128_load(end - 16);
+						if (const int mask = wasm_i8x16_bitmask(wasm_i8x16_eq(chunk, vn1)))
+							return end - 16 + highestSetBit(mask);
+					}
+
+					// Previous aligned position, may overlap with the last vector
+					const char* i = reinterpret_cast<const char*>(reinterpret_cast<std::uintptr_t>(end - 1) & ~0xf);
+					DEATH_DEBUG_ASSERT(i < end && reinterpret_cast<std::uintptr_t>(i) % 16 == 0);
+
+					// Four aligned vectors at a time, ending at `i`
+					for (; i - data >= 4 * 16; i -= 4 * 16) {
+						const v128_t a = wasm_v128_load(reinterpret_cast<const v128_t*>(i) - 4);
+						const v128_t b = wasm_v128_load(reinterpret_cast<const v128_t*>(i) - 3);
+						const v128_t c = wasm_v128_load(reinterpret_cast<const v128_t*>(i) - 2);
+						const v128_t d = wasm_v128_load(reinterpret_cast<const v128_t*>(i) - 1);
+
+						const v128_t eqA = wasm_i8x16_eq(vn1, a);
+						const v128_t eqB = wasm_i8x16_eq(vn1, b);
+						const v128_t eqC = wasm_i8x16_eq(vn1, c);
+						const v128_t eqD = wasm_i8x16_eq(vn1, d);
+
+						const v128_t or1 = wasm_v128_or(eqA, eqB);
+						const v128_t or2 = wasm_v128_or(eqC, eqD);
+						const v128_t or3 = wasm_v128_or(or1, or2);
+						// Bitmask, not any_true, see the forward variant
+						if (wasm_i8x16_bitmask(or3)) {
+							if (const int mask = wasm_i8x16_bitmask(eqD))
+								return i - 1 * 16 + highestSetBit(mask);
+							if (const int mask = wasm_i8x16_bitmask(eqC))
+								return i - 2 * 16 + highestSetBit(mask);
+							if (const int mask = wasm_i8x16_bitmask(eqB))
+								return i - 3 * 16 + highestSetBit(mask);
+							if (const int mask = wasm_i8x16_bitmask(eqA))
+								return i - 4 * 16 + highestSetBit(mask);
+							// Unreachable
+						}
+					}
+
+					// Handle remaining less than four vectors
+					for (; i - data >= 16; i -= 16) {
+						const v128_t chunk = wasm_v128_load(i - 16);
+						if (const int mask = wasm_i8x16_bitmask(wasm_i8x16_eq(chunk, vn1)))
+							return i - 16 + highestSetBit(mask);
+					}
+
+					// Unaligned lookup in the first vector, may overlap
+					if (i > data) {
+						DEATH_DEBUG_ASSERT(i - data < 16);
+						const v128_t chunk = wasm_v128_load(data);
+						if (const int mask = wasm_i8x16_bitmask(wasm_i8x16_eq(chunk, vn1)))
+							return data + highestSetBit(mask);
+					}
+
+					return {};
+				};
+			}
+#endif
+
+			DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(stringFindLastCharacter)>::type stringFindLastCharacterImplementation(Cpu::ScalarT) {
+				return [](const char* const data, const std::size_t size, const char character) -> const char* {
+					// No memrchr() outside Linux, works also for null data
+					for (const char* i = data + size; i != data; )
+						if (*--i == character) return i;
+					return {};
+				};
+			}
 		}
+
+		DEATH_CPU_DISPATCHER_BASE(stringFindLastCharacterImplementation)
+		DEATH_CPU_DISPATCHED(stringFindLastCharacterImplementation, const char* DEATH_CPU_DISPATCHED_DECLARATION(stringFindLastCharacter)(const char* data, std::size_t size, char character))({
+			return stringFindLastCharacterImplementation(Cpu::DefaultBase)(data, size, character);
+		})
 
 		/* I don't want to include <algorithm> just for std::find_first_of() and
 			unfortunately there's no equivalent in the C string library. Coming close

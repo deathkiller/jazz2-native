@@ -25,6 +25,7 @@ namespace Jazz2::Actors
 
 namespace Jazz2::UI
 {
+	class Canvas;
 	class HUD;
 }
 
@@ -37,6 +38,7 @@ namespace Jazz2::Tiles
 {
 	struct LayerDescription;
 	struct TileMapLayer;
+	class TileMap;
 }
 
 namespace Jazz2::Scripting

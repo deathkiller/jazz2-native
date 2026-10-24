@@ -58,7 +58,8 @@ namespace Jazz2::Editor
 		saveAs.Key = { Keys::S, KeyMod::Ctrl | KeyMod::Shift };
 		saveAs.WorksWhileTyping = true;
 		// TRANSLATORS: Menu item in the File menu, saves a copy of the level without what only the editor uses (verb)
-		a.Add(ActionIds::FileExport, _x("editor", "Export"), EditorIcon::Export, [this]() { _files->ShowExportDialog(); }).Key = { Keys::E, KeyMod::Ctrl };
+		// Without a key, Ctrl+E takes the event under the pointer, as in the editors of the original game
+		a.Add(ActionIds::FileExport, _x("editor", "Export"), EditorIcon::Export, [this]() { _files->ShowExportDialog(); });
 		// TRANSLATORS: Menu item in the File menu, packs the level with the files it needs into one archive to share
 		a.Add(ActionIds::FileExportPackage, _x("editor", "Export Package"), EditorIcon::Export, [this]() { ShowExportPackageDialog(*this); });
 		// TRANSLATORS: Menu item in the File menu, opens the list of copies of levels the editor saved by itself
@@ -85,12 +86,44 @@ namespace Jazz2::Editor
 		auto& copy = a.Add(ActionIds::EditCopy, _x("editor", "Copy"), EditorIcon::Copy, [this]() { CopySelection(false); });
 		copy.Key = { Keys::C, KeyMod::Ctrl };
 		copy.IsEnabled = hasSelection;
+		// TRANSLATORS: Menu item in the Edit menu, copies the selected tiles together with the events on them, pasted together
+		auto& copyWithEvents = a.Add(ActionIds::EditCopyWithEvents, _x("editor", "Copy Tiles and Events"), EditorIcon::Copy, [this]() { CopyTilesAndEvents(); });
+		copyWithEvents.Key = { Keys::C, KeyMod::Ctrl | KeyMod::Shift };
+		copyWithEvents.IsEnabled = hasSelection;
 		a.Add(ActionIds::EditPaste, _x("editor", "Paste"), EditorIcon::Paste, [this]() { Paste(); }).Key = { Keys::V, KeyMod::Ctrl };
 		auto& remove = a.Add(ActionIds::EditDelete, _x("editor", "Delete"), EditorIcon::Delete, [this]() { DeleteSelection(); });
 		remove.Key = { Keys::Delete, 0 };
 		remove.IsEnabled = hasSelection;
 		a.Add(ActionIds::EditSelectAll, _x("editor", "Select All"), EditorIcon::Select, [this]() { SelectAll(); }).Key = { Keys::A, KeyMod::Ctrl };
 		a.Add(ActionIds::EditDeselect, _x("editor", "Deselect"), EditorIcon::None, [this]() { ClearSelection(); }).Key = { Keys::D, KeyMod::Ctrl };
+
+		// A block grabbed by its corners, as B of Jazz Creation Station, in the level or in the picker of tiles; a held key
+		// repeats, which would mark the corner and grab at once
+		{
+			struct GrabChoice { const char* Id; String Label; std::int32_t Modifiers; BlockGrab::Mode Mode; };
+			const GrabChoice grabs[] = {
+				// TRANSLATORS: Command in the Edit menu, pressed at a corner of a block of tiles and again at the other corner, the block becomes the brush, as B of Jazz Creation Station
+				{ ActionIds::EditGrabBlock, _x("editor", "Grab Block"), 0, BlockGrab::Mode::Replace },
+				// TRANSLATORS: Command in the Edit menu, as Grab Block, the block is added to the selected tiles and all of them become the brush
+				{ ActionIds::EditGrabBlockAdd, _x("editor", "Grab Block Adding to Selection"), KeyMod::Shift, BlockGrab::Mode::Add },
+				// TRANSLATORS: Command in the Edit menu, as Grab Block, the block is taken out of the selected tiles and the rest of them become the brush
+				{ ActionIds::EditGrabBlockSubtract, _x("editor", "Grab Block Taking from Selection"), KeyMod::Ctrl, BlockGrab::Mode::Subtract },
+			};
+			for (const GrabChoice& grab : grabs) {
+				BlockGrab::Mode mode = grab.Mode;
+				auto& action = a.Add(grab.Id, grab.Label, mode == BlockGrab::Mode::Replace ? EditorIcon::Select : EditorIcon::None, [this, mode]() { GrabBlock(mode); });
+				action.Key = { Keys::B, grab.Modifiers };
+				action.IgnoresRepeat = true;
+			}
+			auto tilesSelected = [this]() { return (!IsEditingEvents() && HasSelection()); };
+			// TRANSLATORS: Command, the selected tiles with the events on them become the brush, as Ctrl+C of the Multi-Layer Level Editor
+			auto& copyToBrush = a.Add(ActionIds::EditCopyToBrush, _x("editor", "Copy into Brush"), EditorIcon::Copy, [this]() { BlockGrab::GrabSelection(*this, false); });
+			copyToBrush.IsEnabled = tilesSelected;
+			// TRANSLATORS: Command, the selected tiles with the events on them become the brush and are erased, as Ctrl+X of the Multi-Layer Level Editor
+			auto& cutToBrush = a.Add(ActionIds::EditCutToBrush, _x("editor", "Cut into Brush"), EditorIcon::Cut, [this]() { BlockGrab::GrabSelection(*this, true); });
+			cutToBrush.IsEnabled = tilesSelected;
+		}
+
 		// TRANSLATORS: Menu item in the Edit menu, opens the list of the changes that can be undone
 		a.Add(ActionIds::EditHistory, _x("editor", "History"), EditorIcon::History, [this]() { ShowHistoryDialog(*this); }).Key = { Keys::H, KeyMod::Ctrl };
 		a.Add(ActionIds::EditFindReplace, _x("editor", "Find and Replace"), EditorIcon::Search, [this]() { ShowFindReplaceDialog(*this); }).Key = { Keys::F, KeyMod::Ctrl };
@@ -173,7 +206,8 @@ namespace Jazz2::Editor
 		struct ToolInfo { const char* Id; String Label; EditorIcon Icon; Keys Key; EditorToolType Type; };
 		static const ToolInfo Tools[] = {
 			// TRANSLATORS: Names of the tools in the Tools menu and the tool strip, nouns ("Fill" is the bucket fill tool, "Hand" moves the view)
-			{ ActionIds::ToolBrush, _x("editor", "Brush"), EditorIcon::Brush, Keys::B, EditorToolType::Brush },
+			// D for draw, B grabs a block as in the editors of the original game
+			{ ActionIds::ToolBrush, _x("editor", "Brush"), EditorIcon::Brush, Keys::D, EditorToolType::Brush },
 			{ ActionIds::ToolEraser, _x("editor", "Eraser"), EditorIcon::Eraser, Keys::E, EditorToolType::Eraser },
 			{ ActionIds::ToolRectangle, _x("editor", "Rectangle"), EditorIcon::Rectangle, Keys::R, EditorToolType::Rectangle },
 			{ ActionIds::ToolFill, _x("editor", "Fill"), EditorIcon::Fill, Keys::G, EditorToolType::Fill },
@@ -189,15 +223,8 @@ namespace Jazz2::Editor
 		};
 		for (const ToolInfo& info : Tools) {
 			EditorToolType type = info.Type;
-			auto& action = a.Add(info.Id, info.Label, info.Icon, [this, type]() {
-				_tools->SetActive(type);
-				// The panel at the bottom offers what the tool uses
-				if (type == EditorToolType::Event || type == EditorToolType::Path) {
-					_pickerPanel = PickerPanel::Events;
-				} else if (type == EditorToolType::Brush || type == EditorToolType::Rectangle || type == EditorToolType::Fill || type == EditorToolType::Eyedropper) {
-					_pickerPanel = PickerPanel::Tiles;
-				}
-			});
+			// The panel at the bottom follows the tool, see ToolManager::OnChosen in the constructor
+			auto& action = a.Add(info.Id, info.Label, info.Icon, [this, type]() { _tools->SetActive(type); });
 			action.Key = { info.Key, 0 };
 			action.IsChecked = [this, type]() { return (_tools->GetActiveType() == type); };
 		}
@@ -225,9 +252,10 @@ namespace Jazz2::Editor
 			});
 			flat.Key = { Keys::P, KeyMod::Ctrl };
 
-			// TRANSLATORS: Toggle in the Show menu and the toolbar, shows the collision masks of the tiles, the solid parts
+			// TRANSLATORS: Toggle in the View menu and the toolbar, shows the collision masks of the tiles, the solid parts
 			auto& masks = a.Add(ActionIds::ViewMasks, _x("editor", "Show Masks"), EditorIcon::Mask, [this]() {
-				// Over the tiles, instead of them, not at all
+				// Over the tiles, instead of them, not at all; while peeking they stay as they're chosen now
+				_maskPeek = false;
 				_maskMode = (_maskMode + 1) % 3;
 				if (_maskMode == 0) {
 					// Its images are made again quickly, they'd only take memory meanwhile
@@ -236,6 +264,26 @@ namespace Jazz2::Editor
 			});
 			masks.Key = { Keys::M, KeyMod::Ctrl };
 			masks.IsChecked = [this]() { return (_maskMode != 0); };
+
+			// While its key is held the masks are shown over the tiles, as M of the Multi-Layer Level Editor; chosen from a
+			// menu, which has no key to release, it shows or hides them as Show Masks does
+			// TRANSLATORS: Command whose key shows the collision masks over the tiles only while it's held
+			auto& peekMasks = a.Add(ActionIds::ViewPeekMasks, _x("editor", "Show Masks While Held"), EditorIcon::Mask, [this]() {
+				if (!_input->IsHandlingShortcut()) {
+					_actions.Execute(ActionIds::ViewMasks);
+				} else if (_maskMode == 0) {
+					_maskMode = 1;
+					_maskPeek = true;
+				}
+			});
+			peekMasks.Release = [this]() {
+				if (_maskPeek) {
+					_maskPeek = false;
+					_maskMode = 0;
+					_maskOverlay->Release();
+				}
+			};
+			peekMasks.IgnoresRepeat = true;
 
 			auto& events = a.Add(ActionIds::ViewEvents, _x("editor", "Show Events"), EditorIcon::Event, [this]() { _showEvents = !_showEvents; });
 			events.Key = { Keys::E, KeyMod::Ctrl | KeyMod::Shift };
@@ -406,9 +454,11 @@ namespace Jazz2::Editor
 			}
 		});
 		editTile.IsEnabled = [this]() { return (!_stamp.IsEmpty() && !_stamp.Tiles[0].IsEmpty()); };
-		a.Add(ActionIds::LevelExportTileSet, _x("editor", "Export Tile Set Image"), EditorIcon::Export, [this]() { _files->ShowExportTileSetImageDialog(); });
+		a.Add(ActionIds::LevelExportTileSet, _x("editor", "Export Tile Set Image"), EditorIcon::Export, [this]() { ShowExportTileSetImageDialog(*this, TileRef::DefaultTileSet); });
 		a.Add(ActionIds::LevelNewTileSet, _x("editor", "New Tile Set"), EditorIcon::New, [this]() { ShowNewTileSetDialog(*this); });
 		a.Add(ActionIds::LevelImportTileSet, _x("editor", "New Tile Set from Image"), EditorIcon::New, [this]() { ShowImportTileSetDialog(*this); });
+		// TRANSLATORS: Command that converts a tile set file of the original game (.j2t) into a new tile set, or copies one of this game
+		a.Add(ActionIds::LevelImportTileSetFile, _x("editor", "New Tile Set from Tile Set File"), EditorIcon::New, [this]() { ShowImportTileSetFileDialog(*this); });
 		a.Add(ActionIds::LevelAddTiles, _x("editor", "Add Tiles from Image"), EditorIcon::Plus, [this]() { ShowAddTilesFromImageDialog(*this); });
 		// TRANSLATORS: Menu item in the Level menu, opens the dialog that generates tiles for a layer with a blur or glass effect
 		a.Add(ActionIds::LevelFxTiles, _x("editor", "Generate Effect Tiles"), EditorIcon::None, [this]() { ShowFxTileGeneratorDialog(*this); });
@@ -445,10 +495,11 @@ namespace Jazz2::Editor
 		play.Key = { Keys::F5, 0 };
 		play.IsEnabled = isEditing;
 		// TRANSLATORS: Menu item in the Play menu, play-tests the level with the player placed where the pointer is
-		auto& here = a.Add(ActionIds::PlayHere, _x("editor", "Play Here"), EditorIcon::Play, [this]() { StartPlayTest(PlayStartMode::Here); });
+		// Its own icon, only the outline of Play; Play from Start has none, three of the same next to each other would tell nothing
+		auto& here = a.Add(ActionIds::PlayHere, _x("editor", "Play Here"), EditorIcon::PlayOutline, [this]() { StartPlayTest(PlayStartMode::Here); });
 		here.Key = { Keys::F5, KeyMod::Shift };
 		here.IsEnabled = isEditing;
-		auto& start = a.Add(ActionIds::PlayStart, _x("editor", "Play from Start"), EditorIcon::Play, [this]() { StartPlayTest(PlayStartMode::FromStart); });
+		auto& start = a.Add(ActionIds::PlayStart, _x("editor", "Play from Start"), EditorIcon::None, [this]() { StartPlayTest(PlayStartMode::FromStart); });
 		start.Key = { Keys::F5, KeyMod::Ctrl };
 		start.IsEnabled = isEditing;
 		// The key that plays goes back while the level is played, the place of the player is kept for "Play"
@@ -590,7 +641,7 @@ namespace Jazz2::Editor
 		// Who gets there, the moves of each character differ, and from where
 		struct ReachChoice { const char* Id; String Label; std::int32_t Character; };
 		static const ReachChoice ReachChoices[] = {
-			// TRANSLATORS: Choices in the Show menu of whose reach the shown reachable area is
+			// TRANSLATORS: Choices in the Reachable Area submenu of the View menu of whose reach the shown reachable area is
 			{ ActionIds::ViewReachAny, _x("editor", "Reachable with Any Character"), 0 },
 			{ ActionIds::ViewReachJazz, _x("editor", "Reachable with Jazz"), std::int32_t(PlayerType::Jazz) },
 			{ ActionIds::ViewReachSpaz, _x("editor", "Reachable with Spaz"), std::int32_t(PlayerType::Spaz) },
@@ -624,7 +675,7 @@ namespace Jazz2::Editor
 		// The script of the level, opened in the program of the settings or the one the system has for it
 		a.Add(ActionIds::LevelEditScript, _x("editor", "Edit Script"), EditorIcon::None, [this]() { _files->EditScript(); });
 		// Where the level differs from the file on disk
-		// TRANSLATORS: Toggle in the Show menu, shows where the level differs from its saved file
+		// TRANSLATORS: Toggle in the View menu, shows where the level differs from its saved file
 		auto& compare = a.Add(ActionIds::ViewCompareSaved, _x("editor", "Compare with Saved"), EditorIcon::None, [this]() {
 			_comparison->Toggle(_input->IsToolPointerDown());
 		});

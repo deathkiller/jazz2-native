@@ -66,7 +66,7 @@ namespace Jazz2::Tests
 		// a normal sweep of the test level stops before them. Anything added has to go *before* them - and that
 		// renumbering has to reach the cases in ApplyInput(), the windows in GetScenarioTicks() and the
 		// placements in SetupProps(), all of which name `cn_chain` and `dm_chain` by index.
-		static constexpr std::int32_t ScenarioCount = 550;
+		static constexpr std::int32_t ScenarioCount = 612;
 		// Raise this to re-measure only the later scenarios while iterating, which turns a twenty-minute
 		// sweep into half a minute. LEAVE IT AT 0 WHEN COMMITTING: a raised value silently skips everything
 		// before it, which has been mistaken for scenarios that stopped working more than once.
@@ -187,6 +187,23 @@ namespace Jazz2::Tests
 		// the things being compared. See `cp_mod_get`, which rides it doing nothing and measures just that.
 		static constexpr std::int32_t CopterClearTicks = 30;
 
+		// The freeze set, `fz_*` at 548-609. On tick `FreezeTick` of the run its subject is lifted by `FreezeLift`
+		// px and frozen for `FreezeLength` ticks (0 = lifted only, -1 tick = nothing, a real Freezer shot does it).
+		// `FreezeTarget` 0 freezes the player, 1 the object GetFreezeSubject() names - the enemy the scenario
+		// spawned, or the level's pushable. Kept identical to the tables in the original game's probe.
+		static constexpr std::int32_t FreezeFirst = 548;
+		static constexpr std::int32_t FreezeCount = 62;
+		static constexpr std::int8_t FreezeTarget[FreezeCount] = { 0,0,0,0,0,0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,1, 1,1,0,1,1, 1,1, 1, 1,1,1, 1,1,1,1,1,1,1,1,1,1,1, 1,1,1, 0,0,0, 0,0,0,0, 1,1,1,1,1,1,1,1 };
+		static constexpr std::int16_t FreezeTick[FreezeCount] = { 20,45,45,60,60,60,60,52,80,16,10,50,50, 60,60,60,60,60,60,60,60,60, 100,0,100,60,60, -1,-1, 100, 60,60,-1, -1,60,-1,60,-1,60,-1,60,-1,60,-1, -1,-1,-1, 60,60,20, 20,20,20,20, 10,10,10,10,10,10,10,10 };
+		static constexpr std::int16_t FreezeLength[FreezeCount] = { 100,100,100,100,100,100,20,100,100,100,100,100,100, 100,100,100,100,100,100,100,0,100, 100,100,100,0,100, 0,0, 30, 100,15,0, 0,100,0,100,0,100,0,100,0,100,0, 0,0,0, 100,100,100, 100,100,100,100, 250,250,250,250,250,250,250,250 };
+		static constexpr std::int16_t FreezeLift[FreezeCount] = { 0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,96,96, 0,0,0,64,64, 0,0, 0, 0,0,0, 0,0,0,0,0,0,0,0,0,0,0, 0,0,0, 0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0 };
+		// How many px short of the turtle the `fz_r_*` ones (k = 54..61) start, kept identical to the original's probe
+		static constexpr std::int16_t FreezeRamRunUp[8] = { 96, 96, 160, 224, 288, 384, 128, 144 };
+		// Where the crate scenarios (k = 33..46) put their crate, in tiles east of the origin, and the player, three
+		// tiles short of it on the same floor. Kept identical to the original game's probe.
+		static constexpr std::int32_t FreezeCrateDX = 42;
+		static constexpr std::int32_t FreezeCratePlayerDX = 39;
+
 		LevelHandler* _levelHandler;
 		std::int32_t _state;
 		std::int32_t _scenario;
@@ -213,6 +230,11 @@ namespace Jazz2::Tests
 		// The tick the last ride ended, or -1 once the player has been put back under the generator for the
 		// next one. See CopterReturnDelay.
 		std::int32_t _copterEndTick;
+		// Whether the current `fz_*` scenario's freeze has been done, latched for the same reason
+		bool _freezeDone;
+		// Where the pushable is put back to at the start of each `fz_b_*` scenario, taken the first time one runs -
+		// it is pushed further every time otherwise. X below zero while not taken yet.
+		Vector2f _boxHome;
 		// What the current scenario put in the world, taken back out again before the next one starts. A pole
 		// chain writes several tile events, so it has to be a list rather than a single position.
 		std::shared_ptr<Actors::ActorBase> _spawned;
@@ -250,6 +272,17 @@ namespace Jazz2::Tests
 		void ScanTileEvent(EventType wanted, StringView label);
 		// Length of a scenario, in the original game's ticks
 		static float GetScenarioTicks(std::int32_t s);
+		static bool IsFreezeScenario(std::int32_t s) {
+			return (s >= FreezeFirst && s < FreezeFirst + FreezeCount);
+		}
+		// The level's pushable, or null while it isn't an actor
+		Actors::ActorBase* FindPushable();
+		// The object an `fz_*` scenario is about, or null for the ones only about the player
+		Actors::ActorBase* GetFreezeSubject(std::int32_t s);
+		// Puts an `fz_*` scenario's object in place at the run start, after the settle
+		void SetupFreezeProps(Actors::Player* player, std::int32_t s);
+		// Freezes and lifts an `fz_*` scenario's subject once its tick is reached
+		void ApplyFreezeAction(Actors::Player* player, std::int32_t s, std::int32_t t);
 	};
 }
 

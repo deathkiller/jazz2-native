@@ -28,6 +28,7 @@ namespace Jazz2::Editor
 #endif
 
 	class ActionRegistry;
+	class BlockGrab;
 	class CommandHistory;
 	class ContentTileSetLibrary;
 	class EditorLevelHandler;
@@ -86,6 +87,8 @@ namespace Jazz2::Editor
 		virtual ActionRegistry& GetActions() = 0;
 		/** @brief Returns the tools */
 		virtual ToolManager& GetTools() = 0;
+		/** @brief Returns the block grabbed by its corners with a key, marked in the level or in the picker of tiles */
+		virtual BlockGrab& GetBlockGrab() = 0;
 		/** @brief Returns the settings */
 		virtual EditorSettings& GetSettings() = 0;
 		/** @brief Returns the level handler that shows the level, or `nullptr` */

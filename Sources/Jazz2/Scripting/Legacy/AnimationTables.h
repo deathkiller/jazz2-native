@@ -48,6 +48,14 @@ namespace Jazz2::Scripting::Legacy
 		static constexpr std::uint32_t MaxAnimations = INT16_MAX;
 		/** @brief Number of entries the frame table can have, the animation file of the game has less than 15 000 */
 		static constexpr std::uint32_t MaxFrames = 1u << 17;
+		/**
+		 * @brief Index of the first animation a set gets, the ones before are empty
+		 *
+		 * The table of JJ2+ has no animation of a set at a small index, scripts take a small one for an animation of a
+		 * set of their own (`MLLE-Weapons.asc` adds the first animation of the set to one below 200) - and an object of
+		 * `curAnim = 1` shows nothing (the joints of the platforms of ThreedRealms).
+		 */
+		static constexpr std::uint32_t FirstSetAnim = 256;
 
 		/** @brief Creates the tables for the animation file of the given version of the game */
 		explicit AnimationTables(bool isTSF);
@@ -81,6 +89,10 @@ namespace Jazz2::Scripting::Legacy
 			Returns `false` if there's no such frame or it has no pixels.
 		*/
 		bool GetFrameBounds(std::uint32_t frameIndex, Recti& frameRect, Recti& pixelBounds);
+		/** @brief Returns the rectangle of a frame from its hotspot and its coldspot as JJ2 stores it, `false` if there's no such frame */
+		bool GetFrameSpots(std::uint32_t frameIndex, Recti& frameRect, Vector2i& coldSpot);
+		/** @brief Returns the index in the frame table of a frame of a set that a script changed, -1 if it's as it was or the set isn't loaded */
+		std::int32_t FindChangedFrame(std::int32_t setID, std::uint32_t animation, std::uint32_t frame) const;
 
 		/** @brief Loads a set of an animation file into a set, as `jjANIMSET::load()` */
 		bool LoadSet(jjANIMSET& set, std::uint32_t fileSetID, StringView filename, std::int32_t firstAnimToOverwrite, std::int32_t firstFrameToOverwrite);
@@ -95,6 +107,8 @@ namespace Jazz2::Scripting::Legacy
 		void AssignFrame(jjANIMFRAME& target, const jjANIMFRAME& source);
 		/** @brief Replaces the image of a frame by palette indices, @p width × @p height of them */
 		void SetFramePixels(jjANIMFRAME& frame, const std::uint8_t* pixels, std::uint32_t width, std::uint32_t height);
+		/** @brief Gives every pixel of a frame the palette index @p colors has at its index, as `jjPIXELMAP::recolor()` and saving it back */
+		void RecolorFrame(jjANIMFRAME& frame, const std::uint8_t* colors);
 		/**
 			@brief Replaces the image of a frame by colors with alpha, @p width × @p height of them, a 32-bit frame of JJ2+
 

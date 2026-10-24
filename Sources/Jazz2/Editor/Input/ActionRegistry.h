@@ -92,12 +92,20 @@ namespace Jazz2::Editor
 		Shortcut DefaultAlternateKey;
 		/** @brief What it does */
 		Function<void()> Execute;
+		/**
+		 * @brief What ends it once the key that ran it is released, for an action that lasts while its key is held, or empty
+		 *
+		 * Called only after it was run by its key, see @ref EditorInputRouter.
+		 */
+		Function<void()> Release;
 		/** @brief Returns whether it can be done now, always if not set */
 		Function<bool()> IsEnabled;
 		/** @brief Returns whether it's turned on, for actions that toggle something */
 		Function<bool()> IsChecked;
 		/** @brief Whether its shortcut works while a text is typed, as saving does, the text is confirmed first */
 		bool WorksWhileTyping = false;
+		/** @brief Whether its shortcut runs it only once while it's held, not again as the key repeats, as marking a corner shouldn't */
+		bool IgnoresRepeat = false;
 		/**
 		 * @brief When its shortcut works
 		 *
@@ -115,9 +123,9 @@ namespace Jazz2::Editor
 	/** @brief Set of shortcuts like those of another level editor, see @ref ActionRegistry::ApplyPreset() */
 	enum class KeymapPreset : std::int32_t
 	{
-		Default,		/**< The shortcuts of this editor */
+		Default,		/**< The shortcuts of this editor, B grabs a block and Ctrl+E / Shift+E take and place events as in the editors of the original game */
 		Jcs,			/**< Like Jazz Creation Station: F and I flip, the number keys choose layers as by default */
-		Mlle			/**< Like the Multi-Layer Level Editor: as JCS, and R rotates where that's offered */
+		Mlle			/**< Like the Multi-Layer Level Editor: as JCS, and Ctrl+C / Ctrl+X into the brush, Ctrl+V events, Ctrl+R plays, the comma picks */
 	};
 
 	/**
@@ -137,8 +145,13 @@ namespace Jazz2::Editor
 		EditorAction* Find(StringView id);
 		/** @brief Runs an action if it can be done now, returns `false` if it can't, an identifier no action has is logged as in @ref Find() */
 		bool Execute(StringView id);
-		/** @brief Runs the action whose shortcut matches a key and works in @p scope, returns `true` if there was one */
-		bool HandleKey(const KeyboardEvent& event, ActionScope scope = ActionScope::Edit);
+		/**
+		 * @brief Runs the action whose shortcut matches a key and works in @p scope, returns `true` if there was one
+		 *
+		 * With @p repeat the key is held and repeats, an action that ignores it (see @ref EditorAction::IgnoresRepeat)
+		 * takes the key without running. @p ran, if given, gets the action that ran, or `nullptr`.
+		 */
+		bool HandleKey(const KeyboardEvent& event, ActionScope scope = ActionScope::Edit, bool repeat = false, EditorAction** ran = nullptr);
 		/** @brief Returns all actions, in the order they were added */
 		const SmallVector<std::unique_ptr<EditorAction>, 0>& GetAll() const {
 			return _actions;

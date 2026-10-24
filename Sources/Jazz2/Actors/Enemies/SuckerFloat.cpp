@@ -87,10 +87,10 @@ namespace Jazz2::Actors::Enemies
 
 			TryGenerateRandomDrop();
 		} else {
-			Vector2f shotSpeed;
+			Vector2f shotSpeed = Vector2f::Zero;
 			if (runtime_cast<Weapons::Thunderbolt>(collider)) {
 				shotSpeed = _pos - collider->GetPos();
-			} else {
+			} else if (collider != nullptr) {
 				shotSpeed = collider->GetSpeed();
 			}
 

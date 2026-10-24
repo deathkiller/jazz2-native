@@ -1,11 +1,13 @@
-﻿#if defined(WITH_ANGELSCRIPT)
+#if defined(WITH_ANGELSCRIPT)
 
 #include "Player.h"
 #include "AnimationTables.h"
 #include "Internal.h"
+#include "ObjectHost.h"
 
 #include "../../Actors/ActorBase.h"
 #include "../../Actors/Player.h"
+#include "../../Actors/Collectibles/CollectibleBase.h"
 #include "../../Compatibility/JJ2Strings.h"
 #include "../../Rendering/PlayerViewport.h"
 
@@ -193,30 +195,34 @@ namespace Jazz2::Scripting
 			_player->_checkpointPos.Y = value;
 			return _player->_checkpointPos.Y;
 		}
+		// Speeds are in pixels per tick of JJ2+, 70 in a second, the player moves by frames, 60 in a second (ThreedRealms' burger booth
+		// lifts the player by 1 a tick, 100 pixels in its 100 ticks)
+		static constexpr float PlayerSpeedToTicks = 60.0f / 70.0f;
+
 		float jjPLAYER::get_xSpeed() {
 			if (_player == nullptr) {
 				return {};
 			}
-			return _player->_speed.X;
+			return _player->_speed.X * PlayerSpeedToTicks;
 		}
 		float jjPLAYER::set_xSpeed(float value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->_speed.X = value;
+			_player->_speed.X = value / PlayerSpeedToTicks;
 			return value;
 		}
 		float jjPLAYER::get_ySpeed() {
 			if (_player == nullptr) {
 				return {};
 			}
-			return _player->_speed.Y;
+			return _player->_speed.Y * PlayerSpeedToTicks;
 		}
 		float jjPLAYER::set_ySpeed(float value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->_speed.Y = value;
+			_player->_speed.Y = value / PlayerSpeedToTicks;
 			return value;
 		}
 
@@ -262,17 +268,25 @@ namespace Jazz2::Scripting
 			return value;
 		}
 
+		// `fastfire` of JJ2 is the delay between the shots of the blaster, 35 ticks without any fast fire - the game counts the
+		// fast fires, each takes 2.76 frames off the 30 frames of the blaster (see Player::FireCurrentWeapon())
+		constexpr float FastFireDefaultTicks = 35.0f;
+		constexpr float TicksPerFastFire = 2.76f * 70.0f / 60.0f;
+		constexpr std::int32_t MaxFastFires = 9;
+
 		std::int32_t jjPLAYER::get_fastfire() const {
 			if (_player == nullptr) {
 				return {};
 			}
-			return (_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+			std::int32_t count = (_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+			return std::int32_t(std::round(FastFireDefaultTicks - count * TicksPerFastFire));
 		}
 		std::int32_t jjPLAYER::set_fastfire(std::int32_t value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (value << 1));
+			std::int32_t count = std::clamp(std::int32_t(std::round((FastFireDefaultTicks - value) / TicksPerFastFire)), 0, MaxFastFires);
+			_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (count << 1));
 			return value;
 		}
 
@@ -325,17 +339,23 @@ namespace Jazz2::Scripting
 			return value;
 		}
 
+		// The ticks left of the blinking invulnerability, as after a hurt
 		std::int32_t jjPLAYER::get_blink() const {
-			if (_player == nullptr) {
-				return {};
+			if (_player == nullptr || _player->_invulnerableTime <= 0.0f || _player->GetInvulnerableType() != Actors::Player::InvulnerableType::Blinking) {
+				return 0;
 			}
-			return (std::int32_t)(_player->_invulnerableBlinkTime * 70.0f / FrameTimer::FramesPerSecond);
+			return (std::int32_t)std::ceil(_player->_invulnerableTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
 		std::int32_t jjPLAYER::set_blink(std::int32_t value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->_invulnerableBlinkTime = value * FrameTimer::FramesPerSecond / 70.0f;
+			if (value > 0) {
+				_player->SetInvulnerability(value * FrameTimer::FramesPerSecond / 70.0f, Actors::Player::InvulnerableType::Blinking);
+			} else if (get_blink() > 0) {
+				// Only the blinking ends, not a shield
+				_player->SetInvulnerability(0.0f, Actors::Player::InvulnerableType::Blinking);
+			}
 			return value;
 		}
 
@@ -389,30 +409,28 @@ namespace Jazz2::Scripting
 			_player->AddCoins(-numberOfCoins);
 			return true;
 		}
+		std::int32_t* jjPLAYER::GetGemCount(std::uint32_t type) const {
+			// GEM::Color counts from 1 (RED), the gems of the player from 0
+			return (_player != nullptr && type >= 1 && type <= arraySize(_player->_inventory.Gems) ? &_player->_inventory.Gems[type - 1] : nullptr);
+		}
 		std::int32_t jjPLAYER::get_gems(std::uint32_t type) const {
-			if (_player == nullptr) {
-				return {};
-			}
-			return (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
+			std::int32_t* count = GetGemCount(type);
+			return (count != nullptr ? *count : 0);
 		}
 		std::int32_t jjPLAYER::set_gems(std::uint32_t type, std::int32_t value) {
-			if (_player == nullptr) {
-				return {};
+			std::int32_t* count = GetGemCount(type);
+			if (count == nullptr) {
+				return 0;
 			}
-			if (type < arraySize(_player->_inventory.Gems)) {
-				_player->_inventory.Gems[type] = value;
-			}
-			return (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
+			*count = value;
+			return value;
 		}
 		bool jjPLAYER::testForGems(std::int32_t numberOfGems, std::uint32_t type) {
-			if (_player == nullptr) {
-				return {};
-			}
 			noop();
-			std::uint8_t currentCount = (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
-			if (numberOfGems <= currentCount) {
+			std::int32_t* count = GetGemCount(type);
+			if (count != nullptr && numberOfGems <= *count) {
 				if (numberOfGems > 0) {
-					_player->_inventory.Gems[type] -= numberOfGems;
+					*count -= numberOfGems;
 				}
 				return true;
 			}
@@ -654,8 +672,9 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			// Toggles tileset collision so the player can pass through level geometry
-			_player->SetState(Actors::ActorState::CollideWithTileset, !value);
+			// Toggles tileset collision so the player can pass through level geometry, and gravity, a player in noclip mode keeps
+			// the speed it has (ThreedRealms' burger booth makes the player rise slowly by it)
+			_player->SetState(Actors::ActorState::CollideWithTileset | Actors::ActorState::ApplyGravitation, !value);
 			return value;
 		}
 		std::uint8_t jjPLAYER::get_lighting() const {
@@ -804,18 +823,30 @@ namespace Jazz2::Scripting
 			if (_player == nullptr || index < 0) {
 				return 0;
 			}
-			// In 1/256 units, the blaster has unlimited ammo, which JJ2+ doesn't count
+			// In 1/256 units, UINT16_MAX is unlimited: JJ2+ doesn't count the blaster's, the others keep their count
 			std::uint16_t ammo = _player->_inventory.WeaponAmmo[index];
-			return (ammo == UINT16_MAX ? 0 : ammo / 256);
+			if (ammo == UINT16_MAX) {
+				return _infiniteAmmo[index];
+			}
+			return ammo / 256;
 		}
 		std::int32_t jjPLAYER::set_ammo(std::uint8_t number, std::int32_t value) {
 			std::int32_t index = ToWeaponIndex(number);
 			if (_player == nullptr || index < 0) {
 				return value;
 			}
+			// A weapon of `jjWEAPON::infinite` that the player has gets the unlimited ammo the HUD shows as such
 			std::uint16_t& ammo = _player->_inventory.WeaponAmmo[index];
-			if (ammo != UINT16_MAX) {
-				ammo = std::uint16_t(std::clamp<std::int32_t>(value, 0, UINT16_MAX / 256 - 1) * 256);
+			std::int32_t count = std::clamp<std::int32_t>(value, 0, UINT16_MAX / 256 - 1);
+			if (_levelScriptLoader->GetWeapon(number)->infinite) {
+				if (count > 0) {
+					ammo = UINT16_MAX;
+					_infiniteAmmo[index] = std::uint16_t(count);
+				} else if (index != std::int32_t(WeaponType::Blaster)) {
+					ammo = 0;
+				}
+			} else {
+				ammo = std::uint16_t(count * 256);
 			}
 			return value;
 		}
@@ -914,11 +945,15 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			noop();
-
-			// TODO: forceHurt and return value
+			// Whether the player was hurt, scripts act on it (ThreedRealms' pumpkin bombs explode then) - one blinking after
+			// a hit is hurt only when forced
+			if (forceHurt && _player->_invulnerableTime > 0.0f) {
+				_player->_invulnerableTime = 0.0f;
+				_player->SetState(Actors::ActorState::IsInvulnerable, false);
+			}
+			std::int32_t health = _player->GetHealth();
 			_player->TakeDamage(damage);
-			return false;
+			return (_player->GetHealth() < health);
 		}
 
 		std::uint32_t jjPLAYER::get_timerState() const {
@@ -1030,13 +1065,25 @@ namespace Jazz2::Scripting
 			_levelScriptLoader->ShowLevelText(text, size);
 		}
 
+		// FLIGHT::NONE is 0, FLYCARROT 1 (any copter) and AIRBOARD -1
 		std::uint32_t jjPLAYER::get_fly() const {
-			noop();
-			return 0;
+			if (_player == nullptr) {
+				return 0;
+			}
+			switch (_player->GetModifier()) {
+				case Actors::Player::Modifier::Airboard: return UINT32_MAX;
+				case Actors::Player::Modifier::Copter:
+				case Actors::Player::Modifier::LizardCopter: return 1;
+				default: return 0;
+			}
 		}
 		std::uint32_t jjPLAYER::set_fly(std::uint32_t value) {
-			noop();
-			return 0;
+			if (_player == nullptr) {
+				return value;
+			}
+			_player->SetModifier(value == UINT32_MAX ? Actors::Player::Modifier::Airboard
+				: (value == 1 ? Actors::Player::Modifier::Copter : Actors::Player::Modifier::None));
+			return value;
 		}
 
 		std::int32_t jjPLAYER::fireBulletDirection(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, std::uint32_t direction) {
@@ -1121,9 +1168,22 @@ namespace Jazz2::Scripting
 			std::shared_ptr<Actors::ActorBase> victim = (target != nullptr ? target->_actor.lock() : nullptr);
 			bool result = false;
 			if (_player != nullptr && victim != nullptr) {
-				result = (_player->OnHandleCollision(victim.get()) || victim->OnHandleCollision(_player));
-				target->energy = std::int8_t(std::clamp<std::int32_t>(victim->GetHealth(), INT8_MIN, INT8_MAX));
-				target->_synced.Energy = target->energy;
+				if (target->_scriptedCollisions) {
+					// The behavior decides, as in JJ2+ - the game doesn't collect a pickup then
+					result = ScriptObjectHost::CallObjectHit(_levelScriptLoader, *target, nullptr, this, force);
+				} else {
+					result = (_player->OnHandleCollision(victim.get()) || victim->OnHandleCollision(_player));
+					target->energy = std::int8_t(std::clamp<std::int32_t>(victim->GetHealth(), INT8_MIN, INT8_MAX));
+					target->_synced.Energy = target->energy;
+					if ((victim->GetHealth() <= 0 || victim->GetState(Actors::ActorState::IsDestroyed)) && runtime_cast<Actors::Collectibles::CollectibleBase>(victim.get()) != nullptr) {
+						// A collected pickup is a sparkle at once, as measured in JJ2+ - scripts tell the ones that are gone by their
+						// behavior (ThreedRealms' series of gems keep drawing theirs otherwise)
+						constexpr std::uint32_t BehaviorExplosion2 = aCOUNT + 21;
+						constexpr std::uint32_t HandlingExplosion = 4;
+						target->behavior = BehaviorExplosion2;
+						target->_playerHandling = HandlingExplosion;
+					}
+				}
 			}
 			if (target != nullptr) {
 				// A handle passed to a native function is the function's to release
@@ -1139,10 +1199,43 @@ namespace Jazz2::Scripting
 		std::uint32_t jjPLAYER::get_spriteMode() const {
 			return _spriteMode;
 		}
+		class jjPLAYER::InvisibleOverride : public Actors::IActorUpdateOverride
+		{
+		public:
+			void OnUpdate(Actors::ActorBase* actor, float timeMult) override {
+				RunPlayerUpdate(static_cast<Actors::Player*>(actor), timeMult);
+			}
+			bool IsDrawn() const override {
+				return false;
+			}
+		};
+
+		void jjPLAYER::UpdateDrawOverride() {
+			if (_player == nullptr) {
+				return;
+			}
+			bool hidden = (_spriteMode == spriteType_INVISIBLE || _drawnByScript);
+			// Nothing else hands over the update of a player
+			bool overridden = (_player->GetUpdateOverride() != nullptr);
+			if (hidden != overridden) {
+				_player->SetUpdateOverride(hidden ? std::make_unique<InvisibleOverride>() : nullptr);
+			}
+		}
+		void jjPLAYER::SetDrawnByScript(bool value) {
+			if (_drawnByScript != value) {
+				_drawnByScript = value;
+				UpdateDrawOverride();
+			}
+		}
+
+		void jjPLAYER::RunPlayerUpdate(Actors::Player* player, float timeMult) {
+			player->OnUpdate(timeMult);
+		}
+
 		std::uint32_t jjPLAYER::set_spriteMode(std::uint32_t value) {
-			noop();
-			// TODO: Only kept, the player is drawn as always - it decides how it's drawn every frame itself (blinking)
+			// Only SPRITE::INVISIBLE is taken, the player decides how it's drawn every frame itself (blinking)
 			_spriteMode = value;
+			UpdateDrawOverride();
 			return value;
 		}
 		std::uint8_t jjPLAYER::get_spriteParam() const {
@@ -1166,6 +1259,11 @@ namespace Jazz2::Scripting
 			}
 			auto& tables = _levelScriptLoader->GetAnimationTables();
 			anim = tables.FindAnimationOfGraphics(_player->_renderer.FrameSource);
+			if (anim == 0 && _player->_currentTransition != nullptr && _player->_currentAnimation != nullptr) {
+				// A transition the original has no animation of (`jump_shoot_end` of the remastered content after a shot in
+				// the air), the animation it leads to then - scripts that draw the player themselves would draw nothing
+				anim = tables.FindAnimationOfGraphics(_player->_currentAnimation->Base);
+			}
 			std::uint32_t frameCount;
 			if (anim == 0 || !tables.GetAnimationFrames(anim, frameCount, firstFrame) || frameCount == 0) {
 				return false;
@@ -1212,8 +1310,21 @@ namespace Jazz2::Scripting
 			// What only the game decides, as JJ2+ has it - a buttstomp counts down from below 41, 50 is none
 			buttstomp = (_player->_currentSpecialMove == Actors::Player::SpecialMoveType::Buttstomp ? 1 : 50);
 			specialMove = std::int32_t(_player->_currentSpecialMove);
-			bossNumber = _levelScriptLoader->GetActiveBossObjectID();
-			bossActive = (bossNumber != 0);
+			// A boss of the game is the one, a boss of a script is told by the script (`boss`)
+			// - and what a script set stays as it set it (HH17's dragon is a boss of the script, which ends it so when it's slain)
+			std::int32_t nativeBoss = _levelScriptLoader->GetActiveBossObjectID();
+			if (nativeBoss != 0) {
+				bossNumber = nativeBoss;
+			}
+			if (!_syncedOnce || bossActive == _synced.BossActive) {
+				bossActive = (nativeBoss != 0 || _levelScriptLoader->IsBossAreaActivated());
+			}
+			_synced.BossActive = (nativeBoss != 0 || _levelScriptLoader->IsBossAreaActivated());
+			// The object the player stands on, if it's an object of the scripts (ThreedRealms tells its trapezes by it)
+			// - none while it dies (ThreedRealms would draw a player dying on a trapeze still hanging there)
+			jjOBJ* standingOn = (_player->_carryingObject != nullptr && _player->GetHealth() > 0
+				? _levelScriptLoader->GetObjectView(_player->_carryingObject) : nullptr);
+			platform = (standingOn != nullptr ? standingOn->objectID : 0);
 		}
 		void jjPLAYER::SyncPropertiesFromBackingStore() {
 			if (_player == nullptr || !_syncedOnce) {
@@ -1246,6 +1357,21 @@ namespace Jazz2::Scripting
 				_player->_idleTime = std::max(idle, 0) * TicksToFrames;
 			}
 
+			// A capped weapon isn't fired faster by tapping, one without its default sample is silent (the weapons of MLLE play
+			// their own sounds), as JJ2+ has the weapons
+			std::uint16_t cappedWeapons = 0, silentWeapons = 0;
+			for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
+				const jjWEAPON* weapon = _levelScriptLoader->GetWeapon(i + 1);
+				if (weapon->style == wsCAPPED) {
+					cappedWeapons |= std::uint16_t(1 << i);
+				}
+				if (!weapon->defaultSample) {
+					silentWeapons |= std::uint16_t(1 << i);
+				}
+			}
+			_player->_cappedWeapons = cappedWeapons;
+			_player->_silentWeapons = silentWeapons;
+
 			// The handed-over values are what the player has now
 			_synced.Lives = lives;
 			_synced.Direction = direction;
@@ -1264,8 +1390,7 @@ namespace Jazz2::Scripting
 			return false;
 		}
 		jjPLAYER* jjPLAYERDRAW::get_player() const {
-			noop();
-			return nullptr;
+			return _player;
 		}
 	}
 
@@ -1344,6 +1469,33 @@ namespace Jazz2::Scripting
 	jjWEAPON* get_jjWEAPON(int index) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetWeapon(index);
+	}
+
+	static bool get_jjWEAPON_infinite(jjWEAPON* self) {
+		return self->infinite;
+	}
+	static bool set_jjWEAPON_infinite(jjWEAPON* self, bool value) {
+		if (self->infinite == value) {
+			return value;
+		}
+		// The ammo the players have is read as it was and written as it is now, set_ammo() converts it
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		for (std::int32_t number = 1; number <= std::int32_t(WeaponType::Count); number++) {
+			if (owner->GetWeapon(number) != self) {
+				continue;
+			}
+			for (Actors::Player* player : owner->GetPlayers()) {
+				if (jjPLAYER* p = owner->GetPlayerBackingStore(player)) {
+					std::int32_t ammo = p->get_ammo(std::uint8_t(number));
+					self->infinite = value;
+					p->set_ammo(std::uint8_t(number), ammo);
+					self->infinite = !value;
+				}
+			}
+			break;
+		}
+		self->infinite = value;
+		return value;
 	}
 
 	jjCHARACTER* get_jjCHARACTER(int index) {
@@ -1682,7 +1834,8 @@ namespace Jazz2::Scripting
 	{
 		engine->RegisterObjectType("jjWEAPON", sizeof(jjWEAPON), asOBJ_REF | asOBJ_NOCOUNT);
 		engine->RegisterGlobalFunction("jjWEAPON@ get_jjWeapons(int)", asFUNCTION(get_jjWEAPON), asCALL_CDECL);
-		engine->RegisterObjectProperty("jjWEAPON", "bool infinite", asOFFSET(jjWEAPON, infinite));
+		engine->RegisterObjectMethod("jjWEAPON", "bool get_infinite() const", asFUNCTION(get_jjWEAPON_infinite), asCALL_CDECL_OBJFIRST);
+		engine->RegisterObjectMethod("jjWEAPON", "bool set_infinite(bool)", asFUNCTION(set_jjWEAPON_infinite), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectProperty("jjWEAPON", "bool replenishes", asOFFSET(jjWEAPON, replenishes));
 		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByShield", asOFFSET(jjWEAPON, replacedByShield));
 		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByBubbles", asOFFSET(jjWEAPON, replacedByBubbles));

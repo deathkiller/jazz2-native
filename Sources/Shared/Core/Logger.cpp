@@ -380,11 +380,13 @@ namespace Death { namespace Trace {
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
 			if (_sinks[i] == sink) {
 				_sinks.eraseUnordered(&_sinks[i]);
-				if (_sinks.empty()) {
-					Dispose();
-				}
 				break;
 			}
+		}
+
+		// Also when the worker removed it already
+		if (_sinks.empty()) {
+			Dispose();
 		}
 	}
 
@@ -742,6 +744,20 @@ namespace Death { namespace Trace {
 			transitEvent.FlushFlag = nullptr;
 
 			// We defer notifying the caller until after this function completes
+		} else if DEATH_UNLIKELY(transitEvent.Level == AttachSinkRequested) {
+			// The sink list changes only here between entries, so the sinks are called without any lock
+			_sinks.push_back(reinterpret_cast<ITraceSink*>(const_cast<char*>(transitEvent.FunctionName)));
+		} else if DEATH_UNLIKELY(transitEvent.Level == RemoveSinkRequested) {
+			ITraceSink* sink = reinterpret_cast<ITraceSink*>(const_cast<char*>(transitEvent.FunctionName));
+			for (std::size_t i = 0; i < _sinks.size(); i++) {
+				if (_sinks[i] == sink) {
+					if (_sinksDirty) {
+						sink->OnTraceFlushed();
+					}
+					_sinks.eraseUnordered(&_sinks[i]);
+					break;
+				}
+			}
 		} /*else if DEATH_UNLIKELY(transitEvent.Level == InitializeBacktraceRequested) {
 			if (_backtraceStorage == nullptr) {
 				_backtraceStorage = std::make_shared<BacktraceStorage>(transitEvent.Capacity);
@@ -968,11 +984,41 @@ namespace Death { namespace Trace {
 
 	void Logger::AttachSink(ITraceSink* sink)
 	{
+#if defined(DEATH_TRACE_ASYNC)
+		using namespace Implementation;
+
+		DEATH_ASSERT(!_backend.IsWorkerThread(), "Sinks cannot be attached from a sink callback", );
+
+		std::lock_guard<Threading::Spinlock> lock(_sinksLifecycleLock);
+		if (_backend.IsAlive()) {
+			// The worker owns the sink list, so the change goes through the queue, ordered with the entries
+			while (!EnqueueEntry(AttachSinkRequested, rdtsc(), sink, nullptr, 0)) {
+				std::this_thread::sleep_for(std::chrono::nanoseconds{100});
+			}
+			_backend.Notify();
+			return;
+		}
+#endif
 		_backend.AttachSink(sink);
 	}
 
 	void Logger::RemoveSink(ITraceSink* sink)
 	{
+#if defined(DEATH_TRACE_ASYNC)
+		using namespace Implementation;
+
+		DEATH_ASSERT(!_backend.IsWorkerThread(), "Sinks cannot be removed from a sink callback", );
+
+		std::lock_guard<Threading::Spinlock> lock(_sinksLifecycleLock);
+		if (_backend.IsAlive()) {
+			while (!EnqueueEntry(RemoveSinkRequested, rdtsc(), sink, nullptr, 0)) {
+				std::this_thread::sleep_for(std::chrono::nanoseconds{100});
+			}
+			// The flush request follows in the same queue, so once it's answered, the worker removed the sink.
+			// The list can't change after that, all other requests are serialized by the lock.
+			Flush();
+		}
+#endif
 		_backend.RemoveSink(sink);
 	}
 
@@ -1186,7 +1232,8 @@ namespace Death { namespace Trace {
 		std::uint8_t* writeBuffer = queue.prepareWrite(totalSize);
 
 		if DEATH_UNLIKELY(writeBuffer == nullptr) {
-			if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
+			if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested &&
+				level != AttachSinkRequested && level != RemoveSinkRequested) {
 				_threadContext->IncrementFailureCounter();
 			}
 

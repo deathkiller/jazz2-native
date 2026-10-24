@@ -11,7 +11,7 @@ namespace Jazz2::Actors
 	{
 	}
 
-	void Explosion::Create(ILevelHandler* levelHandler, const Vector3i& pos, Type type, float scale)
+	void Explosion::Create(ILevelHandler* levelHandler, const Vector3i& pos, Type type, float scale, Vector2f speed)
 	{
 		// Smoke puffs are purely decorative, but they are spawned in bursts (a destroyed crate alone makes four),
 		// and each one is a full actor with its own animation and render command - drop them when the user turned
@@ -39,6 +39,9 @@ namespace Jazz2::Actors
 			pos,
 			explosionParams
 		));
+		if (type == Type::IceShrapnel) {
+			explosion->_speed += speed;
+		}
 		levelHandler->AddActor(explosion);
 	}
 

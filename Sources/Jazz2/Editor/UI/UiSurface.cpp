@@ -114,6 +114,12 @@ namespace Jazz2::Editor
 		if (closed) {
 			// It's destroyed only at the end of the frame, a press held in it gets nothing more until then
 			CancelCaptureInside(element);
+			// What was shown from it goes with it, by index, as closing one may show something else
+			for (std::size_t i = 0; i < _overlays.size(); i++) {
+				if (_overlays[i].Options.Owner == element && !_overlays[i].Closing) {
+					CloseOverlay(_overlays[i].Element.get());
+				}
+			}
 		}
 		// Called once the list isn't touched anymore, it may show something else, which can move the list in memory
 		if (onClosed) {
@@ -121,7 +127,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void UiSurface::MoveOverlay(UiElement* element, Vector2f position)
+	void UiSurface::MoveOverlay(UiElement* element, Vector2f position, float fallbackRight)
 	{
 		for (Overlay& overlay : _overlays) {
 			if (overlay.Element.get() == element) {
@@ -129,6 +135,7 @@ namespace Jazz2::Editor
 				// there and comes back with the pointer, not ahead of it
 				overlay.Options.Centered = false;
 				overlay.Options.Position = Vector2f(std::round(position.X), std::round(position.Y));
+				overlay.Options.FallbackRight = (fallbackRight >= 0.0f ? std::round(fallbackRight) : fallbackRight);
 				break;
 			}
 		}
@@ -190,6 +197,16 @@ namespace Jazz2::Editor
 		for (const Overlay& overlay : _overlays) {
 			if (IsActive(overlay)) {
 				return true;
+			}
+		}
+		return false;
+	}
+
+	bool UiSurface::IsOverlayShown(const UiElement* element) const
+	{
+		for (const Overlay& overlay : _overlays) {
+			if (overlay.Element.get() == element) {
+				return !overlay.Closing;
 			}
 		}
 		return false;
@@ -809,6 +826,13 @@ namespace Jazz2::Editor
 		return (HitTestAll(pos, blocked) != nullptr || blocked);
 	}
 
+	bool UiSurface::TakesTouchAt(Vector2f pos)
+	{
+		bool blocked;
+		UiElement* hit = HitTestAll(pos, blocked);
+		return (hit != nullptr ? !hit->YieldsToViewGestures() : blocked);
+	}
+
 	void UiSurface::SetFocus(UiElement* element)
 	{
 		if (_focus == element) {
@@ -879,7 +903,8 @@ namespace Jazz2::Editor
 		float x = _pointerPos.X + offset - size * 0.5f;
 		float y = _pointerPos.Y + offset - size * 0.5f;
 		if (x + size > screenSize.X) {
-			x = _pointerPos.X - offset - size * 0.5f;
+			// The arrow of the system points up and to the left from its tip, nothing of it is on this side, so closer
+			x = _pointerPos.X - offset * 0.5625f - size * 0.5f;
 		}
 		if (y + size > screenSize.Y) {
 			y = _pointerPos.Y - offset - size * 0.5f;
@@ -1033,6 +1058,9 @@ namespace Jazz2::Editor
 			Vector2f pos = (options.Centered
 				? Vector2f(std::round(safe.X + (safe.W - size.X) * 0.5f), std::round(safe.Y + (safe.H - size.Y) * 0.4f))
 				: options.Position);
+			if (!options.Centered && options.FallbackRight >= 0.0f && pos.X + size.X > safe.X + safe.W) {
+				pos.X = options.FallbackRight - size.X;
+			}
 			// Moved to fit the screen
 			pos.X = std::clamp(pos.X, safe.X, safe.X + safe.W - size.X);
 			pos.Y = std::clamp(pos.Y, safe.Y, safe.Y + safe.H - size.Y);
@@ -1298,8 +1326,8 @@ namespace Jazz2::Editor
 
 			painter.PushOpacity(alpha);
 			painter.Panel(rect, true, UiTheme::PanelHeader, UiTheme::PanelBorder);
-			// A calm blue for a message, red for a warning
-			Colorf iconColor = (toast.Icon == EditorIcon::Warning ? UiTheme::Danger : Colorf(0.55f, 0.75f, 1.0f, 1.0f));
+			// Red for a warning, a message in the colors of its own icon
+			Colorf iconColor = (toast.Icon == EditorIcon::Warning ? UiTheme::Danger : Colorf(1.0f, 1.0f, 1.0f, 1.0f));
 			painter.Icon(toast.Icon, Rectf(rect.X + padding, rect.Y, iconSize, rect.H), iconColor);
 			painter.TextInRect(toast.Text, Rectf(rect.X + padding * 2.0f + iconSize, rect.Y, rect.W, rect.H), UiTheme::Text);
 			painter.PopOpacity();

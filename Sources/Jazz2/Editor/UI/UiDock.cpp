@@ -362,6 +362,8 @@ namespace Jazz2::Editor
 			UiResizeEdges::ShowCursor(*surface, _resizeEdges != 0 ? _resizeEdges : _hoverEdges);
 		}
 
+		// A drawer stays where it slides out
+		_header->ShowMoveArrows = !_drawer;
 		if (_drawer) {
 			if (_dockButton->Icon != EditorIcon::Close) {
 				_dockButton->Icon = EditorIcon::Close;

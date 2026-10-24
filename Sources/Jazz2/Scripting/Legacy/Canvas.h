@@ -60,25 +60,36 @@ namespace Jazz2::Scripting
 		};
 
 		/**
-		 * @brief Drawing surface used by scripts to render onto the HUD
+		 * @brief Drawing surface used by scripts to render onto the HUD or a layer
 		 *
-		 * Short-lived surface handed to draw callbacks, bound to a @ref UI::HUD and a view rectangle. Its methods draw
-		 * pixels, rectangles, tiles, sprites (plain, resized, rotated, vine) and text into that frame's HUD layer.
-		 * Mirrors the original JJ2+ `jjCANVAS` passed to `onDraw*` hooks.
+		 * Short-lived surface handed to draw callbacks, bound to a canvas - the HUD, or the level for `onDrawLayer#` - and
+		 * an offset of its coordinates. Its methods draw pixels, rectangles, tiles, sprites (plain, resized, rotated, vine)
+		 * and text there. Mirrors the original JJ2+ `jjCANVAS` passed to `onDraw*` hooks.
 		 */
 		struct jjCANVAS {
-			/** @brief The HUD this canvas draws onto */
-			UI::HUD* Hud;
-			/** @brief The visible view rectangle */
-			Rectf View;
-			/** @brief Counts the draws into the HUD in this frame, each is drawn over the ones before it, as in JJ2+ */
+			/** @brief The canvas this one draws onto */
+			UI::Canvas* Target;
+			/** @brief Added to every position */
+			Vector2f Offset;
+			/** @brief Width of the area, text is aligned in it */
+			float Width;
+			/** @brief Counts the draws in this frame, each is drawn over the ones before it, as in JJ2+ */
 			std::uint16_t* DrawCount;
+			/** @brief Layers of the draws, the draws after the last one stay on it */
+			std::uint16_t FirstLayer, LastLayer;
 
-			/** @brief Creates a new instance bound to the given HUD and view, @p drawCount is shared by the canvases of the frame */
-			jjCANVAS(UI::HUD* hud, const Rectf& view, std::uint16_t* drawCount);
+			/** @brief Creates a new instance bound to a canvas, @p drawCount is shared by the canvases of the frame */
+			jjCANVAS(UI::Canvas* target, Vector2f offset, float width, std::uint16_t* drawCount, std::uint16_t firstLayer, std::uint16_t lastLayer);
 
-			/** @brief Returns the HUD layer of the next draw, above every draw before it */
+			/** @brief Returns the layer of the next draw, above every draw before it */
 			std::uint16_t NextLayer();
+			/**
+			 * @brief Returns where text of a width starts, as JJ2 places it
+			 *
+			 * Around `0x8000` it's centered, moved by the difference, and around `0x10000` it ends that far from the
+			 * right edge.
+			 */
+			float GetTextX(std::int32_t xPixel, float textWidth) const;
 
 			/** @brief Draws a single colored pixel */
 			void DrawPixel(std::int32_t xPixel, std::int32_t yPixel, std::uint8_t color, std::uint32_t mode, std::uint8_t param);
@@ -105,6 +116,16 @@ namespace Jazz2::Scripting
 			void DrawTextBasicSize(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param);
 			/** @brief Draws text with a custom appearance using the given built-in font size */
 			void DrawTextExtSize(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t mode, std::uint8_t param);
+			/**
+			 * @brief Draws text in a built-in font size, moving as `STRING::Mode` says (`BOUNCE`, `SPIN`), in a sprite mode
+			 *
+			 * In `SPIN`, `#` colors every letter on its own as in the texts of levels, as JJ2+ draws a selected menu item.
+			 */
+			void DrawScriptText(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t stringMode,
+				std::uint32_t spriteMode, std::uint8_t param);
+			/** @brief Draws a frame of the font of the original that has no image as the character in the font of the game, returns `false` for any other frame */
+			bool DrawMissingFontCharacter(std::int32_t xPixel, std::int32_t yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame,
+				std::uint32_t mode, std::uint8_t param);
 
 			/** @brief Draws text using the given animation as a font */
 			void drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param);

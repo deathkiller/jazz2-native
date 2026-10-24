@@ -61,9 +61,9 @@ namespace Jazz2::Editor
 		constexpr float BoxLabelLineStep = 0.8f;
 
 		// The translated name of an event type, or its number in the buffer if it isn't known
-		StringView GetEventNameView(std::uint16_t type, char (&buffer)[16])
+		StringView GetEventNameView(std::uint16_t type, const std::uint8_t* params, char (&buffer)[16])
 		{
-			if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(type))) {
+			if (const EventDescriptor* descriptor = EventCatalog::Find(EventType(type), params)) {
 				return descriptor->Name;
 			}
 			std::int32_t length = std::snprintf(buffer, sizeof(buffer), "#%u", std::uint32_t(type));
@@ -111,7 +111,7 @@ namespace Jazz2::Editor
 			spec.Animation = std::uint32_t(AnimState::Fall);
 			return true;
 		}
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 		bool builtIn = !EventCatalog::IsExtension(descriptor);
 		if (builtIn && ResolveEventPreview(event, spec)) {
 			return (spec.Metadata != nullptr);
@@ -347,17 +347,17 @@ namespace Jazz2::Editor
 					DrawPlacedSprite(target, event, resource, spec, spawnPos, alpha, animTime);
 				}
 
-				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+				const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 				DrawCornerMark(painter, tileRect, GetCategoryColor(descriptor != nullptr ? descriptor->Category : EventCategory::Other), alpha, offGrid);
 				return;
 			}
 		}
 
 		float inset = std::max(1.0f, std::round(tileRect.W / 16.0f));
-		DrawBox(painter, event.Type, Rectf(tileRect.X + inset, tileRect.Y + inset, tileRect.W - inset * 2.0f, tileRect.H - inset * 2.0f), alpha, true);
+		DrawBox(painter, event.Type, event.Params, Rectf(tileRect.X + inset, tileRect.Y + inset, tileRect.W - inset * 2.0f, tileRect.H - inset * 2.0f), alpha, true);
 		// The box itself shows the tile, only one off the grid needs the mark
 		if (offGrid) {
-			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 			DrawCornerMark(painter, tileRect, GetCategoryColor(descriptor != nullptr ? descriptor->Category : EventCategory::Other), alpha, true);
 		}
 	}
@@ -421,8 +421,9 @@ namespace Jazz2::Editor
 		EventPreviewSpec spec;
 		GraphicResource* resource = (GetPreview(event, spec) ? GetSprite(event.Type, spec) : nullptr);
 		if (resource == nullptr) {
-			DrawBox(painter, event.Type, rect, alpha, false);
-			painter.Icon(EditorIcon::Event, rect, Colorf(1.0f, 1.0f, 1.0f, 0.7f * alpha), UiLayer::Overlay);
+			DrawBox(painter, event.Type, event.Params, rect, alpha, false);
+			painter.Icon(EventType(event.Type) == EventType::PassthroughEvent ? EditorIcon::Passthrough : EditorIcon::Event,
+				rect, Colorf(1.0f, 1.0f, 1.0f, 0.7f * alpha), UiLayer::Overlay);
 			return;
 		}
 
@@ -562,10 +563,10 @@ namespace Jazz2::Editor
 		}
 	}
 
-	String EventPreviews::GetEventName(std::uint16_t type)
+	String EventPreviews::GetEventName(std::uint16_t type, const std::uint8_t* params)
 	{
 		char buffer[16];
-		return GetEventNameView(type, buffer);
+		return GetEventNameView(type, params, buffer);
 	}
 
 	void EventPreviews::DrawSprite(const DrawTarget& drawTarget, GraphicResource* resource, const EventPreviewSpec& spec, Vector2f pos, float alpha,
@@ -617,13 +618,13 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void EventPreviews::DrawBox(UiPainter& painter, std::uint16_t type, const Rectf& rect, float alpha, bool withLabel)
+	void EventPreviews::DrawBox(UiPainter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel)
 	{
 		if (rect.W <= 0.0f || rect.H <= 0.0f) {
 			return;
 		}
 
-		const EventDescriptor* descriptor = EventCatalog::Find(EventType(type));
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(type), params);
 		Colorf color = (descriptor != nullptr ? GetCategoryColor(descriptor->Category) : Colorf(0.5f, 0.5f, 0.5f, 1.0f));
 		Colorf fill(color.R * 0.6f, color.G * 0.6f, color.B * 0.6f, 0.55f * alpha);
 		Colorf border(color.R, color.G, color.B, 0.95f * alpha);
@@ -648,7 +649,7 @@ namespace Jazz2::Editor
 		// Zooming changes the size of the boxes in every frame, so a layout is made for sizes a few percent apart, for
 		// the size in the middle of them, and its text is scaled with the box, it gets smaller and larger with it.
 		char numberBuffer[16];
-		StringView name = GetEventNameView(type, numberBuffer);
+		StringView name = GetEventNameView(type, params, numberBuffer);
 		auto getPadding = [](float width) {
 			return std::max(1.0f, std::round(width / 20.0f));
 		};
@@ -661,10 +662,12 @@ namespace Jazz2::Editor
 		std::int32_t heightStep = std::int32_t(std::round(std::log(rect.H) / Ln2 * StepsPerOctave));
 		float layoutWidth = std::pow(2.0f, float(widthStep) / StepsPerOctave);
 		float layoutHeight = std::pow(2.0f, float(heightStep) / StepsPerOctave);
-		std::uint64_t key = std::uint64_t(type) |
+		// An event of the original game a passthrough event keeps by its number there, past the types of the game
+		std::uint64_t key = std::uint64_t(descriptor != nullptr && descriptor->OriginalEvent != 0 ? (0x8000u | descriptor->OriginalEvent) : type) |
 			(std::uint64_t(std::clamp<std::int32_t>(widthStep + 0x8000, 0, 0xFFFF)) << 16) |
 			(std::uint64_t(std::clamp<std::int32_t>(heightStep + 0x8000, 0, 0xFFFF)) << 32) |
-			(std::uint64_t(std::clamp<std::int32_t>(std::int32_t(std::round(painter.GetScale() * 64.0f)), 0, 0xFFFF)) << 48);
+			(std::uint64_t(std::clamp<std::int32_t>(std::int32_t(std::round(painter.GetScale() * 64.0f)), 0, 0x7FFF)) << 48) |
+			(UiTheme::ReadableFont ? (std::uint64_t(1) << 63) : 0);
 		BoxLabel* label;
 		auto it = _boxLabels.find(key);
 		if (it != _boxLabels.end() && it->second.Name == name) {
@@ -705,8 +708,9 @@ namespace Jazz2::Editor
 	{
 		// The text gets smaller with the box, a box smaller than a tile at the size of the interface has a smaller one
 		// too. If it doesn't fit even at the smallest size, it's broken into two lines, or only the initials are left.
-		constexpr float MinTextSize = 0.75f;
-		constexpr float MinInitialsSize = 0.5f;
+		// The readable font gets blurry sooner than the pixel font.
+		const float MinTextSize = (UiTheme::ReadableFont ? 0.85f : 0.75f);
+		const float MinInitialsSize = (UiTheme::ReadableFont ? 0.6f : 0.5f);
 		label.Name = name;
 		label.First = {};
 		label.Second = {};

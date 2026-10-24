@@ -137,6 +137,8 @@ namespace Jazz2::Editor
 		T* Add(Args&&... args) {
 			return static_cast<T*>(AddChild(std::make_unique<T>(std::forward<Args>(args)...)));
 		}
+		/** @brief Adds a child before the child at @p index, at the end if it's past the last one */
+		UiElement* InsertChild(std::size_t index, std::unique_ptr<UiElement> child);
 		/**
 		 * @brief Removes all children
 		 *
@@ -222,6 +224,12 @@ namespace Jazz2::Editor
 		 * was held, see @ref OnPointerHold(). A quick tap still clicks it. The mouse drags it at once.
 		 */
 		virtual bool DragsAfterHold() const;
+		/**
+		 * @brief Returns `true` if the element lies over the level view and a finger on it may still pan the view
+		 *
+		 * A second finger then moves the view, the element gets the press only once the first one moved alone.
+		 */
+		virtual bool YieldsToViewGestures() const;
 		/** @brief Called when a finger rested on an element that drags after it's held, its moves come from now on, see @ref DragsAfterHold() */
 		virtual void OnPointerHold(const UiPointerEvent& event);
 		/** @brief Called when the pointer is scrolled over the element, returns `true` if it was used */

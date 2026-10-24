@@ -1,4 +1,4 @@
-#include "EventPreviews.h"
+﻿#include "EventPreviews.h"
 
 #if defined(WITH_EDITOR)
 
@@ -22,7 +22,7 @@ namespace Jazz2::Editor
 		// The sound an event plays and how loud, as the game plays it
 		bool GetSound(const Formats::EventRecord& event, StringView& metadata, StringView& identifier, float& gain)
 		{
-			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 			// The parameters as the game reads them, an event pack may mean something else by them
 			if (descriptor == nullptr || EventCatalog::IsExtension(descriptor)) {
 				return false;

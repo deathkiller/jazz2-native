@@ -85,7 +85,7 @@ namespace Jazz2::Editor::ToolActions
 		// The parameters of an event as mirroring it changes them, and its team swapped if chosen
 		void MirrorEvent(Formats::EventRecord& event, bool horizontal, bool swapTeams)
 		{
-			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type));
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
 			EventCatalog::MirrorParams(descriptor, event, horizontal);
 			if (swapTeams) {
 				EventCatalog::SwapTeamParams(descriptor, event.Params);
@@ -111,6 +111,96 @@ namespace Jazz2::Editor::ToolActions
 			}
 			selection.Assign(Death::move(cells));
 			selection.AssignOffGrid(Death::move(offGrid));
+		}
+
+		// The tile of the event grid under the pointer, of the sprite layer whichever layer is edited, `false` if the pointer
+		// isn't over it
+		bool GetEventCellAtPointer(IEditorContext& session, Vector2i& cell)
+		{
+			std::int32_t spriteLayer = session.GetDocument().GetSpriteLayerIndex();
+			ToolPointer hover;
+			if (spriteLayer < 0 || !session.GetHoverPointer(hover)) {
+				return false;
+			}
+			LayerView view = session.GetLayerView(spriteLayer);
+			cell = view.WorldToCell(view.ScreenToWorld(hover.Screen));
+			return IsInGrid(cell, session.GetDocument().GetEventGridSize());
+		}
+
+		// The event at a tile of the event grid, or one off the grid in it, or `nullptr`
+		const Formats::EventRecord* FindEventAt(const LevelDocument& document, Vector2i cell)
+		{
+			const Formats::EventRecord& event = document.GetEvent(cell.X, cell.Y);
+			if (!LevelDocument::IsEmptyEvent(event)) {
+				return &event;
+			}
+			for (const Formats::OffGridEventRecord& record : document.OffGridEvents) {
+				if (std::int32_t(record.X / 32) == cell.X && std::int32_t(record.Y / 32) == cell.Y) {
+					return &record.Event;
+				}
+			}
+			return nullptr;
+		}
+
+		// Places the events the event tool places at a tile of the event grid, those there replaced, as one step
+		bool PlaceEventBrushAt(IEditorContext& session, Vector2i cell)
+		{
+			LevelDocument& document = session.GetDocument();
+			if (!session.IsLayerEditable(document.GetSpriteLayerIndex())) {
+				session.ShowMessage(_x("editor", "The sprite layer is locked or hidden"));
+				return false;
+			}
+			// A whole warp or trigger placed works on its own, with identifiers the level doesn't use yet
+			EventStamp stamp = session.GetEventBrush();
+			RemapLinkedIds(stamp, document);
+			Vector2i gridSize = document.GetEventGridSize();
+			String name = _x("editor", "Place Events");
+			bool changed = false;
+			session.BeginChanges(name);
+			auto command = std::make_unique<SetEventsCommand>(document, name);
+			for (const EventStamp::Item& item : stamp.Items) {
+				Vector2i target = cell + item.Offset;
+				if (IsInGrid(target, gridSize)) {
+					Formats::EventRecord event = item.Event;
+					LevelDocument::NormalizeEvent(event);
+					command->Set(target.X, target.Y, event);
+				}
+			}
+			command->Seal();
+			if (!command->IsEmpty()) {
+				session.Execute(Death::move(command));
+				changed = true;
+			}
+			if (!stamp.OffGrid.empty()) {
+				SmallVector<Formats::OffGridEventRecord, 0> offGrid = CopyOffGridEvents(document);
+				std::size_t before = offGrid.size();
+				for (const EventStamp::OffGridItem& item : stamp.OffGrid) {
+					std::int64_t x = std::int64_t(cell.X) * 32 + item.Offset.X, y = std::int64_t(cell.Y) * 32 + item.Offset.Y;
+					if (x >= 0 && y >= 0 && x < std::int64_t(gridSize.X) * 32 && y < std::int64_t(gridSize.Y) * 32) {
+						Formats::OffGridEventRecord& record = offGrid.emplace_back();
+						record.X = std::uint32_t(x);
+						record.Y = std::uint32_t(y);
+						record.Event = item.Event;
+						LevelDocument::NormalizeEvent(record.Event);
+					}
+				}
+				if (offGrid.size() != before) {
+					session.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(offGrid), name));
+					changed = true;
+				}
+			}
+			session.EndChanges();
+			return changed;
+		}
+
+		// Makes a stamp the brush, and paints with it if the tool chosen doesn't paint the stamp
+		void UseStamp(IEditorContext& session, TileStamp&& stamp)
+		{
+			session.SetStamp(Death::move(stamp));
+			EditorToolType tool = session.GetTools().GetChosenType();
+			if (tool != EditorToolType::Brush && tool != EditorToolType::Rectangle && tool != EditorToolType::Fill) {
+				session.GetTools().SetActive(EditorToolType::Brush);
+			}
 		}
 
 		// The selected tiles of the layer being edited, `false` with a message if there are none
@@ -388,6 +478,89 @@ namespace Jazz2::Editor::ToolActions
 			session.ShowMessage(_x("editor", "Pasted into all layers"));
 		}
 		return changed;
+	}
+
+	bool TakeEventAtPointer(IEditorContext& session)
+	{
+		Vector2i cell;
+		if (!GetEventCellAtPointer(session, cell)) {
+			session.ShowMessage(_x("editor", "Point at the event in the level"));
+			return false;
+		}
+		const Formats::EventRecord* event = FindEventAt(session.GetDocument(), cell);
+		if (event == nullptr) {
+			session.ShowMessage(_x("editor", "There's no event under the pointer"));
+			return false;
+		}
+		// Only the event changes, the tool stays, so it can be placed by the key while tiles are painted; it's in the
+		// clipboard too, as Copy would put it there, so it can be pasted into another level
+		EventStamp stamp = EventStamp::FromEvent(*event);
+		theApplication().GetInputManager().setClipboardText(StampClipboard::WriteEvents(stamp));
+		session.GetEventBrush() = Death::move(stamp);
+		session.GetEventSelection().Clear();
+		session.GetTools().GetSettings().PlaceEventsAgain();
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event->Type), event->Params);
+		// TRANSLATORS: Name of an event the editor doesn't know, {} is its number
+		String eventName = (descriptor != nullptr ? String(descriptor->Name) : _fx("editor", "Event {}", std::int32_t(event->Type)));
+		// TRANSLATORS: Status message after the event under the pointer was copied as the one to place, {} is its name
+		session.ShowMessage(_fx("editor", "Copied the event {}", eventName));
+		return true;
+	}
+
+	bool PlaceEventAtPointer(IEditorContext& session)
+	{
+		if (session.GetEventBrush().IsEmpty()) {
+			session.ShowMessage(_x("editor", "Take an event first, or choose one in the Events tab"));
+			return false;
+		}
+		Vector2i cell;
+		if (!GetEventCellAtPointer(session, cell)) {
+			session.ShowMessage(_x("editor", "Point at the tile in the level"));
+			return false;
+		}
+		return PlaceEventBrushAt(session, cell);
+	}
+
+	bool ChooseEventAtPointer(IEditorContext& session)
+	{
+		Vector2i cell;
+		if (!GetEventCellAtPointer(session, cell)) {
+			session.ShowMessage(_x("editor", "Point at the tile in the level"));
+			return false;
+		}
+		// Placed where the pointer was, once it's chosen; it's forgotten with the level, see IEditorContext::PickEventFromList()
+		IEditorContext* s = &session;
+		session.PickEventFromList([s, cell](EventType type) {
+			s->GetEventBrush() = EventStamp::FromEvent(EventCatalog::MakeDefault(type));
+			s->GetEventSelection().Clear();
+			s->GetTools().GetSettings().PlaceEventsAgain();
+			if (IsInGrid(cell, s->GetDocument().GetEventGridSize())) {
+				PlaceEventBrushAt(*s, cell);
+			}
+		});
+		return true;
+	}
+
+	bool PickTileAtPointer(IEditorContext& session, bool withEvent)
+	{
+		ToolPointer hover;
+		std::int32_t layerIndex = session.GetCurrentLayer();
+		LevelDocument& document = session.GetDocument();
+		Vector2i tile;
+		if (layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size()) || !session.GetHoverPointer(hover) ||
+			!session.GetLayerView(layerIndex).Wrap(hover.Cell, tile) || !document.Layers[layerIndex].Contains(tile.X, tile.Y)) {
+			session.ShowMessage(_x("editor", "Point at the tile in the level"));
+			return false;
+		}
+		TileStamp stamp = TileStamp::FromTile(document.Layers[layerIndex].GetTile(tile.X, tile.Y));
+		if (withEvent) {
+			// The event of the sprite layer there, placed with the tile on the sprite layer, even if there's none
+			Vector2i cell;
+			const Formats::EventRecord* event = (GetEventCellAtPointer(session, cell) ? FindEventAt(document, cell) : nullptr);
+			stamp.Events.push_back(event != nullptr ? *event : LevelDocument::GetEmptyEvent());
+		}
+		UseStamp(session, Death::move(stamp));
+		return true;
 	}
 
 	bool UsePrefab(IEditorContext& session, const TilePrefab& prefab)
@@ -816,10 +989,7 @@ namespace Jazz2::Editor::ToolActions
 		// The shape tool
 		{
 			// TRANSLATORS: Name of the tool that draws lines, rectangles and ellipses of tiles, in the Tools menu and the tool strip
-			auto& shape = a.Add(ActionIds::ToolShape, _x("editor", "Shapes"), EditorIcon::Shapes, [s]() {
-				s->GetTools().SetActive(EditorToolType::Shape);
-				s->SetPickerPanel(PickerPanel::Tiles);
-			});
+			auto& shape = a.Add(ActionIds::ToolShape, _x("editor", "Shapes"), EditorIcon::Shapes, [s]() { s->GetTools().SetActive(EditorToolType::Shape); });
 			shape.Key = { Keys::L, 0 };
 			shape.IsChecked = [s]() { return (s->GetTools().GetActiveType() == EditorToolType::Shape); };
 			struct ShapeChoice { const char* Id; String Label; ToolShape Shape; };
@@ -952,11 +1122,11 @@ namespace Jazz2::Editor::ToolActions
 			toggle(ActionIds::EditMirrorSwapTeams,_x("editor", "Mirroring Swaps Teams of Events"), &ToolSettings::MirrorSwapTeams);
 
 			// TRANSLATORS: Command in the Select menu, copies the selected area from all layers at once, with the events
+			// Without keys, Ctrl+Shift+C copies the tiles of one layer with the events on them, see ActionIds::EditCopyWithEvents
 			auto& copyLayers = a.Add(ActionIds::EditCopyLayers,_x("editor", "Copy All Layers"), EditorIcon::Copy, [s]() { CopyAllLayers(*s); });
-			copyLayers.Key = { Keys::C, KeyMod::Ctrl | KeyMod::Shift };
 			copyLayers.IsEnabled = [s]() { return (!s->GetSelection().IsEmpty() || s->GetEventSelection().HasCells()); };
 			// TRANSLATORS: Command in the Select menu, pastes what Copy All Layers copied into all layers at once
-			a.Add(ActionIds::EditPasteLayers,_x("editor", "Paste All Layers"), EditorIcon::Paste, [s]() { PasteAllLayers(*s); }).Key = { Keys::V, KeyMod::Ctrl | KeyMod::Shift };
+			a.Add(ActionIds::EditPasteLayers,_x("editor", "Paste All Layers"), EditorIcon::Paste, [s]() { PasteAllLayers(*s); });
 		}
 
 		// How the event tool places events, or that it only selects them
@@ -975,7 +1145,6 @@ namespace Jazz2::Editor::ToolActions
 					t->EventMode = mode;
 					t->NotifyChanged();
 					s->GetTools().SetActive(EditorToolType::Event);
-					s->SetPickerPanel(PickerPanel::Events);
 				});
 				action.IsChecked = [t, mode]() { return (t->EventMode == mode); };
 			}
@@ -983,6 +1152,25 @@ namespace Jazz2::Editor::ToolActions
 			a.Add(ActionIds::EventsFillSelection,_x("editor", "Fill Selection with Event"), EditorIcon::Event, [s]() { FillSelectionWithEvent(*s); }).IsEnabled = [s]() {
 				return (!s->GetSelection().IsEmpty() && s->GetSelection().GetLayer() == s->GetDocument().GetSpriteLayerIndex());
 			};
+
+			// The event under the pointer, with any tool, as in the editors of the original game
+			// TRANSLATORS: Command in the Edit menu, the event under the pointer becomes the one to place, as Ctrl+E of Jazz Creation Station
+			a.Add(ActionIds::EventsTakeAtPointer, _x("editor", "Take Event Under Pointer"), EditorIcon::Eyedropper, [s]() { TakeEventAtPointer(*s); }).Key = { Keys::E, KeyMod::Ctrl };
+			// TRANSLATORS: Command in the Edit menu, the event to place is placed at the tile under the pointer, as Shift+E of Jazz Creation Station
+			a.Add(ActionIds::EventsPlaceAtPointer, _x("editor", "Place Event Under Pointer"), EditorIcon::Event, [s]() { PlaceEventAtPointer(*s); }).Key = { Keys::E, KeyMod::Shift };
+			// TRANSLATORS: Command, the next event chosen in the list is placed at the tile under the pointer, as E of the Multi-Layer Level Editor
+			auto& choose = a.Add(ActionIds::EventsChooseAtPointer, _x("editor", "Choose Event for Tile Under Pointer"), EditorIcon::Event, [s]() { ChooseEventAtPointer(*s); });
+			choose.IgnoresRepeat = true;
+		}
+
+		// The tile under the pointer as the brush, with any tool, as the comma of the Multi-Layer Level Editor
+		{
+			// TRANSLATORS: Command, the tile under the pointer becomes the brush
+			a.Add(ActionIds::StampPickTile, _x("editor", "Pick Tile Under Pointer"), EditorIcon::Eyedropper, [s]() { PickTileAtPointer(*s, false); });
+			// TRANSLATORS: Command, the tile under the pointer with the event there becomes the brush
+			a.Add(ActionIds::StampPickTileEvent, _x("editor", "Pick Tile and Event Under Pointer"), EditorIcon::Eyedropper, [s]() { PickTileAtPointer(*s, true); });
+			// TRANSLATORS: Command, the brush becomes a single empty tile, which erases, as Backspace of the Multi-Layer Level Editor
+			a.Add(ActionIds::StampBlank, _x("editor", "Brush of an Empty Tile"), EditorIcon::Eraser, [s]() { UseStamp(*s, TileStamp::FromTile(TileRef{})); });
 		}
 
 		// The jumps the measure tool shows

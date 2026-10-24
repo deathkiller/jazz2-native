@@ -25,10 +25,14 @@
 #include "../Compatibility/EventConverter.h"
 #include "../Compatibility/JJ2Strings.h"
 #include "../Rendering/PlayerViewport.h"
+#include "../UI/HUD.h"
 #include "../UI/InGameConsole.h"
 
 #include "../../nCine/Application.h"
 #include "../../nCine/Base/Random.h"
+#include "../../nCine/Graphics/RenderResources.h"
+#include "../../nCine/Graphics/Texture.h"
+#include "../../nCine/Graphics/Viewport.h"
 
 #if defined(DEATH_TRACE)
 #	define AS_LOG_EXCEPTION(ctx)																						\
@@ -50,6 +54,64 @@ static void asScript(String& msg)
 
 namespace Jazz2::Scripting
 {
+	// MLLE::Setup() of the include of weapons of MLLE, in place of it: the weapons as the level has them (see
+	// Formats::CustomWeaponsChunk), those of the script with a hook they share, and then the rest of what it sets up
+	static constexpr StringView MlleWeaponsSetup = R"(
+namespace MLLE {
+	se::WeaponHook@ WeaponHook;
+
+	bool Setup(array<MLLEWeaponApply@> weapons) {
+		jjSTREAM data;
+		if (_GetWeapons(data)) {
+			int16 hookArgument;
+			data.pop(hookArgument);
+			for (uint slot = 1; slot <= 9; ++slot) {
+				bool custom;
+				int maximum;
+				uint8 birds, gunCrates, gemsLost, gemsLostPowerup, flags, ammoCrate, gun8Style;
+				jjSTREAM parameters;
+				data.pop(custom);
+				data.pop(maximum);
+				data.pop(birds);
+				data.pop(gunCrates);
+				data.pop(gemsLost);
+				data.pop(gemsLostPowerup);
+				data.pop(flags);
+				data.pop(ammoCrate);
+				data.pop(gun8Style);
+				data.pop(parameters);
+
+				jjWEAPON@ weapon = jjWeapons[slot];
+				weapon.maximum = maximum;
+				weapon.comesFromBirds = (birds != 0);
+				weapon.comesFromBirdsPowerup = (birds == 2);
+				weapon.comesFromGunCrates = (gunCrates != 0);
+				weapon.gemsLost = gemsLost;
+				weapon.gemsLostPowerup = gemsLostPowerup;
+				weapon.infinite = ((flags & 1) != 0);
+				weapon.replenishes = ((flags & 2) != 0);
+				if (custom) {
+					if (WeaponHook is null) {
+						@WeaponHook = (hookArgument < 0 ? se::DefaultWeaponHook() : se::DefaultWeaponHook(uint8(hookArgument)));
+					}
+					if (slot <= weapons.length && weapons[slot - 1] !is null) {
+						weapons[slot - 1].Apply(slot, WeaponHook, parameters, ammoCrate);
+					}
+				} else if (gun8Style != 255) {
+					weapon.spread = (gun8Style == 0 ? SPREAD::GUN8 : (gun8Style == 1 ? SPREAD::PEPPERSPRAY : SPREAD::NORMAL));
+					if (gun8Style == 2) {
+						weapon.gradualAim = false;
+					}
+				}
+			}
+		}
+		return Setup();
+	}
+}
+
+shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjSTREAM@ = null, uint8 = 0); }
+)"_s;
+
 	static float asFractionf(float v)
 	{
 		float intPart;
@@ -131,6 +193,13 @@ namespace Jazz2::Scripting
 			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr),
 			_enabledCallbacks(NoInit, 256)
 	{
+		// jjDifficultyOrig, as jjDifficulty is when the level starts (ThreedRealms limits the speed of its platforms by it)
+		switch (levelHandler->_difficulty) {
+			case GameDifficulty::Easy: DifficultyAtLevelStart = 0; break;
+			default: DifficultyAtLevelStart = 1; break;
+			case GameDifficulty::Hard: DifficultyAtLevelStart = 2; break;
+		}
+
 		// Try to load the script
 		HashMap<String, bool> DefinedSymbols = {
 #if defined(DEATH_TARGET_ANDROID)
@@ -206,6 +275,9 @@ namespace Jazz2::Scripting
 				levelHandler->_console->WriteLine(UI::MessageLevel::Debug, "Compiling script with \"Legacy\" context"_s);
 #endif
 				RegisterLegacyFunctions(GetEngine());
+				// Strings of JJ2+ are bytes of Windows-1252 as they're written, `§1` of a text is 0xA7 there (the default
+				// UTF-8 scanner made it 0xC2 0xA7, drawn as `Â§`) - the text is recoded when it's drawn
+				GetEngine()->SetEngineProperty(asEP_SCRIPT_SCANNER, 0);
 				break;
 			case ScriptContextType::Standard:
 				LOGD("Compiling script with \"Standard\" context");
@@ -247,7 +319,14 @@ namespace Jazz2::Scripting
 				// Runs before onPlayer() within the same tick, which is where a script belongs that wants to change what
 				// the player believes its controls are doing (see jjPLAYER's key properties)
 				_onPlayerInput = GetMainModule()->GetFunctionByDecl("void onPlayerInput(jjPLAYER@)");
+				_onPlayerDraw = GetMainModule()->GetFunctionByDecl("void onPlayerDraw(jjPLAYERDRAW&)");
 				_onObjectHit = GetMainModule()->GetFunctionByDecl("void onObjectHit(jjOBJ@, jjOBJ@, jjPLAYER@, int)");
+				for (std::int32_t i = 0; i < 8; i++) {
+					char decl[64];
+					std::size_t length = formatInto(decl, "void onDrawLayer{}(jjPLAYER@, jjCANVAS@)", i + 1);
+					decl[length] = '\0';
+					_onDrawLayer[i] = GetMainModule()->GetFunctionByDecl(decl);
+				}
 				break;
 			case ScriptContextType::Standard:
 				_onLevelUpdate = GetMainModule()->GetFunctionByDecl("void onLevelUpdate(float)");
@@ -274,6 +353,7 @@ namespace Jazz2::Scripting
 		ReleaseObjects();
 		// What the script drew refers to the graphics of the animation tables
 		_worldCanvas = nullptr;
+		_layerCanvas = nullptr;
 		for (auto& pair : _spritePaletteOffsets) {
 			if (pair.second >= 0) {
 				ContentResolver::Get().ReleasePaletteOffset(pair.second);
@@ -303,6 +383,13 @@ namespace Jazz2::Scripting
 	{
 		// Skip MLLE files, because it's handled natively
 		if (includePath.hasPrefix("MLLE-Include-"_s) && includePath.hasSuffix(".asc"_s)) {
+			// The include of weapons (`MLLE-Include-1.5w.asc` and later) has MLLE::Setup() take the weapons of the script,
+			// set up as the level has them (see Formats::CustomWeaponsChunk) with the hook of SEweapon.asc it includes
+			if (includePath.hasSuffix("w.asc"_s) && !_mlleWeaponsAdded) {
+				_mlleWeaponsAdded = true;
+				AddScriptSection("MLLE-Weapons", MlleWeaponsSetup);
+				return fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), "SEweapon.asc"_s));
+			}
 			return {};
 		}
 
@@ -350,9 +437,11 @@ namespace Jazz2::Scripting
 
 		// Scenery is a part of its tile, it has an object only where a script drives it (see Legacy::ScriptSceneryObject),
 		// a script can still register a spawner of its own over this one
-		for (EventType type : { EventType::SceneryDestruct, EventType::SceneryDestructButtstomp, EventType::SceneryDestructSpeed, EventType::SceneryCollapse }) {
+		for (EventType type : { EventType::SceneryDestruct, EventType::SceneryDestructButtstomp, EventType::SceneryDestructSpeed, EventType::SceneryCollapse,
+			EventType::TriggerArea }) {
 			_levelHandler->EventSpawner()->RegisterSpawnable(type, SpawnSceneryObject);
 		}
+		_levelHandler->EventSpawner()->RegisterSpawnable(EventType::PassthroughEvent, SpawnPassthroughObject);
 
 		// See the constructor, a variable whose initializer fails is left at its default, as AngelScript leaves it
 		{
@@ -413,8 +502,11 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::OnLevelReload()
 	{
-		// The level went back to a checkpoint, but not what scripts wrote to it
+		// The level went back to a checkpoint, but not what scripts wrote to it - the boss is to be activated again
 		ReapplyEventWrites();
+		_bossAreaActivated = false;
+		// JJ2+ starts the objects again, those scripts made are gone (ThreedRealms makes its puppets again then)
+		DeleteObjectsOfScripts();
 
 		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("void onLevelReload()");
 		if (func == nullptr) {
@@ -478,26 +570,46 @@ namespace Jazz2::Scripting
 		// What the script drew in the level lasts until it updates again, in the next tick - a frame without one draws it
 		// again, the objects draw only in ticks too (see Legacy::ScriptObjectHost::OnUpdate())
 		std::int32_t currentTick = GetGameTick();
+		// Frames of JJ2+ are its ticks, scripts time what they draw by it (blinking, animations)
+		renderFrame = currentTick;
 		if (_worldCanvas != nullptr && _canvasClearTick != currentTick) {
 			_worldCanvas->Clear();
 			_canvasClearTick = currentTick;
+		}
+		if (_particles != nullptr) {
+			UpdateParticles(currentTick);
+		}
+		if (!_loopedSamples.empty()) {
+			StopUnusedLoopedSamples();
 		}
 		UpdateViewSize();
 		RefreshSceneryObjects();
 		UpdateWaterLevel(currentTick);
 
+		if (_layerCanvas == nullptr && !ContentResolver::Get().IsHeadless() &&
+			std::any_of(std::begin(_onDrawLayer), std::end(_onDrawLayer), [](asIScriptFunction* f) { return f != nullptr; })) {
+			_layerCanvas = std::make_unique<Legacy::ScriptLayerCanvas>(this);
+			_layerCanvas->OrderedDraws = true;
+			_layerCanvas->setParent(_levelHandler->_rootNode.get());
+		}
+
 		switch (GetContextType()) {
 			case ScriptContextType::Legacy: {
 				asIScriptFunction* onPlayer = _onPlayer;
 				asIScriptFunction* onPlayerInput = _onPlayerInput;
+				asIScriptFunction* onPlayerDraw = _onPlayerDraw;
 
-				if (_onLevelUpdate == nullptr && onPlayer == nullptr && onPlayerInput == nullptr) {
+				if (_onLevelUpdate == nullptr && onPlayer == nullptr && onPlayerInput == nullptr && onPlayerDraw == nullptr) {
 					// jjGameTicks, as the ticks would have run
 					_onLevelUpdateLastFrame = currentTick + 1;
 					break;
 				}
 				if (_onLevelUpdateLastFrame > currentTick) {
-					// No tick in this frame, the objects don't need to be synced either
+					// No tick in this frame, the objects don't need to be synced either, the controls stay as the last
+					// tick left them
+					for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
+						ApplyInputOverrides(i);
+					}
 					break;
 				}
 
@@ -507,6 +619,8 @@ namespace Jazz2::Scripting
 
 				std::int32_t currentFrame = currentTick;
 				while (_onLevelUpdateLastFrame <= currentFrame) {
+					// The scripts decide again in each tick
+					std::fill(std::begin(_inputOverrideMask), std::end(_inputOverrideMask), 0);
 					if (onPlayerInput != nullptr) {
 						for (auto* player : _levelHandler->_players) {
 							ctx->Prepare(onPlayerInput);
@@ -541,6 +655,54 @@ namespace Jazz2::Scripting
 								AS_LOG_EXCEPTION(ctx);
 								// Don't call the method again if an exception occurs
 								//_onLevelUpdate = nullptr;
+							}
+						}
+					}
+					if (onPlayerDraw != nullptr) {
+						// What the script draws with a player (testrealtimecastle draws its shadow), the player is drawn as
+						// it is whatever the script changes of it
+						for (auto* player : _levelHandler->_players) {
+							jjPLAYER* p = GetPlayerBackingStore(player);
+							Legacy::jjPLAYERDRAW draw = {};
+							draw.name = draw.sprite = draw.sugarRush = draw.gunFlash = draw.invincibility = draw.trail = true;
+							draw.morphingExplosions = true;
+							// Only on an airboard, scripts tell one by it (ThreedRealms' skyrunner)
+							draw.airboardBouncingMotion = draw.airboardPuff = (player->GetModifier() == Actors::Player::Modifier::Airboard);
+							draw.spriteMode = std::int32_t(p->get_spriteMode());
+							draw.spriteParam = p->get_spriteParam();
+							draw.layer = 4;
+							draw.curFrame = p->get_curFrame();
+							// The sign is the side the player faces, as in JJ2+ (ThreedRealms sets 1 for "direction")
+							draw.xScale = (player->IsFacingLeft() ? -1.0f : 1.0f);
+							draw.yScale = 1.0f;
+							draw._player = p;
+							const Legacy::jjPLAYERDRAW original = draw;
+
+							ctx->Prepare(onPlayerDraw);
+							ctx->SetArgAddress(0, &draw);
+							std::int32_t r = ctx->Execute();
+							if (r == asEXECUTION_EXCEPTION) {
+								AS_LOG_EXCEPTION(ctx);
+							}
+
+							// Another frame, offset, scale, angle or mode the script gave the player is drawn here in place of the
+							// player until the next tick (ThreedRealms' trapezes and burgers), the player isn't drawn without a sprite
+							bool replaced = (draw.curFrame != original.curFrame || draw.xOffset != original.xOffset ||
+								draw.yOffset != original.yOffset || draw.xScale != original.xScale || draw.yScale != original.yScale ||
+								draw.angle != original.angle || draw.spriteMode != original.spriteMode || draw.spriteParam != original.spriteParam);
+							p->SetDrawnByScript(!draw.sprite || replaced);
+							if (draw.sprite && replaced && !ContentResolver::Get().IsHeadless()) {
+								std::int32_t cell = 0;
+								if (auto* graphics = GetAnimationTables().ResolveFrame(draw.curFrame, cell)) {
+									// In the colors of the fur of the player, as it draws itself
+									std::uint32_t mode = std::uint32_t(draw.spriteMode);
+									std::int32_t paletteOffset = (mode == Legacy::spriteType_NORMAL
+										? GetSpritePaletteOffset(Legacy::spriteType_PLAYER, std::uint8_t(player->GetPlayerIndex()))
+										: GetSpritePaletteOffset(mode, draw.spriteParam));
+									Legacy::ScriptWorldCanvas::SpriteDraw sprite = { graphics, cell, draw.xOffset, draw.yOffset, 1, draw.xScale, draw.yScale,
+										draw.angle, mode, draw.spriteParam, GetLayerDrawZ(std::int8_t(draw.layer)), paletteOffset, player };
+									GetWorldCanvas().AddSprite(sprite);
+								}
 							}
 						}
 					}
@@ -725,7 +887,8 @@ namespace Jazz2::Scripting
 
 			jjPLAYER* p = GetPlayerBackingStore(player);
 			ctx->SetArgObject(0, p);
-			jjCANVAS* canvasWrapper = new(asAllocMem(sizeof(jjCANVAS))) jjCANVAS(hud, view, &_canvasDrawCount); // TODO: Cache this object ???
+			jjCANVAS* canvasWrapper = new(asAllocMem(sizeof(jjCANVAS))) jjCANVAS(hud, Vector2f(view.X, view.Y), view.W, &_canvasDrawCount,
+				UI::HUD::MainLayer, UI::HUD::FontLayer - 1); // TODO: Cache this object ???
 			ctx->SetArgObject(1, canvasWrapper);
 
 			std::int32_t r = ctx->Execute();
@@ -741,8 +904,92 @@ namespace Jazz2::Scripting
 			// TODO
 			asFreeMem(canvasWrapper);
 		}
-		
+
 		return overrideDraw;
+	}
+
+	void LevelScriptLoader::OnDrawLayers(UI::Canvas* canvas)
+	{
+		auto tileMap = _levelHandler->TileMap();
+		const Viewport* viewport = RenderResources::GetCurrentViewport();
+		if (tileMap == nullptr || viewport == nullptr) {
+			return;
+		}
+		Actors::Player* player = nullptr;
+		for (auto& playerViewport : _levelHandler->_assignedViewports) {
+			if (playerViewport->_view.get() == viewport) {
+				player = runtime_cast<Actors::Player>(playerViewport->_targetActor);
+				break;
+			}
+		}
+		if (player == nullptr) {
+			return;
+		}
+
+		// As JJ2+, from the back to the front, the layers placed for the view as they're drawn (see Tiles::TileMap::OnDraw())
+		Rectf view = viewport->GetCullingRect();
+		asIScriptContext* ctx = nullptr;
+		for (std::int32_t number = 8; number >= 1; number--) {
+			asIScriptFunction* func = _onDrawLayer[number - 1];
+			std::int32_t index = GetLayerIndex(number);
+			if (func == nullptr || index < 0 || index >= std::int32_t(tileMap->_layers.size())) {
+				continue;
+			}
+
+			// In front of the tiles of the layer, behind what's drawn on the layer (see GetLayerDrawZ()) - the sprite layer
+			// has the objects in front
+			std::uint16_t firstLayer = std::uint16_t(tileMap->_layers[index].Description.Depth + 1);
+			std::uint16_t lastLayer = std::uint16_t(number == 4 ? ILevelHandler::SpritePlaneZ - 1 : std::max<std::int32_t>(GetLayerDrawZ(number) - 1, firstLayer));
+			std::uint16_t drawCount = 0;
+			jjCANVAS layerCanvas(canvas, tileMap->GetGameplayLayerOrigin(index, view), view.W, &drawCount, firstLayer, lastLayer);
+
+			if (ctx == nullptr) {
+				OnBeforeScriptCall();
+				ctx = GetEngine()->RequestContext();
+			}
+			ctx->Prepare(func);
+			ctx->SetArgObject(0, GetPlayerBackingStore(player));
+			ctx->SetArgObject(1, &layerCanvas);
+			_drawingLayers = true;
+			if (ctx->Execute() == asEXECUTION_EXCEPTION) {
+				AS_LOG_EXCEPTION(ctx);
+			}
+			_drawingLayers = false;
+			if (number == 8) {
+				ApplyUseLayer8Speeds();
+			}
+		}
+		if (ctx != nullptr) {
+			GetEngine()->ReturnContext(ctx);
+			OnAfterScriptCall();
+		}
+	}
+
+	void LevelScriptLoader::SetUseLayer8Speeds(bool value)
+	{
+		_useLayer8Speeds = value;
+		if (!_drawingLayers) {
+			ApplyUseLayer8Speeds();
+		}
+	}
+
+	void LevelScriptLoader::ApplyUseLayer8Speeds()
+	{
+		auto tileMap = _levelHandler->TileMap();
+		std::int32_t index = GetLayerIndex(8);
+		if (tileMap == nullptr || index < 0 || index >= std::int32_t(tileMap->_layers.size())) {
+			return;
+		}
+		auto& description = tileMap->_layers[index].Description;
+		if (_layer8Fixed < 0) {
+			_layer8Fixed = (description.SpeedModelX == Tiles::LayerSpeedModel::AlwaysOnTop &&
+				description.SpeedModelY == Tiles::LayerSpeedModel::AlwaysOnTop ? 1 : 0);
+		}
+		if (_layer8Fixed != 0) {
+			Tiles::LayerSpeedModel model = (_useLayer8Speeds ? Tiles::LayerSpeedModel::Default : Tiles::LayerSpeedModel::AlwaysOnTop);
+			description.SpeedModelX = model;
+			description.SpeedModelY = model;
+		}
 	}
 
 	void LevelScriptLoader::OnPlayerDied(Actors::Player* player, Actors::ActorBase* collider)
@@ -919,37 +1166,48 @@ namespace Jazz2::Scripting
 			return;
 		}
 
+		// Kept until the next tick, the frames without one are applied it again (see ApplyInputOverrides())
+		std::uint64_t bit = (1ull << (std::int32_t)action);
+		_inputOverrideMask[playerIndex] |= bit;
+		if (value) {
+			_inputOverrideValue[playerIndex] |= bit;
+		} else {
+			_inputOverrideValue[playerIndex] &= ~bit;
+		}
+		ApplyInputOverrides(playerIndex);
+	}
+
+	void LevelScriptLoader::ApplyInputOverrides(std::int32_t playerIndex)
+	{
+		std::uint64_t mask = _inputOverrideMask[playerIndex];
+		if (mask == 0) {
+			return;
+		}
+
 		// Written straight into the state the input was collected into, rather than kept as a separate
 		// override: the collection happens once at the start of the frame and everything downstream
 		// (PlayerActionPressed(), PlayerActionHit(), PlayerHorizontalMovement()) reads it from here, so a
 		// script tick that runs afterwards is simply the last word on what was pressed. It also means the
 		// press/release edges keep working, because next frame's PressedActionsLast comes from this.
 		auto& input = _levelHandler->_playerInputs[playerIndex];
-		std::uint64_t bit = (1ull << (std::int32_t)action);
-		if (value) {
-			input.PressedActions |= bit;
-		} else {
-			input.PressedActions &= ~bit;
-		}
+		input.PressedActions = (input.PressedActions & ~mask) | (_inputOverrideValue[playerIndex] & mask);
 
 		// The directions are also read as an axis, which is what the movement code actually uses, so the two
-		// representations have to be kept in step. Both directions are re-read from the bitmask rather than
-		// derived from the one action being written: a script that releases one direction while the other is
-		// still held ("p.keyRight = true; p.keyLeft = false;") would otherwise zero the whole axis and stop
-		// the player dead, and the outcome would depend on the order the two properties were assigned.
-		switch (action) {
-			case PlayerAction::Left:
-			case PlayerAction::Right:
-				input.RequiredMovement.X = ((input.PressedActions & (1ull << (std::int32_t)PlayerAction::Right)) != 0
-					? 1.0f
-					: ((input.PressedActions & (1ull << (std::int32_t)PlayerAction::Left)) != 0 ? -1.0f : 0.0f));
-				break;
-			case PlayerAction::Up:
-			case PlayerAction::Down:
-				input.RequiredMovement.Y = ((input.PressedActions & (1ull << (std::int32_t)PlayerAction::Down)) != 0
-					? 1.0f
-					: ((input.PressedActions & (1ull << (std::int32_t)PlayerAction::Up)) != 0 ? -1.0f : 0.0f));
-				break;
+		// representations have to be kept in step. Both directions are re-read from the bitmask: a script that
+		// releases one direction while the other is still held ("p.keyRight = true; p.keyLeft = false;") would
+		// otherwise zero the whole axis and stop the player dead, and the outcome would depend on the order the
+		// two properties were assigned.
+		auto isPressed = [&input](PlayerAction action) {
+			return ((input.PressedActions & (1ull << (std::int32_t)action)) != 0);
+		};
+		auto isOverridden = [mask](PlayerAction action) {
+			return ((mask & (1ull << (std::int32_t)action)) != 0);
+		};
+		if (isOverridden(PlayerAction::Left) || isOverridden(PlayerAction::Right)) {
+			input.RequiredMovement.X = (isPressed(PlayerAction::Right) ? 1.0f : (isPressed(PlayerAction::Left) ? -1.0f : 0.0f));
+		}
+		if (isOverridden(PlayerAction::Up) || isOverridden(PlayerAction::Down)) {
+			input.RequiredMovement.Y = (isPressed(PlayerAction::Down) ? 1.0f : (isPressed(PlayerAction::Up) ? -1.0f : 0.0f));
 		}
 	}
 

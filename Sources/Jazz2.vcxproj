@@ -570,6 +570,7 @@
     <ClInclude Include="Jazz2\Editor\Smart\TileShapes.h" />
     <ClInclude Include="Jazz2\Editor\Tests\FakeToolHost.h" />
     <ClInclude Include="Jazz2\Editor\Tests\ToolTests.h" />
+    <ClInclude Include="Jazz2\Editor\Tools\BlockGrab.h" />
     <ClInclude Include="Jazz2\Editor\Tools\EditorContext.h" />
     <ClInclude Include="Jazz2\Editor\Tools\EditorTool.h" />
     <ClInclude Include="Jazz2\Editor\Tools\EventTools.h" />
@@ -1461,6 +1462,7 @@
     <ClCompile Include="Jazz2\Editor\Smart\TileShapes.cpp" />
     <ClCompile Include="Jazz2\Editor\Tests\FakeToolHost.cpp" />
     <ClCompile Include="Jazz2\Editor\Tests\ToolTests.cpp" />
+    <ClCompile Include="Jazz2\Editor\Tools\BlockGrab.cpp" />
     <ClCompile Include="Jazz2\Editor\Tools\EventTools.cpp" />
     <ClCompile Include="Jazz2\Editor\Tools\GroundLineTool.cpp" />
     <ClCompile Include="Jazz2\Editor\Tools\MeasureTool.cpp" />

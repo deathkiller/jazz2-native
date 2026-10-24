@@ -222,7 +222,7 @@ namespace nCine
 				// gapped and waiting cannot un-gap it. Waiting used to be the answer here, and on a frame
 				// that is comfortably inside its budget it cost nothing - but it turns a slow frame into a
 				// much slower one, and then into a spiral. Measured in the worst part of
-				// `prince/02_castle1n` on the PSP: a frame that had fallen to 130 ms spent 55-59 ms of it
+				// `prince/castle1n` on the PSP: a frame that had fallen to 130 ms spent 55-59 ms of it
 				// stopped in this wait, because the decoding thread only gets the CPU the main thread is not
 				// using, so the slower the frame the less of the chunk is ready when the frame asks for it -
 				// and the wait it then does makes the next frame later still. Coming back empty-handed

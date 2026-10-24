@@ -191,10 +191,52 @@ namespace Jazz2::Scripting
 		owner->SetOriginalEvent(tx, ty, word);
 	}
 	std::int8_t GetTileType(std::uint16_t tile) {
-		noop(); return 0;
+		return std::int8_t(ScriptLoader::FromActiveContext<LevelScriptLoader>()->GetOriginalTileType(tile));
 	}
 	std::int8_t SetTileType(std::uint16_t tile, std::uint16_t value) {
-		noop(); return 0;
+		ScriptLoader::FromActiveContext<LevelScriptLoader>()->SetOriginalTileType(tile, std::uint8_t(value));
+		return std::int8_t(value);
+	}
+
+	std::uint8_t LevelScriptLoader::GetOriginalTileType(std::int32_t tileId)
+	{
+		auto tileMap = _levelHandler->TileMap();
+		if (tileMap == nullptr || tileId < 0 || tileId >= tileMap->GetStaticTileCount()) {
+			return 0;
+		}
+		if (_tileTypes.empty()) {
+			// The converter keeps the type of a tile on each placed tile of it (see Formats::TileRecord::ModifierMask)
+			_tileTypes.resize(std::size_t(tileMap->GetStaticTileCount()), 0);
+			SmallVector<std::uint8_t, 0> seen;
+			seen.resize(std::size_t(tileMap->GetStaticTileCount()), 0);
+			for (const TileMapLayer& layer : tileMap->_layers) {
+				for (std::size_t i = 0; i < layer.Layout.size(); i++) {
+					std::int32_t id = layer.Layout.TileIDAt(i);
+					if (id <= 0 || id >= std::int32_t(_tileTypes.size()) || seen[id]) {
+						continue;
+					}
+					seen[id] = 1;
+					const LayerTile& tile = layer.Layout[i];
+					_tileTypes[id] = std::uint8_t((tile.Flags & LayerTileFlags::Heat) == LayerTileFlags::Heat ? 5
+						: (tile.Alpha == 0 ? 3 : (tile.Alpha == Tiles::TileMap::TranslucentTileAlpha ? 1 : 0)));
+				}
+			}
+		} else if (std::size_t(tileId) >= _tileTypes.size()) {
+			// A script added tiles since (see TileMap::AppendTileSet()), they have no type yet
+			_tileTypes.resize(std::size_t(tileMap->GetStaticTileCount()), 0);
+		}
+		return _tileTypes[tileId];
+	}
+
+	void LevelScriptLoader::SetOriginalTileType(std::int32_t tileId, std::uint8_t type)
+	{
+		auto tileMap = _levelHandler->TileMap();
+		if (tileMap == nullptr || tileId <= 0 || tileId >= tileMap->GetStaticTileCount() || GetOriginalTileType(tileId) == type) {
+			return;
+		}
+		_tileTypes[tileId] = type;
+		// The types the game draws, the others (as the caption) are drawn as ordinary tiles
+		tileMap->SetTileModifier(tileId, type == 3 ? 0 : (type == 1 ? Tiles::TileMap::TranslucentTileAlpha : 255), type == 5);
 	}
 	bool GetTileIs32Bit(std::uint16_t tile) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();

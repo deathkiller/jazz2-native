@@ -4,6 +4,7 @@
 #include "../Containers/StringView.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <type_traits>
@@ -365,24 +366,41 @@ namespace Death { namespace Implementation {
 		return formatNumber(buffer, value, context);
 	}
 
-	// std::snprintf() returns a negative value on an output error; clamp it to zero so the result
-	// is never reinterpreted as a huge std::size_t, which would corrupt the computed output size
-	inline std::size_t clampSnprintfResult(int result) {
-		return (result < 0 ? std::size_t{0} : static_cast<std::size_t>(result));
+	template<class T>
+	std::size_t formatFloatingPoint(const Containers::MutableStringView& buffer, const char* format, std::int32_t precision, T value) {
+		const int length = ::snprintf(buffer.data(), buffer.size(), format, precision, value);
+		// Negative on an output error, it must not become a huge size
+		if DEATH_UNLIKELY(length < 0) {
+			return 0;
+		}
+		const std::size_t result = std::size_t(length);
+		// snprintf() put its null terminator over the last character, it matters only if the output fits exactly
+		if DEATH_UNLIKELY(result == buffer.size() && result != 0) {
+			char stackTemp[128];
+			char* temp = (result < sizeof(stackTemp) ? stackTemp : static_cast<char*>(std::malloc(result + 1)));
+			if (temp != nullptr) {
+				::snprintf(temp, result + 1, format, precision, value);
+				buffer.data()[result - 1] = temp[result - 1];
+				if DEATH_UNLIKELY(temp != stackTemp) {
+					std::free(temp);
+				}
+			}
+		}
+		return result;
 	}
 
 	std::size_t Formatter<float>::format(const Containers::MutableStringView& buffer, float value, FormatContext& context) {
 		std::int32_t precision = context.Precision;
 		if (precision == -1) precision = std::numeric_limits<float>::digits10;
 		const char format[] { '%', '.', '*', formatTypeChar<float>(context.Type), '\0' };
-		return clampSnprintfResult(::snprintf(buffer.data(), buffer.size(), format, precision, double(value)));
+		return formatFloatingPoint(buffer, format, precision, double(value));
 	}
 
 	std::size_t Formatter<double>::format(const Containers::MutableStringView& buffer, double value, FormatContext& context) {
 		std::int32_t precision = context.Precision;
 		if (precision == -1) precision = std::numeric_limits<double>::digits10;
 		const char format[] { '%', '.', '*', formatTypeChar<float>(context.Type), '\0' };
-		return clampSnprintfResult(::snprintf(buffer.data(), buffer.size(), format, precision, value));
+		return formatFloatingPoint(buffer, format, precision, value);
 	}
 
 	std::size_t Formatter<long double>::format(const Containers::MutableStringView& buffer, long double value, FormatContext& context) {
@@ -393,7 +411,7 @@ namespace Death { namespace Implementation {
 		if (precision == -1) precision = std::numeric_limits<double>::digits10;
 #endif
 		const char format[] { '%', '.', '*', 'L', formatTypeChar<float>(context.Type), '\0' };
-		return clampSnprintfResult(::snprintf(buffer.data(), buffer.size(), format, precision, value));
+		return formatFloatingPoint(buffer, format, precision, value);
 	}
 
 	std::size_t Formatter<bool>::format(const Containers::MutableStringView& buffer, bool value, FormatContext& context) {

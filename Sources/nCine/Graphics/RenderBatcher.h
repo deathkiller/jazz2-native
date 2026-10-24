@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include <Containers/ArrayView.h>
 #include <Containers/SmallVector.h>
 
 using namespace Death::Containers;
@@ -40,16 +41,20 @@ namespace nCine
 		 * two together would leave every run shorter than the maximum, and every remainder past a multiple
 		 * of it, drawn one command at a time.
 		 *
-		 * A batch never spans @p splitLayer: the commands below it and the ones from it up end up in different
-		 * batches, so the queue can be drawn in two parts with something else in between (see
-		 * @ref RenderQueue::Draw()). The default of @ref RenderQueue::NoSplitLayer splits nothing.
+		 * A batch never spans any of @p splitLayers: the commands below one and the ones from it up end up in
+		 * different batches, so the queue can be drawn in parts with something else in between (see
+		 * @ref RenderQueue::NextPart()). None splits nothing.
 		 *
-		 * @param srcQueue    Sorted source command queue
-		 * @param destQueue   Destination queue that receives batched and pass-through commands
-		 * @param splitLayer  Layer no batch may span
+		 * @param srcQueue     Sorted source command queue
+		 * @param destQueue    Destination queue that receives batched and pass-through commands
+		 * @param splitLayers  Layers no batch may span, in ascending order
 		 */
+#if defined(RHI_CAP_POSTPROCESSING) || defined(DOXYGEN_GENERATING_OUTPUT)
 		void CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue,
-			std::uint32_t splitLayer = 0x10000);
+			ArrayView<const std::uint32_t> splitLayers = {});
+#else
+		void CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue);
+#endif
 		/** @brief Marks all managed buffers as free for reuse in the next frame */
 		void Reset();
 

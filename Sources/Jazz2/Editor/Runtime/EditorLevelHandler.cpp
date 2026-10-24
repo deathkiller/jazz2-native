@@ -46,7 +46,7 @@ namespace Jazz2::Editor
 		bool result = LevelHandler::Initialize(levelInit);
 		_levelData = SmallVector<std::uint8_t, 0>();
 		if (result) {
-			// Layers hidden in the game are shown, so they can be edited
+			// Layers hidden in the editor aren't shown, see RuntimeSync::IsLayerShown()
 			RuntimeSync::ApplyLayerStates(document, *_tileMap);
 		}
 		return result;

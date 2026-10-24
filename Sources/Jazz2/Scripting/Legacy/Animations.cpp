@@ -3,6 +3,7 @@
 #include "Animations.h"
 #include "AnimationTables.h"
 #include "Internal.h"
+#include "PixelMaps.h"
 
 #include "../../../nCine/Base/Algorithms.h"
 
@@ -204,6 +205,97 @@ namespace Jazz2::Scripting
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			owner->GetAnimationTables().AllocateSet(*this, ArrayView<const std::uint32_t>(counts.data(), counts.size()));
 			AddRef();
+			return this;
+		}
+
+		jjANIMSET* jjANIMSET::loadSheet(const jjPIXELMAP& sheet, std::uint32_t frameWidth, std::uint32_t frameHeight, std::uint32_t frameSpacingX,
+			std::uint32_t frameSpacingY, std::uint32_t startX, std::uint32_t startY, const CScriptArray& coldSpotYOffsets,
+			std::int32_t firstAnimToOverwrite, std::int32_t firstFrameToOverwrite)
+		{
+			// The handle returned is a new reference
+			AddRef();
+			if (frameWidth == 0 || frameHeight == 0 || frameWidth > UINT16_MAX || frameHeight > UINT16_MAX) {
+				return this;
+			}
+
+			jjPIXELMAP& source = const_cast<jjPIXELMAP&>(sheet);
+			auto isCellEmpty = [&source, frameWidth, frameHeight](std::uint32_t left, std::uint32_t top) {
+				for (std::uint32_t y = 0; y < frameHeight; y++) {
+					for (std::uint32_t x = 0; x < frameWidth; x++) {
+						if (*source.GetPixel(left + x, top + y) != 0) {
+							return false;
+						}
+					}
+				}
+				return true;
+			};
+
+			// Each row an animation, up to the first row without a frame
+			SmallVector<std::uint32_t, 16> counts;
+			for (std::uint64_t top = startY; top + frameHeight <= sheet.height; top += std::uint64_t(frameHeight) + frameSpacingY) {
+				std::uint32_t count = 0;
+				for (std::uint64_t left = startX; left + frameWidth <= sheet.width && !isCellEmpty(std::uint32_t(left), std::uint32_t(top));
+					left += std::uint64_t(frameWidth) + frameSpacingX) {
+					count++;
+				}
+				if (count == 0) {
+					break;
+				}
+				counts.push_back(count);
+			}
+			if (counts.empty()) {
+				return this;
+			}
+
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			AnimationTables& tables = owner->GetAnimationTables();
+			std::uint32_t firstAnimIndex = std::uint32_t(firstAnimToOverwrite);
+			if (firstAnimToOverwrite < 0) {
+				tables.AllocateSet(*this, ArrayView<const std::uint32_t>(counts.data(), counts.size()));
+				firstAnimIndex = firstAnim;
+			}
+
+			SmallVector<std::uint8_t, 0> pixels(std::size_t(frameWidth) * frameHeight);
+			std::uint32_t nextOverwrittenFrame = std::uint32_t(firstFrameToOverwrite);
+			for (std::uint32_t row = 0; row < counts.size(); row++) {
+				jjANIMATION* anim = tables.GetAnimation(firstAnimIndex + row);
+				if (anim == nullptr) {
+					break;
+				}
+				std::uint32_t firstFrameIndex = anim->getAnimFirstFrame();
+				if (firstAnimToOverwrite >= 0) {
+					// Into the frames from the one given on, or into those the animation has
+					if (firstFrameToOverwrite >= 0) {
+						firstFrameIndex = nextOverwrittenFrame;
+						nextOverwrittenFrame += counts[row];
+					}
+					anim->frameCount = std::uint16_t(counts[row]);
+					tables.SetFirstFrame(*anim, firstFrameIndex);
+				}
+				anim->Release();
+
+				std::int32_t coldSpotYOffset = (row < coldSpotYOffsets.GetSize() ? *static_cast<const std::int32_t*>(coldSpotYOffsets.At(row)) : 0);
+				std::uint32_t top = startY + row * (frameHeight + frameSpacingY);
+				for (std::uint32_t i = 0; i < counts[row]; i++) {
+					std::uint32_t left = startX + i * (frameWidth + frameSpacingX);
+					for (std::uint32_t y = 0; y < frameHeight; y++) {
+						for (std::uint32_t x = 0; x < frameWidth; x++) {
+							pixels[std::size_t(y) * frameWidth + x] = *source.GetPixel(left + x, top + y);
+						}
+					}
+					jjANIMFRAME* frame = tables.GetFrame(firstFrameIndex + i);
+					if (frame == nullptr) {
+						break;
+					}
+					tables.SetFramePixels(*frame, pixels.data(), frameWidth, frameHeight);
+					frame->hotSpotX = std::int16_t(-std::int32_t(frameWidth / 2));
+					frame->hotSpotY = std::int16_t(-std::int32_t(frameHeight));
+					frame->coldSpotX = frame->hotSpotX;
+					frame->coldSpotY = std::int16_t(frame->hotSpotY + coldSpotYOffset);
+					tables.MarkChanged(*frame);
+					frame->Release();
+				}
+			}
 			return this;
 		}
 	}

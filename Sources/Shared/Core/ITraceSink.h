@@ -48,10 +48,20 @@ namespace Death {
 
 	namespace Trace
 	{
-		/** @brief Registers the sink and initializes the event logger if no sink was attached before */
+		/**
+			@brief Registers the sink and initializes the event logger if no sink was attached before
+
+			The sink receives every entry logged after it returns. It must not be called from a sink callback.
+		*/
 		void AttachSink(ITraceSink* sink);
 
-		/** @brief Unregisters the sink and uninitializes the event logger if no sink left */
+		/**
+			@brief Unregisters the sink and uninitializes the event logger if no sink left
+
+			The sink still receives every entry logged before, and once it returns, the sink is no longer called.
+			It waits for the event logger, so it must not be called from a sink callback, or from a thread that
+			a sink callback blocks on, e.g. by invoking synchronously on the UI thread.
+		*/
 		void RemoveSink(ITraceSink* sink);
 
 		/**

@@ -1,0 +1,57 @@
+{
+	/* The file can contain both multi-line comments */
+	// and single-line comments
+
+	/* The file can also be a single event or an array of events instead */
+	"Events":
+	[
+		/* A new event a level script spawns by its type, the type of an event the game knows would describe
+		   it again, for a level script that uses it in another way */
+		{
+			"Type": 300,
+			"Key": "MyTurtle",
+			"Name": "My Turtle",
+			"Category": "Enemy",
+			"Description": "A turtle the level script makes walk, fly or swim",
+			"Preview": { "Metadata": "Enemy/Turtle", "Animation": 1 },
+			/* Another look for some values of a parameter */
+			"PreviewByParam": {
+				"Param": "Mode",
+				"Cases": [
+					{ "Value": 1, "Metadata": "Enemy/TurtleTube", "Animation": 0 },
+					{ "Value": "Default", "FlipX": false }
+				]
+			},
+			"Traits": [ "Object" ],
+			"Params": [
+				{ "Name": "Speed", "Type": "UInt", "Offset": 0, "Bits": 4, "Max": 15, "Default": 3, "Unit": "Pixels",
+				  "Description": "How fast it moves" },
+				/* Options are values from 0 on, or objects with their own values */
+				{ "Name": "Mode", "Type": "Enum", "Offset": 0, "Shift": 4, "Bits": 2, "Options": [ "Walk", "Fly", "Swim" ] },
+				{ "Name": "Height", "Type": "Int", "Offset": 1, "Bits": 8, "Min": -64, "Max": 64,
+				  /* Shown only while "Mode" is "Fly" */
+				  "ShowIf": { "Param": "Mode", "Equals": 1 },
+				  /* A handle in the level, 4 pixels for a unit of the value */
+				  "Gizmo": "OffsetY", "GizmoStep": 4, "MirrorY": "Negate" },
+				{ "Name": "Facing", "Type": "Enum", "Offset": 2, "Bits": 1, "Options": [ "Right", "Left" ], "MirrorX": "Toggle" },
+				/* Events with the same value in the same channel are linked by lines */
+				{ "Name": "Nest", "Type": "UInt", "Offset": 3, "Bits": 8, "Link": { "Channel": "MyNests", "Role": "Source" } }
+			]
+		},
+
+		/* An event of the original game the game has no use for, kept as the passthrough event for the level script;
+		   its number in the original game is the first parameter, the parameters it had there follow from the next
+		   byte, one after another unless "Shift" says where one is */
+		{
+			"Original": 254,
+			"Name": "Color Block",
+			"Category": "Scenery",
+			"Description": "Event 254 of the original game, a block the level script colors",
+			"Params": [
+				{ "Name": "Color", "Type": "Enum", "Bits": 2, "Options": [ "Red", "Green", "Blue", "Yellow" ] },
+				{ "Name": "Solid", "Type": "Bool" },
+				{ "Name": "Delay", "Type": "UInt", "Bits": 5, "Unit": "Seconds" }
+			]
+		}
+	]
+}

@@ -11,6 +11,7 @@
 #include "ShapeTool.h"
 #include "../Common/StampClipboard.h"
 #include "../Common/ToolMath.h"
+#include "../Events/EventPreviews.h"
 #include "../Input/ActionIds.h"
 #include "../Runtime/EditorCamera.h"
 #include "../Runtime/TileDrawing.h"
@@ -111,11 +112,18 @@ namespace Jazz2::Editor
 	}
 
 	bool ToolSettings::ResolveTile(const TileStamp& stamp, Vector2i position, Vector2i origin, const TileRef& existing, bool options,
-		bool onlyEmpty, TileRef& result) const
+		bool onlyEmpty, TileRef& result, bool emptyToo, std::size_t* stampIndex) const
 	{
-		TileRef tile;
-		if (!stamp.GetPatternTile(position.X, position.Y, origin, tile)) {
+		std::size_t index;
+		if (!stamp.GetPatternIndex(position.X, position.Y, origin, index)) {
 			return false;
+		}
+		TileRef tile = stamp.Tiles[index];
+		if (tile.IsEmpty() && stamp.EmptyIsTransparent && !emptyToo) {
+			return false;
+		}
+		if (stampIndex != nullptr) {
+			*stampIndex = index;
 		}
 		if (onlyEmpty && !existing.IsEmpty()) {
 			return false;
@@ -195,6 +203,15 @@ namespace Jazz2::Editor
 	{
 	}
 
+	bool EditorTool::OnKeyPressed(const KeyboardEvent& event)
+	{
+		return false;
+	}
+
+	void EditorTool::OnKeyReleased(const KeyboardEvent& event)
+	{
+	}
+
 	void EditorTool::Cancel()
 	{
 	}
@@ -234,27 +251,56 @@ namespace Jazz2::Editor
 		painter.Frame(rect, color, thickness, UiLayer::Overlay);
 	}
 
-	void EditorTool::DrawStampGhost(UiPainter& painter, const LayerView& view, const TileStamp& stamp, Vector2i cell, Vector2i anchor, float alpha)
+	void EditorTool::DrawStampGhost(UiPainter& painter, const LayerView& view, const TileStamp& stamp, Vector2i cell, Vector2i anchor, float alpha,
+		bool emptyToo)
 	{
 		Tiles::TileMap* tileMap = _host.GetTileMap();
 		if (tileMap == nullptr || stamp.IsEmpty() || stamp.Width * stamp.Height > MaxGhostTiles) {
 			return;
 		}
 		const LevelDocument& document = _host.GetDocument();
+		// The events go only onto the sprite layer, the view is of the layer being edited
+		bool events = (stamp.HasEvents() && _host.GetCurrentLayer() == document.GetSpriteLayerIndex());
 		for (std::int32_t y = 0; y < stamp.Height; y++) {
 			for (std::int32_t x = 0; x < stamp.Width; x++) {
 				if (!stamp.IsPresent(x, y)) {
 					continue;
 				}
 				const TileRef& tile = stamp.GetTile(x, y);
-				Rectf rect = view.CellToScreen(Vector2i(cell.X - anchor.X + x, cell.Y - anchor.Y + y));
+				if (tile.IsEmpty() && stamp.EmptyIsTransparent && !emptyToo) {
+					continue;
+				}
+				Vector2i at(cell.X - anchor.X + x, cell.Y - anchor.Y + y);
+				Rectf rect = view.CellToScreen(at);
 				if (tile.IsEmpty()) {
 					painter.FillRect(rect, Colorf(0.9f, 0.25f, 0.2f, 0.25f * alpha), UiLayer::Content);
 				} else {
 					// By where it comes from, a tile past the IDs the level can address yet is still drawn as itself
 					DrawTile(painter, *tileMap, document, tile, tile.Flags, rect, alpha);
 				}
+				if (events) {
+					const Formats::EventRecord& event = stamp.Events[std::size_t(y) * stamp.Width + x];
+					if (!LevelDocument::IsEmptyEvent(event)) {
+						_host.GetEventPreviews().DrawPlaced(painter, event, rect, view.Scale, alpha, _host.GetAnimTime(),
+							Vector2f(at.X * TileSize + TileSize * 0.5f, at.Y * TileSize + TileSize * 0.5f));
+					}
+				}
 			}
+		}
+		// The events off the grid of the tiles painted, centered at their positions as the event tool shows them
+		if (_host.GetCurrentLayer() != document.GetSpriteLayerIndex() || stamp.Random) {
+			return;
+		}
+		for (const TileStamp::OffGridEvent& item : stamp.OffGridEvents) {
+			std::int32_t sx = item.Offset.X / 32, sy = item.Offset.Y / 32;
+			if (sx >= stamp.Width || sy >= stamp.Height || !stamp.IsPresent(sx, sy) ||
+				(stamp.GetTile(sx, sy).IsEmpty() && stamp.EmptyIsTransparent && !emptyToo)) {
+				continue;
+			}
+			Vector2f world(float((cell.X - anchor.X) * 32 + item.Offset.X), float((cell.Y - anchor.Y) * 32 + item.Offset.Y));
+			Vector2f topLeft = view.WorldToScreen(world - Vector2f(TileSize * 0.5f, TileSize * 0.5f));
+			_host.GetEventPreviews().DrawPlaced(painter, item.Event, Rectf(topLeft.X, topLeft.Y, TileSize * view.Scale, TileSize * view.Scale),
+				view.Scale, alpha, _host.GetAnimTime(), world, false, true);
 		}
 	}
 
@@ -296,7 +342,8 @@ namespace Jazz2::Editor
 	}
 
 	StrokeTool::StrokeTool(IToolHost& host)
-		: EditorTool(host), _strokeLayer(-1), _strokePreview(true), _strokeOptions(true), _strokeOnlyEmpty(false), _lastStamp(nullptr)
+		: EditorTool(host), _strokeLayer(-1), _strokePreview(true), _strokeOptions(true), _strokeOnlyEmpty(false), _strokeEmptyToo(false),
+			_lastStamp(nullptr)
 	{
 	}
 
@@ -307,6 +354,9 @@ namespace Jazz2::Editor
 
 	void StrokeTool::Cancel()
 	{
+		// The events aren't shown before the stroke is released, there's nothing to show again
+		_eventStroke = nullptr;
+		_pendingOffGrid.clear();
 		if (_stroke != nullptr) {
 			Recti area = _stroke->GetArea();
 			_stroke = nullptr;
@@ -334,7 +384,10 @@ namespace Jazz2::Editor
 		_strokePreview = preview;
 		_strokeOptions = true;
 		_strokeOnlyEmpty = false;
+		_strokeEmptyToo = false;
 		_lastStamp = nullptr;
+		_eventStroke = nullptr;
+		_pendingOffGrid.clear();
 		_stroke = std::make_unique<SetTilesCommand>(_host.GetDocument(), layer, Death::move(name));
 		return true;
 	}
@@ -352,30 +405,89 @@ namespace Jazz2::Editor
 		if (_strokeLayer < 0 || _strokeLayer >= std::int32_t(document.Layers.size())) {
 			return;
 		}
+		const ToolSettings& settings = GetSettings();
 		const TileRef& existing = document.Layers[_strokeLayer].GetTile(layerTile.X, layerTile.Y);
 		TileRef tile;
-		if (GetSettings().ResolveTile(stamp, cell, patternOrigin, existing, _strokeOptions, _strokeOnlyEmpty, tile)) {
-			PaintCell(cell, tile);
+		std::size_t index;
+		if (settings.ResolveTile(stamp, cell, patternOrigin, existing, _strokeOptions, _strokeOnlyEmpty, tile, _strokeEmptyToo, &index) &&
+			PaintCell(cell, tile)) {
+			// Only with the tile itself, changing only the modifier of the tiles there keeps their events too
+			if (_strokeOptions && !settings.ModifierOnly && _strokeLayer == document.GetSpriteLayerIndex()) {
+				if (stamp.HasEvents()) {
+					PaintEvent(layerTile, stamp.Events[index]);
+				}
+				PaintOffGrid(stamp, index, layerTile);
+			}
 		}
 	}
 
-	void StrokeTool::PaintCell(Vector2i cell, const TileRef& tile)
+	bool StrokeTool::PaintCell(Vector2i cell, const TileRef& tile)
 	{
 		if (_stroke == nullptr) {
-			return;
+			return false;
 		}
 		// Only the size and the repeating of the layer are used, they're the same as when the stroke started
 		Vector2i layerTile;
 		if (!_strokeView.Wrap(cell, layerTile)) {
-			return;
+			return false;
 		}
 		const TileSelection& selection = _host.GetSelection();
 		if (!selection.IsEmpty() && selection.GetLayer() == _strokeLayer && !selection.Contains(layerTile.X, layerTile.Y)) {
-			return;
+			return false;
 		}
 		_stroke->Set(layerTile.X, layerTile.Y, tile);
 		if (_strokePreview) {
 			_host.PreviewTile(_strokeLayer, layerTile.X, layerTile.Y, tile);
+		}
+		return true;
+	}
+
+	void StrokeTool::PaintEvent(Vector2i layerTile, const Formats::EventRecord& event)
+	{
+		LevelDocument& document = _host.GetDocument();
+		Vector2i gridSize = document.GetEventGridSize();
+		if (layerTile.X < 0 || layerTile.Y < 0 || layerTile.X >= gridSize.X || layerTile.Y >= gridSize.Y) {
+			return;
+		}
+		if (_eventStroke == nullptr) {
+			_eventStroke = std::make_unique<SetEventsCommand>(document, _stroke != nullptr ? _stroke->GetName() : String());
+		}
+		Formats::EventRecord normalized = event;
+		LevelDocument::NormalizeEvent(normalized);
+		_eventStroke->Set(layerTile.X, layerTile.Y, normalized);
+	}
+
+	void StrokeTool::PaintOffGrid(const TileStamp& stamp, std::size_t index, Vector2i layerTile)
+	{
+		if (stamp.OffGridEvents.empty() || stamp.Random || stamp.Width <= 0) {
+			return;
+		}
+		const LevelDocument& document = _host.GetDocument();
+		Vector2i gridSize = document.GetEventGridSize();
+		Vector2i stampCell(std::int32_t(index % std::size_t(stamp.Width)), std::int32_t(index / std::size_t(stamp.Width)));
+		for (const TileStamp::OffGridEvent& item : stamp.OffGridEvents) {
+			if (item.Offset.X / 32 != stampCell.X || item.Offset.Y / 32 != stampCell.Y) {
+				continue;
+			}
+			Vector2i target = layerTile * 32 + (item.Offset - stampCell * 32);
+			if (target.X < 0 || target.Y < 0 || target.X >= gridSize.X * 32 || target.Y >= gridSize.Y * 32) {
+				continue;
+			}
+			Formats::OffGridEventRecord record;
+			record.X = std::uint32_t(target.X);
+			record.Y = std::uint32_t(target.Y);
+			record.Event = item.Event;
+			LevelDocument::NormalizeEvent(record.Event);
+			// Once, also when the stroke covers its tile again, and not over the same event that's there already, painting
+			// the block at the same place again doesn't pile them up
+			auto isSame = [&record](const Formats::OffGridEventRecord& other) {
+				return (other.X == record.X && other.Y == record.Y && LevelDocument::AreEventsEqual(other.Event, record.Event));
+			};
+			if (std::any_of(_pendingOffGrid.begin(), _pendingOffGrid.end(), isSame) ||
+				std::any_of(document.OffGridEvents.begin(), document.OffGridEvents.end(), isSame)) {
+				continue;
+			}
+			_pendingOffGrid.push_back(record);
 		}
 	}
 
@@ -413,10 +525,40 @@ namespace Jazz2::Editor
 			return;
 		}
 		std::unique_ptr<SetTilesCommand> stroke = Death::move(_stroke);
+		std::unique_ptr<SetEventsCommand> events = Death::move(_eventStroke);
+		SmallVector<Formats::OffGridEventRecord, 0> offGrid = Death::move(_pendingOffGrid);
+		_pendingOffGrid.clear();
 		stroke->Seal();
+		if (events != nullptr) {
+			events->Seal();
+			if (events->IsEmpty()) {
+				events = nullptr;
+			}
+		}
+		if (events == nullptr && offGrid.empty()) {
+			if (!stroke->IsEmpty()) {
+				_host.Execute(Death::move(stroke));
+			}
+			return;
+		}
+		// The tiles with the events on them and off the grid, as one step
+		String name = stroke->GetName();
+		_host.BeginChanges(name);
 		if (!stroke->IsEmpty()) {
 			_host.Execute(Death::move(stroke));
 		}
+		if (events != nullptr) {
+			_host.Execute(Death::move(events));
+		}
+		if (!offGrid.empty()) {
+			LevelDocument& document = _host.GetDocument();
+			SmallVector<Formats::OffGridEventRecord, 0> all = CopyOffGridEvents(document);
+			for (const Formats::OffGridEventRecord& record : offGrid) {
+				all.push_back(record);
+			}
+			_host.Execute(std::make_unique<SetOffGridEventsCommand>(document, Death::move(all), name));
+		}
+		_host.EndChanges();
 	}
 
 	BrushTool::BrushTool(IToolHost& host, bool erase)
@@ -457,13 +599,15 @@ namespace Jazz2::Editor
 			return;
 		}
 		const TileStamp& stamp = GetBrushStamp();
-		// With Shift a straight line, shown while it's dragged and painted when it's let go
+		// With Shift a straight line, shown while it's dragged and painted when it's let go, so a click with it paints the
+		// stamp once; the empty tiles of a block grabbed are painted with it too, as Jazz Creation Station does
 		bool lineMode = ((pointer.Modifiers & KeyMod::Shift) != 0);
 		// TRANSLATORS: Names of undo steps in the history, after the brush erased or painted tiles
 		if (stamp.IsEmpty() || !BeginStroke(_erase ? _x("editor", "Erase") : _x("editor", "Paint"), !lineMode)) {
 			return;
 		}
 		_strokeOptions = !_erase;
+		_strokeEmptyToo = lineMode;
 		_lineMode = lineMode;
 		_lastCell = _lineStart = _lineEnd = pointer.Cell;
 		_patternOrigin = pointer.Cell - GetAnchor();
@@ -522,13 +666,15 @@ namespace Jazz2::Editor
 		LayerView view = _host.GetLayerView(_host.GetCurrentLayer());
 		const TileStamp& stamp = GetBrushStamp();
 		Vector2i anchor = GetAnchor();
+		// With Shift the empty tiles of a block grabbed are painted too, see OnPointerDown()
+		bool emptyToo = ((hover.Modifiers & KeyMod::Shift) != 0);
 		if (_lineMode && _stroke != nullptr) {
 			// The line as it would be painted
 			std::int32_t cells = std::max(std::abs(_lineEnd.X - _lineStart.X), std::abs(_lineEnd.Y - _lineStart.Y)) + 1;
 			bool ghosts = (!stamp.Random && std::int64_t(cells) * stamp.Width * stamp.Height <= MaxGhostTiles);
 			WalkLine(_lineStart, _lineEnd, [&](Vector2i cell) {
 				if (ghosts) {
-					DrawStampGhost(painter, view, stamp, cell, anchor, 0.55f);
+					DrawStampGhost(painter, view, stamp, cell, anchor, 0.55f, true);
 				} else {
 					Vector2i from(cell.X - anchor.X, cell.Y - anchor.Y);
 					DrawCellsOutline(painter, view, from, Vector2i(from.X + (stamp.Random ? 0 : stamp.Width - 1), from.Y + (stamp.Random ? 0 : stamp.Height - 1)),
@@ -547,7 +693,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (_stroke == nullptr) {
-			DrawStampGhost(painter, view, stamp, hover.Cell, anchor, 0.65f);
+			DrawStampGhost(painter, view, stamp, hover.Cell, anchor, 0.65f, emptyToo);
 		}
 		Vector2i from(hover.Cell.X - anchor.X, hover.Cell.Y - anchor.Y);
 		DrawCellsOutline(painter, view, from, Vector2i(from.X + stamp.Width - 1, from.Y + stamp.Height - 1), _erase ? UiTheme::Danger : UiTheme::Cursor);
@@ -555,7 +701,14 @@ namespace Jazz2::Editor
 
 	StringView BrushTool::GetHint() const
 	{
-		return (_erase ? _x("editor", "Click or drag to erase tiles - Shift+drag: a straight line") : _x("editor", "Click or drag to paint, right-click to pick a tile - Shift+drag: a straight line"));
+		if (_erase) {
+			return _x("editor", "Click or drag to erase tiles - Shift+drag: a straight line");
+		}
+		// The block grabbed by B paints its empty tiles and their events only with Shift, as in Jazz Creation Station
+		if (_host.GetStamp().EmptyIsTransparent) {
+			return _x("editor", "Click or drag to paint the block, empty tiles are skipped - Shift+click: with its empty tiles and their events - Shift+drag: a straight line");
+		}
+		return _x("editor", "Click or drag to paint, right-click to pick a tile - Shift+drag: a straight line");
 	}
 
 	void BrushTool::BuildOptions(ToolOptionsBuilder& builder)
@@ -614,6 +767,7 @@ namespace Jazz2::Editor
 		}
 		_strokeOptions = !_erase;
 		_strokeOnlyEmpty = (!_erase && GetSettings().OnlyEmpty);
+		_strokeEmptyToo = ((pointer.Modifiers & KeyMod::Shift) != 0);
 		Recti rect = MakeRect(_start, _end);
 		for (std::int32_t y = rect.Y; y < rect.Y + rect.H; y++) {
 			for (std::int32_t x = rect.X; x < rect.X + rect.W; x++) {
@@ -718,12 +872,22 @@ namespace Jazz2::Editor
 		std::size_t count = FindArea(layer, start, view.RepeatX && settings.AcrossSeams, view.RepeatY && settings.AcrossSeams,
 			useSelection ? &selection : nullptr, MaxFillTiles, area, settings.IgnoreFlips);
 		std::int32_t width = layer.GetWidth(), height = layer.GetHeight();
+		// With Shift the empty tiles of a block grabbed too, and its events on the sprite layer, as the brush paints them
+		bool emptyToo = ((pointer.Modifiers & KeyMod::Shift) != 0);
+		bool events = (!erase && !settings.ModifierOnly && layerIndex == _host.GetDocument().GetSpriteLayerIndex());
 		for (std::int32_t y = 0; y < height; y++) {
 			for (std::int32_t x = 0; x < width; x++) {
 				TileRef tile;
+				std::size_t index;
 				if (area[std::size_t(y) * std::size_t(width) + std::size_t(x)] &&
-					settings.ResolveTile(stamp, Vector2i(x, y), start, layer.GetTile(x, y), !erase, !erase && settings.OnlyEmpty, tile)) {
+					settings.ResolveTile(stamp, Vector2i(x, y), start, layer.GetTile(x, y), !erase, !erase && settings.OnlyEmpty, tile, emptyToo, &index)) {
 					_stroke->Set(x, y, tile);
+					if (events) {
+						if (stamp.HasEvents()) {
+							PaintEvent(Vector2i(x, y), stamp.Events[index]);
+						}
+						PaintOffGrid(stamp, index, Vector2i(x, y));
+					}
 				}
 			}
 		}
@@ -910,6 +1074,39 @@ namespace Jazz2::Editor
 				painter.FillRect(horizontal ? Rectf(a, y, b - a, thickness) : Rectf(x, a, thickness, b - a), UiTheme::Accent, UiLayer::Overlay);
 			}
 		}
+	}
+
+	std::int32_t WrapViewRect(const Recti& rect, Vector2i layerSize, const LayerView& view, Recti (&parts)[4])
+	{
+		struct Span { std::int32_t Start, Length; };
+		auto wrapSpan = [](std::int32_t start, std::int32_t length, std::int32_t size, bool repeats, Span* spans) {
+			if (!repeats || size <= 0) {
+				spans[0] = { start, length };
+				return 1;
+			}
+			if (length >= size) {
+				spans[0] = { 0, size };
+				return 1;
+			}
+			start = PositiveModulo(start, size);
+			if (start + length <= size) {
+				spans[0] = { start, length };
+				return 1;
+			}
+			spans[0] = { start, size - start };
+			spans[1] = { 0, start + length - size };
+			return 2;
+		};
+		Span spansX[2], spansY[2];
+		std::int32_t countX = wrapSpan(rect.X, rect.W, layerSize.X, view.RepeatX, spansX);
+		std::int32_t countY = wrapSpan(rect.Y, rect.H, layerSize.Y, view.RepeatY, spansY);
+		std::int32_t count = 0;
+		for (std::int32_t j = 0; j < countY; j++) {
+			for (std::int32_t i = 0; i < countX; i++) {
+				parts[count++] = Recti(spansX[i].Start, spansY[j].Start, spansX[i].Length, spansY[j].Length);
+			}
+		}
+		return count;
 	}
 
 	bool MoveSelectedTiles(IToolHost& host, Vector2i offset)
@@ -1128,41 +1325,13 @@ namespace Jazz2::Editor
 		std::int32_t layerIndex = _host.GetCurrentLayer();
 		const DocumentLayer& layer = _host.GetDocument().Layers[layerIndex];
 		const Vector2i layerSize(layer.GetWidth(), layer.GetHeight());
-		const LayerView view = _host.GetLayerView(layerIndex);
-		const Recti rect = MakeRect(_start, _end);
-
-		// The rectangle is of the copy of a layer that repeats it was dragged over, the selection is of the layer itself (and
-		// so of every copy), so on an axis the layer repeats in it's wrapped into the layer - into two parts if it goes over
-		// the end of a copy into the next one, all of it if it's as long as the layer
-		struct Span { std::int32_t Start, Length; };
-		auto wrapSpan = [](std::int32_t start, std::int32_t length, std::int32_t size, bool repeats, Span* spans) {
-			if (!repeats || size <= 0) {
-				spans[0] = { start, length };
-				return 1;
-			}
-			if (length >= size) {
-				spans[0] = { 0, size };
-				return 1;
-			}
-			start = PositiveModulo(start, size);
-			if (start + length <= size) {
-				spans[0] = { start, length };
-				return 1;
-			}
-			spans[0] = { start, size - start };
-			spans[1] = { 0, start + length - size };
-			return 2;
-		};
-		Span spansX[2], spansY[2];
-		std::int32_t countX = wrapSpan(rect.X, rect.W, layerSize.X, view.RepeatX, spansX);
-		std::int32_t countY = wrapSpan(rect.Y, rect.H, layerSize.Y, view.RepeatY, spansY);
+		Recti parts[4];
+		std::int32_t count = WrapViewRect(MakeRect(_start, _end), layerSize, _host.GetLayerView(layerIndex), parts);
 		bool add = _add;
-		for (std::int32_t j = 0; j < countY; j++) {
-			for (std::int32_t i = 0; i < countX; i++) {
-				selection.Select(layerIndex, layerSize, Recti(spansX[i].Start, spansY[j].Start, spansX[i].Length, spansY[j].Length), add);
-				// The other parts add to the first one
-				add = true;
-			}
+		for (std::int32_t i = 0; i < count; i++) {
+			selection.Select(layerIndex, layerSize, parts[i], add);
+			// The other parts add to the first one
+			add = true;
 		}
 	}
 
@@ -1349,6 +1518,9 @@ namespace Jazz2::Editor
 		}
 		_chosen = type;
 		_temporary = false;
+		if (OnChosen) {
+			OnChosen(type);
+		}
 	}
 
 	void ToolManager::BeginTemporary(EditorToolType type)

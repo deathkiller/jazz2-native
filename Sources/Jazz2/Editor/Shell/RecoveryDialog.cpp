@@ -145,7 +145,7 @@ namespace Jazz2::Editor
 				for (const RecoveryCopy& copy : _state->Copies) {
 					auto* row = Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 					// TRANSLATORS: In the Recovery Copies dialog instead of the name of a level that has none
-					auto* label = row->Add<UiLabel>(copy.DisplayName.empty() ? String(_x("editor", "Unnamed level")) : copy.DisplayName, UiTheme::Text);
+					auto* label = row->Add<UiLabel>(copy.DisplayName.empty() ? String(_x("editor", "Untitled level")) : copy.DisplayName, UiTheme::Text);
 					label->Flex = 1.0f;
 					String path = copy.Path;
 					// TRANSLATORS: Button next to a recovery copy in the Recovery Copies dialog, opens the level as the copy has it

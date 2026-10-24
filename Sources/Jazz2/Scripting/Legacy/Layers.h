@@ -258,6 +258,13 @@ namespace Jazz2::Scripting
 			static CScriptArray* jjLayerOrderGet();
 			/** @brief Sets the draw order of all layers */
 			static bool jjLayerOrderSet(const CScriptArray& order);
+			/**
+			 * @brief Returns an offset of a layer as JJ2+ keeps it, in 16.16 fixed point (measured)
+			 *
+			 * An offset out of its range is 0 and 32768 itself wraps to -32768 - HH17 offsets its layers by `jjRandom()`,
+			 * which leaves them all where they'd be without an offset.
+			 */
+			static float ToStoredOffset(float value);
 			/** @brief Loads the given layers from another level file */
 			static CScriptArray* jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, int32_t tileIDAdjustmentFactor);
 			/** @brief Imports tiles from another tileset into the current one */
@@ -440,10 +447,10 @@ namespace Jazz2::Scripting
 	bool jjMaskedVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength);
 	/** @brief Returns whether any pixel along the vertical line is masked (solid) on the given layer */
 	bool jjMaskedVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer);
-	/** @brief Returns whether the topmost pixel along the vertical line is masked (solid) */
-	bool jjMaskedTopVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength);
-	/** @brief Returns whether the topmost pixel along the vertical line is masked (solid) on the given layer */
-	bool jjMaskedTopVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer);
+	/** @brief Returns the position of the topmost masked (solid) pixel along the vertical line counted from 1, or `lineLength + 1` if there's none */
+	std::int32_t jjMaskedTopVLine(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength);
+	/** @brief Returns the position of the topmost masked (solid) pixel along the vertical line on the given layer counted from 1, or `lineLength + 1` if there's none */
+	std::int32_t jjMaskedTopVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer);
 }
 
 #endif

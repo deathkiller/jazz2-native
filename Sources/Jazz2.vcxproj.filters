@@ -2031,6 +2031,9 @@
     <ClInclude Include="Jazz2\Editor\Tests\ToolTests.h">
       <Filter>Header Files\Jazz2\Editor\Tests</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Tools\BlockGrab.h">
+      <Filter>Header Files\Jazz2\Editor\Tools</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Editor\Tools\EditorContext.h">
       <Filter>Header Files\Jazz2\Editor\Tools</Filter>
     </ClInclude>
@@ -2692,6 +2695,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Tests\ToolTests.cpp">
       <Filter>Source Files\Jazz2\Editor\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Tools\BlockGrab.cpp">
+      <Filter>Source Files\Jazz2\Editor\Tools</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Tools\EventTools.cpp">
       <Filter>Source Files\Jazz2\Editor\Tools</Filter>

@@ -124,6 +124,10 @@ namespace Jazz2::Editor
 		void SetColumns(std::int32_t columns);
 		/** @brief Returns the number of tiles of the source */
 		std::int32_t GetTileCount() const;
+		/** @brief Returns the cell of the tile under the pointer, `false` if it's over no tile */
+		bool GetCellUnderPointer(Vector2i& cell) const;
+		/** @brief Makes the tiles between two cells the stamp, as a drag over them does, and paints with them */
+		void PickBlock(Vector2i from, Vector2i to);
 
 		/** @brief Whether how often the level uses each tile is shown, unused tiles darkened */
 		bool ShowUsage;

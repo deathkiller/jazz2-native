@@ -111,8 +111,8 @@ namespace Jazz2::Editor::EventCatalogParts
 				.MirroredXPairs(ChainSyncMirrorX).MirroredYPairs(ChainSyncMirrorY),
 			IntField(_x("editor", "Speed"), 2, 8, -128, 127, 8).WithDescription(_x("editor", "How fast it turns, negative turns the other way"))
 				.MirroredX(MirrorMode::Negate).MirroredY(MirrorMode::Negate),
-			UIntField(_x("editor", "Length"), 3, 8, 0, 255, 4).WithDescription(_x("editor", "Number of chain links, 12 px each"))
-				.WithGizmo(FieldGizmo::LengthDown, 12),
+			UIntField(_x("editor", "Length"), 3, 8, 0, 255, 4).WithDescription(_x("editor", "Number of chain links, 25 px each"))
+				.WithGizmo(FieldGizmo::LengthDown, 25),
 			// TRANSLATORS: Checkbox of an event in the event properties, it swings to and fro on its chain instead of going round
 			BoolField(_x("editor", "Swing"), 4).WithDescription(_x("editor", "Swings to and fro instead of going round")),
 		};
@@ -262,7 +262,7 @@ namespace Jazz2::Editor::EventCatalogParts
 		};
 
 		// Triggers set the rocks of their ID rolling, see RollingRock::OnTriggeredEvent()
-		constexpr const char* RollingRockChannel = "rollingRock";
+		constexpr const char* RollingRockChannel = "RollingRock";
 
 		static const EventParamField RollingRockFields[] = {
 			// TRANSLATORS: Parameter of a rolling rock in the event properties, short for identifier, links it to its triggers

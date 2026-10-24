@@ -31,10 +31,16 @@ namespace Jazz2::Editor
 			}
 			return '\0';
 		}
+
+		// Frames the pointer rests on a row before its submenu opens, so passing over rows on the way to one doesn't
+		constexpr float SubmenuDelay = 15.0f;
+		// Units of the border of a menu, a submenu overlaps it by as much
+		constexpr float MenuBorder = 2.0f;
 	}
 
 	UiPopupMenu::UiPopupMenu(SmallVectorImpl<UiMenuEntry>&& entries)
-		: UiPanel(UiPanelStyle::Floating, UiOrientation::Vertical, 0.0f, UiThickness(2.0f)), _highlight(-1), _revealHighlight(false)
+		: UiPanel(UiPanelStyle::Floating, UiOrientation::Vertical, 0.0f, UiThickness(MenuBorder)), _highlight(-1), _revealHighlight(false),
+			_submenu(nullptr), _submenuRow(nullptr), _hoverRow(nullptr), _hoverTime(0.0f)
 	{
 		// A menu taller than the screen scrolls, it's never larger than the screen (see UiSurface::OnDraw())
 		_scroll = Add<UiScrollView>();
@@ -91,6 +97,19 @@ namespace Jazz2::Editor
 				_scroll->ScrollIntoView(top, top + rows[_highlight]->Bounds.H);
 			}
 		}
+		// Placed before the submenu, which is shown after it
+		PlaceSubmenu();
+	}
+
+	void UiPopupMenu::PlaceSubmenu()
+	{
+		UiSurface* surface = GetSurface();
+		if (_submenu == nullptr || _submenuRow == nullptr || surface == nullptr) {
+			return;
+		}
+		// Its first row next to the row it's opened from, left of this menu if there's no room on the right
+		float border = surface->GetContext().Px(MenuBorder);
+		surface->MoveOverlay(_submenu, Vector2f(Bounds.X + Bounds.W - border, _submenuRow->Bounds.Y - border), Bounds.X + border);
 	}
 
 	void UiPopupMenu::HighlightFirst()
@@ -113,16 +132,97 @@ namespace Jazz2::Editor
 		SetHighlight(first, true);
 	}
 
+	void UiPopupMenu::OpenSubmenu(UiMenuRow* row, bool fromKeyboard)
+	{
+		UiSurface* surface = GetSurface();
+		if (surface == nullptr || !surface->IsOverlayShown(this) || !row->Entry.Submenu || !row->IsEntryEnabled()) {
+			return;
+		}
+		if (_submenu != nullptr && _submenuRow == row) {
+			if (fromKeyboard) {
+				_submenu->HighlightFirst();
+			}
+			return;
+		}
+		CloseSubmenu();
+
+		SmallVector<UiMenuEntry, 0> entries;
+		row->Entry.Submenu(entries);
+		if (entries.empty()) {
+			return;
+		}
+		SmallVector<UiMenuRow*, 16> rows;
+		GetRows(rows);
+		for (std::int32_t i = 0; i < std::int32_t(rows.size()); i++) {
+			if (rows[i] == row) {
+				SetHighlight(i, false);
+				break;
+			}
+		}
+
+		UiOverlayOptions options;
+		options.Owner = this;
+		// Only one is open at a time, the one before was closed already
+		options.OnClosed = [this]() {
+			_submenu = nullptr;
+			_submenuRow = nullptr;
+		};
+		_submenu = static_cast<UiPopupMenu*>(surface->PushOverlay(std::make_unique<UiPopupMenu>(Death::move(entries)), Death::move(options)));
+		_submenuRow = row;
+		PlaceSubmenu();
+		// Left closes it, Right goes on to the menu next to the one of the menu bar it's in
+		_submenu->OnSwitchMenu = [this](std::int32_t direction) {
+			if (direction < 0) {
+				CloseSubmenu();
+			} else if (OnSwitchMenu) {
+				OnSwitchMenu(direction);
+			}
+		};
+		if (fromKeyboard) {
+			_submenu->HighlightFirst();
+		}
+	}
+
+	void UiPopupMenu::CloseSubmenu()
+	{
+		if (_submenu != nullptr) {
+			if (UiSurface* surface = GetSurface()) {
+				surface->CloseOverlay(_submenu);
+			}
+			_submenu = nullptr;
+			_submenuRow = nullptr;
+		}
+	}
+
 	void UiPopupMenu::Update(float timeMult)
 	{
 		UiPanel::Update(timeMult);
 		// The pointer moves the highlight too, the keys go on from where it is
 		SmallVector<UiMenuRow*, 16> rows;
 		GetRows(rows);
+		UiMenuRow* hovered = nullptr;
 		for (std::int32_t i = 0; i < std::int32_t(rows.size()); i++) {
-			if (rows[i]->IsHovered() && i != _highlight) {
-				SetHighlight(i, false);
+			if (rows[i]->IsHovered()) {
+				hovered = rows[i];
+				if (i != _highlight) {
+					SetHighlight(i, false);
+				}
 				break;
+			}
+		}
+
+		if (hovered != _hoverRow) {
+			_hoverRow = hovered;
+			_hoverTime = 0.0f;
+		} else if (hovered != nullptr && hovered != _submenuRow) {
+			_hoverTime += timeMult;
+			if (_hoverTime >= SubmenuDelay) {
+				_hoverTime = 0.0f;
+				if (hovered->Entry.Submenu) {
+					OpenSubmenu(hovered, false);
+				} else {
+					CloseSubmenu();
+				}
 			}
 		}
 	}
@@ -169,11 +269,20 @@ namespace Jazz2::Editor
 			case Keys::NumPadEnter:
 			case Keys::Space:
 				if (_highlight >= 0 && _highlight < count && rows[_highlight]->IsEntryEnabled()) {
-					rows[_highlight]->Run();
+					if (rows[_highlight]->Entry.Submenu) {
+						OpenSubmenu(rows[_highlight], true);
+					} else {
+						rows[_highlight]->Run();
+					}
 				}
 				return true;
 			case Keys::Left:
 			case Keys::Right:
+				if (event.sym == Keys::Right && _highlight >= 0 && _highlight < count && rows[_highlight]->Entry.Submenu &&
+					rows[_highlight]->IsEntryEnabled()) {
+					OpenSubmenu(rows[_highlight], true);
+					return true;
+				}
 				if (OnSwitchMenu) {
 					// Closes this menu, which is destroyed only in the next frame
 					OnSwitchMenu(event.sym == Keys::Left ? -1 : 1);
@@ -220,6 +329,15 @@ namespace Jazz2::Editor
 		if (!IsEntryEnabled()) {
 			return;
 		}
+		if (Entry.Submenu) {
+			for (UiElement* parent = GetParent(); parent != nullptr; parent = parent->GetParent()) {
+				if (UiPopupMenu* menu = runtime_cast<UiPopupMenu>(parent)) {
+					menu->OpenSubmenu(this, false);
+					break;
+				}
+			}
+			return;
+		}
 		// The menu goes first, what the item does may show something else over the interface
 		Function<void()> execute = Death::move(Entry.Execute);
 		if (UiSurface* surface = GetSurface()) {
@@ -234,7 +352,9 @@ namespace Jazz2::Editor
 	{
 		float padding = context.Px(UiTheme::Padding);
 		float width = padding * 2.0f + context.Px(UiTheme::IconSize) + padding + context.MeasureText(Entry.Label);
-		if (!Entry.ShortcutText.empty()) {
+		if (Entry.Submenu) {
+			width += context.Px(24.0f) + context.Px(UiTheme::IconSize);
+		} else if (!Entry.ShortcutText.empty()) {
 			width += context.Px(24.0f) + context.MeasureText(Entry.ShortcutText);
 		}
 		return Vector2f(std::max(width, context.Px(110.0f)), context.Px(UiTheme::RowHeight + 3.0f));
@@ -273,7 +393,10 @@ namespace Jazz2::Editor
 
 		float x = iconRect.X + iconSize + padding;
 		painter.TextInRect(Entry.Label, Rectf(x, Bounds.Y, Bounds.X + Bounds.W - x, Bounds.H), enabled ? UiTheme::Text : UiTheme::TextDisabled);
-		if (!Entry.ShortcutText.empty()) {
+		if (Entry.Submenu) {
+			painter.Icon(EditorIcon::ChevronRight, Rectf(Bounds.X + Bounds.W - iconSize - padding, Bounds.Y, iconSize, Bounds.H),
+				enabled ? UiTheme::IconColor : UiTheme::IconDisabled);
+		} else if (!Entry.ShortcutText.empty()) {
 			painter.TextInRect(Entry.ShortcutText, Rectf(Bounds.X, Bounds.Y, Bounds.W - padding * 2.0f, Bounds.H),
 				enabled ? UiTheme::TextDim : UiTheme::TextDisabled, Alignment::Right);
 		}

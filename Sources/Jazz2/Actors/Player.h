@@ -250,6 +250,8 @@ namespace Jazz2::Actors
 		bool CanJump() const;
 		/** @brief Returns `true` if the player can bread solid objects */
 		bool CanBreakSolidObjects() const;
+		/** @brief Returns `true` if the player runs into a frozen @p target fast enough to break it, see @ref FrozenRamSpeed */
+		bool IsRammingFrozen(const ActorBase* target) const;
 		/** @brief Returns `true` if the player can move vertically, i.e. not affected by gravity */
 		bool CanMoveVertically() const;
 		/** @brief Returns `true` if the player is currently in water */
@@ -610,12 +612,14 @@ namespace Jazz2::Actors
 		static constexpr float LegacyFrameRateScale = LegacyTickRate / 60.0f;
 		/** @brief Acceleration scale for the same mapping, squared because position is the double integral of acceleration */
 		static constexpr float LegacyFrameRateScaleSqr = LegacyFrameRateScale * LegacyFrameRateScale;
-
 		/** @brief Non-Reforged walk speed cap (original 4 px/tick) */
 		static constexpr float LegacyWalkSpeed = 4.0f * LegacyFrameRateScale;
 		/** @brief Non-Reforged dash speed cap while Run is held (original 16 px/tick) */
 		static constexpr float LegacyDashSpeed = 16.0f * LegacyFrameRateScale;
-		/**
+		/** @brief Horizontal speed above which running into a frozen object breaks it, in all modes (original 12 px/tick, measured) */
+		static constexpr float FrozenRamSpeed = 12.0f * LegacyFrameRateScale;
+		/** @brief Vertical speed of the bounce off a frozen object the player broke (original -6 px/tick, measured) */
+		static constexpr float FrozenRamBounceSpeedY = -6.0f * LegacyFrameRateScale;		/**
 		 * @brief Non-Reforged horizontal acceleration with no Run (original 12000/65536 px/tick^2)
 		 *
 		 * The original applies this in the direction of the *input*, whichever way the player happens to be
@@ -1522,6 +1526,8 @@ namespace Jazz2::Actors
 		// already held when a level starts produces no rising edge inside it, so the toggle would stay off
 		// until the key was released and hit again - see Player::OnHandleMovement().
 		bool _runActionSeeded;
+		// Fire has been let go of since the player froze, only then does holding it chip the ice away
+		bool _fireReleasedWhileFrozen = false;
 		// Past the lower threshold: enough to launch when the tapping stops, but not enough to show the wind-up
 		// pose. Both latch, so the charge decaying back below a threshold does not undo the state it reached -
 		// that decay is the grace in which a further tap resumes the wind-up.
@@ -1673,6 +1679,8 @@ namespace Jazz2::Actors
 		float _weaponFlareTime;
 		std::int32_t _weaponFlareFrame;
 		float _weaponCooldown;
+		std::uint16_t _cappedWeapons = 0;
+		std::uint16_t _silentWeapons = 0;
 		// The acceleration a bird steers with, which a held direction winds towards BirdAcceleration a step per tick
 		// and letting go zeroes - see HandleBirdMovement()
 		float _birdAccelX = 0.0f;

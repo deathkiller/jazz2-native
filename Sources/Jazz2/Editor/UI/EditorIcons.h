@@ -86,6 +86,12 @@ namespace Jazz2::Editor
 		Shapes,
 		History,
 		Properties,
+		// Crossed out, a layer hidden in the game and so in the editor too, see Formats::LayerRecord::Visible
+		EyeOff,
+		// Only the outline of Play, as Play Here
+		PlayOutline,
+		// A flag with an arrow, an event of the original game kept for the level script, see EventType::PassthroughEvent
+		Passthrough,
 		// Shown by the pointer, see UiCursorOverlay
 		CursorResizeHorizontal,
 		CursorResizeVertical,
@@ -114,8 +120,9 @@ namespace Jazz2::Editor
 		/**
 		 * @brief Returns the color of a pixel of an icon as R, G, B and A bytes from the lowest, 0 for transparent
 		 *
-		 * Besides `#` and `+`, `o` is the dark outline and the letters are colors of the game, the capital one a
-		 * shade darker: `w` white, `y` yellow, `r` red, `p` pink, `g` grey, `t` tan, `n` green and `b` blue.
+		 * Besides `#` and `+`, `1` to `7` are the color an eighth to seven eighths opaque, `o` is the dark outline and the letters are colors of the game, the capital one a
+		 * shade darker: `w` white, `y` yellow, `r` red, `p` pink, `g` grey, `t` tan, `n` green and `b` blue. `m` is
+		 * the shine on green, a pale green.
 		 */
 		static std::uint32_t GetPixelColor(char pixel);
 	};

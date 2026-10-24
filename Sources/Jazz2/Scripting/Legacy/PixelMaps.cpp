@@ -5,6 +5,7 @@
 #include "Internal.h"
 
 #include "../../../nCine/Graphics/ITextureLoader.h"
+#include "../../../nCine/Graphics/PngCodec.h"
 #include "../../../nCine/Base/Algorithms.h"
 
 #include <algorithm>
@@ -161,6 +162,22 @@ namespace Jazz2::Scripting
 			return map;
 		}
 		jjPIXELMAP* jjPIXELMAP::CreateFromFilename(const String& filename, const jjPAL* palette, std::uint8_t threshold) {
+			// An image of a palette gives its indices as they are, 0 is transparent (ThreedRealms' burger booth was a black
+			// square otherwise)
+			if (IsScriptFileNameSafe(filename)) {
+				auto stream = OpenScriptFile(filename);
+				PngImage image;
+				PngDecodeOptions options;
+				options.VerifyCrc = true;
+				if (stream != nullptr && stream->IsValid() && PngCodec::Decode(*stream, image, options) == PngError::None && image.Indexed) {
+					jjPIXELMAP* map = Create(std::uint32_t(image.Width), std::uint32_t(image.Height));
+					if (map != nullptr) {
+						std::memcpy(map->_pixels.get(), image.Pixels.data(), std::size_t(image.Width) * image.Height);
+					}
+					return map;
+				}
+			}
+
 			// The colors of the image become the nearest ones of the palette, a pixel of less alpha than `threshold` is
 			// transparent
 			jjCOLORMAP* colors = jjCOLORMAP::CreateFromFilename(filename);
@@ -981,10 +998,7 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjCOLORMAP", "jjCOLORMAP& trim(uint &out, uint &out, uint &out, uint &out, uint8 = 0)", asMETHOD(jjCOLORMAP, trim), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjCOLORMAP", "jjCOLORMAP& trim(uint8 = 0)", asMETHOD(jjCOLORMAP, trimBasic), asCALL_THISCALL);
 		engine->RegisterObjectBehaviour("jjPIXELMAP", asBEHAVE_FACTORY, "jjPIXELMAP@ f(const jjCOLORMAP &in colorMap, const jjPAL &in palette = jjPalette)", asFUNCTION(jjPIXELMAP::CreateFromColorMap), asCALL_CDECL);
-		// TODO
-		/*
-
-		engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @load(const jjPIXELMAP &in, uint frameWidth, uint frameHeight, uint frameSpacingX = 0, uint frameSpacingY = 0, uint startX = 0, uint startY = 0, const array<int> &in coldSpotYOffsets = array<int>(), int firstAnimToOverwrite = -1, int firstFrameToOverwrite = -1)", asFUNCTION(importSpriteSheetToAnimSet), asCALL_CDECL_OBJFIRST);*/
+		engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @load(const jjPIXELMAP &in, uint frameWidth, uint frameHeight, uint frameSpacingX = 0, uint frameSpacingY = 0, uint startX = 0, uint startY = 0, const array<int> &in coldSpotYOffsets = array<int>(), int firstAnimToOverwrite = -1, int firstFrameToOverwrite = -1)", asMETHOD(jjANIMSET, loadSheet), asCALL_THISCALL);
 
 		engine->RegisterObjectType("jjMASKMAP", sizeof(jjMASKMAP), asOBJ_REF);
 		engine->RegisterObjectBehaviour("jjMASKMAP", asBEHAVE_FACTORY, "jjMASKMAP@ f(bool filled = false)", asFUNCTION(jjMASKMAP::CreateFromBool), asCALL_CDECL);

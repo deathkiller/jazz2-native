@@ -13,7 +13,13 @@
 #include "../../Actors/Collectibles/CollectibleBase.h"
 #include "../../Actors/Enemies/Dragon.h"
 #include "../../Actors/Enemies/Monkey.h"
+#include "../../Actors/Environment/AirboardGenerator.h"
+#include "../../Actors/Environment/BonusWarp.h"
+#include "../../Actors/Environment/Moth.h"
+#include "../../Actors/Environment/SwingingVine.h"
 #include "../../Actors/Solid/GenericContainer.h"
+#include "../../Actors/Solid/MovingPlatform.h"
+#include "../../Actors/Solid/PinballBumper.h"
 #include "../../Actors/Weapons/ShotBase.h"
 #include "../../Actors/Weapons/TNT.h"
 #include "../../Events/EventMap.h"
@@ -41,7 +47,8 @@ namespace Jazz2::Scripting::Legacy
 
 		// CREATOR::Type of JJ2+
 		constexpr std::uint32_t cOBJECT = 0;
-		constexpr std::uint32_t cPLAYER = 2;
+		constexpr std::uint32_t cLEVEL = 0x4000;
+		constexpr std::uint32_t cPLAYER = 0x8000;
 
 		// BEHAVIOR::EXPLOSION2 of JJ2+, the end of a collected pickup
 		constexpr std::uint32_t BehaviorExplosion2 = aCOUNT + 21;
@@ -68,7 +75,7 @@ namespace Jazz2::Scripting::Legacy
 				case aENERGYUP: case aFULLENERGY:
 				case aFIRESHIELD: case aWATERSHIELD: case aLIGHTSHIELD: case aLASERSHIELD:
 				case aFASTFEET: case aEXTRALIFE: case aINVINCIBILITY: case aEXTRATIME: case aFREEZER: case aSTOPWATCH:
-				case aFLYCARROT:
+				case aFLYCARROT: case aAIRBOARD:
 				case aRECTREDGEM: case aRECTGREENGEM: case aRECTBLUEGEM:
 					return hPICKUP;
 				default:
@@ -582,6 +589,28 @@ namespace Jazz2::Scripting::Legacy
 		// the object stays as the last one left it, and drawn so (see LevelScriptLoader::OnLevelUpdate()), a few ticks are
 		// caught up after a slow frame
 		constexpr std::int32_t MaxTicksPerFrame = 4;
+		if (_ranOwnBehavior && !_breaking) {
+			if (auto* platform = runtime_cast<Actors::Solid::MovingPlatform>(actor)) {
+				// A behavior moving the point a platform hangs from in every tick (ThreedRealms hangs one from another) moves it
+				// on between the ticks as much as in the last one, the platform and who stands on it would stutter at more frames
+				// than ticks otherwise - for a tick at most, the next one puts it where the behavior wants it
+				constexpr float TickTime = 60.0f / 70.0f;
+				Actors::ActorBase* creator = (_hangsFromCreator ? GetCreatorPlatform() : nullptr);
+				if (creator != nullptr) {
+					// Hung where the platform it was made by is, it hangs there in every frame - that one moves by whole pixels,
+					// unevenly from tick to tick, and moving on by the last step went back and forth by a pixel (ThreedRealms'
+					// recursive platforms, the player standing on them shook)
+					platform->SetOriginPos(creator->GetPos());
+				} else if (_originStep != Vector2f::Zero && _originStepTime < TickTime) {
+					float time = std::min(timeMult, TickTime - _originStepTime);
+					platform->SetOriginPos(platform->GetOriginPos() + _originStep * (time / TickTime));
+					_originStepTime += time;
+				}
+				// A platform moves in every frame as the game moves it, a player standing on it would be carried by the ticks
+				// otherwise (see RunOwnBehavior())
+				actor->OnUpdate(timeMult);
+			}
+		}
 		std::int32_t currentTick = _levelScripts->GetGameTick();
 		if (_nextTick < 0 || currentTick - _nextTick >= MaxTicksPerFrame) {
 			_nextTick = currentTick;
@@ -611,11 +640,20 @@ namespace Jazz2::Scripting::Legacy
 		_drawn = false;
 		_drawFrame = false;
 		_ranOwnBehavior = false;
+		// JJ2 counts it down for every object, the behaviors only set it
+		if (_obj->justHit > 0) {
+			_obj->justHit--;
+		}
 
-		// The frame changes only when the behavior of the game runs (see RunOwnBehavior())
+		// What a script changed since, also in the behavior of another object (ThreedRealms' gem series move their gems), goes
+		// to the object of the game first; the frame changes only when the behavior of the game runs (see RunOwnBehavior()) -
+		// a behavior of the script sees `STATE::KILL` another one gave it first (ThreedRealms' puppets break into pieces then)
+		bool hasScriptBehavior = (_obj->behavior.function != nullptr || _obj->behavior.object != nullptr);
+		PushToActor(*_obj, *actor, hasScriptBehavior);
 		PullFromActor(_levelScripts, *_obj, *actor, false);
 
 		// A copy keeps the behavior alive while it runs, it may replace itself
+		Vector2f origin(_obj->xOrg, _obj->yOrg);
 		jjBEHAVIOR behavior = _obj->behavior;
 		if (!CallScriptBehavior(_levelScripts, *_obj, behavior)) {
 			// The script gave the object a behavior of the game again
@@ -637,9 +675,95 @@ namespace Jazz2::Scripting::Legacy
 
 		// The game doesn't count `age` itself, the behaviors do and scripts use it for anything
 		UpdateSkin(*_obj);
+		_originStep = Vector2f(_obj->xOrg, _obj->yOrg) - origin;
+		_originStepTime = 0.0f;
+		if (Actors::ActorBase* creator = GetCreatorPlatform()) {
+			jjOBJ* creatorView = _levelScripts->GetObjectView(creator);
+			_hangsFromCreator = (creatorView != nullptr && creatorView->xPos == _obj->xOrg && creatorView->yPos == _obj->yOrg);
+		} else {
+			_hangsFromCreator = false;
+		}
 		PushToActor(*_obj, *actor);
 		UpdateFrameHitbox(*actor);
+		CollideByFrame();
 		return true;
+	}
+
+	bool ScriptObjectHost::CollidesByFrame() const
+	{
+		return (!_collidingByFrame && _obj->curFrame != 0 && _obj->get_playerHandling() == hPLAYERBULLET &&
+			(_obj->behavior.function != nullptr || _obj->behavior.object != nullptr) &&
+			runtime_cast<Actors::Weapons::ShotBase>(_actor) != nullptr);
+	}
+
+	void ScriptObjectHost::CollideByFrame()
+	{
+		if (!CollidesByFrame() || _actor->GetState(Actors::ActorState::IsDestroyed) || !UpdateFrameBounds()) {
+			return;
+		}
+
+		// The frame of an object reaches out of its hitbox, the ones near enough are found by their hitboxes first
+		constexpr float Reach = 64.0f;
+		const Recti& bounds = _pixelBounds;
+		float left = _obj->xPos + PositionOffset + (_obj->direction < 0 ? float(-bounds.X - bounds.W) : float(bounds.X));
+		float top = _obj->yPos + PositionOffset + float(bounds.Y);
+		AABBf box(left - Reach, top - Reach, left + float(bounds.W) + Reach, top + float(bounds.H) + Reach);
+		SmallVector<Actors::ActorBase*, 8> nearby;
+		_actor->_levelHandler->FindCollisionActorsByAABB(_actor, box, [&nearby](Actors::ActorBase* other) {
+			if (runtime_cast<Actors::Player>(other) == nullptr && runtime_cast<Actors::Weapons::ShotBase>(other) == nullptr) {
+				nearby.push_back(other);
+			}
+			return true;
+		});
+		if (nearby.empty()) {
+			return;
+		}
+
+		auto& tables = _levelScripts->GetAnimationTables();
+		jjANIMFRAME* frame = tables.GetFrame(_obj->curFrame);
+		if (frame == nullptr) {
+			return;
+		}
+		// As JJ2 has bullets hit objects, by any pixel of the two frames, the game decides what the hit does then - a bullet
+		// with `var[6] & 16` goes through what it hits (ThreedRealms' sword)
+		bool goesThrough = ((_obj->get_var(6) & 16) != 0);
+		_collidingByFrame = true;
+		for (Actors::ActorBase* other : nearby) {
+			jjOBJ* target = _levelScripts->GetObjectView(other);
+			if (target == nullptr || target->curFrame == 0 || other->GetState(Actors::ActorState::IsDestroyed)) {
+				continue;
+			}
+			// Bullets go through pickups, particles, explosions and other bullets in JJ2 (a pickup of the game would stop the
+			// sword here), as the player collides with them
+			constexpr std::uint32_t hEXPLOSION = 4;
+			constexpr std::uint32_t hDELAYEDPICKUP = 6;
+			std::uint32_t handling = (target->_playerHandlingSet ? target->_playerHandling
+				: (runtime_cast<Actors::Collectibles::CollectibleBase>(other) != nullptr ? hPICKUP : GetDefaultPlayerHandling(target->eventID)));
+			if (handling == hPICKUP || handling == hDELAYEDPICKUP || handling == hPARTICLE || handling == hEXPLOSION ||
+				handling == hPLAYERBULLET || handling == hENEMYBULLET) {
+				continue;
+			}
+			jjANIMFRAME* targetFrame = tables.GetFrame(target->curFrame);
+			if (targetFrame == nullptr) {
+				continue;
+			}
+			bool hit = tables.DoFramesCollide(*frame, std::int32_t(_obj->xPos), std::int32_t(_obj->yPos), _obj->direction,
+				*targetFrame, std::int32_t(target->xPos), std::int32_t(target->yPos), target->direction, true);
+			targetFrame->Release();
+			if (!hit) {
+				continue;
+			}
+			if (!Actors::ActorBase::HandleCollisionByOverride(other, _actor)) {
+				if (!other->OnHandleCollision(_actor) && !goesThrough) {
+					_actor->OnHandleCollision(other);
+				}
+			}
+			if (_actor->GetState(Actors::ActorState::IsDestroyed)) {
+				break;
+			}
+		}
+		_collidingByFrame = false;
+		frame->Release();
 	}
 
 	void ScriptObjectHost::FinishTicks()
@@ -647,11 +771,20 @@ namespace Jazz2::Scripting::Legacy
 		if (_drawn || _drawFrame) {
 			// A frame of an animation a script gave the object, or one it chose, is drawn as it is, the object of the game
 			// draws itself otherwise (its frame is the same then)
-			bool ownFrame = (_obj->_skinAnim > 0 || _obj->curFrame != _obj->_synced.CurFrame || _obj->_synced.NativeAnim == 0);
+			bool ownFrame = (_obj->_skinAnim > 0 || _obj->curFrame != _obj->_synced.CurFrame || _obj->_synced.NativeAnim == 0 ||
+				_obj->_synced.LongerAnim);
 			if (ownFrame && _obj->curFrame != 0) {
-				DrawFrame(_levelScripts, *_obj);
+				// Where it floats, as the object of the game draws a pickup
+				DrawFrame(_levelScripts, *_obj, _actor->_pos.Y - GetRestingY(*_actor));
 				_drawn = false;
 			} else {
+				// An animation of a script without frames draws nothing (`curAnim = 1` is blank in JJ2+, ThreedRealms hides the
+				// joint of its double platform so)
+				_drawn = !(ownFrame && _obj->_skinAnim > 0);
+			}
+			if (auto* platform = runtime_cast<Actors::Solid::MovingPlatform>(_actor)) {
+				// The chain is drawn by the game, the platform only if the frame is its own
+				platform->SetBodyHidden(!_drawn);
 				_drawn = true;
 			}
 		}
@@ -667,16 +800,46 @@ namespace Jazz2::Scripting::Legacy
 		jjOBJ& obj = *_obj;
 		auto* player = runtime_cast<Actors::Player>(other);
 		auto* shot = (player == nullptr ? runtime_cast<Actors::Weapons::ShotBase>(other) : nullptr);
+		if (CollidesByFrame()) {
+			// See CollideByFrame()
+			return true;
+		}
+		if (shot != nullptr) {
+			jjOBJ* bullet = _levelScripts->GetObjectView(shot);
+			if (bullet != nullptr && bullet->_host != nullptr && bullet->_host->CollidesByFrame()) {
+				return true;
+			}
+		}
 		if (player == nullptr && shot == nullptr) {
 			return false;
+		}
+		if (player != nullptr && runtime_cast<Actors::Environment::BonusWarp>(actor) != nullptr &&
+			(obj.behavior.function != nullptr || obj.behavior.object != nullptr)) {
+			// Only BEHAVIOR::WARP warps, see RunGameBehavior()
+			return true;
 		}
 
 		// What the object is to players, the game handles a pickup as one, anything else as special
 		std::uint32_t playerHandling = (obj._playerHandlingSet ? obj._playerHandling
-			: (runtime_cast<Actors::Collectibles::CollectibleBase>(actor) != nullptr ? hPICKUP : hSPECIAL));
+			: (runtime_cast<Actors::Collectibles::CollectibleBase>(actor) != nullptr || GetDefaultPlayerHandling(obj.eventID) == hPICKUP ? hPICKUP : hSPECIAL));
 
 		if (obj._playerHandlingSet && playerHandling == hPARTICLE) {
-			// A particle collides with nothing, players and bullets go through it whatever its `bulletHandling` is, as in JJ2+
+			// A particle collides with nothing, players and bullets go through it whatever its `bulletHandling` is, as in JJ2+ -
+			// a moth flies off a player by its behavior there, here by the collision (ThreedRealms makes them particles)
+			return (player == nullptr || runtime_cast<Actors::Environment::Moth>(actor) == nullptr);
+		}
+
+		if (player != nullptr && obj._playerHandlingSet && playerHandling != hPICKUP && !obj._scriptedCollisions &&
+			runtime_cast<Actors::Collectibles::CollectibleBase>(actor) != nullptr) {
+			// A pickup of the game a script made something else isn't collected (ThreedRealms' food that bumps or walks) - an
+			// enemy is hurt by an attack and hurts otherwise, as one of the game, anything else is the behavior's
+			if (playerHandling == 0) {
+				if (player->GetSpecialMove() != Actors::Player::SpecialMoveType::None || player->HasSugarRush()) {
+					actor->DecreaseHealth(4, player);
+				} else {
+					player->TakeDamage(1, 4.0f * (player->GetPos().X > actor->GetPos().X ? 1.0f : -1.0f));
+				}
+			}
 			return true;
 		}
 
@@ -691,16 +854,16 @@ namespace Jazz2::Scripting::Legacy
 				CallObjectHit(_levelScripts, obj, nullptr, p, 0);
 				return true;
 			}
-			// Only an attack hits a special object, a sugar rush (0) or a special move (1), as JJ2+ tells them apart
-			std::int32_t force;
-			if (player->HasSugarRush()) {
-				force = 0;
-			} else if (player->GetSpecialMove() != Actors::Player::SpecialMoveType::None) {
-				force = 1;
-			} else {
-				return false;
+			// A special object is told of every touch, as measured in JJ2+ - 1 while the player attacks (a sugar rush, a special
+			// move), 0 otherwise - and the game never collects it (ThreedRealms' pumpkin bombs and frosty breath are food)
+			// Once in a tick, the game collides in every frame
+			std::int32_t currentTick = _levelScripts->GetGameTick();
+			if (_playerHitTick != currentTick) {
+				_playerHitTick = currentTick;
+				bool attacks = (player->HasSugarRush() || player->GetSpecialMove() != Actors::Player::SpecialMoveType::None);
+				CallObjectHit(_levelScripts, obj, nullptr, p, attacks ? 1 : 0);
 			}
-			return CallObjectHit(_levelScripts, obj, nullptr, p, force);
+			return true;
 		}
 
 		if (obj._bulletHandlingSet) {
@@ -713,15 +876,36 @@ namespace Jazz2::Scripting::Legacy
 				return true;
 			}
 		}
+
+		jjOBJ* bullet = _levelScripts->GetObjectView(shot);
+		if (obj._playerHandlingSet && playerHandling == 0 && !obj._scriptedCollisions &&
+			runtime_cast<Actors::Collectibles::CollectibleBase>(actor) != nullptr) {
+			// A pickup of the game a script made an enemy is hurt by bullets as one of the game, a bullet with `var[6] & 16` goes
+			// through it (ThreedRealms' sword) and hurts it again only once it stopped flashing
+			bool goesThrough = (bullet != nullptr && (bullet->get_var(6) & 16) != 0);
+			if (!goesThrough || obj.justHit == 0) {
+				actor->DecreaseHealth(shot->GetStrength(), shot);
+				obj.justHit = 5;
+			}
+			if (!goesThrough) {
+				shot->DecreaseHealth(INT32_MAX);
+			}
+			return true;
+		}
 		if (!obj._scriptedCollisions || playerHandling != hSPECIAL) {
 			return false;
 		}
 
 		// The force of a bullet is its damage, as the `animSpeed` of a bullet in JJ2+
-		jjOBJ* bullet = _levelScripts->GetObjectView(shot);
 		Actors::Player* owner = shot->GetOwner();
 		jjPLAYER* p = (owner != nullptr ? _levelScripts->GetPlayerBackingStore(owner) : nullptr);
-		return CallObjectHit(_levelScripts, obj, bullet, p, shot->GetStrength());
+		std::uint32_t bulletState = (bullet != nullptr ? bullet->state : 0);
+		bool handled = CallObjectHit(_levelScripts, obj, bullet, p, shot->GetStrength());
+		if (bullet != nullptr && bullet->state == sEXPLODE && bulletState != sEXPLODE) {
+			// The script stopped the bullet, which ends it as hitting anything does (HH17's snowmen, Jazz1 enemies)
+			shot->DecreaseHealth(INT32_MAX);
+		}
+		return handled;
 	}
 
 	ScriptSceneryObject::ScriptSceneryObject()
@@ -766,21 +950,66 @@ namespace Jazz2::Scripting::Legacy
 		}
 	}
 
-	void ScriptObjectHost::OnPerish(Actors::ActorBase* actor, Actors::ActorBase* collider)
+	Task<bool> ScriptEventObject::OnActivatedAsync(const Actors::ActorActivationDetails& details)
 	{
-		// As measured in JJ2+, a hit puts a crate in STATE::ACTION, and the behavior breaks it by BEHAVIOR::CRATE then
-		if (_breaking || runtime_cast<Actors::Solid::GenericContainer>(actor) == nullptr ||
-			(_obj->behavior.function == nullptr && _obj->behavior.object == nullptr)) {
-			return;
+		SetState(Actors::ActorState::CanBeFrozen | Actors::ActorState::CollideWithTileset | Actors::ActorState::ApplyGravitation, false);
+		async_return true;
+	}
+
+	bool ScriptEventObject::OnDraw(RenderQueue& renderQueue)
+	{
+		// Only the behavior of the script draws it
+		return true;
+	}
+
+	bool ScriptObjectHost::OnPerish(Actors::ActorBase* actor, Actors::ActorBase* collider)
+	{
+		if (_breaking) {
+			return false;
 		}
-		_breaking = true;
-		_drawn = false;
-		_levelScripts->BreakObject(_obj->objectID);
+		bool hasBehavior = (_obj->behavior.function != nullptr || _obj->behavior.object != nullptr);
+		if (runtime_cast<Actors::Solid::GenericContainer>(actor) != nullptr) {
+			// As measured in JJ2+, a hit puts a crate in STATE::ACTION, and the behavior breaks it by BEHAVIOR::CRATE then
+			if (hasBehavior) {
+				_breaking = true;
+				_drawn = false;
+				_levelScripts->BreakObject(_obj->objectID);
+			}
+			return false;
+		}
+
+		// Killed by the game, the script killed it already otherwise and its behavior has seen it
+		if (_obj->state == sKILL || _obj->energy <= 0) {
+			return false;
+		}
+		PullFromActor(_levelScripts, *_obj, *actor, false);
+		_obj->state = sKILL;
+		_obj->energy = 0;
+		if (hasBehavior) {
+			// The behavior sees the object killed in a tick of its own, as in JJ2+, most make their particles then (the enemies
+			// of Jazz1 of HH18), the object of the game is gone after it - unless the behavior gives it energy and another state
+			// again, JJ2 kills only what a behavior lets die (ThreedRealms' puppet hands go on to the next puppet)
+			jjBEHAVIOR behavior = _obj->behavior;
+			CallScriptBehavior(_levelScripts, *_obj, behavior);
+			if (_obj->state != sKILL && _obj->energy > 0) {
+				actor->_health = _obj->energy;
+				_obj->_synced.Energy = _obj->energy;
+				_obj->_synced.State = _obj->state;
+				return true;
+			}
+		} else if (_obj->_skinAnim > 0 && _obj->curFrame != 0) {
+			// The behavior of the game bursts the frame the object shows into particles, which is one of the script (HH18's
+			// penguins are lizards), the debris of the object of the game would be of the animation it doesn't show
+			jjOBJ::AddPixelExplosion(_levelScripts, _obj->xPos, _obj->yPos, _obj->curFrame, _obj->direction);
+		}
+		return false;
 	}
 
 	bool ScriptObjectHost::OwnsDebris() const
 	{
-		return _breaking;
+		// The debris of an object showing an animation of a script would be of the one it doesn't show (HH17's snowmen break
+		// into their own pieces, the script makes them)
+		return (_breaking || _obj->_skinAnim > 0);
 	}
 
 	bool ScriptObjectHost::OwnsLights() const
@@ -799,16 +1028,97 @@ namespace Jazz2::Scripting::Legacy
 	bool ScriptObjectHost::OnUpdateHitbox(Actors::ActorBase* actor)
 	{
 		AABBf hitbox;
-		if (!GetFrameHitbox(*actor, hitbox)) {
+		if (!GetPlatformBox(hitbox) && !GetFrameHitbox(*actor, hitbox)) {
 			return false;
 		}
 		actor->AABBInner = hitbox;
 		return true;
 	}
 
+	bool ScriptObjectHost::GetPlatformBox(AABBf& box)
+	{
+		// A platform only while the behavior makes it one, in every tick
+		if (_platformTick == NoPlatform || _levelScripts->GetGameTick() - _platformTick > 1 || !UpdateFrameBounds()) {
+			return false;
+		}
+		// As wide as its frame, the top where the feet of a player stand: 24 pixels above the object as on a platform of the
+		// game (measured in JJ2+, whatever the frame is)
+		constexpr float StandingTop = 5.0f;
+		float width = float(_platformWidth > 0 ? _platformWidth : _frameRect.W);
+		float left = _obj->xPos + PositionOffset + (_platformWidth > 0 ? -width * 0.5f
+			: (_obj->direction < 0 ? float(-_frameRect.X - _frameRect.W) : float(_frameRect.X)));
+		float top = _obj->yPos + PositionOffset - StandingTop;
+		box = AABBf(left, top, left + width, top + 8.0f);
+		return true;
+	}
+
+	void ScriptObjectHost::BePlatform(float xOld, float yOld, std::int32_t width)
+	{
+		_platformTick = _levelScripts->GetGameTick();
+		_platformWidth = std::int16_t(std::clamp<std::int32_t>(width, 0, INT16_MAX));
+		AABBf box;
+		if (!GetPlatformBox(box)) {
+			return;
+		}
+
+		// A player standing on it goes along with it, one falling onto it from above stands on it then - it's solid while it
+		// carries someone, or its own frame would be under the player
+		Vector2f delta(_obj->xPos - xOld, _obj->yPos - yOld);
+		bool carrying = false;
+		for (Actors::Player* player : _actor->_levelHandler->GetPlayers()) {
+			Vector2f pos = player->GetPos();
+			float feet = player->AABBInner.B;
+			bool over = (pos.X + delta.X >= box.L && pos.X + delta.X <= box.R);
+			bool standing = (player->GetCarryingObject() == _actor);
+			if (!standing) {
+				if (player->GetCarryingObject() != nullptr || player->GetSpeed().Y < 0.0f || !over ||
+					feet < box.T - 2.0f || feet > box.T + std::max(player->GetSpeed().Y * 2.0f, 6.0f)) {
+					continue;
+				}
+			} else if (!over || player->GetSpeed().Y < 0.0f) {
+				player->CancelCarryingObject();
+				continue;
+			}
+
+			Vector2f target(pos.X + (standing ? delta.X : 0.0f), box.T - (feet - pos.Y));
+			if (standing && player->GetSpeed().X == 0.0f) {
+				// Whole pixels off the object while standing still, as on a platform of the game (see MovingPlatform::OnUpdate())
+				target.X = _obj->xPos + std::round(target.X - _obj->xPos);
+			}
+			if (auto* tiles = _actor->_levelHandler->TileMap()) {
+				Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, false };
+				if (!tiles->IsTileEmpty(player->AABBInner + (target - pos), params)) {
+					target.X = pos.X;
+					if (!tiles->IsTileEmpty(player->AABBInner + (target - pos), params)) {
+						player->CancelCarryingObject();
+						continue;
+					}
+				}
+			}
+			player->MoveInstantly(target, Actors::MoveType::Absolute | Actors::MoveType::Force);
+			player->UpdateCarryingObject(_actor);
+			carrying = true;
+		}
+		_actor->SetState(Actors::ActorState::IsSolidObject, carrying);
+		_actor->AABBInner = box;
+	}
+
+	void ScriptObjectHost::ClearPlatform()
+	{
+		_platformTick = NoPlatform;
+		for (Actors::Player* player : _actor->_levelHandler->GetPlayers()) {
+			player->CancelCarryingObject(_actor);
+		}
+		_actor->SetState(Actors::ActorState::IsSolidObject, false);
+	}
+
 	bool ScriptObjectHost::GetFrameHitbox(const Actors::ActorBase& actor, AABBf& hitbox)
 	{
-		if (_obj->_skinAnim <= 0 || _obj->curFrame == 0 || !actor.GetState(Actors::ActorState::IsSolidObject)) {
+		// Enemies are hit by their frames in JJ2 too (the pickups ThreedRealms made enemies), a pickup of the game is a few pixels
+		// big - bullets of scripts collide by their frames (see CollideByFrame())
+		bool isSolid = actor.GetState(Actors::ActorState::IsSolidObject);
+		bool hitsByFrame = (isSolid || (_obj->_playerHandlingSet && _obj->get_playerHandling() == 0));
+		if (_obj->_skinAnim <= 0 || _obj->curFrame == 0 || !hitsByFrame) {
 			return false;
 		}
 		if (!UpdateFrameBounds()) {
@@ -821,7 +1131,34 @@ namespace Jazz2::Scripting::Legacy
 		float x = actor._pos.X - PositionOffset;
 		float y = actor._pos.Y - PositionOffset;
 		hitbox = AABBf(x + left, y + float(bounds.Y), x + left + float(bounds.W), y + float(bounds.Y + bounds.H));
+
+		// The frame reaches up to 3 pixels into the ground it's put on (see FindFrameGround()), the hitbox ends above it, or
+		// the object couldn't be pushed along the ground
+		auto* tileMap = actor._levelHandler->TileMap();
+		if (isSolid && tileMap != nullptr) {
+			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
+			float column = std::floor(x);
+			for (std::int32_t i = 0; i < 4 && hitbox.B - hitbox.T > 1.0f; i++) {
+				float row = std::floor(hitbox.B);
+				if (tileMap->IsTileEmpty(AABBf(column, row, column, row), params)) {
+					break;
+				}
+				hitbox.B -= 1.0f;
+			}
+		}
 		return true;
+	}
+
+	bool ScriptObjectHost::IsFrameOnGround(const Actors::ActorBase& actor)
+	{
+		auto* tileMap = actor._levelHandler->TileMap();
+		if (tileMap == nullptr || !UpdateFrameBounds()) {
+			return false;
+		}
+		Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
+		float x = std::floor(actor._pos.X - PositionOffset);
+		float y = std::floor(actor._pos.Y - PositionOffset) + float(_frameRect.Y + _frameRect.H);
+		return !tileMap->IsTileEmpty(AABBf(x, y, x, y), params);
 	}
 
 	bool ScriptObjectHost::UpdateFrameBounds()
@@ -877,11 +1214,21 @@ namespace Jazz2::Scripting::Legacy
 	void ScriptObjectHost::UpdateFrameHitbox(Actors::ActorBase& actor)
 	{
 		AABBf hitbox;
+		if (GetPlatformBox(hitbox)) {
+			// Neither put on the ground nor as big as its frame (see BePlatform())
+			actor.AABBInner = hitbox;
+			return;
+		}
+		if (_platformTick != NoPlatform) {
+			// The behavior made it a platform no more
+			ClearPlatform();
+		}
 		bool hasFrameHitbox = GetFrameHitbox(actor, hitbox);
-		if (hasFrameHitbox && !_hasFrameHitbox) {
+		if (hasFrameHitbox && !_hasFrameHitbox && actor.GetState(Actors::ActorState::IsSolidObject)) {
 			// The object of the game stood on the ground by a hitbox of its own, it's put on the ground by its frame as JJ2+
 			// puts its crates on the ground when they start (see FindFrameGround()) - and it stays there, a frame that reaches
-			// into a slope by a corner would slide down it
+			// into a slope by a corner would slide down it. Only a crate, the others are put on the ground by their scripts
+			// (HH17's snowmen, which a frame reaching down a slope would sink into the ground)
 			float offset;
 			bool onGround = FindFrameGround(actor, offset);
 			if (onGround) {
@@ -918,15 +1265,28 @@ namespace Jazz2::Scripting::Legacy
 		}
 
 		_isRunningOwnBehavior = true;
+		if (_obj->state == sSTART && runtime_cast<Actors::Solid::MovingPlatform>(_actor) != nullptr) {
+			// JJ2 reads the speed of a platform of the tile at its origin on its first update, a script may change it after the
+			// platform was made (ThreedRealms limits it by the difficulty) - the second parameter, 6 bits with a sign
+			std::uint32_t word = _levelScripts->GetOriginalEvent(std::int32_t(_obj->xOrg) >> 5, std::int32_t(_obj->yOrg) >> 5);
+			if ((word & 0xFF) == _obj->eventID) {
+				std::int32_t speed = std::int32_t((word >> (EventTranslator::ParamsShift + 2)) & 0x3F);
+				_obj->set_var(1, speed >= 32 ? speed - 64 : speed);
+			}
+		}
 		// What the behavior changed so far goes to the object first, what the object did comes back
 		UpdateSkin(*_obj);
 		PushToActor(*_obj, *_actor);
 		UpdateFrameHitbox(*_actor);
-		_actor->OnUpdate(_timeMult);
+		if (runtime_cast<Actors::Solid::MovingPlatform>(_actor) == nullptr) {
+			_actor->OnUpdate(_timeMult);
+		}
 		PullFromActor(_levelScripts, *_obj, *_actor);
-		// The behaviors of the game leave the start state on their first update, scenery sleeps until it breaks
+		// The behaviors of the game leave the start state on their first update, scenery sleeps until it breaks and a bumper
+		// until it's hit
 		if (_obj->state == sSTART) {
-			_obj->state = (runtime_cast<ScriptSceneryObject>(_actor) != nullptr ? sSLEEP : sSTILL);
+			bool sleeps = (runtime_cast<ScriptSceneryObject>(_actor) != nullptr || runtime_cast<Actors::Solid::PinballBumper>(_actor) != nullptr);
+			_obj->state = (sleeps ? sSLEEP : sSTILL);
 			_obj->_synced.State = _obj->state;
 		}
 		_isRunningOwnBehavior = false;
@@ -934,6 +1294,200 @@ namespace Jazz2::Scripting::Legacy
 		_ranOwnBehavior = true;
 		if (draw) {
 			_drawn = true;
+		}
+	}
+
+	void ScriptObjectHost::RunGameBehavior(std::uint32_t behavior, bool draw)
+	{
+		// BEHAVIOR::BUMP of JJ2+ is what the bumpers of pinball do (ThreedRealms' ghost bumpers are food that bumps)
+		constexpr std::uint32_t BehaviorBump = aCOUNT + 28;
+		if (behavior == BehaviorBump) {
+			behavior = (_obj->eventID == aPINCARROTBUMP ? aPINCARROTBUMP : aPIN500BUMP);
+		}
+		if (behavior == aSWINGVINE && runtime_cast<Actors::Environment::SwingingVine>(_actor) != nullptr) {
+			RunSwingingVine(draw);
+			return;
+		}
+		if (behavior == aTRIGGERSCENERY && _actor->GetSpawnEventType() == EventType::TriggerArea) {
+			// The tile isn't switched by the trigger by itself where a behavior drives it (see SpawnSceneryObject()), the
+			// behavior of the game switches it here: none while the trigger is on, the one it had otherwise
+			if (_obj->state == sDEACTIVATE) {
+				Deactivate();
+				return;
+			}
+			if (auto* tileMap = _actor->_levelHandler->TileMap()) {
+				Vector2i originTile = GetOriginTile(*_actor);
+				std::uint8_t triggerId = std::uint8_t(_obj->get_var(3));
+				std::uint16_t wanted = (tileMap->GetTrigger(triggerId) ? 0 : std::uint16_t(_obj->get_var(2)));
+				std::int32_t layer = _levelScripts->GetLayerIndex(4);
+				if (tileMap->GetTile(layer, originTile.X, originTile.Y) != wanted) {
+					tileMap->SetTile(layer, originTile.X, originTile.Y, wanted);
+				}
+			}
+			if (_obj->state == sSTART) {
+				_obj->state = sSLEEP;
+				_obj->_synced.State = _obj->state;
+			}
+			return;
+		}
+		// The behavior of another object of an event (ThreedRealms' food behaves as BEHAVIOR::DOGGYDOGG) makes the object of
+		// the game that object - JJ2+ runs it on whatever object, the game has it only in the object of its own
+		if (behavior >= aGUN3AMMO3 && behavior < aCOUNT && !_swapRequested) {
+			EventType type = _levelScripts->GetEventTranslator().FromOriginal(std::uint8_t(behavior), 0).Type;
+			if (type != EventType::Empty && type != EventType::PassthroughEvent && type != _actor->GetSpawnEventType() &&
+				_actor->GetSpawnEventType() != EventType::Empty && _actor->_levelHandler->EventSpawner()->CanSpawn(type)) {
+				_swapRequested = true;
+				_levelScripts->SwapActor(_obj->objectID, std::uint8_t(behavior));
+			}
+		}
+		RunOwnBehavior(draw);
+
+		if (runtime_cast<Actors::Environment::BonusWarp>(_actor) != nullptr) {
+			// BEHAVIOR::WARP of JJ2+ warps the players it touches when it runs, not when the game collides them (ThreedRealms' burger
+			// booth moves the players away for it, buying burgers there isn't a warp)
+			const AABBf& box = _actor->AABBInner;
+			for (Actors::Player* player : _actor->_levelHandler->GetPlayers()) {
+				Vector2f pos = player->GetPos();
+				if (pos.X + 10.0f > box.L && pos.X - 10.0f < box.R && pos.Y + 20.0f > box.T && pos.Y - 8.0f < box.B) {
+					static_cast<Actors::ActorBase*>(player)->OnHandleCollision(_actor);
+				}
+			}
+		}
+	}
+
+	Actors::ActorBase* ScriptObjectHost::GetCreatorPlatform() const
+	{
+		constexpr std::uint32_t CreatorObject = 0;
+		if (runtime_cast<Actors::Solid::MovingPlatform>(_actor) == nullptr || _obj->get_creatorType() != CreatorObject || _obj->get_creatorID() == 0) {
+			return nullptr;
+		}
+		Actors::ActorBase* creator = _levelScripts->GetScriptObject(_obj->get_creatorID());
+		return (creator != nullptr && creator != _actor && runtime_cast<Actors::Solid::MovingPlatform>(creator) != nullptr ? creator : nullptr);
+	}
+
+	void ScriptObjectHost::RunSwingingVine(bool draw)
+	{
+		// BEHAVIOR::SWINGINGVINE as measured in JJ2+ - the swing is `var[2]`, from 32768 at the right end it speeds up by 32 a tick
+		// towards the middle, the object is the end of the vine, which is drawn from links of the frame after `curFrame`. The vine
+		// of the game swings by a clock of its own, a behavior of a script only has the object (ThreedRealms' trapezes hang a bar
+		// from two of them)
+		jjOBJ& obj = *_obj;
+		if (obj.state == sSTART) {
+			obj.set_var(1, 128);
+			obj.set_var(2, 32768);
+			obj.set_var(3, 0);
+			obj.state = sACTION;
+		}
+		std::int32_t swing = obj.get_var(2);
+		std::int32_t speed = obj.get_var(3) + (swing > 0 ? -32 : 32);
+		swing += speed;
+		obj.set_var(0, (swing >> 8) + 128);
+		obj.set_var(2, swing);
+		obj.set_var(3, speed);
+		// Fitted to within a pixel and a half, the height exactly
+		obj.xPos = obj.xOrg + 115.4f * std::sin(1.025f * float(swing) / 32768.0f);
+		obj.yPos = obj.yOrg + float(obj.get_var(1) + 20 - (std::abs(swing) >> 11));
+
+		if (draw && !ContentResolver::Get().IsHeadless()) {
+			std::int32_t cell = 0;
+			if (auto* graphics = _levelScripts->GetAnimationTables().ResolveFrame(obj.curFrame + 1, cell)) {
+				// As thin as in JJ2+, down to 20 pixels above the end, where what hangs on it is
+				constexpr std::int32_t LinkCount = 16;
+				constexpr float LinkWidthScale = 0.25f;
+				float endY = obj.yPos - 20.0f;
+				// Along the vine, in the 1024 steps of a circle of JJ2
+				std::int32_t angle = std::int32_t(std::atan2(obj.xPos - obj.xOrg, endY - obj.yOrg) * 512.0f / fPi);
+				for (std::int32_t i = 0; i < LinkCount; i++) {
+					float t = float(i) / LinkCount;
+					ScriptWorldCanvas::SpriteDraw link = { graphics, cell, obj.xOrg + (obj.xPos - obj.xOrg) * t, obj.yOrg + (endY - obj.yOrg) * t,
+						1, LinkWidthScale, 1.0f, angle, spriteType_NORMAL, 0, _levelScripts->GetLayerDrawZ(4), 0 };
+					_levelScripts->GetWorldCanvas().AddSprite(link);
+				}
+			}
+		}
+	}
+
+	std::shared_ptr<Actors::ActorBase> ScriptObjectHost::SpawnInPlace(LevelScriptLoader* levelScripts, Actors::ActorBase& actor, std::uint8_t eventId)
+	{
+		// With the parameters of the event it was made of, JJ2 reads them by the tile
+		auto& translator = levelScripts->GetEventTranslator();
+		std::uint32_t original = translator.ToOriginal(actor.GetSpawnEventType(), actor.GetSpawnEventParams());
+		Compatibility::ConversionResult converted = translator.FromOriginal(eventId, original >> 12);
+		if (converted.Type == EventType::Empty || converted.Type == EventType::PassthroughEvent) {
+			return nullptr;
+		}
+		Actors::ActorState flags = actor.GetState() & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator);
+		std::shared_ptr<Actors::ActorBase> spawned = actor._levelHandler->EventSpawner()->SpawnEvent(converted.Type, converted.Params,
+			flags, Vector3i(std::int32_t(actor._pos.X), std::int32_t(actor._pos.Y), ILevelHandler::MainPlaneZ));
+		if (spawned != nullptr) {
+			spawned->_originTile = actor._originTile;
+			spawned->SetFacingLeft(actor.IsFacingLeft());
+			if (actor.GetState(Actors::ActorState::IsFromGenerator)) {
+				// The generator waits for the new object to be gone, the old one would stay alive and drawn (ThreedRealms'
+				// ghost bumpers showed the pretzels they're made of)
+				if (auto* events = actor._levelHandler->EventMap()) {
+					events->AttachGeneratorActor(actor._originTile.X, actor._originTile.Y, spawned);
+				}
+			}
+		}
+		return spawned;
+	}
+
+	void ScriptObjectHost::RunMonitor(bool draw)
+	{
+		RunOwnBehavior(draw);
+		if (_obj->state == sKILL || _obj->state == sFREEZE) {
+			return;
+		}
+
+		bool falling;
+		if (!_hasFrameHitbox) {
+			// The object of the game stands on the ground by its own hitbox
+			falling = !_actor->GetState(Actors::ActorState::CanJump);
+		} else if (IsFrameOnGround(*_actor)) {
+			if (!_heldInPlace) {
+				// It landed, it's put on the ground by its frame again
+				float offset;
+				if (FindFrameGround(*_actor, offset)) {
+					_actor->MoveInstantly(Vector2f(0.0f, offset), Actors::MoveType::Relative | Actors::MoveType::Force);
+				}
+				_actor->SetState(Actors::ActorState::ApplyGravitation, false);
+				_actor->SetState(Actors::ActorState::CollideWithTileset, true);
+				_actor->_speed = Vector2f::Zero;
+				_obj->yPos = _actor->_pos.Y - PositionOffset;
+				_obj->ySpeed = 0.0f;
+				_obj->_synced.YPos = _obj->yPos;
+				_obj->_synced.YSpeed = 0.0f;
+				_heldInPlace = true;
+			}
+			falling = false;
+		} else {
+			// The ground under its frame is gone, it was pushed off a ledge or the ground was destroyed - it falls straight
+			// down then, as in JJ2+, the ground its hitbox still touches by a corner doesn't hold it
+			_actor->SetState(Actors::ActorState::ApplyGravitation, true);
+			_actor->SetState(Actors::ActorState::CollideWithTileset, false);
+			_heldInPlace = false;
+			falling = true;
+		}
+		_obj->state = (falling ? sFALL : sSLEEP);
+		_obj->_synced.State = _obj->state;
+	}
+
+	void ScriptObjectHost::FollowScriptMovement()
+	{
+		if (_actor->GetState(Actors::ActorState::ApplyGravitation)) {
+			_actor->SetState(Actors::ActorState::ApplyGravitation | Actors::ActorState::CollideWithTileset, false);
+		}
+		_actor->_speed = Vector2f::Zero;
+		_obj->_movedByBehavior = true;
+		_obj->_synced.XSpeed = _obj->xSpeed;
+		_obj->_synced.YSpeed = _obj->ySpeed;
+		if (_obj->_synced.SkinOffsetY != 0.0f) {
+			// Placed by its frame from now on (see GetSkinOffsetY()), where the behavior put it
+			_obj->_synced.SkinOffsetY = 0.0f;
+			_actor->MoveInstantly(Vector2f(_obj->xPos + PositionOffset, _obj->yPos + PositionOffset), Actors::MoveType::Absolute | Actors::MoveType::Force);
+			_obj->_synced.XPos = _obj->xPos;
+			_obj->_synced.YPos = _obj->yPos;
 		}
 	}
 
@@ -961,7 +1515,7 @@ namespace Jazz2::Scripting::Legacy
 		}
 	}
 
-	void ScriptObjectHost::DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj)
+	void ScriptObjectHost::DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj, float offsetY)
 	{
 		if (ContentResolver::Get().IsHeadless()) {
 			return;
@@ -973,8 +1527,19 @@ namespace Jazz2::Scripting::Legacy
 		}
 		// Frozen or just hit as the game draws the objects, in the sprite layer
 		std::uint32_t mode = (obj.freeze != 0 ? spriteType_FROZEN : (obj.justHit != 0 ? spriteType_SINGLECOLOR : spriteType_NORMAL));
-		ScriptWorldCanvas::SpriteDraw draw = { graphics, cell, obj.xPos, obj.yPos, obj.direction, 1.0f, 1.0f, 0, mode, 15,
-			levelScripts->GetLayerDrawZ(4), 0 };
+		std::uint8_t param = 15;
+		switch (obj.eventID) {
+			case aREDGEM: case aGREENGEM: case aBLUEGEM: case aPURPLEGEM: case aSUPERREDGEM: case aREDGEMTEMP:
+			case aRECTREDGEM: case aRECTGREENGEM: case aRECTBLUEGEM:
+				// A gem in its color, as the behavior of the game draws it (ThreedRealms' skulls are gems)
+				if (mode == spriteType_NORMAL) {
+					mode = spriteType_GEM;
+					param = std::uint8_t(obj._vars[0] - 1);
+				}
+				break;
+		}
+		ScriptWorldCanvas::SpriteDraw draw = { graphics, cell, obj.xPos, obj.yPos + offsetY, obj.direction, 1.0f, 1.0f, 0, mode, param,
+			levelScripts->GetLayerDrawZ(4), (mode == spriteType_GEM ? levelScripts->GetSpritePaletteOffset(mode, param) : 0) };
 		levelScripts->GetWorldCanvas().AddSprite(draw);
 	}
 
@@ -992,10 +1557,20 @@ namespace Jazz2::Scripting::Legacy
 	{
 		obj.xPos = actor._pos.X - PositionOffset;
 		obj.yPos = GetRestingY(actor) - PositionOffset;
-		obj.xSpeed = actor._speed.X;
-		obj.ySpeed = actor._speed.Y;
-		obj.direction = (actor.IsFacingLeft() ? -1 : 1);
-		obj.energy = std::int8_t(std::clamp<std::int32_t>(actor._health, INT8_MIN, INT8_MAX));
+		if (!obj._movedByBehavior) {
+			obj.xSpeed = actor._speed.X;
+			obj.ySpeed = actor._speed.Y;
+		}
+		if (obj.direction == 0 || (obj.direction < 0) != actor.IsFacingLeft()) {
+			// Only the side it faces is of the game, the other bits a script gave it stay (0x40 draws it upside down, ThreedRealms'
+			// leaves of its growing trees)
+			obj.direction = (actor.IsFacingLeft() ? -1 : 1);
+		}
+		obj.energy =std::int8_t(std::clamp<std::int32_t>(actor._health, INT8_MIN, INT8_MAX));
+		if (obj.energy < obj._synced.Energy && obj.energy > 0) {
+			// Hit by something of the game, it flashes for 5 ticks as JJ2 makes it
+			obj.justHit = 5;
+		}
 		if (actor._health <= 0 || actor.GetState(Actors::ActorState::IsDestroyed)) {
 			obj.state = sKILL;
 		} else if (auto* scenery = runtime_cast<ScriptSceneryObject>(&actor)) {
@@ -1003,6 +1578,30 @@ namespace Jazz2::Scripting::Legacy
 				obj.state = sEXTRA;
 			} else if (scenery->IsBroken()) {
 				obj.state = sDONE;
+			}
+		} else if (auto* platform = runtime_cast<Actors::Solid::MovingPlatform>(&actor)) {
+			obj.set_var(1, platform->GetEventSpeed());
+		} else if (auto* bumper = runtime_cast<Actors::Solid::PinballBumper>(&actor)) {
+			// As BEHAVIOR::BUMP has it: ACTION the update it throws a player, `var[0]` is which, BOUNCE until it can again
+			// (ThreedRealms' ghost bumpers release the ghost then), it sleeps otherwise
+			if (bumper->GetCooldown() > 0.0f) {
+				if (obj.state != sACTION && obj.state != sBOUNCE) {
+					obj.state = sACTION;
+					std::int32_t playerIndex = 0;
+					float nearest = FLT_MAX;
+					for (auto* player : actor._levelHandler->GetPlayers()) {
+						float distance = (player->GetPos() - actor._pos).SqrLength();
+						if (distance < nearest) {
+							nearest = distance;
+							playerIndex = player->GetPlayerIndex();
+						}
+					}
+					obj.set_var(0, playerIndex);
+				} else {
+					obj.state = sBOUNCE;
+				}
+			} else if (obj.state == sACTION || obj.state == sBOUNCE || obj.state == sSTILL) {
+				obj.state = sSLEEP;
 			}
 		}
 
@@ -1020,24 +1619,99 @@ namespace Jazz2::Scripting::Legacy
 			std::uint32_t nativeAnim = tables.FindAnimationOfGraphics(actor._renderer.FrameSource);
 			std::uint32_t shownAnim = (obj._skinAnim > 0 ? std::uint32_t(obj._skinAnim) : nativeAnim);
 			std::uint32_t frameCount, firstFrame;
+			obj._synced.LongerAnim = false;
 			if (shownAnim != 0 && tables.GetAnimationFrames(shownAnim, frameCount, firstFrame) && frameCount > 0) {
-				std::uint32_t position = std::uint32_t(std::max<std::int32_t>(actor._renderer.CurrentFrame, 0)) % frameCount;
+				std::uint32_t position = std::uint32_t(std::max<std::int32_t>(actor._renderer.CurrentFrame, 0));
+				std::int32_t age = levelScripts->GetGameTick() - levelScripts->GetObjectSpawnTick(obj.objectID);
+				bool byAge = true;
+				if (shownAnim != nativeAnim) {
+					// A behavior of JJ2 counts the frames itself, however many the animation has: a walking lizard of JJ2+ in a
+					// skin of HH18 shows the next frame every 8 ticks (measured), from the first one when it's made - which
+					// putOnGround() of a script (HH17's snowmen) measures from
+					constexpr std::int32_t TicksPerFrame = 8;
+					position = std::uint32_t(std::max(age, 0) / TicksPerFrame);
+				} else if (std::int32_t(frameCount) > actor._renderer.FrameCount && actor._renderer.FrameCount > 0 && actor._renderer.AnimDuration > 0.0f) {
+					// A script made the animation longer than the graphics of the game have frames (ThreedRealms' skulls of 16
+					// are gems of 8), all of them follow each other as fast as those of the game, the frame is drawn as it is
+					float ticksPerFrame = std::max(actor._renderer.AnimDuration / actor._renderer.FrameCount * 70.0f, 1.0f);
+					position = std::uint32_t(float(std::max(age, 0)) / ticksPerFrame);
+					obj._synced.LongerAnim = true;
+				} else {
+					byAge = false;
+				}
+				if (byAge) {
+					// The frames count on from where a behavior set `frameID` (ThreedRealms' series of skulls start each at another)
+					std::int32_t base = std::int32_t(position % frameCount);
+					if (obj._synced.CurAnim == std::int16_t(shownAnim) && obj.frameID != std::int8_t(obj._synced.CurFrame - firstFrame)) {
+						obj._framePhase = std::int8_t(obj.frameID - base);
+					}
+					position = std::uint32_t(((base + obj._framePhase) % std::int32_t(frameCount) + std::int32_t(frameCount)) % std::int32_t(frameCount));
+				}
+				position %= frameCount;
 				obj.curAnim = std::int16_t(shownAnim);
 				obj.frameID = std::int8_t(position);
 				obj.curFrame = firstFrame + position;
+				if (runtime_cast<Actors::Solid::PinballBumper>(&actor) != nullptr && (obj.state == sACTION || obj.state == sBOUNCE)) {
+					// BEHAVIOR::BUMP shows the frame after while it throws a player (ThreedRealms' ghost bumpers take one back
+					// and burst into pieces of their bubble)
+					obj.frameID = 1;
+					obj.curFrame = firstFrame + 1;
+				}
+			} else if (obj._skinAnim > 0) {
+				// An animation without frames, the object shows nothing
+				obj.frameID = 0;
+				obj.curFrame = 0;
 			}
 			obj._synced.NativeAnim = std::int32_t(nativeAnim);
 			obj._synced.CurAnim = obj.curAnim;
 			obj._synced.CurFrame = obj.curFrame;
 		}
+
+		obj._synced.SkinOffsetY = GetSkinOffsetY(levelScripts, obj, actor);
+		obj.yPos += obj._synced.SkinOffsetY;
+		obj._synced.YPos = obj.yPos;
 	}
 
-	void ScriptObjectHost::PushToActor(jjOBJ& obj, Actors::ActorBase& actor)
+	float ScriptObjectHost::GetSkinOffsetY(LevelScriptLoader* levelScripts, const jjOBJ& obj, const Actors::ActorBase& actor)
+	{
+		// JJ2 rests the frame of an object on the ground by its coldspot, the object of the game stands by its hitbox - a walker
+		// a script gave an animation of its own (HH18's penguins) is placed so the coldspot is where the hitbox ends, or the
+		// frame would float above the ground or sink into it, and putOnGround() of the script would push it through
+		// By the first frame of the animation, the others often have no coldspot (as the converter takes it)
+		auto& tables = levelScripts->GetAnimationTables();
+		std::uint32_t frameCount, firstFrame;
+		if (obj._skinAnim <= 0 || !actor.GetState(Actors::ActorState::ApplyGravitation) || actor.GetState(Actors::ActorState::IsSolidObject) ||
+			!tables.GetAnimationFrames(std::uint32_t(obj._skinAnim), frameCount, firstFrame) || frameCount == 0) {
+			return 0.0f;
+		}
+		Recti frameRect; Vector2i coldSpot;
+		if (!tables.GetFrameSpots(firstFrame, frameRect, coldSpot) || coldSpot == Vector2i::Zero) {
+			return 0.0f;
+		}
+		// The coldspot is in the first masked row, as putOnGround() leaves it - a walker standing on the ground may end a pixel
+		// or two above it by its hitbox (HH18's penguins floated)
+		float groundY = actor.AABBInner.B;
+		auto* tileMap = actor._levelHandler->TileMap();
+		if (tileMap != nullptr && actor.GetState(Actors::ActorState::CanJump)) {
+			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
+			float x = std::floor(actor._pos.X);
+			float y = std::floor(groundY);
+			for (std::int32_t i = 0; i < 4; i++) {
+				if (!tileMap->IsTileEmpty(AABBf(x, y + float(i), x, y + float(i)), params)) {
+					groundY = y + float(i);
+					break;
+				}
+			}
+		}
+		return (groundY + PositionOffset - actor._pos.Y) - float(frameRect.Y - coldSpot.Y);
+	}
+
+	void ScriptObjectHost::PushToActor(jjOBJ& obj, Actors::ActorBase& actor, bool deferKill)
 	{
 		jjOBJ::SyncedState& synced = obj._synced;
 
 		if (obj.xPos != synced.XPos || obj.yPos != synced.YPos) {
-			Vector2f pos(obj.xPos + PositionOffset, obj.yPos + PositionOffset);
+			Vector2f pos(obj.xPos + PositionOffset, obj.yPos + PositionOffset - synced.SkinOffsetY);
 			if (auto* collectible = runtime_cast<Actors::Collectibles::CollectibleBase>(&actor)) {
 				if (collectible->_untouched) {
 					// It floats around the new place
@@ -1050,6 +1724,17 @@ namespace Jazz2::Scripting::Legacy
 		}
 		if (obj.xSpeed != synced.XSpeed || obj.ySpeed != synced.YSpeed) {
 			actor._speed = Vector2f(obj.xSpeed, obj.ySpeed);
+		}
+		if (auto* platform = runtime_cast<Actors::Solid::MovingPlatform>(&actor)) {
+			// A platform swings from xOrg and yOrg, which a behavior may move, by `var[1]` (ThreedRealms hangs one from another
+			// that swings the other way)
+			Vector2f origin(obj.xOrg + PositionOffset, obj.yOrg + PositionOffset);
+			if (origin != platform->GetOriginPos()) {
+				platform->SetOriginPos(origin);
+			}
+			if (obj.get_var(1) != platform->GetEventSpeed()) {
+				platform->SetEventSpeed(obj.get_var(1));
+			}
 		}
 		if (obj.direction != synced.Direction && obj.direction != 0) {
 			actor.SetFacingLeft(obj.direction < 0);
@@ -1064,9 +1749,12 @@ namespace Jazz2::Scripting::Legacy
 				actor.SetHealth(obj.energy);
 			}
 		}
+		bool killDeferred = false;
 		if (obj.state != synced.State) {
 			if (obj.state == sKILL) {
-				if (actor._health > 0) {
+				if (deferKill) {
+					killDeferred = true;
+				} else if (actor._health > 0) {
 					actor.DecreaseHealth(INT32_MAX);
 				}
 			} else if (obj.state == sDEACTIVATE) {
@@ -1080,7 +1768,10 @@ namespace Jazz2::Scripting::Legacy
 		synced.YSpeed = obj.ySpeed;
 		synced.Direction = obj.direction;
 		synced.Energy = obj.energy;
-		synced.State = obj.state;
+		if (!killDeferred) {
+			// A kill the behavior lets be still kills it afterwards
+			synced.State = obj.state;
+		}
 	}
 
 	float ScriptObjectHost::GetRestingY(const Actors::ActorBase& actor)
@@ -1107,15 +1798,22 @@ namespace Jazz2::Scripting::Legacy
 
 	void ScriptObjectHost::DeleteActor(Actors::ActorBase& actor)
 	{
-		// The event stays as it is, its object isn't spawned again
+		// The event stays as it is, its object isn't spawned again - a generator makes another one, as it does in JJ2, once it
+		// sees the object gone
+		if (actor.GetState(Actors::ActorState::IsFromGenerator)) {
+			actor._health = 0;
+		}
 		actor.SetState(Actors::ActorState::IsDestroyed, true);
 	}
 
 	void ScriptObjectHost::DeactivateActor(Actors::ActorBase& actor)
 	{
-		// The event spawns its object again when it's seen again
-		if (actor.GetState(Actors::ActorState::IsCreatedFromEventMap)) {
+		// The event spawns its object again when it's seen again, a generator at once (it would keep this one alive otherwise)
+		if ((actor.GetState() & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
 			if (auto* events = actor._levelHandler->EventMap()) {
+				if (actor.GetState(Actors::ActorState::IsFromGenerator)) {
+					events->ResetGenerator(actor._originTile.X, actor._originTile.Y);
+				}
 				events->Deactivate(actor._originTile.X, actor._originTile.Y);
 			}
 		}
@@ -1142,6 +1840,8 @@ namespace Jazz2::Scripting::Legacy
 		asIScriptEngine* engine = levelScripts->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 		std::int32_t r = asSUCCESS;
+		const void* previousBehavior = obj._runningBehavior;
+		obj._runningBehavior = (behavior.object != nullptr ? static_cast<const void*>(behavior.object) : static_cast<const void*>(behavior.function));
 		if (behavior.object != nullptr) {
 			// The object may lose its behavior while it runs, which would free the instance
 			asIScriptObject* instance = behavior.object;
@@ -1168,6 +1868,7 @@ namespace Jazz2::Scripting::Legacy
 			ctx->SetArgObject(0, &obj);
 			r = ctx->Execute();
 		}
+		obj._runningBehavior = previousBehavior;
 		if (r == asEXECUTION_EXCEPTION) {
 			LogBehaviorException(ctx);
 		}
@@ -1283,6 +1984,10 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::OnActorAdded(const std::shared_ptr<Actors::ActorBase>& actor)
 	{
 		_lastObjectId = 0;
+		if (actor.get() == _swappingActor) {
+			// It takes the object ID of the one it replaces, see ProcessActorSwaps()
+			return;
+		}
 
 		// The bullets of the players are the objects of the events of their weapons, the powered-up ones 8 further, as in
 		// JJ2+ - the players and effects are no objects of events
@@ -1308,6 +2013,9 @@ namespace Jazz2::Scripting
 			}
 		} else if (runtime_cast<Actors::Weapons::TNT>(actor.get()) != nullptr) {
 			eventId = Legacy::aTNT;
+		} else if (runtime_cast<Actors::Environment::AirboardGenerator>(actor.get()) != nullptr) {
+			// The generator of the original makes an airboard the player takes, here the generator is the airboard
+			eventId = Legacy::aAIRBOARD;
 		} else if (Legacy::FindEnemyProjectile(*actor) != nullptr) {
 			// The scripts of JJ2+ find them to replace them (see EnsureObjectView())
 			eventId = Legacy::aBULLET;
@@ -1330,6 +2038,11 @@ namespace Jazz2::Scripting
 			_objectSlots[objectId].CreatorID = std::uint16_t(creatorId);
 		} else if (madeByObject) {
 			_objectSlots[objectId].CreatorType = Legacy::cOBJECT;
+		} else if ((actor->GetState() & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) == Actors::ActorState::None &&
+			runtime_cast<Actors::Collectibles::CollectibleBase>(actor.get()) != nullptr) {
+			// What an enemy drops or a crate gives is made by the player in JJ2 (ThreedRealms' gems tell a drop by it)
+			_objectSlots[objectId].CreatorType = Legacy::cPLAYER;
+			_objectSlots[objectId].CreatorID = 0;
 		}
 
 		// A template no script asked for is as the game has it
@@ -1338,14 +2051,15 @@ namespace Jazz2::Scripting
 			return;
 		}
 
+		// The energy a script gave the template, also what a hosted object starts with (ThreedRealms' clown is hurt below 100)
+		if (preset->energy != preset->_synced.Energy) {
+			actor->SetHealth(std::max<std::int32_t>(preset->energy, 1));
+		}
 		// An animation a script gave the template is what the objects show (see jjOBJ::CopyTemplate())
 		if (Legacy::ScriptObjectHost::NeedsHost(*preset) || (preset->curAnim > 0 && preset->curAnim != preset->_synced.CurAnim)) {
 			if (Legacy::jjOBJ* obj = EnsureObjectView(objectId)) {
 				HostObject(obj, actor.get());
 			}
-		} else if (preset->energy != preset->_synced.Energy) {
-			// The energy a script gave the template
-			actor->SetHealth(std::max<std::int32_t>(preset->energy, 1));
 		}
 	}
 
@@ -1366,13 +2080,40 @@ namespace Jazz2::Scripting
 
 		std::shared_ptr<Actors::ActorBase> actor = std::make_shared<Legacy::ScriptSceneryObject>();
 		actor->OnActivated(details);
+		if (details.Type == EventType::TriggerArea) {
+			// Its behavior switches the tile, it isn't switched by the trigger by itself any more (ThreedRealms' gates of two
+			// locks open by both triggers), see RunTriggerScenery()
+			if (auto* tileMap = levelHandler->TileMap()) {
+				tileMap->ClearTileTrigger(details.Pos.X / Tiles::TileSet::DefaultTileSize, details.Pos.Y / Tiles::TileSet::DefaultTileSize);
+			}
+		}
+		return actor;
+	}
+
+	std::shared_ptr<Actors::ActorBase> LevelScriptLoader::SpawnPassthroughObject(const Actors::ActorActivationDetails& details)
+	{
+		// An event the game has nothing of gets an object only where a script drives it, as SpawnSceneryObject() does
+		auto* levelHandler = runtime_cast<LevelHandler>(details.LevelHandler);
+		LevelScriptLoader* _this = (levelHandler != nullptr ? levelHandler->_scripts.get() : nullptr);
+		if (_this == nullptr) {
+			return nullptr;
+		}
+		std::uint8_t eventId = std::uint8_t(_this->GetEventTranslator().ToOriginal(details.Type, details.Params) & 0xFF);
+		Legacy::jjOBJ* preset = _this->_objectPresets[eventId];
+		if (preset == nullptr || !Legacy::ScriptObjectHost::NeedsHost(*preset)) {
+			return nullptr;
+		}
+
+		std::shared_ptr<Actors::ActorBase> actor = std::make_shared<Legacy::ScriptEventObject>();
+		actor->OnActivated(details);
 		return actor;
 	}
 
 	namespace
 	{
 		// The events of scenery of JJ2+, a bit each in LevelScriptLoader::_sceneryObjectsMask
-		constexpr std::uint8_t SceneryEvents[] = { Legacy::aDESTRUCTSCENERY, Legacy::aDESTRUCTSCENERYBOMB, Legacy::aCOLLAPSESCENERY, Legacy::aSTOMPSCENERY };
+		constexpr std::uint8_t SceneryEvents[] = { Legacy::aDESTRUCTSCENERY, Legacy::aDESTRUCTSCENERYBOMB, Legacy::aCOLLAPSESCENERY, Legacy::aSTOMPSCENERY,
+			Legacy::aTRIGGERSCENERY };
 	}
 
 	std::uint8_t LevelScriptLoader::GetSceneryObjectsMask() const
@@ -1402,7 +2143,7 @@ namespace Jazz2::Scripting
 
 		events->ForEachEvent([this, added](Events::EventMap::EventTile& tile, std::int32_t x, std::int32_t y) {
 			if (tile.IsEventActive && (tile.Event == EventType::SceneryDestruct || tile.Event == EventType::SceneryDestructButtstomp ||
-				tile.Event == EventType::SceneryDestructSpeed || tile.Event == EventType::SceneryCollapse)) {
+				tile.Event == EventType::SceneryDestructSpeed || tile.Event == EventType::SceneryCollapse || tile.Event == EventType::TriggerArea)) {
 				std::uint8_t eventId = std::uint8_t(GetEventTranslator().ToOriginal(tile.Event, tile.EventParams) & 0xFF);
 				for (std::size_t i = 0; i < arraySize(SceneryEvents); i++) {
 					if (SceneryEvents[i] == eventId && (added & (1 << i)) != 0) {
@@ -1456,6 +2197,13 @@ namespace Jazz2::Scripting
 				}
 			}
 			Legacy::InitPresetBullet(*preset);
+			// The color of a gem, which it's drawn by (SPRITE::GEM, var[0] - 1), as measured in JJ2+
+			switch (eventId) {
+				case Legacy::aREDGEM: case Legacy::aRECTREDGEM: case Legacy::aREDGEMTEMP: preset->set_var(0, 1); break;
+				case Legacy::aGREENGEM: case Legacy::aRECTGREENGEM: preset->set_var(0, 2); break;
+				case Legacy::aBLUEGEM: case Legacy::aRECTBLUEGEM: preset->set_var(0, 3); break;
+				case Legacy::aPURPLEGEM: preset->set_var(0, 4); break;
+			}
 			// What a script changes of the template is told apart by this, see OnActorAdded()
 			preset->_synced.Energy = preset->energy;
 			preset->_synced.CurAnim = preset->curAnim;
@@ -1504,14 +2252,16 @@ namespace Jazz2::Scripting
 
 		ObjectSlot& slot = _objectSlots[objectId];
 		if (slot.Object != nullptr) {
-			// The view of the object that had the ID before stays inactive for whoever holds it
+			// The view of the object that had the ID before stays inactive for whoever holds it - with no behavior, which
+			// would hold the script (a behavior of a class holding the objects in its arrays couldn't be collected)
+			slot.Object->behavior = Legacy::aUNKNOWN;
 			slot.Object->Release();
 		}
 		SetSlotActor(objectId, actor);
 		slot.Object = object;
 		slot.EventID = eventId;
 		// An object of an event is made by the level
-		slot.CreatorType = 1;
+		slot.CreatorType = Legacy::cLEVEL;
 		slot.CreatorID = 0;
 		slot.SpawnTick = GetGameTick();
 		if (object != nullptr) {
@@ -1534,17 +2284,12 @@ namespace Jazz2::Scripting
 			return nullptr;
 		}
 
-		// An object is built from its template, as in JJ2+
+		// An object is built from its template, as in JJ2+ - also one no script took yet (the color of a purple gem is of it),
+		// with the event ID of the template, which a script can change (Threed's garbage cans are GUNBARREL)
 		void* mem = asAllocMem(sizeof(Legacy::jjOBJ));
 		Legacy::jjOBJ* obj = new(mem) Legacy::jjOBJ();
-		if (Legacy::jjOBJ* preset = _objectPresets[slot.EventID]) {
-			obj->CopyTemplate(*preset);
-		} else {
-			obj->behavior = Legacy::DefaultBehavior;
-			obj->state = Legacy::sSTART;
-			obj->_playerHandling = Legacy::GetDefaultPlayerHandling(slot.EventID);
-		}
-		obj->eventID = slot.EventID;
+		Legacy::jjOBJ* preset = GetObjectPreset(slot.EventID);
+		obj->CopyTemplate(*preset);
 		obj->objectID = std::int16_t(objectId);
 		obj->_actor = actor;
 		obj->_creatorType = slot.CreatorType;
@@ -1553,6 +2298,27 @@ namespace Jazz2::Scripting
 		obj->xOrg = spawnPos.X;
 		obj->yOrg = spawnPos.Y;
 		Legacy::ScriptObjectHost::PullFromActor(this, *obj, *actor);
+		// A pickup of the game has no speeds, those of the template are the behavior's (ThreedRealms' puppets walk by them,
+		// they're food of the game)
+		if ((preset->xSpeed != 0.0f || preset->ySpeed != 0.0f) && runtime_cast<Actors::Collectibles::CollectibleBase>(actor.get()) != nullptr) {
+			obj->xSpeed = obj->_synced.XSpeed = preset->xSpeed;
+			obj->ySpeed = obj->_synced.YSpeed = preset->ySpeed;
+			obj->_movedByBehavior = true;
+		}
+		if (auto* warp = runtime_cast<Actors::Environment::BonusWarp>(actor.get())) {
+			// The coins it costs, as BEHAVIOR::WARP starts it (ThreedRealms' burger booth shows the price and takes it by it)
+			obj->set_var(0, warp->GetCost());
+		} else if (actor->GetSpawnEventType() == EventType::TriggerArea && runtime_cast<Legacy::ScriptSceneryObject>(actor.get()) != nullptr) {
+			// As measured in JJ2+, the tile it shows (0 and 2) and its trigger (3)
+			Vector2i originTile = Legacy::ScriptObjectHost::GetOriginTile(*actor);
+			auto* tileMap = _levelHandler->TileMap();
+			std::int32_t tile = (tileMap != nullptr ? tileMap->GetTile(GetLayerIndex(4), originTile.X, originTile.Y) : 0);
+			obj->set_var(0, tile);
+			obj->set_var(1, 1);
+			obj->set_var(2, tile);
+			obj->set_var(3, actor->GetSpawnEventParams()[0]);
+		}
+		preset->Release();
 		// An object the level illuminates has the light JJ2+ gives it (see ScriptObjectHost::OwnsLights())
 		if (actor->GetState(Actors::ActorState::Illuminated) && obj->lightType == obj->_synced.LightType) {
 			obj->lightType = Legacy::lightLASER;
@@ -1607,6 +2373,7 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::SyncObjectsFromActors()
 	{
 		BreakObjects();
+		ProcessActorSwaps();
 
 		for (std::size_t i = 1; i < _objectSlots.size(); i++) {
 			ObjectSlot& slot = _objectSlots[i];
@@ -1673,7 +2440,10 @@ namespace Jazz2::Scripting
 			}
 
 			Legacy::ScriptObjectHost::UpdateSkin(*slot.Object);
-			Legacy::ScriptObjectHost::PushToActor(*slot.Object, *actor);
+			// A behavior of the script sees `STATE::KILL` first (see ScriptObjectHost::UpdateTick())
+			const Legacy::jjBEHAVIOR& behavior = slot.Object->behavior;
+			bool deferKill = (slot.Object->_host != nullptr && (behavior.function != nullptr || behavior.object != nullptr));
+			Legacy::ScriptObjectHost::PushToActor(*slot.Object, *actor, deferKill);
 			// A script gave a running object a behavior or an animation of its own, or handles its collisions
 			if (slot.Object->_host == nullptr && Legacy::ScriptObjectHost::NeedsHost(*slot.Object)) {
 				HostObject(slot.Object, actor.get());
@@ -1696,10 +2466,9 @@ namespace Jazz2::Scripting
 					}
 				}
 			}
-			// One the script controls entirely stays as long as the level does, its behavior mustn't hold the script
-			if (slot.Object->_wrapper != nullptr) {
-				slot.Object->behavior = Legacy::jjBEHAVIOR();
-			}
+			// No behavior holds the script anymore, also of a view a script still holds (ThreedRealms' puppets keep theirs in
+			// arrays of the class of their behavior, the objects aren't seen by the collector of the script)
+			slot.Object->behavior = Legacy::jjBEHAVIOR();
 			slot.Object->Release();
 			slot.Object = nullptr;
 		}
@@ -1708,8 +2477,42 @@ namespace Jazz2::Scripting
 
 		for (Legacy::jjOBJ*& preset : _objectPresets) {
 			if (preset != nullptr) {
+				preset->behavior = Legacy::jjBEHAVIOR();
 				preset->Release();
 				preset = nullptr;
+			}
+		}
+	}
+
+	void LevelScriptLoader::DeleteObjectsOfScripts()
+	{
+		constexpr Actors::ActorState FromEventMap = Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator;
+		for (std::size_t i = 1; i < _objectSlots.size(); i++) {
+			ObjectSlot& slot = _objectSlots[i];
+			std::shared_ptr<Actors::ActorBase> actor = slot.Actor.lock();
+			if (actor == nullptr || actor->GetState(Actors::ActorState::IsDestroyed)) {
+				// Gone with the checkpoint already, but not for the scripts yet - its behavior would run on (ThreedRealms' puppet
+				// hands killed the puppets made again in the slots they knew, a pumpkin followed any object of its kid's slot)
+				if (slot.Object != nullptr) {
+					slot.Object->behavior = Legacy::aUNKNOWN;
+				}
+				continue;
+			}
+			if (actor->GetState(Actors::ActorState::PreserveOnRollback) || runtime_cast<Actors::Player>(actor.get()) != nullptr) {
+				continue;
+			}
+			if ((actor->GetState() & FromEventMap) != Actors::ActorState::None) {
+				// One of the event map a behavior of a script drives starts again when it's seen, its behavior made what's
+				// gone now (ThreedRealms' series of gems)
+				if (slot.Object != nullptr && slot.Object->_host != nullptr) {
+					Legacy::ScriptObjectHost::DeactivateActor(*actor);
+				}
+				continue;
+			}
+			if (slot.Object != nullptr) {
+				slot.Object->deleteObject();
+			} else {
+				Legacy::ScriptObjectHost::DeleteActor(*actor);
 			}
 		}
 	}

@@ -50,7 +50,8 @@ namespace Jazz2::Editor
 		@brief Stamps as text in the clipboard of the system, so they can be pasted into another instance of the game
 
 		The text is JSON: `{"J2R":1,"w":...,"h":...,"t":[source,index,flags,...]}` for tiles (source -1 for a tile
-		left out), `{"J2R":1,"events":[x,y,type,flags,generator flags,generator delay,params...],"offgrid":[...]}` for
+		left out), followed by `"events":[...]` and `"offgrid":[...]` as below for tiles with their events (see
+		@ref TileStamp::Events, an event not listed is empty), `{"J2R":1,"events":[x,y,type,flags,generator flags,generator delay,params...],"offgrid":[...]}` for
 		events, those off the grid by their offsets in pixels in the same form (older versions read only those on it), and
 		`{"J2R":2,"w":...,"h":...,"x":...,"y":...,"layers":[{"o":...,"t":[...]},...],"events":[...]}` for several layers
 		with their events. Older versions read the first layer of the last one as tiles, and its events as events.

@@ -17,6 +17,8 @@
 #include "../UI/UiMenu.h"
 #include "../UI/UiSurface.h"
 #include "../../ContentResolver.h"
+#include "../../Compatibility/JJ2Tileset.h"
+#include "../../Formats/TileSetFile.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -38,6 +40,53 @@ namespace Jazz2::Editor
 	{
 		enum class ImportUse : std::uint8_t { Extra, Default, SaveOnly };
 		enum class DitherMode : std::uint8_t { None, Pattern, ErrorDiffusion };
+
+		// Adds the choice of what is done with a new tile set once it's made, as `Use` of the state
+		template<class TState>
+		void AddUseRow(UiForm* content, std::shared_ptr<TState> state)
+		{
+			struct UseOption { String Label; ImportUse Use; };
+			UseOption options[] = {
+				// TRANSLATORS: Choices of what is done with the new tile set after it's made, after "Then"
+				{ _x("editor", "Extra tile set of this level"), ImportUse::Extra },
+				{ _x("editor", "Default tile set of this level"), ImportUse::Default },
+				{ _x("editor", "Only save it"), ImportUse::SaveOnly },
+			};
+			auto shared = std::make_shared<SmallVector<UseOption, 3>>();
+			for (UseOption& option : options) {
+				shared->push_back(Death::move(option));
+			}
+			// TRANSLATORS: Label of the choice of what is done with the new tile set after it's made, as in "and then"
+			auto* row = content->AddRow(_x("editor", "Then"));
+			auto* dropdown = row->Add<UiDropdown>([state, shared]() {
+				for (const UseOption& option : *shared) {
+					if (option.Use == state->Use) {
+						return String(option.Label);
+					}
+				}
+				return String();
+			}, [state, shared](SmallVectorImpl<UiMenuEntry>& entries) {
+				for (const UseOption& option : *shared) {
+					ImportUse use = option.Use;
+					UiMenuEntry entry;
+					entry.Label = option.Label;
+					entry.IsChecked = [state, use]() { return (state->Use == use); };
+					entry.Execute = [state, use]() { state->Use = use; };
+					entries.push_back(Death::move(entry));
+				}
+			});
+			dropdown->Width = 170.0f;
+		}
+
+		// Uses a new tile set in the level as chosen
+		void UseNewTileSet(IEditorContext& session, StringView name, ImportUse use)
+		{
+			switch (use) {
+				case ImportUse::Extra: AddExtraTileSet(session, name); break;
+				case ImportUse::Default: SetDefaultTileSet(session, name); break;
+				default: break;
+			}
+		}
 
 		// What is chosen for the import, compared to tell whether a preview is still what would be made
 		struct ImportSettings
@@ -217,11 +266,7 @@ namespace Jazz2::Editor
 			LOGI("Tile set \"{}\" with {} tiles made from \"{}\" ({} colors added, {} entries kept for sprites, {} same tiles left out)", path, result.TileCount, state.Path,
 				result.ColorsAdded, std::count(std::begin(job.Locked), std::end(job.Locked), true), result.DuplicateTiles);
 
-			switch (state.Use) {
-				case ImportUse::Extra: AddExtraTileSet(session, name); break;
-				case ImportUse::Default: SetDefaultTileSet(session, name); break;
-				default: break;
-			}
+			UseNewTileSet(session, name, state.Use);
 
 			String message = _fnx("editor", "Tile set \"{}\" with {} tile was made", "Tile set \"{}\" with {} tiles was made", result.TileCount, name, result.TileCount);
 			if (result.AddedEmptyTile) {
@@ -438,35 +483,7 @@ namespace Jazz2::Editor
 				addNumber(row, [state]() -> std::int32_t& { return state->Settings.AlphaThreshold; }, 255.0f,
 					_x("editor", "How opaque a pixel has to be to be seen, and a pixel of the masks to be solid, from 1 to 255"));
 			}
-			{
-				struct UseOption { String Label; ImportUse Use; };
-				static const UseOption UseOptions[] = {
-					// TRANSLATORS: Choices of what is done with the new tile set after it's made, after "Then"
-					{ _x("editor", "Extra tile set of this level"), ImportUse::Extra },
-					{ _x("editor", "Default tile set of this level"), ImportUse::Default },
-					{ _x("editor", "Only save it"), ImportUse::SaveOnly },
-				};
-				// TRANSLATORS: Label of the choice of what is done with the new tile set after it's made, as in "and then"
-				auto* row = content->AddRow(_x("editor", "Then"));
-				auto* dropdown = row->Add<UiDropdown>([state]() {
-					for (const UseOption& option : UseOptions) {
-						if (option.Use == state->Use) {
-							return String(option.Label);
-						}
-					}
-					return String();
-				}, [state](SmallVectorImpl<UiMenuEntry>& entries) {
-					for (const UseOption& option : UseOptions) {
-						ImportUse use = option.Use;
-						UiMenuEntry entry;
-						entry.Label = option.Label;
-						entry.IsChecked = [state, use]() { return (state->Use == use); };
-						entry.Execute = [state, use]() { state->Use = use; };
-						entries.push_back(Death::move(entry));
-					}
-				});
-				dropdown->Width = 170.0f;
-			}
+			AddUseRow(content, state);
 
 			// What the tile set would be, before it's saved
 			{
@@ -634,33 +651,7 @@ namespace Jazz2::Editor
 			count->Width = 80.0f;
 			count->Tooltip = _x("editor", "The original tile sets have 10 tiles in a row");
 		}
-		{
-			struct UseOption { String Label; ImportUse Use; };
-			static const UseOption UseOptions[] = {
-				{ _x("editor", "Extra tile set of this level"), ImportUse::Extra },
-				{ _x("editor", "Default tile set of this level"), ImportUse::Default },
-				{ _x("editor", "Only save it"), ImportUse::SaveOnly },
-			};
-			auto* row = content->AddRow(_x("editor", "Then"));
-			auto* dropdown = row->Add<UiDropdown>([state]() {
-				for (const UseOption& option : UseOptions) {
-					if (option.Use == state->Use) {
-						return String(option.Label);
-					}
-				}
-				return String();
-			}, [state](SmallVectorImpl<UiMenuEntry>& entries) {
-				for (const UseOption& option : UseOptions) {
-					ImportUse use = option.Use;
-					UiMenuEntry entry;
-					entry.Label = option.Label;
-					entry.IsChecked = [state, use]() { return (state->Use == use); };
-					entry.Execute = [state, use]() { state->Use = use; };
-					entries.push_back(Death::move(entry));
-				}
-			});
-			dropdown->Width = 170.0f;
-		}
+		AddUseRow(content, state);
 
 		dialog->AddButton(_x("editor", "Make Tile Set"), [s, state, nameBox, dialogPtr]() {
 			String name = nameBox->Text.trimmed();
@@ -671,6 +662,138 @@ namespace Jazz2::Editor
 		dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
 
 		ShowModal(*surface, Death::move(dialog));
+	}
+
+	bool ReadTileSetFile(StringView path, Formats::TileSetData& data, bool& original)
+	{
+		auto s = fs::Open(path, FileAccess::Read);
+		if (!s->IsValid()) {
+			return false;
+		}
+		// One of this game starts with its own signature
+		if (Formats::TileSetFile::Read(*s, data)) {
+			original = false;
+			return true;
+		}
+		// One of the original game has a copyright notice, then "TILE" and a signature, the parser takes it as it is
+		// without them, so they're looked at first
+		constexpr std::int64_t HeaderEnd = 262;
+		if (s->GetSize() < HeaderEnd) {
+			return false;
+		}
+		s->Seek(180, SeekOrigin::Begin);
+		std::uint32_t magic = s->ReadValueAsLE<std::uint32_t>();
+		std::uint32_t signature = s->ReadValueAsLE<std::uint32_t>();
+		if (magic != 0x454C4954 /*TILE*/ || signature != 0xAFBEADDE) {
+			return false;
+		}
+		s = nullptr;
+		Compatibility::JJ2Tileset tileSet;
+		if (!tileSet.Open(path, false)) {
+			return false;
+		}
+		data = Formats::TileSetData();
+		tileSet.Convert(data);
+		original = true;
+		return (data.TileCount > 0);
+	}
+
+	bool ImportTileSetFile(IEditorContext& session, const Formats::TileSetData& data, StringView name, bool addToLevel, bool asDefault)
+	{
+		if (!CheckNewName(session, name)) {
+			return false;
+		}
+		String path = ContentTileSetLibrary::GetWritablePath(name, true);
+		if (path.empty()) {
+			session.ShowMessage(_x("editor", "There's no place to save tile sets to"));
+			return false;
+		}
+		// A file that isn't written whole isn't left there, it would take the name
+		if (!AtomicFile::Write(path, [&data](Stream& s) { return Formats::TileSetFile::Write(s, data); })) {
+			session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
+			return false;
+		}
+		session.InvalidateTileSet(name);
+		LOGI("Tile set \"{}\" with {} tiles imported", path, data.TileCount);
+
+		UseNewTileSet(session, name, !addToLevel ? ImportUse::SaveOnly : (asDefault ? ImportUse::Default : ImportUse::Extra));
+		// TRANSLATORS: Status message after a tile set file was imported into the user content, {} is its name and the number of its tiles
+		session.ShowMessage(_fnx("editor", "Tile set \"{}\" with {} tile was imported", "Tile set \"{}\" with {} tiles was imported", data.TileCount, name, data.TileCount));
+		return true;
+	}
+
+	void ShowImportTileSetFileDialog(IEditorContext& session)
+	{
+		UiSurface* surface = session.GetSurface();
+		if (surface == nullptr) {
+			return;
+		}
+		// The original game is where its tile sets are, any other place can be browsed too
+		SmallVector<UiFileRoot, 4> roots;
+		String sourcePath = String(ContentResolver::Get().GetSourcePath().trimmedSuffix("/\\"_s));
+		if (!sourcePath.empty() && fs::DirectoryExists(sourcePath)) {
+			// TRANSLATORS: Name of a place in the file dialog, the folder of the original game
+			roots.push_back({ _x("editor", "Original game"), sourcePath, false });
+		}
+		IEditorContext* s = &session;
+		// TRANSLATORS: Title of the file dialog that picks a tile set file of the original game, or of this game, to import
+		UiFileDialog::Show(*surface, _x("editor", "Import Tile Set"), UiFileDialogMode::Open, Death::move(roots), ".j2t"_s, sourcePath, {}, [s](StringView path) {
+			struct ImportFileState
+			{
+				Formats::TileSetData Data;
+				bool Original = false;
+				ImportUse Use = ImportUse::Extra;
+			};
+			auto state = std::make_shared<ImportFileState>();
+			if (!ReadTileSetFile(path, state->Data, state->Original)) {
+				s->ShowMessage(_x("editor", "The file isn't a tile set that can be read"));
+				return;
+			}
+			UiSurface* surface = s->GetSurface();
+			if (surface == nullptr) {
+				return;
+			}
+
+			auto dialog = std::make_unique<UiDialog>(_x("editor", "Import Tile Set"));
+			UiDialog* dialogPtr = dialog.get();
+			auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
+			String description = (state->Original
+				// TRANSLATORS: In the Import Tile Set dialog, {} is the number of tiles of the tile set file picked
+				? _fnx("editor", "A tile set of the original game with {} tile, it's converted and saved into the user content.",
+					"A tile set of the original game with {} tiles, it's converted and saved into the user content.", state->Data.TileCount, state->Data.TileCount)
+				// TRANSLATORS: In the Import Tile Set dialog, {} is the number of tiles of the tile set file picked
+				: _fnx("editor", "A tile set with {} tile, it's copied into the user content.",
+					"A tile set with {} tiles, it's copied into the user content.", state->Data.TileCount, state->Data.TileCount));
+			content->Add<UiLabel>(description, UiTheme::TextDim);
+
+			// The name of the file as tile sets are named, the same one is likely there already, converted by the game
+			StringView fileNameWithCase = fs::GetFileNameWithoutExtension(path);
+			String baseName = SuggestTileSetName(fileNameWithCase, {});
+			String fileName = StringUtils::lowercase(fileNameWithCase);
+			UiTextBox* nameBox;
+			{
+				auto* row = content->AddRow(_x("editor", "Name"));
+				nameBox = row->Add<UiTextBox>(baseName);
+				nameBox->Width = 140.0f;
+				nameBox->MaxLength = 32;
+				nameBox->Tooltip = _x("editor", "The tile set is saved in the user content, Tilesets/<name>.j2t");
+			}
+			if (baseName != fileName && !ContentTileSetLibrary::FindTileSetFile(fileName).empty()) {
+				content->Add<UiLabel>(_fx("editor", "A tile set named \"{}\" is there already, it may be this one, then it can be used without importing it.", fileName), UiTheme::TextDim);
+			}
+			AddUseRow(content, state);
+
+			// TRANSLATORS: Button in the Import Tile Set dialog, saves the tile set into the user content
+			dialog->AddButton(_x("editor", "Import"), [s, state, nameBox, dialogPtr]() {
+				String name = nameBox->Text.trimmed();
+				if (ImportTileSetFile(*s, state->Data, name, state->Use != ImportUse::SaveOnly, state->Use == ImportUse::Default)) {
+					dialogPtr->Close();
+				}
+			}, true);
+			dialog->AddButton(_x("editor", "Cancel"), [dialogPtr]() { dialogPtr->Close(); });
+			ShowModal(*surface, Death::move(dialog));
+			nameBox->BeginEdit();
+		});
 	}
 }
 

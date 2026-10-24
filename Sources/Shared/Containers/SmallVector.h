@@ -757,8 +757,16 @@ namespace Death { namespace Containers {
 				return;
 			}
 
-			void* newElts = this->mallocForShrink(this->BeginX, newCapacity, sizeof(T));
-			this->setAllocationRange(newElts, newCapacity);
+			if constexpr (SmallVectorIsTriviallyRelocatable<T>::value) {
+				void* newElts = this->mallocForShrink(this->BeginX, newCapacity, sizeof(T));
+				this->setAllocationRange(newElts, newCapacity);
+			} else {
+				T* newElts = static_cast<T*>(this->mallocForShrink(nullptr, newCapacity, sizeof(T)));
+				this->uninitializedMove(this->begin(), this->end(), newElts);
+				this->destroyRange(this->begin(), this->end());
+				std::free(this->begin());
+				this->setAllocationRange(newElts, newCapacity);
+			}
 		}
 
 		/** @brief Removes the last @p n elements */

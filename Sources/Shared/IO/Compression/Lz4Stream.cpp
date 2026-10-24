@@ -36,7 +36,8 @@ namespace Death { namespace IO { namespace Compression {
 	}
 
 	Lz4Stream::Lz4Stream()
-		: _inputStream(nullptr), _ctx(nullptr), _size(Stream::Invalid), _state(State::Unknown)
+		: _inputStream(nullptr), _ctx(nullptr), _size(Stream::Invalid), _inputSize(-1), _state(State::Unknown),
+			_inPos(0), _inLength(0), _outCapacity(0), _outPos(0), _outPosTotal(0), _outLength(0)
 	{
 	}
 
@@ -52,31 +53,17 @@ namespace Death { namespace IO { namespace Compression {
 	}
 
 	Lz4Stream::Lz4Stream(Lz4Stream&& other) noexcept
+		: Lz4Stream()
 	{
-		_inputStream = other._inputStream;
-		_ctx = other._ctx;
-		_size = other._size;
-		_inputSize = other._inputSize;
-		_state = other._state;
-		std::memcpy(_inBuffer, other._inBuffer, sizeof(_inBuffer));
-		_inPos = other._inPos;
-		_inLength = other._inLength;
-		_outBuffer = Death::move(other._outBuffer);
-		_outCapacity = other._outCapacity;
-		_outPos = other._outPos;
-		_outPosTotal = other._outPosTotal;
-		_outLength = other._outLength;
-
-		other._ctx = nullptr;
-
-		// Original instance will be disabled
-		if (other._state == State::Created || other._state == State::Initialized) {
-			other._state = State::Failed;
-		}
+		*this = Death::move(other);
 	}
 
 	Lz4Stream& Lz4Stream::operator=(Lz4Stream&& other) noexcept
 	{
+		if (this == &other) {
+			return *this;
+		}
+
 		Dispose();
 
 		_inputStream = other._inputStream;
@@ -94,6 +81,9 @@ namespace Death { namespace IO { namespace Compression {
 		_outLength = other._outLength;
 
 		other._ctx = nullptr;
+		other._outCapacity = 0;
+		other._outPos = 0;
+		other._outLength = 0;
 
 		// Original instance will be disabled
 		if (other._state == State::Created || other._state == State::Initialized) {
@@ -160,7 +150,6 @@ namespace Death { namespace IO { namespace Compression {
 			bytesToRead -= bytesRead;
 		} while (bytesToRead > 0);
 
-		_outPosTotal += bytesReadTotal;
 		return bytesReadTotal;
 	}
 
@@ -247,7 +236,7 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		if (_inputSize > 0) {
-			_inputSize -= bytesRead;
+			_inputSize -= std::int32_t(bytesRead);
 		}
 
 		LZ4F_frameInfo_t info;
@@ -261,11 +250,18 @@ namespace Death { namespace IO { namespace Compression {
 			return;
 		}
 
-		_inPos = consumedSize;
-		_inLength = bytesRead;
+		_inPos = std::int32_t(consumedSize);
+		_inLength = std::int32_t(bytesRead);
 
 		std::int32_t blockSize = GetLz4BlockSize(&info);
-		if (_outCapacity != blockSize) {
+		if (blockSize <= 0) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
+			LOGE("Unsupported LZ4 block size");
+#endif
+			_state = State::Failed;
+			return;
+		}
+		if (_outCapacity != blockSize || _outBuffer == nullptr) {
 			_outBuffer = std::make_unique<char[]>(blockSize);
 			_outCapacity = blockSize;
 		}
@@ -278,54 +274,63 @@ namespace Death { namespace IO { namespace Compression {
 		if (_state == State::Created) {
 			InitializeInternal();
 		}
-		if (size <= 0 || _state == State::Finished) {
+		if (size <= 0) {
 			return 0;
 		}
 		if (_state == State::Unknown || _state >= State::Failed) {
 			return Stream::Invalid;
 		}
 
-		bool inBufferTooSmall = false;
 		std::int32_t n = (_outLength - _outPos);
 		while (n == 0) {
-			if (_inPos >= _inLength || inBufferTooSmall) {
-				std::int32_t bytesRead = _inputSize;
-				if (bytesRead < 0 || bytesRead > sizeof(_inBuffer)) {
-					bytesRead = sizeof(_inBuffer);
+			if (_state == State::Finished) {
+				return 0;
+			}
+
+			if (_inPos >= _inLength) {
+				std::int32_t bytesToRead = _inputSize;
+				if (bytesToRead < 0 || bytesToRead > std::int32_t(sizeof(_inBuffer))) {
+					bytesToRead = std::int32_t(sizeof(_inBuffer));
 				}
 
-				_inLength = _inputStream->Read(_inBuffer, bytesRead);
-				if (_inLength <= 0) {
+				std::int64_t bytesRead = (bytesToRead > 0 ? _inputStream->Read(_inBuffer, bytesToRead) : 0);
+				if (bytesRead <= 0) {
+#if defined(DEATH_TRACE_VERBOSE_IO)
+					LOGE("Compressed stream ended prematurely");
+#endif
+					_inPos = 0;
+					_inLength = 0;
+					_state = State::Failed;
 					return Stream::Invalid;
 				}
 
 				if (_inputSize > 0) {
-					_inputSize -= _inLength;
+					_inputSize -= std::int32_t(bytesRead);
 				}
 
 				_inPos = 0;
-				inBufferTooSmall = false;
+				_inLength = std::int32_t(bytesRead);
 			}
 
 			std::size_t dstSize = _outCapacity;
 			std::size_t srcSize = _inLength - _inPos;
 			auto result = LZ4F_decompress(_ctx, &_outBuffer[0], &dstSize, &_inBuffer[_inPos], &srcSize, nullptr);
-			if (LZ4F_isError(result)) {
+			if (LZ4F_isError(result) || (result != 0 && srcSize == 0 && dstSize == 0)) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("LZ4F_decompress() failed with error 0x{:x} ({})", result, LZ4F_getErrorName(result));
+				LOGE("LZ4F_decompress() failed with error 0x{:x} ({})", result, LZ4F_isError(result) ? LZ4F_getErrorName(result) : "No progress");
 #endif
 				_state = State::Failed;
 				return Stream::Invalid;
 			}
 
-			if (dstSize == 0) {
-				inBufferTooSmall = true;
-			}
-
-			_inPos += srcSize;
+			_inPos += std::int32_t(srcSize);
 			_outPos = 0;
-			_outLength = dstSize;
-			n = (_outLength - _outPos);
+			_outLength = std::int32_t(dstSize);
+			n = _outLength;
+
+			if (result == 0 && !HasNextFrame()) {
+				CeaseReading();
+			}
 		}
 
 		if (n > size) {
@@ -333,7 +338,42 @@ namespace Death { namespace IO { namespace Compression {
 		}
 		std::memcpy(ptr, &_outBuffer[_outPos], n);
 		_outPos += n;
+		_outPosTotal += n;
 		return n;
+	}
+
+	bool Lz4Stream::HasNextFrame()
+	{
+		// Concatenated frames are valid, the magic number tells the next one from unrelated trailing data
+		std::int32_t available = _inLength - _inPos;
+		if (available < 4 && _inputSize != 0) {
+			std::memmove(_inBuffer, &_inBuffer[_inPos], available);
+			_inPos = 0;
+			_inLength = available;
+			while (_inLength < 4 && _inputSize != 0) {
+				std::int32_t bytesToRead = std::int32_t(sizeof(_inBuffer)) - _inLength;
+				if (_inputSize > 0 && bytesToRead > _inputSize) {
+					bytesToRead = _inputSize;
+				}
+				std::int64_t bytesRead = _inputStream->Read(&_inBuffer[_inLength], bytesToRead);
+				if (bytesRead <= 0) {
+					break;
+				}
+				if (_inputSize > 0) {
+					_inputSize -= std::int32_t(bytesRead);
+				}
+				_inLength += std::int32_t(bytesRead);
+			}
+			available = _inLength;
+		}
+		if (available < 4) {
+			return false;
+		}
+
+		const std::uint8_t* p = reinterpret_cast<const std::uint8_t*>(&_inBuffer[_inPos]);
+		std::uint32_t magic = std::uint32_t(p[0]) | (std::uint32_t(p[1]) << 8) | (std::uint32_t(p[2]) << 16) | (std::uint32_t(p[3]) << 24);
+		// LZ4 frame or skippable frame
+		return (magic == 0x184D2204u || (magic & 0xFFFFFFF0u) == 0x184D2A50u);
 	}
 
 	bool Lz4Stream::CeaseReading()
@@ -342,25 +382,32 @@ namespace Death { namespace IO { namespace Compression {
 			return true;
 		}
 
-		std::int64_t seekToEnd = _inLength - _inPos;
+		std::int64_t seekToEnd = (_inputSize >= 0 ? std::int64_t(_inputSize) : -std::int64_t(_inLength - _inPos));
 		if (seekToEnd != 0) {
 			_inputStream->Seek(seekToEnd, SeekOrigin::Current);
 		}
+		_inPos = 0;
+		_inLength = 0;
+		if (_inputSize > 0) {
+			_inputSize = 0;
+		}
 
 		_state = State::Finished;
-		_size = std::int32_t(_outPosTotal);
+		_size = std::int64_t(_outPosTotal) + (_outLength - _outPos);
 		return true;
 	}
 
 	Lz4Writer::Lz4Writer(Stream& outputStream, std::int32_t compressionLevel)
-		: _outputStream(&outputStream), _ctx(nullptr), _state(State::Created)
+		: _outputStream(&outputStream), _ctx(nullptr), _state(State::Created), _outCapacity(0), _outLength(0)
 	{
 		auto result = LZ4F_createCompressionContext(&_ctx, LZ4F_VERSION);
 		if (LZ4F_isError(result)) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("LZ4F_createCompressionContext() failed with error 0x{:x} ({})", result, LZ4F_getErrorName(result));
 #endif
+			_ctx = nullptr;
 			_state = State::Failed;
+			return;
 		}
 
 		const LZ4F_preferences_t kPrefs = {
@@ -375,11 +422,12 @@ namespace Death { namespace IO { namespace Compression {
 		_outBuffer = std::make_unique<char[]>(_outCapacity);
 
 		std::size_t headerSize = LZ4F_compressBegin(_ctx, &_outBuffer[0], _outCapacity, &kPrefs);
-		if (LZ4F_isError(result)) {
+		if (LZ4F_isError(headerSize)) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("LZ4F_compressBegin() failed with error 0x{:x} ({})", headerSize, LZ4F_getErrorName(headerSize));
 #endif
 			_state = State::Failed;
+			return;
 		}
 
 		// Header needs to be written before the first frame
@@ -394,12 +442,12 @@ namespace Death { namespace IO { namespace Compression {
 	void Lz4Writer::Dispose()
 	{
 		if (_state != State::Created && _state != State::Initialized) {
+			LZ4F_freeCompressionContext(_ctx);
+			_ctx = nullptr;
 			return;
 		}
 
-		if (_state == State::Initialized) {
-			WriteInternal(nullptr, 0, true);
-		}
+		WriteInternal(nullptr, 0, true);
 
 		LZ4F_freeCompressionContext(_ctx);
 		_ctx = nullptr;
@@ -454,6 +502,14 @@ namespace Death { namespace IO { namespace Compression {
 
 	bool Lz4Writer::Flush()
 	{
+		if (_state != State::Created && _state != State::Initialized) {
+			return false;
+		}
+		// The header has to come first
+		if (WriteInternal(nullptr, 0, false) < 0) {
+			return false;
+		}
+
 		std::size_t compressedSize = LZ4F_flush(_ctx, &_outBuffer[0], _outCapacity, nullptr);
 		if (LZ4F_isError(compressedSize)) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
@@ -463,7 +519,8 @@ namespace Death { namespace IO { namespace Compression {
 			return false;
 		}
 
-		if (compressedSize > 0 && _outputStream->Write(&_outBuffer[0], compressedSize) <= 0) {
+		if (compressedSize > 0 && _outputStream->Write(&_outBuffer[0], std::int64_t(compressedSize)) != std::int64_t(compressedSize)) {
+			_state = State::Failed;
 			return false;
 		}
 
@@ -488,10 +545,11 @@ namespace Death { namespace IO { namespace Compression {
 	std::int32_t Lz4Writer::WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish)
 	{
 		if (_outLength > 0) {
-			if (_outputStream->Write(&_outBuffer[0], _outLength) <= 0) {
+			if (_outputStream->Write(&_outBuffer[0], _outLength) != _outLength) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Failed to write frame info to output stream");
 #endif
+				_state = State::Failed;
 				return Stream::Invalid;
 			}
 			_outLength = 0;
@@ -512,8 +570,9 @@ namespace Death { namespace IO { namespace Compression {
 				return Stream::Invalid;
 			}
 
-			if (compressedSize > 0) {
-				_outputStream->Write(_buffer, compressedSize);
+			if (compressedSize > 0 && _outputStream->Write(&_outBuffer[0], std::int64_t(compressedSize)) != std::int64_t(compressedSize)) {
+				_state = State::Failed;
+				return Stream::Invalid;
 			}
 		}
 
@@ -527,7 +586,10 @@ namespace Death { namespace IO { namespace Compression {
 				return Stream::Invalid;
 			}
 
-			_outputStream->Write(&_outBuffer[0], compressedSize);
+			if (compressedSize > 0 && _outputStream->Write(&_outBuffer[0], std::int64_t(compressedSize)) != std::int64_t(compressedSize)) {
+				_state = State::Failed;
+				return Stream::Invalid;
+			}
 		}
 
 		return bytesToWrite;

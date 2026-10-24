@@ -107,9 +107,17 @@ namespace Jazz2::Editor
 		@brief Shows the tile sets of the level --- the default one and the extra ones that follow it
 
 		The tiles of the level follow every change of the tile sets, so a tile shows the same picture after an extra
-		tile set is moved or another one before it is removed. Tiles of a removed tile set are cleared.
+		tile set is moved or another one before it is removed. Tiles of a removed tile set are cleared. New tile sets
+		are made there too, tiles added to them, their images exported and the default one rearranged.
 	*/
 	void ShowTileSetsDialog(IEditorContext& session);
+
+	/**
+	 * @brief Asks where to save the tiles of a tile set of the level (as @ref TileRef::Source) as an image
+	 *
+	 * Rows of 10 tiles, as the original tile sets were drawn, with an image of their masks next to it.
+	 */
+	void ShowExportTileSetImageDialog(IEditorContext& session, std::uint8_t source);
 
 	/** @brief Makes a tile set the default one of the level as an undoable step, returns `false` if it can't be read */
 	bool SetDefaultTileSet(IEditorContext& session, StringView name);

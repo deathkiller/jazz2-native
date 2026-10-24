@@ -222,22 +222,45 @@ namespace Jazz2::Editor
 			".#.....#.....#..",
 		};
 
+		// An open eye, the lids meet the iris, with the pupil left dark
 		const char* const IconEye[16] = {
 			"................",
 			"................",
 			"................",
-			".....######.....",
-			"...##++++++##...",
-			"..#+...##...+#..",
-			".#+...####...+#.",
-			"#+....####....+#",
-			".#+...####...+#.",
-			"..#+...##...+#..",
-			"...##++++++##...",
-			".....######.....",
+			"................",
+			"....+######+....",
+			"..+##.####.##+..",
+			".+#..######..#+.",
+			"+#...##..##...#+",
+			"+#...##..##...#+",
+			".+#..######..#+.",
+			"..+##.####.##+..",
+			"....+######+....",
 			"................",
 			"................",
 			"................",
+			"................",
+		};
+
+		// The same eye closed, the lid curved down where the lower one was, with lashes
+		// The open eye in grey crossed out by a thick red line with a dark outline, a layer the game doesn't show at all, in
+		// the style of the game, so the line stands out of the eye
+		const char* const IconEyeOff[16] = {
+			"................",
+			"..oo............",
+			".orro...........",
+			"..orro..........",
+			"...orroggggG....",
+			"..Ggorrogg.ggG..",
+			".Gg..orrogg..gG.",
+			"Gg...gorrog...gG",
+			"Gg...ggorro...gG",
+			".Gg..gggorro.gG.",
+			"..Ggg.gggorroG..",
+			"....Ggggggorro..",
+			"...........orro.",
+			"............orro",
+			".............oo.",
 			"................",
 		};
 
@@ -248,13 +271,13 @@ namespace Jazz2::Editor
 			"................",
 			"................",
 			"................",
-			"#+............+#",
-			".#+..........+#.",
-			"..##++++++++##..",
-			"...+########+...",
-			"...#+..#+..+#...",
-			"..#+...#+...+#..",
 			"................",
+			"+#............#+",
+			".+#..........#+.",
+			"..+##......##+..",
+			"....+######+....",
+			"...#..#..#..#...",
+			"..#...#..#...#..",
 			"................",
 			"................",
 			"................",
@@ -444,22 +467,45 @@ namespace Jazz2::Editor
 			"................",
 		};
 
+		// A green triangle in the colors of the game, lit from above with a shine, with an outline, see
+		// EditorIcons::GetPixelColor()
 		const char* const IconPlay[16] = {
 			"................",
+			"...oo...........",
+			"..ommoo.........",
+			"..omwmmoo.......",
+			"..omwnnmmoo.....",
+			"..omnnnnnmmoo...",
+			"..omnnnnnnnmmoo.",
+			"..omnnnnnnnnnmmo",
+			"..onnnnnnnnnnNNo",
+			"..onnnnnnnnNNoo.",
+			"..onnnnnnNNoo...",
+			"..onnnnNNoo.....",
+			"..onnNNoo.......",
+			"..oNNoo.........",
+			"...oo...........",
 			"................",
-			"....#+..........",
-			"....###+........",
-			"....#####+......",
-			"....#######+....",
-			"....#########+..",
-			"....##########+.",
-			"....#########+..",
-			"....#######+....",
-			"....#####+......",
-			"....###+........",
-			"....#+..........",
+		};
+
+		// As Play, but only its green edge between the dark outlines, the middle empty; the lower edge in the light green too,
+		// the dark one of Play would almost vanish between the outlines
+		const char* const IconPlayOutline[16] = {
 			"................",
-			"................",
+			"...oo...........",
+			"..ommoo.........",
+			"..ommmmoo.......",
+			"..omnoommoo.....",
+			"..omno.oommoo...",
+			"..omno...oommoo.",
+			"..omno.....oommo",
+			"..onno.....oonno",
+			"..onno...oonnoo.",
+			"..onno.oonnoo...",
+			"..onnoonnoo.....",
+			"..onnnnoo.......",
+			"..onnoo.........",
+			"...oo...........",
 			"................",
 		};
 
@@ -701,11 +747,11 @@ namespace Jazz2::Editor
 			"......+##+......",
 			"......+##+......",
 			".....+#++#+.....",
-			"...+###+.+###+..",
-			"..+#+.+#+#+.+#+.",
-			"..##...##.#...##",
-			"..+#+.+#+.+#+#+.",
-			"...+###+...+###.",
+			".+####+..+####+.",
+			"+#+.+#+..+#+.+#+",
+			"##...##..##...##",
+			"+#+.+#+..+#+.+#+",
+			".+###+....+###+.",
 			"................",
 			"................",
 		};
@@ -789,21 +835,21 @@ namespace Jazz2::Editor
 		// A disc with the letter "i" cut out of it
 		const char* const IconInfo[16] = {
 			"................",
-			".....+####+.....",
-			"...+########+...",
-			"..+####..####+..",
-			"..#####..#####..",
-			".+############+.",
-			".#####...######.",
-			".######..######.",
-			".######..######.",
-			".######..######.",
-			".######..######.",
-			".+####....####+.",
-			"..############..",
-			"...+########+...",
-			".....+####+.....",
+			"......ooooo.....",
+			"......owwwo.....",
+			"......owwwo.....",
+			"......owwwo.....",
+			"......ooooo.....",
 			"................",
+			".....oooooo.....",
+			".....owwwwo.....",
+			".....oowwwo.....",
+			"......owwwo.....",
+			"......owwwo.....",
+			"......owwwo.....",
+			".....oowwwoo....",
+			".....owwwwwo....",
+			".....ooooooo....",
 		};
 
 		const char* const IconTiles[16] = {
@@ -1135,42 +1181,44 @@ namespace Jazz2::Editor
 			"................",
 		};
 
-		// A window with an arrow out of it, the panel comes off its place
+		// A window with an arrow out of it, the panel comes off its place, smaller than other icons, it's in the header of
+		// the panel next to its title
 		const char* const IconUndock[16] = {
 			"................",
 			"................",
-			"........#######.",
-			"..........+####.",
-			".........###.##.",
-			"........###..##.",
-			"..####.###...##.",
-			"..#...###.......",
-			"..#..###........",
-			"..#..##......#..",
-			"..#..........#..",
-			"..#..........#..",
-			"..#..........#..",
-			"..############..",
+			"................",
+			"................",
+			"........####....",
+			".........###....",
+			"....##..##.#....",
+			"....#..##..#....",
+			"....#.##........",
+			"....#......#....",
+			"....#......#....",
+			"....########....",
+			"................",
+			"................",
 			"................",
 			"................",
 		};
 
-		// A window with a panel at its side, the panel goes back to its place
+		// A window with a panel at its side, the panel goes back to its place, as small as IconUndock, the button shows
+		// one or the other
 		const char* const IconDock[16] = {
 			"................",
 			"................",
-			".##############.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".#####+.......#.",
-			".##############.",
+			"................",
+			"................",
+			"....########....",
+			"....##+....#....",
+			"....##+....#....",
+			"....##+....#....",
+			"....##+....#....",
+			"....##+....#....",
+			"....##+....#....",
+			"....########....",
+			"................",
+			"................",
 			"................",
 			"................",
 		};
@@ -1575,6 +1623,25 @@ namespace Jazz2::Editor
 			"................",
 			"................",
 		};
+
+		const char* const IconPassthrough[16] = {
+			".........2#1....",
+			".........2##1...",
+			"..........6##1..",
+			"..##......27#2..",
+			"..######62.777..",
+			"..######3..#7#..",
+			"..#####6.76#7#1.",
+			"..#####417#77#4.",
+			"..#####626#77##4",
+			"..##4###21#7##72",
+			"..##..441.3##72.",
+			"..##......1#61..",
+			"..##............",
+			"..##............",
+			".4##4...........",
+			"4####4..........",
+		};
 	}
 
 	const char* const* EditorIcons::GetRows(EditorIcon icon)
@@ -1656,6 +1723,9 @@ namespace Jazz2::Editor
 			case EditorIcon::Shapes: return IconShapes;
 			case EditorIcon::History: return IconHistory;
 			case EditorIcon::Properties: return IconProperties;
+			case EditorIcon::EyeOff: return IconEyeOff;
+			case EditorIcon::PlayOutline: return IconPlayOutline;
+			case EditorIcon::Passthrough: return IconPassthrough;
 			case EditorIcon::CursorResizeHorizontal: return IconCursorResizeHorizontal;
 			case EditorIcon::CursorResizeVertical: return IconCursorResizeVertical;
 			case EditorIcon::CursorResizeNWSE: return IconCursorResizeNWSE;
@@ -1673,6 +1743,8 @@ namespace Jazz2::Editor
 		switch (pixel) {
 			case '#': return rgba(255, 255, 255);
 			case '+': return rgba(255, 255, 255, 128);
+			case '1': case '2': case '3': case '4': case '5': case '6': case '7':
+				return rgba(255, 255, 255, std::uint32_t(pixel - '0') * 32);
 			// Dark, but not quite black, as the outlines of the sprites of the game
 			case 'o': return rgba(20, 14, 28);
 			case 'w': return rgba(255, 255, 255);
@@ -1686,6 +1758,8 @@ namespace Jazz2::Editor
 			case 'G': return rgba(110, 112, 134);
 			case 't': return rgba(246, 206, 150);
 			case 'T': return rgba(196, 142, 92);
+			// The shine on green, mixed with it already, a half transparent white would let the background through
+			case 'm': return rgba(196, 248, 172);
 			case 'n': return rgba(110, 220, 80);
 			case 'N': return rgba(36, 132, 56);
 			case 'b': return rgba(90, 170, 255);

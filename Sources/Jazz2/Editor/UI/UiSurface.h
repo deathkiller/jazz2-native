@@ -45,6 +45,10 @@ namespace Jazz2::Editor
 		bool CloseOnOutsideClick = true;
 		/** @brief Whether the virtual cursor is hidden while it's shown, it's driven by the stick directly */
 		bool HidesVirtualCursor = false;
+		/** @brief Element shown over the interface it's shown from, it's closed with it, as a submenu with its menu */
+		UiElement* Owner = nullptr;
+		/** @brief Right edge it's put at instead if it doesn't fit right of its position, as a submenu goes left of its menu then, not used if negative */
+		float FallbackRight = -1.0f;
 		/** @brief Called when it's closed */
 		Function<void()> OnClosed;
 
@@ -94,8 +98,12 @@ namespace Jazz2::Editor
 		UiElement* PushOverlay(std::unique_ptr<UiElement> element, UiOverlayOptions&& options);
 		/** @brief Closes an element shown over the interface, it's destroyed at the end of the frame */
 		void CloseOverlay(UiElement* element);
-		/** @brief Moves an element shown over the interface, its top left corner, it's no longer centered then */
-		void MoveOverlay(UiElement* element, Vector2f position);
+		/**
+		 * @brief Moves an element shown over the interface, its top left corner, it's no longer centered then
+		 *
+		 * See @ref UiOverlayOptions::FallbackRight for @p fallbackRight.
+		 */
+		void MoveOverlay(UiElement* element, Vector2f position, float fallbackRight = -1.0f);
 		/**
 		 * @brief Brings a window shown over the interface in front of the other windows and gives it the keyboard
 		 *
@@ -109,6 +117,8 @@ namespace Jazz2::Editor
 		bool HasModal() const;
 		/** @brief Returns `true` if any element is shown over the interface */
 		bool HasOverlays() const;
+		/** @brief Returns `true` if an element is shown over the interface and isn't closing */
+		bool IsOverlayShown(const UiElement* element) const;
 
 		/** @brief Returns the scale of the interface, pixels per unit */
 		float GetScale() const {
@@ -150,6 +160,8 @@ namespace Jazz2::Editor
 		bool OnTextInput(const TextInputEvent& event);
 		/** @brief Returns `true` if the interface is under a position */
 		bool IsOverInterface(Vector2f pos);
+		/** @brief Returns `true` if a finger at a position is the interface's at once, not one that may still pan the view, see @ref UiElement::YieldsToViewGestures() */
+		bool TakesTouchAt(Vector2f pos);
 		/**
 		 * @brief Follows the pointer while its moves go elsewhere
 		 *

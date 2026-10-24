@@ -518,7 +518,12 @@ namespace Jazz2
 		maxHealth = 0;
 
 		if (_activeBoss == nullptr) {
+#if defined(WITH_ANGELSCRIPT)
+			// A boss a level script drives itself
+			return (_scripts != nullptr && _scripts->GetScriptBossHealth(health, maxHealth));
+#else
 			return false;
+#endif
 		}
 
 		health = _activeBoss->GetHealth();
@@ -718,8 +723,22 @@ namespace Jazz2
 
 		_levelTexts = Death::move(descriptor.LevelTexts);
 		_localizedLevelTexts = Death::move(descriptor.LocalizedTexts);
+		_scriptTexts = Death::move(descriptor.ScriptTexts);
+		_customWeapons = Death::move(descriptor.CustomWeapons);
+#if defined(WITH_ANGELSCRIPT)
+		_tileDiffuseOverrides = Death::move(descriptor.TileDiffuseOverrides);
+		_spriteRecolors = Death::move(descriptor.SpriteRecolors);
+#endif
 
 		LoadLevelScripts(descriptor.FullPath);
+
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts == nullptr) {
+			// Only a script reads them, the tile map has them already
+			_tileDiffuseOverrides = {};
+			_spriteRecolors = {};
+		}
+#endif
 
 #if defined(DEATH_TARGET_DREAMCAST)
 		// The heap window is the binding constraint of this console and a level is the largest thing that
@@ -765,7 +784,7 @@ namespace Jazz2
 		// is a *lift* - both spend their margin at the top. No other side can take one: the player is meant to
 		// be standing on solid floor, so a margin below would reject every ground-level spawn there is.
 		//
-		// 4 px was tried first and changes nothing on the level this was reported from: `rescue/02_colon2`
+		// 4 px was tried first and changes nothing on the level this was reported from: `rescue/colon2`
 		// starts in a space barely taller than the player, and the half-strength offset there clears 4 but
 		// not 8.
 		constexpr float SpawnHeadroom = 8.0f;
@@ -1450,6 +1469,13 @@ namespace Jazz2
 
 				auto* solidObject = runtime_cast<Actors::SolidObjectBase>(actor);
 				if (solidObject == nullptr || !solidObject->IsOneWay || params.Downwards) {
+#if defined(WITH_ANGELSCRIPT)
+					// An object a level script drives may handle the collision itself, it stays solid
+					if (Actors::ActorBase::HandleCollisionByOverride(self, actor)) {
+						colliderActor = actor;
+						return false;
+					}
+#endif
 					if (!self->OnHandleCollision(actor) && !actor->OnHandleCollision(self)) {
 						colliderActor = actor;
 						return false;
@@ -1552,6 +1578,15 @@ namespace Jazz2
 					}
 
 					if (_activeBoss == nullptr) {
+#if defined(WITH_ANGELSCRIPT)
+						// A boss of a script is an object the script drives, it only learns the boss is activated
+						if (_scripts != nullptr && _scripts->OnBossAreaActivated()) {
+							if (eventParams != nullptr) {
+								BeginPlayMusic(StringView((const char*)eventParams, strnlen((const char*)eventParams, 16)));
+							}
+							return;
+						}
+#endif
 						// No boss was found, it's probably a bug in the level, so go to the next level
 						LOGW("No boss was found, skipping to the next level");
 						BeginLevelChange(nullptr, ExitType::Boss);
@@ -1931,6 +1966,19 @@ namespace Jazz2
 		_levelTexts[textId] = value;
 	}
 
+	StringView LevelHandler::GetScriptText(std::uint32_t textId)
+	{
+		return (textId < _scriptTexts.size() && !_scriptTexts[textId].empty() ? StringView(_scriptTexts[textId]) : GetLevelText(textId));
+	}
+
+	void LevelHandler::OverrideScriptText(std::uint32_t textId, StringView value)
+	{
+		if (textId >= _scriptTexts.size()) {
+			_scriptTexts.resize(textId + 1);
+		}
+		_scriptTexts[textId] = value;
+	}
+
 	bool LevelHandler::PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads)
 	{
 		bool isGamepad;
@@ -2202,7 +2250,13 @@ namespace Jazz2
 				continue;
 			}
 
-			if (actor->GetState(Actors::ActorState::Initialized) && actor->IsSerializable() && _eventSpawner.CanSpawn(actor->_spawnEventType)) {
+			bool drivenByScript = false;
+#if defined(WITH_ANGELSCRIPT)
+			// What a level script drives is made again by its events and by the script, as JJ2+ starts all objects again after
+			// a death - a stored copy came back next to them, after every death once more
+			drivenByScript = (actor->GetUpdateOverride() != nullptr);
+#endif
+			if (!drivenByScript && actor->GetState(Actors::ActorState::Initialized) && actor->IsSerializable() && _eventSpawner.CanSpawn(actor->_spawnEventType)) {
 				serializable.push_back(actor.get());
 			} else if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
 				// Objects that cannot be stored are spawned again from their events, the others are transient
@@ -3226,43 +3280,43 @@ namespace Jazz2
 
 		UI::DiscordRpcClient::RichPresence richPresence;
 		if (p[0] == "prince"_s) {
-			if (p[2] == "01_castle1"_s || p[2] == "02_castle1n"_s) {
+			if (p[2] == "castle1"_s || p[2] == "castle1n"_s) {
 				richPresence.LargeImage = "level-prince-01"_s;
-			} else if (p[2] == "03_carrot1"_s || p[2] == "04_carrot1n"_s) {
+			} else if (p[2] == "carrot1"_s || p[2] == "carrot1n"_s) {
 				richPresence.LargeImage = "level-prince-02"_s;
-			} else if (p[2] == "05_labrat1"_s || p[2] == "06_labrat2"_s || p[2] == "bonus_labrat3"_s) {
+			} else if (p[2] == "labrat1"_s || p[2] == "labrat2"_s || p[2] == "labrat3"_s) {
 				richPresence.LargeImage = "level-prince-03"_s;
 			}
 		} else if (p[0] == "rescue"_s) {
-			if (p[2] == "01_colon1"_s || p[2] == "02_colon2"_s) {
+			if (p[2] == "colon1"_s || p[2] == "colon2"_s) {
 				richPresence.LargeImage = "level-rescue-01"_s;
-			} else if (p[2] == "03_psych1"_s || p[2] == "04_psych2"_s || p[2] == "bonus_psych3"_s) {
+			} else if (p[2] == "psych1"_s || p[2] == "psych2"_s || p[2] == "psych3"_s) {
 				richPresence.LargeImage = "level-rescue-02"_s;
-			} else if (p[2] == "05_beach"_s || p[2] == "06_beach2"_s) {
+			} else if (p[2] == "beach"_s || p[2] == "beach2"_s) {
 				richPresence.LargeImage = "level-rescue-03"_s;
 			}
 		} else if (p[0] == "flash"_s) {
-			if (p[2] == "01_diam1"_s || p[2] == "02_diam3"_s) {
+			if (p[2] == "diam1"_s || p[2] == "diam3"_s) {
 				richPresence.LargeImage = "level-flash-01"_s;
-			} else if (p[2] == "03_tube1"_s || p[2] == "04_tube2"_s || p[2] == "bonus_tube3"_s) {
+			} else if (p[2] == "tube1"_s || p[2] == "tube2"_s || p[2] == "tube3"_s) {
 				richPresence.LargeImage = "level-flash-02"_s;
-			} else if (p[2] == "05_medivo1"_s || p[2] == "06_medivo2"_s || p[2] == "bonus_garglair"_s) {
+			} else if (p[2] == "medivo1"_s || p[2] == "medivo2"_s || p[2] == "garglair"_s) {
 				richPresence.LargeImage = "level-flash-03"_s;
 			}
 		} else if (p[0] == "monk"_s) {
-			if (p[2] == "01_jung1"_s || p[2] == "02_jung2"_s) {
+			if (p[2] == "jung1"_s || p[2] == "jung2"_s) {
 				richPresence.LargeImage = "level-monk-01"_s;
-			} else if (p[2] == "03_hell"_s || p[2] == "04_hell2"_s) {
+			} else if (p[2] == "hell"_s || p[2] == "hell2"_s) {
 				richPresence.LargeImage = "level-monk-02"_s;
-			} else if (p[2] == "05_damn"_s || p[2] == "06_damn2"_s) {
+			} else if (p[2] == "damn"_s || p[2] == "damn2"_s) {
 				richPresence.LargeImage = "level-monk-03"_s;
 			}
 		} else if (p[0] == "secretf"_s) {
-			if (p[2] == "01_easter1"_s || p[2] == "02_easter2"_s || p[2] == "03_easter3"_s) {
+			if (p[2] == "easter1"_s || p[2] == "easter2"_s || p[2] == "easter3"_s) {
 				richPresence.LargeImage = "level-secretf-01"_s;
-			} else if (p[2] == "04_haunted1"_s || p[2] == "05_haunted2"_s || p[2] == "06_haunted3"_s) {
+			} else if (p[2] == "haunted1"_s || p[2] == "haunted2"_s || p[2] == "haunted3"_s) {
 				richPresence.LargeImage = "level-secretf-02"_s;
-			} else if (p[2] == "07_town1"_s || p[2] == "08_town2"_s || p[2] == "09_town3"_s) {
+			} else if (p[2] == "town1"_s || p[2] == "town2"_s || p[2] == "town3"_s) {
 				richPresence.LargeImage = "level-secretf-03"_s;
 			}
 		} else if (p[0] == "xmas98"_s || p[0] == "xmas99"_s) {

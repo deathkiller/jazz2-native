@@ -1348,4 +1348,33 @@ namespace Jazz2::Formats
 			data.push_back(number >= 1 && number <= OriginalLayerCount ? number : 0);
 		}
 	}
+
+	StringView ScriptTextsChunk::Read(ArrayView<const std::uint8_t> data, std::int32_t index)
+	{
+		std::size_t pos = 0;
+		for (std::int32_t i = 0; pos + 2 <= data.size(); i++) {
+			std::size_t length = std::size_t(data[pos]) | (std::size_t(data[pos + 1]) << 8);
+			pos += 2;
+			length = std::min<std::size_t>(length, data.size() - pos);
+			if (i == index) {
+				return StringView(reinterpret_cast<const char*>(data.data() + pos), length);
+			}
+			pos += length;
+		}
+		return {};
+	}
+
+	void ScriptTextsChunk::Write(ArrayView<const StringView> texts, SmallVectorImpl<std::uint8_t>& data)
+	{
+		data.clear();
+		if (std::none_of(texts.begin(), texts.end(), [](StringView text) { return !text.empty(); })) {
+			return;
+		}
+		for (StringView text : texts) {
+			std::size_t length = std::min<std::size_t>(text.size(), UINT16_MAX);
+			data.push_back(std::uint8_t(length));
+			data.push_back(std::uint8_t(length >> 8));
+			data.append(reinterpret_cast<const std::uint8_t*>(text.data()), reinterpret_cast<const std::uint8_t*>(text.data()) + length);
+		}
+	}
 }

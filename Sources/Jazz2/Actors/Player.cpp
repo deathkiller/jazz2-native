@@ -321,7 +321,7 @@ namespace Jazz2::Actors
 			AABBInner = {};
 		} else {
 			SetState(ActorState::PreserveOnRollback | ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects |
-				ActorState::IsSolidObject | ActorState::ExcludeSimilar, true);
+				ActorState::IsSolidObject | ActorState::ExcludeSimilar | ActorState::KeepsMomentumWhenFrozen, true);
 
 			_health = 5;
 			_maxHealth = _health;
@@ -383,6 +383,11 @@ namespace Jazz2::Actors
 		aabb.B += CollisionCheckStep;
 		TileCollisionParams params = { TileDestructType::None, true };
 		return !_levelHandler->IsPositionEmpty(this, aabb, params);
+	}
+
+	bool Player::IsRammingFrozen(const ActorBase* target) const
+	{
+		return (target->IsFrozen() && std::abs(_speed.X) > FrozenRamSpeed);
 	}
 
 	bool Player::CanBreakSolidObjects() const
@@ -847,7 +852,7 @@ namespace Jazz2::Actors
 				// The bound has to take the *momentum* as well, not only the position. A tile ceiling does:
 				// TryMoveSubstep() zeroes `_speed.Y` on the frame the move is refused. This clamp only put the
 				// player back and left the rise intact, so they hung against the top of the level while it bled
-				// off under gravity - measured on `secretf/03_easter3` at (216, 16), where a spring into a pole
+				// off under gravity - measured on `secretf/easter3` at (216, 16), where a spring into a pole
 				// arrives at -15.4 and takes some thirty frames of that to turn round, half a second of sitting
 				// against the ceiling. Reported as not being stopped quickly enough, and it is the launches that
 				// carry real momentum - a spring, a pole, the two chained - that reach the bound at all.
@@ -905,26 +910,29 @@ namespace Jazz2::Actors
 
 		OnUpdateHitbox();
 
-		//UpdateFrozenState(timeMult);
-		if (_renderer.AnimPaused) {
-			if (_frozenTimeLeft <= 0.0f) {
-				_renderer.AnimPaused = false;
-				_renderer.Initialize(ActorRendererType::Default);
-
-				for (std::int32_t i = 0; i < 10; i++) {
-					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+		if (_frozenTimeLeft > 0.0f) {
+			// Every tick Fire is held chips 8 more ticks off the ice, as measured in JJ2+, but not while it's still
+			// held from before the freeze
+			constexpr float FireThawTicksPerTick = 8.0f;
+			if (!_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)) {
+				_fireReleasedWhileFrozen = true;
+			} else if (_fireReleasedWhileFrozen) {
+				float chip = FireThawTicksPerTick * timeMult;
+				if (_frozenTimeLeft > chip) {
+					_frozenTimeLeft -= chip;
+				} else {
+					ThawOnNextUpdate();
 				}
-
-				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
-
-				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
-				_levelHandler->PlayerExecuteRumble(this, "Hurt"_s);
-			} else {
-				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
-				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
-				_renderer.Initialize(ActorRendererType::FrozenMask);
-				_frozenTimeLeft -= timeMult;
 			}
+		} else {
+			_fireReleasedWhileFrozen = false;
+		}
+
+		if (UpdateFrozenState(timeMult)) {
+			if (_controllableTimeout > 0.0f) {
+				_controllableTimeout = 0.01f;
+			}
+			_levelHandler->PlayerExecuteRumble(this, "Hurt"_s);
 		}
 	}
 
@@ -2015,6 +2023,12 @@ namespace Jazz2::Actors
 
 	void Player::HandleHorizontalMovement(float timeMult)
 	{
+		// Frozen, it slides by what it had or what pushed it (scripts push a player they freeze), see OnUpdate() - and
+		// letting go of Run doesn't drop a dash to the walk cap either, the keys aren't read at all
+		if (_frozenTimeLeft > 0.0f) {
+			return;
+		}
+
 		UpdateDashState(timeMult);
 
 		if (_keepRunningTime <= 0.0f) {
@@ -2099,7 +2113,7 @@ namespace Jazz2::Actors
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxDizzySpeed * playerMovementVelocity, MaxDizzySpeed * playerMovementVelocity);
 				} else if (_inShallowWater != -1 && _levelHandler->IsReforged() && _playerType != PlayerType::Lori) {
 					// Use lower speed in shallow water if Reforged
-					// Also, exclude Lori, because she can't ledge climb or double jump (rescue/01_colon1)
+					// Also, exclude Lori, because she can't ledge climb or double jump (rescue/colon1)
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxShallowWaterSpeed * playerMovementVelocity, MaxShallowWaterSpeed * playerMovementVelocity);
 				} else {
 					if (_suspendType == SuspendType::None && !_inWater && (_levelHandler->IsReforged() ? _isRunPressed : IsDashActive())) {
@@ -3545,7 +3559,9 @@ namespace Jazz2::Actors
 		} else if (_wasFirePressed) {
 			_wasFirePressed = false;
 
-			_weaponCooldown = 0.0f;
+			if ((_cappedWeapons & (1 << (std::int32_t)_currentWeapon)) == 0) {
+				_weaponCooldown = 0.0f;
+			}
 		}
 
 		if (_weaponSoundType != WeaponType::Unknown) {
@@ -4077,7 +4093,8 @@ namespace Jazz2::Actors
 			// unless a script turns it on: JJ2+'s `canHurt`, which it documents as covering this beak, defaults to
 			// false for both birds.
 			bool birdCharge = (_birdCharging && _levelHandler->IsReforged());
-			bool otherAttack = (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || (enemy->IsFrozen() && _speed.Length() >= 9.0f));
+			bool rammingFrozen = IsRammingFrozen(enemy);
+			bool otherAttack = (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || rammingFrozen);
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
 				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush or shield is active
 			} else if (otherAttack || birdCharge) {
@@ -4129,12 +4146,14 @@ namespace Jazz2::Actors
 						}
 					}
 
-					if (_currentSpecialMove == SpecialMoveType::None && _sugarRushLeft <= 0.0f && enemy->IsFrozen()) {
-						_speed = -_speed;
-						if (_speed.Y > -4.0f) {
-							_speed.Y = -4.0f;
-						}
+					if (_currentSpecialMove == SpecialMoveType::None && _sugarRushLeft <= 0.0f && rammingFrozen) {
+						// As measured in JJ2+: back at half the speed, up at a flat 6, and an enemy that survives it thaws
+						_speed.X *= -0.5f;
+						_speed.Y = FrozenRamBounceSpeedY;
 						SetState(ActorState::CanJump, false);
+						if (enemy->GetHealth() > 0) {
+							enemy->ThawOnNextUpdate();
+						}
 					}
 
 					_levelHandler->PlayerExecuteRumble(this, "Land"_s);
@@ -6628,13 +6647,15 @@ namespace Jazz2::Actors
 			case WeaponType::Electro: FireBirdShotPair<Weapons::ElectroShot, WeaponType::Electro>(spread); break;
 			default: {
 				FireBirdShotPair<Weapons::BlasterShot, WeaponType::Blaster>(spread);
-				PlayPlayerSfx("WeaponBlaster"_s);
+				if ((_silentWeapons & (1 << (std::int32_t)WeaponType::Blaster)) == 0) {
+					PlayPlayerSfx("WeaponBlaster"_s);
+				}
 				ammoDecrease = 0;
 				break;
 			}
 		}
 
-		if (ammoDecrease > 0) {
+		if (ammoDecrease > 0 && _inventory.WeaponAmmo[(std::int32_t)_currentWeapon] != UINT16_MAX) {
 			auto& currentAmmo = _inventory.WeaponAmmo[(std::int32_t)_currentWeapon];
 			if (ammoDecrease > currentAmmo) {
 				ammoDecrease = currentAmmo;
@@ -6844,7 +6865,9 @@ namespace Jazz2::Actors
 					}
 					default: {
 						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.76f, true);
-						PlayPlayerSfx("WeaponBlaster"_s);
+						if ((_silentWeapons & (1 << (std::int32_t)WeaponType::Blaster)) == 0) {
+							PlayPlayerSfx("WeaponBlaster"_s);
+						}
 						break;
 					}
 				}
@@ -6886,7 +6909,9 @@ namespace Jazz2::Actors
 		}
 
 		auto& currentAmmo = _inventory.WeaponAmmo[(std::int32_t)weaponType];
-		if (ammoDecrease > currentAmmo) {
+		if (currentAmmo == UINT16_MAX) {
+			ammoDecrease = 0;
+		} else if (ammoDecrease > currentAmmo) {
 			ammoDecrease = currentAmmo;
 		}
 		currentAmmo -= ammoDecrease;
@@ -8100,15 +8125,16 @@ namespace Jazz2::Actors
 		}
 
 		if (timeLeft > 0.0f) {
+			EndDamagingMove();
 			_renderer.AnimPaused = true;
 			_controllable = false;
 			_controllableTimeout = timeLeft;
+			_frozenTimeLeft = timeLeft;
 		} else if (_frozenTimeLeft > 0.0f) {
 			_controllable = true;
 			_controllableTimeout = 0.0f;
+			ThawOnNextUpdate();
 		}
-
-		_frozenTimeLeft = timeLeft;
 
 		return true;
 	}

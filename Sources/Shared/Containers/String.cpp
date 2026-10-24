@@ -285,8 +285,10 @@ namespace Death { namespace Containers {
 	}
 
 	String& String::operator=(const String& other) {
-		destruct();
-		copyConstruct(other);
+		if DEATH_LIKELY(this != &other) {
+			destruct();
+			copyConstruct(other);
+		}
 		return *this;
 	}
 
@@ -449,7 +451,7 @@ namespace Death { namespace Containers {
 		return _large.data[i];
 	}
 
-	String String::operator+=(const StringView& other)
+	String& String::operator+=(const StringView& other)
 	{
 		std::size_t otherSize = other.size();
 		if (otherSize == 0) {
@@ -459,30 +461,22 @@ namespace Death { namespace Containers {
 		std::size_t currentSize = size();
 		std::size_t newSize = currentSize + otherSize;
 
-		if (newSize < Implementation::SmallStringSize) {
+		if (isSmall() && newSize < Implementation::SmallStringSize) {
 			std::memcpy(_small.data + currentSize, other._data, otherSize);
 			_small.data[newSize] = '\0';
 			_small.size = (unsigned char)(newSize | Implementation::SmallStringBit);
-		} else if (isSmall()) {
-			char tmp[Implementation::SmallStringSize];
-			std::memcpy(tmp, _small.data, currentSize);
-			
-			construct(NoInit, newSize);
-
-			std::memcpy(_large.data, tmp, currentSize);
-			std::memcpy(_large.data + currentSize, other._data, otherSize);
-		} else {
-			char* oldData = _large.data;
-			auto oldDeleter = _large.deleter;
-
-			construct(NoInit, newSize);
-
-			std::memcpy(_large.data, oldData, currentSize);
-			std::memcpy(_large.data + currentSize, other._data, otherSize);
-
-			if (oldDeleter) oldDeleter(oldData, currentSize);
-			else delete[] oldData;
+			return *this;
 		}
+
+		char* const newData = new char[newSize + 1];
+		std::memcpy(newData, data(), currentSize);
+		std::memcpy(newData + currentSize, other._data, otherSize);
+		newData[newSize] = '\0';
+
+		destruct();
+		_large.data = newData;
+		_large.size = newSize;
+		_large.deleter = nullptr;
 
 		return *this;
 	}

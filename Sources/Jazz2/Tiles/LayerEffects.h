@@ -32,8 +32,12 @@ namespace Jazz2::Tiles
 	*/
 	struct LayerEffectsTarget
 	{
-		/** @brief Scene viewport, split at the lowest blur-behind layer it draws (see @ref nCine::Viewport::RequestSplit()) */
+		/** @brief Scene viewport, split at every layer that samples what is behind it (see @ref nCine::Viewport::RequestSplit()) */
 		nCine::Viewport* View = nullptr;
+		/** @brief Split passes that make @ref BehindCopy, `0` if there are none */
+		std::uint32_t CopyPasses = 0;
+		/** @brief Split passes that make @ref BehindBlur, `0` if there are none */
+		std::uint32_t BlurPasses = 0;
 		/** @brief Coverage of the actors behind the x-ray layers in the current frame, or `nullptr` if it wasn't rendered */
 		nCine::Texture* XRayMask = nullptr;
 		/** @brief Blurred scene behind the blur-behind layers, or `nullptr` if there is none (blur effects are off) */

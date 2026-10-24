@@ -477,6 +477,8 @@ namespace Jazz2::Editor
 		std::uint8_t PreviewCaseCount = 0;
 		/** @brief Index of the field @ref PreviewCases are chosen by, -1 for none */
 		std::int8_t PreviewField = -1;
+		/** @brief Number of the event of the original game it describes, which @ref EventType::PassthroughEvent keeps, 0 for none */
+		std::uint8_t OriginalEvent = 0;
 
 		/** @brief Returns the description with the looks for the values of a field, by its index */
 		template<std::size_t N>
@@ -543,39 +545,40 @@ namespace Jazz2::Editor
 		 * @brief Adds descriptions of events written in JSON
 		 *
 		 * The text is an object describing one event, an array of them, or an object with such an array in
-		 * `"events"`. An event has a `"type"` (its number) and a `"name"`, and may have a `"key"`, a `"category"`
-		 * (`"basic"`, `"scenery"`, `"modifier"`, `"area"`, `"trigger"`, `"warp"`, `"light"`, `"environment"`,
-		 * `"enemy"`, `"boss"`, `"collectible"`, `"container"` or `"other"`), a `"description"`, a `"preview"` with
-		 * `"metadata"`, `"animation"`, `"flipX"` and `"offset"` (`[x, y]` in pixels), a `"previewByParam"` with the
-		 * `"param"` (a name or an index) and `"cases"` --- objects of a `"value"` (or `"default"`) and the keys of a
-		 * preview, see @ref EventDescriptor::PreviewCases --- `"traits"` (`"object"`, `"tileModifier"`, `"area"`,
-		 * `"multiplayerOnly"`) and `"params"`. A parameter has a `"name"`, a `"type"` (`"uint"`, `"int"`, `"bool"`,
-		 * `"enum"`, `"flags"`, `"event"`, `"text"`, `"trigger"`, `"warp"`, `"string"`, `"contents"`), the `"offset"`
-		 * of its first byte, `"bits"`, `"shift"`, `"min"`, `"max"`, `"default"`, `"unit"` (`"pixels"`, `"tiles"`,
-		 * `"frames"`, `"seconds"`, `"percent"`, `"degrees"`), `"description"` and `"options"` --- labels for the
-		 * values from 0 on, or objects of a `"label"` and a `"value"`. It may also have:
+		 * `"Events"`, the format is described in @ref editor-events-extensions-format. Keys are case-sensitive, the
+		 * names given as values aren't.
 		 *
-		 * - `"showIf"` --- an object of the `"param"` (a name or an index) and `"equals"`, `"notEquals"` or
-		 *   `"anyBits"`, the parameter is shown only while that one's value matches; `"hidden"` never shows it
-		 * - `"scale"` --- the value is shown multiplied by it
-		 * - `"mirrorX"`, `"mirrorY"` --- what mirroring the event does to the value: `"negate"`, `"toggle"`,
-		 *   `{"swap": [a, b, ...]}` (values or bits of flags swapped in pairs) or `{"swapWith": "param"}`
-		 * - `"team"` --- the value is a team that swapping teams swaps
-		 * - `"gizmo"` --- a handle in the level: `"radius"`, `"length"` (down), `"width"` (to the right), `"offsetX"`
-		 *   and `"offsetY"`, with `"gizmoStep"` pixels for a unit of the value
-		 * - `"link"` --- an object of a `"channel"` and a `"role"` (`"source"`, `"target"`, `"peer"`), events with
-		 *   the same value in the same channel are linked by lines; the game's own channels are `"warp"`,
-		 *   `"trigger"` and `"rollingRock"`
-		 * - `"direction"` --- an object of the `"axis"` (`"x"` or `"y"`), `"negative"` and the `"group"` (0 to 3),
-		 *   the values of a group are drawn as an arrow
-		 * - of a `"contents"` parameter, its `"length"` in bytes and the `"typeParam"` with the type of the event inside
+		 * An event with an `"Original"` in place of the `"Type"` is an event of the original game the game has no use
+		 * for and keeps as @ref EventType::PassthroughEvent for the scripts of the level, by its number there.
 		 *
 		 * The range of a number is cut to -16777216 to 16777216, the number box edits it as a float, which holds whole
-		 * numbers exactly only up to that. A contents parameter can't contain its own `"typeParam"`. A value of a
-		 * wrong type is taken as missing. What's wrong is logged with @p source, kept in
-		 * @ref GetExtensionErrors() and left out. Returns the number of events added.
+		 * numbers exactly only up to that. A value of a wrong type is taken as missing. What's wrong is logged with
+		 * @p source, kept in @ref GetExtensionErrors() and left out. Returns the number of events added.
 		 */
 		static std::int32_t LoadExtensions(StringView json, StringView source, EventExtensionScope scope);
+		/**
+		 * @brief Adds the descriptions of events of the original game that MLLE keeps in a level script
+		 *
+		 * Each is a line `///@Event <number>=<name>|<+ or ->|<category>|<label>|<label>|<parameters>...` as in JCS.ini,
+		 * a parameter `Name:8` of 8 bits, `Name:-8` signed, `Name:c1` a check box or `Name:{A,B,C}2` with named values.
+		 * They're added as with `"Original"` (see @ref LoadExtensions()), so they describe the passthrough events with
+		 * their numbers, and they're offered in the list as well (see @ref GetPickedOriginal()). A line `///@Event <number>=`
+		 * alone hides the event of the original game from the list, as MLLE does, so the event it becomes here is found
+		 * only by searching (see @ref IsHidden()). Returns the number of events added.
+		 */
+		static std::int32_t LoadMlleEvents(StringView script, StringView source, EventExtensionScope scope);
+		/**
+		 * @brief Returns the number of the event of the original game a type of the list stands for, or 0
+		 *
+		 * The events of the original game the script of the level describes are offered by types of their own, from
+		 * @ref FirstOriginalPickType on. @ref MakeDefault() makes one as it's placed.
+		 */
+		static std::uint8_t GetPickedOriginal(EventType type);
+		/** @brief Returns `true` if the script of the level hides an event from the list, see @ref LoadMlleEvents() */
+		static bool IsHidden(const EventDescriptor* descriptor);
+
+		/** @brief First type of the list that stands for an event of the original game, see @ref GetPickedOriginal() */
+		static constexpr std::uint16_t FirstOriginalPickType = 0xFF00;
 		/** @brief Removes all descriptions of events added in a scope, and the errors found in them */
 		static void ClearExtensions(EventExtensionScope scope);
 		/** @brief Returns what was wrong with the descriptions of events from outside of the game, until they're cleared */
@@ -592,6 +595,14 @@ namespace Jazz2::Editor
 
 		/** @brief Returns the description of an event, or `nullptr` if it's not known */
 		static const EventDescriptor* Find(EventType type);
+		/**
+		 * @brief Returns the description of a placed event, or `nullptr` if it's not known
+		 *
+		 * A passthrough event (@ref EventType::PassthroughEvent) is described as the event of the original game it keeps,
+		 * if it is (see `"Original"` in @ref LoadExtensions()). So is an event of the game with the parameters the converter
+		 * makes of a described event of the original game, the parameters of the original are in its last bytes then.
+		 */
+		static const EventDescriptor* Find(EventType type, const std::uint8_t* params);
 		/** @brief Returns the description of an event by its key, or `nullptr` */
 		static const EventDescriptor* FindByKey(StringView key);
 		/**
@@ -610,7 +621,12 @@ namespace Jazz2::Editor
 		static std::int32_t ReadField(const Formats::EventRecord& event, const EventParamField& field);
 		/** @brief Writes a parameter of an event, the value is clamped to the range of the field */
 		static void WriteField(Formats::EventRecord& event, const EventParamField& field, std::int32_t value);
-		/** @brief Makes a new event of a type with the default values of its parameters */
+		/**
+		 * @brief Makes a new event of a type with the default values of its parameters
+		 *
+		 * A type that stands for an event of the original game (see @ref GetPickedOriginal()) makes the event as the
+		 * converter makes it, the passthrough event that keeps it or the event of the game it becomes.
+		 */
 		static Formats::EventRecord MakeDefault(EventType type);
 		/** @brief Reads a text parameter */
 		static StringView ReadString(const Formats::EventRecord& event, const EventParamField& field, char* buffer, std::size_t bufferSize);

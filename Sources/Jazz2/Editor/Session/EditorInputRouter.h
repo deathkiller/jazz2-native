@@ -10,12 +10,15 @@
 #include "../../../nCine/Primitives/Rect.h"
 #include "../../../nCine/Primitives/Vector2.h"
 
+#include <Containers/SmallVector.h>
+
 using namespace nCine;
 
 namespace Jazz2::Editor
 {
 	class PlayTestController;
 	class UiRadialMenu;
+	struct EditorAction;
 	class UiTextBox;
 
 	/**
@@ -167,6 +170,18 @@ namespace Jazz2::Editor
 		std::int32_t _barTouchId = -1;
 		// The keyboard of the system was shown for a box being typed into, it's hidden once no box is, see Update()
 		bool _screenKeyboardShown = false;
+		// Keys held down, pressed again by the system as they repeat, see EditorAction::IgnoresRepeat
+		SmallVector<Keys, 4> _heldKeys;
+		// Actions run by a key that last while it's held, ended when it's released, see EditorAction::Release
+		struct HeldAction
+		{
+			Keys Key;
+			EditorAction* Action;
+		};
+		SmallVector<HeldAction, 2> _heldActions;
+
+		// Ends the actions that last while a key is held, see EditorAction::Release
+		void ReleaseHeldActions(Keys key);
 
 		// Presses the pointer at a position on the screen, by the mouse or a gamepad
 		void PointerDown(Vector2f pos, MouseButton button);

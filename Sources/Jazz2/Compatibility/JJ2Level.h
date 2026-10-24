@@ -115,6 +115,9 @@ namespace Jazz2::Compatibility
 		/** @brief Opens and parses the specified level file */
 		bool Open(StringView path, bool strictParser);
 
+		/** @brief Reads only the names of the levels the specified level leads to, without parsing the rest of it */
+		static bool ReadExits(StringView path, String& nextLevel, String& secretLevel, String& bonusLevel);
+
 		/**
 		 * @brief Converts the level and writes the result to the specified target path
 		 *
@@ -311,7 +314,8 @@ namespace Jazz2::Compatibility
 		std::uint16_t _animCount;
 		bool _isHidden, _verticalMPSplitscreen, _isMpLevel;
 		bool _hasPit, _hasPitInstantDeath, _hasCTF, _hasLaps;
-		bool _isPlusLevel;
+		bool _hasMlleData = false;
+		bool _hasScript = false;
 		std::uint32_t _darknessColor;
 		WeatherType _weatherType;
 		std::uint8_t _weatherIntensity;
@@ -332,6 +336,8 @@ namespace Jazz2::Compatibility
 		SmallVector<std::uint8_t, TextEventStringsCount> _levelTokenTextIds;
 		SmallVector<String, 0> _eventMusic;
 		SmallVector<OffGridEvent, 0> _offGridEvents;
+		SmallVector<std::uint8_t, 0> _mlleWeapons;
+		SmallVector<std::uint8_t, 0> _mlleSpriteRecolors;
 
 		void LoadMetadata(JJ2Block& block, bool strictParser);
 		void LoadStaticTileData(JJ2Block& block, bool strictParser);

@@ -18,6 +18,7 @@
 #include "Session/EditorInputRouter.h"
 #include "Smart/SmartTileModel.h"
 #include "Smart/TileShapes.h"
+#include "Tools/BlockGrab.h"
 #include "Tools/EditorContext.h"
 #include "Tools/EventTools.h"
 
@@ -85,6 +86,8 @@ namespace Jazz2::Editor
 		}
 		/** @brief Returns the tools */
 		ToolManager& GetTools() override;
+		/** @brief Returns the block grabbed by its corners with a key, marked in the level or in the picker of tiles */
+		BlockGrab& GetBlockGrab() override;
 		/** @brief Returns the level handler that shows the level, or `nullptr` */
 		EditorLevelHandler* GetEditHandler() const override {
 			return _editHandler.get();
@@ -341,6 +344,8 @@ namespace Jazz2::Editor
 		// The file of the level, its recovery copy, its lock and its script, see DocumentFiles
 		std::unique_ptr<DocumentFiles> _files;
 		std::unique_ptr<ToolManager> _tools;
+		// A block grabbed by its corners with a key, as B of Jazz Creation Station
+		std::unique_ptr<BlockGrab> _blockGrab;
 
 		// Plays the level, owns the play-tests and the rings into the level and back
 		std::unique_ptr<PlayTestController> _playTest;
@@ -380,6 +385,8 @@ namespace Jazz2::Editor
 		// Draws the layers as images from far away
 		std::unique_ptr<TileLod> _tileLod;
 		std::int32_t _maskMode;
+		// The masks are shown only while the key of peeking at them is held, see ActionIds::ViewPeekMasks
+		bool _maskPeek = false;
 		// Layer drawn differently while it's edited, see UpdateLayerOverride()
 		std::int32_t _overriddenLayer = -1;
 		// Tiles the shown level overrides, and the tiles of the tile sets it stores in itself, each with a hash of what
@@ -532,8 +539,12 @@ namespace Jazz2::Editor
 		// Returns `true` if something is selected, that can be copied or deleted
 		bool HasSelection() const;
 		void CopySelection(bool cut);
+		// Copies the selected tiles of the sprite layer with the events on them, or the selected events with the tiles under them
+		void CopyTilesAndEvents();
 		void DeleteSelection();
 		void Paste();
+		// Marks a corner of a block, or grabs it, over the tiles of the picker or of the layer being edited, see BlockGrab
+		void GrabBlock(BlockGrab::Mode mode);
 		void SelectAll();
 		void AddLayer();
 		void RemoveLayer();

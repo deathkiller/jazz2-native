@@ -618,9 +618,9 @@ namespace Jazz2::Editor
 	{
 		auto* other = runtime_cast<SetLayerPropertiesCommand>(&next);
 		// Only a change of the same property continues this one, as while its value is dragged, a change of another
-		// one is a step of its own
+		// one is a step of its own; but a layer moved by its frame changes either offset or both as it goes
 		return (other != nullptr && other->_layer == _layer && other->_name == _name &&
-			(other->_changedFields == 0 || other->_changedFields == _changedFields));
+			(other->_changedFields == 0 || other->_changedFields == _changedFields || (_mergesAnyField && other->_mergesAnyField)));
 	}
 
 	bool SetLayerPropertiesCommand::TryMerge(EditCommand& next)
@@ -631,6 +631,11 @@ namespace Jazz2::Editor
 		auto* other = runtime_cast<SetLayerPropertiesCommand>(&next);
 		_newRecord = other->_newRecord;
 		_newName = Death::move(other->_newName);
+		if (_mergesAnyField) {
+			// All the step changes now, against where it started; a value dragged keeps the field it changes, also when it's
+			// dragged back to where it was
+			_changedFields = GetChangedFields(_oldRecord, _newRecord, _oldName, _newName);
+		}
 		return true;
 	}
 

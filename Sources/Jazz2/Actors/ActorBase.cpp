@@ -63,10 +63,10 @@ namespace Jazz2::Actors
 	}
 
 	ActorBase::ActorBase()
-		: _state(ActorState::None), _levelHandler(nullptr), _internalForceY(0.0f), _elasticity(0.0f), _friction(1.5f),
-			_unstuckCooldown(0.0f), _frozenTimeLeft(0.0f), _maxHealth(1), _health(1), _spawnFrames(0.0f), _spawnPos(0, 0, 0), _spawnEventType(EventType::Empty), _spawnEventParams{}, _metadata(nullptr),
-			_renderer(this), _currentAnimation(nullptr), _currentTransition(nullptr), _currentTransitionCancellable(false),
-			_collisionProxyID(Collisions::NullNode)
+		: _levelHandler(nullptr), _metadata(nullptr), _currentAnimation(nullptr), _currentTransition(nullptr),
+			_internalForceY(0.0f), _elasticity(0.0f), _friction(1.5f), _unstuckCooldown(0.0f), _frozenTimeLeft(0.0f), _maxHealth(1), _health(1),
+			_spawnFrames(0.0f), _spawnPos(0, 0, 0), _spawnEventParams{}, _spawnEventType(EventType::Empty), _currentTransitionCancellable(false),
+			_renderer(this), _collisionProxyID(Collisions::NullNode), _state(ActorState::None)
 	{
 	}
 
@@ -405,7 +405,7 @@ namespace Jazz2::Actors
 
 		float effectiveSpeedX, effectiveSpeedY;
 		if (_frozenTimeLeft > 0.0f) {
-			effectiveSpeedX = std::clamp(_externalForce.X * timeMult, -16.0f, 16.0f);
+			effectiveSpeedX = std::clamp(GetFrozenMomentumX() + _externalForce.X * timeMult, -16.0f, 16.0f);
 			effectiveSpeedY = ((_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation
 				? (_speed.Y + 0.5f * accelY)
 				: std::clamp(((currentGravity * 2.0f) + _internalForceY) * timeMult, -16.0f, 16.0f));
@@ -1092,7 +1092,8 @@ namespace Jazz2::Actors
 
 		if (effect == ParticleDebrisEffect::Frozen) {
 			for (std::int32_t i = 0; i < 20; i++) {
-				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel,
+					1.0f, Vector2f(GetFrozenMomentumX(), _speed.Y));
 			}
 
 			_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
@@ -1897,35 +1898,68 @@ namespace Jazz2::Actors
 	}
 #endif
 
-	void ActorBase::UpdateFrozenState(float timeMult)
+	bool ActorBase::IsFrozen() const
+	{
+		return (_frozenTimeLeft > 0.0f);
+	}
+
+	float ActorBase::GetFrozenMomentumX() const
+	{
+		return (GetState(ActorState::KeepsMomentumWhenFrozen) ? _speed.X : 0.0f);
+	}
+
+	void ActorBase::ThawOnNextUpdate()
 	{
 		if (_frozenTimeLeft > 0.0f) {
-			_frozenTimeLeft -= timeMult;
-			if (_frozenTimeLeft > 0.0f) {
-				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
-				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
-				_renderer.Initialize(ActorRendererType::FrozenMask);
-			} else {
-				_renderer.AnimPaused = false;
-				_renderer.Initialize(ActorRendererType::Default);
-
-				float scale = GetIceShrapnelScale();
-				for (std::int32_t i = 0; i < 10; i++) {
-					Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel, scale);
-				}
-
-				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite, scale);
-
-				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
-			}
+			_frozenTimeLeft = 0.0f;
+			_thawPending = true;
 		}
+	}
+
+	bool ActorBase::UpdateFrozenState(float timeMult)
+	{
+		constexpr float FrozenSpeedKeptPerTick = 31.0f / 32.0f;
+
+		if (_frozenTimeLeft <= 0.0f) {
+			if (!_thawPending) {
+				return false;
+			}
+		} else {
+			_frozenTimeLeft -= timeMult;
+		}
+		if (_frozenTimeLeft > 0.0f) {
+			// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
+			// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
+			_renderer.Initialize(ActorRendererType::FrozenMask);
+			if (GetState(ActorState::KeepsMomentumWhenFrozen)) {
+				_speed.X *= std::pow(FrozenSpeedKeptPerTick, timeMult * Player::LegacyFrameRateScale);
+			}
+			return false;
+		}
+
+		_frozenTimeLeft = 0.0f;
+		_thawPending = false;
+		_renderer.AnimPaused = false;
+		_renderer.Initialize(ActorRendererType::Default);
+
+		// The ice flies apart as fast as the object slid in it
+		float scale = GetIceShrapnelScale();
+		for (std::int32_t i = 0; i < 10; i++) {
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel,
+				scale, Vector2f(GetFrozenMomentumX(), _speed.Y));
+		}
+
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite, scale);
+
+		_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+		return true;
 	}
 
 	void ActorBase::HandleFrozenStateChange(ActorBase* shot)
 	{
 		if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(shot)) {
 			if (runtime_cast<ActorBase>(freezerShot->GetOwner()) != this) {
-				_frozenTimeLeft = freezerShot->FrozenDuration();
+				_frozenTimeLeft = freezerShot->GetFrozenDuration();
 				_renderer.AnimPaused = true;
 				freezerShot->DecreaseHealth(INT32_MAX);
 			}
@@ -1969,8 +2003,8 @@ namespace Jazz2::Actors
 
 		if (_health <= 0) {
 #if defined(WITH_ANGELSCRIPT)
-			if DEATH_UNLIKELY(_updateOverride != nullptr) {
-				_updateOverride->OnPerish(this, collider);
+			if DEATH_UNLIKELY(_updateOverride != nullptr && _updateOverride->OnPerish(this, collider)) {
+				return;
 			}
 #endif
 			OnPerish(collider);
@@ -2017,9 +2051,9 @@ namespace Jazz2::Actors
 	}
 
 	ActorBase::ActorRenderer::ActorRenderer(ActorBase* owner)
-		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), FrameSource(nullptr), LoopMode(AnimationLoopMode::Loop), FirstFrame(0),
-			FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f), CurrentFrame(0), _owner(owner),
-			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f), _paletteOffset(-1), _baseIndexed(false), _basePaletteOffset(0)
+		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), FrameSource(nullptr), LoopMode(AnimationLoopMode::Loop), FirstFrame(0),
+			FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f), CurrentFrame(0), AnimPaused(false), _baseIndexed(false),
+			_rendererType((ActorRendererType)-1), _owner(owner), _rendererTransition(0.0f), _paletteOffset(-1), _basePaletteOffset(0)
 	{
 		_type = ObjectType::Sprite;
 		_renderCommand.SetType(RenderCommand::Type::Sprite);

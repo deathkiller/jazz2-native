@@ -6,6 +6,8 @@
 
 namespace Jazz2::Scripting
 {
+	class LevelScriptLoader;
+
 	namespace Legacy
 	{
 		/**
@@ -109,6 +111,8 @@ namespace Jazz2::Scripting
 			void behave2(jjBEHAVIOR behavior, bool draw);
 			/** @brief Runs the given behavior function once, optionally drawing the object */
 			void behave3(jjVOIDFUNCOBJ behavior, bool draw);
+			/** @brief Runs `BEHAVIOR::WALKINGENEMY` once, as measured in JJ2+, optionally drawing the object */
+			void RunWalkingEnemy(bool draw);
 
 			/** @brief Spawns a new object with a built-in behavior and returns its object id */
 			static std::int32_t jjAddObject(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, std::uint32_t behavior);
@@ -275,6 +279,8 @@ namespace Jazz2::Scripting
 			std::int32_t fireBullet(std::uint8_t eventID);
 			/** @brief Spawns a pixel-explosion particle effect for the object */
 			void particlePixelExplosion(std::int32_t style);
+			/** @brief Bursts a frame of the animation table into debris where it would be drawn, see @ref particlePixelExplosion() */
+			static void AddPixelExplosion(LevelScriptLoader* owner, float xPixel, float yPixel, std::uint32_t frame, std::int32_t direction);
 			/** @brief Grants the object as a pickup to the given player */
 			void grantPickup(jjPLAYER* player, std::int32_t frequency);
 
@@ -319,9 +325,15 @@ namespace Jazz2::Scripting
 			std::weak_ptr<Actors::ActorBase> _actor;
 			// While a behavior of the script drives the object of the game
 			ScriptObjectHost* _host = nullptr;
+			// The behavior of the script running for the object (its function or object), see behave1()
+			const void* _runningBehavior = nullptr;
+			// A behavior moves the object itself, the speeds are its (see ScriptObjectHost::FollowScriptMovement())
+			bool _movedByBehavior = false;
 			// The animation of its own a script gave the object of the game, which shows its frames in place of the ones of
 			// its own animation, 0 for none (see ScriptObjectHost::PullFromActor())
 			std::int32_t _skinAnim = 0;
+			// How many frames ahead a behavior set `frameID` of an animation counted by the age (see ScriptObjectHost::PullFromActor())
+			std::int8_t _framePhase = 0;
 			// The properties as the object of the game had them last, the ones a script writes are told apart by them
 			struct SyncedState {
 				float XPos, YPos, XSpeed, YSpeed;
@@ -332,6 +344,11 @@ namespace Jazz2::Scripting
 				std::uint32_t CurFrame;
 				// The light the object has in the game, of the template of its event (the object of the game lights itself)
 				std::uint8_t LightType;
+				// How much lower `yPos` is than the object of the game, so the frame of its animation stands where it stands
+				// (see ScriptObjectHost::GetSkinOffsetY())
+				float SkinOffsetY;
+				// The animation has more frames than the graphics of the game, the frame is drawn as it is (see PullFromActor())
+				bool LongerAnim;
 			};
 			SyncedState _synced = {};
 
@@ -514,11 +531,18 @@ namespace Jazz2::Scripting
 				jjPARTICLEFLOWER flower;
 				jjPARTICLESTAR star;
 				jjPARTICLELEAF leaf;
+				// The fields of the types are at the offsets JJ2+ has them (see RegisterLegacyParticles()), 9 bytes
+				std::uint8_t raw[10];
 			} GENERIC;
 
-
 		private:
+			friend class Scripting::LevelScriptLoader;
+
 			std::int32_t _refCount;
+			// Ticks since the particle was made, or since a leaf landed
+			std::uint16_t _age;
+			// What the size of a star shrinks from
+			float _scale;
 		};
 	}
 }
