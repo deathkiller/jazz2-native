@@ -170,26 +170,26 @@ namespace Jazz2::Editor
 	void EditorSession::CreateToolActions()
 	{
 		auto& a = _actions;
-		struct ToolInfo { const char* Id; const char* Label; EditorIcon Icon; Keys Key; EditorToolType Type; };
+		struct ToolInfo { const char* Id; String Label; EditorIcon Icon; Keys Key; EditorToolType Type; };
 		static const ToolInfo Tools[] = {
 			// TRANSLATORS: Names of the tools in the Tools menu and the tool strip, nouns ("Fill" is the bucket fill tool, "Hand" moves the view)
-			{ ActionIds::ToolBrush, NC_("editor", "Brush"), EditorIcon::Brush, Keys::B, EditorToolType::Brush },
-			{ ActionIds::ToolEraser, NC_("editor", "Eraser"), EditorIcon::Eraser, Keys::E, EditorToolType::Eraser },
-			{ ActionIds::ToolRectangle, NC_("editor", "Rectangle"), EditorIcon::Rectangle, Keys::R, EditorToolType::Rectangle },
-			{ ActionIds::ToolFill, NC_("editor", "Fill"), EditorIcon::Fill, Keys::G, EditorToolType::Fill },
-			{ ActionIds::ToolEyedropper, NC_("editor", "Eyedropper"), EditorIcon::Eyedropper, Keys::I, EditorToolType::Eyedropper },
-			{ ActionIds::ToolSelect, NC_("editor", "Select"), EditorIcon::Select, Keys::M, EditorToolType::Select },
-			{ ActionIds::ToolWand, NC_("editor", "Magic Wand"), EditorIcon::Wand, Keys::W, EditorToolType::Wand },
-			{ ActionIds::ToolHand, NC_("editor", "Hand"), EditorIcon::Hand, Keys::H, EditorToolType::Hand },
-			{ ActionIds::ToolEvent, NC_("editor", "Events"), EditorIcon::Event, Keys::Q, EditorToolType::Event },
-			{ ActionIds::ToolMeasure, NC_("editor", "Measure"), EditorIcon::Measure, Keys::U, EditorToolType::Measure },
-			{ ActionIds::ToolPath, NC_("editor", "Events Along Path"), EditorIcon::EventPath, Keys::K, EditorToolType::Path },
-			{ ActionIds::ToolSmart, NC_("editor", "Smart Brush"), EditorIcon::SmartBrush, Keys::T, EditorToolType::Smart },
-			{ ActionIds::ToolGround, NC_("editor", "Ground Line"), EditorIcon::Slope, Keys::P, EditorToolType::Ground },
+			{ ActionIds::ToolBrush, _x("editor", "Brush"), EditorIcon::Brush, Keys::B, EditorToolType::Brush },
+			{ ActionIds::ToolEraser, _x("editor", "Eraser"), EditorIcon::Eraser, Keys::E, EditorToolType::Eraser },
+			{ ActionIds::ToolRectangle, _x("editor", "Rectangle"), EditorIcon::Rectangle, Keys::R, EditorToolType::Rectangle },
+			{ ActionIds::ToolFill, _x("editor", "Fill"), EditorIcon::Fill, Keys::G, EditorToolType::Fill },
+			{ ActionIds::ToolEyedropper, _x("editor", "Eyedropper"), EditorIcon::Eyedropper, Keys::I, EditorToolType::Eyedropper },
+			{ ActionIds::ToolSelect, _x("editor", "Select"), EditorIcon::Select, Keys::M, EditorToolType::Select },
+			{ ActionIds::ToolWand, _x("editor", "Magic Wand"), EditorIcon::Wand, Keys::W, EditorToolType::Wand },
+			{ ActionIds::ToolHand, _x("editor", "Hand"), EditorIcon::Hand, Keys::H, EditorToolType::Hand },
+			{ ActionIds::ToolEvent, _x("editor", "Events"), EditorIcon::Event, Keys::Q, EditorToolType::Event },
+			{ ActionIds::ToolMeasure, _x("editor", "Measure"), EditorIcon::Measure, Keys::U, EditorToolType::Measure },
+			{ ActionIds::ToolPath, _x("editor", "Events Along Path"), EditorIcon::EventPath, Keys::K, EditorToolType::Path },
+			{ ActionIds::ToolSmart, _x("editor", "Smart Brush"), EditorIcon::SmartBrush, Keys::T, EditorToolType::Smart },
+			{ ActionIds::ToolGround, _x("editor", "Ground Line"), EditorIcon::Slope, Keys::P, EditorToolType::Ground },
 		};
 		for (const ToolInfo& info : Tools) {
 			EditorToolType type = info.Type;
-			auto& action = a.Add(info.Id, _x("editor", info.Label), info.Icon, [this, type]() {
+			auto& action = a.Add(info.Id, info.Label, info.Icon, [this, type]() {
 				_tools->SetActive(type);
 				// The panel at the bottom offers what the tool uses
 				if (type == EditorToolType::Event || type == EditorToolType::Path) {
@@ -296,21 +296,21 @@ namespace Jazz2::Editor
 		// Size of the interface, in steps that keep it sharp where they can
 		a.Add(ActionIds::ViewUiLarger, _x("editor", "Larger Interface"), EditorIcon::None, [this]() { ChangeUiScale(1); }).Key = { Keys::Plus, KeyMod::Ctrl | KeyMod::Shift };
 		a.Add(ActionIds::ViewUiSmaller, _x("editor", "Smaller Interface"), EditorIcon::None, [this]() { ChangeUiScale(-1); }).Key = { Keys::Minus, KeyMod::Ctrl | KeyMod::Shift };
-		EditorAction& uiAuto = a.Add(ActionIds::ViewUiAuto, _x("editor", "Interface Size by Window"), EditorIcon::None, [this]() { ChangeUiScale(0); });
+		EditorAction& uiAuto = a.Add(ActionIds::ViewUiAuto, _x("editor", "Interface Size by System"), EditorIcon::None, [this]() { ChangeUiScale(0); });
 		uiAuto.Key = { Keys::D0, KeyMod::Ctrl | KeyMod::Shift };
 		uiAuto.AlternateKey = { Keys::NumPad0, KeyMod::Ctrl | KeyMod::Shift };
 
 		// Layout for the screen, and how much is offered
-		struct LayoutChoice { const char* Id; const char* Label; std::int32_t Value; };
+		struct LayoutChoice { const char* Id; String Label; std::int32_t Value; };
 		static const LayoutChoice Layouts[] = {
 			// TRANSLATORS: Choices of the layout of the editor in the View menu, drawers are panels that slide in from the side
-			{ ActionIds::ViewLayoutAuto, NC_("editor", "Layout by Window Size"), 0 },
-			{ ActionIds::ViewLayoutDesktop, NC_("editor", "Desktop Layout"), 1 },
-			{ ActionIds::ViewLayoutCompact, NC_("editor", "Compact Layout, Panels in Drawers"), 2 },
+			{ ActionIds::ViewLayoutAuto, _x("editor", "Layout by Window Size"), 0 },
+			{ ActionIds::ViewLayoutDesktop, _x("editor", "Desktop Layout"), 1 },
+			{ ActionIds::ViewLayoutCompact, _x("editor", "Compact Layout, Panels in Drawers"), 2 },
 		};
 		for (const LayoutChoice& choice : Layouts) {
 			std::int32_t value = choice.Value;
-			auto& layout = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [this, value]() {
+			auto& layout = a.Add(choice.Id, choice.Label, EditorIcon::None, [this, value]() {
 				_settings.Layout = value;
 				_settings.Save();
 			});
@@ -324,7 +324,7 @@ namespace Jazz2::Editor
 		expert.IsChecked = [this]() { return _settings.Expert; };
 		// How the interface looks and moves, for eyes that need it
 		auto applyTheme = [this]() {
-			UiTheme::Apply(UiThemeKind(_settings.Theme), _settings.ReducedMotion);
+			UiTheme::Apply(UiThemeKind(_settings.Theme), _settings.ReducedMotion, _settings.ReadableFont);
 			_settings.Save();
 		};
 		auto& highContrast = a.Add(ActionIds::ViewHighContrast, _x("editor", "High Contrast Interface"), EditorIcon::None, [this, applyTheme]() {
@@ -332,6 +332,12 @@ namespace Jazz2::Editor
 			applyTheme();
 		});
 		highContrast.IsChecked = [this]() { return (_settings.Theme == std::int32_t(UiThemeKind::HighContrast)); };
+		// TRANSLATORS: Menu item in the View menu, text is shown in a plain font instead of the one of the game
+		auto& readableFont = a.Add(ActionIds::ViewReadableFont, _x("editor", "Readable Font"), EditorIcon::None, [this, applyTheme]() {
+			_settings.ReadableFont = !_settings.ReadableFont;
+			applyTheme();
+		});
+		readableFont.IsChecked = [this]() { return _settings.ReadableFont; };
 		auto& reducedMotion = a.Add(ActionIds::ViewReducedMotion, _x("editor", "Reduce Motion"), EditorIcon::None, [this, applyTheme]() {
 			_settings.ReducedMotion = !_settings.ReducedMotion;
 			applyTheme();
@@ -450,20 +456,21 @@ namespace Jazz2::Editor
 		stop.Key = { Keys::F5, 0 };
 		stop.Scope = ActionScope::Play;
 		stop.IsEnabled = isInGame;
-		struct PlayChoice { const char* Id; const char* Label; std::int32_t Value; bool Character; };
+		struct PlayChoice { const char* Id; String Label; std::int32_t Value; bool Character; };
 		static const PlayChoice Choices[] = {
-			// TRANSLATORS: Choices in the Play menu of the character and the difficulty to play-test the level with
-			{ ActionIds::PlayJazz, NC_("editor", "Jazz"), std::int32_t(PlayerType::Jazz), true },
-			{ ActionIds::PlaySpaz, NC_("editor", "Spaz"), std::int32_t(PlayerType::Spaz), true },
-			{ ActionIds::PlayLori, NC_("editor", "Lori"), std::int32_t(PlayerType::Lori), true },
-			{ ActionIds::PlayEasy, NC_("editor", "Easy"), std::int32_t(GameDifficulty::Easy), false },
-			{ ActionIds::PlayNormal, NC_("editor", "Normal"), std::int32_t(GameDifficulty::Normal), false },
-			{ ActionIds::PlayHard, NC_("editor", "Hard"), std::int32_t(GameDifficulty::Hard), false },
+			// Names of characters aren't translated
+			{ ActionIds::PlayJazz, "Jazz", std::int32_t(PlayerType::Jazz), true },
+			{ ActionIds::PlaySpaz, "Spaz", std::int32_t(PlayerType::Spaz), true },
+			{ ActionIds::PlayLori, "Lori", std::int32_t(PlayerType::Lori), true },
+			// TRANSLATORS: Choices in the Play menu of the difficulty to play-test the level with
+			{ ActionIds::PlayEasy, _x("editor", "Easy"), std::int32_t(GameDifficulty::Easy), false },
+			{ ActionIds::PlayNormal, _x("editor", "Normal"), std::int32_t(GameDifficulty::Normal), false },
+			{ ActionIds::PlayHard, _x("editor", "Hard"), std::int32_t(GameDifficulty::Hard), false },
 		};
 		for (const PlayChoice& choice : Choices) {
 			std::int32_t value = choice.Value;
 			bool character = choice.Character;
-			auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [this, value, character]() {
+			auto& action = a.Add(choice.Id, choice.Label, EditorIcon::None, [this, value, character]() {
 				(character ? _settings.PlayCharacter : _settings.PlayDifficulty) = value;
 				_settings.Save();
 			});
@@ -475,22 +482,21 @@ namespace Jazz2::Editor
 #if defined(WITH_MULTIPLAYER)
 		// Multiplayer in local splitscreen, the rules of a game mode with up to 4 players on one screen
 		using Multiplayer::MpGameMode;
-		struct ModeChoice { const char* Id; const char* Label; MpGameMode Mode; };
+		struct ModeChoice { const char* Id; String Label; MpGameMode Mode; };
+		// Names of the game modes are shared with the menus of the game, they're without the context
 		static const ModeChoice Modes[] = {
 			// TRANSLATORS: Choice in the Play menu next to the multiplayer game modes, play-tests the level as a single player
-			{ ActionIds::PlayAlone, NC_("editor", "Alone"), MpGameMode::Unknown },
-			{ ActionIds::PlayCooperation, N_("Cooperation"), MpGameMode::Cooperation },
-			{ ActionIds::PlayBattle, N_("Battle"), MpGameMode::Battle },
-			{ ActionIds::PlayTeamBattle, N_("Team Battle"), MpGameMode::TeamBattle },
-			{ ActionIds::PlayRace, N_("Race"), MpGameMode::Race },
-			{ ActionIds::PlayTreasureHunt, N_("Treasure Hunt"), MpGameMode::TreasureHunt },
-			{ ActionIds::PlayCaptureTheFlag, N_("Capture The Flag"), MpGameMode::CaptureTheFlag },
+			{ ActionIds::PlayAlone, _x("editor", "Alone"), MpGameMode::Unknown },
+			{ ActionIds::PlayCooperation, _("Cooperation"), MpGameMode::Cooperation },
+			{ ActionIds::PlayBattle, _("Battle"), MpGameMode::Battle },
+			{ ActionIds::PlayTeamBattle, _("Team Battle"), MpGameMode::TeamBattle },
+			{ ActionIds::PlayRace, _("Race"), MpGameMode::Race },
+			{ ActionIds::PlayTreasureHunt, _("Treasure Hunt"), MpGameMode::TreasureHunt },
+			{ ActionIds::PlayCaptureTheFlag, _("Capture The Flag"), MpGameMode::CaptureTheFlag },
 		};
 		for (const ModeChoice& choice : Modes) {
 			std::int32_t value = std::int32_t(choice.Mode);
-			// Names of the game modes are shared with the menus of the game
-			StringView label = (choice.Mode == MpGameMode::Unknown ? _x("editor", choice.Label) : _(choice.Label));
-			auto& action = a.Add(choice.Id, label, EditorIcon::None, [this, value]() {
+			auto& action = a.Add(choice.Id, choice.Label, EditorIcon::None, [this, value]() {
 				_settings.PlayGameMode = value;
 				_settings.Save();
 			});
@@ -519,18 +525,18 @@ namespace Jazz2::Editor
 		path.IsChecked = [this]() { return _showPlayPath; };
 
 		// Debug toggles of play-tests, kept for all of them, the menus toggle them anytime
-		struct DebugToggle { const char* Id; const char* Label; bool EditorSettings::PlayTestSettings::*Option; const char* On; const char* Off; };
+		struct DebugToggle { const char* Id; String Label; bool EditorSettings::PlayTestSettings::*Option; String On; String Off; };
 		static const DebugToggle DebugToggles[] = {
 			// TRANSLATORS: Debug toggles in the bar of a running play-test, then the status messages after turning them on and off
-			{ ActionIds::PlayHitboxes, NC_("editor", "Show Hitboxes"), &EditorSettings::PlayTestSettings::ShowHitboxes, NC_("editor", "Hitboxes are shown"), NC_("editor", "Hitboxes are hidden") },
-			{ ActionIds::PlayEventZones, NC_("editor", "Show Event Zones"), &EditorSettings::PlayTestSettings::ShowEventZones, NC_("editor", "Event zones are shown"), NC_("editor", "Event zones are hidden") },
+			{ ActionIds::PlayHitboxes, _x("editor", "Show Hitboxes"), &EditorSettings::PlayTestSettings::ShowHitboxes, _x("editor", "Hitboxes are shown"), _x("editor", "Hitboxes are hidden") },
+			{ ActionIds::PlayEventZones, _x("editor", "Show Event Zones"), &EditorSettings::PlayTestSettings::ShowEventZones, _x("editor", "Event zones are shown"), _x("editor", "Event zones are hidden") },
 		};
 		for (const DebugToggle& toggle : DebugToggles) {
 			bool EditorSettings::PlayTestSettings::*option = toggle.Option;
-			const char* on = toggle.On;
-			const char* off = toggle.Off;
-			auto& action = a.Add(toggle.Id, _x("editor", toggle.Label), EditorIcon::None, [this, option, on, off]() {
-				TogglePlayTestDebug(option, _x("editor", on), _x("editor", off));
+			StringView on = toggle.On;
+			StringView off = toggle.Off;
+			auto& action = a.Add(toggle.Id, toggle.Label, EditorIcon::None, [this, option, on, off]() {
+				TogglePlayTestDebug(option, on, off);
 			});
 			action.Scope = ActionScope::Play;
 			action.IsChecked = [this, option]() { return _settings.PlayTest.*option; };
@@ -582,17 +588,17 @@ namespace Jazz2::Editor
 		reach.Key = { Keys::R, KeyMod::Ctrl | KeyMod::Shift };
 		reach.IsChecked = [this]() { return _playOverlays->IsReachabilityShown(); };
 		// Who gets there, the moves of each character differ, and from where
-		struct ReachChoice { const char* Id; const char* Label; std::int32_t Character; };
+		struct ReachChoice { const char* Id; String Label; std::int32_t Character; };
 		static const ReachChoice ReachChoices[] = {
 			// TRANSLATORS: Choices in the Show menu of whose reach the shown reachable area is
-			{ ActionIds::ViewReachAny, NC_("editor", "Reachable with Any Character"), 0 },
-			{ ActionIds::ViewReachJazz, NC_("editor", "Reachable with Jazz"), std::int32_t(PlayerType::Jazz) },
-			{ ActionIds::ViewReachSpaz, NC_("editor", "Reachable with Spaz"), std::int32_t(PlayerType::Spaz) },
-			{ ActionIds::ViewReachLori, NC_("editor", "Reachable with Lori"), std::int32_t(PlayerType::Lori) },
+			{ ActionIds::ViewReachAny, _x("editor", "Reachable with Any Character"), 0 },
+			{ ActionIds::ViewReachJazz, _x("editor", "Reachable with Jazz"), std::int32_t(PlayerType::Jazz) },
+			{ ActionIds::ViewReachSpaz, _x("editor", "Reachable with Spaz"), std::int32_t(PlayerType::Spaz) },
+			{ ActionIds::ViewReachLori, _x("editor", "Reachable with Lori"), std::int32_t(PlayerType::Lori) },
 		};
 		for (const ReachChoice& choice : ReachChoices) {
 			std::int32_t character = choice.Character;
-			auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [this, character]() {
+			auto& action = a.Add(choice.Id, choice.Label, EditorIcon::None, [this, character]() {
 				_settings.PlayTest.ReachCharacter = character;
 				_settings.Save();
 				if (_playOverlays->IsReachabilityShown()) {

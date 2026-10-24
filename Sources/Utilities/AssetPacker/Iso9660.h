@@ -156,8 +156,22 @@ namespace Jazz2::AssetPacker
 		/** @brief Adds a file whose contents are copied from the volume being read */
 		bool AddFileFromImage(StringView path, std::uint32_t lba, std::uint32_t size, const std::uint8_t recorded[7]);
 
-		/** @brief Adds a directory and everything below it from the file system */
-		bool AddDirectoryFromDisk(StringView path, StringView hostPath);
+		/**
+			@brief Decides whether an entry of a directory added from the file system is left out
+
+			Called with the name of the entry, whether it's a directory and whether it's right in the directory
+			that was added, not deeper. A directory left out is left out with everything in it.
+		*/
+		using LeaveOutFunc = bool(*)(StringView name, bool isDirectory, bool isTopLevel);
+
+		/**
+			@brief Adds a directory and everything below it from the file system
+
+			@param path			Where it goes in the volume
+			@param hostPath		The directory in the file system
+			@param leaveOut		What of it is left out, or `nullptr` for nothing
+		*/
+		bool AddDirectoryFromDisk(StringView path, StringView hostPath, LeaveOutFunc leaveOut = nullptr);
 
 		/** @brief Adds a single file from the file system */
 		bool AddFileFromDisk(StringView path, StringView hostPath);
@@ -238,7 +252,7 @@ namespace Jazz2::AssetPacker
 
 		Node* FindOrCreateDirectory(StringView path);
 		Node* AddChild(Node& parent, StringView name, bool isDirectory);
-		bool AddDirectoryContents(Node& parent, StringView hostPath);
+		bool AddDirectoryContents(Node& parent, StringView hostPath, LeaveOutFunc leaveOut, bool isTopLevel);
 		void AssignNames(Node& node);
 		bool BuildLayout(std::uint32_t volumeSectorCount, Layout& layout);
 		void WriteDescriptors(ArrayView<std::uint8_t> target, const Layout& layout);

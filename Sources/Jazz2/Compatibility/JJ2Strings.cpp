@@ -184,14 +184,18 @@ namespace Jazz2::Compatibility
 			return {};
 		}
 
+		// `#` starts the colors, every character but a space then takes the next one (the first after the default
+		// color), as does every `|` - `~` freezes the color, another `~` goes back to the default color
+		// without colors. Nothing else changes them, `|` and `~` aren't drawn even without colors.
 		char buffer[1024];
 		std::int32_t colorIndex = 0;
 		bool colorRandom = false;
 		bool colorEmitted = true;
-		bool colorFrozen = true;
+		bool colorFrozen = false;
 		std::size_t length = text.size();
 		std::size_t j = 0;
-		for (std::size_t i = 0; i < length && j < sizeof(buffer) - 16; i++) {
+		// A color and a character take up to 18 bytes
+		for (std::size_t i = 0; i < length && j < sizeof(buffer) - 24; i++) {
 			char current = text[i];
 
 			if (current == '@') {
@@ -206,7 +210,7 @@ namespace Jazz2::Compatibility
 				} else {
 					buffer[j++] = ' ';
 				}
-			} else if (current == '\xA7' && (std::isdigit(text[i + 1]) || text[i + 1] == '/')) {
+			} else if (current == '\xA7' && i + 1 < length && (std::isdigit((unsigned char)text[i + 1]) || text[i + 1] == '/')) {
 				// Char spacing (§)
 				i++;
 				if (!stripFormatting) {
@@ -226,73 +230,130 @@ namespace Jazz2::Compatibility
 						std::uint32_t spacing = text[i] - '0';
 						std::uint32_t converted = 100 - (spacing * 10);
 						j += formatInto({ &buffer[j], 16 }, "[w:{}]", converted);
-						if (colorRandom && !colorFrozen) {
-							colorIndex++;
-						}
 					}
 				}
 			} else if (current == '#') {
 				// Turn on colorization
 				colorRandom = true;
-				colorEmitted = false;
 				colorFrozen = false;
-			} else if (current == '~' && colorRandom) {
-				// Freeze active color
-				if (!colorFrozen) {
-					colorFrozen = true;
-				} else {
-					colorRandom = false;
-					colorEmitted = false;
-					colorFrozen = false;
-					colorIndex = 0;
+			} else if (current == '~') {
+				if (colorRandom) {
+					if (!colorFrozen) {
+						// Freeze active color
+						colorFrozen = true;
+					} else {
+						// Back to the default color
+						colorRandom = false;
+						colorFrozen = false;
+						colorIndex = 0;
+						colorEmitted = false;
+					}
 				}
-			} 
+			}
 			// TODO: '|' is usually also used as separator in AS
 			else if (current == '|') {
 				// Skip one color
-				if (!colorFrozen) {
+				if (colorRandom && !colorFrozen) {
 					colorIndex++;
 					colorEmitted = false;
 				}
 			} else {
-				if (!stripFormatting && !colorEmitted) {
-					colorEmitted = true;
-					if (escaped) {
-						buffer[j++] = '\\';
-						buffer[j++] = 'f';
-					} else {
-						buffer[j++] = '\f';
-					}
-					std::int32_t colorIndex2 = colorIndex % (std::int32_t(arraySize(DefaultFontColors)) + 1);
-					if (colorIndex2 == 0) {
-						buffer[j++] = '[';
-						buffer[j++] = '/';
-						buffer[j++] = 'c';
-						buffer[j++] = ']';
-					} else {
-						j += formatInto({ &buffer[j], 16 }, "[c:#{:.8x}]", DefaultFontColors[colorIndex2 - 1]);
-					}
-				}
-
-				const std::uint16_t c = Windows1250_Utf8[(std::uint8_t)current];
-				if (c < 0x80) {
-					buffer[j++] = (char)c;
-				} else if (c < 0x800) {
-					buffer[j++] = 0xc0 | (c >> 6);
-					buffer[j++] = 0x80 | (c & 0x3f);
-				} else if (c < 0xffff) {
-					buffer[j++] = 0xe0 | (c >> 12);
-					buffer[j++] = 0x80 | ((c >> 6) & 0x3f);
-					buffer[j++] = 0x80 | (c & 0x3f);
-				}
-
-				if (colorRandom && !colorFrozen && c != ' ' && text[i + 1] != '~') {
+				if (colorRandom && !colorFrozen && current != ' ') {
 					colorIndex++;
 					colorEmitted = false;
 				}
+
+				if (!stripFormatting && !colorEmitted) {
+					colorEmitted = true;
+					AppendColor(buffer, j, colorIndex, escaped);
+				}
+
+				AppendChar(buffer, j, current);
 			}
 		}
 
 		return String(buffer, j);
+	}
+
+	String JJ2Strings::RecodeScriptString(StringView text, bool asMessage)
+	{
+		if (text.empty()) {
+			return {};
+		}
+
+		// The colors follow each other from the one after the default color as in the texts of levels, the 6th is the
+		// default color, there's none before the first `|` - a message starts in the first one (as measured in JJ2+)
+		constexpr std::int32_t ColorBeforeFirst = 2;
+
+		char buffer[1024];
+		std::int32_t colorIndex = (asMessage ? ColorBeforeFirst + 1 : ColorBeforeFirst);
+		bool colorEmitted = !asMessage;
+		std::size_t length = text.size();
+		std::size_t j = 0;
+		// A color and a character take up to 18 bytes
+		for (std::size_t i = 0; i < length && j < sizeof(buffer) - 24; i++) {
+			char current = text[i];
+			if (current == '\n') {
+				// No new line, `@` is no new line either (it's drawn as it is)
+				buffer[j++] = ' ';
+			} else if (current == '\xA7' && i + 1 < length && (std::isdigit((unsigned char)text[i + 1]) || text[i + 1] == '/')) {
+				// Char spacing (§)
+				i++;
+				if (text[i] == '/') {
+					j += formatInto({ &buffer[j], 16 }, "\f[/w]");
+				} else {
+					std::uint32_t spacing = text[i] - '0';
+					j += formatInto({ &buffer[j], 16 }, "\f[w:{}]", 100 - (spacing * 10));
+				}
+			} else if (current == '#' && !asMessage) {
+				// Not drawn
+			} else if (current == '|') {
+				colorIndex++;
+				colorEmitted = false;
+			} else {
+				if (!colorEmitted) {
+					colorEmitted = true;
+					AppendColor(buffer, j, colorIndex, false);
+				}
+				AppendChar(buffer, j, current);
+			}
+		}
+
+		return String(buffer, j);
+	}
+
+	void JJ2Strings::AppendChar(char* buffer, std::size_t& j, char c)
+	{
+		const std::uint16_t u = Windows1250_Utf8[(std::uint8_t)c];
+		if (u < 0x80) {
+			buffer[j++] = (char)u;
+		} else if (u < 0x800) {
+			buffer[j++] = 0xc0 | (u >> 6);
+			buffer[j++] = 0x80 | (u & 0x3f);
+		} else if (u < 0xffff) {
+			buffer[j++] = 0xe0 | (u >> 12);
+			buffer[j++] = 0x80 | ((u >> 6) & 0x3f);
+			buffer[j++] = 0x80 | (u & 0x3f);
+		}
+	}
+
+	void JJ2Strings::AppendColor(char* buffer, std::size_t& j, std::int32_t colorIndex, bool escaped)
+	{
+		if (escaped) {
+			buffer[j++] = '\\';
+			buffer[j++] = 'f';
+		} else {
+			buffer[j++] = '\f';
+		}
+		std::int32_t colorIndex2 = colorIndex % (std::int32_t(arraySize(DefaultFontColors)) + 1);
+		if (colorIndex2 == 0) {
+			buffer[j++] = '[';
+			buffer[j++] = '/';
+			buffer[j++] = 'c';
+			buffer[j++] = ']';
+		} else {
+			// RGB only, `UI::FormattedTextBlock` reads 8 digits as ARGB, so a leading `00` would make it transparent
+			j += formatInto({ &buffer[j], 16 }, "[c:#{:.6x}]", DefaultFontColors[colorIndex2 - 1]);
+		}
 	}
 }

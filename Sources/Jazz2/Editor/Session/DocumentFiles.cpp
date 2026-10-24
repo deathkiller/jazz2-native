@@ -928,9 +928,22 @@ namespace Jazz2::Editor
 
 	void DocumentFiles::ShowExportDialog()
 	{
-		String problem;
+		DocumentProblem problem;
 		if (!_context.GetDocument().Validate(&problem)) {
-			UiMessageDialog::Show(*_context.GetSurface(), _x("editor", "Export Level"), _fx("editor", "The level can't be exported:\n{}", _x("editor", problem.data())), { _x("editor", "OK") }, {});
+			StringView description;
+			switch (problem) {
+				// TRANSLATORS: Problems of a level that make it unloadable, shown when the level can't be exported
+				case DocumentProblem::LayerSize: description = _x("editor", "A layer has a different number of tiles than its size"); break;
+				case DocumentProblem::SpriteLayerCount: description = _x("editor", "The level has to have exactly one sprite layer"); break;
+				case DocumentProblem::TooManyLayers: description = _x("editor", "The level has too many layers"); break;
+				case DocumentProblem::TooManyTexts: description = _x("editor", "The level has too many texts"); break;
+				case DocumentProblem::TooManyExtraTileSets: description = _x("editor", "The level has too many extra tile sets"); break;
+				case DocumentProblem::TooManyAnimations: description = _x("editor", "The level has too many animated tiles"); break;
+				case DocumentProblem::TooManyFrames: description = _x("editor", "An animated tile has too many frames"); break;
+				case DocumentProblem::UnaddressableTile: description = _x("editor", "The level uses tiles past the tile IDs it can address"); break;
+				default: break;
+			}
+			UiMessageDialog::Show(*_context.GetSurface(), _x("editor", "Export Level"), _fx("editor", "The level can't be exported:\n{}", description), { _x("editor", "OK") }, {});
 			return;
 		}
 

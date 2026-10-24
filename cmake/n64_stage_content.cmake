@@ -5,7 +5,9 @@
 # soundtrack (see Sources/Utilities/AssetPacker/N64Content.cpp). Any other console tree still boots, so the files
 # the console cannot play at all - original music formats, which it has no decoder for, and the original cinematic
 # where the video replaces it - are left out here rather than taking cartridge space for nothing. So is anything a
-# failed conversion left behind (its ".n64-temp" scratch directory).
+# failed conversion left behind (its ".n64-temp" scratch directory), the ".po" sources of the translations and what
+# only the level editor reads - the rules of Sources/Utilities/AssetPacker/ContentFilter.h, which AssetPacker's
+# "swap-content" stages a ROM by as well (CartridgeImage.cpp); keep them in step.
 #
 # Invoked from the packaging step in ncine_extra_sources.cmake as:
 #   cmake -DSOURCE=<content tree> -DDESTINATION=<staging dir> -P cmake/n64_stage_content.cmake
@@ -33,8 +35,12 @@ foreach(_n64Video IN LISTS _n64Videos)
 	file(REMOVE "${DESTINATION}/Cinematics/${_n64VideoName}.j2v")
 endforeach()
 
-# The ".po" translation sources are not read at run time (only the compiled ".mo" are)
-file(GLOB_RECURSE _n64TranslationSources LIST_DIRECTORIES false "${DESTINATION}/Translations/*.po")
+# The console has no level editor, so nothing it reads (its font) is needed
+file(REMOVE_RECURSE "${DESTINATION}/Editor")
+
+# The ".po" translation sources are not read at run time (only the compiled ".mo" are), wherever they are, as
+# AssetPacker's ContentFilter leaves them out
+file(GLOB_RECURSE _n64TranslationSources LIST_DIRECTORIES false "${DESTINATION}/*.po")
 if(_n64TranslationSources)
 	file(REMOVE ${_n64TranslationSources})
 endif()

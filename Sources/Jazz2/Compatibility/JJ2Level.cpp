@@ -87,14 +87,24 @@ namespace Jazz2::Compatibility
 		std::int32_t layoutBlockPackedSize = headerBlock.ReadInt32();
 		std::int32_t layoutBlockUnpackedSize = headerBlock.ReadInt32();
 
-		JJ2Block infoBlock(s, infoBlockPackedSize, infoBlockUnpackedSize);
-		JJ2Block eventBlock(s, eventBlockPackedSize, eventBlockUnpackedSize);
-		JJ2Block dictBlock(s, dictBlockPackedSize, dictBlockUnpackedSize);
-		JJ2Block layoutBlock(s, layoutBlockPackedSize, layoutBlockUnpackedSize);
-
-		LoadMetadata(infoBlock, strictParser);
-		if (!LoadEvents(eventBlock, strictParser) || !LoadLayers(dictBlock, layoutBlock, strictParser)) {
-			return false;
+		// The blocks follow one another in the file, each is released as soon as it's parsed, the unpacked events of a big
+		// level alone take a few MB, which consoles can't spare
+		{
+			JJ2Block infoBlock(s, infoBlockPackedSize, infoBlockUnpackedSize);
+			LoadMetadata(infoBlock, strictParser);
+		}
+		{
+			JJ2Block eventBlock(s, eventBlockPackedSize, eventBlockUnpackedSize);
+			if (!LoadEvents(eventBlock, strictParser)) {
+				return false;
+			}
+		}
+		{
+			JJ2Block dictBlock(s, dictBlockPackedSize, dictBlockUnpackedSize);
+			JJ2Block layoutBlock(s, layoutBlockPackedSize, layoutBlockUnpackedSize);
+			if (!LoadLayers(dictBlock, layoutBlock, strictParser)) {
+				return false;
+			}
 		}
 
 		// Try to read MLLE data stream
@@ -316,42 +326,55 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		_events = std::make_unique<TileEventSection[]>(width * height);
+		_events.clear();
 
-		for (std::int32_t y = 0; y < height; y++) {
-			for (std::int32_t x = 0; x < width; x++) {
-				std::uint32_t eventData = block.ReadUInt32();
+		const std::int32_t count = width * height;
+		JJ2Event lastEventType = JJ2Event::EMPTY;
+		for (std::int32_t i = 0; i < count; i++) {
+			std::uint32_t eventData = block.ReadUInt32();
+			if (eventData == 0) {
+				lastEventType = JJ2Event::EMPTY;
+				continue;
+			}
 
-				auto& tileEvent = _events[x + y * width];
-				tileEvent.EventType = (JJ2Event)(std::uint8_t)(eventData & 0x000000FF);
-				tileEvent.Difficulty = (std::uint8_t)((eventData & 0x00000300) >> 8);
-				tileEvent.Illuminate = ((eventData & 0x00000400) >> 10 == 1);
-				tileEvent.TileParams = ((eventData & 0xFFFFF000) >> 12);
+			auto& gridEvent = _events.emplace_back();
+			gridEvent.Index = i;
+			auto& tileEvent = gridEvent.Event;
+			tileEvent.EventType = (JJ2Event)(std::uint8_t)(eventData & 0x000000FF);
+			tileEvent.Difficulty = (std::uint8_t)((eventData & 0x00000300) >> 8);
+			tileEvent.Illuminate = ((eventData & 0x00000400) >> 10 == 1);
+			tileEvent.TileParams = ((eventData & 0xFFFFF000) >> 12);
+			lastEventType = tileEvent.EventType;
+
+			if (tileEvent.EventType == JJ2Event::CTF_BASE) {
+				_hasCTF = true;
+			} else if (tileEvent.EventType == JJ2Event::WARP_ORIGIN) {
+				if (((tileEvent.TileParams >> 16) & 1) == 1) {
+					_hasLaps = true;
+				}
 			}
 		}
 
-		auto& lastTileEvent = _events[(width * height) - 1];
-		if (lastTileEvent.EventType == JJ2Event::MODIFIER_ONE_WAY) {
+		if (lastEventType == JJ2Event::MODIFIER_ONE_WAY) {
 			_hasPit = false;
 			_hasPitInstantDeath = false;
-		} else if (lastTileEvent.EventType == JJ2Event::MCE) {
+		} else if (lastEventType == JJ2Event::MCE) {
 			_hasPit = true;
 			_hasPitInstantDeath = true;
 		} else {
 			_hasPit = true;
 			_hasPitInstantDeath = false;
 		}
-
-		for (std::int32_t i = 0; i < width * height; i++) {
-			if (_events[i].EventType == JJ2Event::CTF_BASE) {
-				_hasCTF = true;
-			} else if (_events[i].EventType == JJ2Event::WARP_ORIGIN) {
-				if (((_events[i].TileParams >> 16) & 1) == 1) {
-					_hasLaps = true;
-				}
-			}
-		}
 		return true;
+	}
+
+	const JJ2Level::TileEventSection* JJ2Level::FindEvent(std::int32_t x, std::int32_t y) const
+	{
+		const std::int32_t index = x + y * _layers[3].Width;
+		auto it = std::lower_bound(_events.begin(), _events.end(), index, [](const GridEventSection& gridEvent, std::int32_t index) {
+			return gridEvent.Index < index;
+		});
+		return (it != _events.end() && it->Index == index ? &it->Event : nullptr);
 	}
 
 	bool JJ2Level::LoadLayers(JJ2Block& dictBlock, JJ2Block& layoutBlock, bool strictParser)
@@ -687,36 +710,40 @@ namespace Jazz2::Compatibility
 
 		// Preprocess events first, so they can change some level properties
 		bool hasMultiplayerSpawnPoints = false;
-		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
-			for (std::int32_t x = 0; x < _layers[3].Width; x++) {
-				auto& tileEvent = _events[x + y * _layers[3].Width];
+		for (auto& gridEvent : _events) {
+			auto& tileEvent = gridEvent.Event;
 
-				JJ2Event eventType;
-				if (tileEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
-					// Generators are converted differently
-					std::uint8_t eventParams[16];
-					EventConverter::ConvertParamInt(tileEvent.TileParams, {
-						{ JJ2ParamUInt, 8 },	// Event
-						{ JJ2ParamUInt, 8 },	// Delay
-						{ JJ2ParamBool, 1 }		// Initial Delay
-					}, eventParams);
+			JJ2Event eventType;
+			if (tileEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
+				// Generators are converted differently
+				std::uint8_t eventParams[16];
+				EventConverter::ConvertParamInt(tileEvent.TileParams, {
+					{ JJ2ParamUInt, 8 },	// Event
+					{ JJ2ParamUInt, 8 },	// Delay
+					{ JJ2ParamBool, 1 }		// Initial Delay
+				}, eventParams);
 
-					eventType = (JJ2Event)eventParams[0];
-					tileEvent.GeneratorDelay = eventParams[1];
-					tileEvent.GeneratorFlags = (std::uint8_t)eventParams[2];
-				} else {
-					eventType = tileEvent.EventType;
-					tileEvent.GeneratorDelay = -1;
-					tileEvent.GeneratorFlags = 0;
+				eventType = (JJ2Event)eventParams[0];
+				tileEvent.GeneratorDelay = eventParams[1];
+				tileEvent.GeneratorFlags = (std::uint8_t)eventParams[2];
+			} else {
+				eventType = tileEvent.EventType;
+				tileEvent.GeneratorDelay = -1;
+				tileEvent.GeneratorFlags = 0;
 
-					if (tileEvent.EventType == JJ2Event::MP_LEVEL_START) {
-						hasMultiplayerSpawnPoints = true;
-					}
+				if (tileEvent.EventType == JJ2Event::MP_LEVEL_START) {
+					hasMultiplayerSpawnPoints = true;
 				}
-
-				tileEvent.Converted = eventConverter.TryConvert(this, eventType, tileEvent.TileParams);
 			}
+
+			tileEvent.Converted = eventConverter.TryConvert(this, eventType, tileEvent.TileParams);
 		}
+
+		// What all the tiles without an event are converted to
+		TileEventSection emptyEvent = {};
+		emptyEvent.EventType = JJ2Event::EMPTY;
+		emptyEvent.GeneratorDelay = -1;
+		emptyEvent.Converted = eventConverter.TryConvert(this, JJ2Event::EMPTY, 0);
 
 		for (std::size_t i = 0; i < _offGridEvents.size(); i++) {
 			auto& offGridEvent = _offGridEvents[i];
@@ -1080,9 +1107,15 @@ namespace Jazz2::Compatibility
 
 		// Events
 		Formats::LevelPreview::StartPicker previewStart;
+		std::size_t nextEvent = 0;
 		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
 			for (std::int32_t x = 0; x < _layers[3].Width; x++) {
-				const auto& tileEvent = _events[x + y * _layers[3].Width];
+				const TileEventSection* tileEventPtr = &emptyEvent;
+				if (nextEvent < _events.size() && _events[nextEvent].Index == x + y * _layers[3].Width) {
+					tileEventPtr = &_events[nextEvent].Event;
+					nextEvent++;
+				}
+				const auto& tileEvent = *tileEventPtr;
 				Formats::EventRecord record = MakeEventRecord(tileEvent.Converted, tileEvent.Illuminate, tileEvent.Difficulty,
 					tileEvent.GeneratorFlags, tileEvent.GeneratorDelay);
 				if (tileEvent.GeneratorDelay == -1) {
@@ -1273,66 +1306,41 @@ namespace Jazz2::Compatibility
 		bool waterShouldResetLighting = true;
 		std::int32_t waterLevelAround = INT32_MIN;
 
+		auto checkWaterTile = [&](std::int32_t x, std::int32_t y) {
+			const TileEventSection* waterTile = FindEvent(x, y);
+			if (waterTile == nullptr || waterTile->Converted.Type != EventType::ModifierSetWater || waterTile->Difficulty != 0 /*!All*/ || waterTile->Converted.Params[2] == 0 /*!Instant*/) {
+				waterAround = false;
+			} else {
+				// Check if water level matches other tiles
+				std::int32_t waterLevel = waterTile->Converted.Params[0] | (waterTile->Converted.Params[1] << 8);
+				if (waterLevelAround == INT32_MIN) {
+					waterLevelAround = waterLevel;
+				} else if (waterLevelAround != waterLevel) {
+					waterAround = false;
+				}
+
+				if (waterTile->Converted.Params[3] != 0 /* !IgnoreLighting */) {
+					waterShouldResetLighting = false;
+				}
+			}
+		};
+
 		// Check neighbor tiles of level start events if they contain water event, then set it as initial water level instead
-		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
-			for (std::int32_t x = 0; x < _layers[3].Width; x++) {
-				auto& tileEvent = _events[x + y * _layers[3].Width];
-				if (tileEvent.Converted.Type == EventType::LevelStart || tileEvent.Converted.Type == EventType::LevelStartMultiplayer) {
-					std::int32_t y2 = std::min(y + 1, _layers[3].Height - 1);
-					if (x - 1 >= 0) {
-						auto& waterTile = _events[(x - 1) + y2 * _layers[3].Width];
-						if (waterTile.Converted.Type != EventType::ModifierSetWater || waterTile.Difficulty != 0 /*!All*/ || waterTile.Converted.Params[2] == 0 /*!Instant*/) {
-							waterAround = false;
-						} else {
-							// Check if water level matches other tiles
-							std::int32_t waterLevel = waterTile.Converted.Params[0] | (waterTile.Converted.Params[1] << 8);
-							if (waterLevelAround == INT32_MIN) {
-								waterLevelAround = waterLevel;
-							} else if (waterLevelAround != waterLevel) {
-								waterAround = false;
-							}
-
-							if (waterTile.Converted.Params[3] != 0 /* !IgnoreLighting */) {
-								waterShouldResetLighting = false;
-							}
-						}
-					}
-					if (y2 != y) {
-						auto& waterTile = _events[x + y2 * _layers[3].Width];
-						if (waterTile.Converted.Type != EventType::ModifierSetWater || waterTile.Difficulty != 0 /*!All*/ || waterTile.Converted.Params[2] == 0 /*!Instant*/) {
-							waterAround = false;
-						} else {
-							// Check if water level matches other tiles
-							std::int32_t waterLevel = waterTile.Converted.Params[0] | (waterTile.Converted.Params[1] << 8);
-							if (waterLevelAround == INT32_MIN) {
-								waterLevelAround = waterLevel;
-							} else if (waterLevelAround != waterLevel) {
-								waterAround = false;
-							}
-
-							if (waterTile.Converted.Params[3] != 0 /* !IgnoreLighting */) {
-								waterShouldResetLighting = false;
-							}
-						}
-					}
-					if (x + 1 < _layers[3].Width) {
-						auto& waterTile = _events[(x + 1) + y2 * _layers[3].Width];
-						if (waterTile.Converted.Type != EventType::ModifierSetWater || waterTile.Difficulty != 0 /*!All*/ || waterTile.Converted.Params[2] == 0 /*!Instant*/) {
-							waterAround = false;
-						} else {
-							// Check if water level matches other tiles
-							std::int32_t waterLevel = waterTile.Converted.Params[0] | (waterTile.Converted.Params[1] << 8);
-							if (waterLevelAround == INT32_MIN) {
-								waterLevelAround = waterLevel;
-							} else if (waterLevelAround != waterLevel) {
-								waterAround = false;
-							}
-
-							if (waterTile.Converted.Params[3] != 0 /* !IgnoreLighting */) {
-								waterShouldResetLighting = false;
-							}
-						}
-					}
+		const std::int32_t width = _layers[3].Width;
+		for (const auto& gridEvent : _events) {
+			const auto& tileEvent = gridEvent.Event;
+			if (tileEvent.Converted.Type == EventType::LevelStart || tileEvent.Converted.Type == EventType::LevelStartMultiplayer) {
+				std::int32_t x = gridEvent.Index % width;
+				std::int32_t y = gridEvent.Index / width;
+				std::int32_t y2 = std::min(y + 1, _layers[3].Height - 1);
+				if (x - 1 >= 0) {
+					checkWaterTile(x - 1, y2);
+				}
+				if (y2 != y) {
+					checkWaterTile(x, y2);
+				}
+				if (x + 1 < width) {
+					checkWaterTile(x + 1, y2);
 				}
 			}
 		}

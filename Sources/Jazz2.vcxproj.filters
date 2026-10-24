@@ -247,8 +247,14 @@
     <Filter Include="Source Files\Jazz2\Scripting">
       <UniqueIdentifier>{633274d8-a360-48ab-9529-d01e4b9cd4ae}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Jazz2\Scripting\Legacy">
+      <UniqueIdentifier>{5e1c4a7b-2f9d-4c83-9b6a-0d7e3f18a2c4}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\Jazz2\Scripting">
       <UniqueIdentifier>{28b29c21-7d11-474a-bbf2-a494645dd07e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Scripting\Legacy">
+      <UniqueIdentifier>{a3f7d2e9-6b14-4e5c-8d0f-7c29b4e61a85}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Jazz2\Actors\Enemies\Bosses">
       <UniqueIdentifier>{672eb0e5-0833-4fa0-b5be-661143817a60}</UniqueIdentifier>
@@ -381,6 +387,9 @@
     </Filter>
     <Filter Include="Header Files\Dependencies\pdqsort">
       <UniqueIdentifier>{2f3734f4-9a09-4f5c-93d3-c7f81fcf5e2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Dependencies\stb">
+      <UniqueIdentifier>{7cfaec5e-0855-419a-a218-7ef6d46f1590}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Dependencies\parallel_hashmap">
       <UniqueIdentifier>{d4d3fee8-4a66-47fc-a6f0-3e2b70ef1e0a}</UniqueIdentifier>
@@ -1512,17 +1521,62 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Asserts.h">
       <Filter>Header Files\Shared</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Scripting\JJ2PlusAnimations.h">
-      <Filter>Header Files\Jazz2\Scripting</Filter>
+    <ClInclude Include="Jazz2\Scripting\Legacy\AnimationTables.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Scripting\JJ2PlusObjects.h">
-      <Filter>Header Files\Jazz2\Scripting</Filter>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Animations.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Scripting\JJ2PlusEvents.h">
-      <Filter>Header Files\Jazz2\Scripting</Filter>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Canvas.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h">
-      <Filter>Header Files\Jazz2\Scripting</Filter>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Common.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Definitions.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Enums.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\EventTranslator.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Game.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Internal.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Layers.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Level.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\ObjectHost.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Objects.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Palette.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\PixelMaps.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Player.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Sound.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\Stream.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\Legacy\WorldCanvas.h">
+      <Filter>Header Files\Jazz2\Scripting\Legacy</Filter>
     </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StaticArray.h">
       <Filter>Header Files\Shared\Containers</Filter>
@@ -2031,6 +2085,9 @@
     <ClInclude Include="Jazz2\Editor\UI\UiRadialMenu.h">
       <Filter>Header Files\Jazz2\Editor\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Editor\UI\UiReadableFont.h">
+      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Editor\UI\UiSkin.h">
       <Filter>Header Files\Jazz2\Editor\UI</Filter>
     </ClInclude>
@@ -2318,6 +2375,9 @@
     </ClInclude>
     <ClInclude Include="Dependencies\pdqsort\pdqsort.h">
       <Filter>Header Files\Dependencies\pdqsort</Filter>
+    </ClInclude>
+    <ClInclude Include="Dependencies\stb\stb_truetype.h">
+      <Filter>Header Files\Dependencies\stb</Filter>
     </ClInclude>
     <ClInclude Include="Dependencies\parallel_hashmap\phmap.h">
       <Filter>Header Files\Dependencies\parallel_hashmap</Filter>
@@ -2679,6 +2739,9 @@
       <Filter>Source Files\Jazz2\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\UI\UiRadialMenu.cpp">
+      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\UI\UiReadableFont.cpp">
       <Filter>Source Files\Jazz2\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\UI\UiSkin.cpp">
@@ -3473,17 +3536,53 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\FileSystem.cpp">
       <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Scripting\JJ2PlusAnimations.cpp">
-      <Filter>Source Files\Jazz2\Scripting</Filter>
+    <ClCompile Include="Jazz2\Scripting\Legacy\AnimationTables.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Scripting\JJ2PlusObjects.cpp">
-      <Filter>Source Files\Jazz2\Scripting</Filter>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Animations.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Scripting\JJ2PlusEvents.cpp">
-      <Filter>Source Files\Jazz2\Scripting</Filter>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Canvas.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp">
-      <Filter>Source Files\Jazz2\Scripting</Filter>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Common.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Enums.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\EventTranslator.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Game.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Layers.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Level.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\ObjectHost.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Objects.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Palette.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\PixelMaps.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Player.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Sound.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\Legacy\Stream.cpp">
+      <Filter>Source Files\Jazz2\Scripting\Legacy</Filter>
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp">
       <Filter>Source Files\Shared\Containers</Filter>

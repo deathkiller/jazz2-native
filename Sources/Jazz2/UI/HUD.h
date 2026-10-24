@@ -63,6 +63,8 @@ namespace Jazz2::UI
 
 		/** @brief Shows a text notification */
 		void ShowLevelText(StringView text);
+		/** @brief Sets how big the text notification shown now is drawn, 1 by default (a new text resets it) */
+		void SetLevelTextScale(float scale);
 		/** @brief Shows a notification about coins */
 		void ShowCoins(std::int32_t count);
 		/** @brief Shows a notification about gems */
@@ -164,6 +166,7 @@ namespace Jazz2::UI
 
 		String _levelText;
 		float _levelTextTime;
+		float _levelTextScale = 1.0f;
 		std::int32_t _coins;
 		std::int32_t _gems;
 		float _coinsTime;

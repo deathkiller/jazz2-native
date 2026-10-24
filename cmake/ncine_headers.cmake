@@ -479,10 +479,25 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PolylineRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/XRayMaskRenderer.h
-	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusAnimations.h
-	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h
-	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusEvents.h
-	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusObjects.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/AnimationTables.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Animations.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Canvas.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Common.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Definitions.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Enums.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/EventTranslator.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Game.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Internal.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Layers.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Level.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/ObjectHost.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Objects.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Palette.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/PixelMaps.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Player.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Sound.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Stream.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/WorldCanvas.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterDictionary.h

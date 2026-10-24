@@ -15,10 +15,6 @@
 #include <cmath>
 #include <cstdio>
 
-#if !defined(NC_)
-#	define NC_(context, text) text
-#endif
-
 using namespace Death::Containers::Literals;
 
 namespace Jazz2::Editor
@@ -461,11 +457,11 @@ namespace Jazz2::Editor
 		}
 
 		// The jumps from the start towards the end, the first one that gets there is told
-		static const char* const ReachTexts[] = {
+		static const String ReachTexts[] = {
 			// TRANSLATORS: Shown by the measure tool, the easiest jump of the player that reaches the measured point
-			NC_("editor", "Walking jump gets there"), NC_("editor", "Only dashing jump gets there"), NC_("editor", "Only double jump gets there"),
+			_x("editor", "Walking jump gets there"), _x("editor", "Only dashing jump gets there"), _x("editor", "Only double jump gets there"),
 			// TRANSLATORS: Shown by the measure tool, only the copter of Jazz reaches the measured point
-			NC_("editor", "Only copter gets there")
+			_x("editor", "Only copter gets there")
 		};
 		std::int32_t reachingArc = -1;
 		const JumpArc* arcs = GetArcs();
@@ -504,7 +500,7 @@ namespace Jazz2::Editor
 		if (!springText.empty()) {
 			reach = springText;
 		} else if (std::abs(delta.X) >= 1.0f && settings.ShownArcs != 0) {
-			reach = (reachingArc >= 0 ? String(_x("editor", ReachTexts[reachingArc])) : String(_x("editor", "No jump gets there")));
+			reach = (reachingArc >= 0 ? ReachTexts[reachingArc] : String(_x("editor", "No jump gets there")));
 		}
 
 		float padding = painter.Px(UiTheme::Padding);

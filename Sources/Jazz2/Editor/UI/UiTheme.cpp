@@ -163,7 +163,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void UiTheme::Apply(UiThemeKind kind, bool reducedMotion)
+	void UiTheme::Apply(UiThemeKind kind, bool reducedMotion, bool readableFont)
 	{
 		ThemeTokens& tokens = GetTokens();
 		for (std::size_t i = 0; i < tokens.Count; i++) {
@@ -172,6 +172,10 @@ namespace Jazz2::Editor
 		}
 		CurrentKind = kind;
 		ReducedMotion = reducedMotion;
+		if (ReadableFont != readableFont) {
+			ReadableFont = readableFont;
+			FontVersion++;
+		}
 	}
 
 	UiThemeKind UiTheme::GetKind()

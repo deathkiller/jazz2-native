@@ -43,7 +43,7 @@ namespace Jazz2::Rendering
 		auto actors = _owner->_levelHandler->GetActors();
 		std::size_t actorsCount = actors.size();
 		for (std::size_t i = 0; i < actorsCount; i++) {
-			actors[i]->OnEmitLights(_emittedLightsCache);
+			actors[i]->EmitLights(_emittedLightsCache);
 		}
 
 		// Every actor in the level emits, wherever it is, and in splitscreen each viewport collects the same set,

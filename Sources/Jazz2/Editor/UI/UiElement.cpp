@@ -15,8 +15,13 @@ namespace Jazz2::Editor
 		constexpr float HoverFadeSpeed = 0.25f;
 	}
 
-	UI::Font* UiContext::GetFont()
+	UI::Font* UiContext::GetFont(float scale)
 	{
+		if (UiTheme::ReadableFont) {
+			if (UI::Font* font = UiSurface::GetReadableFont(UiTheme::GetTextScale(scale))) {
+				return font;
+			}
+		}
 		return ContentResolver::Get().GetFont(FontType::Small);
 	}
 
@@ -27,13 +32,13 @@ namespace Jazz2::Editor
 
 	float UiContext::MeasureText(StringView text) const
 	{
-		UI::Font* font = GetFont();
+		UI::Font* font = GetFont(Scale);
 		return (font != nullptr ? font->MeasureString(text, UiTheme::GetTextScale(Scale)).X : 0.0f);
 	}
 
 	float UiContext::GetTextHeight() const
 	{
-		UI::Font* font = GetFont();
+		UI::Font* font = GetFont(Scale);
 		return (font != nullptr ? font->GetSizeInPixels() * UiTheme::GetTextScale(Scale) : 0.0f);
 	}
 

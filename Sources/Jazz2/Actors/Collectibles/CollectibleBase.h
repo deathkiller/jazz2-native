@@ -20,6 +20,11 @@ namespace Jazz2::Actors::Collectibles
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
+#if defined(WITH_ANGELSCRIPT)
+		// Shows a level script the position a floating collectible rests at, as the original has it
+		friend class Jazz2::Scripting::Legacy::ScriptObjectHost;
+#endif
+
 	public:
 		/**
 			@brief Swarm of lights orbiting an illuminated collectible

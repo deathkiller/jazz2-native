@@ -1217,11 +1217,17 @@ else()
 			set(OGC_SD_APP_DIR "${CMAKE_BINARY_DIR}/sd/Jazz2")
 			set(OGC_SD_DOL_NAME "Jazz2.dol")
 		endif()
+		# What only the level editor reads is left out of a build without it, as AssetPacker leaves it out of the disc
+		set(_ogcLeaveOutEditorCommand "")
+		if(NOT WITH_EDITOR)
+			set(_ogcLeaveOutEditorCommand COMMAND ${CMAKE_COMMAND} -E remove_directory "${OGC_SD_APP_DIR}/Content/Editor")
+		endif()
 		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E make_directory "${OGC_SD_APP_DIR}"
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/${NCINE_APP}.dol" "${OGC_SD_APP_DIR}/${OGC_SD_DOL_NAME}"
 			COMMAND ${CMAKE_COMMAND} -E remove_directory "${OGC_SD_APP_DIR}/Content"
 			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${OGC_SD_APP_DIR}/Content"
+			${_ogcLeaveOutEditorCommand}
 			COMMENT "Staging SD card layout with game content"
 			VERBATIM)
 
@@ -1336,9 +1342,11 @@ else()
 		find_program(MKDCDISC_EXECUTABLE mkdcdisc)
 		if(MKDCDISC_EXECUTABLE)
 			# The content is staged as "cd/Content" first, so the directory on the disc is always named
-			# "Content" regardless of the source directory name (e.g. "ContentEmscripten" for the demo)
+			# "Content" regardless of the source directory name (e.g. "ContentEmscripten" for the demo). What only
+			# the level editor reads is left out, the console has no editor.
 			add_custom_command(TARGET ${NCINE_APP} POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/cd/Content"
+				COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/cd/Content/Editor"
 				COMMAND "${MKDCDISC_EXECUTABLE}" -e "$<TARGET_FILE:${NCINE_APP}>" -d "${CMAKE_BINARY_DIR}/cd/Content" -n "Jazz2 Resurrection" -o "${CMAKE_BINARY_DIR}/${NCINE_APP}.cdi"
 				COMMENT "Creating bootable CDI image with game content"
 				VERBATIM)
@@ -1503,8 +1511,10 @@ else()
 				set(_ps2StripStagedElf COMMAND "${CMAKE_STRIP}" --strip-all "${CMAKE_BINARY_DIR}/cd/${_ps2DiscName}.ELF")
 			endif()
 
+			# What only the level editor reads is left out, the console has no editor
 			add_custom_command(TARGET ${NCINE_APP} POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/cd/Content"
+				COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/cd/Content/Editor"
 				${_ps2MarkPrebakedCommand}
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/cd/${_ps2DiscName}.ELF"
 				${_ps2StripStagedElf}
@@ -2122,11 +2132,13 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiMenu.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiPainter.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiRadialMenu.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiReadableFont.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSkin.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSurface.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiTheme.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiVirtualList.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiWidgets.h
+		${NCINE_SOURCE_DIR}/Dependencies/stb/stb_truetype.h
 	)
 
 	list(APPEND SOURCES
@@ -2256,6 +2268,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiMenu.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiPainter.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiRadialMenu.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiReadableFont.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSkin.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSurface.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiTheme.cpp

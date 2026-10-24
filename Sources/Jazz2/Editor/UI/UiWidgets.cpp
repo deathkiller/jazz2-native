@@ -129,12 +129,13 @@ namespace Jazz2::Editor
 	{
 		StringView text = GetText();
 		float textHeight = measurer.GetTextHeight();
-		if (cache.Width == width && cache.TextHeight == textHeight && cache.Text == text) {
+		if (cache.Width == width && cache.TextHeight == textHeight && cache.FontVersion == UiTheme::FontVersion && cache.Text == text) {
 			return cache;
 		}
 		cache.Text = text;
 		cache.Width = width;
 		cache.TextHeight = textHeight;
+		cache.FontVersion = UiTheme::FontVersion;
 		cache.Lines.clear();
 		cache.Widest = 0.0f;
 		SmallVector<StringView, 8> lines;
@@ -201,9 +202,10 @@ namespace Jazz2::Editor
 	float UiButton::GetTextWidth(const TMeasurer& measurer)
 	{
 		float textHeight = measurer.GetTextHeight();
-		if (_measuredTextHeight != textHeight || _measuredText != Text) {
+		if (_measuredTextHeight != textHeight || _measuredFontVersion != UiTheme::FontVersion || _measuredText != Text) {
 			_measuredText = Text;
 			_measuredTextHeight = textHeight;
+			_measuredFontVersion = UiTheme::FontVersion;
 			_measuredTextWidth = measurer.MeasureText(Text);
 		}
 		return _measuredTextWidth;

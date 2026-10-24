@@ -159,7 +159,12 @@ Non-desktop trees:
     re-laid out @m_span{m-text m-dim} (@ref Jazz2::AssetPacker::SpriteRepacker) @m_endspan: frames are
     trimmed and packed so none crosses the PSP's 512-pixel texture page line. Smaller grids are copied
     as they are, since some are sampled as a whole texture.
--   `.po` files in `Translations` are left out, because the game loads only `.mo`.
+-   `.po` files are left out, because the game loads only `.mo`.
+-   For `n64`, `dreamcast`, `ps2` and `gamecube`, whose builds have no level editor, the `Editor` directory (what
+    only the editor reads, such as its font) is left out, and so are the texts of the `editor` context in the
+    translations.
+-   Both rules are @ref Jazz2::AssetPacker::ContentFilter, which `swap-content` and `create-image` put a tree on an
+    image by as well.
 
 @subsection asset-packer-convert-filters Level filters
 
@@ -402,6 +407,9 @@ Dreamcast `.cdi`     | `IP.BIN` (32 KB: bootstrap, licence screen, serial number
 PlayStation 2 `.iso` | `SYSTEM.CNF`, the executable it names, the `.IRX` modules
 GameCube `.iso`      | Disc header and apploader (first 32 KB) and `Jazz2.dol` --- which moves, and the header's pointer to it is updated
 Nintendo 64 `.z64`   | Header (save type, accessories), bootcode, executable and its symbol table
+
+What `convert` leaves out for these consoles is never put on an image either (@ref Jazz2::AssetPacker::ContentFilter:
+`.po` files and the `Editor` directory, none of them has the level editor).
 
 On a Nintendo 64 ROM the content is the DragonFS image at the end, found via the table of contents
 `n64tool` writes after the bootcode. It is rebuilt like `mkdfs` does (the same tree gives an identical ROM

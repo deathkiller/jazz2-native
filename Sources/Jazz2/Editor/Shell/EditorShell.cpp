@@ -520,7 +520,7 @@ namespace Jazz2::Editor
 		_menuBar->AddMenu(_x("editor", "View"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::ViewZoomIn, ActionIds::ViewZoomOut, ActionIds::ViewZoomGame, ActionIds::ViewFit, nullptr, ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewPreviewTextured, nullptr,
 				ActionIds::ViewNavigator, ActionIds::ViewAddNote, nullptr, ActionIds::ViewUiLarger, ActionIds::ViewUiSmaller, ActionIds::ViewUiAuto, nullptr, ActionIds::ViewLayoutAuto, ActionIds::ViewLayoutDesktop, ActionIds::ViewLayoutCompact,
-				nullptr, ActionIds::ViewExpert, nullptr, ActionIds::ViewHighContrast, ActionIds::ViewReducedMotion });
+				nullptr, ActionIds::ViewExpert, nullptr, ActionIds::ViewHighContrast, ActionIds::ViewReadableFont, ActionIds::ViewReducedMotion });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor, what is drawn over the level, such as masks, events or the frame of the screen
 		_menuBar->AddMenu(_x("editor", "Show"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
@@ -1940,7 +1940,7 @@ namespace Jazz2::Editor
 				painter.SetSlot(BubbleSlot);
 				for (std::size_t i = bubbles.size(); i-- > 0; ) {
 					// TRANSLATORS: In front of a text of an event shown in a bubble over the level, {} is the name of the parameter that holds the text
-					String label = (bubbles.size() > 1 ? _fx("editor", "{}: ", _x("editor", bubbles[i].Field->Name)) : String());
+					String label = (bubbles.size() > 1 ? _fx("editor", "{}: ", bubbles[i].Field->Name) : String());
 					float labelWidth = (label.empty() ? 0.0f : painter.MeasureText(label));
 					float width = labelWidth + painter.MeasureText(bubbles[i].Text) + padding * 2.0f;
 					Rectf bubble(std::round(center.X - width * 0.5f), std::round(bottom - height), width, height);
@@ -2366,23 +2366,22 @@ namespace Jazz2::Editor
 		String label;
 		switch (_session.GetSettings().ScreenFrameKind) {
 			default:
-				// TRANSLATORS: Label of the frame of the screen drawn over the level, the view of the game, with its width and height in pixels
-				label = _fx("editor", "Game view, {} x {}", reference.X, reference.Y);
+				// TRANSLATORS: Label of the frame of the screen drawn over the level, the view of the game, its width and height in pixels follow
+				label = Death::format("{}, {} x {}", _x("editor", "Game view"), reference.X, reference.Y);
 				break;
 			case 1:
+				// An aspect ratio, it isn't translated
 				size.X = std::round(size.Y * 4.0f / 3.0f);
-				// TRANSLATORS: Label of the frame of the screen drawn over the level, an aspect ratio, with the width and height in pixels
-				label = _fx("editor", "4:3, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				label = Death::format("4:3, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
 				break;
 			case 2:
 				size.X = std::round(size.Y * 16.0f / 9.0f);
-				// TRANSLATORS: Label of the frame of the screen drawn over the level, an aspect ratio, with the width and height in pixels
-				label = _fx("editor", "16:9, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				label = Death::format("16:9, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
 				break;
 			case 3:
 				size.Y = std::round(size.Y * 0.5f);
-				// TRANSLATORS: Label of the frame of the screen drawn over the level, a half of a split screen for two players, with its width and height in pixels
-				label = _fx("editor", "Split screen, {} x {}", std::int32_t(size.X), std::int32_t(size.Y));
+				// TRANSLATORS: Label of the frame of the screen drawn over the level, a half of a split screen for two players, its width and height in pixels follow
+				label = Death::format("{}, {} x {}", _x("editor", "Split screen"), std::int32_t(size.X), std::int32_t(size.Y));
 				break;
 		}
 		if (size.X <= 0.0f || size.Y <= 0.0f) {

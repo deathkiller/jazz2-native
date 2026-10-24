@@ -57,13 +57,14 @@ namespace Jazz2::Editor
 		void Draw(UiPainter& painter) override;
 
 	private:
-		// Lines of a text broken in a width, as byte ranges of the text, kept until the text, the width or the size of
-		// the text changes
+		// Lines of a text broken in a width, as byte ranges of the text, kept until the text, the width, the size of the
+		// text or the font changes
 		struct WrappedLines
 		{
 			String Text;
 			float Width = -1.0f;
 			float TextHeight = -1.0f;
+			std::uint32_t FontVersion = 0;
 			SmallVector<std::pair<std::uint32_t, std::uint32_t>, 4> Lines;
 			float Widest = 0.0f;
 		};
@@ -145,10 +146,11 @@ namespace Jazz2::Editor
 		bool _textHidden;
 		// How wide the icon and the text are with the padding, as of the last time the button was drawn
 		float _neededWidth;
-		// Width of the text, for the text and the size of text it was measured for, it's measured and drawn every frame
+		// Width of the text, for the text, the size of text and the font it was measured for, it's measured and drawn every frame
 		String _measuredText;
 		float _measuredTextHeight = -1.0f;
 		float _measuredTextWidth = 0.0f;
+		std::uint32_t _measuredFontVersion = 0;
 
 		template<class TMeasurer>
 		float GetTextWidth(const TMeasurer& measurer);

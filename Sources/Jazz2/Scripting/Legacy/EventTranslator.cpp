@@ -1,9 +1,10 @@
-#if defined(WITH_ANGELSCRIPT)
+﻿#if defined(WITH_ANGELSCRIPT)
 
-#include "JJ2PlusEvents.h"
-#include "LevelScriptLoader.h"
-#include "../LevelHandler.h"
-#include "../Events/EventMap.h"
+#include "EventTranslator.h"
+#include "ObjectHost.h"
+#include "../LevelScriptLoader.h"
+#include "../../LevelHandler.h"
+#include "../../Events/EventMap.h"
 
 #include <algorithm>
 #include <cstring>
@@ -105,6 +106,48 @@ namespace Jazz2::Scripting
 		written.Word = eventWord;
 		written.Type = converted.Type;
 		std::memcpy(written.Params, converted.Params, sizeof(written.Params));
+
+		EventWrite& kept = _eventWrites[x + y * size.X];
+		kept.Type = converted.Type;
+		kept.Flags = flags;
+		std::memcpy(kept.Params, converted.Params, sizeof(kept.Params));
+	}
+
+	void LevelScriptLoader::ReapplyEventWrites()
+	{
+		Events::EventMap* eventMap = _levelHandler->EventMap();
+		if (eventMap == nullptr || _eventWrites.empty()) {
+			return;
+		}
+		Vector2i size = eventMap->GetSize();
+
+		for (auto& [position, write] : _eventWrites) {
+			std::int32_t x = position % size.X;
+			std::int32_t y = position / size.X;
+			eventMap->StoreTileEvent(x, y, write.Type, write.Flags, write.Params);
+		}
+
+		// The objects the checkpoint brought back on those tiles aren't there anymore, as the script took their events
+		for (auto& actor : _levelHandler->_actors) {
+			if (!actor->GetState(Actors::ActorState::IsCreatedFromEventMap) || actor->GetState(Actors::ActorState::IsDestroyed)) {
+				continue;
+			}
+			Vector2i originTile = Legacy::ScriptObjectHost::GetOriginTile(*actor);
+			if (originTile.X < 0 || originTile.Y < 0 || originTile.X >= size.X || originTile.Y >= size.Y) {
+				continue;
+			}
+			auto it = _eventWrites.find(originTile.X + originTile.Y * size.X);
+			if (it == _eventWrites.end()) {
+				continue;
+			}
+			if (it->second.Type == actor->GetSpawnEventType() &&
+				std::memcmp(it->second.Params, actor->GetSpawnEventParams(), sizeof(it->second.Params)) == 0) {
+				// The script wrote the event the object comes from, it stays
+				eventMap->Activate(originTile.X, originTile.Y);
+				continue;
+			}
+			Legacy::ScriptObjectHost::DeleteActor(*actor);
+		}
 	}
 }
 

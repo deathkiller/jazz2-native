@@ -25,7 +25,7 @@ namespace Jazz2::UI::Menu
 	CustomLevelSelectSection::CustomLevelSelectSection(bool multiplayer, bool privateServer, bool localGame)
 		: _multiplayer(multiplayer), _privateServer(privateServer), _localGame(localGame), _selectedIndex(0), _animation(0.0f), _y(0.0f),
 			_height(0.0f), _availableHeight(0.0f), _touchTime(0.0f), _touchSpeed(0.0f), _pressedCount(0),
-			_noiseCooldown(0.0f), _touchDirection(0), _indexingFinished(false), _indexingCancelled(false), _itemsSorted(false),
+			_noiseCooldown(0.0f), _touchDirection(0), _indexingFinished(false), _indexingCancelled(false), _itemsSorted(false), _selectionMoved(false),
 			_previewAnimation(0.0f), _previewWait(0.0f), _previewWaitIndex(-1)
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			, _previewRequestDone(false), _previewRequestActive(false)
@@ -126,6 +126,7 @@ namespace Jazz2::UI::Menu
 							_selectedIndex = (std::int32_t)(_items.size() - 1);
 							offset = 0;
 						}
+						_selectionMoved = true;
 						EnsureVisibleSelected(offset);
 						_pressedCount = std::min<std::int32_t>(_pressedCount + 6, 10);
 					}
@@ -145,6 +146,7 @@ namespace Jazz2::UI::Menu
 							_selectedIndex = 0;
 							offset = 0;
 						}
+						_selectionMoved = true;
 						EnsureVisibleSelected(offset);
 						_pressedCount = std::min<std::int32_t>(_pressedCount + 6, 10);
 					}
@@ -537,6 +539,7 @@ namespace Jazz2::UI::Menu
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
 							_animation = 0.0f;
 							_selectedIndex = i;
+							_selectionMoved = true;
 							EnsureVisibleSelected();
 						}
 						break;
@@ -610,16 +613,19 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (finished) {
-			// Sorted once all levels are found, the selection stays on the level it's on
+			// Sorted once all levels are found. The selection stays on the level it's on if the user moved it, otherwise
+			// it's on the first one again - the levels came in the order they were found, the one first then may be anywhere.
 			_itemsSorted = true;
 			String selectedName;
-			if (_selectedIndex >= 0 && _selectedIndex < (std::int32_t)_items.size()) {
+			if (_selectionMoved && _selectedIndex >= 0 && _selectedIndex < (std::int32_t)_items.size()) {
 				selectedName = _items[_selectedIndex].LevelName;
 			}
 			nCine::sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
 				return (a.LevelName < b.LevelName);
 			});
-			if (!selectedName.empty()) {
+			if (!_selectionMoved) {
+				_selectedIndex = 0;
+			} else if (!selectedName.empty()) {
 				for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
 					if (_items[i].LevelName == selectedName) {
 						_selectedIndex = i;

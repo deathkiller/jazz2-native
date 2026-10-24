@@ -596,7 +596,7 @@ namespace Jazz2::Editor
 
 		// Changes the selected animated tile as an undoable step, the changes of a value while it's dragged are merged,
 		// @p final ends the step, a change that isn't dragged is always final
-		void ChangeAnimation(IEditorContext& session, std::int32_t index, const char* name, Function<void(DocumentAnimation&)>&& change, bool final = true)
+		void ChangeAnimation(IEditorContext& session, std::int32_t index, StringView name, Function<void(DocumentAnimation&)>&& change, bool final = true)
 		{
 			LevelDocument& document = session.GetDocument();
 			if (index < 0 || index >= std::int32_t(document.Animations.size())) {
@@ -604,7 +604,7 @@ namespace Jazz2::Editor
 			}
 			DocumentAnimation animation = document.Animations[index];
 			change(animation);
-			session.Execute(std::make_unique<SetAnimationCommand>(document, index, Death::move(animation), _x("editor", name)), true);
+			session.Execute(std::make_unique<SetAnimationCommand>(document, index, Death::move(animation), name), true);
 			if (final) {
 				session.GetHistory().BreakMerge();
 			}
@@ -622,7 +622,7 @@ namespace Jazz2::Editor
 			}, [s, selection, member, divisor](float value, bool final) {
 				std::uint16_t stored = std::uint16_t(std::clamp<std::int32_t>(std::int32_t(std::round(value * divisor)), 0, 65535));
 				// TRANSLATORS: Name of an undo step in the history, the timing of an animated tile changed in the Animated Tiles dialog
-				ChangeAnimation(*s, selection->Animation, NC_("editor", "Animation timing"), [member, stored](DocumentAnimation& animation) {
+				ChangeAnimation(*s, selection->Animation, _x("editor", "Animation timing"), [member, stored](DocumentAnimation& animation) {
 					animation.Timing.*member = stored;
 				}, final);
 			}, 0.0f, 65535.0f / divisor, step, decimals);
@@ -797,7 +797,7 @@ namespace Jazz2::Editor
 				const TileStamp& stamp = s->GetStamp();
 				std::int32_t added = 0;
 				// TRANSLATORS: Name of an undo step in the history, frames added to an animated tile
-				ChangeAnimation(*s, index, NC_("editor", "Add frames"), [&stamp, selection, index, &added](DocumentAnimation& animation) {
+				ChangeAnimation(*s, index, _x("editor", "Add frames"), [&stamp, selection, index, &added](DocumentAnimation& animation) {
 					std::int32_t at = std::min(selection->Frame + 1, std::int32_t(animation.Frames.size()));
 					for (std::size_t i = 0; i < stamp.Tiles.size() && animation.Frames.size() < UINT8_MAX; i++) {
 						const TileRef& tile = stamp.Tiles[i];
@@ -814,7 +814,7 @@ namespace Jazz2::Editor
 			add->Tooltip = _x("editor", "Adds the tiles of the brush after the selected frame");
 			auto* remove = buttons->Add<UiButton>(StringView(), EditorIcon::Delete, [s, selection]() {
 				// TRANSLATORS: Name of an undo step in the history, a frame removed from an animated tile
-				ChangeAnimation(*s, selection->Animation, NC_("editor", "Remove frame"), [selection](DocumentAnimation& animation) {
+				ChangeAnimation(*s, selection->Animation, _x("editor", "Remove frame"), [selection](DocumentAnimation& animation) {
 					// At least one frame stays
 					if (animation.Frames.size() > 1 && selection->Frame < std::int32_t(animation.Frames.size())) {
 						animation.Frames.erase(animation.Frames.begin() + selection->Frame);
@@ -830,7 +830,7 @@ namespace Jazz2::Editor
 					std::int32_t to = from + direction;
 					bool moved = false;
 					// TRANSLATORS: Name of an undo step in the history, a frame of an animated tile moved earlier or later
-					ChangeAnimation(*s, selection->Animation, NC_("editor", "Move frame"), [from, to, &moved](DocumentAnimation& animation) {
+					ChangeAnimation(*s, selection->Animation, _x("editor", "Move frame"), [from, to, &moved](DocumentAnimation& animation) {
 						if (from >= 0 && to >= 0 && from < std::int32_t(animation.Frames.size()) && to < std::int32_t(animation.Frames.size())) {
 							std::swap(animation.Frames[from], animation.Frames[to]);
 							moved = true;
@@ -860,7 +860,7 @@ namespace Jazz2::Editor
 			const auto& animations = s->GetDocument().Animations;
 			return (selection->Animation < std::int32_t(animations.size()) && animations[selection->Animation].Timing.IsPingPong != 0);
 		}, [s, selection](bool value) {
-			ChangeAnimation(*s, selection->Animation, NC_("editor", "Animation timing"), [value](DocumentAnimation& animation) {
+			ChangeAnimation(*s, selection->Animation, _x("editor", "Animation timing"), [value](DocumentAnimation& animation) {
 				animation.Timing.IsPingPong = (value ? 1 : 0);
 			});
 		});
@@ -954,12 +954,13 @@ namespace Jazz2::Editor
 		}
 		{
 			static const PropertyChoice WeatherChoices[] = {
-				// TRANSLATORS: Choices of the weather of the level in the Level Properties dialog, what falls from the sky
-				{ NC_("editor", "None"), std::int32_t(WeatherType::None) },
-				{ NC_("editor", "Snow"), std::int32_t(WeatherType::Snow) },
-				{ NC_("editor", "Flowers"), std::int32_t(WeatherType::Flowers) },
-				{ NC_("editor", "Rain"), std::int32_t(WeatherType::Rain) },
-				{ NC_("editor", "Leaves"), std::int32_t(WeatherType::Leaf) },
+				// TRANSLATORS: Choice of the weather of the level in the Level Properties dialog, no weather
+				{ _x("editor", "None"), std::int32_t(WeatherType::None) },
+				// Kinds of weather aren't translated
+				{ "Snow", std::int32_t(WeatherType::Snow) },
+				{ "Flowers", std::int32_t(WeatherType::Flowers) },
+				{ "Rain", std::int32_t(WeatherType::Rain) },
+				{ "Leaves", std::int32_t(WeatherType::Leaf) },
 			};
 			// TRANSLATORS: Label of a property in the Level Properties dialog
 			auto* row = AddRow(content, _x("editor", "Weather"));
@@ -1038,19 +1039,19 @@ namespace Jazz2::Editor
 		}
 
 		content->Add<UiSeparator>();
-		struct FlagOption { const char* Label; LevelFlags Flag; };
+		struct FlagOption { String Label; LevelFlags Flag; };
 		// Races with laps, Capture the Flag and multiplayer spawn points follow the events, see LevelDocument::GetFlagsFromEvents()
 		static const FlagOption FlagOptions[] = {
 			// TRANSLATORS: Checkboxes in the Level Properties dialog
-			{ NC_("editor", "Pit at the bottom"), LevelFlags::HasPit },
-			{ NC_("editor", "The pit kills at once"), LevelFlags::HasPitInstantDeath },
-			{ NC_("editor", "Hidden from the list of levels"), LevelFlags::IsHidden },
-			{ NC_("editor", "Multiplayer level"), LevelFlags::IsMultiplayerLevel },
-			{ NC_("editor", "Split the screen vertically"), LevelFlags::HasVerticalSplitscreen },
+			{ _x("editor", "Pit at the bottom"), LevelFlags::HasPit },
+			{ _x("editor", "The pit kills at once"), LevelFlags::HasPitInstantDeath },
+			{ _x("editor", "Hidden from the list of levels"), LevelFlags::IsHidden },
+			{ _x("editor", "Multiplayer level"), LevelFlags::IsMultiplayerLevel },
+			{ _x("editor", "Split the screen vertically"), LevelFlags::HasVerticalSplitscreen },
 		};
 		for (const FlagOption& option : FlagOptions) {
 			LevelFlags flag = option.Flag;
-			content->Add<UiCheckBox>(_x("editor", option.Label), [s, flag]() {
+			content->Add<UiCheckBox>(option.Label, [s, flag]() {
 				return (s->GetDocument().Flags & flag) == flag;
 			}, [s, flag](bool value) {
 				ChangeProperties(*s, [flag, value](LevelFlags& flags, Formats::LevelProperties&) {

@@ -655,6 +655,23 @@ namespace Jazz2::Tiles
 				tile.DestructType == TileDestructType::Special);
 	}
 
+	bool TileMap::IsTileDestroyed(std::int32_t tx, std::int32_t ty)
+	{
+		if (_sprLayerIndex == -1) {
+			return false;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (tx < 0 || ty < 0 || tx >= layoutSize.X || ty >= layoutSize.Y) {
+			return false;
+		}
+
+		// A collapsed tile isn't destructible any more (see AdvanceCollapsingTileTimers()), it was if it has an animation of
+		// its destruction
+		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
+		return (tile.DestructAnimation >= 0 && tile.DestructFrameIndex >= GetTileDestructibleFrameCount(tile));
+	}
+
 	bool TileMap::IsTileOneWay(std::int32_t tx, std::int32_t ty)
 	{
 		if (_sprLayerIndex == -1) {

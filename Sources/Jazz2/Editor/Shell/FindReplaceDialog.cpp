@@ -232,12 +232,12 @@ namespace Jazz2::Editor
 				std::shared_ptr<FindState> state = _state;
 				bool find = _find;
 				std::uint32_t bit = (1u << index);
-				String label = _x("editor", f->Name);
+				String label = f->Name;
 				StringView unit = GetUnitSuffix(f->Unit);
 				if (!unit.empty() && f->Type != ParamType::Bool && f->Type != ParamType::Enum && f->Type != ParamType::Flags) {
 					label = label + " ("_s + unit + ")"_s;
 				}
-				String tooltip = (f->Description != nullptr ? String(_x("editor", f->Description)) : String());
+				String tooltip = (f->Description != nullptr ? String(f->Description) : String());
 				// The controls outlive the descriptor if the catalog is read again, until they're made again
 				FieldKey key = { descriptor->Type, index, EventCatalog::GetRevision() };
 				auto read = [state, find, key]() -> std::int32_t {
@@ -306,7 +306,7 @@ namespace Jazz2::Editor
 							if (const EventParamField* field = ResolveField(key)) {
 								for (std::uint8_t i = 0; i < field->OptionCount; i++) {
 									if (field->Options[i].Value == value) {
-										return String(_x("editor", field->Options[i].Label));
+										return String(field->Options[i].Label);
 									}
 								}
 							}
@@ -320,7 +320,7 @@ namespace Jazz2::Editor
 							for (std::uint8_t i = 0; i < field->OptionCount; i++) {
 								std::int32_t value = field->Options[i].Value;
 								UiMenuEntry entry;
-								entry.Label = _x("editor", field->Options[i].Label);
+								entry.Label = field->Options[i].Label;
 								entry.IsChecked = [current, value]() { return (current == value); };
 								entry.Execute = [write, value]() { write(value); };
 								entries.push_back(Death::move(entry));
@@ -339,7 +339,7 @@ namespace Jazz2::Editor
 						}
 						for (std::uint8_t i = 0; i < f->OptionCount; i++) {
 							std::int32_t mask = f->Options[i].Value;
-							checks->Add<UiCheckBox>(_x("editor", f->Options[i].Label), [read, mask]() {
+							checks->Add<UiCheckBox>(f->Options[i].Label, [read, mask]() {
 								return ((read() & mask) == mask);
 							}, [read, write, mask](bool value) {
 								std::int32_t flags = read();

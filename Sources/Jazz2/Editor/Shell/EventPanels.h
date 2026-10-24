@@ -58,6 +58,7 @@ namespace Jazz2::Editor
 		std::int32_t _pressedIndex;
 		float _measuredScale;
 		float _measuredNameWidth;
+		std::uint32_t _measuredFontVersion;
 		mutable String _tooltip;
 
 		void UpdateItems();
@@ -110,14 +111,14 @@ namespace Jazz2::Editor
 		/**
 		 * @brief Changes the selected events, or the event to place
 		 *
-		 * @param name           Name of the change, marked by @ref NC_(), changes of the same name are merged while
+		 * @param name           Name of the change, translated, changes of the same name are merged while
 		 *                       a value is dragged, so it has to be different for each property
 		 * @param change         Changes an event
 		 * @param sameTypeOnly   Whether only the events of the type of the shown one are changed, nothing is changed
 		 *                       then while the selected events are of different kinds, see @ref HasMixedKinds()
 		 * @param final          Whether it ends the step, `false` only while a value is dragged
 		 */
-		void Change(const char* name, Function<void(Formats::EventRecord&)>&& change, bool sameTypeOnly, bool final = true);
+		void Change(StringView name, Function<void(Formats::EventRecord&)>&& change, bool sameTypeOnly, bool final = true);
 
 	private:
 		// What an event chosen in the list is for, see BeginEventPick()

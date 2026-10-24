@@ -5,6 +5,7 @@
 // platforms that cannot convert anything themselves, and for build pipelines.
 
 #include "CartridgeImage.h"
+#include "ContentFilter.h"
 #include "DiscImage.h"
 #include "FontPacker.h"
 #include "FormatVerifier.h"
@@ -325,8 +326,9 @@ namespace
 		@brief Whether the build of the game for a target profile has the level editor
 
 		The consoles that read all their content from a cartridge or a disc are built without it (see `WITH_EDITOR`),
-		so the texts of its `editor` context are left out of their translations (see @ref AssetPacker::TranslationFilter).
-		The generic `console` profile keeps them, as it doesn't say which console the tree is for.
+		so the texts of its `editor` context are left out of their translations (see @ref AssetPacker::TranslationFilter)
+		and what only it reads out of their tree (see @ref AssetPacker::ContentFilter). The generic `console` profile
+		keeps them, as it doesn't say which console the tree is for.
 	*/
 	bool ProfileHasEditor(StringView value)
 	{
@@ -635,13 +637,16 @@ namespace
 	}
 
 	/**
-		@brief Copies a directory tree, adding to whatever is already at the target
+		@brief Copies the game's own content, adding to whatever is already at the target
 
-		@param skippedNames			Entries of the top level that are not copied at all
-		@param skippedExtensions	Extensions, lower-case and without the dot, that are not copied at any level
+		What @ref AssetPacker::ContentFilter leaves out for the target isn't copied.
+
+		@param packedDirectories	Entries of the top level that go into the package instead, so aren't copied either
+		@param hasEditor			Whether the build the content is for has the level editor
+		@param isTopLevel			Whether @p sourcePath is the root of the content
 	*/
-	bool CopyDirectoryRecursive(StringView sourcePath, StringView targetPath, ArrayView<const StringView> skippedNames = {},
-		ArrayView<const StringView> skippedExtensions = {})
+	bool CopyContentDirectory(StringView sourcePath, StringView targetPath, ArrayView<const StringView> packedDirectories,
+		bool hasEditor, bool isTopLevel = true)
 	{
 		if (!fs::CreateDirectories(targetPath)) {
 			return false;
@@ -650,36 +655,25 @@ namespace
 		bool success = true;
 		for (auto item : fs::Directory(sourcePath)) {
 			StringView itemName = fs::GetFileName(item);
-			bool skipped = false;
-			for (StringView skippedName : skippedNames) {
-				if (itemName == skippedName) {
-					skipped = true;
+			const bool isDirectory = fs::DirectoryExists(item);
+			if (AssetPacker::ContentFilter::IsLeftOut(itemName, isDirectory, isTopLevel, hasEditor)) {
+				continue;
+			}
+			bool packed = false;
+			for (StringView packedDirectory : packedDirectories) {
+				if (itemName == packedDirectory) {
+					packed = true;
 					break;
 				}
 			}
-			if (skipped) {
+			if (packed) {
 				continue;
 			}
 
 			String targetItem = fs::CombinePath(targetPath, itemName);
-			if (fs::DirectoryExists(item)) {
-				// The name filter names top-level entries and so does not descend, the extension filter applies
-				// to the tree as a whole - the files it is meant for are one level down
-				success &= CopyDirectoryRecursive(item, targetItem, {}, skippedExtensions);
+			if (isDirectory) {
+				success &= CopyContentDirectory(item, targetItem, {}, hasEditor, false);
 				continue;
-			}
-
-			if (!skippedExtensions.empty()) {
-				String extension = fs::GetExtension(item);
-				for (StringView skippedExtension : skippedExtensions) {
-					if (extension == skippedExtension) {
-						skipped = true;
-						break;
-					}
-				}
-				if (skipped) {
-					continue;
-				}
 			}
 
 			if (!fs::Copy(item, targetItem)) {
@@ -845,18 +839,12 @@ namespace
 		// Everything else the tree carries is read as a loose file and has to stay one.
 		static const StringView PackedContentDirectories[] = { "Animations"_s, "Metadata"_s };
 
-		// The ".po" files beside the translations are the sources the ".mo" the game reads are compiled from, and
-		// nothing loads one at run time - both the language list and the About section's translator credits
-		// require the ".mo" extension. They are larger than the ".mo" they produce, so a tree that is deployed as
-		// it is, onto a memory card or a disc that cannot be rewritten, is better off without them.
-		static const StringView SkippedContentExtensions[] = { "po"_s };
-
 		// The game's own content (fonts, animations, metadata, translations) is not derived from anything in the
 		// original data, so a target that has to be self-contained needs it carried over alongside
 		const bool selfContained = (!layout.ContentPath.empty() && options.Profile != TargetProfile::Desktop);
 		if (selfContained) {
 			LOGI("Copying \"{}\"...", layout.ContentPath);
-			CopyDirectoryRecursive(layout.ContentPath, outputPath, PackedContentDirectories, SkippedContentExtensions);
+			CopyContentDirectory(layout.ContentPath, outputPath, PackedContentDirectories, options.HasEditor);
 			if (!options.HasEditor) {
 				RemoveEditorTranslations(outputPath);
 			}
@@ -892,7 +880,7 @@ namespace
 			} else if (!n64Tools.BuiltIn && n64Tools.VideoConv.empty()) {
 				LOGI("videoconv64, ffmpeg or ffprobe is missing, so the cinematics are encoded by the tool itself");
 			}
-			n64TempPath = fs::CombinePath(outputPath, ".n64-temp"_s);
+			n64TempPath = fs::CombinePath(outputPath, AssetPacker::ContentFilter::N64TempDirectory);
 			fs::RemoveDirectoryRecursive(n64TempPath);
 			fs::CreateDirectories(n64TempPath);
 			n64TempPak = fs::CombinePath(n64TempPath, "Content.pak"_s);

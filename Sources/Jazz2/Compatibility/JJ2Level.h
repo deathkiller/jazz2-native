@@ -259,6 +259,12 @@ namespace Jazz2::Compatibility
 			ConversionResult Converted;
 		};
 
+		// An event of the grid that isn't empty, by its tile index (x + y * width of the sprite layer)
+		struct GridEventSection {
+			std::int32_t Index;
+			TileEventSection Event;
+		};
+
 		struct TilePropertiesSection {
 			TileEventSection Event;
 			bool Flipped;
@@ -320,7 +326,9 @@ namespace Jazz2::Compatibility
 		std::unique_ptr<AnimatedTileSection[]> _animatedTiles;
 		SmallVector<OverridenTileDiffuse, 0> _overridenTileDiffuses;
 		SmallVector<OverridenTileMask, 0> _overridenTileMasks;
-		std::unique_ptr<TileEventSection[]> _events;
+		// Only the tiles with an event, sorted by their index - most have none, and a whole grid of them takes tens of MB
+		// for a big level, more than consoles have
+		SmallVector<GridEventSection, 0> _events;
 		SmallVector<std::uint8_t, TextEventStringsCount> _levelTokenTextIds;
 		SmallVector<String, 0> _eventMusic;
 		SmallVector<OffGridEvent, 0> _offGridEvents;
@@ -333,6 +341,8 @@ namespace Jazz2::Compatibility
 		bool LoadLayers(JJ2Block& dictBlock, JJ2Block& layoutBlock, bool strictParser);
 		void LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser);
 		void CheckWaterLevelAroundStart();
+		// Returns the event of a tile of the grid, `nullptr` if it has none
+		const TileEventSection* FindEvent(std::int32_t x, std::int32_t y) const;
 
 		// Makes the record of a layer as Convert() writes it, and its texture of its own, if it has one - for a level of JJ2+
 		// with the textured layers drawn as there

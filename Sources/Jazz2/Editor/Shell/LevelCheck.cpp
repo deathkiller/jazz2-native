@@ -234,9 +234,9 @@ namespace Jazz2::Editor
 			add(LevelProblemSeverity::Warning, group.Count > 1
 				// TRANSLATORS: In the Check Level dialog, the name of the event, the name of its parameter, the lowest and the highest value it can have, and the number of events
 				? _fnx("editor", "{}: {} is out of its range from {} to {} in {} event", "{}: {} is out of its range from {} to {} in {} events", group.Count,
-					name, _x("editor", field.Name), field.Min, field.Max, group.Count)
+					name, field.Name, field.Min, field.Max, group.Count)
 				// TRANSLATORS: In the Check Level dialog, the name of the event, the name of its parameter, its value, and the lowest and the highest value it can have
-				: _fx("editor", "{}: {} is {}, it can be from {} to {}", name, _x("editor", field.Name), group.Value, field.Min, field.Max), group.Cell, group.OffGrid);
+				: _fx("editor", "{}: {} is {}, it can be from {} to {}", name, field.Name, group.Value, field.Min, field.Max), group.Cell, group.OffGrid);
 		}
 		for (const ProblemGroup& group : missingTexts) {
 			bool exists = (group.Value >= 0 && group.Value < std::int32_t(document.Texts.size()));
@@ -299,7 +299,7 @@ namespace Jazz2::Editor
 
 		// The flag of a team in Capture the Flag is at its base, the first one found, a team without a base has it at its start
 		// TRANSLATORS: Names of the teams in multiplayer, put into the problems in the Check Level dialog
-		static const char* const TeamNames[] = { NC_("editor", "Blue"), NC_("editor", "Red"), NC_("editor", "Green"), NC_("editor", "Yellow") };
+		const StringView TeamNames[] = { _x("editor", "Blue"), _x("editor", "Red"), _x("editor", "Green"), _x("editor", "Yellow") };
 		// As the level is saved, the flag follows the events
 		if ((document.GetSavedFlags() & LevelFlags::HasCaptureTheFlag) == LevelFlags::HasCaptureTheFlag) {
 			for (std::int32_t team = 0; team < 4; team++) {
@@ -307,18 +307,18 @@ namespace Jazz2::Editor
 				bool hasStart = HasId(multiplayerStarts, team);
 				if (bases == 0 && team < 2) {
 					// TRANSLATORS: In the Check Level dialog, {} is the name of the team (Blue, Red, Green or Yellow)
-					LevelProblem& problem = add(LevelProblemSeverity::Warning, _fx("editor", "The team {} has no CTF base, its flag is at its start", _x("editor", TeamNames[team])));
+					LevelProblem& problem = add(LevelProblemSeverity::Warning, _fx("editor", "The team {} has no CTF base, its flag is at its start", TeamNames[team]));
 					problem.Fix = LevelProblemFix::AddCtfBase;
 					problem.FixValue = team;
 				} else if (bases > 1) {
 					auto it = std::find_if(ctfBases.begin(), ctfBases.end(), [team](const IdUse& use) { return use.Id == team; });
 					// TRANSLATORS: In the Check Level dialog, the name of the team (Blue, Red, Green or Yellow) and the number of its bases
-					add(LevelProblemSeverity::Warning, _fx("editor", "The team {} has {} CTF bases, only the first one is used", _x("editor", TeamNames[team]), bases), it->Cell, it->OffGrid);
+					add(LevelProblemSeverity::Warning, _fx("editor", "The team {} has {} CTF bases, only the first one is used", TeamNames[team], bases), it->Cell, it->OffGrid);
 				}
 				if (bases > 0 && !hasStart) {
 					auto it = std::find_if(ctfBases.begin(), ctfBases.end(), [team](const IdUse& use) { return use.Id == team; });
 					// TRANSLATORS: In the Check Level dialog, {} is the name of the team (Blue, Red, Green or Yellow)
-					LevelProblem& problem = add(LevelProblemSeverity::Warning, _fx("editor", "The team {} has a CTF base, but no multiplayer start of its own", _x("editor", TeamNames[team])),
+					LevelProblem& problem = add(LevelProblemSeverity::Warning, _fx("editor", "The team {} has a CTF base, but no multiplayer start of its own", TeamNames[team]),
 						it->Cell, it->OffGrid);
 					problem.Fix = LevelProblemFix::AddMultiplayerStart;
 					problem.FixValue = team;
@@ -758,9 +758,12 @@ namespace Jazz2::Editor
 				break;
 			}
 			case Tiles::LayerRendererType::Reflection: {
+				// The horizon is a fraction of the view, or of the layer (see TileMap::DrawReflection()) - at the top of the layer
+				// it mirrors what is above the layer
+				bool horizonInLayer = ((layer.Record.Textured.Flags & Formats::TexturedLayerParams::InnerLayer) != 0);
 				if (layer.Record.Textured.FadeY >= 1.0f) {
 					add(LevelProblemSeverity::Warning, _x("editor", "The horizon is at the bottom, the reflection shows nothing"));
-				} else if (layer.Record.Textured.FadeY <= 0.0f) {
+				} else if (layer.Record.Textured.FadeY <= 0.0f && !horizonInLayer) {
 					add(LevelProblemSeverity::Warning, _x("editor", "The horizon is at the top, there's nothing to mirror, so it's drawn black"));
 				}
 				// Its ripples are the 8x8 tiles at its top left, unless it has an image of its own, see Tiles::LayerRendererType::Reflection
@@ -847,12 +850,12 @@ namespace Jazz2::Editor
 			}
 			return false;
 		};
-		struct LevelLink { String Formats::LevelProperties::* Member; const char* Label; };
+		struct LevelLink { String Formats::LevelProperties::* Member; String Label; };
 		static const LevelLink Links[] = {
 			// TRANSLATORS: Links of the level to the levels that follow it, put before the name of a level that isn't found in the Check Level dialog
-			{ &Formats::LevelProperties::NextLevel, NC_("editor", "Next level") },
-			{ &Formats::LevelProperties::SecretLevel, NC_("editor", "Secret level") },
-			{ &Formats::LevelProperties::BonusLevel, NC_("editor", "Bonus level") }
+			{ &Formats::LevelProperties::NextLevel, _x("editor", "Next level") },
+			{ &Formats::LevelProperties::SecretLevel, _x("editor", "Secret level") },
+			{ &Formats::LevelProperties::BonusLevel, _x("editor", "Bonus level") }
 		};
 		for (const LevelLink& link : Links) {
 			StringView name = document.Properties.*link.Member;
@@ -863,7 +866,7 @@ namespace Jazz2::Editor
 			}
 			if (!levelExists(name)) {
 				// TRANSLATORS: In the Check Level dialog, the kind of the link (Next level, Secret level or Bonus level) and the name of the level it leads to
-				add(LevelProblemSeverity::Warning, _fx("editor", "{} \"{}\" isn't found", _x("editor", link.Label), name));
+				add(LevelProblemSeverity::Warning, _fx("editor", "{} \"{}\" isn't found", link.Label, name));
 			}
 		}
 
@@ -1136,11 +1139,11 @@ namespace Jazz2::Editor
 				state->Counts[std::int32_t(problem.Severity)]++;
 			}
 			// TRANSLATORS: Toggles in the Check Level dialog that show or hide the problems of each kind, plural nouns
-			static const char* const FilterLabels[] = { NC_("editor", "Errors"), NC_("editor", "Warnings"), NC_("editor", "Information") };
+			const StringView FilterLabels[] = { _x("editor", "Errors"), _x("editor", "Warnings"), _x("editor", "Information") };
 			for (std::int32_t i = 0; i < 3; i++) {
 				if (state->FilterButtons[i] != nullptr) {
 					// TRANSLATORS: Toggle in the Check Level dialog, the kind of problems (Errors, Warnings or Information) and how many were found
-					state->FilterButtons[i]->Text = _fx("editor", "{} ({})", _x("editor", FilterLabels[i]), state->Counts[i]);
+					state->FilterButtons[i]->Text = _fx("editor", "{} ({})", FilterLabels[i], state->Counts[i]);
 				}
 			}
 			String text = (problems.empty() ? String(_x("editor", "No problems found")) : _fnx("editor", "{} problem found", "{} problems found", std::int32_t(problems.size()), std::int32_t(problems.size())));

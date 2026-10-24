@@ -3818,42 +3818,37 @@ namespace Jazz2
 		return tex;
 	}
 
+	// Stops of the gradients of the gems in the sprite palette, 32 entries between each two - the first 4 are the gems of
+	// the game, the others are what `SPRITE::GEM` of JJ2+ shows for the next params (measured), there only the first half
+	// is theirs, the rest of it alternates between the color and white
+	static constexpr std::uint8_t GemGradientStops[][5] = {
+		{ 55, 52, 48, 15, 15 },		// Red
+		{ 87, 84, 80, 15, 15 },		// Green
+		{ 39, 36, 32, 15, 15 },		// Blue
+		{ 95, 92, 88, 15, 15 },		// Purple
+		{ 47, 44, 40, 15, 15 },
+		{ 23, 21, 16, 15, 15 },
+		{ 71, 68, 64, 15, 15 },
+		{ 79, 76, 72, 15, 15 },
+		{ 63, 60, 40, 15, 15 },
+		{ 31, 28, 24, 15, 15 },
+		{ 79, 79, 77, 73, 15 },
+		{ 40, 44, 47, 40, 15 },
+		{ 32, 36, 39, 32, 15 }
+	};
+
+	// Number of entries of the gradient of a gem
+	static constexpr std::int32_t GemGradientSize = 128;
+
 	void ContentResolver::RecreateGemPalettes()
 	{
 		constexpr std::int32_t GemColorCount = 4;
-		constexpr std::int32_t Expansion = 32;
 
-		static const std::int32_t PaletteStops[] = {
-			55, 52, 48, 15, 15,
-			87, 84, 80, 15, 15,
-			39, 36, 32, 15, 15,
-			95, 92, 88, 15, 15
-		};
-
-		constexpr std::int32_t StopsPerGem = (std::int32_t(arraySize(PaletteStops)) / GemColorCount) - 1;
-
-		// Start to fill palette texture from the second row (right after base palette)
-		std::int32_t src = 0, dst = ColorsPerPalette;
-		for (std::int32_t color = 0; color < GemColorCount; color++, src++) {
-			// Compress 2 gem color gradients to single palette row
-			for (std::int32_t i = 0; i < StopsPerGem; i++) {
-				// Base Palette is in first row of "palettes" array
-				std::uint32_t from = _palettes[PaletteStops[src++]];
-				std::uint32_t to = _palettes[PaletteStops[src]];
-
-				std::int32_t r = (from & 0xff) * 8, dr = ((to & 0xff) * 8) - r;
-				std::int32_t g = ((from >> 8) & 0xff) * 8, dg = (((to >> 8) & 0xff) * 8) - g;
-				std::int32_t b = ((from >> 16) & 0xff) * 8, db = (((to >> 16) & 0xff) * 8) - b;
-				std::int32_t a = (from & 0xff000000);
-				r *= Expansion; g *= Expansion; b *= Expansion;
-
-				for (std::int32_t j = 0; j < Expansion; j++) {
-					_palettes[dst] = ((r / (8 * Expansion)) & 0xff) | (((g / (8 * Expansion)) & 0xff) << 8) |
-									 (((b / (8 * Expansion)) & 0xff) << 16) | a;
-					r += dr; g += dg; b += db;
-					dst++;
-				}
-			}
+		// Start to fill palette texture from the second row (right after base palette), 2 gem color gradients in a row
+		std::int32_t dst = ColorsPerPalette;
+		for (std::int32_t color = 0; color < GemColorCount; color++) {
+			BuildGemGradient(GemGradientStops[color], _palettes + dst);
+			dst += GemGradientSize;
 		}
 
 		// The base palette (row 0) and the gem palette rows just changed - mark them for re-upload. `dst` is the
@@ -3862,6 +3857,31 @@ namespace Jazz2
 
 		// Per-player recolor rows are derived from the (now changed) base palette, so rebuild them too
 		RefreshDynamicPaletteRows();
+	}
+
+	void ContentResolver::BuildGemGradient(const std::uint8_t* stops, std::uint32_t* outGradient) const
+	{
+		constexpr std::int32_t Expansion = GemGradientSize / 4;
+
+		std::int32_t dst = 0;
+		for (std::int32_t i = 0; i < 4; i++) {
+			// Base Palette is in first row of "palettes" array
+			std::uint32_t from = _palettes[stops[i]];
+			std::uint32_t to = _palettes[stops[i + 1]];
+
+			std::int32_t r = (from & 0xff) * 8, dr = ((to & 0xff) * 8) - r;
+			std::int32_t g = ((from >> 8) & 0xff) * 8, dg = (((to >> 8) & 0xff) * 8) - g;
+			std::int32_t b = ((from >> 16) & 0xff) * 8, db = (((to >> 16) & 0xff) * 8) - b;
+			std::int32_t a = (from & 0xff000000);
+			r *= Expansion; g *= Expansion; b *= Expansion;
+
+			for (std::int32_t j = 0; j < Expansion; j++) {
+				outGradient[dst] = ((r / (8 * Expansion)) & 0xff) | (((g / (8 * Expansion)) & 0xff) << 8) |
+								   (((b / (8 * Expansion)) & 0xff) << 16) | a;
+				r += dr; g += dg; b += db;
+				dst++;
+			}
+		}
 	}
 
 	std::uint32_t ContentResolver::ShiftHue(std::uint32_t color, float degrees)
@@ -4135,8 +4155,11 @@ namespace Jazz2
 		return freeRow * ColorsPerPalette;
 	}
 
-	// The scheme of a dynamic palette row that holds the shifted sprite palette, no recolor scheme has it
+	// The schemes of the dynamic palette rows that hold the shifted sprite palette and the sprite palette in a single hue,
+	// no recolor scheme has them
 	static constexpr std::uint8_t ShiftedPaletteScheme = 0xFF;
+	static constexpr std::uint8_t SingleHuePaletteScheme = 0xFE;
+	static constexpr std::uint8_t GemPaletteScheme = 0xFD;
 
 	std::int32_t ContentResolver::AcquireShiftedPaletteOffset(std::uint8_t shift)
 	{
@@ -4144,6 +4167,31 @@ namespace Jazz2
 			// Shifted by nothing, it's the sprite palette itself
 			return 0;
 		}
+		return AcquireDerivedPaletteOffset(ShiftedPaletteScheme, shift);
+	}
+
+	std::int32_t ContentResolver::AcquireSingleHuePaletteOffset(std::uint8_t gradientStart)
+	{
+		return AcquireDerivedPaletteOffset(SingleHuePaletteScheme, gradientStart);
+	}
+
+	std::int32_t ContentResolver::AcquireGemPaletteOffset(std::uint8_t gem)
+	{
+		return AcquireDerivedPaletteOffset(GemPaletteScheme, gem);
+	}
+
+	std::uint32_t ContentResolver::GetGemColor(std::uint8_t gem, std::uint8_t index) const
+	{
+		if (gem >= arraySize(GemGradientStops)) {
+			return 0;
+		}
+		std::uint32_t gradient[GemGradientSize];
+		BuildGemGradient(GemGradientStops[gem], gradient);
+		return gradient[index & (GemGradientSize - 1)];
+	}
+
+	std::int32_t ContentResolver::AcquireDerivedPaletteOffset(std::uint8_t scheme, std::uint8_t value)
+	{
 		if (_isHeadless) {
 			return -1;
 		}
@@ -4154,7 +4202,7 @@ namespace Jazz2
 				if (freeRow < 0) {
 					freeRow = row;
 				}
-			} else if (_paletteRowScheme[row] == ShiftedPaletteScheme && _paletteRowColor[row] == shift) {
+			} else if (_paletteRowScheme[row] == scheme && _paletteRowColor[row] == value) {
 				_paletteRowRefCount[row]++;
 				return row * ColorsPerPalette;
 			}
@@ -4165,9 +4213,15 @@ namespace Jazz2
 		}
 
 		_paletteRowRefCount[freeRow] = 1;
-		_paletteRowColor[freeRow] = shift;
-		_paletteRowScheme[freeRow] = ShiftedPaletteScheme;
-		BuildShiftedPalette(shift, _palettes + freeRow * ColorsPerPalette);
+		_paletteRowColor[freeRow] = value;
+		_paletteRowScheme[freeRow] = scheme;
+		if (scheme == SingleHuePaletteScheme) {
+			BuildSingleHuePalette(value, _palettes + freeRow * ColorsPerPalette);
+		} else if (scheme == GemPaletteScheme) {
+			BuildGemPalette(value, _palettes + freeRow * ColorsPerPalette);
+		} else {
+			BuildShiftedPalette(value, _palettes + freeRow * ColorsPerPalette);
+		}
 		MarkPaletteDirty(freeRow, freeRow);
 		return freeRow * ColorsPerPalette;
 	}
@@ -4180,6 +4234,36 @@ namespace Jazz2
 		for (std::int32_t i = 1; i < ColorsPerPalette; i++) {
 			const std::int32_t from = (i + shift) & (ColorsPerPalette - 1);
 			outPalette[i] = (from == 0 ? (_palettes[0] | 0xFF000000u) : _palettes[from]);
+		}
+	}
+
+	void ContentResolver::BuildSingleHuePalette(std::uint8_t gradientStart, std::uint32_t* outPalette) const
+	{
+		// As JJ2+ draws SPRITE::SINGLEHUE (measured): every index is moved into the gradient of 8 entries from the start,
+		// to the same place in it, a transparent pixel stays transparent
+		outPalette[0] = _palettes[0];
+		for (std::int32_t i = 1; i < ColorsPerPalette; i++) {
+			const std::int32_t from = (gradientStart + (i & 7)) & (ColorsPerPalette - 1);
+			outPalette[i] = (from == 0 ? (_palettes[0] | 0xFF000000u) : _palettes[from]);
+		}
+	}
+
+	void ContentResolver::BuildGemPalette(std::uint8_t gem, std::uint32_t* outPalette) const
+	{
+		// As JJ2+ draws SPRITE::GEM (measured): the lower 7 bits of an index pick the entry of the gradient of the gem,
+		// a transparent pixel stays transparent, and a gem without a gradient isn't drawn at all
+		outPalette[0] = _palettes[0];
+		if (gem >= arraySize(GemGradientStops)) {
+			for (std::int32_t i = 1; i < ColorsPerPalette; i++) {
+				outPalette[i] = 0;
+			}
+			return;
+		}
+
+		std::uint32_t gradient[GemGradientSize];
+		BuildGemGradient(GemGradientStops[gem], gradient);
+		for (std::int32_t i = 1; i < ColorsPerPalette; i++) {
+			outPalette[i] = gradient[i & (GemGradientSize - 1)];
 		}
 	}
 
@@ -4200,6 +4284,10 @@ namespace Jazz2
 			if (_paletteRowRefCount[row] > 0) {
 				if (_paletteRowScheme[row] == ShiftedPaletteScheme) {
 					BuildShiftedPalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
+				} else if (_paletteRowScheme[row] == SingleHuePaletteScheme) {
+					BuildSingleHuePalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
+				} else if (_paletteRowScheme[row] == GemPaletteScheme) {
+					BuildGemPalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
 				} else {
 					BuildPlayerColorPaletteForScheme(_paletteRowColor[row], _paletteRowScheme[row], _palettes + row * ColorsPerPalette);
 				}

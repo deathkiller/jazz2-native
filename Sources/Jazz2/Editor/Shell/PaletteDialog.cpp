@@ -33,10 +33,6 @@
 #include <cstring>
 #include <memory>
 
-#if !defined(NC_)
-#	define NC_(context, text) text
-#endif
-
 using namespace Death::Containers::Literals;
 
 namespace Jazz2::Editor
@@ -945,18 +941,18 @@ namespace Jazz2::Editor
 			auto* unusedRow = right->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
 			// Which entries are crossed out: those no tile uses, those of the colors of sprites, those that differ from
 			// the palette of the tile set
-			struct MarkOption { const char* Label; PaletteUsage::Marks Mark; };
+			struct MarkOption { String Label; PaletteUsage::Marks Mark; };
 			static const MarkOption MarkOptions[] = {
 				// TRANSLATORS: Options of the dropdown in the Level Palette dialog, which entries of the palette are crossed out (none, unused, shared with sprites, changed from the tile set)
-				{ NC_("editor", "Mark nothing"), PaletteUsage::Marks::None },
-				{ NC_("editor", "Mark unused"), PaletteUsage::Marks::Unused },
-				{ NC_("editor", "Mark sprite colors"), PaletteUsage::Marks::Sprites },
-				{ NC_("editor", "Mark changed"), PaletteUsage::Marks::TileSetDiff },
+				{ _x("editor", "Mark nothing"), PaletteUsage::Marks::None },
+				{ _x("editor", "Mark unused"), PaletteUsage::Marks::Unused },
+				{ _x("editor", "Mark sprite colors"), PaletteUsage::Marks::Sprites },
+				{ _x("editor", "Mark changed"), PaletteUsage::Marks::TileSetDiff },
 			};
 			auto* marks = unusedRow->Add<UiDropdown>([usage]() {
 				for (const MarkOption& option : MarkOptions) {
 					if (option.Mark == usage->Mark) {
-						return String(_x("editor", option.Label));
+						return String(option.Label);
 					}
 				}
 				return String();
@@ -964,7 +960,7 @@ namespace Jazz2::Editor
 				for (const MarkOption& option : MarkOptions) {
 					PaletteUsage::Marks mark = option.Mark;
 					UiMenuEntry entry;
-					entry.Label = _x("editor", option.Label);
+					entry.Label = option.Label;
 					entry.IsChecked = [usage, mark]() { return (usage->Mark == mark); };
 					entry.Execute = [usage, mark]() { usage->Mark = mark; };
 					entries.push_back(Death::move(entry));
@@ -1049,17 +1045,17 @@ namespace Jazz2::Editor
 			auto* preview = right->Add<GradientPreview>(session, selection, usage);
 			preview->IsVisibleFunc = [selection]() { return (selection->Last() - selection->First() >= 2); };
 			auto* gradientRow = right->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			struct StepOption { const char* Label; PaletteUsage::Steps Steps; };
+			struct StepOption { String Label; PaletteUsage::Steps Steps; };
 			static const StepOption StepOptions[] = {
 				// TRANSLATORS: Options of the dropdown in the Level Palette dialog, how the colors of a gradient are stepped (evenly as they look, by red, green and blue, or around the color wheel)
-				{ NC_("editor", "As they look"), PaletteUsage::Steps::OkLab },
-				{ NC_("editor", "Red, green, blue"), PaletteUsage::Steps::Rgb },
-				{ NC_("editor", "Around the hue"), PaletteUsage::Steps::Hue },
+				{ _x("editor", "As they look"), PaletteUsage::Steps::OkLab },
+				{ _x("editor", "Red, green, blue"), PaletteUsage::Steps::Rgb },
+				{ _x("editor", "Around the hue"), PaletteUsage::Steps::Hue },
 			};
 			auto* steps = gradientRow->Add<UiDropdown>([usage]() {
 				for (const StepOption& option : StepOptions) {
 					if (option.Steps == usage->Gradient) {
-						return String(_x("editor", option.Label));
+						return String(option.Label);
 					}
 				}
 				return String();
@@ -1067,7 +1063,7 @@ namespace Jazz2::Editor
 				for (const StepOption& option : StepOptions) {
 					PaletteUsage::Steps value = option.Steps;
 					UiMenuEntry entry;
-					entry.Label = _x("editor", option.Label);
+					entry.Label = option.Label;
 					entry.IsChecked = [usage, value]() { return (usage->Gradient == value); };
 					entry.Execute = [usage, value]() { usage->Gradient = value; };
 					entries.push_back(Death::move(entry));

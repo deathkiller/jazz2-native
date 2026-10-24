@@ -67,7 +67,7 @@ namespace Jazz2::UI
 	}
 
 	Font::Font(const std::unique_ptr<Stream>& s, StringView path, const std::uint32_t* palette)
-		: _asciiChars{}, _lineHeight(0), _baseSpacing(0), _paletteIndexed(false)
+		: _asciiChars{}, _lineHeight(0), _baseSpacing(0), _glyphScale(1.0f), _paletteIndexed(false)
 	{
 		if (!s->IsValid()) {
 			// A font that can't be opened at all used to fail silently here, which then looked like a
@@ -195,6 +195,25 @@ namespace Jazz2::UI
 		_texture->SetMagFiltering(SamplerFilter::Linear);
 	}
 
+	Font::Font(const char* name, const std::uint8_t* pixels, std::int32_t width, std::int32_t height, std::int32_t lineHeight,
+		float rasterScale, ArrayView<const Pair<char32_t, FontFormat::Glyph>> glyphs)
+		: _asciiChars{}, _lineHeight(lineHeight), _baseSpacing(0), _glyphScale(1.0f / rasterScale), _paletteIndexed(false)
+	{
+		for (const Pair<char32_t, FontFormat::Glyph>& item : glyphs) {
+			// The fallback is codepoint 0, so it lands where the lookup expects it
+			if (item.first() < arraySize(_asciiChars)) {
+				_asciiChars[item.first()] = item.second();
+			} else {
+				_unicodeChars[std::uint32_t(item.first())] = item.second();
+			}
+		}
+
+		_texture = std::make_unique<Texture>(name, Texture::Format::RGBA8, width, height);
+		_texture->LoadFromTexels(pixels, 0, 0, width, height);
+		_texture->SetMinFiltering(SamplerFilter::Linear);
+		_texture->SetMagFiltering(SamplerFilter::Linear);
+	}
+
 	void Font::SetMagnificationFilter(SamplerFilter filter)
 	{
 		if (_texture != nullptr) {
@@ -229,7 +248,7 @@ namespace Jazz2::UI
 		// A character is as wide as the pen moves for it, not as wide as its pixels - two adjacent glyphs are
 		// meant to overlap slightly, which is what the negative base spacing of these fonts arranges
 		const FontFormat::Glyph& glyph = GetGlyph(c);
-		return Vector2f(float(glyph.Advance), float(_lineHeight));
+		return Vector2f(float(glyph.Advance) * _glyphScale, float(_lineHeight));
 	}
 
 	Vector2f Font::MeasureString(StringView text, float scale, float charSpacing, float lineSpacing)
@@ -427,7 +446,7 @@ namespace Jazz2::UI
 			} else {
 				const FontFormat::Glyph& glyph = GetGlyph(cursor.first());
 				if (glyph.Advance > 0) {
-					lastWidth += (glyph.Advance + _baseSpacing) * charSpacing * scalePre;
+					lastWidth += (glyph.Advance * _glyphScale + _baseSpacing) * charSpacing * scalePre;
 				}
 			}
 
@@ -470,6 +489,8 @@ namespace Jazz2::UI
 		// Reciprocals once per string rather than four divisions per glyph
 		const float invTexWidth = 1.0f / float(texSize.X);
 		const float invTexHeight = 1.0f / float(texSize.Y);
+		// How large a pixel of the atlas is drawn, the scale itself for the fonts of the game
+		const float atlasScale = scale * _glyphScale;
 		Shader* colorizeShader;
 		bool useRandomColor, isShadow;
 		float alpha;
@@ -619,7 +640,7 @@ namespace Jazz2::UI
 							color = Colorf(newColor.R, newColor.G, newColor.B, color.A);
 						}
 
-						Vector2f pos = Vector2f(originPos.X + glyph.BearingX * scale, originPos.Y + glyph.BearingY * scale);
+						Vector2f pos = Vector2f(originPos.X + glyph.BearingX * atlasScale, originPos.Y + glyph.BearingY * atlasScale);
 
 						// A glyph outside the view is laid out but not drawn. Nothing above depends on this
 						// and nothing below it does either - the pen, the character counter and the wobble
@@ -643,8 +664,8 @@ namespace Jazz2::UI
 						// everything, since culling against a zero view would silently swallow the text.
 						const float layerScale = canvas->LayerScale;
 						const Vector2f unwobbled = pos * layerScale + canvas->LayerOffset;
-						const float glyphW = glyph.Width * scale * layerScale;
-						const float glyphH = glyph.Height * scale * layerScale;
+						const float glyphW = glyph.Width * atlasScale * layerScale;
+						const float glyphH = glyph.Height * atlasScale * layerScale;
 						// One extra pixel covers the rounding to whole pixels below
 						const float marginX = (angleOffset > 0.0f ? std::abs(varianceX) * scale * layerScale : 0.0f) + 1.0f;
 						const float marginY = (angleOffset > 0.0f ? std::abs(varianceY) * scale * layerScale : 0.0f) + 1.0f;
@@ -671,7 +692,7 @@ namespace Jazz2::UI
 
 							// Apply the canvas-wide draw transform (menu section transitions; identity by default)
 							pos = pos * layerScale + canvas->LayerOffset;
-							float glyphScale = scale * layerScale;
+							float glyphScale = atlasScale * layerScale;
 							Colorf glyphColor = color * canvas->LayerColor;
 
 							pos.X = std::round(pos.X);
@@ -760,7 +781,7 @@ namespace Jazz2::UI
 						}
 					}
 
-					originPos.X += ((glyph.Advance + _baseSpacing) * scale * charSpacing);
+					originPos.X += ((glyph.Advance * _glyphScale + _baseSpacing) * scale * charSpacing);
 					charOffset++;
 				}
 			}

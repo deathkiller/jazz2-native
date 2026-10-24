@@ -50,7 +50,7 @@ namespace Jazz2::Editor
 		_showGrid = _settings.ShowGrid;
 		// The debug toggles of play-tests are kept for all of them
 		ApplyPlayTestDebugOptions();
-		UiTheme::Apply(UiThemeKind(_settings.Theme), _settings.ReducedMotion);
+		UiTheme::Apply(UiThemeKind(_settings.Theme), _settings.ReducedMotion, _settings.ReadableFont);
 
 		String fullPath, levelName, filePath;
 		if (!editorInit.FilePath.empty()) {
@@ -107,9 +107,9 @@ namespace Jazz2::Editor
 		// The recovery copy belongs to the file from now on
 		_files->SetFile(filePath, levelName);
 
-		String problem;
+		DocumentProblem problem;
 		if (!_document.Validate(&problem)) {
-			LOGW("Level \"{}\" has a problem: {}", fullPath, problem);
+			LOGW("Level \"{}\" has a problem: {}", fullPath, LevelDocument::GetProblemDescription(problem));
 		}
 
 		CreateHistory();
@@ -677,12 +677,10 @@ namespace Jazz2::Editor
 	{
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
 		float width = float(gfxDevice.drawableWidth()), height = float(gfxDevice.drawableHeight());
-		// By the size of the window up to the largest size offered, a larger one would only waste the room
-		float byWindow = std::clamp(std::floor(std::min(width / 640.0f, height / 400.0f)), 1.0f, 6.0f);
 
-		// By how large the system shows its own interface, so the editor isn't tiny on a small screen with many pixels,
-		// two pixels a unit at 100%; never smaller than by the window, and only as large as still leaves room for the
-		// smallest layout of the panels
+		// By how large the system shows its own interface (its DPI), not by the size of the window, so a large screen
+		// shows more of the level instead of larger panels, while a small screen with many pixels still gets a larger
+		// interface; one pixel a unit at 100%, and only as large as still leaves room for the smallest layout of the panels
 		float systemScale = gfxDevice.windowScalingFactor();
 		if (!(systemScale > 0.0f && systemScale < 16.0f)) {
 			systemScale = 1.0f;
@@ -696,8 +694,7 @@ namespace Jazz2::Editor
 		// The size of the system to the nearest step, as a density of 420 dpi would be 263%; the room for the panels is a
 		// limit, so it's rounded down
 		float fit = std::floor(std::min(width / MinWidthUnits, height / MinHeightUnits) / UiScaleStep) * UiScaleStep;
-		float bySystem = std::min(RoundUiScale(2.0f * systemScale), fit);
-		return std::clamp(std::max(byWindow, bySystem), MinUiScale, MaxUiScale);
+		return std::clamp(std::min(RoundUiScale(systemScale), fit), MinUiScale, MaxUiScale);
 	}
 
 	float EditorSession::RoundUiScale(float scale)

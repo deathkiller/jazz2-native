@@ -1,4 +1,5 @@
 #include "CartridgeImage.h"
+#include "ContentFilter.h"
 
 #include <algorithm>
 #include <cstring>
@@ -280,8 +281,9 @@ namespace Jazz2::AssetPacker
 		/**
 			@brief Decides what of the content directory goes into the ROM, mirroring `cmake/n64_stage_content.cmake`
 
-			Keep the two in step: a ROM made by this and one made by the build from the same tree should have
-			the same files in them.
+			What every console leaves out is decided by @ref ContentFilter (the console has no level editor), the rest
+			is what only this one can't use. Keep the two in step: a ROM made by this and one made by the build from the
+			same tree should have the same files in them.
 		*/
 		bool StageFilter(StringView contentRoot, StringView dfsPath, StringView hostItem, String& dfsName)
 		{
@@ -292,11 +294,11 @@ namespace Jazz2::AssetPacker
 			const StringView name = fs::GetFileName(hostItem);
 			const bool isDirectory = fs::DirectoryExists(hostItem);
 
+			if (ContentFilter::IsLeftOut(name, isDirectory, relative.empty(), false)) {
+				return false;
+			}
+
 			if (relative.empty()) {
-				// What a failed conversion left behind
-				if (isDirectory && name == ".n64-temp"_s) {
-					return false;
-				}
 				// The console has no writable cache to convert into, so a package named for the desktop is
 				// taken as prebaked
 				if (!isDirectory && name == "Source.pak"_s) {
@@ -331,11 +333,6 @@ namespace Jazz2::AssetPacker
 						fs::IsReadableFile(fs::CombinePath(directory, String(stem + ".h264"_s)))) {
 						return false;
 					}
-				}
-			} else if (topDirectory == "translations"_s) {
-				// Translation sources, only the compiled ".mo" files are read at run time
-				if (extension == "po"_s) {
-					return false;
 				}
 			}
 			return true;

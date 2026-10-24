@@ -837,11 +837,15 @@ namespace Jazz2::Editor
 			UiOnScreenKeyboard::Show(*_session.GetSurface());
 			return DebugResult::Done;
 		} });
-		commands.push_back({ "/theme"_s, 1, "/theme default|contrast [still]"_s, [](const Args& args) {
+		commands.push_back({ "/theme"_s, 1, "/theme default|contrast [still] [readable]"_s, [](const Args& args) {
 			// Not saved
 			UiThemeKind kind = (args[1] == "contrast"_s ? UiThemeKind::HighContrast : UiThemeKind::Default);
-			bool reducedMotion = (args.size() >= 3 && args[2] == "still"_s);
-			UiTheme::Apply(kind, reducedMotion);
+			bool reducedMotion = false, readableFont = false;
+			for (std::size_t i = 2; i < args.size(); i++) {
+				reducedMotion |= (args[i] == "still"_s);
+				readableFont |= (args[i] == "readable"_s);
+			}
+			UiTheme::Apply(kind, reducedMotion, readableFont);
 			return DebugResult::Done;
 		} });
 		commands.push_back({ "/safearea"_s, 4, "/safearea <left> <top> <right> <bottom>, in percent"_s, [](const Args& args) {

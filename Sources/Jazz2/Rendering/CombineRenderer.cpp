@@ -370,7 +370,7 @@ namespace Jazz2::Rendering
 		auto actors = _owner->_levelHandler->GetActors();
 		std::size_t actorsCount = actors.size();
 		for (std::size_t i = 0; i < actorsCount; i++) {
-			actors[i]->OnEmitLights(_swLightsCache);
+			actors[i]->EmitLights(_swLightsCache);
 		}
 
 		// The shader path clears the lighting buffer to (ambientLevel, 0) and blends the scene toward the

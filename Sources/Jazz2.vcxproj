@@ -32,6 +32,8 @@
     <ProjectGuid>{7D39862C-AB77-4BE2-9DED-D330BD162623}</ProjectGuid>
     <RootNamespace>Jazz2</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <!-- Compiles every file on its own in parallel, the object files are in different directories (see ObjectFileName) -->
+    <UseMultiToolTask>true</UseMultiToolTask>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -275,6 +277,12 @@
     </Link>
     <Manifest />
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- Each object file in the directory of its source, files of the same name in different directories don't overwrite each other -->
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="$(ExtensionLibraryPath)\Common.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Cpu.h" />
@@ -340,6 +348,7 @@
     <ClInclude Include="Dependencies\parallel_hashmap\phmap_fwd_decl.h" />
     <ClInclude Include="Dependencies\parallel_hashmap\phmap_utils.h" />
     <ClInclude Include="Dependencies\pdqsort\pdqsort.h" />
+    <ClInclude Include="Dependencies\stb\stb_truetype.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\MpPlayer.h" />
     <ClInclude Include="Jazz2\ContentResolver.h" />
     <ClInclude Include="Jazz2\Input\ControlScheme.h" />
@@ -579,6 +588,7 @@
     <ClInclude Include="Jazz2\Editor\UI\UiMenu.h" />
     <ClInclude Include="Jazz2\Editor\UI\UiPainter.h" />
     <ClInclude Include="Jazz2\Editor\UI\UiRadialMenu.h" />
+    <ClInclude Include="Jazz2\Editor\UI\UiReadableFont.h" />
     <ClInclude Include="Jazz2\Editor\UI\UiSkin.h" />
     <ClInclude Include="Jazz2\Editor\UI\UiSurface.h" />
     <ClInclude Include="Jazz2\Editor\UI\UiTheme.h" />
@@ -612,10 +622,25 @@
     <ClInclude Include="Jazz2\PlayerType.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Resources.h" />
-    <ClInclude Include="Jazz2\Scripting\JJ2PlusAnimations.h" />
-    <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h" />
-    <ClInclude Include="Jazz2\Scripting\JJ2PlusEvents.h" />
-    <ClInclude Include="Jazz2\Scripting\JJ2PlusObjects.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\AnimationTables.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Animations.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Canvas.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Common.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Definitions.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Enums.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\EventTranslator.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Game.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Internal.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Layers.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Level.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\ObjectHost.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Objects.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Palette.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\PixelMaps.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Player.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Sound.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\Stream.h" />
+    <ClInclude Include="Jazz2\Scripting\Legacy\WorldCanvas.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterDictionary.h" />
@@ -1102,10 +1127,22 @@
     <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp" />
     <ClCompile Include="Jazz2\Rendering\XRayMaskRenderer.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
-    <ClCompile Include="Jazz2\Scripting\JJ2PlusAnimations.cpp" />
-    <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />
-    <ClCompile Include="Jazz2\Scripting\JJ2PlusEvents.cpp" />
-    <ClCompile Include="Jazz2\Scripting\JJ2PlusObjects.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\AnimationTables.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Animations.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Canvas.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Common.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Enums.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\EventTranslator.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Game.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Layers.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Level.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\ObjectHost.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Objects.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Palette.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\PixelMaps.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Player.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Sound.cpp" />
+    <ClCompile Include="Jazz2\Scripting\Legacy\Stream.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterDictionary.cpp" />
@@ -1442,6 +1479,7 @@
     <ClCompile Include="Jazz2\Editor\UI\UiMenu.cpp" />
     <ClCompile Include="Jazz2\Editor\UI\UiPainter.cpp" />
     <ClCompile Include="Jazz2\Editor\UI\UiRadialMenu.cpp" />
+    <ClCompile Include="Jazz2\Editor\UI\UiReadableFont.cpp" />
     <ClCompile Include="Jazz2\Editor\UI\UiSkin.cpp" />
     <ClCompile Include="Jazz2\Editor\UI\UiSurface.cpp" />
     <ClCompile Include="Jazz2\Editor\UI\UiTheme.cpp" />
@@ -1454,14 +1492,17 @@
     <ClCompile Include="Jazz2\Tiles\LayerTypes.cpp" />
     <ClCompile Include="Jazz2\Tiles\TileMap.cpp" />
     <ClCompile Include="Jazz2\Tiles\TileSet.cpp" />
-    <ClCompile Include="nCine\Graphics\PngCodec.cpp">
-      <!-- Jazz2\Editor\Imaging\PngCodec.cpp would write the same object file otherwise -->
-      <ObjectFileName>$(IntDir)nCine.Graphics.PngCodec.obj</ObjectFileName>
-    </ClCompile>
+    <ClCompile Include="nCine\Graphics\PngCodec.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\BoundedFileStream.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The sources of the shared library are outside of the project, their object files are in a directory of their own -->
+    <ClCompile Update="$(ExtensionLibraryPath)**\*.cpp">
+      <ObjectFileName>$(IntDir)Shared\</ObjectFileName>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources.rc" />

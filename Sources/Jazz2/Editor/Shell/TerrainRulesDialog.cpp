@@ -24,10 +24,6 @@
 #include <cmath>
 #include <memory>
 
-#if !defined(NC_)
-#	define NC_(context, text) text
-#endif
-
 namespace Jazz2::Editor
 {
 	namespace
@@ -438,14 +434,14 @@ namespace Jazz2::Editor
 		// Pages
 		{
 			auto* tabs = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			struct PageOption { const char* Label; RulesPage Page; };
+			struct PageOption { String Label; RulesPage Page; };
 			static const PageOption Pages[] = {
 				// TRANSLATORS: Tabs of the Terrain Rules dialog, keep them short
-				{ NC_("editor", "Rules"), RulesPage::Rules }, { NC_("editor", "Slopes"), RulesPage::Slopes }, { NC_("editor", "Try It"), RulesPage::Try }, { NC_("editor", "Coverage"), RulesPage::Coverage },
+				{ _x("editor", "Rules"), RulesPage::Rules }, { _x("editor", "Slopes"), RulesPage::Slopes }, { _x("editor", "Try It"), RulesPage::Try }, { _x("editor", "Coverage"), RulesPage::Coverage },
 			};
 			for (const PageOption& option : Pages) {
 				RulesPage page = option.Page;
-				auto* button = tabs->Add<UiButton>(_x("editor", option.Label), EditorIcon::None, [state, page]() { state->Page = page; });
+				auto* button = tabs->Add<UiButton>(option.Label, EditorIcon::None, [state, page]() { state->Page = page; });
 				button->Style = UiButtonStyle::Flat;
 				button->Flex = 1.0f;
 				button->IsCheckedFunc = [state, page]() { return (state->Page == page); };

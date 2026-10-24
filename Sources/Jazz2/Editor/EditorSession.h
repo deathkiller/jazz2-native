@@ -498,9 +498,9 @@ namespace Jazz2::Editor
 		String FindNextLevelFile(StringView levelName);
 		// Offers to edit or play the level that follows, once the level being edited was finished in a play-test
 		void OfferNextLevel(const std::shared_ptr<LevelInitialization>& next, StringView levelName);
-		// Sets the size of the interface by the settings and the window
+		// Sets the size of the interface by the settings and the system
 		void UpdateUiScale();
-		// Returns the size of the interface chosen by the window and how large the system shows its own interface
+		// Returns the size of the interface chosen by how large the system shows its own interface, as long as the panels fit
 		static float GetAutoUiScale();
 		// Returns the size offered nearest to a size, in steps of 25%
 		static float RoundUiScale(float scale);

@@ -37,6 +37,9 @@ It has been developed in @m_class{m-icon} ![](https://resources.jetbrains.com/st
     -   @m_class{m-doc} [libwebp](https://github.com/webmproject/libwebp) library --- licensed under [BSD-3-Clause License](https://github.com/webmproject/libwebp/blob/main/COPYING)
     -   @m_class{m-doc} [libxmp](https://libxmp.sourceforge.net/) library --- licensed under [MIT License](https://github.com/libxmp/libxmp/blob/master/docs/COPYING)
     -   @m_class{m-doc} [Mesa](https://mesa3d.org/) library --- licensed under [MIT License](https://docs.mesa3d.org/license.html)
+-   **Level editor**
+    -   @m_class{m-doc} [stb_truetype](https://github.com/nothings/stb) library --- released into the public domain, or licensed under [MIT License](https://github.com/nothings/stb/blob/master/LICENSE)
+    -   @m_class{m-doc} [Roboto](https://github.com/googlefonts/roboto-classic) font --- licensed under [SIL Open Font License 1.1](https://github.com/googlefonts/roboto-classic/blob/main/OFL.txt)
 -   **Nintendo 64** content conversion in AssetPacker, vendored in the form [libdragon](https://github.com/DragonMinded/libdragon) keeps them
     -   @m_class{m-doc} [libxm](https://github.com/Artefact2/libxm) library --- licensed under [WTFPL](http://www.wtfpl.net/)
     -   @m_class{m-doc} [ulc-codec](https://github.com/Aikku93/ulc-codec) encoder --- released into the public domain under [The Unlicense](https://unlicense.org/)

@@ -1,11 +1,11 @@
-#if defined(WITH_ANGELSCRIPT)
+﻿#if defined(WITH_ANGELSCRIPT)
 
-#include "JJ2PlusAnimations.h"
-#include "LevelScriptLoader.h"
-#include "../Compatibility/AnimSetMapping.h"
-#include "../Compatibility/JJ2Anims.h"
+#include "AnimationTables.h"
+#include "../LevelScriptLoader.h"
+#include "../../Compatibility/AnimSetMapping.h"
+#include "../../Compatibility/JJ2Anims.h"
 
-#include "../../nCine/Graphics/Texture.h"
+#include "../../../nCine/Graphics/Texture.h"
 
 #include <algorithm>
 #include <cmath>
@@ -167,6 +167,30 @@ namespace Jazz2::Scripting::Legacy
 			s->Seek(0, SeekOrigin::Begin);
 			std::int32_t fileSet = (setCount >= std::int32_t(arraySize(OlderPlusSets)) ? std::int32_t(plusSet) : OlderPlusSets[plusSet]);
 			return (fileSet >= 0 && Compatibility::JJ2Anims::ReadAnimationSet(s, fileSet, anims));
+		}
+
+		// Reads a set of the animation file of the original by its set ID in the file
+		bool ReadOriginalAnimationSet(std::uint32_t fileSet, SmallVectorImpl<Compatibility::JJ2Anims::AnimSection>& anims)
+		{
+			String path = fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), "Anims.j2a"_s));
+			if (!fs::IsReadableFile(path)) {
+				return false;
+			}
+			auto s = fs::Open(path, FileAccess::Read);
+			return (s->IsValid() && Compatibility::JJ2Anims::ReadAnimationSet(s, std::int32_t(fileSet), anims));
+		}
+
+		// Returns `true` if the converter converted any animation of a set of an animation file
+		bool HasConvertedAnimations(Compatibility::AnimSetMapping& mapping, std::uint32_t fileSet)
+		{
+			std::uint32_t count = mapping.GetItemCount(fileSet);
+			for (std::uint32_t i = 0; i < count; i++) {
+				auto* entry = mapping.Get(fileSet, i);
+				if (entry != nullptr && entry->Category != Compatibility::AnimSetMapping::Discard && !entry->Name.empty()) {
+					return true;
+				}
+			}
+			return false;
 		}
 
 		// Alpha the converter gives the pixels of a frame that's drawn translucent (see JJ2Anims::ImportAnimations())
@@ -358,6 +382,47 @@ namespace Jazz2::Scripting::Legacy
 		const jjANIMATION* anim = _animations[animIndex];
 		frameCount = anim->frameCount;
 		firstFrame = anim->_firstFrame;
+		return true;
+	}
+
+	bool AnimationTables::GetFrameBounds(std::uint32_t frameIndex, Recti& frameRect, Recti& pixelBounds)
+	{
+		if (frameIndex >= _frames.size()) {
+			return false;
+		}
+
+		jjANIMFRAME& frame = *_frames[frameIndex];
+		EnsureFrameImage(frame);
+		std::int32_t width = frame.width;
+		std::int32_t height = frame.height;
+		if (width == 0 || height == 0) {
+			return false;
+		}
+
+		frameRect = Recti(frame.hotSpotX, frame.hotSpotY, width, height);
+		const std::uint8_t* pixels = frame._pixels.get();
+		if (pixels == nullptr) {
+			// There's no image to find the pixels in, the whole frame is taken
+			pixelBounds = frameRect;
+			return true;
+		}
+
+		std::int32_t minX = width, minY = height, maxX = -1, maxY = -1;
+		for (std::int32_t y = 0; y < height; y++) {
+			for (std::int32_t x = 0; x < width; x++) {
+				if (pixels[y * width + x] != 0) {
+					minX = std::min(minX, x);
+					maxX = std::max(maxX, x);
+					minY = std::min(minY, y);
+					maxY = std::max(maxY, y);
+				}
+			}
+		}
+		if (maxX < 0) {
+			return false;
+		}
+
+		pixelBounds = Recti(frame.hotSpotX + minX, frame.hotSpotY + minY, maxX - minX + 1, maxY - minY + 1);
 		return true;
 	}
 
@@ -906,10 +971,14 @@ namespace Jazz2::Scripting::Legacy
 		auto* mapping = GetFileSet(set._index, fileSet);
 		std::uint32_t animCount = (mapping != nullptr ? mapping->GetItemCount(fileSet) : 0);
 
-		// Most of `plus.j2a` isn't converted (warp, reticles, the fonts...), what isn't comes from the file itself if it's there
+		// Most of `plus.j2a` isn't converted (warp, reticles, the fonts...), what isn't comes from the file itself if it's there,
+		// as does a set of the original that isn't converted at all (the fonts, which scripts draw as sprites too)
 		SmallVector<Compatibility::JJ2Anims::AnimSection, 0> fileAnims;
 		if (set._index >= _plusFirstSetID && set._index - _plusFirstSetID < _plusSetCount &&
 			ReadPlusAnimationSet(set._index - _plusFirstSetID, fileAnims)) {
+			animCount = std::max(animCount, std::uint32_t(fileAnims.size()));
+		} else if (set._index < _plusFirstSetID && mapping != nullptr && animCount > 0 && !HasConvertedAnimations(*mapping, fileSet) &&
+			ReadOriginalAnimationSet(fileSet, fileAnims)) {
 			animCount = std::max(animCount, std::uint32_t(fileAnims.size()));
 		}
 
@@ -1490,196 +1559,6 @@ namespace Jazz2::Scripting::Legacy
 		} else {
 			graphics.TextureDiffuse->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
 		}
-	}
-
-	// The entries of the tables
-
-	jjANIMFRAME::jjANIMFRAME(std::uint32_t index)
-		: _refCount(1), _index(index), _transparent(false), _watched(false), _source(-1), _owner(0), _version(0), _seenSpots{}
-	{
-	}
-
-	jjANIMFRAME::~jjANIMFRAME()
-	{
-	}
-
-	void jjANIMFRAME::AddRef()
-	{
-		_refCount++;
-	}
-
-	void jjANIMFRAME::Release()
-	{
-		if (--_refCount == 0) {
-			this->~jjANIMFRAME();
-			asFreeMem(this);
-		}
-	}
-
-	jjANIMFRAME& jjANIMFRAME::operator=(const jjANIMFRAME& o)
-	{
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		owner->GetAnimationTables().AssignFrame(*this, o);
-		return *this;
-	}
-
-	jjANIMFRAME* jjANIMFRAME::get_jjAnimFrames(std::uint32_t index)
-	{
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return owner->GetAnimationTables().GetFrame(index);
-	}
-
-	bool jjANIMFRAME::get_transparent() const
-	{
-		return _transparent;
-	}
-
-	bool jjANIMFRAME::set_transparent(bool value)
-	{
-		if (_transparent != value) {
-			_transparent = value;
-			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			owner->GetAnimationTables().MarkChanged(*this);
-		}
-		return value;
-	}
-
-	bool jjANIMFRAME::get_is32Bit() const
-	{
-		return (_colors != nullptr);
-	}
-
-	bool jjANIMFRAME::doesCollide(std::int32_t xPos, std::int32_t yPos, std::int32_t direction, const jjANIMFRAME* frame2, std::int32_t xPos2, std::int32_t yPos2, std::int32_t direction2, bool always) const
-	{
-		if (frame2 == nullptr) {
-			return false;
-		}
-
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		bool result = owner->GetAnimationTables().DoFramesCollide(*this, xPos, yPos, direction, *frame2, xPos2, yPos2, direction2, always);
-		// A handle passed to a native function is the function's to release
-		const_cast<jjANIMFRAME*>(frame2)->Release();
-		return result;
-	}
-
-	jjANIMATION::jjANIMATION(std::uint32_t index)
-		: _refCount(1), _index(index), _firstFrame(0), _watched(false), _seenFrameCount(0), _native(-1), _graphicsSignature(0)
-	{
-	}
-
-	jjANIMATION::~jjANIMATION()
-	{
-	}
-
-	void jjANIMATION::AddRef()
-	{
-		_refCount++;
-	}
-
-	void jjANIMATION::Release()
-	{
-		if (--_refCount == 0) {
-			this->~jjANIMATION();
-			asFreeMem(this);
-		}
-	}
-
-	jjANIMATION& jjANIMATION::operator=(const jjANIMATION& o)
-	{
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		owner->GetAnimationTables().AssignAnimation(*this, o);
-		return *this;
-	}
-
-	bool jjANIMATION::save(const String& filename, const jjPAL& palette) const
-	{
-		noop();
-		return false;
-	}
-
-	bool jjANIMATION::load(const String& filename, std::int32_t hotSpotX, std::int32_t hotSpotY, std::int32_t coldSpotYOffset, std::int32_t firstFrameToOverwrite)
-	{
-		noop();
-		return false;
-	}
-
-	jjANIMATION* jjANIMATION::get_jjAnimations(std::uint32_t index)
-	{
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return owner->GetAnimationTables().GetAnimation(index);
-	}
-
-	std::uint32_t jjANIMATION::get_firstFrame() const
-	{
-		return _firstFrame;
-	}
-
-	std::uint32_t jjANIMATION::set_firstFrame(std::uint32_t index)
-	{
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		owner->GetAnimationTables().SetFirstFrame(*this, index);
-		return _firstFrame;
-	}
-
-	std::uint32_t jjANIMATION::getAnimFirstFrame()
-	{
-		return _firstFrame;
-	}
-
-	jjANIMSET::jjANIMSET(std::uint32_t index)
-		: _refCount(1), _index(index), _resolved(false), _watched(false), _seenFirstAnim(0)
-	{
-	}
-
-	jjANIMSET::~jjANIMSET()
-	{
-	}
-
-	void jjANIMSET::AddRef()
-	{
-		_refCount++;
-	}
-
-	void jjANIMSET::Release()
-	{
-		if (--_refCount == 0) {
-			this->~jjANIMSET();
-			asFreeMem(this);
-		}
-	}
-
-	jjANIMSET* jjANIMSET::get_jjAnimSets(std::uint32_t index)
-	{
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return owner->GetAnimationTables().GetSet(index);
-	}
-
-	std::uint32_t jjANIMSET::convertAnimSetToUint()
-	{
-		return firstAnim;
-	}
-
-	jjANIMSET* jjANIMSET::load(std::uint32_t fileSetID, const String& filename, std::int32_t firstAnimToOverwrite, std::int32_t firstFrameToOverwrite)
-	{
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		owner->GetAnimationTables().LoadSet(*this, fileSetID, filename, firstAnimToOverwrite, firstFrameToOverwrite);
-		// The handle returned is a new reference
-		AddRef();
-		return this;
-	}
-
-	jjANIMSET* jjANIMSET::allocate(const CScriptArray& frameCounts)
-	{
-		SmallVector<std::uint32_t, 16> counts;
-		counts.reserve(frameCounts.GetSize());
-		for (asUINT i = 0; i < frameCounts.GetSize(); i++) {
-			counts.push_back(*static_cast<const std::uint32_t*>(frameCounts.At(i)));
-		}
-
-		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		owner->GetAnimationTables().AllocateSet(*this, ArrayView<const std::uint32_t>(counts.data(), counts.size()));
-		AddRef();
-		return this;
 	}
 }
 

@@ -432,6 +432,22 @@ namespace Jazz2::Scripting
 		Set(engine, value, typeId);
 	}
 
+	CScriptDictValue::CScriptDictValue(CScriptDictValue&& other) noexcept
+	{
+		m_valueInt = other.m_valueInt;
+		m_typeId = other.m_typeId;
+		other.m_valueInt = 0;
+		other.m_typeId = 0;
+	}
+
+	CScriptDictValue& CScriptDictValue::operator=(CScriptDictValue&& other) noexcept
+	{
+		// What this one held goes away with the other one
+		std::swap(m_valueInt, other.m_valueInt);
+		std::swap(m_typeId, other.m_typeId);
+		return *this;
+	}
+
 	CScriptDictValue::~CScriptDictValue()
 	{
 		if (m_valueObj != nullptr && m_typeId != 0) {

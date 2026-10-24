@@ -832,12 +832,12 @@ namespace Jazz2::Editor
 				rename->Style = UiButtonStyle::Flat;
 
 				// Where its links lead
-				struct LinkField { const char* Label; const String* Value; };
-				const LinkField fields[] = {
+				struct LinkField { String Label; const String* Value; };
+				static const LinkField fields[] = {
 					// TRANSLATORS: Kinds of links of a level to another level (next, secret and bonus level), shown before the name of the level linked
-					{ NC_("editor", "Next"), &level.NextLevel },
-					{ NC_("editor", "Secret"), &level.SecretLevel },
-					{ NC_("editor", "Bonus"), &level.BonusLevel }
+					{ _x("editor", "Next"), &level.NextLevel },
+					{ _x("editor", "Secret"), &level.SecretLevel },
+					{ _x("editor", "Bonus"), &level.BonusLevel }
 				};
 				String links;
 				bool broken = false;
@@ -850,7 +850,7 @@ namespace Jazz2::Editor
 					if (!links.empty()) {
 						links += ", "_s;
 					}
-					links += String(_x("editor", field.Label)) + ": "_s + *field.Value;
+					links += String(field.Label) + ": "_s + *field.Value;
 					if (linkState == LinkState::Broken) {
 						// TRANSLATORS: In parentheses after a link of a level in the Episode dialog, the level linked doesn't exist
 						links += " ("_s + _x("editor", "doesn't exist") + ")"_s;
@@ -1359,12 +1359,12 @@ namespace Jazz2::Editor
 			// Its own links to levels of "unknown" by just their names
 			String ownChanges;
 			plan->Properties = session.GetDocument().Properties;
-			struct LinkField { const char* Label; String Formats::LevelProperties::*Value; };
-			const LinkField fields[] = {
+			struct LinkField { String Label; String Formats::LevelProperties::*Value; };
+			static const LinkField fields[] = {
 				// TRANSLATORS: Kinds of links of a level to another level (next, secret and bonus level), shown before the name of the level linked
-				{ NC_("editor", "Next"), &Formats::LevelProperties::NextLevel },
-				{ NC_("editor", "Secret"), &Formats::LevelProperties::SecretLevel },
-				{ NC_("editor", "Bonus"), &Formats::LevelProperties::BonusLevel }
+				{ _x("editor", "Next"), &Formats::LevelProperties::NextLevel },
+				{ _x("editor", "Secret"), &Formats::LevelProperties::SecretLevel },
+				{ _x("editor", "Bonus"), &Formats::LevelProperties::BonusLevel }
 			};
 			for (const LinkField& field : fields) {
 				String& link = plan->Properties.*field.Value;
@@ -1372,7 +1372,7 @@ namespace Jazz2::Editor
 				if (KeepOwnLink(link, plan->LevelName, levels)) {
 					plan->OwnLinksChanged = true;
 					// TRANSLATORS: In a list of changed links of the level, the old and the new name of the level linked
-					ownChanges = String(ownChanges + "\n - "_s + String(_x("editor", field.Label)) + ": "_s + _fx("editor", "\"{}\" becomes \"{}\"", previous, link));
+					ownChanges = String(ownChanges + "\n - "_s + String(field.Label) + ": "_s + _fx("editor", "\"{}\" becomes \"{}\"", previous, link));
 				}
 			}
 

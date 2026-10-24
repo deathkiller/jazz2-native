@@ -315,13 +315,13 @@ namespace Jazz2::Editor
 				nameBox->Tooltip = _x("editor", "The tile set is saved in the user content, Tilesets/<name>.j2t");
 			}
 			{
-				struct ColorOption { const char* Label; TileImportColors Colors; bool IndexedOnly; };
+				struct ColorOption { String Label; TileImportColors Colors; bool IndexedOnly; };
 				static const ColorOption ColorOptions[] = {
 					// TRANSLATORS: Choices of the colors of the tiles made from an image in the New Tile Set from Image dialog
-					{ NC_("editor", "Its own palette"), TileImportColors::OwnPalette, true },
-					{ NC_("editor", "True color"), TileImportColors::TrueColor, false },
-					{ NC_("editor", "Closest colors of the level palette"), TileImportColors::MatchPalette, false },
-					{ NC_("editor", "A palette made for it"), TileImportColors::Reduce, false },
+					{ _x("editor", "Its own palette"), TileImportColors::OwnPalette, true },
+					{ _x("editor", "True color"), TileImportColors::TrueColor, false },
+					{ _x("editor", "Closest colors of the level palette"), TileImportColors::MatchPalette, false },
+					{ _x("editor", "A palette made for it"), TileImportColors::Reduce, false },
 				};
 				state->Settings.Colors = (state->Image.Indexed ? TileImportColors::OwnPalette : TileImportColors::TrueColor);
 				// TRANSLATORS: Label of the choice of the colors of the tiles made from an image, a noun
@@ -329,7 +329,7 @@ namespace Jazz2::Editor
 				auto* dropdown = row->Add<UiDropdown>([state]() {
 					for (const ColorOption& option : ColorOptions) {
 						if (option.Colors == state->Settings.Colors) {
-							return String(_x("editor", option.Label));
+							return String(option.Label);
 						}
 					}
 					return String();
@@ -340,7 +340,7 @@ namespace Jazz2::Editor
 						}
 						TileImportColors colors = option.Colors;
 						UiMenuEntry entry;
-						entry.Label = _x("editor", option.Label);
+						entry.Label = option.Label;
 						entry.IsChecked = [state, colors]() { return (state->Settings.Colors == colors); };
 						entry.Execute = [state, colors]() { state->Settings.Colors = colors; };
 						entries.push_back(Death::move(entry));
@@ -349,19 +349,19 @@ namespace Jazz2::Editor
 				dropdown->Width = 170.0f;
 				row->Tooltip = _x("editor", "True color keeps the colors as they are, but they don't change with the palette of a level - a palette made for it keeps the colors of the sprites");
 
-				struct DitherOption { const char* Label; DitherMode Mode; };
+				struct DitherOption { String Label; DitherMode Mode; };
 				static const DitherOption DitherOptions[] = {
 					// TRANSLATORS: Choices of the dithering of the tiles made from an image, "None" means no dithering
-					{ NC_("editor", "None"), DitherMode::None },
-					{ NC_("editor", "Pattern"), DitherMode::Pattern },
-					{ NC_("editor", "Error diffusion"), DitherMode::ErrorDiffusion },
+					{ _x("editor", "None"), DitherMode::None },
+					{ _x("editor", "Pattern"), DitherMode::Pattern },
+					{ _x("editor", "Error diffusion"), DitherMode::ErrorDiffusion },
 				};
 				// TRANSLATORS: Label of the choice of how colors missing in the palette are mixed from others, a noun
 				auto* ditherRow = content->AddRow(_x("editor", "Dither"));
 				auto* dither = ditherRow->Add<UiDropdown>([state]() {
 					for (const DitherOption& option : DitherOptions) {
 						if (option.Mode == state->Settings.Dither) {
-							return String(_x("editor", option.Label));
+							return String(option.Label);
 						}
 					}
 					return String();
@@ -369,7 +369,7 @@ namespace Jazz2::Editor
 					for (const DitherOption& option : DitherOptions) {
 						DitherMode mode = option.Mode;
 						UiMenuEntry entry;
-						entry.Label = _x("editor", option.Label);
+						entry.Label = option.Label;
 						entry.IsChecked = [state, mode]() { return (state->Settings.Dither == mode); };
 						entry.Execute = [state, mode]() { state->Settings.Dither = mode; };
 						entries.push_back(Death::move(entry));
@@ -439,19 +439,19 @@ namespace Jazz2::Editor
 					_x("editor", "How opaque a pixel has to be to be seen, and a pixel of the masks to be solid, from 1 to 255"));
 			}
 			{
-				struct UseOption { const char* Label; ImportUse Use; };
+				struct UseOption { String Label; ImportUse Use; };
 				static const UseOption UseOptions[] = {
 					// TRANSLATORS: Choices of what is done with the new tile set after it's made, after "Then"
-					{ NC_("editor", "Extra tile set of this level"), ImportUse::Extra },
-					{ NC_("editor", "Default tile set of this level"), ImportUse::Default },
-					{ NC_("editor", "Only save it"), ImportUse::SaveOnly },
+					{ _x("editor", "Extra tile set of this level"), ImportUse::Extra },
+					{ _x("editor", "Default tile set of this level"), ImportUse::Default },
+					{ _x("editor", "Only save it"), ImportUse::SaveOnly },
 				};
 				// TRANSLATORS: Label of the choice of what is done with the new tile set after it's made, as in "and then"
 				auto* row = content->AddRow(_x("editor", "Then"));
 				auto* dropdown = row->Add<UiDropdown>([state]() {
 					for (const UseOption& option : UseOptions) {
 						if (option.Use == state->Use) {
-							return String(_x("editor", option.Label));
+							return String(option.Label);
 						}
 					}
 					return String();
@@ -459,7 +459,7 @@ namespace Jazz2::Editor
 					for (const UseOption& option : UseOptions) {
 						ImportUse use = option.Use;
 						UiMenuEntry entry;
-						entry.Label = _x("editor", option.Label);
+						entry.Label = option.Label;
 						entry.IsChecked = [state, use]() { return (state->Use == use); };
 						entry.Execute = [state, use]() { state->Use = use; };
 						entries.push_back(Death::move(entry));
@@ -635,17 +635,17 @@ namespace Jazz2::Editor
 			count->Tooltip = _x("editor", "The original tile sets have 10 tiles in a row");
 		}
 		{
-			struct UseOption { const char* Label; ImportUse Use; };
+			struct UseOption { String Label; ImportUse Use; };
 			static const UseOption UseOptions[] = {
-				{ NC_("editor", "Extra tile set of this level"), ImportUse::Extra },
-				{ NC_("editor", "Default tile set of this level"), ImportUse::Default },
-				{ NC_("editor", "Only save it"), ImportUse::SaveOnly },
+				{ _x("editor", "Extra tile set of this level"), ImportUse::Extra },
+				{ _x("editor", "Default tile set of this level"), ImportUse::Default },
+				{ _x("editor", "Only save it"), ImportUse::SaveOnly },
 			};
 			auto* row = content->AddRow(_x("editor", "Then"));
 			auto* dropdown = row->Add<UiDropdown>([state]() {
 				for (const UseOption& option : UseOptions) {
 					if (option.Use == state->Use) {
-						return String(_x("editor", option.Label));
+						return String(option.Label);
 					}
 				}
 				return String();
@@ -653,7 +653,7 @@ namespace Jazz2::Editor
 				for (const UseOption& option : UseOptions) {
 					ImportUse use = option.Use;
 					UiMenuEntry entry;
-					entry.Label = _x("editor", option.Label);
+					entry.Label = option.Label;
 					entry.IsChecked = [state, use]() { return (state->Use == use); };
 					entry.Execute = [state, use]() { state->Use = use; };
 					entries.push_back(Death::move(entry));

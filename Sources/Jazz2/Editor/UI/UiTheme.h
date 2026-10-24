@@ -109,13 +109,25 @@ namespace Jazz2::Editor
 
 		/** @brief Whether animations of the interface are left out, set by @ref Apply() */
 		static inline bool ReducedMotion = false;
+		/**
+		 * @brief Whether text is in the readable font instead of the pixel font of the game, set by @ref Apply()
+		 *
+		 * See @ref UiReadableFont. It's measured as the pixel font is, so the layout stays.
+		 */
+		static inline bool ReadableFont = false;
+		/**
+		 * @brief Changes whenever text is measured in another font, set by @ref Apply()
+		 *
+		 * Both fonts have the same height of text, so a width of a text kept for later is measured again when this changes.
+		 */
+		static inline std::uint32_t FontVersion = 0;
 
 		/**
-		 * @brief Sets the colors of a theme, and whether animations are left out
+		 * @brief Sets the colors of a theme, whether animations are left out and the font
 		 *
 		 * The interface is drawn in them from the next frame.
 		 */
-		static void Apply(UiThemeKind kind, bool reducedMotion);
+		static void Apply(UiThemeKind kind, bool reducedMotion, bool readableFont);
 		/** @brief Returns the theme in use */
 		static UiThemeKind GetKind();
 		/**
@@ -156,7 +168,8 @@ namespace Jazz2::Editor
 		 *
 		 * It's @ref TextScale times the scale, unless a whole multiple of the size of the font is close to that ---
 		 * the pixel font is crisp only at a whole multiple, so it's taken then. It's never more than a few percent
-		 * larger than asked, larger text wouldn't fit the rows anymore, but it can be up to 15 % smaller.
+		 * larger than asked, larger text wouldn't fit the rows anymore, but it can be up to 15 % smaller. The readable
+		 * font is drawn for the same scale, so the layout doesn't change with the font.
 		 */
 		static float GetTextScale(float scale)
 		{

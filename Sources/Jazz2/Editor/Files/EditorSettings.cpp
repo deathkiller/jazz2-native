@@ -110,6 +110,7 @@ namespace Jazz2::Editor
 		PlayPlayerCount = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "PlayPlayerCount", 2), 1, 4);
 		Theme = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "Theme", 0), 0, 1);
 		ReducedMotion = JsonAccess::GetBool(doc, "ReducedMotion", false);
+		ReadableFont = JsonAccess::GetBool(doc, "ReadableFont", false);
 		ScriptEditor = JsonAccess::ToString(JsonAccess::Member(doc, "ScriptEditor"));
 		{
 			const Json::Value& tools = JsonAccess::Member(doc, "Tools");
@@ -184,6 +185,7 @@ namespace Jazz2::Editor
 		doc["PlayPlayerCount"] = Json::Int(PlayPlayerCount);
 		doc["Theme"] = Json::Int(Theme);
 		doc["ReducedMotion"] = ReducedMotion;
+		doc["ReadableFont"] = ReadableFont;
 		// Written even when empty, so it can be found in the file, it's set only there
 		doc["ScriptEditor"] = Json::Value(ScriptEditor.data(), ScriptEditor.data() + ScriptEditor.size());
 		{

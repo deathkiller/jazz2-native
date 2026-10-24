@@ -42,6 +42,12 @@ namespace Jazz2::Scripting
 		// Destructor must not be called without first calling FreeValue, otherwise a memory leak will occur
 		~CScriptDictValue();
 
+		// The map moves its values when it grows, a value goes with them - a copy would release the object it holds twice
+		CScriptDictValue(const CScriptDictValue&) = delete;
+		CScriptDictValue& operator=(const CScriptDictValue&) = delete;
+		CScriptDictValue(CScriptDictValue&& other) noexcept;
+		CScriptDictValue& operator=(CScriptDictValue&& other) noexcept;
+
 		// Replace the stored value
 		void Set(asIScriptEngine* engine, void* value, std::int32_t typeId);
 		void Set(asIScriptEngine* engine, const std::int64_t& value);

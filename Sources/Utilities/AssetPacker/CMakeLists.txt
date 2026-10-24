@@ -36,6 +36,8 @@ set(SOURCES
 	Main.cpp
 	CartridgeImage.cpp
 	CartridgeImage.h
+	ContentFilter.cpp
+	ContentFilter.h
 	DiscImage.cpp
 	DiscImage.h
 	FontPacker.cpp

@@ -114,16 +114,17 @@ namespace Jazz2::Editor
 				settings->Save();
 			});
 			frame.IsChecked = [settings]() { return settings->ShowScreenFrame; };
-			struct FrameKind { const char* Id; const char* Label; };
+			struct FrameKind { const char* Id; String Label; };
 			static const FrameKind Kinds[] = {
-				// TRANSLATORS: Choices in the Show menu of the size of the frame around the pointer that shows what the game screen would show
-				{ ActionIds::ViewScreenFrameGame, NC_("editor", "Screen Frame: Game View") },
-				{ ActionIds::ViewScreenFrame4x3, NC_("editor", "Screen Frame: 4:3") },
-				{ ActionIds::ViewScreenFrame16x9, NC_("editor", "Screen Frame: 16:9") },
-				{ ActionIds::ViewScreenFrameSplit, NC_("editor", "Screen Frame: Split Screen") }
+				// TRANSLATORS: Choices in the Show menu of the size of the frame around the pointer that shows what the game screen would show,
+				// {} is the size - Game View, Split Screen (for two players), or an aspect ratio (4:3 or 16:9) that isn't translated
+				{ ActionIds::ViewScreenFrameGame, _fx("editor", "Screen Frame: {}", _x("editor", "Game View")) },
+				{ ActionIds::ViewScreenFrame4x3, _fx("editor", "Screen Frame: {}", "4:3") },
+				{ ActionIds::ViewScreenFrame16x9, _fx("editor", "Screen Frame: {}", "16:9") },
+				{ ActionIds::ViewScreenFrameSplit, _fx("editor", "Screen Frame: {}", _x("editor", "Split Screen")) }
 			};
 			for (std::int32_t i = 0; i < std::int32_t(sizeof(Kinds) / sizeof(Kinds[0])); i++) {
-				auto& kind = actions.Add(Kinds[i].Id, _x("editor", Kinds[i].Label), EditorIcon::None, [settings, i]() {
+				auto& kind = actions.Add(Kinds[i].Id, Kinds[i].Label, EditorIcon::None, [settings, i]() {
 					settings->ScreenFrameKind = i;
 					settings->ShowScreenFrame = true;
 					settings->Save();

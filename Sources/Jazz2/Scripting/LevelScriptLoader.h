@@ -3,7 +3,7 @@
 #if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "ScriptLoader.h"
-#include "JJ2PlusDefinitions.h"
+#include "Legacy/Definitions.h"
 #include "../ILevelHandler.h"
 #include "../Formats/LevelFile.h"
 #include "../Formats/TileSetFile.h"
@@ -150,6 +150,14 @@ namespace Jazz2::Scripting
 
 		/** @brief Returns what the script draws in the level (`jjDrawSprite()` and the like), attached to the level on first use */
 		Legacy::ScriptWorldCanvas& GetWorldCanvas();
+		/**
+		 * @brief Returns the palette offset a palette-indexed sprite is drawn with in a sprite mode (`SPRITE::Mode`)
+		 *
+		 * `PALSHIFT` and `SINGLEHUE` draw the sprite in the sprite palette moved by @p param or in the gradient from
+		 * @p param, a row of the shared palette texture each, which the scripts keep until they go. Otherwise it's the
+		 * sprite palette, 0.
+		 */
+		std::int32_t GetSpritePaletteOffset(std::uint32_t mode, std::uint8_t param);
 		/** @brief Returns the depth something drawn on a layer of the original, 1 to 8, is drawn at */
 		std::uint16_t GetLayerDrawZ(std::int32_t layerNumber) const;
 		/**
@@ -160,6 +168,29 @@ namespace Jazz2::Scripting
 		Legacy::jjOBJ* GetObjectById(std::int32_t objectId);
 		/** @brief Returns the script view of an object of the level, not AddRef'd, `nullptr` if it has no object ID (see @ref OnActorAdded()) */
 		Legacy::jjOBJ* GetObjectView(Actors::ActorBase* actor);
+		/** @brief Returns the top left corner of the view of a player on the screen (`jjPLAYER::subscreenX/Y`) */
+		Vector2i GetPlayerSubscreenPosition(Actors::Player* player) const;
+		/** @brief Returns the object ID of the boss that's active (`jjPLAYER::boss`), 0 for none */
+		std::int32_t GetActiveBossObjectID();
+
+		/** @brief Methods of a class of a script that implements `jjBEHAVIORINTERFACE`, `nullptr` for the ones it doesn't have */
+		struct BehaviorMethods {
+			asIScriptFunction* OnBehave;
+			asIScriptFunction* OnDraw;
+			asIScriptFunction* OnObjectHit;
+		};
+		/** @brief Returns the methods of a class of a script that implements `jjBEHAVIORINTERFACE`, looked up once per class */
+		const BehaviorMethods& GetBehaviorMethods(asITypeInfo* type);
+		/** @brief Returns the global `onObjectHit()` of the script, `nullptr` if it has none */
+		asIScriptFunction* GetGlobalObjectHit() const {
+			return _onObjectHit;
+		}
+		/**
+		 * @brief Shows a text of the level in a size of `STRING::Size`
+		 *
+		 * MEDIUM is how the game shows the texts of the level, SMALL is smaller and LARGE bigger.
+		 */
+		void ShowLevelText(StringView text, std::uint32_t size);
 
 		/**
 		 * @brief Spawns a script-controlled object whose behavior function drives it each frame
@@ -168,6 +199,12 @@ namespace Jazz2::Scripting
 		 * script object ID. Used by `jjAddObject` when a custom behavior function is supplied.
 		 */
 		std::int32_t AddScriptControlledObject(std::uint8_t eventId, float xPixel, float yPixel, asIScriptFunction* behaviorFunc);
+		/**
+		 * @brief Lets the object of the script of a crate that broke in the game go on without it
+		 *
+		 * It's done in the next update of the scripts, see @ref Legacy::ScriptObjectHost::OnPerish().
+		 */
+		void BreakObject(std::int32_t objectId);
 
 		/**
 		 * @brief Returns the persistent `jjLAYER` proxy bound to the given level layer index
@@ -333,12 +370,27 @@ namespace Jazz2::Scripting
 		LevelHandler* _levelHandler;
 		asIScriptFunction* _onLevelUpdate;
 		std::int32_t _onLevelUpdateLastFrame;
+		// The elapsed frames of the level as they were last, and the frames the level went back by since (it goes back to
+		// a checkpoint when a player dies), so the ticks of the scripts go on (see GetGameTick())
+		mutable float _lastElapsedFrames = 0.0f;
+		mutable float _rolledBackFrames = 0.0f;
+		// The water level `jjSetWaterLevel()` asked for without `instant`, -1 for none, how fast the water gets there in
+		// pixels per tick and the tick it moved in last (see UpdateWaterLevel())
+		float _waterTarget = -1.0f;
+		float _waterChangeSpeed = 1.0f;
+		std::int32_t _waterTick = -1;
 		asIScriptFunction* _onDrawAmmo;
 		asIScriptFunction* _onDrawHealth;
 		asIScriptFunction* _onDrawLives;
 		asIScriptFunction* _onDrawPlayerTimer;
 		asIScriptFunction* _onDrawScore;
 		asIScriptFunction* _onDrawGameModeHUD;
+		// The global callbacks of JJ2+ looked up once, a declaration is parsed on every lookup
+		asIScriptFunction* _onPlayer = nullptr;
+		asIScriptFunction* _onPlayerInput = nullptr;
+		asIScriptFunction* _onObjectHit = nullptr;
+		// The same for the classes of behaviors, see GetBehaviorMethods()
+		HashMap<asITypeInfo*, BehaviorMethods> _behaviorMethods;
 		// The draws of the canvases of the HUD drawn last and the frame of it, see jjCANVAS::NextLayer()
 		std::uint32_t _canvasFrame = UINT32_MAX;
 		UI::HUD* _canvasHud = nullptr;
@@ -375,19 +427,39 @@ namespace Jazz2::Scripting
 			std::uint8_t Params[16];
 		};
 		HashMap<std::int32_t, WrittenEvent> _writtenEvents;
+		// Every event a script wrote to a tile, by its position, which stays when the level goes back to a checkpoint as
+		// in JJ2+ - a script clears the event of a pickup so it isn't there again after a death (see ReapplyEventWrites())
+		struct EventWrite {
+			EventType Type;
+			Actors::ActorState Flags;
+			std::uint8_t Params[16];
+		};
+		HashMap<std::int32_t, EventWrite> _eventWrites;
+		// Writes the events a script wrote again after the level went back to a checkpoint, the objects that came back on
+		// those tiles go
+		void ReapplyEventWrites();
 
 		// The objects of the level scripts reach by their object ID (jjObjects), the first entry is never used. The level
 		// owns the objects, an entry only follows its object.
 		struct ObjectSlot {
 			std::weak_ptr<Actors::ActorBase> Actor;
+			// The same object as a key of _objectIdsByActor, never dereferenced (it may be gone)
+			Actors::ActorBase* ActorKey;
 			// The script view of the object, made on first use, holds a reference
 			Legacy::jjOBJ* Object;
 			std::uint8_t EventID;
 			// Who made the object (`CREATOR::Type`), a player shooting a bullet, for its view
 			std::uint32_t CreatorType;
 			std::uint16_t CreatorID;
+			// Tick of the scripts the object got its object ID in
+			std::int32_t SpawnTick;
 		};
 		SmallVector<ObjectSlot, 0> _objectSlots;
+		// The object ID of each object of the level that has one, an entry of an object that's gone stays until its ID is
+		// given to another one (see GetObjectView())
+		HashMap<Actors::ActorBase*, std::int32_t> _objectIdsByActor;
+		// Object IDs of the crates that broke, see BreakObject()
+		SmallVector<std::int32_t, 0> _brokenObjects;
 		// The object ID OnActorAdded() gave the last object, for the code that spawns one and returns its ID
 		std::int32_t _lastObjectId = 0;
 		// Templates of the objects of each event of the original (jjObjectPresets), made on first use, each holds a reference
@@ -395,9 +467,16 @@ namespace Jazz2::Scripting
 		// What the script draws in the level, made on first use, and the tick it was cleared in last
 		std::unique_ptr<Legacy::ScriptWorldCanvas> _worldCanvas;
 		std::int32_t _canvasClearTick = -1;
+		// Palette offsets of the sprite modes by the mode (0 for PALSHIFT, 1 for SINGLEHUE) and the parameter, -1 if no row
+		// was free, each holds a reference (see GetSpritePaletteOffset())
+		HashMap<std::uint16_t, std::int32_t> _spritePaletteOffsets;
+		// The scenery events whose templates need an object, a bit each (see RefreshSceneryObjects())
+		std::uint8_t _sceneryObjectsMask = 0;
 
 		// Gives an object of the level an object ID, `object` is its script view if it has one already (taken over)
 		std::int32_t RegisterObject(const std::shared_ptr<Actors::ActorBase>& actor, Legacy::jjOBJ* object, std::uint8_t eventId);
+		// Makes an object the one of an object ID, see _objectIdsByActor
+		void SetSlotActor(std::int32_t objectId, const std::shared_ptr<Actors::ActorBase>& actor);
 		// Returns the script view of a registered object, made from its template on first use, or nullptr if it's gone
 		Legacy::jjOBJ* EnsureObjectView(std::int32_t objectId);
 		// Hands the update of an object of the game over to the behavior of the script its view has
@@ -405,6 +484,12 @@ namespace Jazz2::Scripting
 		// Gives the script views of the objects of the game what their objects are now, and the objects what scripts changed
 		void SyncObjectsFromActors();
 		void SyncObjectsToActors();
+		// Gives the view of a projectile of an enemy what JJ2+ has for it, also what never changes if it's just `created`
+		void UpdateEnemyProjectileView(const ObjectSlot& slot, Legacy::jjOBJ& obj, Actors::ActorBase& actor, bool created);
+		// Makes the objects of the script of the crates that broke since objects a script controls entirely (see BreakObject())
+		void BreakObjects();
+		// Moves the water towards the level a script asked for, for the ticks since the last update
+		void UpdateWaterLevel(std::int32_t currentTick);
 		// Releases the script views of the objects and the templates, the objects of the game stop running behaviors of the script
 		void ReleaseObjects();
 
@@ -578,6 +663,27 @@ namespace Jazz2::Scripting
 		void RegisterLegacyFunctions(asIScriptEngine* engine);
 		void RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module);
 
+		// The parts of the API of JJ2+, each next to what it registers in Legacy/ - see RegisterLegacyFunctions() for the order
+		void RegisterLegacyGame(asIScriptEngine* engine);
+		void RegisterLegacyPlayer(asIScriptEngine* engine);
+		void RegisterLegacyScreen(asIScriptEngine* engine);
+		void RegisterLegacyLayerGlobals(asIScriptEngine* engine);
+		void RegisterLegacyPalette(asIScriptEngine* engine);
+		void RegisterLegacyCanvas(asIScriptEngine* engine);
+		void RegisterLegacyTexturedBackground(asIScriptEngine* engine);
+		void RegisterLegacyLevel(asIScriptEngine* engine);
+		void RegisterLegacySound(asIScriptEngine* engine);
+		void RegisterLegacyCharacters(asIScriptEngine* engine);
+		void RegisterLegacyObjects(asIScriptEngine* engine);
+		void RegisterLegacyParticles(asIScriptEngine* engine);
+		void RegisterLegacyStream(asIScriptEngine* engine);
+		void RegisterLegacyAnimations(asIScriptEngine* engine);
+		void RegisterLegacyPixelMaps(asIScriptEngine* engine);
+		void RegisterLegacyLayers(asIScriptEngine* engine);
+		void RegisterLegacyPlayerDraw(asIScriptEngine* engine);
+		void RegisterLegacyEnumValues(asIScriptEngine* engine);
+		void RegisterLegacyMlle(asIScriptEngine* engine);
+
 		static std::uint8_t asGetDifficulty();
 		static bool asIsReforged();
 		static std::int32_t asGetLevelWidth();
@@ -591,6 +697,12 @@ namespace Jazz2::Scripting
 		static void asPreloadMetadata(const String& path);
 		static void asRegisterSpawnable(std::int32_t eventType, const String& typeName);
 		static std::shared_ptr<Actors::ActorBase> asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details);
+		// Spawns the object of scenery where the template of its event needs one, see Legacy::ScriptSceneryObject
+		static std::shared_ptr<Actors::ActorBase> SpawnSceneryObject(const Actors::ActorActivationDetails& details);
+		// Returns the scenery events whose templates need an object, a bit each, see Legacy::ScriptSceneryObject
+		std::uint8_t GetSceneryObjectsMask() const;
+		// Activates the scenery again whose template came to need an object since, so it gets one
+		void RefreshSceneryObjects();
 		static void asSpawnEvent(std::int32_t eventType, std::int32_t x, std::int32_t y);
 		static void asSpawnEventParams(std::int32_t eventType, std::int32_t x, std::int32_t y, const CScriptArray& eventParams);
 		static void asSpawnType(const String& typeName, std::int32_t x, std::int32_t y);

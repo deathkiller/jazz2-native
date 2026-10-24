@@ -14,6 +14,7 @@ namespace Jazz2::Editor
 {
 	class UiScrollView;
 	class UiMenuBar;
+	class UiReadableFont;
 
 	/** @brief What is shown by the pointer, as the cursor of a window would show it, see @ref UiSurface::SetCursorOverlay() */
 	enum class UiCursorOverlay : std::uint8_t
@@ -119,6 +120,12 @@ namespace Jazz2::Editor
 		UiContext GetContext() const;
 		/** @brief Returns the font of the interface, filtered as the scale needs, see @ref UiContext::GetFont() */
 		UI::Font* GetFont() const;
+		/**
+		 * @brief Returns the readable font for text drawn at a scale, see @ref UiReadableFont::Get()
+		 *
+		 * The surface keeps it. Returns `nullptr` if there's no surface or the font can't be read.
+		 */
+		static UI::Font* GetReadableFont(float textScale);
 		/** @brief Returns the size of the screen in pixels */
 		Vector2f GetScreenSize() const;
 		/**
@@ -293,6 +300,8 @@ namespace Jazz2::Editor
 		UiSkin _skin;
 		// Slanted lines of the interface, antialiased
 		std::unique_ptr<Rendering::PolylineRenderer> _lines;
+		// Made when it's first asked for, see GetReadableFont()
+		std::unique_ptr<UiReadableFont> _readableFont;
 		float _scale;
 		UiElement* _hover;
 		UiElement* _capture;

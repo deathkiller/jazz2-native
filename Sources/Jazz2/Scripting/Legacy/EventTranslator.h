@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../Compatibility/EventConverter.h"
-#include "../Compatibility/JJ2Level.h"
+#include "../../Compatibility/EventConverter.h"
+#include "../../Compatibility/JJ2Level.h"
 
 #include <Containers/SmallVector.h>
 

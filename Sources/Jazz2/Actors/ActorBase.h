@@ -108,6 +108,28 @@ namespace Jazz2::Actors
 		virtual bool OnCollision(ActorBase* actor, ActorBase* other) {
 			return false;
 		}
+		/**
+		 * @brief Called before the hitbox of the object is made of its bounding box, see @ref ActorBase::UpdateHitbox()
+		 *
+		 * Returns `true` if the hitbox (@ref ActorBase::AABBInner) is set already.
+		 */
+		virtual bool OnUpdateHitbox(ActorBase* actor) {
+			return false;
+		}
+		/** @brief Called after the object emitted its own lights, see @ref ActorBase::EmitLights() */
+		virtual void OnEmitLights(ActorBase* actor, SmallVectorImpl<LightEmitter>& lights) {
+		}
+		/** @brief Called when the object runs out of health, right before it perishes, see @ref ActorBase::DecreaseHealth() */
+		virtual void OnPerish(ActorBase* actor, ActorBase* collider) {
+		}
+		/** @brief Returns `true` if the object doesn't break into debris by itself, what drives it makes its own */
+		virtual bool OwnsDebris() const {
+			return false;
+		}
+		/** @brief Returns `true` if the object doesn't emit its own lights, what drives it emits them all (see @ref OnEmitLights()) */
+		virtual bool OwnsLights() const {
+			return false;
+		}
 	};
 #endif
 
@@ -427,8 +449,7 @@ namespace Jazz2::Actors
 		/** @brief Moves the object */
 		bool MoveInstantly(Vector2f pos, MoveType type, Tiles::TileCollisionParams& params);
 		/** @overload */
-		bool MoveInstantly(Vector2f pos, MoveType type)
-		{
+		bool MoveInstantly(Vector2f pos, MoveType type) {
 			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, _speed.Y >= 0.0f };
 			return MoveInstantly(pos, type, params);
 		}
@@ -510,6 +531,9 @@ namespace Jazz2::Actors
 				(b->_updateOverride != nullptr && b->_updateOverride->OnCollision(b, a));
 		}
 #endif
+
+		/** @brief Adds the lights the object emits, its own (see @ref OnEmitLights()) and those of what drives it */
+		void EmitLights(SmallVectorImpl<LightEmitter>& lights);
 
 	protected:
 		/** @brief Actor renderer */

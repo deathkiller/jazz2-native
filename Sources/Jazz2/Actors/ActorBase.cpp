@@ -81,6 +81,20 @@ namespace Jazz2::Actors
 	}
 #endif
 
+	void ActorBase::EmitLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if DEATH_UNLIKELY(_updateOverride != nullptr) {
+			if (!_updateOverride->OwnsLights()) {
+				OnEmitLights(lights);
+			}
+			_updateOverride->OnEmitLights(this, lights);
+			return;
+		}
+#endif
+		OnEmitLights(lights);
+	}
+
 	bool ActorBase::IsFacingLeft() const
 	{
 		return GetState(ActorState::IsFacingLeft);
@@ -792,6 +806,13 @@ namespace Jazz2::Actors
 
 	void ActorBase::UpdateHitbox(std::int32_t w, std::int32_t h)
 	{
+#if defined(WITH_ANGELSCRIPT)
+		// An object a level script drives can be as big as a frame of the script instead
+		if DEATH_UNLIKELY(_updateOverride != nullptr && _updateOverride->OnUpdateHitbox(this)) {
+			return;
+		}
+#endif
+
 		if (_currentAnimation == nullptr) {
 			return;
 		}
@@ -857,6 +878,11 @@ namespace Jazz2::Actors
 
 	void ActorBase::CreateParticleDebrisOnPerish(ParticleDebrisEffect effect, Vector2f speed)
 	{
+#if defined(WITH_ANGELSCRIPT)
+		if DEATH_UNLIKELY(_updateOverride != nullptr && _updateOverride->OwnsDebris()) {
+			return;
+		}
+#endif
 		_levelHandler->HandleCreateParticleDebrisOnPerish(this, effect, speed);
 
 		auto tilemap = _levelHandler->TileMap();
@@ -1080,6 +1106,11 @@ namespace Jazz2::Actors
 
 	void ActorBase::CreateSpriteDebris(AnimState state, std::int32_t count, float elasticity)
 	{
+#if defined(WITH_ANGELSCRIPT)
+		if DEATH_UNLIKELY(_updateOverride != nullptr && _updateOverride->OwnsDebris()) {
+			return;
+		}
+#endif
 		_levelHandler->HandleCreateSpriteDebris(this, state, count, elasticity);
 
 		auto* tilemap = _levelHandler->TileMap();
@@ -1937,6 +1968,11 @@ namespace Jazz2::Actors
 		}
 
 		if (_health <= 0) {
+#if defined(WITH_ANGELSCRIPT)
+			if DEATH_UNLIKELY(_updateOverride != nullptr) {
+				_updateOverride->OnPerish(this, collider);
+			}
+#endif
 			OnPerish(collider);
 		} else {
 			OnHealthChanged(collider);

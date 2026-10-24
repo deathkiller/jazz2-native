@@ -455,7 +455,7 @@ namespace Jazz2::AssetPacker
 		return true;
 	}
 
-	bool Iso9660Builder::AddDirectoryFromDisk(StringView path, StringView hostPath)
+	bool Iso9660Builder::AddDirectoryFromDisk(StringView path, StringView hostPath, LeaveOutFunc leaveOut)
 	{
 		Node* node = FindOrCreateDirectory(path);
 		if (node == nullptr) {
@@ -463,7 +463,7 @@ namespace Jazz2::AssetPacker
 			return false;
 		}
 		WriteRecordDate(node->Recorded, fs::GetLastModificationTime(hostPath));
-		return AddDirectoryContents(*node, hostPath);
+		return AddDirectoryContents(*node, hostPath, leaveOut, true);
 	}
 
 	bool Iso9660Builder::AddFileFromDisk(StringView path, StringView hostPath)
@@ -492,13 +492,16 @@ namespace Jazz2::AssetPacker
 		return true;
 	}
 
-	bool Iso9660Builder::AddDirectoryContents(Node& parent, StringView hostPath)
+	bool Iso9660Builder::AddDirectoryContents(Node& parent, StringView hostPath, LeaveOutFunc leaveOut, bool isTopLevel)
 	{
 		// Anything that cannot be put on the disc stops the whole thing, because a disc is read-only and a
 		// game missing one of its files is worse than no disc at all
 		for (auto item : fs::Directory(hostPath)) {
 			StringView itemName = fs::GetFileName(item);
 			bool isDirectory = fs::DirectoryExists(item);
+			if (leaveOut != nullptr && leaveOut(itemName, isDirectory, isTopLevel)) {
+				continue;
+			}
 
 			Node* node = AddChild(parent, itemName, isDirectory);
 			if (node == nullptr) {
@@ -510,7 +513,7 @@ namespace Jazz2::AssetPacker
 
 			if (isDirectory) {
 				String itemPath = item;
-				if (!AddDirectoryContents(*node, itemPath)) {
+				if (!AddDirectoryContents(*node, itemPath, leaveOut, false)) {
 					return false;
 				}
 				continue;

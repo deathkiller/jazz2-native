@@ -194,19 +194,19 @@ namespace Jazz2::Editor
 			}
 		}
 		{
-			struct FillOption { const char* Label; LevelDocument::ResizeFill Fill; };
+			struct FillOption { String Label; LevelDocument::ResizeFill Fill; };
 			static const FillOption FillOptions[] = {
 				// TRANSLATORS: Options in the Resize Layer dialog, what the layer gets where it grows
-				{ NC_("editor", "Empty tiles"), LevelDocument::ResizeFill::Empty },
-				{ NC_("editor", "Edge tiles extended"), LevelDocument::ResizeFill::ExtendEdges },
-				{ NC_("editor", "Layer repeated"), LevelDocument::ResizeFill::Repeat },
+				{ _x("editor", "Empty tiles"), LevelDocument::ResizeFill::Empty },
+				{ _x("editor", "Edge tiles extended"), LevelDocument::ResizeFill::ExtendEdges },
+				{ _x("editor", "Layer repeated"), LevelDocument::ResizeFill::Repeat },
 			};
 			// TRANSLATORS: Label in the Resize Layer dialog before the choice of what the layer gets where it grows
 			auto* row = content->AddRow(_x("editor", "New tiles"));
 			auto* dropdown = row->Add<UiDropdown>([state]() {
 				for (const FillOption& option : FillOptions) {
 					if (option.Fill == state->Fill) {
-						return String(_x("editor", option.Label));
+						return String(option.Label);
 					}
 				}
 				return String();
@@ -214,7 +214,7 @@ namespace Jazz2::Editor
 				for (const FillOption& option : FillOptions) {
 					LevelDocument::ResizeFill fill = option.Fill;
 					UiMenuEntry entry;
-					entry.Label = _x("editor", option.Label);
+					entry.Label = option.Label;
 					entry.IsChecked = [state, fill]() { return (state->Fill == fill); };
 					entry.Execute = [state, fill]() { state->Fill = fill; };
 					entries.push_back(Death::move(entry));

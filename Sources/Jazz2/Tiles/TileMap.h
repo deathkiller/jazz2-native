@@ -632,6 +632,8 @@ namespace Jazz2::Tiles
 		bool IsTileEmpty(std::int32_t tx, std::int32_t ty);
 		/** @brief Returns `true` if the tile on the main (sprite) layer can be destroyed by the player (read-only, no side effects) */
 		bool IsTileDestructible(std::int32_t tx, std::int32_t ty);
+		/** @brief Returns `true` if the destructible tile on the main (sprite) layer is destroyed, the last frame of its destruction shown */
+		bool IsTileDestroyed(std::int32_t tx, std::int32_t ty);
 		/** @brief Returns `true` if the tile on the main (sprite) layer is a one-way platform (passable from below) */
 		bool IsTileOneWay(std::int32_t tx, std::int32_t ty);
 		/** @brief Returns `true` if the given ~1/3 corner of the tile's collision mask is empty (cornerX/cornerY: -1 = left/top, +1 = right/bottom) */

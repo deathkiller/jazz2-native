@@ -68,11 +68,14 @@ shortens the list of bookmarks first, then the map. Every color has a swatch tha
     <kbd>Ctrl</kbd> with the arrows, <kbd>Backspace</kbd> or <kbd>Del</kbd> moves or deletes by words.
 -   On macOS, <kbd>Cmd</kbd> works as <kbd>Ctrl</kbd>.
 
-@subsection editor-interface-accessibility Contrast and motion
+@subsection editor-interface-accessibility Contrast, font and motion
 
 In the <b>View</b> menu:
 
 -   <b>High Contrast Interface</b> --- a theme with stronger contrast.
+-   <b>Readable Font</b> --- text in a plain font (Roboto, `Content/Editor/Fonts`) instead of the font of the game,
+    with real lowercase letters and sharp at every interface size. Lines keep their height, so nothing moves when it's
+    switched.
 -   <b>Reduce Motion</b> --- nothing animates: panels and lists don't slide, the view jumps instead of flying, and a
     play-test starts without the growing ring, with the music opened up and muffled again at once.
 
@@ -792,7 +795,7 @@ Key | Meaning
 --- | -------
 @cpp "UiScale" @ce | Interface scale, @cpp 0 @ce by the window size
 @cpp "Layout" @ce | @cpp 0 @ce by the window size, @cpp 1 @ce desktop, @cpp 2 @ce compact
-@cpp "Expert" @ce, @cpp "ShowGrid" @ce, @cpp "PauseLayerMovement" @ce, @cpp "ReducedMotion" @ce | <b>Expert Mode</b>, <b>Show Grid</b>, <b>Pause Layer Movement</b>, <b>Reduce Motion</b>
+@cpp "Expert" @ce, @cpp "ShowGrid" @ce, @cpp "PauseLayerMovement" @ce, @cpp "ReadableFont" @ce, @cpp "ReducedMotion" @ce | <b>Expert Mode</b>, <b>Show Grid</b>, <b>Pause Layer Movement</b>, <b>Readable Font</b>, <b>Reduce Motion</b>
 @cpp "Theme" @ce | @cpp 0 @ce the usual theme, @cpp 1 @ce high contrast
 @cpp "ScriptEditor" @ce | The program <b>Edit Script</b> opens scripts in, empty for the one the system has. A path, or a name found in `PATH`, with optional arguments where `{file}` stands for the script, otherwise it goes last. A path with spaces followed by arguments is in quotes. Set only in this file
 @cpp "TileColumns" @ce | Tiles in a row of the tile picker, 1 to 32

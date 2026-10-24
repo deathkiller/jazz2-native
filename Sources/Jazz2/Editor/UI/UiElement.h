@@ -28,12 +28,13 @@ namespace Jazz2::Editor
 		float Scale;
 
 		/**
-		 * @brief Returns the font of the interface
+		 * @brief Returns the font of the interface at a scale of the interface
 		 *
-		 * It's not kept anywhere, the fonts that have the palette baked in are dropped when a level with another
-		 * palette is loaded.
+		 * The readable font drawn for the scale if @ref UiTheme::ReadableFont is set and it can be read, otherwise the
+		 * pixel font of the game. It's not kept anywhere, the fonts that have the palette baked in are dropped when a
+		 * level with another palette is loaded, and the readable font of a scale no longer used goes too.
 		 */
-		static UI::Font* GetFont();
+		static UI::Font* GetFont(float scale);
 		/** @brief Converts units to whole pixels */
 		float Px(float units) const;
 		/** @brief Returns the width of a text in pixels */

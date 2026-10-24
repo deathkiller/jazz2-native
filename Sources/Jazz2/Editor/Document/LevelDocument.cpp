@@ -13,11 +13,6 @@
 
 #include <Utf8.h>
 
-// The document knows nothing of the engine, its messages are only marked to be translated where they're shown
-#if !defined(NC_)
-#	define NC_(context, text) text
-#endif
-
 using namespace Death::Containers::Literals;
 
 namespace Jazz2::Editor
@@ -931,11 +926,11 @@ namespace Jazz2::Editor
 		}
 	}
 
-	bool LevelDocument::Validate(String* problem) const
+	bool LevelDocument::Validate(DocumentProblem* problem) const
 	{
-		auto fail = [problem](String&& message) {
+		auto fail = [problem](DocumentProblem found) {
 			if (problem != nullptr) {
-				*problem = Death::move(message);
+				*problem = found;
 			}
 			return false;
 		};
@@ -946,27 +941,27 @@ namespace Jazz2::Editor
 				spriteLayers++;
 			}
 			if (layer.Tiles.size() != std::size_t(layer.Record.Width) * std::size_t(layer.Record.Height)) {
-				return fail(NC_("editor", "A layer has a different number of tiles than its size"));
+				return fail(DocumentProblem::LayerSize);
 			}
 		}
 		if (spriteLayers != 1) {
-			return fail(NC_("editor", "The level has to have exactly one sprite layer"));
+			return fail(DocumentProblem::SpriteLayerCount);
 		}
 		if (Layers.size() > UINT8_MAX) {
-			return fail(NC_("editor", "The level has too many layers"));
+			return fail(DocumentProblem::TooManyLayers);
 		}
 		if (Texts.size() > UINT8_MAX) {
-			return fail(NC_("editor", "The level has too many texts"));
+			return fail(DocumentProblem::TooManyTexts);
 		}
 		if (ExtraTileSets.size() > TileRef::LastExtraTileSet) {
-			return fail(NC_("editor", "The level has too many extra tile sets"));
+			return fail(DocumentProblem::TooManyExtraTileSets);
 		}
 		if (TileIdSpace > UINT16_MAX + 1 || std::int32_t(Animations.size()) > TileIdSpace) {
-			return fail(NC_("editor", "The level has too many animated tiles"));
+			return fail(DocumentProblem::TooManyAnimations);
 		}
 		for (const DocumentAnimation& animation : Animations) {
 			if (animation.Frames.size() > UINT8_MAX) {
-				return fail(NC_("editor", "An animated tile has too many frames"));
+				return fail(DocumentProblem::TooManyFrames);
 			}
 		}
 		// Tile sets with more tiles than the level can address are allowed, the game doesn't mind the tiles that
@@ -976,18 +971,36 @@ namespace Jazz2::Editor
 		for (const DocumentLayer& layer : Layers) {
 			for (const TileRef& tile : layer.Tiles) {
 				if (!IsTileAddressable(tile)) {
-					return fail(NC_("editor", "The level uses tiles past the tile IDs it can address"));
+					return fail(DocumentProblem::UnaddressableTile);
 				}
 			}
 		}
 		for (const DocumentAnimation& animation : Animations) {
 			for (const TileRef& frame : animation.Frames) {
 				if (!IsTileAddressable(frame)) {
-					return fail(NC_("editor", "The level uses tiles past the tile IDs it can address"));
+					return fail(DocumentProblem::UnaddressableTile);
 				}
 			}
 		}
+		if (problem != nullptr) {
+			*problem = DocumentProblem::None;
+		}
 		return true;
+	}
+
+	StringView LevelDocument::GetProblemDescription(DocumentProblem problem)
+	{
+		switch (problem) {
+			case DocumentProblem::LayerSize: return "A layer has a different number of tiles than its size"_s;
+			case DocumentProblem::SpriteLayerCount: return "The level has to have exactly one sprite layer"_s;
+			case DocumentProblem::TooManyLayers: return "The level has too many layers"_s;
+			case DocumentProblem::TooManyTexts: return "The level has too many texts"_s;
+			case DocumentProblem::TooManyExtraTileSets: return "The level has too many extra tile sets"_s;
+			case DocumentProblem::TooManyAnimations: return "The level has too many animated tiles"_s;
+			case DocumentProblem::TooManyFrames: return "An animated tile has too many frames"_s;
+			case DocumentProblem::UnaddressableTile: return "The level uses tiles past the tile IDs it can address"_s;
+			default: return {};
+		}
 	}
 
 	void LevelDocument::LoadLayerNames(const Formats::ChunkRecord& chunk)

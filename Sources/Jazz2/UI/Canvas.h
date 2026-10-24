@@ -67,9 +67,11 @@ namespace Jazz2::UI
 		 * @brief Draws a textured rectangle
 		 *
 		 * `paletteOffset` >= 0 marks the texture as indexed (palette index in the red channel), recolored at draw time
-		 * through the shared palette texture at that offset; -1 = plain RGBA.
+		 * through the shared palette texture at that offset; -1 = plain RGBA. A `shader` draws it in place of the
+		 * sprite shaders, it has to be the palette variant for an indexed texture.
 		 */
-		void DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false, float angle = 0.0f, std::int32_t paletteOffset = -1);
+		void DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false, float angle = 0.0f, std::int32_t paletteOffset = -1,
+			Shader* shader = nullptr);
 		/**
 		 * @brief Draws a textured rectangle into one batch with the rectangles drawn right before it on the same layer
 		 *
@@ -216,7 +218,7 @@ namespace Jazz2::UI
 		std::uint16_t TakeVisitOrder();
 		/** @brief Draws a rectangle already moved by the layer transform and clipped, by a command of its own */
 		void DrawTransformedTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords,
-			const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset);
+			const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset, Shader* shader = nullptr);
 		/** @brief Returns the record of a layer with a run open for a texture, opening one, or `nullptr` if rectangles can't be batched */
 		QuadBatch* GetQuadRun(const Texture& texture, std::uint16_t layer);
 		/** @brief Begins the next batch of the run of a record, returns `false` if it can't be batched */

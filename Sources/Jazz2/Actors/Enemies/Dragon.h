@@ -28,11 +28,10 @@ namespace Jazz2::Actors::Enemies
 		void OnSerializeState(Stream& dest) override;
 		void OnDeserializeState(Stream& src) override;
 
-	private:
-		static constexpr float DefaultSpeed = 0.7f;
-
+	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
+		// Public only so level scripts can tell the flame apart, see Scripting::LevelScriptLoader::OnActorAdded()
 		class Fire : public EnemyBase
 		{
 			DEATH_RUNTIME_OBJECT(EnemyBase);
@@ -46,6 +45,9 @@ namespace Jazz2::Actors::Enemies
 			float _timeLeft;
 		};
 #endif
+
+	private:
+		static constexpr float DefaultSpeed = 0.7f;
 
 		bool _attacking;
 		float _stateTime;

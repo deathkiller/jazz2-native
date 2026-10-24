@@ -31,11 +31,10 @@ namespace Jazz2::Actors::Enemies
 		void OnSerializeState(Stream& dest) override;
 		void OnDeserializeState(Stream& src) override;
 
-	private:
-		static constexpr float DefaultSpeed = 1.5f;
-
+	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
+		// Public only so level scripts can tell the banana apart, see Scripting::LevelScriptLoader::OnActorAdded()
 		class Banana : public EnemyBase
 		{
 			DEATH_RUNTIME_OBJECT(EnemyBase);
@@ -52,6 +51,9 @@ namespace Jazz2::Actors::Enemies
 			std::shared_ptr<AudioBufferPlayer> _soundThrow;
 		};
 #endif
+
+	private:
+		static constexpr float DefaultSpeed = 1.5f;
 
 		bool _isWalking;
 		bool _stuck;

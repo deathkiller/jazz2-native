@@ -7,6 +7,8 @@
 #include "../../nCine/Base/HashMap.h"
 #include "../../nCine/Graphics/Texture.h"
 
+#include <Containers/ArrayView.h>
+#include <Containers/Pair.h>
 #include <IO/Stream.h>
 
 using namespace nCine;
@@ -71,6 +73,25 @@ namespace Jazz2::UI
 		 */
 		Font(const std::unique_ptr<Death::IO::Stream>& s, StringView path, const std::uint32_t* palette);
 
+		/**
+		 * @brief Creates a new instance from glyphs drawn at run time
+		 *
+		 * For a font drawn from an outline font at the size it's shown in, as the readable font of the level editor.
+		 * The atlas and the glyphs are in its own pixels, @p rasterScale of them make a unit the font is measured and
+		 * drawn in --- text drawn at a scale equal to it comes out one pixel of the atlas per pixel of the screen.
+		 *
+		 * @param name         Name of the texture of the atlas
+		 * @param pixels       Atlas, four bytes per pixel (RGBA, not premultiplied)
+		 * @param width        Width of the atlas in pixels
+		 * @param height       Height of the atlas in pixels
+		 * @param lineHeight   How far one line of text sits below the previous one, in units
+		 * @param rasterScale  Pixels of the atlas per unit
+		 * @param glyphs       Characters and their glyphs, @ref FontFormat::FallbackCodepoint for the one drawn in place
+		 *                     of a character the font doesn't have
+		 */
+		Font(const char* name, const std::uint8_t* pixels, std::int32_t width, std::int32_t height, std::int32_t lineHeight,
+			float rasterScale, ArrayView<const Pair<char32_t, FontFormat::Glyph>> glyphs);
+
 		/** @brief Returns font size in pixels */
 		std::int32_t GetSizeInPixels() const;
 		/** @brief Returns font ascent in pixels */
@@ -123,10 +144,12 @@ namespace Jazz2::UI
 
 		FontFormat::Glyph _asciiChars[128];
 		HashMap<std::uint32_t, FontFormat::Glyph> _unicodeChars;
+		std::unique_ptr<Texture> _texture;
 		/** @brief How far one line of text sits below the previous one */
 		std::int32_t _lineHeight;
 		std::int32_t _baseSpacing;
-		std::unique_ptr<Texture> _texture;
+		// Units per pixel of the atlas, what the metrics of the glyphs are multiplied by, 1 for the fonts of the game
+		float _glyphScale;
 		bool _paletteIndexed;
 
 		/** @brief Returns the glyph of the specified character, or the placeholder if the font doesn't have it */

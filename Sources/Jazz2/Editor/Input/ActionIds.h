@@ -147,6 +147,7 @@ namespace Jazz2::Editor
 		constexpr const char* ViewLayoutCompact = "view.layoutCompact";
 		constexpr const char* ViewExpert = "view.expert";
 		constexpr const char* ViewHighContrast = "view.highContrast";
+		constexpr const char* ViewReadableFont = "view.readableFont";
 		constexpr const char* ViewReducedMotion = "view.reducedMotion";
 		constexpr const char* ViewDrawerTiles = "view.drawerTiles";
 		constexpr const char* ViewDrawerLayers = "view.drawerLayers";

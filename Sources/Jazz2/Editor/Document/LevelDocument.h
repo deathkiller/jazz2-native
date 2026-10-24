@@ -173,6 +173,20 @@ namespace Jazz2::Editor
 		Formats::EventRecord Record;
 	};
 
+	/** @brief Problem that would make a level unloadable, see @ref LevelDocument::Validate() */
+	enum class DocumentProblem : std::uint8_t
+	{
+		None,					/**< No problem */
+		LayerSize,				/**< A layer has a different number of tiles than its size */
+		SpriteLayerCount,		/**< The level doesn't have exactly one sprite layer */
+		TooManyLayers,			/**< The level has too many layers */
+		TooManyTexts,			/**< The level has too many texts */
+		TooManyExtraTileSets,	/**< The level has too many extra tile sets */
+		TooManyAnimations,		/**< The level has too many animated tiles */
+		TooManyFrames,			/**< An animated tile has too many frames */
+		UnaddressableTile		/**< The level uses tiles past the tile IDs it can address */
+	};
+
 	/**
 		@brief A level being edited
 
@@ -385,9 +399,13 @@ namespace Jazz2::Editor
 		/**
 		 * @brief Checks the document for problems that would make the level unloadable
 		 *
-		 * Returns `false` and describes the first problem found if there is any.
+		 * Returns `false` and the first problem found if there is any, the editor shows it translated, see
+		 * @ref GetProblemDescription() for the text of a log.
 		 */
-		bool Validate(String* problem = nullptr) const;
+		bool Validate(DocumentProblem* problem = nullptr) const;
+
+		/** @brief Returns a problem of @ref Validate() as a text of a log, it isn't translated */
+		static StringView GetProblemDescription(DocumentProblem problem);
 
 	private:
 		void LoadLayerNames(const Formats::ChunkRecord& chunk);

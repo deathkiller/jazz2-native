@@ -233,10 +233,10 @@ namespace Jazz2::Editor
 			addCount(_x("editor", "Generators"), &LevelStatistics::Generators, _x("editor", "What they spawn isn't counted above, there's no end to it"));
 			{
 				// TRANSLATORS: Rows of the Statistics dialog, how many starts of each character the level has
-				static const char* const Characters[] = { NC_("editor", "Starts of Jazz"), NC_("editor", "Starts of Spaz"), NC_("editor", "Starts of Lori") };
+				const StringView Characters[] = { _x("editor", "Starts of Jazz"), _x("editor", "Starts of Spaz"), _x("editor", "Starts of Lori") };
 				for (std::int32_t c = 0; c < 3; c++) {
 					CountRow& row = rows.emplace_back();
-					row.Label = _x("editor", Characters[c]);
+					row.Label = Characters[c];
 					for (std::int32_t i = 0; i < 3; i++) {
 						row.Values[i] = FormatInteger(stats[i].Starts[c]);
 					}

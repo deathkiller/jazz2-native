@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "JJ2PlusDefinitions.h"
-#include "../ContentResolver.h"
+#include "Definitions.h"
+#include "../../ContentResolver.h"
 
 namespace Jazz2::Compatibility
 {
@@ -75,6 +75,12 @@ namespace Jazz2::Scripting::Legacy
 		std::uint32_t GetFirstAnim(std::int32_t setID);
 		/** @brief Returns the frame count and the first frame of an animation, `false` if there's no such animation */
 		bool GetAnimationFrames(std::uint32_t animIndex, std::uint32_t& frameCount, std::uint32_t& firstFrame);
+		/**
+			@brief Returns the rectangle of a frame and the one of its pixels, both from its hotspot
+
+			Returns `false` if there's no such frame or it has no pixels.
+		*/
+		bool GetFrameBounds(std::uint32_t frameIndex, Recti& frameRect, Recti& pixelBounds);
 
 		/** @brief Loads a set of an animation file into a set, as `jjANIMSET::load()` */
 		bool LoadSet(jjANIMSET& set, std::uint32_t fileSetID, StringView filename, std::int32_t firstAnimToOverwrite, std::int32_t firstFrameToOverwrite);

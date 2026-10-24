@@ -120,6 +120,13 @@ namespace Jazz2::Editor
 			return index;
 		}
 
+		// Copies of translated texts of the descriptions of the game, they outlive the language they were translated by
+		SmallVector<std::unique_ptr<char[]>, 0>& GetKeptTexts()
+		{
+			static SmallVector<std::unique_ptr<char[]>, 0> texts;
+			return texts;
+		}
+
 		bool ParseCategory(StringView name, EventCategory& category)
 		{
 			static const char* const Names[] = { "basic", "scenery", "modifier", "area", "trigger", "warp", "light",
@@ -682,6 +689,16 @@ namespace Jazz2::Editor
 			std::uint32_t lastBit = std::uint32_t(field.Shift) + field.Bits;
 			return (lastBit <= 8 ? 1 : (lastBit <= 16 ? 2 : 4));
 		}
+	}
+
+	CatalogText::CatalogText(StringView translated)
+	{
+		// The descriptions are built once, while the index is, so each text is copied only once
+		std::unique_ptr<char[]> copy = std::make_unique<char[]>(translated.size() + 1);
+		std::memcpy(copy.get(), translated.data(), translated.size());
+		copy[translated.size()] = '\0';
+		Text = copy.get();
+		GetKeptTexts().push_back(std::move(copy));
 	}
 
 	const EventDescriptor* EventCatalog::Find(EventType type)

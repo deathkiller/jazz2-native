@@ -3,6 +3,7 @@
 #if defined(WITH_EDITOR)
 
 #include "UiMenu.h"
+#include "UiReadableFont.h"
 #include "UiWidgets.h"
 #include "../../ContentResolver.h"
 #include "../../Rendering/PolylineRenderer.h"
@@ -68,8 +69,8 @@ namespace Jazz2::Editor
 		if (_instance == this) {
 			_instance = nullptr;
 		}
-		// The font is shared with the game, which draws it smoothed
-		if (UI::Font* font = UiContext::GetFont()) {
+		// The pixel font is shared with the game, which draws it smoothed
+		if (UI::Font* font = ContentResolver::Get().GetFont(FontType::Small)) {
 			font->SetMagnificationFilter(SamplerFilter::Linear);
 		}
 	}
@@ -202,14 +203,26 @@ namespace Jazz2::Editor
 
 	UI::Font* UiSurface::GetFont() const
 	{
-		UI::Font* font = UiContext::GetFont();
-		if (font != nullptr) {
-			// Text drawn at a whole multiple of its size is crisp only if it's not smoothed. It's set on every font asked
-			// for, a font is loaded again with the default filter when the palette changes, and the texture does nothing
-			// when the filter is the same.
+		UI::Font* font = UiContext::GetFont(_scale);
+		if (font != nullptr && font == ContentResolver::Get().GetFont(FontType::Small)) {
+			// Text in the pixel font drawn at a whole multiple of its size is crisp only if it's not smoothed. It's set on
+			// every font asked for, a font is loaded again with the default filter when the palette changes, and the
+			// texture does nothing when the filter is the same. The readable font is drawn at its own size, a text made
+			// smaller or larger stays smooth.
 			font->SetMagnificationFilter(UiTheme::IsTextScaleWhole(_scale) ? SamplerFilter::Nearest : SamplerFilter::Linear);
 		}
 		return font;
+	}
+
+	UI::Font* UiSurface::GetReadableFont(float textScale)
+	{
+		if (_instance == nullptr) {
+			return nullptr;
+		}
+		if (_instance->_readableFont == nullptr) {
+			_instance->_readableFont = std::make_unique<UiReadableFont>();
+		}
+		return _instance->_readableFont->Get(textScale);
 	}
 
 	UiContext UiSurface::GetContext() const

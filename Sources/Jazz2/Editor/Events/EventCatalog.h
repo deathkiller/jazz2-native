@@ -9,14 +9,7 @@
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
-#if !defined(N_)
-/** @brief Marks a text for translation, it's translated where it's shown */
-#	define N_(text) text
-#endif
-#if !defined(NC_)
-/** @brief Marks a text for translation in the specified context, it's translated where it's shown */
-#	define NC_(context, text) text
-#endif
+#include <cstddef>
 
 namespace Jazz2::Editor
 {
@@ -25,6 +18,26 @@ namespace Jazz2::Editor
 	using Death::Containers::String;
 	using Death::Containers::StringView;
 #endif
+
+	/**
+		@brief Text of a description of an event, a literal is shown as it is, a text translated by `_x()` is kept
+
+		The descriptions of the game are built on their first use, after the language is loaded, so only what's
+		translated there by `_x("editor", ...)` is translated. Such a text is copied, it stays valid when the language
+		is unloaded --- the editor keeps the language it was first opened in.
+	*/
+	struct CatalogText
+	{
+		/** @brief Text, `nullptr` for none */
+		const char* Text;
+
+		/** @brief No text */
+		constexpr CatalogText(std::nullptr_t) noexcept : Text(nullptr) {}
+		/** @brief Text shown as it is */
+		constexpr CatalogText(const char* text) noexcept : Text(text) {}
+		/** @brief Translated text, it's copied */
+		CatalogText(StringView translated);
+	};
 
 	/** @brief Category of an event, the picker groups events by it */
 	enum class EventCategory : std::uint8_t
@@ -78,10 +91,14 @@ namespace Jazz2::Editor
 	/** @brief Option of a parameter of the type @ref ParamType::Enum or @ref ParamType::Flags */
 	struct ParamOption
 	{
-		/** @brief Name shown to the user, marked by @ref NC_() */
-		const char* Label;
+		/** @brief Name shown to the user, see @ref CatalogText */
+		const char* Label = nullptr;
 		/** @brief Value, or the mask of its bits for flags, relative to the field (before @ref EventParamField::Shift) */
-		std::int32_t Value;
+		std::int32_t Value = 0;
+
+		constexpr ParamOption() noexcept = default;
+		/** @brief Option with a name and a value */
+		constexpr ParamOption(CatalogText label, std::int32_t value) noexcept : Label(label.Text), Value(value) {}
 	};
 
 	/** @brief How the value of another field decides whether a field is shown, see @ref EventParamField::VisibleIfField */
@@ -151,7 +168,7 @@ namespace Jazz2::Editor
 	*/
 	struct EventParamField
 	{
-		/** @brief Name shown to the user, marked by @ref NC_() */
+		/** @brief Name shown to the user, see @ref CatalogText */
 		const char* Name;
 		/** @brief How the value is edited */
 		ParamType Type;
@@ -175,7 +192,7 @@ namespace Jazz2::Editor
 		std::uint8_t OptionCount;
 		/** @brief Unit */
 		ParamUnit Unit;
-		/** @brief Description shown as a tooltip, marked by @ref NC_(), may be `nullptr` */
+		/** @brief Description shown as a tooltip, see @ref CatalogText, may be `nullptr` */
 		const char* Description;
 
 		// What follows has defaults, the functions making fields above leave it as it is
@@ -220,9 +237,9 @@ namespace Jazz2::Editor
 			return copy;
 		}
 		/** @brief Returns the field with a description */
-		constexpr EventParamField WithDescription(const char* description) const {
+		constexpr EventParamField WithDescription(CatalogText description) const {
 			EventParamField copy = *this;
-			copy.Description = description;
+			copy.Description = description.Text;
 			return copy;
 		}
 		/** @brief Returns the field with a default value */
@@ -322,56 +339,56 @@ namespace Jazz2::Editor
 	};
 
 	/** @brief Unsigned number of @p bits bits at the byte @p offset, starting at the bit @p shift */
-	constexpr EventParamField UIntField(const char* name, std::uint8_t offset, std::uint8_t bits, std::int32_t min, std::int32_t max, std::int32_t defaultValue = 0, std::uint8_t shift = 0)
+	constexpr EventParamField UIntField(CatalogText name, std::uint8_t offset, std::uint8_t bits, std::int32_t min, std::int32_t max, std::int32_t defaultValue = 0, std::uint8_t shift = 0)
 	{
-		return { name, ParamType::UInt, offset, bits, shift, false, min, max, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
+		return { name.Text, ParamType::UInt, offset, bits, shift, false, min, max, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
 	}
 	/** @brief Signed number of @p bits bits at the byte @p offset */
-	constexpr EventParamField IntField(const char* name, std::uint8_t offset, std::uint8_t bits, std::int32_t min, std::int32_t max, std::int32_t defaultValue = 0, std::uint8_t shift = 0)
+	constexpr EventParamField IntField(CatalogText name, std::uint8_t offset, std::uint8_t bits, std::int32_t min, std::int32_t max, std::int32_t defaultValue = 0, std::uint8_t shift = 0)
 	{
-		return { name, ParamType::Int, offset, bits, shift, true, min, max, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
+		return { name.Text, ParamType::Int, offset, bits, shift, true, min, max, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
 	}
 	/** @brief Yes or no, the bit @p bit of the byte @p offset */
-	constexpr EventParamField BoolField(const char* name, std::uint8_t offset, std::uint8_t bit = 0, bool defaultValue = false)
+	constexpr EventParamField BoolField(CatalogText name, std::uint8_t offset, std::uint8_t bit = 0, bool defaultValue = false)
 	{
-		return { name, ParamType::Bool, offset, 1, bit, false, 0, 1, defaultValue ? 1 : 0, nullptr, 0, ParamUnit::None, nullptr };
+		return { name.Text, ParamType::Bool, offset, 1, bit, false, 0, 1, defaultValue ? 1 : 0, nullptr, 0, ParamUnit::None, nullptr };
 	}
 	/** @brief One of the options, @p bits bits at the byte @p offset */
 	template<std::size_t N>
-	constexpr EventParamField EnumField(const char* name, std::uint8_t offset, std::uint8_t bits, const ParamOption (&options)[N], std::int32_t defaultValue = 0, std::uint8_t shift = 0)
+	constexpr EventParamField EnumField(CatalogText name, std::uint8_t offset, std::uint8_t bits, const ParamOption (&options)[N], std::int32_t defaultValue = 0, std::uint8_t shift = 0)
 	{
-		return { name, ParamType::Enum, offset, bits, shift, false, 0, (1 << bits) - 1, defaultValue, options, std::uint8_t(N), ParamUnit::None, nullptr };
+		return { name.Text, ParamType::Enum, offset, bits, shift, false, 0, (1 << bits) - 1, defaultValue, options, std::uint8_t(N), ParamUnit::None, nullptr };
 	}
 	/** @brief Any of the options, each a bit of @p bits bits at the byte @p offset */
 	template<std::size_t N>
-	constexpr EventParamField FlagsField(const char* name, std::uint8_t offset, std::uint8_t bits, const ParamOption (&options)[N], std::int32_t defaultValue = 0, std::uint8_t shift = 0)
+	constexpr EventParamField FlagsField(CatalogText name, std::uint8_t offset, std::uint8_t bits, const ParamOption (&options)[N], std::int32_t defaultValue = 0, std::uint8_t shift = 0)
 	{
-		return { name, ParamType::Flags, offset, bits, shift, false, 0, (1 << bits) - 1, defaultValue, options, std::uint8_t(N), ParamUnit::None, nullptr };
+		return { name.Text, ParamType::Flags, offset, bits, shift, false, 0, (1 << bits) - 1, defaultValue, options, std::uint8_t(N), ParamUnit::None, nullptr };
 	}
 	/** @brief Another event, 16 bits at the byte @p offset */
-	constexpr EventParamField EventTypeField(const char* name, std::uint8_t offset, std::int32_t defaultValue = 0)
+	constexpr EventParamField EventTypeField(CatalogText name, std::uint8_t offset, std::int32_t defaultValue = 0)
 	{
-		return { name, ParamType::EventType, offset, 16, 0, false, 0, 0xFFFF, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
+		return { name.Text, ParamType::EventType, offset, 16, 0, false, 0, 0xFFFF, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
 	}
 	/** @brief Index of a level text, 8 bits at the byte @p offset */
-	constexpr EventParamField TextIdField(const char* name, std::uint8_t offset, std::int32_t defaultValue = 0)
+	constexpr EventParamField TextIdField(CatalogText name, std::uint8_t offset, std::int32_t defaultValue = 0)
 	{
-		return { name, ParamType::TextId, offset, 8, 0, false, 0, 255, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
+		return { name.Text, ParamType::TextId, offset, 8, 0, false, 0, 255, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
 	}
 	/** @brief Index of a trigger, 8 bits at the byte @p offset */
-	constexpr EventParamField TriggerIdField(const char* name, std::uint8_t offset, std::int32_t defaultValue = 0)
+	constexpr EventParamField TriggerIdField(CatalogText name, std::uint8_t offset, std::int32_t defaultValue = 0)
 	{
-		return { name, ParamType::TriggerId, offset, 8, 0, false, 0, 31, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
+		return { name.Text, ParamType::TriggerId, offset, 8, 0, false, 0, 31, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
 	}
 	/** @brief Identifier of a warp, @p bits bits at the byte @p offset */
-	constexpr EventParamField WarpIdField(const char* name, std::uint8_t offset, std::uint8_t bits = 8, std::int32_t defaultValue = 0)
+	constexpr EventParamField WarpIdField(CatalogText name, std::uint8_t offset, std::uint8_t bits = 8, std::int32_t defaultValue = 0)
 	{
-		return { name, ParamType::WarpId, offset, bits, 0, false, 0, (1 << bits) - 1, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
+		return { name.Text, ParamType::WarpId, offset, bits, 0, false, 0, (1 << bits) - 1, defaultValue, nullptr, 0, ParamUnit::None, nullptr };
 	}
 	/** @brief Text of @p length bytes starting at the byte @p offset */
-	constexpr EventParamField StringField(const char* name, std::uint8_t offset, std::uint8_t length)
+	constexpr EventParamField StringField(CatalogText name, std::uint8_t offset, std::uint8_t length)
 	{
-		return { name, ParamType::String, offset, std::uint8_t(length * 8), 0, false, 0, 0, 0, nullptr, 0, ParamUnit::None, nullptr };
+		return { name.Text, ParamType::String, offset, std::uint8_t(length * 8), 0, false, 0, 0, 0, nullptr, 0, ParamUnit::None, nullptr };
 	}
 	/**
 	 * @brief Parameters of another event inside this one, @p length bytes from the byte @p offset
@@ -379,9 +396,9 @@ namespace Jazz2::Editor
 	 * The type of the event inside is in the field of the index @p typeField, its own parameters are edited shifted by
 	 * @p offset bytes, see @ref EventCatalog::GetContents().
 	 */
-	constexpr EventParamField ContentsField(const char* name, std::uint8_t offset, std::uint8_t length, std::int8_t typeField)
+	constexpr EventParamField ContentsField(CatalogText name, std::uint8_t offset, std::uint8_t length, std::int8_t typeField)
 	{
-		EventParamField field = { name, ParamType::Contents, offset, std::uint8_t(length * 8), 0, false, 0, 0, 0, nullptr, 0, ParamUnit::None, nullptr };
+		EventParamField field = { name.Text, ParamType::Contents, offset, std::uint8_t(length * 8), 0, false, 0, 0, 0, nullptr, 0, ParamUnit::None, nullptr };
 		field.ContentsTypeField = typeField;
 		return field;
 	}
@@ -430,11 +447,11 @@ namespace Jazz2::Editor
 		EventType Type;
 		/** @brief Identifier that doesn't change between versions */
 		const char* Key;
-		/** @brief Name shown to the user, marked by @ref NC_() */
+		/** @brief Name shown to the user, see @ref CatalogText */
 		const char* Name;
 		/** @brief Category */
 		EventCategory Category;
-		/** @brief Description, marked by @ref NC_(), may be `nullptr` */
+		/** @brief Description, see @ref CatalogText, may be `nullptr` */
 		const char* Description;
 		/** @brief Parameters */
 		const EventParamField* Fields;
@@ -473,17 +490,17 @@ namespace Jazz2::Editor
 	};
 
 	/** @brief Description of an event without parameters */
-	constexpr EventDescriptor DescribeEvent(EventType type, const char* key, const char* name, EventCategory category, const char* description,
+	constexpr EventDescriptor DescribeEvent(EventType type, const char* key, CatalogText name, EventCategory category, CatalogText description,
 		const char* previewMetadata, std::uint32_t previewAnimation, EventTraits traits)
 	{
-		return { type, key, name, category, description, nullptr, 0, previewMetadata, previewAnimation, traits };
+		return { type, key, name.Text, category, description.Text, nullptr, 0, previewMetadata, previewAnimation, traits };
 	}
 	/** @brief Description of an event with parameters */
 	template<std::size_t N>
-	constexpr EventDescriptor DescribeEvent(EventType type, const char* key, const char* name, EventCategory category, const char* description,
+	constexpr EventDescriptor DescribeEvent(EventType type, const char* key, CatalogText name, EventCategory category, CatalogText description,
 		const EventParamField (&fields)[N], const char* previewMetadata, std::uint32_t previewAnimation, EventTraits traits)
 	{
-		return { type, key, name, category, description, fields, std::uint8_t(N), previewMetadata, previewAnimation, traits };
+		return { type, key, name.Text, category, description.Text, fields, std::uint8_t(N), previewMetadata, previewAnimation, traits };
 	}
 
 	/** @brief Where descriptions of events from outside of the game come from, see @ref EventCatalog::LoadExtensions() */
@@ -686,7 +703,7 @@ namespace Jazz2::Editor
 		return changed;
 	}
 
-	// The parts of the catalog, one for each group of categories
+	// The parts of the catalog, one for each group of categories, each is built on its first call, the language must be loaded by then
 	namespace EventCatalogParts
 	{
 		ArrayView<const EventDescriptor> GetBasicEvents();			// Basic, Scenery, Modifier

@@ -1,4 +1,5 @@
 #include "DiscImage.h"
+#include "ContentFilter.h"
 #include "Iso9660.h"
 #include "../../Jazz2/Compatibility/JJ2Anims.h"
 #include "../../Jazz2/ContentFileTypes.h"
@@ -31,6 +32,11 @@ namespace Jazz2::AssetPacker
 	{
 		/** @brief Name of the directory on the disc that holds the game content */
 		constexpr StringView ContentDirectoryName = "Content"_s;
+		/** @brief Decides what of the game content isn't put on a disc, every console these discs are for has no level editor */
+		bool IsLeftOutOfDisc(StringView name, bool isDirectory, bool isTopLevel)
+		{
+			return ContentFilter::IsLeftOut(name, isDirectory, isTopLevel, false);
+		}
 
 		/** @brief How a DiscJuggler image ends, and which of the three layouts it is */
 		enum : std::uint32_t {
@@ -1036,7 +1042,7 @@ namespace Jazz2::AssetPacker
 		}
 
 		LOGI("Reading \"{}\"...", contentPath);
-		if (!builder.AddDirectoryFromDisk(ContentDirectoryName, contentPath)) {
+		if (!builder.AddDirectoryFromDisk(ContentDirectoryName, contentPath, IsLeftOutOfDisc)) {
 			return false;
 		}
 
@@ -1196,7 +1202,7 @@ namespace Jazz2::AssetPacker
 			return false;
 		}
 		LOGI("Reading \"{}\"...", description.ContentPath);
-		if (!builder.AddDirectoryFromDisk(ContentDirectoryName, description.ContentPath)) {
+		if (!builder.AddDirectoryFromDisk(ContentDirectoryName, description.ContentPath, IsLeftOutOfDisc)) {
 			return false;
 		}
 

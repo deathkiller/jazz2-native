@@ -81,7 +81,7 @@ namespace Jazz2::Editor
 						value = FormatInteger(raw);
 						for (std::uint8_t j = 0; j < field.OptionCount; j++) {
 							if (field.Options[j].Value == raw) {
-								value = _x("editor", field.Options[j].Label);
+								value = field.Options[j].Label;
 								break;
 							}
 						}
@@ -101,7 +101,7 @@ namespace Jazz2::Editor
 				if (!result.empty()) {
 					result += ", "_s;
 				}
-				result += _x("editor", field.Name) + " "_s + value;
+				result += StringView(field.Name) + " "_s + value;
 				shown++;
 			}
 			return result;

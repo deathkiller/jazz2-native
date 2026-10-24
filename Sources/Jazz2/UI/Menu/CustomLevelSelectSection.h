@@ -81,6 +81,8 @@ namespace Jazz2::UI::Menu
 		// Tells the indexing thread to stop, the section is being destroyed
 		std::atomic<bool> _indexingCancelled;
 		bool _itemsSorted;
+		// Whether the user moved the selection, it stays on its level when the list is sorted then (see TakeIndexedItems())
+		bool _selectionMoved;
 		bool _multiplayer;
 		bool _privateServer;
 		bool _localGame;

@@ -387,8 +387,35 @@ namespace Jazz2
 		 */
 		std::int32_t AcquireShiftedPaletteOffset(std::uint8_t shift);
 		/**
-		 * @brief Releases one reference to a palette offset from @ref AcquirePaletteOffset or @ref AcquireShiftedPaletteOffset
+		 * @brief Acquires a reference-counted palette offset of the sprite palette in a single hue of it
 		 *
+		 * Index `i` of the row is the color of index `gradientStart + (i & 7)` of the sprite palette, the gradient of 8
+		 * entries from @p gradientStart in place of the one of each index, as `SPRITE::SINGLEHUE` of JJ2+ draws it. Index 0
+		 * stays the transparent one. The row is built again whenever the sprite palette changes. Callers with the same
+		 * @p gradientStart share one row. Returns the offset, or -1 if no row is free. Release it with @ref ReleasePaletteOffset.
+		 */
+		std::int32_t AcquireSingleHuePaletteOffset(std::uint8_t gradientStart);
+		/**
+		 * @brief Acquires a reference-counted palette offset of the sprite palette as a gem of the given color
+		 *
+		 * Index `i` of the row is entry `i & 127` of the gradient of the gem (see @ref GetGemColor()), as `SPRITE::GEM`
+		 * of JJ2+ draws it - its translucency is up to the caller. Index 0 stays the transparent one. The row is built
+		 * again whenever the sprite palette changes. Callers with the same @p gem share one row. Returns the offset, or
+		 * -1 if no row is free. Release it with @ref ReleasePaletteOffset.
+		 */
+		std::int32_t AcquireGemPaletteOffset(std::uint8_t gem);
+		/**
+		 * @brief Returns entry @p index of the gradient of a gem as `SPRITE::GEM` of JJ2+ draws it
+		 *
+		 * Gems 0 to 3 are the red, green, blue and purple gems of the game (the gradients the gems are drawn with),
+		 * up to 12 are the other gradients JJ2+ shows for them, the others have none (returns a transparent color).
+		 * Only the lower 7 bits of @p index are used. The color is packed as `0xAABBGGRR`.
+		 */
+		std::uint32_t GetGemColor(std::uint8_t gem, std::uint8_t index) const;
+		/**
+		 * @brief Releases one reference to a palette offset from @ref AcquirePaletteOffset and the like
+		 *
+		 * Also of @ref AcquireShiftedPaletteOffset, @ref AcquireSingleHuePaletteOffset and @ref AcquireGemPaletteOffset.
 		 * The underlying palette is returned to the pool only when the last holder releases it.
 		 */
 		void ReleasePaletteOffset(std::int32_t paletteOffset);
@@ -691,6 +718,14 @@ namespace Jazz2
 		void BuildPlayerColorPaletteForScheme(std::uint32_t furColor, std::int32_t schemeIndex, std::uint32_t* outPalette) const;
 		// Builds the sprite palette shifted by the given number of entries, see AcquireShiftedPaletteOffset()
 		void BuildShiftedPalette(std::uint8_t shift, std::uint32_t* outPalette) const;
+		// Builds the sprite palette in the gradient of the given start, see AcquireSingleHuePaletteOffset()
+		void BuildSingleHuePalette(std::uint8_t gradientStart, std::uint32_t* outPalette) const;
+		// Builds the sprite palette as a gem of the given color, see AcquireGemPaletteOffset()
+		void BuildGemPalette(std::uint8_t gem, std::uint32_t* outPalette) const;
+		// Builds the gradient of 128 entries a gem is drawn with from its 5 stops in the sprite palette, 32 entries each
+		void BuildGemGradient(const std::uint8_t* stops, std::uint32_t* outGradient) const;
+		// Returns a dynamic palette row derived from the sprite palette by a scheme of its own and a value, see AcquireShiftedPaletteOffset()
+		std::int32_t AcquireDerivedPaletteOffset(std::uint8_t scheme, std::uint8_t value);
 #if defined(DEATH_DEBUG)
 		void MigrateGraphics(StringView path);
 #endif
@@ -703,7 +738,8 @@ namespace Jazz2
 		// the dirty range below and re-uploaded lazily. Dynamically allocated per-player rows are reference-counted
 		// (_paletteRowRefCount > 0 = in use) and keyed by both fur color (_paletteRowColor) and recolor scheme
 		// (_paletteRowScheme) so identical recolors share a row (a character's scheme decides which blocks it recolors).
-		// A row of the shifted sprite palette has ShiftedPaletteScheme as its scheme and the shift as its color.
+		// A row of the shifted sprite palette has ShiftedPaletteScheme as its scheme and the shift as its color, a row of
+		// the sprite palette in a single hue SingleHuePaletteScheme and the start of the gradient.
 		std::unique_ptr<Texture> _paletteTexture;
 		std::int32_t _paletteDirtyFirstRow;
 		std::int32_t _paletteDirtyLastRow;

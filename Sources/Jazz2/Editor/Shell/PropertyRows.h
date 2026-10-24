@@ -15,8 +15,8 @@ namespace Jazz2::Editor
 	*/
 	struct PropertyChoice
 	{
-		/** @brief Text, marked by @ref NC_(), translated when it's shown */
-		const char* Label;
+		/** @brief Text as it's shown, translated by `_x()` where the choice is made */
+		String Label;
 		/** @brief Value */
 		std::int32_t Value;
 	};

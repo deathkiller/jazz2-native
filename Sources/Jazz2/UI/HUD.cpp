@@ -520,6 +520,12 @@ namespace Jazz2::UI
 
 		_levelText = text;
 		_levelTextTime = 0.0f;
+		_levelTextScale = 1.0f;
+	}
+
+	void HUD::SetLevelTextScale(float scale)
+	{
+		_levelTextScale = scale;
 	}
 
 	void HUD::ShowCoins(std::int32_t count)
@@ -980,7 +986,7 @@ namespace Jazz2::UI
 
 		// The scale is a legibility threshold for a small display, so it stays keyed to the display and not to
 		// the rectangle the text is laid out in
-		float textScale = (ViewSize.X >= 360 ? 1.0f : 0.8f);
+		float textScale = (ViewSize.X >= 360 ? 1.0f : 0.8f) * _levelTextScale;
 
 		Rectf safeView = GetSafeView();
 		float x = safeView.X + safeView.W * 0.5f + offset;

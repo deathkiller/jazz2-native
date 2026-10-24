@@ -57,7 +57,8 @@ namespace Jazz2::UI
 		_currentRenderQueue->AddCommand(command);
 	}
 
-	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset)
+	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset,
+		Shader* shader)
 	{
 		// Apply the optional per-layer draw transform (menu section transitions; identity by default)
 		pos = pos * LayerScale + LayerOffset;
@@ -80,7 +81,7 @@ namespace Jazz2::UI
 			return;
 		}
 
-		DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, additiveBlending, angle, paletteOffset);
+		DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, additiveBlending, angle, paletteOffset, shader);
 	}
 
 	void Canvas::DrawTextureBatched(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color)
@@ -270,7 +271,7 @@ namespace Jazz2::UI
 	}
 
 	void Canvas::DrawTransformedTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& clippedTexCoords,
-		const Colorf& finalColor, bool additiveBlending, float angle, std::int32_t paletteOffset)
+		const Colorf& finalColor, bool additiveBlending, float angle, std::int32_t paletteOffset, Shader* shader)
 	{
 		EndQuadRun(z);
 
@@ -278,9 +279,11 @@ namespace Jazz2::UI
 		// texture; paletteOffset selects the palette region (0 = default sprite palette). -1 = a plain RGBA texture.
 		bool indexed = (paletteOffset >= 0);
 		auto command = RentRenderCommand();
-		bool shaderChanged = (indexed
-			? command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap))
-			: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+		bool shaderChanged = (shader != nullptr
+			? command->GetMaterial().SetShader(shader)
+			: indexed
+				? command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap))
+				: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 		if (shaderChanged) {
 			command->GetMaterial().ReserveUniformsDataMemory();
 			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);

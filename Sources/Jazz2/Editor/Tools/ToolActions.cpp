@@ -28,10 +28,6 @@
 #include <cmath>
 #include <memory>
 
-#if !defined(NC_)
-#	define NC_(context, text) text
-#endif
-
 using namespace Death::Containers::Literals;
 
 namespace Jazz2::Editor::ToolActions
@@ -826,17 +822,17 @@ namespace Jazz2::Editor::ToolActions
 			});
 			shape.Key = { Keys::L, 0 };
 			shape.IsChecked = [s]() { return (s->GetTools().GetActiveType() == EditorToolType::Shape); };
-			struct ShapeChoice { const char* Id; const char* Label; ToolShape Shape; };
+			struct ShapeChoice { const char* Id; String Label; ToolShape Shape; };
 			static const ShapeChoice Shapes[] = {
 				// TRANSLATORS: Commands in the menus and the list of keyboard shortcuts, the shape the shape tool draws
-				{ ActionIds::ShapeLine, NC_("editor", "Shape: Line"), ToolShape::Line },
-				{ ActionIds::ShapeRectangle, NC_("editor", "Shape: Rectangle Outline"), ToolShape::Rectangle },
-				{ ActionIds::ShapeEllipse, NC_("editor", "Shape: Ellipse"), ToolShape::Ellipse },
-				{ ActionIds::ShapeFilledEllipse, NC_("editor", "Shape: Filled Ellipse"), ToolShape::FilledEllipse },
+				{ ActionIds::ShapeLine, _x("editor", "Shape: Line"), ToolShape::Line },
+				{ ActionIds::ShapeRectangle, _x("editor", "Shape: Rectangle Outline"), ToolShape::Rectangle },
+				{ ActionIds::ShapeEllipse, _x("editor", "Shape: Ellipse"), ToolShape::Ellipse },
+				{ ActionIds::ShapeFilledEllipse, _x("editor", "Shape: Filled Ellipse"), ToolShape::FilledEllipse },
 			};
 			for (const ShapeChoice& choice : Shapes) {
 				ToolShape value = choice.Shape;
-				auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [s, t, value]() {
+				auto& action = a.Add(choice.Id, choice.Label, EditorIcon::None, [s, t, value]() {
 					t->Shape = value;
 					t->NotifyChanged();
 					s->GetTools().SetActive(EditorToolType::Shape);
@@ -866,35 +862,35 @@ namespace Jazz2::Editor::ToolActions
 
 		// The modifier painted with the tiles
 		{
-			struct ModifierChoice { const char* Id; const char* Label; TileModifierMode Mode; };
+			struct ModifierChoice { const char* Id; String Label; TileModifierMode Mode; };
 			static const ModifierChoice Modifiers[] = {
 				// TRANSLATORS: Commands in the menus and the list of keyboard shortcuts, the modifier the tools paint the tiles with
-				{ ActionIds::ToolsModifierKeep, NC_("editor", "Paint Tiles as They Are"), TileModifierMode::Keep },
-				{ ActionIds::ToolsModifierNormal, NC_("editor", "Paint Tiles Normal"), TileModifierMode::Normal },
-				{ ActionIds::ToolsModifierTranslucent, NC_("editor", "Paint Tiles Translucent"), TileModifierMode::Translucent },
-				{ ActionIds::ToolsModifierInvisible, NC_("editor", "Paint Tiles Invisible"), TileModifierMode::Invisible },
-				{ ActionIds::ToolsModifierHeat, NC_("editor", "Paint Tiles with Heat"), TileModifierMode::Heat },
+				{ ActionIds::ToolsModifierKeep, _x("editor", "Paint Tiles as They Are"), TileModifierMode::Keep },
+				{ ActionIds::ToolsModifierNormal, _x("editor", "Paint Tiles Normal"), TileModifierMode::Normal },
+				{ ActionIds::ToolsModifierTranslucent, _x("editor", "Paint Tiles Translucent"), TileModifierMode::Translucent },
+				{ ActionIds::ToolsModifierInvisible, _x("editor", "Paint Tiles Invisible"), TileModifierMode::Invisible },
+				{ ActionIds::ToolsModifierHeat, _x("editor", "Paint Tiles with Heat"), TileModifierMode::Heat },
 			};
 			for (const ModifierChoice& choice : Modifiers) {
 				TileModifierMode mode = choice.Mode;
-				auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [t, mode]() { t->Modifier = mode; });
+				auto& action = a.Add(choice.Id, choice.Label, EditorIcon::None, [t, mode]() { t->Modifier = mode; });
 				action.IsChecked = [t, mode]() { return (t->Modifier == mode); };
 			}
 			// TRANSLATORS: Toggle command, painting changes only the modifier of the tiles painted over and keeps the tiles
 			auto& only = a.Add(ActionIds::ToolsModifierOnly,_x("editor", "Change Only the Modifier of Tiles"), EditorIcon::None, [t]() { t->ModifierOnly = !t->ModifierOnly; });
 			only.IsChecked = [t]() { return t->ModifierOnly; };
 
-			struct SetChoice { const char* Id; const char* Label; TileModifierMode Mode; };
+			struct SetChoice { const char* Id; String Label; TileModifierMode Mode; };
 			static const SetChoice Sets[] = {
 				// TRANSLATORS: Commands in the Select menu, change the modifier of the selected tiles
-				{ ActionIds::EditModifierNormal, NC_("editor", "Make Selected Tiles Normal"), TileModifierMode::Normal },
-				{ ActionIds::EditModifierTranslucent, NC_("editor", "Make Selected Tiles Translucent"), TileModifierMode::Translucent },
-				{ ActionIds::EditModifierInvisible, NC_("editor", "Make Selected Tiles Invisible"), TileModifierMode::Invisible },
-				{ ActionIds::EditModifierHeat, NC_("editor", "Give Selected Tiles Heat"), TileModifierMode::Heat },
+				{ ActionIds::EditModifierNormal, _x("editor", "Make Selected Tiles Normal"), TileModifierMode::Normal },
+				{ ActionIds::EditModifierTranslucent, _x("editor", "Make Selected Tiles Translucent"), TileModifierMode::Translucent },
+				{ ActionIds::EditModifierInvisible, _x("editor", "Make Selected Tiles Invisible"), TileModifierMode::Invisible },
+				{ ActionIds::EditModifierHeat, _x("editor", "Give Selected Tiles Heat"), TileModifierMode::Heat },
 			};
 			for (const SetChoice& choice : Sets) {
 				TileModifierMode mode = choice.Mode;
-				a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::None, [s, mode]() { SetSelectionModifier(*s, mode); }).IsEnabled = hasTileSelection;
+				a.Add(choice.Id, choice.Label, EditorIcon::None, [s, mode]() { SetSelectionModifier(*s, mode); }).IsEnabled = hasTileSelection;
 			}
 		}
 
@@ -927,17 +923,17 @@ namespace Jazz2::Editor::ToolActions
 			// TRANSLATORS: Command in the Select menu, makes the selection of tiles one tile smaller on each side
 			a.Add(ActionIds::SelectShrink, _x("editor", "Shrink Selection"), EditorIcon::Minus, [s]() { s->GetSelection().Grow(true); }).IsEnabled = hasTileSelection;
 			a.Add(ActionIds::SelectSameTiles,_x("editor", "Select All Tiles Like These"), EditorIcon::Wand, [s]() { SelectSameTiles(*s); }).IsEnabled = [s]() { return !s->IsEditingEvents(); };
-			struct Nudge { const char* Id; const char* Label; Keys Key; Vector2i Offset; };
+			struct Nudge { const char* Id; String Label; Keys Key; Vector2i Offset; };
 			static const Nudge Nudges[] = {
 				// TRANSLATORS: Commands in the Select menu, move the selected tiles by one tile in the direction
-				{ ActionIds::SelectMoveLeft, NC_("editor", "Move Selected Tiles Left"), Keys::Left, Vector2i(-1, 0) },
-				{ ActionIds::SelectMoveRight, NC_("editor", "Move Selected Tiles Right"), Keys::Right, Vector2i(1, 0) },
-				{ ActionIds::SelectMoveUp, NC_("editor", "Move Selected Tiles Up"), Keys::Up, Vector2i(0, -1) },
-				{ ActionIds::SelectMoveDown, NC_("editor", "Move Selected Tiles Down"), Keys::Down, Vector2i(0, 1) },
+				{ ActionIds::SelectMoveLeft, _x("editor", "Move Selected Tiles Left"), Keys::Left, Vector2i(-1, 0) },
+				{ ActionIds::SelectMoveRight, _x("editor", "Move Selected Tiles Right"), Keys::Right, Vector2i(1, 0) },
+				{ ActionIds::SelectMoveUp, _x("editor", "Move Selected Tiles Up"), Keys::Up, Vector2i(0, -1) },
+				{ ActionIds::SelectMoveDown, _x("editor", "Move Selected Tiles Down"), Keys::Down, Vector2i(0, 1) },
 			};
 			for (const Nudge& nudge : Nudges) {
 				Vector2i offset = nudge.Offset;
-				auto& action = a.Add(nudge.Id, _x("editor", nudge.Label), EditorIcon::None, [s, offset]() { MoveSelectedTiles(*s, offset); });
+				auto& action = a.Add(nudge.Id, nudge.Label, EditorIcon::None, [s, offset]() { MoveSelectedTiles(*s, offset); });
 				action.Key = { nudge.Key, KeyMod::Shift };
 				action.IsEnabled = hasTileSelection;
 			}
@@ -965,17 +961,17 @@ namespace Jazz2::Editor::ToolActions
 
 		// How the event tool places events, or that it only selects them
 		{
-			struct ModeChoice { const char* Id; const char* Label; EventPlaceMode Mode; };
+			struct ModeChoice { const char* Id; String Label; EventPlaceMode Mode; };
 			static const ModeChoice Modes[] = {
 				// TRANSLATORS: Commands in the menus and the list of keyboard shortcuts, how the event tool places events, or that it only selects them
-				{ ActionIds::EventsModePaint, NC_("editor", "Place Events by Clicking"), EventPlaceMode::Paint },
-				{ ActionIds::EventsModeRectangle, NC_("editor", "Place Events in a Rectangle"), EventPlaceMode::Rectangle },
-				{ ActionIds::EventsModeFill, NC_("editor", "Place Events by Filling an Area"), EventPlaceMode::Fill },
-				{ ActionIds::EventsModeSelect, NC_("editor", "Select Events Without Placing Them"), EventPlaceMode::Select },
+				{ ActionIds::EventsModePaint, _x("editor", "Place Events by Clicking"), EventPlaceMode::Paint },
+				{ ActionIds::EventsModeRectangle, _x("editor", "Place Events in a Rectangle"), EventPlaceMode::Rectangle },
+				{ ActionIds::EventsModeFill, _x("editor", "Place Events by Filling an Area"), EventPlaceMode::Fill },
+				{ ActionIds::EventsModeSelect, _x("editor", "Select Events Without Placing Them"), EventPlaceMode::Select },
 			};
 			for (const ModeChoice& choice : Modes) {
 				EventPlaceMode mode = choice.Mode;
-				auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::Event, [s, t, mode]() {
+				auto& action = a.Add(choice.Id, choice.Label, EditorIcon::Event, [s, t, mode]() {
 					t->EventMode = mode;
 					t->NotifyChanged();
 					s->GetTools().SetActive(EditorToolType::Event);
@@ -991,17 +987,17 @@ namespace Jazz2::Editor::ToolActions
 
 		// The jumps the measure tool shows
 		{
-			struct ArcChoice { const char* Id; const char* Label; std::uint8_t Arc; };
+			struct ArcChoice { const char* Id; String Label; std::uint8_t Arc; };
 			static const ArcChoice Arcs[] = {
 				// TRANSLATORS: Toggle commands, the jumps of the player the measure tool shows
-				{ ActionIds::MeasureWalk, NC_("editor", "Measure: Walking Jump"), ToolSettings::ArcWalk },
-				{ ActionIds::MeasureDash, NC_("editor", "Measure: Dashing Jump"), ToolSettings::ArcDash },
-				{ ActionIds::MeasureDoubleJump, NC_("editor", "Measure: Double Jump of Spaz"), ToolSettings::ArcDoubleJump },
-				{ ActionIds::MeasureCopter, NC_("editor", "Measure: Copter of Jazz"), ToolSettings::ArcCopter },
+				{ ActionIds::MeasureWalk, _x("editor", "Measure: Walking Jump"), ToolSettings::ArcWalk },
+				{ ActionIds::MeasureDash, _x("editor", "Measure: Dashing Jump"), ToolSettings::ArcDash },
+				{ ActionIds::MeasureDoubleJump, _x("editor", "Measure: Double Jump of Spaz"), ToolSettings::ArcDoubleJump },
+				{ ActionIds::MeasureCopter, _x("editor", "Measure: Copter of Jazz"), ToolSettings::ArcCopter },
 			};
 			for (const ArcChoice& choice : Arcs) {
 				std::uint8_t arc = choice.Arc;
-				auto& action = a.Add(choice.Id, _x("editor", choice.Label), EditorIcon::Measure, [t, arc]() {
+				auto& action = a.Add(choice.Id, choice.Label, EditorIcon::Measure, [t, arc]() {
 					t->ShownArcs ^= arc;
 					t->NotifyChanged();
 				});

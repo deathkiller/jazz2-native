@@ -356,9 +356,9 @@ namespace Jazz2::Editor
 				ApplyRandomCommand(random, history, changes);
 			}
 
-			String problem;
+			DocumentProblem problem;
 			if (!document.Validate(&problem)) {
-				LOGE("[{}] Document is not valid after random changes: {}", path, problem);
+				LOGE("[{}] Document is not valid after random changes: {}", path, LevelDocument::GetProblemDescription(problem));
 				return false;
 			}
 
@@ -2625,9 +2625,9 @@ namespace Jazz2::Editor
 				return TestResult::Failed;
 			}
 
-			String problem;
+			DocumentProblem problem;
 			if (!document.Validate(&problem)) {
-				LOGW("[{}] Document is not valid: {}", path, problem);
+				LOGW("[{}] Document is not valid: {}", path, LevelDocument::GetProblemDescription(problem));
 			}
 
 			for (const DocumentEvent& event : document.Events) {

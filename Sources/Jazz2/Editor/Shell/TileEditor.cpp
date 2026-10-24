@@ -1368,26 +1368,26 @@ namespace Jazz2::Editor
 		// What is painted, and with what
 		{
 			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			struct ModeOption { const char* Label; EditMode Mode; };
+			struct ModeOption { String Label; EditMode Mode; };
 			// TRANSLATORS: Buttons of the tile editor, what is painted, the pixels of the tile or its collision mask
-			static const ModeOption Modes[] = { { NC_("editor", "Pixels"), EditMode::Pixels }, { NC_("editor", "Mask"), EditMode::Mask } };
+			static const ModeOption Modes[] = { { _x("editor", "Pixels"), EditMode::Pixels }, { _x("editor", "Mask"), EditMode::Mask } };
 			for (const ModeOption& option : Modes) {
 				EditMode mode = option.Mode;
-				auto* button = row->Add<UiButton>(_x("editor", option.Label), mode == EditMode::Mask ? EditorIcon::Mask : EditorIcon::Tiles, [state, mode]() { state->Mode = mode; });
+				auto* button = row->Add<UiButton>(option.Label, mode == EditMode::Mask ? EditorIcon::Mask : EditorIcon::Tiles, [state, mode]() { state->Mode = mode; });
 				button->Style = UiButtonStyle::Flat;
 				button->IsCheckedFunc = [state, mode]() { return (state->Mode == mode); };
 			}
 			row->Add<UiSeparator>(UiOrientation::Vertical);
-			struct ToolOption { EditorIcon Icon; EditTool Tool; const char* Tooltip; };
+			struct ToolOption { EditorIcon Icon; EditTool Tool; String Tooltip; };
 			static const ToolOption Tools[] = {
 				// TRANSLATORS: Tooltips of the drawing tools of the tile editor, most start with the name of the tool
-				{ EditorIcon::Brush, EditTool::Pencil, NC_("editor", "Pencil - the right button erases") },
-				{ EditorIcon::Path, EditTool::Line, NC_("editor", "Line - the right button erases") },
-				{ EditorIcon::Rectangle, EditTool::Rectangle, NC_("editor", "Rectangle, filled with Shift - the right button erases") },
-				{ EditorIcon::Fill, EditTool::Fill, NC_("editor", "Fill - the right button erases") },
-				{ EditorIcon::Wand, EditTool::Replace, NC_("editor", "Replace a color everywhere in the tile - the right button erases it") },
-				{ EditorIcon::Select, EditTool::Select, NC_("editor", "Select pixels and drag them to move them - the right button clears them") },
-				{ EditorIcon::Eyedropper, EditTool::Eyedropper, NC_("editor", "Pick a color") },
+				{ EditorIcon::Brush, EditTool::Pencil, _x("editor", "Pencil - the right button erases") },
+				{ EditorIcon::Path, EditTool::Line, _x("editor", "Line - the right button erases") },
+				{ EditorIcon::Rectangle, EditTool::Rectangle, _x("editor", "Rectangle, filled with Shift - the right button erases") },
+				{ EditorIcon::Fill, EditTool::Fill, _x("editor", "Fill - the right button erases") },
+				{ EditorIcon::Wand, EditTool::Replace, _x("editor", "Replace a color everywhere in the tile - the right button erases it") },
+				{ EditorIcon::Select, EditTool::Select, _x("editor", "Select pixels and drag them to move them - the right button clears them") },
+				{ EditorIcon::Eyedropper, EditTool::Eyedropper, _x("editor", "Pick a color") },
 			};
 			for (const ToolOption& option : Tools) {
 				EditTool tool = option.Tool;
@@ -1398,7 +1398,7 @@ namespace Jazz2::Editor
 					}
 				});
 				button->Style = UiButtonStyle::Flat;
-				button->Tooltip = _x("editor", option.Tooltip);
+				button->Tooltip = option.Tooltip;
 				button->IsCheckedFunc = [state, tool]() { return (state->Tool == tool); };
 			}
 		}
@@ -1406,15 +1406,15 @@ namespace Jazz2::Editor
 		// Moving the whole tile, the pixels and the mask together, so the collision stays where the picture is
 		{
 			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			struct TransformOption { EditorIcon Icon; const char* Text; const char* Tooltip; std::int32_t Kind; };
+			struct TransformOption { EditorIcon Icon; const char* Text; String Tooltip; std::int32_t Kind; };
 			static const TransformOption Transforms[] = {
-				{ EditorIcon::FlipX, nullptr, NC_("editor", "Flip horizontally"), 0 },
-				{ EditorIcon::FlipY, nullptr, NC_("editor", "Flip vertically"), 1 },
-				{ EditorIcon::Redo, nullptr, NC_("editor", "Rotate clockwise"), 2 },
-				{ EditorIcon::ChevronLeft, nullptr, NC_("editor", "Shift a pixel to the left, what goes out comes back on the other side"), 3 },
-				{ EditorIcon::ChevronRight, nullptr, NC_("editor", "Shift a pixel to the right, what goes out comes back on the other side"), 4 },
-				{ EditorIcon::ArrowUp, nullptr, NC_("editor", "Shift a pixel up, what goes out comes back on the other side"), 5 },
-				{ EditorIcon::ArrowDown, nullptr, NC_("editor", "Shift a pixel down, what goes out comes back on the other side"), 6 },
+				{ EditorIcon::FlipX, nullptr, _x("editor", "Flip horizontally"), 0 },
+				{ EditorIcon::FlipY, nullptr, _x("editor", "Flip vertically"), 1 },
+				{ EditorIcon::Redo, nullptr, _x("editor", "Rotate clockwise"), 2 },
+				{ EditorIcon::ChevronLeft, nullptr, _x("editor", "Shift a pixel to the left, what goes out comes back on the other side"), 3 },
+				{ EditorIcon::ChevronRight, nullptr, _x("editor", "Shift a pixel to the right, what goes out comes back on the other side"), 4 },
+				{ EditorIcon::ArrowUp, nullptr, _x("editor", "Shift a pixel up, what goes out comes back on the other side"), 5 },
+				{ EditorIcon::ArrowDown, nullptr, _x("editor", "Shift a pixel down, what goes out comes back on the other side"), 6 },
 			};
 			for (const TransformOption& option : Transforms) {
 				std::int32_t kind = option.Kind;
@@ -1433,7 +1433,7 @@ namespace Jazz2::Editor
 					}
 				});
 				button->Style = UiButtonStyle::Flat;
-				button->Tooltip = _x("editor", option.Tooltip);
+				button->Tooltip = option.Tooltip;
 			}
 			row->Add<UiSeparator>(UiOrientation::Vertical);
 			auto* neighbors = row->Add<UiButton>(StringView(), EditorIcon::Grid, [state]() { state->ShowNeighbors = !state->ShowNeighbors; });

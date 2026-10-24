@@ -445,19 +445,19 @@ namespace Jazz2::Editor
 		auto* content = dialog->GetContent();
 
 		// What isn't an action, so isn't in the list, in rows as the list has them
-		struct MouseHint { const char* Action; const char* Input; };
+		struct MouseHint { String Action; String Input; };
 		static const MouseHint MouseHints[] = {
 			// TRANSLATORS: Rows above the list of the Keyboard Shortcuts dialog, what is done (verbs) and by which mouse input
-			{ NC_("editor", "Zoom"), NC_("editor", "Mouse wheel") },
-			{ NC_("editor", "Move the view"), NC_("editor", "Middle drag, Space + drag") },
-			{ NC_("editor", "Pick what's under the pointer"), NC_("editor", "Alt + click") },
-			{ NC_("editor", "Erase or pick"), NC_("editor", "Right button") },
+			{ _x("editor", "Zoom"), _x("editor", "Mouse wheel") },
+			{ _x("editor", "Move the view"), _x("editor", "Middle drag, Space + drag") },
+			{ _x("editor", "Pick what's under the pointer"), _x("editor", "Alt + click") },
+			{ _x("editor", "Erase or pick"), _x("editor", "Right button") },
 		};
 		auto* hints = content->Add<UiStack>(UiOrientation::Vertical, 1.0f);
 		for (const MouseHint& hint : MouseHints) {
 			auto* row = hints->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			row->Add<UiLabel>(_x("editor", hint.Action), UiTheme::TextDim)->Flex = 1.0f;
-			row->Add<UiLabel>(_x("editor", hint.Input), UiTheme::TextDim, Alignment::Right);
+			row->Add<UiLabel>(hint.Action, UiTheme::TextDim)->Flex = 1.0f;
+			row->Add<UiLabel>(hint.Input, UiTheme::TextDim, Alignment::Right);
 		}
 
 		// A name to look for, or the keys of a shortcut ("Ctrl+S"), typed or pressed
@@ -483,16 +483,17 @@ namespace Jazz2::Editor
 		keymapRow->Add<UiLabel>(_x("editor", "Shortcuts like"), UiTheme::TextDim);
 		// TRANSLATORS: Text of the choice of shortcuts like those of another level editor in the Keyboard Shortcuts dialog (verb)
 		auto* presets = keymapRow->Add<UiDropdown>([]() { return String(_x("editor", "Choose")); }, [s, fill, search](SmallVectorImpl<UiMenuEntry>& entries) {
-			struct PresetChoice { const char* Label; KeymapPreset Preset; };
+			struct PresetChoice { String Label; KeymapPreset Preset; };
 			static const PresetChoice Choices[] = {
-				// TRANSLATORS: Level editors whose shortcuts can be chosen in the Keyboard Shortcuts dialog, the first one is this editor, the others are names of programs
-				{ NC_("editor", "This Editor"), KeymapPreset::Default },
-				{ NC_("editor", "Jazz Creation Station"), KeymapPreset::Jcs },
-				{ NC_("editor", "MLLE"), KeymapPreset::Mlle },
+				// TRANSLATORS: Level editor whose shortcuts can be chosen in the Keyboard Shortcuts dialog, this one, the others are names of programs
+				{ _x("editor", "This Editor"), KeymapPreset::Default },
+				// Names of programs aren't translated
+				{ "Jazz Creation Station", KeymapPreset::Jcs },
+				{ "MLLE", KeymapPreset::Mlle },
 			};
 			for (const PresetChoice& choice : Choices) {
 				UiMenuEntry entry;
-				entry.Label = _x("editor", choice.Label);
+				entry.Label = choice.Label;
 				KeymapPreset preset = choice.Preset;
 				entry.Execute = [s, fill, search, preset]() {
 					UiSurface* surface = s->GetSurface();

@@ -96,6 +96,9 @@
     <ClCompile Include="CartridgeImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ContentFilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="DiscImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -258,6 +261,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CartridgeImage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ContentFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DiscImage.h">
