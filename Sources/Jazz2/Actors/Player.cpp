@@ -3737,6 +3737,11 @@ namespace Jazz2::Actors
 			case ShieldType::Fire: {
 				auto* res = _metadata->FindAnimation(ShieldFire);
 				if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
+					// The fixed-function tier draws the noise itself, over coordinates that run across several tiles
+					if (res->Base->TextureDiffuse->GetWrap() != SamplerWrapping::Repeat) {
+						res->Base->TextureDiffuse->SetWrap(SamplerWrapping::Repeat);
+					}
+
 					constexpr float PosMultiplier = 0.003f;
 					float frames = elapsedFrames;
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
@@ -3873,6 +3878,11 @@ namespace Jazz2::Actors
 			case ShieldType::Lightning: {
 				auto* res = _metadata->FindAnimation(ShieldLightning);
 				if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
+					// The fixed-function tier draws the noise itself, over coordinates that run across several tiles
+					if (res->Base->TextureDiffuse->GetWrap() != SamplerWrapping::Repeat) {
+						res->Base->TextureDiffuse->SetWrap(SamplerWrapping::Repeat);
+					}
+
 					constexpr float PosMultiplier = 0.001f;
 					float frames = elapsedFrames;
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);

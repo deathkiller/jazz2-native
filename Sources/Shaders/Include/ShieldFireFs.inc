@@ -52,14 +52,32 @@ void fragment() {
 	}
 }
 
-void fixed_function() {
+void fixed_function(pvr) {
 	// Console fixed-function tier (shared by ShieldFire and BatchedShieldFire exactly like the fragment
-	// stage above): color = (scaleX, scaleY, darkness, alpha). The animated noise sphere is out of
-	// reach without fragment shaders, so the shield becomes a flat glow in its own colour - the sprite
-	// modulated to black at half alpha, lifted to the fire palette by the offset colour
-	float darkness = COLOR.b;
-	pass p;
-	p.color = vec4(0.0, 0.0, 0.0, COLOR.a * 0.5);
-	p.offset_color = vec3(darkness, darkness * 0.45, darkness * 0.1);
-	submit_quad(p);
+	// stage above): the sphere is rebuilt out of shaded rings and the noise texture, see ShieldFixedFunction.inc
+	//
+	// The PVR's strip scratch holds 8 vertices
+	#define SHIELD_NOISE
+	#define SHIELD_STRIP_SEGMENTS 3
+	#define SHIELD_STRIPS 6
+	#include "ShieldFixedFunction.inc"
+}
+
+void fixed_function(gx, pica, gu, gs) {
+	#define SHIELD_NOISE
+	#include "ShieldFixedFunction.inc"
+}
+
+void fixed_function(legacygl) {
+	// Rings only: the texture passes would be drawn by the CPU on most of the machines it runs on
+	#include "ShieldFixedFunction.inc"
+}
+
+void fixed_function(rdp) {
+	// Every shaded triangle costs the RDP tens of microseconds, so it gets one ring of 8 segments (and the
+	// noise texture would not fit its texture memory to repeat anyway)
+	#define SHIELD_LITE
+	#define SHIELD_STRIP_SEGMENTS 4
+	#define SHIELD_STRIPS 2
+	#include "ShieldFixedFunction.inc"
 }

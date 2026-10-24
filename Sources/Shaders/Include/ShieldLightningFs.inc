@@ -49,12 +49,36 @@ void fragment() {
 	}
 }
 
-void fixed_function() {
-	// Console fixed-function tier (shared by ShieldLightning and BatchedShieldLightning exactly like
-	// the fragment stage above): as ShieldFireFs.inc, in the lightning shield's blue
-	float darkness = COLOR.b;
-	pass p;
-	p.color = vec4(0.0, 0.0, 0.0, COLOR.a * 0.5);
-	p.offset_color = vec3(darkness * 0.6, darkness * 0.8, darkness);
-	submit_quad(p);
+void fixed_function(pvr) {
+	// Console fixed-function tier (shared by ShieldLightning and BatchedShieldLightning exactly like the fragment
+	// stage above): the sphere is rebuilt out of shaded rings and the noise texture, see ShieldFixedFunction.inc
+	//
+	// The PVR's strip scratch holds 8 vertices
+	#define SHIELD_LIGHTNING
+	#define SHIELD_NOISE
+	#define SHIELD_STRIP_SEGMENTS 3
+	#define SHIELD_STRIPS 6
+	#include "ShieldFixedFunction.inc"
+}
+
+void fixed_function(gx, pica, gu, gs) {
+	#define SHIELD_LIGHTNING
+	#define SHIELD_NOISE
+	#include "ShieldFixedFunction.inc"
+}
+
+void fixed_function(legacygl) {
+	// Rings only: the texture passes would be drawn by the CPU on most of the machines it runs on
+	#define SHIELD_LIGHTNING
+	#include "ShieldFixedFunction.inc"
+}
+
+void fixed_function(rdp) {
+	// Every shaded triangle costs the RDP tens of microseconds, so it gets one ring of 8 segments (and the
+	// noise texture would not fit its texture memory to repeat anyway)
+	#define SHIELD_LIGHTNING
+	#define SHIELD_LITE
+	#define SHIELD_STRIP_SEGMENTS 4
+	#define SHIELD_STRIPS 2
+	#include "ShieldFixedFunction.inc"
 }

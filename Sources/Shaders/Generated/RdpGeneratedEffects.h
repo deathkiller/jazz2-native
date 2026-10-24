@@ -384,32 +384,122 @@ namespace nCine::RHI::RDP
 			}
 		}
 
-		// BatchedShieldFire - from BatchedShieldFire.shader:fixed_function()
-		// Shared by: BatchedShieldFire, ShieldFire [ShieldFire.shader:fixed_function()]
+		// BatchedShieldFire - from BatchedShieldFire.shader:fixed_function(rdp)
+		// Shared by: BatchedShieldFire, ShieldFire [ShieldFire.shader:fixed_function(rdp)]
 		void BatchedShieldFire_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
+			StripReset();
 			const vec4 COLOR = LoadColor(ctx.Color());
 			float darkness = COLOR.z;
+			float alpha = COLOR.w;
+			vec3 baseColor = vec3(1.0f, 0.3f, 0.0f);
+			vec2 halfX = 0.5f * vec2(ctx.QuadAxisXx(), ctx.QuadAxisXy());
+			vec2 halfY = 0.5f * vec2(ctx.QuadAxisYx(), ctx.QuadAxisYy());
+			vec2 centre = vec2(ctx.QuadOriginX(), ctx.QuadOriginY()) + halfX + halfY;
+			vec4 shift = vec4(ctx.TexRect[0], ctx.TexRect[1], ctx.TexRect[2], ctx.TexRect[3]);
+			float segmentCount = float(2 * 4);
+			float stepCos = cos(6.28318530718f / segmentCount);
+			float stepSin = sin(6.28318530718f / segmentCount);
 			FixedFunctionPass p;
-			Store(p.Color, vec4(0.0f, 0.0f, 0.0f, COLOR.w * 0.5f));
-			Store(p.OffsetColor, vec3(darkness, darkness * 0.45f, darkness * 0.1f));
-			p.HasOffsetColor = true;
-			ctx.SubmitQuad(p);
+			for (int ring = 0; ring < 1; ring++) {
+				vec2 stripDir = vec2(1.0f, 0.0f);
+				vec2 dir = stripDir;
+				for (int s = 0; s < 2; s++) {
+					for (int layer = 0; layer < 1; layer++) {
+						dir = stripDir;
+						for (int j = 0; j <= 4; j++) {
+							float u = float(s * 4 + j) / segmentCount;
+							vec4 ph = vec4(u * 2.0f + shift.x * 2.0f, u * 3.0f - shift.y * 2.0f, u * 3.0f + shift.z, u * 2.0f - shift.w * 2.0f);
+							ph = (ph - floor(ph)) * 2.0f - 1.0f;
+							vec4 wave = 4.0f * ph * (1.0f - vec4(abs(ph.x), abs(ph.y), abs(ph.z), abs(ph.w)));
+							float flickerInner = clamp(0.5f + 0.3f * (wave.x + wave.y), 0.0f, 1.0f);
+							float flickerOuter = clamp(0.5f + 0.3f * (wave.z + wave.w), 0.0f, 1.0f);
+							for (int e = 0; e < 2; e++) {
+								int boundary = ring + e;
+								float radius = 0.0f;
+								float white = 0.0f;
+								float a = 0.0f;
+								if (boundary == 0) {
+									white = 0.15f;
+									a = 0.38f;
+								} else {
+									radius = 0.96f;
+									white = 0.3f * flickerInner;
+									a = 0.15f + 0.15f * flickerOuter;
+								}
+								vec2 local = radius * dir;
+								StripPosition(ctx, 2 * j + e, centre + local.x * halfX + local.y * halfY);
+								StripColor(ctx, 2 * j + e, vec4(mix(baseColor, vec3(1.0f, 1.0f, 1.0f), white) * darkness, a * alpha));
+							}
+							if (j < 4) {
+								dir = vec2(dir.x * stepCos - dir.y * stepSin, dir.x * stepSin + dir.y * stepCos);
+							}
+						}
+						SubmitStripShaded(ctx, p, 2 * 4 + 2);
+					}
+					stripDir = dir;
+				}
+			}
 		}
 
-		// BatchedShieldLightning - from BatchedShieldLightning.shader:fixed_function()
-		// Shared by: BatchedShieldLightning, ShieldLightning [ShieldLightning.shader:fixed_function()]
+		// BatchedShieldLightning - from BatchedShieldLightning.shader:fixed_function(rdp)
+		// Shared by: BatchedShieldLightning, ShieldLightning [ShieldLightning.shader:fixed_function(rdp)]
 		void BatchedShieldLightning_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
+			StripReset();
 			const vec4 COLOR = LoadColor(ctx.Color());
 			float darkness = COLOR.z;
+			float alpha = COLOR.w;
+			vec3 baseColor = vec3(0.1f, 1.0f, 0.0f);
+			vec2 halfX = 0.5f * vec2(ctx.QuadAxisXx(), ctx.QuadAxisXy());
+			vec2 halfY = 0.5f * vec2(ctx.QuadAxisYx(), ctx.QuadAxisYy());
+			vec2 centre = vec2(ctx.QuadOriginX(), ctx.QuadOriginY()) + halfX + halfY;
+			vec4 shift = vec4(ctx.TexRect[0], ctx.TexRect[1], ctx.TexRect[2], ctx.TexRect[3]);
+			float segmentCount = float(2 * 4);
+			float stepCos = cos(6.28318530718f / segmentCount);
+			float stepSin = sin(6.28318530718f / segmentCount);
 			FixedFunctionPass p;
-			Store(p.Color, vec4(0.0f, 0.0f, 0.0f, COLOR.w * 0.5f));
-			Store(p.OffsetColor, vec3(darkness * 0.6f, darkness * 0.8f, darkness));
-			p.HasOffsetColor = true;
-			ctx.SubmitQuad(p);
+			for (int ring = 0; ring < 1; ring++) {
+				vec2 stripDir = vec2(1.0f, 0.0f);
+				vec2 dir = stripDir;
+				for (int s = 0; s < 2; s++) {
+					for (int layer = 0; layer < 1; layer++) {
+						dir = stripDir;
+						for (int j = 0; j <= 4; j++) {
+							float u = float(s * 4 + j) / segmentCount;
+							vec4 ph = vec4(u * 2.0f + shift.x * 2.0f, u * 3.0f - shift.y * 2.0f, u * 3.0f + shift.z, u * 2.0f - shift.w * 2.0f);
+							ph = (ph - floor(ph)) * 2.0f - 1.0f;
+							vec4 wave = 4.0f * ph * (1.0f - vec4(abs(ph.x), abs(ph.y), abs(ph.z), abs(ph.w)));
+							float flickerInner = clamp(0.5f + 0.3f * (wave.x + wave.y), 0.0f, 1.0f);
+							float flickerOuter = clamp(0.5f + 0.3f * (wave.z + wave.w), 0.0f, 1.0f);
+							for (int e = 0; e < 2; e++) {
+								int boundary = ring + e;
+								float radius = 0.0f;
+								float white = 0.0f;
+								float a = 0.0f;
+								if (boundary == 0) {
+									white = 0.1f;
+									a = 0.22f;
+								} else {
+									radius = 0.96f;
+									white = 0.6f + 0.4f * flickerInner;
+									a = 0.25f + 0.2f * flickerOuter;
+								}
+								vec2 local = radius * dir;
+								StripPosition(ctx, 2 * j + e, centre + local.x * halfX + local.y * halfY);
+								StripColor(ctx, 2 * j + e, vec4(mix(baseColor, vec3(1.0f, 1.0f, 1.0f), white) * darkness, a * alpha));
+							}
+							if (j < 4) {
+								dir = vec2(dir.x * stepCos - dir.y * stepSin, dir.x * stepSin + dir.y * stepCos);
+							}
+						}
+						SubmitStripShaded(ctx, p, 2 * 4 + 2);
+					}
+					stripDir = dir;
+				}
+			}
 		}
 
 		// Colorized - from Colorized.shader:fixed_function(rdp)
@@ -1264,8 +1354,8 @@ namespace nCine::RHI::RDP
 		}
 
 		constexpr FixedFunctionGeneratedEffect FixedFunctionGeneratedEffects[] = {
-			{ "BatchedShieldFire", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
-			{ "BatchedShieldLightning", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
+			{ "BatchedShieldFire", "", false, FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
+			{ "BatchedShieldLightning", "", false, FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
 			{ "Colorized", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Colorized_Effect },
 			{ "BatchedColorized", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Colorized_Effect },
 			{ "Combine", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
@@ -1290,8 +1380,8 @@ namespace nCine::RHI::RDP
 			{ "PartialWhiteMask", "USE_PALETTE", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
 			{ "BatchedPartialWhiteMask", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
 			{ "BatchedPartialWhiteMask", "USE_PALETTE", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
-			{ "ShieldFire", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
-			{ "ShieldLightning", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
+			{ "ShieldFire", "", false, FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
+			{ "ShieldLightning", "", false, FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
 			{ "SingleColor", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &SingleColor_Effect },
 			{ "SingleColor", "USE_PALETTE", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &SingleColor_Effect },
 			{ "BatchedSingleColor", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &SingleColor_Effect },
