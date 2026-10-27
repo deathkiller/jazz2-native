@@ -986,7 +986,7 @@ namespace Jazz2::Editor
 			}
 
 			Json::Value value(Json::objectValue);
-			value["Original"] = number;
+			value["Original"] = Json::Int(number);
 			value["Name"] = std::string_view(fields[0].data(), fields[0].size());
 			if (fields.size() > 2) {
 				value["Category"] = MapMlleCategory(fields[2]);
@@ -1027,7 +1027,7 @@ namespace Jazz2::Editor
 				}
 				std::int32_t bits = ParseMlleNumber(spec.trimmed());
 				if (bits > 0) {
-					param["Bits"] = bits;
+					param["Bits"] = Json::Int(bits);
 				}
 			}
 			added += AddExtension(value, source, scope);
