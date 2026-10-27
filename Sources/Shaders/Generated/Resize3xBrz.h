@@ -28,8 +28,6 @@ out vec4 vTexCoords5;
 out vec4 vTexCoords6;
 out vec4 vTexCoords7;
 
-// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -59,13 +57,13 @@ void main()
 	vec2 texCoord = aPosition + vec2(0.0000001, 0.0000001);
 
 	vPixelCoords = texCoord * texRect.xy;
-	vTexCoords1 = texCoord.xxxy + vec4( -dx, 0, dx, -2.0*dy);  // A1 B1 C1
-	vTexCoords2 = texCoord.xxxy + vec4( -dx, 0, dx, -dy);      // A  B  C
-	vTexCoords3 = texCoord.xxxy + vec4( -dx, 0, dx, 0);        // D  E  F
-	vTexCoords4 = texCoord.xxxy + vec4( -dx, 0, dx, dy);       // G  H  I
-	vTexCoords5 = texCoord.xxxy + vec4( -dx, 0, dx, 2.0*dy);   // G5 H5 I5
-	vTexCoords6 = texCoord.xyyy + vec4(-2.0*dx, -dy, 0, dy);   // A0 D0 G0
-	vTexCoords7 = texCoord.xyyy + vec4( 2.0*dx, -dy, 0, dy);   // C4 F4 I4
+	vTexCoords1 = texCoord.xxxy + vec4( -dx, 0, dx, -2.0*dy);
+	vTexCoords2 = texCoord.xxxy + vec4( -dx, 0, dx, -dy);
+	vTexCoords3 = texCoord.xxxy + vec4( -dx, 0, dx, 0);
+	vTexCoords4 = texCoord.xxxy + vec4( -dx, 0, dx, dy);
+	vTexCoords5 = texCoord.xxxy + vec4( -dx, 0, dx, 2.0*dy);
+	vTexCoords6 = texCoord.xyyy + vec4(-2.0*dx, -dy, 0, dy);
+	vTexCoords7 = texCoord.xyyy + vec4( 2.0*dx, -dy, 0, dy);
 }
 )__SHDR__";
 #endif
@@ -83,8 +81,6 @@ varying vec4 vTexCoords4;
 varying vec4 vTexCoords5;
 varying vec4 vTexCoords6;
 varying vec4 vTexCoords7;
-
-// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -112,13 +108,13 @@ void main()
 	vec2 texCoord = aPosition + vec2(0.0000001, 0.0000001);
 
 	vPixelCoords = texCoord * texRect.xy;
-	vTexCoords1 = texCoord.xxxy + vec4( -dx, 0, dx, -2.0*dy);  // A1 B1 C1
-	vTexCoords2 = texCoord.xxxy + vec4( -dx, 0, dx, -dy);      // A  B  C
-	vTexCoords3 = texCoord.xxxy + vec4( -dx, 0, dx, 0);        // D  E  F
-	vTexCoords4 = texCoord.xxxy + vec4( -dx, 0, dx, dy);       // G  H  I
-	vTexCoords5 = texCoord.xxxy + vec4( -dx, 0, dx, 2.0*dy);   // G5 H5 I5
-	vTexCoords6 = texCoord.xyyy + vec4(-2.0*dx, -dy, 0, dy);   // A0 D0 G0
-	vTexCoords7 = texCoord.xyyy + vec4( 2.0*dx, -dy, 0, dy);   // C4 F4 I4
+	vTexCoords1 = texCoord.xxxy + vec4( -dx, 0, dx, -2.0*dy);
+	vTexCoords2 = texCoord.xxxy + vec4( -dx, 0, dx, -dy);
+	vTexCoords3 = texCoord.xxxy + vec4( -dx, 0, dx, 0);
+	vTexCoords4 = texCoord.xxxy + vec4( -dx, 0, dx, dy);
+	vTexCoords5 = texCoord.xxxy + vec4( -dx, 0, dx, 2.0*dy);
+	vTexCoords6 = texCoord.xyyy + vec4(-2.0*dx, -dy, 0, dy);
+	vTexCoords7 = texCoord.xyyy + vec4( 2.0*dx, -dy, 0, dy);
 }
 )__SHDR__";
 #endif
@@ -128,11 +124,11 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#	ifdef GL_FRAGMENT_PRECISION_HIGH
+#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#	else
+#else
 precision mediump float;
-#	endif
+#endif
 #endif
 
 in vec2 vPixelCoords;
@@ -143,8 +139,6 @@ in vec4 vTexCoords4;
 in vec4 vTexCoords5;
 in vec4 vTexCoords6;
 in vec4 vTexCoords7;
-
-// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
 
 layout (std140) uniform InstanceBlock
 {
@@ -298,7 +292,6 @@ void main() {
 	dst[7] = src[0];
 	dst[8] = src[0];
 
-	// Scale pixel
 	if (IsBlendingNeeded(blendResult)) {
 		vec3 k[9];
 		vec3 tempDst8;
@@ -401,11 +394,11 @@ void main() {
 	inline constexpr char Resize3xBrz_Fs100[] =
 R"__SHDR__(#line 1
 
-#	ifdef GL_FRAGMENT_PRECISION_HIGH
+#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#	else
+#else
 precision mediump float;
-#	endif
+#endif
 
 varying vec2 vPixelCoords;
 varying vec4 vTexCoords1;
@@ -415,8 +408,6 @@ varying vec4 vTexCoords4;
 varying vec4 vTexCoords5;
 varying vec4 vTexCoords6;
 varying vec4 vTexCoords7;
-
-// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
 
 	uniform mat4 modelMatrix;
 	uniform vec4 color;
@@ -567,7 +558,6 @@ void main() {
 	dst[7] = src[0];
 	dst[8] = src[0];
 
-	// Scale pixel
 	if (IsBlendingNeeded(blendResult)) {
 		vec3 k[9];
 		vec3 tempDst8;

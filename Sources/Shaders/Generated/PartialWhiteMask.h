@@ -28,8 +28,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -62,8 +60,6 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
@@ -178,8 +174,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -212,8 +206,6 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
@@ -402,14 +394,13 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 layout (std140) uniform InstancesBlock
 {
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	Instance[BATCH_SIZE] instances;
 } block;
@@ -448,12 +439,11 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	uniform Instance instances[BATCH_SIZE];
 
@@ -567,14 +557,13 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 layout (std140) uniform InstancesBlock
 {
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	Instance[BATCH_SIZE] instances;
 } block;
@@ -613,12 +602,11 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	uniform Instance instances[BATCH_SIZE];
 

@@ -728,6 +728,12 @@ namespace ShaderCompiler
 		// regenerate the same GLSL. Dead-store removal (step 3.13) supersedes exact byte-identity for
 		// programs with TRIMMED varyings: their epilogue stores and declarations disappear. Programs
 		// whose fragment stage reads all three template varyings still emit this text verbatim.
+		//
+		// The templates carry no GLSL comments, as no emitted source does (see ParseDocuments()):
+		// palOffset is a flat index into the palette texture (added to the per-pixel index for the
+		// palette lookup), it lands in the std140 tail padding after spriteSize, so the block (or the
+		// stride of an instance) stays 112 bytes - only palette shaders read it. The BATCH_SIZE
+		// fallback is the 64 KB uniform block budget divided by those 112 bytes.
 
 		constexpr char CanvasSpriteVsHead[] =
 R"GLSL(uniform mat4 uProjectionMatrix;
@@ -739,8 +745,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -759,14 +763,13 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 layout (std140) uniform InstancesBlock
 {
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	Instance[BATCH_SIZE] instances;
 } block;
@@ -4756,11 +4759,31 @@ R"GLSL(void main()
 	{
 		SmallVector<SourceLine, 0> lines;
 		SplitLines(content, lines);
-		SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
-		StripComments(stripped);
+
+		// Comments never reach the emitted sources - the lines only a comment was on are dropped, trailing
+		// whitespace is trimmed and a run of blank lines is collapsed into one (SourceLine::Line keeps
+		// the diagnostics pointing into the original file)
+		{
+			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
+			StripComments(stripped);
+			std::size_t count = 0;
+			bool previousBlank = true;
+			for (std::size_t i = 0; i < stripped.size(); i++) {
+				String text = TrimRight(stripped[i].Text);
+				bool blank = text.empty();
+				if (blank && (previousBlank || FindFirstNotOf(lines[i].Text, " \t") != Npos)) {
+					continue;
+				}
+				lines[count].Text = Death::move(text);
+				lines[count].Line = stripped[i].Line;
+				count++;
+				previousBlank = blank;
+			}
+			lines.truncate(count);
+		}
 
 		ParsedShader src;
-		if (!ParseShaderSource(lines, stripped, src, diag)) {
+		if (!ParseShaderSource(lines, lines, src, diag)) {
 			return false;
 		}
 

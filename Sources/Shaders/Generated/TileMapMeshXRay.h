@@ -31,15 +31,6 @@ out vec2 vWeights;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -53,8 +44,6 @@ layout (std140) uniform InstanceBlock
 };
 
 
-
-// One over the size of the target being drawn into, which the mask has too
 
 void main()
 {
@@ -84,15 +73,6 @@ varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -103,8 +83,6 @@ uniform mat4 uViewMatrix;
 	uniform float palOffset;
 
 
-
-// One over the size of the target being drawn into, which the mask has too
 
 void main()
 {
@@ -136,15 +114,6 @@ in vec2 vWeights;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
-
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -158,7 +127,6 @@ layout (std140) uniform InstanceBlock
 
 uniform sampler2D uTexture;
 uniform sampler2D uTextureMask;
-// One over the size of the target being drawn into, which the mask has too
 uniform vec2 uTargetSizeInv;
 
 vec4 tileSample(vec2 uv) {
@@ -171,11 +139,8 @@ out vec4 COLOR;
 void main() {
 	vec4 frame0 = tileSample(vTexCoords);
 	vec4 frame1 = tileSample(vTexCoords1);
-	// Mixed premultiplied, so a partly covered pixel blends the two frames instead of darkening towards the
-	// black of the empty one
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
-	// The mask and the target are the same size, so the fragment's own position is its texel in the mask
 	float mask = texture(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
 	vec4 tile = mix(frame0, frame1, mask);
 	COLOR = vec4(tile.rgb * vColor.rgb, tile.a) * vColor.a;
@@ -200,15 +165,6 @@ varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
-
 	uniform mat4 modelMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
@@ -219,7 +175,6 @@ varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
 uniform sampler2D uTextureMask;
-// One over the size of the target being drawn into, which the mask has too
 uniform vec2 uTargetSizeInv;
 
 vec4 tileSample(vec2 uv) {
@@ -232,11 +187,8 @@ void main() {
 	vec4 COLOR;
 	vec4 frame0 = tileSample(vTexCoords);
 	vec4 frame1 = tileSample(vTexCoords1);
-	// Mixed premultiplied, so a partly covered pixel blends the two frames instead of darkening towards the
-	// black of the empty one
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
-	// The mask and the target are the same size, so the fragment's own position is its texel in the mask
 	float mask = texture2D(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
 	vec4 tile = mix(frame0, frame1, mask);
 	COLOR = vec4(tile.rgb * vColor.rgb, tile.a) * vColor.a;
@@ -293,15 +245,6 @@ out vec2 vWeights;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -317,7 +260,6 @@ layout (std140) uniform InstanceBlock
 
 
 uniform sampler2D uTexturePalette;
-// One over the size of the target being drawn into, which the mask has too
 
 void main()
 {
@@ -347,15 +289,6 @@ varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -368,7 +301,6 @@ uniform mat4 uViewMatrix;
 
 
 uniform sampler2D uTexturePalette;
-// One over the size of the target being drawn into, which the mask has too
 
 void main()
 {
@@ -400,15 +332,6 @@ in vec2 vWeights;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
-
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -423,7 +346,6 @@ layout (std140) uniform InstanceBlock
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 uniform sampler2D uTextureMask;
-// One over the size of the target being drawn into, which the mask has too
 uniform vec2 uTargetSizeInv;
 
 vec4 tileSample(vec2 uv) {
@@ -440,11 +362,8 @@ out vec4 COLOR;
 void main() {
 	vec4 frame0 = tileSample(vTexCoords);
 	vec4 frame1 = tileSample(vTexCoords1);
-	// Mixed premultiplied, so a partly covered pixel blends the two frames instead of darkening towards the
-	// black of the empty one
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
-	// The mask and the target are the same size, so the fragment's own position is its texel in the mask
 	float mask = texture(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
 	vec4 tile = mix(frame0, frame1, mask);
 	COLOR = vec4(tile.rgb * vColor.rgb, tile.a) * vColor.a;
@@ -469,15 +388,6 @@ varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
-
 	uniform mat4 modelMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
@@ -489,7 +399,6 @@ varying highp float vPaletteOffset;
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 uniform sampler2D uTextureMask;
-// One over the size of the target being drawn into, which the mask has too
 uniform vec2 uTargetSizeInv;
 
 vec4 tileSample(vec2 uv) {
@@ -506,11 +415,8 @@ void main() {
 	vec4 COLOR;
 	vec4 frame0 = tileSample(vTexCoords);
 	vec4 frame1 = tileSample(vTexCoords1);
-	// Mixed premultiplied, so a partly covered pixel blends the two frames instead of darkening towards the
-	// black of the empty one
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
-	// The mask and the target are the same size, so the fragment's own position is its texel in the mask
 	float mask = texture2D(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
 	vec4 tile = mix(frame0, frame1, mask);
 	COLOR = vec4(tile.rgb * vColor.rgb, tile.a) * vColor.a;

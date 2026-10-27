@@ -27,9 +27,6 @@ out vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -67,9 +64,6 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -97,19 +91,16 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#	ifdef GL_FRAGMENT_PRECISION_HIGH
+#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#	else
+#else
 precision mediump float;
-#	endif
+#endif
 #endif
 
 in vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
-
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
 
 layout (std140) uniform InstanceBlock
 {
@@ -130,7 +121,6 @@ out vec4 COLOR;
 
 void main() {
 	vec4 src = texture(uTexture, vTexCoords);
-	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
@@ -145,18 +135,15 @@ void main() {
 	inline constexpr char TileMapMeshPalette_Fs100[] =
 R"__SHDR__(#line 1
 
-#	ifdef GL_FRAGMENT_PRECISION_HIGH
+#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#	else
+#else
 precision mediump float;
-#	endif
+#endif
 
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
-
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
 
 	uniform mat4 modelMatrix;
 	uniform vec4 color;
@@ -174,7 +161,6 @@ uniform sampler2D uTexturePalette;
 void main() {
 	vec4 COLOR;
 	vec4 src = texture2D(uTexture, vTexCoords);
-	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;

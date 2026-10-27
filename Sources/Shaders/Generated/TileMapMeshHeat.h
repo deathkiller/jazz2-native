@@ -29,15 +29,6 @@ out vec3 vHeat;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -51,8 +42,6 @@ layout (std140) uniform InstanceBlock
 };
 
 
-
-// How many rows the table has scrolled, 0 to 31
 
 void main()
 {
@@ -79,15 +68,6 @@ varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -98,8 +78,6 @@ uniform mat4 uViewMatrix;
 	uniform float palOffset;
 
 
-
-// How many rows the table has scrolled, 0 to 31
 
 void main()
 {
@@ -129,22 +107,9 @@ in vec3 vHeat;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
-
 uniform sampler2D uTexture;
-// How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
-// How far the row k of the table (0 to 31) is taken from the right, in pixels: the table as the sum of its steps, so it
-// needs neither an array nor a texture - 0, 1, 1, 2, 2, -1, -1, 0, -2, 1, 0, 0, 0, -1, -1, -2, -2, -1, 1, 2, 1, -1, -1,
-// 0, 0, 1, 1, 0, -1, -2, -1, 0
 float heatShift(float k) {
 	vec4 row = vec4(k);
 	return dot(vec4(1.0, 1.0, -3.0, 1.0), step(vec4(1.0, 3.0, 5.0, 7.0), row)) +
@@ -159,7 +124,6 @@ out vec4 COLOR;
 
 void main() {
 	float shift = heatShift(mod(floor(vHeat.y) + uHeatPhase, 32.0));
-	// The pixel of the tile this one shows, nothing where the row moved away from it
 	float source = vHeat.x + shift;
 	float inside = step(0.0, source) * step(source, 31.999);
 
@@ -185,22 +149,9 @@ varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
-
 uniform sampler2D uTexture;
-// How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
-// How far the row k of the table (0 to 31) is taken from the right, in pixels: the table as the sum of its steps, so it
-// needs neither an array nor a texture - 0, 1, 1, 2, 2, -1, -1, 0, -2, 1, 0, 0, 0, -1, -1, -2, -2, -1, 1, 2, 1, -1, -1,
-// 0, 0, 1, 1, 0, -1, -2, -1, 0
 float heatShift(float k) {
 	vec4 row = vec4(k);
 	return dot(vec4(1.0, 1.0, -3.0, 1.0), step(vec4(1.0, 3.0, 5.0, 7.0), row)) +
@@ -215,7 +166,6 @@ float heatShift(float k) {
 void main() {
 	vec4 COLOR;
 	float shift = heatShift(mod(floor(vHeat.y) + uHeatPhase, 32.0));
-	// The pixel of the tile this one shows, nothing where the row moved away from it
 	float source = vHeat.x + shift;
 	float inside = step(0.0, source) * step(source, 31.999);
 
@@ -270,15 +220,6 @@ out vec3 vHeat;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -294,7 +235,6 @@ layout (std140) uniform InstanceBlock
 
 
 uniform sampler2D uTexturePalette;
-// How many rows the table has scrolled, 0 to 31
 
 void main()
 {
@@ -321,15 +261,6 @@ varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -342,7 +273,6 @@ uniform mat4 uViewMatrix;
 
 
 uniform sampler2D uTexturePalette;
-// How many rows the table has scrolled, 0 to 31
 
 void main()
 {
@@ -372,23 +302,10 @@ in vec3 vHeat;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
-
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
-// How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
-// How far the row k of the table (0 to 31) is taken from the right, in pixels: the table as the sum of its steps, so it
-// needs neither an array nor a texture - 0, 1, 1, 2, 2, -1, -1, 0, -2, 1, 0, 0, 0, -1, -1, -2, -2, -1, 1, 2, 1, -1, -1,
-// 0, 0, 1, 1, 0, -1, -2, -1, 0
 float heatShift(float k) {
 	vec4 row = vec4(k);
 	return dot(vec4(1.0, 1.0, -3.0, 1.0), step(vec4(1.0, 3.0, 5.0, 7.0), row)) +
@@ -403,7 +320,6 @@ out vec4 COLOR;
 
 void main() {
 	float shift = heatShift(mod(floor(vHeat.y) + uHeatPhase, 32.0));
-	// The pixel of the tile this one shows, nothing where the row moved away from it
 	float source = vHeat.x + shift;
 	float inside = step(0.0, source) * step(source, 31.999);
 
@@ -434,23 +350,10 @@ varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
-
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
-// How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
-// How far the row k of the table (0 to 31) is taken from the right, in pixels: the table as the sum of its steps, so it
-// needs neither an array nor a texture - 0, 1, 1, 2, 2, -1, -1, 0, -2, 1, 0, 0, 0, -1, -1, -2, -2, -1, 1, 2, 1, -1, -1,
-// 0, 0, 1, 1, 0, -1, -2, -1, 0
 float heatShift(float k) {
 	vec4 row = vec4(k);
 	return dot(vec4(1.0, 1.0, -3.0, 1.0), step(vec4(1.0, 3.0, 5.0, 7.0), row)) +
@@ -465,7 +368,6 @@ float heatShift(float k) {
 void main() {
 	vec4 COLOR;
 	float shift = heatShift(mod(floor(vHeat.y) + uHeatPhase, 32.0));
-	// The pixel of the tile this one shows, nothing where the row moved away from it
 	float source = vHeat.x + shift;
 	float inside = step(0.0, source) * step(source, 31.999);
 

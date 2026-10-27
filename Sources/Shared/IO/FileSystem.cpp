@@ -37,6 +37,7 @@
 		!defined(DEATH_TARGET_MORPHOS)
 #		include <ftw.h>
 #	endif
+#	include <limits.h>
 #	include <pwd.h>
 #	include <strings.h>
 #	include <sys/stat.h>

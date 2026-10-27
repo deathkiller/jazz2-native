@@ -145,8 +145,6 @@ uniform sampler2D uTexture;
 	}
 #endif
 
-// Nearest emulated sample given floating point position and texel offset.
-// Also zero's off screen.
 vec3 Fetch(vec2 pos, vec2 off, vec2 texture_size) {
 	pos=(floor(pos*texture_size.xy+off)+vec2(0.5,0.5))/texture_size.xy;
 #ifdef SIMPLE_LINEAR_GAMMA
@@ -156,33 +154,27 @@ vec3 Fetch(vec2 pos, vec2 off, vec2 texture_size) {
 #endif
 }
 
-// Distance in emulated pixels to nearest texel
 vec2 Dist(vec2 pos, vec2 texture_size) {
 	pos=pos*texture_size.xy;
 	return -((pos-floor(pos))-vec2(0.5, 0.5));
 }
 
-// 1D Gaussian
 float Gaus(float pos,float scale) {
 	return exp2(scale*pow(abs(pos),shape));
 }
 
-// 3-tap Gaussian filter along horz line
 vec3 Horz3(vec2 pos, float off, vec2 texture_size) {
 	vec3 b=Fetch(pos,vec2(-1.0,off),texture_size);
 	vec3 c=Fetch(pos,vec2( 0.0,off),texture_size);
 	vec3 d=Fetch(pos,vec2( 1.0,off),texture_size);
 	float dst=Dist(pos, texture_size).x;
-	// Convert distance to weight.
 	float scale=hardPix;
 	float wb=Gaus(dst-1.0,scale);
 	float wc=Gaus(dst+0.0,scale);
 	float wd=Gaus(dst+1.0,scale);
-	// Return filtered sample.
 	return (b*wb+c*wc+d*wd)/(wb+wc+wd);
 }
 
-// 5-tap Gaussian filter along horz line
 vec3 Horz5(vec2 pos, float off, vec2 texture_size) {
 	vec3 a=Fetch(pos,vec2(-2.0,off),texture_size);
 	vec3 b=Fetch(pos,vec2(-1.0,off),texture_size);
@@ -190,18 +182,15 @@ vec3 Horz5(vec2 pos, float off, vec2 texture_size) {
 	vec3 d=Fetch(pos,vec2( 1.0,off),texture_size);
 	vec3 e=Fetch(pos,vec2( 2.0,off),texture_size);
 	float dst=Dist(pos, texture_size).x;
-	// Convert distance to weight.
 	float scale=hardPix;
 	float wa=Gaus(dst-2.0,scale);
 	float wb=Gaus(dst-1.0,scale);
 	float wc=Gaus(dst+0.0,scale);
 	float wd=Gaus(dst+1.0,scale);
 	float we=Gaus(dst+2.0,scale);
-	// Return filtered sample.
 	return (a*wa+b*wb+c*wc+d*wd+e*we)/(wa+wb+wc+wd+we);
 }
 
-// 7-tap Gaussian filter along horz line
 vec3 Horz7(vec2 pos, float off, vec2 texture_size) {
 	vec3 a=Fetch(pos,vec2(-3.0,off),texture_size);
 	vec3 b=Fetch(pos,vec2(-2.0,off),texture_size);
@@ -211,7 +200,6 @@ vec3 Horz7(vec2 pos, float off, vec2 texture_size) {
 	vec3 f=Fetch(pos,vec2( 2.0,off),texture_size);
 	vec3 g=Fetch(pos,vec2( 3.0,off),texture_size);
 	float dst=Dist(pos, texture_size).x;
-	// Convert distance to weight.
 	float scale=hardBloomPix;
 	float wa=Gaus(dst-3.0,scale);
 	float wb=Gaus(dst-2.0,scale);
@@ -220,23 +208,19 @@ vec3 Horz7(vec2 pos, float off, vec2 texture_size) {
 	float we=Gaus(dst+1.0,scale);
 	float wf=Gaus(dst+2.0,scale);
 	float wg=Gaus(dst+3.0,scale);
-	// Return filtered sample.
 	return (a*wa+b*wb+c*wc+d*wd+e*we+f*wf+g*wg)/(wa+wb+wc+wd+we+wf+wg);
 }
 
-// Return scanline weight
 float Scan(vec2 pos,float off, vec2 texture_size) {
 	float dst=Dist(pos, texture_size).y;
 	return Gaus(dst+off,hardScan);
 }
 
-  // Return scanline weight for bloom
 float BloomScan(vec2 pos,float off, vec2 texture_size) {
 	float dst=Dist(pos, texture_size).y;
 	return Gaus(dst+off,hardBloomScan);
 }
 
-// Allow nearest three lines to effect pixel
 vec3 Tri(vec2 pos, vec2 texture_size){
 	vec3 a=Horz3(pos,-1.0, texture_size);
 	vec3 b=Horz5(pos, 0.0, texture_size);
@@ -247,7 +231,6 @@ vec3 Tri(vec2 pos, vec2 texture_size){
 	return a*wa+b*wb+c*wc;
 }
 
-// Small bloom
 vec3 Bloom(vec2 pos, vec2 texture_size) {
 	vec3 a=Horz5(pos,-2.0, texture_size);
 	vec3 b=Horz7(pos,-1.0, texture_size);
@@ -262,14 +245,12 @@ vec3 Bloom(vec2 pos, vec2 texture_size) {
 	return a*wa+b*wb+c*wc+d*wd+e*we;
 }
 
-// Distortion of scanlines, and end of screen alpha
 vec2 Warp(vec2 pos) {
 	pos=pos*2.0-1.0;
 	pos*=vec2(1.0+(pos.y*pos.y)*warpX,1.0+(pos.x*pos.x)*warpY);
 	return pos*0.5+0.5;
 }
 
-// Shadow mask
 vec3 Mask(vec2 pos) {
 	vec3 mask = vec3(maskDark,maskDark,maskDark);
 
@@ -355,8 +336,6 @@ uniform sampler2D uTexture;
 	}
 #endif
 
-// Nearest emulated sample given floating point position and texel offset.
-// Also zero's off screen.
 vec3 Fetch(vec2 pos, vec2 off, vec2 texture_size) {
 	pos=(floor(pos*texture_size.xy+off)+vec2(0.5,0.5))/texture_size.xy;
 #ifdef SIMPLE_LINEAR_GAMMA
@@ -366,33 +345,27 @@ vec3 Fetch(vec2 pos, vec2 off, vec2 texture_size) {
 #endif
 }
 
-// Distance in emulated pixels to nearest texel
 vec2 Dist(vec2 pos, vec2 texture_size) {
 	pos=pos*texture_size.xy;
 	return -((pos-floor(pos))-vec2(0.5, 0.5));
 }
 
-// 1D Gaussian
 float Gaus(float pos,float scale) {
 	return exp2(scale*pow(abs(pos),shape));
 }
 
-// 3-tap Gaussian filter along horz line
 vec3 Horz3(vec2 pos, float off, vec2 texture_size) {
 	vec3 b=Fetch(pos,vec2(-1.0,off),texture_size);
 	vec3 c=Fetch(pos,vec2( 0.0,off),texture_size);
 	vec3 d=Fetch(pos,vec2( 1.0,off),texture_size);
 	float dst=Dist(pos, texture_size).x;
-	// Convert distance to weight.
 	float scale=hardPix;
 	float wb=Gaus(dst-1.0,scale);
 	float wc=Gaus(dst+0.0,scale);
 	float wd=Gaus(dst+1.0,scale);
-	// Return filtered sample.
 	return (b*wb+c*wc+d*wd)/(wb+wc+wd);
 }
 
-// 5-tap Gaussian filter along horz line
 vec3 Horz5(vec2 pos, float off, vec2 texture_size) {
 	vec3 a=Fetch(pos,vec2(-2.0,off),texture_size);
 	vec3 b=Fetch(pos,vec2(-1.0,off),texture_size);
@@ -400,18 +373,15 @@ vec3 Horz5(vec2 pos, float off, vec2 texture_size) {
 	vec3 d=Fetch(pos,vec2( 1.0,off),texture_size);
 	vec3 e=Fetch(pos,vec2( 2.0,off),texture_size);
 	float dst=Dist(pos, texture_size).x;
-	// Convert distance to weight.
 	float scale=hardPix;
 	float wa=Gaus(dst-2.0,scale);
 	float wb=Gaus(dst-1.0,scale);
 	float wc=Gaus(dst+0.0,scale);
 	float wd=Gaus(dst+1.0,scale);
 	float we=Gaus(dst+2.0,scale);
-	// Return filtered sample.
 	return (a*wa+b*wb+c*wc+d*wd+e*we)/(wa+wb+wc+wd+we);
 }
 
-// 7-tap Gaussian filter along horz line
 vec3 Horz7(vec2 pos, float off, vec2 texture_size) {
 	vec3 a=Fetch(pos,vec2(-3.0,off),texture_size);
 	vec3 b=Fetch(pos,vec2(-2.0,off),texture_size);
@@ -421,7 +391,6 @@ vec3 Horz7(vec2 pos, float off, vec2 texture_size) {
 	vec3 f=Fetch(pos,vec2( 2.0,off),texture_size);
 	vec3 g=Fetch(pos,vec2( 3.0,off),texture_size);
 	float dst=Dist(pos, texture_size).x;
-	// Convert distance to weight.
 	float scale=hardBloomPix;
 	float wa=Gaus(dst-3.0,scale);
 	float wb=Gaus(dst-2.0,scale);
@@ -430,23 +399,19 @@ vec3 Horz7(vec2 pos, float off, vec2 texture_size) {
 	float we=Gaus(dst+1.0,scale);
 	float wf=Gaus(dst+2.0,scale);
 	float wg=Gaus(dst+3.0,scale);
-	// Return filtered sample.
 	return (a*wa+b*wb+c*wc+d*wd+e*we+f*wf+g*wg)/(wa+wb+wc+wd+we+wf+wg);
 }
 
-// Return scanline weight
 float Scan(vec2 pos,float off, vec2 texture_size) {
 	float dst=Dist(pos, texture_size).y;
 	return Gaus(dst+off,hardScan);
 }
 
-  // Return scanline weight for bloom
 float BloomScan(vec2 pos,float off, vec2 texture_size) {
 	float dst=Dist(pos, texture_size).y;
 	return Gaus(dst+off,hardBloomScan);
 }
 
-// Allow nearest three lines to effect pixel
 vec3 Tri(vec2 pos, vec2 texture_size){
 	vec3 a=Horz3(pos,-1.0, texture_size);
 	vec3 b=Horz5(pos, 0.0, texture_size);
@@ -457,7 +422,6 @@ vec3 Tri(vec2 pos, vec2 texture_size){
 	return a*wa+b*wb+c*wc;
 }
 
-// Small bloom
 vec3 Bloom(vec2 pos, vec2 texture_size) {
 	vec3 a=Horz5(pos,-2.0, texture_size);
 	vec3 b=Horz7(pos,-1.0, texture_size);
@@ -472,14 +436,12 @@ vec3 Bloom(vec2 pos, vec2 texture_size) {
 	return a*wa+b*wb+c*wc+d*wd+e*we;
 }
 
-// Distortion of scanlines, and end of screen alpha
 vec2 Warp(vec2 pos) {
 	pos=pos*2.0-1.0;
 	pos*=vec2(1.0+(pos.y*pos.y)*warpX,1.0+(pos.x*pos.x)*warpY);
 	return pos*0.5+0.5;
 }
 
-// Shadow mask
 vec3 Mask(vec2 pos) {
 	vec3 mask = vec3(maskDark,maskDark,maskDark);
 

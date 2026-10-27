@@ -37,7 +37,7 @@ struct Instance
 layout (std140) uniform InstancesBlock
 {
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (682) // 64 Kb / 96 b
+	#define BATCH_SIZE (682)
 #endif
 	Instance[BATCH_SIZE] instances;
 } block;
@@ -75,7 +75,7 @@ struct Instance
 };
 
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (682) // 64 Kb / 96 b
+	#define BATCH_SIZE (682)
 #endif
 	uniform Instance instances[BATCH_SIZE];
 

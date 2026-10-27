@@ -148,7 +148,9 @@ themselves are portable, but a full regeneration has to happen on Windows.
 
 A `.shader` file is GLSL globals plus @cpp void vertex() @ce / @cpp void fragment() @ce entry points,
 annotated with keyword directives --- top-level statements at brace depth 0, terminated by `;`.
-Comments follow GLSL rules and pass through into the emitted sources. Do <b>not</b> write
+Comments follow GLSL rules and never reach the emitted sources --- they are stripped right after
+parsing, along with the lines only a comment was on, and diagnostics still point at the lines of the
+original file. Do <b>not</b> write
 @cpp #version @ce --- the engine injects the version header (@cpp "#version 330" @ce,
 @cpp "#version 300 es" @ce, @cpp "#version 100" @ce) and platform defines at runtime. The full in-tree
 specification, including std140 layout rules and the `--check` dump format, is

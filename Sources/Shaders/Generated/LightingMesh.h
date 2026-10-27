@@ -44,12 +44,6 @@ uniform sampler2D uTexture;
 
 void main()
 {
-	// All lights of a viewport arrive as one vertex stream instead of one instanced quad each: the corners are
-	// already in world space, the light's own parameters ride along per vertex (see LightingRenderer::OnDraw).
-	// The fragment stage is shared with the single-light program, so the varyings it reads are filled the same
-	// way - the light centre it would need for normal mapping is not in the stream and would have to be added.
-	// The texture coordinates carry the near radius and the ring radius (zero for a point light), both in units
-	// of the far radius.
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
 	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, aTexCoords.y);
 	vColor = aColor;
@@ -83,12 +77,6 @@ uniform sampler2D uTexture;
 
 void main()
 {
-	// All lights of a viewport arrive as one vertex stream instead of one instanced quad each: the corners are
-	// already in world space, the light's own parameters ride along per vertex (see LightingRenderer::OnDraw).
-	// The fragment stage is shared with the single-light program, so the varyings it reads are filled the same
-	// way - the light centre it would need for normal mapping is not in the stream and would have to be added.
-	// The texture coordinates carry the near radius and the ring radius (zero for a point light), both in units
-	// of the far radius.
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
 	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, aTexCoords.y);
 	vColor = aColor;
@@ -122,22 +110,11 @@ void main() {
 	float intensity = vColor.r;
 	float brightness = vColor.g;
 
-	// A ring light measures the distance from its circle instead of from its centre - with a ring radius of
-	// zero, as every point light has, this is the plain distance from the centre
 	float dist = abs(length(vColor.zw) - ringRadius);
 	if (dist > 1.0) {
 		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
 	} else {
-		// TODO: Normal maps
-		/*vec4 clrNormal = texture(uTexture, vec2(gl_FragCoord) / ViewSize);
-		vec3 normal = normalize(clrNormal.xyz - vec3(0.5, 0.5, 0.5));
-		normal.z = -normal.z;
 
-		vec3 lightDir = vec3((center.x - gl_FragCoord.x), (center.y - gl_FragCoord.y), 0);
-
-		// Diffuse lighting
-		float diffuseFactor = 1.0 - max(dot(normal, normalize(lightDir)), 0.0);
-		diffuseFactor = diffuseFactor * 0.8 + 0.2;*/
 		float diffuseFactor = 1.0;
 
 		float strength = diffuseFactor * lightBlend(clamp(1.0 - ((dist - radiusNear) / (1.0 - radiusNear)), 0.0, 1.0));
@@ -172,22 +149,11 @@ void main() {
 	float intensity = vColor.r;
 	float brightness = vColor.g;
 
-	// A ring light measures the distance from its circle instead of from its centre - with a ring radius of
-	// zero, as every point light has, this is the plain distance from the centre
 	float dist = abs(length(vColor.zw) - ringRadius);
 	if (dist > 1.0) {
 		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
 	} else {
-		// TODO: Normal maps
-		/*vec4 clrNormal = texture(uTexture, vec2(gl_FragCoord) / ViewSize);
-		vec3 normal = normalize(clrNormal.xyz - vec3(0.5, 0.5, 0.5));
-		normal.z = -normal.z;
 
-		vec3 lightDir = vec3((center.x - gl_FragCoord.x), (center.y - gl_FragCoord.y), 0);
-
-		// Diffuse lighting
-		float diffuseFactor = 1.0 - max(dot(normal, normalize(lightDir)), 0.0);
-		diffuseFactor = diffuseFactor * 0.8 + 0.2;*/
 		float diffuseFactor = 1.0;
 
 		float strength = diffuseFactor * lightBlend(clamp(1.0 - ((dist - radiusNear) / (1.0 - radiusNear)), 0.0, 1.0));

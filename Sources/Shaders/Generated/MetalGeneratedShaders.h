@@ -13,8 +13,7 @@
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Antialiasing_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -52,8 +51,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Antialiasing_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -110,8 +108,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char BatchedShieldFire_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -158,8 +155,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedShieldFire_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -216,8 +212,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char BatchedShieldLightning_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -264,8 +259,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedShieldLightning_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -321,8 +315,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Blur_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -361,8 +354,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Blur_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -400,8 +392,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Colorized_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -440,8 +431,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Colorized_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -465,8 +455,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedColorized_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -512,8 +501,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedColorized_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -541,8 +529,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Combine_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -582,8 +569,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Combine_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -635,8 +621,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char CombineWithWater_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -678,8 +663,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char CombineWithWater_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -803,8 +787,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char CombineWithWaterLow_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -846,8 +829,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char CombineWithWaterLow_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -918,8 +900,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace nCine::ShadersGen
 {
 	inline constexpr char DefaultBatchedMeshSprites_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -969,8 +950,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char DefaultBatchedMeshSprites_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -993,8 +973,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace nCine::ShadersGen
 {
 	inline constexpr char DefaultBatchedMeshSpritesNoTexture_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 682
@@ -1040,8 +1019,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char DefaultBatchedMeshSpritesNoTexture_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1063,8 +1041,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]])
 namespace nCine::ShadersGen
 {
 	inline constexpr char DefaultBatchedSpritesNoTexture_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 682
@@ -1106,8 +1083,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char DefaultBatchedSpritesNoTexture_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1129,8 +1105,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]])
 namespace nCine::ShadersGen
 {
 	inline constexpr char DefaultImGui_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1164,8 +1139,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char DefaultImGui_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1188,8 +1162,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace nCine::ShadersGen
 {
 	inline constexpr char DefaultMeshSprite_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1231,8 +1204,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char DefaultMeshSprite_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1255,8 +1227,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace nCine::ShadersGen
 {
 	inline constexpr char DefaultMeshSpriteNoTexture_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1294,8 +1265,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char DefaultMeshSpriteNoTexture_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1317,8 +1287,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]])
 namespace nCine::ShadersGen
 {
 	inline constexpr char DefaultSprite_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1357,8 +1326,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char DefaultSprite_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1378,8 +1346,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char DefaultBatchedSprites_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -1425,8 +1392,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char DefaultBatchedSprites_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1450,8 +1416,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace nCine::ShadersGen
 {
 	inline constexpr char DefaultSpriteNoTexture_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1486,8 +1451,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char DefaultSpriteNoTexture_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1509,8 +1473,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]])
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Downsample_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1548,8 +1511,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Downsample_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1582,8 +1544,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char FrozenMask_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1624,8 +1585,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char FrozenMask_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1675,8 +1635,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char FrozenMask_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -1717,8 +1676,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char FrozenMask_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1772,8 +1730,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedFrozenMask_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -1821,8 +1778,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedFrozenMask_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1872,8 +1828,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedFrozenMask_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -1921,8 +1876,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedFrozenMask_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -1980,8 +1934,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char LightingMesh_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -2023,8 +1976,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char LightingMesh_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2064,8 +2016,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]])
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Outline_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -2104,8 +2055,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Outline_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2151,8 +2101,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedOutline_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -2198,8 +2147,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedOutline_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2249,8 +2197,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char OutlinePalette_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -2291,8 +2238,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char OutlinePalette_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2358,8 +2304,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedOutlinePalette_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -2407,8 +2352,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedOutlinePalette_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2478,8 +2422,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char PaletteRemap_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -2520,8 +2463,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char PaletteRemap_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2547,8 +2489,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedPaletteRemap_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -2596,8 +2537,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedPaletteRemap_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2627,8 +2567,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char PartialWhiteMask_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -2669,8 +2608,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char PartialWhiteMask_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2699,8 +2637,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char PartialWhiteMask_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -2741,8 +2678,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char PartialWhiteMask_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2775,8 +2711,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedPartialWhiteMask_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -2824,8 +2759,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedPartialWhiteMask_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2854,8 +2788,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -2903,8 +2836,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -2941,8 +2873,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Resize3xBrz_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -2998,8 +2929,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Resize3xBrz_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct InstanceBlock
@@ -3238,8 +3168,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ResizeCleanEdge_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -3283,8 +3212,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ResizeCleanEdge_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 constant float scale = 4.0;
@@ -3527,8 +3455,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ResizeCrtApertureGrille_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -3568,8 +3495,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ResizeCrtApertureGrille_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -3763,8 +3689,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ResizeCrtScanlines_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -3804,8 +3729,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ResizeCrtScanlines_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -3855,8 +3779,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ResizeCrtShadowMask_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -3896,8 +3819,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ResizeCrtShadowMask_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -4093,8 +4015,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ResizeHQ2x_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4154,8 +4075,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ResizeHQ2x_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 constant float mx = 0.325;
@@ -4214,8 +4134,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ResizeMonochrome_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4254,8 +4173,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ResizeMonochrome_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct InstanceBlock
@@ -4310,8 +4228,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ResizeSabr_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4380,8 +4297,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ResizeSabr_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 constant float4 Ai = float4(1.0, -1.0, -1.0, 1.0);
@@ -4535,8 +4451,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ShieldFire_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4576,8 +4491,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ShieldFire_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -4634,8 +4548,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char ShieldLightning_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4675,8 +4588,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char ShieldLightning_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -4732,8 +4644,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Silhouette_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4778,8 +4689,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char Silhouette_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -4801,8 +4711,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char Silhouette_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4847,8 +4756,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char Silhouette_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -4877,8 +4785,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char SingleColor_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4919,8 +4826,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char SingleColor_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -4943,8 +4849,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char SingleColor_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -4985,8 +4890,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char SingleColor_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -5012,8 +4916,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedSingleColor_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -5061,8 +4964,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedSingleColor_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -5085,8 +4987,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedSingleColor_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -5134,8 +5035,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedSingleColor_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -5165,8 +5065,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TexturedBackground_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5210,8 +5109,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5308,8 +5206,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_DITHER_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5353,8 +5250,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_DITHER_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5453,8 +5349,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_KEYED_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5501,8 +5396,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_KEYED_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5609,8 +5503,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_PLUS_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5654,8 +5547,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_PLUS_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5750,8 +5642,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_PLUS_DITHER_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5795,8 +5686,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_PLUS_DITHER_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5893,8 +5783,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_PLUS_KEYED_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -5941,8 +5830,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackground_PLUS_KEYED_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6051,8 +5939,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TexturedBackgroundCylinder_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6096,8 +5983,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundCylinder_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6139,8 +6025,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundCylinder_DITHER_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6184,8 +6069,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundCylinder_DITHER_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6236,8 +6120,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundCylinder_KEYED_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6284,8 +6167,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundCylinder_KEYED_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6341,8 +6223,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TexturedBackgroundReflection_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6386,8 +6267,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundReflection_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6461,8 +6341,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TexturedBackgroundTunnel_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6506,8 +6385,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6603,8 +6481,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_DITHER_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6648,8 +6525,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_DITHER_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6747,8 +6623,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_KEYED_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6795,8 +6670,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_KEYED_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6902,8 +6776,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_PLUS_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -6947,8 +6820,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_PLUS_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7043,8 +6915,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_PLUS_DITHER_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7088,8 +6959,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_PLUS_DITHER_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7186,8 +7056,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_PLUS_KEYED_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7234,8 +7103,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundTunnel_PLUS_KEYED_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7344,8 +7212,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TexturedBackgroundWave_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7388,8 +7255,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundWave_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7424,8 +7290,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundWave_KEYED_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7471,8 +7336,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TexturedBackgroundWave_KEYED_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7521,8 +7385,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TileMapMesh_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7565,8 +7428,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMesh_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -7589,8 +7451,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TileMapMeshBlur_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7641,8 +7502,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshBlur_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7701,8 +7561,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TileMapMeshBlur_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7753,8 +7612,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshBlur_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7821,8 +7679,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TileMapMeshChromaKey_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7869,8 +7726,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshChromaKey_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7897,14 +7753,13 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
 	float3 difference = abs(behind - _globals.uKeyColor.xyz);
 	float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
-	COLOR = float4(tile.xyz, tile.w * keyed) * _in.vColor;
+	COLOR = float4(tile.xyz * tile.w, keyed) * _in.vColor;
 	return COLOR;
 }
 )__SHDR__";
 
 	inline constexpr char TileMapMeshChromaKey_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7951,8 +7806,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshChromaKey_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -7983,7 +7837,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
 	float3 difference = abs(behind - _globals.uKeyColor.xyz);
 	float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
-	COLOR = float4(tile.xyz, tile.w * keyed) * _in.vColor;
+	COLOR = float4(tile.xyz * tile.w, keyed) * _in.vColor;
 	return COLOR;
 }
 )__SHDR__";
@@ -7993,8 +7847,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TileMapMeshHeat_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8043,8 +7896,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshHeat_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8082,8 +7934,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TileMapMeshHeat_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8132,8 +7983,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshHeat_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8180,8 +8030,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TileMapMeshPalette_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8226,8 +8075,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshPalette_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct InstanceBlock
@@ -8265,8 +8113,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TileMapMeshXRay_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8318,8 +8165,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshXRay_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8369,8 +8215,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 )__SHDR__";
 
 	inline constexpr char TileMapMeshXRay_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8422,8 +8267,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 )__SHDR__";
 
 	inline constexpr char TileMapMeshXRay_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8481,8 +8325,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Tinted_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8523,8 +8366,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Tinted_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -8547,8 +8389,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char Tinted_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8589,8 +8430,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Tinted_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -8618,8 +8458,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedTinted_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -8667,8 +8506,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedTinted_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -8691,8 +8529,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedTinted_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -8740,8 +8577,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedTinted_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -8773,8 +8609,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char TouchCircle_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8810,8 +8645,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char TouchCircle_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct InstanceBlock
@@ -8846,8 +8680,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant InstanceBlock& _bInstance
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char Transition_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8887,8 +8720,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char Transition_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -8933,8 +8765,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]])
 namespace Jazz2::ShadersGen
 {
 	inline constexpr char WhiteMask_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -8975,8 +8806,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char WhiteMask_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -9005,8 +8835,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char WhiteMask_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct _Globals
@@ -9047,8 +8876,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char WhiteMask_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -9081,8 +8909,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedWhiteMask_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -9130,8 +8957,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedWhiteMask_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn
@@ -9160,8 +8986,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 )__SHDR__";
 
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_VsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 #define BATCH_SIZE 585
@@ -9209,8 +9034,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 )__SHDR__";
 
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_FsMsl[] =
-R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
-#include <metal_stdlib>
+R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
 
 struct FsIn

@@ -28,8 +28,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -60,8 +58,6 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
@@ -95,24 +91,10 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
-// The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
-// row of it moved left or right by the horizontal waves and each column up or down by the vertical ones, as measured in
-// the original - by whole pixels, and by the waves of where the pixel is in the texture before it's moved, so the waves
-// follow the texture, not the view
-
-// Size of the view in the pixels of the level
 uniform vec2 uViewSize;
-// The pixel of the layer at the top left of the view, as its tiles would be drawn there
 uniform vec2 uShift;
-// xy: how far the horizontal and the vertical waves move the texture, in pixels (0 for no waves), zw: one over the period
-// of each, in pixels of the texture
 uniform vec4 uWave;
-// How far the horizontal and the vertical waves have moved, in periods
 uniform vec2 uWavePhase;
-
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
 
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
@@ -121,18 +103,13 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// The pixel of the texture this pixel of the view shows, the texture repeats
 	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
 
-	// A row moves by the horizontal waves at its row of the texture, a column by the vertical ones at its column
 	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
-	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(texture(uTexture, texturePos).rgb * opacity, opacity);
 }
 
@@ -153,24 +130,10 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 
 uniform sampler2D uTexture;
-// The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
-// row of it moved left or right by the horizontal waves and each column up or down by the vertical ones, as measured in
-// the original - by whole pixels, and by the waves of where the pixel is in the texture before it's moved, so the waves
-// follow the texture, not the view
-
-// Size of the view in the pixels of the level
 uniform vec2 uViewSize;
-// The pixel of the layer at the top left of the view, as its tiles would be drawn there
 uniform vec2 uShift;
-// xy: how far the horizontal and the vertical waves move the texture, in pixels (0 for no waves), zw: one over the period
-// of each, in pixels of the texture
 uniform vec4 uWave;
-// How far the horizontal and the vertical waves have moved, in periods
 uniform vec2 uWavePhase;
-
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
 
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
@@ -179,18 +142,13 @@ uniform vec2 uWavePhase;
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// The pixel of the texture this pixel of the view shows, the texture repeats
 	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
 
-	// A row moves by the horizontal waves at its row of the texture, a column by the vertical ones at its column
 	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
-	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(texture2D(uTexture, texturePos).rgb * opacity, opacity);
 	gl_FragColor = COLOR;
 }
@@ -236,8 +194,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -268,8 +224,6 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
@@ -303,38 +257,19 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
-// The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
-// row of it moved left or right by the horizontal waves and each column up or down by the vertical ones, as measured in
-// the original - by whole pixels, and by the waves of where the pixel is in the texture before it's moved, so the waves
-// follow the texture, not the view
-
-// Size of the view in the pixels of the level
 uniform vec2 uViewSize;
-// The pixel of the layer at the top left of the view, as its tiles would be drawn there
 uniform vec2 uShift;
-// xy: how far the horizontal and the vertical waves move the texture, in pixels (0 for no waves), zw: one over the period
-// of each, in pixels of the texture
 uniform vec4 uWave;
-// How far the horizontal and the vertical waves have moved, in periods
 uniform vec2 uWavePhase;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-// A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
 uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
 uniform float uOpacity;
 
 float keyedOpacity() {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
 
@@ -345,16 +280,12 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// The pixel of the texture this pixel of the view shows, the texture repeats
 	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
 
-	// A row moves by the horizontal waves at its row of the texture, a column by the vertical ones at its column
 	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
-	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
 	COLOR = vec4(texture(uTexture, texturePos).rgb, keyedOpacity());
 }
@@ -376,38 +307,19 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 
 uniform sampler2D uTexture;
-// The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
-// row of it moved left or right by the horizontal waves and each column up or down by the vertical ones, as measured in
-// the original - by whole pixels, and by the waves of where the pixel is in the texture before it's moved, so the waves
-// follow the texture, not the view
-
-// Size of the view in the pixels of the level
 uniform vec2 uViewSize;
-// The pixel of the layer at the top left of the view, as its tiles would be drawn there
 uniform vec2 uShift;
-// xy: how far the horizontal and the vertical waves move the texture, in pixels (0 for no waves), zw: one over the period
-// of each, in pixels of the texture
 uniform vec4 uWave;
-// How far the horizontal and the vertical waves have moved, in periods
 uniform vec2 uWavePhase;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-// A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
 uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
 uniform float uOpacity;
 
 float keyedOpacity() {
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
 
@@ -418,16 +330,12 @@ float keyedOpacity() {
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
-	// The pixel of the texture this pixel of the view shows, the texture repeats
 	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
 
-	// A row moves by the horizontal waves at its row of the texture, a column by the vertical ones at its column
 	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
-	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
 	COLOR = vec4(texture2D(uTexture, texturePos).rgb, keyedOpacity());
 	gl_FragColor = COLOR;

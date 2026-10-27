@@ -193,9 +193,6 @@ namespace ShaderCompiler
 				if (!_ok) return {};
 
 				String out;
-				out += (_cg
-					? "// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.\n"_s
-					: "// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.\n"_s);
 				if (_hasSymbolicArray) {
 					out += "#define BATCH_SIZE "_s + Death::format("{}", BatchSize()) + "\n\n"_s;
 				}

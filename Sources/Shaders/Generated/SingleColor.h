@@ -28,8 +28,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -62,8 +60,6 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
@@ -97,10 +93,6 @@ in highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
 
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
-
 out vec4 COLOR;
 
 void main() {
@@ -124,10 +116,6 @@ varying vec4 vColor;
 varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
 
 
 void main() {
@@ -176,8 +164,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -210,8 +196,6 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
@@ -246,10 +230,6 @@ in highp float vPaletteOffset;
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
-
 out vec4 COLOR;
 
 void main() {
@@ -277,10 +257,6 @@ varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
-
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
 
 
 void main() {
@@ -396,14 +372,13 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 layout (std140) uniform InstancesBlock
 {
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	Instance[BATCH_SIZE] instances;
 } block;
@@ -442,12 +417,11 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	uniform Instance instances[BATCH_SIZE];
 
@@ -484,10 +458,6 @@ in highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
 
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
-
 out vec4 COLOR;
 
 void main() {
@@ -511,10 +481,6 @@ varying vec4 vColor;
 varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
-
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
 
 
 void main() {
@@ -559,14 +525,13 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 layout (std140) uniform InstancesBlock
 {
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	Instance[BATCH_SIZE] instances;
 } block;
@@ -605,12 +570,11 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	uniform Instance instances[BATCH_SIZE];
 
@@ -648,10 +612,6 @@ in highp float vPaletteOffset;
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
-
 out vec4 COLOR;
 
 void main() {
@@ -679,10 +639,6 @@ varying highp float vPaletteOffset;
 
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
-
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
 
 
 void main() {

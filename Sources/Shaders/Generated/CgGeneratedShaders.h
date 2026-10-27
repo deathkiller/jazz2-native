@@ -21,8 +21,7 @@ namespace nCine::RHI::GXM
 
 		constexpr GeneratedCgShader GeneratedCgShaders[] = {
 			{ "Antialiasing", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -62,8 +61,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vPixelCoords;
 static float2 vTexSizeInv;
@@ -119,8 +117,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedShieldFire", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -174,8 +171,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float4 vTexCoords;
 static float4 vColor;
@@ -233,8 +229,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedShieldLightning", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -288,8 +283,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float4 vTexCoords;
 static float4 vColor;
@@ -346,8 +340,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Blur", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uPixelOffset;
 uniform float2 uDirection;
@@ -407,8 +400,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float2 vTap1;
@@ -442,8 +434,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Colorized", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -484,8 +475,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -512,8 +502,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedColorized", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -564,8 +553,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -592,8 +580,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Combine", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -637,8 +624,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4 uAmbientColor;
+				R"(uniform float4 uAmbientColor;
 uniform float uTime;
 
 uniform sampler2D uTexture : TEXUNIT0;
@@ -689,8 +675,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "CombineWithWater", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float4 uAmbientColor;
 uniform float uTime;
@@ -767,8 +752,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4 uAmbientColor;
+				R"(uniform float4 uAmbientColor;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -870,8 +854,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "CombineWithWaterLow", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -915,8 +898,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4 uAmbientColor;
+				R"(uniform float4 uAmbientColor;
 uniform float uTime;
 uniform float2 uCameraPos;
 uniform float uWaterLevel;
@@ -993,8 +975,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultBatchedMeshSprites", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -1046,8 +1027,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -1069,8 +1049,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultBatchedMeshSpritesNoTexture", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 682
+				R"(#define BATCH_SIZE 682
 
 struct Instance
 {
@@ -1114,8 +1093,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-static float4 vColor;
+				R"(static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
@@ -1132,8 +1110,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultBatchedSpritesNoTexture", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 682
+				R"(#define BATCH_SIZE 682
 
 struct Instance
 {
@@ -1178,8 +1155,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-static float4 vColor;
+				R"(static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
@@ -1196,8 +1172,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultImGui", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uGuiProjection;
+				R"(uniform float4x4 uGuiProjection;
 uniform float uDepth;
 
 static float2 aPosition;
@@ -1236,8 +1211,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -1259,8 +1233,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultMeshSprite", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -1302,8 +1275,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -1325,8 +1297,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultMeshSpriteNoTexture", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -1360,8 +1331,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-static float4 vColor;
+				R"(static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
@@ -1378,8 +1348,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultSprite", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -1420,8 +1389,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -1444,8 +1412,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultBatchedSprites", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -1496,8 +1463,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -1520,8 +1486,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "DefaultSpriteNoTexture", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -1556,8 +1521,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-static float4 vColor;
+				R"(static float4 vColor;
 static float4 COLOR;
 
 struct PsInput
@@ -1574,8 +1538,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Downsample", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -1612,8 +1575,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uPixelOffset;
+				R"(uniform float2 uPixelOffset;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
@@ -1638,8 +1600,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "FrozenMask", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -1684,8 +1645,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -1740,8 +1700,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "FrozenMask", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -1786,8 +1745,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -1847,8 +1805,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedFrozenMask", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -1903,8 +1860,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -1959,8 +1915,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedFrozenMask", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -2015,8 +1970,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -2076,8 +2030,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "LightingMesh", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -2123,8 +2076,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float4 vTexCoords;
 static float4 vColor;
@@ -2163,8 +2115,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Outline", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -2205,8 +2156,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -2255,8 +2205,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedOutline", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -2307,8 +2256,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -2357,8 +2305,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "OutlinePalette", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -2403,8 +2350,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -2476,8 +2422,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedOutlinePalette", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -2532,8 +2477,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -2605,8 +2549,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "PaletteRemap", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -2651,8 +2594,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -2684,8 +2626,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedPaletteRemap", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -2740,8 +2681,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -2773,8 +2713,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "PartialWhiteMask", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -2819,8 +2758,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -2854,8 +2792,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "PartialWhiteMask", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -2900,8 +2837,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -2940,8 +2876,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedPartialWhiteMask", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -2996,8 +2931,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -3031,8 +2965,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedPartialWhiteMask", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -3087,8 +3020,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -3127,8 +3059,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Resize3xBrz", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -3198,8 +3129,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 modelMatrix;
+				R"(uniform float4x4 modelMatrix;
 uniform float4 color;
 uniform float4 texRect;
 uniform float2 spriteSize;
@@ -3446,8 +3376,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ResizeCleanEdge", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -3493,8 +3422,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float3 highestColor = float3(1., 1., 1.);
 static float similarThreshold = 0.0;
@@ -3736,8 +3664,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ResizeCrtApertureGrille", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -3781,8 +3708,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float2 vTexSize;
@@ -3977,8 +3903,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ResizeCrtScanlines", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -4022,8 +3947,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vPixelCoords;
 static float2 vTexCoords;
@@ -4074,8 +3998,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ResizeCrtShadowMask", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -4119,8 +4042,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float2 vTexSize;
@@ -4317,8 +4239,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ResizeHQ2x", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -4386,8 +4307,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static const float mx = 0.325;
 static const float k = -0.250;
@@ -4451,8 +4371,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ResizeMonochrome", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -4494,8 +4413,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 modelMatrix;
+				R"(uniform float4x4 modelMatrix;
 uniform float4 color;
 uniform float4 texRect;
 uniform float2 spriteSize;
@@ -4547,8 +4465,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ResizeSabr", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -4633,8 +4550,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static const float4 Ai = float4(1.0, -1.0, -1.0, 1.0);
 static const float4 B45 = float4(1.0, 1.0, -1.0, -1.0);
@@ -4801,8 +4717,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ShieldFire", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -4846,8 +4761,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float4 vTexCoords;
 static float4 vColor;
@@ -4905,8 +4819,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "ShieldLightning", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -4950,8 +4863,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float4 vTexCoords;
 static float4 vColor;
@@ -5008,8 +4920,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Silhouette", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -5058,8 +4969,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float vAlpha;
@@ -5086,8 +4996,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Silhouette", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -5138,8 +5047,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -5170,8 +5078,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "SingleColor", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -5216,8 +5123,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -5245,8 +5151,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "SingleColor", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -5291,8 +5196,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -5324,8 +5228,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedSingleColor", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -5380,8 +5283,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -5409,8 +5311,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedSingleColor", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -5465,8 +5366,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -5498,8 +5398,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackground", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uViewSize;
 uniform float2 uCameraPos;
@@ -5552,8 +5451,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uCameraPos;
+				R"(uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
@@ -5595,8 +5493,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackground", "DITHER",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uViewSize;
 uniform float2 uCameraPos;
@@ -5649,8 +5546,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uCameraPos;
+				R"(uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
@@ -5692,8 +5588,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackground", "KEYED",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uViewSize;
 uniform float2 uCameraPos;
@@ -5751,8 +5646,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uCameraPos;
+				R"(uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
@@ -5807,8 +5701,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackground", "PLUS",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uViewSize;
 uniform float2 uCameraPos;
@@ -5861,8 +5754,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uCameraPos;
+				R"(uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
@@ -5902,8 +5794,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackground", "PLUS_DITHER",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uViewSize;
 uniform float2 uCameraPos;
@@ -5956,8 +5847,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uCameraPos;
+				R"(uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
@@ -5997,8 +5887,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackground", "PLUS_KEYED",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uViewSize;
 uniform float2 uCameraPos;
@@ -6056,8 +5945,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uCameraPos;
+				R"(uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
 uniform float4 uHorizonOffset;
@@ -6110,8 +5998,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundCylinder", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6152,8 +6039,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -6193,8 +6079,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundCylinder", "DITHER",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6235,8 +6120,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -6276,8 +6160,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundCylinder", "KEYED",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6318,8 +6201,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -6372,8 +6254,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundReflection", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6410,8 +6291,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float4 uQuad;
 uniform float4 uHorizon;
 uniform float4 uShift;
@@ -6476,8 +6356,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundTunnel", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6518,8 +6397,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -6567,8 +6445,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundTunnel", "DITHER",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6609,8 +6486,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -6658,8 +6534,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundTunnel", "KEYED",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6700,8 +6575,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -6762,8 +6636,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundTunnel", "PLUS",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6804,8 +6677,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -6852,8 +6724,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundTunnel", "PLUS_DITHER",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6894,8 +6765,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -6942,8 +6812,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundTunnel", "PLUS_KEYED",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -6984,8 +6853,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uCameraPos;
 uniform float4 uHorizonColor;
 uniform float2 uShift;
@@ -7045,8 +6913,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundWave", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -7087,8 +6954,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uShift;
 uniform float4 uWave;
 uniform float2 uWavePhase;
@@ -7121,8 +6987,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TexturedBackgroundWave", "KEYED",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -7163,8 +7028,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
+				R"(uniform float2 uViewSize;
 uniform float2 uShift;
 uniform float4 uWave;
 uniform float2 uWavePhase;
@@ -7210,8 +7074,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TileMapMesh", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -7256,8 +7119,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -7279,8 +7141,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TileMapMeshBlur", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uTargetSizeInv;
 
@@ -7340,8 +7201,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uTargetSizeInv;
+				R"(uniform float2 uTargetSizeInv;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -7397,8 +7257,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TileMapMeshBlur", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 uniform float2 uTargetSizeInv;
 
@@ -7460,8 +7319,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uTargetSizeInv;
+				R"(uniform float2 uTargetSizeInv;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -7522,8 +7380,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TileMapMeshChromaKey", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -7572,8 +7429,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uTargetSizeInv;
+				R"(uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 
 uniform sampler2D uTexture : TEXUNIT0;
@@ -7604,13 +7460,12 @@ float4 main(PsInput _input) : COLOR
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
 	float3 difference = abs(behind - uKeyColor.xyz);
 	float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
-	COLOR = float4(tile.xyz, tile.w * keyed) * vColor;
+	COLOR = float4(tile.xyz * tile.w, keyed) * vColor;
 	return COLOR;
 }
 )" },
 			{ "TileMapMeshChromaKey", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -7661,8 +7516,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uTargetSizeInv;
+				R"(uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 
 uniform sampler2D uTexture : TEXUNIT0;
@@ -7698,13 +7552,12 @@ float4 main(PsInput _input) : COLOR
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
 	float3 difference = abs(behind - uKeyColor.xyz);
 	float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
-	COLOR = float4(tile.xyz, tile.w * keyed) * vColor;
+	COLOR = float4(tile.xyz * tile.w, keyed) * vColor;
 	return COLOR;
 }
 )" },
 			{ "TileMapMeshHeat", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -7760,8 +7613,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float uHeatPhase;
+				R"(uniform float uHeatPhase;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
@@ -7801,8 +7653,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TileMapMeshHeat", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -7860,8 +7711,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float uHeatPhase;
+				R"(uniform float uHeatPhase;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
@@ -7907,8 +7757,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TileMapMeshPalette", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -7957,8 +7806,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 modelMatrix;
+				R"(uniform float4x4 modelMatrix;
 uniform float4 color;
 uniform float4 texRect;
 uniform float2 spriteSize;
@@ -7995,8 +7843,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TileMapMeshXRay", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -8059,8 +7906,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uTargetSizeInv;
+				R"(uniform float2 uTargetSizeInv;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -8114,8 +7960,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TileMapMeshXRay", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -8180,8 +8025,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uTargetSizeInv;
+				R"(uniform float2 uTargetSizeInv;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -8240,8 +8084,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Tinted", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -8286,8 +8129,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -8315,8 +8157,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Tinted", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -8361,8 +8202,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -8396,8 +8236,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedTinted", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -8452,8 +8291,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -8481,8 +8319,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedTinted", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -8537,8 +8374,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -8572,8 +8408,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "TouchCircle", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -8609,8 +8444,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 modelMatrix;
+				R"(uniform float4x4 modelMatrix;
 uniform float4 color;
 uniform float4 texRect;
 uniform float2 spriteSize;
@@ -8637,8 +8471,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "Transition", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -8682,8 +8515,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-static float2 vTexCoords;
+				R"(static float2 vTexCoords;
 static float2 vCorrection;
 static float vProgressTime;
 static float4 COLOR;
@@ -8727,8 +8559,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "WhiteMask", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -8773,8 +8604,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -8808,8 +8638,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "WhiteMask", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
+				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
 uniform float4x4 modelMatrix;
@@ -8854,8 +8683,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -8894,8 +8722,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedWhiteMask", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -8950,8 +8777,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
 static float4 vColor;
@@ -8985,8 +8811,7 @@ float4 main(PsInput _input) : COLOR
 }
 )" },
 			{ "BatchedWhiteMask", "USE_PALETTE",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
+				R"(#define BATCH_SIZE 585
 
 struct Instance
 {
@@ -9041,8 +8866,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;

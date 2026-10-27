@@ -306,7 +306,6 @@ namespace ShaderCompiler
 				if (!_ok) return {};
 
 				String out;
-				out += "// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.\n"_s;
 				out += "#include <metal_stdlib>\n"_s;
 				out += "using namespace metal;\n\n"_s;
 				if (_hasSymbolicArray) {

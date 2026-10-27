@@ -28,8 +28,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -58,8 +56,6 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;

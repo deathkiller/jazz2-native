@@ -28,8 +28,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -60,34 +58,17 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying vec4 vWarpTerms;
 
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -129,28 +110,13 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -196,11 +162,7 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
-// The sky layers as this game always drew them, its own approximation of the original game: xy the position in the texture,
-// z how far it fades into the color of the horizon
 vec3 legacyWarp(vec2 uv) {
-	// How far the row is from the horizon towards the edge of its half (0: the horizon, 1: the top or the bottom edge),
-	// which side of the horizon it is on, and the distance from the edge (1.3: the horizon, 0.3: the edge)
 	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
 	float aboveHorizon = (uv.y <= horizonY ? 1.0 : 0.0);
 	float fromHorizon = (aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001));
@@ -209,7 +171,6 @@ vec3 legacyWarp(vec2 uv) {
 
 	float correction = ((uViewSize.x * 9.0) / (uViewSize.y * 16.0));
 
-	// Half of the way from the edge to the horizon, the plane above the horizon runs up, the one below it down
 	vec2 texturePos = vec2(
 		(uShift.x / 256.0) + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + (1.5 * horizonDepth)) * correction,
 		(uShift.y / 256.0) + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance
@@ -223,7 +184,6 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
 	vec3 warp = legacyWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
@@ -241,7 +201,6 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 }
 
@@ -263,27 +222,12 @@ varying vec4 vColor;
 varying vec4 vWarpTerms;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -293,13 +237,7 @@ uniform vec4 uHorizonOffset;
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = vWarpTerms.w;
-	// See vertex(): m how far the row is from the horizon and the distance 1.3 - m. pow() is two transcendentals on parts
-	// like the SGX543's USSE, the square root gives pow(distance, 1.5) exactly, and blending that against the linear term
-	// lands on pow(distance, 1.4) to within 0.007 over the range it takes ([0.3, 1.3]) - far closer than the plain distance
-	// the software branch settles for, which is a different shape and made the horizon read as too sharp. Above the horizon
-	// the texture runs up.
 	float m = max(vWarpTerms.x, vWarpTerms.y);
 	float distance = 1.3 - m;
 	float distancePow15 = distance * sqrt(distance);
@@ -317,7 +255,6 @@ void main() {
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 	gl_FragColor = COLOR;
 }
@@ -364,8 +301,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -396,34 +331,17 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying vec4 vWarpTerms;
 
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -465,28 +383,13 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -532,11 +435,7 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
-// The sky layers as this game always drew them, its own approximation of the original game: xy the position in the texture,
-// z how far it fades into the color of the horizon
 vec3 legacyWarp(vec2 uv) {
-	// How far the row is from the horizon towards the edge of its half (0: the horizon, 1: the top or the bottom edge),
-	// which side of the horizon it is on, and the distance from the edge (1.3: the horizon, 0.3: the edge)
 	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
 	float aboveHorizon = (uv.y <= horizonY ? 1.0 : 0.0);
 	float fromHorizon = (aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001));
@@ -545,7 +444,6 @@ vec3 legacyWarp(vec2 uv) {
 
 	float correction = ((uViewSize.x * 9.0) / (uViewSize.y * 16.0));
 
-	// Half of the way from the edge to the horizon, the plane above the horizon runs up, the one below it down
 	vec2 texturePos = vec2(
 		(uShift.x / 256.0) + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + (1.5 * horizonDepth)) * correction,
 		(uShift.y / 256.0) + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance
@@ -559,7 +457,6 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
 	vec3 warp = legacyWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
@@ -579,7 +476,6 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 }
 
@@ -601,27 +497,12 @@ varying vec4 vColor;
 varying vec4 vWarpTerms;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -631,13 +512,7 @@ uniform vec4 uHorizonOffset;
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = vWarpTerms.w;
-	// See vertex(): m how far the row is from the horizon and the distance 1.3 - m. pow() is two transcendentals on parts
-	// like the SGX543's USSE, the square root gives pow(distance, 1.5) exactly, and blending that against the linear term
-	// lands on pow(distance, 1.4) to within 0.007 over the range it takes ([0.3, 1.3]) - far closer than the plain distance
-	// the software branch settles for, which is a different shape and made the horizon read as too sharp. Above the horizon
-	// the texture runs up.
 	float m = max(vWarpTerms.x, vWarpTerms.y);
 	float distance = 1.3 - m;
 	float distancePow15 = distance * sqrt(distance);
@@ -655,7 +530,6 @@ void main() {
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 	gl_FragColor = COLOR;
 }
@@ -702,8 +576,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -734,43 +606,22 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying vec4 vWarpTerms;
 
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-// A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
 uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
 uniform float uOpacity;
 
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -812,44 +663,24 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-// A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
 uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
 uniform float uOpacity;
 
 float keyedOpacity() {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
 
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -895,11 +726,7 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
-// The sky layers as this game always drew them, its own approximation of the original game: xy the position in the texture,
-// z how far it fades into the color of the horizon
 vec3 legacyWarp(vec2 uv) {
-	// How far the row is from the horizon towards the edge of its half (0: the horizon, 1: the top or the bottom edge),
-	// which side of the horizon it is on, and the distance from the edge (1.3: the horizon, 0.3: the edge)
 	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
 	float aboveHorizon = (uv.y <= horizonY ? 1.0 : 0.0);
 	float fromHorizon = (aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001));
@@ -908,7 +735,6 @@ vec3 legacyWarp(vec2 uv) {
 
 	float correction = ((uViewSize.x * 9.0) / (uViewSize.y * 16.0));
 
-	// Half of the way from the edge to the horizon, the plane above the horizon runs up, the one below it down
 	vec2 texturePos = vec2(
 		(uShift.x / 256.0) + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + (1.5 * horizonDepth)) * correction,
 		(uShift.y / 256.0) + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance
@@ -922,7 +748,6 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
 	vec3 warp = legacyWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
@@ -961,43 +786,23 @@ varying vec4 vColor;
 varying vec4 vWarpTerms;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-// A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
 uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
 uniform float uOpacity;
 
 float keyedOpacity() {
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
 
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1007,13 +812,7 @@ float keyedOpacity() {
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = vWarpTerms.w;
-	// See vertex(): m how far the row is from the horizon and the distance 1.3 - m. pow() is two transcendentals on parts
-	// like the SGX543's USSE, the square root gives pow(distance, 1.5) exactly, and blending that against the linear term
-	// lands on pow(distance, 1.4) to within 0.007 over the range it takes ([0.3, 1.3]) - far closer than the plain distance
-	// the software branch settles for, which is a different shape and made the horizon read as too sharp. Above the horizon
-	// the texture runs up.
 	float m = max(vWarpTerms.x, vWarpTerms.y);
 	float distance = 1.3 - m;
 	float distancePow15 = distance * sqrt(distance);
@@ -1081,8 +880,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -1113,34 +910,17 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying vec4 vWarpTerms;
 
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1181,28 +961,13 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1248,9 +1013,6 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
-// The perspective of JJ2+, by the pixels of the view as it counts them - the row of the horizon is the first one of the plane
-// below it. The texture is half of it further down than the shift, V runs up the layer (see TileMap::TexturedBackgroundPass).
-// xy the position in the texture, z how far it fades into the color of the horizon
 vec3 plusWarp(vec2 uv) {
 	vec2 pixel = uv * uViewSize - vec2(0.5);
 	float row = pixel.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
@@ -1268,7 +1030,6 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
 	vec3 warp = plusWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
@@ -1286,7 +1047,6 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 }
 
@@ -1308,27 +1068,12 @@ varying vec4 vColor;
 varying vec4 vWarpTerms;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1338,9 +1083,7 @@ uniform vec4 uHorizonOffset;
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = vWarpTerms.w;
-	// See vertex(): the distance, |row| + 8 rows, and its reciprocal; below the horizon (its row too) the texture runs down
 	float qInv = 1.0 / (abs(vWarpTerms.x) + PLUS_GAP);
 	float side = (vWarpTerms.x >= 0.0 ? 1.0 : -1.0);
 	vec3 warp = vec3(
@@ -1356,7 +1099,6 @@ void main() {
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 	gl_FragColor = COLOR;
 }
@@ -1403,8 +1145,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -1435,34 +1175,17 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying vec4 vWarpTerms;
 
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1503,28 +1226,13 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1570,9 +1278,6 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
-// The perspective of JJ2+, by the pixels of the view as it counts them - the row of the horizon is the first one of the plane
-// below it. The texture is half of it further down than the shift, V runs up the layer (see TileMap::TexturedBackgroundPass).
-// xy the position in the texture, z how far it fades into the color of the horizon
 vec3 plusWarp(vec2 uv) {
 	vec2 pixel = uv * uViewSize - vec2(0.5);
 	float row = pixel.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
@@ -1590,7 +1295,6 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
 	vec3 warp = plusWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
@@ -1610,7 +1314,6 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 }
 
@@ -1632,27 +1335,12 @@ varying vec4 vColor;
 varying vec4 vWarpTerms;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1662,9 +1350,7 @@ uniform vec4 uHorizonOffset;
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = vWarpTerms.w;
-	// See vertex(): the distance, |row| + 8 rows, and its reciprocal; below the horizon (its row too) the texture runs down
 	float qInv = 1.0 / (abs(vWarpTerms.x) + PLUS_GAP);
 	float side = (vWarpTerms.x >= 0.0 ? 1.0 : -1.0);
 	vec3 warp = vec3(
@@ -1680,7 +1366,6 @@ void main() {
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 	gl_FragColor = COLOR;
 }
@@ -1727,8 +1412,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -1759,43 +1442,22 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying vec4 vWarpTerms;
 
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-// A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
 uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
 uniform float uOpacity;
 
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1836,44 +1498,24 @@ in vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-// A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
 uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
 uniform float uOpacity;
 
 float keyedOpacity() {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
 
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1919,9 +1561,6 @@ float addStarField(vec2 samplePosition, float threshold) {
 	return 0.0;
 }
 
-// The perspective of JJ2+, by the pixels of the view as it counts them - the row of the horizon is the first one of the plane
-// below it. The texture is half of it further down than the shift, V runs up the layer (see TileMap::TexturedBackgroundPass).
-// xy the position in the texture, z how far it fades into the color of the horizon
 vec3 plusWarp(vec2 uv) {
 	vec2 pixel = uv * uViewSize - vec2(0.5);
 	float row = pixel.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
@@ -1939,7 +1578,6 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = COLOR.a;
 	vec3 warp = plusWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
@@ -1978,43 +1616,23 @@ varying vec4 vColor;
 varying vec4 vWarpTerms;
 
 uniform sampler2D uTexture;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
-
-
 uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
 uniform vec4 uHorizonOffset;
 
-// The KEYED variant of a textured background (see Tiles::TexturedLayerBlend): drawn only over the pixels of what is behind
-// it of the key color, as SPRITE::CHROMAKEY of JJ2+, and as opaque as uOpacity - so a layer can be translucent, or show
-// through a part of the scene painted in the key color
-// A sharp copy of what is behind the layer, without a key it's never read
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind the layer may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has - or a negative alpha for no key
 uniform vec4 uKeyColor;
-// How opaque the layer is where it's shown
 uniform float uOpacity;
 
 float keyedOpacity() {
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	// Over the key color, or everywhere without a key
 	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
 }
 
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -2024,9 +1642,7 @@ float keyedOpacity() {
 void main() {
 	vec4 COLOR;
 	COLOR = vColor;
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
 	float opacity = vWarpTerms.w;
-	// See vertex(): the distance, |row| + 8 rows, and its reciprocal; below the horizon (its row too) the texture runs down
 	float qInv = 1.0 / (abs(vWarpTerms.x) + PLUS_GAP);
 	float side = (vWarpTerms.x >= 0.0 ? 1.0 : -1.0);
 	vec3 warp = vec3(

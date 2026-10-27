@@ -27,15 +27,6 @@ out vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -50,11 +41,6 @@ layout (std140) uniform InstanceBlock
 
 
 
-
-// A sharp copy of the scene behind the layer
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
 
 void main()
 {
@@ -78,15 +64,6 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -98,11 +75,6 @@ uniform mat4 uViewMatrix;
 
 
 
-
-// A sharp copy of the scene behind the layer
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
 
 void main()
 {
@@ -130,22 +102,9 @@ in vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
-
 uniform sampler2D uTexture;
-// A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
 uniform vec4 uKeyColor;
 
 out vec4 COLOR;
@@ -176,22 +135,9 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
-
 uniform sampler2D uTexture;
-// A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
 uniform vec4 uKeyColor;
 
 
@@ -251,15 +197,6 @@ out vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -276,10 +213,6 @@ layout (std140) uniform InstanceBlock
 
 
 uniform sampler2D uTexturePalette;
-// A sharp copy of the scene behind the layer
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
 
 void main()
 {
@@ -303,15 +236,6 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -325,10 +249,6 @@ uniform mat4 uViewMatrix;
 
 
 uniform sampler2D uTexturePalette;
-// A sharp copy of the scene behind the layer
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
 
 void main()
 {
@@ -356,23 +276,10 @@ in vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
-
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
-// A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
 uniform vec4 uKeyColor;
 
 out vec4 COLOR;
@@ -407,23 +314,10 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
-
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
-// A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind;
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
 uniform vec4 uKeyColor;
 
 

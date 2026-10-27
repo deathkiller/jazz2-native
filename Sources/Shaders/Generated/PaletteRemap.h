@@ -28,8 +28,6 @@ layout (std140) uniform InstanceBlock
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	float palOffset;
 };
 
@@ -62,8 +60,6 @@ uniform mat4 uViewMatrix;
 	uniform vec4 color;
 	uniform vec4 texRect;
 	uniform vec2 spriteSize;
-	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
-	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
@@ -103,7 +99,6 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 src = texture(uTexture, vTexCoords);
-	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
@@ -132,7 +127,6 @@ void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	vec4 src = texture2D(uTexture, vTexCoords);
-	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
@@ -213,14 +207,13 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 layout (std140) uniform InstancesBlock
 {
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	Instance[BATCH_SIZE] instances;
 } block;
@@ -259,12 +252,11 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
-	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
 	float palOffset;
 };
 
 #ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
+	#define BATCH_SIZE (585)
 #endif
 	uniform Instance instances[BATCH_SIZE];
 
@@ -307,7 +299,6 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 src = texture(uTexture, vTexCoords);
-	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
@@ -336,7 +327,6 @@ void main() {
 	vec4 COLOR;
 	COLOR = vColor;
 	vec4 src = texture2D(uTexture, vTexCoords);
-	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;

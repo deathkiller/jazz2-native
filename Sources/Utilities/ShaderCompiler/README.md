@@ -78,8 +78,10 @@ cmake --build build-shadercompiler
 
 A `.shader` file is a custom shader language: GLSL globals plus `vertex()`/`fragment()`
 entry points, annotated with plain **keyword directives** — top-level statements at brace depth 0,
-terminated by `;`. Comments follow GLSL rules (`//` and `/* */`) and pass through into the
-emitted sources.
+terminated by `;`. Comments follow GLSL rules (`//` and `/* */`) and never reach the emitted
+sources: they are stripped right after parsing (the built-in canvas templates carry none either),
+the lines only a comment was on are dropped, trailing whitespace is trimmed and a run of blank
+lines is collapsed into one. Diagnostics still point at the lines of the original file.
 
 | Directive | Meaning |
 | --- | --- |
@@ -331,7 +333,7 @@ function whose name is never referenced outside its own definition is removed, i
 fixpoint (a helper only used by a removed helper disappears too). `main()`, `vertex()` and
 `fragment()` are roots; overloads share fate by name; references are counted conservatively — an
 identifier occurrence anywhere outside comments counts, including inactive preprocessor branches.
-Comment lines directly above a removed function are removed with it. Reflection is untouched by
+Reflection is untouched by
 function removal. Note that a helper eliminated from a stage may freely reference declarations
 that are guarded out of that stage — the reference disappears together with the helper before the
 GLSL compiler ever sees it.
