@@ -2244,7 +2244,7 @@ namespace Jazz2
 	{
 		SmallVector<std::unique_ptr<Texture>, 1> textureDiffuse;
 		if (!_isHeadless && tileCount > 0) {
-			std::int32_t tilesPerRow = std::max(1, std::int32_t(std::ceil(std::sqrt(float(tileCount)))));
+			std::int32_t tilesPerRow = std::max<std::int32_t>(1, std::int32_t(std::ceil(std::sqrt(float(tileCount)))));
 			std::int32_t width = tilesPerRow * TileSet::PaddedTileSize;
 			std::int32_t height = ((std::int32_t(tileCount) + tilesPerRow - 1) / tilesPerRow) * TileSet::PaddedTileSize;
 			std::unique_ptr<Texture> texture;

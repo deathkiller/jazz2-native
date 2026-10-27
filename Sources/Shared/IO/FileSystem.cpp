@@ -37,7 +37,6 @@
 		!defined(DEATH_TARGET_MORPHOS)
 #		include <ftw.h>
 #	endif
-#	include <libgen.h>
 #	include <pwd.h>
 #	include <strings.h>
 #	include <sys/stat.h>
@@ -602,20 +601,6 @@ namespace Death { namespace IO {
 				}
 				return false;
 			}
-		}
-
-		/** @brief Returns the last component of @p path, which must be writable and null-terminated */
-		static const char* GetBaseName(char* path)
-		{
-#	if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3)
-			// PS2SDK's newlib declares no basename(), and neither does the powerpc64-ps3-elf one behind
-			// PSL1GHT (<libgen.h> is present, but nothing implements the symbol). The callers only need the
-			// last path component, for which the trailing-slash handling POSIX basename() adds makes no difference
-			const char* lastSeparator = std::strrchr(path, '/');
-			return (lastSeparator != nullptr ? lastSeparator + 1 : path);
-#	else
-			return ::basename(path);
-#	endif
 		}
 
 		static FileSystem::Permission NativeModeToEnum(std::uint32_t nativeMode)
@@ -2243,18 +2228,13 @@ namespace Death { namespace IO {
 		struct stat sb;
 		return (::stat(nullTerminatedPath.data(), &sb) == 0 && (sb.st_flags & UF_HIDDEN) == UF_HIDDEN);
 #else
-		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
-		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath)) {
+		if (AndroidAssetStream::TryGetAssetPath(path)) {
 			return false;
 		}
 #	endif
-		char buffer[MaxPathLength];
-		std::size_t pathLength = std::min((std::size_t)MaxPathLength - 1, path.size());
-		strncpy(buffer, path.data(), pathLength);
-		buffer[pathLength] = '\0';
-		const char* baseName = GetBaseName(buffer);
-		return (baseName != nullptr && baseName[0] == '.');
+		StringView fileName = GetFileName(path);
+		return (!fileName.empty() && fileName[0] == '.');
 #endif
 	}
 
@@ -2313,20 +2293,20 @@ namespace Death { namespace IO {
 			return false;
 		}
 #	endif
-		char buffer[MaxPathLength];
-		std::size_t pathLength = std::min((std::size_t)MaxPathLength - 1, path.size());
-		strncpy(buffer, nullTerminatedPath.data(), pathLength);
-		buffer[pathLength] = '\0';
-		const char* baseName = GetBaseName(buffer);
-		if (hidden && baseName != nullptr && baseName[0] != '.') {
-			String newPath = CombinePath(GetDirectoryName(nullTerminatedPath), String("."_s + baseName));
+		StringView fileName = GetFileName(nullTerminatedPath);
+		if (hidden && !fileName.empty() && fileName[0] != '.') {
+			String newPath = CombinePath(GetDirectoryName(nullTerminatedPath), String("."_s + fileName));
 			return (::rename(nullTerminatedPath.data(), newPath.data()) == 0);
-		} else if (!hidden && baseName != nullptr && baseName[0] == '.') {
-			std::int32_t numDots = 0;
-			while (baseName[numDots] == '.') {
+		} else if (!hidden && !fileName.empty() && fileName[0] == '.') {
+			std::size_t numDots = 0;
+			while (numDots < fileName.size() && fileName[numDots] == '.') {
 				numDots++;
 			}
-			String newPath = CombinePath(GetDirectoryName(nullTerminatedPath), &buffer[numDots]);
+			if (numDots == fileName.size()) {
+				// "." or "..", there is no name left to rename it to
+				return false;
+			}
+			String newPath = CombinePath(GetDirectoryName(nullTerminatedPath), fileName.exceptPrefix(numDots));
 			return (::rename(nullTerminatedPath.data(), newPath.data()) == 0);
 		}
 #endif
