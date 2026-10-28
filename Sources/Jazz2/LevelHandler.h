@@ -313,6 +313,13 @@ namespace Jazz2
 #	endif
 		/** @brief Returns `true` if the level is played from the level editor, it returns there when it's left */
 		virtual bool IsEditorPlayTest() const;
+		/** @brief Leaves the level editor the level is played from */
+		virtual void ExitEditor();
+		/** @brief Returns the debug tools of a level played from the level editor, or `nullptr` in a game */
+		Editor::PlayTestDebug* GetPlayTestDebug() const {
+			return _playTestDebug.get();
+		}
+#endif
 		/**
 		 * @brief Returns `true` if the level is loaded only to run its script, by the level editor
 		 *
@@ -321,13 +328,6 @@ namespace Jazz2
 		virtual bool IsSandbox() const {
 			return false;
 		}
-		/** @brief Leaves the level editor the level is played from */
-		virtual void ExitEditor();
-		/** @brief Returns the debug tools of a level played from the level editor, or `nullptr` in a game */
-		Editor::PlayTestDebug* GetPlayTestDebug() const {
-			return _playTestDebug.get();
-		}
-#endif
 		/** @brief Returns the part of the level the view of a given player shows, from its top left corner, the whole view without one */
 		Rectf GetCameraView(Actors::Player* player) const;
 
