@@ -357,7 +357,7 @@ namespace Jazz2::Editor
 		} else if (!Entry.ShortcutText.empty()) {
 			width += context.Px(24.0f) + context.MeasureText(Entry.ShortcutText);
 		}
-		return Vector2f(std::max(width, context.Px(110.0f)), context.Px(UiTheme::RowHeight + 3.0f));
+		return Vector2f(std::max(width, context.Px(110.0f)), context.Px(UiTheme::RowHeight + 5.0f));
 	}
 
 	bool UiMenuRow::MeasureDependsOnAvailable() const
@@ -432,7 +432,7 @@ namespace Jazz2::Editor
 
 	Vector2f UiDropdown::Measure(const UiContext& context, Vector2f available)
 	{
-		Vector2f size(context.Px(80.0f), context.Px(UiTheme::RowHeight + 2.0f));
+		Vector2f size(context.Px(80.0f), context.Px(UiTheme::RowHeight + 4.0f));
 		Vector2f fixedSize = GetFixedSize(context);
 		if (fixedSize.X >= 0.0f) {
 			size.X = fixedSize.X;

@@ -412,12 +412,10 @@ var FIXED_FUNCTION_ONLY_HOVER_INDEX = buildHoverIndex([
 	[language.FIXED_FUNCTION.tevPresets, 'p.tev value']
 ]);
 
-var NOT_IN_FIXED_FUNCTION = '**Not available in a `fixed_function` block.** That body is not GLSL — it is transpiled to ' +
-	'C++ that the console\'s CPU runs once per draw, and its whole vocabulary is `pass` / `pipeline`, the pass fields, ' +
-	'the `submit_*` calls, the context facilities and a small maths subset (`abs`, `ceil`, `clamp`, `cos`, `float`, ' +
-	'`floor`, `int`, `max`, `min`, `mix`, `sin`, `sqrt`).';
-var ONLY_IN_FIXED_FUNCTION = '**Only available inside a `fixed_function` block** — it belongs to the console ' +
-	'fixed-function DSL, never to the GLSL stages.';
+var NOT_IN_FIXED_FUNCTION = '**Not available in a `fixed_function` block.** Only `pass`, `pipeline`, pass fields, ' +
+	'`submit_*`, context functions and basic maths (`abs`, `ceil`, `clamp`, `cos`, `float`, `floor`, `int`, `max`, ' +
+	'`min`, `mix`, `sin`, `sqrt`) are allowed there.';
+var ONLY_IN_FIXED_FUNCTION = '**Only available inside a `fixed_function` block.**';
 
 /** Renders one index entry (plus an optional context warning) as the hover body. */
 function hoverBody(word, entry, warning) {
@@ -470,21 +468,18 @@ var hoverProvider = {
 		}
 
 		if (language.UNSUPPORTED_BUILTINS.indexOf(word) >= 0) {
-			return new vscode.Hover(markdown('**' + word + '**\n\nA canvas built-in the compiler reports as **unsupported**. ' +
-				'Only `COLOR`, `UV`, `TEXTURE`, `PALETTE_OFFSET` and `VERTEX` are implemented.'), wordRange);
+			return new vscode.Hover(markdown('**' + word + '**\n\n**Not supported.** Available canvas built-ins: ' +
+				'`COLOR`, `UV`, `TEXTURE`, `PALETTE_OFFSET`, `VERTEX`.'), wordRange);
 		}
 		// The grammar highlights a wider set of type-looking words than the compiler has entries for, so
 		// say so here rather than let the colour imply it compiles
 		if (language.UNSUPPORTED_TYPES.indexOf(word) >= 0) {
-			return new vscode.Hover(markdown('**' + word + '**\n\n**Not a type this language has.** The compiler\'s type table ' +
-				'(reflection, and every emitter) knows `float`, `int`, `uint`, `bool`, `vec2/3/4`, `ivec2/3/4`, `uvec2/3/4`, ' +
-				'`bvec2/3/4`, `mat2`, `mat3`, `mat4`, `sampler2D`, `sampler3D`, `samplerCube` and your own `struct`s — ' +
-				'nothing else. The editor colours it like a type because the grammar is deliberately permissive; the ' +
-				'declaration still fails as an unknown type.'), wordRange);
+			return new vscode.Hover(markdown('**' + word + '**\n\n**Not a type this language has.** Supported: `float`, `int`, ' +
+				'`uint`, `bool`, `vec2/3/4`, `ivec2/3/4`, `uvec2/3/4`, `bvec2/3/4`, `mat2/3/4`, `sampler2D`, `sampler3D`, ' +
+				'`samplerCube` and your own `struct`s.'), wordRange);
 		}
 		if (word === 'fragColor') {
-			return new vscode.Hover(markdown('**fragColor**\n\nReferencing `fragColor` anywhere in a `.shader` file is a **parse error** — ' +
-				'`COLOR` is the fragment output variable itself.'), wordRange);
+			return new vscode.Hover(markdown('**fragColor**\n\nNot allowed (parse error) - write to `COLOR` instead.'), wordRange);
 		}
 
 		// Something declared by this document: show the declaration. Checked BEFORE the HLSL spellings
@@ -497,10 +492,8 @@ var hoverProvider = {
 
 		// Pasted from an HLSL / Cg / Unity shader: name the spelling this language does use
 		if (Object.prototype.hasOwnProperty.call(language.HLSL_SPELLINGS, word)) {
-			return new vscode.Hover(markdown('**' + word + '**\n\nAn **HLSL / Cg spelling**, which this language does not accept — ' +
-				'a `.shader` is written in GLSL and deliberately has no aliases. Use `' + language.HLSL_SPELLINGS[word] + '` instead.\n\n' +
-				'The HLSL lowering happens inside the compiler on the way to D3D11 and the PS3 (`mix` → `lerp`, `fract` → `frac`, ' +
-				'`dFdx` → `ddx`, …), so the source keeps one spelling for every backend.'), wordRange);
+			return new vscode.Hover(markdown('**' + word + '**\n\nAn HLSL / Cg spelling, not valid in GLSL. ' +
+				'Use `' + language.HLSL_SPELLINGS[word] + '` instead.'), wordRange);
 		}
 		return null;
 	}
@@ -677,8 +670,9 @@ async function validate(document) {
 			}
 		}
 
+		// An include fragment is not a complete shader, so the compiler cannot check it on its own
 		var compiler = resolveCompiler();
-		if (compiler.path !== null && document.uri.scheme === 'file') {
+		if (compiler.path !== null && document.uri.scheme === 'file' && !isIncludeFragment(document)) {
 			var inputPath = document.uri.fsPath;
 			var tempPath = null;
 			try {
@@ -772,6 +766,10 @@ async function showDump(modeName) {
 	var editor = vscode.window.activeTextEditor;
 	if (editor === undefined || !isShaderDocument(editor.document)) {
 		vscode.window.showInformationMessage('Open a .shader file first.');
+		return;
+	}
+	if (isIncludeFragment(editor.document)) {
+		vscode.window.showInformationMessage('An .inc file cannot be compiled on its own - open the .shader file that includes it.');
 		return;
 	}
 	var document = editor.document;

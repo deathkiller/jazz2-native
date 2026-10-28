@@ -107,6 +107,88 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 
 namespace Jazz2::ShadersGen
 {
+	inline constexpr char BackgroundDither_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char BackgroundDither_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+};
+
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTextureBehind [[texture(0)]], sampler uTextureBehind_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	behind = reduceColors(behind, _in.gl_FragCoord.xy);
+	COLOR = float4(behind, 1.0);
+	return COLOR;
+}
+)__SHDR__";
+
+}
+
+namespace Jazz2::ShadersGen
+{
 	inline constexpr char BatchedShieldFire_VsMsl[] =
 R"__SHDR__(#include <metal_stdlib>
 using namespace metal;
@@ -580,6 +662,14 @@ struct _Globals
 	float uTime;
 };
 
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+};
+
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
@@ -612,6 +702,119 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	blur = float4(gray, gray, gray, blur.w);
 	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(1.0 - light.x));
 	COLOR.w = 1.0;
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char Combine_DITHER_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float4 uAmbientColor;
+	float uTime;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vViewSizeInv [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char Combine_DITHER_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float4 uAmbientColor;
+	float uTime;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vViewSizeInv [[user(locn1)]];
+};
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn& _in)
+{
+	float2 seed = position + fract(_globals.uTime * 0.01);
+	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
+}
+
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]])
+{
+	float4 COLOR = float4(0);
+	float4 blur1 = uTextureBlurHalf.sample(uTextureBlurHalf_smplr, _in.vTexCoords);
+	float4 blur2 = uTextureBlurQuarter.sample(uTextureBlurQuarter_smplr, _in.vTexCoords);
+	float4 main_ = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float4 light = uTextureLighting.sample(uTextureLighting_smplr, noiseTexCoords(_in.vTexCoords, _globals, _in));
+	float4 blur = (blur1 + blur2) * float4(0.5);
+	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
+	blur = float4(gray, gray, gray, blur.w);
+	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(1.0 - light.x));
+	COLOR.w = 1.0;
+	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	return COLOR;
 }
 )__SHDR__";
@@ -674,6 +877,14 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
 };
 
 struct FsIn
@@ -782,6 +993,193 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 }
 )__SHDR__";
 
+	inline constexpr char CombineWithWater_DITHER_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float4 uAmbientColor;
+	float uTime;
+	float2 uCameraPos;
+	float uWaterLevel;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vViewSizeInv [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char CombineWithWater_DITHER_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float4 uAmbientColor;
+	float uTime;
+	float2 uCameraPos;
+	float uWaterLevel;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vViewSizeInv [[user(locn1)]];
+};
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn& _in)
+{
+	float2 seed = position + fract(_globals.uTime * 0.01);
+	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
+}
+
+float wave(float x, float time)
+{
+	float waveOffset = cos((x - time) * 60.0) * 0.004 + cos((x - 2.0 * time) * 20.0) * 0.008 + sin((x + 2.0 * time) * 35.0) * 0.01 + cos((x + 4.0 * time) * 70.0) * 0.001;
+	return waveOffset * 0.4;
+}
+
+float aastep(float threshold, float value)
+{
+	float afwidth = length(float2(dfdx(value), dfdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+float3 permute(float3 x)
+{
+	return ((x * 34.0 + 1.0) * x - (289.0) * floor(((x * 34.0 + 1.0) * x) / (289.0)));
+}
+
+float snoise(float2 v)
+{
+	const float4 C = float4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+	float2 i = floor(v + dot(v, C.yy));
+	float2 x0 = v - i + dot(i, C.xx);
+	float2 i1 = x0.x > x0.y ? float2(1.0, 0.0) : float2(0.0, 1.0);
+	float4 x12 = x0.xyxy + C.xxzz;
+	x12.xy -= i1;
+	i = (i - (289.0) * floor((i) / (289.0)));
+	float3 p = permute(permute(i.y + float3(0.0, i1.y, 1.0)) + i.x + float3(0.0, i1.x, 1.0));
+	float3 m = max(0.5 - float3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+	m = m * m;
+	m = m * m;
+	float3 x = 2.0 * fract(p * C.www) - 1.0;
+	float3 h = abs(x) - 0.5;
+	float3 ox = floor(x + 0.5);
+	float3 a0 = x - ox;
+	m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+	float3 g;
+	g.x = a0.x * x0.x + h.x * x0.y;
+	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+	return 130.0 * dot(m, g);
+}
+
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]], texture2d<float> uTextureNoise [[texture(4)]], sampler uTextureNoise_smplr [[sampler(4)]])
+{
+	float4 COLOR = float4(0);
+	float3 waterColor = float3(0.4, 0.6, 0.8);
+	float2 uvLocal = _in.vTexCoords;
+	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
+	float2 uvWorld = uvLocal + uvWorldCenter;
+	float waveHeight = wave(uvWorld.x, _globals.uTime);
+	float isTexelBelow = aastep(waveHeight, uvLocal.y - _globals.uWaterLevel);
+	float isTexelAbove = 1.0 - isTexelBelow;
+	float2 disPos = uvWorld * float2(0.1) + float2((_globals.uTime * 0.4 - (2.0) * floor((_globals.uTime * 0.4) / (2.0))));
+	float2 dis = (uTextureNoise.sample(uTextureNoise_smplr, disPos).xy - float2(0.5)) * float2(0.01);
+	float2 uv = clamp(uvLocal + (float2(0.004 * sin(_globals.uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * float2(isTexelBelow), float2(0.0), float2(1.0));
+	float4 main_ = uTexture.sample(uTexture_smplr, uv);
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = uTexture.sample(uTexture_smplr, float2(uv.x - aberration, uv.y)).x;
+	float blue = uTexture.sample(uTexture_smplr, float2(uv.x + aberration, uv.y)).z;
+	main_.xyz = mix(main_.xyz, waterColor * (0.4 + 1.2 * float3(red, main_.y, blue)), float3(isTexelBelow * 0.5));
+	float2 uvNormalized = (uvLocal / _in.vViewSizeInv - (720.0) * floor((uvLocal / _in.vViewSizeInv) / (720.0))) / 720.0;
+	float noisePos = uvWorldCenter.x * 6.0 + uvLocal.x * 1.4 + uvWorldCenter.y * 0.5 + (1.0 - uvNormalized.x * 1.2 - uvNormalized.y) * -5.0;
+	float rays = snoise(float2(noisePos, _globals.uTime * 5.0 + uvWorldCenter.y)) * 0.55 + 0.3;
+	main_.xyz += float3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
+	float topDist = abs(uvLocal.y - _globals.uWaterLevel - waveHeight);
+	float isNearTop = 1.0 - aastep(_in.vViewSizeInv.y * 2.8, topDist);
+	float isVeryNearTop = 1.0 - aastep(_in.vViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
+	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
+	main_.xyz = mix(main_.xyz, uTexture.sample(uTexture_smplr, float2(uvLocal.x, (_globals.uWaterLevel - uvLocal.y + _globals.uWaterLevel) * 0.97 - waveHeight + _in.vViewSizeInv.y)).xyz, float3(topColorBlendFac));
+	main_.xyz += float3(0.2 * isVeryNearTop);
+	float4 blur1 = uTextureBlurHalf.sample(uTextureBlurHalf_smplr, uv);
+	float4 blur2 = uTextureBlurQuarter.sample(uTextureBlurQuarter_smplr, uv);
+	float4 light = uTextureLighting.sample(uTextureLighting_smplr, noiseTexCoords(uv, _globals, _in));
+	float4 blur = (blur1 + blur2) * float4(0.5);
+	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
+	blur = float4(gray, gray, gray, blur.w);
+	float darknessStrength = 1.0 - light.x;
+	if (_globals.uWaterLevel < 0.4) {
+		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
+		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
+	}
+	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	COLOR.w = 1.0;
+	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
+	return COLOR;
+}
+)__SHDR__";
+
 }
 
 namespace Jazz2::ShadersGen
@@ -842,6 +1240,14 @@ struct _Globals
 	float uWaterLevel;
 };
 
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+};
+
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
@@ -891,6 +1297,140 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	}
 	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char CombineWithWaterLow_DITHER_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float4 uAmbientColor;
+	float uTime;
+	float2 uCameraPos;
+	float uWaterLevel;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vViewSizeInv [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char CombineWithWaterLow_DITHER_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float4 uAmbientColor;
+	float uTime;
+	float2 uCameraPos;
+	float uWaterLevel;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vViewSizeInv [[user(locn1)]];
+};
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn& _in)
+{
+	float2 seed = position + fract(_globals.uTime * 0.01);
+	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
+}
+
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]])
+{
+	float4 COLOR = float4(0);
+	float3 waterColor = float3(0.4, 0.6, 0.8);
+	float2 uvLocal = _in.vTexCoords;
+	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
+	float2 uvWorld = uvLocal + uvWorldCenter;
+	float isTexelBelow = 1.0 - step(uvLocal.y, _globals.uWaterLevel);
+	float isTexelAbove = 1.0 - isTexelBelow;
+	float2 uv = clamp(uvLocal + float2(0.008 * sin(_globals.uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), float2(0.0), float2(1.0));
+	float4 main_ = uTexture.sample(uTexture_smplr, uv);
+	float topDist = abs(uvLocal.y - _globals.uWaterLevel);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = 1.0 - step(_in.vViewSizeInv.y, topDist);
+	main_.xyz = mix(main_.xyz, waterColor, float3(isTexelBelow * 0.4)) + float3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
+	float4 blur1 = uTextureBlurHalf.sample(uTextureBlurHalf_smplr, uv);
+	float4 blur2 = uTextureBlurQuarter.sample(uTextureBlurQuarter_smplr, uv);
+	float4 light = uTextureLighting.sample(uTextureLighting_smplr, noiseTexCoords(uv, _globals, _in));
+	float4 blur = (blur1 + blur2) * float4(0.5);
+	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
+	blur = float4(gray, gray, gray, blur.w);
+	float darknessStrength = 1.0 - light.x;
+	if (_globals.uWaterLevel < 0.4) {
+		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
+		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
+	}
+	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	COLOR.w = 1.0;
+	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	return COLOR;
 }
 )__SHDR__";
@@ -5271,6 +5811,27 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+float4 textureTexel(float2 texturePos, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	return uTexture.sample(uTexture_smplr, float2(texturePos.x, (floor(texturePos.y * 256.0) + 0.5) / 256.0));
+}
+
 float2 hash2D(float2 p)
 {
 	float h = dot(p, float2(12.9898, 78.233));
@@ -5331,9 +5892,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float opacity = COLOR.w;
 	float3 warp = legacyWarp(_in.vTexCoords, _globals);
 	float2 texturePos = warp.xy;
-	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
-	texturePos += hash2D(_in.vTexCoords * _globals.uViewSize + (_globals.uCameraPos + _globals.uShift) * 0.001).xy * 8.0 / _globals.uViewSize;
-	texColor = mix(texColor, uTexture.sample(uTexture_smplr, texturePos), 0.333);
+	float4 texColor = textureTexel(texturePos, uTexture, uTexture_smplr);
 	float horizonOpacity = warp.z;
 	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
 	if (_globals.uHorizonColor.w > 0.0) {
@@ -5343,6 +5902,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - _globals.uHorizonOffset.z));
+	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
@@ -5364,6 +5924,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct InstanceBlock
@@ -5411,6 +5972,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct FsIn
@@ -5420,11 +5982,151 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
-float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += float3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = float3(lum) + (c - float3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = float3(lum) + (c - float3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - float3(lo)) * s / (hi - lo) : float3(0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = float3(1.0) - 2.0 * (float3(1.0) - s) * (float3(1.0) - d);
+	return mix(multiply, screen, step(float3(0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return float3(1.0) - (float3(1.0) - s) * (float3(1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (float3(1.0) - 2.0 * s) * d * (float3(1.0) - d);
+													float3 lightD = mix(((16.0 * d - float3(12.0)) * d + float3(4.0)) * d, sqrt(d), step(float3(0.25), d));
+													float3 light = d + (2.0 * s - float3(1.0)) * (lightD - d);
+													return mix(dark, light, step(float3(0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(float3(1.0) - s, float3(0.0001)), float3(1.0));
+														} else {
+															if (mode < 17.5) {
+																return float3(1.0) - min((float3(1.0) - d) / max(s, float3(0.0001)), float3(1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel)
+{
+	pixel = floor(pixel);
+	float2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel)
+{
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color, constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
 {
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	if (_globals.uBlendMode.x > 0.5) {
+		return blendModeResult(_globals.uBlendMode, color, _globals.uOpacity, behind, _in.gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - _globals.uKeyColor.xyz);
-	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+	return float4(color, _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5)));
 }
 
 float2 hash2D(float2 p)
@@ -5497,7 +6199,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - _globals.uHorizonOffset.z));
-	COLOR.w = keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in);
+	COLOR = keyedColor(COLOR.xyz, _globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -5707,6 +6409,27 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+float4 textureTexel(float2 texturePos, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	return uTexture.sample(uTexture_smplr, float2(texturePos.x, (floor(texturePos.y * 256.0) + 0.5) / 256.0));
+}
+
 float2 hash2D(float2 p)
 {
 	float h = dot(p, float2(12.9898, 78.233));
@@ -5765,9 +6488,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float opacity = COLOR.w;
 	float3 warp = plusWarp(_in.vTexCoords, _globals);
 	float2 texturePos = warp.xy;
-	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
-	texturePos += hash2D(_in.vTexCoords * _globals.uViewSize + (_globals.uCameraPos + _globals.uShift) * 0.001).xy * 8.0 / _globals.uViewSize;
-	texColor = mix(texColor, uTexture.sample(uTexture_smplr, texturePos), 0.333);
+	float4 texColor = textureTexel(texturePos, uTexture, uTexture_smplr);
 	float horizonOpacity = warp.z;
 	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
 	if (_globals.uHorizonColor.w > 0.0) {
@@ -5777,6 +6498,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - _globals.uHorizonOffset.z));
+	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
@@ -5798,6 +6520,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct InstanceBlock
@@ -5845,6 +6568,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct FsIn
@@ -5854,11 +6578,151 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
-float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += float3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = float3(lum) + (c - float3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = float3(lum) + (c - float3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - float3(lo)) * s / (hi - lo) : float3(0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = float3(1.0) - 2.0 * (float3(1.0) - s) * (float3(1.0) - d);
+	return mix(multiply, screen, step(float3(0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return float3(1.0) - (float3(1.0) - s) * (float3(1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (float3(1.0) - 2.0 * s) * d * (float3(1.0) - d);
+													float3 lightD = mix(((16.0 * d - float3(12.0)) * d + float3(4.0)) * d, sqrt(d), step(float3(0.25), d));
+													float3 light = d + (2.0 * s - float3(1.0)) * (lightD - d);
+													return mix(dark, light, step(float3(0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(float3(1.0) - s, float3(0.0001)), float3(1.0));
+														} else {
+															if (mode < 17.5) {
+																return float3(1.0) - min((float3(1.0) - d) / max(s, float3(0.0001)), float3(1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel)
+{
+	pixel = floor(pixel);
+	float2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel)
+{
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color, constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
 {
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	if (_globals.uBlendMode.x > 0.5) {
+		return blendModeResult(_globals.uBlendMode, color, _globals.uOpacity, behind, _in.gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - _globals.uKeyColor.xyz);
-	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+	return float4(color, _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5)));
 }
 
 float2 hash2D(float2 p)
@@ -5929,7 +6793,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - _globals.uHorizonOffset.z));
-	COLOR.w = keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in);
+	COLOR = keyedColor(COLOR.xyz, _globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -6090,11 +6954,25 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
-float2 hash2D(float2 p)
+float bayer2(float2 pixel)
 {
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+float4 textureTexel(float2 texturePos, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	return uTexture.sample(uTexture_smplr, float2(texturePos.x, (floor(texturePos.y * 256.0) + 0.5) / 256.0));
 }
 
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
@@ -6110,10 +6988,9 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float rows = row / 141.0;
 	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
-	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
-	texturePos += hash2D(_in.vTexCoords * _globals.uViewSize + (_globals.uCameraPos + _globals.uShift) * 0.001).xy * 8.0 / _globals.uViewSize;
-	texColor = mix(texColor, uTexture.sample(uTexture_smplr, texturePos), 0.333);
+	float4 texColor = textureTexel(texturePos, uTexture, uTexture_smplr);
 	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fade * _globals.uCylinder.z);
+	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
@@ -6135,6 +7012,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct InstanceBlock
@@ -6182,6 +7060,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct FsIn
@@ -6191,11 +7070,151 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
-float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += float3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = float3(lum) + (c - float3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = float3(lum) + (c - float3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - float3(lo)) * s / (hi - lo) : float3(0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = float3(1.0) - 2.0 * (float3(1.0) - s) * (float3(1.0) - d);
+	return mix(multiply, screen, step(float3(0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return float3(1.0) - (float3(1.0) - s) * (float3(1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (float3(1.0) - 2.0 * s) * d * (float3(1.0) - d);
+													float3 lightD = mix(((16.0 * d - float3(12.0)) * d + float3(4.0)) * d, sqrt(d), step(float3(0.25), d));
+													float3 light = d + (2.0 * s - float3(1.0)) * (lightD - d);
+													return mix(dark, light, step(float3(0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(float3(1.0) - s, float3(0.0001)), float3(1.0));
+														} else {
+															if (mode < 17.5) {
+																return float3(1.0) - min((float3(1.0) - d) / max(s, float3(0.0001)), float3(1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel)
+{
+	pixel = floor(pixel);
+	float2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel)
+{
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color, constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
 {
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	if (_globals.uBlendMode.x > 0.5) {
+		return blendModeResult(_globals.uBlendMode, color, _globals.uOpacity, behind, _in.gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - _globals.uKeyColor.xyz);
-	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+	return float4(color, _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5)));
 }
 
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
@@ -6213,7 +7232,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
 	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fade * _globals.uCylinder.z);
-	COLOR.w = keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in);
+	COLOR = keyedColor(COLOR.xyz, _globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -6546,6 +7565,27 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+float4 textureTexel(float2 texturePos, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	return uTexture.sample(uTexture_smplr, float2(texturePos.x, (floor(texturePos.y * 256.0) + 0.5) / 256.0));
+}
+
 float2 hash2D(float2 p)
 {
 	float h = dot(p, float2(12.9898, 78.233));
@@ -6605,9 +7645,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float opacity = COLOR.w;
 	float3 tunnel = legacyTunnel(_in.vTexCoords, _globals);
 	float2 texturePos = tunnel.xy;
-	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
-	texturePos += hash2D(_in.vTexCoords * _globals.uViewSize + (_globals.uCameraPos + _globals.uShift) * 0.001).xy * 8.0 / _globals.uViewSize;
-	texColor = mix(texColor, uTexture.sample(uTexture_smplr, texturePos), 0.333);
+	float4 texColor = textureTexel(texturePos, uTexture, uTexture_smplr);
 	float horizonOpacity = tunnel.z;
 	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
 	if (_globals.uHorizonColor.w > 0.0) {
@@ -6617,6 +7655,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * _globals.uTunnel.z);
+	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
@@ -6638,6 +7677,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct InstanceBlock
@@ -6685,6 +7725,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct FsIn
@@ -6694,11 +7735,151 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
-float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += float3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = float3(lum) + (c - float3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = float3(lum) + (c - float3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - float3(lo)) * s / (hi - lo) : float3(0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = float3(1.0) - 2.0 * (float3(1.0) - s) * (float3(1.0) - d);
+	return mix(multiply, screen, step(float3(0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return float3(1.0) - (float3(1.0) - s) * (float3(1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (float3(1.0) - 2.0 * s) * d * (float3(1.0) - d);
+													float3 lightD = mix(((16.0 * d - float3(12.0)) * d + float3(4.0)) * d, sqrt(d), step(float3(0.25), d));
+													float3 light = d + (2.0 * s - float3(1.0)) * (lightD - d);
+													return mix(dark, light, step(float3(0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(float3(1.0) - s, float3(0.0001)), float3(1.0));
+														} else {
+															if (mode < 17.5) {
+																return float3(1.0) - min((float3(1.0) - d) / max(s, float3(0.0001)), float3(1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel)
+{
+	pixel = floor(pixel);
+	float2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel)
+{
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color, constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
 {
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	if (_globals.uBlendMode.x > 0.5) {
+		return blendModeResult(_globals.uBlendMode, color, _globals.uOpacity, behind, _in.gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - _globals.uKeyColor.xyz);
-	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+	return float4(color, _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5)));
 }
 
 float2 hash2D(float2 p)
@@ -6770,7 +7951,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * _globals.uTunnel.z);
-	COLOR.w = keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in);
+	COLOR = keyedColor(COLOR.xyz, _globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -6980,6 +8161,27 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+float4 textureTexel(float2 texturePos, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	return uTexture.sample(uTexture_smplr, float2(texturePos.x, (floor(texturePos.y * 256.0) + 0.5) / 256.0));
+}
+
 float2 hash2D(float2 p)
 {
 	float h = dot(p, float2(12.9898, 78.233));
@@ -7038,9 +8240,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float opacity = COLOR.w;
 	float3 tunnel = plusTunnel(_in.vTexCoords, _globals);
 	float2 texturePos = tunnel.xy;
-	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
-	texturePos += hash2D(_in.vTexCoords * _globals.uViewSize + (_globals.uCameraPos + _globals.uShift) * 0.001).xy * 8.0 / _globals.uViewSize;
-	texColor = mix(texColor, uTexture.sample(uTexture_smplr, texturePos), 0.333);
+	float4 texColor = textureTexel(texturePos, uTexture, uTexture_smplr);
 	float horizonOpacity = tunnel.z;
 	float4 horizonColorWithStars = float4(_globals.uHorizonColor.xyz, 1.0);
 	if (_globals.uHorizonColor.w > 0.0) {
@@ -7050,6 +8250,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * _globals.uTunnel.z);
+	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	COLOR = float4(COLOR.xyz * opacity, opacity);
 	return COLOR;
 }
@@ -7071,6 +8272,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct InstanceBlock
@@ -7118,6 +8320,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct FsIn
@@ -7127,11 +8330,151 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
-float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += float3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = float3(lum) + (c - float3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = float3(lum) + (c - float3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - float3(lo)) * s / (hi - lo) : float3(0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = float3(1.0) - 2.0 * (float3(1.0) - s) * (float3(1.0) - d);
+	return mix(multiply, screen, step(float3(0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return float3(1.0) - (float3(1.0) - s) * (float3(1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (float3(1.0) - 2.0 * s) * d * (float3(1.0) - d);
+													float3 lightD = mix(((16.0 * d - float3(12.0)) * d + float3(4.0)) * d, sqrt(d), step(float3(0.25), d));
+													float3 light = d + (2.0 * s - float3(1.0)) * (lightD - d);
+													return mix(dark, light, step(float3(0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(float3(1.0) - s, float3(0.0001)), float3(1.0));
+														} else {
+															if (mode < 17.5) {
+																return float3(1.0) - min((float3(1.0) - d) / max(s, float3(0.0001)), float3(1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel)
+{
+	pixel = floor(pixel);
+	float2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel)
+{
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color, constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
 {
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	if (_globals.uBlendMode.x > 0.5) {
+		return blendModeResult(_globals.uBlendMode, color, _globals.uOpacity, behind, _in.gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - _globals.uKeyColor.xyz);
-	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+	return float4(color, _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5)));
 }
 
 float2 hash2D(float2 p)
@@ -7202,7 +8545,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		horizonColorWithStars += float4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * _globals.uTunnel.z);
-	COLOR.w = keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in);
+	COLOR = keyedColor(COLOR.xyz, _globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -7284,7 +8627,104 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float2 moved = floor(_globals.uWave.xy * float2(cos(6.28318530718 * (pos.y * _globals.uWave.z + _globals.uWavePhase.x)), sin(6.28318530718 * (pos.x * _globals.uWave.w + _globals.uWavePhase.y))));
 	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
 	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
-	COLOR = float4(uTexture.sample(uTexture_smplr, texturePos).xyz * opacity, opacity);
+	float3 color = uTexture.sample(uTexture_smplr, texturePos).xyz;
+	COLOR = float4(color * opacity, opacity);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackgroundWave_DITHER_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uShift;
+	float4 uWave;
+	float2 uWavePhase;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TexturedBackgroundWave_DITHER_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uViewSize;
+	float2 uShift;
+	float4 uWave;
+	float2 uWavePhase;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+};
+
+float bayer2(float2 pixel)
+{
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(float2 pixel)
+{
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+float3 reduceColors(float3 color, float2 pixel)
+{
+	return floor(color * float3(31.0, 63.0, 31.0) + float3(bayer4(pixel))) / float3(31.0, 63.0, 31.0);
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float opacity = COLOR.w;
+	float2 pos = (floor(_globals.uShift + _in.vTexCoords * _globals.uViewSize) - (256.0) * floor((floor(_globals.uShift + _in.vTexCoords * _globals.uViewSize)) / (256.0)));
+	float2 moved = floor(_globals.uWave.xy * float2(cos(6.28318530718 * (pos.y * _globals.uWave.z + _globals.uWavePhase.x)), sin(6.28318530718 * (pos.x * _globals.uWave.w + _globals.uWavePhase.y))));
+	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
+	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
+	float3 color = uTexture.sample(uTexture_smplr, texturePos).xyz;
+	color = reduceColors(color, _in.gl_FragCoord.xy);
+	COLOR = float4(color * opacity, opacity);
 	return COLOR;
 }
 )__SHDR__";
@@ -7304,6 +8744,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct InstanceBlock
@@ -7350,6 +8791,7 @@ struct _Globals
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
 	float uOpacity;
+	float2 uBlendMode;
 };
 
 struct FsIn
@@ -7359,11 +8801,151 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 };
 
-float keyedOpacity(constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += float3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = float3(lum) + (c - float3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = float3(lum) + (c - float3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - float3(lo)) * s / (hi - lo) : float3(0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = float3(1.0) - 2.0 * (float3(1.0) - s) * (float3(1.0) - d);
+	return mix(multiply, screen, step(float3(0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return float3(1.0) - (float3(1.0) - s) * (float3(1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (float3(1.0) - 2.0 * s) * d * (float3(1.0) - d);
+													float3 lightD = mix(((16.0 * d - float3(12.0)) * d + float3(4.0)) * d, sqrt(d), step(float3(0.25), d));
+													float3 light = d + (2.0 * s - float3(1.0)) * (lightD - d);
+													return mix(dark, light, step(float3(0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(float3(1.0) - s, float3(0.0001)), float3(1.0));
+														} else {
+															if (mode < 17.5) {
+																return float3(1.0) - min((float3(1.0) - d) / max(s, float3(0.0001)), float3(1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel)
+{
+	pixel = floor(pixel);
+	float2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel)
+{
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color, constant _Globals& _globals, texture2d<float> uTextureBehind, sampler uTextureBehind_smplr, thread FsIn& _in)
 {
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	if (_globals.uBlendMode.x > 0.5) {
+		return blendModeResult(_globals.uBlendMode, color, _globals.uOpacity, behind, _in.gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - _globals.uKeyColor.xyz);
-	return _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5));
+	return float4(color, _globals.uOpacity * max(step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w), step(_globals.uKeyColor.w, -0.5)));
 }
 
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
@@ -7375,7 +8957,8 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float2 moved = floor(_globals.uWave.xy * float2(cos(6.28318530718 * (pos.y * _globals.uWave.z + _globals.uWavePhase.x)), sin(6.28318530718 * (pos.x * _globals.uWave.w + _globals.uWavePhase.y))));
 	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
 	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
-	COLOR = float4(uTexture.sample(uTexture_smplr, texturePos).xyz, keyedOpacity(_globals, uTextureBehind, uTextureBehind_smplr, _in));
+	float3 color = uTexture.sample(uTexture_smplr, texturePos).xyz;
+	COLOR = keyedColor(color, _globals, uTextureBehind, uTextureBehind_smplr, _in);
 	return COLOR;
 }
 )__SHDR__";
@@ -7688,6 +9271,7 @@ struct _Globals
 	float4x4 uViewMatrix;
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
+	float2 uBlendMode;
 };
 
 struct InstanceBlock
@@ -7735,6 +9319,16 @@ struct _Globals
 	float4x4 uViewMatrix;
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
+	float2 uBlendMode;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
 };
 
 struct FsIn
@@ -7745,15 +9339,157 @@ struct FsIn
 	float vPaletteOffset [[user(locn2)]];
 };
 
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += float3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = float3(lum) + (c - float3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = float3(lum) + (c - float3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - float3(lo)) * s / (hi - lo) : float3(0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = float3(1.0) - 2.0 * (float3(1.0) - s) * (float3(1.0) - d);
+	return mix(multiply, screen, step(float3(0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return float3(1.0) - (float3(1.0) - s) * (float3(1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (float3(1.0) - 2.0 * s) * d * (float3(1.0) - d);
+													float3 lightD = mix(((16.0 * d - float3(12.0)) * d + float3(4.0)) * d, sqrt(d), step(float3(0.25), d));
+													float3 light = d + (2.0 * s - float3(1.0)) * (lightD - d);
+													return mix(dark, light, step(float3(0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(float3(1.0) - s, float3(0.0001)), float3(1.0));
+														} else {
+															if (mode < 17.5) {
+																return float3(1.0) - min((float3(1.0) - d) / max(s, float3(0.0001)), float3(1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel)
+{
+	pixel = floor(pixel);
+	float2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel)
+{
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
 {
 	float4 COLOR = float4(0);
 	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
 	float4 tile = src;
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
-	float3 difference = abs(behind - _globals.uKeyColor.xyz);
-	float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
-	COLOR = float4(tile.xyz * tile.w, keyed) * _in.vColor;
+	if (_globals.uBlendMode.x > 0.5) {
+		float4 color = tile * _in.vColor;
+		COLOR = blendModeResult(_globals.uBlendMode, color.xyz, color.w, behind, _in.gl_FragCoord.xy);
+	} else {
+		float3 difference = abs(behind - _globals.uKeyColor.xyz);
+		float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
+		COLOR = float4(tile.xyz * tile.w, keyed) * _in.vColor;
+	}
 	return COLOR;
 }
 )__SHDR__";
@@ -7768,6 +9504,7 @@ struct _Globals
 	float4x4 uViewMatrix;
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
+	float2 uBlendMode;
 };
 
 struct InstanceBlock
@@ -7815,6 +9552,16 @@ struct _Globals
 	float4x4 uViewMatrix;
 	float2 uTargetSizeInv;
 	float4 uKeyColor;
+	float2 uBlendMode;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
 };
 
 struct FsIn
@@ -7824,6 +9571,143 @@ struct FsIn
 	float4 vColor [[user(locn1)]];
 	float vPaletteOffset [[user(locn2)]];
 };
+
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += float3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = float3(lum) + (c - float3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = float3(lum) + (c - float3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - float3(lo)) * s / (hi - lo) : float3(0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = float3(1.0) - 2.0 * (float3(1.0) - s) * (float3(1.0) - d);
+	return mix(multiply, screen, step(float3(0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return float3(1.0) - (float3(1.0) - s) * (float3(1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (float3(1.0) - 2.0 * s) * d * (float3(1.0) - d);
+													float3 lightD = mix(((16.0 * d - float3(12.0)) * d + float3(4.0)) * d, sqrt(d), step(float3(0.25), d));
+													float3 light = d + (2.0 * s - float3(1.0)) * (lightD - d);
+													return mix(dark, light, step(float3(0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(float3(1.0) - s, float3(0.0001)), float3(1.0));
+														} else {
+															if (mode < 17.5) {
+																return float3(1.0) - min((float3(1.0) - d) / max(s, float3(0.0001)), float3(1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel)
+{
+	pixel = floor(pixel);
+	float2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel)
+{
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
 
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(1)]], sampler uTexture_smplr [[sampler(1)]], texture2d<float> uTexturePalette [[texture(0)]], sampler uTexturePalette_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(2)]], sampler uTextureBehind_smplr [[sampler(2)]])
 {
@@ -7835,9 +9719,14 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float4 paletteColor = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY));
 	float4 tile = float4(paletteColor.xyz, paletteColor.w * src.w);
 	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
-	float3 difference = abs(behind - _globals.uKeyColor.xyz);
-	float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
-	COLOR = float4(tile.xyz * tile.w, keyed) * _in.vColor;
+	if (_globals.uBlendMode.x > 0.5) {
+		float4 color = tile * _in.vColor;
+		COLOR = blendModeResult(_globals.uBlendMode, color.xyz, color.w, behind, _in.gl_FragCoord.xy);
+	} else {
+		float3 difference = abs(behind - _globals.uKeyColor.xyz);
+		float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
+		COLOR = float4(tile.xyz * tile.w, keyed) * _in.vColor;
+	}
 	return COLOR;
 }
 )__SHDR__";

@@ -66,6 +66,8 @@ namespace Jazz2::Editor
 		 * A dialog is never narrower than its content, unless the screen is.
 		 */
 		float MinScreenWidthFraction = 0.0f;
+		/** @brief Width in units @ref MinScreenWidthFraction makes the dialog at most, 0 for no limit, its content can still make it wider */
+		float MaxStretchedWidth = 0.0f;
 		/**
 		 * @brief Whether the window can be resized by its edges
 		 *

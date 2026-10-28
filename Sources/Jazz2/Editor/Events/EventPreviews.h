@@ -121,6 +121,14 @@ namespace Jazz2::Editor
 		 * it, the tiles are taken as empty.
 		 */
 		Death::Containers::Function<bool(const nCine::AABBf&)> IsAreaEmpty;
+		/**
+		 * @brief Returns the sprite the script of the level gives the object of an event, animated or not, or `nullptr`
+		 *
+		 * It's drawn instead of the sprite of the game, as it is, with no parts of the object around it. Only objects have
+		 * one, the events that change tiles share the numbers of the original with the bullets. The last argument tells
+		 * whether the sprite of the game animates, see @ref ScriptGraphics::Find().
+		 */
+		Death::Containers::Function<GraphicResource*(const Formats::EventRecord&, bool, bool)> ScriptSprite;
 
 		/** @brief Returns how an event is drawn, `false` if it's drawn as a box */
 		static bool GetPreview(const Formats::EventRecord& event, EventPreviewSpec& spec);
@@ -302,6 +310,8 @@ namespace Jazz2::Editor
 		};
 
 		GraphicResource* GetSprite(std::uint16_t type, const EventPreviewSpec& spec);
+		/** @brief Returns the sprite the script of the level gives the object of an event, see @ref ScriptSprite */
+		GraphicResource* GetScriptSprite(const Formats::EventRecord& event);
 		/** @brief Appends the parts drawn with the sprite of an event, sorted from the furthest one */
 		static void GetExtraParts(const Formats::EventRecord& event, const EventPreviewSpec& spec, float animTime, SmallVectorImpl<ExtraPart>& parts);
 		/** @brief Finds how an event at a position is drawn, as @ref GetPreview() with what its position changes */
@@ -315,9 +325,9 @@ namespace Jazz2::Editor
 		/** @brief Draws the sprite of an event and its parts fitted into a rectangle together */
 		void DrawFittedWithParts(UiPainter& painter, std::uint16_t type, GraphicResource* resource, const EventPreviewSpec& spec,
 			ArrayView<const ExtraPart> parts, const Rectf& rect, float animTime, float alpha);
-		/** @brief Draws a frame at its hotspot, or centered at the position, the current frame for -1 */
+		/** @brief Draws a frame at its hotspot, the current frame for -1 */
 		void DrawSprite(const DrawTarget& target, GraphicResource* resource, const EventPreviewSpec& spec, Vector2f pos, float alpha, float animTime,
-			std::int32_t frame = -1, bool centered = false);
+			std::int32_t frame = -1);
 		void DrawBox(UiPainter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel);
 		static void LayoutBoxLabel(UiPainter& painter, StringView name, const Rectf& inner, float boxWidth, BoxLabel& label);
 	};

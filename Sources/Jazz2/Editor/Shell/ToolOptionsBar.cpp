@@ -24,7 +24,7 @@ namespace Jazz2::Editor
 	namespace
 	{
 		// Units around the icon of a button, as the other buttons of the toolbar have, and for a finger
-		constexpr float ButtonExtra = 2.0f;
+		constexpr float ButtonExtra = 4.0f;
 		constexpr float TouchButtonExtra = 6.0f;
 		// Units between two options, and for a finger
 		constexpr float OptionSpacing = 2.0f;

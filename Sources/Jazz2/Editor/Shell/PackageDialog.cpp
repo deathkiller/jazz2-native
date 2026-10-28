@@ -284,26 +284,18 @@ namespace Jazz2::Editor
 			return (s->Read(data.data(), size) == size);
 		}
 
-		// The preview of the level as an image, from the chunk the list of levels shows: u16 width and height, then RGB
+		// The preview of the level as an image, from the chunk the list of levels shows
 		bool MakePreviewImage(ArrayView<const std::uint8_t> preview, SmallVectorImpl<std::uint8_t>& png)
 		{
-			if (preview.size() < 4) {
-				return false;
-			}
-			std::int32_t width = preview[0] | (preview[1] << 8);
-			std::int32_t height = preview[2] | (preview[3] << 8);
-			if (width <= 0 || height <= 0 || preview.size() < 4 + std::size_t(width) * std::size_t(height) * 3) {
+			SmallVector<std::uint8_t, 0> rgba;
+			Vector2i size;
+			if (!Formats::LevelPreview::Decode(preview, rgba, size)) {
 				return false;
 			}
 			PngImage image;
-			image.Create(width, height, false);
-			for (std::size_t i = 0; i < std::size_t(width) * std::size_t(height); i++) {
-				image.Pixels[i * 4] = preview[4 + i * 3];
-				image.Pixels[i * 4 + 1] = preview[4 + i * 3 + 1];
-				image.Pixels[i * 4 + 2] = preview[4 + i * 3 + 2];
-				image.Pixels[i * 4 + 3] = 255;
-			}
-			MemoryStream stream(std::int64_t(width) * height * 3 + 1024);
+			image.Create(size.X, size.Y, false);
+			std::memcpy(image.Pixels.data(), rgba.data(), rgba.size());
+			MemoryStream stream(std::int64_t(size.X) * size.Y * 3 + 1024);
 			if (!PngCodec::Encode(stream, image)) {
 				return false;
 			}

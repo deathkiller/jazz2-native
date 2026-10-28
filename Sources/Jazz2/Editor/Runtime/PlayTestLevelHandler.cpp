@@ -51,7 +51,7 @@ namespace Jazz2::Editor
 		_fullPath = fullPath;
 		_options = options;
 
-		LevelInitialization levelInit(levelName, options.Difficulty, PreferencesCache::EnableReforgedGameplay, false, options.Player);
+		LevelInitialization levelInit(levelName, options.Difficulty, options.Reforged, false, options.Player);
 		bool result = LevelHandler::Initialize(levelInit);
 		_levelData = SmallVector<std::uint8_t, 0>();
 		if (!result) {
@@ -113,6 +113,11 @@ namespace Jazz2::Editor
 #endif
 		// A resumed run is a new part of the path
 		_playPath.BreakSegment(PlayPath::Break::None);
+	}
+
+	bool PlayTestLevelHandler::IsLedgeClimbEnabled(const Actors::Player* player) const
+	{
+		return _options.LedgeClimb;
 	}
 
 	bool PlayTestLevelHandler::IsEditorPlayTest() const

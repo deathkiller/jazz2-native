@@ -126,6 +126,16 @@ precision mediump float;
 in vec2 vTexCoords;
 in vec2 vViewSizeInv;
 
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+
+
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
 uniform sampler2D uTextureBlurHalf;
@@ -273,6 +283,13 @@ varying vec4 vWavePhases;
 varying vec4 vWaterLine;
 varying vec2 vConstants;
 
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
 uniform sampler2D uTextureBlurHalf;
@@ -388,6 +405,414 @@ void main() {
 		{ "uTextureNoise", 4 },
 	};
 
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char CombineWithWater_DITHER_Vs[] =
+R"__SHDR__(#line 1
+
+out vec2 vTexCoords;
+out vec2 vViewSizeInv;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+
+
+#define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = vec2(1.0) / spriteSize;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char CombineWithWater_DITHER_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying vec2 vTexCoords;
+varying vec2 vViewSizeInv;
+varying vec2 vLightingSeed;
+varying vec2 vDisplacementPos;
+varying vec2 vRaysPos;
+varying vec4 vWavePhases;
+varying vec4 vWaterLine;
+varying vec2 vConstants;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+uniform vec4 uAmbientColor;
+uniform float uTime;
+uniform vec2 uCameraPos;
+uniform float uWaterLevel;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = vec2(1.0) / spriteSize;
+	vec2 uvLocal = vTexCoords;
+	vec2 uvWorldCenter = uCameraPos * vViewSizeInv;
+	const float invTau = 0.15915494;
+
+	vLightingSeed = aPosition * spriteSize + fract(uTime * 7.31) * 512.0;
+
+	vec2 displacementBase = uvWorldCenter * 0.1 + mod(uTime * 0.4, 2.0);
+	vDisplacementPos = uvLocal * 0.1 + fract(displacementBase);
+
+	float raysLinear = uvLocal.x * 1.4 + uvLocal.x * spriteSize.x * (6.0 / 720.0) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
+	float raysBase = uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 - 5.0;
+	vRaysPos = vec2(raysLinear * 0.125 + fract(raysBase * 0.125), fract((uTime * 5.0 + uvWorldCenter.y) * 0.125));
+
+	vec4 waveScale = vec4(60.0, 20.0, 35.0, 70.0) * invTau;
+	vec4 waveBase = vec4((uvWorldCenter.x - uTime) * waveScale.x + 0.25, (uvWorldCenter.x - 2.0 * uTime) * waveScale.y + 0.25,
+		(uvWorldCenter.x + 2.0 * uTime) * waveScale.z, (uvWorldCenter.x + 4.0 * uTime) * waveScale.w + 0.25);
+	vWavePhases = uvLocal.x * waveScale + fract(waveBase);
+
+	float rippleBase = (uTime * 16.0 + uvWorldCenter.y * 20.0) * invTau;
+	vWaterLine = vec4(uvLocal.y * 20.0 * invTau + fract(rippleBase), uvLocal.y - uWaterLevel,
+		(uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 + vViewSizeInv.y, max(0.4 - uWaterLevel, 0.0));
+
+	vConstants = vec2(1.0 / sqrt(max(uAmbientColor.w, 0.35)), 0.70710678 * spriteSize.y);
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char CombineWithWater_DITHER_Fs[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_ES
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+#endif
+
+in vec2 vTexCoords;
+in vec2 vViewSizeInv;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+
+
+uniform sampler2D uTexture;
+uniform sampler2D uTextureLighting;
+uniform sampler2D uTextureBlurHalf;
+uniform sampler2D uTextureBlurQuarter;
+uniform sampler2D uTextureNoise;
+
+uniform vec4 uAmbientColor;
+uniform float uTime;
+uniform vec2 uCameraPos;
+uniform float uWaterLevel;
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec2 noiseTexCoords(vec2 position) {
+	vec2 seed = position + fract(uTime * 0.01);
+	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
+}
+
+float wave(float x, float time) {
+	float waveOffset = cos((x - time) * 60.0) * 0.004
+						+ cos((x - 2.0 * time) * 20.0) * 0.008
+						+ sin((x + 2.0 * time) * 35.0) * 0.01
+						+ cos((x + 4.0 * time) * 70.0) * 0.001;
+	return waveOffset * 0.4;
+}
+
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+vec3 permute(vec3 x) {
+	return mod(((x*34.0)+1.0)*x, 289.0);
+}
+
+float snoise(vec2 v) {
+	const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+	vec2 i = floor(v + dot(v, C.yy));
+	vec2 x0 = v - i + dot(i, C.xx);
+	vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+	vec4 x12 = x0.xyxy + C.xxzz;
+	x12.xy -= i1;
+	i = mod(i, 289.0);
+	vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0 ));
+	vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw, x12.zw)), 0.0);
+	m = m * m;
+	m = m * m;
+	vec3 x = 2.0 * fract(p * C.www) - 1.0;
+	vec3 h = abs(x) - 0.5;
+	vec3 ox = floor(x + 0.5);
+	vec3 a0 = x - ox;
+	m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+	vec3 g;
+	g.x = a0.x * x0.x + h.x * x0.y;
+	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+	return 130.0 * dot(m, g);
+}
+
+#define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
+
+float bayer2(vec2 pixel) {
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(vec2 pixel) {
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+vec3 reduceColors(vec3 color, vec2 pixel) {
+	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+}
+
+out vec4 COLOR;
+
+void main() {
+	vec3 waterColor = vec3(0.4, 0.6, 0.8);
+
+	vec2 uvLocal = vTexCoords;
+	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
+	vec2 uvWorld = uvLocal + uvWorldCenter;
+
+	float waveHeight = wave(uvWorld.x, uTime);
+	float isTexelBelow = aastep(waveHeight, uvLocal.y - uWaterLevel);
+	float isTexelAbove = 1.0 - isTexelBelow;
+
+	vec2 disPos = uvWorld * vec2(0.1) + vec2(mod(uTime * 0.4, 2.0));
+	vec2 dis = (texture(uTextureNoise, disPos).xy - vec2(0.5)) * vec2(0.01);
+
+	vec2 uv = clamp(uvLocal + (vec2(0.004 * sin(uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * vec2(isTexelBelow), vec2(0.0), vec2(1.0));
+	vec4 main = texture(uTexture, uv);
+
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = texture(uTexture, vec2(uv.x - aberration, uv.y)).r;
+	float blue = texture(uTexture, vec2(uv.x + aberration, uv.y)).b;
+	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
+
+	vec2 uvNormalized = mod(uvLocal / vViewSizeInv, 720.0) / 720.0;
+	float noisePos = uvWorldCenter.x * 6.0 + uvLocal.x * 1.4 + uvWorldCenter.y * 0.5 + (1.0 - uvNormalized.x * 1.2 - uvNormalized.y) * -5.0;
+	float rays = snoise(vec2(noisePos, uTime * 5.0 + uvWorldCenter.y)) * 0.55 + 0.3;
+	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
+
+	float topDist = abs(uvLocal.y - uWaterLevel - waveHeight);
+	float isNearTop = 1.0 - aastep(vViewSizeInv.y * 2.8, topDist);
+	float isVeryNearTop = 1.0 - aastep(vViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
+
+	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
+	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x,
+		(uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + vViewSizeInv.y
+	)).rgb, vec3(topColorBlendFac));
+	main.rgb += vec3(0.2 * isVeryNearTop);
+
+	vec4 blur1 = texture(uTextureBlurHalf, uv);
+	vec4 blur2 = texture(uTextureBlurQuarter, uv);
+	vec4 light = texture(uTextureLighting, noiseTexCoords(uv));
+
+	vec4 blur = (blur1 + blur2) * vec4(0.5);
+
+	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
+	blur = vec4(gray, gray, gray, blur.a);
+
+	float darknessStrength = (1.0 - light.r);
+
+	if (uWaterLevel < 0.4) {
+		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
+		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
+	}
+
+	COLOR = mix(mix(
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		blur,
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(darknessStrength));
+	COLOR.a = 1.0;
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+}
+
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char CombineWithWater_DITHER_Fs100[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 vTexCoords;
+varying vec2 vViewSizeInv;
+varying vec2 vLightingSeed;
+varying vec2 vDisplacementPos;
+varying vec2 vRaysPos;
+varying vec4 vWavePhases;
+varying vec4 vWaterLine;
+varying vec2 vConstants;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+uniform sampler2D uTexture;
+uniform sampler2D uTextureLighting;
+uniform sampler2D uTextureBlurHalf;
+uniform sampler2D uTextureBlurQuarter;
+uniform sampler2D uTextureNoise;
+
+uniform vec4 uAmbientColor;
+
+float interleavedGradientNoise(vec2 p) {
+	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+vec2 lightingJitterLowPower() {
+	vec2 offset = vec2(interleavedGradientNoise(vLightingSeed), interleavedGradientNoise(vLightingSeed + vec2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
+}
+
+float sinCycles(float cycles) {
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 sinCycles(vec4 cycles) {
+	vec4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	vec4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+
+void main() {
+	vec4 COLOR;
+	vec3 waterColor = vec3(0.4, 0.6, 0.8);
+
+	vec2 uvLocal = vTexCoords;
+	float waveHeight = dot(sinCycles(vWavePhases), vec4(0.004, 0.008, 0.01, 0.001) * 0.4);
+	float belowWaterLine = vWaterLine.y - waveHeight;
+	float aaSlope = vConstants.y;
+	float isTexelBelow = clamp(belowWaterLine * aaSlope + 0.5, 0.0, 1.0);
+	float isTexelAbove = 1.0 - isTexelBelow;
+
+	vec2 dis = (texture2D(uTextureNoise, vDisplacementPos).xy - vec2(0.5)) * vec2(0.01);
+
+	vec2 uv = uvLocal + (vec2(0.004 * sinCycles(vWaterLine.x), 0.0) + dis) * vec2(isTexelBelow);
+	vec4 main = texture2D(uTexture, uv);
+
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = texture2D(uTexture, vec2(uv.x - aberration, uv.y)).r;
+	float blue = texture2D(uTexture, vec2(uv.x + aberration, uv.y)).b;
+	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
+
+	float rays = texture2D(uTextureNoise, vRaysPos).b * 1.1 - 0.25;
+	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
+
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * 2.8) * aaSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * (0.8 - 100.0 * waveHeight)) * aaSlope, 0.0, 1.0);
+
+	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
+	main.rgb = mix(main.rgb, texture2D(uTexture, vec2(uvLocal.x, vWaterLine.z - waveHeight)).rgb, vec3(topColorBlendFac));
+	main.rgb += vec3(0.2 * isVeryNearTop);
+
+	vec4 blur1 = texture2D(uTextureBlurHalf, uvLocal);
+	vec4 blur2 = texture2D(uTextureBlurQuarter, uvLocal);
+	vec4 light = texture2D(uTextureLighting, uvLocal + lightingJitterLowPower());
+
+	vec4 blur = (blur1 + blur2) * vec4(0.5);
+
+	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
+	blur = vec4(gray, gray, gray, blur.a);
+
+	float darknessStrength = (1.0 - light.r);
+
+	darknessStrength = min(1.0, darknessStrength + isTexelAbove * vWaterLine.w);
+
+	COLOR = mix(mix(
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		blur,
+		vec4(clamp((1.0 - light.r) * vConstants.x, 0.0, 1.0))
+	), uAmbientColor, vec4(darknessStrength));
+	COLOR.a = 1.0;
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+#endif
+
+	inline constexpr ShaderCompiler::Uniform CombineWithWater_DITHER_Uniforms[] = {
+		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uAmbientColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uTime", ShaderCompiler::UniformType::Float, 0 },
+		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uWaterLevel", ShaderCompiler::UniformType::Float, 0 },
+	};
+
+	inline constexpr ShaderCompiler::BlockMember CombineWithWater_DITHER_Block0_Members[] = {
+		{ "modelMatrix", ShaderCompiler::UniformType::Mat4, 0, 0 },
+		{ "color", ShaderCompiler::UniformType::Vec4, 0, 64 },
+		{ "texRect", ShaderCompiler::UniformType::Vec4, 0, 80 },
+		{ "spriteSize", ShaderCompiler::UniformType::Vec2, 0, 96 },
+	};
+
+	inline constexpr ShaderCompiler::UniformBlock CombineWithWater_DITHER_Blocks[] = {
+		{ "InstanceBlock", 112, 0, 4, CombineWithWater_DITHER_Block0_Members },
+	};
+
+	inline constexpr ShaderCompiler::TextureBinding CombineWithWater_DITHER_Textures[] = {
+		{ "uTexture", 0 },
+		{ "uTextureLighting", 1 },
+		{ "uTextureBlurHalf", 2 },
+		{ "uTextureBlurQuarter", 3 },
+		{ "uTextureNoise", 4 },
+	};
+
 	inline constexpr ShaderCompiler::ProgramVariant CombineWithWater_Variants[] = {
 		{ "", "",
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
@@ -418,8 +843,37 @@ void main() {
 #else
 			nullptr, nullptr },
 #endif
+		{ "DITHER", "DITHER",
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+			CombineWithWater_DITHER_Vs, CombineWithWater_DITHER_Fs,
+#else
+			nullptr, nullptr,
+#endif
+			6, CombineWithWater_DITHER_Uniforms, 1, CombineWithWater_DITHER_Blocks, 5, CombineWithWater_DITHER_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+			CombineWithWater_DITHER_Vs100, CombineWithWater_DITHER_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
+			CombineWithWater_DITHER_VsHlsl, CombineWithWater_DITHER_FsHlsl,
+			CombineWithWater_DITHER_VsDxbc, CombineWithWater_DITHER_VsDxbcSize, CombineWithWater_DITHER_FsDxbc, CombineWithWater_DITHER_FsDxbcSize,
+#else
+			nullptr, nullptr,
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_VULKAN)
+			CombineWithWater_DITHER_VkVs, CombineWithWater_DITHER_VkVsSize, CombineWithWater_DITHER_VkFs, CombineWithWater_DITHER_VkFsSize,
+#else
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_METAL)
+			CombineWithWater_DITHER_VsMsl, CombineWithWater_DITHER_FsMsl },
+#else
+			nullptr, nullptr },
+#endif
 	};
 
-	inline constexpr ShaderCompiler::Program CombineWithWater = { "CombineWithWater", 0, 1, CombineWithWater_Variants };
+	inline constexpr ShaderCompiler::Program CombineWithWater = { "CombineWithWater", 0, 2, CombineWithWater_Variants };
 }
 #endif

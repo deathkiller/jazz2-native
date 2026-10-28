@@ -128,12 +128,13 @@ namespace Jazz2::Editor
 			spec.Animation = previewCase->Animation;
 			spec.FlipX = previewCase->FlipX;
 			spec.Offset = Vector2f(float(previewCase->OffsetX), float(previewCase->OffsetY));
-		} else {
-			if (descriptor->PreviewMetadata == nullptr) {
-				return false;
-			}
+		} else if (descriptor->PreviewMetadata != nullptr) {
 			spec.Metadata = descriptor->PreviewMetadata;
 			spec.Animation = descriptor->PreviewAnimation;
+		} else {
+			// An event of the game described again without a sprite (as MLLE describes checkpoints) is the
+			// object of the game still, the converter left its parameters in their places
+			return (!builtIn && ResolveEventPreview(event, spec) && spec.Metadata != nullptr);
 		}
 		if (builtIn && EventType(event.Type) == EventType::BossUterus) {
 			// Its sprite lies on its side, Uterus::OnUpdate() stands it up by a quarter turn
@@ -172,6 +173,30 @@ namespace Jazz2::Editor
 		}
 		entries.push_back(SpriteEntry{ String(spec.Metadata), spec.Animation, resource });
 		return resource;
+	}
+
+	GraphicResource* EventPreviews::GetScriptSprite(const Formats::EventRecord& event)
+	{
+		if (!ScriptSprite) {
+			return nullptr;
+		}
+		// Only an object has a template, the events that change tiles share the numbers of the original with the bullets
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
+		if (descriptor == nullptr || (descriptor->Traits & EventTraits::Object) != EventTraits::Object) {
+			return nullptr;
+		}
+		// A container of the game doesn't animate, nor does the behavior of JJ2 a script runs it with
+		if (descriptor->Category == EventCategory::Container) {
+			return ScriptSprite(event, false, false);
+		}
+		// An object only given other frames animates as the object of the game does (a restyled checkpoint stays closed)
+		GraphicResource* scripted = ScriptSprite(event, true, true);
+		if (scripted == nullptr || scripted->FrameCount <= 1) {
+			return scripted;
+		}
+		EventPreviewSpec spec;
+		GraphicResource* own = (GetPreview(event, spec) ? GetSprite(event.Type, spec) : nullptr);
+		return (own != nullptr && own->FrameCount <= 1 ? ScriptSprite(event, true, false) : scripted);
 	}
 
 	bool EventPreviews::GetPlacedPreview(const Formats::EventRecord& event, Vector2f spawnPos, EventPreviewSpec& spec)
@@ -215,6 +240,9 @@ namespace Jazz2::Editor
 		if (EventType(event.Type) == EventType::LevelStart || EventType(event.Type) == EventType::LevelStartMultiplayer) {
 			return false;
 		}
+		if (GetScriptSprite(event) != nullptr) {
+			return true;
+		}
 		EventPreviewSpec spec;
 		return (GetPreview(event, spec) && GetSprite(event.Type, spec) != nullptr);
 	}
@@ -224,6 +252,13 @@ namespace Jazz2::Editor
 		if (EventType(event.Type) == EventType::LevelStart || EventType(event.Type) == EventType::LevelStartMultiplayer) {
 			return false;
 		}
+		DrawTarget target;
+		target.Canvas = &canvas;
+		target.Z = z;
+		if (GraphicResource* scripted = GetScriptSprite(event)) {
+			DrawSprite(target, scripted, EventPreviewSpec(), spawnPos, alpha, animTime);
+			return true;
+		}
 		EventPreviewSpec spec;
 		if (!GetPlacedPreview(event, spawnPos, spec)) {
 			return false;
@@ -232,9 +267,6 @@ namespace Jazz2::Editor
 		if (resource == nullptr) {
 			return false;
 		}
-		DrawTarget target;
-		target.Canvas = &canvas;
-		target.Z = z;
 		DrawPlacedSprite(target, event, resource, spec, spawnPos, alpha, animTime);
 		return true;
 	}
@@ -246,11 +278,11 @@ namespace Jazz2::Editor
 			// All of its pieces, as long as it is, each a frame of its own in turn, see Bridge::OnDraw()
 			SmallVector<std::int32_t, 64> offsets;
 			std::int32_t width = std::int32_t(event.Params[0] | (event.Params[1] << 8)) * 16;
-			Actors::Solid::Bridge::GetPieceOffsets(event.Params[2], width, offsets);
+			Actors::Solid::Bridge::GetPieceOffsets(event.Params[2], width, resource, offsets);
 			std::int32_t frameCount = std::max(resource->FrameCount, std::int32_t(1));
 			for (std::size_t i = 0; i < offsets.size(); i++) {
 				Vector2f piece(spawnPos.X + float(offsets[i]), spawnPos.Y - 6.0f);
-				DrawSprite(target, resource, spec, piece, alpha, animTime, resource->FrameOffset + std::int32_t(i % std::size_t(frameCount)), true);
+				DrawSprite(target, resource, spec, piece, alpha, animTime, resource->FrameOffset + std::int32_t(i % std::size_t(frameCount)));
 			}
 			return;
 		}
@@ -332,6 +364,19 @@ namespace Jazz2::Editor
 		Vector2f spawnPos, bool inScene, bool offGrid)
 	{
 		if (DrawStart(painter, event, tileRect, scale, alpha, animTime, offGrid)) {
+			return;
+		}
+
+		if (GraphicResource* scripted = GetScriptSprite(event)) {
+			if (!inScene) {
+				DrawTarget target;
+				target.Painter = &painter;
+				target.Scale = scale;
+				target.Origin = Vector2f(tileRect.X + tileRect.W * 0.5f, tileRect.Y + tileRect.H * 0.5f) - spawnPos * scale;
+				DrawSprite(target, scripted, EventPreviewSpec(), spawnPos, alpha, animTime);
+			}
+			const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
+			DrawCornerMark(painter, tileRect, GetCategoryColor(descriptor != nullptr ? descriptor->Category : EventCategory::Other), alpha, offGrid);
 			return;
 		}
 
@@ -419,17 +464,25 @@ namespace Jazz2::Editor
 	void EventPreviews::DrawFitted(UiPainter& painter, const Formats::EventRecord& event, const Rectf& rect, float animTime, float alpha)
 	{
 		EventPreviewSpec spec;
-		GraphicResource* resource = (GetPreview(event, spec) ? GetSprite(event.Type, spec) : nullptr);
+		GraphicResource* resource = GetScriptSprite(event);
+		bool scripted = (resource != nullptr);
+		if (!scripted) {
+			resource = (GetPreview(event, spec) ? GetSprite(event.Type, spec) : nullptr);
+		}
 		if (resource == nullptr) {
 			DrawBox(painter, event.Type, event.Params, rect, alpha, false);
-			painter.Icon(EventType(event.Type) == EventType::PassthroughEvent ? EditorIcon::Passthrough : EditorIcon::Event,
-				rect, Colorf(1.0f, 1.0f, 1.0f, 0.7f * alpha), UiLayer::Overlay);
+			// What the game passes to the scripts of the level, as kept or as the level describes it
+			bool passthrough = (EventType(event.Type) == EventType::PassthroughEvent ||
+				EventCatalog::IsLevelExtension(EventCatalog::Find(EventType(event.Type), event.Params)));
+			painter.Icon(passthrough ? EditorIcon::Passthrough : EditorIcon::Event, rect, Colorf(1.0f, 1.0f, 1.0f, 0.7f * alpha), UiLayer::Overlay);
 			return;
 		}
 
 		// The parts an object adds to itself are shown too, in place, so it doesn't move while it's animated
 		SmallVector<ExtraPart, 0> parts;
-		GetExtraParts(event, spec, 0.0f, parts);
+		if (!scripted) {
+			GetExtraParts(event, spec, 0.0f, parts);
+		}
 		if (!parts.empty()) {
 			DrawFittedWithParts(painter, event.Type, resource, spec, parts, rect, animTime, alpha);
 			return;
@@ -570,21 +623,16 @@ namespace Jazz2::Editor
 	}
 
 	void EventPreviews::DrawSprite(const DrawTarget& drawTarget, GraphicResource* resource, const EventPreviewSpec& spec, Vector2f pos, float alpha,
-		float animTime, std::int32_t frame, bool centered)
+		float animTime, std::int32_t frame)
 	{
 		GenericGraphicResource* base = resource->Base;
 		if (frame < 0) {
 			frame = resource->GetFrameForTime(animTime);
 		}
 		Recti frameRect = base->GetFrameRect(frame);
-		// At its hotspot, or with its middle at the position, as the pieces of a bridge are
-		Vector2f topLeft;
-		if (centered) {
-			topLeft = Vector2f(pos.X - float(frameRect.W / 2), pos.Y - float(frameRect.H / 2));
-		} else {
-			Vector2i anchor = base->GetFrameAnchor(frame, spec.FlipX, spec.FlipY);
-			topLeft = Vector2f(pos.X - float(anchor.X), pos.Y - float(anchor.Y));
-		}
+		// At its hotspot
+		Vector2i anchor = base->GetFrameAnchor(frame, spec.FlipX, spec.FlipY);
+		Vector2f topLeft = Vector2f(pos.X - float(anchor.X), pos.Y - float(anchor.Y));
 		Rectf target(drawTarget.Origin.X + topLeft.X * drawTarget.Scale, drawTarget.Origin.Y + topLeft.Y * drawTarget.Scale,
 			frameRect.W * drawTarget.Scale, frameRect.H * drawTarget.Scale);
 		// Whole pixels in the interface, so a sprite at a whole scale stays sharp; turned around the position, its

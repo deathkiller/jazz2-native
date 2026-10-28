@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../../Main.h"
 #include "ConversionProgress.h"
@@ -31,7 +31,7 @@ namespace Jazz2::Compatibility
 	{
 	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		static constexpr std::uint16_t CacheVersion = 46;
+		static constexpr std::uint16_t CacheVersion = 49;
 #endif
 
 		/**

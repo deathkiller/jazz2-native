@@ -210,13 +210,17 @@ namespace Jazz2::Editor
 
 	Vector2f UiPaletteGrid::Measure(const UiContext& context, Vector2f available)
 	{
+		// Smaller where there's no room for it, as square as its cells
 		float size = context.Px(CellSize) * 16.0f;
+		if (available.X > 0.0f && available.X < size) {
+			size = std::floor(available.X / 16.0f) * 16.0f;
+		}
 		return Vector2f(size, size);
 	}
 
 	bool UiPaletteGrid::MeasureDependsOnAvailable() const
 	{
-		return false;
+		return true;
 	}
 
 	void UiPaletteGrid::UpdateTexture(const std::uint32_t* palette)

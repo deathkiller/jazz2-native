@@ -10,7 +10,11 @@
 
 #include "../../Actors/ActorBase.h"
 #include "../../Actors/Player.h"
+#include "../../Actors/Collectibles/CollectibleBase.h"
+#include "../../Actors/Enemies/EnemyBase.h"
 #include "../../Actors/Weapons/ShotBase.h"
+#include "../../PreferencesCache.h"
+#include "../../Rendering/PlayerViewport.h"
 #include "../../Tiles/TileMap.h"
 #include "../../UI/Font.h"
 
@@ -27,6 +31,43 @@ namespace Jazz2::Scripting
 {
 	namespace Legacy
 	{
+		// Stands in for a bullet a script controls when it hits an object of the game, which handles only shots of the game
+		// (crates, barrels, monitors) - never in the level, the bullet stops if it lost its health, turns if it ricocheted
+		class ScriptShotProxy : public Actors::Weapons::ShotBase
+		{
+			DEATH_RUNTIME_OBJECT(Actors::Weapons::ShotBase);
+
+		public:
+			ScriptShotProxy(ILevelHandler* levelHandler, std::shared_ptr<Actors::ActorBase> owner, WeaponType weaponType,
+				bool upgraded, std::int32_t strength, Vector2f pos)
+				: _weaponType(weaponType)
+			{
+				_levelHandler = levelHandler;
+				_owner = std::move(owner);
+				_upgrades = (upgraded ? 0x01 : 0x00);
+				_strength = strength;
+				_health = 1;
+				_pos = pos;
+			}
+
+			WeaponType GetWeaponType() override {
+				return _weaponType;
+			}
+
+			bool Ricocheted = false;
+
+		protected:
+			void OnRicochet() override {
+				Ricocheted = true;
+			}
+			bool OnPerish(ActorBase* collider) override {
+				return true;
+			}
+
+		private:
+			WeaponType _weaponType;
+		};
+
 		// Native actor that hosts a script-controlled jjOBJ: each frame it applies the object's own velocity, runs the
 		// script behavior (a jjVOIDFUNCOBJ function or a jjBEHAVIORINTERFACE object) over the jjOBJ, then syncs the
 		// resulting position back to the actor. This is what makes jjAddObject objects script-controllable.
@@ -176,9 +217,10 @@ namespace Jazz2::Scripting
 						behaviorId = _obj->eventID;
 					} else if (behaviorId == BehaviorDefault && _obj->eventID >= aPLAYERBULLET1 && _obj->eventID <= aPLAYERBULLETC3) {
 						// A bullet of a weapon flies as a bullet, a flame of the toaster as one - also in the tick it's made in, so a
-						// script that gives it another behavior next has it flying already (as measured in JJ2+, HH17's dragon
+						// script that gives it another behavior next has it flying already (as measured in JJ2+, a dragon
 						// breathes fire by speeds of its own)
-						behaviorId = (_obj->eventID == aPLAYERBULLET6 || _obj->eventID == aPLAYERBULLETP6 ? aPLAYERBULLET6 : aBULLET);
+						behaviorId = (_obj->eventID == aPLAYERBULLET6 || _obj->eventID == aPLAYERBULLETP6 ? aPLAYERBULLET6 :
+							(_obj->eventID == aPLAYERBULLET2 || _obj->eventID == aPLAYERBULLETP2 ? aPLAYERBULLET2 : aBULLET));
 					}
 					switch (behaviorId) {
 						case BehaviorPepperBullet:
@@ -188,6 +230,10 @@ namespace Jazz2::Scripting
 							break;
 						case BehaviorBilsyBullet:
 							RunBilsyBullet(true);
+							_drawnByBehavior = true;
+							break;
+						case aPLAYERBULLET2:
+							RunBouncerBullet(true);
 							_drawnByBehavior = true;
 							break;
 						case aPLAYERBULLET6:
@@ -227,6 +273,7 @@ namespace Jazz2::Scripting
 					}
 				}
 				HitPlayers();
+				HitEnemies();
 			}
 
 			/**
@@ -255,8 +302,7 @@ namespace Jazz2::Scripting
 						shardObj->behavior = aSHARD;
 						shardObj->curAnim = std::int16_t(firstAnim != 0 ? firstAnim + ShardAnimation : 0);
 						shardObj->_playerHandling = HandlingParticle;
-						shardObj->_creatorType = 0;
-						shardObj->_creatorID = std::uint16_t(obj.objectID);
+						shardObj->creator = jjOBJ::PackCreator(0, std::uint16_t(obj.objectID));
 					}
 				}
 
@@ -496,6 +542,44 @@ namespace Jazz2::Scripting
 				}
 			}
 
+			/**
+			 * @brief Runs `BEHAVIOR::BOUNCERBULLET` once
+			 *
+			 * As a bullet does (see RunBullet()), but it bounces off the walls and the ground instead of exploding in them, until
+			 * its `counterEnd`.
+			 */
+			void RunBouncerBullet(bool draw)
+			{
+				jjOBJ& obj = *_obj;
+				if (obj.state == sSTART || obj.state == sKILL || obj.state == sEXPLODE || obj.counter > obj.counterEnd) {
+					RunBullet(draw);
+					return;
+				}
+
+				obj.counter++;
+				if (IsMasked(obj.xPos + obj.xSpeed, obj.yPos)) {
+					obj.xSpeed = -obj.xSpeed;
+					obj.xAcc = -obj.xAcc;
+				} else {
+					obj.xPos += obj.xSpeed;
+				}
+				obj.ySpeed += obj.yAcc;
+				if (IsMasked(obj.xPos, obj.yPos + obj.ySpeed)) {
+					obj.ySpeed = -obj.ySpeed;
+				} else {
+					obj.yPos += obj.ySpeed;
+				}
+
+				auto& tables = _levelScripts->GetAnimationTables();
+				std::uint32_t frameCount, firstFrame;
+				if (obj.curAnim > 0 && tables.GetAnimationFrames(std::uint32_t(obj.curAnim), frameCount, firstFrame) && frameCount > 0) {
+					obj.frameID = std::int8_t((obj.counter / 4) % std::int32_t(frameCount));
+					obj.curFrame = firstFrame + std::uint32_t(obj.frameID);
+				}
+				if (draw && obj.curFrame != 0) {
+					ScriptObjectHost::DrawFrame(_levelScripts, obj);
+				}
+			}
 			void RunBullet(bool draw)
 			{
 				// Measured in JJ2+, the acceleration doesn't make a bullet faster than this
@@ -513,7 +597,7 @@ namespace Jazz2::Scripting
 				}
 
 				if (obj.state == sKILL) {
-					// Killed by an attack of a player, as an enemy a script made of it (ThreedRealms' bees)
+					// Killed by an attack of a player, as an enemy a script made of it (bees)
 					Remove();
 					return;
 				}
@@ -580,6 +664,8 @@ namespace Jazz2::Scripting
 			std::int16_t _explosionAnim = 0;
 			// A behavior draws the object, its animation isn't drawn by itself
 			bool _drawnByBehavior = false;
+			// What the bullet ricocheted off last, it stops if it does again (see HitEnemies())
+			Actors::ActorBase* _lastRicochet = nullptr;
 
 			// Returns the direction and the speed of who made the object, none if there's no such object or player
 			void GetCreatorMotion(std::int8_t& direction, float& speed)
@@ -590,16 +676,16 @@ namespace Jazz2::Scripting
 
 				direction = 0;
 				speed = 0.0f;
-				if (_obj->_creatorType == CreatorPlayer) {
+				if (_obj->get_creatorType() == CreatorPlayer) {
 					for (Actors::Player* player : _levelScripts->GetPlayers()) {
-						if (player->GetPlayerIndex() == std::int32_t(_obj->_creatorID)) {
+						if (player->GetPlayerIndex() == std::int32_t(_obj->get_creatorID())) {
 							direction = (player->IsFacingLeft() ? -1 : 1);
 							speed = player->GetSpeed().X;
 							break;
 						}
 					}
-				} else if (_obj->_creatorType == CreatorObject && _obj->_creatorID > 0) {
-					jjOBJ* creator = _levelScripts->GetObjectById(_obj->_creatorID);
+				} else if (_obj->get_creatorType() == CreatorObject && _obj->get_creatorID() > 0) {
+					jjOBJ* creator = _levelScripts->GetObjectById(_obj->get_creatorID());
 					direction = creator->direction;
 					speed = creator->xSpeed;
 					creator->Release();
@@ -619,7 +705,7 @@ namespace Jazz2::Scripting
 
 			// A bullet of an enemy (HANDLING::ENEMYBULLET) explodes on a player it touches and hurts the player by its
 			// `animSpeed`, as measured in JJ2+ - unless the player can't be hurt then. It goes through a frozen player, which
-			// it doesn't hurt either, it's after the behavior: HH17's ice bullets freeze the player they touch and push it
+			// it doesn't hurt either, it's after the behavior: ice bullets may freeze the player they touch and push it
 			void HitPlayers()
 			{
 				constexpr std::uint32_t HandlingEnemy = 0;
@@ -637,7 +723,7 @@ namespace Jazz2::Scripting
 					}
 					if (isEnemy) {
 						// An enemy a script made of another object hurts a player who touches it, an attack hurts it instead, as
-						// measured in JJ2+ (ThreedRealms' bees are bullets), its behavior isn't told of it
+						// measured in JJ2+ (bees made of bullets), its behavior isn't told of it
 						if (player->HasSugarRush() || player->GetSpecialMove() != Actors::Player::SpecialMoveType::None) {
 							obj.energy = std::int8_t(std::max(obj.energy - 4, 0));
 							if (obj.energy <= 0) {
@@ -654,6 +740,114 @@ namespace Jazz2::Scripting
 					obj.state = sEXPLODE;
 					break;
 				}
+			}
+
+			// A bullet of a player (HANDLING::PLAYERBULLET) a script made hits what a shot of the game hits, by its `animSpeed`
+			// (the copies a weapon makes of its bullets) - an enemy, a crate, a barrel or a monitor as by the shot of its
+			// weapon, an object a script gave a `bulletHandling` or `scriptedCollisions` as the script says
+			void HitEnemies()
+			{
+				constexpr std::uint32_t HandlingPlayerBullet = 1;
+				constexpr std::uint32_t HandlingSpecial = 8;
+				constexpr std::uint32_t HandlingDestroyBullet = 2;
+				constexpr std::uint32_t CreatorPlayer = 0x8000;
+
+				jjOBJ& obj = *_obj;
+				if (obj._playerHandling != HandlingPlayerBullet || obj.get_creatorType() != CreatorPlayer || obj.state == sEXPLODE ||
+					obj.state == sKILL || GetState(Actors::ActorState::IsDestroyed)) {
+					return;
+				}
+				constexpr float Reach = 32.0f;
+				AABBf box(obj.xPos - Reach, obj.yPos - Reach, obj.xPos + Reach, obj.yPos + Reach);
+				SmallVector<Actors::ActorBase*, 4> touched;
+				_levelHandler->FindCollisionActorsByAABB(this, box, [this, &obj, &touched](Actors::ActorBase* other) {
+					if (other->GetHealth() > 0 && runtime_cast<Actors::Player>(other) == nullptr &&
+						runtime_cast<Actors::Weapons::ShotBase>(other) == nullptr && runtime_cast<ScriptLegacyObject>(other) == nullptr &&
+						DoesObjectTouch(_levelScripts, obj, other->AABBInner)) {
+						touched.push_back(other);
+					}
+					return true;
+				});
+
+				std::int32_t strength = std::max<std::int32_t>(obj.animSpeed, 1);
+				Actors::Player* owner = nullptr;
+				for (Actors::Player* player : _levelScripts->GetPlayers()) {
+					if (player->GetPlayerIndex() == std::int32_t(obj.get_creatorID())) {
+						owner = player;
+						break;
+					}
+				}
+
+				for (Actors::ActorBase* other : touched) {
+					if (other->GetState(Actors::ActorState::IsDestroyed) || other->GetHealth() <= 0) {
+						continue;
+					}
+					jjOBJ* target = _levelScripts->GetObjectView(other);
+					if (target != nullptr && target->_bulletHandlingSet) {
+						if (target->_bulletHandling == HandlingIgnoreBullet) {
+							continue;
+						}
+						if (target->_bulletHandling == HandlingDestroyBullet) {
+							obj.state = sEXPLODE;
+							break;
+						}
+					}
+					if (target != nullptr && target->_scriptedCollisions && (target->_playerHandlingSet
+						? target->_playerHandling == HandlingSpecial : runtime_cast<Actors::Collectibles::CollectibleBase>(other) == nullptr)) {
+						jjPLAYER* p = (owner != nullptr ? _levelScripts->GetPlayerBackingStore(owner) : nullptr);
+						ScriptObjectHost::CallObjectHit(_levelScripts, *target, &obj, p, strength);
+						if (obj.state == sEXPLODE) {
+							break;
+						}
+						continue;
+					}
+					if (auto* enemy = runtime_cast<Actors::Enemies::EnemyBase>(other)) {
+						if (enemy->CanCauseDamage(this)) {
+							enemy->DecreaseHealth(strength, this);
+							obj.state = sEXPLODE;
+							break;
+						}
+						continue;
+					}
+
+					auto proxy = std::make_shared<ScriptShotProxy>(_levelHandler, owner != nullptr ? owner->shared_from_this() : nullptr,
+						GetBulletWeaponType(obj.eventID), IsUpgradedBullet(obj.eventID), strength, _pos);
+					if (!Actors::ActorBase::HandleCollisionByOverride(other, proxy.get())) {
+						other->OnHandleCollision(proxy.get());
+					}
+					if (proxy->GetHealth() <= 0 || (proxy->Ricocheted && _lastRicochet == other)) {
+						obj.state = sEXPLODE;
+						break;
+					}
+					if (proxy->Ricocheted) {
+						_lastRicochet = other;
+						obj.xSpeed = -obj.xSpeed;
+						obj.xAcc = -obj.xAcc;
+						obj.direction = std::int8_t(-obj.direction);
+						break;
+					}
+				}
+			}
+
+			// The weapon a bullet of a player is of by its event, the one its shot of the game would be
+			static WeaponType GetBulletWeaponType(std::uint8_t eventID)
+			{
+				std::uint8_t index = (eventID >= aPLAYERBULLETP1 && eventID <= aPLAYERBULLETP9 ? std::uint8_t(eventID - aPLAYERBULLETP1 + aPLAYERBULLET1) : eventID);
+				switch (index) {
+					case aPLAYERBULLET2: return WeaponType::Bouncer;
+					case aPLAYERBULLET3: return WeaponType::Freezer;
+					case aPLAYERBULLET4: return WeaponType::Seeker;
+					case aPLAYERBULLET5: return WeaponType::RF;
+					case aPLAYERBULLET6: return WeaponType::Toaster;
+					case aPLAYERBULLET8: return WeaponType::Pepper;
+					case aPLAYERBULLET9: return WeaponType::Electro;
+					default: return WeaponType::Blaster;
+				}
+			}
+
+			static bool IsUpgradedBullet(std::uint8_t eventID)
+			{
+				return (eventID >= aPLAYERBULLETP1 && eventID <= aPLAYERBULLETP9);
 			}
 		};
 
@@ -821,7 +1015,7 @@ namespace Jazz2::Scripting
 			return target;
 		}
 		void jjOBJ::blast(std::int32_t maxDistance, bool blastObjects) {
-			// Hurts the players nearer than the square root of `maxDistance` (ThreedRealms' pumpkin bombs pass 100*100), pushed
+			// Hurts the players nearer than the square root of `maxDistance` (bombs pass 100*100), pushed
 			// away from it - what it does to objects (`blastObjects`) isn't done
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			for (Actors::Player* player : owner->GetPlayers()) {
@@ -835,23 +1029,38 @@ namespace Jazz2::Scripting
 		void jjOBJ::RunWalkingEnemy(bool draw) {
 			// BEHAVIOR::WALKINGENEMY, as measured in JJ2+: the row of the cold spot of its frame stands on the ground, without
 			// it the object falls (0.125 a tick); it goes by xSpeed and faces the way it goes, it turns round on the spot if
-			// the row under where it'd go isn't masked or the row above is 38 px further (it turns every tick in the air);
-			// its frames go every 8 ticks of the game
+			// at the front edge of its frame (width + hot spot X beyond where it'd go) the feet row isn't masked or the row
+			// 16 px above it is (it turns every tick in the air); its frames go every 8 ticks of the game
 			constexpr float Gravity = 0.125f;
 			constexpr float MaxFallSpeed = 8.0f;
-			constexpr std::int32_t WallDistance = 38;
+			constexpr std::int32_t WallHeight = 16;
 
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			auto& tables = owner->GetAnimationTables();
-			std::int32_t feet = 0;
+			std::int32_t feet = 0, frontEdge = 0;
 			Recti frameRect; Vector2i coldSpot;
 			if (curFrame != 0 && tables.GetFrameSpots(curFrame, frameRect, coldSpot)) {
 				feet = frameRect.Y - coldSpot.Y;
+				frontEdge = frameRect.W + frameRect.X;
 			}
 
+			if (state == sKILL) {
+				// Killed, it bursts into the pixels of its frame and is gone, as the enemies of JJ2 die
+				if (curFrame != 0) {
+					AddPixelExplosion(owner, xPos, yPos, curFrame, direction);
+				}
+				if (_wrapper != nullptr) {
+					_wrapper->Remove();
+				}
+				return;
+			}
 			if (state == sSTART) {
 				state = sWALK;
 				yAcc = (jjMaskedPixel(std::int32_t(xPos), std::int32_t(yPos) + feet) ? 0.0f : Gravity);
+				// Placed in the ground, it starts on it
+				for (std::int32_t i = 0; yAcc == 0.0f && i < 8 && jjMaskedPixel(std::int32_t(xPos), std::int32_t(yPos) + feet - 1); i++) {
+					yPos -= 1.0f;
+				}
 			} else if (state == sFREEZE) {
 				if (freeze > 0) {
 					freeze--;
@@ -863,8 +1072,8 @@ namespace Jazz2::Scripting
 				bool falling = (ySpeed > 0.0f);
 				yPos += ySpeed;
 				if (jjMaskedPixel(std::int32_t(xPos), std::int32_t(yPos) + feet)) {
-					// Its feet on the first masked row, a fall can end deeper - only then, one pushed into a wall (ThreedRealms'
-					// puppets stagger back) would rise through it
+					// Its feet on the first masked row, a fall can end deeper - only then, one pushed into a wall (puppets
+					// that stagger back) would rise through it
 					for (std::int32_t i = 0; falling && i < 8 && jjMaskedPixel(std::int32_t(xPos), std::int32_t(yPos) + feet - 1); i++) {
 						yPos -= 1.0f;
 					}
@@ -878,7 +1087,8 @@ namespace Jazz2::Scripting
 				float targetX = xPos + xSpeed;
 				std::int32_t way = (xSpeed < 0.0f ? -1 : 1);
 				std::int32_t feetRow = std::int32_t(yPos) + feet;
-				if (!jjMaskedPixel(std::int32_t(targetX), feetRow) || jjMaskedPixel(std::int32_t(targetX) + way * WallDistance, feetRow - 1)) {
+				std::int32_t frontX = std::int32_t(targetX) + way * frontEdge;
+				if (!jjMaskedPixel(frontX, feetRow) || jjMaskedPixel(frontX, feetRow - WallHeight)) {
 					xSpeed = -xSpeed;
 				} else {
 					xPos = targetX;
@@ -907,7 +1117,7 @@ namespace Jazz2::Scripting
 
 		void jjOBJ::behave1(std::uint32_t behavior, bool draw) {
 			// BEHAVIOR::DEFAULT is the behavior the object has (`obj.behave()` of JJ2+ runs a behavior of the script given to
-			// it, the puppets of ThreedRealms start so) - but not again from within itself, the one of the game runs then
+			// it, puppets start so) - but not again from within itself, the one of the game runs then
 			constexpr std::uint32_t BehaviorDefault = UINT32_MAX;
 			if (behavior == BehaviorDefault) {
 				const void* own = (this->behavior.object != nullptr ? static_cast<const void*>(this->behavior.object) : static_cast<const void*>(this->behavior.function));
@@ -919,6 +1129,9 @@ namespace Jazz2::Scripting
 				if (own == nullptr) {
 					behavior = this->behavior.behaviorId;
 				}
+			}
+			if (_host == nullptr && _wrapper == nullptr && behavior != aUNKNOWN) {
+				ScriptLoader::FromActiveContext<LevelScriptLoader>()->OnGameBehavior(*this, behavior);
 			}
 			// Runs a behavior once, it doesn't become the behavior of the object. A behavior of the game is the object's own
 			// update, the object has no other; an object a script controls entirely can be a bullet.
@@ -934,6 +1147,8 @@ namespace Jazz2::Scripting
 				if (behavior == aUNKNOWN) {
 					// BEHAVIOR::INACTIVE
 					_host->Delete();
+				} else if (behavior == aBULLET && _host->IsScriptedBullet()) {
+					_host->RunBullet(draw);
 				} else if (behavior == BehaviorMonitor) {
 					_host->RunMonitor(draw);
 				} else {
@@ -945,7 +1160,17 @@ namespace Jazz2::Scripting
 				switch (behavior) {
 					case aUNKNOWN: _wrapper->Remove(); break;
 					case aBULLET:
-					case ScriptLegacyObject::BehaviorPepperBullet: _wrapper->RunBullet(draw); break;
+					case ScriptLegacyObject::BehaviorPepperBullet:
+					// The other bullets of the weapons go as a bullet does, a bouncer bounces (snowballs)
+					case aPLAYERBULLET1:
+					case aPLAYERBULLET3:
+					case aPLAYERBULLET4:
+					case aPLAYERBULLET5:
+					case aPLAYERBULLET9:
+					case aPLAYERBULLETC1:
+					case aPLAYERBULLETC2:
+					case aPLAYERBULLETC3: _wrapper->RunBullet(draw); break;
+					case aPLAYERBULLET2: _wrapper->RunBouncerBullet(draw); break;
 					case ScriptLegacyObject::BehaviorBilsyBullet: _wrapper->RunBilsyBullet(draw); break;
 					case aPLAYERBULLET6: _wrapper->RunToasterBullet(draw); break;
 					case aSHARD: _wrapper->RunShard(draw); break;
@@ -977,8 +1202,7 @@ namespace Jazz2::Scripting
 			std::int32_t id = owner->AddObjectFromEvent(eventID, xPixel, yPixel);
 			if (id > 0) {
 				jjOBJ* obj = owner->GetObjectById(id);
-				obj->_creatorID = creatorID;
-				obj->_creatorType = creatorType;
+				obj->creator = PackCreator(creatorType, creatorID);
 				if (behavior != BehaviorDefault) {
 					obj->behavior = behavior;
 				}
@@ -991,14 +1215,13 @@ namespace Jazz2::Scripting
 			id = owner->AddScriptControlledObject(eventID, xPixel, yPixel, nullptr);
 			if (auto* wrapper = runtime_cast<ScriptLegacyObject>(owner->GetScriptObject(id))) {
 				jjOBJ* obj = wrapper->GetObject();
-				obj->_creatorID = creatorID;
-				obj->_creatorType = creatorType;
+				obj->creator = PackCreator(creatorType, creatorID);
 				if (behavior != BehaviorDefault) {
 					obj->behavior = behavior;
 				}
-				// BEHAVIOR::INACTIVE keeps the object as it is until the script gives it a behavior (ThreedRealms' pulses of
-				// its trigger crates), it would be gone at once - so does a bullet, as measured in JJ2+, its behavior does
-				// nothing then (HH17's dragon gives its fire the homing behavior next)
+				// BEHAVIOR::INACTIVE keeps the object as it is until the script gives it a behavior (pulses of
+				// trigger crates), it would be gone at once - so does a bullet, as measured in JJ2+, its behavior does
+				// nothing then (fire given the homing behavior next)
 				if (behavior != aUNKNOWN && !(behavior == BehaviorDefault && eventID == aBULLET)) {
 					wrapper->RunTick();
 				}
@@ -1017,8 +1240,7 @@ namespace Jazz2::Scripting
 			if (id > 0) {
 				jjOBJ* obj = owner->GetObjectById(id);
 				obj->behavior = function;
-				obj->_creatorID = creatorID;
-				obj->_creatorType = creatorType;
+				obj->creator = PackCreator(creatorType, creatorID);
 				obj->Release();
 				return id;
 			}
@@ -1028,8 +1250,7 @@ namespace Jazz2::Scripting
 			// Record the creator on the persistent jjOBJ so scripts can read it back
 			if (auto* wrapper = runtime_cast<ScriptLegacyObject>(owner->GetScriptObject(id))) {
 				jjOBJ* obj = wrapper->GetObject();
-				obj->_creatorID = creatorID;
-				obj->_creatorType = creatorType;
+				obj->creator = PackCreator(creatorType, creatorID);
 				// The behavior runs once right away, as JJ2+ runs it for a new object - a new bullet starts to fly in it
 				wrapper->RunTick();
 			}
@@ -1064,19 +1285,24 @@ namespace Jazz2::Scripting
 			return result;
 		}
 
+		// CREATOR::LEVEL 0x4000 and CREATOR::PLAYER 0x8000 over the lower 14 bits of the ID, its 2 upper bits above them -
+		// scripts keep any 16-bit value there (puppet shards keep frames)
+		std::int32_t jjOBJ::PackCreator(std::uint32_t type, std::uint16_t id) {
+			return std::int32_t((type & 0xC000u) | (id & 0x3FFFu) | (std::uint32_t(id & 0xC000u) << 2));
+		}
 		std::uint16_t jjOBJ::get_creatorID() const {
-			return _creatorID;
+			return std::uint16_t((std::uint32_t(creator) & 0x3FFFu) | ((std::uint32_t(creator) >> 2) & 0xC000u));
 		}
 		std::uint16_t jjOBJ::set_creatorID(std::uint16_t value) const {
-			_creatorID = value;
-			return _creatorID;
+			creator = PackCreator(get_creatorType(), value);
+			return value;
 		}
 		std::uint32_t jjOBJ::get_creatorType() const {
-			return _creatorType;
+			return std::uint32_t(creator) & 0xC000u;
 		}
 		std::uint32_t jjOBJ::set_creatorType(std::uint32_t value) const {
-			_creatorType = value;
-			return _creatorType;
+			creator = PackCreator(value, get_creatorID());
+			return get_creatorType();
 		}
 
 		int16_t jjOBJ::determineCurAnim(std::uint8_t setID, std::uint8_t animation, bool change) {
@@ -1182,6 +1408,9 @@ namespace Jazz2::Scripting
 			} else if (_wrapper != nullptr && curFrame != 0) {
 				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 				ScriptObjectHost::DrawFrame(owner, *this);
+			} else if (curFrame != 0) {
+				auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+				owner->OnFrameDrawn(xPos, yPos, curFrame, spriteType_NORMAL);
 			}
 			return 0;
 		}
@@ -1283,7 +1512,7 @@ namespace Jazz2::Scripting
 			noop();
 		}
 		int32_t jjOBJ::fireBullet(std::uint8_t eventID) {
-			// As measured in JJ2+, an object of the event at the gun spot of the frame this one shows (hot spot less gun spot, HH17's
+			// As measured in JJ2+, an object of the event at the gun spot of the frame this one shows (hot spot less gun spot, a
 			// dragon breathes fire from its mouth), made by it - the speed of its template goes the way this one faces (see
 			// ScriptLegacyObject::RunBullet()), its handling is the one of the template
 			constexpr std::uint32_t CreatorObject = 0;
@@ -1413,7 +1642,7 @@ namespace Jazz2::Scripting
 
 		jjPARTICLE::jjPARTICLE()
 			: xPos(0.0f), yPos(0.0f), xSpeed(0.0f), ySpeed(0.0f), particleType(particleNONE), active(false), GENERIC{},
-				_refCount(1), _age(0), _scale(0.0f) {
+				_refCount(1), _age(0), _scale(0.0f), _weather(false) {
 		}
 		jjPARTICLE::~jjPARTICLE() {
 		}
@@ -1478,7 +1707,7 @@ namespace Jazz2::Scripting
 
 	Legacy::jjPARTICLE* LevelScriptLoader::AddScriptParticle(std::uint32_t type)
 	{
-		if (type == Legacy::particleNONE || type > Legacy::particleTILE) {
+		if (type == Legacy::particleNONE || (type > Legacy::particleSTAR && type != Legacy::particleTILE)) {
 			return nullptr;
 		}
 		if (_particles == nullptr) {
@@ -1505,6 +1734,7 @@ namespace Jazz2::Scripting
 		particle->active = true;
 		particle->_age = 0;
 		particle->_scale = 0.0f;
+		particle->_weather = false;
 		std::uint8_t* data = particle->GENERIC.raw;
 		std::memset(data, 0, sizeof(particle->GENERIC.raw));
 		auto setU16 = [data](std::size_t offset, std::uint16_t value) {
@@ -1546,12 +1776,17 @@ namespace Jazz2::Scripting
 			float px = std::floor(x), py = std::floor(y);
 			return (tileMap != nullptr && !tileMap->IsTileEmpty(AABBf(px, py, px, py), params));
 		};
+		if (_particles == nullptr) {
+			_particles = std::make_unique<Legacy::jjPARTICLE[]>(MaxParticles);
+			_particlesTick = currentTick - 1;
+		}
 		if (_particlesTick >= currentTick) {
 			// Drawn already in this tick, the level keeps what was drawn until the next one
 			return;
 		}
 		while (_particlesTick < currentTick) {
 			_particlesTick++;
+			SpawnWeatherParticles();
 			for (std::int32_t i = 0; i < MaxParticles; i++) {
 				Legacy::jjPARTICLE& p = _particles[i];
 				if (p.particleType == Legacy::particleNONE) {
@@ -1633,8 +1868,11 @@ namespace Jazz2::Scripting
 						remove = (p._age >= 122);
 						break;
 					case Legacy::particleFLOWER:
-						p.xPos += p.xSpeed;
-						p.yPos += p.ySpeed;
+						// Stops for good in a wall, still turning and shrinking
+						if (!isMasked(p.xPos, p.yPos)) {
+							p.xPos += p.xSpeed;
+							p.yPos += p.ySpeed;
+						}
 						data[2] = std::uint8_t(data[2] + data[3]);
 						remove = (data[0] == 0 || --data[0] == 0);
 						break;
@@ -1669,6 +1907,10 @@ namespace Jazz2::Scripting
 						break;
 				}
 
+				// Weather of the outdoors only is gone where it falls into a wall
+				if (p._weather && snowingOutdoors && p.particleType != Legacy::particleLEAF && isMasked(p.xPos, p.yPos)) {
+					remove = true;
+				}
 				if (remove) {
 					p.particleType = Legacy::particleNONE;
 					p.active = false;
@@ -1698,7 +1940,25 @@ namespace Jazz2::Scripting
 				case Legacy::particleICETRAIL:
 				case Legacy::particleSPARK: drawSolid(p.xPos, p.yPos, 2.0f, data[0], Legacy::spriteType_NORMAL); break;
 				case Legacy::particleSMOKE: drawSolid(p.xPos, p.yPos, 3.0f, 72, Legacy::spriteType_TRANSLUCENT); break;
-				case Legacy::particleFLOWER: drawSolid(p.xPos, p.yPos, std::max(float(data[0]) / 8.0f, 1.0f), data[1], Legacy::spriteType_NORMAL); break;
+				case Legacy::particleFLOWER: {
+					// Thin petals from the middle, size / 8 long, turned by its angle (a whole turn is 256), the tips faded
+					float length = float(data[0]) / 8.0f;
+					std::int32_t petals = std::max<std::int32_t>(data[4], 1);
+					if (data[1] == 0 || length < 1.0f) {
+						break;
+					}
+					for (std::int32_t j = 0; j < petals; j++) {
+						float angle = float(data[2] + j * 256 / petals) * fTwoPi / 256.0f;
+						float dx = cosf(angle), dy = sinf(angle);
+						auto drawPetal = [&](float petalLength, float width, std::uint32_t mode) {
+							canvas.AddSolid({ p.xPos + dx * petalLength * 0.5f - petalLength * 0.5f, p.yPos + dy * petalLength * 0.5f - width * 0.5f,
+								petalLength, width, data[1], mode, 0, z, angle });
+						};
+						drawPetal(length, 2.0f, Legacy::spriteType_TRANSLUCENT);
+						drawPetal(length * 0.65f, 1.0f, Legacy::spriteType_NORMAL);
+					}
+					break;
+				}
 				case Legacy::particleSTAR: drawSolid(p.xPos, p.yPos, std::max(float(data[0]) / 2.0f, 1.0f), data[1], Legacy::spriteType_NORMAL); break;
 				case Legacy::particleSCORE: {
 					const Legacy::jjPARTICLESTRING& text = p.GENERIC.string;
@@ -1733,6 +1993,103 @@ namespace Jazz2::Scripting
 		}
 	}
 
+	void LevelScriptLoader::SpawnWeatherParticles()
+	{
+		// JJ2+ makes the weather of particles scripts see (`jjParticles`), which they steer or remove - as many in a tick
+		// as the intensity, across the view of each player, rain from above it
+		if (!snowing || snowingType < 0 || snowingType > 3 || PreferencesCache::Particles == ParticleQuality::Off ||
+			ContentResolver::Get().IsHeadless()) {
+			return;
+		}
+		static constexpr std::uint32_t Types[] = { Legacy::particleSNOW, Legacy::particleFLOWER, Legacy::particleRAIN, Legacy::particleLEAF };
+		std::uint32_t type = Types[snowingType];
+		float rate = float(std::max<std::int32_t>(snowingIntensity, 1)) * (PreferencesCache::Particles == ParticleQuality::Low ? 0.5f : 1.0f);
+
+		// The frames of a snowflake, the first animation of the set of snow
+		std::uint32_t snowFirstFrame = 0, snowFrameCount = 0;
+		if (type == Legacy::particleSNOW) {
+			auto& tables = GetAnimationTables();
+			std::uint32_t firstAnim = tables.GetFirstAnim(Legacy::AnimationTables::GetSetID(Legacy::mSNOW, versionTSF));
+			if (firstAnim == 0 || !tables.GetAnimationFrames(firstAnim, snowFrameCount, snowFirstFrame) || snowFrameCount == 0) {
+				return;
+			}
+		}
+
+		// Flowers are a steady 64 per view, a new one in a tick while any is missing, as measured in JJ2+
+		std::int32_t missingFlowers = 0;
+		if (type == Legacy::particleFLOWER) {
+			std::int32_t flowersPerView = (PreferencesCache::Particles == ParticleQuality::Low ? 32 : 64);
+			missingFlowers = flowersPerView * std::int32_t(_levelHandler->_assignedViewports.size());
+			for (std::int32_t i = 0; i < MaxParticles; i++) {
+				if (_particles[i]._weather && _particles[i].particleType == Legacy::particleFLOWER) {
+					missingFlowers--;
+				}
+			}
+		}
+
+		for (const auto& viewport : _levelHandler->_assignedViewports) {
+			auto* player = runtime_cast<Actors::Player>(viewport->GetTargetActor());
+			if (player == nullptr) {
+				continue;
+			}
+			Rectf view = _levelHandler->GetCameraView(player);
+			std::int32_t count;
+			if (type == Legacy::particleFLOWER) {
+				count = (missingFlowers > 0 ? 1 : 0);
+				missingFlowers -= count;
+			} else {
+				count = std::int32_t(rate);
+				if (Random().NextFloat() < rate - float(count)) {
+					count++;
+				}
+			}
+			for (std::int32_t i = 0; i < count; i++) {
+				Legacy::jjPARTICLE* p = AddScriptParticle(type);
+				if (p == nullptr) {
+					return;
+				}
+				p->_weather = true;
+				// Further to the right too, snow drifts left
+				p->xPos = view.X + Random().FastFloat(-view.W * 0.1f, view.W * 1.25f);
+				switch (type) {
+					case Legacy::particleSNOW: {
+						p->yPos = view.Y + Random().FastFloat(-16.0f, view.H);
+						p->xSpeed = Random().FastFloat(-1.0f, -0.25f);
+						p->ySpeed = Random().FastFloat(0.75f, 2.0f);
+						std::uint8_t* data = p->GENERIC.raw;
+						data[0] = std::uint8_t(Random().Next(0, std::int32_t(std::min<std::uint32_t>(snowFrameCount, 255))));
+						std::uint16_t frameBase = std::uint16_t(std::min<std::uint32_t>(snowFirstFrame, UINT16_MAX));
+						std::memcpy(&data[3], &frameBase, sizeof(frameBase));
+						break;
+					}
+					case Legacy::particleRAIN:
+						p->xPos -= view.W * 0.25f;
+						p->yPos = view.Y + Random().FastFloat(-view.H * 0.5f, view.H * 0.5f);
+						p->xSpeed = Random().FastFloat(1.5f, 2.0f);
+						p->ySpeed = Random().FastFloat(6.0f, 7.0f);
+						break;
+					case Legacy::particleFLOWER: {
+						// Anywhere in the view, white, 64 ticks long (now and then 128), drifting left and down
+						p->xPos = view.X + Random().FastFloat(-32.0f, view.W + 32.0f);
+						p->yPos = view.Y + Random().FastFloat(-32.0f, view.H);
+						p->xSpeed = Random().FastFloat(-0.75f, -0.5f);
+						p->ySpeed = Random().FastFloat(0.0f, 2.0f);
+						std::uint8_t* data = p->GENERIC.raw;
+						data[0] = (Random().Next(0, 8) == 0 ? 127 : 63);
+						data[1] = 72;
+						data[2] = std::uint8_t(Random().Next(0, 256));
+						data[3] = std::uint8_t(std::int8_t(Random().Next(-8, 8)));
+						data[4] = (Random().Next(0, 5) == 0 ? 7 : 6);
+						break;
+					}
+					default:
+						p->yPos = view.Y + Random().FastFloat(-32.0f, view.H * 0.5f);
+						break;
+				}
+			}
+		}
+	}
+
 	std::int32_t LevelScriptLoader::AddObjectFromEvent(std::uint8_t eventId, float xPixel, float yPixel)
 	{
 		// Objects below the first ammo are bullets and particles (OBJECT::SHARD, OBJECT::EXPLOSION...), the same IDs
@@ -1741,7 +2098,7 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 
-		// An object of JJ2 reads its parameters of the tile it's made at, ThreedRealms makes a platform at the tile of
+		// An object of JJ2 reads its parameters of the tile it's made at, a script may make a platform at the tile of
 		// another (the converters that read the level get an empty one, see Legacy::EventTranslator)
 		std::uint32_t tileWord = GetOriginalEvent(std::int32_t(xPixel) >> 5, std::int32_t(yPixel) >> 5);
 		std::uint32_t params = ((tileWord & 0xFF) == eventId ? tileWord >> Legacy::EventTranslator::ParamsShift : 0);
@@ -2003,8 +2360,9 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalProperty("const int jjObjectMax", &jjObjectMax);
 		engine->RegisterObjectMethod("jjOBJ", "bool get_isActive() const", asMETHOD(jjOBJ, get_isActive), asCALL_THISCALL);
 
-		engine->RegisterObjectMethod("jjPLAYER", "LIGHT::Type get_lightType() const", asMETHOD(jjOBJ, get_lightType), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "LIGHT::Type set_lightType(LIGHT::Type)", asMETHOD(jjOBJ, set_lightType), asCALL_THISCALL);
+		// Registered here, after LIGHT::Type
+		engine->RegisterObjectMethod("jjPLAYER", "LIGHT::Type get_lightType() const", asMETHOD(jjPLAYER, get_lightType), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "LIGHT::Type set_lightType(LIGHT::Type)", asMETHOD(jjPLAYER, set_lightType), asCALL_THISCALL);
 
 		engine->RegisterObjectMethod("jjPLAYER", "bool doesCollide(const jjOBJ@ object, bool always = false) const", asMETHOD(jjPLAYER, doesCollide), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int getObjectHitForce(const jjOBJ@ target = null) const", asMETHOD(jjPLAYER, getObjectHitForce), asCALL_THISCALL);

@@ -1,4 +1,5 @@
 program CombineWithWater;
+variant DITHER;
 precision highp;
 
 uniform mat4 uProjectionMatrix;
@@ -163,6 +164,10 @@ vec4 sinCycles(vec4 cycles) {
 	return y * (0.775 + 0.225 * abs(y));
 }
 
+#if DITHER
+#include "Include/Dither565.inc"
+#endif
+
 void fragment() {
 	vec3 waterColor = vec3(0.4, 0.6, 0.8);
 
@@ -289,6 +294,10 @@ void fragment() {
 	), uAmbientColor, vec4(darknessStrength));
 #endif
 	COLOR.a = 1.0;
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
+	// The whole scene in the colors of the 16-bit renderer of JJ2+, the HUD is drawn after it
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+#endif
 }
 
 void fixed_function(gx, pica, gu, gs, legacygl) {

@@ -389,14 +389,25 @@ namespace Jazz2::UI
 		_currentRenderQueue->AddCommand(command);
 	}
 
-	void Canvas::DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending)
+	void Canvas::DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending, float angle)
 	{
 		// Apply the optional per-layer draw transform (menu section transitions; identity by default)
 		pos = pos * LayerScale + LayerOffset;
 		size = size * LayerScale;
 		const Colorf finalColor = color * LayerColor;
 
-		if (!ClipQuad(pos, size, nullptr)) {
+		const bool rotated = (std::abs(angle) > 0.01f);
+		if (rotated) {
+			// Left out only if all of it is outside, as a rotated texture
+			if (ClipRect.W > 0.0f && ClipRect.H > 0.0f) {
+				const float radius = 0.5f * std::sqrt(size.X * size.X + size.Y * size.Y);
+				Vector2f boundsPos = pos + size * 0.5f - Vector2f(radius, radius);
+				Vector2f boundsSize = Vector2f(radius * 2.0f, radius * 2.0f);
+				if (!ClipQuad(boundsPos, boundsSize, nullptr)) {
+					return;
+				}
+			}
+		} else if (!ClipQuad(pos, size, nullptr)) {
 			return;
 		}
 
@@ -420,7 +431,13 @@ namespace Jazz2::UI
 		instanceUniforms->SpriteSize->SetFloatVector(size.Data());
 		instanceUniforms->Color->SetFloatVector(finalColor.Data());
 
-		command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+		Matrix4x4f worldMatrix = Matrix4x4f::Translation(pos.X, pos.Y, 0.0f);
+		if (rotated) {
+			worldMatrix.Translate(size.X * 0.5f, size.Y * 0.5f, 0.0f);
+			worldMatrix.RotateZ(angle);
+			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
+		}
+		command->SetTransformation(worldMatrix);
 		command->SetLayer(z);
 		command->GetMaterial().SetTexture(0, nullptr);
 

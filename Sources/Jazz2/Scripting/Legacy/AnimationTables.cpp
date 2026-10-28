@@ -194,7 +194,7 @@ namespace Jazz2::Scripting::Legacy
 		}
 
 		// Alpha the converter gives the pixels of a frame that's drawn translucent (see JJ2Anims::ImportAnimations())
-		constexpr std::uint8_t TranslucentAlpha = 140;
+		constexpr std::uint8_t TranslucentAlpha = AnimationTables::TranslucentFrameAlpha;
 		// Pixels kept between two frames of a sheet, so filtering doesn't bleed one into the other
 		constexpr std::int32_t FrameSpacing = GenericGraphicResource::FrameBorder;
 		// Largest sheet made of the frames of an animation
@@ -384,6 +384,111 @@ namespace Jazz2::Scripting::Legacy
 		const jjANIMATION* anim = _animations[animIndex];
 		frameCount = anim->frameCount;
 		firstFrame = anim->_firstFrame;
+		return true;
+	}
+
+	bool AnimationTables::GetAnimationImage(std::uint32_t animIndex, std::int32_t maxFrames, SmallVectorImpl<std::uint32_t>& colors, Vector2i& cellSize,
+		Vector2i& hotspot, std::int32_t& frameCount, std::int32_t& fps, bool& changed)
+	{
+		changed = false;
+		if (animIndex == 0 || animIndex >= _animations.size() || _animations[animIndex] == nullptr) {
+			return false;
+		}
+		const jjANIMATION& anim = *_animations[animIndex];
+		frameCount = std::min<std::int32_t>(anim.frameCount, maxFrames);
+		fps = anim.fps;
+		return GetFramesImage(anim._firstFrame, frameCount, nullptr, colors, cellSize, hotspot, changed);
+	}
+
+	bool AnimationTables::IsAnimationChanged(std::uint32_t animIndex)
+	{
+		if (animIndex == 0 || animIndex >= _animations.size() || _animations[animIndex] == nullptr) {
+			return false;
+		}
+		const jjANIMATION& anim = *_animations[animIndex];
+		for (std::uint32_t i = 0; i < anim.frameCount; i++) {
+			const jjANIMFRAME* frame = EnsureFrame(anim._firstFrame + i);
+			if (frame != nullptr && (frame->_version != 0 || frame->_owner != animIndex)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool AnimationTables::GetFramesImage(std::uint32_t firstFrame, std::int32_t frameCount, const std::uint32_t* palette, SmallVectorImpl<std::uint32_t>& colors,
+		Vector2i& cellSize, Vector2i& hotspot, bool& changed)
+	{
+		changed = false;
+		if (frameCount <= 0) {
+			return false;
+		}
+
+		// The cell holds every frame by its hotspot
+		SmallVector<jjANIMFRAME*, 16> frames;
+		Recti bounds;
+		bool hasBounds = false;
+		for (std::int32_t i = 0; i < frameCount; i++) {
+			jjANIMFRAME* frame = EnsureFrame(firstFrame + std::uint32_t(i));
+			if (frame == nullptr) {
+				return false;
+			}
+			EnsureFrameImage(*frame);
+			frames.push_back(frame);
+			changed |= (frame->_version != 0);
+			if (frame->width == 0 || frame->height == 0 || frame->_pixels == nullptr) {
+				continue;
+			}
+			Recti rect(frame->hotSpotX, frame->hotSpotY, frame->width, frame->height);
+			if (!hasBounds) {
+				bounds = rect;
+				hasBounds = true;
+			} else {
+				std::int32_t right = std::max(bounds.X + bounds.W, rect.X + rect.W);
+				std::int32_t bottom = std::max(bounds.Y + bounds.H, rect.Y + rect.H);
+				bounds.X = std::min(bounds.X, rect.X);
+				bounds.Y = std::min(bounds.Y, rect.Y);
+				bounds.W = right - bounds.X;
+				bounds.H = bottom - bounds.Y;
+			}
+		}
+		if (!hasBounds) {
+			return false;
+		}
+
+		cellSize = Vector2i(bounds.W, bounds.H);
+		hotspot = Vector2i(-bounds.X, -bounds.Y);
+		std::int32_t stride = bounds.W * frameCount;
+		colors.clear();
+		colors.resize(std::size_t(stride) * std::size_t(bounds.H), 0);
+		if (palette == nullptr) {
+			palette = ContentResolver::Get().GetPalettes().data();
+		}
+		for (std::int32_t i = 0; i < frameCount; i++) {
+			const jjANIMFRAME& frame = *frames[i];
+			if (frame.width == 0 || frame.height == 0 || frame._pixels == nullptr) {
+				continue;
+			}
+			std::int32_t left = i * bounds.W + (frame.hotSpotX - bounds.X);
+			std::int32_t top = frame.hotSpotY - bounds.Y;
+			for (std::int32_t y = 0; y < frame.height; y++) {
+				std::uint32_t* row = &colors[std::size_t(top + y) * std::size_t(stride) + std::size_t(left)];
+				for (std::int32_t x = 0; x < frame.width; x++) {
+					std::size_t p = std::size_t(y) * frame.width + std::size_t(x);
+					std::uint32_t color;
+					if (frame._colors != nullptr) {
+						const jjPALCOLOR& c = frame._colors[p];
+						color = std::uint32_t(c.red) | (std::uint32_t(c.green) << 8) | (std::uint32_t(c.blue) << 16) | (std::uint32_t(c.alpha) << 24);
+					} else {
+						std::uint8_t index = frame._pixels[p];
+						color = (index != 0 ? palette[index] : 0);
+					}
+					if (frame._transparent && (color >> 24) != 0) {
+						color = (color & 0x00FFFFFFu) | (std::uint32_t(TranslucentFrameAlpha) << 24);
+					}
+					row[x] = color;
+				}
+			}
+		}
 		return true;
 	}
 
@@ -760,8 +865,11 @@ namespace Jazz2::Scripting::Legacy
 		return false;
 	}
 
-	GenericGraphicResource* AnimationTables::ResolveSprite(std::int32_t setID, std::int32_t animation, std::int32_t frame, std::int32_t& cell)
+	GenericGraphicResource* AnimationTables::ResolveSprite(std::int32_t setID, std::int32_t animation, std::int32_t frame, std::int32_t& cell, bool* translucent)
 	{
+		if (translucent != nullptr) {
+			*translucent = false;
+		}
 		std::uint32_t firstAnim = GetFirstAnim(setID);
 		if (firstAnim == 0 || animation < 0) {
 			return nullptr;
@@ -781,6 +889,9 @@ namespace Jazz2::Scripting::Legacy
 		if (position < 0) {
 			position += anim.frameCount;
 		}
+		if (translucent != nullptr && anim._firstFrame + std::uint32_t(position) < _frames.size()) {
+			*translucent = _frames[anim._firstFrame + std::uint32_t(position)]->_transparent;
+		}
 
 		// The graphics of the game repeat the frames of the animation over their own frames, so the first ones are it
 		if (anim._native >= 0) {
@@ -797,10 +908,16 @@ namespace Jazz2::Scripting::Legacy
 		return RequestOwnGraphics(anim);
 	}
 
-	GenericGraphicResource* AnimationTables::ResolveFrame(std::uint32_t frameIndex, std::int32_t& cell)
+	GenericGraphicResource* AnimationTables::ResolveFrame(std::uint32_t frameIndex, std::int32_t& cell, bool* translucent)
 	{
+		if (translucent != nullptr) {
+			*translucent = false;
+		}
 		if (frameIndex == 0 || frameIndex >= _frames.size()) {
 			return nullptr;
+		}
+		if (translucent != nullptr) {
+			*translucent = _frames[frameIndex]->_transparent;
 		}
 
 		// The animation the frame was made for draws it, as long as it still has it

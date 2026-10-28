@@ -109,6 +109,12 @@ namespace Jazz2::Editor
 			}
 		}
 
+		addValue(document.DiffuseOverrides.size());
+		for (const Formats::TileDiffuseOverride& diffuse : document.DiffuseOverrides) {
+			addValue(diffuse.TileId);
+			addBytes(diffuse.Indices, sizeof(diffuse.Indices));
+		}
+
 		// An animated tile stands for its first frame
 		addValue(document.Animations.size());
 		for (const DocumentAnimation& animation : document.Animations) {
@@ -152,6 +158,19 @@ namespace Jazz2::Editor
 		}
 		if (tile.IsEmpty() || tile.Source == TileRef::Raw) {
 			return false;
+		}
+		// Palette indices of the level the tile was drawn over with, whatever tile set it's of, as the game draws it
+		if (!document.DiffuseOverrides.empty()) {
+			std::int32_t tileId = document.ToTileId(tile);
+			for (const Formats::TileDiffuseOverride& diffuse : document.DiffuseOverrides) {
+				if (diffuse.TileId == tileId) {
+					result.Pixels = diffuse.Indices;
+					result.TrueColor = false;
+					result.Remapping = nullptr;
+					result.Flags = tile.Flags;
+					return true;
+				}
+			}
 		}
 
 		TileSource source;

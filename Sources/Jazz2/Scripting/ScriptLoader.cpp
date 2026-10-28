@@ -29,6 +29,9 @@ using namespace Death::IO;
 
 namespace Jazz2::Scripting
 {
+	asIScriptEngine* ScriptLoader::_lastEngine = nullptr;
+	void* ScriptLoader::_lastOwner = nullptr;
+
 	ScriptLoader::ScriptLoader()
 		: _module(nullptr), _scriptContextType(ScriptContextType::Unknown)
 	{
@@ -57,8 +60,13 @@ namespace Jazz2::Scripting
 		}
 
 		if (_engine != nullptr) {
+			asIScriptEngine* engine = _engine;
 			_engine->ShutDownAndRelease();
 			_engine = nullptr;
+			if (_lastEngine == engine) {
+				_lastEngine = nullptr;
+				_lastOwner = nullptr;
+			}
 		}
 	}
 
@@ -555,8 +563,22 @@ namespace Jazz2::Scripting
 		std::uint32_t len = 0;
 
 		// Skip until ; or { whichever comes first
+		char prevSignificant = '\0';
 		while (pos < scriptSize && scriptContent[pos] != ';' && scriptContent[pos] != '{') {
-			_engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
+			asETokenClass t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
+			if (t == asTC_IDENTIFIER && prevSignificant != '@' && prevSignificant != '.') {
+				// Scripts of JJ2+ declare value conversions as `jjPALCOLOR opImplCast()`, which AngelScript means for handles
+				// only - its compiler asserts on such a method (JJ2+ has the asserts compiled out), the conversion is the same
+				MutableStringView identifier(&scriptContent[pos], len);
+				if (identifier == "opImplCast"_s) {
+					std::memcpy(&scriptContent[pos], "opImplConv", len);
+				} else if (identifier == "opCast"_s) {
+					std::memcpy(&scriptContent[pos], "opConv", len);
+				}
+			}
+			if (t != asTC_COMMENT && t != asTC_WHITESPACE) {
+				prevSignificant = scriptContent[pos + len - 1];
+			}
 			pos += len;
 		}
 

@@ -34,10 +34,10 @@ namespace Jazz2::Editor
 			// As the game starts local splitscreen, see GameEventHandler::SetLevelHandler()
 			auto serverConfig = NetworkManager::CreateDefaultServerConfiguration();
 			serverConfig.GameMode = MpGameMode(options.GameMode);
-			serverConfig.ReforgedGameplay = PreferencesCache::EnableReforgedGameplay;
+			serverConfig.ReforgedGameplay = options.Reforged;
 			serverConfig.MinPlayerCount = 1;
 			serverConfig.PreGameSecs = 0;
-			serverConfig.AllowLedgeClimb = PreferencesCache::EnableLedgeClimb;
+			serverConfig.AllowLedgeClimb = options.LedgeClimb;
 
 			_playTestNetwork = std::make_unique<NetworkManager>();
 			_playTestNetwork->CreateLocalServer(this, Death::move(serverConfig));
@@ -96,7 +96,7 @@ namespace Jazz2::Editor
 			std::int32_t character = (std::int32_t(_options.Player) - std::int32_t(PlayerType::Jazz) + i) % 3;
 			players[i] = PlayerType(std::int32_t(PlayerType::Jazz) + character);
 		}
-		LevelInitialization levelInit(levelName, _options.Difficulty, PreferencesCache::EnableReforgedGameplay, false, arrayView(players, std::size_t(count)));
+		LevelInitialization levelInit(levelName, _options.Difficulty, _options.Reforged, false, arrayView(players, std::size_t(count)));
 		levelInit.IsLocalSession = true;
 		levelInit.LocalMultiplayerGameMode = _options.GameMode;
 		bool result = MpLevelHandler::Initialize(levelInit);
@@ -171,6 +171,11 @@ namespace Jazz2::Editor
 		}
 #endif
 		_playPath.BreakSegment(PlayPath::Break::None);
+	}
+
+	bool PlayTestMpLevelHandler::IsLedgeClimbEnabled(const Actors::Player* player) const
+	{
+		return _options.LedgeClimb;
 	}
 
 	bool PlayTestMpLevelHandler::IsEditorPlayTest() const

@@ -235,7 +235,8 @@ namespace Jazz2::Editor
 
 	Vector2f UiButton::Measure(const UiContext& context, Vector2f available)
 	{
-		float height = context.Px(UiTheme::ButtonHeight);
+		// A button of only an icon is a little larger, the icon would look crowded otherwise
+		float height = context.Px(UiTheme::ButtonHeight + (Text.empty() ? 2.0f : 0.0f));
 		float width;
 		if (Text.empty()) {
 			width = height;
@@ -285,8 +286,20 @@ namespace Jazz2::Editor
 		}
 		if (checked) {
 			painter.RoundRectBorder(Bounds, UiTheme::Accent);
-		} else if (Style == UiButtonStyle::Normal) {
-			painter.RoundRectBorder(Bounds, UiTheme::PanelBorderDim);
+		} else {
+			float outline = (_pressed && usable ? 1.0f : hover);
+			Colorf border;
+			if (Style == UiButtonStyle::Accent) {
+				// Halfway between the fill and the accent, a little more while pointed at
+				border = UiLerpColor(UiLerpColor(UiTheme::ButtonChecked, UiTheme::AccentDim, 0.5f), UiLerpColor(UiTheme::ButtonCheckedHover, UiTheme::Accent, 0.5f), outline);
+			} else {
+				border = (Style == UiButtonStyle::Normal ? UiTheme::PanelBorderDim
+					: Colorf(UiTheme::ButtonOutline.R, UiTheme::ButtonOutline.G, UiTheme::ButtonOutline.B, 0.0f));
+				border = UiLerpColor(border, UiTheme::ButtonOutline, outline);
+			}
+			if (border.A > 0.0f) {
+				painter.RoundRectBorder(Bounds, border);
+			}
 		}
 		if (_focused) {
 			// Reached by Tab
@@ -1022,7 +1035,7 @@ namespace Jazz2::Editor
 	Vector2f UiTextBox::Measure(const UiContext& context, Vector2f available)
 	{
 		_lastContext = context;
-		float height = context.Px(UiTheme::RowHeight + 2.0f);
+		float height = context.Px(UiTheme::RowHeight + 4.0f);
 		if (Multiline) {
 			// Grows with the lines of the text
 			StringView shown = GetShownText();
@@ -1678,7 +1691,8 @@ namespace Jazz2::Editor
 
 	Rectf UiNumberBox::GetSpinRect() const
 	{
-		float width = _lastContext.Px(9.0f);
+		// The arrows and the padding right of them
+		float width = _lastContext.Px(13.0f);
 		return Rectf(Bounds.X + Bounds.W - width, Bounds.Y, width, Bounds.H);
 	}
 
@@ -1698,13 +1712,13 @@ namespace Jazz2::Editor
 			bool overSpin = (_hovered && GetSurface() != nullptr && spin.Contains(GetSurface()->GetPointerPos()));
 			Colorf color = Colorf(1.0f, 1.0f, 1.0f, (IsUsable() ? (overSpin ? 0.75f : 0.2f + 0.25f * _hoverAmount) : 0.1f));
 			float pixel = std::max(1.0f, std::round(painter.GetScale()));
-			float centerX = std::round(spin.X + spin.W * 0.5f - pixel * 0.5f);
+			float centerX = std::round(spin.X + (spin.W - painter.Px(2.0f)) * 0.5f - pixel * 0.5f);
 			float middle = std::round(Bounds.Y + Bounds.H * 0.5f);
-			for (std::int32_t i = 0; i < 3; i++) {
+			for (std::int32_t i = 0; i < 4; i++) {
 				float width = pixel * float(i * 2 + 1);
 				// Up above the middle, down below it
-				painter.FillRect(Rectf(centerX - pixel * i, middle - pixel * float(4 - i), width, pixel), color, UiLayer::Content);
-				painter.FillRect(Rectf(centerX - pixel * i, middle + pixel * float(3 - i), width, pixel), color, UiLayer::Content);
+				painter.FillRect(Rectf(centerX - pixel * i, middle - pixel * float(5 - i), width, pixel), color, UiLayer::Content);
+				painter.FillRect(Rectf(centerX - pixel * i, middle + pixel * float(4 - i), width, pixel), color, UiLayer::Content);
 			}
 		}
 	}

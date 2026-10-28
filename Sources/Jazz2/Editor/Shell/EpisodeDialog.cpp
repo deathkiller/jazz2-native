@@ -700,15 +700,39 @@ namespace Jazz2::Editor
 			// TRANSLATORS: Tooltip of the button in the Episode dialog that removes the title or background image of the episode
 			removeButton->Tooltip = _x("editor", "Remove it");
 			removeButton->IsEnabledFunc = [state, title]() { return !(title ? state->Episode.Title : state->Episode.Background).IsEmpty(); };
-			row->Add<EpisodeImagePreview>(state, title);
+			// Larger below the buttons
+			auto* preview = form->AddRow(StringView())->Add<EpisodeImagePreview>(state, title);
+			preview->Width = 240.0f;
+			preview->Height = (title ? 60.0f : 135.0f);
 		}
+
+		/** A level and its links in the list of levels, every other one on a lighter background */
+		class EpisodeLevelEntry : public UiStack
+		{
+		public:
+			explicit EpisodeLevelEntry(bool striped)
+				: UiStack(UiOrientation::Vertical, 1.0f, UiThickness(3.0f, 2.0f)), _striped(striped)
+			{
+			}
+
+			void Draw(UiPainter& painter) override
+			{
+				if (_striped) {
+					painter.FillRect(Bounds, Colorf(UiTheme::Hover.R, UiTheme::Hover.G, UiTheme::Hover.B, 0.05f), UiLayer::Fill);
+				}
+				UiStack::Draw(painter);
+			}
+
+		private:
+			bool _striped;
+		};
 
 		/** The levels of the episode in the order the links lead, rebuilt when they're read again */
 		class EpisodeLevelList : public UiStack
 		{
 		public:
 			EpisodeLevelList(IEditorContext& session, std::shared_ptr<EpisodeState> state, UiDialog* dialog)
-				: UiStack(UiOrientation::Vertical, 3.0f, UiThickness(0.0f, 0.0f, 3.0f, 0.0f)), _session(session), _state(Death::move(state)),
+				: UiStack(UiOrientation::Vertical, 0.0f, UiThickness(0.0f, 0.0f, 3.0f, 0.0f)), _session(session), _state(Death::move(state)),
 					_dialog(dialog), _shownGeneration(UINT32_MAX)
 			{
 			}
@@ -742,7 +766,7 @@ namespace Jazz2::Editor
 				if (_state->IsNoEpisode) {
 					// Not an episode, nothing is first and nothing has to lead anywhere, by their names
 					for (std::size_t i = 0; i < _state->Levels.size(); i++) {
-						AddLevelRow(std::int32_t(i), false, false);
+						AddLevelRow(std::int32_t(i), false, false, (i & 1) != 0);
 					}
 					return;
 				}
@@ -779,17 +803,18 @@ namespace Jazz2::Editor
 				}
 
 				for (std::size_t i = 0; i < order.size(); i++) {
-					AddLevelRow(order[i], std::int32_t(order[i]) == first, std::int32_t(i) >= reachableCount);
+					AddLevelRow(order[i], std::int32_t(order[i]) == first, std::int32_t(i) >= reachableCount, (i & 1) != 0);
 				}
 			}
 
-			void AddLevelRow(std::int32_t index, bool isFirst, bool isOrphan)
+			void AddLevelRow(std::int32_t index, bool isFirst, bool isOrphan, bool striped)
 			{
 				const EpisodeLevelInfo& level = _state->Levels[index];
 				IEditorContext* s = &_session;
 				std::shared_ptr<EpisodeState> state = _state;
 
-				auto* row = Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* entry = Add<EpisodeLevelEntry>(striped);
+				auto* row = entry->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 				String title = level.Name;
 				if (!level.DisplayName.empty()) {
 					title += " - "_s + level.DisplayName;
@@ -867,7 +892,7 @@ namespace Jazz2::Editor
 					// TRANSLATORS: Below a level in the Episode dialog that has no links to other levels
 					links = _x("editor", "Leads nowhere");
 				}
-				auto* linksLabel = Add<UiLabel>(links, broken ? UiTheme::TextDanger : UiTheme::TextDim);
+				auto* linksLabel = entry->Add<UiLabel>(links, broken ? UiTheme::TextDanger : UiTheme::TextDim);
 				linksLabel->Tooltip = _x("editor", "Next, secret and bonus level of the level, as set in its properties");
 			}
 		};
@@ -883,14 +908,18 @@ namespace Jazz2::Editor
 		public:
 			// The list that takes what the window can grow by
 			UiScrollView* List = nullptr;
+			// The columns of the properties and of the levels, and the column of the levels, or none
+			UiElement* Columns = nullptr;
+			UiElement* ListColumn = nullptr;
 
 			// Height of the list in units until the window was laid out
 			EpisodeWindow(StringView title, float listHeight)
 				: UiDialog(title, true), _listHeight(listHeight)
 			{
-				// 70 % of the width of the screen, the list as wide, and at most 80 % of its height
+				// 70 % of the width of the screen up to a width, the list as wide, and at most 65 % of its height
 				MinScreenWidthFraction = 0.7f;
-				MaxScreenHeightFraction = 0.8f;
+				MaxStretchedWidth = 720.0f;
+				MaxScreenHeightFraction = 0.65f;
 			}
 
 			Vector2f Measure(const UiContext& context, Vector2f available) override
@@ -901,7 +930,13 @@ namespace Jazz2::Editor
 				if (List != nullptr && _contentScroll != nullptr && context.Scale > 0.0f && Bounds.H > 0.0f && _contentScroll->Bounds.H > 0.0f) {
 					float limit = std::floor(available.Y * MaxScreenHeightFraction);
 					// The title, the buttons and the padding, then the rest of the content, which is laid out in full in the scroll view
-					float around = (Bounds.H - _contentScroll->Bounds.H) + (_content->Bounds.H - List->Bounds.H);
+					float around = (Bounds.H - _contentScroll->Bounds.H);
+					if (Columns != nullptr && ListColumn != nullptr) {
+						// Only what's above the columns and above the list in its column
+						around += (_content->Bounds.H - Columns->Bounds.H) + (ListColumn->Bounds.H - List->Bounds.H);
+					} else {
+						around += (_content->Bounds.H - List->Bounds.H);
+					}
 					_listHeight = std::max(std::floor((limit - around) / context.Scale), MinListHeight);
 				}
 				if (List != nullptr) {
@@ -948,7 +983,10 @@ namespace Jazz2::Editor
 			content->Add<UiLabel>(state->Exists ? _fx("editor", "Episode \"{}\"", state->Name) : _fx("editor", "Episode \"{}\" has no episode file yet, saving makes it", state->Name),
 				UiTheme::TextHeader);
 
-			UiForm* form = content->Add<UiForm>(UiTheme::Spacing);
+			// The properties in the first column, the levels in the second one
+			auto* columns = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 4.0f);
+			dialogPtr->Columns = columns;
+			UiForm* form = columns->Add<UiForm>(UiTheme::Spacing);
 			{
 				// TRANSLATORS: Label of the name of the episode shown in the game in the Episode dialog
 				auto* row = form->AddRow(_x("editor", "Name"));
@@ -1021,9 +1059,11 @@ namespace Jazz2::Editor
 			AddImageRow(form, session, state, true);
 			AddImageRow(form, session, state, false);
 
-			content->Add<UiSeparator>();
-			content->Add<UiLabel>(_x("editor", "Levels, in the order the links lead from the first one"), UiTheme::TextHeader);
-			auto* scroll = content->Add<UiScrollView>();
+			auto* levels = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+			levels->Flex = 1.0f;
+			dialogPtr->ListColumn = levels;
+			levels->Add<UiLabel>(_x("editor", "Levels, in the order the links lead from the first one"), UiTheme::TextHeader);
+			auto* scroll = levels->Add<UiScrollView>();
 			dialogPtr->List = scroll;
 			scroll->SetContent<EpisodeLevelList>(session, state, dialogPtr);
 

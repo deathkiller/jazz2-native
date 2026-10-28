@@ -75,7 +75,13 @@ namespace Jazz2::Scripting
 		static T* FromActiveContext() {
 			auto* ctx = asGetActiveContext();
 			DEATH_ASSERT(ctx != nullptr, "Active context is not set", nullptr);
-			return static_cast<T*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+			// The user data of the engine is behind its lock, which every call of the script to the game would take
+			asIScriptEngine* engine = ctx->GetEngine();
+			if (engine != _lastEngine) {
+				_lastEngine = engine;
+				_lastOwner = engine->GetUserData(EngineToOwner);
+			}
+			return static_cast<T*>(_lastOwner);
 		}
 
 		ScriptLoader();
@@ -157,6 +163,10 @@ namespace Jazz2::Scripting
 #endif
 
 		static constexpr asPWORD EngineToOwner = 0;
+
+		// The engine FromActiveContext() last saw and its owner
+		static asIScriptEngine* _lastEngine;
+		static void* _lastOwner;
 
 		asIScriptEngine* _engine;
 		asIScriptModule* _module;

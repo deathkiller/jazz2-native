@@ -1,10 +1,12 @@
 ﻿#include "LevelPreview.h"
 #include "../EventType.h"
+#include "../Compatibility/JJ2Anims.h"
 
 #include <algorithm>
 #include <cmath>
 
 #include <IO/FileSystem.h>
+#include <IO/MemoryStream.h>
 
 using namespace Death::IO;
 using namespace nCine;
@@ -77,7 +79,7 @@ namespace Jazz2::Formats
 				const LayerRecord& layer = source.GetLayer(l);
 				auto rendererType = Tiles::LayerRendererType(layer.RendererType);
 				if ((layer.Flags & LayerRecord::Visible) != 0 && rendererType != Tiles::LayerRendererType::XRay &&
-					rendererType != Tiles::LayerRendererType::BlurBehind && rendererType != Tiles::LayerRendererType::ChromaKey) {
+					rendererType != Tiles::LayerRendererType::BlurBehind && layer.Blend != std::uint8_t(Tiles::LayerBlend::ChromaKey)) {
 					order.push_back(l);
 				}
 			}
@@ -392,10 +394,22 @@ namespace Jazz2::Formats
 					shiftedPalette[i] = (from == 0 ? (palette[0] | 0xFF000000u) : palette[from]);
 				}
 				layerPalette = shiftedPalette;
+			} else if (rendererType == Tiles::LayerRendererType::AlphaMap) {
+				// One entry of the palette, as opaque as the index is high (see ContentResolver::AcquireAlphaMapPaletteOffset())
+				for (std::int32_t i = 0; i < 256; i++) {
+					shiftedPalette[i] = (palette[layer.Color[0]] & 0x00FFFFFFu) | (std::uint32_t(i) << 24);
+				}
+				layerPalette = shiftedPalette;
 			}
 			// A single color layer is the shapes of its tiles in that entry of the palette, as opaque as the layer is
 			const bool singleColor = (rendererType == Tiles::LayerRendererType::SingleColor);
 			const std::uint32_t singleColorRgb = (palette[layer.Color[0]] & 0x00FFFFFFu);
+			// Screened or multiplied as the game draws it (see Tiles::LayerBlend)
+			const bool blendable = (rendererType == Tiles::LayerRendererType::Default || rendererType == Tiles::LayerRendererType::PaletteShift ||
+				rendererType == Tiles::LayerRendererType::AlphaMap || rendererType == Tiles::LayerRendererType::PaletteMapping ||
+				Tiles::LayerDescription::IsTexturedBackground(rendererType));
+			const bool screen = (blendable && layer.Blend == std::uint8_t(Tiles::LayerBlend::Screen));
+			const bool multiply = (blendable && layer.Blend == std::uint8_t(Tiles::LayerBlend::Multiply));
 
 			std::int32_t lastTileIndex = -1;
 			TilePixels tilePixels;
@@ -420,14 +434,25 @@ namespace Jazz2::Formats
 					color = (color & 0x00FFFFFFu) | (((color >> 24) * 192 / 255) << 24);
 				}
 				std::uint32_t& pixel = accum[std::size_t(sy) * SampleW + std::size_t(sx)];
-				pixel = Blend(pixel, color);
+				if (screen || multiply) {
+					const std::uint32_t a = (color >> 24) * layer.BlendParam / 255;
+					std::uint32_t result = 0xFF000000u;
+					for (std::int32_t shift = 0; shift < 24; shift += 8) {
+						const std::uint32_t d = (pixel >> shift) & 0xFF;
+						const std::uint32_t s = (color >> shift) & 0xFF;
+						const std::uint32_t c = (multiply ? (d * (255 - a) + d * s * a / 255) / 255 : (s * a + d * (255 - s * a / 255)) / 255);
+						result |= (std::min<std::uint32_t>(c, 255) << shift);
+					}
+					pixel = result;
+				} else {
+					pixel = Blend(pixel, color);
+				}
 			});
 		}
 
-		data.push_back(std::uint8_t(Width));
-		data.push_back(std::uint8_t(Width >> 8));
-		data.push_back(std::uint8_t(Height));
-		data.push_back(std::uint8_t(Height >> 8));
+		SmallVector<std::uint8_t, 0> pixels;
+		pixels.resize_for_overwrite(std::size_t(Width * Height * 4));
+		std::uint8_t* pixel = pixels.data();
 		for (std::int32_t y = 0; y < Height; y++) {
 			for (std::int32_t x = 0; x < Width; x++) {
 				std::uint32_t r = 0, g = 0, b = 0;
@@ -439,18 +464,46 @@ namespace Jazz2::Formats
 						b += (color >> 16) & 0xFF;
 					}
 				}
-				data.push_back(std::uint8_t(r / (Samples * Samples)));
-				data.push_back(std::uint8_t(g / (Samples * Samples)));
-				data.push_back(std::uint8_t(b / (Samples * Samples)));
+				pixel[0] = std::uint8_t(r / (Samples * Samples));
+				pixel[1] = std::uint8_t(g / (Samples * Samples));
+				pixel[2] = std::uint8_t(b / (Samples * Samples));
+				pixel[3] = 255;
+				pixel += 4;
 			}
 		}
+
+		MemoryStream so(std::int64_t(Width * Height * 4 + 4));
+		so.WriteValueAsLE<std::uint16_t>(std::uint16_t(Width));
+		so.WriteValueAsLE<std::uint16_t>(std::uint16_t(Height));
+		Compatibility::JJ2Anims::WriteImageContent(so, pixels.data(), Width, Height, 4);
+		data.assign(so.GetBuffer(), so.GetBuffer() + so.GetSize());
 	}
 
-	bool LevelPreview::Read(StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size)
+	bool LevelPreview::Decode(ArrayView<const std::uint8_t> data, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size)
 	{
 		// The editor and the converter store previews of at most 128x72 pixels, anything much larger isn't one of them
 		constexpr std::int32_t MaxSize = 256;
 
+		rgba.clear();
+		size = Vector2i();
+		if (data.size() < 4) {
+			return false;
+		}
+		std::int32_t width = data[0] | (data[1] << 8);
+		std::int32_t height = data[2] | (data[3] << 8);
+		if (width <= 0 || height <= 0 || width > MaxSize || height > MaxSize) {
+			return false;
+		}
+		rgba.resize_for_overwrite(std::size_t(width) * std::size_t(height) * 4);
+		Compatibility::JJ2Anims::ImageContentDecoder decoder;
+		const std::uint8_t* src = data.data() + 4;
+		decoder.Decode(src, data.data() + data.size(), rgba.data(), width * height, 4);
+		size = Vector2i(width, height);
+		return true;
+	}
+
+	bool LevelPreview::Read(StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size)
+	{
 		rgba.clear();
 		size = Vector2i();
 
@@ -470,25 +523,9 @@ namespace Jazz2::Formats
 			return (tag == LevelFile::PreviewChunk);
 		});
 		for (const ChunkRecord& chunk : chunks) {
-			if (chunk.Tag != LevelFile::PreviewChunk || chunk.Data.size() < 4) {
-				continue;
+			if (chunk.Tag == LevelFile::PreviewChunk) {
+				return Decode(chunk.Data, rgba, size);
 			}
-			std::int32_t width = chunk.Data[0] | (chunk.Data[1] << 8);
-			std::int32_t height = chunk.Data[2] | (chunk.Data[3] << 8);
-			if (width <= 0 || height <= 0 || width > MaxSize || height > MaxSize ||
-				chunk.Data.size() < 4 + std::size_t(width) * std::size_t(height) * 3) {
-				return false;
-			}
-			const std::size_t pixelCount = std::size_t(width) * std::size_t(height);
-			rgba.resize_for_overwrite(pixelCount * 4);
-			for (std::size_t i = 0; i < pixelCount; i++) {
-				rgba[i * 4] = chunk.Data[4 + i * 3];
-				rgba[i * 4 + 1] = chunk.Data[4 + i * 3 + 1];
-				rgba[i * 4 + 2] = chunk.Data[4 + i * 3 + 2];
-				rgba[i * 4 + 3] = 255;
-			}
-			size = Vector2i(width, height);
-			return true;
 		}
 		return false;
 	}

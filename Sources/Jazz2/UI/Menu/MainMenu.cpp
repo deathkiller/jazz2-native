@@ -1148,7 +1148,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Prepare output render command
-		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground));
+		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::Dithering != DitheringScope::None ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground));
 		if (shaderChanged) {
 			_outputRenderCommand.GetMaterial().ReserveUniformsDataMemory();
 			_outputRenderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);

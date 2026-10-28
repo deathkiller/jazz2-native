@@ -357,8 +357,9 @@ namespace Jazz2::Editor
 	bool TileLod::IsDrawnAsImages(const DocumentLayer& layer)
 	{
 		auto rendererType = LayerRendererType(layer.Record.RendererType);
+		// One through a palette of its own has its colors through it (see GetPaletteVariant())
 		return (rendererType != LayerRendererType::Solid && rendererType != LayerRendererType::XRay && rendererType != LayerRendererType::BlurBehind &&
-			rendererType != LayerRendererType::PaletteShift && rendererType != LayerRendererType::ChromaKey && layer.GetWidth() > 0 && layer.GetHeight() > 0);
+			layer.Record.Blend == std::uint8_t(Tiles::LayerBlend::Normal) && layer.GetWidth() > 0 && layer.GetHeight() > 0);
 	}
 
 	std::uint8_t TileLod::GetRepeats(const DocumentLayer& layer)
@@ -389,6 +390,7 @@ namespace Jazz2::Editor
 		if (!keepBlocks) {
 			ClearBlockCache();
 			_blocks.clear();
+			_paletteBlocks.clear();
 		}
 		// Counted again, the colors kept are found quickly, then the images of the layers made ahead are made again
 		RestartWarmUp();
@@ -412,6 +414,13 @@ namespace Jazz2::Editor
 			if ((it->first >> 24) == TileRef::Animated) {
 				it = _blocks.erase(it);
 				erased = true;
+			} else {
+				++it;
+			}
+		}
+		for (auto it = _paletteBlocks.begin(); it != _paletteBlocks.end(); ) {
+			if (((it->first >> 24) & 0xFF) == TileRef::Animated) {
+				it = _paletteBlocks.erase(it);
 			} else {
 				++it;
 			}
@@ -467,6 +476,8 @@ namespace Jazz2::Editor
 		for (BlockCacheEntry& entry : _blockCache) {
 			entry = BlockCacheEntry{ 0, nullptr };
 		}
+		_lastPaletteBlockKey = UINT64_MAX;
+		_lastPaletteBlock = nullptr;
 	}
 
 	void TileLod::InvalidateTileIds(const LevelDocument& document, ArrayView<const std::uint16_t> sortedTileIds)
@@ -484,6 +495,16 @@ namespace Jazz2::Editor
 			TileRef tile{ std::uint16_t(key & 0xFFFFu), std::uint8_t(key >> 24), std::uint8_t((key >> 16) & 0x03) };
 			if (RuntimeSync::ShowsAnyTile(document, tile, sortedTileIds)) {
 				it = _blocks.erase(it);
+				erased.push_back(key);
+			} else {
+				++it;
+			}
+		}
+		for (auto it = _paletteBlocks.begin(); it != _paletteBlocks.end(); ) {
+			std::uint32_t key = std::uint32_t(it->first);
+			TileRef tile{ std::uint16_t(key & 0xFFFFu), std::uint8_t(key >> 24), std::uint8_t((key >> 16) & 0x03) };
+			if (RuntimeSync::ShowsAnyTile(document, tile, sortedTileIds)) {
+				it = _paletteBlocks.erase(it);
 				erased.push_back(key);
 			} else {
 				++it;
@@ -594,7 +615,7 @@ namespace Jazz2::Editor
 			const LevelDocument& document = _document;
 			for (Chunk& chunk : _chunks) {
 				if (chunk.Layer >= 0 && chunk.Layer < std::int32_t(document.Layers.size()) && chunk.TilePixels != 0 &&
-					chunk.Repeats != GetRepeats(document.Layers[chunk.Layer])) {
+					(chunk.Repeats != GetRepeats(document.Layers[chunk.Layer]) || chunk.PaletteVariant != GetPaletteVariant(document.Layers[chunk.Layer]))) {
 					chunk.Dirty = true;
 				}
 			}
@@ -604,6 +625,7 @@ namespace Jazz2::Editor
 			// a color dragged in the palette doesn't empty the view and make every image again at once for each step
 			ClearBlockCache();
 			_blocks.clear();
+			_paletteBlocks.clear();
 			RestartWarmUp();
 			for (Chunk& chunk : _chunks) {
 				chunk.Dirty = true;
@@ -1031,6 +1053,7 @@ namespace Jazz2::Editor
 		const DocumentLayer& layer = document.Layers[chunk.Layer];
 		std::int32_t width = layer.GetWidth(), height = layer.GetHeight();
 		chunk.Repeats = GetRepeats(layer);
+		chunk.PaletteVariant = GetPaletteVariant(layer);
 		bool repeatX = (chunk.Repeats & 0x01) != 0;
 		bool repeatY = (chunk.Repeats & 0x02) != 0;
 
@@ -1063,7 +1086,7 @@ namespace Jazz2::Editor
 				if (tile.IsEmpty() || modifier == Formats::TileRecord::ModifierInvisible) {
 					continue;
 				}
-				TileBlock& block = GetBlock(tile);
+				TileBlock& block = (chunk.PaletteVariant != 0 ? GetPaletteBlock(tile, chunk.PaletteVariant) : GetBlock(tile));
 				// Even one that shows nothing yet, its tile can be drawn on
 				if (block.BuildStamp != _buildStamp) {
 					block.BuildStamp = _buildStamp;
@@ -1165,17 +1188,61 @@ namespace Jazz2::Editor
 		// The blocks stay where they are in the map when another one is added, so the cache stays valid
 		TileBlock& block = _blocks[key];
 		cached = BlockCacheEntry{ key, &block };
+		FillBlock(block, tile, ContentResolver::Get().GetPalettes().data());
+		return block;
+	}
+
+	TileLod::TileBlock& TileLod::GetPaletteBlock(const TileRef& tile, std::uint32_t variant)
+	{
+		std::uint64_t key = (std::uint64_t(variant) << 32) | GetBlockKey(tile);
+		if (key == _lastPaletteBlockKey && _lastPaletteBlock != nullptr) {
+			return *_lastPaletteBlock;
+		}
+		auto it = _paletteBlocks.find(key);
+		if (it == _paletteBlocks.end()) {
+			// The colors of the row the layer is drawn through (see TileMap::AcquireLayerPalette()), without taking one
+			std::uint32_t palette[Formats::LevelFile::ColorsPerPalette];
+			auto rendererType = LayerRendererType(variant >> 8);
+			std::uint8_t param = std::uint8_t(variant & 0xFF);
+			if (rendererType == LayerRendererType::PaletteMapping) {
+				if (param < _document.AdditionalPalettes.size()) {
+					std::memcpy(palette, _document.AdditionalPalettes[param].Colors, sizeof(palette));
+				} else {
+					std::memcpy(palette, ContentResolver::Get().GetPalettes().data(), sizeof(palette));
+				}
+			} else {
+				ContentResolver::Get().BuildLayerPalette(rendererType == LayerRendererType::AlphaMap, param, palette);
+			}
+			it = _paletteBlocks.emplace(key, TileBlock{}).first;
+			FillBlock(it->second, tile, palette);
+		}
+		_lastPaletteBlockKey = key;
+		_lastPaletteBlock = &it->second;
+		return it->second;
+	}
+
+	std::uint32_t TileLod::GetPaletteVariant(const DocumentLayer& layer)
+	{
+		auto rendererType = LayerRendererType(layer.Record.RendererType);
+		if ((rendererType != LayerRendererType::PaletteShift && rendererType != LayerRendererType::AlphaMap &&
+			 rendererType != LayerRendererType::PaletteMapping) || (rendererType == LayerRendererType::PaletteShift && layer.Record.Color[0] == 0)) {
+			return 0;
+		}
+		return (std::uint32_t(layer.Record.RendererType) << 8) | layer.Record.Color[0];
+	}
+
+	bool TileLod::FillBlock(TileBlock& block, const TileRef& tile, const std::uint32_t* palette)
+	{
 		std::memset(block.Colors, 0, sizeof(block.Colors));
 		block.Visible = false;
 		LevelThumbnail::TilePixels source;
 		TileRef plain = tile;
 		plain.Flags &= 0x03;
 		if (!LevelThumbnail::GetTilePixels(_document, _tileSets, plain, source)) {
-			return block;
+			return false;
 		}
 
 		// The pixels as the tile shows them, read once for all sizes
-		const std::uint32_t* palette = ContentResolver::Get().GetPalettes().data();
 		std::uint32_t pixels[32 * 32];
 		for (std::int32_t y = 0; y < 32; y++) {
 			for (std::int32_t x = 0; x < 32; x++) {
@@ -1247,7 +1314,7 @@ namespace Jazz2::Editor
 				}
 			}
 		}
-		return block;
+		return true;
 	}
 
 	void TileLod::DropOldChunks()

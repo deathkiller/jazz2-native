@@ -188,7 +188,6 @@ void main() {
 	vec3 warp = legacyWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -249,7 +248,6 @@ void main() {
 	);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -390,6 +388,27 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uHorizonOffset;
 
+#define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
+
+float bayer2(vec2 pixel) {
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(vec2 pixel) {
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+vec3 reduceColors(vec3 color, vec2 pixel) {
+	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+}
+
+#define DITHER_TEXTURE_SIZE 256.0
+
+vec4 textureTexel(vec2 texturePos) {
+	return texture(uTexture, vec2(texturePos.x, (floor(texturePos.y * DITHER_TEXTURE_SIZE) + 0.5) / DITHER_TEXTURE_SIZE));
+}
+
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -460,10 +479,7 @@ void main() {
 	float opacity = COLOR.a;
 	vec3 warp = legacyWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
-	vec4 texColor = texture(uTexture, texturePos);
-
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
+	vec4 texColor = textureTexel(texturePos);
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -476,6 +492,7 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 }
 
@@ -524,7 +541,6 @@ void main() {
 	);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -621,6 +637,7 @@ uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
 uniform float uOpacity;
+uniform vec2 uBlendMode;
 
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
@@ -670,15 +687,119 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uHorizonOffset;
 
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
 uniform float uOpacity;
+uniform vec2 uBlendMode;
 
-float keyedOpacity() {
+vec4 keyedColor(vec3 color) {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+	return vec4(color, uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5)));
 }
 
 #define PLUS_DEPTH 15360.0
@@ -752,7 +873,6 @@ void main() {
 	vec3 warp = legacyWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -765,7 +885,7 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	COLOR.a = keyedOpacity();
+	COLOR = keyedColor(COLOR.rgb);
 }
 
 )__SHDR__";
@@ -792,15 +912,119 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uHorizonOffset;
 
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
 uniform float uOpacity;
+uniform vec2 uBlendMode;
 
-float keyedOpacity() {
+vec4 keyedColor(vec3 color) {
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+	return vec4(color, uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5)));
 }
 
 #define PLUS_DEPTH 15360.0
@@ -824,13 +1048,12 @@ void main() {
 	);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	COLOR.a = keyedOpacity();
+	COLOR = keyedColor(COLOR.rgb);
 	gl_FragColor = COLOR;
 }
 
@@ -848,6 +1071,7 @@ void main() {
 		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uOpacity", ShaderCompiler::UniformType::Float, 0 },
+		{ "uBlendMode", ShaderCompiler::UniformType::Vec2, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember TexturedBackground_KEYED_Block0_Members[] = {
@@ -1034,7 +1258,6 @@ void main() {
 	vec3 warp = plusWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -1093,7 +1316,6 @@ void main() {
 	);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -1233,6 +1455,27 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uHorizonOffset;
 
+#define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
+
+float bayer2(vec2 pixel) {
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(vec2 pixel) {
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+vec3 reduceColors(vec3 color, vec2 pixel) {
+	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+}
+
+#define DITHER_TEXTURE_SIZE 256.0
+
+vec4 textureTexel(vec2 texturePos) {
+	return texture(uTexture, vec2(texturePos.x, (floor(texturePos.y * DITHER_TEXTURE_SIZE) + 0.5) / DITHER_TEXTURE_SIZE));
+}
+
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
@@ -1298,10 +1541,7 @@ void main() {
 	float opacity = COLOR.a;
 	vec3 warp = plusWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
-	vec4 texColor = texture(uTexture, texturePos);
-
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
+	vec4 texColor = textureTexel(texturePos);
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -1314,6 +1554,7 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 }
 
@@ -1360,7 +1601,6 @@ void main() {
 	);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -1457,6 +1697,7 @@ uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
 uniform float uOpacity;
+uniform vec2 uBlendMode;
 
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
@@ -1505,15 +1746,119 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uHorizonOffset;
 
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
 uniform float uOpacity;
+uniform vec2 uBlendMode;
 
-float keyedOpacity() {
+vec4 keyedColor(vec3 color) {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+	return vec4(color, uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5)));
 }
 
 #define PLUS_DEPTH 15360.0
@@ -1582,7 +1927,6 @@ void main() {
 	vec3 warp = plusWarp(vTexCoords);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
@@ -1595,7 +1939,7 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	COLOR.a = keyedOpacity();
+	COLOR = keyedColor(COLOR.rgb);
 }
 
 )__SHDR__";
@@ -1622,15 +1966,119 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uHorizonOffset;
 
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
 uniform float uOpacity;
+uniform vec2 uBlendMode;
 
-float keyedOpacity() {
+vec4 keyedColor(vec3 color) {
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+	return vec4(color, uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5)));
 }
 
 #define PLUS_DEPTH 15360.0
@@ -1652,13 +2100,12 @@ void main() {
 	);
 	vec2 texturePos = warp.xy;
 	vec4 texColor = texture2D(uTexture, texturePos);
-
 	float horizonOpacity = warp.z;
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	COLOR.a = keyedOpacity();
+	COLOR = keyedColor(COLOR.rgb);
 	gl_FragColor = COLOR;
 }
 
@@ -1676,6 +2123,7 @@ void main() {
 		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uOpacity", ShaderCompiler::UniformType::Float, 0 },
+		{ "uBlendMode", ShaderCompiler::UniformType::Vec2, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember TexturedBackground_PLUS_KEYED_Block0_Members[] = {
@@ -1760,7 +2208,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			10, TexturedBackground_KEYED_Uniforms, 1, TexturedBackground_KEYED_Blocks, 2, TexturedBackground_KEYED_Textures, 0, nullptr,
+			11, TexturedBackground_KEYED_Uniforms, 1, TexturedBackground_KEYED_Blocks, 2, TexturedBackground_KEYED_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TexturedBackground_KEYED_Vs100, TexturedBackground_KEYED_Fs100,
 #else
@@ -1847,7 +2295,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			10, TexturedBackground_PLUS_KEYED_Uniforms, 1, TexturedBackground_PLUS_KEYED_Blocks, 2, TexturedBackground_PLUS_KEYED_Textures, 0, nullptr,
+			11, TexturedBackground_PLUS_KEYED_Uniforms, 1, TexturedBackground_PLUS_KEYED_Blocks, 2, TexturedBackground_PLUS_KEYED_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TexturedBackground_PLUS_KEYED_Vs100, TexturedBackground_PLUS_KEYED_Fs100,
 #else

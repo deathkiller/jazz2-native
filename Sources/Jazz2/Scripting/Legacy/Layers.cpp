@@ -123,7 +123,7 @@ namespace Jazz2::Scripting
 			std::memcpy(_textureColor, o._textureColor, sizeof(_textureColor)); _textureStars = o._textureStars;
 			_customTexture = nullptr;
 			if (o._customTexture != nullptr) {
-				constexpr std::size_t Size = std::size_t(Formats::TexturedLayerChunk::TextureSize) * Formats::TexturedLayerChunk::TextureSize;
+				constexpr std::size_t Size = std::size_t(Formats::LayerPropertiesChunk::TextureSize) * Formats::LayerPropertiesChunk::TextureSize;
 				_customTexture = std::make_unique<std::uint8_t[]>(Size);
 				std::memcpy(_customTexture.get(), o._customTexture.get(), Size);
 			}
@@ -165,6 +165,29 @@ namespace Jazz2::Scripting
 			if (description == nullptr) {
 				return spriteType_NORMAL;
 			}
+			if (Tiles::LayerDescription::IsTexturedBackground(description->RendererType) && description->TextureMapping > 0) {
+				return (description->Blend == Tiles::LayerBlend::Translucent ? spriteType_TRANSLUCENTMAPPING : spriteType_MAPPING);
+			}
+			switch (description->Blend) {
+				case Tiles::LayerBlend::Screen: return spriteType_BLENDSCREEN;
+				case Tiles::LayerBlend::Multiply: return spriteType_BLENDMULTIPLY;
+				case Tiles::LayerBlend::ChromaKey: return spriteType_CHROMAKEY;
+				case Tiles::LayerBlend::Darken: return spriteType_BLENDDARKEN;
+				case Tiles::LayerBlend::Lighten: return spriteType_BLENDLIGHTEN;
+				case Tiles::LayerBlend::Hue: return spriteType_BLENDHUE;
+				case Tiles::LayerBlend::Saturation: return spriteType_BLENDSATURATION;
+				case Tiles::LayerBlend::Color: return spriteType_BLENDCOLOR;
+				case Tiles::LayerBlend::Luminosity: return spriteType_BLENDLUMINANCE;
+				case Tiles::LayerBlend::Dissolve: return spriteType_BLENDDISSOLVE;
+				case Tiles::LayerBlend::Overlay: return spriteType_BLENDOVERLAY;
+				case Tiles::LayerBlend::HardLight: return spriteType_BLENDHARDLIGHT;
+				case Tiles::LayerBlend::SoftLight: return spriteType_BLENDSOFTLIGHT;
+				case Tiles::LayerBlend::Difference: return spriteType_BLENDDIFFERENCE;
+				case Tiles::LayerBlend::Dodge: return spriteType_BLENDDODGE;
+				case Tiles::LayerBlend::Burn: return spriteType_BLENDBURN;
+				case Tiles::LayerBlend::Exclusion: return spriteType_BLENDEXCLUSION;
+				default: break;
+			}
 			const bool translucent = (description->Color.W < 1.0f);
 			switch (description->RendererType) {
 				// SPRITE::INVISIBLE is converted to an ordinary layer of no alpha
@@ -172,7 +195,8 @@ namespace Jazz2::Scripting
 				case Tiles::LayerRendererType::Tinted: return spriteType_TINTED;
 				case Tiles::LayerRendererType::PaletteShift: return (translucent ? spriteType_TRANSLUCENTPALSHIFT : spriteType_PALSHIFT);
 				case Tiles::LayerRendererType::SingleColor: return (translucent ? spriteType_TRANSLUCENTCOLOR : spriteType_SINGLECOLOR);
-				case Tiles::LayerRendererType::ChromaKey: return spriteType_CHROMAKEY;
+				case Tiles::LayerRendererType::AlphaMap: return spriteType_ALPHAMAP;
+				case Tiles::LayerRendererType::PaletteMapping: return (translucent ? spriteType_TRANSLUCENTMAPPING : spriteType_MAPPING);
 				default: return spriteType_NORMAL;
 			}
 		}
@@ -195,7 +219,7 @@ namespace Jazz2::Scripting
 				self->_spriteMode = value;
 				self->_hasSpriteMode = true;
 				Tiles::LayerDescription description = *current;
-				if (!SetTextureBlend(description)) {
+				if (!SetBlend(description)) {
 					LOGW("Sprite mode {} isn't supported for textured layers, layer {} is drawn as it is", value, _layerIndex);
 				}
 				tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
@@ -206,7 +230,8 @@ namespace Jazz2::Scripting
 			// their own that read the color their own way, so a mode would turn them into plain tiles.
 			if (current->RendererType != Tiles::LayerRendererType::Default && current->RendererType != Tiles::LayerRendererType::Tinted &&
 				current->RendererType != Tiles::LayerRendererType::PaletteShift && current->RendererType != Tiles::LayerRendererType::SingleColor &&
-				current->RendererType != Tiles::LayerRendererType::ChromaKey) {
+				current->RendererType != Tiles::LayerRendererType::AlphaMap &&
+				current->RendererType != Tiles::LayerRendererType::PaletteMapping) {
 				LOGW("Sprite mode {} isn't supported for layer {}, it isn't drawn as tiles", value, _layerIndex);
 				return value;
 			}
@@ -214,6 +239,8 @@ namespace Jazz2::Scripting
 			// The modes a layer can be drawn with, the rest of them aren't supported for layers
 			Tiles::LayerDescription description = *current;
 			const float param = _spriteParam / 255.0f;
+			description.Blend = Tiles::LayerBlend::Normal;
+			description.BlendParam = 255;
 			switch (value) {
 				case spriteType_NORMAL: description.RendererType = Tiles::LayerRendererType::Default; description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f); break;
 				case spriteType_TRANSLUCENT: description.RendererType = Tiles::LayerRendererType::Default; description.Color = Vector4f(1.0f, 1.0f, 1.0f, TranslucentLayerAlpha); break;
@@ -235,7 +262,38 @@ namespace Jazz2::Scripting
 				// The parameter is the entry of the palette of the color, or of the key
 				case spriteType_SINGLECOLOR: description.RendererType = Tiles::LayerRendererType::SingleColor; description.Color = Vector4f(param, 0.0f, 0.0f, 1.0f); break;
 				case spriteType_TRANSLUCENTCOLOR: description.RendererType = Tiles::LayerRendererType::SingleColor; description.Color = Vector4f(param, 0.0f, 0.0f, TranslucentLayerAlpha); break;
-				case spriteType_CHROMAKEY: description.RendererType = Tiles::LayerRendererType::ChromaKey; description.Color = Vector4f(param, 0.0f, 0.0f, 1.0f); break;
+				case spriteType_CHROMAKEY:
+					description.RendererType = Tiles::LayerRendererType::Default;
+					description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+					description.Blend = Tiles::LayerBlend::ChromaKey;
+					description.BlendParam = _spriteParam;
+					break;
+				case spriteType_ALPHAMAP: description.RendererType = Tiles::LayerRendererType::AlphaMap; description.Color = Vector4f(param, 0.0f, 0.0f, 1.0f); break;
+				// The parameter is the mapping, which are the additional palettes of the level, as MLLE sets them up
+				case spriteType_MAPPING: description.RendererType = Tiles::LayerRendererType::PaletteMapping; description.Color = Vector4f(param, 0.0f, 0.0f, 1.0f); break;
+				case spriteType_TRANSLUCENTMAPPING: description.RendererType = Tiles::LayerRendererType::PaletteMapping; description.Color = Vector4f(param, 0.0f, 0.0f, 0.5f); break;
+				// The parameter is how far the result is mixed over what is behind it
+				case spriteType_BLENDDARKEN:
+				case spriteType_BLENDLIGHTEN:
+				case spriteType_BLENDHUE:
+				case spriteType_BLENDSATURATION:
+				case spriteType_BLENDCOLOR:
+				case spriteType_BLENDLUMINANCE:
+				case spriteType_BLENDMULTIPLY:
+				case spriteType_BLENDSCREEN:
+				case spriteType_BLENDDISSOLVE:
+				case spriteType_BLENDOVERLAY:
+				case spriteType_BLENDHARDLIGHT:
+				case spriteType_BLENDSOFTLIGHT:
+				case spriteType_BLENDDIFFERENCE:
+				case spriteType_BLENDDODGE:
+				case spriteType_BLENDBURN:
+				case spriteType_BLENDEXCLUSION:
+					description.RendererType = Tiles::LayerRendererType::Default;
+					description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+					description.Blend = Tiles::LayerDescription::FromSpriteMode(value);
+					description.BlendParam = _spriteParam;
+					break;
 				default:
 					LOGW("Sprite mode {} isn't supported for layers", value);
 					return value;
@@ -262,11 +320,22 @@ namespace Jazz2::Scripting
 			if (current != nullptr && Tiles::LayerDescription::IsTexturedBackground(current->RendererType)) {
 				if (_hasSpriteMode) {
 					Tiles::LayerDescription description = *current;
-					SetTextureBlend(description);
+					SetBlend(description);
+					tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
+				} else if (current->TextureMapping > 0 && current->TextureMapping != std::uint8_t(value + 1)) {
+					// SPRITE::MAPPING the level gave it, the parameter is the palette (a script may change it while playing)
+					Tiles::LayerDescription description = *current;
+					description.TextureMapping = std::uint8_t(value + 1);
 					tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
 				}
+			} else if (current != nullptr && (current->Blend == Tiles::LayerBlend::Screen || current->Blend == Tiles::LayerBlend::Multiply ||
+				current->Blend == Tiles::LayerBlend::ChromaKey || Tiles::LayerDescription::IsBehindBlend(current->Blend))) {
+				Tiles::LayerDescription description = *current;
+				description.BlendParam = value;
+				tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
 			} else if (current != nullptr && (current->RendererType == Tiles::LayerRendererType::Tinted || current->RendererType == Tiles::LayerRendererType::PaletteShift ||
-				current->RendererType == Tiles::LayerRendererType::SingleColor || current->RendererType == Tiles::LayerRendererType::ChromaKey)) {
+				current->RendererType == Tiles::LayerRendererType::SingleColor ||
+				current->RendererType == Tiles::LayerRendererType::AlphaMap || current->RendererType == Tiles::LayerRendererType::PaletteMapping)) {
 				Tiles::LayerDescription description = *current;
 				description.Color.X = value / 255.0f;
 				tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
@@ -283,27 +352,43 @@ namespace Jazz2::Scripting
 			return value;
 		}
 
-		bool jjLAYER::SetTextureBlend(Tiles::LayerDescription& description) const {
+		bool jjLAYER::SetBlend(Tiles::LayerDescription& description) const {
 			// The modes a textured layer can be drawn with over what is behind it, others are drawn as it is
 			std::uint32_t mode = (_hasSpriteMode ? _spriteMode : std::uint32_t(spriteType_NORMAL));
-			description.TextureBlendParam = 255;
+			description.BlendParam = 255;
+			description.TextureMapping = 0;
 			switch (mode) {
-				case spriteType_NORMAL: description.TextureBlend = Tiles::TexturedLayerBlend::Normal; return true;
+				// The parameter is the additional palette the texture is drawn through, half translucent too (as a layer of tiles is)
+				case spriteType_MAPPING: description.Blend = Tiles::LayerBlend::Normal; description.TextureMapping = std::uint8_t(_spriteParam + 1); return true;
+				case spriteType_TRANSLUCENTMAPPING:
+					description.Blend = Tiles::LayerBlend::Translucent;
+					description.BlendParam = 128;
+					description.TextureMapping = std::uint8_t(_spriteParam + 1);
+					return true;
+				case spriteType_NORMAL: description.Blend = Tiles::LayerBlend::Normal; return true;
 				// Half way between the texture and what is behind it, not as translucent tiles are, measured in JJ2+
 				case spriteType_TRANSLUCENT:
 				case spriteType_TRANSLUCENTTILE:
-					description.TextureBlend = Tiles::TexturedLayerBlend::Translucent;
-					description.TextureBlendParam = 128;
+					description.Blend = Tiles::LayerBlend::Translucent;
+					description.BlendParam = 128;
 					return true;
 				// The parameter is how opaque the layer is
-				case spriteType_BLENDNORMAL: description.TextureBlend = Tiles::TexturedLayerBlend::Translucent; description.TextureBlendParam = _spriteParam; return true;
-				case spriteType_INVISIBLE: description.TextureBlend = Tiles::TexturedLayerBlend::Translucent; description.TextureBlendParam = 0; return true;
+				case spriteType_BLENDNORMAL: description.Blend = Tiles::LayerBlend::Translucent; description.BlendParam = _spriteParam; return true;
+				case spriteType_INVISIBLE: description.Blend = Tiles::LayerBlend::Translucent; description.BlendParam = 0; return true;
 				// The parameter is the entry of the palette of the key
-				case spriteType_CHROMAKEY: description.TextureBlend = Tiles::TexturedLayerBlend::ChromaKey; description.TextureBlendParam = _spriteParam; return true;
+				case spriteType_CHROMAKEY: description.Blend = Tiles::LayerBlend::ChromaKey; description.BlendParam = _spriteParam; return true;
 				// The parameter is how far the result is mixed over what is behind it, measured in JJ2+
-				case spriteType_BLENDSCREEN: description.TextureBlend = Tiles::TexturedLayerBlend::Screen; description.TextureBlendParam = _spriteParam; return true;
-				case spriteType_BLENDMULTIPLY: description.TextureBlend = Tiles::TexturedLayerBlend::Multiply; description.TextureBlendParam = _spriteParam; return true;
-				default: description.TextureBlend = Tiles::TexturedLayerBlend::Normal; return false;
+				case spriteType_BLENDSCREEN: description.Blend = Tiles::LayerBlend::Screen; description.BlendParam = _spriteParam; return true;
+				case spriteType_BLENDMULTIPLY: description.Blend = Tiles::LayerBlend::Multiply; description.BlendParam = _spriteParam; return true;
+				default:
+					// The blend modes that take what is behind it, the parameter is how far the result is mixed over it
+					description.Blend = Tiles::LayerDescription::FromSpriteMode(mode);
+					if (!Tiles::LayerDescription::IsBehindBlend(description.Blend)) {
+						description.Blend = Tiles::LayerBlend::Normal;
+						return false;
+					}
+					description.BlendParam = _spriteParam;
+					return true;
 			}
 		}
 
@@ -363,7 +448,7 @@ namespace Jazz2::Scripting
 			}
 		}
 		bool jjLAYER::SetCustomTexture(const std::uint8_t* pixels) {
-			constexpr std::size_t Size = std::size_t(Formats::TexturedLayerChunk::TextureSize) * Formats::TexturedLayerChunk::TextureSize;
+			constexpr std::size_t Size = std::size_t(Formats::LayerPropertiesChunk::TextureSize) * Formats::LayerPropertiesChunk::TextureSize;
 			if (pixels != _customTexture.get()) {
 				_customTexture = std::make_unique<std::uint8_t[]>(Size);
 				std::memcpy(_customTexture.get(), pixels, Size);
@@ -400,7 +485,7 @@ namespace Jazz2::Scripting
 			if (tileMap == nullptr) {
 				return;
 			}
-			constexpr std::int32_t Size = Formats::TexturedLayerChunk::TextureSize;
+			constexpr std::int32_t Size = Formats::LayerPropertiesChunk::TextureSize;
 			if (value == 0) {
 				// TEXTURE::FROMTILES, the tiles at the top left of the layer
 				tileMap->SetLayerTexture(_layerIndex, {});
@@ -605,7 +690,7 @@ namespace Jazz2::Scripting
 			description.TextureInnerSpeed = Vector2f(xInnerSpeed, yInnerSpeed);
 			description.TextureInnerAutoSpeed = Vector2f(xInnerAutoSpeed, yInnerAutoSpeed) * Tiles::LayerDescription::OriginalAutoSpeedScale;
 			// The sprite mode a script set, also before the layer was textured
-			SetTextureBlend(description);
+			SetBlend(description);
 			description.RendererType = Tiles::LayerRendererType(std::int32_t(Tiles::LayerRendererType::Sky) + style);
 			tileMap->SetLayerDescription(_layerIndex, description, tileMap->IsLayerVisible(_layerIndex));
 			tileMap->InvalidateTexturedBackground();
@@ -794,7 +879,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::ApplySpriteRecolors()
 	{
-		// The sprites MLLE can recolor, by their slot (see Formats::SpriteRecolorsChunk) - the set, the animation of the first
+		// The sprites MLLE can recolor, by their slot (see Formats::ScriptDataChunk) - the set, the animation of the first
 		// frame and the number of frames from it
 		static constexpr struct {
 			Legacy::anim Set;
@@ -810,7 +895,7 @@ namespace Jazz2::Scripting
 
 		ArrayView<const std::uint8_t> recolors = _levelHandler->_spriteRecolors;
 		auto& tables = GetAnimationTables();
-		for (std::size_t i = 0; i + Formats::SpriteRecolorsChunk::RecordSize <= recolors.size(); i += Formats::SpriteRecolorsChunk::RecordSize) {
+		for (std::size_t i = 0; i + Formats::ScriptDataChunk::RecolorRecordSize <= recolors.size(); i += Formats::ScriptDataChunk::RecolorRecordSize) {
 			std::uint8_t slot = recolors[i];
 			if (slot >= std::size(RecolorableSprites)) {
 				continue;
@@ -835,7 +920,7 @@ namespace Jazz2::Scripting
 	}
 
 	bool mlleGetWeapons(Legacy::jjSTREAM* data) {
-		// What the include of weapons of MLLE reads of the level, see Formats::CustomWeaponsChunk
+		// What the include of weapons of MLLE reads of the level, see Formats::ScriptDataChunk
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		ArrayView<const std::uint8_t> weapons = owner->GetLevelHandler()->GetCustomWeapons();
 		bool hasWeapons = (data != nullptr && !weapons.empty());
@@ -1296,8 +1381,13 @@ namespace Jazz2::Scripting
 			// A layer without a single tile is one JJ2+ keeps without its tile map, and draws nothing of it
 			layer->hasTileMap = src.Layout.HasAnyTile();
 			layer->hasTiles = src.Visible;
-			if (src.Description.RendererType == Tiles::LayerRendererType::Tinted || src.Description.RendererType == Tiles::LayerRendererType::PaletteShift ||
-				src.Description.RendererType == Tiles::LayerRendererType::SingleColor || src.Description.RendererType == Tiles::LayerRendererType::ChromaKey) {
+			if (Tiles::LayerDescription::IsTexturedBackground(src.Description.RendererType) && src.Description.TextureMapping > 0) {
+				layer->_spriteParam = std::uint8_t(src.Description.TextureMapping - 1);
+			} else if (src.Description.Blend != Tiles::LayerBlend::Normal) {
+				layer->_spriteParam = src.Description.BlendParam;
+			} else if (src.Description.RendererType == Tiles::LayerRendererType::Tinted || src.Description.RendererType == Tiles::LayerRendererType::PaletteShift ||
+				src.Description.RendererType == Tiles::LayerRendererType::SingleColor ||
+				src.Description.RendererType == Tiles::LayerRendererType::AlphaMap || src.Description.RendererType == Tiles::LayerRendererType::PaletteMapping) {
 				layer->_spriteParam = std::uint8_t(src.Description.Color.X * 255.0f + 0.5f);
 			}
 			layer->InitializeTexture(src);
@@ -1312,7 +1402,7 @@ namespace Jazz2::Scripting
 
 	std::int32_t LevelScriptLoader::GetLayerIndex(std::int32_t layerNumber) const
 	{
-		constexpr std::int32_t Count = Formats::LayerNumbersChunk::OriginalLayerCount;
+		constexpr std::int32_t Count = Formats::LayerPropertiesChunk::OriginalLayerCount;
 		if (layerNumber < 1 || layerNumber > Count) {
 			return -1;
 		}
@@ -1430,6 +1520,7 @@ namespace Jazz2::Scripting
 			// The sprite layer itself is 50 below the main plane, a layer of depth 0 is at the main plane
 			tileMap->_layers[index].Description.Depth = std::uint16_t(std::clamp<std::int32_t>(spriteDepth + 50 - depth, 0, INT16_MAX));
 		}
+		InvalidateLayerDrawZ();
 		SyncLayerProperties();
 		return true;
 	}
@@ -1491,7 +1582,7 @@ namespace Jazz2::Scripting
 			return false;
 		}
 		for (std::uint32_t number : layerNumbers) {
-			if (number < 1 || number > Formats::LayerNumbersChunk::OriginalLayerCount) {
+			if (number < 1 || number > Formats::LayerPropertiesChunk::OriginalLayerCount) {
 				return false;
 			}
 		}
@@ -1508,7 +1599,7 @@ namespace Jazz2::Scripting
 
 		if (IsCurrentLevelFile(fileName)) {
 			// The layers of this level are here already, as they are now
-			SmallVector<std::int32_t, Formats::LayerNumbersChunk::OriginalLayerCount> sources;
+			SmallVector<std::int32_t, Formats::LayerPropertiesChunk::OriginalLayerCount> sources;
 			for (std::uint32_t number : layerNumbers) {
 				std::int32_t sourceIndex = GetLayerIndex(std::int32_t(number));
 				if (sourceIndex < 0) {
@@ -1630,7 +1721,7 @@ namespace Jazz2::Scripting
 
 	bool LevelScriptLoader::GetPlusTexture(std::int32_t index, std::uint8_t* pixels)
 	{
-		constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+		constexpr std::int32_t TextureBytes = Formats::LayerPropertiesChunk::TextureSize * Formats::LayerPropertiesChunk::TextureSize;
 		if (!_plusTexturesLoaded) {
 			_plusTexturesLoaded = true;
 			// As the converter takes them for the layers of the levels (see Compatibility::AssetConverter), only the textures
@@ -1689,6 +1780,7 @@ namespace Jazz2::Scripting
 			_layersOutOfOrder.resize(layerCount, false);
 		}
 		_layersOutOfOrder[index] = true;
+		InvalidateLayerDrawZ();
 
 		Legacy::jjLAYER* layer = GetLayerProxy(index);
 		// JJ2+ has a tile map for every layer a script makes, empty or not
@@ -1954,7 +2046,7 @@ namespace Jazz2::Scripting
 						auto data = std::make_unique<Formats::TileSetData>();
 						if (Formats::TileSetFile::Read(*s, *data)) {
 							if (part.PaletteRemapping != nullptr) {
-								// In the colors of the level, as they're drawn (ThreedRealms' trapezes are chains of a tile of an extra tile set)
+								// In the colors of the level, as they're drawn (chains drawn from a tile of an extra tile set)
 								for (std::int32_t tile = 0; tile < data->TileCount; tile++) {
 									if (std::size_t(tile) < data->TrueColor.size() && data->TrueColor[tile] != 0) {
 										continue;
@@ -2215,7 +2307,7 @@ namespace Jazz2::Scripting
 		return 0;
 	}
 	void jjGenerateSettableTileArea(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile, std::int32_t width, std::int32_t height) {
-		noop();
+		// Every tile of a layer can be set already
 	}
 
 	// TODO
@@ -2290,6 +2382,19 @@ namespace Jazz2::Scripting
 		return found + 1;
 	}
 	std::int32_t jjMaskedTopVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer) {
+		return jjMaskedTopVLine(xPixel, yPixel, lineLength);
+	}
+	// The same of a layer, which is the sprite layer here too
+	static bool LayerMaskedPixel(const jjLAYER* self, std::int32_t xPixel, std::int32_t yPixel) {
+		return jjMaskedPixel(xPixel, yPixel);
+	}
+	static bool LayerMaskedHLine(const jjLAYER* self, std::int32_t xPixel, std::int32_t lineLength, std::int32_t yPixel) {
+		return jjMaskedHLine(xPixel, lineLength, yPixel);
+	}
+	static bool LayerMaskedVLine(const jjLAYER* self, std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength) {
+		return jjMaskedVLine(xPixel, yPixel, lineLength);
+	}
+	static std::int32_t LayerMaskedTopVLine(const jjLAYER* self, std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength) {
 		return jjMaskedTopVLine(xPixel, yPixel, lineLength);
 	}
 
@@ -2568,16 +2673,16 @@ namespace Jazz2::Scripting
 
 		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel, int yPixel)", asFUNCTION(jjMaskedPixel), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel, int yPixel, uint8 layer)", asFUNCTION(jjMaskedPixelLayer), asCALL_CDECL);
-		//engine->RegisterObjectMethod("jjLAYER", "bool maskedPixel(int xPixel, int yPixel) const", asMETHOD(jjLAYER, CheckPixel), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjLAYER", "bool maskedPixel(int xPixel, int yPixel) const", asFUNCTION(LayerMaskedPixel), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel, int lineLength, int yPixel)", asFUNCTION(jjMaskedHLine), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel, int lineLength, int yPixel, uint8 layer)", asFUNCTION(jjMaskedHLineLayer), asCALL_CDECL);
-		//engine->RegisterObjectMethod("jjLAYER", "bool maskedHLine(int xPixel, int lineLength, int yPixel) const", asMETHOD(jjLAYER, CheckHLine), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjLAYER", "bool maskedHLine(int xPixel, int lineLength, int yPixel) const", asFUNCTION(LayerMaskedHLine), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedVLine), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel, int yPixel, int lineLength,uint8 layer)", asFUNCTION(jjMaskedVLineLayer), asCALL_CDECL);
-		//engine->RegisterObjectMethod("jjLAYER", "bool maskedVLine(int xPixel, int yPixel, int lineLength) const", asMETHOD(jjLAYER, CheckVLineBool), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjLAYER", "bool maskedVLine(int xPixel, int yPixel, int lineLength) const", asFUNCTION(LayerMaskedVLine), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedTopVLine), asCALL_CDECL);
 		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength,uint8 layer)", asFUNCTION(jjMaskedTopVLineLayer), asCALL_CDECL);
-		//engine->RegisterObjectMethod("jjLAYER", "int maskedTopVLine(int xPixel,int yPixel, int lineLength) const", asMETHOD(jjLAYER, CheckVLine), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjLAYER", "int maskedTopVLine(int xPixel, int yPixel, int lineLength) const", asFUNCTION(LayerMaskedTopVLine), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("uint8 get_jjEventAtLastMaskedPixel()", asFUNCTION(get_jjEventAtLastMaskedPixel), asCALL_CDECL);
 	}
 

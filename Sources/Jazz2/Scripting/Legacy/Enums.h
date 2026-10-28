@@ -156,15 +156,16 @@ namespace Jazz2::Scripting
 			dirRIGHT,
 			dirLEFT,
 			dirUP,
-			dirCURRENT
+			// The value of JJ2+
+			dirCURRENT = 4
 		};
 
 		enum gameState {
-			gameSTOPPED,
-			gameSTARTED,
-			gamePAUSED,
-			gamePREGAME,
-			gameOVERTIME
+			gameSTARTED = 0,
+			gamePREGAME = 1,
+			gameOVERTIME = 2,
+			gamePAUSED = 3,
+			gameSTOPPED = 4
 		};
 
 		enum gameConnection {
@@ -174,12 +175,12 @@ namespace Jazz2::Scripting
 		};
 
 		enum GM_ {
-			GM_SP,
-			GM_COOP,
-			GM_BATTLE,
-			GM_CTF,
-			GM_TREASURE,
-			GM_RACE
+			GM_SP = 0,
+			GM_COOP = 1,
+			GM_BATTLE = 2,
+			GM_RACE = 3,
+			GM_TREASURE = 4,
+			GM_CTF = 5
 		};
 
 		enum groundjump {
@@ -483,7 +484,8 @@ namespace Jazz2::Scripting
 			particleFLOWER,
 			particleLEAF,
 			particleSTAR,
-			particleTILE
+			// The value of JJ2+
+			particleTILE = 64
 		};
 
 		enum playerAnim {
@@ -567,48 +569,50 @@ namespace Jazz2::Scripting
 			mJAZZ_VPOLE
 		};
 
+		// The values of JJ2+, which has gaps between them - MLLE stores them in levels
 		enum spriteType {
-			spriteType_NORMAL,
-			spriteType_TRANSLUCENT,
-			spriteType_TINTED,
-			spriteType_GEM,
-			spriteType_INVISIBLE,
-			spriteType_SINGLECOLOR,
-			spriteType_RESIZED,
-			spriteType_NEONGLOW,
-			spriteType_FROZEN,
-			spriteType_PLAYER,
-			spriteType_PALSHIFT,
-			spriteType_SHADOW,
-			spriteType_SINGLEHUE,
-			spriteType_BRIGHTNESS,
-			spriteType_TRANSLUCENTCOLOR,
-			spriteType_TRANSLUCENTPLAYER,
-			spriteType_TRANSLUCENTPALSHIFT,
-			spriteType_TRANSLUCENTSINGLEHUE,
-			spriteType_ALPHAMAP,
-			spriteType_MENUPLAYER,
-			spriteType_BLENDNORMAL,
-			spriteType_BLENDDARKEN,
-			spriteType_BLENDLIGHTEN,
-			spriteType_BLENDHUE,
-			spriteType_BLENDSATURATION,
-			spriteType_BLENDCOLOR,
-			spriteType_BLENDLUMINANCE,
-			spriteType_BLENDMULTIPLY,
-			spriteType_BLENDSCREEN,
-			spriteType_BLENDDISSOLVE,
-			spriteType_BLENDOVERLAY,
-			spriteType_BLENDHARDLIGHT,
-			spriteType_BLENDSOFTLIGHT,
-			spriteType_BLENDDIFFERENCE,
-			spriteType_BLENDDODGE,
-			spriteType_BLENDBURN,
-			spriteType_BLENDEXCLUSION,
-			spriteType_TRANSLUCENTTILE,
-			spriteType_CHROMAKEY,
-			spriteType_MAPPING,
-			spriteType_TRANSLUCENTMAPPING
+			spriteType_NORMAL = 0,
+			spriteType_TRANSLUCENT = 1,
+			spriteType_TINTED = 2,
+			spriteType_GEM = 5,
+			spriteType_INVISIBLE = 10,
+			spriteType_SINGLECOLOR = 11,
+			spriteType_RESIZED = 12,
+			spriteType_NEONGLOW = 15,
+			spriteType_FROZEN = 16,
+			spriteType_PLAYER = 17,
+			spriteType_PALSHIFT = 18,
+			spriteType_SHADOW = 20,
+			spriteType_SINGLEHUE = 21,
+			spriteType_BRIGHTNESS = 22,
+			spriteType_TRANSLUCENTCOLOR = 23,
+			spriteType_TRANSLUCENTPLAYER = 24,
+			spriteType_TRANSLUCENTPALSHIFT = 25,
+			spriteType_TRANSLUCENTSINGLEHUE = 26,
+			spriteType_ALPHAMAP = 27,
+			spriteType_MENUPLAYER = 28,
+			spriteType_BLENDNORMAL = 29,
+			spriteType_BLENDDARKEN = 30,
+			spriteType_BLENDLIGHTEN = 31,
+			spriteType_BLENDHUE = 32,
+			spriteType_BLENDSATURATION = 33,
+			spriteType_BLENDCOLOR = 34,
+			spriteType_BLENDLUMINANCE = 35,
+			spriteType_BLENDMULTIPLY = 36,
+			spriteType_BLENDSCREEN = 37,
+			spriteType_BLENDDISSOLVE = 38,
+			spriteType_BLENDOVERLAY = 39,
+			spriteType_BLENDHARDLIGHT = 40,
+			spriteType_BLENDSOFTLIGHT = 41,
+			spriteType_BLENDDIFFERENCE = 42,
+			spriteType_BLENDDODGE = 43,
+			spriteType_BLENDBURN = 44,
+			spriteType_BLENDEXCLUSION = 45,
+			spriteType_TRANSLUCENTTILE = 46,
+			spriteType_CHROMAKEY = 47,
+			spriteType_MAPPING = 48,
+			spriteType_TRANSLUCENTMAPPING = 49,
+			spriteType_INVERSE = 50
 		};
 
 		enum sound {
@@ -1190,15 +1194,15 @@ namespace Jazz2::Scripting
 		};
 
 		enum wsp {
-			wspNORMAL,
-			wspNORMALORDIRECTIONANDAIM,
-			wspDIRECTIONANDAIM,
-			wspDOUBLEORTRIPLE,
-			wspDOUBLE,
-			wspTRIPLE,
-			wspREFLECTSFASTFIRE,
-			wspNORMALORBBGUN,
-			wspBBGUN
+			wspNORMAL = 0,
+			wspDOUBLE = 1,
+			wspTRIPLE = 2,
+			wspDOUBLEORTRIPLE = 3,
+			wspDIRECTIONANDAIM = 4,
+			wspNORMALORDIRECTIONANDAIM = 5,
+			wspBBGUN = 6,
+			wspNORMALORBBGUN = 7,
+			wspREFLECTSFASTFIRE = 8
 		};
 	}
 }

@@ -33,7 +33,6 @@ namespace Jazz2::Actors::Multiplayer
 		/** @overload */
 		std::shared_ptr<const PeerDescriptor> GetPeerDescriptor() const;
 
-		bool IsLedgeClimbAllowed() const override;
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT

@@ -1,4 +1,4 @@
-﻿#include "PreferencesCache.h"
+#include "PreferencesCache.h"
 #include "ContentResolver.h"
 #include "LevelHandler.h"
 #include "Input/ControlScheme.h"
@@ -87,9 +87,9 @@ namespace Jazz2
 	// Dithering is a dependent second texture sample over the whole background, which the shader compiles
 	// out on a low-power build anyway - leaving the value on would only pick the Dither variant of the
 	// background programs and compile a second copy of identical code (see TileMap and MainMenu)
-	bool PreferencesCache::BackgroundDithering = false;
+	DitheringScope PreferencesCache::Dithering = DitheringScope::None;
 #else
-	bool PreferencesCache::BackgroundDithering = true;
+	DitheringScope PreferencesCache::Dithering = DitheringScope::Layers;
 #endif
 	bool PreferencesCache::BlurEffects = true;
 #if defined(DEATH_TARGET_VITA)
@@ -1361,7 +1361,11 @@ namespace
 					UnalignedViewport = ((boolOptions & BoolOptions::UnalignedViewport) == BoolOptions::UnalignedViewport);
 					PreferVerticalSplitscreen = ((boolOptions & BoolOptions::PreferVerticalSplitscreen) == BoolOptions::PreferVerticalSplitscreen);
 					PreferZoomOut = ((boolOptions & BoolOptions::PreferZoomOut) == BoolOptions::PreferZoomOut);
-					BackgroundDithering = ((boolOptions & BoolOptions::BackgroundDithering) == BoolOptions::BackgroundDithering);
+					Dithering = DitheringScope((std::uint64_t(boolOptions) >> DitheringShift) & 0x03);
+					if (Dithering == DitheringScope::None && (boolOptions & BoolOptions::Reserved) == BoolOptions::Reserved) {
+						// Dithering of the background layers of older versions
+						Dithering = DitheringScope::Layers;
+					}
 					EnableReforgedGameplay = ((boolOptions & BoolOptions::EnableReforgedGameplay) == BoolOptions::EnableReforgedGameplay);
 					EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
 					WeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel ? WeaponWheelStyle::Enabled : WeaponWheelStyle::Disabled);
@@ -1463,12 +1467,9 @@ namespace
 						LightingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(10), std::uint8_t(100));
 					}
 
-					// Outside every version arm above, because what matters is that no config can end up with it
-					// on: it is not offered where it is forced off (see GraphicsOptionsSection and the static
-					// initializers), so there would be no menu item left to turn a value the file switched on
-					// back off again
+					// Forced off for any version, there's no menu item to turn it off again on these GPUs
 #if defined(RHI_LOW_POWER_GPU)
-					BackgroundDithering = false;
+					Dithering = DitheringScope::None;
 #endif
 
 					// Touch button per-slot configuration (v14+)
@@ -1871,7 +1872,7 @@ namespace
 		if (UnalignedViewport) boolOptions |= BoolOptions::UnalignedViewport;
 		if (PreferVerticalSplitscreen) boolOptions |= BoolOptions::PreferVerticalSplitscreen;
 		if (PreferZoomOut) boolOptions |= BoolOptions::PreferZoomOut;
-		if (BackgroundDithering) boolOptions |= BoolOptions::BackgroundDithering;
+		boolOptions |= BoolOptions((std::uint64_t(Dithering) & 0x03) << DitheringShift);
 		if (EnableReforgedGameplay) boolOptions |= BoolOptions::EnableReforgedGameplay;
 		if (EnableReforgedCamera) boolOptions |= BoolOptions::EnableReforgedCamera;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;

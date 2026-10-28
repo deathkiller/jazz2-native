@@ -150,22 +150,31 @@ namespace Jazz2::UI::Menu
 			});
 #endif
 #if defined(RHI_CAP_POSTPROCESSING) && !defined(RHI_LOW_POWER_GPU)
-		// The dithering is a second texture sample inside the warped background shader, which the direct
-		// tier never takes: the fixed-function backends rebuild the warp out of bands from a fixed_function
-		// block that has no dither pass, and the shader compiles the sample out for the software renderer -
-		// on both, the Dither variant deduplicates to the plain effect. The option would have no effect
-		// anywhere on this tier, which is why the gate starts at RHI_CAP_POSTPROCESSING. On a low-power part
-		// it does have an effect and the effect is unaffordable: the second sample is a DEPENDENT one (its
-		// coordinate comes out of a sin()-based hash), which is the access pattern such GPUs are worst at,
-		// and it measured at a sixth of the frame rate over a full-screen background on the Vita's SGX543.
-		// The shader compiles it out on those builds (see LOW_POWER_GPU in TexturedBackground.shader) and
-		// the option goes with it - that covers both PS Vita backends and the OpenGL|ES 2.0 profile.
+		// The colors of the 16-bit renderer of JJ2+ (see DitheringScope), of the textured and translucent background layers
+		// themselves, of everything behind the sprites, or of the whole scene. The direct tier has no pass to do it in (the
+		// fixed-function backends and the software renderer compile the dither out), and a low-power GPU can't afford it -
+		// measured at a sixth of the frame rate over a full-screen background on the Vita's SGX543, so the option isn't
+		// there either, which covers both PS Vita backends and the OpenGL|ES 2.0 profile.
 		// TRANSLATORS: Menu item in Options > Graphics section
-		list->Add<ChoiceItem>(_("Background Dithering"),
-			// TRANSLATORS: Option for on/off items in Options > Graphics section
-			[]() -> StringView { return (PreferencesCache::BackgroundDithering ? _("Enabled") : _("Disabled")); },
-			[this](std::int32_t) {
-				PreferencesCache::BackgroundDithering = !PreferencesCache::BackgroundDithering;
+		list->Add<ChoiceItem>(_("Dithering"),
+			[]() -> StringView {
+				switch (PreferencesCache::Dithering) {
+					// TRANSLATORS: Option for on/off items in Options > Graphics section
+					default: return _("Disabled");
+					// TRANSLATORS: Option for Dithering in Options > Graphics section, only the textured and translucent background layers are dithered
+					case DitheringScope::Layers: return _("Background Layers");
+					// TRANSLATORS: Option for Dithering in Options > Graphics section, everything behind the sprites is dithered
+					case DitheringScope::BehindSprites: return _("Behind Sprites");
+					// TRANSLATORS: Option for Dithering in Options > Graphics section, the whole scene is dithered
+					case DitheringScope::Screen: return _("Whole Screen");
+				}
+			},
+			[this](std::int32_t direction) {
+				// Disabled, then each scope wider than the one before, clamped at the ends - a press goes around
+				constexpr std::int32_t Count = (std::int32_t)DitheringScope::Screen + 1;
+				std::int32_t index = (std::int32_t)PreferencesCache::Dithering;
+				index = (direction == 0 ? (index + 1) % Count : std::clamp(index + (direction < 0 ? -1 : 1), 0, Count - 1));
+				PreferencesCache::Dithering = (DitheringScope)index;
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});

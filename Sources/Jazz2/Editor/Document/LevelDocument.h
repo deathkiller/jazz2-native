@@ -108,8 +108,9 @@ namespace Jazz2::Editor
 		 * @brief Description of the layer as the file stores it, including its size
 		 *
 		 * The renderer type and the color of the sprite layer are stored apart from its record, in
-		 * @ref Formats::SpriteLayerChunk, they're kept here as those of any other layer. So are the parameters of
-		 * a tunnel or a reflection (@ref Formats::LayerRecord::Textured), stored in @ref Formats::TexturedLayerChunk.
+		 * @ref Formats::LayerPropertiesChunk, they're kept here as those of any other layer. So is everything else of the
+		 * record the chunk stores (@ref Formats::LayerRecord::Textured, @ref Formats::LayerRecord::OriginalNumber,
+		 * @ref Formats::LayerRecord::Blend).
 		 */
 		Formats::LayerRecord Record;
 		/** @brief Name of the layer, may be empty */
@@ -119,8 +120,8 @@ namespace Jazz2::Editor
 		/**
 		 * @brief Texture of its own of a textured layer, taken instead of the 8×8 tiles at its top left, or empty
 		 *
-		 * Palette indices row by row, stored with the parameters of the layer in @ref Formats::TexturedLayerChunk (see
-		 * @ref Formats::TexturedLayerChunk::Entry::Texture), such as a texture of JJ2+ a converted level has.
+		 * Palette indices row by row, stored with the properties of the layer in @ref Formats::LayerPropertiesChunk (see
+		 * @ref Formats::LayerPropertiesChunk::Entry::Texture), such as a texture of JJ2+ a converted level has.
 		 */
 		SmallVector<std::uint8_t, 0> Texture;
 		/** @brief Combination of @ref EditorHidden and @ref EditorLocked, saved with the level but not part of it */
@@ -408,10 +409,8 @@ namespace Jazz2::Editor
 		static StringView GetProblemDescription(DocumentProblem problem);
 
 	private:
-		void LoadLayerNames(const Formats::ChunkRecord& chunk);
 		bool LoadLayerStates(const Formats::ChunkRecord& chunk);
 		void LoadLegacyLayerStates(const Formats::ChunkRecord& chunk);
-		void WriteLayerNames(SmallVectorImpl<std::uint8_t>& data) const;
 		void WriteLayerStates(SmallVectorImpl<std::uint8_t>& data) const;
 	};
 }

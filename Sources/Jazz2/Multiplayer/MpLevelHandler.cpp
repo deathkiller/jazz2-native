@@ -7916,9 +7916,17 @@ namespace Jazz2::Multiplayer
 				serverConfig.GameMode == MpGameMode::Cooperation);
 	}
 
-	bool MpLevelHandler::IsLedgeClimbAllowed() const
+	bool MpLevelHandler::IsLedgeClimbEnabled(const Actors::Player* player) const
 	{
-		return _networkManager->GetServerConfiguration().AllowLedgeClimb;
+		// The server decides whether it can be used at all, the player can only turn it off - a remote player by the
+		// preference its client sent
+		if (!_networkManager->GetServerConfiguration().AllowLedgeClimb) {
+			return false;
+		}
+		if (auto* remotePlayer = runtime_cast<RemotePlayerOnServer>(const_cast<Actors::Player*>(player))) {
+			return remotePlayer->GetPeerDescriptor()->EnableLedgeClimb;
+		}
+		return LevelHandler::IsLedgeClimbEnabled(player);
 	}
 
 	Actors::ActorBase* MpLevelHandler::FindPlayerToStandOn(Actors::Player* player, float timeMult)

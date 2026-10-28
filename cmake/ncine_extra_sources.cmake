@@ -2065,6 +2065,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTestMpLevelHandler.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTransition.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/RuntimeSync.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/ScriptGraphics.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/TileLod.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Session/DocumentFiles.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Session/EditorDebugConsole.h
@@ -2205,6 +2206,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/PlayTransition.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/RuntimeSync.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/TileDrawing.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/ScriptGraphics.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Runtime/TileLod.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Session/DocumentFiles.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Session/EditorDebugConsole.cpp

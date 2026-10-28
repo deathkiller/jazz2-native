@@ -537,6 +537,7 @@
     <ClInclude Include="Jazz2\Editor\Runtime\PlayTestMpLevelHandler.h" />
     <ClInclude Include="Jazz2\Editor\Runtime\PlayTransition.h" />
     <ClInclude Include="Jazz2\Editor\Runtime\RuntimeSync.h" />
+    <ClInclude Include="Jazz2\Editor\Runtime\ScriptGraphics.h" />
     <ClInclude Include="Jazz2\Editor\Runtime\TileLod.h" />
     <ClInclude Include="Jazz2\Editor\Session\DocumentFiles.h" />
     <ClInclude Include="Jazz2\Editor\Session\EditorDebugConsole.h" />
@@ -1416,6 +1417,7 @@
     <ClCompile Include="Jazz2\Editor\Runtime\PlayTransition.cpp" />
     <ClCompile Include="Jazz2\Editor\Runtime\RuntimeSync.cpp" />
     <ClCompile Include="Jazz2\Editor\Runtime\TileDrawing.cpp" />
+    <ClCompile Include="Jazz2\Editor\Runtime\ScriptGraphics.cpp" />
     <ClCompile Include="Jazz2\Editor\Runtime\TileLod.cpp" />
     <ClCompile Include="Jazz2\Editor\Session\DocumentFiles.cpp" />
     <ClCompile Include="Jazz2\Editor\Session\EditorDebugConsole.cpp" />

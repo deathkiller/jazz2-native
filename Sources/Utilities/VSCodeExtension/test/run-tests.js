@@ -531,7 +531,7 @@ function messagesOf(findings) {
 	var uintish = ['uint', 'uvec2', 'uvec3', 'uvec4'];
 	var unwarned = null;
 	for (var q = 0; q < uintish.length; q++) {
-		if (docOf(language.GLSL_TYPES, uintish[q]).indexOf('ESSL100') < 0) {
+		if (docOf(language.GLSL_TYPES, uintish[q]).indexOf('ESSL 100') < 0) {
 			unwarned = uintish[q];
 		}
 	}

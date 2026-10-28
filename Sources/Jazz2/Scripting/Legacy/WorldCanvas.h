@@ -45,6 +45,8 @@ namespace Jazz2::Scripting::Legacy
 			std::int32_t PaletteOffset;
 			/** @brief Object the position is relative to, where it is when it's drawn, `nullptr` for the level */
 			Actors::ActorBase* Anchor = nullptr;
+			/** @brief The frame is `transparent`, see @ref AnimationTables::ResolveFrame() */
+			bool TranslucentFrame = false;
 		};
 
 		/** @brief Rectangle of a color of the palette drawn in the level */
@@ -58,6 +60,8 @@ namespace Jazz2::Scripting::Legacy
 			std::uint8_t Param;
 			/** @brief Depth */
 			std::uint16_t Z;
+			/** @brief Angle in radians, turned about its center */
+			float Angle = 0.0f;
 		};
 
 		/** @brief Tile drawn in the level */

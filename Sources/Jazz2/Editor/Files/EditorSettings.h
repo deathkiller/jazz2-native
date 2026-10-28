@@ -47,6 +47,12 @@ namespace Jazz2::Editor
 		bool PauseLayerMovement = false;
 		/** @brief Whether a textured layer being edited is drawn as in the game instead of as plain tiles to be painted */
 		bool PreviewTexturedLayers = false;
+		/** @brief Whether events are drawn with the sprites the script of the level gives their objects, see @ref ScriptGraphics */
+		bool OverriddenAssets = true;
+		/** @brief Tool chosen when the editor was left, see @ref EditorToolType */
+		std::int32_t Tool = 5;
+		/** @brief Whether the picker showed the events when the editor was left, the tiles otherwise */
+		bool PickerEvents = false;
 		/** @brief Tiles in a row of the tile picker */
 		std::int32_t TilePickerColumns = 10;
 		/** @brief Width of the panel on the right in units */

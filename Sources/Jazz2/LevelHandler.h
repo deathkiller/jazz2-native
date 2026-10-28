@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ILevelHandler.h"
 #include "IResumable.h"
@@ -159,6 +159,7 @@ namespace Jazz2
 		bool IsServer() const override;
 		bool IsPausable() const override;
 		bool IsReforged() const override;
+		bool IsLedgeClimbEnabled(const Actors::Player* player) const override;
 		bool CanActivateSugarRush() const override;
 		bool CanEventDisappear(EventType eventType) const override;
 		bool CanPlayersCollide() const override;
@@ -166,6 +167,7 @@ namespace Jazz2
 		float GetElapsedFrames() const override;
 		float GetGravity() const override;
 		float GetWaterLevel() const override;
+		float GetPlayerWaterLevel() const override;
 		float GetHurtInvulnerableTime() const override;
 		bool GetActiveBossHealth(std::int32_t& health, std::int32_t& maxHealth) const override;
 
@@ -230,6 +232,9 @@ namespace Jazz2
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
+		bool HandlePlayerFire(Actors::Player* player, WeaponType weaponType) override;
+		bool IsWeaponFireCapped(WeaponType weaponType) override;
+		bool IsWeaponSoundMuted(WeaponType weaponType) override;
 		void SetCheckpoint(Actors::Player* player, Vector2f pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void HandleActivateSugarRush(Actors::Player* player) override;
@@ -238,11 +243,11 @@ namespace Jazz2
 		void ShowLevelText(StringView text, Actors::ActorBase* initiator = nullptr) override;
 		StringView GetLevelText(std::uint32_t textId, std::int32_t index = -1, std::uint32_t delimiter = 0) override;
 		void OverrideLevelText(std::uint32_t textId, StringView value) override;
-		/** @brief Returns a level text as the original game had it, for scripts, the level text if the level has none (see @ref Formats::ScriptTextsChunk) */
+		/** @brief Returns a level text as the original game had it, for scripts, the level text if the level has none (see @ref Formats::ScriptDataChunk) */
 		StringView GetScriptText(std::uint32_t textId);
 		/** @brief Sets a level text as the original game has it, which scripts read back, the text shown has to be set too */
 		void OverrideScriptText(std::uint32_t textId, StringView value);
-		/** @brief Returns the custom weapons the level sets up for its script, empty if it has none (see @ref Formats::CustomWeaponsChunk) */
+		/** @brief Returns the custom weapons the level sets up for its script, empty if it has none (see @ref Formats::ScriptDataChunk) */
 		ArrayView<const std::uint8_t> GetCustomWeapons() const {
 			return _customWeapons;
 		}
@@ -308,6 +313,14 @@ namespace Jazz2
 #	endif
 		/** @brief Returns `true` if the level is played from the level editor, it returns there when it's left */
 		virtual bool IsEditorPlayTest() const;
+		/**
+		 * @brief Returns `true` if the level is loaded only to run its script, by the level editor
+		 *
+		 * Nothing of it is shown or heard, and its script writes no files.
+		 */
+		virtual bool IsSandbox() const {
+			return false;
+		}
 		/** @brief Leaves the level editor the level is played from */
 		virtual void ExitEditor();
 		/** @brief Returns the debug tools of a level played from the level editor, or `nullptr` in a game */
@@ -409,13 +422,13 @@ namespace Jazz2
 		SmallVector<String, 0> _levelTexts;
 		// Translations of the level texts the level carries, see Formats::LevelTextsChunk
 		SmallVector<LocalizedLevelTexts, 0> _localizedLevelTexts;
-		// The level texts as the original game had them, see Formats::ScriptTextsChunk
+		// The level texts as the original game had them, see Formats::ScriptDataChunk
 		SmallVector<String, 0> _scriptTexts;
 		SmallVector<std::uint8_t, 0> _customWeapons;
 #if defined(WITH_ANGELSCRIPT)
 		// Tile images the level replaces, for the script to read (see LevelScriptLoader::ResolveTileSetPixels())
 		SmallVector<Formats::TileDiffuseOverride, 0> _tileDiffuseOverrides;
-		// Sprites the level recolors, for the script to apply, see Formats::SpriteRecolorsChunk
+		// Sprites the level recolors, for the script to apply, see Formats::ScriptDataChunk
 		SmallVector<std::uint8_t, 0> _spriteRecolors;
 #endif
 
@@ -436,6 +449,11 @@ namespace Jazz2
 
 		float _checkpointFrames;
 		float _waterLevel;
+		// The water as the level script left it after onPlayer() in its last tick, see GetPlayerWaterLevel()
+		float _playerWaterLevel = 0.0f;
+		bool _playerWaterLevelSet = false;
+		// The water is still there for the actors, but not drawn (`jjWaterLayer` of JJ2+ out of the layers)
+		bool _waterHidden = false;
 		Vector4f _defaultAmbientLight;
 #if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;

@@ -1072,24 +1072,46 @@ namespace Jazz2::Editor
 			_context.ShowMessage(_x("editor", "Save the level first, its script is kept next to it"));
 			return;
 		}
-		if (!fs::FileExists(path)) {
-			// Something to start from, with how the script describes its events for the editor
-			String name = fs::GetFileNameWithoutExtension(_filePath);
-			String text = "// Script of the level \""_s + name + "\", it runs while the level is played\r\n"_s
-				"//\r\n"_s
-				"// Events the script reacts to can be described for the level editor, each by a line such as this one,\r\n"_s
-				"// without the slashes, see the documentation of the level editor for all that can be described:\r\n"_s
-				"// #pragma editor-event {\"Type\": 255, \"Name\": \"My Event\", \"Category\": \"Other\", \"Params\": [{\"Name\": \"Speed\", \"Type\": \"UInt\", \"Offset\": 0, \"Bits\": 4}]}\r\n"_s
-				"\r\n"_s
-				"void onLevelBegin()\r\n"_s
-				"{\r\n"_s
-				"}\r\n"_s;
-			if (!AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
-				_context.ShowMessage(_x("editor", "The script couldn't be made"));
-				return;
-			}
-			_watchedScriptTime = GetModificationTime(path);
+		if (fs::FileExists(path)) {
+			OpenScript(path);
+			return;
 		}
+		UiSurface* surface = _context.GetSurface();
+		if (surface == nullptr) {
+			return;
+		}
+		UiMessageDialog::Show(*surface, _x("editor", "Edit Script"), _x("editor", "The level has no script yet.\nDo you want to make a new one?"),
+			// TRANSLATORS: Buttons of the message box asking whether to make a new script for the level
+			{ _x("editor", "Make Script"), _x("editor", "Cancel") }, [this, path](std::int32_t button) {
+			if (button == 0 && CreateScript(path)) {
+				OpenScript(path);
+			}
+		});
+	}
+
+	bool DocumentFiles::CreateScript(StringView path)
+	{
+		// Something to start from, with how the script describes its events for the editor
+		String name = fs::GetFileNameWithoutExtension(_filePath);
+		String text = "// Script of the level \""_s + name + "\", it runs while the level is played\r\n"_s
+			"//\r\n"_s
+			"// Events the script reacts to can be described for the level editor, each by a line such as this one,\r\n"_s
+			"// without the slashes, see the documentation of the level editor for all that can be described:\r\n"_s
+			"// #pragma editor-event {\"Type\": 255, \"Name\": \"My Event\", \"Category\": \"Other\", \"Params\": [{\"Name\": \"Speed\", \"Type\": \"UInt\", \"Offset\": 0, \"Bits\": 4}]}\r\n"_s
+			"\r\n"_s
+			"void onLevelBegin()\r\n"_s
+			"{\r\n"_s
+			"}\r\n"_s;
+		if (!AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
+			_context.ShowMessage(_x("editor", "The script couldn't be made"));
+			return false;
+		}
+		_watchedScriptTime = GetModificationTime(path);
+		return true;
+	}
+
+	void DocumentFiles::OpenScript(StringView path)
+	{
 		// In the program set in the settings file, if there's one, the events the script describes are read again once
 		// it's saved
 		StringView scriptEditor = _context.GetSettings().ScriptEditor;

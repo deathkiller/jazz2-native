@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../Main.h"
 #include "AnimationLoopMode.h"
@@ -495,6 +495,9 @@ namespace Jazz2::Resources
 		Combine,							/**< Combine render passes */
 		CombineWithWater,					/**< Combine render passes with water effect */
 		CombineWithWaterLow,				/**< Combine render passes with low quality water effect */
+		CombineDither,						/**< @ref Combine in the colors of the 16-bit renderer of JJ2+, see @ref DitheringScope::Screen */
+		CombineWithWaterDither,				/**< @ref CombineWithWater in the colors of the 16-bit renderer of JJ2+ */
+		CombineWithWaterLowDither,			/**< @ref CombineWithWaterLow in the colors of the 16-bit renderer of JJ2+ */
 
 		TexturedBackground,					/**< Textured background */
 		TexturedBackgroundDither,			/**< Textured background with dithering */
@@ -506,7 +509,8 @@ namespace Jazz2::Resources
 		TexturedBackgroundTunnelPlusDither,	/**< Tunnel textured background of JJ2+ with dithering */
 		TexturedBackgroundCylinder,			/**< Cylinder textured background */
 		TexturedBackgroundCylinderDither,	/**< Cylinder textured background with dithering */
-		TexturedBackgroundWave,				/**< Wave textured background, it has no dithering */
+		TexturedBackgroundWave,				/**< Wave textured background */
+		TexturedBackgroundWaveDither,		/**< Wave textured background with dithering */
 
 		TileMapMeshHeat,					/**< Tiles of the heat effect, see @ref Tiles::LayerTileFlags::Heat */
 		TileMapMeshHeatPalette,				/**< Tiles of the heat effect with palette */
@@ -551,7 +555,7 @@ namespace Jazz2::Resources
 		TileMapMeshPalette,					/**< Batched variant of @ref TileMapMesh */
 #endif
 #if defined(TILEMAP_LAYER_EFFECTS)
-		// The special tile layers (see Tiles::LayerRendererType::XRay, ::BlurBehind, ::Reflection and ::ChromaKey) and the actor
+		// The special tile layers (see Tiles::LayerRendererType::XRay, ::BlurBehind, ::Reflection and Tiles::LayerBlend::ChromaKey) and the actor
 		// coverage the x-ray layers sample. Compiled only once a level that has such a layer is loaded, see
 		// ContentResolver::CompileLayerEffectShaders()
 		TileMapMeshXRay,					/**< Animated tiles of an x-ray layer */
@@ -569,6 +573,7 @@ namespace Jazz2::Resources
 		TexturedBackgroundTunnelPlusKeyed,	/**< Chroma key or translucent variant of @ref TexturedBackgroundTunnelPlus */
 		TexturedBackgroundCylinderKeyed,	/**< Chroma key or translucent variant of @ref TexturedBackgroundCylinder */
 		TexturedBackgroundWaveKeyed,		/**< Chroma key or translucent variant of @ref TexturedBackgroundWave */
+		BackgroundDither,					/**< What is behind the sprite layer in the colors of the 16-bit renderer of JJ2+, see @ref DitheringScope::BehindSprites */
 #endif
 
 #if !defined(DISABLE_RESCALE_SHADERS)

@@ -102,10 +102,123 @@ in vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	float palOffset;
+};
+
+
+
+
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTexture;
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
+uniform vec2 uBlendMode;
 
 out vec4 COLOR;
 
@@ -113,9 +226,14 @@ void main() {
 	vec4 src = texture(uTexture, vTexCoords);
 	vec4 tile = src;
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
-	COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	if (uBlendMode.x > 0.5) {
+		vec4 color = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+	} else {
+		vec3 difference = abs(behind - uKeyColor.rgb);
+		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
+		COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	}
 }
 
 )__SHDR__";
@@ -135,10 +253,120 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	uniform float palOffset;
+
+
+
+
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTexture;
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
+uniform vec2 uBlendMode;
 
 
 void main() {
@@ -146,9 +374,14 @@ void main() {
 	vec4 src = texture2D(uTexture, vTexCoords);
 	vec4 tile = src;
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
-	COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	if (uBlendMode.x > 0.5) {
+		vec4 color = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+	} else {
+		vec3 difference = abs(behind - uKeyColor.rgb);
+		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
+		COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	}
 	gl_FragColor = COLOR;
 }
 
@@ -160,6 +393,7 @@ void main() {
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uBlendMode", ShaderCompiler::UniformType::Vec2, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember TileMapMeshChromaKey_Block0_Members[] = {
@@ -276,11 +510,124 @@ in vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	float palOffset;
+};
+
+
+
+
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
+uniform vec2 uBlendMode;
 
 out vec4 COLOR;
 
@@ -292,9 +639,14 @@ void main() {
 	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
 	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
-	COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	if (uBlendMode.x > 0.5) {
+		vec4 color = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+	} else {
+		vec3 difference = abs(behind - uKeyColor.rgb);
+		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
+		COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	}
 }
 
 )__SHDR__";
@@ -314,11 +666,121 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	uniform float palOffset;
+
+
+
+
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
+uniform vec2 uBlendMode;
 
 
 void main() {
@@ -330,9 +792,14 @@ void main() {
 	vec4 paletteColor = texture2D(uTexturePalette, vec2(palX, palY));
 	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
-	COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	if (uBlendMode.x > 0.5) {
+		vec4 color = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+	} else {
+		vec3 difference = abs(behind - uKeyColor.rgb);
+		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
+		COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	}
 	gl_FragColor = COLOR;
 }
 
@@ -344,6 +811,7 @@ void main() {
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uBlendMode", ShaderCompiler::UniformType::Vec2, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember TileMapMeshChromaKey_USE_PALETTE_Block0_Members[] = {
@@ -377,7 +845,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			4, TileMapMeshChromaKey_Uniforms, 1, TileMapMeshChromaKey_Blocks, 2, TileMapMeshChromaKey_Textures, 3, TileMapMeshChromaKey_Attributes,
+			5, TileMapMeshChromaKey_Uniforms, 1, TileMapMeshChromaKey_Blocks, 2, TileMapMeshChromaKey_Textures, 3, TileMapMeshChromaKey_Attributes,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TileMapMeshChromaKey_Vs100, TileMapMeshChromaKey_Fs100,
 #else
@@ -406,7 +874,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			4, TileMapMeshChromaKey_USE_PALETTE_Uniforms, 1, TileMapMeshChromaKey_USE_PALETTE_Blocks, 3, TileMapMeshChromaKey_USE_PALETTE_Textures, 3, TileMapMeshChromaKey_USE_PALETTE_Attributes,
+			5, TileMapMeshChromaKey_USE_PALETTE_Uniforms, 1, TileMapMeshChromaKey_USE_PALETTE_Blocks, 3, TileMapMeshChromaKey_USE_PALETTE_Textures, 3, TileMapMeshChromaKey_USE_PALETTE_Attributes,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TileMapMeshChromaKey_USE_PALETTE_Vs100, TileMapMeshChromaKey_USE_PALETTE_Fs100,
 #else

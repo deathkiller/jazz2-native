@@ -127,8 +127,8 @@ namespace Jazz2::Compatibility
 		 * the tile set empty) and sets the last argument to the number of tiles of the whole tile set. A level whose
 		 * default tile set isn't there gets none, the tiles of an extra tile set that isn't there are left out.
 		 *
-		 * With @p textureLookup, which fills @ref Formats::TexturedLayerChunk::TextureSize ×
-		 * @ref Formats::TexturedLayerChunk::TextureSize palette indices with a texture of JJ2+ by its number
+		 * With @p textureLookup, which fills @ref Formats::LayerPropertiesChunk::TextureSize ×
+		 * @ref Formats::LayerPropertiesChunk::TextureSize palette indices with a texture of JJ2+ by its number
 		 * (`TEXTURE::Texture`, from 1) and returns `false` if there's no such texture, a textured layer of a level made
 		 * for JJ2+ gets the texture it names. Without it, or without the texture, the layer gets a texture made up of
 		 * smooth noise in the same colors, which ripples a reflection alike.

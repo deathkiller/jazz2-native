@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ITileMapOwner.h"
 #include "../ILevelHandler.h"
@@ -24,6 +24,7 @@ namespace Jazz2
 		class LevelReader;
 		struct AnimatedTileRecord;
 		struct LayerRecord;
+		struct PaletteRecord;
 	}
 
 #if defined(WITH_ANGELSCRIPT)
@@ -354,8 +355,8 @@ namespace Jazz2::Tiles
 		/**
 		 * @brief Texture of its own of a textured layer, palette indices row by row, or empty
 		 *
-		 * @ref Formats::TexturedLayerChunk::TextureSize pixels wide and high, taken instead of the tiles at the top
-		 * left of the layer (see @ref Formats::TexturedLayerChunk::Entry::Texture).
+		 * @ref Formats::LayerPropertiesChunk::TextureSize pixels wide and high, taken instead of the tiles at the top
+		 * left of the layer (see @ref Formats::LayerPropertiesChunk::Entry::Texture).
 		 */
 		SmallVector<std::uint8_t, 0> TexturePixels;
 		/** @brief Changes with @ref TexturePixels, unique among the layers, so the texture made of them is made again */
@@ -366,12 +367,12 @@ namespace Jazz2::Tiles
 		 * For a wave, X is how far its waves have moved, in periods, from 0 to 1.
 		 */
 		Vector2f TextureOffset;
-		/** @brief Name of the layer, which scripts may find it by, or empty (see @ref Formats::LayerNamesChunk) */
+		/** @brief Name of the layer, which scripts may find it by, or empty (see @ref Formats::LayerPropertiesChunk) */
 		String Name;
 		/**
 		 * @brief Number of the layer in the original game, 1 to 8 from the front, or 0 for a layer of another origin
 		 *
-		 * Scripts of JJ2+ refer to the layers by it (see @ref Formats::LayerNumbersChunk).
+		 * Scripts of JJ2+ refer to the layers by it (see @ref Formats::LayerPropertiesChunk).
 		 */
 		std::uint8_t OriginalNumber = 0;
 	};
@@ -923,7 +924,7 @@ namespace Jazz2::Tiles
 		/**
 		 * @brief Gives a textured layer a texture of its own, taken instead of the tiles at its top left
 		 *
-		 * @p pixels are @ref Formats::TexturedLayerChunk::TextureSize × @ref Formats::TexturedLayerChunk::TextureSize
+		 * @p pixels are @ref Formats::LayerPropertiesChunk::TextureSize × @ref Formats::LayerPropertiesChunk::TextureSize
 		 * palette indices row by row, they stay indexed, so the texture follows the palette as the tiles do. Empty
 		 * @p pixels take the tiles again. Called before the viewport is initialized, as when the level is loaded, the
 		 * texture is drawn of its own size. Returns `false` if the layer doesn't exist or the pixels are of another size.
@@ -938,10 +939,16 @@ namespace Jazz2::Tiles
 		 *
 		 * Only a renderer type the sprite layer can be drawn with is taken (see
 		 * @ref LayerDescription::IsSpriteLayerRenderer()), with any other one the layer is drawn as ordinary tiles. The
-		 * color means what it does for any other layer. Set by the loader from @ref Formats::SpriteLayerChunk, and by the
+		 * color means what it does for any other layer. Set by the loader from @ref Formats::LayerPropertiesChunk, and by the
 		 * level editor. Returns `false` if there's no sprite layer.
 		 */
 		bool SetSpriteLayerRenderer(LayerRendererType type, const Vector4f& color);
+		/**
+		 * @brief Sets the additional palettes of the level, which layers of @ref LayerRendererType::PaletteMapping are drawn through
+		 *
+		 * Each one is 256 colors packed as `0xAABBGGRR`, index 0 is always transparent.
+		 */
+		void SetAdditionalPalettes(ArrayView<const Formats::PaletteRecord> palettes);
 		/**
 		 * @brief Puts the layers in another order, as they are with all their state
 		 *
@@ -1008,7 +1015,7 @@ namespace Jazz2::Tiles
 		bool BlurBehindLayersNeedSharpCopy();
 		/** @brief Returns `true` if any layer is a @ref LayerRendererType::Reflection layer, which needs a sharp copy of the scene behind it */
 		bool HasReflectionLayers() const;
-		/** @brief Returns `true` if any layer is a @ref LayerRendererType::ChromaKey layer or a textured one drawn translucent or keyed (see @ref TexturedLayerBlend), which needs a sharp copy of the scene behind it */
+		/** @brief Returns `true` if any layer is drawn keyed (see @ref LayerBlend::ChromaKey) or a textured one translucent, which needs a sharp copy of the scene behind it */
 		bool HasChromaKeyLayers() const;
 #endif
 
@@ -1165,14 +1172,19 @@ namespace Jazz2::Tiles
 		/// ago that was. Only the memory-constrained consoles trim (see @ref OnEndFrame()).
 		std::int32_t _renderCommandsPeak;
 		std::int32_t _renderCommandsPeakAge;
-		/// A row of the shared palette that the palette-shifted layers are drawn through, and the frame it was last used in
-		struct ShiftedPaletteRow
+		/// A row of the shared palette that layers of a renderer of a palette of their own are drawn through, which of them
+		/// and its parameter, whether its colors are premultiplied by their alpha, and the frame it was last used in
+		struct LayerPaletteRow
 		{
 			std::int32_t PaletteOffset;
 			std::uint32_t LastUsedFrame;
-			std::uint8_t Shift;
+			LayerRendererType Type;
+			std::uint8_t Param;
+			bool Premultiplied;
 		};
-		SmallVector<ShiftedPaletteRow, 0> _shiftedPaletteRows;
+		SmallVector<LayerPaletteRow, 0> _layerPaletteRows;
+		/// Additional palettes of the level, see LayerRendererType::PaletteMapping
+		SmallVector<std::unique_ptr<std::uint32_t[]>, 0> _additionalPalettes;
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Per-frame pools for aggregated meshes, replacing the per-tile and per-particle commands. One vertex buffer
@@ -1260,6 +1272,8 @@ namespace Jazz2::Tiles
 			std::unique_ptr<TexturedBackgroundPass> Pass;
 		};
 		SmallVector<LayerPass, 0> _layerPasses;
+		// The revision of the sprite palette the textured backgrounds were drawn in, they're drawn again when it changes
+		std::uint32_t _texturedPaletteRevision = 0;
 		// Whether a layer is keyed (see HasChromaKeyLayers()), the colors of the textured layers have to stay exact then, so
 		// they're neither dithered nor filtered (see UpdateTexturedLayers())
 		bool _hasKeyedLayers = false;
@@ -1416,13 +1430,14 @@ namespace Jazz2::Tiles
 			const Rectf& cullingRect, Vector2f layerOrigin);
 		// Returns the color of a tinted layer, whose description keeps a palette index in red and the strength in alpha
 		static Vector4f ResolveTintColor(const Vector4f& description);
-		// Returns the palette offset of the sprite palette shifted by `shift` entries for a palette-shifted layer drawn now,
-		// 0 for no shift or if no row of the palette is free (see LayerRendererType::PaletteShift)
-		std::int32_t AcquireShiftedPalette(std::uint8_t shift);
-		// Gives back the rows of the shifted palettes no layer was drawn with in this frame or the one before, all of them with `all`
-		void ReleaseShiftedPalettes(bool all);
+		// Returns the palette offset a layer of a palette-shifted, an alpha map or a palette mapping renderer is drawn through
+		// now, 0 (the sprite palette) if there's nothing to change or no row of the palette is free; premultiplied for a layer
+		// that is screened or multiplied, which is drawn through a row even if nothing else changes
+		std::int32_t AcquireLayerPalette(LayerRendererType type, std::uint8_t param, bool premultiplied = false);
+		// Gives back the rows of the layer palettes no layer was drawn with in this frame or the one before, all of them with `all`
+		void ReleaseLayerPalettes(bool all);
 		// With `keyed`, a textured background gets the variant of its shader that's drawn translucent or keyed (see
-		// TexturedLayerBlend), if there is one, and with `plus` a sky or a tunnel the one in the perspective of JJ2+ (see
+		// LayerBlend), if there is one, and with `plus` a sky or a tunnel the one in the perspective of JJ2+ (see
 		// LayerDescription::HasPlusPerspective())
 		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr, bool keyed = false,
 			bool plus = false);
@@ -1463,7 +1478,7 @@ namespace Jazz2::Tiles
 		/** @brief Appends a tile of the heat effect (resolved to a single frame) to the heat mesh, returns `false` if it can't be drawn so */
 		bool AppendHeatTile(std::int32_t tileId, LayerTileFlags flags, float alpha, float x, float y);
 		/** @brief Emits the heat meshes accumulated for the layer being drawn */
-		void EmitHeatMeshes(RenderQueue& renderQueue, const Vector4f& color, std::uint16_t depth);
+		void EmitHeatMeshes(RenderQueue& renderQueue, const Vector4f& color, std::uint16_t depth, std::uint16_t paletteOffset);
 #endif
 #if defined(TILEMAP_LAYER_EFFECTS)
 		/** @brief What a group of the tiles of a special layer is drawn as */
@@ -1482,14 +1497,25 @@ namespace Jazz2::Tiles
 			std::int32_t VerticesIndex;
 		};
 
-		/** @brief The special layer @ref DrawLayer() is drawing, a @ref LayerRendererType::Default type otherwise */
+		/** @brief Which special layer @ref DrawLayer() is drawing */
+		enum class EffectLayerType : std::uint8_t {
+			None,			//< An ordinary one
+			XRay,			//< A layer of @ref LayerRendererType::XRay
+			BlurBehind,		//< A layer of @ref LayerRendererType::BlurBehind
+			ChromaKey		//< A layer of tiles of @ref LayerBlend::ChromaKey
+		};
+
+		/** @brief The special layer @ref DrawLayer() is drawing */
 		struct EffectLayerState {
-			LayerRendererType Type = LayerRendererType::Default;
+			EffectLayerType Type = EffectLayerType::None;
 			LayerEffectsTarget* Target = nullptr;
 			std::uint16_t Depth = 0;
 			bool MaskAvailable = false;
 			// The color of the palette a chroma key layer is drawn over
 			Vector3f KeyColor;
+			// The blend mode a layer of tiles is mixed with what is behind it by instead of the key (see LayerBlend::Darken), and
+			// non-zero if its opacity is an ordered pattern of whole pixels (see BlendModes.inc)
+			Vector2f BlendMode;
 		};
 
 		/** @brief A column of the window of the blur layer being walked: the last row it had a reflective tile in, and that tile's mirror line */
@@ -1507,9 +1533,12 @@ namespace Jazz2::Tiles
 		/// The same for the reflection, one command for each viewport it's drawn in
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _reflectionCommands;
 		std::int32_t _reflectionCommandCount = 0;
+		/// The quad that dithers what is behind the sprite layer, one command for each viewport
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _backgroundDitherCommands;
+		std::int32_t _backgroundDitherCommandCount = 0;
 
 		/** @brief Prepares drawing of a special layer, returns `false` if it can't be drawn in the current viewport at all */
-		bool BeginEffectLayer(const TileMapLayer& layer, LayerRendererType type);
+		bool BeginEffectLayer(const TileMapLayer& layer, EffectLayerType type);
 		/** @brief Appends an x-ray tile at the given position, returns `false` if it is no x-ray tile and is drawn as usual */
 		bool AppendXRayTile(const LayerTile& tile, float x, float y);
 		/** @brief Appends a tile (resolved to a single frame) to the mesh of the given kind, a blur one with the mirror line of its reflection */
@@ -1542,6 +1571,8 @@ namespace Jazz2::Tiles
 		void PrepareXRayLayer(const TileMapLayer& layer);
 		/** @brief Draws a reflection layer below its horizon, inside @p area of the view, with its @p texture moved by @p shift of its pixels */
 		void DrawReflection(RenderQueue& renderQueue, const Rectf& cullingRect, const Rectf& area, const TileMapLayer& layer, Texture* texture, Vector2f shift);
+		/** @brief Draws what is behind the sprite layer again in the colors of the 16-bit renderer of JJ2+, see @ref DitheringScope::BehindSprites */
+		void DrawBackgroundDither(RenderQueue& renderQueue, const Rectf& cullingRect);
 #else
 		/** @brief Turns the animated tiles of an x-ray layer into what they show outside the mask, see @ref LayerRendererType::XRay */
 		void ReduceXRayLayer(TileMapLayer& layer);

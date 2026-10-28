@@ -116,6 +116,60 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
+			{ "BackgroundDither", "",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	return _output;
+}
+)",
+				R"(uniform float2 uTargetSizeInv;
+
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	COLOR = float4(behind, 1.0);
+	return COLOR;
+}
+)" },
 			{ "BatchedShieldFire", "",
 				R"(#define BATCH_SIZE 585
 
@@ -627,6 +681,111 @@ VsOutput main(VsInput _input)
 				R"(uniform float4 uAmbientColor;
 uniform float uTime;
 
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureLighting : TEXUNIT1;
+uniform sampler2D uTextureBlurHalf : TEXUNIT2;
+uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
+
+static float2 vTexCoords;
+static float2 vViewSizeInv;
+static float2 vPixelPos;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float2 vViewSizeInv : TEXCOORD1;
+	float2 vPixelPos : TEXCOORD2;
+};
+
+float interleavedGradientNoise(float2 p)
+{
+	return frac(52.9829189 * frac(dot(p, float2(0.06711056, 0.00583715))));
+}
+
+float2 lightingJitterLowPower()
+{
+	float2 seed = vPixelPos + frac(uTime * 7.31) * 512.0;
+	float2 offset = float2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + float2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vViewSizeInv = _input.vViewSizeInv;
+	vPixelPos = _input.vPixelPos;
+	float4 blur1 = tex2D(uTextureBlurHalf, vTexCoords);
+	float4 blur2 = tex2D(uTextureBlurQuarter, vTexCoords);
+	float4 main = tex2D(uTexture, vTexCoords);
+	float4 light = tex2D(uTextureLighting, vTexCoords + lightingJitterLowPower());
+	float4 blur = (blur1 + blur2) * ((float4)0.5);
+	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
+	blur = float4(gray, gray, gray, blur.w);
+	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)(1.0 - light.x)));
+	COLOR.w = 1.0;
+	return COLOR;
+}
+)" },
+			{ "Combine", "DITHER",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float2 vViewSizeInv;
+static float2 vPixelPos;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float2 vViewSizeInv : TEXCOORD1;
+	float2 vPixelPos : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = ((float2)1.0) / spriteSize;
+	vPixelPos = aPosition * spriteSize;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vViewSizeInv = vViewSizeInv;
+	_output.vPixelPos = vPixelPos;
+	return _output;
+}
+)",
+				R"(uniform float4 uAmbientColor;
+uniform float uTime;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
 uniform sampler2D uTextureBlurHalf : TEXUNIT2;
@@ -753,6 +912,195 @@ VsOutput main(VsInput _input)
 }
 )",
 				R"(uniform float4 uAmbientColor;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureLighting : TEXUNIT1;
+uniform sampler2D uTextureBlurHalf : TEXUNIT2;
+uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
+uniform sampler2D uTextureNoise : TEXUNIT4;
+
+static float2 vTexCoords;
+static float2 vViewSizeInv;
+static float2 vLightingSeed;
+static float2 vDisplacementPos;
+static float2 vRaysPos;
+static float4 vWavePhases;
+static float4 vWaterLine;
+static float2 vConstants;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float2 vViewSizeInv : TEXCOORD1;
+	float2 vLightingSeed : TEXCOORD2;
+	float2 vDisplacementPos : TEXCOORD3;
+	float2 vRaysPos : TEXCOORD4;
+	float4 vWavePhases : TEXCOORD5;
+	float4 vWaterLine : TEXCOORD6;
+	float2 vConstants : TEXCOORD7;
+};
+
+float interleavedGradientNoise(float2 p)
+{
+	return frac(52.9829189 * frac(dot(p, float2(0.06711056, 0.00583715))));
+}
+
+float2 lightingJitterLowPower()
+{
+	float2 offset = float2(interleavedGradientNoise(vLightingSeed), interleavedGradientNoise(vLightingSeed + float2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
+}
+
+float sinCycles(float cycles)
+{
+	float v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vViewSizeInv = _input.vViewSizeInv;
+	vLightingSeed = _input.vLightingSeed;
+	vDisplacementPos = _input.vDisplacementPos;
+	vRaysPos = _input.vRaysPos;
+	vWavePhases = _input.vWavePhases;
+	vWaterLine = _input.vWaterLine;
+	vConstants = _input.vConstants;
+	float3 waterColor = float3(0.4, 0.6, 0.8);
+	float2 uvLocal = vTexCoords;
+	float waveHeight = dot(sinCycles(vWavePhases), float4(0.004, 0.008, 0.01, 0.001) * 0.4);
+	float belowWaterLine = vWaterLine.y - waveHeight;
+	float aaSlope = vConstants.y;
+	float isTexelBelow = clamp(belowWaterLine * aaSlope + 0.5, 0.0, 1.0);
+	float isTexelAbove = 1.0 - isTexelBelow;
+	float2 dis = (tex2D(uTextureNoise, vDisplacementPos).xy - ((float2)0.5)) * ((float2)0.01);
+	float2 uv = uvLocal + (float2(0.004 * sinCycles(vWaterLine.x), 0.0) + dis) * ((float2)isTexelBelow);
+	float4 main = tex2D(uTexture, uv);
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = tex2D(uTexture, float2(uv.x - aberration, uv.y)).x;
+	float blue = tex2D(uTexture, float2(uv.x + aberration, uv.y)).z;
+	main.xyz = lerp(main.xyz, waterColor * (0.4 + 1.2 * float3(red, main.y, blue)), ((float3)(isTexelBelow * 0.5)));
+	float rays = tex2D(uTextureNoise, vRaysPos).z * 1.1 - 0.25;
+	main.xyz += ((float3)(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6));
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * 2.8) * aaSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * (0.8 - 100.0 * waveHeight)) * aaSlope, 0.0, 1.0);
+	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
+	main.xyz = lerp(main.xyz, tex2D(uTexture, float2(uvLocal.x, vWaterLine.z - waveHeight)).xyz, ((float3)topColorBlendFac));
+	main.xyz += ((float3)(0.2 * isVeryNearTop));
+	float4 blur1 = tex2D(uTextureBlurHalf, uvLocal);
+	float4 blur2 = tex2D(uTextureBlurQuarter, uvLocal);
+	float4 light = tex2D(uTextureLighting, uvLocal + lightingJitterLowPower());
+	float4 blur = (blur1 + blur2) * ((float4)0.5);
+	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
+	blur = float4(gray, gray, gray, blur.w);
+	float darknessStrength = 1.0 - light.x;
+	darknessStrength = min(1.0, darknessStrength + isTexelAbove * vWaterLine.w);
+	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * vConstants.x, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	COLOR.w = 1.0;
+	return COLOR;
+}
+)" },
+			{ "CombineWithWater", "DITHER",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+uniform float4 uAmbientColor;
+uniform float uTime;
+uniform float2 uCameraPos;
+uniform float uWaterLevel;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float2 vViewSizeInv;
+static float2 vLightingSeed;
+static float2 vDisplacementPos;
+static float2 vRaysPos;
+static float4 vWavePhases;
+static float4 vWaterLine;
+static float2 vConstants;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float2 vViewSizeInv : TEXCOORD1;
+	float2 vLightingSeed : TEXCOORD2;
+	float2 vDisplacementPos : TEXCOORD3;
+	float2 vRaysPos : TEXCOORD4;
+	float4 vWavePhases : TEXCOORD5;
+	float4 vWaterLine : TEXCOORD6;
+	float2 vConstants : TEXCOORD7;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = ((float2)1.0) / spriteSize;
+	float2 uvLocal = vTexCoords;
+	float2 uvWorldCenter = uCameraPos * vViewSizeInv;
+	const float invTau = 0.15915494;
+	vLightingSeed = aPosition * spriteSize + frac(uTime * 7.31) * 512.0;
+	float2 displacementBase = uvWorldCenter * 0.1 + (uTime * 0.4 - (2.0) * floor((uTime * 0.4) / (2.0)));
+	vDisplacementPos = uvLocal * 0.1 + frac(displacementBase);
+	float raysLinear = uvLocal.x * 1.4 + uvLocal.x * spriteSize.x * (6.0 / 720.0) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
+	float raysBase = uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 - 5.0;
+	vRaysPos = float2(raysLinear * 0.125 + frac(raysBase * 0.125), frac((uTime * 5.0 + uvWorldCenter.y) * 0.125));
+	float4 waveScale = float4(60.0, 20.0, 35.0, 70.0) * invTau;
+	float4 waveBase = float4((uvWorldCenter.x - uTime) * waveScale.x + 0.25, (uvWorldCenter.x - 2.0 * uTime) * waveScale.y + 0.25, (uvWorldCenter.x + 2.0 * uTime) * waveScale.z, (uvWorldCenter.x + 4.0 * uTime) * waveScale.w + 0.25);
+	vWavePhases = uvLocal.x * waveScale + frac(waveBase);
+	float rippleBase = (uTime * 16.0 + uvWorldCenter.y * 20.0) * invTau;
+	vWaterLine = float4(uvLocal.y * 20.0 * invTau + frac(rippleBase), uvLocal.y - uWaterLevel, (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 + vViewSizeInv.y, max(0.4 - uWaterLevel, 0.0));
+	vConstants = float2(1.0 / sqrt(max(uAmbientColor.w, 0.35)), 0.70710678 * spriteSize.y);
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vViewSizeInv = vViewSizeInv;
+	_output.vLightingSeed = vLightingSeed;
+	_output.vDisplacementPos = vDisplacementPos;
+	_output.vRaysPos = vRaysPos;
+	_output.vWavePhases = vWavePhases;
+	_output.vWaterLine = vWaterLine;
+	_output.vConstants = vConstants;
+	return _output;
+}
+)",
+				R"(uniform float4 uAmbientColor;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -902,6 +1250,137 @@ VsOutput main(VsInput _input)
 uniform float uTime;
 uniform float2 uCameraPos;
 uniform float uWaterLevel;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureLighting : TEXUNIT1;
+uniform sampler2D uTextureBlurHalf : TEXUNIT2;
+uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
+
+static float2 vTexCoords;
+static float2 vViewSizeInv;
+static float2 vPixelPos;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float2 vViewSizeInv : TEXCOORD1;
+	float2 vPixelPos : TEXCOORD2;
+};
+
+float interleavedGradientNoise(float2 p)
+{
+	return frac(52.9829189 * frac(dot(p, float2(0.06711056, 0.00583715))));
+}
+
+float2 lightingJitterLowPower()
+{
+	float2 seed = vPixelPos + frac(uTime * 7.31) * 512.0;
+	float2 offset = float2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + float2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
+}
+
+float sinCycles(float cycles)
+{
+	float v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vViewSizeInv = _input.vViewSizeInv;
+	vPixelPos = _input.vPixelPos;
+	float3 waterColor = float3(0.4, 0.6, 0.8);
+	float2 uvLocal = vTexCoords;
+	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
+	float2 uvWorld = uvLocal + uvWorldCenter;
+	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
+	float isTexelAbove = 1.0 - isTexelBelow;
+	float2 uv = uvLocal + float2(0.008 * sinCycles((uTime * 16.0 + uvWorld.y * 20.0) * 0.15915494) * isTexelBelow, 0.0);
+	float4 main = tex2D(uTexture, uv);
+	float topDist = abs(uvLocal.y - uWaterLevel);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
+	main.xyz = lerp(main.xyz, waterColor, ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
+	float4 blur1 = tex2D(uTextureBlurHalf, uvLocal);
+	float4 blur2 = tex2D(uTextureBlurQuarter, uvLocal);
+	float4 light = tex2D(uTextureLighting, uvLocal + lightingJitterLowPower());
+	float4 blur = (blur1 + blur2) * ((float4)0.5);
+	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
+	blur = float4(gray, gray, gray, blur.w);
+	float darknessStrength = 1.0 - light.x;
+	if (uWaterLevel < 0.4) {
+		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
+		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
+	}
+	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	COLOR.w = 1.0;
+	return COLOR;
+}
+)" },
+			{ "CombineWithWaterLow", "DITHER",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float2 vViewSizeInv;
+static float2 vPixelPos;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float2 vViewSizeInv : TEXCOORD1;
+	float2 vPixelPos : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = ((float2)1.0) / spriteSize;
+	vPixelPos = aPosition * spriteSize;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vViewSizeInv = vViewSizeInv;
+	_output.vPixelPos = vPixelPos;
+	return _output;
+}
+)",
+				R"(uniform float4 uAmbientColor;
+uniform float uTime;
+uniform float2 uCameraPos;
+uniform float uWaterLevel;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -5596,6 +6075,7 @@ uniform float4 uHorizonOffset;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
+uniform float2 uBlendMode;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -5653,6 +6133,7 @@ uniform float4 uHorizonOffset;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
+uniform float2 uBlendMode;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -5671,11 +6152,151 @@ struct PsInput
 	float4 vWarpTerms : TEXCOORD2;
 };
 
-float keyedOpacity()
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += ((float3)(l - blendLuminosity(c)));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - ((float3)lo)) * s / (hi - lo) : ((float3)0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = ((float3)1.0) - 2.0 * (((float3)1.0) - s) * (((float3)1.0) - d);
+	return lerp(multiply, screen, step(((float3)0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return ((float3)1.0) - (((float3)1.0) - s) * (((float3)1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (((float3)1.0) - 2.0 * s) * d * (((float3)1.0) - d);
+													float3 lightD = lerp(((16.0 * d - ((float3)12.0)) * d + ((float3)4.0)) * d, sqrt(d), step(((float3)0.25), d));
+													float3 light = d + (2.0 * s - ((float3)1.0)) * (lightD - d);
+													return lerp(dark, light, step(((float3)0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(((float3)1.0) - s, ((float3)0.0001)), ((float3)1.0));
+														} else {
+															if (mode < 17.5) {
+																return ((float3)1.0) - min((((float3)1.0) - d) / max(s, ((float3)0.0001)), ((float3)1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel_)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = frac(sin(dot(floor(pixel_), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel_)
+{
+	pixel_ = floor(pixel_);
+	float2 coarsePixel = floor(pixel_ * 0.5);
+	float coarse = frac(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = frac(pixel_.x * 0.5 + pixel_.y * pixel_.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel_)
+{
+	a = blendModeAlpha(mode.x, a, pixel_);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel_) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color)
 {
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - uKeyColor.xyz);
-	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+	return float4(color, uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5)));
 }
 
 float4 main(PsInput _input) : COLOR
@@ -5696,7 +6317,7 @@ float4 main(PsInput _input) : COLOR
 	float horizonOpacity = warp.z;
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
 	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * (1.0 - uHorizonOffset.z))));
-	COLOR.w = keyedOpacity();
+	COLOR = keyedColor(COLOR.xyz);
 	return COLOR;
 }
 )" },
@@ -5895,6 +6516,7 @@ uniform float4 uHorizonOffset;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
+uniform float2 uBlendMode;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -5952,6 +6574,7 @@ uniform float4 uHorizonOffset;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
+uniform float2 uBlendMode;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -5970,11 +6593,151 @@ struct PsInput
 	float4 vWarpTerms : TEXCOORD2;
 };
 
-float keyedOpacity()
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += ((float3)(l - blendLuminosity(c)));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - ((float3)lo)) * s / (hi - lo) : ((float3)0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = ((float3)1.0) - 2.0 * (((float3)1.0) - s) * (((float3)1.0) - d);
+	return lerp(multiply, screen, step(((float3)0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return ((float3)1.0) - (((float3)1.0) - s) * (((float3)1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (((float3)1.0) - 2.0 * s) * d * (((float3)1.0) - d);
+													float3 lightD = lerp(((16.0 * d - ((float3)12.0)) * d + ((float3)4.0)) * d, sqrt(d), step(((float3)0.25), d));
+													float3 light = d + (2.0 * s - ((float3)1.0)) * (lightD - d);
+													return lerp(dark, light, step(((float3)0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(((float3)1.0) - s, ((float3)0.0001)), ((float3)1.0));
+														} else {
+															if (mode < 17.5) {
+																return ((float3)1.0) - min((((float3)1.0) - d) / max(s, ((float3)0.0001)), ((float3)1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel_)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = frac(sin(dot(floor(pixel_), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel_)
+{
+	pixel_ = floor(pixel_);
+	float2 coarsePixel = floor(pixel_ * 0.5);
+	float coarse = frac(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = frac(pixel_.x * 0.5 + pixel_.y * pixel_.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel_)
+{
+	a = blendModeAlpha(mode.x, a, pixel_);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel_) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color)
 {
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - uKeyColor.xyz);
-	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+	return float4(color, uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5)));
 }
 
 float4 main(PsInput _input) : COLOR
@@ -5993,7 +6756,7 @@ float4 main(PsInput _input) : COLOR
 	float horizonOpacity = warp.z;
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
 	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * (1.0 - uHorizonOffset.z))));
-	COLOR.w = keyedOpacity();
+	COLOR = keyedColor(COLOR.xyz);
 	return COLOR;
 }
 )" },
@@ -6209,6 +6972,7 @@ uniform float4 uCylinder;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
+uniform float2 uBlendMode;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -6225,11 +6989,151 @@ struct PsInput
 	float4 vColor : TEXCOORD1;
 };
 
-float keyedOpacity()
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += ((float3)(l - blendLuminosity(c)));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - ((float3)lo)) * s / (hi - lo) : ((float3)0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = ((float3)1.0) - 2.0 * (((float3)1.0) - s) * (((float3)1.0) - d);
+	return lerp(multiply, screen, step(((float3)0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return ((float3)1.0) - (((float3)1.0) - s) * (((float3)1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (((float3)1.0) - 2.0 * s) * d * (((float3)1.0) - d);
+													float3 lightD = lerp(((16.0 * d - ((float3)12.0)) * d + ((float3)4.0)) * d, sqrt(d), step(((float3)0.25), d));
+													float3 light = d + (2.0 * s - ((float3)1.0)) * (lightD - d);
+													return lerp(dark, light, step(((float3)0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(((float3)1.0) - s, ((float3)0.0001)), ((float3)1.0));
+														} else {
+															if (mode < 17.5) {
+																return ((float3)1.0) - min((((float3)1.0) - d) / max(s, ((float3)0.0001)), ((float3)1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel_)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = frac(sin(dot(floor(pixel_), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel_)
+{
+	pixel_ = floor(pixel_);
+	float2 coarsePixel = floor(pixel_ * 0.5);
+	float coarse = frac(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = frac(pixel_.x * 0.5 + pixel_.y * pixel_.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel_)
+{
+	a = blendModeAlpha(mode.x, a, pixel_);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel_) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color)
 {
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - uKeyColor.xyz);
-	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+	return float4(color, uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5)));
 }
 
 float4 main(PsInput _input) : COLOR
@@ -6249,7 +7153,7 @@ float4 main(PsInput _input) : COLOR
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = tex2D(uTexture, texturePos);
 	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fade * uCylinder.z)));
-	COLOR.w = keyedOpacity();
+	COLOR = keyedColor(COLOR.xyz);
 	return COLOR;
 }
 )" },
@@ -6583,6 +7487,7 @@ uniform float4 uTunnel;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
+uniform float2 uBlendMode;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -6599,11 +7504,151 @@ struct PsInput
 	float4 vColor : TEXCOORD1;
 };
 
-float keyedOpacity()
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += ((float3)(l - blendLuminosity(c)));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - ((float3)lo)) * s / (hi - lo) : ((float3)0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = ((float3)1.0) - 2.0 * (((float3)1.0) - s) * (((float3)1.0) - d);
+	return lerp(multiply, screen, step(((float3)0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return ((float3)1.0) - (((float3)1.0) - s) * (((float3)1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (((float3)1.0) - 2.0 * s) * d * (((float3)1.0) - d);
+													float3 lightD = lerp(((16.0 * d - ((float3)12.0)) * d + ((float3)4.0)) * d, sqrt(d), step(((float3)0.25), d));
+													float3 light = d + (2.0 * s - ((float3)1.0)) * (lightD - d);
+													return lerp(dark, light, step(((float3)0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(((float3)1.0) - s, ((float3)0.0001)), ((float3)1.0));
+														} else {
+															if (mode < 17.5) {
+																return ((float3)1.0) - min((((float3)1.0) - d) / max(s, ((float3)0.0001)), ((float3)1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel_)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = frac(sin(dot(floor(pixel_), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel_)
+{
+	pixel_ = floor(pixel_);
+	float2 coarsePixel = floor(pixel_ * 0.5);
+	float coarse = frac(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = frac(pixel_.x * 0.5 + pixel_.y * pixel_.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel_)
+{
+	a = blendModeAlpha(mode.x, a, pixel_);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel_) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color)
 {
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - uKeyColor.xyz);
-	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+	return float4(color, uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5)));
 }
 
 float3 legacyTunnel(float2 uv)
@@ -6631,7 +7676,7 @@ float4 main(PsInput _input) : COLOR
 	float horizonOpacity = tunnel.z;
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
 	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * uTunnel.z)));
-	COLOR.w = keyedOpacity();
+	COLOR = keyedColor(COLOR.xyz);
 	return COLOR;
 }
 )" },
@@ -6861,6 +7906,7 @@ uniform float4 uTunnel;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
+uniform float2 uBlendMode;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -6877,11 +7923,151 @@ struct PsInput
 	float4 vColor : TEXCOORD1;
 };
 
-float keyedOpacity()
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += ((float3)(l - blendLuminosity(c)));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - ((float3)lo)) * s / (hi - lo) : ((float3)0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = ((float3)1.0) - 2.0 * (((float3)1.0) - s) * (((float3)1.0) - d);
+	return lerp(multiply, screen, step(((float3)0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return ((float3)1.0) - (((float3)1.0) - s) * (((float3)1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (((float3)1.0) - 2.0 * s) * d * (((float3)1.0) - d);
+													float3 lightD = lerp(((16.0 * d - ((float3)12.0)) * d + ((float3)4.0)) * d, sqrt(d), step(((float3)0.25), d));
+													float3 light = d + (2.0 * s - ((float3)1.0)) * (lightD - d);
+													return lerp(dark, light, step(((float3)0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(((float3)1.0) - s, ((float3)0.0001)), ((float3)1.0));
+														} else {
+															if (mode < 17.5) {
+																return ((float3)1.0) - min((((float3)1.0) - d) / max(s, ((float3)0.0001)), ((float3)1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel_)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = frac(sin(dot(floor(pixel_), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel_)
+{
+	pixel_ = floor(pixel_);
+	float2 coarsePixel = floor(pixel_ * 0.5);
+	float coarse = frac(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = frac(pixel_.x * 0.5 + pixel_.y * pixel_.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel_)
+{
+	a = blendModeAlpha(mode.x, a, pixel_);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel_) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color)
 {
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - uKeyColor.xyz);
-	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+	return float4(color, uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5)));
 }
 
 float3 plusTunnel(float2 uv)
@@ -6908,7 +8094,7 @@ float4 main(PsInput _input) : COLOR
 	float horizonOpacity = tunnel.z;
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
 	COLOR = lerp(texColor, horizonColorWithStars, ((float4)(horizonOpacity * uTunnel.z)));
-	COLOR.w = keyedOpacity();
+	COLOR = keyedColor(COLOR.xyz);
 	return COLOR;
 }
 )" },
@@ -6982,7 +8168,83 @@ float4 main(PsInput _input) : COLOR
 	float2 moved = floor(uWave.xy * float2(cos(6.28318530718 * (pos.y * uWave.z + uWavePhase.x)), sin(6.28318530718 * (pos.x * uWave.w + uWavePhase.y))));
 	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
 	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
-	COLOR = float4(tex2D(uTexture, texturePos).xyz * opacity, opacity);
+	float3 color = tex2D(uTexture, texturePos).xyz;
+	COLOR = float4(color * opacity, opacity);
+	return COLOR;
+}
+)" },
+			{ "TexturedBackgroundWave", "DITHER",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(uniform float2 uViewSize;
+uniform float2 uShift;
+uniform float4 uWave;
+uniform float2 uWavePhase;
+
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float opacity = COLOR.w;
+	float2 pos = (floor(uShift + vTexCoords * uViewSize) - (256.0) * floor((floor(uShift + vTexCoords * uViewSize)) / (256.0)));
+	float2 moved = floor(uWave.xy * float2(cos(6.28318530718 * (pos.y * uWave.z + uWavePhase.x)), sin(6.28318530718 * (pos.x * uWave.w + uWavePhase.y))));
+	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
+	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
+	float3 color = tex2D(uTexture, texturePos).xyz;
+	COLOR = float4(color * opacity, opacity);
 	return COLOR;
 }
 )" },
@@ -7035,6 +8297,7 @@ uniform float2 uWavePhase;
 uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float uOpacity;
+uniform float2 uBlendMode;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -7051,11 +8314,151 @@ struct PsInput
 	float4 vColor : TEXCOORD1;
 };
 
-float keyedOpacity()
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += ((float3)(l - blendLuminosity(c)));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - ((float3)lo)) * s / (hi - lo) : ((float3)0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = ((float3)1.0) - 2.0 * (((float3)1.0) - s) * (((float3)1.0) - d);
+	return lerp(multiply, screen, step(((float3)0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return ((float3)1.0) - (((float3)1.0) - s) * (((float3)1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (((float3)1.0) - 2.0 * s) * d * (((float3)1.0) - d);
+													float3 lightD = lerp(((16.0 * d - ((float3)12.0)) * d + ((float3)4.0)) * d, sqrt(d), step(((float3)0.25), d));
+													float3 light = d + (2.0 * s - ((float3)1.0)) * (lightD - d);
+													return lerp(dark, light, step(((float3)0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(((float3)1.0) - s, ((float3)0.0001)), ((float3)1.0));
+														} else {
+															if (mode < 17.5) {
+																return ((float3)1.0) - min((((float3)1.0) - d) / max(s, ((float3)0.0001)), ((float3)1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel_)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = frac(sin(dot(floor(pixel_), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel_)
+{
+	pixel_ = floor(pixel_);
+	float2 coarsePixel = floor(pixel_ * 0.5);
+	float coarse = frac(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = frac(pixel_.x * 0.5 + pixel_.y * pixel_.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel_)
+{
+	a = blendModeAlpha(mode.x, a, pixel_);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel_) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
+float4 keyedColor(float3 color)
 {
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	float3 difference = abs(behind - uKeyColor.xyz);
-	return uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5));
+	return float4(color, uOpacity * max(step(max(max(difference.x, difference.y), difference.z), uKeyColor.w), step(uKeyColor.w, -0.5)));
 }
 
 float4 main(PsInput _input) : COLOR
@@ -7069,7 +8472,8 @@ float4 main(PsInput _input) : COLOR
 	float2 moved = floor(uWave.xy * float2(cos(6.28318530718 * (pos.y * uWave.z + uWavePhase.x)), sin(6.28318530718 * (pos.x * uWave.w + uWavePhase.y))));
 	float2 texel = (pos + moved - (256.0) * floor((pos + moved) / (256.0)));
 	float2 texturePos = float2((texel.x + 0.5) / 256.0, 1.0 - (texel.y + 0.5) / 256.0);
-	COLOR = float4(tex2D(uTexture, texturePos).xyz, keyedOpacity());
+	float3 color = tex2D(uTexture, texturePos).xyz;
+	COLOR = keyedColor(color);
 	return COLOR;
 }
 )" },
@@ -7431,6 +8835,13 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
+uniform float2 uBlendMode;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -7449,6 +8860,143 @@ struct PsInput
 	float vPaletteOffset : TEXCOORD2;
 };
 
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += ((float3)(l - blendLuminosity(c)));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - ((float3)lo)) * s / (hi - lo) : ((float3)0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = ((float3)1.0) - 2.0 * (((float3)1.0) - s) * (((float3)1.0) - d);
+	return lerp(multiply, screen, step(((float3)0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return ((float3)1.0) - (((float3)1.0) - s) * (((float3)1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (((float3)1.0) - 2.0 * s) * d * (((float3)1.0) - d);
+													float3 lightD = lerp(((16.0 * d - ((float3)12.0)) * d + ((float3)4.0)) * d, sqrt(d), step(((float3)0.25), d));
+													float3 light = d + (2.0 * s - ((float3)1.0)) * (lightD - d);
+													return lerp(dark, light, step(((float3)0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(((float3)1.0) - s, ((float3)0.0001)), ((float3)1.0));
+														} else {
+															if (mode < 17.5) {
+																return ((float3)1.0) - min((((float3)1.0) - d) / max(s, ((float3)0.0001)), ((float3)1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel_)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = frac(sin(dot(floor(pixel_), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel_)
+{
+	pixel_ = floor(pixel_);
+	float2 coarsePixel = floor(pixel_ * 0.5);
+	float coarse = frac(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = frac(pixel_.x * 0.5 + pixel_.y * pixel_.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel_)
+{
+	a = blendModeAlpha(mode.x, a, pixel_);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel_) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
 float4 main(PsInput _input) : COLOR
 {
 	gl_FragCoord = _input._fragCoord;
@@ -7458,9 +9006,14 @@ float4 main(PsInput _input) : COLOR
 	float4 src = tex2D(uTexture, vTexCoords);
 	float4 tile = src;
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
-	float3 difference = abs(behind - uKeyColor.xyz);
-	float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
-	COLOR = float4(tile.xyz * tile.w, keyed) * vColor;
+	if (uBlendMode.x > 0.5) {
+		float4 color = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, color.xyz, color.w, behind, gl_FragCoord.xy);
+	} else {
+		float3 difference = abs(behind - uKeyColor.xyz);
+		float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
+		COLOR = float4(tile.xyz * tile.w, keyed) * vColor;
+	}
 	return COLOR;
 }
 )" },
@@ -7518,6 +9071,13 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
+uniform float2 uBlendMode;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
@@ -7537,6 +9097,143 @@ struct PsInput
 	float vPaletteOffset : TEXCOORD2;
 };
 
+float blendLuminosity(float3 c)
+{
+	return dot(c, float3(0.3, 0.59, 0.11));
+}
+
+float3 blendSetLuminosity(float3 c, float l)
+{
+	c += ((float3)(l - blendLuminosity(c)));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	if (lo < 0.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = ((float3)lum) + (c - ((float3)lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(float3 c)
+{
+	return max(max(c.x, c.y), c.z) - min(min(c.x, c.y), c.z);
+}
+
+float3 blendSetSaturation(float3 c, float s)
+{
+	float lo = min(min(c.x, c.y), c.z);
+	float hi = max(max(c.x, c.y), c.z);
+	return hi > lo ? (c - ((float3)lo)) * s / (hi - lo) : ((float3)0.0);
+}
+
+float3 blendHardLight(float3 s, float3 d)
+{
+	float3 multiply = 2.0 * s * d;
+	float3 screen = ((float3)1.0) - 2.0 * (((float3)1.0) - s) * (((float3)1.0) - d);
+	return lerp(multiply, screen, step(((float3)0.5), s));
+}
+
+float3 blendModeColor(float mode, float3 s, float3 d)
+{
+	if (mode < 3.5) {
+		return ((float3)1.0) - (((float3)1.0) - s) * (((float3)1.0) - d);
+	} else {
+		if (mode < 4.5) {
+			return s * d;
+		} else {
+			if (mode < 5.5) {
+				return min(s, d);
+			} else {
+				if (mode < 6.5) {
+					return max(s, d);
+				} else {
+					if (mode < 7.5) {
+						return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+					} else {
+						if (mode < 8.5) {
+							return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+						} else {
+							if (mode < 9.5) {
+								return blendSetLuminosity(s, blendLuminosity(d));
+							} else {
+								if (mode < 10.5) {
+									return blendSetLuminosity(d, blendLuminosity(s));
+								} else {
+									if (mode < 11.5) {
+										return s;
+									} else {
+										if (mode < 12.5) {
+											return blendHardLight(d, s);
+										} else {
+											if (mode < 13.5) {
+												return blendHardLight(s, d);
+											} else {
+												if (mode < 14.5) {
+													float3 dark = d - (((float3)1.0) - 2.0 * s) * d * (((float3)1.0) - d);
+													float3 lightD = lerp(((16.0 * d - ((float3)12.0)) * d + ((float3)4.0)) * d, sqrt(d), step(((float3)0.25), d));
+													float3 light = d + (2.0 * s - ((float3)1.0)) * (lightD - d);
+													return lerp(dark, light, step(((float3)0.5), s));
+												} else {
+													if (mode < 15.5) {
+														return abs(s - d);
+													} else {
+														if (mode < 16.5) {
+															return min(d / max(((float3)1.0) - s, ((float3)0.0001)), ((float3)1.0));
+														} else {
+															if (mode < 17.5) {
+																return ((float3)1.0) - min((((float3)1.0) - d) / max(s, ((float3)0.0001)), ((float3)1.0));
+															} else {
+																return s + d - 2.0 * s * d;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, float2 pixel_)
+{
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = frac(sin(dot(floor(pixel_), float2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(float2 pixel_)
+{
+	pixel_ = floor(pixel_);
+	float2 coarsePixel = floor(pixel_ * 0.5);
+	float coarse = frac(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = frac(pixel_.x * 0.5 + pixel_.y * pixel_.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+float4 blendModeResult(float2 mode, float3 s, float a, float3 d, float2 pixel_)
+{
+	a = blendModeAlpha(mode.x, a, pixel_);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel_) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return float4(s * a, a);
+	}
+	return float4(blendModeColor(mode.x, s, d), a);
+}
+
 float4 main(PsInput _input) : COLOR
 {
 	gl_FragCoord = _input._fragCoord;
@@ -7550,9 +9247,14 @@ float4 main(PsInput _input) : COLOR
 	float4 paletteColor = tex2D(uTexturePalette, float2(palX, palY));
 	float4 tile = float4(paletteColor.xyz, paletteColor.w * src.w);
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
-	float3 difference = abs(behind - uKeyColor.xyz);
-	float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
-	COLOR = float4(tile.xyz * tile.w, keyed) * vColor;
+	if (uBlendMode.x > 0.5) {
+		float4 color = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, color.xyz, color.w, behind, gl_FragCoord.xy);
+	} else {
+		float3 difference = abs(behind - uKeyColor.xyz);
+		float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
+		COLOR = float4(tile.xyz * tile.w, keyed) * vColor;
+	}
 	return COLOR;
 }
 )" },

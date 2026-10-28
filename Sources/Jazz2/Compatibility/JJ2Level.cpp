@@ -475,8 +475,9 @@ namespace Jazz2::Compatibility
 		// Weather particles type (Snow, Flower, Rain, Leaf)
 		std::uint8_t snowType = block.ReadByte();
 
+		// The intensity is kept even without weather, scripts may start it later
+		_weatherIntensity = snowIntensity;
 		if (isSnowing) {
-			_weatherIntensity = snowIntensity;
 			_weatherType = (WeatherType)(snowType + 1);
 			if (_weatherType != WeatherType::None && isSnowingOutdoorsOnly) {
 				_weatherType |= WeatherType::OutdoorsOnly;
@@ -525,12 +526,12 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// Recolorable sprites, kept for the script (see Formats::SpriteRecolorsChunk); the list was expanded in MLLE-Include-1.5
+		// Recolorable sprites, kept for the script (see Formats::ScriptDataChunk); the list was expanded in MLLE-Include-1.5
 		std::int32_t recolorableSpriteListSize = (version >= 0x105 ? 20 : 11);
 		for (std::int32_t i = 0; i < recolorableSpriteListSize; ++i) {
 			if (block.ReadBool()) {
 				std::size_t offset = _mlleSpriteRecolors.size();
-				_mlleSpriteRecolors.resize(offset + Formats::SpriteRecolorsChunk::RecordSize);
+				_mlleSpriteRecolors.resize(offset + Formats::ScriptDataChunk::RecolorRecordSize);
 				_mlleSpriteRecolors[offset] = std::uint8_t(i);
 				block.ReadRawBytes(&_mlleSpriteRecolors[offset + 1], 256);
 			}
@@ -635,7 +636,7 @@ namespace Jazz2::Compatibility
 					// A texture of JJ2+ by its number, or an image of its own, 256x256 palette indices, which follow
 					layer.TextureSource = (std::int8_t)block.ReadByte();
 					if (layer.TextureSource < 0) {
-						constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+						constexpr std::int32_t TextureBytes = Formats::LayerPropertiesChunk::TextureSize * Formats::LayerPropertiesChunk::TextureSize;
 						layer.TextureImage = std::make_unique<std::uint8_t[]>(TextureBytes);
 						block.ReadRawBytes(layer.TextureImage.get(), TextureBytes);
 					}
@@ -675,7 +676,7 @@ namespace Jazz2::Compatibility
 				}
 			}
 
-			// Weapons were added in MLLE-Include-1.5(w), kept for the script (see Formats::CustomWeaponsChunk)
+			// Weapons were added in MLLE-Include-1.5(w), kept for the script (see Formats::ScriptDataChunk)
 			if (version >= 0x105) {
 				SmallVector<std::uint8_t, 0> weapons;
 				auto write = [&weapons](const void* value, std::size_t size) {
@@ -684,7 +685,7 @@ namespace Jazz2::Compatibility
 				// The argument of DefaultWeaponHook was added in MLLE-Include-1.6(w)
 				std::int16_t hookArgument = (version >= 0x106 ? block.ReadInt16() : -1);
 				write(&hookArgument, sizeof(hookArgument));
-				for (std::int32_t weaponId = 0; weaponId < Formats::CustomWeaponsChunk::WeaponCount; weaponId++) {
+				for (std::int32_t weaponId = 0; weaponId < Formats::ScriptDataChunk::WeaponCount; weaponId++) {
 					std::uint8_t customWeapon = (block.ReadBool() ? 1 : 0);
 					std::int32_t maximum = block.ReadInt32();
 					write(&customWeapon, 1);
@@ -1086,47 +1087,42 @@ namespace Jazz2::Compatibility
 		}
 
 		writer.WriteLayerCount(layerCount);
-		// What scripts know the layers by, in the order they are written
-		SmallVector<StringView, JJ2LayerCount> layerNames;
-		SmallVector<std::uint8_t, JJ2LayerCount> layerNumbers;
+		// What the records have no room for, by the index of the layer in the file - what scripts know the layers by, how the
+		// sprite layer is drawn, the parameters and the texture of a textured layer, how a layer is blended
+		SmallVector<Formats::LayerPropertiesChunk::Entry, JJ2LayerCount> layerProperties;
 
 		// The preview needs the converted layers whole
 		const bool makePreview = bool(tilesetLookup);
 		SmallVector<Formats::LevelPreview::RecordSource::Layer, JJ2LayerCount> previewLayers;
 		SmallVector<SmallVector<Formats::TileRecord, 0>, JJ2LayerCount> previewTiles;
 
-		SmallVector<Formats::TexturedLayerChunk::Entry, JJ2LayerCount> texturedLayers;
-		SmallVector<std::uint8_t, 0> spriteLayerChunkData;
 		std::int32_t writtenLayers = 0;
 
-		SmallVector<Formats::TileRecord, 0> layerRow;
+		// In the order they're drawn, from the front, so the editor lists them so - the layers of the original keep their numbers
+		// wherever they are (see LayerRecord::OriginalNumber), which is what the scripts know them by
+		SmallVector<std::int32_t, JJ2LayerCount * 2> writeOrder;
 		for (std::int32_t i = 0; i < (std::int32_t)_layers.size(); i++) {
+			writeOrder.push_back(i);
+		}
+		std::stable_sort(writeOrder.begin(), writeOrder.end(), [this](std::int32_t a, std::int32_t b) {
+			return (_layers[a].Depth < _layers[b].Depth);
+		});
+
+		SmallVector<Formats::TileRecord, 0> layerRow;
+		for (std::int32_t i : writeOrder) {
 			auto& layer = _layers[i];
 			if (!isWritten(layer)) {
 				continue;
 			}
 
-			bool isSprite = (i == 3);
 			bool hasTiles = (layer.Used && layer.Tiles != nullptr);
 
 			Formats::LayerRecord record;
 			// The texture of its own of a textured layer, empty if its tiles are
 			SmallVector<std::uint8_t, 0> texture;
 			MakeLayerRecord(i, record, texture, textureLookup, _hasMlleData || _hasScript);
-			layerNames.push_back(layer.Name);
-			layerNumbers.push_back(record.OriginalNumber);
-			if (isSprite) {
-				// How the sprite layer is drawn isn't in its record, it goes into a chunk, see Formats::SpriteLayerChunk - none
-				// for one drawn as ordinary tiles
-				Formats::SpriteLayerChunk::Write(record, spriteLayerChunkData);
-			}
-
 			writer.WriteLayerHeader(record);
-			// The parameters the record has no room for go into a chunk, by the index of the layer in the file, and the texture too
-			Formats::TexturedLayerChunk::Entry& texturedLayer = texturedLayers.emplace_back();
-			texturedLayer.Layer = std::uint32_t(writtenLayers);
-			texturedLayer.Params = record.Textured;
-			texturedLayer.Texture = Death::move(texture);
+			layerProperties.push_back(Formats::LayerPropertiesChunk::Entry::FromRecord(std::uint32_t(writtenLayers), record, layer.Name, texture));
 			writtenLayers++;
 
 			SmallVector<Formats::TileRecord, 0>* previewLayerTiles = nullptr;
@@ -1185,28 +1181,11 @@ namespace Jazz2::Compatibility
 		writer.WriteOffGridEvents(offGridEvents);
 
 		SmallVector<Formats::ChunkRecord, 2> chunks;
-		Formats::ChunkRecord texturedLayersChunk;
-		texturedLayersChunk.Tag = Formats::TexturedLayerChunk::Tag;
-		Formats::TexturedLayerChunk::Write(texturedLayers, texturedLayersChunk.Data);
-		if (!texturedLayersChunk.Data.empty()) {
-			chunks.push_back(Death::move(texturedLayersChunk));
-		}
-		if (!spriteLayerChunkData.empty()) {
-			Formats::ChunkRecord& spriteLayerChunk = chunks.emplace_back();
-			spriteLayerChunk.Tag = Formats::SpriteLayerChunk::Tag;
-			spriteLayerChunk.Data = Death::move(spriteLayerChunkData);
-		}
-		Formats::ChunkRecord layerNamesChunk;
-		layerNamesChunk.Tag = Formats::LayerNamesChunk::Tag;
-		Formats::LayerNamesChunk::Write(layerNames, layerNamesChunk.Data);
-		if (!layerNamesChunk.Data.empty()) {
-			chunks.push_back(Death::move(layerNamesChunk));
-		}
-		Formats::ChunkRecord layerNumbersChunk;
-		layerNumbersChunk.Tag = Formats::LayerNumbersChunk::Tag;
-		Formats::LayerNumbersChunk::Write(layerNumbers, layerNumbersChunk.Data);
-		if (!layerNumbersChunk.Data.empty()) {
-			chunks.push_back(Death::move(layerNumbersChunk));
+		Formats::ChunkRecord layerPropertiesChunk;
+		layerPropertiesChunk.Tag = Formats::LayerPropertiesChunk::Tag;
+		Formats::LayerPropertiesChunk::Write(layerProperties, layerPropertiesChunk.Data);
+		if (!layerPropertiesChunk.Data.empty()) {
+			chunks.push_back(Death::move(layerPropertiesChunk));
 		}
 		if (_hasScript) {
 			// What the script reads by jjHelpStrings, the texts above have lost the characters of the formatting
@@ -1214,23 +1193,15 @@ namespace Jazz2::Compatibility
 			for (std::int32_t i = 0; i < TextEventStringsCount; i++) {
 				scriptTexts[i] = _textEventStrings[i];
 			}
-			Formats::ChunkRecord scriptTextsChunk;
-			scriptTextsChunk.Tag = Formats::ScriptTextsChunk::Tag;
-			Formats::ScriptTextsChunk::Write(scriptTexts, scriptTextsChunk.Data);
-			if (!scriptTextsChunk.Data.empty()) {
-				chunks.push_back(Death::move(scriptTextsChunk));
-			}
-			if (!_mlleWeapons.empty()) {
-				Formats::ChunkRecord weaponsChunk;
-				weaponsChunk.Tag = Formats::CustomWeaponsChunk::Tag;
-				weaponsChunk.Data.append(_mlleWeapons.begin(), _mlleWeapons.end());
-				chunks.push_back(Death::move(weaponsChunk));
-			}
-			if (!_mlleSpriteRecolors.empty()) {
-				Formats::ChunkRecord recolorsChunk;
-				recolorsChunk.Tag = Formats::SpriteRecolorsChunk::Tag;
-				recolorsChunk.Data.append(_mlleSpriteRecolors.begin(), _mlleSpriteRecolors.end());
-				chunks.push_back(Death::move(recolorsChunk));
+			SmallVector<std::uint8_t, 0> texts;
+			Formats::ScriptDataChunk::WriteTexts(scriptTexts, texts);
+			Formats::ChunkRecord scriptDataChunk;
+			scriptDataChunk.Tag = Formats::ScriptDataChunk::Tag;
+			Formats::ScriptDataChunk::WriteSection(scriptDataChunk.Data, Formats::ScriptDataChunk::Section::Texts, texts);
+			Formats::ScriptDataChunk::WriteSection(scriptDataChunk.Data, Formats::ScriptDataChunk::Section::Weapons, _mlleWeapons);
+			Formats::ScriptDataChunk::WriteSection(scriptDataChunk.Data, Formats::ScriptDataChunk::Section::Recolors, _mlleSpriteRecolors);
+			if (!scriptDataChunk.Data.empty()) {
+				chunks.push_back(Death::move(scriptDataChunk));
 			}
 		}
 
@@ -1583,6 +1554,44 @@ namespace Jazz2::Compatibility
 		}
 
 		record.RendererType = look.TexturedBackgroundType + (std::uint8_t)Tiles::LayerRendererType::Sky;
+		// Drawn over what is behind it as by a script (see Scripting::Legacy::jjLAYER::SetBlend())
+		switch (layer.SpriteMode) {
+			case 0: break;
+			case 1:		// SPRITE::TRANSLUCENT
+			case 46:	// SPRITE::TRANSLUCENTTILE
+				record.Blend = std::uint8_t(Tiles::LayerBlend::Translucent);
+				record.BlendParam = 128;
+				break;
+			case 10:	// SPRITE::INVISIBLE
+			case 29:	// SPRITE::BLEND_NORMAL
+				record.Blend = std::uint8_t(Tiles::LayerBlend::Translucent);
+				record.BlendParam = (layer.SpriteMode == 10 ? 0 : layer.SpriteParam);
+				break;
+			case 47:	// SPRITE::CHROMAKEY
+				record.Blend = std::uint8_t(Tiles::LayerBlend::ChromaKey);
+				record.BlendParam = layer.SpriteParam;
+				break;
+			case 48:	// SPRITE::MAPPING
+			case 49:	// SPRITE::TRANSLUCENTMAPPING, half as opaque
+				// Through the additional palette of the parameter
+				record.Textured.Mapping = std::uint8_t(layer.SpriteParam + 1);
+				if (layer.SpriteMode == 49) {
+					record.Blend = std::uint8_t(Tiles::LayerBlend::Translucent);
+					record.BlendParam = 128;
+				}
+				break;
+			default: {
+				// SPRITE::BLEND_DARKEN to SPRITE::BLEND_EXCLUSION
+				Tiles::LayerBlend blend = Tiles::LayerDescription::FromSpriteMode(layer.SpriteMode);
+				if (blend == Tiles::LayerBlend::Multiply || blend == Tiles::LayerBlend::Screen || Tiles::LayerDescription::IsBehindBlend(blend)) {
+					record.Blend = std::uint8_t(blend);
+					record.BlendParam = layer.SpriteParam;
+				} else {
+					LOGW("Sprite mode {} isn't supported for textured layer {} of level \"{}\", it's drawn as it is", layer.SpriteMode, index, LevelName);
+				}
+				break;
+			}
+		}
 		// The fade color of a sky, a tunnel or a cylinder, the wavelengths and the speed of a wave, the tint opacity,
 		// distance and distortion of a reflection
 		record.Color[0] = look.TexturedParams1;
@@ -1641,7 +1650,7 @@ namespace Jazz2::Compatibility
 		}
 		if (layer.TextureSource != 0) {
 			// A texture of JJ2+ (TEXTURE::Texture) instead of the tiles of the layer, or an image of its own made by MLLE
-			constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+			constexpr std::int32_t TextureBytes = Formats::LayerPropertiesChunk::TextureSize * Formats::LayerPropertiesChunk::TextureSize;
 			texture.resize_for_overwrite(TextureBytes);
 			if (layer.TextureSource < 0 && layer.TextureImage != nullptr) {
 				std::memcpy(texture.data(), layer.TextureImage.get(), TextureBytes);
@@ -1726,8 +1735,10 @@ namespace Jazz2::Compatibility
 		record.Color[2] = 255;
 		record.Color[3] = 255;
 
+		// The values of `SPRITE::Mode` of JJ2+, which aren't consecutive
 		switch (spriteMode) {
 			case 1:		// SPRITE::TRANSLUCENT
+			case 46:	// SPRITE::TRANSLUCENTTILE
 				record.Color[3] = 192;
 				break;
 			case 2:		// SPRITE::TINTED
@@ -1736,29 +1747,59 @@ namespace Jazz2::Compatibility
 				record.Color[1] = 0;
 				record.Color[2] = 0;
 				break;
-			case 4:		// SPRITE::INVISIBLE
+			case 10:	// SPRITE::INVISIBLE
 				record.Color[3] = 0;
 				break;
-			case 5:		// SPRITE::SINGLECOLOR
-			case 14:	// SPRITE::TRANSLUCENTCOLOR
+			case 11:	// SPRITE::SINGLECOLOR
+			case 23:	// SPRITE::TRANSLUCENTCOLOR
 				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::SingleColor;
 				record.Color[0] = spriteParam;
 				record.Color[1] = 0;
 				record.Color[2] = 0;
-				record.Color[3] = (spriteMode == 14 ? 192 : 255);
+				record.Color[3] = (spriteMode == 23 ? 192 : 255);
 				break;
-			case 38:	// SPRITE::CHROMAKEY
-				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::ChromaKey;
+			case 47:	// SPRITE::CHROMAKEY
+				record.Blend = std::uint8_t(Tiles::LayerBlend::ChromaKey);
+				record.BlendParam = spriteParam;
+				break;
+			case 18:	// SPRITE::PALSHIFT
+			case 25:	// SPRITE::TRANSLUCENTPALSHIFT
+				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::PaletteShift;
+				record.Color[0] = spriteParam;
+				record.Color[3] = (spriteMode == 25 ? 192 : 255);
+				break;
+			case 22:	// SPRITE::BRIGHTNESS, 128 as it is
+				record.Color[0] = record.Color[1] = record.Color[2] = std::uint8_t(std::min<std::int32_t>(spriteParam * 2, 255));
+				break;
+			case 27:	// SPRITE::ALPHAMAP
+				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::AlphaMap;
 				record.Color[0] = spriteParam;
 				record.Color[1] = 0;
 				record.Color[2] = 0;
 				break;
-			case 10:	// SPRITE::PALSHIFT
-			case 16:	// SPRITE::TRANSLUCENTPALSHIFT
-				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::PaletteShift;
-				record.Color[0] = spriteParam;
-				record.Color[3] = (spriteMode == 16 ? 192 : 255);
+			case 29:	// SPRITE::BLEND_NORMAL, the parameter is how opaque it is
+				record.Color[3] = spriteParam;
 				break;
+			case 48:	// SPRITE::MAPPING
+			case 49:	// SPRITE::TRANSLUCENTMAPPING, half as opaque (compared with JJ2+)
+				// The parameter is the index of the additional palette (MLLE maps its own list onto the mappings of JJ2+)
+				record.RendererType = (std::uint8_t)Tiles::LayerRendererType::PaletteMapping;
+				record.Color[0] = spriteParam;
+				record.Color[1] = 0;
+				record.Color[2] = 0;
+				record.Color[3] = (spriteMode == 49 ? 128 : 255);
+				break;
+			default: {
+				// SPRITE::BLEND_DARKEN to SPRITE::BLEND_EXCLUSION, mixed over what is behind as far as the parameter says
+				Tiles::LayerBlend blend = Tiles::LayerDescription::FromSpriteMode(spriteMode);
+				if (blend == Tiles::LayerBlend::Multiply || blend == Tiles::LayerBlend::Screen || Tiles::LayerDescription::IsBehindBlend(blend)) {
+					record.Blend = std::uint8_t(blend);
+					record.BlendParam = spriteParam;
+				} else if (spriteMode != 0) {
+					LOGW("Layer sprite mode {} isn't supported, the layer is drawn as an ordinary one", spriteMode);
+				}
+				break;
+			}
 		}
 	}
 
@@ -1766,7 +1807,7 @@ namespace Jazz2::Compatibility
 	{
 		// Value noise of four octaves, each of them on a lattice that fits the texture a whole number of times, so the
 		// texture repeats without a seam, as the textures of JJ2+ do; always the same, the level is converted the same
-		constexpr std::int32_t Size = Formats::TexturedLayerChunk::TextureSize;
+		constexpr std::int32_t Size = Formats::LayerPropertiesChunk::TextureSize;
 		constexpr std::int32_t Octaves = 4;
 		constexpr std::uint8_t FirstColor = 176;
 		constexpr std::int32_t ColorCount = 32;

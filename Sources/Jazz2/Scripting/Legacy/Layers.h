@@ -156,7 +156,7 @@ namespace Jazz2::Scripting
 			 *
 			 * Returns `false` if the mode isn't one a textured layer can be drawn with, it's drawn as it is then.
 			 */
-			bool SetTextureBlend(Tiles::LayerDescription& description) const;
+			bool SetBlend(Tiles::LayerDescription& description) const;
 
 			/** @brief Returns a value of the parameters of a texture style */
 			template<float TextureStyleParams::*Member>
@@ -261,7 +261,7 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns an offset of a layer as JJ2+ keeps it, in 16.16 fixed point (measured)
 			 *
-			 * An offset out of its range is 0 and 32768 itself wraps to -32768 - HH17 offsets its layers by `jjRandom()`,
+			 * An offset out of its range is 0 and 32768 itself wraps to -32768 - layers offset by `jjRandom()`,
 			 * which leaves them all where they'd be without an offset.
 			 */
 			static float ToStoredOffset(float value);

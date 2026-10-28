@@ -668,6 +668,12 @@ namespace Jazz2::Editor
 			renderer = Tiles::LayerRendererType::Default;
 		}
 
+		// The list is the order the layers are drawn in, from the front, but the depth decides it in the game
+		if (aboutOthers && layerIndex > 0 && document.Layers[layerIndex - 1].Record.Depth > layer.Record.Depth) {
+			add(LevelProblemSeverity::Warning, _fx("editor", "Its depth {} is nearer than {} of the layer above it in the list, so it's drawn in front of it",
+				layer.Record.Depth, document.Layers[layerIndex - 1].Record.Depth));
+		}
+
 		// Hidden in the game, and so in the editor too (see RuntimeSync::IsLayerShown()), as an empty layer of the original
 		// game is converted; one with nothing to show is told only about itself (in its properties, as a warning too, it
 		// isn't seen at all), a converted level often has such layers
@@ -730,6 +736,8 @@ namespace Jazz2::Editor
 				break;
 			case Tiles::LayerRendererType::Solid:
 			case Tiles::LayerRendererType::PaletteShift:
+			case Tiles::LayerRendererType::AlphaMap:
+			case Tiles::LayerRendererType::PaletteMapping:
 				if (color[3] == 0) {
 					add(LevelProblemSeverity::Warning, _x("editor", "Alpha is 0, it isn't drawn"));
 				}
@@ -746,7 +754,6 @@ namespace Jazz2::Editor
 				break;
 			}
 			case Tiles::LayerRendererType::SingleColor:
-			case Tiles::LayerRendererType::ChromaKey:
 				if (color[3] == 0) {
 					add(LevelProblemSeverity::Warning, _x("editor", "Alpha is 0, it isn't drawn"));
 				}

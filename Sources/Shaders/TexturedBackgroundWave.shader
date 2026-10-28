@@ -1,4 +1,5 @@
 program TexturedBackgroundWave;
+variant DITHER;
 variant KEYED;
 
 shader_type canvas_item;
@@ -20,6 +21,7 @@ uniform vec4 uWave;
 uniform vec2 uWavePhase;
 
 #include "Include/TexturedBackgroundKey.inc"
+#include "Include/TexturedBackgroundDither.inc"
 
 #define TEXTURE_SIZE 256.0
 #define TAU 6.28318530718
@@ -36,10 +38,14 @@ void fragment() {
 
 	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
+	vec3 color = texture(TEXTURE, texturePos).rgb;
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
+	color = reduceColors(color, gl_FragCoord.xy);
+#endif
 #if KEYED
-	COLOR = vec4(texture(TEXTURE, texturePos).rgb, keyedOpacity());
+	COLOR = keyedColor(color);
 #else
 	// Premultiplied, which the blending of the sprite modes takes as it is
-	COLOR = vec4(texture(TEXTURE, texturePos).rgb * opacity, opacity);
+	COLOR = vec4(color * opacity, opacity);
 #endif
 }

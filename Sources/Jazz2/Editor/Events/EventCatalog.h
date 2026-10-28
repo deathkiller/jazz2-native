@@ -592,6 +592,8 @@ namespace Jazz2::Editor
 		 * have in the level --- that's used only while an event isn't described from outside of the game.
 		 */
 		static bool IsExtension(const EventDescriptor* descriptor);
+		/** @brief Returns `true` if an event is described by the level being edited, by its script (see @ref LoadMlleEvents()) */
+		static bool IsLevelExtension(const EventDescriptor* descriptor);
 
 		/** @brief Returns the description of an event, or `nullptr` if it's not known */
 		static const EventDescriptor* Find(EventType type);

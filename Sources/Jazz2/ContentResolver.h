@@ -356,6 +356,10 @@ namespace Jazz2
 		 * sprites that must keep their original colors sample row 0 (the default palette) via a palette offset of 0.
 		 */
 		Texture* GetPaletteTexture();
+		/** @brief Returns a number that changes whenever the sprite palette (the first row of the palette texture) changes */
+		std::uint32_t GetSpritePaletteRevision() const {
+			return _spritePaletteRevision;
+		}
 		/**
 		 * @brief Declares the channel order of a texture whose texels are palette entries
 		 *
@@ -383,9 +387,11 @@ namespace Jazz2
 		 * transparent one, and a pixel moved onto index 0 gets its color fully opaque, as `SPRITE::PALSHIFT` of JJ2+
 		 * draws it (see @ref Tiles::LayerRendererType::PaletteShift). The row is built again whenever the sprite
 		 * palette changes. Callers with the same shift share one row. Returns 0 (the sprite palette itself) for a
-		 * shift of 0, otherwise the offset, or -1 if no row is free. Release it with @ref ReleasePaletteOffset.
+		 * shift of 0 (unless @p premultiplied), otherwise the offset, or -1 if no row is free. Release it with
+		 * @ref ReleasePaletteOffset. With @p premultiplied the colors of the row are premultiplied by their alpha,
+		 * as a layer that is screened or multiplied is drawn through (see @ref Tiles::LayerBlend), a row of its own.
 		 */
-		std::int32_t AcquireShiftedPaletteOffset(std::uint8_t shift);
+		std::int32_t AcquireShiftedPaletteOffset(std::uint8_t shift, bool premultiplied = false);
 		/**
 		 * @brief Acquires a reference-counted palette offset of the sprite palette in a single hue of it
 		 *
@@ -410,8 +416,15 @@ namespace Jazz2
 		 * Index `i` of the row is the color of index @p color of the sprite palette with the alpha of `i`, as
 		 * `SPRITE::ALPHAMAP` of JJ2+ draws it. The row is built again whenever the sprite palette changes. Callers with the
 		 * same @p color share one row. Returns the offset, or -1 if no row is free. Release it with @ref ReleasePaletteOffset.
+		 * With @p premultiplied the colors of the row are premultiplied by their alpha, as a layer that is screened or
+		 * multiplied is drawn through (see @ref Tiles::LayerBlend), a row of its own.
 		 */
-		std::int32_t AcquireAlphaMapPaletteOffset(std::uint8_t color);
+		std::int32_t AcquireAlphaMapPaletteOffset(std::uint8_t color, bool premultiplied = false);
+		/**
+		 * @brief Fills 256 colors as the row of @ref AcquireShiftedPaletteOffset() or, with @p alphaMap, of
+		 *		@ref AcquireAlphaMapPaletteOffset() is, without taking a row
+		 */
+		void BuildLayerPalette(bool alphaMap, std::uint8_t param, std::uint32_t* outPalette) const;
 		/**
 		 * @brief Acquires a reference-counted palette offset of a color of the sprite palette for indices below a density
 		 *
@@ -430,6 +443,16 @@ namespace Jazz2
 		 * sprite palette changes. Returns the offset, or -1 if no row is free. Release it with @ref ReleasePaletteOffset.
 		 */
 		std::int32_t AcquireNeonGlowPaletteOffset(std::uint8_t channels);
+		/**
+		 * @brief Acquires a palette offset of a row of its own colors
+		 *
+		 * The row is the 256 colors of @p colors (packed as `0xAABBGGRR`) with index 0 transparent, and it stays so
+		 * whatever happens to the sprite palette, e.g. an additional palette of a level (see
+		 * @ref Tiles::LayerRendererType::PaletteMapping). Each call takes a row of its own. Returns the offset, or -1 if
+		 * no row is free. Release it with @ref ReleasePaletteOffset. With @p premultiplied the colors of the row are
+		 * premultiplied by their alpha, as a layer that is screened or multiplied is drawn through (see @ref Tiles::LayerBlend).
+		 */
+		std::int32_t AcquireFixedPaletteOffset(const std::uint32_t* colors, bool premultiplied = false);
 		/**
 		 * @brief Returns entry @p index of the gradient of a gem as `SPRITE::GEM` of JJ2+ draws it
 		 *
@@ -768,6 +791,8 @@ namespace Jazz2
 		void BuildNeonGlowPalette(std::uint8_t channels, std::uint32_t* outPalette) const;
 		// Builds the gradient of 128 entries a gem is drawn with from its 5 stops in the sprite palette, 32 entries each
 		void BuildGemGradient(const std::uint8_t* stops, std::uint32_t* outGradient) const;
+		// Premultiplies the colors of a row by their alpha, see AcquireShiftedPaletteOffset()
+		static void PremultiplyPalette(std::uint32_t* palette);
 		// Returns a dynamic palette row derived from the sprite palette by a scheme of its own and a value, see AcquireShiftedPaletteOffset()
 		std::int32_t AcquireDerivedPaletteOffset(std::uint8_t scheme, std::uint32_t value);
 #if defined(DEATH_DEBUG)
@@ -786,6 +811,7 @@ namespace Jazz2
 		// the sprite palette in a single hue SingleHuePaletteScheme and the start of the gradient.
 		std::unique_ptr<Texture> _paletteTexture;
 		std::int32_t _paletteDirtyFirstRow;
+		std::uint32_t _spritePaletteRevision = 0;
 		std::int32_t _paletteDirtyLastRow;
 		std::int32_t _paletteRowRefCount[PaletteCount];
 		std::uint32_t _paletteRowColor[PaletteCount];

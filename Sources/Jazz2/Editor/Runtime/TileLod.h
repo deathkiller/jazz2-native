@@ -212,6 +212,8 @@ namespace Jazz2::Editor
 			std::uint32_t CountedFrame = 0;
 			// Directions the layer repeated in when it was made, see GetRepeats()
 			std::uint8_t Repeats = 0;
+			// The palette the layer was drawn through when it was made, see GetPaletteVariant()
+			std::uint32_t PaletteVariant = 0;
 			bool Dirty;
 			// Whether it's one of the images of a whole layer with a pixel for a tile, made ahead and kept, see WarmUp()
 			bool Base = false;
@@ -285,6 +287,10 @@ namespace Jazz2::Editor
 		std::unordered_map<std::uint64_t, std::int32_t> _chunkIndex;
 		std::unordered_map<std::uint32_t, TileBlock> _blocks;
 		BlockCacheEntry _blockCache[BlockCacheSize];
+		// Blocks of the layers drawn through a palette of their own, by the variant above the key of the tile
+		std::unordered_map<std::uint64_t, TileBlock> _paletteBlocks;
+		std::uint64_t _lastPaletteBlockKey = UINT64_MAX;
+		TileBlock* _lastPaletteBlock = nullptr;
 		SmallVector<std::uint32_t, 0> _pixels;
 		SmallVector<PooledTexture, 0> _texturePool;
 		std::size_t _pooledBytes;
@@ -364,6 +370,12 @@ namespace Jazz2::Editor
 		bool BuildBaseChunks(const nCine::TimeStamp& start, float milliseconds);
 		void BuildChunk(Chunk& chunk, std::int32_t tilePixels);
 		TileBlock& GetBlock(const TileRef& tile);
+		// The block of a tile through the palette of a layer, see GetPaletteVariant()
+		TileBlock& GetPaletteBlock(const TileRef& tile, std::uint32_t variant);
+		// Returns 0 for a layer drawn through the sprite palette, the renderer and its parameter otherwise
+		static std::uint32_t GetPaletteVariant(const DocumentLayer& layer);
+		// Fills a block of the colors of a tile, false if the tile has no pixels
+		bool FillBlock(TileBlock& block, const TileRef& tile, const std::uint32_t* palette);
 		// Returns the key a block is kept by, flips change the block, the rest of the flags don't
 		static std::uint32_t GetBlockKey(const TileRef& tile);
 		// Forgets the blocks found last, before any is removed from the map

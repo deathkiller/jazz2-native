@@ -75,6 +75,9 @@ namespace Jazz2::Editor
 	{
 		// A kept play-test runs the old script, so it starts again when it's resumed
 		_playTest->MarkPlayTestOutdated();
+#if defined(WITH_ANGELSCRIPT)
+		_scriptGraphicsDirty = true;
+#endif
 	}
 
 	void EditorSession::ReloadTileSet(StringView name)
@@ -108,7 +111,6 @@ namespace Jazz2::Editor
 			state.FlatLayers = (tileMap->GetViewOptions().FlatAmount > 0.5f);
 		}
 		state.MaskMode = std::uint8_t(_maskMode);
-		state.PickerPanel = std::uint8_t(_pickerPanel == PickerPanel::Events ? 1 : 0);
 		state.HasPlaySettings = true;
 		state.PlayCharacter = std::uint8_t(_settings.PlayCharacter);
 		state.PlayDifficulty = std::uint8_t(_settings.PlayDifficulty);
@@ -138,7 +140,6 @@ namespace Jazz2::Editor
 		_showEvents = state.ShowEvents;
 		_showPlayPath = state.ShowPlayPath;
 		_maskMode = std::min<std::int32_t>(state.MaskMode, 2);
-		_pickerPanel = (state.PickerPanel == 1 ? PickerPanel::Events : PickerPanel::Tiles);
 		if (state.FlatLayers) {
 			if (Tiles::TileMap* tileMap = _editHandler->TileMap()) {
 				Tiles::TileMapViewOptions options = tileMap->GetViewOptions();
@@ -198,6 +199,9 @@ namespace Jazz2::Editor
 		_editHandler = Death::move(handler);
 		AttachSceneContent();
 		RememberAppliedOverrides();
+#if defined(WITH_ANGELSCRIPT)
+		_scriptGraphicsDirty = true;
+#endif
 		// A recovered level is seen as it was
 		ApplyViewState();
 		Vector2i res = theApplication().GetResolution();

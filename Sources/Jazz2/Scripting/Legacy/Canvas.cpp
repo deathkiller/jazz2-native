@@ -10,6 +10,7 @@
 #include "../../Tiles/TileMap.h"
 #include "../../UI/HUD.h"
 
+#include "../../../nCine/Application.h"
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/Graphics/Texture.h"
@@ -122,7 +123,7 @@ namespace Jazz2::Scripting
 			// row of the shared palette texture of the sprite mode (see LevelScriptLoader::GetSpritePaletteOffset()).
 			static void DrawSpriteFrame(UI::Canvas* canvas, std::uint16_t z, GenericGraphicResource* base, std::int32_t frame,
 					float x, float y, std::int8_t direction, float scaleX, float scaleY, std::int32_t angle,
-					std::uint32_t mode, std::uint8_t param, std::int32_t spritePaletteOffset)
+					std::uint32_t mode, std::uint8_t param, std::int32_t spritePaletteOffset, bool translucentFrame = false)
 			{
 				if (base == nullptr || base->TextureDiffuse == nullptr || base->FrameCount <= 0 || base->FrameConfiguration.X <= 0 ||
 					mode == spriteType_INVISIBLE) {
@@ -186,8 +187,13 @@ namespace Jazz2::Scripting
 					// Also where the backend has no such shader
 					color = Colorf(1.0f, 1.0f, 1.0f, SpriteModeToAlpha(mode, param));
 				}
+				if (translucentFrame && mode != spriteType_NORMAL && mode != spriteType_SHADOW) {
+					// A `transparent` frame is translucent only in SPRITE::NORMAL in JJ2+ (bullets drawn in
+					// SINGLEHUE stay opaque), its pixels have less alpha in the graphics
+					color.A *= 255.0f / float(AnimationTables::TranslucentFrameAlpha);
+				}
 
-				// JJ2 turns a sprite counter-clockwise about its hotspot (ThreedRealms hangs its puppets on strings so, from the
+				// JJ2 turns a sprite counter-clockwise about its hotspot (a puppet hung on strings turns so, from the
 				// hotspot at the end of the string), the canvas turns the other way about the middle of the quad
 				float angleRad = -angle * fTwoPi / 1024.0f;
 				if (angle != 0) {
@@ -276,7 +282,7 @@ namespace Jazz2::Scripting
 
 			for (const SolidDraw& draw : _solids) {
 				Colorf color = SpriteModeToSolidColor(draw.Color, draw.Mode, draw.Param);
-				DrawSolid(Vector2f(draw.X, draw.Y), draw.Z, Vector2f(draw.Width, draw.Height), color, draw.Mode == spriteType_BLENDLIGHTEN);
+				DrawSolid(Vector2f(draw.X, draw.Y), draw.Z, Vector2f(draw.Width, draw.Height), color, draw.Mode == spriteType_BLENDLIGHTEN, draw.Angle);
 			}
 			for (const TileDraw& draw : _tiles) {
 				DrawTileQuad(this, draw.Z, draw.TileMap, draw.Tile, draw.Quadrant, draw.X, draw.Y);
@@ -285,7 +291,7 @@ namespace Jazz2::Scripting
 				// Following the object in every frame, not only in the ticks of the script (a player drawn by `onPlayerDraw()`)
 				Vector2f anchor = (draw.Anchor != nullptr ? draw.Anchor->GetPos() : Vector2f::Zero);
 				DrawSpriteFrame(this, draw.Z, draw.Graphics, draw.Cell, anchor.X + draw.X, anchor.Y + draw.Y, draw.Direction, draw.ScaleX,
-					draw.ScaleY, draw.Angle, draw.Mode, draw.Param, draw.PaletteOffset);
+					draw.ScaleY, draw.Angle, draw.Mode, draw.Param, draw.PaletteOffset, draw.TranslucentFrame);
 			}
 			for (const TextDraw& draw : _texts) {
 				// Where the HUD puts text of the size against the position (see jjCANVAS::DrawScriptText())
@@ -365,49 +371,55 @@ namespace Jazz2::Scripting
 				return;
 			}
 			std::int32_t cell = 0;
-			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+			bool translucent;
+			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
 			DrawSpriteFrame(Target, NextLayer(), base, cell,
-				xPixel + Offset.X, yPixel + Offset.Y, direction, 1.0f, 1.0f, 0, mode, param, owner->GetSpritePaletteOffset(mode, param));
+				xPixel + Offset.X, yPixel + Offset.Y, direction, 1.0f, 1.0f, 0, mode, param, owner->GetSpritePaletteOffset(mode, param), translucent);
 		}
 		void jjCANVAS::DrawCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int8_t direction, std::uint32_t mode, std::uint8_t param)
 		{
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			std::int32_t cell = 0;
-			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+			bool translucent;
+			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell, &translucent);
 			DrawSpriteFrame(Target, NextLayer(), base, cell,
-				xPixel + Offset.X, yPixel + Offset.Y, direction, 1.0f, 1.0f, 0, mode, param, owner->GetSpritePaletteOffset(mode, param));
+				xPixel + Offset.X, yPixel + Offset.Y, direction, 1.0f, 1.0f, 0, mode, param, owner->GetSpritePaletteOffset(mode, param), translucent);
 		}
 		void jjCANVAS::DrawResizedSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, std::uint32_t mode, std::uint8_t param)
 		{
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			std::int32_t cell = 0;
-			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+			bool translucent;
+			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
 			DrawSpriteFrame(Target, NextLayer(), base, cell,
-				xPixel + Offset.X, yPixel + Offset.Y, 1, xScale, yScale, 0, mode, param, owner->GetSpritePaletteOffset(mode, param));
+				xPixel + Offset.X, yPixel + Offset.Y, 1, xScale, yScale, 0, mode, param, owner->GetSpritePaletteOffset(mode, param), translucent);
 		}
 		void jjCANVAS::DrawResizedCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, float xScale, float yScale, std::uint32_t mode, std::uint8_t param)
 		{
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			std::int32_t cell = 0;
-			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+			bool translucent;
+			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell, &translucent);
 			DrawSpriteFrame(Target, NextLayer(), base, cell,
-				xPixel + Offset.X, yPixel + Offset.Y, 1, xScale, yScale, 0, mode, param, owner->GetSpritePaletteOffset(mode, param));
+				xPixel + Offset.X, yPixel + Offset.Y, 1, xScale, yScale, 0, mode, param, owner->GetSpritePaletteOffset(mode, param), translucent);
 		}
 		void jjCANVAS::DrawTransformedSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, int32_t angle, float xScale, float yScale, std::uint32_t mode, std::uint8_t param)
 		{
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			std::int32_t cell = 0;
-			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
+			bool translucent;
+			auto* base = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
 			DrawSpriteFrame(Target, NextLayer(), base, cell,
-				xPixel + Offset.X, yPixel + Offset.Y, 1, xScale, yScale, angle, mode, param, owner->GetSpritePaletteOffset(mode, param));
+				xPixel + Offset.X, yPixel + Offset.Y, 1, xScale, yScale, angle, mode, param, owner->GetSpritePaletteOffset(mode, param), translucent);
 		}
 		void jjCANVAS::DrawTransformedCurFrameSprite(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int32_t angle, float xScale, float yScale, std::uint32_t mode, std::uint8_t param)
 		{
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			std::int32_t cell = 0;
-			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell);
+			bool translucent;
+			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell, &translucent);
 			DrawSpriteFrame(Target, NextLayer(), base, cell,
-				xPixel + Offset.X, yPixel + Offset.Y, 1, xScale, yScale, angle, mode, param, owner->GetSpritePaletteOffset(mode, param));
+				xPixel + Offset.X, yPixel + Offset.Y, 1, xScale, yScale, angle, mode, param, owner->GetSpritePaletteOffset(mode, param), translucent);
 		}
 		void jjCANVAS::DrawSwingingVine(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int32_t length, int32_t curvature, std::uint32_t mode, std::uint8_t param)
 		{
@@ -660,13 +672,14 @@ namespace Jazz2::Scripting
 	// coordinates follow (`layerXY`) and the player that sees it (`playerID`) aren't taken into account, the coordinates
 	// are those of the level and everyone sees it.
 	static void DrawWorldSprite(LevelScriptLoader* owner, GenericGraphicResource* graphics, std::int32_t cell, float x, float y,
-		std::int8_t direction, float scaleX, float scaleY, std::int32_t angle, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ)
+		std::int8_t direction, float scaleX, float scaleY, std::int32_t angle, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, bool translucent)
 	{
 		if (graphics == nullptr || ContentResolver::Get().IsHeadless()) {
 			return;
 		}
 		Legacy::ScriptWorldCanvas::SpriteDraw draw = { graphics, cell, x, y, direction, scaleX, scaleY, angle, mode, param, owner->GetLayerDrawZ(layerZ),
 			owner->GetSpritePaletteOffset(mode, param) };
+		draw.TranslucentFrame = translucent;
 		owner->GetWorldCanvas().AddSprite(draw);
 	}
 
@@ -693,50 +706,59 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::jjDrawSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		std::int32_t cell = 0;
-		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
-		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, direction, 1.0f, 1.0f, 0, mode, param, layerZ);
+		bool translucent;
+		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, direction, 1.0f, 1.0f, 0, mode, param, layerZ, translucent);
 	}
 
 	void LevelScriptLoader::jjDrawSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		std::int32_t cell = 0;
-		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell);
-		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, direction, 1.0f, 1.0f, 0, mode, param, layerZ);
+		bool translucent;
+		owner->OnFrameDrawn(xPixel, yPixel, sprite, mode);
+		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell, &translucent);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, direction, 1.0f, 1.0f, 0, mode, param, layerZ, translucent);
 	}
 
 	void LevelScriptLoader::jjDrawResizedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		std::int32_t cell = 0;
-		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
-		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, 0, mode, param, layerZ);
+		bool translucent;
+		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, 0, mode, param, layerZ, translucent);
 	}
 
 	void LevelScriptLoader::jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		std::int32_t cell = 0;
-		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell);
-		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, 0, mode, param, layerZ);
+		bool translucent;
+		owner->OnFrameDrawn(xPixel, yPixel, sprite, mode);
+		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell, &translucent);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, 0, mode, param, layerZ, translucent);
 	}
 
 	void LevelScriptLoader::jjDrawRotatedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		std::int32_t cell = 0;
-		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell);
-		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, angle, mode, param, layerZ);
+		bool translucent;
+		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, angle, mode, param, layerZ, translucent);
 	}
 
 	void LevelScriptLoader::jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		std::int32_t cell = 0;
-		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell);
-		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, angle, mode, param, layerZ);
+		bool translucent;
+		owner->OnFrameDrawn(xPixel, yPixel, sprite, mode);
+		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell, &translucent);
+		DrawWorldSprite(owner, graphics, cell, xPixel, yPixel, 0, xScale, yScale, angle, mode, param, layerZ, translucent);
 	}
 
 	Legacy::ScriptWorldCanvas& LevelScriptLoader::GetWorldCanvas()
 	{
 		if (_worldCanvas == nullptr) {
 			_worldCanvas = std::make_unique<Legacy::ScriptWorldCanvas>();
-			// In the order the script draws, as in JJ2+ (ThreedRealms draws the bomb of a pumpkin behind it)
+			// In the order the script draws, as in JJ2+ (a bomb drawn behind a pumpkin)
 			_worldCanvas->OrderedDraws = true;
 			_worldCanvas->setParent(_levelHandler->_rootNode.get());
 		}
@@ -816,13 +838,28 @@ namespace Jazz2::Scripting
 
 	std::uint16_t LevelScriptLoader::GetLayerDrawZ(std::int32_t layerNumber) const
 	{
+		// Every object drawn asks for it, the order of the layers is sorted only once a frame
+		const std::uint32_t frame = theApplication().GetFrameCount();
+		if (_layerDrawZFrame != frame) {
+			_layerDrawZFrame = frame;
+			std::memset(_layerDrawZCache, 0, sizeof(_layerDrawZCache));
+		}
+		std::uint16_t& cached = _layerDrawZCache[std::uint8_t(std::clamp<std::int32_t>(layerNumber, -128, 127) + 128)];
+		if (cached == 0) {
+			cached = ResolveLayerDrawZ(layerNumber);
+		}
+		return cached;
+	}
+
+	std::uint16_t LevelScriptLoader::ResolveLayerDrawZ(std::int32_t layerNumber) const
+	{
 		// The sprite layer is where the objects are, on the others just behind the next layer, in front of what the hook of
 		// the layer draws (see OnDrawLayers()), as JJ2+ draws the sprites of a layer over it
 		Tiles::TileMap* tileMap = _levelHandler->_tileMap.get();
 		std::int32_t index;
 		if (!_layersOutOfOrder.empty()) {
 			// With an order of the layers of a script, the layer is as far from the sprite layer in it as the number is from
-			// 4, as measured in JJ2+ (testrealtimecastle draws its shadows 7 and 8 layers behind it, ThreedRealms its cars
+			// 4, as measured in JJ2+ (shadows drawn 7 and 8 layers behind it, cars
 			// in the sprite layer, behind the layer 3 in front of it)
 			SmallVector<std::int32_t, 16> order;
 			GetLayerOrder(order);

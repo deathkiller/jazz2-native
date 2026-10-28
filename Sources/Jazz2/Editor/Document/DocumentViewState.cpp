@@ -10,12 +10,9 @@ namespace Jazz2::Editor
 {
 	namespace
 	{
-		// u8 version, u16 flags, f32 camera X, f32 camera Y, f32 zoom, i32 layer, u8 mask mode, u8 picker,
-		// u8 character, u8 difficulty, u8 game mode, u8 players, i32 reserved, i32 reserved --- a newer version
-		// may add more at the end, what's missing at the end of an older one keeps its default.
-		// The two reserved values were the position of a play-start marker, which was dropped. They're still written,
-		// as 0, so whatever is added later stays where it would be, and the flag of the marker is never set, so builds
-		// that still have the marker see none.
+		// u8 version, u16 flags, f32 camera X, f32 camera Y, f32 zoom, i32 layer, u8 mask mode, u8 character,
+		// u8 difficulty, u8 game mode, u8 players --- a newer version may add more at the end, what's missing at the end
+		// of an older one keeps its default
 		constexpr std::uint8_t Version = 1;
 
 		enum Flags : std::uint16_t
@@ -26,7 +23,6 @@ namespace Jazz2::Editor
 			FlagPlayPath = 0x08,
 			FlagFlat = 0x10,
 			FlagPlaySettings = 0x20
-			// 0x40 was the play-start marker, it's not used for anything else, older builds would take it as one
 		};
 
 		class Writer
@@ -136,7 +132,7 @@ namespace Jazz2::Editor
 			state.CameraCenter = center;
 			state.CameraZoom = zoom;
 		}
-		if (!r.I32(state.CurrentLayer) || !r.U8(state.MaskMode) || !r.U8(state.PickerPanel)) {
+		if (!r.I32(state.CurrentLayer) || !r.U8(state.MaskMode)) {
 			return true;
 		}
 		std::uint8_t character, difficulty, gameMode, playerCount;
@@ -150,10 +146,6 @@ namespace Jazz2::Editor
 			state.PlayGameMode = gameMode;
 			state.PlayPlayerCount = playerCount;
 		}
-		// The place of the play-start marker of older builds is skipped, what's added later will come after it
-		std::int32_t reserved;
-		r.I32(reserved);
-		r.I32(reserved);
 		return true;
 	}
 
@@ -176,14 +168,10 @@ namespace Jazz2::Editor
 		w.F32(CameraZoom);
 		w.U32(std::uint32_t(CurrentLayer));
 		w.U8(MaskMode);
-		w.U8(PickerPanel);
 		w.U8(PlayCharacter);
 		w.U8(PlayDifficulty);
 		w.U8(PlayGameMode);
 		w.U8(PlayPlayerCount);
-		// Reserved, see Version
-		w.U32(0);
-		w.U32(0);
 		document.SetChunk(Chunk, data);
 	}
 }

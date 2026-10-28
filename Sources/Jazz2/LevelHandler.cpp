@@ -51,6 +51,18 @@ using namespace Jazz2::Tiles;
 
 namespace Jazz2
 {
+	namespace
+	{
+		bool IsScreenDithered()
+		{
+#if defined(RHI_CAP_POSTPROCESSING) && !defined(RHI_LOW_POWER_GPU)
+			return (PreferencesCache::Dithering == DitheringScope::Screen);
+#else
+			return false;
+#endif
+		}
+	}
+
 	namespace Resources
 	{
 		static constexpr AnimState Snow = (AnimState)0;
@@ -466,6 +478,11 @@ namespace Jazz2
 		return _isReforged;
 	}
 
+	bool LevelHandler::IsLedgeClimbEnabled(const Actors::Player* player) const
+	{
+		return PreferencesCache::EnableLedgeClimb;
+	}
+
 	bool LevelHandler::CanActivateSugarRush() const
 	{
 		return true;
@@ -505,6 +522,14 @@ namespace Jazz2
 	float LevelHandler::GetWaterLevel() const
 	{
 		return _waterLevel;
+	}
+
+	float LevelHandler::GetPlayerWaterLevel() const
+	{
+		// JJ2+ runs onPlayer() right before the player in each tick and the objects after it, so the player swims by the water
+		// onPlayer() left, whatever the objects set it to later in the tick - here the frames between the ticks would take that
+		// instead (bubbles set it every tick from both)
+		return (_playerWaterLevelSet ? _playerWaterLevel : _waterLevel);
 	}
 
 	float LevelHandler::GetHurtInvulnerableTime() const
@@ -676,7 +701,9 @@ namespace Jazz2
 
 		LOGI("Level \"{}\" (from \"{}.j2l\") loaded", _levelDisplayName, _levelName);
 
-		if (!_levelDisplayName.empty()) {
+		if (IsSandbox()) {
+			// Nothing of it is shown
+		} else if (!_levelDisplayName.empty()) {
 			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + _levelDisplayName));
 		} else {
 			theApplication().GetGfxDevice().setWindowTitle(NCINE_APP_NAME);
@@ -706,7 +733,7 @@ namespace Jazz2
 		_musicDefaultPath = _musicCurrentPath;
 
 #if defined(WITH_AUDIO)
-		if (!_musicCurrentPath.empty()) {
+		if (!_musicCurrentPath.empty() && !IsSandbox()) {
 			_music = ContentResolver::Get().GetMusic(_musicCurrentPath);
 			if (_music != nullptr) {
 				_music->setLooping(true);
@@ -1178,6 +1205,12 @@ namespace Jazz2
 			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
 			if (_combineShader == nullptr) { LOGW("PrecompiledShader::Combine failed"); }
 		}
+#	if !defined(RHI_LOW_POWER_GPU)
+		// The whole scene dithered, the HUD is drawn after it (see PreferencesCache::Dithering), picked again
+		// whenever the preferences change
+		Shader* combineDither = resolver.GetShader(PrecompiledShader::CombineDither);
+		_combineShader = (IsScreenDithered() && combineDither != nullptr ? combineDither : resolver.GetShader(PrecompiledShader::Combine));
+#	endif
 #endif
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
 		// Software renderer: the bloom + shader-lighting chain is capability-gated out, but the viewport compositor
@@ -1209,8 +1242,8 @@ namespace Jazz2
 		// fragment stage. Both quality variants carry the same console block, so the preference still picks
 		// the program - there is simply nothing left for it to reduce there.
 		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
-			? PrecompiledShader::CombineWithWaterLow
-			: PrecompiledShader::CombineWithWater);
+			? (IsScreenDithered() ? PrecompiledShader::CombineWithWaterLowDither : PrecompiledShader::CombineWithWaterLow)
+			: (IsScreenDithered() ? PrecompiledShader::CombineWithWaterDither : PrecompiledShader::CombineWithWater));
 		if (_combineWithWaterShader == nullptr) {
 			if (PreferencesCache::LowWaterQuality) {
 				LOGW("PrecompiledShader::CombineWithWaterLow failed");
@@ -1770,12 +1803,46 @@ namespace Jazz2
 			}
 		}
 
-		_hud->ShowCoins(newCount);
+		if (_hud != nullptr) {
+			_hud->ShowCoins(newCount);
+		}
 	}
 
 	void LevelHandler::HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount)
 	{
-		_hud->ShowGems(gemType, newCount);
+		if (_hud != nullptr) {
+			_hud->ShowGems(gemType, newCount);
+		}
+	}
+
+	bool LevelHandler::HandlePlayerFire(Actors::Player* player, WeaponType weaponType)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			return _scripts->FirePlayerWeapon(player, weaponType);
+		}
+#endif
+		return false;
+	}
+
+	bool LevelHandler::IsWeaponFireCapped(WeaponType weaponType)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			return _scripts->IsWeaponFireCapped(weaponType);
+		}
+#endif
+		return false;
+	}
+
+	bool LevelHandler::IsWeaponSoundMuted(WeaponType weaponType)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			return _scripts->IsWeaponSoundMuted(weaponType);
+		}
+#endif
+		return false;
 	}
 
 	void LevelHandler::SetCheckpoint(Actors::Player* player, Vector2f pos)
@@ -1894,7 +1961,10 @@ namespace Jazz2
 
 	void LevelHandler::ShowLevelText(StringView text, Actors::ActorBase* initiator)
 	{
-		_hud->ShowLevelText(text);
+		// No HUD in a level without players (see IsSandbox())
+		if (_hud != nullptr) {
+			_hud->ShowLevelText(text);
+		}
 	}
 
 	StringView LevelHandler::GetLevelText(std::uint32_t textId, std::int32_t index, std::uint32_t delimiter)
@@ -2761,6 +2831,12 @@ namespace Jazz2
 			ContentResolver::Get().IsHeadless()) {
 			return;
 		}
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr && _scripts->OwnsWeather()) {
+			// Particles of the scripts instead
+			return;
+		}
+#endif
 
 		std::size_t playerCount = _assignedViewports.size();
 		SmallVector<Rectf, ControlScheme::MaxSupportedPlayers> playerZones;
@@ -2782,7 +2858,9 @@ namespace Jazz2
 			}
 		}
 
-		float effectiveIntensity = (PreferencesCache::Particles == ParticleQuality::Low ? _weatherIntensity * 0.5f : (float)_weatherIntensity);
+		// The intensity of JJ2+ shows as many particles in the view as 3 per frame of it here (compared with JJ2+)
+		constexpr float IntensityScale = 3.0f;
+		float effectiveIntensity = IntensityScale * (PreferencesCache::Particles == ParticleQuality::Low ? _weatherIntensity * 0.5f : (float)_weatherIntensity);
 		std::int32_t weatherIntensity = std::max<std::int32_t>((std::int32_t)(effectiveIntensity * timeMult), 1);
 
 		bool isRain = ((_weatherType & ~WeatherType::OutdoorsOnly) == WeatherType::Rain);
@@ -2814,8 +2892,9 @@ namespace Jazz2
 						: TileMap::DebrisFlags::Disappear);
 				}
 
-				Vector2f debrisPos = Vector2f(zone.X + Random().FastFloat(zone.W * -1.0f, zone.W * 2.0f),
-					zone.Y + Random().NextFloat(zone.H * -1.0f, zone.H * 2.0f));
+				// Where it crosses the view in its life, snow drifts left and rain right
+				Vector2f debrisPos = Vector2f(zone.X + (isRain ? Random().FastFloat(zone.W * -0.5f, zone.W * 1.25f) : Random().FastFloat(zone.W * -0.25f, zone.W * 1.5f)),
+					zone.Y + Random().NextFloat(zone.H * -0.6f, zone.H));
 
 				float scale = Random().FastFloat(0.4f, 1.1f);
 

@@ -891,7 +891,68 @@ namespace Jazz2::Editor
 		}
 		DocumentChanges changes;
 		// TRANSLATORS: Name of an undo step in the history, a layer moved up or down in the list of layers
-		_history->Execute(std::make_unique<MoveLayerCommand>(from, to, _x("editor", "Move Layer")), changes);
+		String name = _x("editor", "Move Layer");
+		std::int32_t first = std::min(from, to), last = std::max(from, to);
+		// The list is the order the layers are drawn in, from the front, so the layers moved keep the depths of the places
+		// in the list, two swapped layers swap their depths - the sprite layer keeps its own, its number in the original
+		// (what scripts know it by) stays with each layer
+		SmallVector<std::int32_t, 16> placeDepths;
+		for (std::int32_t i = first; i <= last; i++) {
+			if (!_document.Layers[i].IsSpriteLayer()) {
+				placeDepths.push_back(_document.Layers[i].Record.Depth);
+			}
+		}
+		_history->BeginTransaction(name);
+		_history->Execute(std::make_unique<MoveLayerCommand>(from, to, name), changes);
+
+		SmallVector<std::int32_t, 16> depths(ValueInit, std::size_t(count));
+		std::int32_t spriteIndex = -1;
+		for (std::int32_t i = 0, next = 0; i < count; i++) {
+			const DocumentLayer& layer = _document.Layers[i];
+			depths[i] = layer.Record.Depth;
+			if (layer.IsSpriteLayer()) {
+				spriteIndex = i;
+			} else if (i >= first && i <= last) {
+				depths[i] = placeDepths[next++];
+			}
+		}
+		if (spriteIndex >= 0) {
+			// What got to the other side of the sprite layer gets depths spread between it and the next layer there
+			std::int32_t spriteDepth = depths[spriteIndex];
+			auto spread = [&](std::int32_t runFirst, std::int32_t runLast) {
+				std::int32_t runCount = runLast - runFirst + 1;
+				bool hasLower = (runFirst > 0), hasUpper = (runLast + 1 < count);
+				std::int32_t lower = (hasLower ? depths[runFirst - 1] : 0), upper = (hasUpper ? depths[runLast + 1] : 0);
+				for (std::int32_t k = 0; k < runCount; k++) {
+					depths[runFirst + k] = (hasLower && hasUpper ? lower + (upper - lower) * (k + 1) / (runCount + 1)
+						: (hasLower ? lower + 10 * (k + 1) : upper - 10 * (runCount - k)));
+				}
+			};
+			std::int32_t runFirst = spriteIndex;
+			while (runFirst > first && depths[runFirst - 1] >= spriteDepth) {
+				runFirst--;
+			}
+			if (runFirst < spriteIndex) {
+				spread(runFirst, spriteIndex - 1);
+			}
+			std::int32_t runLast = spriteIndex;
+			while (runLast < last && depths[runLast + 1] <= spriteDepth) {
+				runLast++;
+			}
+			if (runLast > spriteIndex) {
+				spread(spriteIndex + 1, runLast);
+			}
+		}
+		for (std::int32_t i = 0; i < count; i++) {
+			const DocumentLayer& layer = _document.Layers[i];
+			std::int16_t depth = std::int16_t(std::clamp<std::int32_t>(depths[i], INT16_MIN, INT16_MAX));
+			if (!layer.IsSpriteLayer() && depth != layer.Record.Depth) {
+				Formats::LayerRecord record = layer.Record;
+				record.Depth = depth;
+				_history->Execute(std::make_unique<SetLayerPropertiesCommand>(_document, i, record, layer.Name, name), changes);
+			}
+		}
+		_history->EndTransaction();
 		// The moved layer is the one edited then
 		_currentLayer = to;
 		OnDocumentChanged(changes);

@@ -54,8 +54,49 @@ static void asScript(String& msg)
 
 namespace Jazz2::Scripting
 {
+	// The pages of the help screen of JJ2+ a script changes in onHelp(), only kept, the game has no such screen
+	static constexpr StringView LegacyHelpPages = R"(
+namespace HELP {
+	enum Position { LEFT, RIGHT, FLOATLEFT, FLOATRIGHT }
+}
+class jjHELPPARAGRAPH {
+	string text;
+	STRING::Size textSize = STRING::SMALL;
+	STRING::Alignment textAlignment = STRING::LEFT;
+	const jjANIMFRAME@ image;
+	const jjANIMATION@ animation;
+	HELP::Position position = HELP::LEFT;
+	jjHELPPARAGRAPH() {}
+	jjHELPPARAGRAPH(const string &in text, STRING::Size textSize = STRING::SMALL, STRING::Alignment textAlignment = STRING::LEFT,
+		const jjANIMFRAME@ image = null, HELP::Position position = HELP::LEFT) {
+		this.text = text;
+		this.textSize = textSize;
+		this.textAlignment = textAlignment;
+		@this.image = image;
+		this.position = position;
+	}
+	jjHELPPARAGRAPH(const string &in text, const jjANIMATION@ image, STRING::Size textSize = STRING::SMALL,
+		STRING::Alignment textAlignment = STRING::LEFT, HELP::Position position = HELP::LEFT) {
+		this.text = text;
+		this.textSize = textSize;
+		this.textAlignment = textAlignment;
+		@this.animation = image;
+		this.position = position;
+	}
+}
+class jjHELPPAGE {
+	array<jjHELPPARAGRAPH> paragraphs;
+	string tags;
+	jjHELPPAGE() {}
+	jjHELPPAGE(const array<jjHELPPARAGRAPH> &in paragraphs, const string &in tags = "") {
+		this.paragraphs = paragraphs;
+		this.tags = tags;
+	}
+}
+)"_s;
+
 	// MLLE::Setup() of the include of weapons of MLLE, in place of it: the weapons as the level has them (see
-	// Formats::CustomWeaponsChunk), those of the script with a hook they share, and then the rest of what it sets up
+	// Formats::ScriptDataChunk), those of the script with a hook they share, and then the rest of what it sets up
 	static constexpr StringView MlleWeaponsSetup = R"(
 namespace MLLE {
 	se::WeaponHook@ WeaponHook;
@@ -193,7 +234,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr),
 			_enabledCallbacks(NoInit, 256)
 	{
-		// jjDifficultyOrig, as jjDifficulty is when the level starts (ThreedRealms limits the speed of its platforms by it)
+		// jjDifficultyOrig, as jjDifficulty is when the level starts (scripts limit the speed of platforms by it)
 		switch (levelHandler->_difficulty) {
 			case GameDifficulty::Easy: DifficultyAtLevelStart = 0; break;
 			default: DifficultyAtLevelStart = 1; break;
@@ -384,7 +425,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		// Skip MLLE files, because it's handled natively
 		if (includePath.hasPrefix("MLLE-Include-"_s) && includePath.hasSuffix(".asc"_s)) {
 			// The include of weapons (`MLLE-Include-1.5w.asc` and later) has MLLE::Setup() take the weapons of the script,
-			// set up as the level has them (see Formats::CustomWeaponsChunk) with the hook of SEweapon.asc it includes
+			// set up as the level has them (see Formats::ScriptDataChunk) with the hook of SEweapon.asc it includes
 			if (includePath.hasSuffix("w.asc"_s) && !_mlleWeaponsAdded) {
 				_mlleWeaponsAdded = true;
 				AddScriptSection("MLLE-Weapons", MlleWeaponsSetup);
@@ -412,6 +453,26 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 	{
 		// The script sees the objects as they are now
 		SyncObjectsFromActors();
+		PullWeather();
+	}
+
+	void LevelScriptLoader::PullWeather(bool force)
+	{
+		if (!force && _levelHandler->_weatherType == _appliedWeather && _levelHandler->_weatherIntensity == _appliedWeatherIntensity) {
+			return;
+		}
+		_appliedWeather = _levelHandler->_weatherType;
+		_appliedWeatherIntensity = _levelHandler->_weatherIntensity;
+		WeatherType weatherKind = (_appliedWeather & ~WeatherType::OutdoorsOnly);
+		snowing = (weatherKind != WeatherType::None);
+		snowingOutdoors = ((_appliedWeather & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly);
+		snowingIntensity = _appliedWeatherIntensity;
+		snowingType = (snowing ? std::int32_t(weatherKind) - 1 : 0);
+	}
+
+	bool LevelScriptLoader::OwnsWeather() const
+	{
+		return (GetContextType() == ScriptContextType::Legacy);
 	}
 
 	void LevelScriptLoader::OnAfterScriptCall()
@@ -425,6 +486,20 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		if (_animTables != nullptr) {
 			_animTables->Flush();
 		}
+
+		// The weather as the script set it, SNOWING::Type is one less than WeatherType
+		WeatherType weather = WeatherType::None;
+		if (snowing && snowingType >= 0 && snowingType <= 3) {
+			weather = WeatherType(snowingType + 1);
+			if (snowingOutdoors) {
+				weather |= WeatherType::OutdoorsOnly;
+			}
+		}
+		if (weather != _appliedWeather || snowingIntensity != _appliedWeatherIntensity) {
+			_appliedWeather = weather;
+			_appliedWeatherIntensity = snowingIntensity;
+			_levelHandler->SetWeather(weather, snowingIntensity);
+		}
 	}
 
 	void LevelScriptLoader::OnLevelLoad()
@@ -434,6 +509,9 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			numberOfTiles = std::uint32_t(tileMap->GetLoadedTileCount());
 		}
 		UpdateViewSize();
+
+		// The weather of the level, scripts start and stop it by these
+		PullWeather(true);
 
 		// Scenery is a part of its tile, it has an object only where a script drives it (see Legacy::ScriptSceneryObject),
 		// a script can still register a spawner of its own over this one
@@ -505,7 +583,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		// The level went back to a checkpoint, but not what scripts wrote to it - the boss is to be activated again
 		ReapplyEventWrites();
 		_bossAreaActivated = false;
-		// JJ2+ starts the objects again, those scripts made are gone (ThreedRealms makes its puppets again then)
+		// JJ2+ starts the objects again, those scripts made are gone (scripts make them again then)
 		DeleteObjectsOfScripts();
 
 		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("void onLevelReload()");
@@ -576,7 +654,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			_worldCanvas->Clear();
 			_canvasClearTick = currentTick;
 		}
-		if (_particles != nullptr) {
+		if (_particles != nullptr || (snowing && OwnsWeather())) {
 			UpdateParticles(currentTick);
 		}
 		if (!_loopedSamples.empty()) {
@@ -657,22 +735,25 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 								//_onLevelUpdate = nullptr;
 							}
 						}
+						// The players swim by the water as onPlayer() left it, the objects of the tick come after them in JJ2+
+						_levelHandler->_playerWaterLevel = _levelHandler->_waterLevel;
+						_levelHandler->_playerWaterLevelSet = true;
 					}
 					if (onPlayerDraw != nullptr) {
-						// What the script draws with a player (testrealtimecastle draws its shadow), the player is drawn as
+						// What the script draws with a player (a shadow), the player is drawn as
 						// it is whatever the script changes of it
 						for (auto* player : _levelHandler->_players) {
 							jjPLAYER* p = GetPlayerBackingStore(player);
 							Legacy::jjPLAYERDRAW draw = {};
 							draw.name = draw.sprite = draw.sugarRush = draw.gunFlash = draw.invincibility = draw.trail = true;
 							draw.morphingExplosions = true;
-							// Only on an airboard, scripts tell one by it (ThreedRealms' skyrunner)
+							// Only on an airboard, scripts tell one by it
 							draw.airboardBouncingMotion = draw.airboardPuff = (player->GetModifier() == Actors::Player::Modifier::Airboard);
 							draw.spriteMode = std::int32_t(p->get_spriteMode());
 							draw.spriteParam = p->get_spriteParam();
 							draw.layer = 4;
 							draw.curFrame = p->get_curFrame();
-							// The sign is the side the player faces, as in JJ2+ (ThreedRealms sets 1 for "direction")
+							// The sign is the side the player faces, as in JJ2+ (scripts set 1 for "direction")
 							draw.xScale = (player->IsFacingLeft() ? -1.0f : 1.0f);
 							draw.yScale = 1.0f;
 							draw._player = p;
@@ -686,7 +767,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 							}
 
 							// Another frame, offset, scale, angle or mode the script gave the player is drawn here in place of the
-							// player until the next tick (ThreedRealms' trapezes and burgers), the player isn't drawn without a sprite
+							// player until the next tick (trapezes and burgers), the player isn't drawn without a sprite
 							bool replaced = (draw.curFrame != original.curFrame || draw.xOffset != original.xOffset ||
 								draw.yOffset != original.yOffset || draw.xScale != original.xScale || draw.yScale != original.yScale ||
 								draw.angle != original.angle || draw.spriteMode != original.spriteMode || draw.spriteParam != original.spriteParam);
@@ -1114,6 +1195,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		RegisterLegacyPlayerDraw(engine);
 		RegisterLegacyEnumValues(engine);
 		RegisterLegacyMlle(engine);
+		// Declared by a script, not by the engine
+		AddScriptSection("JJ2+ Help", LegacyHelpPages);
 	}
 
 	void LevelScriptLoader::RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module)

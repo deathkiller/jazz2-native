@@ -793,7 +793,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "COKE", aCOKE);
 		engine->RegisterEnumValue("Object", "SOFTDRINK", aCOKE); // Private/deprecated
 		engine->RegisterEnumValue("Object", "PEPSI", aPEPSI);
-		engine->RegisterEnumValue("Object", "SODAPOP", aPEPSI); // Private/deprecated
+		engine->RegisterEnumValue("Object", "SODAPOP", aCOKE); // Private/deprecated
 		engine->RegisterEnumValue("Object", "MILK", aMILK);
 		engine->RegisterEnumValue("Object", "PIE", aPIE);
 		engine->RegisterEnumValue("Object", "CAKE", aCAKE);
@@ -1045,7 +1045,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "COKE", aCOKE);
 		engine->RegisterEnumValue("Behavior", "SOFTDRINK", aCOKE); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "PEPSI", aPEPSI);
-		engine->RegisterEnumValue("Behavior", "SODAPOP", aPEPSI); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "SODAPOP", aCOKE); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "MILK", aMILK);
 		engine->RegisterEnumValue("Behavior", "PIE", aPIE);
 		engine->RegisterEnumValue("Behavior", "CAKE", aCAKE);
@@ -1158,6 +1158,8 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "BUMP", aCOUNT + 28);
 		// The spray of the pepper spray, a bullet of a script moves as any other here
 		engine->RegisterEnumValue("Behavior", "PEPPERBULLET", aCOUNT + 29);
+		// All the poles, a pole runs its own behavior by it
+		engine->RegisterEnumValue("Behavior", "POLE", aCOUNT + 30);
 
 		engine->SetDefaultNamespace("ANIM");
 		engine->RegisterEnumValue("Set", "AMMO", Legacy::AnimationTables::GetSetID(mAMMO, versionTSF));

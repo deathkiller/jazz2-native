@@ -153,7 +153,7 @@ namespace Jazz2::Editor
 		/**
 		 * @brief Opens the script of the level in the program of `EditorSettings::ScriptEditor` or the one the system has for it
 		 *
-		 * A script that doesn't exist yet is made from a template first.
+		 * A script that doesn't exist yet is made from a template first, once the user agrees to it.
 		 */
 		void EditScript();
 		/** @brief Describes the events of event packs, with @p packs, and of the script of the level, see @ref EventCatalog::LoadExtensions() */
@@ -185,6 +185,11 @@ namespace Jazz2::Editor
 		void UpdateWindowTitle(bool force = false);
 
 	private:
+		// Makes a new script from a template, see EditScript()
+		bool CreateScript(StringView path);
+		// Opens a script that exists, see EditScript()
+		void OpenScript(StringView path);
+
 		struct WatchedTileSet
 		{
 			String Name;

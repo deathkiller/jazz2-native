@@ -62,6 +62,8 @@ namespace Jazz2::Actors::Bosses
 		};
 #endif
 
+		void SetShielded(bool value);
+
 		std::int32_t _state = StateWaiting;
 		float _stateTime;
 		std::uint8_t _endText;

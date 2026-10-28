@@ -100,20 +100,14 @@ namespace Jazz2::Formats
 		@par Version history
 		- 1 --- first versioned layout; a layer may use @ref Tiles::LayerRendererType::XRay and
 		  @ref Tiles::LayerRendererType::BlurBehind; optional chunks at the end of the body; @ref LevelProperties::Author
-		  after the display name. Since 4.0.0 a layer may also use @ref Tiles::LayerRendererType::PaletteShift, which
-		  3.9.0 draws as an ordinary layer modulated by the layer's color (see @ref LayerRecord::Color), and the
-		  sprite layer may be drawn otherwise than as ordinary tiles (see @ref SpriteLayerChunk), which 3.9.0 doesn't.
-		  Since 4.0.0 a layer may also be a reflection (@ref Tiles::LayerRendererType::Reflection), which 3.9.0 draws as
-		  an ordinary layer of its tiles modulated by its color, and a tunnel or a reflection may have parameters its
-		  color has no room for (see @ref TexturedLayerChunk), which 3.9.0 ignores. Since 4.0.0 a layer may also be a
-		  cylinder (@ref Tiles::LayerRendererType::Cylinder), with parameters in the same chunk, which 3.9.0 draws as an
-		  ordinary layer of its tiles modulated by its color. Since 4.0.0 a layer may also be a wave
-		  (@ref Tiles::LayerRendererType::Wave), with parameters in the same chunk, which 3.9.0 draws as an ordinary
-		  layer of its tiles, and a tile may have the heat modifier (@ref TileRecord::ModifierHeat), which 3.9.0 draws
-		  as an ordinary tile. Since 4.0.0 the layers may have names (@ref LayerNamesChunk) and the numbers they had in
-		  the original game (@ref LayerNumbersChunk), which the game uses for scripts only. Since 4.0.0 a layer may also
-		  be drawn in a single color (@ref Tiles::LayerRendererType::SingleColor), the sprite layer too, or only over a
-		  color of what is behind it (@ref Tiles::LayerRendererType::ChromaKey), which 3.9.0 draws as an ordinary layer
+		  after the display name. Since 4.0.0 a layer may also be palette-shifted (@ref Tiles::LayerRendererType::PaletteShift),
+		  a reflection (@ref Tiles::LayerRendererType::Reflection), a cylinder (@ref Tiles::LayerRendererType::Cylinder),
+		  a wave (@ref Tiles::LayerRendererType::Wave), drawn in a single color (@ref Tiles::LayerRendererType::SingleColor),
+		  an alpha map (@ref Tiles::LayerRendererType::AlphaMap) or through an additional palette of the level
+		  (@ref Tiles::LayerRendererType::PaletteMapping), which 3.9.0 draws as an ordinary layer of its tiles, a reflection
+		  and a cylinder modulated by the color, and a tile may have the heat modifier (@ref TileRecord::ModifierHeat),
+		  which 3.9.0 draws as an ordinary tile. Since 4.0.0 the properties the records of the layers have no room for are
+		  in @ref LayerPropertiesChunk, and the data of the script of a level in @ref ScriptDataChunk, which 3.9.0 ignores.
 	*/
 	struct LevelFile
 	{
@@ -146,7 +140,8 @@ namespace Jazz2::Formats
 		/**
 		 * @brief Small image of the level shown in the list of custom levels, kept when the level is exported
 		 *
-		 * @cpp u16 @ce width and height, then @cpp R, G, B @ce bytes for each pixel, row by row. Made by
+		 * @cpp u16 @ce width and height, then the pixels row by row as opaque RGBA in the image content of the game's
+		 * files (see @ref Compatibility::JJ2Anims::WriteImageContent()), read by @ref LevelPreview::Decode(). Made by
 		 * @ref LevelPreview, written by the level editor whenever it saves a level, and by the converter of the
 		 * original levels for those of no episode, the ones the list shows.
 		 */
@@ -352,8 +347,8 @@ namespace Jazz2::Formats
 		Taken by a tunnel (@ref Tiles::LayerRendererType::Tunnel), a wave (@ref Tiles::LayerRendererType::Wave), a cylinder
 		(@ref Tiles::LayerRendererType::Cylinder) and a reflection (@ref Tiles::LayerRendererType::Reflection), as the same
 		fields of a layer of JJ2+ (`jjLAYER.tunnel`, `jjLAYER.wave`, `jjLAYER.cylinder` and `jjLAYER.reflection`), which
-		share them there too. They aren't a part of @ref LayerRecord in the file, they're stored in @ref TexturedLayerChunk
-		--- a layer without it has the defaults.
+		share them there too. They aren't a part of @ref LayerRecord in the file, they're stored in @ref LayerPropertiesChunk
+		--- a layer without them has the defaults.
 	*/
 	struct TexturedLayerParams
 	{
@@ -395,7 +390,7 @@ namespace Jazz2::Formats
 		 * @brief Only the ground of a sky is drawn, below its horizon, and only in the tiles of layer 8
 		 *
 		 * As JJ2+ draws a textured layer other than the sky layer of a level without extended layer data (`SURFACE::LEGACY`),
-		 * measured: it shows only where layer 8 (see @ref LayerNumbersChunk) has tiles, layer 8 fixed to the view and
+		 * measured: it shows only where layer 8 (see @ref LayerRecord::OriginalNumber) has tiles, layer 8 fixed to the view and
 		 * repeating as it does. Readers before 4.0.0 draw the sky too.
 		 */
 		static constexpr std::uint8_t FloorOnly = 0x40;
@@ -434,10 +429,17 @@ namespace Jazz2::Formats
 		float InnerAutoSpeedX = 0.0f;
 		/** @brief Vertical speed the texture of a reflection drawn only where the layer is moves at by itself (`jjLAYER.yInnerAutoSpeed` of JJ2+) */
 		float InnerAutoSpeedY = 0.0f;
+		/**
+		 * @brief One more than the index of the additional palette of the level the texture is drawn through, 0 for the palette of the level
+		 *
+		 * As `SPRITE::MAPPING` of a textured layer of JJ2+, so the texture keeps its colors whatever happens to the palette of
+		 * the level. Without such a palette, the palette of the level.
+		 */
+		std::uint8_t Mapping = 0;
 
 		/** @brief Returns `true` if all the parameters are the defaults */
 		bool IsDefault() const {
-			return (FadeX == 0.5f && FadeY == 0.5f && Fade == DefaultFade && Flags == 0 && HasDefaultInnerSpeeds());
+			return (FadeX == 0.5f && FadeY == 0.5f && Fade == DefaultFade && Flags == 0 && HasDefaultInnerSpeeds() && Mapping == 0);
 		}
 
 		/** @brief Returns `true` if all the inner speeds are zero */
@@ -450,7 +452,7 @@ namespace Jazz2::Formats
 		@brief Description of a layer
 
 		Everything after @ref Height is stored only for layers other than the sprite one, which is always placed
-		with its defaults --- how it's drawn is stored apart from the record, see @ref SpriteLayerChunk. The speed
+		with its defaults --- how it's drawn is stored apart from the record, see @ref LayerPropertiesChunk. The speed
 		models and the renderer type are kept as raw values, so a level saved again keeps even values this version
 		of the game doesn't know.
 	*/
@@ -525,15 +527,23 @@ namespace Jazz2::Formats
 		/**
 		 * @brief Parameters of a tunnel, a wave, a cylinder or a reflection that @ref Color has no room for
 		 *
-		 * Not stored in the record itself but in @ref TexturedLayerChunk, the reader of the record leaves the defaults.
+		 * Not stored in the record itself but in @ref LayerPropertiesChunk, the reader of the record leaves the defaults.
 		 */
 		TexturedLayerParams Textured;
 		/**
 		 * @brief Number of the layer in the original game, 1 to 8 from the front, or 0 for a layer of another origin
 		 *
-		 * Not stored in the record itself but in @ref LayerNumbersChunk, the reader of the record sets 0.
+		 * Not stored in the record itself but in @ref LayerPropertiesChunk, the reader of the record sets 0.
 		 */
 		std::uint8_t OriginalNumber;
+		/**
+		 * @brief How the layer is blended over what is behind it (see @ref Tiles::LayerBlend)
+		 *
+		 * Not stored in the record itself but in @ref LayerPropertiesChunk, as @ref BlendParam.
+		 */
+		std::uint8_t Blend = 0;
+		/** @brief Parameter of @ref Blend, the opacity or the palette entry of the key (see @ref Tiles::LayerDescription::BlendParam) */
+		std::uint8_t BlendParam = 255;
 	};
 
 	/**
@@ -609,207 +619,159 @@ namespace Jazz2::Formats
 	};
 
 	/**
-		@brief Chunk with how the sprite layer is drawn, which its @ref LayerRecord doesn't store
+		@brief Chunk with what the records of the layers have no room for
 
-		The record of the sprite layer ends after its size, so the layer would always be drawn as ordinary tiles. This
-		ancillary chunk gives it a renderer type and a color, which mean what @ref LayerRecord::RendererType and
-		@ref LayerRecord::Color of any other layer do --- but only the renderer types that keep the tiles where they
-		are take effect (see @ref Tiles::LayerDescription::IsSpriteLayerRenderer()), and the layer is still placed as
-		it always is. A reader that doesn't know the chunk --- the game before 4.0.0 --- draws the sprite layer as
-		ordinary tiles. It's written only when the sprite layer isn't drawn so, and kept when the level is exported.
+		The name of a layer, the number it had in the original game, how the sprite layer is drawn, the parameters and the
+		texture of its own of a textured layer, and how a layer is blended over what is behind it. The level editor shows the
+		names, and scripts find layers by them; a script of JJ2+ refers to the eight layers of a level of the original game by
+		their numbers, 1 to 8 from the front (`jjLayers[n]`), whatever order they are drawn in --- the converter keeps all eight
+		of them, even an empty one, and gives them their numbers here. Without a number, scripts count the layers from the sprite
+		layer, which is layer 4. The record of the sprite layer ends after its size, so its renderer type and its color are
+		here, and only those that keep its tiles where they are take effect (see @ref Tiles::LayerDescription::IsSpriteLayerRenderer()).
+		A reader that doesn't know the chunk draws the layers as their records say, the sprite layer as ordinary tiles. It's
+		written only for the layers that have any of it, and kept when the level is exported.
 
-		The payload is @cpp u8 @ce renderer type and the 4 bytes of the color. A newer version may add bytes after
-		them, a reader skips those it doesn't know.
+		The payload is @cpp varuint @ce count × (@cpp varuint @ce index of the layer in file order, @cpp varuint @ce size of
+		its fields, then the fields), each field @cpp u8 @ce @ref Field, @cpp varuint @ce size and its value:
+
+		- @ref Field::Name --- the UTF-8 bytes of the name, at most @ref MaxNameLength
+		- @ref Field::OriginalNumber --- @cpp u8 @ce 1 to @ref OriginalLayerCount, another one is taken as 0
+		- @ref Field::SpriteLook --- @cpp u8 @ce renderer type and the 4 bytes of the color, which mean what
+		  @ref LayerRecord::RendererType and @ref LayerRecord::Color of any other layer do, only of the sprite layer
+		- @ref Field::Textured --- @cpp f32 @ce @ref TexturedLayerParams::FadeX, @cpp f32 @ce @ref TexturedLayerParams::FadeY,
+		  @cpp u8 @ce @ref TexturedLayerParams::Fade, @cpp u8 @ce @ref TexturedLayerParams::Flags, @cpp f32 @ce
+		  @ref TexturedLayerParams::InnerSpeedX, @cpp f32 @ce @ref TexturedLayerParams::InnerSpeedY, @cpp f32 @ce
+		  @ref TexturedLayerParams::InnerAutoSpeedX, @cpp f32 @ce @ref TexturedLayerParams::InnerAutoSpeedY and @cpp u8 @ce
+		  @ref TexturedLayerParams::Mapping
+		- @ref Field::Texture --- @ref TextureSize × @ref TextureSize palette indices row by row
+		- @ref Field::Blend --- @cpp u8 @ce @ref LayerRecord::Blend and @cpp u8 @ce @ref LayerRecord::BlendParam
+
+		A field of a kind this version doesn't know is skipped, and so are the bytes a newer version adds after a value; a field
+		shorter than its value is ignored. A layer without a field has its default, a layer without an entry all of them.
 	*/
-	struct SpriteLayerChunk
+	struct LayerPropertiesChunk
 	{
 		/** @brief Tag of the chunk */
-		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('S', 'P', 'R', 'L');
-
-		SpriteLayerChunk() = delete;
-
-		/** @brief Reads the payload into the renderer type and the color of a record, returns `false` if it's damaged and the record stays as it was */
-		static bool Read(ArrayView<const std::uint8_t> data, LayerRecord& record);
-		/** @brief Writes the payload of the record of the sprite layer, nothing if the layer is drawn as ordinary tiles */
-		static void Write(const LayerRecord& record, SmallVectorImpl<std::uint8_t>& data);
-	};
-
-	/**
-		@brief Chunk with the parameters of tunnels, cylinders and reflections, which their @ref LayerRecord doesn't store
-
-		A tunnel, a cylinder and a reflection take more parameters than the 4 bytes of @ref LayerRecord::Color, the rest of
-		them is in @ref LayerRecord::Textured. This ancillary chunk stores them for the layers where they aren't the defaults,
-		and the texture of a textured layer that has one of its own instead of its tiles.
-		A reader that doesn't know the chunk --- the game before 4.0.0 --- draws every tunnel centered on the view, fading
-		out into its center and not spiralling, and doesn't know cylinders and reflections at all. It's kept when the level
-		is exported.
-
-		The payload is @cpp varuint @ce count × (@cpp varuint @ce index of the layer in file order, @cpp varuint @ce size,
-		then @cpp f32 @ce @ref TexturedLayerParams::FadeX, @cpp f32 @ce @ref TexturedLayerParams::FadeY, @cpp u8 @ce
-		@ref TexturedLayerParams::Fade and @cpp u8 @ce @ref TexturedLayerParams::Flags). A newer version may add bytes
-		at the end of an entry, a reader skips those it doesn't know.
-
-		An entry of a layer with inner speeds or a texture of its own goes on with @cpp f32 @ce
-		@ref TexturedLayerParams::InnerSpeedX, @cpp f32 @ce @ref TexturedLayerParams::InnerSpeedY, @cpp f32 @ce
-		@ref TexturedLayerParams::InnerAutoSpeedX, @cpp f32 @ce @ref TexturedLayerParams::InnerAutoSpeedY and @cpp u8 @ce
-		texture --- 0 for the tiles of the layer, 1 for an image of its own, @ref TextureSize × @ref TextureSize palette
-		indices row by row, which follow. An entry without them, the only one before, has the defaults: no inner speeds
-		and the tiles of the layer. A texture of another kind is of a newer version, the tiles of the layer are taken then.
-	*/
-	struct TexturedLayerChunk
-	{
-		/** @brief Tag of the chunk */
-		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('T', 'X', 'L', 'P');
+		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('L', 'P', 'R', 'P');
 		/** @brief Width and height of a texture of its own in pixels, as the textures of JJ2+ and of 8×8 tiles */
 		static constexpr std::int32_t TextureSize = 256;
+		/** @brief Largest length of a name in bytes, a longer one is cut short at a whole character */
+		static constexpr std::size_t MaxNameLength = 255;
+		/** @brief Number of the layers of a level of the original game */
+		static constexpr std::uint8_t OriginalLayerCount = 8;
 
-		/** @brief Parameters of one layer */
+		/** @brief Kind of a field of an entry */
+		enum class Field : std::uint8_t {
+			Name = 1,				/**< Name of the layer */
+			OriginalNumber,			/**< Number of the layer in the original game */
+			SpriteLook,				/**< Renderer type and color of the sprite layer */
+			Textured,				/**< Parameters of a textured layer, see @ref TexturedLayerParams */
+			Texture,				/**< Texture of its own of a textured layer */
+			Blend					/**< How the layer is blended over what is behind it */
+		};
+
+		/** @brief Properties of one layer */
 		struct Entry
 		{
 			/** @brief Index of the layer in file order */
-			std::uint32_t Layer;
-			/** @brief Parameters of the layer */
-			TexturedLayerParams Params;
+			std::uint32_t Layer = 0;
+			/** @brief Name of the layer, empty if it has none */
+			String Name;
+			/** @brief See @ref LayerRecord::OriginalNumber */
+			std::uint8_t OriginalNumber = 0;
+			/** @brief Whether @ref RendererType and @ref Color are stored, only for the sprite layer drawn otherwise than as ordinary tiles */
+			bool HasSpriteLook = false;
+			/** @brief See @ref LayerRecord::RendererType */
+			std::uint8_t RendererType = 0;
+			/** @brief See @ref LayerRecord::Color */
+			std::uint8_t Color[4] = { 255, 255, 255, 255 };
+			/** @brief See @ref LayerRecord::Textured */
+			TexturedLayerParams Textured;
 			/**
 			 * @brief Texture of its own, @ref TextureSize × @ref TextureSize palette indices row by row
 			 *
 			 * The 8×8 tiles at the top left of the layer are its texture if it's empty, as `TEXTURE::FROMTILES` of JJ2+. A
-			 * layer of JJ2+ with one of its own textures, or with an image of its own, has it here. It stays
-			 * indexed, so it follows changes of the palette as the tiles do.
+			 * layer of JJ2+ with one of its own textures, or with an image of its own, has it here. It stays indexed, so it
+			 * follows changes of the palette as the tiles do.
 			 */
 			SmallVector<std::uint8_t, 0> Texture;
+			/** @brief See @ref LayerRecord::Blend */
+			std::uint8_t Blend = 0;
+			/** @brief See @ref LayerRecord::BlendParam */
+			std::uint8_t BlendParam = 255;
+
+			/** @brief Makes the entry of a layer of the given index in file order */
+			static Entry FromRecord(std::uint32_t layer, const LayerRecord& record, StringView name, ArrayView<const std::uint8_t> texture);
+			/** @brief Puts the properties the record keeps into it, how the sprite layer is drawn only into a record of the sprite layer */
+			void ApplyTo(LayerRecord& record) const;
+			/** @brief Returns `true` if every property has its default, such an entry isn't written */
+			bool IsDefault() const;
 		};
 
-		TexturedLayerChunk() = delete;
+		LayerPropertiesChunk() = delete;
 
 		/** @brief Reads the payload, returns `false` if it's damaged and @p layers is left empty then */
 		static bool Read(ArrayView<const std::uint8_t> data, SmallVectorImpl<Entry>& layers);
 		/**
-		 * @brief Writes the payload of the layers whose parameters aren't the defaults or that have a texture of their own, nothing if there are none
+		 * @brief Writes the payload of the layers that have any property other than its default, nothing if there are none
 		 *
-		 * An entry ends after the flags if the layer has neither inner speeds nor a texture of its own. A texture of another
-		 * size than @ref TextureSize × @ref TextureSize isn't written.
+		 * A texture of another size than @ref TextureSize × @ref TextureSize isn't written, a parameter that isn't finite
+		 * is written as its default.
 		 */
 		static void Write(ArrayView<const Entry> layers, SmallVectorImpl<std::uint8_t>& data);
 	};
 
 	/**
-		@brief Chunk with the names of the layers
+		@brief Chunk with the data of a level for its script
 
-		The level editor shows them, and scripts find layers by them, the names a converted level gives its layers are
-		converted into them. Written only if a layer has a name, and kept when the level is exported.
+		What a level of JJ2+ keeps for its script beyond the level itself, in sections:
 
-		The payload is @cpp str8 @ce per layer in file order. A layer after the last one has an empty name, the names after
-		the last layer are ignored.
-	*/
-	struct LayerNamesChunk
-	{
-		/** @brief Tag of the chunk */
-		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('L', 'N', 'A', 'M');
-		/** @brief Largest length of a name in bytes, a longer one is cut short at a whole character */
-		static constexpr std::size_t MaxNameLength = 255;
+		- @ref Section::Texts --- the texts of the level as the original game had them. They're kept with their formatting
+		  converted, which drops the characters that formatting uses, such as `|`, a script reads them as they were
+		  (`jjHelpStrings`), and some split them by those characters. @cpp u16 @ce length and the bytes of each text in
+		  order, a text after the last one is empty.
+		- @ref Section::Weapons --- how the level changes the weapons, which its script sets up together with weapons of its
+		  own (see @ref Scripting::LevelScriptLoader). @cpp i16 @ce the argument of the hook of the weapons of the script
+		  (-1 for none), then for each of the @ref WeaponCount weapons: @cpp u8 @ce 1 if it's a weapon of the script, @cpp i32 @ce
+		  the most ammo, @cpp u8 @ce whether it comes from birds (2 if powered up), from gun crates, the gems lost, the gems
+		  lost powered up, 1 if it's infinite and 2 if it replenishes, the event of its ammo crate (0 for none), the style of
+		  the 8th weapon (255 for none), and @cpp u32 @ce the length and the bytes of the parameters of a weapon of the
+		  script. That's how `jjSTREAM` of JJ2+ reads them.
+		- @ref Section::Recolors --- the sprites the level recolors, platforms, poles and the like, which its script does when
+		  it sets up: for each of them @cpp u8 @ce its slot in the list of the sprites the editor of the level can recolor
+		  and @cpp u8 @ce the new palette index of each of the 256 indices (@ref RecolorRecordSize).
 
-		LayerNamesChunk() = delete;
-
-		/** @brief Reads the name of the layer at the given index in file order from the payload, empty if it has none */
-		static StringView Read(ArrayView<const std::uint8_t> data, std::int32_t layer);
-		/** @brief Writes the payload of the names of all layers in file order, nothing if no layer has a name */
-		static void Write(ArrayView<const StringView> names, SmallVectorImpl<std::uint8_t>& data);
-	};
-
-	/**
-		@brief Chunk with the numbers the layers had in the original game
-
-		A script of JJ2+ refers to the eight layers of a level of the original game by their numbers, 1 to 8 from the front
-		(`jjLayers[n]`), whatever order they are drawn in. The converter keeps all eight of them, even an empty one, and
-		gives them their numbers here; a layer of another origin --- an additional layer of a converted level, a layer added
-		in the editor --- has 0. Without the chunk, scripts count the layers from the sprite layer, which is layer 4. Written only
-		if a layer has a number, and kept when the level is exported.
-
-		The payload is @cpp u8 @ce per layer in file order (see @ref LayerRecord::OriginalNumber). A layer after the last
-		one has 0, the numbers after the last layer are ignored, and a number other than 1 to 8 is taken as 0.
-	*/
-	struct LayerNumbersChunk
-	{
-		/** @brief Tag of the chunk */
-		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('L', 'N', 'U', 'M');
-		/** @brief Number of the layers of a level of the original game */
-		static constexpr std::uint8_t OriginalLayerCount = 8;
-
-		LayerNumbersChunk() = delete;
-
-		/** @brief Reads the number of the layer at the given index in file order from the payload, 0 if it has none */
-		static std::uint8_t Read(ArrayView<const std::uint8_t> data, std::int32_t layer);
-		/** @brief Writes the payload of the numbers of all layers in file order, nothing if no layer has a number */
-		static void Write(ArrayView<const std::uint8_t> numbers, SmallVectorImpl<std::uint8_t>& data);
-	};
-
-	/**
-		@brief Chunk with the texts of a level as the original game had them, for its script
-
-		The texts of a level of the original game are kept with their formatting converted, which drops the characters
-		that formatting uses, such as `|`. A script of JJ2+ reads them as they were (`jjHelpStrings`), and some split them
-		by those characters. The converter writes the chunk for a level with a script only, and it's kept when the level
-		is exported.
-
-		The payload is @cpp u16 @ce length and the bytes of each text in order, as the original game has them. A text
-		after the last one is empty.
-	*/
-	struct ScriptTextsChunk
-	{
-		/** @brief Tag of the chunk */
-		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('S', 'T', 'X', 'T');
-
-		ScriptTextsChunk() = delete;
-
-		/** @brief Reads the text at the given index from the payload, empty if there's none */
-		static StringView Read(ArrayView<const std::uint8_t> data, std::int32_t index);
-		/** @brief Writes the payload of all texts in order, nothing if all are empty */
-		static void Write(ArrayView<const StringView> texts, SmallVectorImpl<std::uint8_t>& data);
-	};
-
-	/**
-		@brief Chunk with the custom weapons a level sets up, for its script
-
-		A level of JJ2+ can keep how it changes the weapons, which its script sets up together with weapons of its own
-		(see @ref Scripting::LevelScriptLoader). The converter writes the chunk for a level with such weapons, and it's
-		kept when the level is exported.
-
-		The payload is @cpp i16 @ce the argument of the hook of the weapons of the script (-1 for none), then for each
-		of the 9 weapons: @cpp u8 @ce 1 if it's a weapon of the script, @cpp i32 @ce the most ammo, @cpp u8 @ce whether
-		it comes from birds (2 if powered up), from gun crates, the gems lost, the gems lost powered up, 1 if it's
-		infinite and 2 if it replenishes, the event of its ammo crate (0 for none), the style of the 8th weapon (255 for
-		none), and @cpp u32 @ce the length and the bytes of the parameters of a weapon of the script. That's how
-		`jjSTREAM` of JJ2+ reads them.
-	*/
-	struct CustomWeaponsChunk
-	{
-		/** @brief Tag of the chunk */
-		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('C', 'W', 'P', 'N');
-		/** @brief Number of weapons */
-		static constexpr std::int32_t WeaponCount = 9;
-
-		CustomWeaponsChunk() = delete;
-	};
-
-	/**
-		@brief Chunk with the sprites a level recolors, for its script
-
-		A level of JJ2+ can recolor some sprites of the game, platforms, poles and the like, which its script does when it
-		sets up (see @ref Scripting::LevelScriptLoader). The converter writes the chunk for a level with such sprites, and
+		The payload is the sections in any order, each @cpp u8 @ce @ref Section, @cpp varuint @ce size and its bytes. A
+		section of a kind this version doesn't know is skipped. The converter writes the chunk for a level with a script, and
 		it's kept when the level is exported.
-
-		The payload is, for each recolored sprite, @cpp u8 @ce its slot in the list of the sprites the editor of the
-		level can recolor and @cpp u8 @ce the new palette index of each of the 256 indices.
 	*/
-	struct SpriteRecolorsChunk
+	struct ScriptDataChunk
 	{
 		/** @brief Tag of the chunk */
-		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('S', 'R', 'C', 'L');
-		/** @brief Size of one recolored sprite in the payload */
-		static constexpr std::size_t RecordSize = 1 + 256;
+		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('S', 'C', 'R', 'D');
+		/** @brief Number of weapons of @ref Section::Weapons */
+		static constexpr std::int32_t WeaponCount = 9;
+		/** @brief Size of one recolored sprite of @ref Section::Recolors */
+		static constexpr std::size_t RecolorRecordSize = 1 + 256;
 
-		SpriteRecolorsChunk() = delete;
+		/** @brief Kind of a section */
+		enum class Section : std::uint8_t {
+			Texts = 1,			/**< Texts of the level as the original game had them */
+			Weapons,			/**< Custom weapons */
+			Recolors			/**< Recolored sprites */
+		};
+
+		ScriptDataChunk() = delete;
+
+		/** @brief Returns the bytes of a section of the payload, empty if there's none or the payload is damaged */
+		static ArrayView<const std::uint8_t> ReadSection(ArrayView<const std::uint8_t> data, Section section);
+		/** @brief Appends a section to the payload, nothing if @p bytes is empty */
+		static void WriteSection(SmallVectorImpl<std::uint8_t>& data, Section section, ArrayView<const std::uint8_t> bytes);
+
+		/** @brief Reads the text at the given index from @ref Section::Texts, empty if there's none */
+		static StringView ReadText(ArrayView<const std::uint8_t> texts, std::int32_t index);
+		/** @brief Writes all texts in order as @ref Section::Texts, nothing if all are empty */
+		static void WriteTexts(ArrayView<const StringView> texts, SmallVectorImpl<std::uint8_t>& data);
 	};
 
 	/**

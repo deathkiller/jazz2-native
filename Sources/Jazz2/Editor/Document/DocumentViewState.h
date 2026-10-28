@@ -43,8 +43,6 @@ namespace Jazz2::Editor
 		bool FlatLayers = false;
 		/** @brief How collision masks are shown, 0 not at all, 1 over the tiles, 2 instead of them */
 		std::uint8_t MaskMode = 0;
-		/** @brief Panel of the picker, 0 tiles, 1 events */
-		std::uint8_t PickerPanel = 0;
 
 		/** @brief Whether the way the level is played was saved */
 		bool HasPlaySettings = false;

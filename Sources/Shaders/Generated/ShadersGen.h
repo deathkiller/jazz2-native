@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Antialiasing.h"
+#include "BackgroundDither.h"
 #include "BatchedShieldFire.h"
 #include "BatchedShieldLightning.h"
 #include "Blur.h"
@@ -58,6 +59,7 @@ namespace Jazz2::ShadersGen
 	// All generated Jazz2 shader programs, sorted by name
 	inline constexpr const ShaderCompiler::Program* AllPrograms[] = {
 		&Antialiasing,
+		&BackgroundDither,
 		&BatchedShieldFire,
 		&BatchedShieldLightning,
 		&Blur,

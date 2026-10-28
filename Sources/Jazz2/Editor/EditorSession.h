@@ -14,6 +14,7 @@
 #include "Files/EditorSettings.h"
 #include "Input/ActionRegistry.h"
 #include "Runtime/PlayTestTypes.h"
+#include "Runtime/ScriptGraphics.h"
 #include "Session/DocumentFiles.h"
 #include "Session/EditorInputRouter.h"
 #include "Smart/SmartTileModel.h"
@@ -354,6 +355,9 @@ namespace Jazz2::Editor
 		// Where the player can get and where it died in the last play-tests
 		std::unique_ptr<PlayOverlays> _playOverlays;
 		bool _showPlayPath;
+		// How the level is played in this session only, as the game is set up at first
+		bool _playReforged;
+		bool _playLedgeClimb;
 		// Changes not shown yet, during a transaction or while the level is played, see OnDocumentChanged()
 		DocumentChanges _pendingChanges;
 		// See GetAccentColor()
@@ -384,6 +388,11 @@ namespace Jazz2::Editor
 		TileShapes _tileShapes;
 		// Draws the layers as images from far away
 		std::unique_ptr<TileLod> _tileLod;
+#if defined(WITH_ANGELSCRIPT)
+		// The sprites the script of the level gives the objects, taken again once it's marked, see UpdateScriptGraphics()
+		ScriptGraphics _scriptGraphics;
+		bool _scriptGraphicsDirty = true;
+#endif
 		std::int32_t _maskMode;
 		// The masks are shown only while the key of peeking at them is held, see ActionIds::ViewPeekMasks
 		bool _maskPeek = false;
@@ -417,6 +426,10 @@ namespace Jazz2::Editor
 		void StoreViewState() override;
 		/** @brief Shows the level as it was seen when it was saved, once the level handler exists but before its view does */
 		void ApplyViewState();
+#if defined(WITH_ANGELSCRIPT)
+		/** @brief Runs the script of the level for the sprites it gives the objects, if they were marked to be taken again */
+		void UpdateScriptGraphics();
+#endif
 
 		// IDocumentFilesHost
 		void PrepareForSave() override;

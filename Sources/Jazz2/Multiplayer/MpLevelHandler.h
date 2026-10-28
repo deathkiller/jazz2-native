@@ -129,6 +129,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const override;
 		bool IsPlayerColorForced(const Actors::Player* player) const override;
 		bool IsPausable() const override;
+		bool IsLedgeClimbEnabled(const Actors::Player* player) const override;
 		bool CanPlayersCollide() const override;
 		bool CanActivateSugarRush() const override;
 		bool CanEventDisappear(EventType eventType) const override;
@@ -380,8 +381,6 @@ namespace Jazz2::Multiplayer
 		 * Meaningful only on the server, a client learns the outcome from whether the track is synchronized to it.
 		 */
 		bool IsMinimapAllowed() const;
-		/** @brief Returns `true` if players are allowed to climb ledges (per-level @ref ServerConfiguration::AllowLedgeClimb) */
-		bool IsLedgeClimbAllowed() const;
 		/** @brief Returns the player actor the given player is standing/landing on (one-way platform check), or `nullptr` */
 		Actors::ActorBase* FindPlayerToStandOn(Actors::Player* player, float timeMult) override;
 		/** @brief Called when a player requests to synchronize weapon ammo */

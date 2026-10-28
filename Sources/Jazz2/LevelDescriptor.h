@@ -90,11 +90,11 @@ namespace Jazz2
 		SmallVector<String, 0> LevelTexts;
 		/** @brief Level texts translated to other languages, empty if the level has none */
 		SmallVector<LocalizedLevelTexts, 0> LocalizedTexts;
-		/** @brief Level texts as the original game had them, for the script of the level, empty if it has none (see @ref Formats::ScriptTextsChunk) */
+		/** @brief Level texts as the original game had them, for the script of the level, empty if it has none (see @ref Formats::ScriptDataChunk) */
 		SmallVector<String, 0> ScriptTexts;
-		/** @brief Custom weapons the level sets up for its script, empty if it has none (see @ref Formats::CustomWeaponsChunk) */
+		/** @brief Custom weapons the level sets up for its script, empty if it has none (see @ref Formats::ScriptDataChunk) */
 		SmallVector<std::uint8_t, 0> CustomWeapons;
-		/** @brief Sprites the level recolors for its script, empty if it has none (see @ref Formats::SpriteRecolorsChunk) */
+		/** @brief Sprites the level recolors for its script, empty if it has none (see @ref Formats::ScriptDataChunk) */
 		SmallVector<std::uint8_t, 0> SpriteRecolors;
 		/** @brief Tile images the level replaces, which scripts read instead of those of the tile sets */
 		SmallVector<Formats::TileDiffuseOverride, 0> TileDiffuseOverrides;

@@ -626,7 +626,7 @@ namespace nCine::RHI::GS
 		}
 
 		// CombineWithWater - from CombineWithWater.shader:fixed_function(gx, pica, gu, gs, legacygl)
-		// Shared by: CombineWithWater, CombineWithWaterLow [CombineWithWaterLow.shader:fixed_function(gx, pica, gu, gs, legacygl)]
+		// Shared by: CombineWithWater, CombineWithWater (DITHER), CombineWithWaterLow [CombineWithWaterLow.shader:fixed_function(gx, pica, gu, gs, legacygl)], CombineWithWaterLow (DITHER) [CombineWithWaterLow.shader:fixed_function(gx, pica, gu, gs, legacygl)]
 		void CombineWithWater_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
@@ -1644,8 +1644,11 @@ namespace nCine::RHI::GS
 			{ "Colorized", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Colorized_Effect },
 			{ "BatchedColorized", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Colorized_Effect },
 			{ "Combine", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
+			{ "Combine", "DITHER", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
 			{ "CombineWithWater", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::LightingCombine, &CombineWithWater_Effect },
+			{ "CombineWithWater", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::LightingCombine, &CombineWithWater_Effect },
 			{ "CombineWithWaterLow", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::LightingCombine, &CombineWithWater_Effect },
+			{ "CombineWithWaterLow", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::LightingCombine, &CombineWithWater_Effect },
 			{ "DefaultBatchedSpritesNoTexture", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
 			{ "DefaultMeshSprite", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LineStripMesh, nullptr },
 			{ "DefaultSprite", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },

@@ -18,6 +18,7 @@ uniform vec2 uShift;
 uniform vec4 uTunnel;
 
 #include "Include/TexturedBackgroundKey.inc"
+#include "Include/TexturedBackgroundDither.inc"
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -137,11 +138,10 @@ void fragment() {
 	vec3 tunnel = legacyTunnel(UV);
 #endif
 	vec2 texturePos = tunnel.xy;
-	vec4 texColor = texture(TEXTURE, texturePos);
-
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
+	vec4 texColor = textureTexel(texturePos);
+#else
+	vec4 texColor = texture(TEXTURE, texturePos);
 #endif
 	float horizonOpacity = tunnel.z;
 
@@ -158,8 +158,11 @@ void fragment() {
 
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+#endif
 #if KEYED
-	COLOR.a = keyedOpacity();
+	COLOR = keyedColor(COLOR.rgb);
 #else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);

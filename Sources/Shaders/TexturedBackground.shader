@@ -21,6 +21,7 @@ uniform vec2 uShift;
 uniform vec4 uHorizonOffset;
 
 #include "Include/TexturedBackgroundKey.inc"
+#include "Include/TexturedBackgroundDither.inc"
 
 // The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
 // length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
@@ -191,11 +192,10 @@ void fragment() {
 #endif
 #endif
 	vec2 texturePos = warp.xy;
-	vec4 texColor = texture(TEXTURE, texturePos);
-
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
+	vec4 texColor = textureTexel(texturePos);
+#else
+	vec4 texColor = texture(TEXTURE, texturePos);
 #endif
 	float horizonOpacity = warp.z;
 
@@ -211,8 +211,11 @@ void fragment() {
 #endif
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+#endif
 #if KEYED
-	COLOR.a = keyedOpacity();
+	COLOR = keyedColor(COLOR.rgb);
 #else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);

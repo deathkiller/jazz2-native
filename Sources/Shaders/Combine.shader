@@ -1,4 +1,5 @@
 program Combine;
+variant DITHER;
 
 #include "Include/CombineVs.inc"
 
@@ -35,6 +36,10 @@ vec2 lightingJitterLowPower() {
 	return offset * vViewSizeInv * 1.4;
 }
 
+#if DITHER
+#include "Include/Dither565.inc"
+#endif
+
 void fragment() {
 	vec4 blur1 = texture(uTextureBlurHalf, vTexCoords);
 	vec4 blur2 = texture(uTextureBlurQuarter, vTexCoords);
@@ -60,6 +65,10 @@ void fragment() {
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(1.0 - light.r));
 	COLOR.a = 1.0;
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
+	// The whole scene in the colors of the 16-bit renderer of JJ2+, the HUD is drawn after it
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+#endif
 }
 
 void fixed_function() {

@@ -893,6 +893,7 @@ namespace Jazz2::Editor
 		// As large as the screen allows, scrolled only if it doesn't fit, as on a small screen
 		dialog->MaxScreenHeightFraction = 0.85f;
 		dialog->MinScreenWidthFraction = 0.6f;
+		dialog->MaxStretchedWidth = 440.0f;
 		auto* scroll = dialog->GetContent()->Add<UiScrollView>();
 		scroll->Flex = 1.0f;
 		UiForm* content = scroll->SetContent<UiForm>(UiTheme::Spacing, UiThickness(0.0f, 0.0f, 4.0f, 0.0f));

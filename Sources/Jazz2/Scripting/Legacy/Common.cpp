@@ -87,7 +87,7 @@ namespace Jazz2::Scripting
 	}
 
 	// The table of JJ2 has 1024 entries, an angle is taken of it as it wraps round - a negative one a script passes as `uint`
-	// would have no precision left as a float (the strings of ThreedRealms' puppets)
+	// would have no precision left as a float (the strings of puppets)
 	float get_sinTable(std::uint32_t angle) {
 		return sinf(float(angle & 1023) * fTwoPi / 1024.0f);
 	};

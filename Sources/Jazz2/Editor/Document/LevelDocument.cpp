@@ -220,29 +220,18 @@ namespace Jazz2::Editor
 
 		const Formats::ChunkRecord* layerStates = nullptr;
 		const Formats::ChunkRecord* legacyLayerStates = nullptr;
-		std::int32_t spriteLayer = GetSpriteLayerIndex();
 		for (Formats::ChunkRecord& chunk : chunks) {
-			if (chunk.Tag == Formats::LayerNamesChunk::Tag) {
-				LoadLayerNames(chunk);
-			} else if (chunk.Tag == Formats::LayerNumbersChunk::Tag) {
-				for (std::int32_t i = 0; i < std::int32_t(Layers.size()); i++) {
-					Layers[i].Record.OriginalNumber = Formats::LayerNumbersChunk::Read(chunk.Data, i);
-				}
-			} else if (chunk.Tag == Formats::SpriteLayerChunk::Tag) {
-				// How the sprite layer is drawn is kept in its record as for any other layer, a damaged one leaves the defaults;
-				// without a sprite layer it means nothing, and it's written from the record of the sprite layer only
-				if (spriteLayer >= 0) {
-					Formats::SpriteLayerChunk::Read(chunk.Data, Layers[spriteLayer].Record);
-				}
-			} else if (chunk.Tag == Formats::TexturedLayerChunk::Tag) {
-				// The parameters of the tunnels and the reflections are kept in their records too, and a texture of its own with
-				// the layer, a damaged chunk leaves the defaults
-				SmallVector<Formats::TexturedLayerChunk::Entry, 4> texturedLayers;
-				if (Formats::TexturedLayerChunk::Read(chunk.Data, texturedLayers)) {
-					for (Formats::TexturedLayerChunk::Entry& entry : texturedLayers) {
+			if (chunk.Tag == Formats::LayerPropertiesChunk::Tag) {
+				// Kept in the records as for any other layer - how the sprite layer is drawn too, the name and a texture of its own
+				// with the layer - a damaged chunk leaves the defaults
+				SmallVector<Formats::LayerPropertiesChunk::Entry, 8> layers;
+				if (Formats::LayerPropertiesChunk::Read(chunk.Data, layers)) {
+					for (Formats::LayerPropertiesChunk::Entry& entry : layers) {
 						if (entry.Layer < Layers.size()) {
-							Layers[entry.Layer].Record.Textured = entry.Params;
-							Layers[entry.Layer].Texture = Death::move(entry.Texture);
+							DocumentLayer& layer = Layers[entry.Layer];
+							entry.ApplyTo(layer.Record);
+							layer.Name = Death::move(entry.Name);
+							layer.Texture = Death::move(entry.Texture);
 						}
 					}
 				}
@@ -335,43 +324,16 @@ namespace Jazz2::Editor
 
 		// Chunks the document holds itself come first, then all the others in their order
 		SmallVector<Formats::ChunkRecord, 0> chunks;
-		std::int32_t spriteLayer = GetSpriteLayerIndex();
-		if (spriteLayer >= 0) {
-			Formats::ChunkRecord spriteLayerLook;
-			spriteLayerLook.Tag = Formats::SpriteLayerChunk::Tag;
-			Formats::SpriteLayerChunk::Write(Layers[spriteLayer].Record, spriteLayerLook.Data);
-			if (!spriteLayerLook.Data.empty()) {
-				chunks.push_back(Death::move(spriteLayerLook));
-			}
-		}
-		SmallVector<Formats::TexturedLayerChunk::Entry, 4> texturedLayers;
+		SmallVector<Formats::LayerPropertiesChunk::Entry, 8> layerProperties;
 		for (std::size_t i = 0; i < Layers.size(); i++) {
-			Formats::TexturedLayerChunk::Entry& entry = texturedLayers.emplace_back();
-			entry.Layer = std::uint32_t(i);
-			entry.Params = Layers[i].Record.Textured;
-			entry.Texture = Layers[i].Texture;
+			const DocumentLayer& layer = Layers[i];
+			layerProperties.push_back(Formats::LayerPropertiesChunk::Entry::FromRecord(std::uint32_t(i), layer.Record, layer.Name, layer.Texture));
 		}
-		Formats::ChunkRecord texturedLayersChunk;
-		texturedLayersChunk.Tag = Formats::TexturedLayerChunk::Tag;
-		Formats::TexturedLayerChunk::Write(texturedLayers, texturedLayersChunk.Data);
-		if (!texturedLayersChunk.Data.empty()) {
-			chunks.push_back(Death::move(texturedLayersChunk));
-		}
-		Formats::ChunkRecord layerNames;
-		layerNames.Tag = Formats::LayerNamesChunk::Tag;
-		WriteLayerNames(layerNames.Data);
-		if (!layerNames.Data.empty()) {
-			chunks.push_back(Death::move(layerNames));
-		}
-		SmallVector<std::uint8_t, 16> layerNumbers;
-		for (const DocumentLayer& layer : Layers) {
-			layerNumbers.push_back(layer.Record.OriginalNumber);
-		}
-		Formats::ChunkRecord layerNumbersChunk;
-		layerNumbersChunk.Tag = Formats::LayerNumbersChunk::Tag;
-		Formats::LayerNumbersChunk::Write(layerNumbers, layerNumbersChunk.Data);
-		if (!layerNumbersChunk.Data.empty()) {
-			chunks.push_back(Death::move(layerNumbersChunk));
+		Formats::ChunkRecord layerPropertiesChunk;
+		layerPropertiesChunk.Tag = Formats::LayerPropertiesChunk::Tag;
+		Formats::LayerPropertiesChunk::Write(layerProperties, layerPropertiesChunk.Data);
+		if (!layerPropertiesChunk.Data.empty()) {
+			chunks.push_back(Death::move(layerPropertiesChunk));
 		}
 		if (!exportOnly) {
 			Formats::ChunkRecord layerStates;
@@ -882,8 +844,7 @@ namespace Jazz2::Editor
 
 	void LevelDocument::SetChunk(std::uint32_t tag, ArrayView<const std::uint8_t> data)
 	{
-		DEATH_DEBUG_ASSERT(tag != Formats::LayerNamesChunk::Tag && tag != Formats::LayerNumbersChunk::Tag && tag != LayerStateChunk && tag != LegacyLayerStateChunk &&
-			tag != Formats::SpriteLayerChunk::Tag && tag != Formats::TexturedLayerChunk::Tag, "The chunk is held by the document itself", );
+		DEATH_DEBUG_ASSERT(tag != Formats::LayerPropertiesChunk::Tag && tag != LayerStateChunk && tag != LegacyLayerStateChunk, "The chunk is held by the document itself", );
 
 		for (std::size_t i = 0; i < Chunks.size(); i++) {
 			if (Chunks[i].Tag == tag) {
@@ -905,8 +866,7 @@ namespace Jazz2::Editor
 
 	void LevelDocument::ReplaceChunk(std::uint32_t tag, SmallVector<std::uint8_t, 0>&& data)
 	{
-		DEATH_DEBUG_ASSERT(tag != Formats::LayerNamesChunk::Tag && tag != Formats::LayerNumbersChunk::Tag && tag != LayerStateChunk && tag != LegacyLayerStateChunk &&
-			tag != Formats::SpriteLayerChunk::Tag && tag != Formats::TexturedLayerChunk::Tag, "The chunk is held by the document itself", );
+		DEATH_DEBUG_ASSERT(tag != Formats::LayerPropertiesChunk::Tag && tag != LayerStateChunk && tag != LegacyLayerStateChunk, "The chunk is held by the document itself", );
 
 		for (std::size_t i = 0; i < Chunks.size(); i++) {
 			if (Chunks[i].Tag == tag) {
@@ -1003,13 +963,6 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void LevelDocument::LoadLayerNames(const Formats::ChunkRecord& chunk)
-	{
-		for (std::int32_t i = 0; i < std::int32_t(Layers.size()); i++) {
-			Layers[i].Name = Formats::LayerNamesChunk::Read(chunk.Data, i);
-		}
-	}
-
 	bool LevelDocument::LoadLayerStates(const Formats::ChunkRecord& chunk)
 	{
 		const std::uint8_t* p = chunk.Data.data();
@@ -1037,15 +990,6 @@ namespace Jazz2::Editor
 		for (std::size_t i = 0; i < count; i++) {
 			Layers[i].EditorFlags = chunk.Data[i];
 		}
-	}
-
-	void LevelDocument::WriteLayerNames(SmallVectorImpl<std::uint8_t>& data) const
-	{
-		SmallVector<StringView, 16> names;
-		for (const DocumentLayer& layer : Layers) {
-			names.push_back(layer.Name);
-		}
-		Formats::LayerNamesChunk::Write(names, data);
 	}
 
 	void LevelDocument::WriteLayerStates(SmallVectorImpl<std::uint8_t>& data) const

@@ -582,17 +582,14 @@ namespace Jazz2::Editor
 			// The preview kept with the level when it's saved
 			SmallVector<std::uint8_t, 0> preview;
 			LevelThumbnail::MakePreview(_session.GetDocument(), _session.GetTileMap(), _session.GetTileSetDataCache(), preview);
-			if (preview.size() < 4) {
+			SmallVector<std::uint8_t, 0> rgba;
+			Vector2i size;
+			if (!Formats::LevelPreview::Decode(preview, rgba, size)) {
 				return DebugResult::Failed;
 			}
 			PngImage image;
-			image.Create(preview[0] | (preview[1] << 8), preview[2] | (preview[3] << 8), false);
-			for (std::size_t i = 0; i < std::size_t(image.Width) * std::size_t(image.Height); i++) {
-				image.Pixels[i * 4] = preview[4 + i * 3];
-				image.Pixels[i * 4 + 1] = preview[4 + i * 3 + 1];
-				image.Pixels[i * 4 + 2] = preview[4 + i * 3 + 2];
-				image.Pixels[i * 4 + 3] = 255;
-			}
+			image.Create(size.X, size.Y, false);
+			std::memcpy(image.Pixels.data(), rgba.data(), rgba.size());
 			auto s = fs::Open(args[1], FileAccess::Write);
 			return QuietResult(s->IsValid() && PngCodec::Encode(*s, image));
 		} });
@@ -1050,11 +1047,20 @@ namespace Jazz2::Editor
 			const LevelDocument& document = _session.GetDocument();
 			for (std::size_t i = 0; i < document.Layers.size(); i++) {
 				const DocumentLayer& layer = document.Layers[i];
-				LOGI("Layer {}: kind {}, {}x{}, depth {}, speed {}x{}, offset {}x{}, flags 0x{:x}, editor 0x{:x}, renderer {}, color {} {} {} {}, texture {} bytes, name \"{}\"", i, std::int32_t(layer.Record.Kind),
+				TileRef first = (layer.GetWidth() > 0 && layer.GetHeight() > 0 ? layer.GetTile(0, 0) : TileRef{});
+				LOGI("Layer {}: kind {}, {}x{}, depth {}, speed {}x{}, offset {}x{}, flags 0x{:x}, editor 0x{:x}, renderer {}, color {} {} {} {}, texture {} bytes, first tile {}:{} flags 0x{:x}, name \"{}\"", i, std::int32_t(layer.Record.Kind),
 					layer.GetWidth(), layer.GetHeight(), layer.Record.Depth, layer.Record.SpeedX, layer.Record.SpeedY, layer.Record.OffsetX, layer.Record.OffsetY,
 					layer.Record.Flags, layer.EditorFlags,
 					std::int32_t(layer.Record.RendererType), layer.Record.Color[0], layer.Record.Color[1], layer.Record.Color[2], layer.Record.Color[3],
-					std::int32_t(layer.Texture.size()), layer.Name);
+					std::int32_t(layer.Texture.size()), std::int32_t(first.Source), first.Index, std::int32_t(first.Flags), layer.Name);
+			}
+			LOGI("Default tile set \"{}\": {} tiles in the document, {} tiles in the game", document.Properties.DefaultTileSet, document.DefaultTileCount,
+				_session.GetEditHandler()->TileMap() != nullptr ? _session.GetEditHandler()->TileMap()->GetTileSetTileCount(0) : -1);
+			for (std::size_t i = 0; i < document.ExtraTileSets.size(); i++) {
+				const Formats::ExtraTileSetRecord& extra = document.ExtraTileSets[i];
+				LOGI("Extra tile set {} (source {}): \"{}\", offset {}, count {} ({} in the game), flags 0x{:x}, alternate palette {}", i, i + 1, extra.Name,
+					extra.Offset, extra.Count, _session.GetEditHandler()->TileMap() != nullptr ? _session.GetEditHandler()->TileMap()->GetTileSetTileCount(std::int32_t(i) + 1) : -1,
+					extra.Flags, extra.AlternatePalette);
 			}
 			return DebugResult::Done;
 		} });

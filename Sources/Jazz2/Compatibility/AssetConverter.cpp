@@ -447,7 +447,7 @@ namespace Jazz2::Compatibility
 			}
 
 		private:
-			static constexpr std::int32_t TextureBytes = Formats::TexturedLayerChunk::TextureSize * Formats::TexturedLayerChunk::TextureSize;
+			static constexpr std::int32_t TextureBytes = Formats::LayerPropertiesChunk::TextureSize * Formats::LayerPropertiesChunk::TextureSize;
 
 			struct Entry
 			{

@@ -170,6 +170,13 @@ namespace Jazz2::Formats
 		static void Make(ISource& source, nCine::Vector2f start, const std::uint32_t* palette, SmallVectorImpl<std::uint8_t>& data);
 
 		/**
+		 * @brief Decodes the payload of @ref LevelFile::PreviewChunk to RGBA pixels, row by row
+		 *
+		 * Returns `false` if it's too short, or too large to be a preview.
+		 */
+		static bool Decode(ArrayView<const std::uint8_t> data, SmallVectorImpl<std::uint8_t>& rgba, nCine::Vector2i& size);
+
+		/**
 		 * @brief Reads the preview of a level file as RGBA pixels, row by row
 		 *
 		 * Returns `false` if the level has none, or one too large to be one of them.

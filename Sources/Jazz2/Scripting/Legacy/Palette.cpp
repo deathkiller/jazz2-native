@@ -531,6 +531,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Mode", "CHROMAKEY", spriteType_CHROMAKEY);
 		engine->RegisterEnumValue("Mode", "MAPPING", spriteType_MAPPING);
 		engine->RegisterEnumValue("Mode", "TRANSLUCENTMAPPING", spriteType_TRANSLUCENTMAPPING);
+		engine->RegisterEnumValue("Mode", "INVERSE", spriteType_INVERSE);
 		engine->RegisterEnum("Direction");
 		engine->RegisterEnumValue("Direction", "FLIPNONE", 0x00);
 		engine->RegisterEnumValue("Direction", "FLIPH", 0xFF - 0x100);

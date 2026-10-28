@@ -937,8 +937,8 @@ namespace Jazz2::AssetPacker
 		void AppendCraftedChunks(FuzzRandom& random, Bytes& body)
 		{
 			const std::uint32_t Tags[] = {
-				LevelFile::PreviewChunk, LayerNamesChunk::Tag, LayerNumbersChunk::Tag, SpriteLayerChunk::Tag,
-				TexturedLayerChunk::Tag, LevelFile::MakeChunkTag('e', 'd', 'o', 'c'),
+				LevelFile::PreviewChunk, LayerPropertiesChunk::Tag, ScriptDataChunk::Tag, LevelTextsChunk::Tag,
+				LevelFile::MakeChunkTag('e', 'd', 'o', 'c'),
 				LevelFile::MakeChunkTag('a', 'n', 'n', 'o'), LevelFile::MakeChunkTag('s', 'p', 'l', 'n'),
 				LevelFile::MakeChunkTag('e', 'l', 'a', 'y'), LevelFile::MakeChunkTag('r', 'c', 'o', 'v'),
 				LevelFile::MakeChunkTag('G', 's', 'c', 'r'), LevelFile::MakeChunkTag('X', 'Y', 'Z', 'W')
@@ -1314,55 +1314,41 @@ namespace Jazz2::AssetPacker
 						}
 					}
 
-					// How the sprite layer is drawn, the same
+					// The properties of the layers, the same - the writer drops the entries of the defaults
 					for (const ChunkRecord& chunk : level->Chunks) {
-						if (chunk.Tag != SpriteLayerChunk::Tag) {
+						if (chunk.Tag != LayerPropertiesChunk::Tag) {
 							continue;
 						}
-						LayerRecord record = {};
-						if (SpriteLayerChunk::Read(chunk.Data, record)) {
+						SmallVector<LayerPropertiesChunk::Entry, 0> layers;
+						if (LayerPropertiesChunk::Read(chunk.Data, layers)) {
 							Bytes written;
-							SpriteLayerChunk::Write(record, written);
-							LayerRecord recordAgain = {};
-							if (!written.empty() && (!SpriteLayerChunk::Read(written, recordAgain) || recordAgain.RendererType != record.RendererType ||
-								std::memcmp(recordAgain.Color, record.Color, sizeof(record.Color)) != 0)) {
-								outcome.RoundTripDifference = "sprite layer"_s;
-							}
-						}
-					}
-
-					// The parameters of the textured layers, the same - the writer drops the entries of the defaults
-					for (const ChunkRecord& chunk : level->Chunks) {
-						if (chunk.Tag != TexturedLayerChunk::Tag) {
-							continue;
-						}
-						SmallVector<TexturedLayerChunk::Entry, 0> layers;
-						if (TexturedLayerChunk::Read(chunk.Data, layers)) {
-							Bytes written;
-							TexturedLayerChunk::Write(layers, written);
-							SmallVector<TexturedLayerChunk::Entry, 0> layersAgain;
-							if (!written.empty() && !TexturedLayerChunk::Read(written, layersAgain)) {
-								outcome.RoundTripDifference = "textured layers reading again"_s;
+							LayerPropertiesChunk::Write(layers, written);
+							SmallVector<LayerPropertiesChunk::Entry, 0> layersAgain;
+							if (!written.empty() && !LayerPropertiesChunk::Read(written, layersAgain)) {
+								outcome.RoundTripDifference = "layer properties reading again"_s;
 							} else {
 								std::size_t next = 0;
-								for (const TexturedLayerChunk::Entry& entry : layers) {
-									if (entry.Params.IsDefault() && entry.Texture.empty()) {
+								for (const LayerPropertiesChunk::Entry& entry : layers) {
+									if (entry.IsDefault()) {
 										continue;
 									}
-									const TexturedLayerChunk::Entry* again = (next < layersAgain.size() ? &layersAgain[next++] : nullptr);
-									if (again == nullptr || again->Layer != entry.Layer || again->Params.FadeX != entry.Params.FadeX ||
-										again->Params.FadeY != entry.Params.FadeY || again->Params.Fade != entry.Params.Fade || again->Params.Flags != entry.Params.Flags ||
-										again->Params.InnerSpeedX != entry.Params.InnerSpeedX || again->Params.InnerSpeedY != entry.Params.InnerSpeedY ||
-										again->Params.InnerAutoSpeedX != entry.Params.InnerAutoSpeedX || again->Params.InnerAutoSpeedY != entry.Params.InnerAutoSpeedY ||
+									const LayerPropertiesChunk::Entry* again = (next < layersAgain.size() ? &layersAgain[next++] : nullptr);
+									const TexturedLayerParams& p1 = entry.Textured;
+									if (again == nullptr || again->Layer != entry.Layer || again->Name != entry.Name || again->OriginalNumber != entry.OriginalNumber ||
+										again->HasSpriteLook != entry.HasSpriteLook || again->RendererType != entry.RendererType ||
+										std::memcmp(again->Color, entry.Color, sizeof(entry.Color)) != 0 || again->Blend != entry.Blend ||
+										(entry.Blend != 0 && again->BlendParam != entry.BlendParam) ||
+										again->Textured.FadeX != p1.FadeX || again->Textured.FadeY != p1.FadeY || again->Textured.Fade != p1.Fade ||
+										again->Textured.Flags != p1.Flags || again->Textured.InnerSpeedX != p1.InnerSpeedX || again->Textured.InnerSpeedY != p1.InnerSpeedY ||
+										again->Textured.InnerAutoSpeedX != p1.InnerAutoSpeedX || again->Textured.InnerAutoSpeedY != p1.InnerAutoSpeedY ||
 										again->Texture.size() != entry.Texture.size() || !std::equal(entry.Texture.begin(), entry.Texture.end(), again->Texture.begin())) {
-										outcome.RoundTripDifference = "textured layers"_s;
+										outcome.RoundTripDifference = "layer properties"_s;
 										break;
 									}
 								}
 							}
 						}
 					}
-
 					MemoryStream rewritten(std::int64_t(size) + 4096);
 					WriteLevel(rewritten, *level);
 					auto again = std::make_unique<LevelData>();

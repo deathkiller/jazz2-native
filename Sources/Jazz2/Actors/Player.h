@@ -259,7 +259,7 @@ namespace Jazz2::Actors
 		/** @brief Returns `true` if continuous jump is allowed */
 		virtual bool IsContinuousJumpAllowed() const;
 		/** @brief Returns `true` if ledge climbing is allowed */
-		virtual bool IsLedgeClimbAllowed() const;
+		bool IsLedgeClimbAllowed() const;
 		/**
 		 * @brief Returns how far the non-Reforged camera should lead the player horizontally, in pixels
 		 *
@@ -1339,6 +1339,15 @@ namespace Jazz2::Actors
 		 */
 		static constexpr float LegacyWaterAccelY = (1.0f / 8.0f) * LegacyFrameRateScaleSqr;
 		/**
+		 * @brief Non-Reforged horizontal coasting under water with nothing held (original 31/32 of the speed per tick)
+		 *
+		 * The water doesn't brake by a fixed step as the ground does, the speed falls by a share of itself - measured in
+		 * JJ2+, 2.0625 px/tick down to 0.7707 in steps of exactly 31/32 - until it's below @ref LegacyWaterCoastStop.
+		 */
+		static constexpr float LegacyWaterCoast = 31.0f / 32.0f;
+		/** @brief Horizontal speed under water below which the coasting stops at once (original 0.75 px/tick) */
+		static constexpr float LegacyWaterCoastStop = 0.75f * LegacyFrameRateScale;
+		/**
 		 * @brief Pixels a non-Reforged wind area moves the player per unit of its strength (original 0.5)
 		 *
 		 * A *position* move, not a speed: the original's `xs` reads 0.0000 for the whole time a player is
@@ -1612,6 +1621,8 @@ namespace Jazz2::Actors
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
 #endif
+		// The enemy the first bird's beak charge hit last, see _birdChargeHitCooldown
+		std::weak_ptr<ActorBase> _birdChargeLastHit;
 
 		Vector2i _lastPolePos;
 		Vector2f _trailLastPos;
@@ -1622,6 +1633,47 @@ namespace Jazz2::Actors
 		float _idleTime;
 		float _hitFloorTime;
 		float _keepRunningTime;
+		/** @brief Ticks the non-Reforged dash state still has left after Run was let go (see @ref LegacyDashGraceTicks) */
+		float _dashGraceLeft;
+		/** @brief Pixels of travel a non-Reforged sidekick still has; counting distance rather than time makes it exact whatever the frame rate (see @ref CheckEndOfSpecialMoves()) */
+		float _sidekickDistanceLeft;
+		/** @brief Ticks elapsed in the current non-Reforged sidekick, for Lori's quadratic ramp (see @ref LegacyLoriKickRamp) */
+		float _sidekickTime;
+		/** @brief Ticks an RF blast still holds the horizontal speed for, with friction and input ignored (see @ref LegacyRFBlastHoldTicks) */
+		float _rfBlastLeft;
+		/** @brief Ticks a non-Reforged uppercut still drives for, during which gravity is almost off (see @ref LegacyUppercutGravity) */
+		float _uppercutTimeLeft;
+		float _lastPoleTime;
+		float _inTubeTime;
+		float _dizzyTime;
+		float _activeShieldTime;
+		float _weaponFlareTime;
+		std::int32_t _weaponFlareFrame;
+		float _weaponCooldown;
+
+		// The acceleration a bird steers with, which a held direction winds towards BirdAcceleration a step per tick
+		// and letting go zeroes - see HandleBirdMovement()
+		float _birdAccelX = 0.0f;
+		// How long a bird has been sitting still on the floor, which is what perches it (see BirdPerchTime), and how
+		// long the perched pose on screen has left before the next one is picked (see UpdateBirdPerchPose())
+		float _birdIdleTime = 0.0f;
+		float _birdPoseTime = 0.0f;
+		// How long until the enemy the beak charge hit last can be hit again, see BirdChargeHitInterval
+		float _birdChargeHitCooldown = 0.0f;
+
+		SuspendType _suspendType;
+		ShieldType _activeShield;
+		WeaponType _currentWeapon;
+		// Continuous weapon whose looping sound is playing, here and on the peers, or WeaponType::Unknown. Kept apart
+		// from `_weaponSound`, which a dedicated server never has but must still stop.
+		WeaponType _weaponSoundType;
+		WeaponWheelState _weaponWheelState;
+		// Which perched pose is on screen, an index into the table in UpdateBirdPerchPose(), or 0 for none yet
+		std::uint8_t _birdPose = 0;
+		// Which way the first bird's beak charge flies vertically, -1 up, 1 down or 0 level. Decided along with the charge
+		// at the end of a frame and carried out at the start of the next one (see HandleBirdMovement()).
+		std::int8_t _birdChargeDirY = 0;
+
 		/**
 		 * @brief Whether the carry @ref _keepRunningTime is counting down came out of a horizontal pole
 		 *
@@ -1629,7 +1681,7 @@ namespace Jazz2::Actors
 		 * held to @ref LegacyAppliedSpeedCap. It cannot be read off `_keepRunningTime` alone, because a
 		 * spring sets that too and a spring launch *is* capped - measured, it reports 32 and moves 8.
 		 */
-		bool _hPoleCarry;
+		bool _hPoleCarry = false;
 		/**
 		 * @brief Whether the carry @ref _keepRunningTime is counting down came out of a spring
 		 *
@@ -1651,7 +1703,7 @@ namespace Jazz2::Actors
 		 * is the whole reason this flag exists. The rev-up launch arms the same timer and is deliberately left
 		 * out: nothing has measured what Down does to one.
 		 */
-		bool _springCarry;
+		bool _springCarry = false;
 		/**
 		 * @brief Whether the carry @ref _keepRunningTime is counting down came out of a run-in-place launch
 		 *
@@ -1661,50 +1713,7 @@ namespace Jazz2::Actors
 		 * over by the direction of travel, so the player can turn round and shoot backwards while still being
 		 * carried forwards.
 		 */
-		bool _revUpCarry;
-		/** @brief Ticks the non-Reforged dash state still has left after Run was let go (see @ref LegacyDashGraceTicks) */
-		float _dashGraceLeft;
-		/** @brief Pixels of travel a non-Reforged sidekick still has; counting distance rather than time makes it exact whatever the frame rate (see @ref CheckEndOfSpecialMoves()) */
-		float _sidekickDistanceLeft;
-		/** @brief Ticks elapsed in the current non-Reforged sidekick, for Lori's quadratic ramp (see @ref LegacyLoriKickRamp) */
-		float _sidekickTime;
-		/** @brief Ticks an RF blast still holds the horizontal speed for, with friction and input ignored (see @ref LegacyRFBlastHoldTicks) */
-		float _rfBlastLeft;
-		/** @brief Ticks a non-Reforged uppercut still drives for, during which gravity is almost off (see @ref LegacyUppercutGravity) */
-		float _uppercutTimeLeft;
-		float _lastPoleTime;
-		float _inTubeTime;
-		float _dizzyTime;
-		float _activeShieldTime;
-		float _weaponFlareTime;
-		std::int32_t _weaponFlareFrame;
-		float _weaponCooldown;
-		std::uint16_t _cappedWeapons = 0;
-		std::uint16_t _silentWeapons = 0;
-		// The acceleration a bird steers with, which a held direction winds towards BirdAcceleration a step per tick
-		// and letting go zeroes - see HandleBirdMovement()
-		float _birdAccelX = 0.0f;
-		// How long a bird has been sitting still on the floor, which is what perches it (see BirdPerchTime), and how
-		// long the perched pose on screen has left before the next one is picked (see UpdateBirdPerchPose())
-		float _birdIdleTime = 0.0f;
-		float _birdPoseTime = 0.0f;
-		// Which perched pose is on screen, an index into the table in UpdateBirdPerchPose(), or 0 for none yet
-		std::uint8_t _birdPose = 0;
-		// Which way the first bird's beak charge flies vertically, -1 up, 1 down or 0 level. Decided along with the charge
-		// at the end of a frame and carried out at the start of the next one (see HandleBirdMovement()).
-		std::int8_t _birdChargeDirY = 0;
-		// The enemy the first bird's beak charge hit last and how long until it can be hit again, see BirdChargeHitInterval
-		std::weak_ptr<ActorBase> _birdChargeLastHit;
-		float _birdChargeHitCooldown = 0.0f;
-
-		SuspendType _suspendType;
-		ShieldType _activeShield;
-		WeaponType _currentWeapon;
-		// Continuous weapon whose looping sound is playing, here and on the peers, or WeaponType::Unknown. Kept apart
-		// from `_weaponSound`, which a dedicated server never has but must still stop.
-		WeaponType _weaponSoundType;
-		WeaponWheelState _weaponWheelState;
-
+		bool _revUpCarry = false;
 		/** @brief Whether the jump key has been let go during the current non-Reforged ascent, which makes the rest of it heavier */
 		bool _jumpReleased;
 		/** @brief Whether the pole currently held was reached off a spring, which is what picks the rise gravity its launch decays under */
@@ -1747,6 +1756,8 @@ namespace Jazz2::Actors
 		// Set when the player is restored standing on the exit the level was left through, the exit is ignored
 		// until the player steps off it, otherwise it would be taken again immediately
 		bool _levelExitSuppressed = false;
+		// A script turned the light around the player off (`jjPLAYER.lightType` of JJ2+ set to `LIGHT::NONE`)
+		bool _lightHiddenByScript = false;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

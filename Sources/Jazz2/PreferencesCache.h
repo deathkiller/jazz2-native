@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../Main.h"
 #include "WeaponType.h"
@@ -99,6 +99,14 @@ namespace Jazz2
 		Low,						/**< About half of the particles */
 		High,						/**< All particles (default) */
 		Ultra						/**< Reserved, behaves as @ref High for now */
+	};
+
+	/** @brief What is drawn in the colors of the 16-bit renderer of JJ2+, see @ref PreferencesCache::Dithering */
+	enum class DitheringScope : std::uint8_t {
+		None,						/**< Nothing, everything is drawn in full colors */
+		Layers,						/**< The textured backgrounds and the translucent layers behind the sprites themselves */
+		BehindSprites,				/**< Everything behind the sprite layer as one image, the sprites and what is in front of them stay as they are */
+		Screen						/**< The whole scene, as the 16-bit renderer of JJ2+ draws it, the HUD stays as it is */
 	};
 
 	/**
@@ -356,8 +364,8 @@ namespace Jazz2
 		static bool PreferVerticalSplitscreen;
 		/** @brief Whether viewport zoom out is preferred */
 		static bool PreferZoomOut;
-		/** @brief Whether background dithering should be used */
-		static bool BackgroundDithering;
+		/** @brief What is drawn in the colors of the 16-bit renderer of JJ2+ */
+		static DitheringScope Dithering;
 		/** @brief Whether blur effects are allowed */
 		static bool BlurEffects;
 		/** @brief Lighting resolution percent (of the rendering resolution) */
@@ -600,7 +608,8 @@ namespace Jazz2
 			EnableReforgedMainMenu = 0x200000,
 			ToggleRunAction = 0x400000,
 			AllowCheats = 0x1000000,
-			BackgroundDithering = 0x2000000,
+			// Dithering of the background layers on in older versions, only read (see Dithering0)
+			Reserved = 0x2000000,
 
 			PlayStationExtendedSupport = 0x4000000,
 			SwitchToNewWeapon = 0x8000000,
@@ -614,10 +623,16 @@ namespace Jazz2
 			EnableReforgedCamera = 0x200000000,
 			// Together with ShowPerformanceMetrics, which on its own is the frame rate counter older versions know
 			ShowDetailedPerformanceMetrics = 0x400000000,
-			ShowAllWeaponWheelSlots = 0x800000000
+			ShowAllWeaponWheelSlots = 0x800000000,
+			// The two bits of DitheringScope, see DitheringShift
+			Dithering0 = 0x1000000000,
+			Dithering1 = 0x2000000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
+
+		// Where DitheringScope is in BoolOptions, Dithering0 is its lower bit
+		static constexpr std::uint32_t DitheringShift = 36;
 
 		static constexpr std::uint8_t FileVersion = 19;
 

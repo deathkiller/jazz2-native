@@ -53,7 +53,7 @@ namespace Jazz2::Scripting::Legacy
 		 *
 		 * The table of JJ2+ has no animation of a set at a small index, scripts take a small one for an animation of a
 		 * set of their own (`MLLE-Weapons.asc` adds the first animation of the set to one below 200) - and an object of
-		 * `curAnim = 1` shows nothing (the joints of the platforms of ThreedRealms).
+		 * `curAnim = 1` shows nothing (scripts hide parts of objects so).
 		 */
 		static constexpr std::uint32_t FirstSetAnim = 256;
 
@@ -89,6 +89,21 @@ namespace Jazz2::Scripting::Legacy
 			Returns `false` if there's no such frame or it has no pixels.
 		*/
 		bool GetFrameBounds(std::uint32_t frameIndex, Recti& frameRect, Recti& pixelBounds);
+		/**
+			@brief Returns the frames of an animation in colors, for a picture of it outside of the scripts
+
+			At most @p maxFrames frames in a row of cells of @p cellSize, each placed by its hotspot, which is at @p hotspot
+			in every cell; colors are `0xAABBGGRR`, 8-bit frames in the colors of the palette of the sprites. @p fps is the
+			speed of the animation, @p changed whether a script changed any of the frames. Returns `false` if there's no such
+			animation or nothing is in it. Raises no script exception.
+		*/
+		bool GetAnimationImage(std::uint32_t animIndex, std::int32_t maxFrames, SmallVectorImpl<std::uint32_t>& colors, Vector2i& cellSize,
+			Vector2i& hotspot, std::int32_t& frameCount, std::int32_t& fps, bool& changed);
+		/** @brief Returns `true` if a script changed any frame of an animation or gave it frames of another one */
+		bool IsAnimationChanged(std::uint32_t animIndex);
+		/** @brief The same for frames of the frame table from @p firstFrame, 8-bit ones in the colors of @p palette, the palette of the sprites for `nullptr` */
+		bool GetFramesImage(std::uint32_t firstFrame, std::int32_t frameCount, const std::uint32_t* palette, SmallVectorImpl<std::uint32_t>& colors,
+			Vector2i& cellSize, Vector2i& hotspot, bool& changed);
 		/** @brief Returns the rectangle of a frame from its hotspot and its coldspot as JJ2 stores it, `false` if there's no such frame */
 		bool GetFrameSpots(std::uint32_t frameIndex, Recti& frameRect, Vector2i& coldSpot);
 		/** @brief Returns the index in the frame table of a frame of a set that a script changed, -1 if it's as it was or the set isn't loaded */
@@ -137,9 +152,17 @@ namespace Jazz2::Scripting::Legacy
 			The frame is taken modulo the frame count of the animation, as JJ2+ does. Returns `nullptr` if there's
 			nothing to draw.
 		*/
-		Resources::GenericGraphicResource* ResolveSprite(std::int32_t setID, std::int32_t animation, std::int32_t frame, std::int32_t& cell);
-		/** @brief Returns the graphics to draw a frame of the frame table with, and the frame of the graphics */
-		Resources::GenericGraphicResource* ResolveFrame(std::uint32_t frameIndex, std::int32_t& cell);
+		Resources::GenericGraphicResource* ResolveSprite(std::int32_t setID, std::int32_t animation, std::int32_t frame, std::int32_t& cell,
+			bool* translucent = nullptr);
+		/**
+			@brief Returns the graphics to draw a frame of the frame table with, and the frame of the graphics
+
+			@p translucent tells whether the frame is `transparent`, drawn with the alpha of @ref TranslucentFrameAlpha in
+			the graphics - JJ2+ draws it so only in `SPRITE::NORMAL`.
+		*/
+		Resources::GenericGraphicResource* ResolveFrame(std::uint32_t frameIndex, std::int32_t& cell, bool* translucent = nullptr);
+		/** @brief Alpha of the pixels of a `transparent` frame in the graphics */
+		static constexpr std::uint8_t TranslucentFrameAlpha = 140;
 		/**
 			@brief Returns the animation of the animation table that graphics of the game show, or 0
 

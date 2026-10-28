@@ -1,4 +1,4 @@
-﻿#include "EditorSessionPrivate.h"
+#include "EditorSessionPrivate.h"
 
 #if defined(WITH_EDITOR)
 
@@ -305,6 +305,16 @@ namespace Jazz2::Editor
 			});
 			previewTextured.Key = { Keys::T, KeyMod::Ctrl | KeyMod::Shift };
 			previewTextured.IsChecked = [this]() { return _settings.PreviewTexturedLayers; };
+#if defined(WITH_ANGELSCRIPT)
+			// TRANSLATORS: Toggle in the View menu, events are drawn with the sprites the script of the level gives their objects
+			auto& overriddenAssets = a.Add(ActionIds::ViewOverriddenAssets, _x("editor", "Show Overridden Assets"), EditorIcon::OverriddenAssets, [this]() {
+				_settings.OverriddenAssets = !_settings.OverriddenAssets;
+				_settings.Save();
+				// Taken again when it's turned on, the script may have changed meanwhile
+				_scriptGraphicsDirty = true;
+			});
+			overriddenAssets.IsChecked = [this]() { return _settings.OverriddenAssets; };
+#endif
 			flat.IsChecked = [this]() {
 				Tiles::TileMap* tileMap = GetTileMap();
 				return (tileMap != nullptr && tileMap->GetViewOptions().FlatAmount > 0.5f);
@@ -445,8 +455,8 @@ namespace Jazz2::Editor
 		snap.IsEnabled = [this]() { return !_document.OffGridEvents.empty(); };
 		a.Add(ActionIds::LevelAnimations, _x("editor", "Animated Tiles"), EditorIcon::Tiles, [this]() { ShowAnimatedTilesDialog(*this); });
 		a.Add(ActionIds::LevelTileSets, _x("editor", "Tile Sets"), EditorIcon::None, [this]() { ShowTileSetsDialog(*this); });
-		// TRANSLATORS: Menu item in the Level menu, opens the color palette of the level
-		a.Add(ActionIds::LevelPalette, _x("editor", "Palette"), EditorIcon::None, [this]() { ShowLevelPaletteDialog(*this); });
+		// TRANSLATORS: Menu item in the Level menu, opens the dialog of the palette of the level and its additional palettes
+		a.Add(ActionIds::LevelPalette, _x("editor", "Palettes"), EditorIcon::None, [this]() { ShowPalettesDialog(*this); });
 		// The first tile of the brush, a tile of the tile picker is opened by a double click on it too
 		auto& editTile = a.Add(ActionIds::LevelEditTile, _x("editor", "Edit Tile of the Brush"), EditorIcon::Brush, [this]() {
 			if (!_stamp.IsEmpty()) {
@@ -529,6 +539,20 @@ namespace Jazz2::Editor
 				return ((character ? _settings.PlayCharacter : _settings.PlayDifficulty) == value);
 			};
 		}
+
+		// For this session only, a play-test kept until then starts again with it
+		// TRANSLATORS: Toggle in the Play menu, the level is play-tested with the gameplay of Resurrection instead of the original
+		auto& reforged = a.Add(ActionIds::PlayReforged, _x("editor", "Reforged Gameplay"), EditorIcon::None, [this]() {
+			_playReforged = !_playReforged;
+			_playTest->MarkPlayTestOutdated();
+		});
+		reforged.IsChecked = [this]() { return _playReforged; };
+		// TRANSLATORS: Toggle in the Play menu, players can climb up ledges in the play-test
+		auto& ledgeClimb = a.Add(ActionIds::PlayLedgeClimb, _x("editor", "Allow Ledge Climbing"), EditorIcon::None, [this]() {
+			_playLedgeClimb = !_playLedgeClimb;
+			_playTest->MarkPlayTestOutdated();
+		});
+		ledgeClimb.IsChecked = [this]() { return _playLedgeClimb; };
 
 #if defined(WITH_MULTIPLAYER)
 		// Multiplayer in local splitscreen, the rules of a game mode with up to 4 players on one screen

@@ -149,7 +149,7 @@ namespace Jazz2::Scripting
 			return map;
 		}
 		jjPIXELMAP* jjPIXELMAP::CreateFromTexture(std::uint32_t texture, const jjPAL* palette) {
-			constexpr std::uint32_t Size = Formats::TexturedLayerChunk::TextureSize;
+			constexpr std::uint32_t Size = Formats::LayerPropertiesChunk::TextureSize;
 			if (texture == 0) {
 				// TEXTURE::LAYER8, the tiles of the textured background
 				return CreateFromLayer(0, 0, Size, Size, 8, palette);
@@ -162,7 +162,7 @@ namespace Jazz2::Scripting
 			return map;
 		}
 		jjPIXELMAP* jjPIXELMAP::CreateFromFilename(const String& filename, const jjPAL* palette, std::uint8_t threshold) {
-			// An image of a palette gives its indices as they are, 0 is transparent (ThreedRealms' burger booth was a black
+			// An image of a palette gives its indices as they are, 0 is transparent (a burger booth was a black
 			// square otherwise)
 			if (IsScriptFileNameSafe(filename)) {
 				auto stream = OpenScriptFile(filename);
@@ -292,7 +292,7 @@ namespace Jazz2::Scripting
 			}
 			proxy->_texture = -1;
 
-			constexpr std::uint32_t Size = Formats::TexturedLayerChunk::TextureSize;
+			constexpr std::uint32_t Size = Formats::LayerPropertiesChunk::TextureSize;
 			bool result = (width == Size && height == Size && proxy->SetCustomTexture(_pixels.get()));
 			// A handle passed to a native function is the function's to release, and GetLayerProxy() gave one too
 			proxy->Release();

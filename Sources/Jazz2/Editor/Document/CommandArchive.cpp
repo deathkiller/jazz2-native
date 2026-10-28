@@ -1,4 +1,4 @@
-﻿#include "CommandArchive.h"
+#include "CommandArchive.h"
 
 #if defined(WITH_EDITOR)
 
@@ -43,7 +43,8 @@ namespace Jazz2::Editor
 			SetTerrainSplines,
 			Transaction,
 			// Added later, so the values before stay those of stored histories
-			SetLayerTexture
+			SetLayerTexture,
+			SetAdditionalPalette
 		};
 
 		// The records are written as they are in memory, a history of a build with other records isn't read; the size of
@@ -74,8 +75,8 @@ namespace Jazz2::Editor
 			// The snapshots and the layers compressed by them are kept as they are, so how they're written counts too
 			mix(DocumentSnapshot::EncodingVersion);
 			// A field added to a record may take bytes that were padding, which leaves its size as it was
-			// 1 - LayerRecord::OriginalNumber
-			mix(1);
+			// 1 - LayerRecord::OriginalNumber, 2 - LayerRecord::Blend and BlendParam
+			mix(2);
 			return hash;
 		}
 	}
@@ -442,6 +443,15 @@ namespace Jazz2::Editor
 			w.Bytes(c->_changedEntries, sizeof(c->_changedEntries));
 			return true;
 		}
+		if (auto* c = runtime_cast<SetAdditionalPaletteCommand>(&command)) {
+			w.Value(CommandType::SetAdditionalPalette);
+			w.Text(c->_name);
+			w.Value(c->_index);
+			w.Bytes(c->_oldPalette, sizeof(c->_oldPalette));
+			w.Bytes(c->_newPalette, sizeof(c->_newPalette));
+			w.Bytes(c->_changedEntries, sizeof(c->_changedEntries));
+			return true;
+		}
 		if (auto* c = runtime_cast<SetLevelTilesCommand>(&command)) {
 			w.Value(CommandType::SetLevelTiles);
 			w.Text(c->_name);
@@ -676,6 +686,15 @@ namespace Jazz2::Editor
 				auto command = std::make_unique<SetLevelPaletteCommand>(document, false, document.LevelPalette, Death::move(name));
 				command->_oldUse = (r.Value<std::uint8_t>() != 0);
 				command->_newUse = (r.Value<std::uint8_t>() != 0);
+				r.Bytes(command->_oldPalette, sizeof(command->_oldPalette));
+				r.Bytes(command->_newPalette, sizeof(command->_newPalette));
+				r.Bytes(command->_changedEntries, sizeof(command->_changedEntries));
+				return (r.IsValid() ? Death::move(command) : nullptr);
+			}
+			case CommandType::SetAdditionalPalette: {
+				std::int32_t index = r.Value<std::int32_t>();
+				auto command = std::make_unique<SetAdditionalPaletteCommand>(document, -1, document.LevelPalette, Death::move(name));
+				command->_index = index;
 				r.Bytes(command->_oldPalette, sizeof(command->_oldPalette));
 				r.Bytes(command->_newPalette, sizeof(command->_newPalette));
 				r.Bytes(command->_changedEntries, sizeof(command->_changedEntries));

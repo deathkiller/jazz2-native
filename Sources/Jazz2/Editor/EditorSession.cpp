@@ -14,7 +14,8 @@ namespace Jazz2::Editor
 	}
 
 	EditorSession::EditorSession(IRootController* root)
-		: _root(root), _shell(nullptr), _showPlayPath(true), _currentLayer(0), _showGrid(true), _maskMode(0), _showEvents(true),
+		: _root(root), _shell(nullptr), _showPlayPath(true), _playReforged(PreferencesCache::EnableReforgedGameplay),
+			_playLedgeClimb(PreferencesCache::EnableLedgeClimb), _currentLayer(0), _showGrid(true), _maskMode(0), _showEvents(true),
 			_pickerPanel(PickerPanel::Tiles)
 	{
 		_playTest = std::make_unique<PlayTestController>(static_cast<IPlayTestHost&>(*this));
@@ -50,6 +51,8 @@ namespace Jazz2::Editor
 	EditorSession::~EditorSession()
 	{
 		_files->ReleaseLock();
+		_settings.Tool = std::int32_t(_tools->GetChosenType());
+		_settings.PickerEvents = (_pickerPanel == PickerPanel::Events);
 		_settings.Save();
 		// The interface refers to the session, so it goes first
 		_surface = nullptr;
@@ -146,6 +149,12 @@ namespace Jazz2::Editor
 		_actions.CaptureDefaults();
 		_actions.LoadOverrides(GetHotkeysPath());
 		CreateInterface();
+		// The tool and the picker as the editor was left
+		EditorToolType tool = EditorToolType(_settings.Tool);
+		if (tool < EditorToolType::Count && tool != EditorToolType::TilePixels) {
+			_tools->SetActive(tool);
+		}
+		_pickerPanel = (_settings.PickerEvents ? PickerPanel::Events : PickerPanel::Tiles);
 		_files->ShowEventExtensionErrors();
 		// The script and the tile sets changed outside of the editor, and another editor with the same level
 		_files->WatchFiles();
@@ -201,6 +210,11 @@ namespace Jazz2::Editor
 			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
 			return tileMap->IsTileEmpty(aabb, params);
 		};
+#if defined(WITH_ANGELSCRIPT)
+		_eventPreviews.ScriptSprite = [this](const Formats::EventRecord& event, bool animated, bool ownAnimated) -> GraphicResource* {
+			return (_settings.OverriddenAssets ? _scriptGraphics.Find(event, animated, ownAnimated) : nullptr);
+		};
+#endif
 	}
 
 	ToolManager& EditorSession::GetTools()
@@ -369,6 +383,9 @@ namespace Jazz2::Editor
 			// Indexed tiles and sprites take their colors from the palette as they're drawn, so it's enough to replace it,
 			// before the overridden tiles of a tile set that isn't indexed are made again with it
 			ContentResolver::Get().SetSpritePalette(_document.LevelPalette);
+		}
+		if (!reload && changes.HasAny(DocumentChangeKind::Palette)) {
+			_editHandler->TileMap()->SetAdditionalPalettes(_document.AdditionalPalettes);
 		}
 		if (!reload && changes.HasAny(DocumentChangeKind::TileOverrides | DocumentChangeKind::Palette)) {
 			reload = !ApplyTileOverrides(changes.HasAny(DocumentChangeKind::Palette));
@@ -587,6 +604,23 @@ namespace Jazz2::Editor
 		return _eventPreviews;
 	}
 
+#if defined(WITH_ANGELSCRIPT)
+	void EditorSession::UpdateScriptGraphics()
+	{
+		if (!_scriptGraphicsDirty) {
+			return;
+		}
+		_scriptGraphicsDirty = false;
+		if (!_settings.OverriddenAssets) {
+			_scriptGraphics.Clear();
+			return;
+		}
+		_scriptGraphics.Capture(&GetPlayTestRoot(), _document, _files->GetLevelName(), _files->GetFilePath());
+		// The level of the script named the window after itself
+		_files->UpdateWindowTitle();
+	}
+#endif
+
 	float EditorSession::GetAnimTime() const
 	{
 		return (_surface != nullptr ? _surface->AnimTime : 0.0f);
@@ -643,6 +677,9 @@ namespace Jazz2::Editor
 			// The colors of the tiles for the view from far away are prepared ahead, not while the view flies into the game
 			if (_playTest->IsEditing()) {
 				_tileLod->WarmUp(TileLod::WarmUpMilliseconds);
+#if defined(WITH_ANGELSCRIPT)
+				UpdateScriptGraphics();
+#endif
 			}
 			if (_smartTilesUsed && !_smartTiles.IsReady()) {
 				_smartTiles.Update();
@@ -924,6 +961,9 @@ namespace Jazz2::Editor
 		Vector2i res = theApplication().GetResolution();
 		OnInitializeViewport(res.X, res.Y);
 		_runtimeBuildCount++;
+#if defined(WITH_ANGELSCRIPT)
+		_scriptGraphicsDirty = true;
+#endif
 		// The flat layers stay as they were
 		viewOptions.ReferenceViewSize = _editHandler->GetReferenceViewSize();
 		_editHandler->TileMap()->SetViewOptions(viewOptions);

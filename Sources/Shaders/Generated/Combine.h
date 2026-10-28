@@ -90,6 +90,16 @@ precision mediump float;
 in vec2 vTexCoords;
 in vec2 vViewSizeInv;
 
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+
+
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
 uniform sampler2D uTextureBlurHalf;
@@ -143,6 +153,13 @@ precision mediump float;
 varying vec2 vTexCoords;
 varying vec2 vViewSizeInv;
 varying vec2 vPixelPos;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
 
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
@@ -213,6 +230,239 @@ void main() {
 		{ "uTextureBlurQuarter", 3 },
 	};
 
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char Combine_DITHER_Vs[] =
+R"__SHDR__(#line 1
+
+out vec2 vTexCoords;
+out vec2 vViewSizeInv;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+
+
+#define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = vec2(1.0) / spriteSize;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char Combine_DITHER_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying vec2 vTexCoords;
+varying vec2 vViewSizeInv;
+varying vec2 vPixelPos;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = vec2(1.0) / spriteSize;
+	vPixelPos = aPosition * spriteSize;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char Combine_DITHER_Fs[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+in vec2 vTexCoords;
+in vec2 vViewSizeInv;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+
+
+uniform sampler2D uTexture;
+uniform sampler2D uTextureLighting;
+uniform sampler2D uTextureBlurHalf;
+uniform sampler2D uTextureBlurQuarter;
+
+uniform vec4 uAmbientColor;
+uniform float uTime;
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec2 noiseTexCoords(vec2 position) {
+	vec2 seed = position + fract(uTime * 0.01);
+	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
+}
+
+#define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
+
+float bayer2(vec2 pixel) {
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(vec2 pixel) {
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+vec3 reduceColors(vec3 color, vec2 pixel) {
+	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+}
+
+out vec4 COLOR;
+
+void main() {
+	vec4 blur1 = texture(uTextureBlurHalf, vTexCoords);
+	vec4 blur2 = texture(uTextureBlurQuarter, vTexCoords);
+
+	vec4 main = texture(uTexture, vTexCoords);
+	vec4 light = texture(uTextureLighting, noiseTexCoords(vTexCoords));
+
+	vec4 blur = (blur1 + blur2) * vec4(0.5);
+
+	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
+	blur = vec4(gray, gray, gray, blur.a);
+
+	COLOR = mix(mix(
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		blur,
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(1.0 - light.r));
+	COLOR.a = 1.0;
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+}
+
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char Combine_DITHER_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec2 vViewSizeInv;
+varying vec2 vPixelPos;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+uniform sampler2D uTexture;
+uniform sampler2D uTextureLighting;
+uniform sampler2D uTextureBlurHalf;
+uniform sampler2D uTextureBlurQuarter;
+
+uniform vec4 uAmbientColor;
+uniform float uTime;
+
+float interleavedGradientNoise(vec2 p) {
+	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+vec2 lightingJitterLowPower() {
+	vec2 seed = vPixelPos + fract(uTime * 7.31) * 512.0;
+	vec2 offset = vec2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + vec2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
+}
+
+
+void main() {
+	vec4 COLOR;
+	vec4 blur1 = texture2D(uTextureBlurHalf, vTexCoords);
+	vec4 blur2 = texture2D(uTextureBlurQuarter, vTexCoords);
+
+	vec4 main = texture2D(uTexture, vTexCoords);
+	vec4 light = texture2D(uTextureLighting, vTexCoords + lightingJitterLowPower());
+
+	vec4 blur = (blur1 + blur2) * vec4(0.5);
+
+	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
+	blur = vec4(gray, gray, gray, blur.a);
+
+	COLOR = mix(mix(
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		blur,
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(1.0 - light.r));
+	COLOR.a = 1.0;
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+#endif
+
+	inline constexpr ShaderCompiler::Uniform Combine_DITHER_Uniforms[] = {
+		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uAmbientColor", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uTime", ShaderCompiler::UniformType::Float, 0 },
+	};
+
+	inline constexpr ShaderCompiler::BlockMember Combine_DITHER_Block0_Members[] = {
+		{ "modelMatrix", ShaderCompiler::UniformType::Mat4, 0, 0 },
+		{ "color", ShaderCompiler::UniformType::Vec4, 0, 64 },
+		{ "texRect", ShaderCompiler::UniformType::Vec4, 0, 80 },
+		{ "spriteSize", ShaderCompiler::UniformType::Vec2, 0, 96 },
+	};
+
+	inline constexpr ShaderCompiler::UniformBlock Combine_DITHER_Blocks[] = {
+		{ "InstanceBlock", 112, 0, 4, Combine_DITHER_Block0_Members },
+	};
+
+	inline constexpr ShaderCompiler::TextureBinding Combine_DITHER_Textures[] = {
+		{ "uTexture", 0 },
+		{ "uTextureLighting", 1 },
+		{ "uTextureBlurHalf", 2 },
+		{ "uTextureBlurQuarter", 3 },
+	};
+
 	inline constexpr ShaderCompiler::ProgramVariant Combine_Variants[] = {
 		{ "", "",
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
@@ -243,8 +493,37 @@ void main() {
 #else
 			nullptr, nullptr },
 #endif
+		{ "DITHER", "DITHER",
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+			Combine_DITHER_Vs, Combine_DITHER_Fs,
+#else
+			nullptr, nullptr,
+#endif
+			4, Combine_DITHER_Uniforms, 1, Combine_DITHER_Blocks, 4, Combine_DITHER_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+			Combine_DITHER_Vs100, Combine_DITHER_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
+			Combine_DITHER_VsHlsl, Combine_DITHER_FsHlsl,
+			Combine_DITHER_VsDxbc, Combine_DITHER_VsDxbcSize, Combine_DITHER_FsDxbc, Combine_DITHER_FsDxbcSize,
+#else
+			nullptr, nullptr,
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_VULKAN)
+			Combine_DITHER_VkVs, Combine_DITHER_VkVsSize, Combine_DITHER_VkFs, Combine_DITHER_VkFsSize,
+#else
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_METAL)
+			Combine_DITHER_VsMsl, Combine_DITHER_FsMsl },
+#else
+			nullptr, nullptr },
+#endif
 	};
 
-	inline constexpr ShaderCompiler::Program Combine = { "Combine", 0, 1, Combine_Variants };
+	inline constexpr ShaderCompiler::Program Combine = { "Combine", 0, 2, Combine_Variants };
 }
 #endif

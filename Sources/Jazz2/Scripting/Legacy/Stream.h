@@ -110,6 +110,13 @@ namespace Jazz2::Scripting
 			/** @brief Reads a length-prefixed stream from the front of the stream into another stream */
 			bool pop(jjSTREAM& value);
 
+			/** @brief Compresses the unread bytes of a stream as a zlib stream */
+			static bool ZlibCompress(const jjSTREAM& input, jjSTREAM& output);
+			/** @brief Decompresses a zlib stream that inflates to exactly @p size bytes */
+			static bool ZlibUncompress(const jjSTREAM& input, jjSTREAM& output, std::uint32_t size);
+			/** @brief Returns the CRC-32 of the unread bytes of a stream, continuing from @p crc */
+			static std::uint32_t CRC32(const jjSTREAM& input, std::uint32_t crc);
+
 		private:
 			std::int32_t _refCount;
 			SmallVector<std::uint8_t, 0> _data;

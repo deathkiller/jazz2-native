@@ -113,6 +113,8 @@ namespace Jazz2::Scripting
 			std::int32_t get_invincibility() const;
 			/** @brief Sets the remaining invincibility duration */
 			std::int32_t set_invincibility(std::int32_t value);
+			std::uint32_t get_lightType() const;
+			std::uint32_t set_lightType(std::uint32_t value);
 			/** @brief Returns the remaining blink (post-hit flicker) duration */
 			std::int32_t get_blink() const;
 			/** @brief Sets the remaining blink (post-hit flicker) duration */
@@ -443,6 +445,9 @@ namespace Jazz2::Scripting
 			/** @brief Returns the current frame id within the animation */
 			std::uint8_t get_frameID() const;
 
+			/** @brief Fires the bullets of a weapon whose bullets a script controls, see @ref LevelScriptLoader::FirePlayerWeapon() */
+			bool FireScriptedWeapon(WeaponType weaponType);
+
 		private:
 			LevelScriptLoader* _levelScriptLoader;
 			Actors::Player* _player;
@@ -480,6 +485,10 @@ namespace Jazz2::Scripting
 
 			// The ammo JJ2+ shows of each weapon of `jjWEAPON::infinite`, the player has unlimited ammo of it
 			std::uint16_t _infiniteAmmo[std::int32_t(WeaponType::Count)] = {};
+
+			// Fires one bullet of the spread, -1 angled up, 0 straight, 1 angled down
+			template<typename T>
+			void FireSpreadShot(WeaponType weaponType, std::int8_t slot);
 
 			// Gives the properties what the player is now, except the ones a script changed since and didn't hand over yet
 			void SyncPropertiesToBackingStore();

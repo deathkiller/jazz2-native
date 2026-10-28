@@ -49,13 +49,16 @@ namespace Jazz2::Editor
 	}
 
 	UiDialog::UiDialog(StringView title, bool scrollContent)
-		: UiPanel(UiPanelStyle::Floating, UiOrientation::Vertical, UiTheme::Spacing * 2.0f, UiThickness(UiTheme::Padding * 2.0f))
+		: UiPanel(UiPanelStyle::Floating, UiOrientation::Vertical, UiTheme::Spacing * 3.0f,
+			UiThickness(UiTheme::Padding * 3.0f, UiTheme::Padding * 2.0f, UiTheme::Padding * 3.0f, UiTheme::Padding * 3.0f))
 	{
 		// The window is moved by its title
 		_titleBar = Add<UiDragBar>(UiTheme::Spacing);
 		_titleBar->Add<UiLabel>(title, UiTheme::TextHeader)->Flex = 1.0f;
 		_closeButton = _titleBar->Add<DialogCloseButton>(*this, [this]() { Cancel(); });
 		_closeButton->Style = UiButtonStyle::Flat;
+		// The title stays low, the cross is still easy to hit by its padding (see DialogCloseButton)
+		_closeButton->Width = _closeButton->Height = UiTheme::ButtonHeight - 2.0f;
 		// TRANSLATORS: Tooltip of the cross in the title of a dialog, with the key that closes it too
 		_closeButton->Tooltip = _x("editor", "Close (Esc)");
 		_titleBar->OnDragStart = [this](Vector2f) {
@@ -76,7 +79,7 @@ namespace Jazz2::Editor
 			_content = Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
 			_content->Flex = 1.0f;
 		}
-		_buttons = Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+		_buttons = Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 2.0f);
 		_buttons->Add<UiElement>()->Flex = 1.0f;
 		// A window closed only by its cross has no row of buttons, nor one whose buttons are all hidden now
 		_buttons->IsVisibleFunc = [this]() {
@@ -106,7 +109,11 @@ namespace Jazz2::Editor
 			}
 		}
 		if (Width < 0.0f) {
-			size.X = std::max(size.X, std::floor(available.X * std::clamp(MinScreenWidthFraction, 0.0f, 1.0f)));
+			float stretched = std::floor(available.X * std::clamp(MinScreenWidthFraction, 0.0f, 1.0f));
+			if (MaxStretchedWidth > 0.0f) {
+				stretched = std::min(stretched, context.Px(MaxStretchedWidth));
+			}
+			size.X = std::max(size.X, stretched);
 		}
 		size.X = std::min(size.X, limit.X);
 		size.Y = std::min(size.Y, limit.Y);
@@ -229,7 +236,9 @@ namespace Jazz2::Editor
 	UiButton* UiDialog::AddButton(StringView text, Function<void()>&& onClick, bool accent)
 	{
 		auto* button = _buttons->Add<UiButton>(text, EditorIcon::None, Death::move(onClick));
-		button->MinWidth = 64.0f;
+		// Larger than the buttons in the content, the answers are what the dialog is for
+		button->Height = UiTheme::ButtonHeight + 4.0f;
+		button->MinWidth = 72.0f;
 		if (accent) {
 			button->Style = UiButtonStyle::Accent;
 		}
@@ -301,6 +310,9 @@ namespace Jazz2::Editor
 	{
 		auto dialog = std::make_unique<UiDialog>(title);
 		UiDialog* dialogPtr = dialog.get();
+		// At least this wide, a short question would make a cramped box
+		dialog->MinScreenWidthFraction = 1.0f;
+		dialog->MaxStretchedWidth = 280.0f;
 		for (StringView line : text.split('\n')) {
 			dialog->GetContent()->Add<UiLabel>(line, UiTheme::Text);
 		}

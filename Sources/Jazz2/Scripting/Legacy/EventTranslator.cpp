@@ -103,7 +103,7 @@ namespace Jazz2::Scripting
 		Compatibility::EventConverter::KeepOriginalParams(converted.Type, converted.Params, eventWord >> Legacy::EventTranslator::ParamsShift);
 		Actors::ActorState flags = ((eventWord & Legacy::EventTranslator::IlluminateBit) != 0 ? Actors::ActorState::Illuminated : Actors::ActorState::None);
 		eventMap->StoreTileEvent(x, y, converted.Type, flags, converted.Params);
-		// A script marks the event of an object it made itself as active, so the level doesn't make one there (Threed puppets)
+		// A script marks the event of an object it made itself as active, so the level doesn't make one there
 		if ((eventWord & Legacy::EventTranslator::ActiveBit) != 0) {
 			eventMap->Activate(x, y);
 		} else {

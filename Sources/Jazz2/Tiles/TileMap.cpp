@@ -209,8 +209,8 @@ namespace Jazz2::Tiles
 
 	TileMap::~TileMap()
 	{
-		if (!_shiftedPaletteRows.empty()) {
-			ReleaseShiftedPalettes(true);
+		if (!_layerPaletteRows.empty()) {
+			ReleaseLayerPalettes(true);
 		}
 		TracyPlot("TileMap Render Commands", 0LL);
 #if defined(TILEMAP_USE_SINGLE_DRAW)
@@ -438,8 +438,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::OnEndFrame()
 	{
-		if DEATH_UNLIKELY(!_shiftedPaletteRows.empty()) {
-			ReleaseShiftedPalettes(false);
+		if DEATH_UNLIKELY(!_layerPaletteRows.empty()) {
+			ReleaseLayerPalettes(false);
 		}
 
 #if defined(TILEMAP_TRIM_ONLY_EDITOR_VIEWS)
@@ -513,6 +513,7 @@ namespace Jazz2::Tiles
 #if defined(TILEMAP_LAYER_EFFECTS)
 		_effectMeshCommandCount = 0;
 		_reflectionCommandCount = 0;
+		_backgroundDitherCommandCount = 0;
 #endif
 #if defined(TILEMAP_HEAT_TILES)
 		_heatMeshCommandCount = 0;
@@ -533,6 +534,14 @@ namespace Jazz2::Tiles
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		UpdateMeshSlots();
 #endif
+
+		// The textured backgrounds are drawn in the colors of the palette into their passes, a script that changes the palette
+		// (as MLLE applies the palette of the level) has them drawn again
+		const std::uint32_t paletteRevision = ContentResolver::Get().GetSpritePaletteRevision();
+		if (paletteRevision != _texturedPaletteRevision) {
+			_texturedPaletteRevision = paletteRevision;
+			InvalidateTexturedBackground();
+		}
 
 		// The layers are placed by the view drawn, unless the view options name another one of the same center
 		Rectf placementRect = cullingRect;
@@ -611,6 +620,9 @@ namespace Jazz2::Tiles
 			}
 		}
 
+#if defined(TILEMAP_LAYER_EFFECTS)
+		DrawBackgroundDither(renderQueue, cullingRect);
+#endif
 		DrawDebris(renderQueue);
 
 		// Counts only the per-tile/per-particle commands, which the mesh path leaves to the unmeshable layers -
@@ -1376,6 +1388,20 @@ namespace Jazz2::Tiles
 		Vector4f layerColor = layer.Description.Color;
 		// The palette the indexed tiles are drawn through, the sprite palette unless the layer is palette-shifted
 		float layerPaletteOffset = 0.0f;
+		// With the dithering of the background layers only, an ordinary layer screened or multiplied is as opaque as it is in an
+		// ordered pattern of whole pixels (see EmitEffectMesh()) - dithered as a whole, it's blended and dithered with the rest
+		const bool isScreenOrMultiply = (layer.Description.Blend == LayerBlend::Screen || layer.Description.Blend == LayerBlend::Multiply);
+#if defined(TILEMAP_LAYER_EFFECTS)
+		const bool ditheredBlend = (PreferencesCache::Dithering == DitheringScope::Layers && isScreenOrMultiply && rendererType == LayerRendererType::Default &&
+			layer.Description.BlendParam < 255 && ContentResolver::Get().GetShader(PrecompiledShader::TileMapMeshChromaKey) != nullptr);
+#else
+		constexpr bool ditheredBlend = false;
+#endif
+		// Screened or multiplied through a row of the palette premultiplied by alpha, which the blending takes (see
+		// DrawTexturedLayer()), only a layer whose tiles take their colors from the palette
+		const bool blendable = (isScreenOrMultiply && !ditheredBlend &&
+			(rendererType == LayerRendererType::Default || rendererType == LayerRendererType::PaletteShift || rendererType == LayerRendererType::AlphaMap ||
+			 rendererType == LayerRendererType::PaletteMapping || LayerDescription::IsTexturedBackground(rendererType)));
 		if (rendererType == LayerRendererType::Tinted) {
 			// The tint is an entry of the palette, resolved every frame so it follows the palette as it changes
 			layerColor = ResolveTintColor(layer.Description.Color);
@@ -1384,11 +1410,14 @@ namespace Jazz2::Tiles
 			// entry is taken, as JJ2+ does - scripts pick entries the level doesn't use, which may be transparent
 			layerColor = ResolveTintColor(Vector4f(layer.Description.Color.X, 0.0f, 0.0f, 1.0f));
 			layerColor.W = layer.Description.Color.W;
-		} else if (rendererType == LayerRendererType::PaletteShift) {
-			// A row of the palette shifted by the red of the layer's color, built from the palette as it is, so the tiles
-			// are drawn as any other through it; the alpha is the opacity of the layer, tiles in true color stay as they are
-			layerPaletteOffset = (float)AcquireShiftedPalette(std::uint8_t(layer.Description.Color.X * 255.0f + 0.5f));
+		} else if (rendererType == LayerRendererType::PaletteShift || rendererType == LayerRendererType::AlphaMap ||
+			rendererType == LayerRendererType::PaletteMapping) {
+			// A row of the palette of the layer's own (shifted, one color of it by the index, or an additional palette) by
+			// the red of the layer's color, so the tiles are drawn as any other through it; the alpha is the opacity of the
+			// layer, tiles in true color stay as they are
+			layerPaletteOffset = (float)AcquireLayerPalette(rendererType, std::uint8_t(layer.Description.Color.X * 255.0f + 0.5f), blendable);
 			layerColor = Vector4f(1.0f, 1.0f, 1.0f, layer.Description.Color.W);
+			rendererType = LayerRendererType::PaletteShift;
 		} else if (LayerDescription::IsTexturedBackground(rendererType)) {
 			// Not drawn as a textured background (see DrawTexturedLayer()), so as an ordinary repeating tile layer
 			rendererType = LayerRendererType::Default;
@@ -1397,18 +1426,44 @@ namespace Jazz2::Tiles
 			// darkened the whole layer - and a level with a black horizon lost its background entirely.
 			layerColor = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 		}
+		if (blendable && rendererType == LayerRendererType::Default) {
+			layerPaletteOffset = (float)AcquireLayerPalette(LayerRendererType::PaletteShift, 0, true);
+			rendererType = LayerRendererType::PaletteShift;
+		}
+		// Without a row of its own (none is free), drawn as an ordinary layer; tiles in true color always are
+		const bool blended = (blendable && layerPaletteOffset > 0.0f);
+		const Vector4f plainColor = layerColor;
+		if (blended) {
+			const float opacity = layerColor.W * (layer.Description.BlendParam / 255.0f);
+			layerColor = Vector4f(layerColor.X * opacity, layerColor.Y * opacity, layerColor.Z * opacity, opacity);
+		}
 
+		// Drawn only over a color of what is behind it or mixed with it by a blend mode, out of the mesh path and its window
+		// cache - every tile of it goes into the mesh of the chroma key instead
+		bool keyedTiles = (layer.Description.IsKeyedTileLayer() || ditheredBlend);
 #if defined(TILEMAP_LAYER_EFFECTS)
-		_effectLayer.Type = LayerRendererType::Default;
-		if (rendererType == LayerRendererType::XRay || rendererType == LayerRendererType::BlurBehind || rendererType == LayerRendererType::ChromaKey) {
-			if (!BeginEffectLayer(layer, rendererType)) {
+		_effectLayer.Type = EffectLayerType::None;
+		const EffectLayerType effectType = (rendererType == LayerRendererType::XRay ? EffectLayerType::XRay :
+			(rendererType == LayerRendererType::BlurBehind ? EffectLayerType::BlurBehind : (keyedTiles ? EffectLayerType::ChromaKey : EffectLayerType::None)));
+		if (effectType != EffectLayerType::None && !BeginEffectLayer(layer, effectType)) {
+			// Where what is behind the layers can't be read, a layer of a blend mode is drawn as an ordinary one, the others not at all
+			if (effectType != EffectLayerType::ChromaKey || layer.Description.Blend == LayerBlend::ChromaKey) {
 				return;
 			}
-			if (rendererType == LayerRendererType::ChromaKey) {
-				// The key is an entry of the palette as the tint of a tinted layer is, the tiles are drawn in their own colors
-				Vector4f keyColor = ResolveTintColor(Vector4f(layer.Description.Color.X, 0.0f, 0.0f, 1.0f));
-				_effectLayer.KeyColor = Vector3f(keyColor.X, keyColor.Y, keyColor.Z);
-				layerColor = Vector4f(1.0f, 1.0f, 1.0f, layer.Description.Color.W);
+			_effectLayer.Type = EffectLayerType::None;
+			keyedTiles = false;
+		} else if (effectType != EffectLayerType::None) {
+			if (effectType == EffectLayerType::ChromaKey) {
+				if (layer.Description.Blend == LayerBlend::ChromaKey) {
+					// The key is an entry of the palette as the tint of a tinted layer is
+					Vector4f keyColor = ResolveTintColor(Vector4f(layer.Description.BlendParam / 255.0f, 0.0f, 0.0f, 1.0f));
+					_effectLayer.KeyColor = Vector3f(keyColor.X, keyColor.Y, keyColor.Z);
+					_effectLayer.BlendMode = Vector2f(0.0f, 0.0f);
+				} else {
+					// Mixed over what is behind it as far as the parameter says
+					_effectLayer.BlendMode = Vector2f(float(layer.Description.Blend), ditheredBlend ? 1.0f : 0.0f);
+					layerColor.W *= layer.Description.BlendParam / 255.0f;
+				}
 			}
 			// The static tiles of an x-ray layer are ordinary ones and take the ordinary path, only its animated tiles
 			// are intercepted in the walk below. A blur layer stays what it is, which keeps it out of the mesh path and
@@ -1417,6 +1472,12 @@ namespace Jazz2::Tiles
 				rendererType = LayerRendererType::Default;
 			}
 		}
+#else
+		// Where what is behind the layers can't be read, a layer of a blend mode is drawn as an ordinary one, the others not at all
+		if (keyedTiles && layer.Description.Blend == LayerBlend::ChromaKey) {
+			return;
+		}
+		keyedTiles = false;
 #endif
 
 		// The layer coordinate at the left/top edge of the view the layer is placed by
@@ -1437,10 +1498,10 @@ namespace Jazz2::Tiles
 		// Images may be drawn in place of the tiles (see TileMapViewOptions::LayerOverride), the walk below then draws only the
 		// tiles of the areas the images don't show yet
 		const bool clipped = (_viewOptions.LayerOverride != nullptr && rendererType != LayerRendererType::BlurBehind &&
-			rendererType != LayerRendererType::ChromaKey && DrawLayerImages(renderQueue, layer, rendererType, layerColor, cullingRect, Vector2f(x1 - xt, y1 - yt)));
+			!keyedTiles && DrawLayerImages(renderQueue, layer, rendererType, plainColor, cullingRect, Vector2f(x1 - xt, y1 - yt)));
 		if (clipped && _layerTileAreas.empty()) {
 #if defined(TILEMAP_LAYER_EFFECTS)
-			_effectLayer.Type = LayerRendererType::Default;
+			_effectLayer.Type = EffectLayerType::None;
 #endif
 			return;
 		}
@@ -1488,9 +1549,13 @@ namespace Jazz2::Tiles
 		// emission of the RDP keeps to levels of a single tile set.
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 #	if defined(TILEMAP_GROUP_MESH_BY_TILE)
-		bool meshMode = (rendererType == LayerRendererType::Default && _tileSets.size() == 1 && _tileSets[0].Data != nullptr);
+		bool meshMode = (rendererType == LayerRendererType::Default && !keyedTiles && _tileSets.size() == 1 && _tileSets[0].Data != nullptr);
+#	elif defined(TILEMAP_PACKED_TILE_RECORDS)
+		bool meshMode = (rendererType == LayerRendererType::Default && !keyedTiles && !_meshSlots.empty());
 #	else
-		bool meshMode = (rendererType == LayerRendererType::Default && !_meshSlots.empty());
+		// A layer through a row of the palette of its own too, unless blended, which takes blending of its own per tile
+		bool meshMode = ((rendererType == LayerRendererType::Default || (rendererType == LayerRendererType::PaletteShift && !blended)) &&
+			!keyedTiles && !_meshSlots.empty());
 #	endif
 #	if defined(TILEMAP_GROUP_MESH_BY_TILE) || defined(DEATH_TARGET_N64)
 		TileSet* meshTileSet = (meshMode ? _tileSets[0].Data.get() : nullptr);
@@ -1526,9 +1591,9 @@ namespace Jazz2::Tiles
 #endif
 #if defined(TILEMAP_LAYER_EFFECTS)
 		// Read once rather than per tile - the walk below is the hot path of every layer
-		const bool xrayLayer = (_effectLayer.Type == LayerRendererType::XRay);
-		const bool blurLayer = (_effectLayer.Type == LayerRendererType::BlurBehind);
-		const bool chromaKeyLayer = (_effectLayer.Type == LayerRendererType::ChromaKey);
+		const bool xrayLayer = (_effectLayer.Type == EffectLayerType::XRay);
+		const bool blurLayer = (_effectLayer.Type == EffectLayerType::BlurBehind);
+		const bool chromaKeyLayer = (_effectLayer.Type == EffectLayerType::ChromaKey);
 		if (blurLayer) {
 			// No run of reflective tiles is known yet in any column of the window
 			_reflectionColumns.clear();
@@ -1633,8 +1698,8 @@ namespace Jazz2::Tiles
 		// go into it relative to the window's origin, and only the animated ones are streamed.
 		LayerWindowCache* windowCache = nullptr;
 		float windowOriginX = 0.0f, windowOriginY = 0.0f;
-		// Not for a few areas of the layer, the window is all of it
-		if (meshMode && !clipped) {
+		// Not for a few areas of the layer, the window is all of it; its commands are of the sprite palette
+		if (meshMode && !clipped && layerPaletteOffset == 0.0f) {
 			// Counted with the very float additions the walk makes, so a window that ends exactly on a tile
 			// boundary cannot come out a cell longer or shorter than the walk
 			auto countSteps = [](float from, float to) {
@@ -2064,7 +2129,17 @@ namespace Jazz2::Tiles
 				TileCommandUniforms* commandUniforms;
 				auto command = RentRenderCommand(rendererType, tileSet->IsIndexed, &commandUniforms);
 				command->SetType(RenderCommand::Type::TileMap);
-				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+				const bool blendedTile = (blended && tileSet->IsIndexed);
+				if (blendedTile) {
+					// See DrawTexturedLayer(), the color is premultiplied
+					if (layer.Description.Blend == LayerBlend::Screen) {
+						command->GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcColor);
+					} else {
+						command->GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::OneMinusSrcAlpha);
+					}
+				} else {
+					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+				}
 
 				// A solid color layer draws its tiles without a texture, its shader has no texture rectangle
 				if (commandUniforms->TexRect != nullptr) {
@@ -2074,8 +2149,13 @@ namespace Jazz2::Tiles
 					commandUniforms->SpriteSize->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 				}
 
-				Vector4f color = layerColor;
-				color.W *= tile.Alpha / 255.0f;
+				Vector4f color;
+				if (blendedTile) {
+					color = layerColor * (tile.Alpha / 255.0f);
+				} else {
+					color = plainColor;
+					color.W *= tile.Alpha / 255.0f;
+				}
 				if (commandUniforms->Color != nullptr) {
 					commandUniforms->Color->SetFloatVector(color.Data());
 				}
@@ -2248,26 +2328,26 @@ namespace Jazz2::Tiles
 				if (verticesIndex < 0 || _meshVertices[verticesIndex].empty()) {
 					continue;
 				}
-				// Tiles use the default sprite palette (row 0, offset 0); every tile accumulated into these
-				// vertices resolved to this chunk of the atlas of this tile set
+				// Tiles use the sprite palette or the row of the layer; every tile accumulated into these vertices resolved
+				// to this chunk of the atlas of this tile set
 				const MeshSlot& meshSlot = _meshSlots[slot];
 #	if defined(TILEMAP_PACKED_TILE_RECORDS)
 				EmitTileRecords(renderQueue, _meshVertices[verticesIndex], *meshSlot.GetTexture(),
 					meshSlot.Set->IsIndexed, layerColor, layer.Description.Depth);
 #	else
 				EmitMesh(renderQueue, _meshVertices[verticesIndex], *meshSlot.GetTexture(),
-					meshSlot.Set->IsIndexed, 0, layerColor, layer.Description.Depth, RenderCommand::Type::TileMap, false);
+					meshSlot.Set->IsIndexed, std::uint16_t(layerPaletteOffset), layerColor, layer.Description.Depth, RenderCommand::Type::TileMap, false);
 #	endif
 			}
 #	if defined(TILEMAP_HEAT_TILES)
 			if (!_heatMeshGroups.empty()) {
-				EmitHeatMeshes(renderQueue, layerColor, layer.Description.Depth);
+				EmitHeatMeshes(renderQueue, layerColor, layer.Description.Depth, std::uint16_t(layerPaletteOffset));
 			}
 #	endif
 		}
 #endif
 #if defined(TILEMAP_LAYER_EFFECTS)
-		if (_effectLayer.Type != LayerRendererType::Default) {
+		if (_effectLayer.Type != EffectLayerType::None) {
 			EmitEffectMeshes(renderQueue, layerColor, layer.Description.Depth);
 		}
 #endif
@@ -2299,12 +2379,18 @@ namespace Jazz2::Tiles
 		if (isInner) {
 			Vector2f layerCoords = layer.Description.GetViewCoordinates(layer.LayoutSize, _layers[_sprLayerIndex].LayoutSize,
 				placementRect, loX, loY);
+			// On the whole pixels the tiles of an ordinary layer there are drawn at (see DrawLayer()), or a layer of tiles that meets
+			// it would leave a row of pixels between them at some positions of the view
+			Vector2f origin(px1 - layerCoords.X, py1 - layerCoords.Y);
+			if (!PreferencesCache::UnalignedViewport) {
+				origin = Vector2f(std::floor(origin.X), std::floor(origin.Y));
+			}
 			if (!layer.Description.RepeatX) {
-				area.X = px1 - cullingRect.X - layerCoords.X;
+				area.X = origin.X - cullingRect.X;
 				area.W = float(layer.LayoutSize.X * TileSet::DefaultTileSize);
 			}
 			if (!layer.Description.RepeatY) {
-				area.Y = py1 - cullingRect.Y - layerCoords.Y;
+				area.Y = origin.Y - cullingRect.Y;
 				area.H = float(layer.LayoutSize.Y * TileSet::DefaultTileSize);
 			}
 			innerShift = Vector2f(px1 * layer.Description.TextureInnerSpeed.X + layer.TextureOffset.X,
@@ -2573,7 +2659,7 @@ namespace Jazz2::Tiles
 #endif
 
 		// Not with a key in the level, whose colors have to stay exact (see UpdateTexturedLayers())
-		const bool dither = (PreferencesCache::BackgroundDithering && !_hasKeyedLayers);
+		const bool dither = (PreferencesCache::Dithering != DitheringScope::None && !_hasKeyedLayers);
 
 		bool shaderChanged;
 		switch (keyedShader != nullptr ? LayerRendererType(-1) : type) {
@@ -2597,7 +2683,12 @@ namespace Jazz2::Tiles
 				: (dither ? PrecompiledShader::TexturedBackgroundTunnelDither : PrecompiledShader::TexturedBackgroundTunnel))); break;
 			case LayerRendererType::Cylinder: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(dither ? PrecompiledShader::TexturedBackgroundCylinderDither : PrecompiledShader::TexturedBackgroundCylinder)); break;
 			// Whole pixels of the texture, nothing to dither
-			case LayerRendererType::Wave: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundWave)); break;
+			case LayerRendererType::Wave: {
+				// Without the variant (an offline table of a backend may predate it), not dithered
+				Shader* ditherShader = (dither ? ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundWaveDither) : nullptr);
+				shaderChanged = command->GetMaterial().SetShader(ditherShader != nullptr ? ditherShader : ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackgroundWave));
+				break;
+			}
 			default: shaderChanged = (indexed
 				? command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap))
 				: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)); break;
@@ -2859,7 +2950,7 @@ namespace Jazz2::Tiles
 		return true;
 	}
 
-	void TileMap::EmitHeatMeshes(RenderQueue& renderQueue, const Vector4f& color, std::uint16_t depth)
+	void TileMap::EmitHeatMeshes(RenderQueue& renderQueue, const Vector4f& color, std::uint16_t depth, std::uint16_t paletteOffset)
 	{
 		constexpr std::uint32_t HeatFloatsPerVertex = 12;
 		constexpr std::uint32_t HeatFloatsPerQuad = VerticesPerQuad * HeatFloatsPerVertex;
@@ -2916,8 +3007,8 @@ namespace Jazz2::Tiles
 
 				command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 				command->SetLayer(depth);
-				// Diffuse on unit 0 and, when indexed, the palette on unit 1
-				ContentResolver::Get().BindSpritePalette(*command, *group.DiffuseTexture, group.Indexed, 0);
+				// Diffuse on unit 0 and, when indexed, the palette on unit 1 at the row of the layer
+				ContentResolver::Get().BindSpritePalette(*command, *group.DiffuseTexture, group.Indexed, paletteOffset);
 
 				renderQueue.AddCommand(command);
 			}
@@ -3144,7 +3235,7 @@ namespace Jazz2::Tiles
 		for (const auto& cell : cache.Animated) {
 			const LayerTile tile = layer.Layout[cell.LayoutIndex];
 #if defined(TILEMAP_LAYER_EFFECTS)
-			if (_effectLayer.Type == LayerRendererType::XRay && tile.Alpha != 0 &&
+			if (_effectLayer.Type == EffectLayerType::XRay && tile.Alpha != 0 &&
 				AppendXRayTile(tile, originX + float(cell.Xo * (std::int32_t)TileSet::DefaultTileSize),
 					originY + float(cell.Yo * (std::int32_t)TileSet::DefaultTileSize))) {
 				continue;
@@ -3755,14 +3846,13 @@ namespace Jazz2::Tiles
 		// The textured and the reflection layers get their passes with the viewports (see OnInitializeViewport())
 #else
 		// Without the effects, the special layers are reduced to what a level looks like without them (see
-		// LayerRendererType): an x-ray layer shows its animated tiles as they are outside the mask, a blur, a
-		// reflection or a chroma key layer nothing
+		// LayerRendererType): an x-ray layer shows its animated tiles as they are outside the mask, a blur or a
+		// reflection layer nothing (a keyed one isn't drawn, see DrawLayer())
 		if (newLayer.Description.RendererType == LayerRendererType::XRay) {
 			ReduceXRayLayer(newLayer);
 			newLayer.Description.RendererType = LayerRendererType::Default;
 		} else if (newLayer.Description.RendererType == LayerRendererType::BlurBehind ||
-			newLayer.Description.RendererType == LayerRendererType::Reflection ||
-			newLayer.Description.RendererType == LayerRendererType::ChromaKey) {
+			newLayer.Description.RendererType == LayerRendererType::Reflection) {
 			newLayer.Visible = false;
 			newLayer.Description.RendererType = LayerRendererType::Default;
 		}
@@ -3815,14 +3905,18 @@ namespace Jazz2::Tiles
 		// A textured layer drawn translucent or keyed needs the copy of what is behind it, the owner sets it up (see
 		// HasChromaKeyLayers())
 		auto needsBehindCopy = [](const LayerDescription& d) {
-			return (LayerDescription::IsTexturedBackground(d.RendererType) &&
-				(d.TextureBlend == TexturedLayerBlend::Translucent || d.TextureBlend == TexturedLayerBlend::ChromaKey));
+			return d.ReadsBehind();
 		};
 		const bool neededBehindCopy = needsBehindCopy(layer.Description);
 #endif
 		LayerRendererType rendererType = layer.Description.RendererType;
+		const bool mappingChanged = (layer.Description.TextureMapping != description.TextureMapping);
 		layer.Description = description;
 		layer.Description.RendererType = rendererType;
+		if (mappingChanged) {
+			// The texture is drawn in the colors of another palette
+			InvalidateTexturedBackground();
+		}
 		SetLayerRendererType(layerIndex, description.RendererType);
 		// Also when the renderer type stays, then the call above returns early
 		UpdateTexturedLayers();
@@ -3836,7 +3930,7 @@ namespace Jazz2::Tiles
 
 	bool TileMap::SetLayerTexture(std::int32_t layerIndex, ArrayView<const std::uint8_t> pixels)
 	{
-		constexpr std::size_t PixelCount = std::size_t(Formats::TexturedLayerChunk::TextureSize) * std::size_t(Formats::TexturedLayerChunk::TextureSize);
+		constexpr std::size_t PixelCount = std::size_t(Formats::LayerPropertiesChunk::TextureSize) * std::size_t(Formats::LayerPropertiesChunk::TextureSize);
 		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size() || (!pixels.empty() && pixels.size() != PixelCount)) {
 			return false;
 		}
@@ -3852,7 +3946,7 @@ namespace Jazz2::Tiles
 	Vector2i TileMap::GetLayerTextureSize(const TileMapLayer& layer)
 	{
 		if (!layer.TexturePixels.empty()) {
-			return Vector2i(Formats::TexturedLayerChunk::TextureSize, Formats::TexturedLayerChunk::TextureSize);
+			return Vector2i(Formats::LayerPropertiesChunk::TextureSize, Formats::LayerPropertiesChunk::TextureSize);
 		}
 		// No more than the textured backgrounds take, the top left of a larger layer
 		return Vector2i(std::clamp<std::int32_t>(layer.LayoutSize.X, 1, TexturedBackgroundTiles) * TileSet::DefaultTileSize,
@@ -4099,39 +4193,57 @@ namespace Jazz2::Tiles
 			description.W * (((color >> 24) & 0x000000ff) / 255.0f));
 	}
 
-	std::int32_t TileMap::AcquireShiftedPalette(std::uint8_t shift)
+	void TileMap::SetAdditionalPalettes(ArrayView<const Formats::PaletteRecord> palettes)
 	{
-		if (shift == 0) {
+		ReleaseLayerPalettes(true);
+		_additionalPalettes.clear();
+		for (const Formats::PaletteRecord& palette : palettes) {
+			auto colors = std::make_unique<std::uint32_t[]>(Formats::LevelFile::ColorsPerPalette);
+			std::memcpy(colors.get(), palette.Colors, Formats::LevelFile::ColorsPerPalette * sizeof(std::uint32_t));
+			_additionalPalettes.push_back(Death::move(colors));
+		}
+	}
+
+	std::int32_t TileMap::AcquireLayerPalette(LayerRendererType type, std::uint8_t param, bool premultiplied)
+	{
+		if ((type == LayerRendererType::PaletteShift && param == 0 && !premultiplied) ||
+			(type == LayerRendererType::PaletteMapping && param >= _additionalPalettes.size())) {
 			return 0;
 		}
 
 		const std::uint32_t frame = theApplication().GetFrameCount();
-		for (ShiftedPaletteRow& row : _shiftedPaletteRows) {
-			if (row.Shift == shift) {
+		for (LayerPaletteRow& row : _layerPaletteRows) {
+			if (row.Type == type && row.Param == param && row.Premultiplied == premultiplied) {
 				row.LastUsedFrame = frame;
 				return row.PaletteOffset;
 			}
 		}
 
-		// A shift that changes every frame (a script can animate it) would take a row for each value otherwise
-		ReleaseShiftedPalettes(false);
-		std::int32_t paletteOffset = ContentResolver::Get().AcquireShiftedPaletteOffset(shift);
+		// A parameter that changes every frame (a script can animate it) would take a row for each value otherwise
+		ReleaseLayerPalettes(false);
+		auto& resolver = ContentResolver::Get();
+		std::int32_t paletteOffset;
+		switch (type) {
+			case LayerRendererType::AlphaMap: paletteOffset = resolver.AcquireAlphaMapPaletteOffset(param, premultiplied); break;
+			case LayerRendererType::PaletteMapping: paletteOffset = resolver.AcquireFixedPaletteOffset(_additionalPalettes[param].get(), premultiplied); break;
+			default: paletteOffset = resolver.AcquireShiftedPaletteOffset(param, premultiplied); break;
+		}
 		if (paletteOffset < 0) {
-			// All rows are taken, the layer is drawn unshifted
+			// All rows are taken, the layer is drawn in the sprite palette
 			return 0;
 		}
-		_shiftedPaletteRows.push_back({ paletteOffset, frame, shift });
+		_layerPaletteRows.push_back({ paletteOffset, frame, type, param, premultiplied });
 		return paletteOffset;
 	}
 
-	void TileMap::ReleaseShiftedPalettes(bool all)
+	void TileMap::ReleaseLayerPalettes(bool all)
 	{
 		const std::uint32_t frame = theApplication().GetFrameCount();
-		for (std::size_t i = 0; i < _shiftedPaletteRows.size(); ) {
-			const ShiftedPaletteRow& row = _shiftedPaletteRows[i];
+		for (std::size_t i = 0; i < _layerPaletteRows.size(); ) {
+			const LayerPaletteRow& row = _layerPaletteRows[i];
 			if (all || row.LastUsedFrame + 1 < frame) {
 				ContentResolver::Get().ReleasePaletteOffset(row.PaletteOffset);
-				_shiftedPaletteRows.eraseUnordered(i);
+				_layerPaletteRows.eraseUnordered(i);
 			} else {
 				i++;
 			}
@@ -4986,8 +5098,7 @@ namespace Jazz2::Tiles
 
 #if defined(TILEMAP_LAYER_EFFECTS)
 		auto isEffect = [](LayerRendererType type) {
-			return (type == LayerRendererType::XRay || type == LayerRendererType::BlurBehind || type == LayerRendererType::Reflection ||
-				type == LayerRendererType::ChromaKey);
+			return (type == LayerRendererType::XRay || type == LayerRendererType::BlurBehind || type == LayerRendererType::Reflection);
 		};
 		const bool hadEffect = isEffect(layer.Description.RendererType);
 		const bool hasEffect = isEffect(type);
@@ -5013,7 +5124,7 @@ namespace Jazz2::Tiles
 		if (type == LayerRendererType::XRay) {
 			ReduceXRayLayer(layer);
 			type = LayerRendererType::Default;
-		} else if (type == LayerRendererType::BlurBehind || type == LayerRendererType::Reflection || type == LayerRendererType::ChromaKey) {
+		} else if (type == LayerRendererType::BlurBehind || type == LayerRendererType::Reflection) {
 			layer.Visible = false;
 			type = LayerRendererType::Default;
 		}
@@ -5041,8 +5152,8 @@ namespace Jazz2::Tiles
 				continue;
 			}
 			LayerRendererType type = _layers[i].Description.RendererType;
-			hasKeyedLayers |= (type == LayerRendererType::ChromaKey || (LayerDescription::IsTexturedBackground(type) &&
-				_layers[i].Description.TextureBlend == TexturedLayerBlend::ChromaKey));
+			hasKeyedLayers |= (_layers[i].Description.Blend == LayerBlend::ChromaKey &&
+				(type == LayerRendererType::Default || LayerDescription::IsTexturedBackground(type)));
 			if (LayerDescription::IsTexturedBackground(type)) {
 				if (SupportsTexturedBackground || SupportsTexturedBackgroundTunnel || SupportsTexturedBackgroundCylinder) {
 					wanted.push_back({ i, Recti(), false, type == LayerRendererType::TileMenu });
@@ -5156,8 +5267,7 @@ namespace Jazz2::Tiles
 	bool TileMap::HasChromaKeyLayers() const
 	{
 		for (const auto& layer : _layers) {
-			if (layer.Description.RendererType == LayerRendererType::ChromaKey || (LayerDescription::IsTexturedBackground(layer.Description.RendererType) &&
-				(layer.Description.TextureBlend == TexturedLayerBlend::Translucent || layer.Description.TextureBlend == TexturedLayerBlend::ChromaKey))) {
+			if (layer.Description.ReadsBehind()) {
 				return true;
 			}
 		}
@@ -5198,7 +5308,7 @@ namespace Jazz2::Tiles
 		return false;
 	}
 
-	bool TileMap::BeginEffectLayer(const TileMapLayer& layer, LayerRendererType type)
+	bool TileMap::BeginEffectLayer(const TileMapLayer& layer, EffectLayerType type)
 	{
 		_effectMeshGroups.clear();
 		_effectLayer.Type = type;
@@ -5206,7 +5316,7 @@ namespace Jazz2::Tiles
 		_effectLayer.Target = (_owner != nullptr ? _owner->GetLayerEffectsTarget(RenderResources::GetCurrentViewport()) : nullptr);
 
 		auto& resolver = ContentResolver::Get();
-		if (type == LayerRendererType::XRay) {
+		if (type == EffectLayerType::XRay) {
 			// Without a mask, an x-ray layer still shows its tiles as they are outside the mask
 			_effectLayer.MaskAvailable = (_effectLayer.Target != nullptr && _effectLayer.Target->XRayMask != nullptr &&
 				resolver.GetShader(PrecompiledShader::TileMapMeshXRay) != nullptr);
@@ -5214,7 +5324,11 @@ namespace Jazz2::Tiles
 		}
 
 		_effectLayer.MaskAvailable = false;
-		if (type == LayerRendererType::ChromaKey) {
+		if (type == EffectLayerType::ChromaKey && (layer.Description.Blend == LayerBlend::Screen || layer.Description.Blend == LayerBlend::Multiply)) {
+			// Screened or multiplied by the fixed blending, only its opacity is a pattern of pixels, it takes nothing behind it
+			return (ContentResolver::Get().GetShader(PrecompiledShader::TileMapMeshChromaKey) != nullptr);
+		}
+		if (type == EffectLayerType::ChromaKey) {
 			// The colors of what is behind the layer are compared with the key, a blur of them would key only the middle of an
 			// area of the color (see PlayerViewport::InitializeLayerEffects())
 			return (_effectLayer.Target != nullptr && _effectLayer.Target->View != nullptr && _effectLayer.Target->BehindCopy != nullptr &&
@@ -5439,7 +5553,7 @@ namespace Jazz2::Tiles
 				EmitEffectMesh(renderQueue, vertices, *group.DiffuseTexture, group.Indexed, group.Kind, color, depth);
 				if (group.Kind == EffectMeshKind::Blur) {
 					passes |= _effectLayer.Target->BlurPasses | _effectLayer.Target->CopyPasses;
-				} else if (group.Kind == EffectMeshKind::ChromaKey) {
+				} else if (group.Kind == EffectMeshKind::ChromaKey && (_effectLayer.BlendMode.X < 2.5f || _effectLayer.BlendMode.X > 4.5f)) {
 					passes |= _effectLayer.Target->CopyPasses;
 				}
 			}
@@ -5470,7 +5584,9 @@ namespace Jazz2::Tiles
 			shaderType = (indexed ? PrecompiledShader::TileMapMeshXRayPalette : PrecompiledShader::TileMapMeshXRay);
 			floatsPerVertex = 12;
 		} else if (isChromaKey) {
-			sampledTarget = _effectLayer.Target->BehindCopy;
+			// Screened or multiplied, it takes nothing behind it, but something has to be bound there
+			const bool readsBehind = (_effectLayer.BlendMode.X < 2.5f || _effectLayer.BlendMode.X > 4.5f);
+			sampledTarget = (readsBehind ? (_effectLayer.Target != nullptr ? _effectLayer.Target->BehindCopy : nullptr) : const_cast<Texture*>(&texture));
 			shaderType = (indexed ? PrecompiledShader::TileMapMeshChromaKeyPalette : PrecompiledShader::TileMapMeshChromaKey);
 			floatsPerVertex = 8;
 		} else {
@@ -5502,8 +5618,15 @@ namespace Jazz2::Tiles
 			RenderCommand* command = _effectMeshCommands[_effectMeshCommandCount++].get();
 
 			command->SetType(RenderCommand::Type::TileMap);
-			// The x-ray tiles come out premultiplied (see TileMapMeshXRay.shader), the blur is a plain mix by the amount
-			command->GetMaterial().SetBlendingFactors(isXRay ? BlendingFactor::One : BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+			// The x-ray tiles come out premultiplied (see TileMapMeshXRay.shader), the blur is a plain mix by the amount, screened
+			// and multiplied tiles are premultiplied too and blended as those of an ordinary layer (see DrawTexturedLayer())
+			if (isChromaKey && _effectLayer.BlendMode.X > 2.5f && _effectLayer.BlendMode.X < 3.5f) {
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcColor);
+			} else if (isChromaKey && _effectLayer.BlendMode.X > 3.5f && _effectLayer.BlendMode.X < 4.5f) {
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::OneMinusSrcAlpha);
+			} else {
+				command->GetMaterial().SetBlendingFactors(isXRay ? BlendingFactor::One : BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+			}
 
 			if (command->GetMaterial().SetShader(shader)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
@@ -5537,6 +5660,9 @@ namespace Jazz2::Tiles
 				targetSizeUniform->SetFloatValue(targetSizeInv.X, targetSizeInv.Y);
 			}
 			if (isChromaKey) {
+				if (auto* blendModeUniform = command->GetMaterial().Uniform("uBlendMode")) {
+					blendModeUniform->SetFloatValue(_effectLayer.BlendMode.X, _effectLayer.BlendMode.Y);
+				}
 				auto* keyColorUniform = command->GetMaterial().Uniform("uKeyColor");
 				if (keyColorUniform != nullptr) {
 					// The copy of the scene may have fewer bits per channel than the palette (see Texture::ColorTargetFormat),
@@ -6015,15 +6141,20 @@ namespace Jazz2::Tiles
 			return;
 		}
 
-		// Drawn translucent by the variant of its shader, and keyed only with the copy of what is behind it (see
-		// HasChromaKeyLayers()), opaque otherwise
-		const TexturedLayerBlend blend = layer.Description.TextureBlend;
+		// Drawn translucent by the variant of its shader, and keyed or mixed by a blend mode only with the copy of what is
+		// behind it (see HasChromaKeyLayers()), opaque otherwise
+		const LayerBlend blend = layer.Description.Blend;
+		const bool readsBehind = (blend == LayerBlend::ChromaKey || LayerDescription::IsBehindBlend(blend));
+		// Screened or multiplied with the dithering of the backgrounds, as opaque as it is in an ordered pattern of whole pixels,
+		// as the 16-bit renderer of JJ2+ draws it
+		const bool isScreenOrMultiply = (blend == LayerBlend::Screen || blend == LayerBlend::Multiply);
+		const bool ditheredBlend = (PreferencesCache::Dithering == DitheringScope::Layers && isScreenOrMultiply && layer.Description.BlendParam < 255);
 		bool keyed = false;
 #if defined(TILEMAP_LAYER_EFFECTS)
 		LayerEffectsTarget* effectsTarget = nullptr;
-		if (blend == TexturedLayerBlend::Translucent || blend == TexturedLayerBlend::ChromaKey) {
+		if (blend == LayerBlend::Translucent || readsBehind || ditheredBlend) {
 			effectsTarget = (_owner != nullptr ? _owner->GetLayerEffectsTarget(RenderResources::GetCurrentViewport()) : nullptr);
-			keyed = (blend == TexturedLayerBlend::Translucent ||
+			keyed = (blend == LayerBlend::Translucent || ditheredBlend ||
 				(effectsTarget != nullptr && effectsTarget->View != nullptr && effectsTarget->BehindCopy != nullptr));
 		}
 #endif
@@ -6038,8 +6169,7 @@ namespace Jazz2::Tiles
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(right - left, bottom - top);
 		// Screened or multiplied, as opaque as the parameter of the sprite mode is, as in JJ2+ - the shaders premultiply by its
 		// alpha, and the fixed-function passes that modulate the texture by it get it premultiplied already
-		const bool isScreenOrMultiply = (blend == TexturedLayerBlend::Screen || blend == TexturedLayerBlend::Multiply);
-		const float opacity = (isScreenOrMultiply ? layer.Description.TextureBlendParam / 255.0f : 1.0f);
+		const float opacity = (isScreenOrMultiply ? layer.Description.BlendParam / 255.0f : 1.0f);
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(opacity, opacity, opacity, opacity).Data());
 
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue(reference.W, reference.H);
@@ -6050,12 +6180,16 @@ namespace Jazz2::Tiles
 		}
 		if (auto* horizonUniform = command->GetMaterial().Uniform("uHorizonColor")) {
 			Vector4f horizonColor = layer.Description.Color;
-			if (layer.Description.TextureBlend != TexturedLayerBlend::Normal) {
+			if (layer.Description.Blend != LayerBlend::Normal) {
 				// In a sprite mode, JJ2+ fades the texture as the 8-bit game does, towards the last entry of the gradient the
 				// textures are drawn in (207) instead of the fade color, measured in JJ2+ - resolved every frame so it follows
 				// the palette, the gradient is near enough linear for the colors to fade as the entries would
 				Vector4f entry = ResolveTintColor(Vector4f(207.0f / 255.0f, 0.0f, 0.0f, 1.0f));
 				horizonColor = Vector4f(entry.X, entry.Y, entry.Z, horizonColor.W);
+			} else if (layer.Description.TextureMapping > 0 && layer.Description.TextureMapping <= _additionalPalettes.size()) {
+				// Mapped the same way, towards the entry 207 of the mapping
+				std::uint32_t entry = _additionalPalettes[layer.Description.TextureMapping - 1][207];
+				horizonColor = Vector4f((entry & 0xFF) / 255.0f, ((entry >> 8) & 0xFF) / 255.0f, ((entry >> 16) & 0xFF) / 255.0f, horizonColor.W);
 			}
 			horizonUniform->SetFloatVector(horizonColor.Data());
 		}
@@ -6091,9 +6225,9 @@ namespace Jazz2::Tiles
 		// A sprite mode a fixed blending can do, a pooled command keeps the factors it was given last. With the color premultiplied
 		// by the opacity a, screen is a * src + dst * (1 - a * src) and multiply a * src * dst + dst * (1 - a), what is behind
 		// mixed with the result by a.
-		switch (layer.Description.TextureBlend) {
-			case TexturedLayerBlend::Screen: command->GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcColor); break;
-			case TexturedLayerBlend::Multiply: command->GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::OneMinusSrcAlpha); break;
+		switch (keyed && !isScreenOrMultiply ? LayerBlend::Normal : layer.Description.Blend) {
+			case LayerBlend::Screen: command->GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcColor); break;
+			case LayerBlend::Multiply: command->GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::OneMinusSrcAlpha); break;
 			default: command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha); break;
 		}
 
@@ -6104,26 +6238,30 @@ namespace Jazz2::Tiles
 #if defined(TILEMAP_LAYER_EFFECTS)
 		// Only if the variant was there (see RentRenderCommand())
 		if (auto* keyUniform = (keyed ? command->GetMaterial().Uniform("uKeyColor") : nullptr)) {
-			const bool isChromaKey = (blend == TexturedLayerBlend::ChromaKey);
+			const bool isChromaKey = (blend == LayerBlend::ChromaKey);
 			if (isChromaKey) {
 				// The key is an entry of the palette, resolved every frame so it follows the palette, with the tolerance of the
 				// chroma key layers (see EmitEffectMesh())
 				constexpr float KeyTolerance = (Texture::ColorTargetFormat == Texture::Format::RGB565 ? 1.5f / 31.0f : 1.5f / 255.0f);
-				Vector4f keyColor = ResolveTintColor(Vector4f(layer.Description.TextureBlendParam / 255.0f, 0.0f, 0.0f, 1.0f));
+				Vector4f keyColor = ResolveTintColor(Vector4f(layer.Description.BlendParam / 255.0f, 0.0f, 0.0f, 1.0f));
 				keyUniform->SetFloatValue(keyColor.X, keyColor.Y, keyColor.Z, KeyTolerance);
 			} else {
 				keyUniform->SetFloatValue(0.0f, 0.0f, 0.0f, -1.0f);
 			}
 			if (auto* opacityUniform = command->GetMaterial().Uniform("uOpacity")) {
-				opacityUniform->SetFloatValue(isChromaKey ? 1.0f : layer.Description.TextureBlendParam / 255.0f);
+				opacityUniform->SetFloatValue(isChromaKey ? 1.0f : layer.Description.BlendParam / 255.0f);
+			}
+			if (auto* blendModeUniform = command->GetMaterial().Uniform("uBlendMode")) {
+				const bool blendMode = ((readsBehind && blend != LayerBlend::ChromaKey) || ditheredBlend);
+				blendModeUniform->SetFloatValue(blendMode ? float(blend) : 0.0f, ditheredBlend ? 1.0f : 0.0f);
 			}
 			if (auto* targetSizeUniform = command->GetMaterial().Uniform("uTargetSizeInv")) {
 				const Vector2i targetSize = RenderResources::GetCurrentViewport()->GetSize();
 				targetSizeUniform->SetFloatValue(targetSize.X > 0 ? 1.0f / targetSize.X : 0.0f, targetSize.Y > 0 ? 1.0f / targetSize.Y : 0.0f);
 			}
-			// Without a key it's never read, but something has to be bound there
-			command->GetMaterial().SetTexture(2, isChromaKey ? *effectsTarget->BehindCopy : texture);
-			if (isChromaKey) {
+			// Without a key or a blend mode it's never read, but something has to be bound there
+			command->GetMaterial().SetTexture(2, readsBehind ? *effectsTarget->BehindCopy : texture);
+			if (readsBehind) {
 				// Everything below the layer is drawn and copied first, before the layer itself
 				effectsTarget->View->RequestSplit(layer.Description.Depth, effectsTarget->CopyPasses);
 			}
@@ -6159,16 +6297,17 @@ namespace Jazz2::Tiles
 			cullingRect.Y + reference.Y + reference.H * layer.Description.TextureFadePosition.Y);
 
 		// Drawn translucent, or keyed by the chroma key layers' shader where there is the copy of what is behind it
-		const float opacity = (layer.Description.TextureBlend == TexturedLayerBlend::Translucent ? layer.Description.TextureBlendParam / 255.0f : 1.0f);
+		const float opacity = (layer.Description.Blend == LayerBlend::Translucent ? layer.Description.BlendParam / 255.0f : 1.0f);
 #if defined(TILEMAP_LAYER_EFFECTS)
 		bool keyed = false;
-		if (layer.Description.TextureBlend == TexturedLayerBlend::ChromaKey) {
+		if (layer.Description.Blend == LayerBlend::ChromaKey) {
 			_effectLayer.Target = (_owner != nullptr ? _owner->GetLayerEffectsTarget(RenderResources::GetCurrentViewport()) : nullptr);
 			keyed = (_effectLayer.Target != nullptr && _effectLayer.Target->View != nullptr && _effectLayer.Target->BehindCopy != nullptr &&
 				ContentResolver::Get().GetShader(PrecompiledShader::TileMapMeshChromaKey) != nullptr);
 			if (keyed) {
-				Vector4f keyColor = ResolveTintColor(Vector4f(layer.Description.TextureBlendParam / 255.0f, 0.0f, 0.0f, 1.0f));
+				Vector4f keyColor = ResolveTintColor(Vector4f(layer.Description.BlendParam / 255.0f, 0.0f, 0.0f, 1.0f));
 				_effectLayer.KeyColor = Vector3f(keyColor.X, keyColor.Y, keyColor.Z);
+				_effectLayer.BlendMode = Vector2f(0.0f, 0.0f);
 			}
 		}
 #endif
@@ -6362,6 +6501,57 @@ namespace Jazz2::Tiles
 
 		// Everything below the layer is drawn and copied first, before the rest of the scene is drawn over it
 		effectsTarget->View->RequestSplit(layer.Description.Depth, effectsTarget->CopyPasses);
+	}
+
+	void TileMap::DrawBackgroundDither(RenderQueue& renderQueue, const Rectf& cullingRect)
+	{
+		if (PreferencesCache::Dithering != DitheringScope::BehindSprites ||
+			_sprLayerIndex < 0 || _owner == nullptr) {
+			return;
+		}
+		LayerEffectsTarget* effectsTarget = _owner->GetLayerEffectsTarget(RenderResources::GetCurrentViewport());
+		Shader* shader = ContentResolver::Get().GetShader(PrecompiledShader::BackgroundDither);
+		if (effectsTarget == nullptr || effectsTarget->View == nullptr || effectsTarget->BehindCopy == nullptr || shader == nullptr) {
+			return;
+		}
+
+		// Just behind the sprite layer, everything there is drawn and copied first, then drawn again dithered over itself
+		const std::uint16_t depth = std::uint16_t(std::max<std::int32_t>(std::int32_t(_layers[_sprLayerIndex].Description.Depth) - 1, 0));
+		if (_backgroundDitherCommandCount >= (std::int32_t)_backgroundDitherCommands.size()) {
+			auto& newCommand = _backgroundDitherCommands.emplace_back(std::make_unique<RenderCommand>());
+			// Blended to keep its place among the commands of its depth, it's opaque
+			newCommand->GetMaterial().SetBlendingEnabled(true);
+		}
+		RenderCommand* command = _backgroundDitherCommands[_backgroundDitherCommandCount++].get();
+		command->SetType(RenderCommand::Type::TileMap);
+		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+		if (command->GetMaterial().SetShader(shader)) {
+			command->GetMaterial().ReserveUniformsDataMemory();
+			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+			if (auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName)) {
+				textureUniform->SetIntValue(0);
+			}
+			if (auto* behindUniform = command->GetMaterial().Uniform("uTextureBehind")) {
+				behindUniform->SetIntValue(2);
+			}
+		}
+
+		if (auto* instanceBlock = command->GetInstanceBlock()) {
+			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(cullingRect.W, cullingRect.H);
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+		}
+		if (auto* uniform = command->GetMaterial().Uniform("uTargetSizeInv")) {
+			const Vector2i targetSize = RenderResources::GetCurrentViewport()->GetSize();
+			uniform->SetFloatValue(targetSize.X > 0 ? 1.0f / targetSize.X : 0.0f, targetSize.Y > 0 ? 1.0f / targetSize.Y : 0.0f);
+		}
+
+		command->SetTransformation(Matrix4x4f::Translation(cullingRect.X, cullingRect.Y, 0.0f));
+		command->SetLayer(depth);
+		command->GetMaterial().SetTexture(0, *effectsTarget->BehindCopy);
+		command->GetMaterial().SetTexture(2, *effectsTarget->BehindCopy);
+		renderQueue.AddCommand(command);
+		effectsTarget->View->RequestSplit(depth, effectsTarget->CopyPasses);
 	}
 #endif
 
@@ -6684,10 +6874,17 @@ namespace Jazz2::Tiles
 		std::int32_t renderCommandIndex = 0;
 		bool isAnimated = false;
 
+		// Through an additional palette of the level, as SPRITE::MAPPING of a textured layer of JJ2+ (only the colors are drawn
+		// here, the row may go once they are)
+		std::int32_t paletteOffset = 0;
+		if (!_drawsIndices && layer.Description.TextureMapping > 0) {
+			paletteOffset = _owner->AcquireLayerPalette(LayerRendererType::PaletteMapping, std::uint8_t(layer.Description.TextureMapping - 1));
+		}
+
 		if (!layer.TexturePixels.empty() && _source.W <= 0) {
 			// A texture of its own instead of the tiles, made again only when its pixels change. It stays indexed, it's drawn
 			// through the palette as the tiles are, so it follows the palette the same way, or as the indices themselves.
-			constexpr std::int32_t Size = Formats::TexturedLayerChunk::TextureSize;
+			constexpr std::int32_t Size = Formats::LayerPropertiesChunk::TextureSize;
 			if (_image == nullptr || _imageRevision != layer.TextureRevision) {
 				if (_image == nullptr) {
 					_image = std::make_unique<Texture>("TexturedLayer", Texture::Format::R8, Size, Size);
@@ -6705,7 +6902,7 @@ namespace Jazz2::Tiles
 			// that keeps an R8 texture as RGBA8 fills green and blue with 255 (GL gives 0)
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector((_drawsIndices ? Colorf::Red : Colorf::White).Data());
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
-			ContentResolver::Get().BindSpritePalette(*command, *_image, !_drawsIndices, 0);
+			ContentResolver::Get().BindSpritePalette(*command, *_image, !_drawsIndices, std::uint16_t(paletteOffset));
 			renderQueue.AddCommand(command);
 			// The tiles aren't drawn
 			layoutSize = Vector2i(0, 0);
@@ -6759,7 +6956,7 @@ namespace Jazz2::Tiles
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector((_drawsIndices && tileSet->IsIndexed ? Colorf::Red : Colorf::White).Data());
 
 				command->SetTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
-				ContentResolver::Get().BindSpritePalette(*command, *tileTexture, throughPalette, 0);
+				ContentResolver::Get().BindSpritePalette(*command, *tileTexture, throughPalette, std::uint16_t(paletteOffset));
 
 				renderQueue.AddCommand(command);
 			}

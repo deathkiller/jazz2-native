@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
@@ -149,6 +149,7 @@ namespace Jazz2::Editor
 		constexpr const char* ViewEvents = "view.events";
 		constexpr const char* ViewPauseLayers = "view.pauseLayers";
 		constexpr const char* ViewPreviewTextured = "view.previewTextured";
+		constexpr const char* ViewOverriddenAssets = "view.overriddenAssets";
 		constexpr const char* ViewZoomIn = "view.zoomIn";
 		constexpr const char* ViewZoomOut = "view.zoomOut";
 		constexpr const char* ViewZoomGame = "view.zoomGame";
@@ -230,6 +231,8 @@ namespace Jazz2::Editor
 		constexpr const char* PlayEasy = "play.easy";
 		constexpr const char* PlayNormal = "play.normal";
 		constexpr const char* PlayHard = "play.hard";
+		constexpr const char* PlayReforged = "play.reforged";
+		constexpr const char* PlayLedgeClimb = "play.ledgeClimb";
 		constexpr const char* PlayAlone = "play.alone";
 		constexpr const char* PlayCooperation = "play.cooperation";
 		constexpr const char* PlayBattle = "play.battle";

@@ -630,12 +630,32 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 7 }		// Size
 			}, eventParams);
 
+			// The round light of JJ2+ (measured on objects of LIGHT::NORMAL, which the event is), smooth from the middle; above
+			// size 5 it's twice as strong as full light, which is the light of full strength from 0.794 of the way out
+			auto getRoundLight = [](std::uint8_t size, std::uint8_t& intensity, std::uint16_t& radiusNear, std::uint16_t& radiusFar) {
+				switch (size) {
+					case 0: intensity = 255; radiusNear = 60; radiusFar = 100; break;
+					case 1: intensity = 64; radiusNear = 3; radiusFar = 23; break;
+					case 2:
+					case 3: intensity = 204; radiusNear = 7; radiusFar = 39; break;
+					case 4: intensity = 217; radiusNear = 10; radiusFar = 41; break;
+					case 5: intensity = 230; radiusNear = 14; radiusFar = 44; break;
+					default: {
+						float radius = 4.2f * size + 1.0f;
+						intensity = 255;
+						radiusFar = (std::uint16_t)(radius + 28.0f);
+						radiusNear = (std::uint16_t)std::max(radiusFar - 0.794f * 46.0f, 0.0f);
+						break;
+					}
+				}
+			};
+
 			switch (eventParams[0]) {
 				default:
 				case 0: { // Normal
-					std::uint16_t radiusNear = (std::uint16_t)(eventParams[1] == 0 ? 60 : eventParams[1] * 6);
-					std::uint16_t radiusFar = (std::uint16_t)(radiusNear * 1.666f);
-					return { EventType::LightSteady, { 255, 10, (std::uint8_t)(radiusNear & 0xff), (std::uint8_t)((radiusNear >> 8) & 0xff), (std::uint8_t)(radiusFar & 0xff), (std::uint8_t)((radiusFar >> 8) & 0xff) } };
+					std::uint8_t intensity; std::uint16_t radiusNear, radiusFar;
+					getRoundLight(eventParams[1], intensity, radiusNear, radiusFar);
+					return { EventType::LightSteady, { intensity, 0, (std::uint8_t)(radiusNear & 0xff), (std::uint8_t)((radiusNear >> 8) & 0xff), (std::uint8_t)(radiusFar & 0xff), (std::uint8_t)((radiusFar >> 8) & 0xff) } };
 				}
 
 				case 1: // Single point (ignores the "Size" parameter)
@@ -645,15 +665,15 @@ namespace Jazz2::Compatibility
 					return { EventType::LightSteady, { 255, 200, 0, 0, 16, 0 } };
 
 				case 3: { // Flicker light
-					std::uint16_t radiusNear = (std::uint16_t)(eventParams[1] == 0 ? 60 : eventParams[1] * 6);
-					std::uint16_t radiusFar = (std::uint16_t)(radiusNear * 1.666f);
+					std::uint8_t intensity; std::uint16_t radiusNear, radiusFar;
+					getRoundLight(eventParams[1], intensity, radiusNear, radiusFar);
 					return { EventType::LightFlicker, { std::min((std::uint8_t)(110 + eventParams[1] * 2), (std::uint8_t)255), 40, (std::uint8_t)(radiusNear & 0xff), (std::uint8_t)((radiusNear >> 8) & 0xff), (std::uint8_t)(radiusFar & 0xff), (std::uint8_t)((radiusFar >> 8) & 0xff) } };
 				}
 
-				case 4: { // Bright normal light
-					std::uint16_t radiusNear = (std::uint16_t)(eventParams[1] == 0 ? 80 : eventParams[1] * 7);
-					std::uint16_t radiusFar = (std::uint16_t)(radiusNear * 1.25f);
-					return { EventType::LightSteady, { 255, 200, (std::uint8_t)(radiusNear & 0xff), (std::uint8_t)((radiusNear >> 8) & 0xff), (std::uint8_t)(radiusFar & 0xff), (std::uint8_t)((radiusFar >> 8) & 0xff) } };
+				case 4: { // Bright normal light, the same as the normal one, but brighter than full light (LIGHT::BRIGHT)
+					std::uint8_t intensity; std::uint16_t radiusNear, radiusFar;
+					getRoundLight(eventParams[1], intensity, radiusNear, radiusFar);
+					return { EventType::LightSteady, { intensity, 64, (std::uint8_t)(radiusNear & 0xff), (std::uint8_t)((radiusNear >> 8) & 0xff), (std::uint8_t)(radiusFar & 0xff), (std::uint8_t)((radiusFar >> 8) & 0xff) } };
 				}
 
 				case 5: { // Laser shield/Illuminate Surroundings

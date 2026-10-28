@@ -45,7 +45,7 @@ namespace Jazz2::Editor
 	/**
 		@brief Makes an indexed image of @p size × @p size palette indices with the colors of @p palette, entry 0 transparent
 
-		As a texture of its own of a layer is stored (see @ref Formats::TexturedLayerChunk), so it can be edited and read
+		As a texture of its own of a layer is stored (see @ref Formats::LayerPropertiesChunk), so it can be edited and read
 		back by @ref ReadTextureFromImage() without losing anything.
 	*/
 	PngImage MakeTextureImage(const std::uint8_t* indices, std::int32_t size, const std::uint32_t* palette);

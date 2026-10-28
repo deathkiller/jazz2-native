@@ -100,14 +100,23 @@ namespace Jazz2::Tiles
 			an ordinary one.
 		*/
 		SingleColor,
+
+		// 7 isn't used, a layer drawn only over a color of what is behind it is one of LayerBlend::ChromaKey
+
 		/**
-			Chroma key, as `SPRITE::CHROMAKEY` of JJ2+ --- the tiles are drawn as they are, but only over the pixels of
-			what is behind the layer that have the color of the entry of the palette the red of the layer's color is (0
-			to 255, as a byte), so a part of the scene painted in that color is a window the layer shows through. The
-			alpha is how opaque the layer is. Where the scene behind the layers can't be read, the layer isn't drawn.
-			Readers before 4.0.0 draw such a layer as an ordinary one.
+			Alpha map, as `SPRITE::ALPHAMAP` of JJ2+ --- every pixel of the tiles takes the color of the entry of the palette
+			the red of the layer's color is (0 to 255, as a byte), as opaque as its palette index is high (index 255 fully
+			opaque), so a gradient of indices is a glow of that color. It follows the palette as it changes. The alpha is how
+			opaque the layer is. Tiles stored in true color aren't changed.
 		*/
-		ChromaKey,
+		AlphaMap = 8,
+		/**
+			Palette mapping, as `SPRITE::MAPPING` of JJ2+ in 16-bit color --- the tiles are drawn through one of the additional
+			palettes of the level instead of its palette, the red of the layer's color is its index (0 to 255, as a byte),
+			so they keep their colors whatever happens to the palette of the level. The alpha is how opaque the layer is.
+			Without such a palette, and for tiles stored in true color, it's drawn as an ordinary layer.
+		*/
+		PaletteMapping,
 
 		/**
 			Textured background --- sky, as `TEXTURE::WARPHORIZON` of JJ2+: the tiles of a layer of 8×8 tiles as two planes
@@ -116,7 +125,7 @@ namespace Jazz2::Tiles
 			and whether it fades out (@ref LayerDescription::TextureFade) are kept apart from the color (see
 			@ref Formats::TexturedLayerParams), readers before 4.0.0 draw them in the middle, fading. A layer of another
 			size is drawn as ordinary tiles, unless it has a texture of its own (see
-			@ref Formats::TexturedLayerChunk::Entry::Texture), which any textured background takes instead of its tiles.
+			@ref Formats::LayerPropertiesChunk::Entry::Texture), which any textured background takes instead of its tiles.
 
 			Any textured background can also be drawn only where the layer is placed, as an ordinary layer would be, as
 			`SURFACE::INNERWINDOW` and `SURFACE::INNERLAYER` of JJ2+ (@ref LayerDescription::TextureFlags), but a wave.
@@ -180,7 +189,7 @@ namespace Jazz2::Tiles
 			Reflection, as `TEXTURE::REFLECTION` of JJ2+ --- the layer is drawn below its horizon only, where it shows
 			what is drawn behind it above the horizon mirrored, as a plane of water stretching to the horizon would.
 			The tiles aren't shown, the 8×8 of them at the top left of the layer --- or its texture of its own (see
-			@ref Formats::TexturedLayerChunk::Entry::Texture) --- are laid on the plane at twice the size of the plane's
+			@ref Formats::LayerPropertiesChunk::Entry::Texture) --- are laid on the plane at twice the size of the plane's
 			own units and move what is mirrored, as ripples, up or down by how much higher the palette index of a pixel is
 			than that of the pixel half of the texture further along the plane, and left or right by how much higher the
 			index of the pixel a quarter of the texture back and to the left is than that of the one half of the texture
@@ -205,23 +214,70 @@ namespace Jazz2::Tiles
 	};
 
 	/**
-		@brief How a textured background is drawn over what is behind it
+		@brief How a layer is blended over what is behind it
 
-		The sprite modes of JJ2+ a textured layer can be drawn with (see @ref LayerDescription::TextureBlend). Only scripts
-		set it, a level file doesn't store it. @ref Translucent and @ref ChromaKey need a backend that can sample a render
-		target in a shader, elsewhere such a layer is drawn opaque.
+		The sprite modes of JJ2+ a layer can be drawn with (see @ref LayerDescription::Blend), stored in a level file in
+		@ref Formats::LayerPropertiesChunk. @ref Screen and @ref Multiply take a layer of any renderer type that draws its tiles
+		through the palette (@ref LayerRendererType::Default, @ref LayerRendererType::PaletteShift, @ref LayerRendererType::AlphaMap
+		and @ref LayerRendererType::PaletteMapping), and a textured background; tiles stored in true color are drawn as in an
+		ordinary layer. @ref ChromaKey and the blend modes from @ref Darken on take an ordinary layer of tiles
+		(@ref LayerRendererType::Default) and a textured background, @ref Translucent only a textured background, a layer
+		of tiles is as opaque as the alpha of its color says. The sprite layer is always drawn as its renderer type draws it.
+
+		@ref Translucent, @ref ChromaKey and the blend modes from @ref Darken on need a backend that can sample a render
+		target in a shader, they read what is behind the layer. Elsewhere a textured background is drawn opaque, a layer of
+		tiles of @ref ChromaKey isn't drawn at all, and one of another blend mode is drawn as an ordinary one.
+
+		The blend modes from @ref Darken on are those of JJ2+ (SPRITE::BLEND_DARKEN and the like), as image editors have
+		them: the color of the layer and the color behind it make the color shown, which is mixed over what is behind it
+		as far as @ref LayerDescription::BlendParam is from 0 to 255 (see @ref LayerDescription::FromSpriteMode()).
 	*/
-	enum class TexturedLayerBlend : std::uint8_t {
-		/** @brief Opaque */
+	enum class LayerBlend : std::uint8_t {
+		/** @brief Drawn as the renderer type draws it */
 		Normal,
-		/** @brief As opaque as @ref LayerDescription::TextureBlendParam is, from 0 to 255 */
+		/** @brief As opaque as @ref LayerDescription::BlendParam is, from 0 to 255 */
 		Translucent,
-		/** @brief Only over the pixels behind it of the color of the palette entry @ref LayerDescription::TextureBlendParam, as `SPRITE::CHROMAKEY` */
+		/**
+		 * @brief Only over the pixels behind it of the color of the palette entry @ref LayerDescription::BlendParam, as `SPRITE::CHROMAKEY`
+		 *
+		 * A part of the scene painted in that color is a window the layer shows through.
+		 */
 		ChromaKey,
-		/** @brief Lightens what is behind it, mixed over it as far as @ref LayerDescription::TextureBlendParam is from 0 to 255, as `SPRITE::BLEND_SCREEN` */
+		/** @brief Lightens what is behind it, mixed over it as far as @ref LayerDescription::BlendParam is from 0 to 255, as `SPRITE::BLEND_SCREEN` */
 		Screen,
-		/** @brief Darkens what is behind it, mixed over it as far as @ref LayerDescription::TextureBlendParam is from 0 to 255, as `SPRITE::BLEND_MULTIPLY` */
-		Multiply
+		/** @brief Darkens what is behind it, mixed over it as far as @ref LayerDescription::BlendParam is from 0 to 255, as `SPRITE::BLEND_MULTIPLY` */
+		Multiply,
+		/** @brief The darker of each channel, as `SPRITE::BLEND_DARKEN` */
+		Darken,
+		/** @brief The lighter of each channel, as `SPRITE::BLEND_LIGHTEN` */
+		Lighten,
+		/** @brief The hue of the layer with the saturation and the luminosity behind it, as `SPRITE::BLEND_HUE` */
+		Hue,
+		/** @brief The saturation of the layer with the hue and the luminosity behind it, as `SPRITE::BLEND_SATURATION` */
+		Saturation,
+		/** @brief The hue and the saturation of the layer with the luminosity behind it, as `SPRITE::BLEND_COLOR` */
+		Color,
+		/** @brief The luminosity of the layer with the hue and the saturation behind it, as `SPRITE::BLEND_LUMINANCE` */
+		Luminosity,
+		/** @brief As many pixels of the layer drawn as it's opaque, the others not at all, as `SPRITE::BLEND_DISSOLVE` */
+		Dissolve,
+		/** @brief Multiplied or screened by what is behind it, as `SPRITE::BLEND_OVERLAY` */
+		Overlay,
+		/** @brief Multiplied or screened by the layer, as `SPRITE::BLEND_HARDLIGHT` */
+		HardLight,
+		/** @brief Darkened or lightened softly by the layer, as `SPRITE::BLEND_SOFTLIGHT` */
+		SoftLight,
+		/** @brief The difference of each channel, as `SPRITE::BLEND_DIFFERENCE` */
+		Difference,
+		/** @brief What is behind it brightened by the layer, as `SPRITE::BLEND_DODGE` */
+		Dodge,
+		/** @brief What is behind it darkened by the layer, as `SPRITE::BLEND_BURN` */
+		Burn,
+		/** @brief Like @ref Difference, but of less contrast, as `SPRITE::BLEND_EXCLUSION` */
+		Exclusion,
+
+		/** @brief The last blend this version knows, a layer of a later one is drawn as its renderer type draws it */
+		Last = Exclusion
 	};
 
 	/**
@@ -285,10 +341,12 @@ namespace Jazz2::Tiles
 		nCine::Vector2f TextureInnerSpeed = nCine::Vector2f(0.0f, 0.0f);
 		/** @brief Speeds the texture of a textured layer drawn only where the layer is moves at by itself, see @ref Formats::TexturedLayerParams::InnerAutoSpeedX */
 		nCine::Vector2f TextureInnerAutoSpeed = nCine::Vector2f(0.0f, 0.0f);
-		/** @brief How a textured background is drawn over what is behind it, never stored in a level file */
-		TexturedLayerBlend TextureBlend = TexturedLayerBlend::Normal;
-		/** @brief Opacity of a translucent, screened or multiplied textured background, or the palette entry of its key (see @ref TextureBlend) */
-		std::uint8_t TextureBlendParam = 255;
+		/** @brief One more than the index of the additional palette the texture of a textured layer is drawn through, see @ref Formats::TexturedLayerParams::Mapping */
+		std::uint8_t TextureMapping = 0;
+		/** @brief How the layer is blended over what is behind it */
+		LayerBlend Blend = LayerBlend::Normal;
+		/** @brief Opacity of a translucent, screened or multiplied layer, or the palette entry of the key of a textured background (see @ref Blend) */
+		std::uint8_t BlendParam = 255;
 
 		/**
 		 * @brief Makes the description of a layer from a layer of a level file
@@ -303,7 +361,7 @@ namespace Jazz2::Tiles
 		/**
 		 * @brief Takes the parameters of a tunnel, a wave, a cylinder or a reflection that the color has no room for
 		 *
-		 * The level file stores them apart from the record of the layer (see @ref Formats::TexturedLayerChunk).
+		 * The level file stores them apart from the record of the layer (see @ref Formats::LayerPropertiesChunk).
 		 */
 		void SetTexturedParams(const Formats::TexturedLayerParams& params);
 
@@ -311,13 +369,42 @@ namespace Jazz2::Tiles
 		 * @brief Returns `true` if the sprite layer can be drawn with a renderer type
 		 *
 		 * Only those that draw each tile where it is --- @ref LayerRendererType::Default, @ref LayerRendererType::Solid,
-		 * @ref LayerRendererType::Tinted, @ref LayerRendererType::PaletteShift and @ref LayerRendererType::SingleColor.
+		 * @ref LayerRendererType::Tinted, @ref LayerRendererType::PaletteShift, @ref LayerRendererType::SingleColor,
+		 * @ref LayerRendererType::AlphaMap and @ref LayerRendererType::PaletteMapping.
 		 * An x-ray layer hides its tiles away from the objects and changes its animated tiles, a blur or a reflection
-		 * layer doesn't show its tiles at all and a chroma key one only partly, a sky, a tunnel or a cylinder is drawn
-		 * far away from where its tiles are, and a wave moves them, while the objects of the level walk on the tiles of
-		 * the sprite layer.
+		 * layer doesn't show its tiles at all, a sky, a tunnel or a cylinder is drawn far away from where its tiles are,
+		 * and a wave moves them, while the objects of the level walk on the tiles of the sprite layer.
 		 */
 		static bool IsSpriteLayerRenderer(LayerRendererType type);
+		/** @brief Returns `true` if a blend is computed with what is behind the layer, @ref LayerBlend::Darken and those after it */
+		static bool IsBehindBlend(LayerBlend blend) {
+			return (blend >= LayerBlend::Darken && blend <= LayerBlend::Last);
+		}
+		/**
+		 * @brief Returns `true` if the layer is drawn as tiles that read what is behind them
+		 *
+		 * Only over a color of it (@ref LayerBlend::ChromaKey), or mixed with it by a blend mode (see @ref IsBehindBlend()).
+		 */
+		bool IsKeyedTileLayer() const {
+			return ((Blend == LayerBlend::ChromaKey || IsBehindBlend(Blend)) && RendererType == LayerRendererType::Default);
+		}
+		/**
+		 * @brief Returns `true` if the layer may need a copy of what is behind it to be drawn
+		 *
+		 * A layer of tiles drawn by @ref IsKeyedTileLayer(), and a textured background drawn translucent, keyed or by a
+		 * blend mode from @ref LayerBlend::Darken on.
+		 */
+		bool ReadsBehind() const {
+			return (IsKeyedTileLayer() || (IsTexturedBackground(RendererType) && (Blend == LayerBlend::Translucent ||
+				Blend == LayerBlend::ChromaKey || IsBehindBlend(Blend))));
+		}
+		/**
+		 * @brief Returns the blend of a sprite mode of JJ2+ (`SPRITE::Mode`) a layer can be drawn with, @ref LayerBlend::Normal for any other
+		 *
+		 * `BLEND_DARKEN` to `BLEND_EXCLUSION`, `CHROMAKEY`, and `TRANSLUCENT`, `TRANSLUCENTTILE` and `BLEND_NORMAL`
+		 * (@ref LayerBlend::Translucent, only a textured background takes it).
+		 */
+		static LayerBlend FromSpriteMode(std::uint32_t spriteMode);
 		/**
 		 * @brief Returns `true` if a renderer type is a textured background, @ref LayerRendererType::Sky, @ref LayerRendererType::Tunnel, @ref LayerRendererType::TileMenu, @ref LayerRendererType::Wave or @ref LayerRendererType::Cylinder
 		 *

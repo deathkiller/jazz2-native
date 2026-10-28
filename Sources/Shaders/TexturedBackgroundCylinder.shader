@@ -16,6 +16,7 @@ uniform vec2 uShift;
 uniform vec4 uCylinder;
 
 #include "Include/TexturedBackgroundKey.inc"
+#include "Include/TexturedBackgroundDither.inc"
 
 // The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
 // an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
@@ -23,12 +24,6 @@ uniform vec4 uCylinder;
 #define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
-
-vec2 hash2D(in vec2 p) {
-	float h = dot(p, vec2(12.9898, 78.233));
-	float h2 = dot(p, vec2(37.271, 377.632));
-	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
-}
 
 void fragment() {
 	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
@@ -49,16 +44,18 @@ void fragment() {
 	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
 
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
-	vec4 texColor = texture(TEXTURE, texturePos);
-
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
+	vec4 texColor = textureTexel(texturePos);
+#else
+	vec4 texColor = texture(TEXTURE, texturePos);
 #endif
 
 	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
+	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+#endif
 #if KEYED
-	COLOR.a = keyedOpacity();
+	COLOR = keyedColor(COLOR.rgb);
 #else
 	// Premultiplied, which the blending of the sprite modes takes as it is
 	COLOR = vec4(COLOR.rgb * opacity, opacity);

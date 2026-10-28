@@ -547,7 +547,7 @@ namespace Jazz2::Editor
 	{
 		// The edge above, between it and the list of layers, is drawn by the splitter that resizes them
 		// TRANSLATORS: Header of the panel with the properties of the selected events
-		Add<UiLabel>(_x("editor", "Event Properties"), UiTheme::TextHeader);
+		Add<UiStack>(UiOrientation::Vertical, 0.0f, UiThickness(4.0f, 0.0f, 0.0f, 0.0f))->Add<UiLabel>(_x("editor", "Event Properties"), UiTheme::TextHeader);
 		_scroll = Add<UiScrollView>();
 		_scroll->Flex = 1.0f;
 		Rebuild();
@@ -847,7 +847,7 @@ namespace Jazz2::Editor
 		_shownContents = (hasEvent ? GetContentsSignature(event) : 0);
 		_shownMixedKinds = HasMixedKinds();
 
-		auto* rows = _scroll->SetContent<UiForm>(2.0f, UiThickness(0.0f, 0.0f, 2.0f, 0.0f));
+		auto* rows = _scroll->SetContent<UiForm>(2.0f, UiThickness(4.0f, 0.0f, 2.0f, 0.0f));
 		if (!hasEvent) {
 			// In short lines, labels don't wrap
 			// TRANSLATORS: First line of a sentence in the event properties when no event is picked, "or in the level" is its second line
@@ -985,59 +985,66 @@ namespace Jazz2::Editor
 			// TRANSLATORS: Label in the event properties above the bytes of the parameters of the event as they're stored
 			rows->Add<UiLabel>(_x("editor", "Raw parameters"), UiTheme::TextDim);
 			AddMixedMark(rows, MixedRaw);
-			auto* raw = rows->Add<UiTextBox>();
-			raw->MaxLength = Formats::LevelFile::EventParamsSize * 3;
-			raw->TextFunc = [self]() {
-				Formats::EventRecord event;
-				if (!self->GetPrimary(event)) {
-					return String();
-				}
-				char buffer[Formats::LevelFile::EventParamsSize * 3 + 1];
-				std::int32_t length = 0;
-				for (std::int32_t i = 0; i < Formats::LevelFile::EventParamsSize; i++) {
-					length += std::snprintf(buffer + length, sizeof(buffer) - length, i > 0 ? " %02X" : "%02X", event.Params[i]);
-				}
-				return String(buffer, std::size_t(length));
-			};
-			raw->OnCommit = [self](StringView text) {
-				std::uint8_t params[Formats::LevelFile::EventParamsSize] = {};
-				String copy = text;
-				const char* p = copy.data();
-				for (std::int32_t i = 0; i < Formats::LevelFile::EventParamsSize && *p != '\0'; i++) {
-					while (*p == ' ' || *p == ',') {
-						p++;
+			// 8 bytes a line, each line changes only its own
+			static constexpr std::int32_t BytesPerLine = 8;
+			for (std::int32_t offset = 0; offset < Formats::LevelFile::EventParamsSize; offset += BytesPerLine) {
+				std::int32_t count = std::min<std::int32_t>(BytesPerLine, Formats::LevelFile::EventParamsSize - offset);
+				auto* raw = rows->Add<UiTextBox>();
+				raw->MaxLength = count * 3;
+				raw->TextFunc = [self, offset, count]() {
+					Formats::EventRecord event;
+					if (!self->GetPrimary(event)) {
+						return String();
 					}
-					char* end;
-					long value = std::strtol(p, &end, 16);
-					if (end == p) {
-						break;
+					char buffer[BytesPerLine * 3 + 1];
+					std::int32_t length = 0;
+					for (std::int32_t i = 0; i < count; i++) {
+						length += std::snprintf(buffer + length, sizeof(buffer) - length, i > 0 ? " %02X" : "%02X", event.Params[offset + i]);
 					}
-					params[i] = std::uint8_t(value);
-					p = end;
-				}
-				// Only the bytes changed from those shown, of the shown event, the other selected events keep the rest
-				Formats::EventRecord primary;
-				if (!self->GetPrimary(primary)) {
-					return;
-				}
-				bool changed[Formats::LevelFile::EventParamsSize];
-				bool anyChanged = false;
-				for (std::int32_t i = 0; i < Formats::LevelFile::EventParamsSize; i++) {
-					changed[i] = (params[i] != primary.Params[i]);
-					anyChanged |= changed[i];
-				}
-				if (!anyChanged) {
-					return;
-				}
-				// TRANSLATORS: Name of an undo step in the history, the raw parameters of events were changed
-				self->Change(_x("editor", "Raw parameters"), [params, changed](Formats::EventRecord& event) {
-					for (std::int32_t i = 0; i < Formats::LevelFile::EventParamsSize; i++) {
-						if (changed[i]) {
-							event.Params[i] = params[i];
+					return String(buffer, std::size_t(length));
+				};
+				raw->OnCommit = [self, offset, count](StringView text) {
+					std::uint8_t values[BytesPerLine] = {};
+					String copy = text;
+					const char* p = copy.data();
+					for (std::int32_t i = 0; i < count && *p != '\0'; i++) {
+						while (*p == ' ' || *p == ',') {
+							p++;
 						}
+						char* end;
+						long value = std::strtol(p, &end, 16);
+						if (end == p) {
+							break;
+						}
+						values[i] = std::uint8_t(value);
+						p = end;
 					}
-				}, true);
-			};
+					// Only the bytes changed from those shown, of the shown event, the other selected events keep the rest
+					Formats::EventRecord primary;
+					if (!self->GetPrimary(primary)) {
+						return;
+					}
+					std::uint8_t params[Formats::LevelFile::EventParamsSize] = {};
+					bool changed[Formats::LevelFile::EventParamsSize] = {};
+					bool anyChanged = false;
+					for (std::int32_t i = 0; i < count; i++) {
+						params[offset + i] = values[i];
+						changed[offset + i] = (values[i] != primary.Params[offset + i]);
+						anyChanged |= changed[offset + i];
+					}
+					if (!anyChanged) {
+						return;
+					}
+					// TRANSLATORS: Name of an undo step in the history, the raw parameters of events were changed
+					self->Change(_x("editor", "Raw parameters"), [params, changed](Formats::EventRecord& event) {
+						for (std::int32_t i = 0; i < Formats::LevelFile::EventParamsSize; i++) {
+							if (changed[i]) {
+								event.Params[i] = params[i];
+							}
+						}
+					}, true);
+				};
+			}
 		}
 	}
 
@@ -1055,7 +1062,13 @@ namespace Jazz2::Editor
 			EventInspectorPanel* self = this;
 			const EventDescriptor* d = &descriptor;
 			for (std::int32_t i = firstChild; i < rows->GetChildCount(); i++) {
-				rows->GetChild(i)->IsVisibleFunc = [self, d, index]() {
+				// On top of a condition of the row itself, the mark of mixed values has one
+				UiElement* child = rows->GetChild(i);
+				auto own = Death::move(child->IsVisibleFunc);
+				child->IsVisibleFunc = [self, d, index, own = Death::move(own)]() mutable {
+					if (own && !own()) {
+						return false;
+					}
 					Formats::EventRecord event;
 					return (!self->GetPrimary(event) || event.Type != std::uint16_t(d->Type) || EventCatalog::IsFieldVisible(*d, std::size_t(index), event));
 				};

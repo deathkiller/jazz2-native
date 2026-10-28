@@ -179,6 +179,8 @@ namespace Jazz2::Editor
 		}
 		/** @brief Lets go of the pointer the interface holds, the element that holds it is told it was cancelled, not released */
 		void CancelPointerCapture();
+		/** @brief Hides the tooltip and forgets what is pointed at, until the pointer moves again */
+		void DismissTooltip();
 
 		/** @brief Gives the keyboard focus to an element, or takes it away */
 		void SetFocus(UiElement* element);

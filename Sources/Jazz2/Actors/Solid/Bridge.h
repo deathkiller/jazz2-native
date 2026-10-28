@@ -26,10 +26,10 @@ namespace Jazz2::Actors::Solid
 		/**
 		 * @brief Appends where the pieces of a bridge are, from the position of the bridge
 		 *
-		 * @p bridgeType and @p bridgeWidth (in pixels) are as the event gives them. The level editor shows a bridge
-		 * this way, piece by piece, as long as it is.
+		 * @p bridgeType and @p bridgeWidth (in pixels) are as the event gives them, @p resource is the animation of the
+		 * pieces, they're as wide as its frames. The level editor shows a bridge this way, piece by piece, as long as it is.
 		 */
-		static void GetPieceOffsets(std::uint8_t bridgeType, std::int32_t bridgeWidth, SmallVectorImpl<std::int32_t>& offsets);
+		static void GetPieceOffsets(std::uint8_t bridgeType, std::int32_t bridgeWidth, const GraphicResource* resource, SmallVectorImpl<std::int32_t>& offsets);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
@@ -62,23 +62,17 @@ namespace Jazz2::Actors::Solid
 
 		static constexpr float BaseY = -6.0f;
 
-		static constexpr std::int32_t PieceWidthsRope[] = { 13, 13, 10, 13, 13, 12, 11 };
-		static constexpr std::int32_t PieceWidthsStone[] = { 15, 9, 10, 9, 15, 9, 15 };
-		static constexpr std::int32_t PieceWidthsVine[] = { 7, 7, 7, 7, 10, 7, 7, 7, 7 };
-		static constexpr std::int32_t PieceWidthsStoneRed[] = { 10, 11, 11, 12 };
-		static constexpr std::int32_t PieceWidthsLog[] = { 13, 13, 13 };
-		static constexpr std::int32_t PieceWidthsGem[] = { 14 };
-		static constexpr std::int32_t PieceWidthsLab[] = { 14 };
+		// Width of a piece without graphics (a server)
+		static constexpr std::int32_t FallbackPieceWidth = 13;
 
-		/** @brief Returns the widths of the pieces of a type of bridge, and how far they're moved in */
-		static void GetPieceWidths(BridgeType type, const std::int32_t*& widths, std::int32_t& count, std::int32_t& offset);
+		// How far the first piece is moved in from the left end
+		static std::int32_t GetPieceInset(std::uint8_t bridgeType);
+		// Width of a piece, that of its frame
+		static std::int32_t GetPieceWidth(const GraphicResource* resource, std::int32_t index);
 
 		BridgeType _bridgeType;
 		std::int32_t _bridgeWidth;
 		float _heightFactor;
-		const std::int32_t* _widths;
-		std::int32_t _widthsCount;
-		std::int32_t _widthOffset;
 
 		float _leftX, _leftHeight, _rightX, _rightHeight;
 		// Server-authoritative sag (accounts for all players including remote ones); used on clients for
@@ -89,6 +83,7 @@ namespace Jazz2::Actors::Solid
 
 		SmallVector<BridgePiece, 0> _pieces;
 
+		void AddPiece();
 		float GetSectionHeight(float x) const;
 		float GetDropAt(float widthCovered, float leftX, float leftHeight, float rightX, float rightHeight) const;
 	};

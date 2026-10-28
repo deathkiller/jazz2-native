@@ -1,4 +1,4 @@
-﻿#include "Player.h"
+#include "Player.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../Events/EventMap.h"
@@ -122,9 +122,6 @@ namespace Jazz2::Actors
 		_idleTime(0.0f),
 		_hitFloorTime(5.0f),
 		_keepRunningTime(0.0f),
-		_hPoleCarry(false),
-		_springCarry(false),
-		_revUpCarry(false),
 		_lastPoleTime(0.0f),
 		_inTubeTime(0.0f),
 		_dizzyTime(0.0f),
@@ -441,7 +438,7 @@ namespace Jazz2::Actors
 
 	bool Player::IsLedgeClimbAllowed() const
 	{
-		return PreferencesCache::EnableLedgeClimb;
+		return _levelHandler->IsLedgeClimbEnabled(this);
 	}
 
 	bool Player::OnTileDeactivated()
@@ -595,7 +592,7 @@ namespace Jazz2::Actors
 		// Original JJ2: in air the rise decelerates ~3x faster than the fall accelerates, which gives the
 		// recognizable "snappy up, floaty down" arc. All three figures are the original's own, measured with
 		// the trajectory probe (see the constants in Player.h).
-		if (_pos.Y >= _levelHandler->GetWaterLevel()) {
+		if (_pos.Y >= _levelHandler->GetPlayerWaterLevel()) {
 			return LegacyWaterGravity;
 		}
 		// An uppercut is nearly weightless for its whole length, which is what lets 7.5 px/tick climb 228 px
@@ -2189,7 +2186,12 @@ namespace Jazz2::Actors
 						deceleration = (IsDashActive() ? LegacyDashDecel : LegacyWalkDecel);
 					}
 				}
-				_speed.X = std::max((absSpeedX - deceleration * timeMult), 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
+				if (_inWater && !_levelHandler->IsReforged()) {
+					// Coasting, not braking, see LegacyWaterCoast
+					_speed.X = (absSpeedX < LegacyWaterCoastStop ? 0.0f : _speed.X * std::pow(LegacyWaterCoast, timeMult * LegacyFrameRateScale));
+				} else {
+					_speed.X = std::max((absSpeedX - deceleration * timeMult), 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
+				}
 
 				// An accelerating belt is applied *after* the brake, and that ordering is the measurement: the
 				// original ramps xs 2.0, 3.878, 5.756 and then holds exactly 6.000, which is a step of half
@@ -3559,7 +3561,7 @@ namespace Jazz2::Actors
 		} else if (_wasFirePressed) {
 			_wasFirePressed = false;
 
-			if ((_cappedWeapons & (1 << (std::int32_t)_currentWeapon)) == 0) {
+			if (!_levelHandler->IsWeaponFireCapped(_currentWeapon)) {
 				_weaponCooldown = 0.0f;
 			}
 		}
@@ -3983,7 +3985,9 @@ namespace Jazz2::Actors
 
 	void Player::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		OnEmitRemotedLights(lights);
+		if (!_lightHiddenByScript) {
+			OnEmitRemotedLights(lights);
+		}
 
 		for (std::int32_t i = 0; i < (std::int32_t)_trail.size(); i++) {
 			lights.emplace_back(_trail[i]);
@@ -5809,8 +5813,13 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		// Far from the surface it's the water that moved (a script moves it so), not the player through the surface - taken at
+		// once, without the cooldown that keeps the player from bobbing in and out at the surface, without a splash and a push
+		const float waterLevel = _levelHandler->GetPlayerWaterLevel();
+		const bool farFromSurface = (std::abs(_pos.Y - waterLevel) > 40.0f);
+
 		if (_inWater) {
-			if (_pos.Y >= _levelHandler->GetWaterLevel()) {
+			if (_pos.Y >= waterLevel) {
 				SetState(ActorState::ApplyGravitation, false);
 
 				if (std::abs(_speed.X) > 1.0f || std::abs(_speed.Y) > 1.0f) {
@@ -5839,20 +5848,22 @@ namespace Jazz2::Actors
 					_renderer.AnimDuration = std::max(_currentAnimation->AnimDuration + 1.0f - Vector2f(_speed.X, _speed.Y).Length() * 0.26f, 0.4f);
 				}
 
-			} else if (_waterCooldownLeft <= 0.0f) {
+			} else if (_waterCooldownLeft <= 0.0f || farFromSurface) {
 				_inWater = false;
 				_waterCooldownLeft = 20.0f;
 
 				SetState(ActorState::ApplyGravitation | ActorState::CanJump, true);
-				_externalForce.Y = -0.6f;
 				_renderer.setRotation(0.0f);
 
 				SetAnimation(AnimState::Jump);
 
-				OnWaterSplash(Vector2f(_pos.X, _levelHandler->GetWaterLevel()), false);
+				if (!farFromSurface) {
+					_externalForce.Y = -0.6f;
+					OnWaterSplash(Vector2f(_pos.X, waterLevel), false);
+				}
 			}
 		} else {
-			if (_pos.Y >= _levelHandler->GetWaterLevel() && _waterCooldownLeft <= 0.0f) {
+			if (_pos.Y >= waterLevel && (_waterCooldownLeft <= 0.0f || farFromSurface)) {
 				_inWater = true;
 				_waterCooldownLeft = 20.0f;
 				_flyCheatActive = false;
@@ -5864,7 +5875,9 @@ namespace Jazz2::Actors
 				_controllable = true;
 				EndDamagingMove();
 
-				OnWaterSplash(Vector2f(_pos.X, _levelHandler->GetWaterLevel()), true);
+				if (!farFromSurface) {
+					OnWaterSplash(Vector2f(_pos.X, waterLevel), true);
+				}
 			}
 
 			// Adjust walking animation speed. Reforged's own rule, and now Reforged's alone: outside it
@@ -6647,7 +6660,7 @@ namespace Jazz2::Actors
 			case WeaponType::Electro: FireBirdShotPair<Weapons::ElectroShot, WeaponType::Electro>(spread); break;
 			default: {
 				FireBirdShotPair<Weapons::BlasterShot, WeaponType::Blaster>(spread);
-				if ((_silentWeapons & (1 << (std::int32_t)WeaponType::Blaster)) == 0) {
+				if (!_levelHandler->IsWeaponSoundMuted(WeaponType::Blaster)) {
 					PlayPlayerSfx("WeaponBlaster"_s);
 				}
 				ammoDecrease = 0;
@@ -6845,7 +6858,15 @@ namespace Jazz2::Actors
 
 		std::uint16_t ammoDecrease = 256;
 
-		switch (weaponType) {
+		// The level may fire the shots itself (a script that controls the bullets), the blaster only without a shield
+		if (!(weaponType == WeaponType::Blaster && _activeShield != ShieldType::None) && _levelHandler->HandlePlayerFire(this, weaponType)) {
+			std::int32_t fastFire = (_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+			_weaponCooldown = 30.0f - (fastFire * 2.76f);
+			EmitWeaponFlare();
+			if (weaponType == WeaponType::Blaster) {
+				ammoDecrease = 0;
+			}
+		} else switch (weaponType) {
 			case WeaponType::Blaster:
 				switch (_activeShield) {
 					case ShieldType::Fire: {
@@ -6865,7 +6886,7 @@ namespace Jazz2::Actors
 					}
 					default: {
 						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.76f, true);
-						if ((_silentWeapons & (1 << (std::int32_t)WeaponType::Blaster)) == 0) {
+						if (!_levelHandler->IsWeaponSoundMuted(WeaponType::Blaster)) {
 							PlayPlayerSfx("WeaponBlaster"_s);
 						}
 						break;

@@ -19,15 +19,6 @@ namespace Jazz2::Formats
 	{
 		// More is a damaged or crafted file, each of them costs a record in memory however small it's in the file
 		constexpr std::uint32_t MaxChunks = 65535;
-		// Size of an entry of TexturedLayerChunk without the inner speeds and the texture, the only one before them, what
-		// follows in an entry of a newer one is skipped
-		constexpr std::uint32_t TexturedLayerEntrySize = 2 * sizeof(float) + 2;
-		// Size of an entry with the inner speeds and the kind of the texture, which an image of its own follows
-		constexpr std::uint32_t TexturedLayerTextureEntrySize = TexturedLayerEntrySize + 4 * sizeof(float) + 1;
-		// The kinds of the texture of an entry, the tiles of the layer or an image of its own
-		constexpr std::uint8_t TexturedLayerTextureTiles = 0;
-		constexpr std::uint8_t TexturedLayerTextureImage = 1;
-		constexpr std::uint32_t TexturedLayerTextureBytes = std::uint32_t(TexturedLayerChunk::TextureSize * TexturedLayerChunk::TextureSize);
 
 		float ReadFloatLE(const std::uint8_t* p)
 		{
@@ -530,8 +521,10 @@ namespace Jazz2::Formats
 		layer.Flags = ReadUint16();
 		layer.Width = ReadInt32();
 		layer.Height = ReadInt32();
-		// Only LayerNumbersChunk gives it a number
+		// Only LayerPropertiesChunk gives it a number and a blend
 		layer.OriginalNumber = 0;
+		layer.Blend = 0;
+		layer.BlendParam = 255;
 
 		if (std::uint8_t(layer.Kind) > std::uint8_t(LayerKind::Sprite)) {
 			// The kind decides what follows, a kind of a later version could store anything there
@@ -554,7 +547,7 @@ namespace Jazz2::Formats
 			ReadBytes(layer.Color, sizeof(layer.Color));
 		} else {
 			// The sprite layer is always placed with its defaults, they aren't stored; it's drawn as ordinary tiles unless
-			// the level has a SpriteLayerChunk
+			// the level says otherwise in LayerPropertiesChunk
 			layer.SpeedModels = 0;
 			layer.OffsetX = 0.0f;
 			layer.OffsetY = 0.0f;
@@ -1178,31 +1171,49 @@ namespace Jazz2::Formats
 		return success;
 	}
 
-	bool SpriteLayerChunk::Read(ArrayView<const std::uint8_t> data, LayerRecord& record)
+	LayerPropertiesChunk::Entry LayerPropertiesChunk::Entry::FromRecord(std::uint32_t layer, const LayerRecord& record, StringView name,
+		ArrayView<const std::uint8_t> texture)
 	{
-		// The renderer type and the color, anything after them is of a newer version
-		if (data.size() < 1 + sizeof(record.Color)) {
-			return false;
-		}
-		record.RendererType = data[0];
-		std::memcpy(record.Color, &data[1], sizeof(record.Color));
-		return true;
-	}
-
-	void SpriteLayerChunk::Write(const LayerRecord& record, SmallVectorImpl<std::uint8_t>& data)
-	{
-		data.clear();
+		Entry entry;
+		entry.Layer = layer;
+		entry.Name = name;
+		entry.OriginalNumber = (record.OriginalNumber <= OriginalLayerCount ? record.OriginalNumber : 0);
 		// Ordinary tiles as the reader of the record has them (see LevelReader::ReadLayerHeader())
 		static const std::uint8_t White[4] = { 255, 255, 255, 255 };
-		if (record.RendererType == 0 && std::memcmp(record.Color, White, sizeof(White)) == 0) {
-			return;
+		entry.HasSpriteLook = (record.Kind == LayerKind::Sprite && (record.RendererType != 0 || std::memcmp(record.Color, White, sizeof(White)) != 0));
+		if (entry.HasSpriteLook) {
+			entry.RendererType = record.RendererType;
+			std::memcpy(entry.Color, record.Color, sizeof(entry.Color));
 		}
-		data.push_back(record.RendererType);
-		data.append(record.Color, record.Color + sizeof(record.Color));
+		entry.Textured = record.Textured;
+		entry.Texture.assign(texture.begin(), texture.end());
+		entry.Blend = record.Blend;
+		entry.BlendParam = (record.Blend != 0 ? record.BlendParam : 255);
+		return entry;
 	}
 
-	bool TexturedLayerChunk::Read(ArrayView<const std::uint8_t> data, SmallVectorImpl<Entry>& layers)
+	void LayerPropertiesChunk::Entry::ApplyTo(LayerRecord& record) const
 	{
+		record.OriginalNumber = OriginalNumber;
+		if (HasSpriteLook && record.Kind == LayerKind::Sprite) {
+			record.RendererType = RendererType;
+			std::memcpy(record.Color, Color, sizeof(record.Color));
+		}
+		record.Textured = Textured;
+		record.Blend = Blend;
+		record.BlendParam = BlendParam;
+	}
+
+	bool LayerPropertiesChunk::Entry::IsDefault() const
+	{
+		return (Name.empty() && OriginalNumber == 0 && !HasSpriteLook && Textured.IsDefault() && Texture.empty() && Blend == 0);
+	}
+
+	bool LayerPropertiesChunk::Read(ArrayView<const std::uint8_t> data, SmallVectorImpl<Entry>& layers)
+	{
+		constexpr std::uint32_t TextureBytes = std::uint32_t(TextureSize * TextureSize);
+		constexpr std::uint32_t TexturedBytes = 6 * sizeof(float) + 2;
+
 		layers.clear();
 		const std::uint8_t* p = data.data();
 		const std::uint8_t* end = p + data.size();
@@ -1213,158 +1224,187 @@ namespace Jazz2::Formats
 		}
 		for (std::uint32_t i = 0; i < count; i++) {
 			std::uint32_t layer, size;
-			if (!ReadVarUint(p, end, layer) || layer > UINT8_MAX || !ReadVarUint(p, end, size) ||
-				size < TexturedLayerEntrySize || std::uint32_t(end - p) < size) {
+			if (!ReadVarUint(p, end, layer) || layer > UINT8_MAX || !ReadVarUint(p, end, size) || std::uint32_t(end - p) < size) {
 				layers.clear();
 				return false;
 			}
 			Entry& entry = layers.emplace_back();
 			entry.Layer = layer;
-			entry.Params.FadeX = ReadFloatLE(p);
-			entry.Params.FadeY = ReadFloatLE(p + 4);
-			entry.Params.Fade = p[8];
-			entry.Params.Flags = p[9];
-			// The inner speeds and the texture, an entry without them has the defaults
-			if (size >= TexturedLayerTextureEntrySize) {
-				entry.Params.InnerSpeedX = ReadFloatLE(p + 10);
-				entry.Params.InnerSpeedY = ReadFloatLE(p + 14);
-				entry.Params.InnerAutoSpeedX = ReadFloatLE(p + 18);
-				entry.Params.InnerAutoSpeedY = ReadFloatLE(p + 22);
-				// A texture of a kind this version doesn't know leaves the tiles of the layer
-				if (p[26] == TexturedLayerTextureImage) {
-					if (size - TexturedLayerTextureEntrySize < TexturedLayerTextureBytes) {
-						layers.clear();
-						return false;
-					}
-					const std::uint8_t* image = p + TexturedLayerTextureEntrySize;
-					entry.Texture.assign(image, image + TexturedLayerTextureBytes);
+			const std::uint8_t* fieldsEnd = p + size;
+			while (p < fieldsEnd) {
+				std::uint8_t field = *p++;
+				std::uint32_t fieldSize;
+				if (!ReadVarUint(p, fieldsEnd, fieldSize) || std::uint32_t(fieldsEnd - p) < fieldSize) {
+					layers.clear();
+					return false;
 				}
+				// The bytes a newer version adds after a value are skipped, a field shorter than its value is ignored
+				switch (Field(field)) {
+					case Field::Name:
+						entry.Name = String(reinterpret_cast<const char*>(p), std::min<std::size_t>(fieldSize, MaxNameLength));
+						break;
+					case Field::OriginalNumber:
+						if (fieldSize >= 1) {
+							entry.OriginalNumber = (p[0] >= 1 && p[0] <= OriginalLayerCount ? p[0] : 0);
+						}
+						break;
+					case Field::SpriteLook:
+						if (fieldSize >= 1 + sizeof(entry.Color)) {
+							entry.HasSpriteLook = true;
+							entry.RendererType = p[0];
+							std::memcpy(entry.Color, &p[1], sizeof(entry.Color));
+						}
+						break;
+					case Field::Textured:
+						if (fieldSize >= TexturedBytes) {
+							entry.Textured.FadeX = ReadFloatLE(p);
+							entry.Textured.FadeY = ReadFloatLE(p + 4);
+							entry.Textured.Fade = p[8];
+							entry.Textured.Flags = p[9];
+							entry.Textured.InnerSpeedX = ReadFloatLE(p + 10);
+							entry.Textured.InnerSpeedY = ReadFloatLE(p + 14);
+							entry.Textured.InnerAutoSpeedX = ReadFloatLE(p + 18);
+							entry.Textured.InnerAutoSpeedY = ReadFloatLE(p + 22);
+							entry.Textured.Mapping = (fieldSize > TexturedBytes ? p[26] : 0);
+							// A value that isn't finite has the default instead, as an offset or a speed of the layer itself
+							if (SanitizeTexturedFloats(entry.Textured)) {
+								LOGW("Layer {} has invalid parameters of its texture, the defaults are used instead", layer);
+							}
+						}
+						break;
+					case Field::Texture:
+						if (fieldSize >= TextureBytes) {
+							entry.Texture.assign(p, p + TextureBytes);
+						}
+						break;
+					case Field::Blend:
+						if (fieldSize >= 2) {
+							entry.Blend = p[0];
+							entry.BlendParam = p[1];
+						}
+						break;
+					default:
+						break;
+				}
+				p += fieldSize;
 			}
-			// A value that isn't finite has the default instead, as an offset or a speed of the layer itself
-			if (SanitizeTexturedFloats(entry.Params)) {
-				LOGW("Layer {} has invalid parameters of its texture, the defaults are used instead", layer);
-			}
-			// What a newer version added is skipped
-			p += size;
 		}
 		return true;
 	}
 
-	void TexturedLayerChunk::Write(ArrayView<const Entry> layers, SmallVectorImpl<std::uint8_t>& data)
+	void LayerPropertiesChunk::Write(ArrayView<const Entry> layers, SmallVectorImpl<std::uint8_t>& data)
 	{
+		constexpr std::size_t TextureBytes = std::size_t(TextureSize * TextureSize);
+
 		data.clear();
-		auto hasTexture = [](const Entry& entry) {
-			return (entry.Texture.size() == TexturedLayerTextureBytes);
+		auto isWritten = [](const Entry& entry) {
+			return (entry.Layer <= UINT8_MAX && !entry.IsDefault());
 		};
-		std::uint32_t count = 0;
-		for (const Entry& entry : layers) {
-			if ((!entry.Params.IsDefault() || hasTexture(entry)) && entry.Layer <= UINT8_MAX) {
-				count++;
-			}
-		}
+		std::uint32_t count = std::uint32_t(std::count_if(layers.begin(), layers.end(), isWritten));
 		if (count == 0) {
-			// Every layer has the defaults, no chunk
 			return;
 		}
 
 		WriteVarUint(data, count);
+		SmallVector<std::uint8_t, 0> fields;
+		auto writeField = [&fields](Field field, const std::uint8_t* bytes, std::size_t size) {
+			fields.push_back(std::uint8_t(field));
+			WriteVarUint(fields, std::uint32_t(size));
+			fields.append(bytes, bytes + size);
+		};
 		for (const Entry& entry : layers) {
-			if ((entry.Params.IsDefault() && !hasTexture(entry)) || entry.Layer > UINT8_MAX) {
+			if (!isWritten(entry)) {
 				continue;
 			}
-			// A reader replaces values that aren't finite by the defaults, they're written so right away
-			TexturedLayerParams params = entry.Params;
-			if (SanitizeTexturedFloats(params)) {
-				LOGW("Layer {} has invalid parameters of its texture, the defaults are saved instead", entry.Layer);
+			fields.clear();
+			if (!entry.Name.empty()) {
+				// Not in the middle of a character
+				std::size_t length = Death::Utf8::FitPrefix(entry.Name, MaxNameLength);
+				writeField(Field::Name, reinterpret_cast<const std::uint8_t*>(entry.Name.data()), length);
 			}
-			// As short as the parameters allow, so a layer without inner speeds and a texture of its own is written as before
-			const bool extended = (!params.HasDefaultInnerSpeeds() || hasTexture(entry));
-			WriteVarUint(data, entry.Layer);
-			WriteVarUint(data, extended ? TexturedLayerTextureEntrySize + (hasTexture(entry) ? TexturedLayerTextureBytes : 0) : TexturedLayerEntrySize);
-			WriteFloatLE(data, params.FadeX);
-			WriteFloatLE(data, params.FadeY);
-			data.push_back(params.Fade);
-			data.push_back(params.Flags);
-			if (extended) {
-				WriteFloatLE(data, params.InnerSpeedX);
-				WriteFloatLE(data, params.InnerSpeedY);
-				WriteFloatLE(data, params.InnerAutoSpeedX);
-				WriteFloatLE(data, params.InnerAutoSpeedY);
-				if (hasTexture(entry)) {
-					data.push_back(TexturedLayerTextureImage);
-					data.append(entry.Texture.begin(), entry.Texture.end());
-				} else {
-					data.push_back(TexturedLayerTextureTiles);
+			if (entry.OriginalNumber >= 1 && entry.OriginalNumber <= OriginalLayerCount) {
+				writeField(Field::OriginalNumber, &entry.OriginalNumber, 1);
+			}
+			if (entry.HasSpriteLook) {
+				std::uint8_t look[1 + sizeof(entry.Color)] = { entry.RendererType };
+				std::memcpy(&look[1], entry.Color, sizeof(entry.Color));
+				writeField(Field::SpriteLook, look, sizeof(look));
+			}
+			if (!entry.Textured.IsDefault()) {
+				// A reader replaces values that aren't finite by the defaults, they're written so right away
+				TexturedLayerParams params = entry.Textured;
+				if (SanitizeTexturedFloats(params)) {
+					LOGW("Layer {} has invalid parameters of its texture, the defaults are saved instead", entry.Layer);
 				}
+				SmallVector<std::uint8_t, 32> textured;
+				WriteFloatLE(textured, params.FadeX);
+				WriteFloatLE(textured, params.FadeY);
+				textured.push_back(params.Fade);
+				textured.push_back(params.Flags);
+				WriteFloatLE(textured, params.InnerSpeedX);
+				WriteFloatLE(textured, params.InnerSpeedY);
+				WriteFloatLE(textured, params.InnerAutoSpeedX);
+				WriteFloatLE(textured, params.InnerAutoSpeedY);
+				textured.push_back(params.Mapping);
+				writeField(Field::Textured, textured.data(), textured.size());
 			}
+			if (entry.Texture.size() == TextureBytes) {
+				writeField(Field::Texture, entry.Texture.data(), entry.Texture.size());
+			}
+			if (entry.Blend != 0) {
+				const std::uint8_t blend[2] = { entry.Blend, entry.BlendParam };
+				writeField(Field::Blend, blend, sizeof(blend));
+			}
+			WriteVarUint(data, entry.Layer);
+			WriteVarUint(data, std::uint32_t(fields.size()));
+			data.append(fields.begin(), fields.end());
 		}
 	}
 
-	StringView LayerNamesChunk::Read(ArrayView<const std::uint8_t> data, std::int32_t layer)
+	ArrayView<const std::uint8_t> ScriptDataChunk::ReadSection(ArrayView<const std::uint8_t> data, Section section)
 	{
-		std::size_t pos = 0;
-		for (std::int32_t i = 0; pos < data.size(); i++) {
-			// The length byte first, the rest of the chunk is measured after it
-			std::size_t length = data[pos++];
-			length = std::min<std::size_t>(length, data.size() - pos);
-			if (i == layer) {
-				return StringView(reinterpret_cast<const char*>(data.data() + pos), length);
+		const std::uint8_t* p = data.data();
+		const std::uint8_t* end = p + data.size();
+		while (p < end) {
+			std::uint8_t kind = *p++;
+			std::uint32_t size;
+			if (!ReadVarUint(p, end, size) || std::uint32_t(end - p) < size) {
+				return {};
 			}
-			pos += length;
+			if (kind == std::uint8_t(section)) {
+				return ArrayView<const std::uint8_t>(p, size);
+			}
+			p += size;
 		}
 		return {};
 	}
 
-	void LayerNamesChunk::Write(ArrayView<const StringView> names, SmallVectorImpl<std::uint8_t>& data)
+	void ScriptDataChunk::WriteSection(SmallVectorImpl<std::uint8_t>& data, Section section, ArrayView<const std::uint8_t> bytes)
 	{
-		data.clear();
-		if (std::none_of(names.begin(), names.end(), [](StringView name) { return !name.empty(); })) {
+		if (bytes.empty()) {
 			return;
 		}
-		for (StringView name : names) {
-			// Not in the middle of a character
-			std::size_t length = Death::Utf8::FitPrefix(name, MaxNameLength);
-			data.push_back(std::uint8_t(length));
-			data.append(reinterpret_cast<const std::uint8_t*>(name.data()), reinterpret_cast<const std::uint8_t*>(name.data()) + length);
-		}
+		data.push_back(std::uint8_t(section));
+		WriteVarUint(data, std::uint32_t(bytes.size()));
+		data.append(bytes.begin(), bytes.end());
 	}
 
-	std::uint8_t LayerNumbersChunk::Read(ArrayView<const std::uint8_t> data, std::int32_t layer)
-	{
-		if (layer < 0 || std::size_t(layer) >= data.size()) {
-			return 0;
-		}
-		std::uint8_t number = data[layer];
-		return (number >= 1 && number <= OriginalLayerCount ? number : 0);
-	}
-
-	void LayerNumbersChunk::Write(ArrayView<const std::uint8_t> numbers, SmallVectorImpl<std::uint8_t>& data)
-	{
-		data.clear();
-		if (std::none_of(numbers.begin(), numbers.end(), [](std::uint8_t number) { return number != 0; })) {
-			return;
-		}
-		for (std::uint8_t number : numbers) {
-			data.push_back(number >= 1 && number <= OriginalLayerCount ? number : 0);
-		}
-	}
-
-	StringView ScriptTextsChunk::Read(ArrayView<const std::uint8_t> data, std::int32_t index)
+	StringView ScriptDataChunk::ReadText(ArrayView<const std::uint8_t> texts, std::int32_t index)
 	{
 		std::size_t pos = 0;
-		for (std::int32_t i = 0; pos + 2 <= data.size(); i++) {
-			std::size_t length = std::size_t(data[pos]) | (std::size_t(data[pos + 1]) << 8);
+		for (std::int32_t i = 0; pos + 2 <= texts.size(); i++) {
+			std::size_t length = std::size_t(texts[pos]) | (std::size_t(texts[pos + 1]) << 8);
 			pos += 2;
-			length = std::min<std::size_t>(length, data.size() - pos);
+			length = std::min<std::size_t>(length, texts.size() - pos);
 			if (i == index) {
-				return StringView(reinterpret_cast<const char*>(data.data() + pos), length);
+				return StringView(reinterpret_cast<const char*>(texts.data() + pos), length);
 			}
 			pos += length;
 		}
 		return {};
 	}
 
-	void ScriptTextsChunk::Write(ArrayView<const StringView> texts, SmallVectorImpl<std::uint8_t>& data)
+	void ScriptDataChunk::WriteTexts(ArrayView<const StringView> texts, SmallVectorImpl<std::uint8_t>& data)
 	{
 		data.clear();
 		if (std::none_of(texts.begin(), texts.end(), [](StringView text) { return !text.empty(); })) {

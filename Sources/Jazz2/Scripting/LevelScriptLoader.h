@@ -162,6 +162,52 @@ namespace Jazz2::Scripting
 		void OnActorAdded(const std::shared_ptr<Actors::ActorBase>& actor);
 		/** @brief Returns the template of the objects of an event of the original (`jjObjectPresets`), AddRef'd */
 		Legacy::jjOBJ* GetObjectPreset(std::uint8_t eventId);
+		/**
+		 * @brief Fires the bullets of a weapon whose bullets a script controls as JJ2+ does, `false` if a script doesn't control them
+		 *
+		 * The bullets go by `SPREAD::Spread` of the weapon, the behavior of the script moves them then (see
+		 * @ref Legacy::ScriptObjectHost::RunBullet()).
+		 */
+		bool FirePlayerWeapon(Actors::Player* player, WeaponType weaponType);
+		/**
+		 * @brief Returns `true` if the scripts make the weather of the level, the level doesn't draw it then
+		 *
+		 * The weather of JJ2+ is of particles scripts see (`jjParticles`), they steer or remove them.
+		 */
+		bool OwnsWeather() const;
+		/** @brief Returns `true` if tapping fire doesn't fire a weapon faster (`jjWEAPON::style` of `WEAPON::CAPPED`) */
+		bool IsWeaponFireCapped(WeaponType weaponType);
+		/** @brief Returns `true` if a weapon fires without its sound (`jjWEAPON::defaultSample` off, MLLE weapons play their own) */
+		bool IsWeaponSoundMuted(WeaponType weaponType);
+		/** @brief Returns the template of an event if a script asked for it, `nullptr` otherwise, not AddRef'd */
+		Legacy::jjOBJ* FindObjectPreset(std::uint8_t eventId) const;
+		/** @brief How a new object of an event looks, see @ref GetStartingLook() */
+		struct StartingLook
+		{
+			std::int16_t CurAnim;
+			std::uint32_t CurFrame;
+			/** @brief Frame its behavior drew where the object is, 0 if none */
+			std::uint32_t DrawnFrame;
+			/** @brief Whether it keeps showing that frame, by a behavior that runs none of the game */
+			bool Steady;
+		};
+
+		/**
+		 * @brief Returns how a new object of an event at a tile starts, `false` if no script asked for its template
+		 *
+		 * The behavior of a script the template has runs once on a copy of it in `STATE::START`, which is in no level,
+		 * and for a few ticks more to see whether it changes the frame. The copy is at the tile, its behavior reads the
+		 * parameters of the event there.
+		 */
+		bool GetStartingLook(std::uint8_t eventId, std::int32_t tileX, std::int32_t tileY, StartingLook& look);
+		/** @brief Called by what a script draws a frame by, see @ref GetStartingLook() */
+		void OnFrameDrawn(float x, float y, std::uint32_t frame, std::uint32_t mode);
+		/** @brief Called when an object that isn't in the level runs a behavior of the game, see @ref GetStartingLook() */
+		void OnGameBehavior(const Legacy::jjOBJ& obj, std::uint32_t behavior);
+		/** @brief Stops a context running for @ref GetStartingLook() after too many lines, returns `true` if it's watched */
+		bool WatchLookContext(asIScriptContext* ctx);
+		/** @brief Returns the animation the template of an event has before a script changes it, 0 if it has none */
+		std::uint32_t GetDefaultPresetAnimation(std::uint8_t eventId);
 
 		/** @brief Returns what the script draws in the level (`jjDrawSprite()` and the like), attached to the level on first use */
 		Legacy::ScriptWorldCanvas& GetWorldCanvas();
@@ -184,6 +230,10 @@ namespace Jazz2::Scripting
 		Texture* GetDissolveNoise(std::uint8_t color, std::uint8_t density, std::int32_t& paletteOffset);
 		/** @brief Returns the depth something drawn on a layer of the original, 1 to 8, is drawn at */
 		std::uint16_t GetLayerDrawZ(std::int32_t layerNumber) const;
+		/** @brief Forgets the depths @ref GetLayerDrawZ() resolved, once the order or the depths of the layers change */
+		void InvalidateLayerDrawZ() {
+			_layerDrawZFrame = UINT32_MAX;
+		}
 		/**
 		 * @brief Returns the script view of the object of an object ID (`jjObjects`), AddRef'd
 		 *
@@ -199,11 +249,11 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Called when a player activates the boss of a level without a boss of the game
 		 *
-		 * A script of JJ2+ drives a boss of its own (HH17's and HH18's guardians), it learns the boss is activated by
+		 * A script of JJ2+ drives a boss of its own, it learns the boss is activated by
 		 * `jjPLAYER::bossActivated`. Returns `false` if the context isn't of JJ2+, the level has no boss then.
 		 */
 		bool OnBossAreaActivated();
-		/** @brief Recolors the frames of the sprites the level recolors (see @ref Formats::SpriteRecolorsChunk), as `MLLE::Setup()` does */
+		/** @brief Recolors the frames of the sprites the level recolors (see @ref Formats::ScriptDataChunk), as `MLLE::Setup()` does */
 		void ApplySpriteRecolors();
 		/** @brief Draws text in the level until the next tick, as `jjDrawString()` does */
 		void AddWorldText(float xPixel, float yPixel, StringView text, std::uint32_t size, const Colorf& color, std::int8_t layerZ);
@@ -229,7 +279,7 @@ namespace Jazz2::Scripting
 			asIScriptFunction* OnObjectHit;
 		};
 		/** @brief Returns the methods of a class of a script that implements `jjBEHAVIORINTERFACE`, looked up once per class */
-		const BehaviorMethods& GetBehaviorMethods(asITypeInfo* type);
+		BehaviorMethods GetBehaviorMethods(asITypeInfo* type);
 		/** @brief Returns the global `onObjectHit()` of the script, `nullptr` if it has none */
 		asIScriptFunction* GetGlobalObjectHit() const {
 			return _onObjectHit;
@@ -257,7 +307,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Makes the object of the game of an object ID the object of another event, which keeps its object ID and view
 		 *
-		 * As JJ2+ has an object behave as another one (ThreedRealms' food behaves as a dog), the object of the game is that
+		 * As JJ2+ has an object behave as another one (food that behaves as a dog), the object of the game is that
 		 * object then. It's done in the next update of the scripts, see @ref Legacy::ScriptObjectHost::RunGameBehavior().
 		 */
 		void SwapActor(std::int32_t objectId, std::uint8_t eventId);
@@ -273,7 +323,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Returns the index of the level layer a script means by a layer number of the original, 1 to 8
 		 *
-		 * The layers of a converted level know their numbers (see @ref Formats::LayerNumbersChunk), wherever they are
+		 * The layers of a converted level know their numbers (see @ref Formats::LayerPropertiesChunk), wherever they are
 		 * drawn. In a level without them the number is counted from the sprite layer, which is always layer 4. Returns -1
 		 * if the level has no such layer.
 		 */
@@ -293,7 +343,7 @@ namespace Jazz2::Scripting
 		 * `onDrawLayer8()`, where JJ2+ reads it.
 		 */
 		void SetUseLayer8Speeds(bool value);
-		/** @brief Returns the index of the first level layer of a given name (see @ref Formats::LayerNamesChunk), or -1 */
+		/** @brief Returns the index of the first level layer of a given name (see @ref Formats::LayerPropertiesChunk), or -1 */
 		std::int32_t FindLayerByName(StringView name) const;
 		/**
 		 * @brief Returns the indices of the level layers in the order they are drawn, from the front, as `jjLayerOrderGet()`
@@ -457,6 +507,8 @@ namespace Jazz2::Scripting
 		float _waterTarget = -1.0f;
 		float _waterChangeSpeed = 1.0f;
 		std::int32_t _waterTick = -1;
+		// The layer `jjWaterLayer` puts the water in front of, the water isn't drawn for one that isn't 1 to 8
+		std::int32_t _waterLayer = 1;
 		asIScriptFunction* _onDrawAmmo;
 		asIScriptFunction* _onDrawHealth;
 		asIScriptFunction* _onDrawLives;
@@ -555,8 +607,20 @@ namespace Jazz2::Scripting
 			std::uint16_t CreatorID;
 			// Tick of the scripts the object got its object ID in
 			std::int32_t SpawnTick;
+			// Where a bullet a player fired is in the spread of a weapon whose bullets a script controls, -1 angled up, 0
+			// straight, 1 angled down, NotSpread for any other object - and how far below the player the gunspot was
+			std::int8_t SpreadSlot;
+			float GunspotOffsetY;
 		};
+		static constexpr std::int8_t NotSpread = INT8_MIN;
 		SmallVector<ObjectSlot, 0> _objectSlots;
+		// The bullet being fired by FirePlayerWeapon(), RegisterObject() gives its object ID the place in the spread
+		struct FiringBullet {
+			const Actors::ActorBase* Shot;
+			std::int8_t SpreadSlot;
+			float GunspotOffsetY;
+		};
+		FiringBullet _firingBullet = {};
 		// The object ID of each object of the level that has one, an entry of an object that's gone stays until its ID is
 		// given to another one (see GetObjectView())
 		HashMap<Actors::ActorBase*, std::int32_t> _objectIdsByActor;
@@ -566,6 +630,14 @@ namespace Jazz2::Scripting
 		std::int32_t _lastObjectId = 0;
 		// Templates of the objects of each event of the original (jjObjectPresets), made on first use, each holds a reference
 		Legacy::jjOBJ* _objectPresets[256] = {};
+		// The copy GetStartingLook() runs the behavior of, and the frame drawn where it is
+		Legacy::jjOBJ* _lookObject = nullptr;
+		std::uint32_t _lookDrawnFrame = 0;
+		bool _lookGameBehavior = false;
+		std::uint32_t _lookLines = 0;
+		static constexpr std::uint32_t MaxLookLines = 200000;
+
+		void OnLookLine(asIScriptContext* ctx);
 		// What the script draws in the level, made on first use, and the tick it was cleared in last
 		std::unique_ptr<Legacy::ScriptWorldCanvas> _worldCanvas;
 		std::int32_t _canvasClearTick = -1;
@@ -577,6 +649,10 @@ namespace Jazz2::Scripting
 
 		// Moves the particles by the ticks since the last update and draws them in the level
 		void UpdateParticles(std::int32_t currentTick);
+		// Makes the particles of the weather of a tick, see OwnsWeather()
+		void SpawnWeatherParticles();
+		// Takes the weather the level has now, changed by an area of weather, into the variables of the scripts
+		void PullWeather(bool force = false);
 		// Palette offsets of the sprite modes by the mode (0 for PALSHIFT, 1 for SINGLEHUE) and the parameter, -1 if no row
 		// was free, each holds a reference (see GetSpritePaletteOffset())
 		HashMap<std::uint32_t, std::int32_t> _spritePaletteOffsets;
@@ -652,10 +728,15 @@ namespace Jazz2::Scripting
 
 		// The index of the level layer of each number of the original, 1 to 8, worked out on first use (the layers of a level
 		// don't change while it's played, only their order and their properties do)
-		mutable std::int32_t _layerIndexByNumber[Formats::LayerNumbersChunk::OriginalLayerCount + 1] = {};
+		mutable std::int32_t _layerIndexByNumber[Formats::LayerPropertiesChunk::OriginalLayerCount + 1] = {};
 		mutable bool _layerIndicesResolved = false;
 		// Layers left out of the order by jjLayerOrderSet(), one per level layer, aren't drawn whatever their hasTiles says
 		SmallVector<bool, 0> _layersOutOfOrder;
+		// GetLayerDrawZ() of each layer number in the frame it's of, 0 if not resolved yet (see InvalidateLayerDrawZ())
+		mutable std::uint16_t _layerDrawZCache[256] = {};
+		mutable std::uint32_t _layerDrawZFrame = UINT32_MAX;
+
+		std::uint16_t ResolveLayerDrawZ(std::int32_t layerNumber) const;
 		// The index of the first layer a script made (see CreateLayer()), the layers from it on are made by scripts, or -1
 		std::int32_t _firstScriptLayer = -1;
 		// The textures of JJ2+ read from Plus.j2d (see GetPlusTexture()), by their numbers
@@ -718,7 +799,8 @@ namespace Jazz2::Scripting
 		jjPAL jjPalette;
 		jjPAL jjBackupPalette;
 
-		std::int32_t jjObjectCount = 0;
+		// Object 0 is never used in JJ2+, the count is at least 1 (scripts count down to it by `--i != 0`)
+		std::int32_t jjObjectCount = 1;
 		// As in a local game of JJ2+
 		std::int32_t jjObjectMax = 2048;
 
@@ -743,7 +825,7 @@ namespace Jazz2::Scripting
 		std::uint32_t numberOfTiles = 0;
 
 		bool parLowDetail = false;
-		// JJ2+ runs in 8 or 16 bits, scripts show their effects in 16 (ThreedRealms its fog)
+		// JJ2+ runs in 8 or 16 bits, scripts show their effects in 16 (fog)
 		std::int32_t colorDepth = 16;
 		std::int32_t checkedMaxSubVideoWidth = 0;
 		std::int32_t checkedMaxSubVideoHeight = 0;
@@ -756,6 +838,9 @@ namespace Jazz2::Scripting
 		bool snowingOutdoors = false;
 		std::uint8_t snowingIntensity = 0;
 		std::int32_t snowingType = 0;
+		// The weather the level handler has, what the variables above were set to last
+		WeatherType _appliedWeather = WeatherType::None;
+		std::uint8_t _appliedWeatherIntensity = 0;
 
 		std::int32_t maxScore = 0;
 

@@ -104,10 +104,16 @@ namespace Jazz2::Scripting
 		}
 	}
 	std::int32_t LevelScriptLoader::get_waterLayer() {
-		noop(); return 0;
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return _this->_waterLayer;
 	}
 	std::int32_t LevelScriptLoader::set_waterLayer(std::int32_t value) {
-		noop(); return 0;
+		// The water is always drawn in front of all the layers, but not at all for a layer that isn't there, as in JJ2+ -
+		// the actors are still in it then
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		_this->_waterLayer = value;
+		_this->_levelHandler->_waterHidden = (value < 1 || value > 8);
+		return value;
 	}
 	void LevelScriptLoader::setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2) {
 		noop();

@@ -150,9 +150,11 @@ namespace Jazz2::Scripting
 
 			/** @brief Number of frames the object has existed */
 			std::int32_t age = 0;
-			/** @brief Object id of the creator */
-			std::int32_t creator = 0;
+			/** @brief Creator as JJ2+ packs it, its type (`CREATOR::Type`) with its id */
+			mutable std::int32_t creator = 0;
 
+			/** @brief Packs a creator type and a 16-bit creator ID as @ref creator keeps them */
+			static std::int32_t PackCreator(std::uint32_t type, std::uint16_t id);
 			/** @brief Returns the id of the object that created this one */
 			std::uint16_t get_creatorID() const;
 			/** @brief Sets the id of the object that created this one */
@@ -303,9 +305,6 @@ namespace Jazz2::Scripting
 			// but scripts read/write them constantly (state machines lean on var[]), so they're stored for round-trip use.
 			static constexpr std::int32_t MaxVars = 16;
 			std::int32_t _vars[MaxVars] = {};
-			// Mutable: set_creatorID/set_creatorType are declared const (to match the JJ2+ registration) but still store
-			mutable std::uint16_t _creatorID = 0;
-			mutable std::uint32_t _creatorType = 0;
 			std::uint32_t _bulletHandling = 0;
 			std::uint32_t _playerHandling = 0;
 			bool _ricochetProp = false;
@@ -329,6 +328,11 @@ namespace Jazz2::Scripting
 			const void* _runningBehavior = nullptr;
 			// A behavior moves the object itself, the speeds are its (see ScriptObjectHost::FollowScriptMovement())
 			bool _movedByBehavior = false;
+			// Made in STATE::START, shown floating as a pickup of the game until a behavior of the script runs it (see
+			// ScriptObjectHost::CallScriptBehavior())
+			bool _startPending = false;
+			// A bullet a player fired of a weapon whose bullets a script controls, see ScriptObjectHost::InitializeScriptedBullet()
+			bool _scriptedBullet = false;
 			// The animation of its own a script gave the object of the game, which shows its frames in place of the ones of
 			// its own animation, 0 for none (see ScriptObjectHost::PullFromActor())
 			std::int32_t _skinAnim = 0;
@@ -543,6 +547,8 @@ namespace Jazz2::Scripting
 			std::uint16_t _age;
 			// What the size of a star shrinks from
 			float _scale;
+			// Made by the weather of the level, see LevelScriptLoader::SpawnWeatherParticles()
+			bool _weather;
 		};
 	}
 }

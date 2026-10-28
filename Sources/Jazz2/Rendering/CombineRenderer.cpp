@@ -1,4 +1,4 @@
-﻿#include "CombineRenderer.h"
+#include "CombineRenderer.h"
 #include "PlayerViewport.h"
 #include "../PreferencesCache.h"
 
@@ -203,19 +203,19 @@ namespace Jazz2::Rendering
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
 			_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+			if (textureUniform != nullptr) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 			auto* lightTexUniform = _renderCommand.GetMaterial().Uniform("uTextureLighting");
-			if (lightTexUniform && lightTexUniform->GetIntValue(0) != 1) {
+			if (lightTexUniform != nullptr) {
 				lightTexUniform->SetIntValue(1); // GL_TEXTURE1
 			}
 			auto* blurHalfTexUniform = _renderCommand.GetMaterial().Uniform("uTextureBlurHalf");
-			if (blurHalfTexUniform && blurHalfTexUniform->GetIntValue(0) != 2) {
+			if (blurHalfTexUniform != nullptr) {
 				blurHalfTexUniform->SetIntValue(2); // GL_TEXTURE2
 			}
 			auto* blurQuarterTexUniform = _renderCommand.GetMaterial().Uniform("uTextureBlurQuarter");
-			if (blurQuarterTexUniform && blurQuarterTexUniform->GetIntValue(0) != 3) {
+			if (blurQuarterTexUniform != nullptr) {
 				blurQuarterTexUniform->SetIntValue(3); // GL_TEXTURE3
 			}
 		}
@@ -224,23 +224,23 @@ namespace Jazz2::Rendering
 			_renderCommandWithWater.GetMaterial().ReserveUniformsDataMemory();
 			_renderCommandWithWater.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommandWithWater.GetMaterial().Uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+			if (textureUniform != nullptr) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 			auto* lightTexUniform = _renderCommandWithWater.GetMaterial().Uniform("uTextureLighting");
-			if (lightTexUniform && lightTexUniform->GetIntValue(0) != 1) {
+			if (lightTexUniform != nullptr) {
 				lightTexUniform->SetIntValue(1); // GL_TEXTURE1
 			}
 			auto* blurHalfTexUniform = _renderCommandWithWater.GetMaterial().Uniform("uTextureBlurHalf");
-			if (blurHalfTexUniform && blurHalfTexUniform->GetIntValue(0) != 2) {
+			if (blurHalfTexUniform != nullptr) {
 				blurHalfTexUniform->SetIntValue(2); // GL_TEXTURE2
 			}
 			auto* blurQuarterTexUniform = _renderCommandWithWater.GetMaterial().Uniform("uTextureBlurQuarter");
-			if (blurQuarterTexUniform && blurQuarterTexUniform->GetIntValue(0) != 3) {
+			if (blurQuarterTexUniform != nullptr) {
 				blurQuarterTexUniform->SetIntValue(3); // GL_TEXTURE3
 			}
 			auto* noiseTexUniform = _renderCommandWithWater.GetMaterial().Uniform("uTextureNoise");
-			if (noiseTexUniform && noiseTexUniform->GetIntValue(0) != 4) {
+			if (noiseTexUniform != nullptr) {
 				noiseTexUniform->SetIntValue(4); // GL_TEXTURE4
 			}
 		}
@@ -275,7 +275,7 @@ namespace Jazz2::Rendering
 		// water is a fixed_function block of the water program, and the plain Combine has none. The software
 		// backend keeps its own richer per-row water from the queued light either way.
 		const float viewWaterLevel = (_owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y) * _owner->_cameraScale + _bounds.H * 0.5f;
-		const bool viewHasWater = (viewWaterLevel < _bounds.H);
+		const bool viewHasWater = (viewWaterLevel < _bounds.H && !_owner->_levelHandler->_waterHidden);
 		const bool waterProgramReady = (_owner->_levelHandler->_combineWithWaterShader != nullptr);
 		auto& command = (viewHasWater && waterProgramReady ? _renderCommandWithWater : _renderCommand);
 
@@ -314,7 +314,7 @@ namespace Jazz2::Rendering
 		return true;
 #else
 		float viewWaterLevel = (_owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y) * _owner->_cameraScale + _bounds.H * 0.5f;
-		bool viewHasWater = (viewWaterLevel < _bounds.H);
+		bool viewHasWater = (viewWaterLevel < _bounds.H && !_owner->_levelHandler->_waterHidden);
 		auto& command = (viewHasWater ? _renderCommandWithWater : _renderCommand);
 
 		command.GetMaterial().SetTexture(0, *_owner->_viewTexture);
@@ -362,7 +362,7 @@ namespace Jazz2::Rendering
 		// pixels from the top edge (it may be negative when the whole view is underwater), together with the
 		// shader's uTime and the camera Y that anchor the wave animation to the world.
 		const float viewWaterLevel = (_owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y) * _owner->_cameraScale + _bounds.H * 0.5f;
-		const bool viewHasWater = (viewWaterLevel < _bounds.H);
+		const bool viewHasWater = (viewWaterLevel < _bounds.H && !_owner->_levelHandler->_waterHidden);
 		const float waterTime = _owner->_levelHandler->_elapsedFrames * 0.0018f;
 
 		// Collect every active light emitter, exactly like the shader-path LightingRenderer does

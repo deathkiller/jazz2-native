@@ -10,6 +10,11 @@ namespace Jazz2::Tiles
 	LayerDescription LayerDescription::FromRecord(const Formats::LayerRecord& record, std::int32_t mainPlaneDepth)
 	{
 		LayerDescription description;
+		// A blend of a newer version is drawn as the renderer type draws it
+		if (record.Blend <= std::uint8_t(LayerBlend::Last)) {
+			description.Blend = LayerBlend(record.Blend);
+			description.BlendParam = record.BlendParam;
+		}
 		if (record.Kind == Formats::LayerKind::Sprite) {
 			// The sprite layer is always placed with its defaults, the objects walk on its tiles
 			description.OffsetX = 0.0f;
@@ -25,7 +30,7 @@ namespace Jazz2::Tiles
 			description.SpeedModelX = LayerSpeedModel::Default;
 			description.SpeedModelY = LayerSpeedModel::Default;
 			// Only drawn otherwise by a renderer that keeps its tiles where they are, the level file stores it in a chunk
-			// (see Formats::SpriteLayerChunk), its record has the defaults otherwise
+			// (see Formats::LayerPropertiesChunk), its record has the defaults otherwise
 			if (IsSpriteLayerRenderer((LayerRendererType)record.RendererType)) {
 				description.RendererType = (LayerRendererType)record.RendererType;
 				description.Color = Vector4f(record.Color[0] / 255.0f, record.Color[1] / 255.0f, record.Color[2] / 255.0f, record.Color[3] / 255.0f);
@@ -60,7 +65,8 @@ namespace Jazz2::Tiles
 			case LayerRendererType::BlurBehind:
 			case LayerRendererType::PaletteShift:
 			case LayerRendererType::SingleColor:
-			case LayerRendererType::ChromaKey:
+			case LayerRendererType::AlphaMap:
+			case LayerRendererType::PaletteMapping:
 			case LayerRendererType::Sky:
 			case LayerRendererType::Tunnel:
 			case LayerRendererType::TileMenu:
@@ -75,7 +81,7 @@ namespace Jazz2::Tiles
 				break;
 		}
 
-		// A tinted, a single color and a chroma key layer keep a palette index in red, it's resolved from the live palette
+		// A tinted, a single color, an alpha map and a palette-mapped layer keep a palette index in red, it's resolved from the live palette
 		// when the layer is drawn, a palette-shifted one its shift. The color of an unknown renderer means something else to it - a
 		// renderer of a later version may have its parameters there - so it's drawn as it is.
 		description.Color = (knownRenderer
@@ -92,6 +98,36 @@ namespace Jazz2::Tiles
 		TextureFlags = params.Flags;
 		TextureInnerSpeed = Vector2f(params.InnerSpeedX, params.InnerSpeedY);
 		TextureInnerAutoSpeed = Vector2f(params.InnerAutoSpeedX, params.InnerAutoSpeedY);
+		TextureMapping = params.Mapping;
+	}
+
+	LayerBlend LayerDescription::FromSpriteMode(std::uint32_t spriteMode)
+	{
+		// The values of `SPRITE::Mode` of JJ2+, which aren't consecutive
+		switch (spriteMode) {
+			case 1:		// SPRITE::TRANSLUCENT
+			case 29:	// SPRITE::BLEND_NORMAL
+			case 46:	// SPRITE::TRANSLUCENTTILE
+				return LayerBlend::Translucent;
+			case 30: return LayerBlend::Darken;
+			case 31: return LayerBlend::Lighten;
+			case 32: return LayerBlend::Hue;
+			case 33: return LayerBlend::Saturation;
+			case 34: return LayerBlend::Color;
+			case 35: return LayerBlend::Luminosity;
+			case 36: return LayerBlend::Multiply;
+			case 37: return LayerBlend::Screen;
+			case 38: return LayerBlend::Dissolve;
+			case 39: return LayerBlend::Overlay;
+			case 40: return LayerBlend::HardLight;
+			case 41: return LayerBlend::SoftLight;
+			case 42: return LayerBlend::Difference;
+			case 43: return LayerBlend::Dodge;
+			case 44: return LayerBlend::Burn;
+			case 45: return LayerBlend::Exclusion;
+			case 47: return LayerBlend::ChromaKey;
+			default: return LayerBlend::Normal;
+		}
 	}
 
 	bool LayerDescription::IsSpriteLayerRenderer(LayerRendererType type)
@@ -102,6 +138,8 @@ namespace Jazz2::Tiles
 			case LayerRendererType::Tinted:
 			case LayerRendererType::PaletteShift:
 			case LayerRendererType::SingleColor:
+			case LayerRendererType::AlphaMap:
+			case LayerRendererType::PaletteMapping:
 				return true;
 			default:
 				return false;

@@ -10,6 +10,8 @@
 #include <cstring>
 #include <limits>
 #include <IO/FileSystem.h>
+#include <IO/MemoryStream.h>
+#include <IO/Compression/DeflateStream.h>
 
 #include <Containers/StringConcatenable.h>
 
@@ -142,6 +144,11 @@ namespace Jazz2::Scripting
 			// saves and reloads its own file finds it again - but only there, see IsScriptFileNameSafe()
 			if (!IsScriptFileNameSafe(filename)) {
 				LOGW("Script tried to write \"{}\", which is outside the game's data directory", filename);
+				return false;
+			}
+			// The level editor runs the script only for what it shows (see LevelHandler::IsSandbox())
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			if (owner != nullptr && owner->GetLevelHandler()->IsSandbox()) {
 				return false;
 			}
 
@@ -334,6 +341,49 @@ namespace Jazz2::Scripting
 			return PopLength(length) && get(value, length);
 		}
 
+		bool jjSTREAM::ZlibCompress(const jjSTREAM& input, jjSTREAM& output) {
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
+			Death::IO::MemoryStream ms(std::int64_t(input.getSize() / 2 + 64));
+			{
+				Death::IO::Compression::DeflateWriter dw(ms, 9, false);
+				if (input.getSize() > 0 && dw.Write(input._data.data() + input._readPos, input.getSize()) != input.getSize()) {
+					return false;
+				}
+			}
+			output.clear();
+			output.Append(ms.GetBuffer(), (std::uint32_t)ms.GetSize());
+			return true;
+#else
+			return false;
+#endif
+		}
+		bool jjSTREAM::ZlibUncompress(const jjSTREAM& input, jjSTREAM& output, std::uint32_t size) {
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
+			Death::IO::MemoryStream ms(input._data.data() + input._readPos, input.getSize());
+			Death::IO::Compression::DeflateStream ds(ms, std::int32_t(input.getSize()), false);
+			SmallVector<std::uint8_t, 0> result;
+			result.resize_for_overwrite(size);
+			std::int64_t read = (size > 0 ? ds.Read(result.data(), size) : 0);
+			std::uint8_t extra;
+			// Like zlib's uncompress(), the data must fit into the given size
+			if (read < 0 || !ds.IsValid() || ds.Read(&extra, 1) > 0) {
+				return false;
+			}
+			output.clear();
+			output.Append(result.data(), (std::uint32_t)read);
+			return true;
+#else
+			return false;
+#endif
+		}
+		std::uint32_t jjSTREAM::CRC32(const jjSTREAM& input, std::uint32_t crc) {
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
+			return (std::uint32_t)crc32(crc, input._data.data() + input._readPos, input.getSize());
+#else
+			return 0;
+#endif
+		}
+
 		jjRNG::jjRNG(std::uint64_t seed) : _refCount(1) {
 			noop();
 		}
@@ -430,11 +480,11 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjSTREAM", "bool pop(jjSTREAM &out value)", asMETHODPR(jjSTREAM, pop, (jjSTREAM&), bool), asCALL_THISCALL);
 
 		engine->RegisterGlobalFunction("bool jjSendPacket(const jjSTREAM &in packet, int toClientID = 0, uint toScriptModuleID = ::jjScriptModuleID)", asFUNCTION(jjSendPacket), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjZlibCompress(const jjSTREAM &in input, jjSTREAM &out output)", asFUNCTION(jjSTREAM::ZlibCompress), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjZlibUncompress(const jjSTREAM &in input, jjSTREAM &out output, uint size)", asFUNCTION(jjSTREAM::ZlibUncompress), asCALL_CDECL);
+		engine->RegisterGlobalFunction("uint jjCRC32(const jjSTREAM &in input, uint crc = 0)", asFUNCTION(jjSTREAM::CRC32), asCALL_CDECL);
 		// TODO
-		/*engine->RegisterGlobalFunction("bool jjTakeScreenshot(const string &in filename = '')", asFUNCTION(requestScreenshot), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool jjZlibCompress(const jjSTREAM &in input, jjSTREAM &out output)", asFUNCTION(streamCompress), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool jjZlibUncompress(const jjSTREAM &in input, jjSTREAM &out output, uint size)", asFUNCTION(streamUncompress), asCALL_CDECL);
-		engine->RegisterGlobalFunction("uint jjCRC32(const jjSTREAM &in input, uint crc = 0)", asFUNCTION(streamCRC32), asCALL_CDECL);*/
+		//engine->RegisterGlobalFunction("bool jjTakeScreenshot(const string &in filename = '')", asFUNCTION(requestScreenshot), asCALL_CDECL);
 
 		engine->RegisterObjectType("jjRNG", sizeof(jjRNG), asOBJ_REF);
 		engine->RegisterObjectBehaviour("jjRNG", asBEHAVE_FACTORY, "jjRNG@ f(uint64 seed = 5489)", asFUNCTION(jjRNG::Create), asCALL_CDECL);

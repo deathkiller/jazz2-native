@@ -523,6 +523,10 @@ namespace Jazz2::UI
 			case MessageLevel::Fatal: __DEATH_TRACE(TraceLevel::Fatal, {}, "< │ {}", Font::StripFormatting(line)); break;
 		}
 #endif
+		// The history is shared, nothing of a level that isn't shown goes there
+		if (_levelHandler != nullptr && _levelHandler->IsSandbox()) {
+			return;
+		}
 		_logHistory.emplace_back(level, Death::move(line), _smallFont);
 		_scrollPos = 0;
 	}

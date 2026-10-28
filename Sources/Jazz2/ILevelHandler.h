@@ -4,6 +4,7 @@
 #include "PlayerAction.h"
 #include "WarpFlags.h"
 #include "WeatherType.h"
+#include "WeaponType.h"
 #include "Actors/ActorBase.h"
 #include "Actors/Enemies/Bosses/BossBase.h"
 
@@ -89,6 +90,8 @@ namespace Jazz2
 		virtual bool IsPausable() const = 0;
 		/** @brief Returns `true` if Reforged Gameplay is enabled */
 		virtual bool IsReforged() const = 0;
+		/** @brief Returns `true` if a player may climb ledges, see @ref PreferencesCache::EnableLedgeClimb */
+		virtual bool IsLedgeClimbEnabled(const Actors::Player* player) const = 0;
 		/** @brief Returns `true` if sugar rush can be activated */
 		virtual bool CanActivateSugarRush() const = 0;
 		/** @brief Returns `true` if event can be safely despawned */
@@ -103,6 +106,15 @@ namespace Jazz2
 		virtual float GetGravity() const = 0;
 		/** @brief Returns current water level */
 		virtual float GetWaterLevel() const = 0;
+		/**
+		 * @brief Returns the water level the players swim by
+		 *
+		 * The same as @ref GetWaterLevel(), unless a level script changes the water in its ticks - the water as the script
+		 * left it for the players then, before its objects (see @ref LevelHandler::GetPlayerWaterLevel()).
+		 */
+		virtual float GetPlayerWaterLevel() const {
+			return GetWaterLevel();
+		}
 		/** @brief Returns default invulnerable time when a player is hurt */
 		virtual float GetHurtInvulnerableTime() const = 0;
 		/**
@@ -215,6 +227,12 @@ namespace Jazz2
 		 * local/single-player sessions).
 		 */
 		virtual void HandlePlayerPushed(Actors::Player* player) {}
+		/** @brief Called when a player fires a weapon, returns `true` if its shots were fired by something else (a level script) */
+		virtual bool HandlePlayerFire(Actors::Player* player, WeaponType weaponType) { return false; }
+		/** @brief Returns `true` if tapping fire doesn't fire a weapon faster than holding it (a level script may cap it) */
+		virtual bool IsWeaponFireCapped(WeaponType weaponType) { return false; }
+		/** @brief Returns `true` if a weapon fires without its sound (a level script plays its own) */
+		virtual bool IsWeaponSoundMuted(WeaponType weaponType) { return false; }
 		/** @brief Called when a player collects or losts coins */
 		virtual void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;
 		/** @brief Called when a player collects or losts gems */

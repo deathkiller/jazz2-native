@@ -420,6 +420,17 @@ namespace Jazz2::Editor
 		capture->OnPointerCancel();
 	}
 
+	void UiSurface::DismissTooltip()
+	{
+		if (_hover != nullptr) {
+			_hover->_hovered = false;
+			_hover = nullptr;
+		}
+		_tooltipTime = 0.0f;
+		_tooltipShown = false;
+		_tooltipLinger = 0.0f;
+	}
+
 	void UiSurface::TrackPointer(Vector2f pos)
 	{
 		// A finger always trembles a little, the moves themselves decide when its tooltip goes away

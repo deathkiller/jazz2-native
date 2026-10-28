@@ -92,6 +92,8 @@ namespace Jazz2::Editor
 		PlayOutline,
 		// A flag with an arrow, an event of the original game kept for the level script, see EventType::PassthroughEvent
 		Passthrough,
+		// A sprite in front of the one it replaces, what the script of the level gives objects instead of theirs
+		OverriddenAssets,
 		// Shown by the pointer, see UiCursorOverlay
 		CursorResizeHorizontal,
 		CursorResizeVertical,

@@ -41,6 +41,7 @@ namespace Jazz2::Editor
 				{ &UiTheme::ButtonPressed, Colorf(0.04f, 0.04f, 0.05f, 1.0f) },
 				{ &UiTheme::ButtonChecked, Colorf(0.50f, 0.42f, 0.0f, 1.0f) },
 				{ &UiTheme::ButtonCheckedHover, Colorf(0.64f, 0.54f, 0.0f, 1.0f) },
+				{ &UiTheme::ButtonOutline, Colorf(1.0f, 1.0f, 1.0f, 1.0f) },
 				{ &UiTheme::Accent, Colorf(1.0f, 0.92f, 0.0f, 1.0f) },
 				{ &UiTheme::AccentDim, Colorf(0.80f, 0.72f, 0.0f, 1.0f) },
 				{ &UiTheme::Selection, Colorf(1.0f, 0.92f, 0.0f, 0.45f) },

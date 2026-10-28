@@ -5,13 +5,15 @@ variant USE_PALETTE;
 // disagree on precision between them does not link - so the fragment prologue keeps the vertex default
 precision highp;
 
-// A chroma key layer (see Tiles::LayerRendererType::ChromaKey) in the tile-layer mesh: the tiles are drawn as usual,
+// A chroma key layer (see Tiles::LayerBlend::ChromaKey), or one of a blend mode that takes the scene behind it, in the
+// tile-layer mesh. With the key, the tiles are drawn as usual,
 // but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
 // layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
 // of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
 // key stay for the layers in front
 
 #include "Include/TileMapVs.inc"
+#include "Include/BlendModes.inc"
 
 uniform sampler2D uTexture : texture_unit(0);
 #if USE_PALETTE
@@ -24,6 +26,9 @@ uniform vec2 uTargetSizeInv;
 // The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
 // fewer bits per channel than the palette has
 uniform vec4 uKeyColor;
+// Or the blend mode the tiles are mixed with the scene behind them by instead of the key in x (see BlendModes.inc), 0 for the
+// key, and in y non-zero if its opacity is an ordered pattern of whole pixels
+uniform vec2 uBlendMode;
 
 void fragment() {
 	vec4 src = texture(uTexture, vTexCoords);
@@ -37,7 +42,12 @@ void fragment() {
 	vec4 tile = src;
 #endif
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	vec3 difference = abs(behind - uKeyColor.rgb);
-	float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
-	COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	if (uBlendMode.x > 0.5) {
+		vec4 color = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+	} else {
+		vec3 difference = abs(behind - uKeyColor.rgb);
+		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
+		COLOR = vec4(tile.rgb * tile.a, keyed) * vColor;
+	}
 }

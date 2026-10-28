@@ -130,7 +130,7 @@ namespace Jazz2::Editor
 				originalNumbers.push_back(document.Layers[i].Record.OriginalNumber);
 				char letter = char('A' + (i % 26));
 				document.Layers[i].Name = "Layer "_s + StringView(&letter, 1);
-				document.Layers[i].Record.OriginalNumber = std::uint8_t((i + 1) % (Formats::LayerNumbersChunk::OriginalLayerCount + 1));
+				document.Layers[i].Record.OriginalNumber = std::uint8_t((i + 1) % (Formats::LayerPropertiesChunk::OriginalLayerCount + 1));
 				document.Layers[i].EditorFlags = std::uint8_t(i & 3);
 			}
 			document.SetChunk(TestChunk, TestChunkData);
@@ -1445,7 +1445,6 @@ namespace Jazz2::Editor
 			state.ShowPlayPath = false;
 			state.FlatLayers = true;
 			state.MaskMode = 2;
-			state.PickerPanel = 1;
 			state.HasPlaySettings = true;
 			state.PlayCharacter = 3;
 			state.PlayDifficulty = 1;
@@ -1461,7 +1460,7 @@ namespace Jazz2::Editor
 			stream.Seek(0, SeekOrigin::Begin);
 			ok = ok && loaded.Load(stream, nullptr) && DocumentViewState::Read(loaded, read);
 			ok = ok && read.HasCamera && read.CameraCenter == state.CameraCenter && read.CameraZoom == state.CameraZoom && read.CurrentLayer == 5 &&
-				!read.ShowGrid && read.ShowEvents && !read.ShowPlayPath && read.FlatLayers && read.MaskMode == 2 && read.PickerPanel == 1 &&
+				!read.ShowGrid && read.ShowEvents && !read.ShowPlayPath && read.FlatLayers && read.MaskMode == 2 &&
 				read.HasPlaySettings && read.PlayCharacter == 3 && read.PlayDifficulty == 1 && read.PlayGameMode == 4 && read.PlayPlayerCount == 3;
 
 			// Export leaves it out
@@ -1471,26 +1470,10 @@ namespace Jazz2::Editor
 			exported.Seek(0, SeekOrigin::Begin);
 			ok = ok && exportedLoaded.Load(exported, nullptr) && !DocumentViewState::Read(exportedLoaded, read);
 
-			// Where older builds kept a play-start marker, 0 is written and its flag 0x40 is never set, so they see none and
-			// what's added later stays where it would be, and the marker of an older chunk is skipped
-			constexpr std::size_t MarkerOffset = 25;
-			constexpr std::size_t ChunkSize = MarkerOffset + 8;
+			// The layout is fixed
+			constexpr std::size_t ChunkSize = 24;
 			const Formats::ChunkRecord* chunk = document.FindChunk(DocumentViewState::Chunk);
-			ok = ok && chunk != nullptr && chunk->Data.size() == ChunkSize && (chunk->Data[1] & 0x40) == 0;
-			for (std::size_t i = MarkerOffset; ok && i < ChunkSize; i++) {
-				ok = (chunk->Data[i] == 0);
-			}
-			if (ok) {
-				SmallVector<std::uint8_t, 0> older;
-				older.assign(chunk->Data.data(), chunk->Data.data() + chunk->Data.size());
-				older[1] |= 0x40;
-				older[MarkerOffset] = 0x10;
-				older[MarkerOffset + 4] = 0x20;
-				document.SetChunk(DocumentViewState::Chunk, older);
-				DocumentViewState fromOlder;
-				ok = DocumentViewState::Read(document, fromOlder) && fromOlder.HasCamera && fromOlder.CameraCenter == state.CameraCenter &&
-					fromOlder.HasPlaySettings && fromOlder.PlayCharacter == 3 && fromOlder.PlayPlayerCount == 3;
-			}
+			ok = ok && chunk != nullptr && chunk->Data.size() == ChunkSize;
 
 			if (!ok) {
 				LOGE("View state: the edoc chunk isn't the same after it was saved and loaded, export kept it, or its layout changed");
@@ -2333,7 +2316,7 @@ namespace Jazz2::Editor
 			document.Layers[0].Record.Textured.InnerSpeedY = -0.5f;
 			document.Layers[0].Record.Textured.InnerAutoSpeedX = 0.8f;
 			document.Layers[0].Record.Textured.InnerAutoSpeedY = 1.25f;
-			constexpr std::size_t TextureBytes = std::size_t(Formats::TexturedLayerChunk::TextureSize) * Formats::TexturedLayerChunk::TextureSize;
+			constexpr std::size_t TextureBytes = std::size_t(Formats::LayerPropertiesChunk::TextureSize) * Formats::LayerPropertiesChunk::TextureSize;
 			document.Layers[0].Texture.resize_for_overwrite(TextureBytes);
 			for (std::size_t i = 0; i < TextureBytes; i++) {
 				document.Layers[0].Texture[i] = std::uint8_t(176 + (i * 7 + i / 256) % 32);
@@ -2367,10 +2350,10 @@ namespace Jazz2::Editor
 			expect((loaded.Flags & LevelFlags::HasPreview) == LevelFlags::None, "the preview flag isn't kept in the document");
 			expect(loaded.Layers[1].Record.RendererType == document.Layers[1].Record.RendererType &&
 				std::memcmp(loaded.Layers[1].Record.Color, SpriteLayerColor, sizeof(SpriteLayerColor)) == 0 &&
-				loaded.FindChunk(Formats::SpriteLayerChunk::Tag) == nullptr, "how the sprite layer is drawn through a file");
+				loaded.FindChunk(Formats::LayerPropertiesChunk::Tag) == nullptr, "how the sprite layer is drawn through a file");
 			const Formats::TexturedLayerParams& textured = loaded.Layers[0].Record.Textured;
 			expect(textured.FadeX == 0.25f && textured.FadeY == 0.75f && textured.Fade == 28 && textured.Flags == Formats::TexturedLayerParams::InnerLayer &&
-				loaded.Layers[1].Record.Textured.IsDefault() && loaded.FindChunk(Formats::TexturedLayerChunk::Tag) == nullptr,
+				loaded.Layers[1].Record.Textured.IsDefault() && loaded.FindChunk(Formats::LayerPropertiesChunk::Tag) == nullptr,
 				"the parameters of a reflection through a file");
 			expect(textured.InnerSpeedX == 0.3f && textured.InnerSpeedY == -0.5f && textured.InnerAutoSpeedX == 0.8f && textured.InnerAutoSpeedY == 1.25f &&
 				sameTexture(loaded.Layers[0]) && loaded.Layers[1].Texture.empty(), "the inner speeds and the texture of a reflection through a file");
@@ -2387,17 +2370,19 @@ namespace Jazz2::Editor
 			expect(exported.Layers[0].Record.Textured.Fade == 28 && exported.Layers[0].Record.Textured.InnerAutoSpeedX == 0.8f &&
 				sameTexture(exported.Layers[0]), "the parameters and the texture of a reflection kept by an export");
 
-			// An entry of before, which ends after the flags, has no inner speeds and takes the tiles
+			// A field of a newer version is skipped, and so are the bytes a newer version adds after a value
 			{
-				static const std::uint8_t ShortEntry[] = { 1, 0, 10, 0x00, 0x00, 0x80, 0x3E, 0x00, 0x00, 0x40, 0x3F, 28, 0x04 };
-				SmallVector<Formats::TexturedLayerChunk::Entry, 1> entries;
-				expect(Formats::TexturedLayerChunk::Read(ShortEntry, entries) && entries.size() == 1 && entries[0].Params.FadeX == 0.25f &&
-					entries[0].Params.FadeY == 0.75f && entries[0].Params.HasDefaultInnerSpeeds() && entries[0].Texture.empty(),
-					"an entry of the parameters of a reflection of before");
+				// Layer 1: a field of kind 200 of 2 bytes, then the blend with a byte more than this version knows
+				static const std::uint8_t NewerEntry[] = { 1, 1, 9, 200, 2, 0xAA, 0xBB, 6, 3, 4, 77, 0xCC };
+				SmallVector<Formats::LayerPropertiesChunk::Entry, 1> entries;
+				expect(Formats::LayerPropertiesChunk::Read(NewerEntry, entries) && entries.size() == 1 && entries[0].Layer == 1 &&
+					entries[0].Blend == 4 && entries[0].BlendParam == 77 && entries[0].Name.empty() && entries[0].Textured.IsDefault(),
+					"an entry of the properties of a layer of a newer version");
 				SmallVector<std::uint8_t, 0> written;
-				Formats::TexturedLayerChunk::Write(entries, written);
-				expect(written.size() == sizeof(ShortEntry) && std::equal(written.begin(), written.end(), ShortEntry),
-					"an entry without inner speeds and a texture written as before");
+				Formats::LayerPropertiesChunk::Write(entries, written);
+				static const std::uint8_t Written[] = { 1, 1, 4, 6, 2, 4, 77 };
+				expect(written.size() == sizeof(Written) && std::equal(written.begin(), written.end(), Written),
+					"an entry written without what this version doesn't know");
 			}
 
 			if (problems == 0) {
@@ -2473,7 +2458,7 @@ namespace Jazz2::Editor
 			static const std::uint8_t ChunkData[] = { 7, 8, 9 };
 			history.Execute(std::make_unique<SetChunkCommand>(document, Formats::LevelFile::MakeChunkTag('e', 't', 's', 't'), ChunkData, "Chunk"_s), changes);
 			// A texture of its own of a layer given and taken away again, the random ones don't change those either
-			constexpr std::size_t TextureBytes = std::size_t(Formats::TexturedLayerChunk::TextureSize) * std::size_t(Formats::TexturedLayerChunk::TextureSize);
+			constexpr std::size_t TextureBytes = std::size_t(Formats::LayerPropertiesChunk::TextureSize) * std::size_t(Formats::LayerPropertiesChunk::TextureSize);
 			SmallVector<std::uint8_t, 0> texture;
 			texture.resize_for_overwrite(TextureBytes);
 			for (std::size_t i = 0; i < texture.size(); i++) {

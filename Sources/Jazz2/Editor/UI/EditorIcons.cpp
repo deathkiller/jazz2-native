@@ -1642,6 +1642,25 @@ namespace Jazz2::Editor
 			".4##4...........",
 			"4####4..........",
 		};
+
+		const char* const IconOverriddenAssets[16] = {
+			"................",
+			".+++++++++.###..",
+			".+.......+...#..",
+			".+.......+..###.",
+			".+.......+...#..",
+			".+.......+......",
+			".+....#########.",
+			".+....#.......#.",
+			".+....#...#...#.",
+			".+++++#..###..#.",
+			"......#.#####.#.",
+			"......#..###..#.",
+			"......#...#...#.",
+			"......#.......#.",
+			"......#########.",
+			"................",
+		};
 	}
 
 	const char* const* EditorIcons::GetRows(EditorIcon icon)
@@ -1726,6 +1745,7 @@ namespace Jazz2::Editor
 			case EditorIcon::EyeOff: return IconEyeOff;
 			case EditorIcon::PlayOutline: return IconPlayOutline;
 			case EditorIcon::Passthrough: return IconPassthrough;
+			case EditorIcon::OverriddenAssets: return IconOverriddenAssets;
 			case EditorIcon::CursorResizeHorizontal: return IconCursorResizeHorizontal;
 			case EditorIcon::CursorResizeVertical: return IconCursorResizeVertical;
 			case EditorIcon::CursorResizeNWSE: return IconCursorResizeNWSE;

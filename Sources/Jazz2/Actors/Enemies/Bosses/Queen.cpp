@@ -2,6 +2,7 @@
 #include "../../../ILevelHandler.h"
 #include "../../Player.h"
 #include "../../Environment/Spring.h"
+#include "../../Weapons/ShotBase.h"
 
 #include "../../../../nCine/Base/Random.h"
 
@@ -36,8 +37,9 @@ namespace Jazz2::Actors::Bosses
 		_originPos = _pos;
 
 		_canHurtPlayer = false;
-		SetState(ActorState::IsInvulnerable | ActorState::IsSolidObject | ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::IsSolidObject | ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::CanBeFrozen, false);
+		SetShielded(true);
 		_health = INT32_MAX;
 		_maxHealth = INT32_MAX;
 		_scoreValue = 0;
@@ -104,7 +106,7 @@ namespace Jazz2::Actors::Bosses
 				// Scream towards the player
 				if (_stateTime <= 0.0f) {
 					_lastHealth = _health;
-					SetState(ActorState::IsInvulnerable, false);
+					SetShielded(false);
 
 					_state = StateScreaming;
 					PlaySfx("Scream"_s);
@@ -112,7 +114,7 @@ namespace Jazz2::Actors::Bosses
 						_state = (Random().NextFloat() < 0.8f ? StateIdleToStomp : StateIdleToBackstep);
 						_stateTime = Random().NextFloat(65.0f, 85.0f);
 
-						SetState(ActorState::IsInvulnerable, true);
+						SetShielded(true);
 
 						if (_lastHealth - _health >= 2) {
 							_queuedBackstep = true;
@@ -177,12 +179,12 @@ namespace Jazz2::Actors::Bosses
 							TileCollisionParams params = { TileDestructType::None, true };
 							if (!_levelHandler->IsPositionEmpty(this, aabb1, params) && _levelHandler->IsPositionEmpty(this, aabb2, params)) {
 								_lastHealth = _health;
-								SetState(ActorState::IsInvulnerable, false);
+								SetShielded(false);
 
 								// It's on the ledge
 								_state = StateTransition;
 								SetTransition((AnimState)1073741827, false, [this]() {
-									SetState(ActorState::IsInvulnerable, true);
+									SetShielded(true);
 
 									// 1 hits by player
 									if (_lastHealth - _health >= 1) {
@@ -245,7 +247,15 @@ namespace Jazz2::Actors::Bosses
 
 	bool Queen::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* spring = runtime_cast<Environment::Spring>(other)) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
+			if (GetState(ActorState::IsInvulnerable)) {
+				WeaponType weaponType = shotBase->GetWeaponType();
+				if (weaponType != WeaponType::Electro && weaponType != WeaponType::Thunderbolt) {
+					shotBase->TriggerRicochet(this);
+				}
+				return true;
+			}
+		} else if (auto* spring = runtime_cast<Environment::Spring>(other)) {
 			// Collide only with hitbox
 			if (AABBInner.Overlaps(spring->AABBInner)) {
 				Vector2f force = spring->Activate();
@@ -275,6 +285,13 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		return BossBase::OnHandleCollision(other);
+	}
+
+	void Queen::SetShielded(bool value)
+	{
+		SetState(ActorState::IsInvulnerable, value);
+		// Shots must not destroy themselves on contact, so the ricochet doesn't depend on collision order
+		CanCollideWithShots = !value;
 	}
 
 	Task<bool> Queen::Brick::OnActivatedAsync(const ActorActivationDetails& details)

@@ -324,6 +324,7 @@ namespace Jazz2::Input
 		std::size_t joyStateCount = joyStates.size();
 		bool allowGamepads = (flags & NavigationFlags::AllowGamepads) == NavigationFlags::AllowGamepads;
 		bool allowKeyboard = (flags & NavigationFlags::AllowKeyboard) == NavigationFlags::AllowKeyboard;
+		std::uint32_t assignedGamepads = 0;
 
 		for (std::int32_t j = 0; j < MaxSupportedPlayers; j++) {
 			const auto* mappings = &_mappings[j * (std::int32_t)PlayerAction::Count];
@@ -333,6 +334,9 @@ namespace Jazz2::Input
 						// Gamepad
 						std::uint32_t joyIdx = (target.Data & GamepadIndexMask) >> 16;
 						if (allowGamepads && joyIdx < joyStateCount) {
+							if (joyIdx < 32) {
+								assignedGamepads |= (1u << joyIdx);
+							}
 							if (target.Data & GamepadAnalogMask) {
 								// Analog axis
 								AxisName axisName = (AxisName)(target.Data & ButtonMask);
@@ -345,27 +349,10 @@ namespace Jazz2::Input
 										: IInputManager::AnalogOutButtonDeadZone)) {
 									pressedActions |= (1 << (std::uint32_t)i);
 								}
-							} else {
-								// Button
-								bool isPressed = false;
-								switch ((PlayerAction)i) {
-									case PlayerAction::Up:
-									case PlayerAction::Down:
-									case PlayerAction::Left:
-									case PlayerAction::Right:
-										isPressed = (joyStates[joyIdx]->isButtonPressed((ButtonName)(target.Data & ButtonMask)));
-										break;
-									case PlayerAction::Fire:
-										isPressed = (joyStates[joyIdx]->isButtonPressed(ButtonName::A) || joyStates[joyIdx]->isButtonPressed(ButtonName::X));
-										break;
-									case PlayerAction::Menu:
-										isPressed = (joyStates[joyIdx]->isButtonPressed(ButtonName::B) || joyStates[joyIdx]->isButtonPressed(ButtonName::Start));
-										break;
-									case PlayerAction::ChangeWeapon:
-										isPressed = (joyStates[joyIdx]->isButtonPressed(ChangeWeaponMenuButton));
-										break;
-								}
-								if (isPressed) {
+							} else if (i == (std::size_t)PlayerAction::Up || i == (std::size_t)PlayerAction::Down ||
+								i == (std::size_t)PlayerAction::Left || i == (std::size_t)PlayerAction::Right) {
+								// Button, only directions follow bindings, the rest is fixed below
+								if (joyStates[joyIdx]->isButtonPressed((ButtonName)(target.Data & ButtonMask))) {
 									pressedActions |= (1 << (std::uint32_t)i);
 									break;
 								}
@@ -379,6 +366,23 @@ namespace Jazz2::Input
 						}
 					}
 				}
+			}
+		}
+
+		// Menu buttons are fixed on every gamepad assigned to a player, regardless of action bindings
+		for (std::uint32_t joyIdx = 0; joyIdx < joyStateCount && joyIdx < 32; joyIdx++) {
+			if ((assignedGamepads & (1u << joyIdx)) == 0) {
+				continue;
+			}
+			const auto* joyState = joyStates[joyIdx];
+			if (joyState->isButtonPressed(ButtonName::A) || joyState->isButtonPressed(ButtonName::X)) {
+				pressedActions |= (1 << (std::uint32_t)PlayerAction::Fire);
+			}
+			if (joyState->isButtonPressed(ButtonName::B) || joyState->isButtonPressed(ButtonName::Start)) {
+				pressedActions |= (1 << (std::uint32_t)PlayerAction::Menu);
+			}
+			if (joyState->isButtonPressed(ChangeWeaponMenuButton)) {
+				pressedActions |= (1 << (std::uint32_t)PlayerAction::ChangeWeapon);
 			}
 		}
 

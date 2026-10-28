@@ -568,6 +568,38 @@ namespace Jazz2::Editor
 	};
 
 	/**
+		@brief Changes the colors of an additional palette of the level, as an undoable step
+
+		Consecutive changes of the same entries of the same palette by the same name are merged, as a color dragged.
+	*/
+	class SetAdditionalPaletteCommand : public EditCommand
+	{
+		DEATH_RUNTIME_OBJECT(EditCommand);
+
+	public:
+		/** @brief Creates a change of the palette of an index from its current colors to the given ones */
+		SetAdditionalPaletteCommand(const LevelDocument& document, std::int32_t index, const std::uint32_t* palette, String name);
+
+		void Do(LevelDocument& document, DocumentChanges& changes) override;
+		void Undo(LevelDocument& document, DocumentChanges& changes) override;
+		bool TryMerge(EditCommand& next) override;
+		bool CanMerge(EditCommand& next) override;
+		String GetName() const override;
+		std::size_t GetMemoryUsage() const override;
+
+	private:
+		friend class CommandArchive;
+
+		String _name;
+		std::int32_t _index;
+		std::uint32_t _oldPalette[Formats::LevelFile::ColorsPerPalette];
+		std::uint32_t _newPalette[Formats::LevelFile::ColorsPerPalette];
+		std::uint32_t _changedEntries[Formats::LevelFile::ColorsPerPalette / 32];
+
+		void Apply(LevelDocument& document, DocumentChanges& changes, const std::uint32_t* palette);
+	};
+
+	/**
 		@brief Changes the pixels or the masks of tiles the level stores in itself, see @ref Formats::ExtraTileSetRecord::Embedded
 
 		The tiles stay as many and of the same kind, so the level shows the change at once without being loaded again.

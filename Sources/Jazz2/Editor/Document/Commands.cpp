@@ -1238,6 +1238,74 @@ namespace Jazz2::Editor
 		return sizeof(SetLevelPaletteCommand) + _name.size();
 	}
 
+	SetAdditionalPaletteCommand::SetAdditionalPaletteCommand(const LevelDocument& document, std::int32_t index, const std::uint32_t* palette, String name)
+		: _name(Death::move(name)), _index(index)
+	{
+		if (index >= 0 && index < std::int32_t(document.AdditionalPalettes.size())) {
+			std::memcpy(_oldPalette, document.AdditionalPalettes[index].Colors, sizeof(_oldPalette));
+		} else {
+			std::memcpy(_oldPalette, palette, sizeof(_oldPalette));
+		}
+		std::memcpy(_newPalette, palette, sizeof(_newPalette));
+		std::memset(_changedEntries, 0, sizeof(_changedEntries));
+		for (std::int32_t i = 0; i < Formats::LevelFile::ColorsPerPalette; i++) {
+			if (_oldPalette[i] != _newPalette[i]) {
+				_changedEntries[i / 32] |= (1u << (i % 32));
+			}
+		}
+	}
+
+	void SetAdditionalPaletteCommand::Do(LevelDocument& document, DocumentChanges& changes)
+	{
+		Apply(document, changes, _newPalette);
+	}
+
+	void SetAdditionalPaletteCommand::Undo(LevelDocument& document, DocumentChanges& changes)
+	{
+		Apply(document, changes, _oldPalette);
+	}
+
+	void SetAdditionalPaletteCommand::Apply(LevelDocument& document, DocumentChanges& changes, const std::uint32_t* palette)
+	{
+		if (_index < 0 || _index >= std::int32_t(document.AdditionalPalettes.size())) {
+			return;
+		}
+		std::memcpy(document.AdditionalPalettes[_index].Colors, palette, sizeof(_newPalette));
+		changes.Add(DocumentChangeKind::Palette);
+	}
+
+	bool SetAdditionalPaletteCommand::CanMerge(EditCommand& next)
+	{
+		auto* other = runtime_cast<SetAdditionalPaletteCommand>(&next);
+		if (other == nullptr || other->_index != _index || other->_name != _name) {
+			return false;
+		}
+		bool otherChangesAny = false;
+		for (std::size_t i = 0; i < sizeof(_changedEntries) / sizeof(_changedEntries[0]); i++) {
+			otherChangesAny |= (other->_changedEntries[i] != 0);
+		}
+		return (!otherChangesAny || std::memcmp(other->_changedEntries, _changedEntries, sizeof(_changedEntries)) == 0);
+	}
+
+	bool SetAdditionalPaletteCommand::TryMerge(EditCommand& next)
+	{
+		if (!CanMerge(next)) {
+			return false;
+		}
+		std::memcpy(_newPalette, runtime_cast<SetAdditionalPaletteCommand>(&next)->_newPalette, sizeof(_newPalette));
+		return true;
+	}
+
+	String SetAdditionalPaletteCommand::GetName() const
+	{
+		return _name;
+	}
+
+	std::size_t SetAdditionalPaletteCommand::GetMemoryUsage() const
+	{
+		return sizeof(SetAdditionalPaletteCommand) + _name.size();
+	}
+
 	SetLevelTilesCommand::SetLevelTilesCommand(const LevelDocument& document, std::int32_t slot, SmallVector<std::uint8_t, 0>&& data, String name, std::int32_t flags)
 		: _name(Death::move(name)), _slot(slot), _data(Death::move(data)), _flags(flags)
 	{

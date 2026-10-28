@@ -244,8 +244,10 @@ namespace Jazz2::Rendering
 		// shown - a blur layer with neither isn't drawn at all. A reflection layer mirrors the same sharp copy, and a chroma
 		// key layer compares its colors with the key.
 		bool needsBehindBlur = (hasBlurLayers && PreferencesCache::BlurEffects);
+		// What is behind the sprite layer is dithered as one image from such a copy too
 		bool needsBehindCopy = ((hasBlurLayers && tileMap->BlurBehindLayersNeedSharpCopy()) ||
-			(tileMap != nullptr && (tileMap->HasReflectionLayers() || tileMap->HasChromaKeyLayers())));
+			(tileMap != nullptr && (tileMap->HasReflectionLayers() || tileMap->HasChromaKeyLayers())) ||
+			(tileMap != nullptr && PreferencesCache::Dithering == DitheringScope::BehindSprites));
 		if ((needsMask || needsBehindBlur || needsBehindCopy) && !ContentResolver::Get().CompileLayerEffectShaders()) {
 			LOGW("Shaders of the special tile layers are not available, the layers are drawn without their effects");
 			needsMask = false;

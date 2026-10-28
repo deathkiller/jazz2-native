@@ -185,7 +185,8 @@ namespace Jazz2::Editor
 		IEditorContext& _session;
 		TileGrid* _grid;
 
-		String GetSourceName() const;
+		String GetSourceName(std::uint8_t source) const;
+		void GetSources(SmallVectorImpl<std::uint8_t>& sources) const;
 		void NextSource(std::int32_t direction);
 	};
 

@@ -56,7 +56,6 @@ namespace Jazz2::Actors::Multiplayer
 		RemotePlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 		bool IsContinuousJumpAllowed() const override;
-		bool IsLedgeClimbAllowed() const override;
 
 		bool OnHandleCollision(ActorBase* other) override;
 		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType) override;

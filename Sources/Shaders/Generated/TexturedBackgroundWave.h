@@ -110,7 +110,8 @@ void main() {
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	COLOR = vec4(texture(uTexture, texturePos).rgb * opacity, opacity);
+	vec3 color = texture(uTexture, texturePos).rgb;
+	COLOR = vec4(color * opacity, opacity);
 }
 
 )__SHDR__";
@@ -149,7 +150,8 @@ void main() {
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	COLOR = vec4(texture2D(uTexture, texturePos).rgb * opacity, opacity);
+	vec3 color = texture2D(uTexture, texturePos).rgb;
+	COLOR = vec4(color * opacity, opacity);
 	gl_FragColor = COLOR;
 }
 
@@ -178,6 +180,192 @@ void main() {
 	};
 
 	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundWave_Textures[] = {
+		{ "uTexture", 0 },
+	};
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundWave_DITHER_Vs[] =
+R"__SHDR__(#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	float palOffset;
+};
+
+out vec2 vTexCoords;
+out vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundWave_DITHER_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundWave_DITHER_Fs[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_ES
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+#endif
+
+in vec2 vTexCoords;
+in vec4 vColor;
+
+uniform sampler2D uTexture;
+uniform vec2 uViewSize;
+uniform vec2 uShift;
+uniform vec4 uWave;
+uniform vec2 uWavePhase;
+
+#define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
+
+float bayer2(vec2 pixel) {
+	pixel = floor(pixel);
+	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+}
+
+float bayer4(vec2 pixel) {
+	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
+}
+
+vec3 reduceColors(vec3 color, vec2 pixel) {
+	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+}
+
+#define DITHER_TEXTURE_SIZE 256.0
+
+#define TEXTURE_SIZE 256.0
+#define TAU 6.28318530718
+
+out vec4 COLOR;
+
+void main() {
+	COLOR = vColor;
+	float opacity = COLOR.a;
+	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
+
+	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
+	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
+
+	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
+	vec3 color = texture(uTexture, texturePos).rgb;
+	color = reduceColors(color, gl_FragCoord.xy);
+	COLOR = vec4(color * opacity, opacity);
+}
+
+)__SHDR__";
+#endif
+
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+	inline constexpr char TexturedBackgroundWave_DITHER_Fs100[] =
+R"__SHDR__(#line 1
+
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+uniform vec2 uViewSize;
+uniform vec2 uShift;
+uniform vec4 uWave;
+uniform vec2 uWavePhase;
+
+#define TEXTURE_SIZE 256.0
+#define TAU 6.28318530718
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	float opacity = COLOR.a;
+	vec2 pos = mod(floor(uShift + vTexCoords * uViewSize), TEXTURE_SIZE);
+
+	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
+	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
+
+	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
+	vec3 color = texture2D(uTexture, texturePos).rgb;
+	COLOR = vec4(color * opacity, opacity);
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+#endif
+
+	inline constexpr ShaderCompiler::Uniform TexturedBackgroundWave_DITHER_Uniforms[] = {
+		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uViewSize", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uShift", ShaderCompiler::UniformType::Vec2, 0 },
+		{ "uWave", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uWavePhase", ShaderCompiler::UniformType::Vec2, 0 },
+	};
+
+	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundWave_DITHER_Block0_Members[] = {
+		{ "modelMatrix", ShaderCompiler::UniformType::Mat4, 0, 0 },
+		{ "color", ShaderCompiler::UniformType::Vec4, 0, 64 },
+		{ "texRect", ShaderCompiler::UniformType::Vec4, 0, 80 },
+		{ "spriteSize", ShaderCompiler::UniformType::Vec2, 0, 96 },
+		{ "palOffset", ShaderCompiler::UniformType::Float, 0, 104 },
+	};
+
+	inline constexpr ShaderCompiler::UniformBlock TexturedBackgroundWave_DITHER_Blocks[] = {
+		{ "InstanceBlock", 112, 0, 5, TexturedBackgroundWave_DITHER_Block0_Members },
+	};
+
+	inline constexpr ShaderCompiler::TextureBinding TexturedBackgroundWave_DITHER_Textures[] = {
 		{ "uTexture", 0 },
 	};
 
@@ -262,15 +450,119 @@ uniform vec2 uShift;
 uniform vec4 uWave;
 uniform vec2 uWavePhase;
 
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
 uniform float uOpacity;
+uniform vec2 uBlendMode;
 
-float keyedOpacity() {
+vec4 keyedColor(vec3 color) {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+	return vec4(color, uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5)));
 }
 
 #define TEXTURE_SIZE 256.0
@@ -287,7 +579,8 @@ void main() {
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	COLOR = vec4(texture(uTexture, texturePos).rgb, keyedOpacity());
+	vec3 color = texture(uTexture, texturePos).rgb;
+	COLOR = keyedColor(color);
 }
 
 )__SHDR__";
@@ -312,15 +605,119 @@ uniform vec2 uShift;
 uniform vec4 uWave;
 uniform vec2 uWavePhase;
 
+float blendLuminosity(vec3 c) {
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
+vec3 blendSetLuminosity(vec3 c, float l) {
+	c += vec3(l - blendLuminosity(c));
+	float lum = blendLuminosity(c);
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	if (lo < 0.0) {
+		c = vec3(lum) + (c - vec3(lum)) * lum / max(lum - lo, 0.0001);
+	}
+	if (hi > 1.0) {
+		c = vec3(lum) + (c - vec3(lum)) * (1.0 - lum) / max(hi - lum, 0.0001);
+	}
+	return c;
+}
+
+float blendSaturation(vec3 c) {
+	return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);
+}
+
+vec3 blendSetSaturation(vec3 c, float s) {
+	float lo = min(min(c.r, c.g), c.b);
+	float hi = max(max(c.r, c.g), c.b);
+	return (hi > lo ? (c - vec3(lo)) * s / (hi - lo) : vec3(0.0));
+}
+
+vec3 blendHardLight(vec3 s, vec3 d) {
+	vec3 multiply = 2.0 * s * d;
+	vec3 screen = vec3(1.0) - 2.0 * (vec3(1.0) - s) * (vec3(1.0) - d);
+	return mix(multiply, screen, step(vec3(0.5), s));
+}
+
+vec3 blendModeColor(float mode, vec3 s, vec3 d) {
+	if (mode < 3.5) {
+		return vec3(1.0) - (vec3(1.0) - s) * (vec3(1.0) - d);
+	} else if (mode < 4.5) {
+		return s * d;
+	} else if (mode < 5.5) {
+		return min(s, d);
+	} else if (mode < 6.5) {
+		return max(s, d);
+	} else if (mode < 7.5) {
+		return blendSetLuminosity(blendSetSaturation(s, blendSaturation(d)), blendLuminosity(d));
+	} else if (mode < 8.5) {
+		return blendSetLuminosity(blendSetSaturation(d, blendSaturation(s)), blendLuminosity(d));
+	} else if (mode < 9.5) {
+		return blendSetLuminosity(s, blendLuminosity(d));
+	} else if (mode < 10.5) {
+		return blendSetLuminosity(d, blendLuminosity(s));
+	} else if (mode < 11.5) {
+		return s;
+	} else if (mode < 12.5) {
+		return blendHardLight(d, s);
+	} else if (mode < 13.5) {
+		return blendHardLight(s, d);
+	} else if (mode < 14.5) {
+		vec3 dark = d - (vec3(1.0) - 2.0 * s) * d * (vec3(1.0) - d);
+		vec3 lightD = mix(((16.0 * d - vec3(12.0)) * d + vec3(4.0)) * d, sqrt(d), step(vec3(0.25), d));
+		vec3 light = d + (2.0 * s - vec3(1.0)) * (lightD - d);
+		return mix(dark, light, step(vec3(0.5), s));
+	} else if (mode < 15.5) {
+		return abs(s - d);
+	} else if (mode < 16.5) {
+		return min(d / max(vec3(1.0) - s, vec3(0.0001)), vec3(1.0));
+	} else if (mode < 17.5) {
+		return vec3(1.0) - min((vec3(1.0) - d) / max(s, vec3(0.0001)), vec3(1.0));
+	} else {
+		return s + d - 2.0 * s * d;
+	}
+}
+
+float blendModeAlpha(float mode, float alpha, vec2 pixel) {
+	if (mode > 10.5 && mode < 11.5) {
+		float noise = fract(sin(dot(floor(pixel), vec2(12.9898, 78.233))) * 43758.5453);
+		return step(noise, alpha);
+	}
+	return alpha;
+}
+
+float blendBayer4(vec2 pixel) {
+	pixel = floor(pixel);
+	vec2 coarsePixel = floor(pixel * 0.5);
+	float coarse = fract(coarsePixel.x * 0.5 + coarsePixel.y * coarsePixel.y * 0.75);
+	float fine = fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
+	return coarse * 0.25 + fine;
+}
+
+vec4 blendModeResult(vec2 mode, vec3 s, float a, vec3 d, vec2 pixel) {
+	a = blendModeAlpha(mode.x, a, pixel);
+	if (mode.y > 0.5) {
+		a = step(blendBayer4(pixel) + 0.03125, a);
+	}
+	if (mode.x < 4.5) {
+		return vec4(s * a, a);
+	}
+	return vec4(blendModeColor(mode.x, s, d), a);
+}
+
 uniform sampler2D uTextureBehind;
 uniform vec2 uTargetSizeInv;
 uniform vec4 uKeyColor;
 uniform float uOpacity;
+uniform vec2 uBlendMode;
 
-float keyedOpacity() {
+vec4 keyedColor(vec3 color) {
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
+	if (uBlendMode.x > 0.5) {
+		return blendModeResult(uBlendMode, color, uOpacity, behind, gl_FragCoord.xy);
+	}
 	vec3 difference = abs(behind - uKeyColor.rgb);
-	return uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5));
+	return vec4(color, uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5)));
 }
 
 #define TEXTURE_SIZE 256.0
@@ -337,7 +734,8 @@ void main() {
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
-	COLOR = vec4(texture2D(uTexture, texturePos).rgb, keyedOpacity());
+	vec3 color = texture2D(uTexture, texturePos).rgb;
+	COLOR = keyedColor(color);
 	gl_FragColor = COLOR;
 }
 
@@ -354,6 +752,7 @@ void main() {
 		{ "uTargetSizeInv", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uKeyColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uOpacity", ShaderCompiler::UniformType::Float, 0 },
+		{ "uBlendMode", ShaderCompiler::UniformType::Vec2, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember TexturedBackgroundWave_KEYED_Block0_Members[] = {
@@ -403,13 +802,42 @@ void main() {
 #else
 			nullptr, nullptr },
 #endif
+		{ "DITHER", "DITHER",
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundWave_DITHER_Vs, TexturedBackgroundWave_DITHER_Fs,
+#else
+			nullptr, nullptr,
+#endif
+			6, TexturedBackgroundWave_DITHER_Uniforms, 1, TexturedBackgroundWave_DITHER_Blocks, 1, TexturedBackgroundWave_DITHER_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
+			TexturedBackgroundWave_DITHER_Vs100, TexturedBackgroundWave_DITHER_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
+			TexturedBackgroundWave_DITHER_VsHlsl, TexturedBackgroundWave_DITHER_FsHlsl,
+			TexturedBackgroundWave_DITHER_VsDxbc, TexturedBackgroundWave_DITHER_VsDxbcSize, TexturedBackgroundWave_DITHER_FsDxbc, TexturedBackgroundWave_DITHER_FsDxbcSize,
+#else
+			nullptr, nullptr,
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_VULKAN)
+			TexturedBackgroundWave_DITHER_VkVs, TexturedBackgroundWave_DITHER_VkVsSize, TexturedBackgroundWave_DITHER_VkFs, TexturedBackgroundWave_DITHER_VkFsSize,
+#else
+			nullptr, 0, nullptr, 0,
+#endif
+#if defined(WITH_RHI_METAL)
+			TexturedBackgroundWave_DITHER_VsMsl, TexturedBackgroundWave_DITHER_FsMsl },
+#else
+			nullptr, nullptr },
+#endif
 		{ "KEYED", "KEYED",
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			TexturedBackgroundWave_KEYED_Vs, TexturedBackgroundWave_KEYED_Fs,
 #else
 			nullptr, nullptr,
 #endif
-			9, TexturedBackgroundWave_KEYED_Uniforms, 1, TexturedBackgroundWave_KEYED_Blocks, 2, TexturedBackgroundWave_KEYED_Textures, 0, nullptr,
+			10, TexturedBackgroundWave_KEYED_Uniforms, 1, TexturedBackgroundWave_KEYED_Blocks, 2, TexturedBackgroundWave_KEYED_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TexturedBackgroundWave_KEYED_Vs100, TexturedBackgroundWave_KEYED_Fs100,
 #else
@@ -434,6 +862,6 @@ void main() {
 #endif
 	};
 
-	inline constexpr ShaderCompiler::Program TexturedBackgroundWave = { "TexturedBackgroundWave", 0, 2, TexturedBackgroundWave_Variants };
+	inline constexpr ShaderCompiler::Program TexturedBackgroundWave = { "TexturedBackgroundWave", 0, 3, TexturedBackgroundWave_Variants };
 }
 #endif

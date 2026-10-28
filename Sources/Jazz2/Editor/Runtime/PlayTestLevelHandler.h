@@ -32,6 +32,7 @@ namespace Jazz2::Editor
 		void Suspend() override;
 		void Resume() override;
 
+		bool IsLedgeClimbEnabled(const Actors::Player* player) const override;
 		bool IsEditorPlayTest() const override;
 		void ExitEditor() override;
 		bool SerializeResumableToStream(Stream& dest) override;

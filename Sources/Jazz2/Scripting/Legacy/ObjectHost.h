@@ -160,7 +160,7 @@ namespace Jazz2::Scripting::Legacy
 		 * The object of the game breaks (and gives what's in it), but the object of the script stays - in `STATE::ACTION`,
 		 * as JJ2+ has a crate that was hit, so `BEHAVIOR::CRATE` breaks it into pieces of `OBJECT::SHARD` and the behavior
 		 * can keep what remains of it (see @ref LevelScriptLoader::BreakObjects()). Anything else perishes as in the game,
-		 * unless a behavior of the script brings it back (ThreedRealms' puppet hands).
+		 * unless a behavior of the script brings it back (puppet hands).
 		 */
 		bool OnPerish(Actors::ActorBase* actor, Actors::ActorBase* collider) override;
 		/** @brief Returns `true` once a crate breaks as in JJ2+, its pieces are objects then (see @ref OnPerish()), or for an object showing an animation of a script */
@@ -201,6 +201,26 @@ namespace Jazz2::Scripting::Legacy
 		 * when it rests on the ground.
 		 */
 		void RunMonitor(bool draw);
+		/**
+		 * @brief Returns `true` for a bullet a player fired of a weapon whose bullets a script controls
+		 *
+		 * See @ref LevelScriptLoader::FirePlayerWeapon(), such a bullet flies as `BEHAVIOR::BULLET` of JJ2+ (see @ref RunBullet()).
+		 */
+		bool IsScriptedBullet() const;
+		/**
+		 * @brief Runs `BEHAVIOR::BULLET` of JJ2+ on a bullet of a weapon whose bullets a script controls
+		 *
+		 * It flies by its speeds and accelerations until its `counterEnd` or a wall, then plays its `killAnim` and is gone.
+		 * The shot of the game neither moves nor is drawn then.
+		 */
+		void RunBullet(bool draw);
+		/**
+		 * @brief Sets up the bullet of a weapon whose bullets a script controls as JJ2+ fires it, see @ref IsScriptedBullet()
+		 *
+		 * @p spreadSlot is -1 for the bullet angled up, 0 for the straight one and 1 for the one angled down, @p gunspotOffsetY
+		 * how far below the player the gunspot of the pose it was fired in was.
+		 */
+		static void InitializeScriptedBullet(jjOBJ& obj, const jjOBJ& preset, Actors::ActorBase& actor, std::int8_t spreadSlot, float gunspotOffsetY);
 		/**
 			@brief Makes the object of the game follow a behavior that moves the object itself (`BEHAVIOR::WALKINGENEMY`)
 
@@ -259,6 +279,9 @@ namespace Jazz2::Scripting::Legacy
 		static void DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj, float offsetY = 0.0f);
 
 	private:
+		// Prepares the context for a function of a behavior, logs why it can't be
+		static bool PrepareBehavior(asIScriptContext* ctx, asIScriptFunction* function);
+
 		LevelScriptLoader* _levelScripts;
 		jjOBJ* _obj;
 		Actors::ActorBase* _actor;
@@ -314,7 +337,7 @@ namespace Jazz2::Scripting::Legacy
 		bool GetPlatformBox(AABBf& box);
 		// Returns `true` for a bullet of a player with a behavior of the script and a frame, which collides by the pixels of it
 		bool CollidesByFrame() const;
-		// Hits what the frame of the bullet collides with, as JJ2 has bullets hit objects (ThreedRealms' sword)
+		// Hits what the frame of the bullet collides with, as JJ2 has bullets hit objects (a sword)
 		void CollideByFrame();
 		// Draws the object as the last tick left it, by itself or its frame
 		void FinishTicks();

@@ -1,4 +1,4 @@
-﻿#include "EditorShell.h"
+#include "EditorShell.h"
 
 #if defined(WITH_EDITOR)
 
@@ -40,7 +40,8 @@ namespace Jazz2::Editor
 	namespace
 	{
 		// Sizes of the docked panels in units, and at most which part of the screen they take
-		constexpr float ToolStripWidth = 24.0f;
+		// The buttons of the actions (UiTheme::ButtonHeight + 4) and the padding around them
+		constexpr float ToolStripWidth = UiTheme::ButtonHeight + 4.0f + 5.0f * 2.0f;
 		constexpr float RightDockMinWidth = 100.0f;
 		constexpr float RightDockMaxFraction = 0.6f;
 		constexpr float PickerDockMinWidth = 80.0f;
@@ -50,6 +51,8 @@ namespace Jazz2::Editor
 		constexpr float InspectorMinHeight = 48.0f;
 		// Width of the edge of a panel that resizes it, in units
 		constexpr float SplitterGrip = 5.0f;
+		// Room between the layers and the properties, all of it grabs the edge between them
+		constexpr float LayersGap = 15.0f;
 		// Narrower windows than this in units get the panels in drawers, and the tools at the bottom
 		constexpr float CompactWidth = 600.0f;
 		constexpr float NarrowWidth = 420.0f;
@@ -234,6 +237,7 @@ namespace Jazz2::Editor
 
 		_rightFrame = Add<UiDockFrame>(UiDockSide::Right, _x("editor", "Drag to move the panel, to the edge of the screen to dock it again"));
 		_rightDock = _rightFrame->GetPanel();
+		_rightDock->Spacing = LayersGap;
 		// TRANSLATORS: Header of the panel with the list of layers of the level and their properties
 		_rightFrame->GetHeaderContent()->Add<UiLabel>(_x("editor", "Layers"), UiTheme::TextHeader)->Flex = 1.0f;
 		_layersPanel = _rightDock->Add<LayersPanel>(session);
@@ -564,7 +568,7 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Menu in the menu bar of the editor, the camera, what is drawn over the level and the look of the editor
 		_menuBar->AddMenu(_x("editor", "View"), [addActions, addSubmenu](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::ViewZoomIn, ActionIds::ViewZoomOut, ActionIds::ViewZoomGame, ActionIds::ViewFit, nullptr, ActionIds::ViewGrid, ActionIds::ViewMasks, ActionIds::ViewEvents,
-				ActionIds::ViewPlayPath, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewPreviewTextured });
+				ActionIds::ViewPlayPath, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewPreviewTextured, ActionIds::ViewOverriddenAssets });
 			entries.push_back(UiMenuEntry::Separator());
 			// TRANSLATORS: Submenu in the View menu, shows where the player can get and with which character
 			addSubmenu(entries, _x("editor", "Reachable Area"), EditorIcon::Reach, { ActionIds::ViewReachability, nullptr, ActionIds::ViewReachAny, ActionIds::ViewReachJazz,
@@ -615,7 +619,7 @@ namespace Jazz2::Editor
 			addSubmenu(entries, _("Game Mode"), EditorIcon::None, { ActionIds::PlayAlone, ActionIds::PlayCooperation, ActionIds::PlayBattle, ActionIds::PlayTeamBattle,
 				ActionIds::PlayRace, ActionIds::PlayTreasureHunt, ActionIds::PlayCaptureTheFlag, nullptr, ActionIds::PlayPlayers1, ActionIds::PlayPlayers2, ActionIds::PlayPlayers3, ActionIds::PlayPlayers4 });
 #endif
-			addActions(entries, { nullptr, ActionIds::ViewPlayPath, ActionIds::ViewDeaths, ActionIds::PlayClearPaths });
+			addActions(entries, { ActionIds::PlayReforged, ActionIds::PlayLedgeClimb, nullptr, ActionIds::ViewPlayPath, ActionIds::ViewDeaths, ActionIds::PlayClearPaths });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor
 		_menuBar->AddMenu(_x("editor", "Help"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
@@ -650,7 +654,8 @@ namespace Jazz2::Editor
 		}
 		_toolbar->Add<UiSeparator>(UiOrientation::Vertical)->IsVisibleFunc = notNarrow;
 		EditorSettings* settings = &_session.GetSettings();
-		for (const char* id : { ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewMasks, ActionIds::ViewEvents, ActionIds::ViewPlayPath, ActionIds::ViewReachability }) {
+		for (const char* id : { ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewMasks, ActionIds::ViewEvents, ActionIds::ViewOverriddenAssets, ActionIds::ViewPlayPath,
+			ActionIds::ViewReachability }) {
 			if (UiButton* button = AddActionButton(_toolbar, id)) {
 				bool expert = IsExpertAction(id);
 				button->IsVisibleFunc = [this, settings, expert]() { return (!_narrow && (!expert || settings->Expert)); };
@@ -673,14 +678,14 @@ namespace Jazz2::Editor
 
 	void EditorShell::CreateToolStrip()
 	{
-		_toolStrip = Add<UiPanel>(UiPanelStyle::Panel, UiOrientation::Vertical, 0.0f, UiThickness(3.0f));
+		_toolStrip = Add<UiPanel>(UiPanelStyle::Panel, UiOrientation::Vertical, 0.0f, UiThickness(5.0f));
 		// A short window scrolls the buttons that don't fit, by the wheel or a finger, the strip is too narrow to give a bar
 		// room of its own, so it's only a mark over the buttons
 		auto* scroll = _toolStrip->Add<UiScrollView>();
 		scroll->Flex = 1.0f;
 		scroll->OverlayBar = true;
 		// Into the padding of the strip, off the buttons
-		scroll->OverlayBarOffset = 3.0f;
+		scroll->OverlayBarOffset = 5.0f;
 		_toolStripItems = scroll->SetContent<UiStack>(UiOrientation::Vertical, 2.0f);
 		// Selecting first, then the tools that paint tiles, those that make them up by themselves, apart from them those of
 		// events, and the ones that change nothing last (a separator where the ID is null)
@@ -723,9 +728,9 @@ namespace Jazz2::Editor
 			button->IsVisibleFunc = [settings]() { return settings->Expert; };
 		}
 		// A unit more around the icon than other buttons have, the bars would look crowded otherwise
-		button->Height = UiTheme::ButtonHeight + 2.0f;
+		button->Height = UiTheme::ButtonHeight + 4.0f;
 		if (!showText) {
-			button->Width = UiTheme::ButtonHeight + 2.0f;
+			button->Width = UiTheme::ButtonHeight + 4.0f;
 		}
 		if (action->IsChecked) {
 			button->IsCheckedFunc = [action]() {
@@ -822,8 +827,8 @@ namespace Jazz2::Editor
 		_rightSplitter->Arrange(context, Rectf(std::round(right - grip * 0.5f), top, grip, bottom - top));
 		_pickerSplitter->Arrange(context, Rectf(std::round(left - grip * 0.5f), top, grip, bottom - top));
 		const Rectf& layers = _layersPanel->Bounds;
-		float spacing = context.Px(UiTheme::Spacing);
-		_layersSplitter->Arrange(context, Rectf(layers.X, std::round(layers.Y + layers.H + (spacing - grip) * 0.5f), layers.W, grip));
+		float gap = context.Px(LayersGap);
+		_layersSplitter->Arrange(context, Rectf(layers.X, std::round(layers.Y + layers.H), layers.W, gap));
 
 		// The bar slides in from above the screen as it fades in, to below the edge that may be cut off
 		Vector2f playBarSize = _playBar->Measure(context, Vector2f(area.W, area.H));

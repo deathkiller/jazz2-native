@@ -8,6 +8,14 @@
 #include "../../Actors/ActorBase.h"
 #include "../../Actors/Player.h"
 #include "../../Actors/Collectibles/CollectibleBase.h"
+#include "../../Actors/Weapons/BlasterShot.h"
+#include "../../Actors/Weapons/BouncerShot.h"
+#include "../../Actors/Weapons/ElectroShot.h"
+#include "../../Actors/Weapons/FreezerShot.h"
+#include "../../Actors/Weapons/PepperShot.h"
+#include "../../Actors/Weapons/RFShot.h"
+#include "../../Actors/Weapons/SeekerShot.h"
+#include "../../Actors/Weapons/ToasterShot.h"
 #include "../../Compatibility/JJ2Strings.h"
 #include "../../Rendering/PlayerViewport.h"
 
@@ -195,7 +203,7 @@ namespace Jazz2::Scripting
 			_player->_checkpointPos.Y = value;
 			return _player->_checkpointPos.Y;
 		}
-		// Speeds are in pixels per tick of JJ2+, 70 in a second, the player moves by frames, 60 in a second (ThreedRealms' burger booth
+		// Speeds are in pixels per tick of JJ2+, 70 in a second, the player moves by frames, 60 in a second (a burger booth
 		// lifts the player by 1 a tick, 100 pixels in its 100 ticks)
 		static constexpr float PlayerSpeedToTicks = 60.0f / 70.0f;
 
@@ -330,6 +338,17 @@ namespace Jazz2::Scripting
 			}
 			return (std::int32_t)(_player->_invulnerableTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
+		std::uint32_t jjPLAYER::get_lightType() const {
+			// LIGHT::NONE and LIGHT::PLAYER of JJ2+
+			return (_player != nullptr && _player->_lightHiddenByScript ? 0 : 10);
+		}
+		std::uint32_t jjPLAYER::set_lightType(std::uint32_t value) {
+			// Only whether the player has its light, the light of the game is the light of a player of any type
+			if (_player != nullptr) {
+				_player->_lightHiddenByScript = (value == 0);
+			}
+			return value;
+		}
 		std::int32_t jjPLAYER::set_invincibility(std::int32_t value) {
 			if (_player == nullptr) {
 				return {};
@@ -376,7 +395,7 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			noop(); return _player->_inventory.FoodEaten;
+			return _player->_inventory.FoodEaten;
 		}
 		std::int32_t jjPLAYER::set_food(std::int32_t value) {
 			if (_player == nullptr) {
@@ -501,13 +520,13 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			noop(); return (std::int8_t)_player->_playerIndex;
+			return (std::int8_t)_player->_playerIndex;
 		}
 		std::int32_t jjPLAYER::get_localPlayerID() const {
 			if (_player == nullptr) {
 				return {};
 			}
-			noop(); return _player->_playerIndex;
+			return _player->_playerIndex;
 		}
 
 		bool jjPLAYER::get_running() const {
@@ -673,7 +692,7 @@ namespace Jazz2::Scripting
 				return {};
 			}
 			// Toggles tileset collision so the player can pass through level geometry, and gravity, a player in noclip mode keeps
-			// the speed it has (ThreedRealms' burger booth makes the player rise slowly by it)
+			// the speed it has (a burger booth makes the player rise slowly by it)
 			_player->SetState(Actors::ActorState::CollideWithTileset | Actors::ActorState::ApplyGravitation, !value);
 			return value;
 		}
@@ -681,14 +700,14 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			// The ambient light of the view of the player, 64 is full light as in JJ2 (see the converter of LIGHT_SET)
-			return (std::uint8_t)std::clamp(_levelScriptLoader->_levelHandler->GetAmbientLight(_player) * 64.0f + 0.5f, 0.0f, 255.0f);
+			// The ambient light of the view of the player, 100 is full light as in JJ2 (see the converter of LIGHT_SET)
+			return (std::uint8_t)std::clamp(_levelScriptLoader->_levelHandler->GetAmbientLight(_player) * 100.0f + 0.5f, 0.0f, 255.0f);
 		}
 		std::uint8_t jjPLAYER::set_lighting(std::uint8_t value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_levelScriptLoader->_levelHandler->SetAmbientLight(_player, value / 64.0f);
+			_levelScriptLoader->_levelHandler->SetAmbientLight(_player, value / 100.0f);
 			return value;
 		}
 		std::uint8_t jjPLAYER::resetLight() {
@@ -945,7 +964,7 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			// Whether the player was hurt, scripts act on it (ThreedRealms' pumpkin bombs explode then) - one blinking after
+			// Whether the player was hurt, scripts act on it (bombs explode then) - one blinking after
 			// a hit is hurt only when forced
 			if (forceHurt && _player->_invulnerableTime > 0.0f) {
 				_player->_invulnerableTime = 0.0f;
@@ -1177,7 +1196,7 @@ namespace Jazz2::Scripting
 					target->_synced.Energy = target->energy;
 					if ((victim->GetHealth() <= 0 || victim->GetState(Actors::ActorState::IsDestroyed)) && runtime_cast<Actors::Collectibles::CollectibleBase>(victim.get()) != nullptr) {
 						// A collected pickup is a sparkle at once, as measured in JJ2+ - scripts tell the ones that are gone by their
-						// behavior (ThreedRealms' series of gems keep drawing theirs otherwise)
+						// behavior (series of gems keep drawing theirs otherwise)
 						constexpr std::uint32_t BehaviorExplosion2 = aCOUNT + 21;
 						constexpr std::uint32_t HandlingExplosion = 4;
 						target->behavior = BehaviorExplosion2;
@@ -1311,7 +1330,7 @@ namespace Jazz2::Scripting
 			buttstomp = (_player->_currentSpecialMove == Actors::Player::SpecialMoveType::Buttstomp ? 1 : 50);
 			specialMove = std::int32_t(_player->_currentSpecialMove);
 			// A boss of the game is the one, a boss of a script is told by the script (`boss`)
-			// - and what a script set stays as it set it (HH17's dragon is a boss of the script, which ends it so when it's slain)
+			// - and what a script set stays as it set it (a boss of a script ends it so when it's slain)
 			std::int32_t nativeBoss = _levelScriptLoader->GetActiveBossObjectID();
 			if (nativeBoss != 0) {
 				bossNumber = nativeBoss;
@@ -1320,12 +1339,69 @@ namespace Jazz2::Scripting
 				bossActive = (nativeBoss != 0 || _levelScriptLoader->IsBossAreaActivated());
 			}
 			_synced.BossActive = (nativeBoss != 0 || _levelScriptLoader->IsBossAreaActivated());
-			// The object the player stands on, if it's an object of the scripts (ThreedRealms tells its trapezes by it)
-			// - none while it dies (ThreedRealms would draw a player dying on a trapeze still hanging there)
+			// The object the player stands on, if it's an object of the scripts (trapezes are told by it)
+			// - none while it dies (a player dying on a trapeze would be drawn still hanging there)
 			jjOBJ* standingOn = (_player->_carryingObject != nullptr && _player->GetHealth() > 0
 				? _levelScriptLoader->GetObjectView(_player->_carryingObject) : nullptr);
 			platform = (standingOn != nullptr ? standingOn->objectID : 0);
 		}
+		bool jjPLAYER::FireScriptedWeapon(WeaponType weaponType) {
+			// The bullet of the weapon must have a behavior of the script, the behavior moves the bullets then
+			std::uint8_t bullet;
+			switch (weaponType) {
+				case WeaponType::Pepper: bullet = aPLAYERBULLET8; break;
+				case WeaponType::Electro: bullet = aPLAYERBULLET9; break;
+				default: bullet = (weaponType <= WeaponType::Toaster ? std::uint8_t(aPLAYERBULLET1 + std::int32_t(weaponType)) : std::uint8_t(0)); break;
+			}
+			const jjOBJ* preset = (bullet != 0 ? _levelScriptLoader->FindObjectPreset(bullet) : nullptr);
+			if (preset == nullptr || (preset->behavior.function == nullptr && preset->behavior.object == nullptr)) {
+				return false;
+			}
+
+			// As JJ2+ fires by `SPREAD::Spread` (measured): RFNORMAL two bullets angled up and down, RFPU those and a straight
+			// one, RF two or three when powered up, every other spread one
+			constexpr std::int32_t SpreadRfNormal = 1, SpreadRfPowerUp = 2, SpreadRf = 3;
+			std::int32_t spread = _levelScriptLoader->GetWeapon(std::int32_t(weaponType) + 1)->spread;
+			bool upgraded = ((_player->_inventory.WeaponUpgrades[(std::int32_t)weaponType] & 0x01) != 0);
+			bool angled = (spread == SpreadRfNormal || spread == SpreadRfPowerUp || spread == SpreadRf);
+			bool straight = (!angled || spread == SpreadRfPowerUp || (spread == SpreadRf && upgraded));
+			for (std::int8_t slot = -1; slot <= 1; slot++) {
+				if (slot == 0 ? !straight : !angled) {
+					continue;
+				}
+				switch (weaponType) {
+					case WeaponType::Blaster: FireSpreadShot<Actors::Weapons::BlasterShot>(weaponType, slot); break;
+					case WeaponType::Bouncer: FireSpreadShot<Actors::Weapons::BouncerShot>(weaponType, slot); break;
+					case WeaponType::Freezer: FireSpreadShot<Actors::Weapons::FreezerShot>(weaponType, slot); break;
+					case WeaponType::Seeker: FireSpreadShot<Actors::Weapons::SeekerShot>(weaponType, slot); break;
+					case WeaponType::RF: FireSpreadShot<Actors::Weapons::RFShot>(weaponType, slot); break;
+					case WeaponType::Toaster: FireSpreadShot<Actors::Weapons::ToasterShot>(weaponType, slot); break;
+					case WeaponType::Pepper: FireSpreadShot<Actors::Weapons::PepperShot>(weaponType, slot); break;
+					case WeaponType::Electro: FireSpreadShot<Actors::Weapons::ElectroShot>(weaponType, slot); break;
+					default: break;
+				}
+			}
+			return true;
+		}
+
+		template<typename T>
+		void jjPLAYER::FireSpreadShot(WeaponType weaponType, std::int8_t slot) {
+			Vector3i initialPos;
+			Vector2f gunspotPos;
+			float angle;
+			_player->GetFirePointAndAngle(initialPos, gunspotPos, angle);
+			float angleOffset = slot * (_player->IsFacingLeft() ? -0.2f : 0.2f);
+
+			std::uint8_t shotParams[1] = { _player->_inventory.WeaponUpgrades[(std::int32_t)weaponType] };
+			std::shared_ptr<T> shot = std::make_shared<T>();
+			shot->OnActivated(Actors::ActorActivationDetails(_player->_levelHandler, initialPos, shotParams));
+			shot->OnFire(_player->shared_from_this(), gunspotPos, _player->_speed, angle + angleOffset, _player->IsFacingLeft());
+			// Its view is made as JJ2+ fires it when the level adds it (see LevelScriptLoader::EnsureObjectView())
+			_levelScriptLoader->_firingBullet = { shot.get(), slot, gunspotPos.Y - _player->_pos.Y };
+			_player->_levelHandler->AddActor(shot);
+			_levelScriptLoader->_firingBullet = {};
+		}
+
 		void jjPLAYER::SyncPropertiesFromBackingStore() {
 			if (_player == nullptr || !_syncedOnce) {
 				return;
@@ -1357,21 +1433,6 @@ namespace Jazz2::Scripting
 				_player->_idleTime = std::max(idle, 0) * TicksToFrames;
 			}
 
-			// A capped weapon isn't fired faster by tapping, one without its default sample is silent (the weapons of MLLE play
-			// their own sounds), as JJ2+ has the weapons
-			std::uint16_t cappedWeapons = 0, silentWeapons = 0;
-			for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
-				const jjWEAPON* weapon = _levelScriptLoader->GetWeapon(i + 1);
-				if (weapon->style == wsCAPPED) {
-					cappedWeapons |= std::uint16_t(1 << i);
-				}
-				if (!weapon->defaultSample) {
-					silentWeapons |= std::uint16_t(1 << i);
-				}
-			}
-			_player->_cappedWeapons = cappedWeapons;
-			_player->_silentWeapons = silentWeapons;
-
 			// The handed-over values are what the player has now
 			_synced.Lives = lives;
 			_synced.Direction = direction;
@@ -1395,14 +1456,10 @@ namespace Jazz2::Scripting
 	}
 
 	std::int32_t get_jjPlayerCount() {
-		noop();
-		// TODO
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetPlayers().size();
 	}
 	std::int32_t get_jjLocalPlayerCount() {
-		noop();
-		// TODO
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetPlayers().size();
 	}
@@ -1421,6 +1478,23 @@ namespace Jazz2::Scripting
 
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		return owner->GetPlayerBackingStore(index);
+	}
+
+	bool LevelScriptLoader::FirePlayerWeapon(Actors::Player* player, WeaponType weaponType)
+	{
+		jjPLAYER* p = GetPlayerBackingStore(player);
+		return (p != nullptr && p->FireScriptedWeapon(weaponType));
+	}
+
+	bool LevelScriptLoader::IsWeaponFireCapped(WeaponType weaponType)
+	{
+		// TNT, capped by default, is placed by every press as the weapon of the game places it
+		return (weaponType != WeaponType::TNT && GetWeapon(std::int32_t(weaponType) + 1)->style == Legacy::wsCAPPED);
+	}
+
+	bool LevelScriptLoader::IsWeaponSoundMuted(WeaponType weaponType)
+	{
+		return !GetWeapon(std::int32_t(weaponType) + 1)->defaultSample;
 	}
 
 	Legacy::jjWEAPON* LevelScriptLoader::GetWeapon(std::int32_t number)

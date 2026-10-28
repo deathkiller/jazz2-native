@@ -1077,6 +1077,20 @@ namespace Jazz2::Editor
 		return (type >= std::size_t(EventType::Count) || GetIndex().BuiltInByType[type] != descriptor);
 	}
 
+	bool EventCatalog::IsLevelExtension(const EventDescriptor* descriptor)
+	{
+		if (descriptor == nullptr) {
+			return false;
+		}
+		for (const auto& extension : GetIndex().Extensions) {
+			if (extension->Scope == EventExtensionScope::Level && (descriptor == &extension->Descriptor ||
+				descriptor == &extension->PickDescriptor || descriptor == &extension->NativeDescriptor)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	std::uint8_t EventCatalog::GetPickedOriginal(EventType type)
 	{
 		if (std::uint16_t(type) < FirstOriginalPickType) {

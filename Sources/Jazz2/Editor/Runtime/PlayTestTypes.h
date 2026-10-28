@@ -113,6 +113,10 @@ namespace Jazz2::Editor
 		std::uint8_t GameMode = 0;
 		/** @brief Players in local splitscreen, from 1 to 4 */
 		std::int32_t PlayerCount = 1;
+		/** @brief Whether Reforged Gameplay is enabled */
+		bool Reforged = true;
+		/** @brief Whether players may climb ledges */
+		bool LedgeClimb = true;
 	};
 
 	/**

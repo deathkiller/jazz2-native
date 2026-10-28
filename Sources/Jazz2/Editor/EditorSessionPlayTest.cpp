@@ -140,11 +140,14 @@ namespace Jazz2::Editor
 		if (UiSurface* surface = _surface.get()) {
 			surface->ClosePopups();
 			surface->SetFocus(nullptr);
+			surface->DismissTooltip();
 		}
 
 		PlayTestOptions options;
 		options.Player = PlayerType(_settings.PlayCharacter);
 		options.Difficulty = GameDifficulty(_settings.PlayDifficulty);
+		options.Reforged = _playReforged;
+		options.LedgeClimb = _playLedgeClimb;
 #if defined(WITH_MULTIPLAYER)
 		options.GameMode = std::uint8_t(_settings.PlayGameMode);
 		options.PlayerCount = std::clamp<std::int32_t>(_settings.PlayPlayerCount, 1, LevelInitialization::MaxPlayerCount);
