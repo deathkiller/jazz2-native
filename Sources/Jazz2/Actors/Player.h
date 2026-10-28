@@ -250,6 +250,8 @@ namespace Jazz2::Actors
 		bool CanJump() const;
 		/** @brief Returns `true` if the player can bread solid objects */
 		bool CanBreakSolidObjects() const;
+		/** @brief Returns `true` if a buttstomp is still in its start transition, before it hurts or breaks anything */
+		bool IsButtstompStarting() const;
 		/** @brief Returns `true` if the player runs into a frozen @p target fast enough to break it, see @ref FrozenRamSpeed */
 		bool IsRammingFrozen(const ActorBase* target) const;
 		/** @brief Returns `true` if the player can move vertically, i.e. not affected by gravity */
@@ -693,6 +695,14 @@ namespace Jazz2::Actors
 		 * shared with Reforged, which rode 7 px high for the same reason this did.
 		 */
 		static constexpr float TubeSnapY = 15.0f;
+		/**
+		 * @brief How long the sucker tube's curled-up ball stays drawn after the last tube tile (original 35 ticks)
+		 *
+		 * Measured on `tb_right`, `tb_up` and a JJ2+ probe of the same tube ride in a shipped level: the ball
+		 * ends exactly 35 ticks after the last tick spent on a tube tile, grounded, falling or in a buttstomp
+		 * alike, including one a ceiling spring forces. Only the pose, the movement under it is unaffected.
+		 */
+		static constexpr float TubeBallPoseTime = 35.0f / LegacyFrameRateScale;
 		/**
 		 * @brief Ticks the non-Reforged dash outlives the Run key (original 16 ticks)
 		 *
@@ -1463,6 +1473,8 @@ namespace Jazz2::Actors
 		// ticks *before* the jump press that fires it. Setting the animation from the paddle alone cannot
 		// work, because UpdateAnimation() re-derives it from the player's own state every frame.
 		float _onPinballPaddleTime = 0.0f;
+		// Counts down from TubeBallPoseTime, re-armed on every tube tile
+		float _tubeBallPoseLeft = 0.0f;
 		float _controllableTimeout;
 		// The run-in-place wind-up accumulator: what it currently holds, how much the press being held has
 		// already contributed (so it can be capped), how many presses have landed, how much of the tap window

@@ -116,6 +116,18 @@ namespace Jazz2::Scripting
 				return (mode == spriteType_SHADOW ? Colorf(0.0f, 0.0f, 0.0f, 0.5f) : PaletteIndexToColor(color, SpriteModeToAlpha(mode, param)));
 			}
 
+			// How a rectangle in a sprite mode is blended with what's behind it, the parameter of a blend mode is how far it's
+			// mixed over it
+			static UI::BlendMode SpriteModeToBlendMode(std::uint32_t mode, std::uint8_t param, Colorf& color)
+			{
+				switch (mode) {
+					case spriteType_BLENDLIGHTEN: return UI::BlendMode::Additive;
+					case spriteType_BLENDMULTIPLY: color.A = param / 255.0f; return UI::BlendMode::Multiply;
+					case spriteType_BLENDSCREEN: color.A = param / 255.0f; return UI::BlendMode::Screen;
+					default: return UI::BlendMode::Normal;
+				}
+			}
+
 			// Draws a single animation frame of a resolved graphic onto a HUD canvas, following the HUD::DrawElement
 			// pattern. The sprite is anchored at the frame's hotspot, optionally flipped (by `SPRITE::Direction` or a
 			// negative scale), scaled and rotated (angle in JJ2 units where 1024 = a full turn). Indexed graphics draw
@@ -254,14 +266,18 @@ namespace Jazz2::Scripting
 
 		void jjTEXTAPPEARANCE::constructor(void* self)
 		{
-			new(self) jjTEXTAPPEARANCE{};
+			auto* appearance = new(self) jjTEXTAPPEARANCE{};
+			appearance->spacing = 1;
 		}
-		// As JJ2+ makes an appearance of STRING::Mode - BOUNCE moves the letters up and down, SPIN around, RIGHTALIGN aligns it
+		// As JJ2+ makes an appearance of STRING::Mode - BOUNCE moves the letters up and down, SPIN around, RIGHTALIGN aligns it,
+		// the characters 1 pixel apart (measured)
 		static void ApplyStringMode(jjTEXTAPPEARANCE& appearance, std::uint32_t mode)
 		{
+			appearance.spacing = 1;
 			appearance.xAmp = (mode == 4 ? 1 : 0);
 			appearance.yAmp = (mode == 3 || mode == 4 ? 1 : 0);
 			appearance.align = (mode == 2 ? jjTEXTAPPEARANCE::align_RIGHT : jjTEXTAPPEARANCE::align_DEFAULT);
+			appearance.newline = (mode == 4 ? jjTEXTAPPEARANCE::ch_SPECIAL : jjTEXTAPPEARANCE::ch_HIDE);
 		}
 
 		void jjTEXTAPPEARANCE::constructorMode(std::uint32_t mode, void* self)
@@ -282,7 +298,8 @@ namespace Jazz2::Scripting
 
 			for (const SolidDraw& draw : _solids) {
 				Colorf color = SpriteModeToSolidColor(draw.Color, draw.Mode, draw.Param);
-				DrawSolid(Vector2f(draw.X, draw.Y), draw.Z, Vector2f(draw.Width, draw.Height), color, draw.Mode == spriteType_BLENDLIGHTEN, draw.Angle);
+				UI::BlendMode blending = SpriteModeToBlendMode(draw.Mode, draw.Param, color);
+				DrawSolid(Vector2f(draw.X, draw.Y), draw.Z, Vector2f(draw.Width, draw.Height), color, blending, draw.Angle);
 			}
 			for (const TileDraw& draw : _tiles) {
 				DrawTileQuad(this, draw.Z, draw.TileMap, draw.Tile, draw.Quadrant, draw.X, draw.Y);
@@ -341,8 +358,8 @@ namespace Jazz2::Scripting
 		void jjCANVAS::DrawPixel(std::int32_t xPixel, int32_t yPixel, std::uint8_t color, std::uint32_t mode, std::uint8_t param)
 		{
 			Colorf c = SpriteModeToSolidColor(color, mode, param);
-			Target->DrawSolid(Vector2f((float)xPixel, (float)yPixel) + Offset, NextLayer(), Vector2f(1.0f, 1.0f), c,
-				mode == spriteType_BLENDLIGHTEN);
+			UI::BlendMode blending = SpriteModeToBlendMode(mode, param, c);
+			Target->DrawSolid(Vector2f((float)xPixel, (float)yPixel) + Offset, NextLayer(), Vector2f(1.0f, 1.0f), c, blending);
 		}
 		void jjCANVAS::DrawRectangle(std::int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, std::uint8_t color, std::uint32_t mode, std::uint8_t param)
 		{
@@ -361,8 +378,8 @@ namespace Jazz2::Scripting
 				}
 			}
 			Colorf c = SpriteModeToSolidColor(color, mode, param);
-			Target->DrawSolid(Vector2f((float)xPixel, (float)yPixel) + Offset, NextLayer(), Vector2f((float)width, (float)height), c,
-				mode == spriteType_BLENDLIGHTEN);
+			UI::BlendMode blending = SpriteModeToBlendMode(mode, param, c);
+			Target->DrawSolid(Vector2f((float)xPixel, (float)yPixel) + Offset, NextLayer(), Vector2f((float)width, (float)height), c, blending);
 		}
 		void jjCANVAS::DrawSprite(std::int32_t xPixel, int32_t yPixel, int32_t setID, std::uint8_t animation, std::uint8_t frame, int8_t direction, std::uint32_t mode, std::uint8_t param)
 		{
@@ -498,10 +515,10 @@ namespace Jazz2::Scripting
 			// Only how the letters move and the alignment are taken of the appearance (see jjTEXTAPPEARANCE::constructorMode())
 			std::uint32_t stringMode = (appearance.xAmp != 0 && appearance.yAmp != 0 ? 4 : (appearance.yAmp != 0 ? 3
 				: (appearance.align == jjTEXTAPPEARANCE::align_RIGHT ? 2 : 0)));
-			DrawScriptText(xPixel, yPixel, text, size, stringMode, mode, param);
+			DrawScriptText(xPixel, yPixel, text, size, stringMode, mode, param, appearance.newline == jjTEXTAPPEARANCE::ch_SPECIAL);
 		}
 		void jjCANVAS::DrawScriptText(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t stringMode,
-			std::uint32_t spriteMode, std::uint8_t param) {
+			std::uint32_t spriteMode, std::uint8_t param, bool newLines) {
 			ScriptTextStyle style = GetScriptTextStyle(size);
 			if (style.Font == nullptr) {
 				return;
@@ -520,8 +537,8 @@ namespace Jazz2::Scripting
 					angleOffset = 0.7f; varianceX = 1.1f; varianceY = 1.1f; speed = 0.4f;
 					break;
 			}
-			auto recode = [stringMode](StringView part) {
-				return (stringMode == 4 ? Compatibility::JJ2Strings::RecodeString(part) : Compatibility::JJ2Strings::RecodeScriptString(part));
+			auto recode = [stringMode, newLines](StringView part) {
+				return (stringMode == 4 ? Compatibility::JJ2Strings::RecodeString(part) : Compatibility::JJ2Strings::RecodeScriptString(part, false, newLines));
 			};
 
 			// A character whose frame of the font of the original a script replaced is drawn as that frame, as JJ2+ draws all
@@ -594,61 +611,122 @@ namespace Jazz2::Scripting
 			}
 		}
 
-		void jjCANVAS::drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param) {
-			// The frames of the animation are the characters from the space on, each as wide as its frame; the characters
-			// of formatting are left out and `@` breaks the line, as in the text of JJ2
+		namespace
+		{
+			// What a character of a string is in the font of an animation: drawn as its frame, a new line or left out - the
+			// characters of formatting are left out and `@` breaks the line as in the text of JJ2, unless the appearance shows them
+			enum class AnimTextChar { Draw, NewLine, Skip };
+
+			AnimTextChar ClassifyAnimTextChar(std::uint8_t ch, const jjTEXTAPPEARANCE* appearance)
+			{
+				auto shown = [appearance](jjTEXTAPPEARANCE::ch_ jjTEXTAPPEARANCE::* sign) {
+					return (appearance != nullptr && appearance->*sign == jjTEXTAPPEARANCE::ch_DISPLAY);
+				};
+				switch (ch) {
+					case '@': return (shown(&jjTEXTAPPEARANCE::at) ? AnimTextChar::Draw : AnimTextChar::NewLine);
+					case '\n': return AnimTextChar::NewLine;
+					case '|': return (shown(&jjTEXTAPPEARANCE::pipe) ? AnimTextChar::Draw : AnimTextChar::Skip);
+					case '#': return (shown(&jjTEXTAPPEARANCE::hash) ? AnimTextChar::Draw : AnimTextChar::Skip);
+					case '~': return (shown(&jjTEXTAPPEARANCE::tilde) ? AnimTextChar::Draw : AnimTextChar::Skip);
+					case '^': return (shown(&jjTEXTAPPEARANCE::caret) ? AnimTextChar::Draw : AnimTextChar::Skip);
+					case 0xA7: return (shown(&jjTEXTAPPEARANCE::section) ? AnimTextChar::Draw : AnimTextChar::Skip);
+					default: return (ch < 32 ? AnimTextChar::Skip : AnimTextChar::Draw);
+				}
+			}
+
+			// The frame of a character in the font of an animation and its size in the original (a space is an empty frame as wide
+			// as the others), `nullptr` for one it has no frame of
+			GenericGraphicResource* ResolveAnimTextChar(AnimationTables& tables, const jjANIMATION& animation, std::uint8_t ch,
+				std::int32_t& cell, Recti& frameRect)
+			{
+				if (ch < 32 || ch - 32 >= animation.frameCount) {
+					return nullptr;
+				}
+				std::uint32_t frame = const_cast<jjANIMATION&>(animation).get_firstFrame() + (ch - 32);
+				auto* base = tables.ResolveFrame(frame, cell);
+				if (base == nullptr || base->FrameCount <= 0) {
+					return nullptr;
+				}
+				Recti pixelBounds;
+				if (!tables.GetFrameBounds(frame, frameRect, pixelBounds)) {
+					frameRect = base->GetFrameRect(std::clamp<std::int32_t>(cell, 0, base->FrameCount - 1));
+				}
+				if (ch == ' ') {
+					// A space is 7 pixels wide whatever its frame is (measured in JJ2+)
+					frameRect.W = 7;
+				}
+				return base;
+			}
+
+			// The width of the line of a string from a character on, each character as wide as its frame and the spacing
+			float GetAnimTextLineWidth(AnimationTables& tables, const String& text, std::size_t from, const jjANIMATION& animation,
+				const jjTEXTAPPEARANCE* appearance)
+			{
+				float width = 0.0f;
+				std::int32_t spacing = (appearance != nullptr ? appearance->spacing : 0);
+				for (std::size_t i = from; i < text.size(); i++) {
+					AnimTextChar kind = ClassifyAnimTextChar(std::uint8_t(text[i]), appearance);
+					if (kind == AnimTextChar::NewLine) {
+						break;
+					}
+					std::int32_t cell = 0;
+					Recti frameRect;
+					if (kind == AnimTextChar::Draw && ResolveAnimTextChar(tables, animation, std::uint8_t(text[i]), cell, frameRect) != nullptr) {
+						width += float(frameRect.W + spacing);
+					}
+				}
+				return width;
+			}
+		}
+
+		void jjCANVAS::DrawAnimationText(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation,
+			const jjTEXTAPPEARANCE* appearance, std::uint32_t mode, std::uint8_t param) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			auto& tables = owner->GetAnimationTables();
 			std::int32_t paletteOffset = owner->GetSpritePaletteOffset(mode, param);
 			std::uint16_t z = NextLayer();
-			std::uint32_t firstFrame = const_cast<jjANIMATION&>(animation).get_firstFrame();
-			// The frame of a character and its width, `nullptr` for one that isn't drawn
-			auto resolve = [&](std::uint8_t ch, std::int32_t& cell, Recti& frameRect) -> GenericGraphicResource* {
-				if (ch == '|' || ch == '#' || ch == '~' || ch == '^' || ch == 0xA7 || ch < 32 || ch - 32 >= animation.frameCount) {
-					return nullptr;
+			std::int32_t spacing = (appearance != nullptr ? appearance->spacing : 0);
+			auto lineX = [&](std::size_t from) {
+				float width = GetAnimTextLineWidth(tables, text, from, animation, appearance);
+				switch (appearance != nullptr ? appearance->align : jjTEXTAPPEARANCE::align_DEFAULT) {
+					case jjTEXTAPPEARANCE::align_CENTER: return xPixel + Offset.X - std::round(width * 0.5f);
+					case jjTEXTAPPEARANCE::align_RIGHT: return xPixel + Offset.X - width;
+					default: return GetTextX(xPixel, xPixel >= 0x4000 ? width : 0.0f);
 				}
-				auto* base = tables.ResolveFrame(firstFrame + (ch - 32), cell);
-				if (base == nullptr || base->FrameCount <= 0) {
-					return nullptr;
-				}
-				frameRect = base->GetFrameRect(std::clamp<std::int32_t>(cell, 0, base->FrameCount - 1));
-				return base;
-			};
-			auto getLineWidth = [&](std::size_t from) {
-				float width = 0.0f;
-				for (std::size_t i = from; i < text.size() && text[i] != '@' && text[i] != '\n'; i++) {
-					std::int32_t cell = 0;
-					Recti frameRect;
-					if (resolve(std::uint8_t(text[i]), cell, frameRect) != nullptr) {
-						width += float(frameRect.W);
-					}
-				}
-				return width;
 			};
 
 			// The characters are 10 pixels higher than the frames drawn as sprites at the same position, measured in JJ2+
 			constexpr float CharOffsetY = -10.0f;
-			float x = GetTextX(xPixel, xPixel >= 0x4000 ? getLineWidth(0) : 0.0f), y = yPixel + Offset.Y + CharOffsetY;
+			float x = lineX(0), y = yPixel + Offset.Y + CharOffsetY;
 			float lineHeight = 0.0f;
 			for (std::size_t i = 0; i < text.size(); i++) {
 				std::uint8_t ch = std::uint8_t(text[i]);
-				if (ch == '@' || ch == '\n') {
-					x = GetTextX(xPixel, xPixel >= 0x4000 ? getLineWidth(i + 1) : 0.0f);
+				AnimTextChar kind = ClassifyAnimTextChar(ch, appearance);
+				if (kind == AnimTextChar::NewLine) {
+					x = lineX(i + 1);
 					y += lineHeight;
 					continue;
 				}
 				std::int32_t cell = 0;
 				Recti frameRect;
-				if (auto* base = resolve(ch, cell, frameRect)) {
-					DrawSpriteFrame(Target, z, base, cell, x, y, 0, 1.0f, 1.0f, 0, mode, param, paletteOffset);
-					x += float(frameRect.W);
-					lineHeight = std::max(lineHeight, float(frameRect.H));
+				if (kind == AnimTextChar::Draw) {
+					if (auto* base = ResolveAnimTextChar(tables, animation, ch, cell, frameRect)) {
+						DrawSpriteFrame(Target, z, base, cell, x, y, 0, 1.0f, 1.0f, 0, mode, param, paletteOffset);
+						x += float(frameRect.W + spacing);
+						lineHeight = std::max(lineHeight, float(frameRect.H));
+					}
 				}
 			}
 		}
 
+		void jjCANVAS::drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param) {
+			// The frames of the animation are the characters from the space on, each as wide as its frame
+			DrawAnimationText(xPixel, yPixel, text, animation, nullptr, mode, param);
+		}
+
 		void jjCANVAS::drawStringEx(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t spriteMode, std::uint8_t param2) {
-			noop();
+			// The spacing, alignment and the characters of formatting the appearance shows (the letters don't move)
+			DrawAnimationText(xPixel, yPixel, text, animation, &appearance, spriteMode, param2);
 		}
 
 		void jjCANVAS::jjDrawString(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
@@ -660,9 +738,16 @@ namespace Jazz2::Scripting
 		}
 
 		int jjCANVAS::jjGetStringWidth(const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& style) {
-			noop();
-			// TODO
-			return text.size() * 12.0f;
+			// The widest of the lines, as drawString() lays them out
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto& tables = owner->GetAnimationTables();
+			float width = GetAnimTextLineWidth(tables, text, 0, animation, &style);
+			for (std::size_t i = 0; i < text.size(); i++) {
+				if (ClassifyAnimTextChar(std::uint8_t(text[i]), &style) == AnimTextChar::NewLine) {
+					width = std::max(width, GetAnimTextLineWidth(tables, text, i + 1, animation, &style));
+				}
+			}
+			return std::int32_t(width);
 		}
 	}
 
@@ -933,7 +1018,7 @@ namespace Jazz2::Scripting
 		if (textStyle.Font == nullptr) {
 			return 0;
 		}
-		auto recodedText = Compatibility::JJ2Strings::RecodeScriptString(text);
+		auto recodedText = Compatibility::JJ2Strings::RecodeScriptString(text, false, style.newline == jjTEXTAPPEARANCE::ch_SPECIAL);
 		return (std::int32_t)textStyle.Font->MeasureString(recodedText, textStyle.Scale, textStyle.CharSpacing, textStyle.LineSpacing).X;
 	}
 

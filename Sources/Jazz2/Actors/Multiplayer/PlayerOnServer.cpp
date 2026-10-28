@@ -247,7 +247,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool PlayerOnServer::IsAttacking() const
 	{
-		if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
+		if (IsButtstompStarting() && _sugarRushLeft <= 0.0f) {
 			return false;
 		}
 

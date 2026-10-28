@@ -26,6 +26,27 @@ namespace Jazz2::Editor
 
 	EditorLevelHandler::~EditorLevelHandler()
 	{
+		// A node deletes its children with itself
+		if (SceneNode* frameNode = _upscalePass.GetNode()) {
+			for (SceneNode* child : frameNode->children()) {
+				if (child == _frameContent) {
+					child->setParent(nullptr);
+					break;
+				}
+			}
+		}
+	}
+
+	void EditorLevelHandler::SetFrameContent(SceneNode* node)
+	{
+		SceneNode* frameNode = _upscalePass.GetNode();
+		if (node == nullptr || frameNode == nullptr) {
+			return;
+		}
+		_frameContent = node;
+		if (node->parent() != frameNode) {
+			node->setParent(frameNode);
+		}
 	}
 
 	bool EditorLevelHandler::Initialize(const LevelDocument& document, StringView levelName, StringView fullPath)
@@ -229,6 +250,125 @@ namespace Jazz2::Editor
 
 		ApplyCamera();
 		viewport->UpdateCamera(0.0f);
+	}
+
+	void EditorLevelHandler::SetFrameBlur(bool below, bool whole)
+	{
+#if defined(RHI_CAP_POSTPROCESSING)
+		Texture* frame = _upscalePass.GetTargetTexture();
+		Viewport* frameView = _upscalePass.GetView();
+		Rendering::PlayerViewport* viewport = GetViewport();
+		bool available = (PreferencesCache::BlurEffects && frame != nullptr && frameView != nullptr && viewport != nullptr);
+		below = (below && available);
+		whole = (whole && available);
+
+		if (below) {
+			_belowBlur.Prepare(frame, viewport);
+			if (_belowBlurBits == 0) {
+				for (auto& pass : _belowBlur.Passes) {
+					_belowBlurBits |= frameView->AddSplitPass(pass->GetView());
+				}
+			}
+		}
+		if (whole) {
+			_wholeBlur.Prepare(frame, viewport);
+		}
+		if (_belowBlur.IsInChain() == below && _wholeBlur.IsInChain() == whole) {
+			return;
+		}
+
+		_belowBlur.RemoveFromChain();
+		_wholeBlur.RemoveFromChain();
+		// The chain is drawn from its end, so the whole image is blurred after everything else, once it's done. The passes
+		// below a layer are only visited with the chain, the image draws them itself.
+		if (whole) {
+			_wholeBlur.InsertIntoChain();
+		}
+		if (below) {
+			_belowBlur.InsertIntoChain();
+		}
+#endif
+	}
+
+	Texture* EditorLevelHandler::RequestFrameBlurBelow(std::uint16_t layer)
+	{
+#if defined(RHI_CAP_POSTPROCESSING)
+		if (CanBlurFrameBelow()) {
+			_upscalePass.GetView()->RequestSplit(layer, _belowBlurBits);
+			return _belowBlur.GetTarget();
+		}
+#endif
+		return nullptr;
+	}
+
+	bool EditorLevelHandler::CanBlurFrameBelow() const
+	{
+		return (_belowBlurBits != 0 && _upscalePass.GetView() != nullptr && _belowBlur.IsInChain());
+	}
+
+	Texture* EditorLevelHandler::GetFrameBlur() const
+	{
+		return (_wholeBlur.IsInChain() ? _wholeBlur.GetTarget() : nullptr);
+	}
+
+	void EditorLevelHandler::FrameBlur::Prepare(Texture* frame, Rendering::PlayerViewport* viewport)
+	{
+		Vector2i size = frame->GetSize();
+		if (Passes[0] != nullptr && Size == size) {
+			return;
+		}
+		Size = size;
+		for (auto& pass : Passes) {
+			if (pass == nullptr) {
+				pass = std::make_unique<Rendering::BlurRenderPass>(viewport);
+			}
+		}
+		Vector2i half = size / 2, quarter = size / 4;
+		Passes[0]->Initialize(frame, half.X, half.Y, Vector2f(0.0f, 0.0f));
+		Passes[1]->Initialize(Passes[0]->GetTarget(), half.X, half.Y, Vector2f(1.0f, 0.0f));
+		Passes[2]->Initialize(Passes[1]->GetTarget(), half.X, half.Y, Vector2f(0.0f, 1.0f));
+		Passes[3]->Initialize(Passes[2]->GetTarget(), quarter.X, quarter.Y, Vector2f(1.0f, 0.0f));
+		Passes[4]->Initialize(Passes[3]->GetTarget(), quarter.X, quarter.Y, Vector2f(0.0f, 1.0f));
+	}
+
+	bool EditorLevelHandler::FrameBlur::IsInChain() const
+	{
+		Viewport* last = (Passes[4] != nullptr ? Passes[4]->GetView() : nullptr);
+		if (last == nullptr) {
+			return false;
+		}
+		for (Viewport* view : Viewport::GetChain()) {
+			if (view == last) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void EditorLevelHandler::FrameBlur::RemoveFromChain()
+	{
+		auto& chain = Viewport::GetChain();
+		for (auto& pass : Passes) {
+			Viewport* view = (pass != nullptr ? pass->GetView() : nullptr);
+			for (std::int32_t i = std::int32_t(chain.size()) - 1; i >= 0 && view != nullptr; i--) {
+				if (chain[i] == view) {
+					chain.erase(&chain[i]);
+				}
+			}
+		}
+	}
+
+	void EditorLevelHandler::FrameBlur::InsertIntoChain()
+	{
+		auto& chain = Viewport::GetChain();
+		for (auto& pass : Passes) {
+			chain.insert(chain.begin(), pass->GetView());
+		}
+	}
+
+	Texture* EditorLevelHandler::FrameBlur::GetTarget() const
+	{
+		return (Passes[4] != nullptr ? Passes[4]->GetTarget() : nullptr);
 	}
 
 	void EditorLevelHandler::OnKeyPressed(const KeyboardEvent& event)

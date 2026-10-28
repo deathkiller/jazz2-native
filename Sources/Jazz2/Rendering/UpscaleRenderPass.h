@@ -127,6 +127,11 @@ namespace Jazz2::Rendering
 			return _node.get();
 		}
 
+		/** @brief Returns the viewport the input scene is drawn through, into @ref GetTargetTexture() */
+		Viewport* GetView() const {
+			return _view.get();
+		}
+
 		/** @brief Returns the texture the input scene is drawn into, it keeps the last image after @ref Detach() */
 		Texture* GetTargetTexture() const {
 			return _target.get();

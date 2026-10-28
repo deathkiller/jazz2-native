@@ -1033,6 +1033,73 @@ namespace Jazz2::Editor
 		}
 	}
 
+	class UiSurface::PanelsCanvas : public UI::Canvas
+	{
+	public:
+		explicit PanelsCanvas(UiSurface& surface)
+			: _surface(surface)
+		{
+			OrderedDraws = true;
+		}
+
+		bool OnDraw(RenderQueue& renderQueue) override
+		{
+			UI::Canvas::OnDraw(renderQueue);
+			_surface.DrawPanelsInto(*this);
+			return true;
+		}
+
+	private:
+		UiSurface& _surface;
+	};
+
+	SceneNode* UiSurface::GetPanelsNode()
+	{
+		if (_panelsCanvas == nullptr) {
+			_panelsCanvas = std::make_unique<PanelsCanvas>(*this);
+		}
+		return _panelsCanvas.get();
+	}
+
+	std::uint16_t UiSurface::GetPanelsDepth()
+	{
+		return std::uint16_t(UiPainter::BaseDepth + RootSlot * UiPainter::SlotDepth);
+	}
+
+	void UiSurface::DrawPanelsInto(UI::Canvas& canvas)
+	{
+		// The picture of the level is drawn before the screen, the surface knows by the frame it's drawn already
+		if (!DrawsPanelsInLevel || !DrawsPanelsInLevel()) {
+			return;
+		}
+		_panelsDrawnFrame = theApplication().GetFrameCount();
+
+		Vector2f screenSize = GetScreenSize();
+		canvas.ViewSize = Vector2i(std::int32_t(screenSize.X), std::int32_t(screenSize.Y));
+		canvas.ClipRect = Rectf(0.0f, 0.0f, 0.0f, 0.0f);
+		_lines->BeginFrame();
+		UiPainter painter(canvas, _skin, GetFont(), _scale, _lines.get());
+		UiElement::BeginLayout();
+		_drawingInLevel = true;
+		DrawRoot(painter, screenSize, true);
+		_drawingInLevel = false;
+		UiElement::EndLayout();
+	}
+
+	void UiSurface::DrawRoot(UiPainter& painter, Vector2f screenSize, bool inLevel)
+	{
+		Rectf backdropBounds;
+		const Texture* backdrop = (GetBackdrop ? GetBackdrop(UiBackdrop::Panels, screenSize, backdropBounds, inLevel) : nullptr);
+		// What is shown over the level is drawn before the panels, it's in their picture
+		painter.SetBackdrop(backdrop, backdropBounds, UiTheme::BackdropFillOpacity, RootSlot);
+
+		if (_root != nullptr && _root->IsShown()) {
+			_root->Arrange(GetContext(), Rectf(0.0f, 0.0f, screenSize.X, screenSize.Y));
+			painter.SetSlot(RootSlot);
+			_root->Draw(painter);
+		}
+	}
+
 	bool UiSurface::OnDraw(RenderQueue& renderQueue)
 	{
 		UI::Canvas::OnDraw(renderQueue);
@@ -1042,16 +1109,20 @@ namespace Jazz2::Editor
 		ClipRect = Rectf(0.0f, 0.0f, 0.0f, 0.0f);
 
 		UiContext context = GetContext();
-		_lines->BeginFrame();
+		bool panelsDrawn = (_panelsDrawnFrame == theApplication().GetFrameCount());
+		if (!panelsDrawn) {
+			_lines->BeginFrame();
+		}
 		UiPainter painter(*this, _skin, GetFont(), _scale, _lines.get());
 		// Sizes measured from here on are kept for the frame, nothing changes while it's laid out and drawn
 		UiElement::BeginLayout();
 
-		if (_root != nullptr && _root->IsShown()) {
-			_root->Arrange(context, Rectf(0.0f, 0.0f, screenSize.X, screenSize.Y));
-			painter.SetSlot(RootSlot);
-			_root->Draw(painter);
+		if (!panelsDrawn) {
+			DrawRoot(painter, screenSize, false);
 		}
+		Rectf overlayBackdropBounds;
+		const Texture* overlayBackdrop = (GetBackdrop ? GetBackdrop(UiBackdrop::Overlays, screenSize, overlayBackdropBounds, panelsDrawn) : nullptr);
+		painter.SetBackdrop(overlayBackdrop, overlayBackdropBounds, UiTheme::BackdropWindowFillOpacity);
 
 		// Windows and menus stay in the part of the screen that isn't cut off
 		Rectf safe = GetSafeBounds();

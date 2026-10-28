@@ -319,6 +319,10 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 				// Strings of JJ2+ are bytes of Windows-1252 as they're written, `§1` of a text is 0xA7 there (the default
 				// UTF-8 scanner made it 0xC2 0xA7, drawn as `Â§`) - the text is recoded when it's drawn
 				GetEngine()->SetEngineProperty(asEP_SCRIPT_SCANNER, 0);
+				// The language as the older AngelScript of JJ2+ has it
+				GetEngine()->SetEngineProperty(asEP_ALLOW_NONCONST_IMPLICIT_THIS_CALL, true);
+				GetEngine()->SetEngineProperty(asEP_MEMBER_INIT_MODE, 0);
+				GetEngine()->SetEngineProperty(asEP_FOREACH_SUPPORT, false);
 				break;
 			case ScriptContextType::Standard:
 				LOGD("Compiling script with \"Standard\" context");
@@ -477,9 +481,6 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 	void LevelScriptLoader::OnAfterScriptCall()
 	{
-		for (auto& p : _playerBackingStore) {
-			p.second->SyncPropertiesFromBackingStore();
-		}
 		// The objects get what the script changed of them
 		SyncObjectsToActors();
 		// The sprites of the game show what the script changed of the animations

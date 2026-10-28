@@ -120,9 +120,10 @@ namespace Jazz2::Scripting
 			 * @brief Draws text in a built-in font size, moving as `STRING::Mode` says (`BOUNCE`, `SPIN`), in a sprite mode
 			 *
 			 * In `SPIN`, `#` colors every letter on its own as in the texts of levels, as JJ2+ draws a selected menu item.
+			 * Elsewhere `\n` breaks the line only with @p newLines.
 			 */
 			void DrawScriptText(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t stringMode,
-				std::uint32_t spriteMode, std::uint8_t param);
+				std::uint32_t spriteMode, std::uint8_t param, bool newLines = false);
 			/** @brief Draws a frame of the font of the original that has no image as the character in the font of the game, returns `false` for any other frame */
 			bool DrawMissingFontCharacter(std::int32_t xPixel, std::int32_t yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame,
 				std::uint32_t mode, std::uint8_t param);
@@ -139,6 +140,11 @@ namespace Jazz2::Scripting
 			static void jjDrawStringEx(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t spriteMode, std::uint8_t param2, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID);
 			/** @brief Returns the rendered width of the text in pixels */
 			static int jjGetStringWidth(const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& style);
+
+		private:
+			// Draws text in the font of an animation, laid out by the appearance if any
+			void DrawAnimationText(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation,
+				const jjTEXTAPPEARANCE* appearance, std::uint32_t mode, std::uint8_t param);
 		};
 	}
 }

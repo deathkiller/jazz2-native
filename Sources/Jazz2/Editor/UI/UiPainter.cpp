@@ -11,7 +11,8 @@
 namespace Jazz2::Editor
 {
 	UiPainter::UiPainter(UI::Canvas& canvas, UiSkin& skin, UI::Font* font, float scale, Rendering::PolylineRenderer* lines)
-		: _canvas(canvas), _skin(skin), _font(font), _scale(scale), _fontScale(UiTheme::GetTextScale(scale)), _slot(0), _opacity(1.0f), _lines(lines)
+		: _canvas(canvas), _skin(skin), _font(font), _scale(scale), _fontScale(UiTheme::GetTextScale(scale)), _slot(0), _opacity(1.0f), _lines(lines), _backdrop(nullptr),
+			_backdropFillOpacity(UiTheme::BackdropFillOpacity), _backdropFirstSlot(0)
 	{
 	}
 
@@ -140,6 +141,46 @@ namespace Jazz2::Editor
 			UiTheme::FocusRing, UiLayer::Overlay);
 	}
 
+	void UiPainter::SetBackdrop(const Texture* texture, const Rectf& bounds, float fillOpacity, std::int32_t firstSlot)
+	{
+		_backdrop = (bounds.W > 0.0f && bounds.H > 0.0f ? texture : nullptr);
+		_backdropBounds = bounds;
+		_backdropFillOpacity = fillOpacity;
+		_backdropFirstSlot = firstSlot;
+	}
+
+	Colorf UiPainter::Backdrop(const Rectf& rect, const Colorf& fill, bool rounded)
+	{
+		if (_backdrop == nullptr || _slot < _backdropFirstSlot || rect.W <= 0.0f || rect.H <= 0.0f || UiTheme::Resolve(fill).A >= 1.0f ||
+			rect.X < _backdropBounds.X || rect.Y < _backdropBounds.Y ||
+			rect.X + rect.W > _backdropBounds.X + _backdropBounds.W || rect.Y + rect.H > _backdropBounds.Y + _backdropBounds.H) {
+			return fill;
+		}
+
+		// A square of the picture would stick out of the rounded corners
+		float corner = (rounded ? std::min({ float(_skin.GetRoundFill().Corner), rect.W * 0.5f, rect.H * 0.5f }) : 0.0f);
+		if (corner > 0.0f) {
+			DrawBackdropPart(Rectf(rect.X + corner, rect.Y, rect.W - corner * 2.0f, rect.H));
+			DrawBackdropPart(Rectf(rect.X, rect.Y + corner, corner, rect.H - corner * 2.0f));
+			DrawBackdropPart(Rectf(rect.X + rect.W - corner, rect.Y + corner, corner, rect.H - corner * 2.0f));
+		} else {
+			DrawBackdropPart(rect);
+		}
+		return Colorf(fill.R, fill.G, fill.B, fill.A * _backdropFillOpacity);
+	}
+
+	void UiPainter::DrawBackdropPart(const Rectf& rect)
+	{
+		if (rect.W <= 0.0f || rect.H <= 0.0f) {
+			return;
+		}
+		Vector4f texCoords(rect.W / _backdropBounds.W, (rect.X - _backdropBounds.X) / _backdropBounds.W,
+			rect.H / _backdropBounds.H, (rect.Y - _backdropBounds.Y) / _backdropBounds.H);
+		// Over the shadow drawn in the same layer before, the canvas keeps the order things are drawn in
+		_canvas.DrawTexture(*_backdrop, Vector2f(rect.X, rect.Y), GetDepth(UiLayer::Back), Vector2f(rect.W, rect.H), texCoords,
+			ApplyOpacity(Colorf::White));
+	}
+
 	void UiPainter::Panel(const Rectf& rect, bool shadow, const Colorf& fill, const Colorf& border)
 	{
 		if (shadow) {
@@ -149,7 +190,7 @@ namespace Jazz2::Editor
 			Rectf shadowRect(rect.X - spread, rect.Y - spread + spread * 0.35f, rect.W + spread * 2.0f, rect.H + spread * 2.0f);
 			DrawNineSlice(_skin.GetShadow(), shadowRect, UiTheme::Shadow, UiLayer::Back, false);
 		}
-		RoundRect(rect, fill, UiLayer::Fill);
+		RoundRect(rect, Backdrop(rect, fill, true), UiLayer::Fill);
 		RoundRectBorder(rect, border, UiLayer::Fill);
 	}
 

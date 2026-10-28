@@ -5,6 +5,7 @@
 #include "../../LevelInitialization.h"
 #include "../../PlayerAction.h"
 #include "../Alignment.h"
+#include "../BlendMode.h"
 
 #if defined(WITH_MULTIPLAYER)
 #	include "../../Multiplayer/ServerInitialization.h"
@@ -148,7 +149,7 @@ namespace Jazz2::UI::Menu
 		virtual void DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align,
 			const Colorf& color, Vector2f size, const Vector4f& texCoords, bool unaligned = false) = 0;
 		/** @brief Draws a solid rectangle */
-		virtual void DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending = false) = 0;
+		virtual void DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, BlendMode blending = BlendMode::Normal) = 0;
 		/** @brief Draws a textured rectangle */
 		virtual void DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned = false) = 0;
 		/** @brief Measures a string */

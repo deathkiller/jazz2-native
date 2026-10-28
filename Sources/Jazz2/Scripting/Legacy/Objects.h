@@ -549,6 +549,8 @@ namespace Jazz2::Scripting
 			float _scale;
 			// Made by the weather of the level, see LevelScriptLoader::SpawnWeatherParticles()
 			bool _weather;
+			// The first frame of a snowflake of the weather, `snow.frameBase` holds only 16 bits of it
+			std::uint32_t _snowFrameBase;
 		};
 	}
 }

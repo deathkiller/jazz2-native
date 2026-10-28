@@ -275,7 +275,7 @@ namespace Jazz2::Compatibility
 		return String(buffer, j);
 	}
 
-	String JJ2Strings::RecodeScriptString(StringView text, bool asMessage)
+	String JJ2Strings::RecodeScriptString(StringView text, bool asMessage, bool newLines)
 	{
 		if (text.empty()) {
 			return {};
@@ -294,8 +294,8 @@ namespace Jazz2::Compatibility
 		for (std::size_t i = 0; i < length && j < sizeof(buffer) - 24; i++) {
 			char current = text[i];
 			if (current == '\n') {
-				// No new line, `@` is no new line either (it's drawn as it is)
-				buffer[j++] = ' ';
+				// `@` is no new line (it's drawn as it is)
+				buffer[j++] = (newLines ? '\n' : ' ');
 			} else if (current == '\xA7' && i + 1 < length && (std::isdigit((unsigned char)text[i + 1]) || text[i + 1] == '/')) {
 				// Char spacing (§)
 				i++;

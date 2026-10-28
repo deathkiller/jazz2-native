@@ -431,7 +431,7 @@ namespace Jazz2::Editor
 				painter.Panel(Bounds, true, UiTheme::PanelFill, UiTheme::PanelBorder);
 				break;
 			case UiPanelStyle::Header:
-				painter.FillRect(Bounds, UiTheme::PanelHeader);
+				painter.FillRect(Bounds, painter.Backdrop(Bounds, UiTheme::PanelHeader, false));
 				break;
 			case UiPanelStyle::Inset:
 				painter.RoundRect(Bounds, UiTheme::InputFill);

@@ -138,7 +138,7 @@ namespace Jazz2::UI
 			// Carret
 			Vector2f textToCursorSize = _smallFont->MeasureString(StringView{_currentLine, _textCursor}, 0.8f);
 			DrawSolid(Vector2f(currentLinePos.X + textToCursorSize.X + 1.0f, currentLinePos.Y - 7.0f), FontLayer + 120, Vector2f(1.0f, 12.0f),
-				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), BlendMode::Additive);
 		}
 
 		// History
@@ -227,7 +227,7 @@ namespace Jazz2::UI
 
 				Vector2f textToCursorSize = _smallFont->MeasureString(StringView{_currentLine, _textCursor}, 1.0f);
 				DrawSolid(Vector2f(120.0f + textToCursorSize.X + 1.0f, topLineY - 8.0f), KeyboardLayer + 14, Vector2f(1.0f, 14.0f),
-					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), BlendMode::Additive);
 			}
 
 #if defined(NCINE_HAS_TOUCH_CONTROLS)

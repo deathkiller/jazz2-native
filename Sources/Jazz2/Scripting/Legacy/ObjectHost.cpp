@@ -17,6 +17,7 @@
 #include "../../Actors/Environment/AirboardGenerator.h"
 #include "../../Actors/Environment/BonusWarp.h"
 #include "../../Actors/Environment/Moth.h"
+#include "../../Actors/Environment/Spring.h"
 #include "../../Actors/Environment/SwingingVine.h"
 #include "../../Actors/Solid/GenericContainer.h"
 #include "../../Actors/Solid/MovingPlatform.h"
@@ -1807,6 +1808,11 @@ namespace Jazz2::Scripting::Legacy
 		// a script gave an animation of its own (penguins) is placed so the coldspot is where the hitbox ends, or the
 		// frame would float above the ground or sink into it, and putOnGround() of the script would push it through
 		// By the first frame of the animation, the others often have no coldspot (as the converter takes it)
+		if (auto* spring = runtime_cast<Actors::Environment::Spring>(&actor)) {
+			// A spring on the floor is 9 px above it in JJ2+ (measured), 16 px lower than the spring of the game
+			return (spring->GetLegacyLaunchSpeed().Y < 0.0f ? 16.0f : 0.0f);
+		}
+
 		auto& tables = levelScripts->GetAnimationTables();
 		std::uint32_t frameCount, firstFrame;
 		if (obj._skinAnim <= 0 || !actor.GetState(Actors::ActorState::ApplyGravitation) || actor.GetState(Actors::ActorState::IsSolidObject) ||
@@ -1852,7 +1858,12 @@ namespace Jazz2::Scripting::Legacy
 			actor.MoveInstantly(pos, Actors::MoveType::Absolute | Actors::MoveType::Force);
 		}
 		if (obj.xSpeed != synced.XSpeed || obj.ySpeed != synced.YSpeed) {
-			actor._speed = Vector2f(obj.xSpeed, obj.ySpeed);
+			if (auto* spring = runtime_cast<Actors::Environment::Spring>(&actor)) {
+				// The speeds of a spring are what it launches by, it doesn't move
+				spring->SetLegacyLaunchSpeed(Vector2f(obj.xSpeed, obj.ySpeed));
+			} else {
+				actor._speed = Vector2f(obj.xSpeed, obj.ySpeed);
+			}
 		}
 		if (auto* platform = runtime_cast<Actors::Solid::MovingPlatform>(&actor)) {
 			// A platform swings from xOrg and yOrg, which a behavior may move, by `var[1]` (one may hang from another
@@ -2561,6 +2572,22 @@ namespace Jazz2::Scripting
 		if ((preset->xSpeed != 0.0f || preset->ySpeed != 0.0f) && runtime_cast<Actors::Collectibles::CollectibleBase>(actor.get()) != nullptr) {
 			obj->xSpeed = obj->_synced.XSpeed = preset->xSpeed;
 			obj->ySpeed = obj->_synced.YSpeed = preset->ySpeed;
+			obj->_movedByBehavior = true;
+		}
+		if (auto* spring = runtime_cast<Actors::Environment::Spring>(actor.get())) {
+			// BEHAVIOR::SPRING launches by the speeds, those of a template are a spring of a script (any spring made vertical
+			// by a negative ySpeed), and a script behavior runs it unfrozen
+			Vector2f launchSpeed = Vector2f(preset->xSpeed, preset->ySpeed);
+			if (launchSpeed != Vector2f::Zero) {
+				spring->SetLegacyLaunchSpeed(launchSpeed);
+			} else {
+				launchSpeed = spring->GetLegacyLaunchSpeed();
+			}
+			if (preset->behavior.function != nullptr || preset->behavior.object != nullptr) {
+				spring->Thaw();
+			}
+			obj->xSpeed = obj->_synced.XSpeed = launchSpeed.X;
+			obj->ySpeed = obj->_synced.YSpeed = launchSpeed.Y;
 			obj->_movedByBehavior = true;
 		}
 		if (auto* warp = runtime_cast<Actors::Environment::BonusWarp>(actor.get())) {

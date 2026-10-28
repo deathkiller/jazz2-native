@@ -58,6 +58,13 @@ namespace Jazz2::Editor
 		}
 	};
 
+	/** @brief Part of the interface a blurred picture is drawn behind, see @ref UiSurface::GetBackdrop */
+	enum class UiBackdrop : std::uint8_t
+	{
+		Panels,		/**< The tree of the interface, over the level and what is shown over the level */
+		Overlays	/**< Windows, menus and messages, also over the panels */
+	};
+
 	/**
 		@brief Shows the interface of the level editor and passes input to it
 
@@ -237,6 +244,34 @@ namespace Jazz2::Editor
 
 		/** @brief Draws over all of the interface, in a slot of its own and the slot after it, with the size of the screen */
 		Function<void(UiPainter&, Vector2f)> DrawOver;
+		/**
+		 * @brief Returns a blurred picture of what is behind a part of the interface and the part of the screen it covers, or `nullptr`
+		 *
+		 * Asked for every frame with the size of the screen, before the part is drawn, which is drawn over the picture then,
+		 * see @ref UiPainter::Backdrop(). The last argument tells whether the tree of the interface is drawn into the
+		 * picture of the level in this frame, see @ref DrawsPanelsInLevel.
+		 */
+		Function<const Texture*(UiBackdrop, Vector2f, Rectf&, bool)> GetBackdrop;
+		/**
+		 * @brief Returns `true` if the tree of the interface is drawn into the picture of the level in this frame
+		 *
+		 * Asked for every frame while the picture is drawn, if the node of @ref GetPanelsNode() is drawn into it. The tree
+		 * is drawn with the rest otherwise.
+		 */
+		Function<bool()> DrawsPanelsInLevel;
+
+		/** @brief Returns the node that draws the tree of the interface into the picture of the level, the surface owns it, see @ref DrawsPanelsInLevel */
+		SceneNode* GetPanelsNode();
+		/** @brief Returns the depth the panels are drawn from, what is shown over the level is drawn below it */
+		static std::uint16_t GetPanelsDepth();
+		/**
+		 * @brief Returns `true` while the tree of the interface is drawn into the picture of the level
+		 *
+		 * The panels show what is under them blurred then, so what is shown over the level is seen under them too.
+		 */
+		bool IsDrawingInLevel() const {
+			return _drawingInLevel;
+		}
 
 		/** @brief Whether a cursor moved by a gamepad is shown */
 		bool ShowVirtualCursor = false;
@@ -304,6 +339,9 @@ namespace Jazz2::Editor
 			float TimeLeft;
 		};
 
+		// Draws the tree of the interface into the picture of the level, see GetPanelsNode()
+		class PanelsCanvas;
+
 		static UiSurface* _instance;
 
 		std::unique_ptr<UiElement> _root;
@@ -351,6 +389,13 @@ namespace Jazz2::Editor
 		// Asked for by the pointer in this frame, forgotten after it's drawn
 		UiCursorOverlay _cursorOverlay = UiCursorOverlay::None;
 		String _pointerTooltip;
+		std::unique_ptr<PanelsCanvas> _panelsCanvas;
+		// Frame the tree of the interface was drawn into the picture of the level in
+		std::uint32_t _panelsDrawnFrame = 0;
+		bool _drawingInLevel = false;
+
+		void DrawPanelsInto(UI::Canvas& canvas);
+		void DrawRoot(UiPainter& painter, Vector2f screenSize, bool inLevel);
 
 		UiElement* HitTestAll(Vector2f pos, bool& blocked);
 		void SetHover(UiElement* element);

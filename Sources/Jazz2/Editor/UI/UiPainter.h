@@ -105,6 +105,21 @@ namespace Jazz2::Editor
 		void Shadow(const Rectf& rect, float opacity = 1.0f);
 		/** @brief Draws the ring around an element that has the keyboard focus */
 		void FocusRing(const Rectf& rect);
+		/**
+		 * @brief Sets a blurred picture of what is behind the interface and the part of the screen it covers, `nullptr` for none
+		 *
+		 * Backgrounds drawn over it keep @p fillOpacity of their opacity, see @ref UiTheme::BackdropFillOpacity. Those
+		 * drawn in a slot before @p firstSlot aren't drawn over it, they may be in the picture.
+		 */
+		void SetBackdrop(const Texture* texture, const Rectf& bounds, float fillOpacity, std::int32_t firstSlot = 0);
+		/**
+		 * @brief Draws the blurred picture behind a background of a color, see @ref SetBackdrop()
+		 *
+		 * Returns the color made more transparent if it was drawn, the color as it is otherwise --- there's no picture,
+		 * the background is opaque or the rectangle isn't all inside of the picture. The corners of a rounded background
+		 * are left out.
+		 */
+		Colorf Backdrop(const Rectf& rect, const Colorf& fill, bool rounded);
 		/** @brief Draws a panel, its shadow, background and border */
 		void Panel(const Rectf& rect, bool shadow = true, const Colorf& fill = UiTheme::PanelFill, const Colorf& border = UiTheme::PanelBorderDim);
 		/** @brief Draws a line, antialiased unless it's horizontal or vertical */
@@ -158,7 +173,12 @@ namespace Jazz2::Editor
 		SmallVector<float, 4> _opacities;
 		float _opacity;
 		Rendering::PolylineRenderer* _lines;
+		const Texture* _backdrop;
+		Rectf _backdropBounds;
+		float _backdropFillOpacity;
+		std::int32_t _backdropFirstSlot;
 
+		void DrawBackdropPart(const Rectf& rect);
 		void DrawNineSlice(const UiSkin::NineSlice& slice, const Rectf& rect, const Colorf& color, UiLayer layer, bool withMiddle = true);
 		Colorf ApplyOpacity(const Colorf& color) const;
 		// Cuts a segment to the clipping made smaller by an inset, returns false if nothing of it is left

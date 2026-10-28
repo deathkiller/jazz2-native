@@ -7,6 +7,11 @@
 #include "../Document/LevelDocument.h"
 #include "EditorCamera.h"
 
+namespace Jazz2::Rendering
+{
+	class BlurRenderPass;
+}
+
 namespace Jazz2::Editor
 {
 	/**
@@ -89,6 +94,31 @@ namespace Jazz2::Editor
 		Texture* GetFrameTexture() const {
 			return _upscalePass.GetTargetTexture();
 		}
+		/**
+		 * @brief Draws a node into the image of the level, over the level, see @ref GetFrameTexture()
+		 *
+		 * The handler doesn't own it, it's taken out of the image when the handler is destroyed. Does nothing before the
+		 * viewports are initialized.
+		 */
+		void SetFrameContent(SceneNode* node);
+		/**
+		 * @brief Blurs the image of the level with what is drawn into it, below a layer and as a whole
+		 *
+		 * Called every frame. With @p below, the image is blurred in the middle of being drawn when it's asked for by
+		 * @ref RequestFrameBlurBelow(), with @p whole once it's drawn, see @ref GetFrameBlur(). The passes are made the
+		 * first time and only drawn while they're enabled. Nothing is blurred without the blur effects.
+		 */
+		void SetFrameBlur(bool below, bool whole);
+		/**
+		 * @brief Blurs the image of the level as it's drawn below a layer in this frame, returns the blurred image or `nullptr`
+		 *
+		 * Called while the image is visited, by what is drawn into it over the layer, see @ref SetFrameBlur().
+		 */
+		Texture* RequestFrameBlurBelow(std::uint16_t layer);
+		/** @brief Returns `true` if the image can be blurred below a layer in this frame, see @ref RequestFrameBlurBelow() */
+		bool CanBlurFrameBelow() const;
+		/** @brief Returns the whole image of the level blurred with what is drawn into it, or `nullptr` if it isn't blurred, see @ref SetFrameBlur() */
+		Texture* GetFrameBlur() const;
 
 		bool IsPausable() const override;
 
@@ -122,6 +152,25 @@ namespace Jazz2::Editor
 		float _initialCameraScale;
 		bool _initialCameraRelative = false;
 		std::unique_ptr<EditorSceneCanvas> _sceneCanvas;
+		// Downsampled, then blurred at a half and at a quarter of the size, as the bloom of the level is
+		struct FrameBlur
+		{
+			std::unique_ptr<Rendering::BlurRenderPass> Passes[5];
+			Vector2i Size;
+
+			void Prepare(Texture* frame, Rendering::PlayerViewport* viewport);
+			bool IsInChain() const;
+			void RemoveFromChain();
+			void InsertIntoChain();
+			Texture* GetTarget() const;
+		};
+
+		// Drawn in the middle of the image, see Viewport::AddSplitPass(), and after the image
+		FrameBlur _belowBlur;
+		std::uint32_t _belowBlurBits = 0;
+		FrameBlur _wholeBlur;
+		// Only compared with the children of the image, it may be destroyed already
+		SceneNode* _frameContent = nullptr;
 
 		void ApplyCamera();
 	};

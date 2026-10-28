@@ -88,7 +88,7 @@ namespace Jazz2::Multiplayer
 		CreateRemoteActor,				/**< Creates a remote actor on the client */
 		CreateMirroredActor,			/**< Creates a mirrored actor on the client */
 		DestroyRemoteActor,				/**< Destroys a remote actor on the client */
-		UpdateAllActors,				/**< Periodic update of all remote actors */
+		UpdateAllActors,				/**< Periodic update of the remote actors relevant to the peer */
 		ChangeRemoteActorMetadata,		/**< Changes metadata of a remote actor */
 		MarkRemoteActorAsPlayer,		/**< Marks a remote actor as another player */
 		UpdatePositionsInRound,			/**< Updates player positions in the current round */

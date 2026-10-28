@@ -424,14 +424,33 @@ namespace Jazz2::Multiplayer
 		struct RemotingActorInfo {
 			std::uint32_t ActorID;
 			bool IsMirrored;			// Whether clients recreate the actor from the event map instead (see ActorShouldBeMirrored())
-			std::int32_t LastPosX;
-			std::int32_t LastPosY;
-			std::uint32_t LastAnimation;
-			std::uint16_t LastRotation;
-			std::uint16_t LastScaleX;
-			std::uint16_t LastScaleY;
-			std::uint8_t LastRendererType;
-			SmallVector<std::uint8_t, 0> LastLights;	// Encoded light block last broadcast, so an unchanged one isn't resent
+		};
+
+		// Server: what a peer knows about a remoted actor or a player, see SendActorUpdates()
+		struct ReplicatedActorState {
+			bool IsKnown = true;		// Creation of an actor far from the peer is deferred until it gets close
+			bool IsRelevant = true;		// Otherwise the peer's copy is hidden and parked out of the level
+			bool HasState = false;		// Whether the values below were sent, otherwise everything is
+			std::uint8_t LastFlags = 0;
+			std::int32_t LastPosX = 0;
+			std::int32_t LastPosY = 0;
+			std::uint32_t LastAnimation = 0;
+			std::uint16_t LastRotation = 0;
+			std::uint16_t LastScaleX = 0;
+			std::uint16_t LastScaleY = 0;
+			std::uint8_t LastRendererType = 0;
+			SmallVector<std::uint8_t, 0> LastLights;
+		};
+
+		struct PeerReplication {
+			HashMap<std::uint32_t, ReplicatedActorState> Actors;
+			std::uint32_t LastUpdated = 0;	// Value of _lastUpdated the peer was last sent, a peer that's gone is dropped
+		};
+
+		struct ReplicationPeer {
+			Peer RemotePeer;
+			Actors::Multiplayer::MpPlayer* Player;	// Its position is the center of what's relevant to the peer
+			bool IsSpectating;
 		};
 
 		struct PlayerName {
@@ -549,6 +568,17 @@ namespace Jazz2::Multiplayer
 		static constexpr std::uint64_t AntiCheatClockWindowMs = 10000;
 		static constexpr std::int64_t AntiCheatClockDriftToleranceMs = 1000;	// Per window, i.e. a client clock 10% faster
 
+		// Half extents of the box around a peer's player that is relevant to it, well over the largest view (720x405)
+		// to cover latency and the camera look-ahead, and left only through the larger one, so nothing flickers on the edge
+		static constexpr float RelevanceEnterHalfWidth = 720.0f;
+		static constexpr float RelevanceEnterHalfHeight = 480.0f;
+		static constexpr float RelevanceLeaveHalfWidth = 880.0f;
+		static constexpr float RelevanceLeaveHalfHeight = 600.0f;
+		// A player out of the box that the peer still needs to see (minimap, flag carrier) is updated less often
+		static constexpr std::uint32_t FarPlayerUpdateInterval = 8;
+		// Where a peer's copy of an actor out of its box is moved, so it can't be seen, collided with or stood on
+		static constexpr float ParkedActorPos = -1000000.0f;
+
 		NetworkManager* _networkManager;
 		std::unique_ptr<GameModes::IGameMode> _gameMode;
 		float _updateTimeLeft;
@@ -561,6 +591,8 @@ namespace Jazz2::Multiplayer
 		bool _enqueuedPlaylistChange; // Server: apply the next playlist entry once the end-of-level transition finishes
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
+		HashMap<Peer, PeerReplication> _peerReplication;	// Server: per-peer relevance and the state last sent (main thread only)
+		SmallVector<Peer, 0> _forceResyncPeers;			// Server: peers that requested a full update (guarded by _lock)
 		HashMap<std::uint32_t, PlayerName> _playerNames; // Client: Actor ID -> Player name (and flags)
 		SmallVector<PlayerPositionInRound, 0> _positionsInRound; // Client: Actor ID -> Position In Round
 		SmallVector<std::uint32_t, 0> _teamScores;	// Server: computed each check; Client: mirrored for the HUD (index = team id)
@@ -620,6 +652,21 @@ namespace Jazz2::Multiplayer
 
 		void InitializeRequiredAssets();
 		void SynchronizePeers(float timeMult);
+		/** @brief Sends each synchronized peer the updates of the players and actors that are relevant to it */
+		void SendActorUpdates(float timeMult);
+		/** @brief Collects the remote peers that receive actor updates */
+		void CollectReplicationPeers(SmallVectorImpl<ReplicationPeer>& peers);
+		/** @brief Returns `true` if @p pos is close enough to the player of @p peerDesc */
+		static bool IsRelevantToPeer(const PeerDescriptor& peerDesc, Vector2f pos);
+		static bool IsWithinRelevance(Vector2f center, Vector2f pos, bool wasRelevant);
+		/** @brief Returns `true` if a non-player actor at @p pos should exist and be updated on the peer */
+		bool IsActorRelevantToPeer(const ReplicationPeer& rp, Vector2f pos, bool wasRelevant) const;
+		/** @brief Returns `false` if creation of the actor is deferred for the peer, so it doesn't exist there */
+		bool IsActorKnownByPeer(const Peer& peer, std::uint32_t actorId) const;
+		/** @brief Makes the actor exist and be visible on every peer, even those it isn't relevant to */
+		void RevealActorToAllPeers(Actors::ActorBase* actor, std::uint32_t actorId);
+		/** @brief Forgets what peers were sent about an actor, called when it's destroyed on them, so its ID can be reused */
+		void ForgetReplicatedActor(std::uint32_t actorId);
 		std::uint32_t FindFreeActorId();
 		std::uint8_t FindFreePlayerId();
 		std::int32_t GetNonSpectatePlayerCount();

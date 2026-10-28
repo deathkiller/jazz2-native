@@ -68,6 +68,18 @@ namespace Jazz2::UI::Multiplayer
 		std::uint32_t _minimapTrackTextureKey = 0;
 		Vector2i _minimapTrackTextureSize;
 
+		// Client: smoothed minimap positions of remote players, far ones are updated only a few times per second
+		struct MinimapDot {
+			Vector2f Pos;
+			Vector2f Velocity;
+			Vector2f Target;
+			bool IsSeen;
+		};
+		HashMap<std::uint32_t, MinimapDot> _minimapDots;
+
+		/** @brief Moves the smoothed minimap positions of remote players towards their actors */
+		void UpdateMinimapDots(float timeMult);
+
 		/** @brief Rebuilds the cached smoothed track centerline if the checkpoints changed */
 		void RefreshMinimapTrack(Jazz2::Multiplayer::MpLevelHandler* mpLevelHandler);
 		/** @brief Draws a smoothed thick polyline as a triangle-strip mesh */

@@ -1,4 +1,4 @@
-#if defined(WITH_ANGELSCRIPT)
+﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "Player.h"
 #include "AnimationTables.h"
@@ -8,6 +8,7 @@
 #include "../../Actors/ActorBase.h"
 #include "../../Actors/Player.h"
 #include "../../Actors/Collectibles/CollectibleBase.h"
+#include "../../Actors/Environment/Spring.h"
 #include "../../Actors/Weapons/BlasterShot.h"
 #include "../../Actors/Weapons/BouncerShot.h"
 #include "../../Actors/Weapons/ElectroShot.h"
@@ -486,6 +487,85 @@ namespace Jazz2::Scripting
 			return value;
 		}
 
+		std::int8_t jjPLAYER::get_frozen() const {
+			if (_player == nullptr) {
+				return {};
+			}
+			return std::int8_t(std::min(std::ceil(_player->_frozenTimeLeft * 70.0f / FrameTimer::FramesPerSecond), 127.0f));
+		}
+		std::int8_t jjPLAYER::set_frozen(std::int8_t value) {
+			if (_player == nullptr) {
+				return {};
+			}
+			if (value > 0) {
+				_player->Freeze(value * FrameTimer::FramesPerSecond / 70.0f);
+			} else if (_player->_frozenTimeLeft > 0.0f) {
+				_player->Freeze(0.0f);
+			}
+			return value;
+		}
+		std::int32_t jjPLAYER::get_lives() const {
+			return (_player != nullptr ? _player->_lives : 0);
+		}
+		std::int32_t jjPLAYER::set_lives(std::int32_t value) {
+			if (_player != nullptr) {
+				_player->_lives = value;
+			}
+			return value;
+		}
+		std::int8_t jjPLAYER::get_direction() const {
+			if (_player == nullptr) {
+				return {};
+			}
+			return std::int8_t(_player->IsFacingLeft() ? -1 : 1);
+		}
+		std::int8_t jjPLAYER::set_direction(std::int8_t value) {
+			if (_player != nullptr && value != 0) {
+				_player->SetFacingLeft(value < 0);
+			}
+			return value;
+		}
+		std::int32_t jjPLAYER::get_doubleJumpCount() const {
+			return (_player != nullptr && !_player->_canDoubleJump ? 1 : 0);
+		}
+		std::int32_t jjPLAYER::set_doubleJumpCount(std::int32_t value) {
+			if (_player != nullptr) {
+				_player->_canDoubleJump = (value == 0);
+			}
+			return value;
+		}
+		bool jjPLAYER::get_alreadyDoubleJumped() const {
+			return (get_doubleJumpCount() != 0);
+		}
+		bool jjPLAYER::set_alreadyDoubleJumped(bool value) {
+			set_doubleJumpCount(value ? 1 : 0);
+			return value;
+		}
+		std::int32_t jjPLAYER::get_helicopter() const {
+			if (_player == nullptr) {
+				return {};
+			}
+			return std::int32_t(std::ceil(std::max(_player->_copterFramesLeft, 0.0f) * 70.0f / FrameTimer::FramesPerSecond));
+		}
+		std::int32_t jjPLAYER::set_helicopter(std::int32_t value) {
+			if (_player != nullptr) {
+				_player->_copterFramesLeft = std::max(value, 0) * FrameTimer::FramesPerSecond / 70.0f;
+			}
+			return value;
+		}
+		std::int32_t jjPLAYER::get_idle() const {
+			if (_player == nullptr) {
+				return {};
+			}
+			return std::int32_t(_player->_idleTime * 70.0f / FrameTimer::FramesPerSecond);
+		}
+		std::int32_t jjPLAYER::set_idle(std::int32_t value) {
+			if (_player != nullptr) {
+				_player->_idleTime = std::max(value, 0) * FrameTimer::FramesPerSecond / 70.0f;
+			}
+			return value;
+		}
+
 		std::int32_t jjPLAYER::get_rolling() const {
 			if (_player == nullptr) {
 				return {};
@@ -564,7 +644,23 @@ namespace Jazz2::Scripting
 			noop();
 		}
 		void jjPLAYER::spring(float xSpeed, float ySpeed, bool keepZeroSpeeds, bool sample) {
-			noop();
+			if (_player == nullptr || (xSpeed == 0.0f && ySpeed == 0.0f)) {
+				return;
+			}
+			// As touching a spring of the speeds of the original, the axis of a zero speed keeps the speed if asked
+			auto* levelHandler = _player->_levelHandler;
+			Vector2f force(
+				xSpeed != 0.0f ? std::copysign(Actors::Environment::Spring::GetStrengthOfLegacySpeed(levelHandler, std::abs(xSpeed), true), xSpeed) : 0.0f,
+				ySpeed != 0.0f ? std::copysign(Actors::Environment::Spring::GetStrengthOfLegacySpeed(levelHandler, std::abs(ySpeed), false), ySpeed) : 0.0f);
+			bool removeSpecialMove = false;
+			_player->OnHitSpring(_player->_pos, force, keepZeroSpeeds && xSpeed == 0.0f, keepZeroSpeeds && ySpeed == 0.0f, removeSpecialMove);
+			if (removeSpecialMove) {
+				_player->_controllable = true;
+				_player->EndDamagingMove();
+			}
+			if (sample) {
+				_levelScriptLoader->PlaySample(_player->_pos, sSPRING_SPRING1, 63, 0, false);
+			}
 		}
 
 		bool jjPLAYER::get_isConnecting() const {
@@ -991,11 +1087,16 @@ namespace Jazz2::Scripting
 			return _timerState;
 		}
 		std::uint32_t jjPLAYER::timerPause() {
-			_timerState = 2; // PAUSED
+			// Only a started timer pauses, a stopped one stays stopped
+			if (_timerState == 1) { // STARTED
+				_timerState = 2; // PAUSED
+			}
 			return _timerState;
 		}
 		std::uint32_t jjPLAYER::timerResume() {
-			_timerState = 1; // STARTED
+			if (_timerState == 2) { // PAUSED
+				_timerState = 1; // STARTED
+			}
 			return _timerState;
 		}
 		std::uint32_t jjPLAYER::timerStop() {
@@ -1308,24 +1409,6 @@ namespace Jazz2::Scripting
 				return;
 			}
 
-			// In ticks, 70 in a second
-			constexpr float FramesToTicks = 70.0f / 60.0f;
-
-			// A writable property a script changed keeps its value until it's handed over (see SyncPropertiesFromBackingStore())
-			auto refresh = [this](auto& property, auto& synced, auto value) {
-				if (!_syncedOnce || property == synced) {
-					property = value;
-				}
-				synced = value;
-			};
-			refresh(lives, _synced.Lives, _player->_lives);
-			refresh(direction, _synced.Direction, std::int8_t(_player->IsFacingLeft() ? -1 : 1));
-			refresh(frozen, _synced.Frozen, std::int8_t(std::min(std::ceil(_player->_frozenTimeLeft * FramesToTicks), 127.0f)));
-			refresh(specialJump, _synced.SpecialJump, std::int32_t(_player->_canDoubleJump ? 0 : 1));
-			refresh(helicopter, _synced.Helicopter, std::int32_t(std::ceil(std::max(_player->_copterFramesLeft, 0.0f) * FramesToTicks)));
-			refresh(idle, _synced.Idle, std::int32_t(_player->_idleTime * FramesToTicks));
-			_syncedOnce = true;
-
 			// What only the game decides, as JJ2+ has it - a buttstomp counts down from below 41, 50 is none
 			buttstomp = (_player->_currentSpecialMove == Actors::Player::SpecialMoveType::Buttstomp ? 1 : 50);
 			specialMove = std::int32_t(_player->_currentSpecialMove);
@@ -1335,10 +1418,12 @@ namespace Jazz2::Scripting
 			if (nativeBoss != 0) {
 				bossNumber = nativeBoss;
 			}
-			if (!_syncedOnce || bossActive == _synced.BossActive) {
-				bossActive = (nativeBoss != 0 || _levelScriptLoader->IsBossAreaActivated());
+			bool nativeBossActive = (nativeBoss != 0 || _levelScriptLoader->IsBossAreaActivated());
+			if (!_syncedOnce || bossActive == _syncedBossActive) {
+				bossActive = nativeBossActive;
 			}
-			_synced.BossActive = (nativeBoss != 0 || _levelScriptLoader->IsBossAreaActivated());
+			_syncedBossActive = nativeBossActive;
+			_syncedOnce = true;
 			// The object the player stands on, if it's an object of the scripts (trapezes are told by it)
 			// - none while it dies (a player dying on a trapeze would be drawn still hanging there)
 			jjOBJ* standingOn = (_player->_carryingObject != nullptr && _player->GetHealth() > 0
@@ -1400,46 +1485,6 @@ namespace Jazz2::Scripting
 			_levelScriptLoader->_firingBullet = { shot.get(), slot, gunspotPos.Y - _player->_pos.Y };
 			_player->_levelHandler->AddActor(shot);
 			_levelScriptLoader->_firingBullet = {};
-		}
-
-		void jjPLAYER::SyncPropertiesFromBackingStore() {
-			if (_player == nullptr || !_syncedOnce) {
-				return;
-			}
-
-			// In frames, 60 in a second
-			constexpr float TicksToFrames = 60.0f / 70.0f;
-
-			if (lives != _synced.Lives) {
-				_player->_lives = lives;
-			}
-			if (direction != _synced.Direction && direction != 0) {
-				_player->SetFacingLeft(direction < 0);
-			}
-			if (frozen != _synced.Frozen) {
-				if (frozen > 0) {
-					_player->Freeze(frozen * TicksToFrames);
-				} else if (_player->_frozenTimeLeft > 0.0f) {
-					_player->Freeze(0.0f);
-				}
-			}
-			if (specialJump != _synced.SpecialJump) {
-				_player->_canDoubleJump = (specialJump == 0);
-			}
-			if (helicopter != _synced.Helicopter) {
-				_player->_copterFramesLeft = std::max(helicopter, 0) * TicksToFrames;
-			}
-			if (idle != _synced.Idle) {
-				_player->_idleTime = std::max(idle, 0) * TicksToFrames;
-			}
-
-			// The handed-over values are what the player has now
-			_synced.Lives = lives;
-			_synced.Direction = direction;
-			_synced.Frozen = frozen;
-			_synced.SpecialJump = specialJump;
-			_synced.Helicopter = helicopter;
-			_synced.Idle = idle;
 		}
 
 		bool jjPLAYERDRAW::get_shield(std::int32_t shield) const {
@@ -1656,7 +1701,8 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "float get_ySpeed() const", asMETHOD(jjPLAYER, get_ySpeed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "float set_ySpeed(float)", asMETHOD(jjPLAYER, set_ySpeed), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "float jumpStrength", asOFFSET(jjPLAYER, jumpStrength));
-		engine->RegisterObjectProperty("jjPLAYER", "int8 frozen", asOFFSET(jjPLAYER, frozen));
+		engine->RegisterObjectMethod("jjPLAYER", "int8 get_frozen() const", asMETHOD(jjPLAYER, get_frozen), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int8 set_frozen(int8)", asMETHOD(jjPLAYER, set_frozen), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "void freeze(bool frozen = true)", asMETHOD(jjPLAYER, freeze), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_currTile() const", asMETHOD(jjPLAYER, get_currTile), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool startSugarRush(int time = 1400)", asMETHOD(jjPLAYER, startSugarRush), asCALL_THISCALL);
@@ -1670,7 +1716,8 @@ namespace Jazz2::Scripting
 		
 		//engine->RegisterObjectMethod("jjPLAYER", "int get_lives() const", asMETHOD(jjPLAYER, get_lives), asCALL_THISCALL);
 		//engine->RegisterObjectMethod("jjPLAYER", "int set_lives(int)", asMETHOD(jjPLAYER, set_lives), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "int lives", asOFFSET(jjPLAYER, lives));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_lives() const", asMETHOD(jjPLAYER, get_lives), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_lives(int)", asMETHOD(jjPLAYER, set_lives), asCALL_THISCALL);
 
 		engine->RegisterObjectMethod("jjPLAYER", "int get_invincibility() const", asMETHOD(jjPLAYER, get_invincibility), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_invincibility(int)", asMETHOD(jjPLAYER, set_invincibility), asCALL_THISCALL);
@@ -1693,7 +1740,8 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "int set_ballTime(int)", asMETHOD(jjPLAYER, set_rolling), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "int boss", asOFFSET(jjPLAYER, bossNumber));
 		engine->RegisterObjectProperty("jjPLAYER", "bool bossActivated", asOFFSET(jjPLAYER, bossActive));
-		engine->RegisterObjectProperty("jjPLAYER", "int8 direction", asOFFSET(jjPLAYER, direction));
+		engine->RegisterObjectMethod("jjPLAYER", "int8 get_direction() const", asMETHOD(jjPLAYER, get_direction), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int8 set_direction(int8)", asMETHOD(jjPLAYER, set_direction), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "int platform", asOFFSET(jjPLAYER, platform));
 		engine->RegisterObjectProperty("jjPLAYER", "const int flag", asOFFSET(jjPLAYER, flag));
 		engine->RegisterObjectProperty("jjPLAYER", "const int clientID", asOFFSET(jjPLAYER, clientID));
@@ -1702,15 +1750,19 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjPLAYER", "const bool teamRed", asOFFSET(jjPLAYER, team));
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_running() const", asMETHOD(jjPLAYER, get_running), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool set_running(bool)", asMETHOD(jjPLAYER, set_running), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "bool alreadyDoubleJumped", asOFFSET(jjPLAYER, specialJump)); // Deprecated
-		engine->RegisterObjectProperty("jjPLAYER", "int doubleJumpCount", asOFFSET(jjPLAYER, specialJump));
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_alreadyDoubleJumped() const", asMETHOD(jjPLAYER, get_alreadyDoubleJumped), asCALL_THISCALL); // Deprecated
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_alreadyDoubleJumped(bool)", asMETHOD(jjPLAYER, set_alreadyDoubleJumped), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_doubleJumpCount() const", asMETHOD(jjPLAYER, get_doubleJumpCount), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_doubleJumpCount(int)", asMETHOD(jjPLAYER, set_doubleJumpCount), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_stoned() const", asMETHOD(jjPLAYER, get_stoned), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_stoned(int)", asMETHOD(jjPLAYER, set_stoned), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "int buttstomp", asOFFSET(jjPLAYER, buttstomp));
-		engine->RegisterObjectProperty("jjPLAYER", "int helicopter", asOFFSET(jjPLAYER, helicopter));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_helicopter() const", asMETHOD(jjPLAYER, get_helicopter), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_helicopter(int)", asMETHOD(jjPLAYER, set_helicopter), asCALL_THISCALL);
 		engine->RegisterObjectProperty("jjPLAYER", "int helicopterElapsed", asOFFSET(jjPLAYER, helicopterElapsed));
 		engine->RegisterObjectProperty("jjPLAYER", "int specialMove", asOFFSET(jjPLAYER, specialMove));
-		engine->RegisterObjectProperty("jjPLAYER", "int idle", asOFFSET(jjPLAYER, idle));
+		engine->RegisterObjectMethod("jjPLAYER", "int get_idle() const", asMETHOD(jjPLAYER, get_idle), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int set_idle(int)", asMETHOD(jjPLAYER, set_idle), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "void suckerTube(int xSpeed, int ySpeed, bool center, bool noclip = false, bool trigSample = false)", asMETHOD(jjPLAYER, suckerTube), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "void poleSpin(float xSpeed, float ySpeed, uint delay = 70)", asMETHOD(jjPLAYER, poleSpin), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "void spring(float xSpeed, float ySpeed, bool keepZeroSpeeds, bool sample)", asMETHOD(jjPLAYER, spring), asCALL_THISCALL);

@@ -515,6 +515,8 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileDestructType.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Alignment.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/BlendMode.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Cinematics.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/DiscordRpcClient.h

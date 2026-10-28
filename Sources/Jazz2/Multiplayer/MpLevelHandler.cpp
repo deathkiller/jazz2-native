@@ -44,6 +44,7 @@
 #include "../Actors/Weapons/ShotBase.h"
 #include "../Actors/Weapons/TNT.h"
 
+#include <cstring>
 #include <float.h>
 #include <queue>
 
@@ -453,9 +454,11 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableUint32((std::uint32_t)sfx.Identifier.size());
 				packet.Write(sfx.Identifier.data(), (std::uint32_t)sfx.Identifier.size());
 
-				_networkManager->SendTo([this](const Peer& peer) {
+				bool sendToAll = ((sfx.Flags & SfxFlags::Exclusive) == SfxFlags::Exclusive);
+				Vector2f sourcePos = sfx.Actor->_pos;
+				_networkManager->SendTo([this, sendToAll, sourcePos](const Peer& peer) {
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && (sendToAll || IsRelevantToPeer(*peerDesc, sourcePos)));
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlaySfx, packet);
 			}
 			_pendingSfx.clear();
@@ -882,212 +885,10 @@ namespace Jazz2::Multiplayer
 
 			if (_isServer) {
 				if (_networkManager->HasInboundConnections()) {
-					std::uint32_t playerCount = GetNonSpectatePlayerCount();
-					std::uint32_t actorCount = playerCount + (std::uint32_t)_remotingActors.size();
-
-					MemoryStream packet(8 + actorCount * 24);
-					packet.WriteVariableUint32(_lastUpdated);
-					packet.WriteVariableUint64((std::uint64_t)_elapsedFrames);
-					packet.WriteVariableUint32((actorCount << 1) | (_forceResyncPending ? 1 : 0));
-
-					// Reused across all actors below, so sampling and encoding the lights costs no allocations
-					SmallVector<LightEmitter, MaxRemotedLights> lights;
-					SmallVector<std::uint8_t, MaxRemotedLightsSize> lightBlock;
-
-					for (Actors::Player* player : _players) {
-						auto* mpPlayer = static_cast<PlayerOnServer*>(player);
-
-						// Skip spectate players - don't send their position to other clients
-						if (mpPlayer->_playerType == PlayerType::Spectate) {
-							continue;
-						}
-
-						/*Vector2f pos;
-						auto it = _playerStates.find(player->_playerIndex);
-						if (it != _playerStates.end()) {
-							// Remote players
-							pos = player->_pos;
-
-							// TODO: This should be WarpUpdatesLeft
-							if (it->second.WarpTimeLeft > 0.0f) {
-								it->second.WarpTimeLeft -= timeMult;
-								if (it->second.WarpTimeLeft <= 0.0f) {
-									it->second.WarpTimeLeft = 0.0f;
-									LOGW("Player warped without permission (possible cheating attempt)");
-								}
-							} else if (it->second.WarpTimeLeft < 0.0f) {
-								it->second.WarpTimeLeft += timeMult;
-								if (it->second.WarpTimeLeft >= 0.0f) {
-									it->second.WarpTimeLeft = 0.0f;
-									LOGW("Player failed to warp in time (possible cheating attempt)");
-								}
-							}
-						} else {
-							// Local players
-							pos = player->_pos;
-						}*/
-						Vector2f pos = player->_pos;
-
-						packet.WriteVariableUint32(player->_playerIndex);
-
-						std::uint8_t flags = 0x01 | 0x02; // PositionChanged | AnimationChanged
-						if (player->_renderer.isDrawEnabled()) {
-							flags |= 0x04;
-						}
-						if (player->_renderer.AnimPaused) {
-							flags |= 0x08;
-						}
-						if (player->_renderer.isFlippedX()) {
-							flags |= 0x10;
-						}
-						if (player->_renderer.isFlippedY()) {
-							flags |= 0x20;
-						}
-						if (mpPlayer->_justWarped) {
-							mpPlayer->_justWarped = false;
-							flags |= 0x40;
-						}
-
-						lights.clear();
-						mpPlayer->OnEmitRemotedLights(lights);
-						EncodeRemotedLights(lightBlock, pos, lights);
-						bool lightsChanged = (_forceResyncPending || lightBlock != mpPlayer->_lastRemotedLights);
-						if (lightsChanged) {
-							flags |= 0x80;
-						}
-						packet.WriteValue<std::uint8_t>(flags);
-
-						packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
-						packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
-						packet.WriteVariableUint32((std::uint32_t)(player->_currentTransition != nullptr ? player->_currentTransition->State : player->_currentAnimation->State));
-
-						float rotation = player->_renderer.rotation();
-						if (rotation < 0.0f) rotation += fRadAngle360;
-						packet.WriteValue<std::uint16_t>((std::uint16_t)(rotation * UINT16_MAX / fRadAngle360));
-						Vector2f scale = player->_renderer.scale();
-						packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
-						packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
-						Actors::ActorRendererType rendererType = player->_renderer.GetRendererType();
-						if (rendererType == Actors::ActorRendererType::Outline) {
-							// Outline renderer type is local-only
-							rendererType = Actors::ActorRendererType::Default;
-						}
-						packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
-
-						if (lightsChanged) {
-							packet.Write(lightBlock.data(), (std::uint32_t)lightBlock.size());
-							mpPlayer->_lastRemotedLights.assign(lightBlock.begin(), lightBlock.end());
-						}
-					}
-
-					// TODO: Does this need to be locked?
-					{
-						std::unique_lock lock(_lock);
-						for (auto& [remotingActor, remotingActorInfo] : _remotingActors) {
-							packet.WriteVariableUint32(remotingActorInfo.ActorID);
-
-							std::int32_t newPosX = (std::int32_t)(remotingActor->_pos.X * 512.0f);
-							std::int32_t newPosY = (std::int32_t)(remotingActor->_pos.Y * 512.0f);
-							bool positionChanged = (_forceResyncPending || newPosX != remotingActorInfo.LastPosX || newPosY != remotingActorInfo.LastPosY);
-
-							std::uint32_t newAnimation = (std::uint32_t)(remotingActor->_currentTransition != nullptr ? remotingActor->_currentTransition->State : (remotingActor->_currentAnimation != nullptr ? remotingActor->_currentAnimation->State : AnimState::Idle));
-							float rotation = remotingActor->_renderer.rotation();
-							if (rotation < 0.0f) rotation += fRadAngle360;
-							std::uint16_t newRotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
-							Vector2f newScale = remotingActor->_renderer.scale();
-							std::uint16_t newScaleX = (std::uint16_t)Half{newScale.X};
-							std::uint16_t newScaleY = (std::uint16_t)Half{newScale.Y};
-							std::uint8_t newRendererType = (std::uint8_t)remotingActor->_renderer.GetRendererType();
-							bool animationChanged = (_forceResyncPending || newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation ||
-								newScaleX != remotingActorInfo.LastScaleX || newScaleY != remotingActorInfo.LastScaleY || newRendererType != remotingActorInfo.LastRendererType);
-
-							// A mirrored actor is recreated from its real class on the client, which emits its own
-							// lights - describing them to it would be a stream of updates nobody applies
-							bool lightsChanged = false;
-							if (!remotingActorInfo.IsMirrored) {
-								lights.clear();
-								remotingActor->OnEmitRemotedLights(lights);
-								EncodeRemotedLights(lightBlock, remotingActor->_pos, lights);
-								lightsChanged = (_forceResyncPending || lightBlock != remotingActorInfo.LastLights);
-							}
-
-							std::uint8_t flags = 0;
-							if (positionChanged) {
-								flags |= 0x01;
-							}
-							if (animationChanged) {
-								flags |= 0x02;
-							}
-							if (remotingActor->_renderer.isDrawEnabled()) {
-								flags |= 0x04;
-							}
-							if (remotingActor->_renderer.AnimPaused) {
-								flags |= 0x08;
-							}
-							if (remotingActor->_renderer.isFlippedX()) {
-								flags |= 0x10;
-							}
-							if (remotingActor->_renderer.isFlippedY()) {
-								flags |= 0x20;
-							}
-							if (lightsChanged) {
-								flags |= 0x80;
-							}
-							packet.WriteValue<std::uint8_t>(flags);
-
-							if (positionChanged) {
-								packet.WriteValue<std::int32_t>(newPosX);
-								packet.WriteValue<std::int32_t>(newPosY);
-
-								remotingActorInfo.LastPosX = newPosX;
-								remotingActorInfo.LastPosY = newPosY;
-							}
-							if (animationChanged) {
-								packet.WriteVariableUint32(newAnimation);
-								packet.WriteValue<std::uint16_t>(newRotation);
-								packet.WriteValue<std::uint16_t>(newScaleX);
-								packet.WriteValue<std::uint16_t>(newScaleY);
-								packet.WriteValue<std::uint8_t>(newRendererType);
-
-								remotingActorInfo.LastAnimation = newAnimation;
-								remotingActorInfo.LastRotation = newRotation;
-								remotingActorInfo.LastScaleX = newScaleX;
-								remotingActorInfo.LastScaleY = newScaleY;
-								remotingActorInfo.LastRendererType = newRendererType;
-							}
-							if (lightsChanged) {
-								packet.Write(lightBlock.data(), (std::uint32_t)lightBlock.size());
-
-								remotingActorInfo.LastLights.assign(lightBlock.begin(), lightBlock.end());
-							}
-						}
-					}
-
-					MemoryStream packetCompressed(1024);
-					{
-						DeflateWriter dw(packetCompressed);
-						dw.Write(packet.GetBuffer(), packet.GetSize());
-					}
-
-#if defined(DEATH_DEBUG)
-					_debugAverageUpdatePacketSize = lerp(_debugAverageUpdatePacketSize, (std::int32_t)(packet.GetSize() * UpdatesPerSecond), 0.04f * timeMult);
-#endif
-#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
-					_updatePacketSize[_plotIndex] = packet.GetSize();
-					_updatePacketMaxSize = std::max(_updatePacketMaxSize, _updatePacketSize[_plotIndex]);
-					_compressedUpdatePacketSize[_plotIndex] = packetCompressed.GetSize();
-#endif
-
-					_networkManager->SendTo([this](const Peer& peer) {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-					}, _forceResyncPending ? NetworkChannel::Main : NetworkChannel::UnreliableUpdates, (std::uint8_t)ServerPacketType::UpdateAllActors, packetCompressed);
-
-					_lastUpdated++;
-					_forceResyncPending = false;
-
+					SendActorUpdates(timeMult);
 					SynchronizePeers(timeMult);
 				} else {
+					_peerReplication.clear();
 #if defined(DEATH_DEBUG)
 					_debugAverageUpdatePacketSize = 0;
 #endif
@@ -1337,10 +1138,19 @@ namespace Jazz2::Multiplayer
 				MemoryStream packet;
 				InitializeCreateRemoteActorPacket(packet, actorId, actorPtr);
 
-				_networkManager->SendTo([this](const Peer& peer) {
-					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
+				SmallVector<ReplicationPeer, 8> peers;
+				CollectReplicationPeers(peers);
+				for (const auto& rp : peers) {
+					// Created on the peer once it gets close, see SendActorUpdates()
+					if (!IsActorRelevantToPeer(rp, actorPtr->_pos, false)) {
+						auto& state = _peerReplication[rp.RemotePeer].Actors[actorId];
+						state = {};
+						state.IsKnown = false;
+						state.IsRelevant = false;
+						continue;
+					}
+					_networkManager->SendTo(rp.RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
+				}
 			}
 		}
 	}
@@ -1390,9 +1200,14 @@ namespace Jazz2::Multiplayer
 				packet.Write(identifier.data(), (std::uint32_t)identifier.size());
 
 				Actors::ActorBase* excludedPlayer = (excludeSelf ? self : nullptr);
-				_networkManager->SendTo([this, excludedPlayer](const Peer& peer) {
+				// A sound far from a peer isn't heard, and would tell where its source is. An exclusive one can be
+				// long and is moved with its actor, so it's sent to everyone.
+				bool sendToAll = ((flags & SfxFlags::Exclusive) == SfxFlags::Exclusive || self == nullptr);
+				Vector2f sourcePos = (self != nullptr ? self->_pos : Vector2f::Zero);
+				_networkManager->SendTo([this, excludedPlayer, sendToAll, sourcePos](const Peer& peer) {
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && (excludedPlayer == nullptr || excludedPlayer != peerDesc->Player));
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && (excludedPlayer == nullptr || excludedPlayer != peerDesc->Player) &&
+						(sendToAll || IsRelevantToPeer(*peerDesc, sourcePos)));
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlaySfx, packet);
 			} else {
 				// Actor is probably not fully created yet, try it later again
@@ -1446,9 +1261,10 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableUint32((std::uint32_t)identifier.size());
 			packet.Write(identifier.data(), (std::uint32_t)identifier.size());
 
-			_networkManager->SendTo([this](const Peer& peer) {
+			Vector2f sourcePos = Vector2f(pos.X, pos.Y);
+			_networkManager->SendTo([this, sourcePos](const Peer& peer) {
 				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && IsRelevantToPeer(*peerDesc, sourcePos));
 			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayCommonSfx, packet);
 		}
 
@@ -2052,9 +1868,10 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableInt32((std::int32_t)(speed.X * 100.0f));
 				packet.WriteVariableInt32((std::int32_t)(speed.Y * 100.0f));
 
-				_networkManager->SendTo([this](const Peer& peer) {
+				Vector2f sourcePos = self->_pos;
+				_networkManager->SendTo([this, sourcePos](const Peer& peer) {
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && IsRelevantToPeer(*peerDesc, sourcePos));
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateDebris, packet);
 			} else {
 				LOGW("Remote actor not found");
@@ -2084,9 +1901,10 @@ namespace Jazz2::Multiplayer
 				// Last, so a peer that doesn't read it stops before it, see HandleServerPacketCreateDebris()
 				packet.WriteValueAsLE<float>(elasticity);
 
-				_networkManager->SendTo([this](const Peer& peer) {
+				Vector2f sourcePos = self->_pos;
+				_networkManager->SendTo([this, sourcePos](const Peer& peer) {
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && IsRelevantToPeer(*peerDesc, sourcePos));
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateDebris, packet);
 			} else {
 				LOGW("Remote actor not found");
@@ -3381,6 +3199,7 @@ namespace Jazz2::Multiplayer
 				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
 			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packetDestroy);
+			ForgetReplicatedActor((std::uint32_t)playerIndex);
 		}
 
 		// Spawn new player actor according to spectate mode
@@ -3896,6 +3715,10 @@ namespace Jazz2::Multiplayer
 					_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
 						return (peer != otherPeer);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
+
+					InvokeAsync([this, playerIndex]() {
+						ForgetReplicatedActor((std::uint32_t)playerIndex);
+					});
 
 					const auto& serverConfig = _networkManager->GetServerConfiguration();
 					if (_levelState == LevelState::WaitingForMinPlayers) {
@@ -4463,7 +4286,13 @@ namespace Jazz2::Multiplayer
 	bool MpLevelHandler::HandleClientPacketForceResyncActors(const Peer& peer, ArrayView<const std::uint8_t> data)
 	{
 		LOGD("[MP] ClientPacketType::ForceResyncActors [{}] - update: {}", peer, _lastUpdated);
-		_forceResyncPending = true;
+		std::unique_lock lock(_lock);
+		for (const auto& otherPeer : _forceResyncPeers) {
+			if (otherPeer == peer) {
+				return true;
+			}
+		}
+		_forceResyncPeers.push_back(peer);
 		return true;
 	}
 
@@ -7457,10 +7286,12 @@ namespace Jazz2::Multiplayer
 		MemoryStream packet(4);
 		packet.WriteVariableUint32(actorId);
 
-		_networkManager->SendTo([this](const Peer& peer) {
+		_networkManager->SendTo([this, actorId](const Peer& peer) {
 			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && IsActorKnownByPeer(peer, actorId));
 		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
+
+		ForgetReplicatedActor(actorId);
 	}
 
 	void MpLevelHandler::ProcessEvents(float timeMult)
@@ -7598,6 +7429,11 @@ namespace Jazz2::Multiplayer
 				} else {
 					actorId = UINT32_MAX;
 				}
+			}
+
+			// The decoration is kept by the rider, so a peer that deferred or parked it would never see it
+			if (actorId != UINT32_MAX) {
+				RevealActorToAllPeers(decor.get(), actorId);
 			}
 
 			MemoryStream packet(10);
@@ -8275,6 +8111,373 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::SendActorUpdates(float timeMult)
+	{
+		struct ActorSnapshot {
+			Actors::ActorBase* Actor;
+			std::uint32_t ActorID;
+			Vector2f Pos;
+			std::int32_t PosX;
+			std::int32_t PosY;
+			std::uint32_t Animation;
+			std::uint16_t Rotation;
+			std::uint16_t ScaleX;
+			std::uint16_t ScaleY;
+			std::uint8_t RendererType;
+			std::uint8_t Flags;
+			bool IsPlayer;
+			bool JustWarped;
+			bool AlwaysShown;
+			std::uint32_t LightsOffset;
+			std::uint32_t LightsSize;
+		};
+
+		SmallVector<ReplicationPeer, 8> peers;
+		CollectReplicationPeers(peers);
+
+		SmallVector<Peer, 4> resyncPeers;
+		{
+			std::unique_lock lock(_lock);
+			resyncPeers.append(_forceResyncPeers.begin(), _forceResyncPeers.end());
+			_forceResyncPeers.clear();
+		}
+
+		// Everything is sampled once, only what each peer is sent differs
+		SmallVector<ActorSnapshot, 0> snapshots;
+		SmallVector<std::uint8_t, 0> lightBlocks;
+		SmallVector<LightEmitter, MaxRemotedLights> lights;
+		SmallVector<std::uint8_t, MaxRemotedLightsSize> lightBlock;
+
+		auto addSnapshot = [&](Actors::ActorBase* actor, std::uint32_t actorId, bool isPlayer) -> ActorSnapshot& {
+			auto& s = snapshots.emplace_back();
+			s.Actor = actor;
+			s.ActorID = actorId;
+			s.Pos = actor->_pos;
+			s.PosX = (std::int32_t)(actor->_pos.X * 512.0f);
+			s.PosY = (std::int32_t)(actor->_pos.Y * 512.0f);
+			s.Animation = (std::uint32_t)(actor->_currentTransition != nullptr ? actor->_currentTransition->State
+				: (actor->_currentAnimation != nullptr ? actor->_currentAnimation->State : AnimState::Idle));
+
+			float rotation = actor->_renderer.rotation();
+			if (rotation < 0.0f) rotation += fRadAngle360;
+			s.Rotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
+			Vector2f scale = actor->_renderer.scale();
+			s.ScaleX = (std::uint16_t)Half{scale.X};
+			s.ScaleY = (std::uint16_t)Half{scale.Y};
+			Actors::ActorRendererType rendererType = actor->_renderer.GetRendererType();
+			if (isPlayer && rendererType == Actors::ActorRendererType::Outline) {
+				// Outline renderer type is local-only
+				rendererType = Actors::ActorRendererType::Default;
+			}
+			s.RendererType = (std::uint8_t)rendererType;
+
+			s.Flags = 0;
+			if (actor->_renderer.isDrawEnabled()) {
+				s.Flags |= 0x04;
+			}
+			if (actor->_renderer.AnimPaused) {
+				s.Flags |= 0x08;
+			}
+			if (actor->_renderer.isFlippedX()) {
+				s.Flags |= 0x10;
+			}
+			if (actor->_renderer.isFlippedY()) {
+				s.Flags |= 0x20;
+			}
+			s.IsPlayer = isPlayer;
+			s.JustWarped = false;
+			s.AlwaysShown = false;
+
+			lights.clear();
+			actor->OnEmitRemotedLights(lights);
+			EncodeRemotedLights(lightBlock, actor->_pos, lights);
+			s.LightsOffset = (std::uint32_t)lightBlocks.size();
+			s.LightsSize = (std::uint32_t)lightBlock.size();
+			lightBlocks.append(lightBlock.begin(), lightBlock.end());
+			return s;
+		};
+
+		bool minimapShown = (IsMinimapAllowed() && !_orderedRaceCheckpoints.empty());
+		for (Actors::Player* player : _players) {
+			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
+			// Skip spectate players - don't send their position to other clients
+			if (mpPlayer->_playerType == PlayerType::Spectate) {
+				continue;
+			}
+
+			auto& s = addSnapshot(player, (std::uint32_t)player->_playerIndex, true);
+			s.JustWarped = mpPlayer->_justWarped;
+			mpPlayer->_justWarped = false;
+			s.AlwaysShown = minimapShown;
+			for (const auto& flag : _ctfFlags) {
+				if (flag.State == CtfFlagState::Carried && flag.CarrierPlayerIndex == s.ActorID) {
+					s.AlwaysShown = true;
+				}
+			}
+		}
+
+		{
+			std::unique_lock lock(_lock);
+			for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
+				// A mirrored actor is recreated from its real class on the client, which doesn't apply any updates
+				if (!remotingActorInfo.IsMirrored) {
+					addSnapshot(remotingActor, remotingActorInfo.ActorID, false);
+				}
+			}
+		}
+
+		constexpr std::int32_t ParkedPosX = (std::int32_t)(ParkedActorPos * 512.0f);
+		constexpr std::int32_t ParkedPosY = (std::int32_t)(ParkedActorPos * 512.0f);
+
+		std::int64_t totalSize = 0, totalCompressedSize = 0;
+
+		for (const auto& rp : peers) {
+			auto& replication = _peerReplication[rp.RemotePeer];
+			replication.LastUpdated = _lastUpdated;
+
+			bool resync = _forceResyncPending;
+			for (std::size_t i = 0; i < resyncPeers.size() && !resync; i++) {
+				resync = (resyncPeers[i] == rp.RemotePeer);
+			}
+
+			MemoryStream body(64 + snapshots.size() * 12);
+			std::uint32_t actorCount = 0;
+
+			for (const auto& s : snapshots) {
+				// The own player is simulated by the client itself
+				if (s.Actor == rp.Player) {
+					continue;
+				}
+
+				auto& state = replication.Actors[s.ActorID];
+				bool isRelevant, isFar = false;
+				if (s.IsPlayer) {
+					// A spectator can cut to any player at any time
+					isRelevant = (rp.Player != nullptr && (rp.IsSpectating || IsWithinRelevance(rp.Player->_pos, s.Pos, state.IsRelevant)));
+					if (!isRelevant && rp.Player != nullptr && s.AlwaysShown) {
+						isRelevant = true;
+						isFar = true;
+					}
+				} else {
+					isRelevant = IsActorRelevantToPeer(rp, s.Pos, state.IsRelevant);
+				}
+
+				if (!state.IsKnown) {
+					if (!isRelevant) {
+						continue;
+					}
+					MemoryStream packet;
+					InitializeCreateRemoteActorPacket(packet, s.ActorID, s.Actor);
+					_networkManager->SendTo(rp.RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
+					state = {};
+				}
+
+				if (!isRelevant) {
+					if (state.IsRelevant || resync) {
+						// Hidden and moved away, without saying where it really is
+						body.WriteVariableUint32(s.ActorID);
+						body.WriteValue<std::uint8_t>(0x01 | 0x40 | 0x80);
+						body.WriteValue<std::int32_t>(ParkedPosX);
+						body.WriteValue<std::int32_t>(ParkedPosY);
+						body.WriteValue<std::uint8_t>(0);
+						actorCount++;
+
+						state.IsRelevant = false;
+						state.HasState = false;
+					}
+					continue;
+				}
+
+				bool wasParked = !state.IsRelevant;
+				if (isFar && !resync && !wasParked && !s.JustWarped && state.HasState && ((_lastUpdated + s.ActorID) % FarPlayerUpdateInterval) != 0) {
+					continue;
+				}
+
+				const std::uint8_t* lightsData = lightBlocks.data() + s.LightsOffset;
+				bool sendAll = (resync || !state.HasState);
+				bool positionChanged = (sendAll || s.IsPlayer || s.PosX != state.LastPosX || s.PosY != state.LastPosY);
+				bool animationChanged = (sendAll || s.IsPlayer || s.Animation != state.LastAnimation || s.Rotation != state.LastRotation ||
+					s.ScaleX != state.LastScaleX || s.ScaleY != state.LastScaleY || s.RendererType != state.LastRendererType);
+				bool lightsChanged = (sendAll || state.LastLights.size() != s.LightsSize || std::memcmp(state.LastLights.data(), lightsData, s.LightsSize) != 0);
+				bool warped = (wasParked || s.JustWarped);
+				if (!positionChanged && !animationChanged && !lightsChanged && !warped && s.Flags == state.LastFlags) {
+					continue;
+				}
+
+				std::uint8_t flags = s.Flags;
+				if (positionChanged) {
+					flags |= 0x01;
+				}
+				if (animationChanged) {
+					flags |= 0x02;
+				}
+				if (warped) {
+					flags |= 0x40;
+				}
+				if (lightsChanged) {
+					flags |= 0x80;
+				}
+
+				body.WriteVariableUint32(s.ActorID);
+				body.WriteValue<std::uint8_t>(flags);
+				if (positionChanged) {
+					body.WriteValue<std::int32_t>(s.PosX);
+					body.WriteValue<std::int32_t>(s.PosY);
+					state.LastPosX = s.PosX;
+					state.LastPosY = s.PosY;
+				}
+				if (animationChanged) {
+					body.WriteVariableUint32(s.Animation);
+					body.WriteValue<std::uint16_t>(s.Rotation);
+					body.WriteValue<std::uint16_t>(s.ScaleX);
+					body.WriteValue<std::uint16_t>(s.ScaleY);
+					body.WriteValue<std::uint8_t>(s.RendererType);
+					state.LastAnimation = s.Animation;
+					state.LastRotation = s.Rotation;
+					state.LastScaleX = s.ScaleX;
+					state.LastScaleY = s.ScaleY;
+					state.LastRendererType = s.RendererType;
+				}
+				if (lightsChanged) {
+					body.Write(lightsData, s.LightsSize);
+					state.LastLights.assign(lightsData, lightsData + s.LightsSize);
+				}
+				actorCount++;
+
+				state.IsRelevant = true;
+				state.HasState = true;
+				state.LastFlags = s.Flags;
+			}
+
+			// An empty update is still sent, a missing one makes the client ask for a full resync
+			MemoryStream header(20);
+			header.WriteVariableUint32(_lastUpdated);
+			header.WriteVariableUint64((std::uint64_t)_elapsedFrames);
+			header.WriteVariableUint32((actorCount << 1) | (resync ? 1 : 0));
+
+			MemoryStream packetCompressed(1024);
+			{
+				DeflateWriter dw(packetCompressed);
+				dw.Write(header.GetBuffer(), header.GetSize());
+				dw.Write(body.GetBuffer(), body.GetSize());
+			}
+
+			totalSize += header.GetSize() + body.GetSize();
+			totalCompressedSize += packetCompressed.GetSize();
+
+			_networkManager->SendTo(rp.RemotePeer, resync ? NetworkChannel::Main : NetworkChannel::UnreliableUpdates,
+				(std::uint8_t)ServerPacketType::UpdateAllActors, packetCompressed);
+		}
+
+		if (_peerReplication.size() > peers.size()) {
+			SmallVector<Peer, 4> stalePeers;
+			for (const auto& [peer, replication] : _peerReplication) {
+				if (replication.LastUpdated != _lastUpdated) {
+					stalePeers.push_back(peer);
+				}
+			}
+			for (const auto& peer : stalePeers) {
+				_peerReplication.erase(peer);
+			}
+		}
+
+#if defined(DEATH_DEBUG)
+		_debugAverageUpdatePacketSize = lerp(_debugAverageUpdatePacketSize, (std::int32_t)(totalSize * UpdatesPerSecond), 0.04f * timeMult);
+#endif
+#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
+		_updatePacketSize[_plotIndex] = (float)totalSize;
+		_updatePacketMaxSize = std::max(_updatePacketMaxSize, _updatePacketSize[_plotIndex]);
+		_compressedUpdatePacketSize[_plotIndex] = (float)totalCompressedSize;
+#endif
+
+		_lastUpdated++;
+		_forceResyncPending = false;
+	}
+
+	void MpLevelHandler::CollectReplicationPeers(SmallVectorImpl<ReplicationPeer>& peers)
+	{
+		peers.clear();
+		auto peerMap = _networkManager->GetPeers();
+		for (const auto& [peer, peerDesc] : *peerMap) {
+			if (peerDesc->RemotePeer && peerDesc->LevelState >= PeerLevelState::LevelSynchronized) {
+				bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
+				peers.push_back(ReplicationPeer{peer, peerDesc->Player, isSpectating});
+			}
+		}
+	}
+
+	bool MpLevelHandler::IsRelevantToPeer(const PeerDescriptor& peerDesc, Vector2f pos)
+	{
+		return (peerDesc.Player != nullptr && IsWithinRelevance(peerDesc.Player->_pos, pos, true));
+	}
+
+	bool MpLevelHandler::IsWithinRelevance(Vector2f center, Vector2f pos, bool wasRelevant)
+	{
+		float halfWidth = (wasRelevant ? RelevanceLeaveHalfWidth : RelevanceEnterHalfWidth);
+		float halfHeight = (wasRelevant ? RelevanceLeaveHalfHeight : RelevanceEnterHalfHeight);
+		return (std::abs(pos.X - center.X) <= halfWidth && std::abs(pos.Y - center.Y) <= halfHeight);
+	}
+
+	bool MpLevelHandler::IsActorRelevantToPeer(const ReplicationPeer& rp, Vector2f pos, bool wasRelevant) const
+	{
+		// Nothing is drawn before the peer spawns
+		if (rp.Player == nullptr) {
+			return false;
+		}
+		if (IsWithinRelevance(rp.Player->_pos, pos, wasRelevant)) {
+			return true;
+		}
+		if (rp.IsSpectating) {
+			// Around every player, so a spectator cutting to another one sees its surroundings right away
+			for (Actors::Player* player : _players) {
+				if (static_cast<PlayerOnServer*>(player)->_playerType != PlayerType::Spectate && IsWithinRelevance(player->_pos, pos, wasRelevant)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	bool MpLevelHandler::IsActorKnownByPeer(const Peer& peer, std::uint32_t actorId) const
+	{
+		auto it = _peerReplication.find(peer);
+		if (it == _peerReplication.end()) {
+			return true;
+		}
+		auto it2 = it->second.Actors.find(actorId);
+		return (it2 == it->second.Actors.end() || it2->second.IsKnown);
+	}
+
+	void MpLevelHandler::RevealActorToAllPeers(Actors::ActorBase* actor, std::uint32_t actorId)
+	{
+		MemoryStream packet;
+		for (auto& [peer, replication] : _peerReplication) {
+			auto it = replication.Actors.find(actorId);
+			if (it == replication.Actors.end() || (it->second.IsKnown && it->second.IsRelevant)) {
+				continue;
+			}
+
+			if (packet.GetSize() == 0) {
+				InitializeCreateRemoteActorPacket(packet, actorId, actor);
+			}
+			if (it->second.IsKnown) {
+				// The parked copy is hidden, so it's replaced with a new one
+				MemoryStream packetDestroy(4);
+				packetDestroy.WriteVariableUint32(actorId);
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packetDestroy);
+			}
+			_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
+			it->second = {};
+		}
+	}
+
+	void MpLevelHandler::ForgetReplicatedActor(std::uint32_t actorId)
+	{
+		for (auto& [peer, replication] : _peerReplication) {
+			replication.Actors.erase(actorId);
+		}
+	}
+
 	void MpLevelHandler::SynchronizePeers(float timeMult)
 	{
 		for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
@@ -8421,6 +8624,10 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
+				// A peer without its player has nothing drawn, so everything else is created once it spawns, near it only
+				auto& replication = _peerReplication[peer];
+				replication = {};
+
 				// TODO: Does this need to be locked?
 				std::unique_lock lock(_lock);
 				for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
@@ -8439,6 +8646,10 @@ namespace Jazz2::Multiplayer
 
 							_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateMirroredActor, packet);
 						}
+					} else if (!remotingActorInfo.IsMirrored) {
+						auto& state = replication.Actors[remotingActorInfo.ActorID];
+						state.IsKnown = false;
+						state.IsRelevant = false;
 					} else {
 						MemoryStream packet;
 						InitializeCreateRemoteActorPacket(packet, remotingActorInfo.ActorID, remotingActor);

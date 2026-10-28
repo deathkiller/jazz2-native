@@ -34,6 +34,13 @@ namespace Jazz2::Editor
 			{
 			}
 
+			void Arrange(const UiContext& context, const Rectf& bounds) override
+			{
+				// Larger than it's measured, so the title doesn't get taller
+				float grow = context.Px(2.0f);
+				UiButton::Arrange(context, Rectf(bounds.X - grow, bounds.Y - grow, bounds.W + grow * 2.0f, bounds.H + grow * 2.0f));
+			}
+
 			Rectf GetHitBounds() const override
 			{
 				// The padding of the window around it is as easy to hit, by a finger too, also as far to the left and below

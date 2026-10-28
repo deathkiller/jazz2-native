@@ -57,6 +57,7 @@
 #include "../Tiles/TileCollisionParams.h"
 #include "../Formats/TileSetFile.h"
 #include "../PreferencesCache.h"
+#include "../Rendering/PlayerViewport.h"
 #include "../Tiles/TileMap.h"
 
 #include "../../nCine/Application.h"

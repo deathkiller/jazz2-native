@@ -847,6 +847,8 @@ namespace Jazz2::Editor
 
 	void EditorShell::Draw(UiPainter& painter)
 	{
+		UiSurface* surface = GetSurface();
+		_drawRect = (_session.ArePanelsShown() && surface != nullptr && surface->IsDrawingInLevel() ? Bounds : _viewRect);
 		PlayTransition& transition = _session.GetPlayTransition();
 		if (!_session.ArePanelsShown()) {
 			std::int32_t slot = painter.GetSlot();
@@ -878,7 +880,7 @@ namespace Jazz2::Editor
 			// ring with the game in it has grown over it
 			transition.DrawOutside(painter, Vector2f(Bounds.W, Bounds.H));
 		}
-		painter.PushClip(_viewRect);
+		painter.PushClip(_drawRect);
 		{
 			std::int32_t layer = _session.GetCurrentLayer();
 			LayerView view = _session.GetLayerView(layer);
@@ -890,13 +892,13 @@ namespace Jazz2::Editor
 			}
 			DrawSelection(painter, view);
 			if (_session.AreEventsShown() || _session.IsEditingEvents()) {
-				DrawEvents(painter, _viewRect);
+				DrawEvents(painter, _drawRect);
 			}
 			if (_session.IsPlayPathShown()) {
 				DrawPlayPath(painter);
 			}
 			// The deaths in the last play-tests, see the Play menu
-			_session.DrawSessionOverlays(painter, _viewRect);
+			_session.DrawSessionOverlays(painter, _drawRect);
 			DrawAnnotations(painter);
 			if (_session.GetSettings().ShowScreenFrame) {
 				DrawScreenFrame(painter);
@@ -989,8 +991,8 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X, _viewRect.Y)));
-		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X + _viewRect.W, _viewRect.Y + _viewRect.H)));
+		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_drawRect.X, _drawRect.Y)));
+		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_drawRect.X + _drawRect.W, _drawRect.Y + _drawRect.H)));
 		if (!view.RepeatX) {
 			from.X = std::max<std::int32_t>(from.X, 0);
 			to.X = std::min(to.X, view.Size.X - 1);
@@ -1005,10 +1007,10 @@ namespace Jazz2::Editor
 
 		Rectf topLeft = view.CellToScreen(from);
 		Rectf bottomRight = view.CellToScreen(to);
-		float top = std::max(topLeft.Y, _viewRect.Y);
-		float bottom = std::min(bottomRight.Y + bottomRight.H, _viewRect.Y + _viewRect.H);
-		float left = std::max(topLeft.X, _viewRect.X);
-		float right = std::min(bottomRight.X + bottomRight.W, _viewRect.X + _viewRect.W);
+		float top = std::max(topLeft.Y, _drawRect.Y);
+		float bottom = std::min(bottomRight.Y + bottomRight.H, _drawRect.Y + _drawRect.H);
+		float left = std::max(topLeft.X, _drawRect.X);
+		float right = std::min(bottomRight.X + bottomRight.W, _drawRect.X + _drawRect.W);
 
 		Colorf color = UiTheme::GridLine;
 		color.A *= alpha;
@@ -1036,8 +1038,8 @@ namespace Jazz2::Editor
 		const bool repeatX = (view.RepeatX && view.Size.X > 0);
 		const bool repeatY = (view.RepeatY && view.Size.Y > 0);
 		const Recti& bounds = selection.GetBounds();
-		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X, _viewRect.Y)));
-		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X + _viewRect.W, _viewRect.Y + _viewRect.H)));
+		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_drawRect.X, _drawRect.Y)));
+		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_drawRect.X + _drawRect.W, _drawRect.Y + _drawRect.H)));
 		if (!repeatX) {
 			from.X = std::max(from.X, bounds.X);
 			to.X = std::min(to.X, bounds.X + bounds.W - 1);
@@ -1287,7 +1289,7 @@ namespace Jazz2::Editor
 		// The dots follow the line, a little wider than it where it ends, so they don't stand out of a thin one
 		float minMarkerRadius = std::max(1.5f, painter.GetScale() * 1.8f) * zoom;
 		float ringWidth = std::max(1.0f, painter.GetScale() * 1.2f * zoom);
-		Rectf visible(_viewRect.X - maxHalfThickness, _viewRect.Y - maxHalfThickness, _viewRect.W + maxHalfThickness * 2.0f, _viewRect.H + maxHalfThickness * 2.0f);
+		Rectf visible(_drawRect.X - maxHalfThickness, _drawRect.Y - maxHalfThickness, _drawRect.W + maxHalfThickness * 2.0f, _drawRect.H + maxHalfThickness * 2.0f);
 		std::uint16_t z = painter.GetDepth(UiLayer::Content);
 
 		// From blue at the start to gold at the end, in short runs of a single color each
@@ -1362,12 +1364,12 @@ namespace Jazz2::Editor
 			return;
 		}
 		// Over the level, or instead of it
-		_session.GetMaskOverlay().Draw(painter, *tileMap, document, layerIndex, view, _viewRect, mode == 2);
+		_session.GetMaskOverlay().Draw(painter, *tileMap, document, layerIndex, view, _drawRect, mode == 2);
 		if (layerIndex == document.GetSpriteLayerIndex()) {
 			DrawMaskGlyphs(painter, view);
 		}
 		// Translucent and invisible tiles, solid as any other, but drawn otherwise or not at all
-		DrawTileModifiers(painter, document.Layers[layerIndex], view, _viewRect);
+		DrawTileModifiers(painter, document.Layers[layerIndex], view, _drawRect);
 	}
 
 	void EditorShell::DrawReachability(UiPainter& painter)
@@ -1381,8 +1383,8 @@ namespace Jazz2::Editor
 			return;
 		}
 		LayerView view = _session.GetLayerView(spriteLayer);
-		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X, _viewRect.Y)));
-		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X + _viewRect.W, _viewRect.Y + _viewRect.H)));
+		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_drawRect.X, _drawRect.Y)));
+		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_drawRect.X + _drawRect.W, _drawRect.Y + _drawRect.H)));
 		from.X = std::max<std::int32_t>(from.X, 0);
 		from.Y = std::max<std::int32_t>(from.Y, 0);
 		to.X = std::min(to.X, gridSize.X - 1);
@@ -1444,7 +1446,7 @@ namespace Jazz2::Editor
 		float padding = painter.Px(UiTheme::Padding);
 		for (const Annotation& annotation : annotations) {
 			Vector2f pos = view.WorldToScreen(Vector2f(float(annotation.X), float(annotation.Y)));
-			if (!_viewRect.Contains(pos)) {
+			if (!_drawRect.Contains(pos)) {
 				continue;
 			}
 			pos = Vector2f(std::round(pos.X), std::round(pos.Y));
@@ -1530,8 +1532,8 @@ namespace Jazz2::Editor
 		if (gridSize.X <= 0 || gridSize.Y <= 0 || tileSize < 8.0f) {
 			return;
 		}
-		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X, _viewRect.Y)));
-		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_viewRect.X + _viewRect.W, _viewRect.Y + _viewRect.H)));
+		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(_drawRect.X, _drawRect.Y)));
+		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(_drawRect.X + _drawRect.W, _drawRect.Y + _drawRect.H)));
 		from.X = std::max<std::int32_t>(from.X, 0);
 		from.Y = std::max<std::int32_t>(from.Y, 0);
 		to.X = std::min(to.X, gridSize.X - 1);
@@ -1881,7 +1883,7 @@ namespace Jazz2::Editor
 		// Only around the view and not too many, all events of a large level can be selected
 		constexpr std::int32_t MaxDetails = 256;
 		float reach = painter.Px(200.0f);
-		Rectf nearView(_viewRect.X - reach, _viewRect.Y - reach, _viewRect.W + reach * 2.0f, _viewRect.H + reach * 2.0f);
+		Rectf nearView(_drawRect.X - reach, _drawRect.Y - reach, _drawRect.W + reach * 2.0f, _drawRect.H + reach * 2.0f);
 		std::int32_t drawn = 0;
 
 		for (std::uint32_t cell : _session.GetEventSelection().GetCells()) {
@@ -1908,8 +1910,8 @@ namespace Jazz2::Editor
 				bool pulsing = (!UiTheme::ReducedMotion && light.Pulse > 0.0f && light.PulseSpeed > 0.0f);
 				float pulse = (pulsing ? EventPreviews::GetLightPulse(light, _session.GetAnimTime()) : 0.0f);
 				float largest = (light.RadiusFar + (pulsing ? light.Pulse : 0.0f)) * view.Scale;
-				if (largest >= 2.0f && center.X + largest >= _viewRect.X && center.X - largest <= _viewRect.X + _viewRect.W &&
-					center.Y + largest >= _viewRect.Y && center.Y - largest <= _viewRect.Y + _viewRect.H) {
+				if (largest >= 2.0f && center.X + largest >= _drawRect.X && center.X - largest <= _drawRect.X + _drawRect.W &&
+					center.Y + largest >= _drawRect.Y && center.Y - largest <= _drawRect.Y + _drawRect.H) {
 					drawn++;
 					auto drawRing = [&painter, center](float radius, float lineThickness, const Colorf& color) {
 						// A pulsing light can shrink so far that nothing is left of a ring
@@ -1964,8 +1966,8 @@ namespace Jazz2::Editor
 				if (field.Unit == ParamUnit::Pixels && StringView(field.Name).contains("Radius"_s) && !isLight) {
 					// How far a light reaches
 					float radius = float(EventCatalog::ReadField(event, field)) * view.Scale;
-					if (radius < 2.0f || center.X + radius < _viewRect.X || center.X - radius > _viewRect.X + _viewRect.W ||
-						center.Y + radius < _viewRect.Y || center.Y - radius > _viewRect.Y + _viewRect.H) {
+					if (radius < 2.0f || center.X + radius < _drawRect.X || center.X - radius > _drawRect.X + _drawRect.W ||
+						center.Y + radius < _drawRect.Y || center.Y - radius > _drawRect.Y + _drawRect.H) {
 						continue;
 					}
 					drawn++;
@@ -2025,7 +2027,7 @@ namespace Jazz2::Editor
 				// The new water level across the view
 				drawn++;
 				float y = std::round(view.WorldToScreen(Vector2f(0.0f, float(EventCatalog::ReadField(event, descriptor->Fields[0])))).Y);
-				painter.FillRect(Rectf(_viewRect.X, y, _viewRect.W, std::max(thickness, 2.0f)), Colorf(0.3f, 0.6f, 1.0f, 0.8f), UiLayer::Overlay);
+				painter.FillRect(Rectf(_drawRect.X, y, _drawRect.W, std::max(thickness, 2.0f)), Colorf(0.3f, 0.6f, 1.0f, 0.8f), UiLayer::Overlay);
 				painter.Line(center, Vector2f(center.X, y), thickness, Colorf(0.3f, 0.6f, 1.0f, 0.6f), UiLayer::Overlay);
 			} else if (EventType(event.Type) == EventType::ModifierLimitCameraView && descriptor->FieldCount > 1 && isNearView) {
 				// Where the camera is kept, darker outside of it, see Player::HandleAreaEventAt()
@@ -2047,25 +2049,25 @@ namespace Jazz2::Editor
 				float screenRight = std::round(view.WorldToScreen(Vector2f(right, 0.0f)).X);
 				Colorf shade(0.0f, 0.0f, 0.0f, 0.35f);
 				Colorf edge(1.0f, 0.55f, 0.85f, 0.9f);
-				if (screenEffectiveLeft > _viewRect.X) {
-					painter.FillRect(Rectf(_viewRect.X, _viewRect.Y, std::min(screenEffectiveLeft, _viewRect.X + _viewRect.W) - _viewRect.X, _viewRect.H), shade, UiLayer::Fill);
+				if (screenEffectiveLeft > _drawRect.X) {
+					painter.FillRect(Rectf(_drawRect.X, _drawRect.Y, std::min(screenEffectiveLeft, _drawRect.X + _drawRect.W) - _drawRect.X, _drawRect.H), shade, UiLayer::Fill);
 				}
 				if (screenEffectiveLeft < screenLeft) {
 					// Where the camera can go too, as the view is wider than the span, lighter and with a thinner edge
-					float from = std::max(screenEffectiveLeft, _viewRect.X);
-					float to = std::min(screenLeft, _viewRect.X + _viewRect.W);
+					float from = std::max(screenEffectiveLeft, _drawRect.X);
+					float to = std::min(screenLeft, _drawRect.X + _drawRect.W);
 					if (to > from) {
-						painter.FillRect(Rectf(from, _viewRect.Y, to - from, _viewRect.H), Colorf(edge.R, edge.G, edge.B, 0.08f), UiLayer::Fill);
+						painter.FillRect(Rectf(from, _drawRect.Y, to - from, _drawRect.H), Colorf(edge.R, edge.G, edge.B, 0.08f), UiLayer::Fill);
 					}
-					painter.FillRect(Rectf(screenEffectiveLeft - thickness * 0.5f, _viewRect.Y, thickness, _viewRect.H), Colorf(edge.R, edge.G, edge.B, 0.55f), UiLayer::Overlay);
+					painter.FillRect(Rectf(screenEffectiveLeft - thickness * 0.5f, _drawRect.Y, thickness, _drawRect.H), Colorf(edge.R, edge.G, edge.B, 0.55f), UiLayer::Overlay);
 				}
-				if (screenRight < _viewRect.X + _viewRect.W) {
-					float from = std::max(screenRight, _viewRect.X);
-					painter.FillRect(Rectf(from, _viewRect.Y, _viewRect.X + _viewRect.W - from, _viewRect.H), shade, UiLayer::Fill);
+				if (screenRight < _drawRect.X + _drawRect.W) {
+					float from = std::max(screenRight, _drawRect.X);
+					painter.FillRect(Rectf(from, _drawRect.Y, _drawRect.X + _drawRect.W - from, _drawRect.H), shade, UiLayer::Fill);
 				}
 				float lineWidth = std::max(thickness, 2.0f);
-				painter.FillRect(Rectf(screenLeft - lineWidth * 0.5f, _viewRect.Y, lineWidth, _viewRect.H), edge, UiLayer::Overlay);
-				painter.FillRect(Rectf(screenRight - lineWidth * 0.5f, _viewRect.Y, lineWidth, _viewRect.H), edge, UiLayer::Overlay);
+				painter.FillRect(Rectf(screenLeft - lineWidth * 0.5f, _drawRect.Y, lineWidth, _drawRect.H), edge, UiLayer::Overlay);
+				painter.FillRect(Rectf(screenRight - lineWidth * 0.5f, _drawRect.Y, lineWidth, _drawRect.H), edge, UiLayer::Overlay);
 				painter.Line(Vector2f(screenLeft, center.Y), Vector2f(screenRight, center.Y), thickness, Colorf(edge.R, edge.G, edge.B, 0.5f), UiLayer::Overlay);
 			}
 		}
@@ -2134,7 +2136,7 @@ namespace Jazz2::Editor
 			return Rectf(topLeft.X, topLeft.Y, cells.W * 32.0f * view.Scale, cells.H * 32.0f * view.Scale);
 		};
 		// Lines that can't cross the view aren't drawn
-		Rectf viewRect = _viewRect;
+		Rectf viewRect = _drawRect;
 		auto crossesView = [viewRect](const Rectf& a, const Rectf& b) {
 			float left = std::min(a.X, b.X), right = std::max(a.X + a.W, b.X + b.W);
 			float top = std::min(a.Y, b.Y), bottom = std::max(a.Y + a.H, b.Y + b.H);
@@ -2320,20 +2322,20 @@ namespace Jazz2::Editor
 		// Outside of a layer that doesn't repeat is darkened, so its edges can be seen
 		Rectf topLeft = view.CellToScreen(Vector2i(0, 0));
 		Rectf bottomRight = view.CellToScreen(Vector2i(view.Size.X - 1, view.Size.Y - 1));
-		float left = (view.RepeatX ? _viewRect.X : std::max(topLeft.X, _viewRect.X));
-		float right = (view.RepeatX ? _viewRect.X + _viewRect.W : std::min(bottomRight.X + bottomRight.W, _viewRect.X + _viewRect.W));
-		float top = (view.RepeatY ? _viewRect.Y : std::max(topLeft.Y, _viewRect.Y));
-		float bottom = (view.RepeatY ? _viewRect.Y + _viewRect.H : std::min(bottomRight.Y + bottomRight.H, _viewRect.Y + _viewRect.H));
+		float left = (view.RepeatX ? _drawRect.X : std::max(topLeft.X, _drawRect.X));
+		float right = (view.RepeatX ? _drawRect.X + _drawRect.W : std::min(bottomRight.X + bottomRight.W, _drawRect.X + _drawRect.W));
+		float top = (view.RepeatY ? _drawRect.Y : std::max(topLeft.Y, _drawRect.Y));
+		float bottom = (view.RepeatY ? _drawRect.Y + _drawRect.H : std::min(bottomRight.Y + bottomRight.H, _drawRect.Y + _drawRect.H));
 		Colorf shade(0.02f, 0.0f, 0.06f, 0.68f);
 
 		if (right <= left || bottom <= top) {
-			painter.FillRect(_viewRect, shade, UiLayer::Back);
+			painter.FillRect(_drawRect, shade, UiLayer::Back);
 			return;
 		}
-		painter.FillRect(Rectf(_viewRect.X, _viewRect.Y, _viewRect.W, top - _viewRect.Y), shade, UiLayer::Back);
-		painter.FillRect(Rectf(_viewRect.X, bottom, _viewRect.W, _viewRect.Y + _viewRect.H - bottom), shade, UiLayer::Back);
-		painter.FillRect(Rectf(_viewRect.X, top, left - _viewRect.X, bottom - top), shade, UiLayer::Back);
-		painter.FillRect(Rectf(right, top, _viewRect.X + _viewRect.W - right, bottom - top), shade, UiLayer::Back);
+		painter.FillRect(Rectf(_drawRect.X, _drawRect.Y, _drawRect.W, top - _drawRect.Y), shade, UiLayer::Back);
+		painter.FillRect(Rectf(_drawRect.X, bottom, _drawRect.W, _drawRect.Y + _drawRect.H - bottom), shade, UiLayer::Back);
+		painter.FillRect(Rectf(_drawRect.X, top, left - _drawRect.X, bottom - top), shade, UiLayer::Back);
+		painter.FillRect(Rectf(right, top, _drawRect.X + _drawRect.W - right, bottom - top), shade, UiLayer::Back);
 
 		if (view.RepeatX || view.RepeatY) {
 			DrawRepeatedLayerBounds(painter, view, topLeft, bottomRight);
@@ -2393,20 +2395,20 @@ namespace Jazz2::Editor
 		float minCopy = painter.GetScale() * 24.0f;
 
 		if (view.RepeatX && layer.W >= minCopy) {
-			float first = layer.X + std::floor((_viewRect.X - layer.X) / layer.W) * layer.W;
-			for (float x = first; x <= _viewRect.X + _viewRect.W; x += layer.W) {
-				float lineTop = (view.RepeatY ? _viewRect.Y : std::max(layer.Y, _viewRect.Y));
-				float lineBottom = (view.RepeatY ? _viewRect.Y + _viewRect.H : std::min(layer.Y + layer.H, _viewRect.Y + _viewRect.H));
+			float first = layer.X + std::floor((_drawRect.X - layer.X) / layer.W) * layer.W;
+			for (float x = first; x <= _drawRect.X + _drawRect.W; x += layer.W) {
+				float lineTop = (view.RepeatY ? _drawRect.Y : std::max(layer.Y, _drawRect.Y));
+				float lineBottom = (view.RepeatY ? _drawRect.Y + _drawRect.H : std::min(layer.Y + layer.H, _drawRect.Y + _drawRect.H));
 				if (lineBottom > lineTop) {
 					painter.FillRect(Rectf(std::round(x), lineTop, width, lineBottom - lineTop), seam, UiLayer::Overlay);
 				}
 			}
 		}
 		if (view.RepeatY && layer.H >= minCopy) {
-			float first = layer.Y + std::floor((_viewRect.Y - layer.Y) / layer.H) * layer.H;
-			for (float y = first; y <= _viewRect.Y + _viewRect.H; y += layer.H) {
-				float lineLeft = (view.RepeatX ? _viewRect.X : std::max(layer.X, _viewRect.X));
-				float lineRight = (view.RepeatX ? _viewRect.X + _viewRect.W : std::min(layer.X + layer.W, _viewRect.X + _viewRect.W));
+			float first = layer.Y + std::floor((_drawRect.Y - layer.Y) / layer.H) * layer.H;
+			for (float y = first; y <= _drawRect.Y + _drawRect.H; y += layer.H) {
+				float lineLeft = (view.RepeatX ? _drawRect.X : std::max(layer.X, _drawRect.X));
+				float lineRight = (view.RepeatX ? _drawRect.X + _drawRect.W : std::min(layer.X + layer.W, _drawRect.X + _drawRect.W));
 				if (lineRight > lineLeft) {
 					painter.FillRect(Rectf(lineLeft, std::round(y), lineRight - lineLeft, width), seam, UiLayer::Overlay);
 				}

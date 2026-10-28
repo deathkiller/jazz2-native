@@ -64,10 +64,10 @@ namespace Jazz2::Compatibility
 		 * @brief Recodes a string a level script draws from the original encoding, as `jjCANVAS::drawString()` of JJ2+ draws it
 		 *
 		 * Unlike in the texts of levels, every `|` switches to the next color, `#` isn't drawn, and `~` and `@` are drawn
-		 * as they are - there are no new lines. With @p asMessage, as `jjAlert()` and `jjConsole()` show it, the text
-		 * starts in the first color instead of the default one and `#` is drawn too.
+		 * as they are - `\n` is a new line only with @p newLines (`STRING::SPECIALSIGN`), a space otherwise. With @p asMessage,
+		 * as `jjAlert()` and `jjConsole()` show it, the text starts in the first color instead of the default one and `#` is drawn too.
 		 */
-		static String RecodeScriptString(StringView text, bool asMessage = false);
+		static String RecodeScriptString(StringView text, bool asMessage = false, bool newLines = false);
 
 	private:
 		// Appends a character of the original encoding as UTF-8

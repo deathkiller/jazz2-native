@@ -393,8 +393,7 @@ namespace Jazz2::Actors
 			return true;
 		}
 
-		if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr) {
-			// Buttstomp is probably in starting transition, do nothing yet
+		if (IsButtstompStarting()) {
 			return false;
 		}
 
@@ -888,7 +887,8 @@ namespace Jazz2::Actors
 		// that assignment takes over, but capping it here as well would put the tighter limit on every frame
 		// of a ladder ride where `_inFloatUpArea` is a frame stale, for one tick of a transition that the
 		// assignment overwrites anyway.
-		if (!_levelHandler->IsReforged()) {
+		// Without gravity (noclip of a tube) the speed is kept as it was given
+		if (!_levelHandler->IsReforged() && GetState(ActorState::ApplyGravitation)) {
 			float fallCap;
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
 				fallCap = (_inFloatUpArea ? LegacyFloatUpFallCap : LegacyButtstompSpeed);
@@ -1886,6 +1886,13 @@ namespace Jazz2::Actors
 	bool Player::IsDashActive() const
 	{
 		return (_isRunPressed || _dashGraceLeft > 0.0f);
+	}
+
+	bool Player::IsButtstompStarting() const
+	{
+		// Only its own start transition, a stomp forced by a spring can run under an unrelated one (e.g. warp-out pose)
+		return (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr &&
+			_currentTransition->State == AnimState::TransitionButtstompStart);
 	}
 
 	std::int32_t Player::GetSlideStrength() const
@@ -4080,13 +4087,13 @@ namespace Jazz2::Actors
 		bool handled = false;
 		bool removeSpecialMove = false;
 		if (auto* turtleShell = runtime_cast<Enemies::TurtleShell>(other)) {
-			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
-				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush is active
+			if (IsButtstompStarting() && _sugarRushLeft <= 0.0f) {
+				// Buttstomp is in starting transition, do nothing yet unless sugar rush is active
 			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
 				other->DecreaseHealth(INT32_MAX, this);
 				handled = true;
 
-				if ((_currentAnimation->State & AnimState::Buttstomp) == AnimState::Buttstomp) {
+				if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
 					removeSpecialMove = true;
 					_speed.Y *= -0.6f;
 					SetState(ActorState::CanJump, false);
@@ -4099,8 +4106,8 @@ namespace Jazz2::Actors
 			bool birdCharge = (_birdCharging && _levelHandler->IsReforged());
 			bool rammingFrozen = IsRammingFrozen(enemy);
 			bool otherAttack = (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || rammingFrozen);
-			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
-				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush or shield is active
+			if (IsButtstompStarting() && _sugarRushLeft <= 0.0f) {
+				// Buttstomp is in starting transition, do nothing yet unless sugar rush or shield is active
 			} else if (otherAttack || birdCharge) {
 				// The charge alone hurts the same enemy only once per BirdChargeHitInterval, the bird goes through it
 				// unharmed in between
@@ -4124,7 +4131,7 @@ namespace Jazz2::Actors
 						}
 						_speed.Y *= -0.5f;
 					}
-					if ((_currentAnimation->State & AnimState::Buttstomp) == AnimState::Buttstomp) {
+					if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
 						removeSpecialMove = true;
 						if (_levelHandler->IsReforged()) {
 							_speed.Y *= -0.6f;
@@ -4667,7 +4674,9 @@ namespace Jazz2::Actors
 				removeSpecialMove = false;
 				if (_activeModifier == Modifier::None) {
 					_currentSpecialMove = SpecialMoveType::Buttstomp;
-					SetAnimation(AnimState::Buttstomp);
+					if (_tubeBallPoseLeft <= 0.0f) {
+						SetAnimation(AnimState::Buttstomp);
+					}
 				}
 			} else {
 				removeSpecialMove = true;
@@ -4713,6 +4722,18 @@ namespace Jazz2::Actors
 			_currentTransition->State == AnimState::Spring) {
 			// The transition is deliberately non-cancellable, so nothing else can end it
 			ForceCancelTransition();
+		}
+
+		if (_tubeBallPoseLeft > 0.0f) {
+			_tubeBallPoseLeft -= timeMult;
+			if (!_inWater && _activeModifier == Modifier::None && !IsBird()) {
+				// A transition still plays over it, replacing it would cancel e.g. the buttstomp's start
+				ApplyStopAnimation(false);
+				if (_currentTransition == nullptr) {
+					SetAnimation(AnimState::Dash | AnimState::Jump);
+				}
+				return;
+			}
 		}
 
 		if (!_controllable) {
@@ -4834,6 +4855,10 @@ namespace Jazz2::Actors
 		} else {
 			// Only certain ones don't need to be preserved from earlier state, others should be set as expected
 			AnimState composite = (_currentAnimation->State & CompositeAnimMask);
+			// A buttstomp that ran under the tube's ball (see TubeBallPoseTime) gets its own pose back
+			if (_currentSpecialMove == SpecialMoveType::Buttstomp && !IsButtstompStarting()) {
+				composite |= AnimState::Buttstomp;
+			}
 
 			if (stopPoseShowing) {
 				// Sliding to a halt. The base state stays idle for the whole slide and the stop pose is drawn
@@ -6212,9 +6237,17 @@ namespace Jazz2::Actors
 					break;
 				}
 
+				// The warp-out pose a player can still be in from a warp just before isn't drawn over the ball
+				if (_currentTransition != nullptr && (_currentTransition->State == AnimState::TransitionWarpOut ||
+					_currentTransition->State == AnimState::TransitionWarpOutFreefall)) {
+					_currentTransitionCancellable = true;
+					CancelTransition();
+				}
+
 				EndDamagingMove();
 
 				SetAnimation(AnimState::Dash | AnimState::Jump);
+				_tubeBallPoseLeft = TubeBallPoseTime;
 
 				_controllable = false;
 				SetState(ActorState::CanJump, false);
@@ -6259,6 +6292,12 @@ namespace Jazz2::Actors
 				}
 
 				SetState(ActorState::CollideWithTileset, !becomeNoclip);
+				// Noclip has no gravity either, the speed of the tube is kept until a tube of noclip only ends it
+				if (becomeNoclip) {
+					SetState(ActorState::ApplyGravitation, false);
+				} else if (!_levelHandler->IsReforged()) {
+					SetState(ActorState::ApplyGravitation, true);
+				}
 				_inTubeTime = (becomeNoclip ? 600.0f : TubeControlTime);
 				return true;
 			}

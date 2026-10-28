@@ -748,7 +748,8 @@ namespace Jazz2::Scripting
 	{
 		String ret;
 		if (start < str.size() && count != 0) {
-			ret = str.slice(start, (size_t)(count < 0 ? str.size() : start + count));
+			// As std::string::substr(), a count past the end takes the rest
+			ret = str.slice(start, count < 0 || std::size_t(count) >= str.size() - start ? str.size() : start + std::size_t(count));
 		}
 		return ret;
 	}

@@ -59,8 +59,6 @@ namespace Jazz2::Actors::Environment
 
 		async_await RequestMetadataAsync("Object/Spring"_s);
 
-		Vector2f tileCorner = Vector2f((std::int32_t)(_pos.X / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize,
-			(std::int32_t)(_pos.Y / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize);
 		if (_orientation > Orientation::Left) {
 			// JJ2 horizontal springs held no data about which way they were facing.
 			// For compatibility, correct orientation is evaluated during runtime.
@@ -68,6 +66,37 @@ namespace Jazz2::Actors::Environment
 			TileCollisionParams params = { TileDestructType::None, true };
 			_orientation = (_levelHandler->TileMap()->IsTileEmpty(aabb, params) != (_orientation == (Orientation)5) ? Orientation::Right : Orientation::Left);
 		}
+
+		ApplyOrientation();
+		SetState(ActorState::ApplyGravitation, applyGravitation);
+		_renderer.setLayer(_renderer.layer() - 8);
+		UpdateStrength();
+
+		if (GetState(ActorState::ApplyGravitation)) {
+			OnUpdateHitbox();
+
+			// Apply instant gravitation
+			std::int32_t i = 10;
+			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
+				// Nothing to do...
+			}
+			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative)) {
+				// Nothing to do...
+			}
+		}
+
+		if (_state == State::Frozen) {
+			_renderer.Initialize(ActorRendererType::FrozenMask);
+			SetState(ActorState::CanBeFrozen, false);
+		}
+
+		async_return true;
+	}
+
+	void Spring::ApplyOrientation()
+	{
+		Vector2f tileCorner = Vector2f((std::int32_t)(_pos.X / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize,
+			(std::int32_t)(_pos.Y / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize);
 
 		std::int32_t orientationBit = 0;
 		switch (_orientation) {
@@ -85,16 +114,16 @@ namespace Jazz2::Actors::Environment
 			case Orientation::Left:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
-				SetFacingLeft(true);
 				break;
 		}
-
-		SetState(ActorState::ApplyGravitation, applyGravitation);
+		SetFacingLeft(_orientation == Orientation::Left);
 
 		// Red starts at 1 in "Object/Spring"
 		SetAnimation((AnimState)(((_type + 1) << 10) | (orientationBit << 12)));
-		_renderer.setLayer(_renderer.layer() - 8);
+	}
 
+	void Spring::UpdateStrength()
+	{
 		if (!_levelHandler->IsReforged()) {
 			// Measured off the original with the trajectory probe: a spring sets the player's speed outright,
 			// the same figure on either axis, and only the colour matters - 16, 24 and 32 px/tick at its 70 Hz.
@@ -136,26 +165,64 @@ namespace Jazz2::Actors::Environment
 					break;
 			}
 		}
+	}
 
-		if (GetState(ActorState::ApplyGravitation)) {
-			OnUpdateHitbox();
+	Vector2f Spring::GetLegacyLaunchSpeed() const
+	{
+		float power = 16.0f + std::min<std::int32_t>(_type, 2) * 8.0f;
+		switch (_orientation) {
+			case Orientation::Bottom: return Vector2f(0.0f, -power);
+			case Orientation::Top: return Vector2f(0.0f, power);
+			case Orientation::Right: return Vector2f(power, 0.0f);
+			case Orientation::Left: return Vector2f(-power, 0.0f);
+			default: return Vector2f::Zero;
+		}
+	}
 
-			// Apply instant gravitation
-			std::int32_t i = 10;
-			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
-				// Nothing to do...
-			}
-			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative)) {
-				// Nothing to do...
-			}
+	void Spring::SetLegacyLaunchSpeed(Vector2f speed)
+	{
+		if (speed == Vector2f::Zero) {
+			return;
 		}
 
+		Orientation orientation = (speed.X != 0.0f
+			? (speed.X > 0.0f ? Orientation::Right : Orientation::Left)
+			: (speed.Y < 0.0f ? Orientation::Bottom : Orientation::Top));
+		if (orientation != _orientation) {
+			_orientation = orientation;
+			ApplyOrientation();
+		}
+		// The speed of its own color launches as the spring of the game does
+		if (speed == GetLegacyLaunchSpeed()) {
+			UpdateStrength();
+		} else {
+			float power = std::abs(speed.X != 0.0f ? speed.X : speed.Y);
+			_strength = GetStrengthOfLegacySpeed(_levelHandler, power, orientation == Orientation::Right || orientation == Orientation::Left);
+		}
+	}
+
+	float Spring::GetStrengthOfLegacySpeed(ILevelHandler* levelHandler, float speed, bool horizontal)
+	{
+		// The colors of the original are 16, 24 and 32, Reforged has strengths of its own for them
+		if (!levelHandler->IsReforged()) {
+			return speed * Player::LegacyFrameRateScale;
+		} else if (horizontal) {
+			return 9.5f * speed / 16.0f;
+		} else if (speed <= 16.0f) {
+			return 1.25f * speed / 16.0f;
+		} else if (speed <= 24.0f) {
+			return 1.25f + (speed - 16.0f) * (1.50f - 1.25f) / 8.0f;
+		} else {
+			return 1.50f + (speed - 24.0f) * (1.68f - 1.50f) / 8.0f;
+		}
+	}
+
+	void Spring::Thaw()
+	{
 		if (_state == State::Frozen) {
-			_renderer.Initialize(ActorRendererType::FrozenMask);
-			SetState(ActorState::CanBeFrozen, false);
+			_state = State::Heated;
+			SetState(ActorState::CanBeFrozen, true);
 		}
-
-		async_return true;
 	}
 
 	void Spring::OnUpdate(float timeMult)

@@ -1446,8 +1446,9 @@ namespace Jazz2::Scripting::Legacy
 
 	GenericGraphicResource* AnimationTables::RequestNativeGraphics(NativeAnimation& native)
 	{
-		if (native.Graphics == nullptr && !native.Path.empty()) {
+		if (native.Graphics == nullptr && !native.Path.empty() && !native.GraphicsRequested) {
 			// Indexed, as the actors request it, so this is the very same instance they draw
+			native.GraphicsRequested = true;
 			native.Graphics = ContentResolver::Get().RequestGraphics(native.Path, 0, true);
 		}
 		return native.Graphics;
@@ -1500,6 +1501,7 @@ namespace Jazz2::Scripting::Legacy
 		if (!ContentResolver::Get().IsGraphicsCached(native.Graphics, native.Path, 0, true)) {
 			native.Original = nullptr;
 			native.Graphics = nullptr;
+			native.GraphicsRequested = false;
 			return;
 		}
 

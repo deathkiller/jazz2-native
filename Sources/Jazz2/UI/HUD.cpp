@@ -286,9 +286,9 @@ namespace Jazz2::UI
 			auto& viewport = _levelHandler->_assignedViewports[0];
 			for (const auto& actor : _levelHandler->_actors) {
 				DrawSolid(actor->GetPos() - actor->AABB.GetExtents() - viewport->_cameraPos + viewport->GetBounds().GetSize() * 0.5f, 10,
-					actor->AABB.GetExtents() * 2.0f, Colorf(0.0f, 0.0f, 0.0f, 0.3f), false);
+					actor->AABB.GetExtents() * 2.0f, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
 				DrawSolid(actor->GetPos() - actor->AABBInner.GetExtents() - viewport->_cameraPos + viewport->GetBounds().GetSize() * 0.5f, 12,
-					actor->AABBInner.GetExtents() * 2.0f, Colorf(1.0f, 1.0f, 1.0f, 0.3f), true);
+					actor->AABBInner.GetExtents() * 2.0f, Colorf(1.0f, 1.0f, 1.0f, 0.3f), BlendMode::Additive);
 			}
 		}*/
 #endif
@@ -1334,10 +1334,10 @@ namespace Jazz2::UI
 				if (PreferencesCache::PreferVerticalSplitscreen) {
 					std::int32_t halfW = ViewSize.X / 2;
 					DrawSolid(Vector2f(halfW - 1.0f, 0.0f), 20, Vector2f(1.0f, ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-					DrawSolid(Vector2f(halfW, 0.0f), 20, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
+					DrawSolid(Vector2f(halfW, 0.0f), 20, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.1f), BlendMode::Additive);
 				} else {
 					std::int32_t halfH = ViewSize.Y / 2;
-					DrawSolid(Vector2f(0.0f, halfH - 1.0f), 20, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
+					DrawSolid(Vector2f(0.0f, halfH - 1.0f), 20, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), BlendMode::Additive);
 					DrawSolid(Vector2f(0.0f, halfH), 20, Vector2f(ViewSize.X, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 				}
 				break;
@@ -1352,8 +1352,8 @@ namespace Jazz2::UI
 				std::int32_t halfW = (ViewSize.X + 1) / 2;
 				std::int32_t halfH = (ViewSize.Y + 1) / 2;
 				DrawSolid(Vector2f(halfW - 1.0f, 0.0f), 20, Vector2f(1.0f, ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-				DrawSolid(Vector2f(halfW, 0.0f), 20, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
-				DrawSolid(Vector2f(0.0f, halfH - 1.0f), 20, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), true);
+				DrawSolid(Vector2f(halfW, 0.0f), 20, Vector2f(1.0f, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, 0.1f), BlendMode::Additive);
+				DrawSolid(Vector2f(0.0f, halfH - 1.0f), 20, Vector2f(ViewSize.X, 1.0f), Colorf(1.0f, 1.0f, 1.0f, 0.1f), BlendMode::Additive);
 				DrawSolid(Vector2f(0.0f, halfH), 20, Vector2f(ViewSize.X, 1.0f), Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 				break;
 			}

@@ -389,12 +389,20 @@ namespace Jazz2::UI
 		_currentRenderQueue->AddCommand(command);
 	}
 
-	void Canvas::DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending, float angle)
+	void Canvas::DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, BlendMode blending, float angle)
 	{
 		// Apply the optional per-layer draw transform (menu section transitions; identity by default)
 		pos = pos * LayerScale + LayerOffset;
 		size = size * LayerScale;
-		const Colorf finalColor = color * LayerColor;
+		Colorf finalColor = color * LayerColor;
+		// The alpha fades the color towards the one that leaves what's behind as it is
+		if (blending == BlendMode::Multiply) {
+			float a = finalColor.A;
+			finalColor = Colorf(1.0f - a + finalColor.R * a, 1.0f - a + finalColor.G * a, 1.0f - a + finalColor.B * a, 1.0f);
+		} else if (blending == BlendMode::Screen) {
+			float a = finalColor.A;
+			finalColor = Colorf(finalColor.R * a, finalColor.G * a, finalColor.B * a, 1.0f);
+		}
 
 		const bool rotated = (std::abs(angle) > 0.01f);
 		if (rotated) {
@@ -420,10 +428,19 @@ namespace Jazz2::UI
 			//command->SetTransformation(command->transformation());
 		}
 
-		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
-		} else {
-			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+		switch (blending) {
+			case BlendMode::Additive:
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
+				break;
+			case BlendMode::Multiply:
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::Zero, BlendingFactor::Zero, BlendingFactor::One);
+				break;
+			case BlendMode::Screen:
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::OneMinusDstColor, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
+				break;
+			default:
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+				break;
 		}
 
 		// Resolved once per shader change instead of looked up in the block by name on every draw

@@ -231,6 +231,8 @@ namespace Jazz2::Scripting::Legacy
 			std::uint64_t OriginalSignature;
 			// What the graphics had before they were changed, to restore them
 			std::unique_ptr<OriginalGraphics> Original;
+			// The graphics were requested already, sheets that can't be loaded aren't looked for again in every frame
+			bool GraphicsRequested = false;
 		};
 #endif
 

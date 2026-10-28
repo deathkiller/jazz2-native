@@ -1642,7 +1642,7 @@ namespace Jazz2::Scripting
 
 		jjPARTICLE::jjPARTICLE()
 			: xPos(0.0f), yPos(0.0f), xSpeed(0.0f), ySpeed(0.0f), particleType(particleNONE), active(false), GENERIC{},
-				_refCount(1), _age(0), _scale(0.0f), _weather(false) {
+				_refCount(1), _age(0), _scale(0.0f), _weather(false), _snowFrameBase(0) {
 		}
 		jjPARTICLE::~jjPARTICLE() {
 		}
@@ -1735,6 +1735,7 @@ namespace Jazz2::Scripting
 		particle->_age = 0;
 		particle->_scale = 0.0f;
 		particle->_weather = false;
+		particle->_snowFrameBase = 0;
 		std::uint8_t* data = particle->GENERIC.raw;
 		std::memset(data, 0, sizeof(particle->GENERIC.raw));
 		auto setU16 = [data](std::size_t offset, std::uint16_t value) {
@@ -1975,7 +1976,10 @@ namespace Jazz2::Scripting
 						frame = (frameBase != 0 ? frameBase + (data[0] / 2) % LeafFrames : 0);
 					} else if (p.particleType == Legacy::particleSNOW) {
 						std::memcpy(&frameBase, &data[3], sizeof(frameBase));
-						frame = (frameBase != 0 ? frameBase + data[0] : 0);
+						// The full first frame of the weather, unless a script gave the snowflake another one
+						std::uint32_t base = (p._snowFrameBase != 0 && frameBase == std::min<std::uint32_t>(p._snowFrameBase, UINT16_MAX)
+							? p._snowFrameBase : frameBase);
+						frame = (base != 0 ? base + data[0] : 0);
 					} else {
 						std::memcpy(&frameBase, &data[1], sizeof(frameBase));
 						frame = (frameBase != 0 ? frameBase + data[0] : 0);
@@ -2060,6 +2064,7 @@ namespace Jazz2::Scripting
 						data[0] = std::uint8_t(Random().Next(0, std::int32_t(std::min<std::uint32_t>(snowFrameCount, 255))));
 						std::uint16_t frameBase = std::uint16_t(std::min<std::uint32_t>(snowFirstFrame, UINT16_MAX));
 						std::memcpy(&data[3], &frameBase, sizeof(frameBase));
+						p->_snowFrameBase = snowFirstFrame;
 						break;
 					}
 					case Legacy::particleRAIN:

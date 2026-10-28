@@ -198,7 +198,7 @@ namespace Jazz2::UI::Menu
 							color = ContentResolver::ShiftHue(color, ContentResolver::HueShiftDegreesForGradient((std::int32_t)base));
 						}
 						r->DrawSolid(startX + i * swatchW, y, IMenuContainer::FontLayer - 10, Alignment::Left,
-							Vector2f(swatchW, 14.0f), ColorFromPacked(color | 0xFF000000u, alpha), false);
+							Vector2f(swatchW, 14.0f), ColorFromPacked(color | 0xFF000000u, alpha));
 					}
 				}
 			};
@@ -419,7 +419,7 @@ namespace Jazz2::UI::Menu
 
 					Vector2f textToCursorSize = _root->MeasureString(_nameInput->GetText().prefix(_nameInput->GetCursor()), 1.0f);
 					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
-						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_nameInput->GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_nameInput->GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), BlendMode::Additive);
 				}
 			}
 #endif

@@ -1101,6 +1101,9 @@
     <ClInclude Include="Jazz2\UI\Alignment.h">
       <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\BlendMode.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Actors\Solid\BarrelContainer.h">
       <Filter>Header Files\Jazz2\Actors\Solid</Filter>
     </ClInclude>

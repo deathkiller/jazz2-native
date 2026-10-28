@@ -50,8 +50,6 @@ namespace Jazz2::Actors::Multiplayer
 		float _bumpCooldown;
 		/** @brief Whether player-vs-player collision dispatch has been enabled (done lazily after activation) */
 		bool _bumpInitialized;
-		/** @brief Encoded light block last broadcast for this player, so an unchanged one isn't resent */
-		SmallVector<std::uint8_t, 0> _lastRemotedLights;
 		/** @brief Whether sugar rush was active when it was last sent to the peers, to only resync on change */
 		bool _sugarRushLastSent = false;
 

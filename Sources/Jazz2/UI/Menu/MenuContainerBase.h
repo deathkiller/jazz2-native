@@ -60,7 +60,7 @@ namespace Jazz2::UI::Menu
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false) override;
 		void DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			Vector2f size, const Vector4f& texCoords, bool unaligned = false) override;
-		void DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending = false) override;
+		void DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, BlendMode blending = BlendMode::Normal) override;
 		void DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned = false) override;
 		Vector2f MeasureString(StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
 		void DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,

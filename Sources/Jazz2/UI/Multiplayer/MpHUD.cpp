@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../../Actors/Multiplayer/PlayerOnServer.h"
+#include "../../Actors/Multiplayer/StateInterpolationBuffer.h"
 #include "../../Multiplayer/MpLevelHandler.h"
 #include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
@@ -80,6 +81,18 @@ namespace Jazz2::UI::Multiplayer
 	// Multiplayer HUD elements are scaled by this factor in splitscreen so they take less of the smaller viewport
 	static constexpr float SplitscreenHudScale = 0.7f;
 
+	// Critically damped spring, keeps the velocity across the steps of a target updated only now and then
+	static void SmoothDamp(Vector2f& pos, Vector2f& velocity, Vector2f target, float smoothTime, float deltaTime)
+	{
+		float omega = 2.0f / smoothTime;
+		float x = omega * deltaTime;
+		float decay = 1.0f / (1.0f + x + 0.48f * x * x + 0.235f * x * x * x);
+		Vector2f change = pos - target;
+		Vector2f temp = (velocity + change * omega) * deltaTime;
+		velocity = (velocity - temp * omega) * decay;
+		pos = target + (change + temp) * decay;
+	}
+
 	MpHUD::MpHUD(Jazz2::Multiplayer::MpLevelHandler* levelHandler)
 		: HUD(levelHandler), _countdownTimeLeft(0.0f), _hudScale(1.0f), _minimapCacheKey(0)
 	{
@@ -93,6 +106,77 @@ namespace Jazz2::UI::Multiplayer
 
 		if (_countdownTimeLeft > 0.0f) {
 			_countdownTimeLeft -= timeMult;
+		}
+
+		UpdateMinimapDots(timeMult);
+	}
+
+	void MpHUD::UpdateMinimapDots(float timeMult)
+	{
+		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
+
+		// The server has the real positions of everyone
+		if (mpLevelHandler->_isServer || mpLevelHandler->_orderedRaceCheckpoints.size() < 2) {
+			_minimapDots.clear();
+			return;
+		}
+
+		// Far players arrive every MpLevelHandler::FarPlayerUpdateInterval updates, nearby ones need almost no smoothing
+		constexpr float FarSmoothTime = 0.12f;
+		constexpr float NearSmoothTime = 0.03f;
+		constexpr float MaxStep = StateInterpolationBuffer::MaxInterpolatedDistance;
+
+		Vector2f center;
+		bool hasFarPlayers = false;
+		if (!mpLevelHandler->_players.empty()) {
+			auto* player = mpLevelHandler->_players[0];
+			center = player->GetPos();
+			// A spectator is sent every player at the full rate
+			hasFarPlayers = (player->GetPlayerType() != PlayerType::Spectate);
+		}
+
+		float deltaTime = timeMult * FrameTimer::SecondsPerFrame;
+
+		for (auto& [actorId, dot] : _minimapDots) {
+			dot.IsSeen = false;
+		}
+
+		for (const auto& [actorId, playerName] : mpLevelHandler->_playerNames) {
+			if (actorId == mpLevelHandler->_lastSpawnedActorId || playerName.IsSpectating) {
+				continue;
+			}
+			auto it = mpLevelHandler->_remoteActors.find(actorId);
+			if (it == mpLevelHandler->_remoteActors.end() || it->second == nullptr) {
+				continue;
+			}
+
+			Vector2f target = it->second->GetPos();
+			auto dotIt = _minimapDots.find(actorId);
+			if (dotIt == _minimapDots.end() || (target - dotIt->second.Target).SqrLength() > MaxStep * MaxStep ||
+				(target - dotIt->second.Pos).SqrLength() > 4.0f * MaxStep * MaxStep) {
+				// New, warped or respawned, so it jumps right there
+				_minimapDots[actorId] = MinimapDot{target, Vector2f::Zero, target, true};
+				continue;
+			}
+
+			auto& dot = dotIt->second;
+			bool isFar = (hasFarPlayers && (std::abs(target.X - center.X) > MpLevelHandler::RelevanceEnterHalfWidth ||
+				std::abs(target.Y - center.Y) > MpLevelHandler::RelevanceEnterHalfHeight));
+			if (deltaTime > 0.0f) {
+				SmoothDamp(dot.Pos, dot.Velocity, target, isFar ? FarSmoothTime : NearSmoothTime, deltaTime);
+			}
+			dot.Target = target;
+			dot.IsSeen = true;
+		}
+
+		SmallVector<std::uint32_t, 4> gone;
+		for (const auto& [actorId, dot] : _minimapDots) {
+			if (!dot.IsSeen) {
+				gone.push_back(actorId);
+			}
+		}
+		for (std::uint32_t actorId : gone) {
+			_minimapDots.erase(actorId);
 		}
 	}
 
@@ -867,7 +951,9 @@ namespace Jazz2::UI::Multiplayer
 				}
 				auto it = mpLevelHandler->_remoteActors.find(actorId);
 				if (it != mpLevelHandler->_remoteActors.end()) {
-					drawPlayerDot(it->second->GetPos(), actorId, isSpectating && actorId == followedActorId, playerName.Team);
+					auto dotIt = _minimapDots.find(actorId);
+					Vector2f pos = (dotIt != _minimapDots.end() ? dotIt->second.Pos : it->second->GetPos());
+					drawPlayerDot(pos, actorId, isSpectating && actorId == followedActorId, playerName.Team);
 				}
 			}
 		}

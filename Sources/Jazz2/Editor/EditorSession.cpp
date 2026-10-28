@@ -201,6 +201,37 @@ namespace Jazz2::Editor
 				transition.DrawRing(painter, screenSize);
 			}
 		};
+		// Panels and what is over them are drawn into the image of the level while editing, it's blurred below the panels
+		// and as a whole then, see EditorLevelHandler::SetFrameBlur()
+		_surface->DrawsPanelsInLevel = [this]() {
+			return (_editHandler != nullptr && _playTest->IsEditing() && _playTest->GetGameHandler() == nullptr && _editHandler->CanBlurFrameBelow());
+		};
+		// Only the editor's view, the game's blur is taken before its lighting
+		_surface->GetBackdrop = [this](UiBackdrop backdrop, Vector2f screenSize, Rectf& bounds, bool inLevel) -> const Texture* {
+#if defined(RHI_CAP_POSTPROCESSING)
+			if (!PreferencesCache::BlurEffects || _editHandler == nullptr || _playTest->GetGameHandler() != nullptr) {
+				return nullptr;
+			}
+			if (inLevel) {
+				// The image of the level is at the size of the screen in the editor
+				bounds = Rectf(0.0f, 0.0f, screenSize.X, screenSize.Y);
+				Texture* whole = (backdrop == UiBackdrop::Overlays ? _editHandler->GetFrameBlur() : nullptr);
+				return (whole != nullptr ? whole : _editHandler->RequestFrameBlurBelow(UiSurface::GetPanelsDepth()));
+			}
+			// The level without what is shown over it
+			Rendering::PlayerViewport* viewport = _editHandler->GetViewport();
+			Vector2i viewSize = _editHandler->GetViewSize();
+			if (viewport == nullptr || viewSize.X <= 0 || viewSize.Y <= 0) {
+				return nullptr;
+			}
+			Rectf viewBounds = viewport->GetBounds();
+			float scaleX = screenSize.X / float(viewSize.X), scaleY = screenSize.Y / float(viewSize.Y);
+			bounds = Rectf(viewBounds.X * scaleX, viewBounds.Y * scaleY, viewBounds.W * scaleX, viewBounds.H * scaleY);
+			return viewport->GetBlurredTarget();
+#else
+			return nullptr;
+#endif
+		};
 		// Events that turn by the tiles around them are shown turned as the game turns them
 		_eventPreviews.IsAreaEmpty = [this](const AABBf& aabb) {
 			Tiles::TileMap* tileMap = (_editHandler != nullptr ? _editHandler->TileMap() : nullptr);
@@ -683,6 +714,12 @@ namespace Jazz2::Editor
 			}
 			if (_smartTilesUsed && !_smartTiles.IsReady()) {
 				_smartTiles.Update();
+			}
+			// Panels blur the level with what is shown over it, windows and menus also the panels
+			if (_surface != nullptr) {
+				bool editing = _playTest->IsEditing();
+				_editHandler->SetFrameBlur(editing, editing && _surface->HasOverlays());
+				_editHandler->SetFrameContent(_surface->GetPanelsNode());
 			}
 			_editHandler->OnBeginFrame();
 		}

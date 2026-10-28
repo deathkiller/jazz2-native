@@ -68,6 +68,11 @@ namespace Jazz2::Editor
 		static inline Colorf GridLineStrong = Colorf(1.0f, 1.0f, 1.0f, 0.24f);
 		static inline Colorf Cursor = Colorf(1.0f, 1.0f, 1.0f, 0.85f);
 
+		/** @brief How much of the opacity of the background of a panel is kept over a blurred picture of the level, see @ref UiPainter::Backdrop() */
+		static constexpr float BackdropFillOpacity = 0.8f;
+		/** @brief How much of the opacity of the background of a window, a menu or a message is kept over a blurred picture of what is behind it */
+		static constexpr float BackdropWindowFillOpacity = 0.93f;
+
 		/** @} */
 
 		/**

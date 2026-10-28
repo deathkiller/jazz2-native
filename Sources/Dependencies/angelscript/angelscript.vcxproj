@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM64EC">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64EC</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64EC">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64EC</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{6981341A-BE18-4FBB-AF99-83646BF3FE6F}</ProjectGuid>
+    <RootNamespace>angelscript</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)'!='ARM64EC'" Label="Configuration">
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)'=='ARM64EC'" Label="Configuration">
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <!-- Every static library linked into Jazz2 has to be built against VC-LTL as well -->
+  <Import Project="$(SolutionDir)\VC-LTL helper for Visual Studio.props" Condition="Exists('$(SolutionDir)\VC-LTL helper for Visual Studio.props')" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)..\..\$(Platform)\$(Configuration)\angelscript\</OutDir>
+    <IntDir>$(ProjectDir)..\..\$(Platform)\$(Configuration)\angelscript\</IntDir>
+    <TargetName>angelscript</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>AS_NO_EXCEPTIONS;_CRT_SECURE_NO_WARNINGS;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="source\as_atomic.cpp" />
+    <ClCompile Include="source\as_builder.cpp" />
+    <ClCompile Include="source\as_bytecode.cpp" />
+    <ClCompile Include="source\as_callfunc.cpp" />
+    <ClCompile Include="source\as_callfunc_arm.cpp" />
+    <ClCompile Include="source\as_callfunc_arm64.cpp" />
+    <ClCompile Include="source\as_callfunc_e2k.cpp" />
+    <ClCompile Include="source\as_callfunc_mips.cpp" />
+    <ClCompile Include="source\as_callfunc_ppc.cpp" />
+    <ClCompile Include="source\as_callfunc_ppc_64.cpp" />
+    <ClCompile Include="source\as_callfunc_riscv64.cpp" />
+    <ClCompile Include="source\as_callfunc_sh4.cpp" />
+    <ClCompile Include="source\as_callfunc_x64_gcc.cpp" />
+    <ClCompile Include="source\as_callfunc_x64_mingw.cpp" />
+    <ClCompile Include="source\as_callfunc_x64_msvc.cpp" />
+    <ClCompile Include="source\as_callfunc_x86.cpp" />
+    <ClCompile Include="source\as_callfunc_xenon.cpp" />
+    <ClCompile Include="source\as_compiler.cpp" />
+    <ClCompile Include="source\as_configgroup.cpp" />
+    <ClCompile Include="source\as_context.cpp" />
+    <ClCompile Include="source\as_datatype.cpp" />
+    <ClCompile Include="source\as_gc.cpp" />
+    <ClCompile Include="source\as_generic.cpp" />
+    <ClCompile Include="source\as_globalproperty.cpp" />
+    <ClCompile Include="source\as_memory.cpp" />
+    <ClCompile Include="source\as_module.cpp" />
+    <ClCompile Include="source\as_objecttype.cpp" />
+    <ClCompile Include="source\as_outputbuffer.cpp" />
+    <ClCompile Include="source\as_parser.cpp" />
+    <ClCompile Include="source\as_restore.cpp" />
+    <ClCompile Include="source\as_scriptcode.cpp" />
+    <ClCompile Include="source\as_scriptengine.cpp" />
+    <ClCompile Include="source\as_scriptfunction.cpp" />
+    <ClCompile Include="source\as_scriptnode.cpp" />
+    <ClCompile Include="source\as_scriptobject.cpp" />
+    <ClCompile Include="source\as_string.cpp" />
+    <ClCompile Include="source\as_string_util.cpp" />
+    <ClCompile Include="source\as_thread.cpp" />
+    <ClCompile Include="source\as_tokenizer.cpp" />
+    <ClCompile Include="source\as_typeinfo.cpp" />
+    <ClCompile Include="source\as_variablescope.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\angelscript.h" />
+    <ClInclude Include="source\as_array.h" />
+    <ClInclude Include="source\as_atomic.h" />
+    <ClInclude Include="source\as_builder.h" />
+    <ClInclude Include="source\as_bytecode.h" />
+    <ClInclude Include="source\as_callfunc.h" />
+    <ClInclude Include="source\as_compiler.h" />
+    <ClInclude Include="source\as_config.h" />
+    <ClInclude Include="source\as_configgroup.h" />
+    <ClInclude Include="source\as_context.h" />
+    <ClInclude Include="source\as_criticalsection.h" />
+    <ClInclude Include="source\as_datatype.h" />
+    <ClInclude Include="source\as_debug.h" />
+    <ClInclude Include="source\as_gc.h" />
+    <ClInclude Include="source\as_generic.h" />
+    <ClInclude Include="source\as_map.h" />
+    <ClInclude Include="source\as_memory.h" />
+    <ClInclude Include="source\as_module.h" />
+    <ClInclude Include="source\as_namespace.h" />
+    <ClInclude Include="source\as_objecttype.h" />
+    <ClInclude Include="source\as_outputbuffer.h" />
+    <ClInclude Include="source\as_parser.h" />
+    <ClInclude Include="source\as_property.h" />
+    <ClInclude Include="source\as_restore.h" />
+    <ClInclude Include="source\as_scriptcode.h" />
+    <ClInclude Include="source\as_scriptengine.h" />
+    <ClInclude Include="source\as_scriptfunction.h" />
+    <ClInclude Include="source\as_scriptnode.h" />
+    <ClInclude Include="source\as_scriptobject.h" />
+    <ClInclude Include="source\as_string.h" />
+    <ClInclude Include="source\as_string_util.h" />
+    <ClInclude Include="source\as_symboltable.h" />
+    <ClInclude Include="source\as_texts.h" />
+    <ClInclude Include="source\as_thread.h" />
+    <ClInclude Include="source\as_tokendef.h" />
+    <ClInclude Include="source\as_tokenizer.h" />
+    <ClInclude Include="source\as_typeinfo.h" />
+    <ClInclude Include="source\as_variablescope.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="source\as_callfunc_x64_msvc_asm.asm">
+      <ExcludedFromBuild Condition="'$(Platform)'=='Win32'">true</ExcludedFromBuild>
+    </MASM>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

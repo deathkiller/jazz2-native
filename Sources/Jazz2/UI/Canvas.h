@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Alignment.h"
+#include "BlendMode.h"
 #include "../../nCine/Graphics/RenderBatcher.h"
 #include "../../nCine/Graphics/RenderCommand.h"
 #include "../../nCine/Graphics/SceneNode.h"
@@ -89,7 +90,7 @@ namespace Jazz2::UI
 		 */
 		void DrawTextureWithPalette(const Texture& texture, const Texture& palette, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, float paletteOffset = 0.0f);
 		/** @brief Draws a solid rectangle, turned by `angle` in radians about its center */
-		void DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending = false, float angle = 0.0f);
+		void DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, BlendMode blending = BlendMode::Normal, float angle = 0.0f);
 		
 		/** @brief Applies alignment settings to a given position vector */
 		static Vector2f ApplyAlignment(Alignment align, Vector2f vec, Vector2f size);

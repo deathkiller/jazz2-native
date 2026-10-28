@@ -287,14 +287,14 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false, 0.0f, paletteOffset);
 	}
 
-	void MenuContainerBase::DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending)
+	void MenuContainerBase::DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, BlendMode blending)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 		adjustedPos.X = roundFast(adjustedPos.X);
 		adjustedPos.Y = roundFast(adjustedPos.Y);
 
-		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
+		currentCanvas->DrawSolid(adjustedPos, z, size, color, blending);
 	}
 
 	void MenuContainerBase::DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned)

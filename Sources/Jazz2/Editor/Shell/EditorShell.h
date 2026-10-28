@@ -99,6 +99,8 @@ namespace Jazz2::Editor
 		float _pickerDockWidth;
 		float _dragStartSize;
 		Rectf _viewRect;
+		// Part of the screen what is shown over the level is drawn in, also under the panels while they show it blurred
+		Rectf _drawRect;
 		// Part of the screen the panels are in, the edges a display may cut off are around it, see UiSurface::GetSafeBounds()
 		Rectf _safeArea;
 		// Laid out for a small screen, with the panels in drawers, and for a very narrow one with the tools at the bottom
