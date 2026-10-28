@@ -265,7 +265,7 @@ namespace Jazz2::UI::Menu
 		);
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, 0.0f, paletteOffset);
+		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending ? BlendMode::Additive : BlendMode::Normal, 0.0f, paletteOffset);
 	}
 
 	void MenuContainerBase::DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, Vector2f size, const Vector4f& texCoords, bool unaligned)
@@ -284,7 +284,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false, 0.0f, paletteOffset);
+		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, BlendMode::Normal, 0.0f, paletteOffset);
 	}
 
 	void MenuContainerBase::DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, BlendMode blending)

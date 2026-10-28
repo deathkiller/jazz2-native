@@ -84,13 +84,16 @@ namespace Jazz2::Editor
 		{
 			// See MakeKey()
 			std::uint32_t Key;
-			std::unique_ptr<Sprite> Look;
+			// In _variantSprites, `nullptr` for the look of the game
+			Sprite* Look;
 		};
 
 		// By the event of the original
 		std::unique_ptr<Sprite> _sprites[256];
 		// Events whose parameters give them another look (an enemy that is a bomb by a parameter), sorted by key
 		SmallVector<Variant, 0> _variants;
+		// Sprites of the variants, parameters that look the same share one
+		SmallVector<std::unique_ptr<Sprite>, 0> _variantSprites;
 		// Types of the game the events with sprites convert to, sorted, the events of other types aren't looked up
 		SmallVector<std::uint16_t, 0> _types;
 		// Made on first use, it probes all converters of events

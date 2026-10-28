@@ -1747,7 +1747,17 @@ namespace Jazz2::Scripting
 			case Legacy::particleICETRAIL: data[0] = 32; data[1] = 40; data[2] = 1; break;
 			case Legacy::particleSPARK: data[0] = 40; data[1] = 46; data[2] = 1; break;
 			case Legacy::particleSNOW: data[2] = 35; break;
-			case Legacy::particleRAIN: particle->ySpeed = 6.0f; break;
+			case Legacy::particleRAIN: {
+				// The drops are the third animation of the common set (bubbles of a garbage can in ThreedRealms)
+				particle->ySpeed = 6.0f;
+				auto& tables = GetAnimationTables();
+				std::uint32_t firstAnim = tables.GetFirstAnim(Legacy::AnimationTables::GetSetID(Legacy::mCOMMON, versionTSF));
+				std::uint32_t frameCount, firstFrame;
+				if (firstAnim != 0 && tables.GetAnimationFrames(firstAnim + 2, frameCount, firstFrame) && frameCount > 0) {
+					setU16(1, std::uint16_t(std::min<std::uint32_t>(firstFrame, UINT16_MAX)));
+				}
+				break;
+			}
 			case Legacy::particleFLOWER: particle->ySpeed = 0.5f; data[0] = 64; data[1] = 16; data[4] = 5; break;
 			case Legacy::particleSTAR: data[0] = 16; data[1] = 40; particle->_scale = 16.0f; break;
 			case Legacy::particleLEAF: {

@@ -289,7 +289,7 @@ namespace Jazz2::Scripting
 					}
 					tables.SetFramePixels(*frame, pixels.data(), frameWidth, frameHeight);
 					frame->hotSpotX = std::int16_t(-std::int32_t(frameWidth / 2));
-					frame->hotSpotY = std::int16_t(-std::int32_t(frameHeight));
+					frame->hotSpotY = std::int16_t(-std::int32_t(frameHeight / 2));
 					frame->coldSpotX = frame->hotSpotX;
 					frame->coldSpotY = std::int16_t(frame->hotSpotY + coldSpotYOffset);
 					tables.MarkChanged(*frame);

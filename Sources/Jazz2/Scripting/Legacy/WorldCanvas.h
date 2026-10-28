@@ -47,6 +47,10 @@ namespace Jazz2::Scripting::Legacy
 			Actors::ActorBase* Anchor = nullptr;
 			/** @brief The frame is `transparent`, see @ref AnimationTables::ResolveFrame() */
 			bool TranslucentFrame = false;
+			/** @brief Length of a swinging vine drawn of the frame from the position down, 0 for a plain sprite */
+			std::int32_t VineLength = 0;
+			/** @brief Curvature of the swinging vine */
+			std::int32_t VineCurvature = 0;
 		};
 
 		/** @brief Rectangle of a color of the palette drawn in the level */

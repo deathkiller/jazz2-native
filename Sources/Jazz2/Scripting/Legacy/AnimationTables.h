@@ -268,6 +268,8 @@ namespace Jazz2::Scripting::Legacy
 		bool _warnedTrueColor;
 		// The graphics of the game were given back, see RestoreNativeGraphics()
 		bool _nativeGraphicsRestored = false;
+		// Writes of all tables into the graphics of the game when this one last checked, see ReclaimNativeGraphics()
+		std::uint32_t _nativeWriteGeneration = 0;
 
 		// Returns the mapping and the index in the file of a set of the original, or nullptr
 		Compatibility::AnimSetMapping* GetFileSet(std::uint32_t setID, std::uint32_t& fileSet);
@@ -296,14 +298,20 @@ namespace Jazz2::Scripting::Legacy
 		// Makes the graphics of the game show an animation, or restores them
 		void ShowInNativeGraphics(NativeAnimation& native, jjANIMATION& anim);
 		void RestoreNativeGraphics(NativeAnimation& native);
+		// Shows its animations in the graphics of the game again where other tables wrote into them since
+		void ReclaimNativeGraphics();
 		// Returns the sprite sheet of its own an animation is drawn with, made of its frames if needed
 		Resources::GenericGraphicResource* RequestOwnGraphics(jjANIMATION& anim);
 		// Returns the frames an animation shows, with their images
 		void GetFrames(const jjANIMATION& anim, SmallVectorImpl<jjANIMFRAME*>& frames);
 		// Lays the frames out in a sheet and uploads it into the graphics; `keepLayout` keeps the frame count, the
 		// size of the cell and the hotspot of the graphics (of the game), the frames repeat over the cells, otherwise
-		// the graphics are made to fit the frames
-		void ComposeGraphics(Resources::GenericGraphicResource& graphics, ArrayView<jjANIMFRAME* const> frames, std::int32_t fps, bool keepLayout);
+		// the graphics are made to fit the frames; `clearIndex` is transparent too (128 of the swinging vine)
+		void ComposeGraphics(Resources::GenericGraphicResource& graphics, ArrayView<jjANIMFRAME* const> frames, std::int32_t fps, bool keepLayout,
+			std::uint8_t clearIndex = 0);
+		// Returns the palette index the frames of the graphics of the game at a path are transparent at besides 0, the
+		// swinging vine of the original uses 128 (the converter turns it into 0)
+		static std::uint8_t GetClearIndex(StringView path);
 		// Uploads an image of (palette index, alpha) pairs, or of RGBA colors if `trueColor`, into the texture of graphics
 		// and rebuilds the collision mask; the graphics are indexed or not as the image is
 		static void UploadGraphics(Resources::GenericGraphicResource& graphics, const std::uint8_t* pixels, Vector2i size, const char* name, bool trueColor = false);

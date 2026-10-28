@@ -1983,11 +1983,11 @@ namespace Jazz2::Editor
 					// The text the event refers to, above it, or the level an exit without one goes to
 					String text;
 					if (!EventPreviews::DescribeDefaultLevel(document, event, field, text)) {
-						std::int32_t index = EventCatalog::ReadField(event, field);
-						if (index < 0 || index >= std::int32_t(document.Texts.size()) || document.Texts[index].empty()) {
+						StringView used;
+						if (!EventPreviews::GetUsedText(document, event, field, used)) {
 							continue;
 						}
-						text = EventCatalog::MakeTextPreview(document.Texts[index], 48);
+						text = EventCatalog::MakeTextPreview(used, 48);
 					}
 					if (text.empty()) {
 						continue;

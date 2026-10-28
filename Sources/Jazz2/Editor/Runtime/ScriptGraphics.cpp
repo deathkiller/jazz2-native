@@ -27,8 +27,9 @@ namespace Jazz2::Editor
 		// At most so many frames of an animation are taken, the sheet isn't wider than this
 		constexpr std::uint32_t MaxFrames = 16;
 		constexpr std::int32_t MaxSheetWidth = 4096;
-		// At most so many other parameters of an event are tried for another look
-		constexpr std::size_t MaxVariants = 16;
+		// At most so many other parameters of an event are tried for another look, and so many in all
+		constexpr std::size_t MaxVariants = 255;
+		constexpr std::size_t MaxLookProbes = 1024;
 		// HANDLING::PICKUP of JJ2+
 		constexpr std::uint32_t PlayerHandlingPickup = 5;
 
@@ -54,6 +55,12 @@ namespace Jazz2::Editor
 			explicit ScriptGraphicsLevelHandler(IRootController* root)
 				: LevelHandler(root)
 			{
+			}
+
+			~ScriptGraphicsLevelHandler() override
+			{
+				// While it's still a sandbox for what the script does as it's released
+				ReleaseScripts();
 			}
 
 			bool Initialize(const LevelDocument& document, StringView levelName, StringView fullPath)
@@ -162,9 +169,7 @@ namespace Jazz2::Editor
 		for (const auto& sprite : _sprites) {
 			count += (sprite != nullptr ? 1 : 0);
 		}
-		for (const Variant& variant : _variants) {
-			count += (variant.Look != nullptr ? 1 : 0);
-		}
+		count += std::int32_t(_variantSprites.size());
 		LOGI("The script of the level gives {} objects sprites of their own", count);
 		return !IsEmpty();
 	}
@@ -211,7 +216,15 @@ namespace Jazz2::Editor
 		std::stable_sort(placements.begin(), placements.end(), [](const Placement& a, const Placement& b) { return a.Key < b.Key; });
 		placements.erase(std::unique(placements.begin(), placements.end(), [](const Placement& a, const Placement& b) { return a.Key == b.Key; }), placements.end());
 
+		// Every template is tried once, the other parameters share what's left of the probes
+		std::size_t extraProbes = MaxLookProbes;
+		for (std::int32_t id = 1; id < 256; id++) {
+			extraProbes -= (scripted[id] && extraProbes > 0 ? 1 : 0);
+		}
+
 		SmallVector<std::uint32_t, 0> colors;
+		SmallVector<Look, 0> looks;
+		SmallVector<bool, 0> found;
 		std::size_t next = 0;
 		for (std::int32_t id = 1; id < 256; id++) {
 			if (!scripted[id]) {
@@ -224,9 +237,10 @@ namespace Jazz2::Editor
 
 			// A behavior may start the same animation from another frame by the parameters (a pole of each length),
 			// the frame is chosen by them then, it isn't animated
-			Look looks[MaxVariants + 1];
-			bool found[MaxVariants + 1];
-			std::size_t count = std::clamp<std::size_t>(next - first, 1, MaxVariants + 1);
+			std::size_t count = std::clamp<std::size_t>(next - first, 1, std::min(MaxVariants, extraProbes) + 1);
+			extraProbes -= count - 1;
+			looks.resize(count);
+			found.resize(count);
 			for (std::size_t i = 0; i < count; i++) {
 				bool placed = (first + i < next);
 				found[i] = GetLook(scripts, std::uint8_t(id), (placed ? placements[first + i].X : 0), (placed ? placements[first + i].Y : 0), looks[i]);
@@ -250,6 +264,8 @@ namespace Jazz2::Editor
 				_sprites[id] = MakeSprite(scripts, std::uint8_t(id), looks[0], colors);
 			}
 			bool hasBase = (_sprites[id] != nullptr);
+			std::size_t firstSprite = _variantSprites.size();
+			SmallVector<std::size_t, 0> spriteLooks;
 			for (std::size_t i = 1; i < count; i++) {
 				if (!found[i]) {
 					// It looks as the game has it with these
@@ -261,8 +277,22 @@ namespace Jazz2::Editor
 				if (hasBase && looks[i] == looks[0]) {
 					continue;
 				}
-				if (auto sprite = MakeSprite(scripts, std::uint8_t(id), looks[i], colors)) {
-					_variants.push_back(Variant{placements[first + i].Key, Death::move(sprite)});
+				Sprite* shared = nullptr;
+				for (std::size_t j = 0; j < spriteLooks.size(); j++) {
+					if (looks[spriteLooks[j]] == looks[i]) {
+						shared = _variantSprites[firstSprite + j].get();
+						break;
+					}
+				}
+				if (shared == nullptr) {
+					if (auto sprite = MakeSprite(scripts, std::uint8_t(id), looks[i], colors)) {
+						shared = sprite.get();
+						_variantSprites.push_back(Death::move(sprite));
+						spriteLooks.push_back(i);
+					}
+				}
+				if (shared != nullptr) {
+					_variants.push_back(Variant{placements[first + i].Key, shared});
 				}
 			}
 		}
@@ -412,6 +442,7 @@ namespace Jazz2::Editor
 			sprite = nullptr;
 		}
 		_variants.clear();
+		_variantSprites.clear();
 		_types.clear();
 	}
 
@@ -431,7 +462,7 @@ namespace Jazz2::Editor
 			std::uint32_t key = MakeKey(id, word >> Scripting::Legacy::EventTranslator::ParamsShift);
 			auto it = std::lower_bound(_variants.begin(), _variants.end(), key, [](const Variant& variant, std::uint32_t key) { return variant.Key < key; });
 			if (it != _variants.end() && it->Key == key) {
-				return it->Look.get();
+				return it->Look;
 			}
 		}
 		return _sprites[id].get();

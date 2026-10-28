@@ -292,7 +292,7 @@ namespace Jazz2::UI
 
 			Colorf color = Colorf(1.0f, 1.0f, 1.0f, lerp(1.0f, 0.5f, darkness) * _owner->_transition);
 			std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? loadingRes->PaletteOffset : -1);
-			DrawTexture(*base->TextureDiffuse.get(), pos, IndicatorLayer, size, texCoords, color, false, 0.0f, paletteOffset);
+			DrawTexture(*base->TextureDiffuse.get(), pos, IndicatorLayer, size, texCoords, color, BlendMode::Normal, 0.0f, paletteOffset);
 
 			// Where the dark patch behind the indicator starts, the bar extends it to the left
 			float scrimLeft = cellPos.X;

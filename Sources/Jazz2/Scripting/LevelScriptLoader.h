@@ -222,6 +222,13 @@ namespace Jazz2::Scripting
 		 */
 		std::int32_t GetSpritePaletteOffset(std::uint32_t mode, std::uint8_t param);
 		/**
+		 * @brief Returns the palette offset a swinging vine is drawn with, see @ref GetSpritePaletteOffset()
+		 *
+		 * In the sprite palette index 128 is transparent too, it's the background of vines in the original game. A sprite
+		 * mode with a palette of its own keeps it.
+		 */
+		std::int32_t GetVinePaletteOffset(std::uint32_t mode, std::uint8_t param);
+		/**
 		 * @brief Returns how `SPRITE::BLEND_DISSOLVE` draws a color, as many random pixels as @p density says
 		 *
 		 * Returns a repeating texture of noise and sets @p paletteOffset to the palette it's drawn through, or `nullptr`

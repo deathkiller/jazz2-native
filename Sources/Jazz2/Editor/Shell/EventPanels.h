@@ -172,7 +172,10 @@ namespace Jazz2::Editor
 		void Rebuild();
 		void AddCommonRows(UiElement* rows);
 		void AddField(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
+		void AddFieldRowsWithCondition(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
 		void AddFieldRows(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
+		// The text a field of ParamType::TextId refers to, or the part of it that's used
+		void AddTextPreview(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
 		// The fields of the event inside of a field of ParamType::Contents, of the kind it has now
 		void AddContentsFields(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
 		// Returns the kinds of the events inside the event, the fields shown depend on them

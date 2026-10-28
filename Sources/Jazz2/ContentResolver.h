@@ -444,6 +444,14 @@ namespace Jazz2
 		 */
 		std::int32_t AcquireNeonGlowPaletteOffset(std::uint8_t channels);
 		/**
+		 * @brief Acquires a palette offset of the sprite palette with one more transparent entry
+		 *
+		 * The entry @p index is transparent, as swinging vines of the original game are drawn (index 128 is their
+		 * background). The row is built again whenever the sprite palette changes. Returns the offset, or -1 if no row
+		 * is free. Release it with @ref ReleasePaletteOffset.
+		 */
+		std::int32_t AcquireColorKeyPaletteOffset(std::uint8_t index);
+		/**
 		 * @brief Acquires a palette offset of a row of its own colors
 		 *
 		 * The row is the 256 colors of @p colors (packed as `0xAABBGGRR`) with index 0 transparent, and it stays so
@@ -789,6 +797,8 @@ namespace Jazz2
 		void BuildDissolvePalette(std::uint32_t value, std::uint32_t* outPalette) const;
 		// Builds the brightness of the sprite palette in color channels, see AcquireNeonGlowPaletteOffset()
 		void BuildNeonGlowPalette(std::uint8_t channels, std::uint32_t* outPalette) const;
+		// Builds the sprite palette with one more transparent entry, see AcquireColorKeyPaletteOffset()
+		void BuildColorKeyPalette(std::uint8_t index, std::uint32_t* outPalette) const;
 		// Builds the gradient of 128 entries a gem is drawn with from its 5 stops in the sprite palette, 32 entries each
 		void BuildGemGradient(const std::uint8_t* stops, std::uint32_t* outGradient) const;
 		// Premultiplies the colors of a row by their alpha, see AcquireShiftedPaletteOffset()

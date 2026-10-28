@@ -509,6 +509,68 @@ namespace Jazz2::Editor
 		}
 		return true;
 	}
+
+	bool EventPreviews::GetUsedText(const LevelDocument& document, const Formats::EventRecord& event, const EventParamField& field, StringView& text)
+	{
+		std::int32_t index = EventCatalog::ReadField(event, field);
+		if (field.Type != ParamType::TextId || index < 0 || index >= std::int32_t(document.Texts.size()) || document.Texts[index].empty()) {
+			return false;
+		}
+		text = document.Texts[index];
+
+		// Player::HandleAreaEventAt(), an event pack may mean something else by the parameters
+		std::int32_t part = -1;
+		if (!EventCatalog::IsExtension(EventCatalog::Find(EventType(event.Type), event.Params))) {
+			if (EventType(event.Type) == EventType::AreaEndOfLevel && field.Offset == 2) {
+				part = event.Params[3];
+			} else if (EventType(event.Type) == EventType::AreaText && field.Offset == 0) {
+				part = (event.Params[1] != 0 ? std::int32_t(event.Params[1]) : -1);
+			}
+		}
+		if (part < 0) {
+			return true;
+		}
+
+		// LevelHandler::GetLevelText()
+		std::int32_t count = 0;
+		std::size_t start = 0;
+		for (std::size_t i = 0; i < text.size(); i++) {
+			if (text[i] == '|') {
+				if (count == part) {
+					text = text.slice(start, i);
+					return true;
+				}
+				count++;
+				start = i + 1;
+			}
+		}
+		text = (count == part ? text.exceptPrefix(start) : StringView());
+		return true;
+	}
+
+	std::int32_t EventPreviews::FindTextPartField(const EventDescriptor& descriptor, std::int32_t textField)
+	{
+		if (textField < 0 || textField >= std::int32_t(descriptor.FieldCount) || EventCatalog::IsExtension(&descriptor)) {
+			return -1;
+		}
+		// As GetUsedText() reads it
+		std::uint8_t textOffset = descriptor.Fields[textField].Offset;
+		std::int32_t partOffset;
+		if (EventType(descriptor.Type) == EventType::AreaEndOfLevel && textOffset == 2) {
+			partOffset = 3;
+		} else if (EventType(descriptor.Type) == EventType::AreaText && textOffset == 0) {
+			partOffset = 1;
+		} else {
+			return -1;
+		}
+		for (std::int32_t i = 0; i < std::int32_t(descriptor.FieldCount); i++) {
+			const EventParamField& field = descriptor.Fields[i];
+			if (i != textField && field.Offset == partOffset && field.Type != ParamType::TextId) {
+				return i;
+			}
+		}
+		return -1;
+	}
 }
 
 #endif

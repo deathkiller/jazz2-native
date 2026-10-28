@@ -240,6 +240,16 @@ namespace Jazz2::Editor
 		 */
 		static bool DescribeDefaultLevel(const LevelDocument& document, const Formats::EventRecord& event, const EventParamField& field, String& text,
 			bool brief = false);
+		/**
+		 * @brief Finds the part of a level text an event uses, as the game splits it by `|`
+		 *
+		 * An exit takes the part its Part parameter says as the name of the next level, a text area shows one part or the
+		 * whole text. Any other text is used whole. Returns `false` if @p field of the event refers to no text or an empty
+		 * one, @p text is empty if the text has no such part.
+		 */
+		static bool GetUsedText(const LevelDocument& document, const Formats::EventRecord& event, const EventParamField& field, StringView& text);
+		/** @brief Returns the index of the field that says which part of the text of a field is used, see @ref GetUsedText(), or -1 */
+		static std::int32_t FindTextPartField(const EventDescriptor& descriptor, std::int32_t textField);
 
 		/** @brief Returns `true` if an event plays a sound that can be heard in the editor, see @ref UpdateSound() */
 		static bool HasSound(const Formats::EventRecord& event);
@@ -328,6 +338,13 @@ namespace Jazz2::Editor
 		/** @brief Draws a frame at its hotspot, the current frame for -1 */
 		void DrawSprite(const DrawTarget& target, GraphicResource* resource, const EventPreviewSpec& spec, Vector2f pos, float alpha, float animTime,
 			std::int32_t frame = -1);
+		/** @brief Draws a frame centered at a position, scaled and turned around its center */
+		static void DrawCentered(const DrawTarget& target, GraphicResource* resource, std::int32_t frame, Vector2f pos, float scale, float angle, float alpha);
+		/** @brief Draws the gems of a gem ring around its position, as many and turning as fast as its parameters say */
+		static void DrawGemRing(const DrawTarget& target, const Formats::EventRecord& event, GraphicResource* resource, Vector2f center, float alpha,
+			float animTime);
+		/** @brief Returns how far the gems of a gem ring reach from its position at most, in pixels of the level */
+		static float GetGemRingExtent(GraphicResource* resource);
 		void DrawBox(UiPainter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel);
 		static void LayoutBoxLabel(UiPainter& painter, StringView name, const Rectf& inner, float boxWidth, BoxLabel& label);
 	};

@@ -68,6 +68,45 @@ namespace Jazz2::Scripting
 		return style;
 	}
 
+	// JJ2+ adds `jjTEXTAPPEARANCE::spacing` pixels after every character (1 as the style draws it), the font of the game
+	// only scales the advances, so the difference is spread over the characters of the recoded text by their average width
+	static float GetAppearanceCharSpacing(const ScriptTextStyle& style, StringView recodedText, std::int32_t spacing)
+	{
+		if (spacing == 1 || style.Font == nullptr) {
+			return style.CharSpacing;
+		}
+		SmallVector<char, 256> flat;
+		std::int32_t glyphCount = 0;
+		for (std::size_t i = 0; i < recodedText.size(); i++) {
+			char c = recodedText[i];
+			if (c == '\n') {
+				continue;
+			}
+			flat.push_back(c);
+			if (c == '\f') {
+				// A formatting tag, up to its closing bracket, or a single character
+				if (i + 1 < recodedText.size() && recodedText[i + 1] == '[') {
+					while (++i < recodedText.size()) {
+						flat.push_back(recodedText[i]);
+						if (recodedText[i] == ']') {
+							break;
+						}
+					}
+				} else if (i + 1 < recodedText.size()) {
+					flat.push_back(recodedText[++i]);
+				}
+			} else if ((std::uint8_t(c) & 0xC0) != 0x80) {
+				glyphCount++;
+			}
+		}
+		float width = style.Font->MeasureString(StringView(flat.data(), flat.size()), style.Scale, style.CharSpacing, style.LineSpacing).X;
+		if (glyphCount == 0 || width <= 0.0f) {
+			return style.CharSpacing;
+		}
+		float factor = 1.0f + float(glyphCount) * float(spacing - 1) / width;
+		return style.CharSpacing * std::max(factor, 0.1f);
+	}
+
 	namespace Legacy
 	{
 		namespace
@@ -124,6 +163,8 @@ namespace Jazz2::Scripting
 					case spriteType_BLENDLIGHTEN: return UI::BlendMode::Additive;
 					case spriteType_BLENDMULTIPLY: color.A = param / 255.0f; return UI::BlendMode::Multiply;
 					case spriteType_BLENDSCREEN: color.A = param / 255.0f; return UI::BlendMode::Screen;
+					case spriteType_BLENDDIFFERENCE:
+					case spriteType_BLENDEXCLUSION: color.A = param / 255.0f; return UI::BlendMode::Difference;
 					default: return UI::BlendMode::Normal;
 				}
 			}
@@ -135,7 +176,8 @@ namespace Jazz2::Scripting
 			// row of the shared palette texture of the sprite mode (see LevelScriptLoader::GetSpritePaletteOffset()).
 			static void DrawSpriteFrame(UI::Canvas* canvas, std::uint16_t z, GenericGraphicResource* base, std::int32_t frame,
 					float x, float y, std::int8_t direction, float scaleX, float scaleY, std::int32_t angle,
-					std::uint32_t mode, std::uint8_t param, std::int32_t spritePaletteOffset, bool translucentFrame = false)
+					std::uint32_t mode, std::uint8_t param, std::int32_t spritePaletteOffset, bool translucentFrame = false,
+					std::int32_t firstRow = 0, std::int32_t rowCount = 0)
 			{
 				if (base == nullptr || base->TextureDiffuse == nullptr || base->FrameCount <= 0 || base->FrameConfiguration.X <= 0 ||
 					mode == spriteType_INVISIBLE) {
@@ -154,11 +196,23 @@ namespace Jazz2::Scripting
 				if (scaleX < 0.0f) { flipX = !flipX; scaleX = -scaleX; }
 				if (scaleY < 0.0f) { flipY = true; scaleY = -scaleY; }
 
-				const Recti spriteRect = base->GetFrameRect(frame);
+				Recti spriteRect = base->GetFrameRect(frame);
+				if (rowCount > 0) {
+					// Only a band of rows, where it is in the whole frame (see DrawSwingingVineFrame())
+					firstRow = std::clamp(firstRow, 0, spriteRect.H);
+					rowCount = std::min(rowCount, spriteRect.H - firstRow);
+					if (rowCount <= 0) {
+						return;
+					}
+					spriteRect.Y += firstRow;
+					spriteRect.H = rowCount;
+				} else {
+					firstRow = 0;
+				}
 				Vector2f size(spriteRect.W * scaleX, spriteRect.H * scaleY);
 				// Anchor the sprite at its hotspot, so the given coordinates are where the hotspot lands
 				const Vector2i frameAnchor = base->GetFrameAnchor(frame, flipX, flipY);
-				Vector2f pos(x - frameAnchor.X * scaleX, y - frameAnchor.Y * scaleY);
+				Vector2f pos(x - frameAnchor.X * scaleX, y + (firstRow - frameAnchor.Y) * scaleY);
 
 				Vector2i texSize = base->TextureDiffuse->GetSize();
 				const Recti& frameRect = spriteRect;
@@ -186,6 +240,11 @@ namespace Jazz2::Scripting
 						shader = ContentResolver::Get().GetShader(indexed ? PrecompiledShader::SingleColorPalette : PrecompiledShader::SingleColor);
 						color = PaletteIndexToColor(param, SpriteModeToAlpha(mode, param));
 						break;
+					case spriteType_TINTED:
+						// Mixed with a color of the palette, as a layer of the mode is (see Tiles::LayerRendererType::Tinted)
+						shader = ContentResolver::Get().GetShader(indexed ? PrecompiledShader::TintedPalette : PrecompiledShader::Tinted);
+						color = PaletteIndexToColor(param, 1.0f);
+						break;
 					case spriteType_FROZEN:
 						// As the game draws a frozen object (see Actors::ActorRendererType::FrozenMask), JJ2+ draws an ice
 						// block of its own - the color is the size of a texel and how frozen it is
@@ -195,7 +254,13 @@ namespace Jazz2::Scripting
 					default:
 						break;
 				}
-				if (shader == nullptr && mode != spriteType_SHADOW) {
+				UI::BlendMode blending = (mode == spriteType_BLENDLIGHTEN || mode == spriteType_NEONGLOW ? UI::BlendMode::Additive : UI::BlendMode::Normal);
+				if (shader == nullptr && (mode == spriteType_BLENDDIFFERENCE || mode == spriteType_BLENDEXCLUSION)) {
+					// The colors scaled by the parameter, the blending takes no alpha (a white sprite gives the negative)
+					float level = param / 255.0f;
+					color = Colorf(level, level, level, 1.0f);
+					blending = UI::BlendMode::Difference;
+				} else if (shader == nullptr && mode != spriteType_SHADOW) {
 					// Also where the backend has no such shader
 					color = Colorf(1.0f, 1.0f, 1.0f, SpriteModeToAlpha(mode, param));
 				}
@@ -214,8 +279,37 @@ namespace Jazz2::Scripting
 					pos += fromMiddle - Vector2f(fromMiddle.X * c - fromMiddle.Y * s, fromMiddle.X * s + fromMiddle.Y * c);
 				}
 				// NEONGLOW adds the brightness of its row of the palette to what's behind (see GetSpritePaletteOffset())
-				canvas->DrawTexture(*base->TextureDiffuse.get(), pos, z, size, texCoords, color,
-					mode == spriteType_BLENDLIGHTEN || mode == spriteType_NEONGLOW, angleRad, paletteOffset, shader);
+				canvas->DrawTexture(*base->TextureDiffuse.get(), pos, z, size, texCoords, color, blending, angleRad, paletteOffset, shader);
+			}
+
+			// Draws a frame as a swinging vine, its rows from the top at the position down (the frame repeats), the hotspot
+			// centers it only horizontally. As measured in JJ2+, each row is moved sideways by curvature * row^2 / 2^22 and
+			// the vine is a row shorter for every 2048 of the curvature.
+			static void DrawSwingingVineFrame(UI::Canvas* canvas, std::uint16_t z, GenericGraphicResource* base, std::int32_t frame,
+				float x, float y, std::int32_t length, std::int32_t curvature, std::uint32_t mode, std::uint8_t param,
+				std::int32_t spritePaletteOffset, bool translucentFrame)
+			{
+				constexpr std::int32_t BandHeight = 2;
+				length -= (std::abs(curvature) >> 11);
+				if (base == nullptr || base->FrameCount <= 0 || length <= 0) {
+					return;
+				}
+				frame = std::clamp(frame, 0, base->FrameCount - 1);
+				std::int32_t frameHeight = base->GetFrameRect(frame).H;
+				if (frameHeight <= 0) {
+					return;
+				}
+				float anchorY = float(base->GetFrameAnchor(frame, false, false).Y);
+				std::int32_t row = 0;
+				while (row < length) {
+					std::int32_t sourceRow = row % frameHeight;
+					std::int32_t count = std::min(std::min(BandHeight, length - row), frameHeight - sourceRow);
+					float middle = row + count * 0.5f;
+					float shift = float(curvature) * middle * middle / 4194304.0f;
+					DrawSpriteFrame(canvas, z, base, frame, x + shift, y + float(row - sourceRow) + anchorY, 0, 1.0f, 1.0f, 0,
+						mode, param, spritePaletteOffset, translucentFrame, sourceRow, count);
+					row += count;
+				}
 			}
 
 			// Draws a tile of a value as JJ2+ has it (with TILE::HFLIPPED, VFLIPPED and ANIMATED) with its top left corner at
@@ -260,7 +354,7 @@ namespace Jazz2::Scripting
 					y += TileSize * 0.5f * qy;
 					size = Vector2f(TileSize * 0.5f, TileSize * 0.5f);
 				}
-				canvas->DrawTexture(*texture, Vector2f(x, y), z, size, texCoords, Colorf::White, false, 0.0f, indexed ? 0 : -1);
+				canvas->DrawTexture(*texture, Vector2f(x, y), z, size, texCoords, Colorf::White, UI::BlendMode::Normal, 0.0f, indexed ? 0 : -1);
 			}
 		}
 
@@ -307,6 +401,11 @@ namespace Jazz2::Scripting
 			for (const SpriteDraw& draw : _sprites) {
 				// Following the object in every frame, not only in the ticks of the script (a player drawn by `onPlayerDraw()`)
 				Vector2f anchor = (draw.Anchor != nullptr ? draw.Anchor->GetPos() : Vector2f::Zero);
+				if (draw.VineLength > 0) {
+					DrawSwingingVineFrame(this, draw.Z, draw.Graphics, draw.Cell, anchor.X + draw.X, anchor.Y + draw.Y, draw.VineLength,
+						draw.VineCurvature, draw.Mode, draw.Param, draw.PaletteOffset, draw.TranslucentFrame);
+					continue;
+				}
 				DrawSpriteFrame(this, draw.Z, draw.Graphics, draw.Cell, anchor.X + draw.X, anchor.Y + draw.Y, draw.Direction, draw.ScaleX,
 					draw.ScaleY, draw.Angle, draw.Mode, draw.Param, draw.PaletteOffset, draw.TranslucentFrame);
 			}
@@ -373,7 +472,7 @@ namespace Jazz2::Scripting
 					Vector4f texCoords(float(width) / noiseSize.X, float((tick * 37u) % 64u) / 64.0f,
 						float(height) / noiseSize.Y, float((tick * 23u) % 64u) / 64.0f);
 					Target->DrawTexture(*noise, Vector2f((float)xPixel, (float)yPixel) + Offset, NextLayer(),
-						Vector2f((float)width, (float)height), texCoords, Colorf::White, false, 0.0f, paletteOffset);
+						Vector2f((float)width, (float)height), texCoords, Colorf::White, UI::BlendMode::Normal, 0.0f, paletteOffset);
 					return;
 				}
 			}
@@ -440,7 +539,12 @@ namespace Jazz2::Scripting
 		}
 		void jjCANVAS::DrawSwingingVine(std::int32_t xPixel, int32_t yPixel, std::uint32_t sprite, int32_t length, int32_t curvature, std::uint32_t mode, std::uint8_t param)
 		{
-			noop();
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			std::int32_t cell = 0;
+			bool translucent;
+			auto* base = owner->GetAnimationTables().ResolveFrame(sprite, cell, &translucent);
+			DrawSwingingVineFrame(Target, NextLayer(), base, cell, xPixel + Offset.X, yPixel + Offset.Y, length, curvature,
+				mode, param, owner->GetVinePaletteOffset(mode, param), translucent);
 		}
 
 		void jjCANVAS::ExternalDrawTile(std::int32_t xPixel, int32_t yPixel, std::uint16_t tile, std::uint32_t tileQuadrant)
@@ -455,7 +559,30 @@ namespace Jazz2::Scripting
 				case spriteType_TRANSLUCENT:
 				case spriteType_TRANSLUCENTTILE:
 					return UI::Font::TransparentDefaultColor;
-				case spriteType_BLENDNORMAL: {
+				case spriteType_BLENDLUMINANCE: {
+					// The brightness of the font in the colors of what's behind it, mostly the dark boxes scripts draw text
+					// on - gray as bright as the glyph (see SPRITE::BRIGHTNESS below), added to what's behind on canvases (see
+					// DrawScriptText()), the parameter is the opacity (the shader takes alpha as 1 + (a - 0.5) * 4)
+					constexpr float GlyphLevel = 0.5f - (1.0f - 1.0f / 1.5f) * 0.25f;
+					return Colorf(GlyphLevel, GlyphLevel, GlyphLevel, 0.25f + 0.25f * (param / 255.0f));
+				}
+				case spriteType_BLENDNORMAL:
+				case spriteType_BLENDDARKEN:
+				case spriteType_BLENDLIGHTEN:
+				case spriteType_BLENDHUE:
+				case spriteType_BLENDSATURATION:
+				case spriteType_BLENDCOLOR:
+				case spriteType_BLENDMULTIPLY:
+				case spriteType_BLENDSCREEN:
+				case spriteType_BLENDDISSOLVE:
+				case spriteType_BLENDOVERLAY:
+				case spriteType_BLENDHARDLIGHT:
+				case spriteType_BLENDSOFTLIGHT:
+				case spriteType_BLENDDIFFERENCE:
+				case spriteType_BLENDDODGE:
+				case spriteType_BLENDBURN:
+				case spriteType_BLENDEXCLUSION: {
+					// The parameter of every blend mode is the opacity, the font can't be mixed with what's behind otherwise
 					Colorf color = UI::Font::DefaultColor;
 					color.A = param / 255.0f;
 					return color;
@@ -515,10 +642,10 @@ namespace Jazz2::Scripting
 			// Only how the letters move and the alignment are taken of the appearance (see jjTEXTAPPEARANCE::constructorMode())
 			std::uint32_t stringMode = (appearance.xAmp != 0 && appearance.yAmp != 0 ? 4 : (appearance.yAmp != 0 ? 3
 				: (appearance.align == jjTEXTAPPEARANCE::align_RIGHT ? 2 : 0)));
-			DrawScriptText(xPixel, yPixel, text, size, stringMode, mode, param, appearance.newline == jjTEXTAPPEARANCE::ch_SPECIAL);
+			DrawScriptText(xPixel, yPixel, text, size, stringMode, mode, param, appearance.newline == jjTEXTAPPEARANCE::ch_SPECIAL, appearance.spacing);
 		}
 		void jjCANVAS::DrawScriptText(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t stringMode,
-			std::uint32_t spriteMode, std::uint8_t param, bool newLines) {
+			std::uint32_t spriteMode, std::uint8_t param, bool newLines, std::int32_t spacing) {
 			ScriptTextStyle style = GetScriptTextStyle(size);
 			if (style.Font == nullptr) {
 				return;
@@ -540,6 +667,9 @@ namespace Jazz2::Scripting
 			auto recode = [stringMode, newLines](StringView part) {
 				return (stringMode == 4 ? Compatibility::JJ2Strings::RecodeString(part) : Compatibility::JJ2Strings::RecodeScriptString(part, false, newLines));
 			};
+			if (spacing != 1) {
+				style.CharSpacing = GetAppearanceCharSpacing(style, recode(text), spacing);
+			}
 
 			// A character whose frame of the font of the original a script replaced is drawn as that frame, as JJ2+ draws all
 			// of them so (SwitchTestV2 makes `$` to `(` the stars of its par times), the rest in the font of the game; the
@@ -598,8 +728,11 @@ namespace Jazz2::Scripting
 			std::int32_t charOffset = 0;
 			for (const Piece& piece : pieces) {
 				if (piece.Frame < 0) {
+					// Added to what's behind, which keeps its hue as in JJ2+ (lavender over purple bricks)
+					Target->AdditiveText = (spriteMode == spriteType_BLENDLUMINANCE);
 					style.Font->DrawString(Target, piece.Text, charOffset, x, yPixel + Offset.Y + style.OffsetY, z,
 						UI::Alignment::TopLeft, color, style.Scale, angleOffset, varianceX, varianceY, speed, style.CharSpacing, style.LineSpacing);
+					Target->AdditiveText = false;
 				} else {
 					// 10 pixels higher than the frame drawn as a sprite, as the characters of JJ2+ (see drawString())
 					std::int32_t cell = 0;
@@ -891,6 +1024,21 @@ namespace Jazz2::Scripting
 		return std::max<std::int32_t>(it->second, 0);
 	}
 
+	std::int32_t LevelScriptLoader::GetVinePaletteOffset(std::uint32_t mode, std::uint8_t param)
+	{
+		constexpr std::uint8_t VineBackground = 128;
+		std::int32_t offset = GetSpritePaletteOffset(mode, param);
+		if (offset != 0) {
+			return offset;
+		}
+		std::uint32_t key = 0x20000u | VineBackground;
+		auto it = _spritePaletteOffsets.find(key);
+		if (it == _spritePaletteOffsets.end()) {
+			it = _spritePaletteOffsets.emplace(key, ContentResolver::Get().AcquireColorKeyPaletteOffset(VineBackground)).first;
+		}
+		return std::max<std::int32_t>(it->second, 0);
+	}
+
 	Texture* LevelScriptLoader::GetDissolveNoise(std::uint8_t color, std::uint8_t density, std::int32_t& paletteOffset)
 	{
 		constexpr std::int32_t NoiseSize = 64;
@@ -978,7 +1126,22 @@ namespace Jazz2::Scripting
 	}
 
 	void LevelScriptLoader::jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
-		noop();
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		if (length <= 0 || ContentResolver::Get().IsHeadless()) {
+			return;
+		}
+		std::int32_t cell = 0;
+		bool translucent;
+		auto* graphics = owner->GetAnimationTables().ResolveFrame(sprite, cell, &translucent);
+		if (graphics == nullptr) {
+			return;
+		}
+		Legacy::ScriptWorldCanvas::SpriteDraw draw = { graphics, cell, xPixel, yPixel, 0, 1.0f, 1.0f, 0, std::uint32_t(mode), param,
+			owner->GetLayerDrawZ(layerZ), owner->GetVinePaletteOffset(mode, param) };
+		draw.TranslucentFrame = translucent;
+		draw.VineLength = length;
+		draw.VineCurvature = curvature;
+		owner->GetWorldCanvas().AddSprite(draw);
 	}
 
 	void LevelScriptLoader::jjDrawTile(float xPixel, float yPixel, std::uint16_t tile, std::uint32_t tileQuadrant, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
@@ -1019,7 +1182,8 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 		auto recodedText = Compatibility::JJ2Strings::RecodeScriptString(text, false, style.newline == jjTEXTAPPEARANCE::ch_SPECIAL);
-		return (std::int32_t)textStyle.Font->MeasureString(recodedText, textStyle.Scale, textStyle.CharSpacing, textStyle.LineSpacing).X;
+		float charSpacing = GetAppearanceCharSpacing(textStyle, recodedText, style.spacing);
+		return (std::int32_t)textStyle.Font->MeasureString(recodedText, textStyle.Scale, charSpacing, textStyle.LineSpacing).X;
 	}
 
 	void LevelScriptLoader::RegisterLegacyCanvas(asIScriptEngine* engine)

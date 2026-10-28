@@ -10,6 +10,7 @@ namespace Jazz2::UI
 		Normal,		/**< Over what's behind by its alpha */
 		Additive,	/**< Added to what's behind */
 		Multiply,	/**< What's behind times the color */
-		Screen		/**< What's behind lightened by the color */
+		Screen,		/**< What's behind lightened by the color */
+		Difference	/**< What's behind inverted by the color, `src + dst - 2 * src * dst` (exact for black and white) */
 	};
 }

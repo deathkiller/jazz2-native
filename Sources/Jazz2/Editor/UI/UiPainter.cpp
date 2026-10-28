@@ -222,7 +222,7 @@ namespace Jazz2::Editor
 		Vector2f center = (from + to) * 0.5f;
 		Vector2f size(length, thickness);
 		_canvas.DrawTexture(_skin.GetAtlas(), center - size * 0.5f, GetDepth(layer), size, _skin.GetWhiteTexCoords(),
-			ApplyOpacity(color), false, std::atan2(delta.Y, delta.X));
+			ApplyOpacity(color), UI::BlendMode::Normal, std::atan2(delta.Y, delta.X));
 	}
 
 	bool UiPainter::ClipSegment(const Rectf& clip, float inset, Vector2f& from, Vector2f& to)
@@ -407,7 +407,7 @@ namespace Jazz2::Editor
 
 	void UiPainter::Image(const Texture& texture, const Rectf& rect, const Vector4f& texCoords, const Colorf& color, std::int32_t paletteOffset, UiLayer layer, float angle)
 	{
-		_canvas.DrawTexture(texture, Vector2f(rect.X, rect.Y), GetDepth(layer), Vector2f(rect.W, rect.H), texCoords, ApplyOpacity(color), false, angle, paletteOffset);
+		_canvas.DrawTexture(texture, Vector2f(rect.X, rect.Y), GetDepth(layer), Vector2f(rect.W, rect.H), texCoords, ApplyOpacity(color), UI::BlendMode::Normal, angle, paletteOffset);
 	}
 
 	bool UiPainter::Tile(Tiles::TileMap& tileMap, std::int32_t tileId, std::uint8_t flags, const Rectf& rect, float alpha, UiLayer layer)

@@ -76,6 +76,8 @@ namespace Jazz2
 		// Version of the level state snapshot format, snapshots are also stored in resumable states. Version 2 added
 		// the special levels completed from the level at the end, version 1 is read the same way without them.
 		constexpr std::uint16_t LevelStateVersion = 2;
+		// Flag of a level state left through a secret exit, the secret level returns to it from any level exit
+		constexpr std::uint8_t LevelStateLeftBySecretExit = 0x08;
 
 		void WriteSnapshotString(Stream& dest, StringView value)
 		{
@@ -137,6 +139,17 @@ namespace Jazz2
 				return {};
 			}
 			return ReadSnapshotString(src);
+		}
+
+		bool IsLevelStateLeftBySecretExit(const LevelStateSnapshot& state)
+		{
+			MemoryStream src(state.data(), (std::int64_t)state.size());
+			if (!IsLevelStateVersionSupported(src.ReadValueAsLE<std::uint16_t>())) {
+				return false;
+			}
+			std::uint32_t nameLength = src.ReadVariableUint32();
+			src.Seek(nameLength + 1, SeekOrigin::Current);
+			return ((src.ReadValue<std::uint8_t>() & LevelStateLeftBySecretExit) != 0);
 		}
 	}
 
@@ -214,6 +227,7 @@ namespace Jazz2
 
 	LevelHandler::~LevelHandler()
 	{
+		ReleaseScripts();
 		_players.clear();
 
 		// Remove nodes from UpscaleRenderPass
@@ -234,6 +248,19 @@ namespace Jazz2
 #endif
 
 		TracyPlot("Actors", 0LL);
+	}
+
+	void LevelHandler::ReleaseScripts()
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts == nullptr) {
+			return;
+		}
+		// Actors made by the script hold its objects, they go first, as the members would
+		_players.clear();
+		_actors.clear();
+		_scripts = nullptr;
+#endif
 	}
 
 	bool LevelHandler::Initialize(const LevelInitialization& levelInit)
@@ -1666,11 +1693,12 @@ namespace Jazz2
 
 		// A special level returns back to the level it was entered from once it's completed, so the current state
 		// has to be remembered now, before the players start leaving
-		if (CanUseLevelStateSnapshots()) {
+		if (CanUseLevelStateSnapshots() && !ReturnsFromSecretLevel(exitType)) {
 			String targetLevel = ResolveNextLevelName(exitType, nextLevel);
-			if (!targetLevel.empty() && !StringUtils::equalsIgnoreCase(targetLevel, _levelName) && IsReturnLevel(targetLevel)) {
+			bool secretExit = IsSecretExit(exitType);
+			if (!targetLevel.empty() && !StringUtils::equalsIgnoreCase(targetLevel, _levelName) && (secretExit || IsReturnLevel(targetLevel))) {
 				MemoryStream dest(64 * 1024);
-				SerializeLevelState(dest, targetLevel);
+				SerializeLevelState(dest, targetLevel, secretExit);
 				auto state = std::make_shared<LevelStateSnapshot>();
 				AssignSnapshotData(*state, dest);
 				_leftLevelState = Death::move(state);
@@ -1714,7 +1742,7 @@ namespace Jazz2
 
 	bool LevelHandler::CanTakeLevelExit(ExitType exitType, StringView nextLevel) const
 	{
-		if (_completedSpecialLevels.empty()) {
+		if (_completedSpecialLevels.empty() || ReturnsFromSecretLevel(exitType)) {
 			return true;
 		}
 
@@ -2281,6 +2309,21 @@ namespace Jazz2
 		return StringUtils::equalsIgnoreCase(nextLevel, levelName);
 	}
 
+	bool LevelHandler::IsSecretExit(ExitType exitType)
+	{
+		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
+		return (exitTypeMasked == ExitType::Special || exitTypeMasked == ExitType::Bonus);
+	}
+
+	bool LevelHandler::ReturnsFromSecretLevel(ExitType exitType) const
+	{
+		if (_returnLevelState == nullptr || !IsLevelStateLeftBySecretExit(*_returnLevelState)) {
+			return false;
+		}
+		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
+		return (exitTypeMasked == ExitType::Normal || exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Special);
+	}
+
 	void LevelHandler::CreateCheckpointSnapshot()
 	{
 		_checkpointSnapshotPending = false;
@@ -2424,7 +2467,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::SerializeLevelState(Stream& dest, StringView specialLevel)
+	void LevelHandler::SerializeLevelState(Stream& dest, StringView specialLevel, bool secretExit)
 	{
 		if (_checkpointSnapshotPending) {
 			CreateCheckpointSnapshot();
@@ -2437,6 +2480,7 @@ namespace Jazz2
 		if (_isReforged) flags |= 0x01;
 		if (_cheatsUsed) flags |= 0x02;
 		if (_checkpointCreated) flags |= 0x04;
+		if (secretExit) flags |= LevelStateLeftBySecretExit;
 		dest.WriteValue<std::uint8_t>(flags);
 		dest.WriteValueAsLE<float>(_elapsedFrames);
 		dest.WriteValueAsLE<float>(_checkpointFrames);
@@ -2769,7 +2813,7 @@ namespace Jazz2
 	void LevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
 	{
 		String nextLevel = ResolveNextLevelName(_nextLevelType, _nextLevelName);
-		if (_returnLevelState != nullptr && StringUtils::equalsIgnoreCase(nextLevel, _levelName)) {
+		if (_returnLevelState != nullptr && (ReturnsFromSecretLevel(_nextLevelType) || StringUtils::equalsIgnoreCase(nextLevel, _levelName))) {
 			// The special level is completed, so return back to the level it was entered from
 			levelInit.LevelName = ReadLevelStateName(*_returnLevelState);
 			levelInit.RestoreLevelState = _returnLevelState;

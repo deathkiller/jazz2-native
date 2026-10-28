@@ -229,13 +229,14 @@ namespace Jazz2::Scripting
 		}
 
 		std::uint8_t* jjPIXELMAP::GetPixel(std::uint32_t x, std::uint32_t y) {
-			if (x >= width || y >= height) {
-				// Scripts of JJ2+ reach past the edge (`x <= 32` of a tile) and work there, a pixel out of the map is a
-				// scratch one, what's written to it is lost
+			// JJ2+ indexes the rows one after another without checking `x`, so `x` past the width is in the rows below
+			// (plusPixelMapEx draws its double-width slopes so); past the end is a scratch pixel, what's written there is lost
+			std::uint64_t index = std::uint64_t(y) * width + x;
+			if (index >= std::uint64_t(width) * height) {
 				_outOfRange = 0;
 				return &_outOfRange;
 			}
-			return &_pixels[std::size_t(y) * width + x];
+			return &_pixels[std::size_t(index)];
 		}
 
 		bool jjPIXELMAP::saveToTile(std::uint16_t tileID, bool hFlip) const {
@@ -639,12 +640,13 @@ namespace Jazz2::Scripting
 		}
 
 		jjPALCOLOR* jjCOLORMAP::GetPixel(std::uint32_t x, std::uint32_t y) {
-			if (x >= width || y >= height) {
-				// As of jjPIXELMAP, what's written to a pixel out of the map is lost
+			// As jjPIXELMAP::GetPixel(), the rows one after another
+			std::uint64_t index = std::uint64_t(y) * width + x;
+			if (index >= std::uint64_t(width) * height) {
 				_outOfRange = {};
 				return &_outOfRange;
 			}
-			return &_pixels[std::size_t(y) * width + x];
+			return &_pixels[std::size_t(index)];
 		}
 
 		std::unique_ptr<std::uint8_t[]> jjCOLORMAP::ToIndices(const jjPAL& palette) const {
@@ -907,12 +909,13 @@ namespace Jazz2::Scripting
 		}
 
 		bool* jjMASKMAP::GetPixel(std::uint32_t x, std::uint32_t y) {
-			if (x >= Size || y >= Size) {
-				// The same as jjPIXELMAP::GetPixel()
+			// The same as jjPIXELMAP::GetPixel()
+			std::uint64_t index = std::uint64_t(y) * Size + x;
+			if (index >= std::uint64_t(Size) * Size) {
 				_outOfRange = false;
 				return &_outOfRange;
 			}
-			return &_mask[y * Size + x];
+			return &_mask[std::size_t(index)];
 		}
 
 		bool jjMASKMAP::save(std::uint16_t tileID, bool hFlip) const {

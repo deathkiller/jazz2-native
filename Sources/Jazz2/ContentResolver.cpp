@@ -4271,6 +4271,7 @@ namespace Jazz2
 	static constexpr std::uint8_t DissolvePaletteScheme = 0xFB;
 	static constexpr std::uint8_t NeonGlowPaletteScheme = 0xFA;
 	static constexpr std::uint8_t FixedPaletteScheme = 0xF9;
+	static constexpr std::uint8_t ColorKeyPaletteScheme = 0xF8;
 	// Set in the value of a derived row whose colors are premultiplied by their alpha
 	static constexpr std::uint32_t PremultipliedPaletteBit = 0x80000000u;
 
@@ -4315,6 +4316,11 @@ namespace Jazz2
 	std::int32_t ContentResolver::AcquireNeonGlowPaletteOffset(std::uint8_t channels)
 	{
 		return AcquireDerivedPaletteOffset(NeonGlowPaletteScheme, std::min<std::uint8_t>(channels, 6));
+	}
+
+	std::int32_t ContentResolver::AcquireColorKeyPaletteOffset(std::uint8_t index)
+	{
+		return AcquireDerivedPaletteOffset(ColorKeyPaletteScheme, index);
 	}
 
 	std::int32_t ContentResolver::AcquireFixedPaletteOffset(const std::uint32_t* colors, bool premultiplied)
@@ -4386,6 +4392,8 @@ namespace Jazz2
 			BuildDissolvePalette(value, _palettes + freeRow * ColorsPerPalette);
 		} else if (scheme == NeonGlowPaletteScheme) {
 			BuildNeonGlowPalette(std::uint8_t(value), _palettes + freeRow * ColorsPerPalette);
+		} else if (scheme == ColorKeyPaletteScheme) {
+			BuildColorKeyPalette(std::uint8_t(value), _palettes + freeRow * ColorsPerPalette);
 		} else {
 			BuildShiftedPalette(std::uint8_t(value), _palettes + freeRow * ColorsPerPalette);
 		}
@@ -4464,6 +4472,12 @@ namespace Jazz2
 		}
 	}
 
+	void ContentResolver::BuildColorKeyPalette(std::uint8_t index, std::uint32_t* outPalette) const
+	{
+		std::memcpy(outPalette, _palettes, ColorsPerPalette * sizeof(std::uint32_t));
+		outPalette[index] = 0;
+	}
+
 	void ContentResolver::BuildGemPalette(std::uint8_t gem, std::uint32_t* outPalette) const
 	{
 		// As JJ2+ draws SPRITE::GEM (measured): the lower 7 bits of an index pick the entry of the gradient of the gem,
@@ -4510,6 +4524,8 @@ namespace Jazz2
 					BuildDissolvePalette(_paletteRowColor[row], _palettes + row * ColorsPerPalette);
 				} else if (_paletteRowScheme[row] == NeonGlowPaletteScheme) {
 					BuildNeonGlowPalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
+				} else if (_paletteRowScheme[row] == ColorKeyPaletteScheme) {
+					BuildColorKeyPalette(std::uint8_t(_paletteRowColor[row]), _palettes + row * ColorsPerPalette);
 				} else if (_paletteRowScheme[row] == FixedPaletteScheme) {
 					continue;
 				} else {

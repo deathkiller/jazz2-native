@@ -655,6 +655,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			_worldCanvas->Clear();
 			_canvasClearTick = currentTick;
 		}
+		// The weather a level starts (an event of weather) also without a callback of the script in each tick
+		PullWeather();
 		if (_particles != nullptr || (snowing && OwnsWeather())) {
 			UpdateParticles(currentTick);
 		}
@@ -679,8 +681,13 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 				asIScriptFunction* onPlayerDraw = _onPlayerDraw;
 
 				if (_onLevelUpdate == nullptr && onPlayer == nullptr && onPlayerInput == nullptr && onPlayerDraw == nullptr) {
-					// jjGameTicks, as the ticks would have run
+					// jjGameTicks, as the ticks would have run; the sprites show what behaviors of objects changed of the
+					// animations as after onMain(), a script may have no other callback (plusPixelMapEx)
+					bool newTick = (_onLevelUpdateLastFrame <= currentTick);
 					_onLevelUpdateLastFrame = currentTick + 1;
+					if (newTick && _animTables != nullptr) {
+						_animTables->Flush();
+					}
 					break;
 				}
 				if (_onLevelUpdateLastFrame > currentTick) {

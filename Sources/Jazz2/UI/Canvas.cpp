@@ -57,7 +57,7 @@ namespace Jazz2::UI
 		_currentRenderQueue->AddCommand(command);
 	}
 
-	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset,
+	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, BlendMode blending, float angle, std::int32_t paletteOffset,
 		Shader* shader)
 	{
 		// Apply the optional per-layer draw transform (menu section transitions; identity by default)
@@ -81,7 +81,7 @@ namespace Jazz2::UI
 			return;
 		}
 
-		DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, additiveBlending, angle, paletteOffset, shader);
+		DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, blending, angle, paletteOffset, shader);
 	}
 
 	void Canvas::DrawTextureBatched(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color)
@@ -110,7 +110,7 @@ namespace Jazz2::UI
 			}
 		}
 		if (record == nullptr) {
-			DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, false, 0.0f, -1);
+			DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, BlendMode::Normal, 0.0f, -1);
 			return;
 		}
 
@@ -271,7 +271,7 @@ namespace Jazz2::UI
 	}
 
 	void Canvas::DrawTransformedTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& clippedTexCoords,
-		const Colorf& finalColor, bool additiveBlending, float angle, std::int32_t paletteOffset, Shader* shader)
+		const Colorf& finalColor, BlendMode blending, float angle, std::int32_t paletteOffset, Shader* shader)
 	{
 		EndQuadRun(z);
 
@@ -301,10 +301,16 @@ namespace Jazz2::UI
 		// Use a separate alpha blend so the alpha channel of an RGBA render target accumulates correct "over" coverage,
 		// otherwise drawing semi-transparent content over an opaque background would erode its alpha and let the
 		// scene behind show through. Harmless for opaque/RGB targets (alpha ignored).
-		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
-		} else {
-			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+		switch (blending) {
+			case BlendMode::Additive:
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
+				break;
+			case BlendMode::Difference:
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::OneMinusDstColor, BlendingFactor::OneMinusSrcColor, BlendingFactor::Zero, BlendingFactor::One);
+				break;
+			default:
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+				break;
 		}
 
 		// Resolved once per shader change instead of looked up in the block by name on every draw
@@ -399,7 +405,7 @@ namespace Jazz2::UI
 		if (blending == BlendMode::Multiply) {
 			float a = finalColor.A;
 			finalColor = Colorf(1.0f - a + finalColor.R * a, 1.0f - a + finalColor.G * a, 1.0f - a + finalColor.B * a, 1.0f);
-		} else if (blending == BlendMode::Screen) {
+		} else if (blending == BlendMode::Screen || blending == BlendMode::Difference) {
 			float a = finalColor.A;
 			finalColor = Colorf(finalColor.R * a, finalColor.G * a, finalColor.B * a, 1.0f);
 		}
@@ -437,6 +443,9 @@ namespace Jazz2::UI
 				break;
 			case BlendMode::Screen:
 				command->GetMaterial().SetBlendingFactors(BlendingFactor::OneMinusDstColor, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
+				break;
+			case BlendMode::Difference:
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::OneMinusDstColor, BlendingFactor::OneMinusSrcColor, BlendingFactor::Zero, BlendingFactor::One);
 				break;
 			default:
 				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
@@ -480,7 +489,11 @@ namespace Jazz2::UI
 
 		// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
 		// when drawn into an RGBA render target, harmless for opaque/RGB targets
-		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+		if (AdditiveText) {
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
+		} else {
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+		}
 		command->GetMaterial().SetTexture(fontTexture);
 		return command;
 	}
@@ -494,7 +507,7 @@ namespace Jazz2::UI
 		std::int32_t index = -1, unusedIndex = -1;
 		for (std::int32_t i = 0; i < std::int32_t(_glyphBatches.size()); i++) {
 			const GlyphBatch& glyphBatch = _glyphBatches[i];
-			if (glyphBatch.FontTexture == &fontTexture && glyphBatch.Colorized == colorized && glyphBatch.Layer == layer) {
+			if (glyphBatch.FontTexture == &fontTexture && glyphBatch.Colorized == colorized && glyphBatch.Additive == AdditiveText && glyphBatch.Layer == layer) {
 				index = i;
 				break;
 			}
@@ -514,6 +527,7 @@ namespace Jazz2::UI
 			glyphBatch = GlyphBatch();
 			glyphBatch.FontTexture = &fontTexture;
 			glyphBatch.Colorized = colorized;
+			glyphBatch.Additive = AdditiveText;
 			glyphBatch.Layer = layer;
 		}
 

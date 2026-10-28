@@ -35,6 +35,8 @@ namespace Jazz2::Editor
 
 	PlayTestLevelHandler::~PlayTestLevelHandler()
 	{
+		// Sounds its script plays as it's released are stopped with the others
+		ReleaseScripts();
 #if defined(WITH_AUDIO)
 		// A play-test that isn't kept anymore takes its sounds with it, also the paused ones and those an actor still holds
 		for (auto& sound : _playingSounds) {

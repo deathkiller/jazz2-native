@@ -585,6 +585,15 @@ namespace Jazz2
 		 * the level it was entered from once completed (e.g., "Gargoyle's Lair" from "Medieval Kineval").
 		 */
 		static bool IsReturnLevel(StringView levelName);
+		/**
+		 * @brief Returns `true` if the exit type is a secret exit
+		 *
+		 * The level a secret exit leads to always returns back to the level it was entered from, whatever its
+		 * next level is, see @ref ReturnsFromSecretLevel().
+		 */
+		static bool IsSecretExit(ExitType exitType);
+		/** @brief Returns `true` if the current level was entered through a secret exit and the exit type returns back from it */
+		bool ReturnsFromSecretLevel(ExitType exitType) const;
 
 		/** @brief Returns player viewport bounds */
 		Recti GetPlayerViewportBounds(std::int32_t w, std::int32_t h, std::int32_t index);
@@ -625,6 +634,13 @@ namespace Jazz2
 		virtual void ShowConsole();
 		/** @brief Hides the in-game console */
 		virtual void HideConsole();
+		/**
+		 * @brief Releases the level script and the actors while the rest of the level is still there
+		 *
+		 * Destructors of script objects may call back into the level (JJ2+ behaviors write to the console). Called by the
+		 * destructor, and earlier by a derived handler whose overrides they should still see.
+		 */
+		void ReleaseScripts();
 
 		/**
 		 * @brief Applies the cheat matching the specified command to the specified players
@@ -649,7 +665,7 @@ namespace Jazz2
 		void RestoreCheckpointSnapshot();
 		void SerializeActorsToStream(Stream& dest);
 		void InitializeActorsFromStream(Stream& src);
-		void SerializeLevelState(Stream& dest, StringView specialLevel);
+		void SerializeLevelState(Stream& dest, StringView specialLevel, bool secretExit);
 		bool InitializeFromLevelState(const LevelStateSnapshot& state, const LevelInitialization& levelInit);
 
 		void CheatKill(ArrayView<Actors::Player* const> targets);

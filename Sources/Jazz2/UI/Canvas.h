@@ -60,6 +60,8 @@ namespace Jazz2::UI
 		 * default, as only the level editor and what level scripts draw need it.
 		 */
 		bool OrderedDraws = false;
+		/** @brief Whether text drawn through @ref Font is added to what's behind it instead of drawn over it, off by default */
+		bool AdditiveText = false;
 
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
@@ -69,9 +71,11 @@ namespace Jazz2::UI
 		 *
 		 * `paletteOffset` >= 0 marks the texture as indexed (palette index in the red channel), recolored at draw time
 		 * through the shared palette texture at that offset; -1 = plain RGBA. A `shader` draws it in place of the
-		 * sprite shaders, it has to be the palette variant for an indexed texture.
+		 * sprite shaders, it has to be the palette variant for an indexed texture. Only @ref BlendMode::Normal,
+		 * @ref BlendMode::Additive and @ref BlendMode::Difference are supported for textures, with
+		 * @ref BlendMode::Difference the color of a transparent texel must be black.
 		 */
-		void DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false, float angle = 0.0f, std::int32_t paletteOffset = -1,
+		void DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, BlendMode blending = BlendMode::Normal, float angle = 0.0f, std::int32_t paletteOffset = -1,
 			Shader* shader = nullptr);
 		/**
 		 * @brief Draws a textured rectangle into one batch with the rectangles drawn right before it on the same layer
@@ -133,6 +137,8 @@ namespace Jazz2::UI
 			const Texture* FontTexture = nullptr;
 			/** @brief Whether the glyphs are drawn with the colorization shader */
 			bool Colorized = false;
+			/** @brief Whether the glyphs are added to what's behind them, see @ref AdditiveText */
+			bool Additive = false;
 			/** @brief Layer of the glyphs */
 			std::uint16_t Layer = 0;
 			/** @brief Whether the record is in use in this frame */
@@ -219,7 +225,7 @@ namespace Jazz2::UI
 		std::uint16_t TakeVisitOrder();
 		/** @brief Draws a rectangle already moved by the layer transform and clipped, by a command of its own */
 		void DrawTransformedTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords,
-			const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset, Shader* shader = nullptr);
+			const Colorf& color, BlendMode blending, float angle, std::int32_t paletteOffset, Shader* shader = nullptr);
 		/** @brief Returns the record of a layer with a run open for a texture, opening one, or `nullptr` if rectangles can't be batched */
 		QuadBatch* GetQuadRun(const Texture& texture, std::uint16_t layer);
 		/** @brief Begins the next batch of the run of a record, returns `false` if it can't be batched */

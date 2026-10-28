@@ -908,7 +908,7 @@ namespace Jazz2::UI::Menu
 			const Vector4f texCoords(side / period.X, offU, side / period.Y, offV);
 			const bool indexed = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
 			_canvasBackground->DrawTexture(*base->TextureDiffuse, center - Vector2f(side, side) * 0.5f, layer, Vector2f(side, side), texCoords,
-				Colorf::White, false, angle, indexed ? 0 : -1);
+				Colorf::White, BlendMode::Normal, angle, indexed ? 0 : -1);
 		};
 
 		// 16
@@ -969,7 +969,7 @@ namespace Jazz2::UI::Menu
 						continue;
 					}
 					_canvasBackground->DrawTexture(*base->TextureDiffuse, quadCenter - period * 0.5f, 120, period, texCoords, Colorf::White,
-						false, angle, indexed ? 0 : -1);
+						BlendMode::Normal, angle, indexed ? 0 : -1);
 				}
 			}
 		}

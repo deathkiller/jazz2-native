@@ -120,10 +120,10 @@ namespace Jazz2::Scripting
 			 * @brief Draws text in a built-in font size, moving as `STRING::Mode` says (`BOUNCE`, `SPIN`), in a sprite mode
 			 *
 			 * In `SPIN`, `#` colors every letter on its own as in the texts of levels, as JJ2+ draws a selected menu item.
-			 * Elsewhere `\n` breaks the line only with @p newLines.
+			 * Elsewhere `\n` breaks the line only with @p newLines. @p spacing is `jjTEXTAPPEARANCE::spacing`.
 			 */
 			void DrawScriptText(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t stringMode,
-				std::uint32_t spriteMode, std::uint8_t param, bool newLines = false);
+				std::uint32_t spriteMode, std::uint8_t param, bool newLines = false, std::int32_t spacing = 1);
 			/** @brief Draws a frame of the font of the original that has no image as the character in the font of the game, returns `false` for any other frame */
 			bool DrawMissingFontCharacter(std::int32_t xPixel, std::int32_t yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame,
 				std::uint32_t mode, std::uint8_t param);

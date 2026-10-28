@@ -192,6 +192,10 @@ namespace Jazz2::Scripting::Legacy
 		void RunGameBehavior(std::uint32_t behavior, bool draw);
 		/** @brief Runs `BEHAVIOR::SWINGINGVINE` of JJ2+, the object is the end of the vine */
 		void RunSwingingVine(bool draw);
+		/** @brief Puts a swinging vine object at the end of the vine, as JJ2 has it, from its `var[1]` and `var[2]` */
+		static void SetVineEnd(jjOBJ& obj);
+		/** @brief Draws a swinging vine, by the vine of the game or by the frame after `curFrame` */
+		void DrawVine(bool draw);
 		/** @brief Spawns the object of an event where an object of the game is, as made of the same event, `nullptr` if it has none */
 		static std::shared_ptr<Actors::ActorBase> SpawnInPlace(LevelScriptLoader* levelScripts, Actors::ActorBase& actor, std::uint8_t eventId);
 		/**
@@ -277,8 +281,27 @@ namespace Jazz2::Scripting::Legacy
 		static bool CallObjectHit(LevelScriptLoader* levelScripts, jjOBJ& obj, jjOBJ* bullet, jjPLAYER* player, std::int32_t force);
 		/** @brief Draws the current frame of a `jjOBJ` where it is in the level (@p offsetY lower), as `jjOBJ::draw()` */
 		static void DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj, float offsetY = 0.0f);
+		/** @brief Returns `true` if an object of a `direction` (`SPRITE::Direction`) is drawn upside down */
+		static bool IsUpsideDown(std::int8_t direction);
+		/**
+		 * @brief Turns an object of the game upside down, as JJ2+ has the objects of a template whose `direction` is `SPRITE::FLIPV`
+		 *
+		 * It's drawn flipped vertically, a solid object (a crate, a bird cage) hangs from the ceiling above it instead of
+		 * standing on the ground, its hitbox flipped with it.
+		 */
+		static void TurnUpsideDown(Actors::ActorBase& actor);
 
 	private:
+		class UpsideDownOverride;
+
+		// Hangs a solid object turned upside down from the ceiling above it by its hitbox, see TurnUpsideDown()
+		static void HangFromCeiling(Actors::ActorBase& actor);
+		// Runs the update of the object of the game itself
+		static void RunNativeUpdate(Actors::ActorBase& actor, float timeMult);
+		// Makes the hitbox of the object of the game as it does itself and flips it upside down about the position, as the
+		// frame is drawn
+		static void UpdateUpsideDownHitbox(Actors::ActorBase& actor);
+
 		// Prepares the context for a function of a behavior, logs why it can't be
 		static bool PrepareBehavior(asIScriptContext* ctx, asIScriptFunction* function);
 

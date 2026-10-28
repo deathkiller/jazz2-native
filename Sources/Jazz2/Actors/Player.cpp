@@ -10,6 +10,7 @@
 #include "Environment/Bird.h"
 #include "Environment/BonusWarp.h"
 #include "Environment/Spring.h"
+#include "Environment/SwingingVine.h"
 #include "Enemies/EnemyBase.h"
 #include "Enemies/TurtleShell.h"
 
@@ -3033,6 +3034,9 @@ namespace Jazz2::Actors
 				// Drop off hook/vine
 				if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
 					if (_suspendType == SuspendType::SwingingVine) {
+						if (auto* vine = runtime_cast<Environment::SwingingVine>(_carryingObject)) {
+							_speed.X = vine->GetReleaseSpeedX();
+						}
 						CancelCarryingObject();
 						_springCooldown = 30.0f;
 					} else {

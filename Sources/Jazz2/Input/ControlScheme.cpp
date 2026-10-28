@@ -15,27 +15,13 @@ namespace Jazz2::Input
 			mapping.Targets.clear();
 		}
 
-		// Fire and Run take a shoulder control in addition to their face button. On a controller with analog
-		// triggers that is the trigger, which leaves the bumpers free; the two PlayStation handhelds have a
-		// shoulder row of L and R alone, so there it has to be the bumpers. Neither reports a trigger the
-		// binding could reach: the PSP's built-in pad declares no trigger axis at all, and the Vita's
-		// declares "lefttrigger:a4" / "righttrigger:a5" for axes nothing on the console drives (see
-		// JoyMappingDb.h). Binding them is what left both actions on their face button only. Named here so
-		// the first player below and the loop over the others stay one description of the same layout.
+		// Fire and Run also take a shoulder control - the trigger, or the bumper on pads without usable triggers
 #if defined(DEATH_TARGET_N64)
-		// The Nintendo 64 pad is the odd one out: it has A and B where a modern pad has four face buttons, no
-		// second trigger, and Z under the middle grip. The layout follows what the console's own games settled
-		// on - A jumps, B shoots, and Z is the held modifier, which is Run here. That leaves the two shoulders
-		// for the rest: L is a second Fire within reach of the same hand, and R opens the weapon wheel, which
-		// has nowhere else to go because the pad has no Y button (the backend reports nothing at all for X, Y and
-		// Back - see N64InputManager). Z arrives as the right trigger axis rather than a button, which is why Run
-		// takes an axis here while Fire takes a button.
+		// N64: A jumps, B shoots, Z (reported as the right trigger) runs, L is a second Fire, R changes weapon
 		constexpr ButtonName FireShoulder = ButtonName::LeftBumper;
 		constexpr AxisName RunShoulder = AxisName::RightTrigger;
 #elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_AMIGAOS)
-		// The 3DS is the same shape again: L and R are the only shoulder buttons every model has (ZL/ZR exist on
-		// the New 3DS alone, and its backend reports them as the trigger axes), so the bumpers carry the actions.
-		// So is the Amiga's CD32 pad, with Reverse and Forward - and its backend reports no axes at all.
+		// Only L and R exist (or the Vita's trigger axes are never driven, see JoyMappingDb.h)
 		constexpr ButtonName FireShoulder = ButtonName::RightBumper;
 		constexpr ButtonName RunShoulder = ButtonName::LeftBumper;
 #else
@@ -43,9 +29,7 @@ namespace Jazz2::Input
 		constexpr AxisName RunShoulder = AxisName::LeftTrigger;
 #endif
 #if defined(DEATH_TARGET_N64)
-		// The pad's B is published as B, so that it goes back in the menus like the B of any other pad. In the game
-		// it shoots, as described above. Run has only Z and Change Weapon only R, the X and Y a modern pad has for
-		// them exist on this console only on a GameCube pad.
+		// B stays B so it goes back in menus, there is no X/Y for Run and Change Weapon
 		constexpr ButtonName FireButton = ButtonName::B;
 		constexpr ButtonName RunButton = ButtonName::Unknown;
 		constexpr ButtonName ChangeWeaponButton = ButtonName::RightBumper;

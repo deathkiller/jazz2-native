@@ -180,7 +180,7 @@ namespace Jazz2::Scripting
 			 * @brief Loads animations from a sprite sheet into this set
 			 *
 			 * Each row of cells is an animation, its cells up to the first empty one are its frames, the hotspot at the
-			 * middle of the bottom of a cell and the coldspot above it by the offset given for the animation. The animations
+			 * middle of a cell and the coldspot below it by the offset given for the animation. The animations
 			 * and frames are new ones, unless @p firstAnimToOverwrite and @p firstFrameToOverwrite say which to overwrite.
 			 */
 			jjANIMSET* loadSheet(const jjPIXELMAP& sheet, std::uint32_t frameWidth, std::uint32_t frameHeight, std::uint32_t frameSpacingX,

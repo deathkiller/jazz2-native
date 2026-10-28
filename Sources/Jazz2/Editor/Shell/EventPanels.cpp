@@ -1052,9 +1052,23 @@ namespace Jazz2::Editor
 	{
 		const EventParamField& field = descriptor.Fields[index];
 		// A value only kept as it is
-		if (field.Hidden) {
-			return;
+		if (!field.Hidden) {
+			AddFieldRowsWithCondition(rows, descriptor, index);
 		}
+		// The text a field refers to, below the part of it that's used if there's such a field
+		for (std::uint8_t i = 0; i < descriptor.FieldCount; i++) {
+			if (descriptor.Fields[i].Type == ParamType::TextId && !descriptor.Fields[i].Hidden) {
+				std::int32_t part = EventPreviews::FindTextPartField(descriptor, i);
+				if ((part >= 0 ? part : std::int32_t(i)) == index) {
+					AddTextPreview(rows, descriptor, i);
+				}
+			}
+		}
+	}
+
+	void EventInspectorPanel::AddFieldRowsWithCondition(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index)
+	{
+		const EventParamField& field = descriptor.Fields[index];
 		std::int32_t firstChild = rows->GetChildCount();
 		AddFieldRows(rows, descriptor, index);
 		// A field shown only while another one has a value, all of its rows with it, see EventCatalog::IsFieldVisible()
@@ -1397,26 +1411,37 @@ namespace Jazz2::Editor
 				// The wheel pressed sets the value a new event has
 				number->DefaultValue = [f]() { return float(EventCatalog::ToDisplayValue(*f, f->Default)); };
 				addMixedMark(row);
-
-				if (field.Type == ParamType::TextId) {
-					// The text itself, as far as it fits, or the level an exit without one goes to
-					IEditorContext* session = &_session;
-					auto* preview = rows->Add<UiLabel>(StringView(), UiTheme::TextDim);
-					preview->TextFunc = [self, session, read, f]() {
-						Formats::EventRecord event;
-						String defaultLevel;
-						if (self->GetPrimary(event) && EventPreviews::DescribeDefaultLevel(session->GetDocument(), event, *f, defaultLevel, true)) {
-							return defaultLevel;
-						}
-						std::int32_t index = read();
-						const auto& texts = session->GetDocument().Texts;
-						return (index >= 0 && index < std::int32_t(texts.size()) && !texts[index].empty()
-							? String("\""_s + EventCatalog::MakeTextPreview(texts[index], 64) + "\""_s) : String(_x("editor", "No such text")));
-					};
-				}
 				break;
 			}
 		}
+	}
+
+	void EventInspectorPanel::AddTextPreview(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index)
+	{
+		// The text itself, as far as it fits, or the level an exit without one goes to
+		EventInspectorPanel* self = this;
+		IEditorContext* session = &_session;
+		const EventParamField* f = &descriptor.Fields[index];
+		auto* preview = rows->Add<UiLabel>(StringView(), UiTheme::TextDim);
+		preview->TextFunc = [self, session, f]() {
+			Formats::EventRecord event;
+			if (!self->GetPrimary(event)) {
+				return String();
+			}
+			String defaultLevel;
+			if (EventPreviews::DescribeDefaultLevel(session->GetDocument(), event, *f, defaultLevel, true)) {
+				return defaultLevel;
+			}
+			StringView used;
+			if (!EventPreviews::GetUsedText(session->GetDocument(), event, *f, used)) {
+				return String(_x("editor", "No such text"));
+			}
+			if (used.empty()) {
+				// TRANSLATORS: Under a text of an event in the event properties, the text has fewer parts split by | than the event asks for
+				return String(_x("editor", "No such part"));
+			}
+			return String("\""_s + EventCatalog::MakeTextPreview(used, 64) + "\""_s);
+		};
 	}
 }
 

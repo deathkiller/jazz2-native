@@ -185,10 +185,6 @@ namespace Jazz2::Editor
 		if (descriptor == nullptr || (descriptor->Traits & EventTraits::Object) != EventTraits::Object) {
 			return nullptr;
 		}
-		// A container of the game doesn't animate, nor does the behavior of JJ2 a script runs it with
-		if (descriptor->Category == EventCategory::Container) {
-			return ScriptSprite(event, false, false);
-		}
 		// An object only given other frames animates as the object of the game does (a restyled checkpoint stays closed)
 		GraphicResource* scripted = ScriptSprite(event, true, true);
 		if (scripted == nullptr || scripted->FrameCount <= 1) {
@@ -196,6 +192,10 @@ namespace Jazz2::Editor
 		}
 		EventPreviewSpec spec;
 		GraphicResource* own = (GetPreview(event, spec) ? GetSprite(event.Type, spec) : nullptr);
+		// A container animates only if the game's own does (monitors do, crates don't)
+		if (descriptor->Category == EventCategory::Container) {
+			return (own != nullptr && own->FrameCount > 1 ? scripted : ScriptSprite(event, false, false));
+		}
 		return (own != nullptr && own->FrameCount <= 1 ? ScriptSprite(event, true, false) : scripted);
 	}
 
@@ -284,6 +284,10 @@ namespace Jazz2::Editor
 				Vector2f piece(spawnPos.X + float(offsets[i]), spawnPos.Y - 6.0f);
 				DrawSprite(target, resource, spec, piece, alpha, animTime, resource->FrameOffset + std::int32_t(i % std::size_t(frameCount)));
 			}
+			return;
+		}
+		if (EventType(event.Type) == EventType::GemRing && HasBuiltInLayout(event.Type)) {
+			DrawGemRing(target, event, resource, spawnPos, alpha, animTime);
 			return;
 		}
 		// Objects are spawned at the center of their tile, and drawn at their hotspot, with the parts they add to
@@ -487,6 +491,16 @@ namespace Jazz2::Editor
 			DrawFittedWithParts(painter, event.Type, resource, spec, parts, rect, animTime, alpha);
 			return;
 		}
+		if (!scripted && EventType(event.Type) == EventType::GemRing && HasBuiltInLayout(event.Type)) {
+			float extent = GetGemRingExtent(resource);
+			float ringScale = std::min(rect.W, rect.H) / (extent * 2.0f);
+			DrawTarget target;
+			target.Painter = &painter;
+			target.Scale = (ringScale >= 1.0f ? std::floor(ringScale) : ringScale);
+			target.Origin = Vector2f(std::round(rect.X + rect.W * 0.5f), std::round(rect.Y + rect.H * 0.5f));
+			DrawGemRing(target, event, resource, Vector2f::Zero, alpha, animTime);
+			return;
+		}
 
 		// The whole cell fits, so the sprite doesn't jump around while it's animated
 		GenericGraphicResource* base = resource->Base;
@@ -662,8 +676,55 @@ namespace Jazz2::Editor
 			drawTarget.Painter->Image(*base->TextureDiffuse, target, texCoords, Colorf(1.0f, 1.0f, 1.0f, alpha), paletteOffset, UiLayer::Content, angle);
 		} else if (drawTarget.Canvas != nullptr) {
 			drawTarget.Canvas->DrawTexture(*base->TextureDiffuse, Vector2f(target.X, target.Y), drawTarget.Z, Vector2f(target.W, target.H), texCoords,
-				Colorf(1.0f, 1.0f, 1.0f, alpha), false, angle, paletteOffset);
+				Colorf(1.0f, 1.0f, 1.0f, alpha), UI::BlendMode::Normal, angle, paletteOffset);
 		}
+	}
+
+	void EventPreviews::DrawCentered(const DrawTarget& drawTarget, GraphicResource* resource, std::int32_t frame, Vector2f pos, float scale, float angle,
+		float alpha)
+	{
+		GenericGraphicResource* base = resource->Base;
+		Recti frameRect = base->GetFrameRect(frame);
+		Vector2f size(float(frameRect.W) * scale * drawTarget.Scale, float(frameRect.H) * scale * drawTarget.Scale);
+		Vector2f center = drawTarget.Origin + pos * drawTarget.Scale;
+		Rectf target(center.X - size.X * 0.5f, center.Y - size.Y * 0.5f, size.X, size.Y);
+
+		Vector2i texSize = base->TextureDiffuse->GetSize();
+		Vector4f texCoords(float(frameRect.W) / float(texSize.X), float(frameRect.X) / float(texSize.X),
+			float(frameRect.H) / float(texSize.Y), float(frameRect.Y) / float(texSize.Y));
+		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? resource->PaletteOffset : -1);
+		if (drawTarget.Painter != nullptr) {
+			drawTarget.Painter->Image(*base->TextureDiffuse, target, texCoords, Colorf(1.0f, 1.0f, 1.0f, alpha), paletteOffset, UiLayer::Content, angle);
+		} else if (drawTarget.Canvas != nullptr) {
+			drawTarget.Canvas->DrawTexture(*base->TextureDiffuse, Vector2f(target.X, target.Y), drawTarget.Z, Vector2f(target.W, target.H), texCoords,
+				Colorf(1.0f, 1.0f, 1.0f, alpha), UI::BlendMode::Normal, angle, paletteOffset);
+		}
+	}
+
+	void EventPreviews::DrawGemRing(const DrawTarget& target, const Formats::EventRecord& event, GraphicResource* resource, Vector2f center, float alpha,
+		float animTime)
+	{
+		// GemRing::OnActivatedAsync(), OnUpdate() and OnDraw(): smaller see-through gems behind the objects, each its own frame
+		std::int32_t length = (event.Params[0] > 0 ? event.Params[0] : 8);
+		float speed = float(event.Params[1] > 0 ? event.Params[1] : 8) * 0.00625f;
+		float phase = animTime * (speed / UI::Canvas::AnimTimeMultiplier);
+		float distance = 8.0f * (4.0f + std::sin(phase * 1.1f));
+		DrawTarget pieceTarget = target;
+		if (pieceTarget.Canvas != nullptr) {
+			pieceTarget.Z = std::uint16_t(std::max<std::int32_t>(std::int32_t(target.Z) - 2, 0));
+		}
+		std::int32_t frameCount = std::max(resource->FrameCount, std::int32_t(1));
+		for (std::int32_t i = 0; i < length; i++) {
+			float angle = phase + float(i) * fTwoPi / float(length);
+			Vector2f pos(center.X + std::cos(angle) * distance, center.Y + std::sin(angle) * distance);
+			DrawCentered(pieceTarget, resource, resource->FrameOffset + (i % frameCount), pos, 0.8f, angle + fPiOver2, alpha * 0.7f);
+		}
+	}
+
+	float EventPreviews::GetGemRingExtent(GraphicResource* resource)
+	{
+		Vector2i cell = resource->Base->FrameDimensions;
+		return 40.0f + 0.4f * float(std::max(cell.X, cell.Y));
 	}
 
 	void EventPreviews::DrawBox(UiPainter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel)

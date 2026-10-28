@@ -1390,7 +1390,7 @@ namespace Jazz2::UI
 		);
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, angle, paletteOffset);
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending ? BlendMode::Additive : BlendMode::Normal, angle, paletteOffset);
 	}
 
 	bool HUD::DrawElementWithPalette(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float paletteOffset, float scaleX, float scaleY)
@@ -1512,7 +1512,7 @@ namespace Jazz2::UI
 		);
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, Vector2f(visibleW, visibleH), texCoords, color, false, 0.0f, paletteOffset);
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, Vector2f(visibleW, visibleH), texCoords, color, BlendMode::Normal, 0.0f, paletteOffset);
 	}
 
 	AnimState HUD::GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset)

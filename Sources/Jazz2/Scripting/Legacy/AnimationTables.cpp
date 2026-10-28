@@ -272,6 +272,17 @@ namespace Jazz2::Scripting::Legacy
 				ctx->SetException(message);
 			}
 		}
+
+		// Graphics of the game are shared by the levels loaded at once (a kept play-test, the editor's sandbox), only the
+		// tables that wrote last give them back, and the frames they had come from the first write
+		struct NativeWrite
+		{
+			const AnimationTables* Writer;
+			SmallVector<Resources::FrameRect, 0> FrameRects;
+		};
+
+		HashMap<const GenericGraphicResource*, NativeWrite> NativeWrites;
+		std::uint32_t NativeWriteGeneration = 0;
 	}
 
 	AnimationTables::AnimationTables(bool isTSF)
@@ -1080,7 +1091,13 @@ namespace Jazz2::Scripting::Legacy
 			}
 		}
 
-		if (_changes == _flushedChanges || _nativeGraphicsRestored) {
+		if (_nativeGraphicsRestored) {
+			return;
+		}
+		if (_nativeWriteGeneration != NativeWriteGeneration) {
+			ReclaimNativeGraphics();
+		}
+		if (_changes == _flushedChanges) {
 			return;
 		}
 		_flushedChanges = _changes;
@@ -1304,6 +1321,8 @@ namespace Jazz2::Scripting::Legacy
 			}
 			hasSheet = false;
 		}
+		// The vine of the original is transparent at 128 as JJ2+ gives it to scripts
+		std::uint8_t clearIndex = GetClearIndex(native.Path);
 
 		for (std::uint32_t i = 0; i < native.FrameCount; i++) {
 			jjANIMFRAME& frame = *_frames[native.FirstFrame + i];
@@ -1365,7 +1384,8 @@ namespace Jazz2::Scripting::Legacy
 			bool translucent = false;
 			for (std::int32_t v = 0; v < h; v++) {
 				for (std::int32_t u = 0; u < w; u++) {
-					frame._pixels[std::size_t(v) * w + u] = ReadSheetIndex(sheet, x + u, y + v, translucent);
+					std::uint8_t index = ReadSheetIndex(sheet, x + u, y + v, translucent);
+					frame._pixels[std::size_t(v) * w + u] = (index != 0 ? index : clearIndex);
 				}
 			}
 			frame._transparent = translucent;
@@ -1461,7 +1481,9 @@ namespace Jazz2::Scripting::Legacy
 			return;
 		}
 		// Changed graphics can be true color, those of 32-bit frames
-		if (native.Original == nullptr && (graphics->Flags & GenericGraphicResourceFlags::Indexed) != GenericGraphicResourceFlags::Indexed) {
+		auto written = NativeWrites.find(graphics);
+		if (native.Original == nullptr && written == NativeWrites.end() &&
+			(graphics->Flags & GenericGraphicResourceFlags::Indexed) != GenericGraphicResourceFlags::Indexed) {
 			if (!_warnedTrueColor) {
 				_warnedTrueColor = true;
 				LOGW("Graphics \"{}\" aren't palette-indexed, scripts can't change them", native.Path);
@@ -1474,13 +1496,38 @@ namespace Jazz2::Scripting::Legacy
 			if (!ContentResolver::Get().ReadSpriteSheet(native.Path, original->Sheet, true)) {
 				return;
 			}
-			original->FrameRects = graphics->FrameRects;
+			original->FrameRects = (written != NativeWrites.end() ? written->second.FrameRects : graphics->FrameRects);
 			native.Original = Death::move(original);
 		}
+		if (written == NativeWrites.end()) {
+			written = NativeWrites.emplace(graphics, NativeWrite{this, native.Original->FrameRects}).first;
+		}
+		written->second.Writer = this;
+		_nativeWriteGeneration = ++NativeWriteGeneration;
 
 		SmallVector<jjANIMFRAME*, 16> frames;
 		GetFrames(anim, frames);
-		ComposeGraphics(*graphics, ArrayView<jjANIMFRAME* const>(frames.data(), frames.size()), anim.fps, true);
+		ComposeGraphics(*graphics, ArrayView<jjANIMFRAME* const>(frames.data(), frames.size()), anim.fps, true, GetClearIndex(native.Path));
+	}
+
+	void AnimationTables::ReclaimNativeGraphics()
+	{
+		_nativeWriteGeneration = NativeWriteGeneration;
+		for (NativeAnimation& native : _natives) {
+			if (native.Original == nullptr || native.Graphics == nullptr || native.ShownAnim >= _animations.size()) {
+				continue;
+			}
+			auto written = NativeWrites.find(native.Graphics);
+			if (written != NativeWrites.end() && written->second.Writer == this) {
+				continue;
+			}
+			if (!ContentResolver::Get().IsGraphicsCached(native.Graphics, native.Path, 0, true)) {
+				native.Original = nullptr;
+				native.Graphics = nullptr;
+				native.GraphicsRequested = false;
+			}
+			ShowInNativeGraphics(native, *_animations[native.ShownAnim]);
+		}
 	}
 
 	void AnimationTables::RestoreNativeGraphics()
@@ -1498,12 +1545,24 @@ namespace Jazz2::Scripting::Legacy
 		}
 		// Once the level is left, the next one may have been loaded already, and it frees what it doesn't need - so they're
 		// given back only if they're still there, a level that loads them again reads them as they were
+		auto written = NativeWrites.find(native.Graphics);
+		bool isWriter = (written != NativeWrites.end() && written->second.Writer == this);
 		if (!ContentResolver::Get().IsGraphicsCached(native.Graphics, native.Path, 0, true)) {
+			if (isWriter) {
+				NativeWrites.erase(written);
+			}
 			native.Original = nullptr;
 			native.Graphics = nullptr;
 			native.GraphicsRequested = false;
 			return;
 		}
+		if (!isWriter) {
+			// Other tables wrote into them since, those give them back
+			native.Original = nullptr;
+			return;
+		}
+		NativeWrites.erase(written);
+		_nativeWriteGeneration = ++NativeWriteGeneration;
 
 		const ContentResolver::SpriteSheet& sheet = native.Original->Sheet;
 		std::size_t count = std::size_t(sheet.Size.X) * sheet.Size.Y;
@@ -1551,7 +1610,13 @@ namespace Jazz2::Scripting::Legacy
 		}
 	}
 
-	void AnimationTables::ComposeGraphics(GenericGraphicResource& graphics, ArrayView<jjANIMFRAME* const> frames, std::int32_t fps, bool keepLayout)
+	std::uint8_t AnimationTables::GetClearIndex(StringView path)
+	{
+		return (path == "Object/vine.aura"_s ? 128 : 0);
+	}
+
+	void AnimationTables::ComposeGraphics(GenericGraphicResource& graphics, ArrayView<jjANIMFRAME* const> frames, std::int32_t fps, bool keepLayout,
+		std::uint8_t clearIndex)
 	{
 		constexpr std::int32_t Border = GenericGraphicResource::FrameBorder;
 
@@ -1644,8 +1709,9 @@ namespace Jazz2::Scripting::Legacy
 				const std::uint8_t* source = &frame._pixels[std::size_t(v) * frame.width];
 				if (!trueColor) {
 					for (std::int32_t u = 0; u < rect.W; u++) {
-						row[u * 2] = source[u];
-						row[u * 2 + 1] = (source[u] != 0 ? alpha : 0);
+						std::uint8_t index = (source[u] != clearIndex ? source[u] : 0);
+						row[u * 2] = index;
+						row[u * 2 + 1] = (index != 0 ? alpha : 0);
 					}
 				} else if (frame._colors != nullptr) {
 					const jjPALCOLOR* colors = &frame._colors[std::size_t(v) * frame.width];
@@ -1657,7 +1723,7 @@ namespace Jazz2::Scripting::Legacy
 					}
 				} else {
 					for (std::int32_t u = 0; u < rect.W; u++) {
-						if (source[u] != 0) {
+						if (source[u] != 0 && source[u] != clearIndex) {
 							std::uint32_t color = palette[source[u]];
 							row[u * 4] = std::uint8_t(color);
 							row[u * 4 + 1] = std::uint8_t(color >> 8);

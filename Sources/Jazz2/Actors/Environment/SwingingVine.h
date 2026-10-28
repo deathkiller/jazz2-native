@@ -22,6 +22,26 @@ namespace Jazz2::Actors::Environment
 
 		bool OnHandleCollision(ActorBase* other) override;
 
+		/** @brief Length of a vine in JJ2, which has no parameter for it */
+		static constexpr std::int32_t DefaultLength = 128;
+
+		/**
+		 * @brief Returns the swing as `BEHAVIOR::SWINGINGVINE` of JJ2 has it
+		 *
+		 * @p length is `var[1]`, @p position is `var[2]` (from `length * 256` on the right to the negative of it on the
+		 * left), @p speed is `var[3]`.
+		 */
+		void GetSwing(std::int32_t& length, std::int32_t& position, std::int32_t& speed) const;
+		/** @brief Sets the swing, see @ref GetSwing(), it goes on from there */
+		void SetSwing(std::int32_t length, std::int32_t position, std::int32_t speed);
+		/** @brief Returns the horizontal speed a player letting go of the vine is flung with */
+		float GetReleaseSpeedX() const;
+
+		/** @brief Advances the swing by one tick of JJ2 */
+		static void AdvanceSwing(std::int32_t& position, std::int32_t& speed);
+		/** @brief Returns where the end of the vine is in JJ2 (`xPos` and `yPos` of the object), from its origin */
+		static Vector2f GetLegacyTipOffset(std::int32_t length, std::int32_t position);
+
 		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
@@ -39,9 +59,22 @@ namespace Jazz2::Actors::Environment
 		/** @brief Horizontal movement in a frame below which the rider's facing is left alone, so the apex of a swing does not flip it on rounding noise */
 		static constexpr float TurnDeadzone = 0.01f;
 
-		float _angle;
-		float _phase;
+		// The swing of JJ2, see GetSwing()
+		std::int32_t _length;
+		std::int32_t _position;
+		std::int32_t _speed;
+		// Ticks of JJ2 since the start of the level the swing is at
+		std::int32_t _ticks;
+		// The widest angle of the end of the vine, for the length
+		float _amplitude;
 		Vector2f _chunkPos[ChunkCount];
 		std::unique_ptr<RenderCommand> _chunks[ChunkCount];
+
+		float GetTickTime() const;
+		std::int32_t GetDirection() const;
+		float GetLengthScale() const;
+		void UpdateAmplitude();
+		float GetCurrentPhase() const;
+		void UpdateChunks();
 	};
 }

@@ -775,6 +775,10 @@ namespace Jazz2::Scripting::Legacy
 
 	void ScriptObjectHost::FinishTicks()
 	{
+		if (runtime_cast<Actors::Environment::SwingingVine>(_actor) != nullptr) {
+			// See DrawVine()
+			return;
+		}
 		if (_drawn || _drawFrame) {
 			// A frame of an animation a script gave the object, or one it chose, is drawn as it is, the object of the game
 			// draws itself otherwise (its frame is the same then)
@@ -1292,9 +1296,10 @@ namespace Jazz2::Scripting::Legacy
 		PullFromActor(_levelScripts, *_obj, *_actor);
 		// The behaviors of the game leave the start state on their first update, scenery sleeps until it breaks and a bumper
 		// until it's hit
+		bool isVine = (runtime_cast<Actors::Environment::SwingingVine>(_actor) != nullptr);
 		if (_obj->state == sSTART) {
 			bool sleeps = (runtime_cast<ScriptSceneryObject>(_actor) != nullptr || runtime_cast<Actors::Solid::PinballBumper>(_actor) != nullptr);
-			_obj->state = (sleeps ? sSLEEP : sSTILL);
+			_obj->state = (isVine ? sACTION : (sleeps ? sSLEEP : sSTILL));
 			_obj->_synced.State = _obj->state;
 		} else if ((_obj->state == sSTILL || _obj->state == sWALK) && runtime_cast<Actors::Enemies::EnemyBase>(_actor) != nullptr) {
 			// An enemy of the game walks in STATE::WALK there while it moves, scripts fire from it (ice demons)
@@ -1304,7 +1309,9 @@ namespace Jazz2::Scripting::Legacy
 		_isRunningOwnBehavior = false;
 
 		_ranOwnBehavior = true;
-		if (draw) {
+		if (isVine) {
+			DrawVine(draw);
+		} else if (draw) {
 			_drawn = true;
 		}
 	}
@@ -1379,44 +1386,64 @@ namespace Jazz2::Scripting::Legacy
 
 	void ScriptObjectHost::RunSwingingVine(bool draw)
 	{
-		// BEHAVIOR::SWINGINGVINE as measured in JJ2+ - the swing is `var[2]`, from 32768 at the right end it speeds up by 32 a tick
-		// towards the middle, the object is the end of the vine, which is drawn from links of the frame after `curFrame`. The vine
-		// of the game swings by a clock of its own, a behavior of a script only has the object (trapezes hang a bar
-		// from two of them)
+		// BEHAVIOR::SWINGINGVINE as measured in JJ2+, on the object - the vine of the game takes the swing over (trapezes hang a
+		// bar from two of them, a script may swing them as it likes)
 		jjOBJ& obj = *_obj;
 		if (obj.state == sSTART) {
-			obj.set_var(1, 128);
-			obj.set_var(2, 32768);
+			obj.set_var(1, Actors::Environment::SwingingVine::DefaultLength);
+			obj.set_var(2, Actors::Environment::SwingingVine::DefaultLength * 256);
 			obj.set_var(3, 0);
 			obj.state = sACTION;
 		}
-		std::int32_t swing = obj.get_var(2);
-		std::int32_t speed = obj.get_var(3) + (swing > 0 ? -32 : 32);
-		swing += speed;
-		obj.set_var(0, (swing >> 8) + 128);
-		obj.set_var(2, swing);
+		std::int32_t position = obj.get_var(2);
+		std::int32_t speed = obj.get_var(3);
+		Actors::Environment::SwingingVine::AdvanceSwing(position, speed);
+		obj.set_var(2, position);
 		obj.set_var(3, speed);
-		// Fitted to within a pixel and a half, the height exactly
-		obj.xPos = obj.xOrg + 115.4f * std::sin(1.025f * float(swing) / 32768.0f);
-		obj.yPos = obj.yOrg + float(obj.get_var(1) + 20 - (std::abs(swing) >> 11));
+		SetVineEnd(obj);
 
-		if (draw && !ContentResolver::Get().IsHeadless()) {
-			std::int32_t cell = 0;
-			if (auto* graphics = _levelScripts->GetAnimationTables().ResolveFrame(obj.curFrame + 1, cell)) {
-				// As thin as in JJ2+, down to 20 pixels above the end, where what hangs on it is
-				constexpr std::int32_t LinkCount = 16;
-				constexpr float LinkWidthScale = 0.25f;
-				float endY = obj.yPos - 20.0f;
-				// Along the vine, in the 1024 steps of a circle of JJ2
-				std::int32_t angle = std::int32_t(std::atan2(obj.xPos - obj.xOrg, endY - obj.yOrg) * 512.0f / fPi);
-				for (std::int32_t i = 0; i < LinkCount; i++) {
-					float t = float(i) / LinkCount;
-					ScriptWorldCanvas::SpriteDraw link = { graphics, cell, obj.xOrg + (obj.xPos - obj.xOrg) * t, obj.yOrg + (endY - obj.yOrg) * t,
-						1, LinkWidthScale, 1.0f, angle, spriteType_NORMAL, 0, _levelScripts->GetLayerDrawZ(4), 0 };
-					_levelScripts->GetWorldCanvas().AddSprite(link);
-				}
-			}
+		auto* vine = static_cast<Actors::Environment::SwingingVine*>(_actor);
+		Vector2f origin(obj.xOrg + PositionOffset, obj.yOrg + PositionOffset);
+		if (_actor->_pos != origin) {
+			_actor->MoveInstantly(origin, Actors::MoveType::Absolute | Actors::MoveType::Force);
 		}
+		vine->SetSwing(obj.get_var(1), position, speed);
+		DrawVine(draw);
+	}
+
+	void ScriptObjectHost::SetVineEnd(jjOBJ& obj)
+	{
+		std::int32_t length = obj.get_var(1);
+		std::int32_t position = obj.get_var(2);
+		Vector2f tip = Actors::Environment::SwingingVine::GetLegacyTipOffset(length, position);
+		obj.xPos = obj.xOrg + tip.X;
+		obj.yPos = obj.yOrg + tip.Y;
+		// From 0 on the left to 256 on the right, as measured
+		std::int32_t halfLength = std::max<std::int32_t>(length, 1) * 2;
+		std::int32_t side = (position >= 0 ? position / halfLength : -((-position + halfLength - 1) / halfLength));
+		obj.set_var(0, side + 128);
+	}
+
+	void ScriptObjectHost::DrawVine(bool draw)
+	{
+		// The vine is drawn from the frame after `curFrame` in JJ2, the vine of the game draws itself if that's its own
+		if (!draw || ContentResolver::Get().IsHeadless()) {
+			return;
+		}
+		jjOBJ& obj = *_obj;
+		std::int32_t cell = 0;
+		bool translucent = false;
+		auto* graphics = (obj.curFrame != 0 ? _levelScripts->GetAnimationTables().ResolveFrame(obj.curFrame + 1, cell, &translucent) : nullptr);
+		if (graphics == nullptr || (_actor->_currentAnimation != nullptr && graphics == _actor->_currentAnimation->Base)) {
+			_drawn = true;
+			return;
+		}
+		ScriptWorldCanvas::SpriteDraw vineDraw = { graphics, cell, obj.xOrg, obj.yOrg, 0, 1.0f, 1.0f, 0, spriteType_NORMAL, 0,
+			_levelScripts->GetLayerDrawZ(4), _levelScripts->GetVinePaletteOffset(spriteType_NORMAL, 0) };
+		vineDraw.TranslucentFrame = translucent;
+		vineDraw.VineLength = obj.get_var(1);
+		vineDraw.VineCurvature = obj.get_var(2);
+		_levelScripts->GetWorldCanvas().AddSprite(vineDraw);
 	}
 
 	std::shared_ptr<Actors::ActorBase> ScriptObjectHost::SpawnInPlace(LevelScriptLoader* levelScripts, Actors::ActorBase& actor, std::uint8_t eventId)
@@ -1648,6 +1675,117 @@ namespace Jazz2::Scripting::Legacy
 		levelScripts->GetWorldCanvas().AddSprite(draw);
 	}
 
+	class ScriptObjectHost::UpsideDownOverride : public Actors::IActorUpdateOverride
+	{
+	public:
+		void OnUpdate(Actors::ActorBase* actor, float timeMult) override
+		{
+			if (!_hung) {
+				_hung = true;
+				HangFromCeiling(*actor);
+			}
+			RunNativeUpdate(*actor, timeMult);
+		}
+
+		bool IsDrawn() const override
+		{
+			return true;
+		}
+
+		bool OnUpdateHitbox(Actors::ActorBase* actor) override
+		{
+			// The object makes its own hitbox in here, which is then flipped
+			if (_inHitbox) {
+				return false;
+			}
+			_inHitbox = true;
+			UpdateUpsideDownHitbox(*actor);
+			_inHitbox = false;
+			return true;
+		}
+
+	private:
+		bool _hung = false;
+		bool _inHitbox = false;
+	};
+
+	bool ScriptObjectHost::IsUpsideDown(std::int8_t direction)
+	{
+		// The sign flips it horizontally, the next bit vertically when it differs from the sign (see DrawSpriteFrame())
+		std::uint8_t bits = std::uint8_t(direction);
+		return (((bits & 0x80) != 0) != ((bits & 0x40) != 0));
+	}
+
+	void ScriptObjectHost::TurnUpsideDown(Actors::ActorBase& actor)
+	{
+		actor._renderer.setFlippedY(true);
+		if (runtime_cast<Actors::SolidObjectBase>(&actor) == nullptr || actor.GetUpdateOverride() != nullptr) {
+			return;
+		}
+		// Only solid objects stand on the ground by themselves, they stick to the ceiling instead
+		actor.SetState(Actors::ActorState::ApplyGravitation, false);
+		actor._speed = Vector2f::Zero;
+		actor.SetUpdateOverride(std::make_unique<UpsideDownOverride>());
+	}
+
+	void ScriptObjectHost::HangFromCeiling(Actors::ActorBase& actor)
+	{
+		// As JJ2+ puts it on the ground (see FindFrameGround()), upside down - up until the pixel right above the top of
+		// its hitbox is masked, in the column of its position (one-way tiles are no ceiling)
+		auto* tileMap = actor._levelHandler->TileMap();
+		if (tileMap == nullptr) {
+			return;
+		}
+		actor.OnUpdateHitbox();
+		Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, false };
+		float x = std::floor(actor._pos.X);
+		float top = std::floor(actor.AABBInner.T);
+		auto isMasked = [&](float y) {
+			return !tileMap->IsTileEmpty(AABBf(x, y, x, y), params);
+		};
+
+		constexpr std::int32_t MaxDistance = 16 * Tiles::TileSet::DefaultTileSize;
+		std::int32_t shift = 0;
+		if (isMasked(top)) {
+			// Out of the ceiling it's in
+			while (shift < Tiles::TileSet::DefaultTileSize && isMasked(top + float(shift))) {
+				shift++;
+			}
+		} else {
+			while (shift > -MaxDistance && !isMasked(top + float(shift - 1))) {
+				shift--;
+			}
+			if (shift <= -MaxDistance) {
+				// No ceiling above it
+				shift = 0;
+			}
+		}
+		if (shift != 0) {
+			actor.MoveInstantly(Vector2f(0.0f, float(shift)), Actors::MoveType::Relative | Actors::MoveType::Force);
+		}
+	}
+
+	void ScriptObjectHost::RunNativeUpdate(Actors::ActorBase& actor, float timeMult)
+	{
+		actor.OnUpdate(timeMult);
+	}
+
+	void ScriptObjectHost::UpdateUpsideDownHitbox(Actors::ActorBase& actor)
+	{
+		// The object may have no hitbox yet (no animation), the one it has is flipped already then
+		const AABBf previous = actor.AABBInner;
+		actor.AABBInner = AABBf(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
+		actor.OnUpdateHitbox();
+		if (actor.AABBInner.T == FLT_MAX) {
+			actor.AABBInner = previous;
+			return;
+		}
+		float y = actor._pos.Y;
+		float top = 2.0f * y - actor.AABBInner.B;
+		actor.AABBInner.B = 2.0f * y - actor.AABBInner.T;
+		actor.AABBInner.T = top;
+	}
+
 	void ScriptObjectHost::Delete()
 	{
 		DeleteActor(*_actor);
@@ -1728,6 +1866,15 @@ namespace Jazz2::Scripting::Legacy
 			if (((obj.state == sSTART || obj.state == sSTILL) && gameBehavior) || obj.state == sFLOAT || obj.state == sFLOATFALL) {
 				obj.state = (collectible->_untouched ? sFLOAT : sFLOATFALL);
 			}
+		} else if (auto* vine = runtime_cast<Actors::Environment::SwingingVine>(&actor)) {
+			// The swing of the vine is the swing of JJ2, the object is at its end there, and the frame isn't the vine's
+			std::int32_t length, position, speed;
+			vine->GetSwing(length, position, speed);
+			obj.set_var(1, length);
+			obj.set_var(2, position);
+			obj.set_var(3, speed);
+			SetVineEnd(obj);
+			withAnimation = false;
 		}
 
 		obj._synced.XPos = obj.xPos;
@@ -1845,7 +1992,19 @@ namespace Jazz2::Scripting::Legacy
 	{
 		jjOBJ::SyncedState& synced = obj._synced;
 
-		if (obj.xPos != synced.XPos || obj.yPos != synced.YPos) {
+		auto* vine = runtime_cast<Actors::Environment::SwingingVine>(&actor);
+		if (vine != nullptr) {
+			// A vine hangs from its origin, its end follows from the swing (see SetVineEnd())
+			Vector2f origin(obj.xOrg + PositionOffset, obj.yOrg + PositionOffset);
+			if (actor._pos != origin) {
+				actor.MoveInstantly(origin, Actors::MoveType::Absolute | Actors::MoveType::Force);
+			}
+			std::int32_t length, position, speed;
+			vine->GetSwing(length, position, speed);
+			if (obj.get_var(1) != length || obj.get_var(2) != position || obj.get_var(3) != speed) {
+				vine->SetSwing(obj.get_var(1), obj.get_var(2), obj.get_var(3));
+			}
+		} else if (obj.xPos != synced.XPos || obj.yPos != synced.YPos) {
 			Vector2f pos(obj.xPos + PositionOffset, obj.yPos + PositionOffset - synced.SkinOffsetY);
 			if (auto* collectible = runtime_cast<Actors::Collectibles::CollectibleBase>(&actor)) {
 				if (collectible->_untouched) {
@@ -2218,6 +2377,10 @@ namespace Jazz2::Scripting
 				HostObject(obj, actor.get());
 			}
 		}
+		// A template turned upside down turns its objects (bird cages hanging from the ceiling)
+		if (Legacy::ScriptObjectHost::IsUpsideDown(preset->direction)) {
+			Legacy::ScriptObjectHost::TurnUpsideDown(*actor);
+		}
 	}
 
 	std::shared_ptr<Actors::ActorBase> LevelScriptLoader::SpawnSceneryObject(const Actors::ActorActivationDetails& details)
@@ -2357,7 +2520,11 @@ namespace Jazz2::Scripting
 		_lookDrawnFrame = 0;
 		_lookGameBehavior = false;
 		_lookLines = 0;
-		Legacy::ScriptObjectHost::CallScriptBehavior(this, *obj, behavior, false);
+		// Before the first update jjGameTicks is -1, scripts index arrays by it
+		std::int32_t gameTicks = _onLevelUpdateLastFrame;
+		_onLevelUpdateLastFrame = std::max(gameTicks, 0);
+		// With onDraw(), some scripts choose the animation only there
+		Legacy::ScriptObjectHost::CallScriptBehavior(this, *obj, behavior, true);
 		look.CurAnim = obj->curAnim;
 		look.CurFrame = obj->curFrame;
 		look.DrawnFrame = _lookDrawnFrame;
@@ -2366,13 +2533,12 @@ namespace Jazz2::Scripting
 		// watched for a while (a bomb that turns only to a player) - with the time going on
 		constexpr std::int32_t SteadyTicks = 32;
 		std::uint32_t shown = (look.DrawnFrame != 0 ? look.DrawnFrame : look.CurFrame);
-		std::int32_t gameTicks = _onLevelUpdateLastFrame;
 		look.Steady = !_lookGameBehavior;
 		for (std::int32_t i = 0; i < SteadyTicks && look.Steady; i++) {
 			_onLevelUpdateLastFrame++;
 			_lookDrawnFrame = 0;
 			behavior = obj->behavior;
-			look.Steady = (Legacy::ScriptObjectHost::CallScriptBehavior(this, *obj, behavior, false) && !_lookGameBehavior &&
+			look.Steady = (Legacy::ScriptObjectHost::CallScriptBehavior(this, *obj, behavior, true) && !_lookGameBehavior &&
 				(_lookDrawnFrame != 0 ? _lookDrawnFrame : obj->curFrame) == shown);
 		}
 		_onLevelUpdateLastFrame = gameTicks;
