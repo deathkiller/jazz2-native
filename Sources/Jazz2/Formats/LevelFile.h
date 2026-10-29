@@ -107,7 +107,8 @@ namespace Jazz2::Formats
 		  (@ref Tiles::LayerRendererType::PaletteMapping), which 3.9.0 draws as an ordinary layer of its tiles, a reflection
 		  and a cylinder modulated by the color, and a tile may have the heat modifier (@ref TileRecord::ModifierHeat),
 		  which 3.9.0 draws as an ordinary tile. Since 4.0.0 the properties the records of the layers have no room for are
-		  in @ref LayerPropertiesChunk, and the data of the script of a level in @ref ScriptDataChunk, which 3.9.0 ignores.
+		  in @ref LayerPropertiesChunk, the data of the script of a level in @ref ScriptDataChunk and its weapons in
+		  @ref WeaponsChunk, which 3.9.0 ignores.
 	*/
 	struct LevelFile
 	{
@@ -730,13 +731,6 @@ namespace Jazz2::Formats
 		  converted, which drops the characters that formatting uses, such as `|`, a script reads them as they were
 		  (`jjHelpStrings`), and some split them by those characters. @cpp u16 @ce length and the bytes of each text in
 		  order, a text after the last one is empty.
-		- @ref Section::Weapons --- how the level changes the weapons, which its script sets up together with weapons of its
-		  own (see @ref Scripting::LevelScriptLoader). @cpp i16 @ce the argument of the hook of the weapons of the script
-		  (-1 for none), then for each of the @ref WeaponCount weapons: @cpp u8 @ce 1 if it's a weapon of the script, @cpp i32 @ce
-		  the most ammo, @cpp u8 @ce whether it comes from birds (2 if powered up), from gun crates, the gems lost, the gems
-		  lost powered up, 1 if it's infinite and 2 if it replenishes, the event of its ammo crate (0 for none), the style of
-		  the 8th weapon (255 for none), and @cpp u32 @ce the length and the bytes of the parameters of a weapon of the
-		  script. That's how `jjSTREAM` of JJ2+ reads them.
 		- @ref Section::Recolors --- the sprites the level recolors, platforms, poles and the like, which its script does when
 		  it sets up: for each of them @cpp u8 @ce its slot in the list of the sprites the editor of the level can recolor
 		  and @cpp u8 @ce the new palette index of each of the 256 indices (@ref RecolorRecordSize).
@@ -749,15 +743,12 @@ namespace Jazz2::Formats
 	{
 		/** @brief Tag of the chunk */
 		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('S', 'C', 'R', 'D');
-		/** @brief Number of weapons of @ref Section::Weapons */
-		static constexpr std::int32_t WeaponCount = 9;
 		/** @brief Size of one recolored sprite of @ref Section::Recolors */
 		static constexpr std::size_t RecolorRecordSize = 1 + 256;
 
 		/** @brief Kind of a section */
 		enum class Section : std::uint8_t {
 			Texts = 1,			/**< Texts of the level as the original game had them */
-			Weapons,			/**< Custom weapons */
 			Recolors			/**< Recolored sprites */
 		};
 

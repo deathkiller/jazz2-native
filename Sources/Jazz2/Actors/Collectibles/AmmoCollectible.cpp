@@ -33,6 +33,17 @@ namespace Jazz2::Actors::Collectibles
 		_scoreValue = 100;
 
 		_weaponType = (WeaponType)details.Params[0];
+
+		// The level may give the ammo of a weapon its own look
+		const WeaponSprite& pickup = _levelHandler->GetWeaponDefinition(_weaponType).Pickup;
+		if (!pickup.IsEmpty()) {
+			async_await RequestMetadataAsync(_levelHandler->GetWeapons().GetSpriteMetadataPath(pickup));
+			if (SetAnimation(AnimState(pickup.AnimState))) {
+				SetFacingDirection();
+				async_return true;
+			}
+		}
+
 		switch (_weaponType) {
 			case WeaponType::Bouncer: async_await RequestMetadataAsync("Collectible/AmmoBouncer"_s); break;
 			case WeaponType::Freezer: async_await RequestMetadataAsync("Collectible/AmmoFreezer"_s); break;

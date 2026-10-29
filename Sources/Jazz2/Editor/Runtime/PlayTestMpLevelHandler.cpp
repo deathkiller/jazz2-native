@@ -237,6 +237,11 @@ namespace Jazz2::Editor
 		MemoryStream s(_levelData.data(), std::int64_t(_levelData.size()));
 		return ContentResolver::Get().TryLoadLevel(s, _fullPath, GetLevelLoadOptions(), descriptor);
 	}
+
+	void PlayTestMpLevelHandler::LoadLevelScripts(StringView fullPath)
+	{
+		LevelHandler::LoadLevelScripts(fullPath, _options.ScriptText);
+	}
 }
 
 #endif

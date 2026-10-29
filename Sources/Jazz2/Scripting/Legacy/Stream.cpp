@@ -385,10 +385,9 @@ namespace Jazz2::Scripting
 		}
 
 		jjRNG::jjRNG(std::uint64_t seed) : _refCount(1) {
-			noop();
+			_random.Init(seed, DefaultInitSequence);
 		}
 		jjRNG::~jjRNG() {
-			noop();
 		}
 		jjRNG* jjRNG::Create(std::uint64_t seed) {
 			void* mem = asAllocMem(sizeof(jjRNG));

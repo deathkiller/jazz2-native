@@ -71,14 +71,19 @@ namespace Jazz2::Scripting
 		}
 		_includedFiles.emplace(absolutePath, true);
 
-		auto s = fs::Open(absolutePath, FileAccess::Read);
-		if (s->GetSize() <= 0) {
+		String scriptContent;
+		if (!OnReadScript(absolutePath, scriptContent)) {
+			auto s = fs::Open(absolutePath, FileAccess::Read);
+			if (s->GetSize() <= 0) {
+				return ScriptContextType::Unknown;
+			}
+
+			scriptContent = String(NoInit, s->GetSize());
+			s->Read(scriptContent.data(), s->GetSize());
+			s->Dispose();
+		} else if (scriptContent.empty()) {
 			return ScriptContextType::Unknown;
 		}
-
-		String scriptContent(NoInit, s->GetSize());
-		s->Read(scriptContent.data(), s->GetSize());
-		s->Dispose();
 
 		ScriptContextType contextType = ScriptContextType::Legacy;
 		SmallVector<String, 4> metadata;
@@ -326,6 +331,11 @@ namespace Jazz2::Scripting
 		}
 
 		return contextType;
+	}
+
+	bool ScriptLoader::OnReadScript(StringView absolutePath, String& content)
+	{
+		return false;
 	}
 
 	ScriptBuildResult ScriptLoader::Build()

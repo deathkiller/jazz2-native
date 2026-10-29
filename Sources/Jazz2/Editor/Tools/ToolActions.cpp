@@ -1076,7 +1076,7 @@ namespace Jazz2::Editor::ToolActions
 		// The selection
 		{
 			// Of the events with the event tool, as Select All
-			auto& invert = a.Add(ActionIds::SelectInvert,_x("editor", "Invert Selection"), EditorIcon::Select, [s]() {
+			auto& invert = a.Add(ActionIds::SelectInvert,_x("editor", "Invert Selection"), EditorIcon::InvertSelection, [s]() {
 				if (s->IsEditingEvents()) {
 					InvertEventSelection(*s);
 					return;

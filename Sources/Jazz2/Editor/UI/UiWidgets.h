@@ -380,6 +380,8 @@ namespace Jazz2::Editor
 		float MaxLabelWidth;
 		/** @brief Widest the column of labels gets as a part of the width of the form */
 		float MaxLabelFraction;
+		/** @brief Narrowest the column of labels is in units, so it doesn't change as rows are shown and hidden, or between forms */
+		float MinLabelWidth;
 
 		/** @brief Adds a row with a label, what it's about is added to the returned stack */
 		UiStack* AddRow(StringView label, StringView tooltip = {});

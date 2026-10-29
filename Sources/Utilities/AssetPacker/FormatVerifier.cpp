@@ -3,6 +3,7 @@
 #include "../../Jazz2/Formats/LevelFile.h"
 #include "../../Jazz2/Formats/LevelTextsChunk.h"
 #include "../../Jazz2/Formats/TileSetFile.h"
+#include "../../Jazz2/Formats/WeaponsChunk.h"
 
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
@@ -937,7 +938,7 @@ namespace Jazz2::AssetPacker
 		void AppendCraftedChunks(FuzzRandom& random, Bytes& body)
 		{
 			const std::uint32_t Tags[] = {
-				LevelFile::PreviewChunk, LayerPropertiesChunk::Tag, ScriptDataChunk::Tag, LevelTextsChunk::Tag,
+				LevelFile::PreviewChunk, LayerPropertiesChunk::Tag, ScriptDataChunk::Tag, LevelTextsChunk::Tag, WeaponsChunk::Tag,
 				LevelFile::MakeChunkTag('e', 'd', 'o', 'c'),
 				LevelFile::MakeChunkTag('a', 'n', 'n', 'o'), LevelFile::MakeChunkTag('s', 'p', 'l', 'n'),
 				LevelFile::MakeChunkTag('e', 'l', 'a', 'y'), LevelFile::MakeChunkTag('r', 'c', 'o', 'v'),

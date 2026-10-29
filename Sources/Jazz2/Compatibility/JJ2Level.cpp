@@ -3,6 +3,7 @@
 #include "EventConverter.h"
 #include "../Formats/LevelFile.h"
 #include "../Formats/LevelPreview.h"
+#include "../Formats/WeaponsChunk.h"
 #include "../Tiles/LayerTypes.h"
 
 #include "../../nCine/Base/Algorithms.h"
@@ -64,6 +65,7 @@ namespace Jazz2::Compatibility
 
 		_hasMlleData = false;
 		_hasScript = false;
+		_weapons = WeaponsDescription();
 		_darknessColor = 0;
 		_weatherType = WeatherType::None;
 		_weatherIntensity = 0;
@@ -121,7 +123,11 @@ namespace Jazz2::Compatibility
 		}
 		// JJ2+ runs the script of the same name next to the level
 		StringView foundDot = path.findLastOr('.', path.end());
-		_hasScript = fs::IsReadableFile(fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + ".j2as"_s));
+		String scriptPath = fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + ".j2as"_s);
+		_hasScript = fs::IsReadableFile(scriptPath);
+		if (_hasScript) {
+			LoadScriptWeapons(scriptPath);
+		}
 
 		return true;
 	}
@@ -676,53 +682,9 @@ namespace Jazz2::Compatibility
 				}
 			}
 
-			// Weapons were added in MLLE-Include-1.5(w), kept for the script (see Formats::ScriptDataChunk)
+			// Weapons were added in MLLE-Include-1.5(w)
 			if (version >= 0x105) {
-				SmallVector<std::uint8_t, 0> weapons;
-				auto write = [&weapons](const void* value, std::size_t size) {
-					weapons.append(static_cast<const std::uint8_t*>(value), static_cast<const std::uint8_t*>(value) + size);
-				};
-				// The argument of DefaultWeaponHook was added in MLLE-Include-1.6(w)
-				std::int16_t hookArgument = (version >= 0x106 ? block.ReadInt16() : -1);
-				write(&hookArgument, sizeof(hookArgument));
-				for (std::int32_t weaponId = 0; weaponId < Formats::ScriptDataChunk::WeaponCount; weaponId++) {
-					std::uint8_t customWeapon = (block.ReadBool() ? 1 : 0);
-					std::int32_t maximum = block.ReadInt32();
-					write(&customWeapon, 1);
-					write(&maximum, sizeof(maximum));
-
-					// comesFromBirds (2 powered up), comesFromGunCrates, gemsLost, gemsLostPowerup, infinite (1) and replenishes (2)
-					constexpr std::int32_t NumberOfCommonOptions = 5;
-					for (std::int32_t optionId = 0; optionId < NumberOfCommonOptions; optionId++) {
-						std::uint8_t optionValue = block.ReadByte();
-						write(&optionValue, 1);
-					}
-
-					std::uint8_t ammoCrate = (weaponId >= 6 ? block.ReadByte() : 0);
-					write(&ammoCrate, 1);
-
-					std::uint8_t gun8Style = UINT8_MAX;
-					std::uint32_t weaponParamsLength = 0;
-					SmallVector<std::uint8_t, 0> weaponParams;
-					if (customWeapon) {
-						// The name of the weapon in MLLE isn't needed
-						std::int32_t weaponNameLength = std::clamp<std::int32_t>(block.ReadUint7bitEncoded(), 0, block.GetRemainingLength());
-						block.DiscardBytes(weaponNameLength);
-
-						weaponParamsLength = std::uint32_t(std::clamp<std::int32_t>(block.ReadInt32(), 0, block.GetRemainingLength()));
-						weaponParams.resize_for_overwrite(weaponParamsLength);
-						block.ReadRawBytes(weaponParams.data(), std::int32_t(weaponParamsLength));
-					} else if (weaponId == 7) {
-						// The style of the pepper spray
-						gun8Style = block.ReadByte();
-					}
-					write(&gun8Style, 1);
-					write(&weaponParamsLength, sizeof(weaponParamsLength));
-					weapons.append(weaponParams.begin(), weaponParams.end());
-				}
-				if (!block.ReachedEndOfStream()) {
-					_mlleWeapons = Death::move(weapons);
-				}
+				LoadMlleWeapons(block, version);
 			}
 
 			// Off-grid objects were added in MLLE-Include-1.6
@@ -741,6 +703,182 @@ namespace Jazz2::Compatibility
 					offGridEvent.Illuminate = ((eventData & 0x00000400) >> 10 == 1);
 					offGridEvent.TileParams = ((eventData & 0xFFFFF000) >> 12);
 				}
+			}
+		}
+	}
+
+	ConversionResult JJ2Level::ConvertEvent(EventConverter& eventConverter, JJ2Event eventType, std::uint32_t tileParams)
+	{
+		// An event MLLE makes an ammo crate of a weapon of the game, a weapon of the script sets up its own
+		if (std::uint8_t(eventType) > 32) {
+			for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
+				const WeaponDefinition& weapon = _weapons.Weapons[i];
+				if (weapon.Kind != WeaponKind::Script && weapon.AmmoCrateEvent == std::uint8_t(eventType)) {
+					ConversionResult result = {};
+					result.Type = EventType::CrateAmmo;
+					result.Params[0] = std::uint8_t(i);
+					return result;
+				}
+			}
+		}
+		return eventConverter.TryConvert(this, eventType, tileParams);
+	}
+
+	void JJ2Level::LoadMlleWeapons(JJ2Block& block, std::uint32_t version)
+	{
+		WeaponsDescription weapons;
+		// The argument of DefaultWeaponHook was added in MLLE-Include-1.6(w)
+		weapons.ScriptHookArgument = (version >= 0x106 ? block.ReadInt16() : -1);
+		for (std::int32_t i = 0; i < 9; i++) {
+			WeaponDefinition& weapon = weapons.Weapons[i];
+			bool scriptWeapon = block.ReadBool();
+			weapon.Options.Maximum = std::clamp<std::int32_t>(block.ReadInt32(), -1, 255);
+			std::uint8_t birds = block.ReadByte();
+			weapon.Options.ComesFromBirds = (birds != 0);
+			weapon.Options.ComesFromBirdsPowerup = (birds == 2);
+			weapon.Options.ComesFromGunCrates = (block.ReadByte() != 0);
+			weapon.Options.GemsLost = block.ReadByte();
+			weapon.Options.GemsLostPowerup = block.ReadByte();
+			std::uint8_t flags = block.ReadByte();
+			weapon.Options.Infinite = ((flags & 0x01) != 0);
+			weapon.Options.Replenishes = ((flags & 0x02) != 0);
+			if (i >= 6) {
+				weapon.AmmoCrateEvent = block.ReadByte();
+			}
+
+			if (scriptWeapon) {
+				weapon.Kind = WeaponKind::Script;
+				std::int32_t nameLength = std::clamp<std::int32_t>(block.ReadUint7bitEncoded(), 0, block.GetRemainingLength());
+				weapon.Name = block.ReadString(nameLength, false);
+				std::int32_t paramsLength = std::clamp<std::int32_t>(block.ReadInt32(), 0, block.GetRemainingLength());
+				weapon.ScriptParams.resize_for_overwrite(paramsLength);
+				block.ReadRawBytes(weapon.ScriptParams.data(), paramsLength);
+			} else if (i == std::int32_t(WeaponType::Pepper)) {
+				std::uint8_t style = block.ReadByte();
+				weapon.Options.Spread = (style == 0 ? WeaponSpread::NormalOrPepper : (style == 1 ? WeaponSpread::Pepper : WeaponSpread::Normal));
+				if (style == 2) {
+					weapon.Options.GradualAim = false;
+				}
+			}
+		}
+		if (!block.ReachedEndOfStream()) {
+			_weapons = Death::move(weapons);
+		}
+	}
+
+	void JJ2Level::LoadScriptWeapons(StringView scriptPath)
+	{
+		// MLLE writes what creates its weapons into the script, `MLLE::Setup(array<MLLEWeaponApply@> = {...})`, and
+		// includes their libraries, each line marked `///@MLLE-Generated`
+		auto s = fs::Open(scriptPath, FileAccess::Read);
+		std::int64_t size = (s->IsValid() ? s->GetSize() : 0);
+		if (size <= 0 || size > 16 * 1024 * 1024) {
+			return;
+		}
+		String text{NoInit, std::size_t(size)};
+		if (s->Read(text.data(), size) != size) {
+			return;
+		}
+
+		SmallVector<String, 9> constructors;
+		SmallVector<String, 4> libraries;
+		StringView rest = text;
+		while (!rest.empty()) {
+			StringView lineEnd = rest.findOr('\n', rest.end());
+			StringView line = rest.prefix(lineEnd.begin()).trimmed();
+			rest = rest.suffix(lineEnd.begin() == rest.end() ? rest.end() : lineEnd.begin() + 1);
+			if (!line.contains("///@MLLE-Generated"_s)) {
+				continue;
+			}
+
+			if (line.hasPrefix("#include"_s)) {
+				StringView quoteStart = line.findOr('"', line.end());
+				if (quoteStart.begin() != line.end()) {
+					StringView name = line.suffix(quoteStart.begin() + 1);
+					name = name.prefix(name.findOr('"', name.end()).begin());
+					if (!StringUtils::lowercase(name).hasPrefix("mlle-"_s)) {
+						libraries.emplace_back(name);
+					}
+				}
+				continue;
+			}
+
+			StringView arrayStart = line.find("MLLEWeaponApply@>"_s);
+			if (arrayStart.empty() || !constructors.empty()) {
+				continue;
+			}
+			StringView entries = line.suffix(arrayStart.end());
+			entries = entries.suffix(entries.findOr('{', entries.end()).begin());
+			if (entries.empty()) {
+				continue;
+			}
+			std::int32_t depth = 0;
+			const char* entryStart = entries.begin() + 1;
+			for (const char* c = entries.begin() + 1; c < entries.end(); c++) {
+				if (*c == '(' || *c == '{' || *c == '[') {
+					depth++;
+				} else if ((*c == ')' || *c == ']' || *c == '}') && depth > 0) {
+					depth--;
+				} else if ((*c == ',' || *c == '}') && depth == 0) {
+					StringView entry = StringView(entryStart, std::size_t(c - entryStart)).trimmed();
+					constructors.emplace_back(entry == "null"_s ? StringView() : entry);
+					entryStart = c + 1;
+					if (*c == '}') {
+						break;
+					}
+				}
+			}
+		}
+
+		String directory = fs::GetDirectoryName(scriptPath);
+		for (std::size_t i = 0; i < constructors.size() && i < 9; i++) {
+			WeaponDefinition& weapon = _weapons.Weapons[i];
+			if (weapon.Kind != WeaponKind::Script || constructors[i].empty()) {
+				continue;
+			}
+			weapon.ScriptConstructor = constructors[i];
+			if (libraries.size() == 1) {
+				weapon.ScriptLibrary = libraries[0];
+				continue;
+			}
+			// The library with all namespaces the weapon is created in and its class, libraries of a pack share the namespace of
+			// the pack, or at least with the first namespace
+			SmallVector<StringView, 4> names;
+			StringView scope = constructors[i];
+			scope = scope.prefix(scope.findOr('(', scope.end()).begin()).trimmed();
+			while (!scope.empty()) {
+				StringView separator = scope.findOr("::"_s, scope.end());
+				names.push_back(scope.prefix(separator.begin()).trimmed());
+				scope = scope.suffix(separator.end());
+			}
+			if (names.empty()) {
+				continue;
+			}
+			String fallback;
+			for (const String& library : libraries) {
+				auto ls = fs::Open(fs::FindPathCaseInsensitive(fs::CombinePath(directory, library)), FileAccess::Read);
+				std::int64_t librarySize = (ls->IsValid() ? ls->GetSize() : 0);
+				if (librarySize <= 0 || librarySize > 16 * 1024 * 1024) {
+					continue;
+				}
+				String libraryText{NoInit, std::size_t(librarySize)};
+				if (ls->Read(libraryText.data(), librarySize) != librarySize || !libraryText.contains(String("namespace "_s + names[0]))) {
+					continue;
+				}
+				bool all = libraryText.contains(String("class "_s + names.back()));
+				for (std::size_t n = 0; all && n + 1 < names.size(); n++) {
+					all = libraryText.contains(String("namespace "_s + names[n]));
+				}
+				if (all) {
+					weapon.ScriptLibrary = library;
+					break;
+				}
+				if (fallback.empty()) {
+					fallback = library;
+				}
+			}
+			if (weapon.ScriptLibrary.empty()) {
+				weapon.ScriptLibrary = Death::move(fallback);
 			}
 		}
 	}
@@ -780,7 +918,7 @@ namespace Jazz2::Compatibility
 				}
 			}
 
-			tileEvent.Converted = eventConverter.TryConvert(this, eventType, tileEvent.TileParams);
+			tileEvent.Converted = ConvertEvent(eventConverter, eventType, tileEvent.TileParams);
 		}
 
 		// What all the tiles without an event are converted to
@@ -811,7 +949,7 @@ namespace Jazz2::Compatibility
 				offGridEvent.GeneratorFlags = 0;
 			}
 
-			offGridEvent.Converted = eventConverter.TryConvert(this, eventType, offGridEvent.TileParams);
+			offGridEvent.Converted = ConvertEvent(eventConverter, eventType, offGridEvent.TileParams);
 		}
 
 		CheckWaterLevelAroundStart();
@@ -1198,11 +1336,16 @@ namespace Jazz2::Compatibility
 			Formats::ChunkRecord scriptDataChunk;
 			scriptDataChunk.Tag = Formats::ScriptDataChunk::Tag;
 			Formats::ScriptDataChunk::WriteSection(scriptDataChunk.Data, Formats::ScriptDataChunk::Section::Texts, texts);
-			Formats::ScriptDataChunk::WriteSection(scriptDataChunk.Data, Formats::ScriptDataChunk::Section::Weapons, _mlleWeapons);
 			Formats::ScriptDataChunk::WriteSection(scriptDataChunk.Data, Formats::ScriptDataChunk::Section::Recolors, _mlleSpriteRecolors);
 			if (!scriptDataChunk.Data.empty()) {
 				chunks.push_back(Death::move(scriptDataChunk));
 			}
+		}
+		Formats::ChunkRecord weaponsChunk;
+		weaponsChunk.Tag = Formats::WeaponsChunk::Tag;
+		Formats::WeaponsChunk::Write(_weapons, weaponsChunk.Data);
+		if (!weaponsChunk.Data.empty()) {
+			chunks.push_back(Death::move(weaponsChunk));
 		}
 
 		// Preview, drawn with the original tile sets, the level can't be shown without its default one

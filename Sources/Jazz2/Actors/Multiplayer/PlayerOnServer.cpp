@@ -3,14 +3,14 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../Weapons/ShotBase.h"
-#include "../Weapons/FreezerShot.h"
 #include "../../Multiplayer/MpLevelHandler.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
 	PlayerOnServer::PlayerOnServer()
-		: _lastAttackerTimeout(0.0f), _canTakeDamage(true), _justWarped(false), _bumpCooldown(0.0f), _bumpInitialized(false)
+		: _lastAttackerTimeout(0.0f), _canTakeDamage(true), _justWarped(false), _bumpCooldown(0.0f), _bumpInitialized(false),
+			_sugarRushLastSent(false), _gemsLostOnHit(3)
 	{
 	}
 
@@ -112,13 +112,19 @@ namespace Jazz2::Actors::Multiplayer
 					static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerBumped(rammer);
 				}
 
+				auto* shot = runtime_cast<Weapons::ShotBase>(other);
 				// Decrease remaining shield time by 5 secs
 				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 					DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
-				} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(other)) {
+				} else if (shot != nullptr && shot->GetFrozenDuration() > 0.0f) {
 					Freeze(3.0f * FrameTimer::FramesPerSecond);
 				} else {
+					if (shot != nullptr) {
+						const WeaponOptions& options = _levelHandler->GetWeaponDefinition(shot->GetSourceWeapon()).Options;
+						_gemsLostOnHit = (shot->IsUpgraded() ? options.GemsLostPowerup : options.GemsLost);
+					}
 					TakeDamage(1, 4.0f * (_pos.X > other->GetPos().X ? 1.0f : -1.0f));
+					_gemsLostOnHit = 3;
 				}
 				if (!otherIsPlayer) {
 					other->DecreaseHealth(INT32_MAX);

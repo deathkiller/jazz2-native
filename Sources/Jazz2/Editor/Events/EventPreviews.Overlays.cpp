@@ -465,6 +465,135 @@ namespace Jazz2::Editor
 		return std::sin(light.PulsePhase + light.PulseSpeed * frames) * light.Pulse;
 	}
 
+	bool EventPreviews::GetAmbientLight(const Formats::EventRecord& event, std::uint8_t& intensity)
+	{
+		// Player::HandleAreaEventAt(), an event pack may mean something else by the parameter
+		const EventDescriptor* descriptor = EventCatalog::Find(EventType(event.Type), event.Params);
+		if (EventType(event.Type) != EventType::LightAmbient || descriptor == nullptr || EventCatalog::IsExtension(descriptor)) {
+			return false;
+		}
+		intensity = event.Params[0];
+		return true;
+	}
+
+	bool EventPreviews::CollectAmbientLight(const LevelDocument& document, std::int32_t step, Vector2i& size, SmallVectorImpl<std::uint8_t>& intensities)
+	{
+		intensities.clear();
+		size = Vector2i();
+		Vector2i gridSize = document.GetEventGridSize();
+		if (gridSize.X <= 0 || gridSize.Y <= 0 || step <= 0) {
+			return false;
+		}
+
+		// Positions in blocks, the middle of the first block is at 0.5
+		struct Source
+		{
+			Vector2f Position;
+			std::uint8_t Intensity;
+		};
+		SmallVector<Source, 0> sources;
+		for (const DocumentEvent& event : document.Events) {
+			std::uint8_t intensity;
+			if (GetAmbientLight(event.Record, intensity)) {
+				float x = float(event.Cell % std::uint32_t(gridSize.X)) + 0.5f, y = float(event.Cell / std::uint32_t(gridSize.X)) + 0.5f;
+				sources.push_back({ Vector2f(x / float(step), y / float(step)), intensity });
+			}
+		}
+		if (sources.empty()) {
+			return false;
+		}
+
+		// The nearest event and the nearest one of another intensity of each block, passed on from block to block
+		size = Vector2i((gridSize.X + step - 1) / step, (gridSize.Y + step - 1) / step);
+		std::size_t count = std::size_t(size.X) * std::size_t(size.Y);
+		SmallVector<std::int32_t, 0> nearest, other;
+		nearest.resize(count, -1);
+		other.resize(count, -1);
+		auto offer = [&](std::int32_t x, std::int32_t y, std::int32_t candidate) {
+			std::size_t i = std::size_t(y) * std::size_t(size.X) + std::size_t(x);
+			std::int32_t& a = nearest[i];
+			std::int32_t& b = other[i];
+			if (candidate < 0 || candidate == a || candidate == b) {
+				return;
+			}
+			if (a < 0) {
+				a = candidate;
+				return;
+			}
+			Vector2f center(float(x) + 0.5f, float(y) + 0.5f);
+			float distance = (sources[candidate].Position - center).SqrLength();
+			float distanceA = (sources[a].Position - center).SqrLength();
+			if (sources[candidate].Intensity == sources[a].Intensity) {
+				if (distance < distanceA) {
+					a = candidate;
+				}
+			} else if (distance < distanceA) {
+				b = a;
+				a = candidate;
+			} else if (b < 0 || distance < (sources[b].Position - center).SqrLength()) {
+				b = candidate;
+			}
+		};
+		auto pull = [&](std::int32_t x, std::int32_t y, std::int32_t fromX, std::int32_t fromY) {
+			if (fromX < 0 || fromY < 0 || fromX >= size.X || fromY >= size.Y) {
+				return;
+			}
+			std::size_t from = std::size_t(fromY) * std::size_t(size.X) + std::size_t(fromX);
+			std::int32_t a = nearest[from], b = other[from];
+			offer(x, y, a);
+			offer(x, y, b);
+		};
+		for (std::int32_t s = 0; s < std::int32_t(sources.size()); s++) {
+			offer(std::min<std::int32_t>(std::int32_t(sources[s].Position.X), size.X - 1), std::min<std::int32_t>(std::int32_t(sources[s].Position.Y), size.Y - 1), s);
+		}
+		// Down and back up, each row both ways, as a distance transform sweeps
+		for (std::int32_t y = 0; y < size.Y; y++) {
+			for (std::int32_t x = 0; x < size.X; x++) {
+				pull(x, y, x - 1, y);
+				pull(x, y, x - 1, y - 1);
+				pull(x, y, x, y - 1);
+				pull(x, y, x + 1, y - 1);
+			}
+			for (std::int32_t x = size.X - 1; x >= 0; x--) {
+				pull(x, y, x + 1, y);
+			}
+		}
+		for (std::int32_t y = size.Y - 1; y >= 0; y--) {
+			for (std::int32_t x = size.X - 1; x >= 0; x--) {
+				pull(x, y, x + 1, y);
+				pull(x, y, x + 1, y + 1);
+				pull(x, y, x, y + 1);
+				pull(x, y, x - 1, y + 1);
+			}
+			for (std::int32_t x = 0; x < size.X; x++) {
+				pull(x, y, x - 1, y);
+			}
+		}
+
+		// From the nearest intensity towards the other one, by how much nearer the block is to the other event than the
+		// events are to each other, half-way where both are as near
+		intensities.resize(count);
+		for (std::int32_t y = 0; y < size.Y; y++) {
+			for (std::int32_t x = 0; x < size.X; x++) {
+				std::size_t i = std::size_t(y) * std::size_t(size.X) + std::size_t(x);
+				std::int32_t a = nearest[i], b = other[i];
+				float value = (a >= 0 ? float(sources[a].Intensity) : 255.0f);
+				if (a >= 0 && b >= 0) {
+					Vector2f center(float(x) + 0.5f, float(y) + 0.5f);
+					float gap = (sources[b].Position - sources[a].Position).Length();
+					if (gap > 0.0f) {
+						float distanceA = (sources[a].Position - center).Length();
+						float distanceB = (sources[b].Position - center).Length();
+						float t = std::clamp(0.5f + 0.5f * (distanceA - distanceB) / gap, 0.0f, 0.5f);
+						value += (float(sources[b].Intensity) - value) * t;
+					}
+				}
+				intensities[i] = std::uint8_t(std::round(value));
+			}
+		}
+		return true;
+	}
+
 	float EventPreviews::GetDirectionLength(float strength)
 	{
 		// By the square root of the strength, a tube of 8 reaches into the next tile, the strongest one a few tiles away

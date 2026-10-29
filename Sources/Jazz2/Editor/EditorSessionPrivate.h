@@ -31,6 +31,7 @@
 #endif
 #include "Shell/LayerDialogs.h"
 #include "Shell/LevelDialogs.h"
+#include "Shell/WeaponsDialog.h"
 #include "Shell/FindReplaceDialog.h"
 #include "Shell/FxTileGenerator.h"
 #include "Shell/HelpDialogs.h"

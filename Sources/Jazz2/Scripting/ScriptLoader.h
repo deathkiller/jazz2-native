@@ -127,6 +127,8 @@ namespace Jazz2::Scripting
 		virtual String OnProcessInclude(StringView includePath, StringView scriptPath) = 0;
 		/** @brief Called when `#pragma` directive is encountered in a script file */
 		virtual void OnProcessPragma(StringView content, ScriptContextType& contextType) = 0;
+		/** @brief Called before a script file is read, returns `true` with @p content to use it instead of the file, which then needn't exist */
+		virtual bool OnReadScript(StringView absolutePath, String& content);
 
 		/** @brief Creates a relative path */
 		static String MakeRelativePath(StringView path, StringView relativeToFile);

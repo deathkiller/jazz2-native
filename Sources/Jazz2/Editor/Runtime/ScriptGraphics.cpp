@@ -63,7 +63,7 @@ namespace Jazz2::Editor
 				ReleaseScripts();
 			}
 
-			bool Initialize(const LevelDocument& document, StringView levelName, StringView fullPath)
+			bool Initialize(const LevelDocument& document, StringView levelName, StringView fullPath, StringView scriptText)
 			{
 				MemoryStream s;
 				if (!document.Save(s, true, 0)) {
@@ -71,6 +71,7 @@ namespace Jazz2::Editor
 				}
 				_levelData.assign(s.GetBuffer(), s.GetBuffer() + s.GetSize());
 				_fullPath = fullPath;
+				_scriptText = scriptText;
 
 				LevelInitialization levelInit(levelName, GameDifficulty::Normal, PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
 				bool result = LevelHandler::Initialize(levelInit);
@@ -112,6 +113,11 @@ namespace Jazz2::Editor
 				return ContentResolver::Get().TryLoadLevel(s, _fullPath, GetLevelLoadOptions(), descriptor);
 			}
 
+			void LoadLevelScripts(StringView fullPath) override
+			{
+				LevelHandler::LoadLevelScripts(fullPath, _scriptText);
+			}
+
 			void SpawnPlayers(const LevelInitialization& levelInit) override
 			{
 			}
@@ -127,6 +133,7 @@ namespace Jazz2::Editor
 		private:
 			SmallVector<std::uint8_t, 0> _levelData;
 			String _fullPath;
+			String _scriptText;
 		};
 	}
 
@@ -138,7 +145,7 @@ namespace Jazz2::Editor
 	{
 	}
 
-	bool ScriptGraphics::Capture(IRootController* root, const LevelDocument& document, StringView levelName, StringView fullPath)
+	bool ScriptGraphics::Capture(IRootController* root, const LevelDocument& document, StringView levelName, StringView fullPath, StringView scriptText)
 	{
 		Clear();
 		auto& resolver = ContentResolver::Get();
@@ -154,7 +161,7 @@ namespace Jazz2::Editor
 		resolver.RetainLoadedResources();
 		{
 			auto handler = std::make_shared<ScriptGraphicsLevelHandler>(root);
-			if (handler->Initialize(document, levelName, fullPath)) {
+			if (handler->Initialize(document, levelName, fullPath, scriptText)) {
 				Scripting::LevelScriptLoader* scripts = handler->GetScripts();
 				Events::EventMap* eventMap = handler->EventMap();
 				if (scripts != nullptr && eventMap != nullptr) {
@@ -170,7 +177,11 @@ namespace Jazz2::Editor
 			count += (sprite != nullptr ? 1 : 0);
 		}
 		count += std::int32_t(_variantSprites.size());
-		LOGI("The script of the level gives {} objects sprites of their own", count);
+		std::int32_t iconCount = 0;
+		for (const auto& icons : _weaponIcons) {
+			iconCount += (icons[0] != nullptr ? 1 : 0) + (icons[1] != nullptr ? 1 : 0);
+		}
+		LOGI("The script of the level gives {} objects sprites of their own and {} icons of weapons", count, iconCount);
 		return !IsEmpty();
 	}
 
@@ -297,6 +308,17 @@ namespace Jazz2::Editor
 			}
 		}
 
+		// The hook of the weapons shows the next frame every 4 ticks, as a pickup
+		for (std::int32_t weapon = 0; weapon < 9; weapon++) {
+			for (std::int32_t powered = 0; powered < 2; powered++) {
+				std::uint32_t firstFrame, frameCount;
+				if (scripts.GetWeaponSprite(std::uint32_t(weapon + 1), powered != 0, firstFrame, frameCount)) {
+					Look look = { firstFrame, std::int32_t(std::min<std::uint32_t>(frameCount, MaxFrames)), firstFrame, false };
+					_weaponIcons[weapon][powered] = MakeFramesSprite(scripts, look, nullptr, 4.0f, colors);
+				}
+			}
+		}
+
 		if (_translator == nullptr) {
 			_translator = std::make_unique<EventTranslator>();
 		}
@@ -382,7 +404,15 @@ namespace Jazz2::Editor
 			}
 		}
 
+		// A behavior of JJ2 shows the next frame every 8 ticks, a pickup every 4
+		return MakeFramesSprite(scripts, look, palette, preset->get_playerHandling() == PlayerHandlingPickup ? 4.0f : 8.0f, colors);
+	}
+
+	std::unique_ptr<ScriptGraphics::Sprite> ScriptGraphics::MakeFramesSprite(Scripting::LevelScriptLoader& scripts, const Look& look, const std::uint32_t* palette,
+		float ticksPerFrame, SmallVectorImpl<std::uint32_t>& colors)
+	{
 		// All frames of the animation, still at the one it starts with
+		auto& tables = scripts.GetAnimationTables();
 		Vector2i cellSize, hotspot;
 		bool changed;
 		if (!tables.GetFramesImage(look.FirstFrame, look.FrameCount, palette, colors, cellSize, hotspot, changed) || cellSize.X <= 0 || cellSize.Y <= 0 ||
@@ -398,9 +428,7 @@ namespace Jazz2::Editor
 			}
 		}
 		std::int32_t stillFrame = std::min<std::int32_t>(std::int32_t(look.Frame - look.FirstFrame), shownFrames - 1);
-		// A behavior of JJ2 shows the next frame every 8 ticks, a pickup every 4, in the time of the animations of the editor
-		// (60 frames in a second, a tick is 60/70 of a frame)
-		float ticksPerFrame = (preset->get_playerHandling() == PlayerHandlingPickup ? 4.0f : 8.0f);
+		// In the time of the animations of the editor (60 frames in a second, a tick is 60/70 of a frame)
 		float animDuration = float(shownFrames) * ticksPerFrame * (60.0f / 70.0f) * UI::Canvas::AnimTimeMultiplier;
 
 		auto sprite = std::make_unique<Sprite>();
@@ -441,6 +469,10 @@ namespace Jazz2::Editor
 		for (auto& sprite : _sprites) {
 			sprite = nullptr;
 		}
+		for (auto& icons : _weaponIcons) {
+			icons[0] = nullptr;
+			icons[1] = nullptr;
+		}
 		_variants.clear();
 		_variantSprites.clear();
 		_types.clear();
@@ -448,7 +480,15 @@ namespace Jazz2::Editor
 
 	bool ScriptGraphics::IsEmpty() const
 	{
-		return _types.empty();
+		if (!_types.empty()) {
+			return false;
+		}
+		for (const auto& icons : _weaponIcons) {
+			if (icons[0] != nullptr || icons[1] != nullptr) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	ScriptGraphics::Sprite* ScriptGraphics::FindSprite(const Formats::EventRecord& event)
@@ -466,6 +506,15 @@ namespace Jazz2::Editor
 			}
 		}
 		return _sprites[id].get();
+	}
+
+	Resources::GraphicResource* ScriptGraphics::FindWeaponIcon(std::int32_t weapon, bool powered)
+	{
+		if (weapon < 0 || weapon >= 9) {
+			return nullptr;
+		}
+		Sprite* sprite = _weaponIcons[weapon][powered ? 1 : 0].get();
+		return (sprite != nullptr ? &sprite->Animated : nullptr);
 	}
 
 	Resources::GraphicResource* ScriptGraphics::Find(const Formats::EventRecord& event, bool animated, bool ownAnimated)

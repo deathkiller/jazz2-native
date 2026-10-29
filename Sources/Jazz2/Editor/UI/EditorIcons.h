@@ -96,6 +96,28 @@ namespace Jazz2::Editor
 		OverriddenAssets,
 		// A smaller and thinner Close, for the menu bar
 		CloseSmall,
+		// Half of a square filled inside a selection
+		InvertSelection,
+		// A screen with a landscape, the frame of what the game screen shows
+		ScreenFrame,
+		// Tiles between two corners, as the block is grabbed by them
+		GrabBlock,
+		// Layers with a pause sign, their movement stopped
+		PauseLayers,
+		// An arrow down into a tray, the counterpart of Export
+		Import,
+		// A lifebuoy, the copies of levels kept to recover from
+		Recovery,
+		// A box with a prompt, actions found by typing
+		CommandPalette,
+		// The flag of events with a checkerboard, a waypoint of a race
+		RaceFlag,
+		// A shining bulb, an event of light
+		LightBulb,
+		// The flag of events standing on layers, events drawn over all of them
+		EventsOnTop,
+		// The blaster of Spaz with a small Play, trying a weapon
+		Weapon,
 		// Shown by the pointer, see UiCursorOverlay
 		CursorResizeHorizontal,
 		CursorResizeVertical,

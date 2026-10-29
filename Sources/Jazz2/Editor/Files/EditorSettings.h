@@ -45,6 +45,8 @@ namespace Jazz2::Editor
 		bool ShowGrid = true;
 		/** @brief Whether layers with an automatic speed stay still */
 		bool PauseLayerMovement = false;
+		/** @brief Whether the sprites of events are drawn over all layers instead of among them as in the game */
+		bool EventsOnTop = false;
 		/** @brief Whether a textured layer being edited is drawn as in the game instead of as plain tiles to be painted */
 		bool PreviewTexturedLayers = false;
 		/** @brief Whether events are drawn with the sprites the script of the level gives their objects, see @ref ScriptGraphics */

@@ -269,6 +269,15 @@ namespace Jazz2
 		 */
 		void PinMetadata(Metadata* metadata, bool pinned);
 		/**
+		 * @brief Makes an image of the weapons of a level available as metadata, until it's released again
+		 *
+		 * Its path is @ref WeaponsDescription::GetImageMetadataPath(), with a single animation of the default state.
+		 * Two levels that have the same image share it, it's released when both released it (see @ref PinMetadata()).
+		 */
+		Metadata* AcquireWeaponImage(const WeaponImage& image);
+		/** @brief Releases an image acquired by @ref AcquireWeaponImage(), by the path of its metadata */
+		void ReleaseWeaponImage(StringView path);
+		/**
 		 * @brief Keeps everything loaded across the loadings that follow, until @ref ReleaseLoadedResources()
 		 *
 		 * Nothing is released at the end of a loading while any is held, also what was loaded since, see

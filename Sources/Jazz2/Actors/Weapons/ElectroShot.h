@@ -32,6 +32,8 @@ namespace Jazz2::Actors::Weapons
 
 		/** @brief Spawns one ring of swirl particles, shared with the remote representation of the shot */
 		static void CreateParticles(ILevelHandler* levelHandler, Metadata* metadata, Vector2f pos, std::uint16_t layer, float currentStep, bool facingLeft, bool poweredUp);
+		/** @overload */
+		static void CreateParticles(ILevelHandler* levelHandler, const GraphicResource* res, Vector2f pos, std::uint16_t layer, float currentStep, bool facingLeft, bool poweredUp);
 		/** @brief Emits the light surrounding the swirl, shared with the remote representation of the shot */
 		static void EmitParticleLight(SmallVectorImpl<LightEmitter>& lights, Vector2f pos, float currentStep);
 

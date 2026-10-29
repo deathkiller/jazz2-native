@@ -35,6 +35,21 @@ namespace Jazz2::Actors::Weapons
 		return WeaponType::Unknown;
 	}
 
+	WeaponType ShotBase::GetSourceWeapon()
+	{
+		return GetWeaponType();
+	}
+
+	float ShotBase::GetFrozenDuration() const
+	{
+		return 0.0f;
+	}
+
+	bool ShotBase::ThawsFrozen() const
+	{
+		return false;
+	}
+
 	void ShotBase::TriggerRicochet(ActorBase* other)
 	{
 		TimeStamp now = TimeStamp::now();

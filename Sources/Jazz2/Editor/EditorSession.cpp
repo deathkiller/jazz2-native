@@ -241,11 +241,31 @@ namespace Jazz2::Editor
 			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
 			return tileMap->IsTileEmpty(aabb, params);
 		};
-#if defined(WITH_ANGELSCRIPT)
 		_eventPreviews.ScriptSprite = [this](const Formats::EventRecord& event, bool animated, bool ownAnimated) -> GraphicResource* {
+			// Ammo the level gives a look of its own (see WeaponDefinition::Pickup)
+			if (EventType(event.Type) == EventType::Ammo && event.Params[0] < std::uint8_t(WeaponType::Count)) {
+				const WeaponsDescription& weapons = GetCachedLevelWeapons(*this);
+				const WeaponSprite& pickup = weapons.Weapons[event.Params[0]].Pickup;
+				if (!pickup.IsEmpty()) {
+					Metadata* metadata = ContentResolver::Get().RequestMetadata(weapons.GetSpriteMetadataPath(pickup));
+					if (GraphicResource* resource = (metadata != nullptr ? metadata->FindAnimation(AnimState(pickup.AnimState)) : nullptr)) {
+						return resource;
+					}
+				}
+			}
+#if defined(WITH_ANGELSCRIPT)
 			return (_settings.OverriddenAssets ? _scriptGraphics.Find(event, animated, ownAnimated) : nullptr);
-		};
+#else
+			return nullptr;
 #endif
+		};
+		_eventPreviews.ScriptWeaponIcon = [this](std::int32_t weapon, bool powered) -> GraphicResource* {
+#if defined(WITH_ANGELSCRIPT)
+			return (_settings.OverriddenAssets ? _scriptGraphics.FindWeaponIcon(weapon, powered) : nullptr);
+#else
+			return nullptr;
+#endif
+		};
 	}
 
 	ToolManager& EditorSession::GetTools()
@@ -638,6 +658,18 @@ namespace Jazz2::Editor
 #if defined(WITH_ANGELSCRIPT)
 	void EditorSession::UpdateScriptGraphics()
 	{
+		// The weapons of the script that changed change the script that runs, only once the lines of the script differ
+		const Formats::ChunkRecord* chunk = _document.FindChunk(Formats::WeaponsChunk::Tag);
+		ArrayView<const std::uint8_t> weapons = (chunk != nullptr ? ArrayView<const std::uint8_t>(chunk->Data) : ArrayView<const std::uint8_t>());
+		if (weapons.size() != _scriptGraphicsWeapons.size() || (!weapons.empty() && std::memcmp(weapons.data(), _scriptGraphicsWeapons.data(), weapons.size()) != 0)) {
+			_scriptGraphicsWeapons.assign(weapons.begin(), weapons.end());
+			String script = _files->GetUnsavedScript();
+			if (script != _scriptGraphicsScript) {
+				_scriptGraphicsScript = Death::move(script);
+				_scriptGraphicsDirty = true;
+			}
+		}
+
 		if (!_scriptGraphicsDirty) {
 			return;
 		}
@@ -646,7 +678,7 @@ namespace Jazz2::Editor
 			_scriptGraphics.Clear();
 			return;
 		}
-		_scriptGraphics.Capture(&GetPlayTestRoot(), _document, _files->GetLevelName(), _files->GetFilePath());
+		_scriptGraphics.Capture(&GetPlayTestRoot(), _document, _files->GetLevelName(), _files->GetFilePath(), _scriptGraphicsScript);
 		// The level of the script named the window after itself
 		_files->UpdateWindowTitle();
 	}

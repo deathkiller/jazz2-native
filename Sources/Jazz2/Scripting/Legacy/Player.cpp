@@ -953,7 +953,7 @@ namespace Jazz2::Scripting
 			// A weapon of `jjWEAPON::infinite` that the player has gets the unlimited ammo the HUD shows as such
 			std::uint16_t& ammo = _player->_inventory.WeaponAmmo[index];
 			std::int32_t count = std::clamp<std::int32_t>(value, 0, UINT16_MAX / 256 - 1);
-			if (_levelScriptLoader->GetWeapon(number)->infinite) {
+			if (_levelScriptLoader->GetWeapon(number)->Infinite) {
 				if (count > 0) {
 					ammo = UINT16_MAX;
 					_infiniteAmmo[index] = std::uint16_t(count);
@@ -1445,11 +1445,10 @@ namespace Jazz2::Scripting
 
 			// As JJ2+ fires by `SPREAD::Spread` (measured): RFNORMAL two bullets angled up and down, RFPU those and a straight
 			// one, RF two or three when powered up, every other spread one
-			constexpr std::int32_t SpreadRfNormal = 1, SpreadRfPowerUp = 2, SpreadRf = 3;
-			std::int32_t spread = _levelScriptLoader->GetWeapon(std::int32_t(weaponType) + 1)->spread;
+			WeaponSpread spread = _levelScriptLoader->GetWeapon(std::int32_t(weaponType) + 1)->Spread;
 			bool upgraded = ((_player->_inventory.WeaponUpgrades[(std::int32_t)weaponType] & 0x01) != 0);
-			bool angled = (spread == SpreadRfNormal || spread == SpreadRfPowerUp || spread == SpreadRf);
-			bool straight = (!angled || spread == SpreadRfPowerUp || (spread == SpreadRf && upgraded));
+			bool angled = (spread == WeaponSpread::Double || spread == WeaponSpread::Triple || spread == WeaponSpread::DoubleOrTriple);
+			bool straight = (!angled || spread == WeaponSpread::Triple || (spread == WeaponSpread::DoubleOrTriple && upgraded));
 			for (std::int8_t slot = -1; slot <= 1; slot++) {
 				if (slot == 0 ? !straight : !angled) {
 					continue;
@@ -1531,47 +1530,16 @@ namespace Jazz2::Scripting
 		return (p != nullptr && p->FireScriptedWeapon(weaponType));
 	}
 
-	bool LevelScriptLoader::IsWeaponFireCapped(WeaponType weaponType)
-	{
-		// TNT, capped by default, is placed by every press as the weapon of the game places it
-		return (weaponType != WeaponType::TNT && GetWeapon(std::int32_t(weaponType) + 1)->style == Legacy::wsCAPPED);
-	}
-
-	bool LevelScriptLoader::IsWeaponSoundMuted(WeaponType weaponType)
-	{
-		return !GetWeapon(std::int32_t(weaponType) + 1)->defaultSample;
-	}
-
 	Legacy::jjWEAPON* LevelScriptLoader::GetWeapon(std::int32_t number)
 	{
-		constexpr std::int32_t Count = std::int32_t(WeaponType::Count);
-		if (!_weaponsInitialized) {
-			_weaponsInitialized = true;
-			// As JJ2+ starts a level: the blaster has infinite ammo and gives way to a shield, the rest of them have the
-			// default maximum (-1, 99 in single player and 50 in multiplayer), as JJ2+ documents them
-			for (std::int32_t i = 0; i <= Count; i++) {
-				Legacy::jjWEAPON& weapon = _weapons[i];
-				weapon = {};
-				weapon.infinite = (i == 1);
-				weapon.replacedByShield = (i == 1);
-				weapon.comesFromGunCrates = (i >= 2 && i <= 6);
-				weapon.multiplier = 1;
-				weapon.maximum = -1;
-				weapon.defaultSample = true;
-				weapon.allowed = true;
-				weapon.allowedPowerup = true;
-				switch (i) {
-					case 3: weapon.spread = wspNORMALORDIRECTIONANDAIM; break;
-					case 4: weapon.style = wsMISSILE; break;
-					case 5: weapon.style = wsMISSILE; weapon.spread = wspDOUBLEORTRIPLE; break;
-					case 6: weapon.style = wsPOPCORN; weapon.spread = wspREFLECTSFASTFIRE; break;
-					case 7: weapon.style = wsCAPPED; break;
-					case 8: weapon.spread = wspNORMALORBBGUN; break;
-				}
+		// The options of the level itself, so the game plays by what a script changes; the entry 0 of JJ2+ is no
+		// weapon, it's a scratch one
+		if (number >= 1 && number <= std::int32_t(WeaponType::Count)) {
+			if (WeaponDefinition* definition = _levelHandler->GetWritableWeaponDefinition(WeaponType(number - 1))) {
+				return &definition->Options;
 			}
 		}
-		// The entry 0 of JJ2+ is no weapon, it's the scratch one too
-		return &_weapons[number >= 1 && number <= Count ? number : 0];
+		return &_scratchWeapon;
 	}
 
 	Vector2i LevelScriptLoader::GetPlayerSubscreenPosition(Actors::Player* player) const
@@ -1591,10 +1559,10 @@ namespace Jazz2::Scripting
 	}
 
 	static bool get_jjWEAPON_infinite(jjWEAPON* self) {
-		return self->infinite;
+		return self->Infinite;
 	}
 	static bool set_jjWEAPON_infinite(jjWEAPON* self, bool value) {
-		if (self->infinite == value) {
+		if (self->Infinite == value) {
 			return value;
 		}
 		// The ammo the players have is read as it was and written as it is now, set_ammo() converts it
@@ -1606,14 +1574,14 @@ namespace Jazz2::Scripting
 			for (Actors::Player* player : owner->GetPlayers()) {
 				if (jjPLAYER* p = owner->GetPlayerBackingStore(player)) {
 					std::int32_t ammo = p->get_ammo(std::uint8_t(number));
-					self->infinite = value;
+					self->Infinite = value;
 					p->set_ammo(std::uint8_t(number), ammo);
-					self->infinite = !value;
+					self->Infinite = !value;
 				}
 			}
 			break;
 		}
-		self->infinite = value;
+		self->Infinite = value;
 		return value;
 	}
 
@@ -1962,22 +1930,22 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("jjWEAPON@ get_jjWeapons(int)", asFUNCTION(get_jjWEAPON), asCALL_CDECL);
 		engine->RegisterObjectMethod("jjWEAPON", "bool get_infinite() const", asFUNCTION(get_jjWEAPON_infinite), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjWEAPON", "bool set_infinite(bool)", asFUNCTION(set_jjWEAPON_infinite), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectProperty("jjWEAPON", "bool replenishes", asOFFSET(jjWEAPON, replenishes));
-		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByShield", asOFFSET(jjWEAPON, replacedByShield));
-		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByBubbles", asOFFSET(jjWEAPON, replacedByBubbles));
-		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromGunCrates", asOFFSET(jjWEAPON, comesFromGunCrates));
-		engine->RegisterObjectProperty("jjWEAPON", "bool gradualAim", asOFFSET(jjWEAPON, gradualAim));
-		engine->RegisterObjectProperty("jjWEAPON", "int multiplier", asOFFSET(jjWEAPON, multiplier));
-		engine->RegisterObjectProperty("jjWEAPON", "int maximum", asOFFSET(jjWEAPON, maximum));
-		engine->RegisterObjectProperty("jjWEAPON", "int gemsLost", asOFFSET(jjWEAPON, gemsLost));
-		engine->RegisterObjectProperty("jjWEAPON", "int gemsLostPowerup", asOFFSET(jjWEAPON, gemsLostPowerup));
-		engine->RegisterObjectProperty("jjWEAPON", "int8 style", asOFFSET(jjWEAPON, style));
-		engine->RegisterObjectProperty("jjWEAPON", "SPREAD::Spread spread", asOFFSET(jjWEAPON, spread));
-		engine->RegisterObjectProperty("jjWEAPON", "bool defaultSample", asOFFSET(jjWEAPON, defaultSample));
-		engine->RegisterObjectProperty("jjWEAPON", "bool allowed", asOFFSET(jjWEAPON, allowed));
-		engine->RegisterObjectProperty("jjWEAPON", "bool allowedPowerup", asOFFSET(jjWEAPON, allowedPowerup));
-		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirds", asOFFSET(jjWEAPON, comesFromBirds));
-		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirdsPowerup", asOFFSET(jjWEAPON, comesFromBirdsPowerup));
+		engine->RegisterObjectProperty("jjWEAPON", "bool replenishes", asOFFSET(jjWEAPON, Replenishes));
+		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByShield", asOFFSET(jjWEAPON, ReplacedByShield));
+		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByBubbles", asOFFSET(jjWEAPON, ReplacedByBubbles));
+		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromGunCrates", asOFFSET(jjWEAPON, ComesFromGunCrates));
+		engine->RegisterObjectProperty("jjWEAPON", "bool gradualAim", asOFFSET(jjWEAPON, GradualAim));
+		engine->RegisterObjectProperty("jjWEAPON", "int multiplier", asOFFSET(jjWEAPON, Multiplier));
+		engine->RegisterObjectProperty("jjWEAPON", "int maximum", asOFFSET(jjWEAPON, Maximum));
+		engine->RegisterObjectProperty("jjWEAPON", "int gemsLost", asOFFSET(jjWEAPON, GemsLost));
+		engine->RegisterObjectProperty("jjWEAPON", "int gemsLostPowerup", asOFFSET(jjWEAPON, GemsLostPowerup));
+		engine->RegisterObjectProperty("jjWEAPON", "int8 style", asOFFSET(jjWEAPON, Style));
+		engine->RegisterObjectProperty("jjWEAPON", "SPREAD::Spread spread", asOFFSET(jjWEAPON, Spread));
+		engine->RegisterObjectProperty("jjWEAPON", "bool defaultSample", asOFFSET(jjWEAPON, DefaultSample));
+		engine->RegisterObjectProperty("jjWEAPON", "bool allowed", asOFFSET(jjWEAPON, Allowed));
+		engine->RegisterObjectProperty("jjWEAPON", "bool allowedPowerup", asOFFSET(jjWEAPON, AllowedPowerup));
+		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirds", asOFFSET(jjWEAPON, ComesFromBirds));
+		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirdsPowerup", asOFFSET(jjWEAPON, ComesFromBirdsPowerup));
 
 		engine->SetDefaultNamespace("AIR");
 		engine->RegisterEnum("Jump");

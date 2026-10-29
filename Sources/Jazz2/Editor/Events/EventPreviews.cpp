@@ -478,7 +478,17 @@ namespace Jazz2::Editor
 			// What the game passes to the scripts of the level, as kept or as the level describes it
 			bool passthrough = (EventType(event.Type) == EventType::PassthroughEvent ||
 				EventCatalog::IsLevelExtension(EventCatalog::Find(EventType(event.Type), event.Params)));
-			painter.Icon(passthrough ? EditorIcon::Passthrough : EditorIcon::Event, rect, Colorf(1.0f, 1.0f, 1.0f, 0.7f * alpha), UiLayer::Overlay);
+			EditorIcon icon = (passthrough ? EditorIcon::Passthrough : EditorIcon::Event);
+			switch (EventType(event.Type)) {
+				case EventType::RaceCheckpoint: icon = EditorIcon::RaceFlag; break;
+				case EventType::LightAmbient:
+				case EventType::LightSteady:
+				case EventType::LightPulse:
+				case EventType::LightFlicker:
+				case EventType::LightIlluminate: icon = EditorIcon::LightBulb; break;
+				default: break;
+			}
+			painter.Icon(icon, rect, Colorf(1.0f, 1.0f, 1.0f, 0.7f * alpha), UiLayer::Overlay);
 			return;
 		}
 

@@ -4,10 +4,12 @@
 
 #include "../../GameDifficulty.h"
 #include "../../PlayerType.h"
+#include "../../WeaponType.h"
 #include "../../../nCine/Primitives/Colorf.h"
 #include "../../../nCine/Primitives/Vector2.h"
 
 #include <Containers/SmallVector.h>
+#include <Containers/String.h>
 #include <Containers/StringView.h>
 
 #include <memory>
@@ -23,6 +25,7 @@ namespace Jazz2::Editor
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
+	using Death::Containers::String;
 	using Death::Containers::StringView;
 #endif
 
@@ -117,6 +120,12 @@ namespace Jazz2::Editor
 		bool Reforged = true;
 		/** @brief Whether players may climb ledges */
 		bool LedgeClimb = true;
+		/** @brief Weapon the players hold from the start, with full ammo, @ref WeaponType::Unknown for none */
+		WeaponType GiveWeapon = WeaponType::Unknown;
+		/** @brief Whether @ref GiveWeapon is powered up */
+		bool GiveWeaponPowered = false;
+		/** @brief Text of the script of the level with the weapons of the script as the editor has them, empty to read its file */
+		String ScriptText;
 	};
 
 	/**

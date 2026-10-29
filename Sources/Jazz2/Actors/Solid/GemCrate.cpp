@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Solid
 		}
 
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
-			if (shotBase->GetWeaponType() == WeaponType::Freezer) {
+			if (shotBase->GetFrozenDuration() > 0.0f) {
 				HandleFrozenStateChange(shotBase);
 				return true;
 			}

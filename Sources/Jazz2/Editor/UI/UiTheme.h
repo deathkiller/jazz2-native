@@ -90,6 +90,7 @@ namespace Jazz2::Editor
 		static inline Colorf TextOnAccent = Colorf(0.58f, 0.56f, 0.52f, 0.5f);
 		static inline Colorf TextAccent = Colorf(0.62f, 0.54f, 0.36f, 0.5f);
 		static inline Colorf TextDanger = Colorf(0.60f, 0.40f, 0.38f, 0.5f);
+		static inline Colorf TextWarning = Colorf(0.58f, 0.52f, 0.44f, 0.5f);
 		static inline Colorf TextPlay = Colorf(0.42f, 0.58f, 0.43f, 0.5f);
 
 		/** @} */

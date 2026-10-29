@@ -51,7 +51,9 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Whether player-vs-player collision dispatch has been enabled (done lazily after activation) */
 		bool _bumpInitialized;
 		/** @brief Whether sugar rush was active when it was last sent to the peers, to only resync on change */
-		bool _sugarRushLastSent = false;
+		bool _sugarRushLastSent;
+		/** @brief Gems the next hit takes in Treasure Hunt, as the weapon of the shot says (see @ref WeaponOptions::GemsLost) */
+		std::int32_t _gemsLostOnHit;
 
 		void OnUpdate(float timeMult) override;
 

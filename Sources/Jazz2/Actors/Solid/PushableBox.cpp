@@ -47,8 +47,8 @@ namespace Jazz2::Actors::Solid
 			if (weaponType == WeaponType::Blaster || weaponType == WeaponType::RF ||
 				weaponType == WeaponType::Seeker || weaponType == WeaponType::Pepper) {
 				shotBase->DecreaseHealth(INT32_MAX);
-			} else if (weaponType == WeaponType::Freezer) {
-				_frozenTimeLeft = static_cast<Weapons::FreezerShot*>(shotBase)->GetFrozenDuration() * 4.0f;
+			} else if (shotBase->GetFrozenDuration() > 0.0f) {
+				_frozenTimeLeft = shotBase->GetFrozenDuration() * 4.0f;
 				_renderer.AnimPaused = true;
 				shotBase->DecreaseHealth(INT32_MAX);
 			} else if (weaponType == WeaponType::Toaster) {

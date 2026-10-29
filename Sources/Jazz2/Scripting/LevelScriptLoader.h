@@ -85,8 +85,9 @@ namespace Jazz2::Scripting
 		 *
 		 * @param levelHandler  Level handler the script is bound to
 		 * @param scriptPath    Path to the script file to load
+		 * @param scriptText    Text read in place of the script file, which then needn't exist, empty to read the file
 		 */
-		LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath);
+		LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath, StringView scriptText = {});
 		~LevelScriptLoader();
 
 		/** @brief Returns the level handler this script is bound to */
@@ -175,10 +176,6 @@ namespace Jazz2::Scripting
 		 * The weather of JJ2+ is of particles scripts see (`jjParticles`), they steer or remove them.
 		 */
 		bool OwnsWeather() const;
-		/** @brief Returns `true` if tapping fire doesn't fire a weapon faster (`jjWEAPON::style` of `WEAPON::CAPPED`) */
-		bool IsWeaponFireCapped(WeaponType weaponType);
-		/** @brief Returns `true` if a weapon fires without its sound (`jjWEAPON::defaultSample` off, MLLE weapons play their own) */
-		bool IsWeaponSoundMuted(WeaponType weaponType);
 		/** @brief Returns the template of an event if a script asked for it, `nullptr` otherwise, not AddRef'd */
 		Legacy::jjOBJ* FindObjectPreset(std::uint8_t eventId) const;
 		/** @brief How a new object of an event looks, see @ref GetStartingLook() */
@@ -208,6 +205,10 @@ namespace Jazz2::Scripting
 		bool WatchLookContext(asIScriptContext* ctx);
 		/** @brief Returns the animation the template of an event has before a script changes it, 0 if it has none */
 		std::uint32_t GetDefaultPresetAnimation(std::uint8_t eventId);
+		/** @brief Called when a weapon of the script gets the sprite its hook shows on the screen, frames as `jjAnimFrames` has them */
+		void OnWeaponSprite(std::uint32_t slot, bool powered, std::uint32_t firstFrame, std::uint32_t frameCount);
+		/** @brief Returns the frames of the sprite a weapon of the script shows on the screen, see @ref OnWeaponSprite(), `false` if it has none */
+		bool GetWeaponSprite(std::uint32_t slot, bool powered, std::uint32_t& firstFrame, std::uint32_t& frameCount) const;
 
 		/** @brief Returns what the script draws in the level (`jjDrawSprite()` and the like), attached to the level on first use */
 		Legacy::ScriptWorldCanvas& GetWorldCanvas();
@@ -495,6 +496,7 @@ namespace Jazz2::Scripting
 	protected:
 		String OnProcessInclude(StringView includePath, StringView scriptPath) override;
 		void OnProcessPragma(StringView content, ScriptContextType& contextType) override;
+		bool OnReadScript(StringView absolutePath, String& content) override;
 
 		/** @brief Called before a script function is called */
 		void OnBeforeScriptCall();
@@ -552,11 +554,13 @@ namespace Jazz2::Scripting
 		std::uint64_t _inputOverrideValue[Input::ControlScheme::MaxSupportedPlayers] = {};
 		// What `jjPlayers` gives for the players that aren't in the game, it's inactive and its methods do nothing
 		std::unique_ptr<jjPLAYER> _absentPlayer;
-		// `jjWeapons[]` by the numbers of JJ2+, entry 0 is the scratch one (see GetWeapon())
-		Legacy::jjWEAPON _weapons[(std::int32_t)WeaponType::Count + 1];
-		bool _weaponsInitialized = false;
+		// `jjWeapons[0]`, no weapon in JJ2+ (see GetWeapon())
+		Legacy::jjWEAPON _scratchWeapon = {};
 		// Whether `MLLE::Setup()` of the include of weapons is in the module already, see OnProcessInclude()
 		bool _mlleWeaponsAdded = false;
+		// Text of the script in place of its file, see OnReadScript()
+		String _scriptText;
+		String _scriptTextPath;
 
 		// Lazily-built mapping of original JJ2 sample indices to converted asset paths (only allocated once a script
 		// actually plays a sample, so non-scripting and silent sessions pay nothing)
@@ -637,6 +641,8 @@ namespace Jazz2::Scripting
 		std::int32_t _lastObjectId = 0;
 		// Templates of the objects of each event of the original (jjObjectPresets), made on first use, each holds a reference
 		Legacy::jjOBJ* _objectPresets[256] = {};
+		// The first frame and the frame count of the sprite of each weapon of the script, usual and powered up, see OnWeaponSprite()
+		std::uint32_t _weaponSprites[9][2][2] = {};
 		// The copy GetStartingLook() runs the behavior of, and the frame drawn where it is
 		Legacy::jjOBJ* _lookObject = nullptr;
 		std::uint32_t _lookDrawnFrame = 0;

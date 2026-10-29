@@ -147,6 +147,7 @@ namespace Jazz2::Editor
 		constexpr const char* ViewMasks = "view.masks";
 		constexpr const char* ViewPeekMasks = "view.peekMasks";
 		constexpr const char* ViewEvents = "view.events";
+		constexpr const char* ViewEventsOnTop = "view.eventsOnTop";
 		constexpr const char* ViewPauseLayers = "view.pauseLayers";
 		constexpr const char* ViewPreviewTextured = "view.previewTextured";
 		constexpr const char* ViewOverriddenAssets = "view.overriddenAssets";
@@ -201,6 +202,7 @@ namespace Jazz2::Editor
 		// Level
 		constexpr const char* LevelProperties = "level.properties";
 		constexpr const char* LevelTexts = "level.texts";
+		constexpr const char* LevelWeapons = "level.weapons";
 		constexpr const char* LevelEpisode = "level.episode";
 		constexpr const char* LevelStatistics = "level.statistics";
 		constexpr const char* LevelCheck = "level.check";

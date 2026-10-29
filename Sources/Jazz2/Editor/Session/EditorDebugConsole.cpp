@@ -593,6 +593,30 @@ namespace Jazz2::Editor
 			auto s = fs::Open(args[1], FileAccess::Write);
 			return QuietResult(s->IsValid() && PngCodec::Encode(*s, image));
 		} });
+		commands.push_back({ "/exportsprite"_s, 2, "/exportsprite <sprite.aura> <image.png>"_s, [](const Args& args) {
+			// The whole sprite sheet in the colors of the sprites, to draw icons after
+			ContentResolver::SpriteSheet sheet;
+			if (!ContentResolver::Get().ReadSpriteSheet(args[1], sheet) || sheet.Pixels == nullptr) {
+				return DebugResult::Failed;
+			}
+			const std::uint32_t* palette = ContentResolver::Get().GetPalettes().data();
+			PngImage image;
+			image.Create(sheet.Size.X, sheet.Size.Y, false);
+			std::int32_t channels = sheet.ChannelCount;
+			for (std::int32_t i = 0; i < sheet.Size.X * sheet.Size.Y; i++) {
+				const std::uint8_t* src = &sheet.Pixels[std::size_t(i) * channels];
+				std::uint32_t color;
+				if (channels == 4) {
+					color = std::uint32_t(src[0]) | (std::uint32_t(src[1]) << 8) | (std::uint32_t(src[2]) << 16) | (std::uint32_t(src[3]) << 24);
+				} else {
+					std::uint32_t alpha = (channels == 2 ? src[1] : (src[0] != 0 ? 255 : 0));
+					color = (palette[src[0]] & 0x00FFFFFFu) | (alpha << 24);
+				}
+				std::memcpy(&image.Pixels[std::size_t(i) * 4], &color, 4);
+			}
+			auto s = fs::Open(args[2], FileAccess::Write);
+			return QuietResult(s->IsValid() && PngCodec::Encode(*s, image));
+		} });
 	}
 
 	void EditorDebugConsole::AddPlayTestCommands(SmallVectorImpl<Command>& commands)

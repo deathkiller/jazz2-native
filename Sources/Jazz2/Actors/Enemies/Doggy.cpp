@@ -133,7 +133,7 @@ namespace Jazz2::Actors::Enemies
 
 			HandleFrozenStateChange(shotBase);
 
-			if (!runtime_cast<Weapons::FreezerShot>(shotBase)) {
+			if (shotBase->GetFrozenDuration() <= 0.0f) {
 				if (_attackTime <= 0.0f) {
 					PlaySfx("Attack");
 					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * _attackSpeed;

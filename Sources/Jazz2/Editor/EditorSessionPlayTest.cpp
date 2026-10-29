@@ -148,6 +148,11 @@ namespace Jazz2::Editor
 		options.Difficulty = GameDifficulty(_settings.PlayDifficulty);
 		options.Reforged = _playReforged;
 		options.LedgeClimb = _playLedgeClimb;
+		options.GiveWeapon = _playWeapon;
+		options.GiveWeaponPowered = _playWeaponPowered;
+		_playWeapon = WeaponType::Unknown;
+		// The weapons of the script as they're now, the script file gets them only when the level is saved
+		options.ScriptText = _files->GetUnsavedScript();
 #if defined(WITH_MULTIPLAYER)
 		options.GameMode = std::uint8_t(_settings.PlayGameMode);
 		options.PlayerCount = std::clamp<std::int32_t>(_settings.PlayPlayerCount, 1, LevelInitialization::MaxPlayerCount);
@@ -168,6 +173,16 @@ namespace Jazz2::Editor
 
 		// Where the last play-test was left is known to the controller
 		_playTest->Enter(mode, options);
+	}
+
+	void EditorSession::PlayTestWeapon(WeaponType weapon, bool poweredUp)
+	{
+		_playWeapon = weapon;
+		_playWeaponPowered = poweredUp;
+		// A play-test kept from before would be resumed without the weapon
+		ResetPlayState();
+		StartPlayTest(PlayStartMode::Here);
+		_playWeapon = WeaponType::Unknown;
 	}
 
 	void EditorSession::StopPlayTest(bool keep)

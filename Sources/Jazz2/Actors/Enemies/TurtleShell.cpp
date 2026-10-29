@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Enemies
 
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			if (shotBase->GetStrength() > 0) {
-				if (runtime_cast<Weapons::FreezerShot>(shotBase)) {
+				if (shotBase->GetFrozenDuration() > 0.0f) {
 					return false;
 				}
 

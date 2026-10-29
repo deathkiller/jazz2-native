@@ -129,6 +129,8 @@ namespace Jazz2::Editor
 		 * whether the sprite of the game animates, see @ref ScriptGraphics::Find().
 		 */
 		Death::Containers::Function<GraphicResource*(const Formats::EventRecord&, bool, bool)> ScriptSprite;
+		/** @brief Returns the sprite a weapon of the script of the level shows on the screen, usual or powered up, or `nullptr`, see @ref ScriptGraphics::FindWeaponIcon() */
+		Death::Containers::Function<GraphicResource*(std::int32_t, bool)> ScriptWeaponIcon;
 
 		/** @brief Returns how an event is drawn, `false` if it's drawn as a box */
 		static bool GetPreview(const Formats::EventRecord& event, EventPreviewSpec& spec);
@@ -214,6 +216,16 @@ namespace Jazz2::Editor
 		 * the animations of the interface, as sprites are drawn at. A light that doesn't pulse doesn't grow.
 		 */
 		static float GetLightPulse(const EventLightShape& light, float animTime);
+		/** @brief Finds the intensity an ambient light event sets, 0 dark to 255 fully lit, returns `false` if it isn't one */
+		static bool GetAmbientLight(const Formats::EventRecord& event, std::uint8_t& intensity);
+		/**
+		 * @brief Finds how lit the level is around its ambient light events, in blocks of @p step tiles
+		 *
+		 * A block takes the intensity of the nearest event. Between events of different intensities, it goes from one to
+		 * the other, half-way at the same distance from both. One value per block row by row into @p intensities, 0 dark
+		 * to 255 fully lit, with the number of blocks in @p size. Returns `false` if the level has no ambient light event.
+		 */
+		static bool CollectAmbientLight(const LevelDocument& document, std::int32_t step, Vector2i& size, SmallVectorImpl<std::uint8_t>& intensities);
 		/**
 		 * @brief Returns the length of the arrow of a direction of a strength (see @ref CollectDirections()), in pixels of the level
 		 *

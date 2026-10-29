@@ -524,7 +524,7 @@ namespace Jazz2::Editor
 		presets->Width = 120.0f;
 		keymapRow->Add<UiElement>()->Flex = 1.0f;
 		// TRANSLATORS: Button in the Keyboard Shortcuts dialog, reads shortcuts from a file (verb)
-		keymapRow->Add<UiButton>(_x("editor", "Import"), EditorIcon::Folder, [s, fill, search]() {
+		keymapRow->Add<UiButton>(_x("editor", "Import"), EditorIcon::Import, [s, fill, search]() {
 			UiSurface* surface = s->GetSurface();
 			if (surface == nullptr) {
 				return;

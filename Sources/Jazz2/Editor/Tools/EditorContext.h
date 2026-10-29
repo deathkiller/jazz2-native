@@ -13,6 +13,7 @@
 namespace Jazz2
 {
 	enum class EventType : std::uint16_t;
+	enum class WeaponType : std::uint8_t;
 }
 
 namespace Jazz2::Formats
@@ -178,6 +179,8 @@ namespace Jazz2::Editor
 		virtual bool ComputeReachability(SmallVectorImpl<std::int32_t>& distances) = 0;
 		/** @brief Loads the level again from the document, so the events in the game are as they are now, see @ref ComputeReachability() */
 		virtual void ReloadRuntime() = 0;
+		/** @brief Plays the level from the middle of the view with a weapon in hand and full of ammo, to try it */
+		virtual void PlayTestWeapon(WeaponType weapon, bool poweredUp) = 0;
 	};
 }
 

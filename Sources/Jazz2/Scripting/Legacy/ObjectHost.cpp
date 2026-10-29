@@ -2598,6 +2598,24 @@ namespace Jazz2::Scripting
 		return (firstAnim != 0 ? firstAnim + presetAnim->Animation : 0);
 	}
 
+	void LevelScriptLoader::OnWeaponSprite(std::uint32_t slot, bool powered, std::uint32_t firstFrame, std::uint32_t frameCount)
+	{
+		if (slot >= 1 && slot <= 9) {
+			_weaponSprites[slot - 1][powered ? 1 : 0][0] = firstFrame;
+			_weaponSprites[slot - 1][powered ? 1 : 0][1] = frameCount;
+		}
+	}
+
+	bool LevelScriptLoader::GetWeaponSprite(std::uint32_t slot, bool powered, std::uint32_t& firstFrame, std::uint32_t& frameCount) const
+	{
+		if (slot < 1 || slot > 9) {
+			return false;
+		}
+		firstFrame = _weaponSprites[slot - 1][powered ? 1 : 0][0];
+		frameCount = _weaponSprites[slot - 1][powered ? 1 : 0][1];
+		return (firstFrame != 0 && frameCount > 0);
+	}
+
 	Legacy::jjOBJ* LevelScriptLoader::GetObjectPreset(std::uint8_t eventId)
 	{
 		Legacy::jjOBJ*& preset = _objectPresets[eventId];

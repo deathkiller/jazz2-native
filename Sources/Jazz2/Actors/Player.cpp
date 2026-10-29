@@ -1,4 +1,4 @@
-#include "Player.h"
+﻿#include "Player.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../Events/EventMap.h"
@@ -16,6 +16,7 @@
 
 #include "Weapons/BlasterShot.h"
 #include "Weapons/BouncerShot.h"
+#include "Weapons/CustomShot.h"
 #include "Weapons/ElectroShot.h"
 #include "Weapons/FreezerShot.h"
 #include "Weapons/PepperShot.h"
@@ -303,8 +304,7 @@ namespace Jazz2::Actors
 		std::memset(_inventory.WeaponUpgrades, 0, sizeof(_inventory.WeaponUpgrades));
 		std::memset(_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
-		_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-		_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		ApplyLevelWeaponRules();
 
 		if (_playerType == PlayerType::Spectate) {
 			// Spectate mode - no collision, no gravity, invisible
@@ -1477,7 +1477,9 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		StringView identifier = (_weaponSoundType == WeaponType::Thunderbolt ? "WeaponThunderbolt"_s : "WeaponToaster"_s);
+		const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(_weaponSoundType);
+		StringView identifier = (definition.Kind == WeaponKind::Custom && !definition.Fire.Sound.empty() ? StringView(definition.Fire.Sound)
+			: (_weaponSoundType == WeaponType::Thunderbolt ? "WeaponThunderbolt"_s : "WeaponToaster"_s));
 		_weaponSoundType = WeaponType::Unknown;
 
 #if defined(WITH_AUDIO)
@@ -3572,7 +3574,8 @@ namespace Jazz2::Actors
 		} else if (_wasFirePressed) {
 			_wasFirePressed = false;
 
-			if (!_levelHandler->IsWeaponFireCapped(_currentWeapon)) {
+			// TNT, capped by default, is placed by every press as the weapon of the game places it
+			if (_currentWeapon == WeaponType::TNT || _levelHandler->GetWeaponDefinition(_currentWeapon).Options.Style != WeaponStyle::Capped) {
 				_weaponCooldown = 0.0f;
 			}
 		}
@@ -6703,7 +6706,7 @@ namespace Jazz2::Actors
 			case WeaponType::Electro: FireBirdShotPair<Weapons::ElectroShot, WeaponType::Electro>(spread); break;
 			default: {
 				FireBirdShotPair<Weapons::BlasterShot, WeaponType::Blaster>(spread);
-				if (!_levelHandler->IsWeaponSoundMuted(WeaponType::Blaster)) {
+				if (_levelHandler->GetWeaponDefinition(WeaponType::Blaster).Options.DefaultSample) {
 					PlayPlayerSfx("WeaponBlaster"_s);
 				}
 				ammoDecrease = 0;
@@ -6900,6 +6903,10 @@ namespace Jazz2::Actors
 		}
 
 		std::uint16_t ammoDecrease = 256;
+		const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(weaponType);
+		if (!definition.Options.Allowed) {
+			return false;
+		}
 
 		// The level may fire the shots itself (a script that controls the bullets), the blaster only without a shield
 		if (!(weaponType == WeaponType::Blaster && _activeShield != ShieldType::None) && _levelHandler->HandlePlayerFire(this, weaponType)) {
@@ -6909,9 +6916,30 @@ namespace Jazz2::Actors
 			if (weaponType == WeaponType::Blaster) {
 				ammoDecrease = 0;
 			}
+		} else if (_inWater && definition.Options.ReplacedByBubbles) {
+			Vector3i initialPos;
+			Vector2f gunspotPos;
+			float angle;
+			GetFirePointAndAngle(initialPos, gunspotPos, angle);
+			std::uint8_t shotParams[3] = { 0, std::uint8_t(weaponType), Weapons::CustomShot::IsBubble };
+			std::shared_ptr<Weapons::CustomShot> shot = std::make_shared<Weapons::CustomShot>();
+			shot->OnActivated(ActorActivationDetails(_levelHandler, initialPos, shotParams));
+			shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
+			_levelHandler->AddActor(shot);
+			_weaponCooldown = 30.0f;
+			if (weaponType == WeaponType::Blaster) {
+				ammoDecrease = 0;
+			} else if (definition.Kind == WeaponKind::Custom) {
+				ammoDecrease = definition.Fire.AmmoPerShot;
+			}
+		} else if (definition.Kind == WeaponKind::Custom && !(weaponType == WeaponType::Blaster && _activeShield != ShieldType::None &&
+			definition.Options.ReplacedByShield)) {
+			if (!FireCustomWeapon(weaponType, definition, ammoDecrease)) {
+				return false;
+			}
 		} else switch (weaponType) {
 			case WeaponType::Blaster:
-				switch (_activeShield) {
+				switch (definition.Options.ReplacedByShield ? _activeShield : ShieldType::None) {
 					case ShieldType::Fire: {
 						if (_inWater) {
 							return false;
@@ -6929,7 +6957,7 @@ namespace Jazz2::Actors
 					}
 					default: {
 						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.76f, true);
-						if (!_levelHandler->IsWeaponSoundMuted(WeaponType::Blaster)) {
+						if (_levelHandler->GetWeaponDefinition(WeaponType::Blaster).Options.DefaultSample) {
 							PlayPlayerSfx("WeaponBlaster"_s);
 						}
 						break;
@@ -6991,6 +7019,64 @@ namespace Jazz2::Actors
 		}
 
 		return (weaponType != WeaponType::TNT);
+	}
+
+	bool Player::FireCustomWeapon(WeaponType weaponType, const WeaponDefinition& definition, std::uint16_t& ammoDecrease)
+	{
+		const WeaponFireOptions& fire = definition.Fire;
+		if (!fire.AllowedInWater && _inWater) {
+			return false;
+		}
+		if (definition.Options.Style == WeaponStyle::Missile && !_levelHandler->PlayerActionHit(this, PlayerAction::Fire)) {
+			return false;
+		}
+
+		Vector3i initialPos;
+		Vector2f gunspotPos;
+		float angle;
+		GetFirePointAndAngle(initialPos, gunspotPos, angle);
+
+		bool playSound = (definition.Options.DefaultSample && !fire.Sound.empty());
+		bool playerHasSound = (playSound && _metadata->Sounds.find(String::nullTerminatedView(fire.Sound)) != _metadata->Sounds.end());
+
+		std::int32_t count = std::max<std::int32_t>(fire.ShotsPerFire, 1);
+		for (std::int32_t i = 0; i < count; i++) {
+			float offset = (count > 1 ? fire.SpreadAngle * (float(i) / float(count - 1) - 0.5f) : 0.0f);
+			if (fire.RandomSpread > 0.0f) {
+				offset += Random().NextFloat(-fire.RandomSpread, fire.RandomSpread);
+			}
+			// Without the player's own sound, the first shot plays it from its metadata
+			std::uint8_t shotParams[3] = { _inventory.WeaponUpgrades[(std::int32_t)weaponType], std::uint8_t(weaponType),
+				std::uint8_t(i == 0 && playSound && !playerHasSound && !fire.LoopSound ? 1 : 0) };
+			std::shared_ptr<Weapons::CustomShot> shot = std::make_shared<Weapons::CustomShot>();
+			shot->OnActivated(ActorActivationDetails(_levelHandler, initialPos, shotParams));
+			shot->OnFire(shared_from_this(), gunspotPos, _speed, angle + offset, IsFacingLeft());
+			_levelHandler->AddActor(shot);
+		}
+
+		if (playerHasSound) {
+			if (fire.LoopSound) {
+				StartWeaponSfx(weaponType, fire.Sound, 0.6f, 1.0f);
+			} else {
+				PlayPlayerSfx(fire.Sound);
+			}
+		}
+
+		std::int32_t fastFire = (_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+		_weaponCooldown = std::max(fire.Cooldown - fastFire * fire.FastFireStep, 1.0f);
+		if (definition.Options.Style == WeaponStyle::Popcorn) {
+			_weaponCooldown = std::max(_weaponCooldown, fire.Cooldown * 0.5f);
+		}
+
+		if (fire.Recoil != 0.0f) {
+			AddExternalForce(IsFacingLeft() ? fire.Recoil : -fire.Recoil, 0.0f);
+		}
+		if (fire.Flare) {
+			EmitWeaponFlare();
+		}
+
+		ammoDecrease = fire.AmmoPerShot;
+		return true;
 	}
 
 	void Player::EmitWeaponFlare()
@@ -7336,8 +7422,7 @@ namespace Jazz2::Actors
 		std::memcpy(_inventory.WeaponUpgrades, carryOver.WeaponUpgrades, sizeof(_inventory.WeaponUpgrades));
 		std::memcpy(_inventoryCheckpoint.WeaponUpgrades, carryOver.WeaponUpgrades, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
-		_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-		_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		ApplyLevelWeaponRules();
 
 		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
 		if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
@@ -7355,7 +7440,48 @@ namespace Jazz2::Actors
 		// Preload all weapons
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(_inventory.WeaponAmmo)); i++) {
 			if (_inventory.WeaponAmmo[i] != 0) {
-				PreloadMetadataAsync(String("Weapon/"_s + WeaponNames[i]));
+				const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(WeaponType(i));
+				String path = (definition.Kind == WeaponKind::Custom ? _levelHandler->GetWeapons().GetSpriteMetadataPath(definition.Shot.Sprite) : String());
+				PreloadMetadataAsync(path.empty() ? String("Weapon/"_s + WeaponNames[i]) : path);
+			}
+		}
+	}
+
+	std::uint16_t Player::GetAmmoLimit(const WeaponOptions& options)
+	{
+		std::int32_t limit = options.GetMaximumAmmo() * std::max<std::int32_t>(options.Multiplier, 1) * 256;
+		return std::uint16_t(std::min<std::int32_t>(limit, UINT16_MAX - 1));
+	}
+
+	void Player::ApplyLevelWeaponRules()
+	{
+		for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
+			const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(WeaponType(i));
+			std::uint16_t limit = GetAmmoLimit(definition.Options);
+			std::int32_t startAmmo = definition.StartAmmo * std::max<std::int32_t>(definition.Options.Multiplier, 1) * 256;
+			for (InventoryState* inventory : { &_inventory, &_inventoryCheckpoint }) {
+				std::uint16_t& ammo = inventory->WeaponAmmo[i];
+				if (!definition.Options.AllowedPowerup || !definition.Options.Allowed) {
+					inventory->WeaponUpgrades[i] &= ~0x01;
+				}
+				if (!definition.Options.Allowed) {
+					ammo = 0;
+				} else if (definition.Options.Infinite) {
+					ammo = UINT16_MAX;
+				} else if (ammo == UINT16_MAX || definition.Options.Replenishes) {
+					ammo = limit;
+				} else {
+					ammo = std::uint16_t(std::clamp<std::int32_t>(std::max<std::int32_t>(ammo, startAmmo), 0, limit));
+				}
+			}
+		}
+
+		if (_inventory.WeaponAmmo[(std::int32_t)_currentWeapon] == 0) {
+			for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
+				if (_inventory.WeaponAmmo[i] != 0) {
+					_currentWeapon = WeaponType(i);
+					break;
+				}
 			}
 		}
 	}
@@ -8448,21 +8574,28 @@ namespace Jazz2::Actors
 
 	bool Player::AddAmmo(WeaponType weaponType, std::int16_t count)
 	{
-		constexpr std::int16_t Multiplier = 256;
-		constexpr std::int16_t AmmoLimit = 99 * Multiplier;
-
-		if (weaponType >= WeaponType::Count || _inventory.WeaponAmmo[(std::int32_t)weaponType] < 0 || _inventory.WeaponAmmo[(std::int32_t)weaponType] >= AmmoLimit) {
+		if (weaponType >= WeaponType::Count) {
+			return false;
+		}
+		const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(weaponType);
+		std::uint16_t& ammo = _inventory.WeaponAmmo[(std::int32_t)weaponType];
+		std::uint16_t limit = GetAmmoLimit(definition.Options);
+		if (!definition.Options.Allowed || ammo == UINT16_MAX || ammo >= limit) {
 			return false;
 		}
 
-		bool switchTo = (_inventory.WeaponAmmo[(std::int32_t)weaponType] == 0);
+		bool switchTo = (ammo == 0);
 
-		_inventory.WeaponAmmo[(std::int32_t)weaponType] = (std::int16_t)std::min((std::int32_t)_inventory.WeaponAmmo[(std::int32_t)weaponType] + count * Multiplier, (int32_t)AmmoLimit);
+		std::int32_t added = count * std::max<std::int32_t>(definition.Options.Multiplier, 1) * 256;
+		ammo = std::uint16_t(std::clamp<std::int32_t>(std::int32_t(ammo) + added, 0, limit));
 
 		if (switchTo) {
 			SetCurrentWeapon(weaponType, SetCurrentWeaponReason::AddAmmo);
 
-			switch (_currentWeapon) {
+			String customPath = (definition.Kind == WeaponKind::Custom ? _levelHandler->GetWeapons().GetSpriteMetadataPath(definition.Shot.Sprite) : String());
+			if (!customPath.empty()) {
+				PreloadMetadataAsync(customPath);
+			} else switch (_currentWeapon) {
 				case WeaponType::Blaster: PreloadMetadataAsync("Weapon/Blaster"_s); break;
 				case WeaponType::Bouncer: PreloadMetadataAsync("Weapon/Bouncer"_s); break;
 				case WeaponType::Freezer: PreloadMetadataAsync("Weapon/Freezer"_s); break;
@@ -8482,6 +8615,17 @@ namespace Jazz2::Actors
 
 	void Player::AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade)
 	{
+		if (weaponType >= WeaponType::Count) {
+			return;
+		}
+		const WeaponOptions& options = _levelHandler->GetWeaponDefinition(weaponType).Options;
+		if (!options.Allowed || !options.AllowedPowerup) {
+			upgrade &= ~0x01;
+			if (upgrade == 0) {
+				return;
+			}
+		}
+
 		bool shouldSwitchToWeapon = (_inventory.WeaponUpgrades[(std::int32_t)weaponType] == 0);
 
 		_inventory.WeaponUpgrades[(std::int32_t)weaponType] |= upgrade;

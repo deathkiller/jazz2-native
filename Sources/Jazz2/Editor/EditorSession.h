@@ -124,6 +124,7 @@ namespace Jazz2::Editor
 
 		/** @brief Starts playing the level */
 		void StartPlayTest(PlayStartMode mode) override;
+		void PlayTestWeapon(WeaponType weapon, bool poweredUp) override;
 		/** @brief Stops playing the level and returns to editing, @p keep keeps the play-test to resume later */
 		void StopPlayTest(bool keep) override;
 		/** @brief Returns `true` while the level is played, or is about to be */
@@ -358,6 +359,9 @@ namespace Jazz2::Editor
 		// How the level is played in this session only, as the game is set up at first
 		bool _playReforged;
 		bool _playLedgeClimb;
+		// The weapon the next play-test starts with, see PlayTestWeapon()
+		WeaponType _playWeapon = WeaponType::Unknown;
+		bool _playWeaponPowered = false;
 		// Changes not shown yet, during a transaction or while the level is played, see OnDocumentChanged()
 		DocumentChanges _pendingChanges;
 		// See GetAccentColor()
@@ -392,6 +396,9 @@ namespace Jazz2::Editor
 		// The sprites the script of the level gives the objects, taken again once it's marked, see UpdateScriptGraphics()
 		ScriptGraphics _scriptGraphics;
 		bool _scriptGraphicsDirty = true;
+		// The weapons of the level and the script with their lines that the sprites were taken with last
+		SmallVector<std::uint8_t, 0> _scriptGraphicsWeapons;
+		String _scriptGraphicsScript;
 #endif
 		std::int32_t _maskMode;
 		// The masks are shown only while the key of peeking at them is held, see ActionIds::ViewPeekMasks

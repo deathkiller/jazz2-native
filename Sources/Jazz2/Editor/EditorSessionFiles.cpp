@@ -77,6 +77,9 @@ namespace Jazz2::Editor
 		_playTest->MarkPlayTestOutdated();
 #if defined(WITH_ANGELSCRIPT)
 		_scriptGraphicsDirty = true;
+		// The lines of the weapons are put into the new text
+		_scriptGraphicsWeapons.clear();
+		_scriptGraphicsScript = {};
 #endif
 	}
 
@@ -201,6 +204,8 @@ namespace Jazz2::Editor
 		RememberAppliedOverrides();
 #if defined(WITH_ANGELSCRIPT)
 		_scriptGraphicsDirty = true;
+		_scriptGraphicsWeapons.clear();
+		_scriptGraphicsScript = {};
 #endif
 		// A recovered level is seen as it was
 		ApplyViewState();

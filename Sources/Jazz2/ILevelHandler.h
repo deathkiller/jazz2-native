@@ -4,7 +4,7 @@
 #include "PlayerAction.h"
 #include "WarpFlags.h"
 #include "WeatherType.h"
-#include "WeaponType.h"
+#include "WeaponDefinition.h"
 #include "Actors/ActorBase.h"
 #include "Actors/Enemies/Bosses/BossBase.h"
 
@@ -229,10 +229,10 @@ namespace Jazz2
 		virtual void HandlePlayerPushed(Actors::Player* player) {}
 		/** @brief Called when a player fires a weapon, returns `true` if its shots were fired by something else (a level script) */
 		virtual bool HandlePlayerFire(Actors::Player* player, WeaponType weaponType) { return false; }
-		/** @brief Returns `true` if tapping fire doesn't fire a weapon faster than holding it (a level script may cap it) */
-		virtual bool IsWeaponFireCapped(WeaponType weaponType) { return false; }
-		/** @brief Returns `true` if a weapon fires without its sound (a level script plays its own) */
-		virtual bool IsWeaponSoundMuted(WeaponType weaponType) { return false; }
+		/** @brief Returns what the level makes of a weapon (see @ref Formats::WeaponsChunk) */
+		virtual const WeaponDefinition& GetWeaponDefinition(WeaponType weaponType) const = 0;
+		/** @brief Returns the weapons of the level with the images they use */
+		virtual const WeaponsDescription& GetWeapons() const = 0;
 		/** @brief Called when a player collects or losts coins */
 		virtual void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;
 		/** @brief Called when a player collects or losts gems */

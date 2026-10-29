@@ -4,7 +4,7 @@
 
 #include "Canvas.h"
 #include "Objects.h"
-#include "../../WeaponType.h"
+#include "../../WeaponDefinition.h"
 
 namespace Jazz2::Scripting
 {
@@ -506,48 +506,9 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Settings for a weapon type
 		 *
-		 * Holds the tunable parameters of one of the game's weapon slots: ammo limits and multipliers, firing style and
-		 * spread, what the weapon is replaced by (shield, bubbles) and where its ammo comes from (crates, birds), and
-		 * whether it and its powered-up form are allowed. Indexed by weapon type and edited from script.
+		 * The options of a weapon of the level, so a script changes those the game itself plays by.
 		 */
-		class jjWEAPON
-		{
-		public:
-			/** @brief Whether the weapon has infinite ammo */
-			bool infinite;
-			/** @brief Whether the weapon's ammo replenishes over time */
-			bool replenishes;
-			/** @brief Whether the weapon is replaced by a shield pickup */
-			bool replacedByShield;
-			/** @brief Whether the weapon is replaced by bubbles underwater */
-			bool replacedByBubbles;
-			/** @brief Whether ammo for the weapon comes from gun crates */
-			bool comesFromGunCrates;
-			/** @brief Whether the weapon aims gradually */
-			bool gradualAim;
-			/** @brief Ammo multiplier applied to pickups */
-			int multiplier;
-			/** @brief Maximum ammo the player can carry */
-			int maximum;
-			/** @brief Gems lost when firing the weapon */
-			int gemsLost;
-			/** @brief Gems lost when firing the powered-up weapon */
-			int gemsLostPowerup;
-			/** @brief Firing style of the weapon */
-			std::int8_t style;
-			/** @brief Spread pattern of the weapon's bullets */
-			int spread;
-			/** @brief Whether the weapon uses its default firing sound */
-			bool defaultSample;
-			/** @brief Whether the weapon is allowed */
-			bool allowed;
-			/** @brief Whether the powered-up weapon is allowed */
-			bool allowedPowerup;
-			/** @brief Whether ammo for the weapon comes from birds */
-			bool comesFromBirds;
-			/** @brief Whether ammo for the powered-up weapon comes from birds */
-			bool comesFromBirdsPowerup;
-		};
+		using jjWEAPON = WeaponOptions;
 
 		/** @brief Movement and ability settings for a playable character */
 		class jjCHARACTER

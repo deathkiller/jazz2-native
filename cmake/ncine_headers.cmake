@@ -325,6 +325,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelFile.h
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelPreview.h
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelTextsChunk.h
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/WeaponsChunk.h
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/TileSetFile.h
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/VarUint.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.h
@@ -339,6 +340,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/ShieldType.h
 	${NCINE_SOURCE_DIR}/Jazz2/SuspendType.h
 	${NCINE_SOURCE_DIR}/Jazz2/WarpFlags.h
+	${NCINE_SOURCE_DIR}/Jazz2/WeaponDefinition.h
 	${NCINE_SOURCE_DIR}/Jazz2/WeaponType.h
 	${NCINE_SOURCE_DIR}/Jazz2/WeatherType.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/ActorBase.h
@@ -438,6 +440,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.h
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/CustomShot.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ElectroShot.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/FreezerShot.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/PepperShot.h

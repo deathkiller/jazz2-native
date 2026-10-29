@@ -939,6 +939,9 @@
     <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h">
       <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\CustomShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h">
       <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
     </ClInclude>
@@ -1438,6 +1441,9 @@
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\SfxFlags.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\WeaponDefinition.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\WeaponType.h">
@@ -2346,6 +2352,15 @@
     <ClInclude Include="Jazz2\Editor\Shell\ToolOptionsBar.h">
       <Filter>Header Files\Jazz2\Editor\Shell</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\WeaponsDialog.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\WeaponScripts.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\WeaponPreview.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Editor\Tools\ShapeTool.h">
       <Filter>Header Files\Jazz2\Editor\Tools</Filter>
     </ClInclude>
@@ -2362,6 +2377,9 @@
       <Filter>Header Files\Jazz2\Formats</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Formats\LevelTextsChunk.h">
+      <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Formats\WeaponsChunk.h">
       <Filter>Header Files\Jazz2\Formats</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Formats\VarUint.h">
@@ -3068,6 +3086,9 @@
     <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp">
       <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
     </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\CustomShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp">
       <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
     </ClCompile>
@@ -3264,6 +3285,9 @@
       <Filter>Source Files\Jazz2\Actors</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\PreferencesCache.cpp">
+      <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\WeaponDefinition.cpp">
       <Filter>Source Files\Jazz2</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp">
@@ -3938,6 +3962,15 @@
     <ClCompile Include="Jazz2\Editor\Shell\ToolOptionsBar.cpp">
       <Filter>Source Files\Jazz2\Editor\Shell</Filter>
     </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\WeaponsDialog.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\WeaponScripts.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\WeaponPreview.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
     <ClCompile Include="Jazz2\Editor\Tools\ShapeTool.cpp">
       <Filter>Source Files\Jazz2\Editor\Tools</Filter>
     </ClCompile>
@@ -3954,6 +3987,9 @@
       <Filter>Source Files\Jazz2\Formats</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Formats\LevelTextsChunk.cpp">
+      <Filter>Source Files\Jazz2\Formats</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Formats\WeaponsChunk.cpp">
       <Filter>Source Files\Jazz2\Formats</Filter>
     </ClCompile>
     <ClCompile Include="Dependencies\jsoncpp\reader.cpp">

@@ -63,7 +63,7 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Menu item in the File menu, packs the level with the files it needs into one archive to share
 		a.Add(ActionIds::FileExportPackage, _x("editor", "Export Package"), EditorIcon::Export, [this]() { ShowExportPackageDialog(*this); });
 		// TRANSLATORS: Menu item in the File menu, opens the list of copies of levels the editor saved by itself
-		a.Add(ActionIds::FileRecovery, _x("editor", "Recovery Copies"), EditorIcon::None, [this]() { ShowRecoveryDialog(*this); });
+		a.Add(ActionIds::FileRecovery, _x("editor", "Recovery Copies"), EditorIcon::Recovery, [this]() { ShowRecoveryDialog(*this); });
 		a.Add(ActionIds::FileExit, _("Exit Editor"), EditorIcon::CloseSmall, [this]() { _files->ExitEditor(); });
 	}
 
@@ -111,7 +111,7 @@ namespace Jazz2::Editor
 			};
 			for (const GrabChoice& grab : grabs) {
 				BlockGrab::Mode mode = grab.Mode;
-				auto& action = a.Add(grab.Id, grab.Label, mode == BlockGrab::Mode::Replace ? EditorIcon::Select : EditorIcon::None, [this, mode]() { GrabBlock(mode); });
+				auto& action = a.Add(grab.Id, grab.Label, mode == BlockGrab::Mode::Replace ? EditorIcon::GrabBlock : EditorIcon::None, [this, mode]() { GrabBlock(mode); });
 				action.Key = { Keys::B, grab.Modifiers };
 				action.IgnoresRepeat = true;
 			}
@@ -146,7 +146,7 @@ namespace Jazz2::Editor
 	void EditorSession::CreateHelpActions()
 	{
 		auto& a = _actions;
-		a.Add(ActionIds::HelpCommands, _x("editor", "Command Palette"), EditorIcon::None, [this]() { ShowCommandPalette(*this); }).Key = { Keys::K, KeyMod::Ctrl };
+		a.Add(ActionIds::HelpCommands, _x("editor", "Command Palette"), EditorIcon::CommandPalette, [this]() { ShowCommandPalette(*this); }).Key = { Keys::K, KeyMod::Ctrl };
 		a.Add(ActionIds::HelpShortcuts, _x("editor", "Keyboard Shortcuts"), EditorIcon::None, [this]() { ShowShortcutsDialog(*this); }).Key = { Keys::F1, 0 };
 	}
 
@@ -289,8 +289,15 @@ namespace Jazz2::Editor
 			events.Key = { Keys::E, KeyMod::Ctrl | KeyMod::Shift };
 			events.IsChecked = [this]() { return _showEvents; };
 
+			// TRANSLATORS: Toggle in the View menu, the sprites of events are drawn over all layers instead of among them as in the game
+			auto& eventsOnTop = a.Add(ActionIds::ViewEventsOnTop, _x("editor", "Show Events Over All Layers"), EditorIcon::EventsOnTop, [this]() {
+				_settings.EventsOnTop = !_settings.EventsOnTop;
+				_settings.Save();
+			});
+			eventsOnTop.IsChecked = [this]() { return _settings.EventsOnTop; };
+
 			// The layer being edited always stays still, this keeps all of them still
-			auto& pauseLayers = a.Add(ActionIds::ViewPauseLayers, _x("editor", "Pause Layer Movement"), EditorIcon::Pause, [this]() {
+			auto& pauseLayers = a.Add(ActionIds::ViewPauseLayers, _x("editor", "Pause Layer Movement"), EditorIcon::PauseLayers, [this]() {
 				_settings.PauseLayerMovement = !_settings.PauseLayerMovement;
 				_settings.Save();
 			});
@@ -444,6 +451,8 @@ namespace Jazz2::Editor
 		a.Add(ActionIds::LevelProperties, _x("editor", "Level Properties"), EditorIcon::Properties, [this]() { ShowLevelPropertiesDialog(*this); });
 		// TRANSLATORS: Menu item in the Level menu, opens the list of the texts the level shows to the player
 		a.Add(ActionIds::LevelTexts, _x("editor", "Level Texts"), EditorIcon::None, [this]() { ShowLevelTextsDialog(*this); }).Key = { Keys::T, KeyMod::Ctrl };
+		// TRANSLATORS: Menu item in the Level menu, opens the weapons of the level, their ammo and custom weapons
+		a.Add(ActionIds::LevelWeapons, _x("editor", "Weapons"), EditorIcon::None, [this]() { ShowWeaponsDialog(*this); });
 		// The episode is the directory the level file is in, a level that wasn't saved yet is offered to be saved first
 		// TRANSLATORS: Menu item in the Level menu, opens the properties of the episode the level is in
 		a.Add(ActionIds::LevelEpisode, _x("editor", "Episode"), EditorIcon::None, [this]() { ShowEpisodeDialog(*this); });

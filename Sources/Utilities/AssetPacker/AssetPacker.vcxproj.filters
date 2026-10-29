@@ -168,6 +168,12 @@
     <ClCompile Include="..\..\Jazz2\Formats\LevelTextsChunk.cpp">
       <Filter>Source Files\Jazz2\Formats</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Formats\WeaponsChunk.cpp">
+      <Filter>Source Files\Jazz2\Formats</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\WeaponDefinition.cpp">
+      <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Jazz2\Formats\TileSetFile.cpp">
       <Filter>Source Files\Jazz2\Formats</Filter>
     </ClCompile>
@@ -319,6 +325,12 @@
     </ClInclude>
     <ClInclude Include="..\..\Jazz2\Formats\LevelTextsChunk.h">
       <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Formats\WeaponsChunk.h">
+      <Filter>Header Files\Jazz2\Formats</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\WeaponDefinition.h">
+      <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Jazz2\Formats\TileSetFile.h">
       <Filter>Header Files\Jazz2\Formats</Filter>

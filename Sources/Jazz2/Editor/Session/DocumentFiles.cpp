@@ -16,6 +16,7 @@
 #include "../Imaging/PngCodec.h"
 #include "../Imaging/TileImages.h"
 #include "../Shell/TextPrompt.h"
+#include "../Shell/WeaponScripts.h"
 #include "../Tools/EditorContext.h"
 #include "../UI/EditorIcons.h"
 #include "../UI/UiDialogs.h"
@@ -27,6 +28,7 @@
 #include "../../PreferencesCache.h"
 #include "../../Formats/LevelPreview.h"
 #include "../../Formats/TileSetFile.h"
+#include "../../Formats/WeaponsChunk.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
@@ -385,6 +387,69 @@ namespace Jazz2::Editor
 			_recoveryKept = false;
 		}
 		SetFile(path, levelName);
+		RememberSavedWeapons();
+	}
+
+	void DocumentFiles::RememberSavedWeapons()
+	{
+		const Formats::ChunkRecord* chunk = _context.GetDocument().FindChunk(Formats::WeaponsChunk::Tag);
+		if (chunk != nullptr) {
+			_savedWeapons.assign(chunk->Data.begin(), chunk->Data.end());
+		} else {
+			_savedWeapons.clear();
+		}
+	}
+
+	bool DocumentFiles::GetUpdatedScript(String& path, String& text, String& updated) const
+	{
+		const Formats::ChunkRecord* chunk = _context.GetDocument().FindChunk(Formats::WeaponsChunk::Tag);
+		ArrayView<const std::uint8_t> data = (chunk != nullptr ? ArrayView<const std::uint8_t>(chunk->Data) : ArrayView<const std::uint8_t>());
+		bool changed = (data.size() != _savedWeapons.size() || (!data.empty() && std::memcmp(data.data(), _savedWeapons.data(), data.size()) != 0));
+		path = GetScriptPath();
+		if (!changed || path.empty()) {
+			return false;
+		}
+
+		WeaponsDescription weapons;
+		if (!data.empty() && Formats::WeaponsChunk::Read(data, weapons) != Formats::WeaponsChunk::ReadResult::Success) {
+			return false;
+		}
+		text = {};
+		String existing = fs::FindPathCaseInsensitive(path);
+		if (!existing.empty() && fs::FileExists(existing)) {
+			path = existing;
+			auto s = fs::Open(path, FileAccess::Read);
+			std::int64_t size = (s->IsValid() ? s->GetSize() : -1);
+			if (size < 0 || size > 16 * 1024 * 1024) {
+				return false;
+			}
+			text = String{NoInit, std::size_t(size)};
+			if (s->Read(text.data(), size) != size) {
+				return false;
+			}
+		}
+		updated = UpdateScriptWeaponLines(text, weapons);
+		return (updated != text);
+	}
+
+	String DocumentFiles::GetUnsavedScript() const
+	{
+		String path, text, updated;
+		return (GetUpdatedScript(path, text, updated) ? updated : String());
+	}
+
+	void DocumentFiles::UpdateScriptWeapons()
+	{
+		String path, text, updated;
+		if (!GetUpdatedScript(path, text, updated)) {
+			return;
+		}
+		if (AtomicFile::Write(path, updated.data(), std::int64_t(updated.size()))) {
+			_watchedScriptTime = GetModificationTime(path);
+			LOGI("Weapons of the script written into \"{}\"", path);
+		} else {
+			_context.ShowMessage(_x("editor", "The weapons couldn't be written into the script of the level"));
+		}
 	}
 
 	bool DocumentFiles::CanSaveInPlace() const
@@ -702,6 +767,8 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (SaveTo(_filePath, false)) {
+			UpdateScriptWeapons();
+			RememberSavedWeapons();
 			// TRANSLATORS: Status message after the level was saved
 			_context.ShowMessage(_x("editor", "Saved"));
 		} else {
@@ -790,6 +857,8 @@ namespace Jazz2::Editor
 			}
 		}
 		SetFile(path, IEditorContext::MakeLevelName(path));
+		UpdateScriptWeapons();
+		RememberSavedWeapons();
 		LoadEventExtensions(false);
 		UpdateWindowTitle();
 		// The script and the lock go with the file, the lock of the previous file is released

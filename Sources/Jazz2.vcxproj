@@ -464,6 +464,7 @@
     <ClInclude Include="Jazz2\Actors\Solid\SpikeBall.h" />
     <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h" />
+    <ClInclude Include="Jazz2\Actors\Weapons\CustomShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\ElectroShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\FreezerShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\PepperShot.h" />
@@ -712,6 +713,7 @@
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\TouchControlsOptionsSection.h" />
     <ClInclude Include="Jazz2\WarpFlags.h" />
+    <ClInclude Include="Jazz2\WeaponDefinition.h" />
     <ClInclude Include="Jazz2\WeaponType.h" />
     <ClInclude Include="Jazz2\WeatherType.h" />
     <ClInclude Include="nCine\AppConfiguration.h" />
@@ -925,6 +927,9 @@
     <ClInclude Include="Jazz2\Editor\Shell\TerrainCoverageView.h" />
     <ClInclude Include="Jazz2\Editor\Shell\TextPrompt.h" />
     <ClInclude Include="Jazz2\Editor\Shell\ToolOptionsBar.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\WeaponsDialog.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\WeaponScripts.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\WeaponPreview.h" />
     <ClInclude Include="Jazz2\Editor\Tools\ShapeTool.h" />
     <ClInclude Include="Jazz2\Editor\Tools\ToolActions.h" />
     <ClInclude Include="Jazz2\Editor\Tools\ToolHost.h" />
@@ -934,6 +939,7 @@
     <ClInclude Include="Jazz2\EventType.h" />
     <ClInclude Include="Jazz2\Formats\LevelPreview.h" />
     <ClInclude Include="Jazz2\Formats\LevelTextsChunk.h" />
+    <ClInclude Include="Jazz2\Formats\WeaponsChunk.h" />
     <ClInclude Include="Jazz2\Formats\VarUint.h" />
     <ClInclude Include="Jazz2\ILevelHandler.h" />
     <ClInclude Include="Jazz2\IStateHandler.h" />
@@ -1080,6 +1086,7 @@
     <ClCompile Include="Jazz2\Actors\Solid\SpikeBall.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp" />
+    <ClCompile Include="Jazz2\Actors\Weapons\CustomShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\ElectroShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\FreezerShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\PepperShot.cpp" />
@@ -1122,6 +1129,7 @@
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\WebhookClient.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
+    <ClCompile Include="Jazz2\WeaponDefinition.cpp" />
     <ClCompile Include="Jazz2\Rendering\BlurRenderPass.cpp" />
     <ClCompile Include="Jazz2\Rendering\CombineRenderer.cpp" />
     <ClCompile Include="Jazz2\Rendering\LightingRenderer.cpp" />
@@ -1458,6 +1466,9 @@
     <ClCompile Include="Jazz2\Editor\Shell\TileSetLayoutDialog.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\TileSetsDialog.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\ToolOptionsBar.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\WeaponsDialog.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\WeaponScripts.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\WeaponPreview.cpp" />
     <ClCompile Include="Jazz2\Editor\Smart\RulesFile.cpp" />
     <ClCompile Include="Jazz2\Editor\Smart\SmartTileModel.cpp" />
     <ClCompile Include="Jazz2\Editor\Smart\TerrainRules.cpp" />
@@ -1492,6 +1503,7 @@
     <ClCompile Include="Jazz2\Editor\UI\UiWidgets.cpp" />
     <ClCompile Include="Jazz2\Formats\LevelPreview.cpp" />
     <ClCompile Include="Jazz2\Formats\LevelTextsChunk.cpp" />
+    <ClCompile Include="Jazz2\Formats\WeaponsChunk.cpp" />
     <ClCompile Include="Jazz2\LevelHandler.cpp" />
     <ClCompile Include="Jazz2\Tests\PhysicsProbe.cpp" />
     <ClCompile Include="Jazz2\Tiles\LayerTypes.cpp" />

@@ -405,9 +405,9 @@ namespace Jazz2::Editor
 		Text(text, Vector2f(x, rect.Y + rect.H * 0.5f), color, horizontal, layer);
 	}
 
-	void UiPainter::Image(const Texture& texture, const Rectf& rect, const Vector4f& texCoords, const Colorf& color, std::int32_t paletteOffset, UiLayer layer, float angle)
+	void UiPainter::Image(const Texture& texture, const Rectf& rect, const Vector4f& texCoords, const Colorf& color, std::int32_t paletteOffset, UiLayer layer, float angle, UI::BlendMode blend)
 	{
-		_canvas.DrawTexture(texture, Vector2f(rect.X, rect.Y), GetDepth(layer), Vector2f(rect.W, rect.H), texCoords, ApplyOpacity(color), UI::BlendMode::Normal, angle, paletteOffset);
+		_canvas.DrawTexture(texture, Vector2f(rect.X, rect.Y), GetDepth(layer), Vector2f(rect.W, rect.H), texCoords, ApplyOpacity(color), blend, angle, paletteOffset);
 	}
 
 	bool UiPainter::Tile(Tiles::TileMap& tileMap, std::int32_t tileId, std::uint8_t flags, const Rectf& rect, float alpha, UiLayer layer)

@@ -398,6 +398,8 @@ ordinary tiles.
     (<kbd>Ctrl</kbd>+<kbd>P</kbd>) aligns them all to one grid, which helps when editing backgrounds.
 -   A layer that moves by itself stays still while it's selected. <b>Pause Layer Movement</b>
     (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>) stops all of them.
+-   The sprites of events are drawn among the layers as in the game, layers in front of the sprite layer cover them.
+    <b>Show Events Over All Layers</b> draws them over all layers.
 -   The selected layer is framed in white, and darkened outside where it doesn't repeat. A repeating layer shows
     faint lines where it repeats, and the frame is around the copy nearest the middle of the view.
 -   <kbd>Ctrl</kbd>+<kbd>M</kbd> shows the collision masks of the selected layer. On the sprite layer, symbols show
@@ -429,6 +431,77 @@ its language, or to the language without its region (`pt` for `pt-br`).
 
 For translators, <b>Export .pot</b> writes a gettext template, <b>Export .po</b> a catalog with the translations of
 the chosen language, and <b>Import .po</b> reads one back.
+
+@subsection editor-level-weapons Weapons
+
+<b>Weapons</b> in the <b>Level</b> menu shows the ten weapons of the level, each of them is:
+
+-   <b>Weapon of the game</b>, maybe with other ammo options: the most ammo (with a multiplier of what a pickup gives),
+    ammo at the start or full at every start, infinite ammo, whether it's allowed or can be powered up, whether gun
+    crates give it and birds fire it, whether a shield fires in its place, bubbles under water, and the gems a player hit
+    by it loses in Treasure Hunt --- the options JJ2+ scripts know as `jjWEAPON`, which scripts read and change too,
+-   a <b>Custom weapon</b>, which the game fires itself, also online, without a script: how often it fires, how many shots
+    at once and how they spread, recoil and sound, and for its shot and its powered-up shot the speed, gravity, damage,
+    bounces, passing through enemies or walls, homing, freezing, a trigger (on a hit, an enemy close for a mine, or a
+    timer), a blast with its damage and push, the explosion, the light and the look (a sprite, a glowing sprite as the
+    pepper spray, a swirl of sparks as the electro blaster, or a beam as the thunderbolt, which reaches as far as the
+    shot would fly in its time), with a second sprite each shot takes at random and the sprite flipped horizontally
+    or vertically always or at random; it's made from a weapon of the game, whose rules crates and bosses keep for it,
+-   a <b>Script-driven weapon</b>, set up by the script of the level as MLLE does it, with a weapon of a script library
+    (`.asc`) next to the level or in the files of the original game, which works only where scripts of levels run.
+
+The ammo of a weapon is counted in 1/256 of a round. A weapon of the game takes a round a shot, the toaster 50/256 and
+the thunderbolt 80/256 (40/256 powered up), a custom weapon takes what its <b>Ammo a shot</b> says, down to 1/256.
+<b>Multiplier</b> of each weapon (1 for all of them in the game) multiplies what a pickup gives and the maximum, and
+divides the ammo shown, so a weapon can fire many shots for each round shown. JJ2+ scripts and MLLE know only the
+multiplier, a script counts ammo in rounds times the multiplier.
+
+A custom weapon is shown firing in a firing range below its pages, held for most of a second, with walls and a target;
+the player, the character chosen in the <b>Play</b> menu, and the target are moved by dragging them. The sound of firing is played by the button next to it. <b>Try It</b> plays the level from
+the middle of the view with the weapon in hand and full of ammo. On the <b>Animations</b> page, the shots, the icon on
+the screen and the ammo can be animations of the game or embedded images --- PNG strips with the frames side by side,
+imported into the colors of the sprites and kept in the level --- each shown playing as in the game. The ammo of a
+weapon named by the level is shown by that name in the event properties. A value the level changed is marked
+<b>(changed)</b> next to it, as are the weapons in the list, with their animated icons on the screen. A weapon the
+script of the level sets up, as MLLE does or by its own code, is marked <b>(script)</b> and shows the icon the script
+gives it on the screen, or its ammo; one set up by its own code is told on the first page and its <b>Script</b> page, as how it looks
+and fires in the game comes from the script then.
+
+The weapons a script-driven weapon is chosen from on the <b>Script</b> page are described by files in
+`Editor/Weapons/` of the content or the user content, which also says which parameters the weapon has and how they're
+edited, and which callbacks of the level script it needs to pass on to its hook (as @cpp onMain() @ce calling
+@cpp MLLE::WeaponHook.processMain() @ce, which MLLE doesn't write either). The `.ini` files of MLLE are read as they
+are, a section of each weapon with @cpp Options = Name:type:default|... @ce. Files of the editor are `.json`, a weapon,
+an array, or an object with a @cpp "Weapons" @ce array:
+
+@code{.json}
+{
+	"Weapons": [{
+		"Name": "Pathfinder",
+		"Library": "WeaponVMega4.asc",
+		"Constructor": "WeaponVMega::Pathfinder::Weapon()",
+		"Image": "pathfinder.png",
+		"Hooks": [ "onMain" ],
+		"Params": [
+			{ "Name": "Nodes (idle)", "Type": "int", "Default": 1, "Min": 0, "Max": 16, "Description": "Shown as a tooltip" },
+			{ "Name": "Mode", "Type": "uint8", "Default": 0, "Options": [ { "Name": "Slow", "Value": 0 }, { "Name": "Fast", "Value": 1 } ] }
+		]
+	}]
+}
+@endcode
+
+A parameter is @cpp bool @ce, @cpp int8 @ce, @cpp uint8 @ce, @cpp int16 @ce, @cpp uint16 @ce, @cpp int @ce,
+@cpp uint @ce, @cpp int64 @ce, @cpp uint64 @ce, @cpp float @ce, @cpp double @ce or @cpp string @ce, in the order the
+library pops them from its @cpp jjSTREAM @ce, which is how they're kept in the level. A weapon of a library no file
+describes is offered too, with its parameters guessed from the library: what the function of the weapon that gets the
+@cpp jjSTREAM@ @ce pops, by the declarations of what it pops into. A guess stops at the first value of a type it can't
+tell, the bytes after it are kept as they are.
+
+When the level is saved and its script-driven weapons changed, the lines of its script that set them up, those marked
+`///@MLLE-Generated`, are written again, and all other lines are kept. Until then, play-tests and the sprites the
+editor shows of the script run the script with those lines as they are in the editor. Script-driven weapons work only
+while scripts of levels are allowed in the options of the game. The weapons are kept in the chunk
+@cpp "WPNS" @ce (see @ref editor-formats-chunks), a level of a newer version of it is shown but not changed.
 
 @subsection editor-level-episode Episode
 
@@ -971,7 +1044,7 @@ Key | Meaning
 --- | -------
 @cpp "UiScale" @ce | Interface scale, @cpp 0 @ce by the window size
 @cpp "Layout" @ce | @cpp 0 @ce by the window size, @cpp 1 @ce desktop, @cpp 2 @ce compact
-@cpp "Expert" @ce, @cpp "ShowGrid" @ce, @cpp "PauseLayerMovement" @ce, @cpp "OverriddenAssets" @ce, @cpp "ReadableFont" @ce, @cpp "ReducedMotion" @ce | <b>Expert Mode</b>, <b>Show Grid</b>, <b>Pause Layer Movement</b>, <b>Show Overridden Assets</b>, <b>Readable Font</b>, <b>Reduce Motion</b>
+@cpp "Expert" @ce, @cpp "ShowGrid" @ce, @cpp "PauseLayerMovement" @ce, @cpp "EventsOnTop" @ce, @cpp "OverriddenAssets" @ce, @cpp "ReadableFont" @ce, @cpp "ReducedMotion" @ce | <b>Expert Mode</b>, <b>Show Grid</b>, <b>Pause Layer Movement</b>, <b>Show Events Over All Layers</b>, <b>Show Overridden Assets</b>, <b>Readable Font</b>, <b>Reduce Motion</b>
 @cpp "Theme" @ce | @cpp 0 @ce the usual theme, @cpp 1 @ce high contrast
 @cpp "ScriptEditor" @ce | The program <b>Edit Script</b> opens scripts in, empty for the one the system has. A path, or a name found in `PATH`, with optional arguments where `{file}` stands for the script, otherwise it goes last. A path with spaces followed by arguments is in quotes. Set only in this file
 @cpp "Tool" @ce, @cpp "PickerEvents" @ce | Tool chosen and whether the picker showed the events when the editor was left, any level opens with them
@@ -1017,7 +1090,8 @@ Tag | Contents
 @cpp "PRVW" @ce | Preview for the custom level list, kept on export: @cpp u16 @ce width and height, then the pixels row by row as opaque RGBA in the QOI-based image content of the game's files (@ref Compatibility::JJ2Anims::WriteImageContent()). The writer sets @ref LevelFlags::HasPreview with it
 @cpp "LPRP" @ce | What the records of the layers have no room for, kept on export (@ref Formats::LayerPropertiesChunk): @cpp varuint @ce count, then for each layer @cpp varuint @ce index in layer order, @cpp varuint @ce size and its fields, each as @cpp u8 @ce kind, @cpp varuint @ce size and the value --- 1 the name (UTF-8), 2 the number in the original game (@cpp u8 @ce 1 to 8), 3 how the sprite layer is drawn (@cpp u8 @ce renderer type and the 4 bytes of the color), 4 the parameters of a sky, tunnel, wave, cylinder or reflection its color has no room for (@cpp f32 @ce fade X and Y or the amplitudes of a wave, @cpp u8 @ce fade, @cpp u8 @ce flags --- 1 spiral, 2 window of the layer, 4 the layer, 8 half size, 16 swapped angles of a wave, 32 the perspective of JJ2+, 64 the ground only --- and @cpp f32 @ce inner speed X and Y and inner auto speed X and Y, then @cpp u8 @ce the additional palette the texture is drawn through plus 1, 0 for none, as @cpp SPRITE::MAPPING @ce of JJ2+), 5 a texture of its own (256×256 palette indices), 6 the blend (@cpp u8 @ce blend and its parameter). A field of an unknown kind is skipped. Written only for layers without the defaults
 @cpp "LTXT" @ce | Translations of the level texts, kept on export (@ref Formats::LevelTextsChunk): @cpp u8 @ce version (1), @cpp varuint @ce number of languages, then each as a @cpp varuint @ce size and a record of @cpp str8 @ce language, @cpp varuint @ce number of texts, and for each @cpp varuint @ce text number, @cpp varuint @ce length and UTF-8 text
-@cpp "SCRD" @ce | Data of a level for its script, kept on export (@ref Formats::ScriptDataChunk): sections, each as @cpp u8 @ce kind, @cpp varuint @ce size and its bytes --- 1 the texts of the level as the original game had them, 2 the custom weapons, 3 the recolored sprites. Written by the converter for a level with a script
+@cpp "SCRD" @ce | Data of a level for its script, kept on export (@ref Formats::ScriptDataChunk): sections, each as @cpp u8 @ce kind, @cpp varuint @ce size and its bytes --- 1 the texts of the level as the original game had them, 2 the recolored sprites. Written by the converter for a level with a script
+@cpp "WPNS" @ce | Weapons of the level, kept on export (@ref Formats::WeaponsChunk): @cpp u8 @ce version (1), @cpp i16 @ce argument of the hook of the weapons of the script, @cpp varuint @ce number of weapons, each as @cpp u8 @ce weapon, @cpp varuint @ce size and its properties (@cpp u8 @ce id, @cpp varuint @ce size and the value; one that isn't there is as the weapon of the game has it), then @cpp varuint @ce number of images, each as @cpp varuint @ce size, frame width, height and count, @cpp f32 @ce speed of the animation, @cpp i16 @ce hotspot and a palette index of each pixel. A newer version is left alone by the game and kept as it is by the editor
 @cpp "ela2" @ce | Layer editor state (@ref Editor::LevelDocument::LayerStateChunk): @cpp u8 @ce version (1), @cpp varuint @ce number of layers, @cpp varuint @ce bytes of each layer, then those bytes of each layer --- hidden and locked flags, and the editor opacity if any layer has one
 @cpp "ann2" @ce | Bookmarks and notes (@ref Editor::Annotation): @cpp u8 @ce version (1), @cpp varuint @ce count, then each as a @cpp varuint @ce size and a record of @cpp i32 @ce X and Y in pixels, @cpp u8 @ce bookmark number (0 = note), @cpp varuint @ce length and text. Version 2 adds @cpp u32 @ce color, the author, @cpp i64 @ce time, @cpp u8 @ce flags (1 = done) and the replies, each with its author, time and text
 @cpp "spl2" @ce | Ground lines (@ref Editor::TerrainSpline): @cpp u8 @ce version (1), @cpp varuint @ce count, then each as a @cpp varuint @ce size and a record of @cpp i32 @ce layer, @cpp u8 @ce depth, @cpp u8 @ce kind (ground, ceiling, band, shape), @cpp u8 @ce flags (1 = smooth), @cpp varuint @ce point count and @cpp f32 @ce X and Y of each in layer pixels, @cpp varuint @ce count of written tiles and for each @cpp i32 @ce X and Y, then the written and previous tile, each as @cpp u16 @ce index, @cpp u8 @ce source and @cpp u8 @ce flags

@@ -95,55 +95,32 @@ class jjHELPPAGE {
 }
 )"_s;
 
-	// MLLE::Setup() of the include of weapons of MLLE, in place of it: the weapons as the level has them (see
-	// Formats::ScriptDataChunk), those of the script with a hook they share, and then the rest of what it sets up
+	// MLLE::Setup() of the include of weapons of MLLE, in place of it: the game already plays by the options of the weapons
+	// of the level (see Formats::WeaponsChunk), the weapons of the script are set up with a hook they share, and then the
+	// rest of what it sets up. The hook tells which sprites the weapons show on the screen, so the editor shows them too.
 	static constexpr StringView MlleWeaponsSetup = R"(
 namespace MLLE {
 	se::WeaponHook@ WeaponHook;
 
-	bool Setup(array<MLLEWeaponApply@> weapons) {
-		jjSTREAM data;
-		if (_GetWeapons(data)) {
-			int16 hookArgument;
-			data.pop(hookArgument);
-			for (uint slot = 1; slot <= 9; ++slot) {
-				bool custom;
-				int maximum;
-				uint8 birds, gunCrates, gemsLost, gemsLostPowerup, flags, ammoCrate, gun8Style;
-				jjSTREAM parameters;
-				data.pop(custom);
-				data.pop(maximum);
-				data.pop(birds);
-				data.pop(gunCrates);
-				data.pop(gemsLost);
-				data.pop(gemsLostPowerup);
-				data.pop(flags);
-				data.pop(ammoCrate);
-				data.pop(gun8Style);
-				data.pop(parameters);
+	class _WeaponHook : se::DefaultWeaponHook {
+		_WeaponHook() { super(); }
+		_WeaponHook(uint8 packetID) { super(packetID); }
+		void setWeaponSprite(uint number, bool powerup, const ::jjANIMATION@ anim) override {
+			se::DefaultWeaponHook::setWeaponSprite(number, powerup, anim);
+			if (anim !is null)
+				_SetWeaponSprite(number, powerup, anim.firstFrame, anim.frameCount);
+		}
+	}
 
-				jjWEAPON@ weapon = jjWeapons[slot];
-				weapon.maximum = maximum;
-				weapon.comesFromBirds = (birds != 0);
-				weapon.comesFromBirdsPowerup = (birds == 2);
-				weapon.comesFromGunCrates = (gunCrates != 0);
-				weapon.gemsLost = gemsLost;
-				weapon.gemsLostPowerup = gemsLostPowerup;
-				weapon.infinite = ((flags & 1) != 0);
-				weapon.replenishes = ((flags & 2) != 0);
-				if (custom) {
-					if (WeaponHook is null) {
-						@WeaponHook = (hookArgument < 0 ? se::DefaultWeaponHook() : se::DefaultWeaponHook(uint8(hookArgument)));
-					}
-					if (slot <= weapons.length && weapons[slot - 1] !is null) {
-						weapons[slot - 1].Apply(slot, WeaponHook, parameters, ammoCrate);
-					}
-				} else if (gun8Style != 255) {
-					weapon.spread = (gun8Style == 0 ? SPREAD::GUN8 : (gun8Style == 1 ? SPREAD::PEPPERSPRAY : SPREAD::NORMAL));
-					if (gun8Style == 2) {
-						weapon.gradualAim = false;
-					}
+	bool Setup(array<MLLEWeaponApply@> weapons) {
+		for (uint slot = 1; slot <= weapons.length && slot <= 9; ++slot) {
+			jjSTREAM parameters;
+			if (weapons[slot - 1] !is null && _GetWeaponParams(slot, parameters)) {
+				if (WeaponHook is null) {
+					int16 hookArgument = _GetWeaponHookArgument();
+					@WeaponHook = (hookArgument < 0 ? _WeaponHook() : _WeaponHook(uint8(hookArgument)));
 				}
+				weapons[slot - 1].Apply(slot, WeaponHook, parameters, _GetWeaponAmmoCrate(slot));
 			}
 		}
 		return Setup();
@@ -229,11 +206,15 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		return raw;
 	}
 
-	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath)
+	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath, StringView scriptText)
 		: _levelHandler(levelHandler), _onLevelUpdate(nullptr), _onLevelUpdateLastFrame(-1), _onDrawAmmo(nullptr),
 			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr),
 			_enabledCallbacks(NoInit, 256)
 	{
+		if (!scriptText.empty()) {
+			_scriptText = scriptText;
+			_scriptTextPath = fs::GetAbsolutePath(scriptPath);
+		}
 		// jjDifficultyOrig, as jjDifficulty is when the level starts (scripts limit the speed of platforms by it)
 		switch (levelHandler->_difficulty) {
 			case GameDifficulty::Easy: DifficultyAtLevelStart = 0; break;
@@ -424,12 +405,21 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		}
 	}
 
+	bool LevelScriptLoader::OnReadScript(StringView absolutePath, String& content)
+	{
+		if (_scriptText.empty() || absolutePath != _scriptTextPath) {
+			return false;
+		}
+		content = _scriptText;
+		return true;
+	}
+
 	String LevelScriptLoader::OnProcessInclude(StringView includePath, StringView scriptPath)
 	{
 		// Skip MLLE files, because it's handled natively
 		if (includePath.hasPrefix("MLLE-Include-"_s) && includePath.hasSuffix(".asc"_s)) {
 			// The include of weapons (`MLLE-Include-1.5w.asc` and later) has MLLE::Setup() take the weapons of the script,
-			// set up as the level has them (see Formats::ScriptDataChunk) with the hook of SEweapon.asc it includes
+			// set up as the level has them (see Formats::WeaponsChunk) with the hook of SEweapon.asc it includes
 			if (includePath.hasSuffix("w.asc"_s) && !_mlleWeaponsAdded) {
 				_mlleWeaponsAdded = true;
 				AddScriptSection("MLLE-Weapons", MlleWeaponsSetup);
@@ -438,9 +428,13 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			return {};
 		}
 
-		// TODO: Allow multiple search paths
-		//return ConstructPath(includePath, path);
-
+		// Next to the script first, as a level with its own libraries has them, then in the files of the original game
+		if (!scriptPath.empty()) {
+			String nextToScript = fs::FindPathCaseInsensitive(fs::CombinePath(fs::GetDirectoryName(scriptPath), includePath));
+			if (!nextToScript.empty() && fs::IsReadableFile(nextToScript)) {
+				return nextToScript;
+			}
+		}
 		auto sourcePath = ContentResolver::Get().GetSourcePath();
 		return fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, includePath));
 	}

@@ -5,6 +5,7 @@
 #include "../ShieldType.h"
 #include "../SuspendType.h"
 #include "../WarpFlags.h"
+#include "../WeaponDefinition.h"
 
 namespace Death::IO
 {
@@ -239,6 +240,11 @@ namespace Jazz2::Actors
 		/** @brief Returns weapon upgrades */
 		ArrayView<const std::uint8_t> GetWeaponUpgrades() const {
 			return _inventory.WeaponUpgrades;
+		}
+		
+		/** @brief Returns the weapon the player holds */
+		WeaponType GetCurrentWeapon() const {
+			return _currentWeapon;
 		}
 
 		/** @brief Returns `true` if sugar rush is active */
@@ -2502,6 +2508,10 @@ namespace Jazz2::Actors
 		void FireWeaponRF();
 		void FireWeaponTNT();
 		bool FireWeaponThunderbolt();
+		bool FireCustomWeapon(WeaponType weaponType, const WeaponDefinition& definition, std::uint16_t& ammoDecrease);
+		// The ammo the level allows of each weapon (see WeaponOptions), for a new inventory or one carried over
+		void ApplyLevelWeaponRules();
+		static std::uint16_t GetAmmoLimit(const WeaponOptions& options);
 
 		// Returns `true` if another player is currently standing on top of this one (so we should show the lift
 		// animation). Searches the player list, which on a client only contains locally-simulated players.

@@ -77,7 +77,7 @@ namespace Jazz2::Actors::Solid
 
 				const auto playerAmmo = player->GetWeaponAmmo();
 				for (std::int32_t i = 1; i < (std::int32_t)WeaponType::Count; i++) {
-					if (playerAmmo[i] > 0) {
+					if (playerAmmo[i] > 0 && _levelHandler->GetWeaponDefinition(WeaponType(i)).Options.ComesFromGunCrates) {
 						weaponTypes.push_back((WeaponType)i);
 					}
 				}

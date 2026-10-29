@@ -54,6 +54,7 @@ list(APPEND SOURCES ${CONVERTER_SOURCES})
 # Formats only the game reads, not the converters
 list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelTextsChunk.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/WeaponsChunk.cpp
 )
 
 list(APPEND SOURCES
@@ -334,6 +335,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/LevelInitialization.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Resources.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/WeaponDefinition.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/ActorBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Player.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/PlayerCorpse.cpp
@@ -431,6 +433,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/CustomShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ElectroShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/FreezerShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/PepperShot.cpp

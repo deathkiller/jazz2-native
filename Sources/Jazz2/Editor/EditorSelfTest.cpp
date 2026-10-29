@@ -25,10 +25,13 @@
 #include "Shell/FxTileGenerator.h"
 #include "Shell/LevelCheck.h"
 #include "Shell/TileSetLayoutDialog.h"
+#include "Shell/WeaponPreview.h"
+#include "Shell/WeaponScripts.h"
 #include "Tests/ToolTests.h"
 #include "Tools/ToolActions.h"
 #include "../Formats/TileSetFile.h"
 #include "../Formats/VarUint.h"
+#include "../Formats/WeaponsChunk.h"
 #include "../ContentResolver.h"
 #include "../Rendering/PolylineRenderer.h"
 #include "../Tiles/LayerTypes.h"
@@ -799,6 +802,25 @@ namespace Jazz2::Editor
 					std::abs(EventPreviews::GetLightPulse(light, 0.0f) - light.Pulse) < 0.01f, "light pulse");
 				event.Params[8] = 0;
 				expect(EventPreviews::GetLight(event, light) && EventPreviews::GetLightPulse(light, 1.0f) == 0.0f, "light without pulse");
+			}
+
+			// Ambient light of the nearest event, half-way between two of different intensities
+			{
+				LevelDocument lit;
+				lit.CreateNew("test"_s, 100, Vector2i(12, 4));
+				event = EventCatalog::MakeDefault(EventType::LightAmbient);
+				event.Params[0] = 0;
+				lit.SetEvent(1, 1, event);
+				event.Params[0] = 200;
+				lit.SetEvent(9, 1, event);
+				lit.SetEvent(5, 3, EventCatalog::MakeDefault(EventType::LightSteady));
+				Vector2i size;
+				SmallVector<std::uint8_t, 0> intensities;
+				expect(EventPreviews::CollectAmbientLight(lit, 1, size, intensities) && size == Vector2i(12, 4) && intensities.size() == 48 &&
+					intensities[1 + 12] == 0 && intensities[0 + 12] == 0 && intensities[9 + 12] == 200 && intensities[11 + 12] == 200 &&
+					intensities[5 + 12] == 100, "ambient light");
+				std::uint8_t intensity;
+				expect(!EventPreviews::GetAmbientLight(EventCatalog::MakeDefault(EventType::LightSteady), intensity), "not an ambient light");
 			}
 
 			if (problems == 0) {
@@ -2654,6 +2676,322 @@ namespace Jazz2::Editor
 			return 0;
 		}
 
+		// The weapons of a level are read back as they were written, a newer version or a damaged payload is refused, what a
+		// newer version adds that can be skipped is kept
+		std::int32_t TestWeaponsChunk()
+		{
+			std::int32_t problems = 0;
+			auto expect = [&problems](bool condition, const char* what) {
+				if (!condition) {
+					LOGE("Weapons chunk: {}", what);
+					problems++;
+				}
+			};
+
+			WeaponsDescription weapons;
+			SmallVector<std::uint8_t, 0> data;
+			Formats::WeaponsChunk::Write(weapons, data);
+			expect(data.empty(), "no chunk for the weapons of the game");
+
+			weapons.ScriptHookArgument = 5;
+			weapons.Weapons[3] = WeaponDefinition::MakeCustom(WeaponType::Seeker, WeaponType::Bouncer);
+			weapons.Weapons[3].Name = "Boomerang"_s;
+			weapons.Weapons[3].ShotPowered.Speed = 7.5f;
+			weapons.Weapons[3].Shot.Sprite.Image = 0;
+			weapons.Weapons[3].Fire.Sound = "Fire"_s;
+			weapons.Weapons[5].Options.Maximum = 40;
+			weapons.Weapons[5].Options.Infinite = true;
+			weapons.Weapons[5].StartAmmo = 12;
+			weapons.Weapons[8].Kind = WeaponKind::Script;
+			weapons.Weapons[8].ScriptLibrary = "Library.asc"_s;
+			weapons.Weapons[8].ScriptConstructor = "Ns::Weapon()"_s;
+			weapons.Weapons[8].ScriptParams = { 1, 2, 3 };
+			weapons.Weapons[8].AmmoCrateEvent = 77;
+			weapons.Weapons[2].UnknownProperties = { 250, 2, 0xAA, 0xBB };
+			WeaponImage& image = weapons.Images.emplace_back();
+			image.FrameWidth = 4;
+			image.FrameHeight = 3;
+			image.FrameCount = 2;
+			image.FrameRate = 8.0f;
+			image.HotspotX = 2;
+			image.HotspotY = -1;
+			for (std::int32_t i = 0; i < 4 * 3 * 2; i++) {
+				image.Pixels.push_back(std::uint8_t(i * 7));
+			}
+
+			Formats::WeaponsChunk::Write(weapons, data);
+			WeaponsDescription read;
+			expect(Formats::WeaponsChunk::Read(data, read) == Formats::WeaponsChunk::ReadResult::Success, "read back");
+			expect(read.ScriptHookArgument == 5 && read.Images.size() == 1 && read.Images[0] == image, "the hook and the images");
+			for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
+				expect(read.Weapons[i] == weapons.Weapons[i], "a weapon is the same");
+			}
+			SmallVector<std::uint8_t, 0> again;
+			Formats::WeaponsChunk::Write(read, again);
+			expect(again.size() == data.size() && std::memcmp(again.data(), data.data(), data.size()) == 0, "written the same again, with the property it doesn't know");
+
+			// A weapon this version doesn't have is skipped
+			const std::uint8_t unknownSlot[] = { 1, 0xFF, 0xFF, 1, 20, 1, 0x55, 0 };
+			expect(Formats::WeaponsChunk::Read(unknownSlot, read) == Formats::WeaponsChunk::ReadResult::Success && read.IsDefault(), "an unknown weapon is skipped");
+
+			SmallVector<std::uint8_t, 0> newer = data;
+			newer[0] = Formats::WeaponsChunk::Version + 1;
+			expect(Formats::WeaponsChunk::Read(newer, read) == Formats::WeaponsChunk::ReadResult::NewerVersion && read.IsDefault(), "a newer version is left alone");
+			for (std::size_t cut = 1; cut < data.size(); cut += std::max<std::size_t>(data.size() / 16, 1)) {
+				expect(Formats::WeaponsChunk::Read(ArrayView<const std::uint8_t>(data.data(), cut), read) == Formats::WeaponsChunk::ReadResult::Damaged, "a cut payload is damaged");
+			}
+
+			if (problems == 0) {
+				LOGI("Weapons chunk test passed");
+			}
+			return problems;
+		}
+
+		// The firing range of the preview of a custom weapon
+		std::int32_t TestWeaponPreview()
+		{
+			std::int32_t problems = 0;
+			auto expect = [&problems](bool condition, const char* what) {
+				if (!condition) {
+					LOGE("Weapon preview: {}", what);
+					problems++;
+				}
+			};
+
+			SmallVector<SimulatedShot, 4> shots, again;
+			WeaponDefinition blaster = WeaponDefinition::MakeCustom(WeaponType::Blaster, WeaponType::Blaster);
+			SimulateWeapon(blaster, false, shots);
+			expect(shots.size() == 1 && shots[0].End == SimulatedShotEnd::Target && shots[0].TargetHits == 1, "a blaster shot hits the target");
+			SimulateWeapon(blaster, false, again);
+			expect(again.size() == shots.size() && again[0].Points.size() == shots[0].Points.size(), "the same each time");
+
+			WeaponDefinition rf = WeaponDefinition::MakeCustom(WeaponType::RF, WeaponType::RF);
+			SimulateWeapon(rf, false, shots);
+			expect(shots.size() == 2 && shots[0].Points.size() > 1 && shots[0].Points[1].Y < 0.0f && shots[1].Points[1].Y > 0.0f, "two RF shots spread up and down");
+
+			WeaponDefinition piercing = blaster;
+			piercing.Shot.Pierce = 1;
+			piercing.Shot.Lifetime = 600.0f;
+			SimulateWeapon(piercing, false, shots);
+			expect(shots.size() == 1 && shots[0].TargetHits == 1 && shots[0].End == SimulatedShotEnd::Wall, "a piercing shot passes through to the wall");
+
+			FiringRange behind;
+			behind.Muzzle = Vector2f(200.0f, 0.0f);
+			behind.Target = Vector2f(60.0f, FiringRange::FloorY);
+			behind.FacingLeft = true;
+			SimulateWeapon(blaster, false, shots, behind);
+			expect(shots.size() == 1 && shots[0].End == SimulatedShotEnd::Target && shots[0].Points.back().X < 200.0f,
+				"a shot flies to a target on the left");
+
+			WeaponDefinition toaster = WeaponDefinition::MakeCustom(WeaponType::Toaster, WeaponType::Toaster);
+			SimulateHeldWeapon(toaster, false, shots);
+			std::int32_t held = std::int32_t(shots.size());
+			SimulateHeldWeapon(blaster, false, shots);
+			expect(held > std::int32_t(shots.size()) && shots.size() >= 1 && shots.back().StartFrame > 0, "a faster weapon fires more while held");
+			WeaponDefinition seeker = WeaponDefinition::MakeCustom(WeaponType::Seeker, WeaponType::Seeker);
+			SimulateHeldWeapon(seeker, false, shots);
+			expect(shots.size() == 1, "a weapon that fires once per press fires once");
+
+			WeaponDefinition thunderbolt = WeaponDefinition::MakeCustom(WeaponType::Thunderbolt, WeaponType::Thunderbolt);
+			FiringRange close;
+			close.Target = Vector2f(100.0f, FiringRange::FloorY);
+			SimulateWeapon(thunderbolt, false, shots, close);
+			expect(shots.size() == 1 && shots[0].Points.size() == 2 && shots[0].Frames == 10 && shots[0].TargetHits == 1,
+				"a beam reaches a close target at once and lasts its time");
+			SimulateWeapon(thunderbolt, false, shots);
+			expect(shots.size() == 1 && shots[0].TargetHits == 0 && std::abs(shots[0].Points.back().X - 140.0f) < 3.0f, "a beam is as long as the shot would fly");
+
+			if (problems == 0) {
+				LOGI("Weapon preview test passed");
+			}
+			return problems;
+		}
+
+		// The lines of a level script MLLE generates for the weapons of the script, and the weapons of a library
+		// Descriptions of weapons of scripts, their parameters, and what is guessed from libraries
+		std::int32_t TestScriptWeaponTemplates()
+		{
+			std::int32_t problems = 0;
+			auto expect = [&problems](bool condition, const char* what) {
+				if (!condition) {
+					LOGE("Script weapon templates: {}", what);
+					problems++;
+				}
+			};
+
+			SmallVector<ScriptWeaponTemplate, 4> templates;
+			std::int32_t read = ReadMlleWeaponTemplates(
+				"[0]\r\nName = Meteor Gun\r\nImageFilename = meteorgun.png\r\nLibraryFilename = ArcaneWeapon2.asc\r\n"
+				"Initialization = ArcaneWeapons::MeteorGun::Weapon()\r\nHooks = onMain, onPlayer\r\n"
+				"Options = Little rocks (normal):bool:true|Little rocks (PU):bool:true\r\n\r\n"
+				"[1]\r\nName = Pathfinder\r\nLibraryFilename = WeaponVMega4.asc\r\nInitialization = WeaponVMega::Pathfinder::Weapon()\r\n"
+				"Options = Nodes (idle):int:1 | Nodes (homing):int:4\r\n\r\n[2]\r\nName = No constructor\r\n"_s, "Weapons/Test.ini"_s, templates);
+			expect(read == 2 && templates.size() == 2, "two weapons of an .ini, a section without a constructor isn't one");
+			if (templates.size() == 2) {
+				const ScriptWeaponTemplate& meteor = templates[0];
+				expect(meteor.Name == "Meteor Gun"_s && meteor.Library == "ArcaneWeapon2.asc"_s && meteor.Hooks.size() == 2 &&
+					meteor.Params.size() == 2 && meteor.Params[0].Type == ScriptParamType::Bool && meteor.Params[0].Default == 1.0, "options of an .ini");
+				SmallVector<std::uint8_t, 0> data;
+				MakeDefaultScriptParams(templates[1], data);
+				const std::uint8_t nodes[] = { 1, 0, 0, 0, 4, 0, 0, 0 };
+				expect(data.size() == 8 && std::memcmp(data.data(), nodes, 8) == 0, "defaults of the parameters as MLLE writes them");
+
+				// A value changed keeps what the description doesn't tell
+				const std::uint8_t stored[] = { 1, 0, 0, 0, 4, 0, 0, 0, 0xAA };
+				SmallVector<ScriptParamValue, 4> values;
+				std::size_t used = ReadScriptParams(templates[1], arrayView(stored), values);
+				expect(used == 8 && values.size() == 2 && values[1].Number == 4.0, "parameters read");
+				values[0].Number = 300.0;
+				WriteScriptParams(templates[1], values, arrayView(stored).exceptPrefix(used), data);
+				expect(data.size() == 9 && data[0] == 44 && data[1] == 1 && data[8] == 0xAA, "parameters written with the rest kept");
+				expect(IsScriptWeaponTemplateOf(templates[1], "weaponvmega4.asc"_s, "WeaponVMega::Pathfinder::Weapon( )"_s), "a template matched by its library and code");
+				expect(GetScriptWeaponHookCall("onMain"_s) == "processMain("_s, "the call of a hook");
+			}
+
+			templates.clear();
+			read = ReadWeaponTemplates(R"json({ "Weapons": [ { "Name": "Test", "Library": "Test.asc", "Constructor": "Test::Weapon()", "Hooks": [ "onMain" ],
+				"Params": [ { "Name": "Mode", "Type": "uint8", "Default": 2, "Options": [ { "Name": "A", "Value": 1 }, { "Name": "B", "Value": 2 } ] },
+				{ "Name": "Text", "Type": "string", "Default": "hi" }, { "Name": "Speed", "Type": "float", "Default": 1.5, "Min": 0, "Max": 4 } ] } ] })json"_s,
+				"Weapons/Test.json"_s, templates);
+			expect(read == 1 && templates.size() == 1 && templates[0].Params.size() == 3 && templates[0].Params[0].Choices.size() == 2 &&
+				templates[0].Params[1].Type == ScriptParamType::String && templates[0].Params[2].Max == 4.0, "a .json description");
+			if (templates.size() == 1) {
+				SmallVector<std::uint8_t, 0> data;
+				MakeDefaultScriptParams(templates[0], data);
+				SmallVector<ScriptParamValue, 4> values;
+				expect(ReadScriptParams(templates[0], data, values) == data.size() && values.size() == 3 && values[0].Number == 2.0 &&
+					values[1].Text == "hi"_s && values[2].Number == 1.5, "a text and a float round trip");
+			}
+			expect(ReadWeaponTemplates("not json"_s, "x.json"_s, templates) < 0, "a file that isn't JSON");
+
+			// What the library pops, in order, by the declarations of what it pops into
+			ScriptWeaponTemplate guess;
+			bool guessed = GuessScriptWeaponTemplate("Meteor.asc"_s,
+				"namespace ArcaneWeapons { namespace MeteorGun {\n"
+				"\tclass Weapon : MLLEWeapons::WeaponInterface {\n\t\tbool LittleRocksNormal = true, LittleRocksPowerup = true;\n\t}\n"
+				"\tbool Apply(uint, se::WeaponHook@, jjSTREAM@ parameter) {\n"
+				"\t\tif (parameter !is null && parameter.getSize() >= 2) { parameter.pop(LittleRocksNormal); parameter.pop(LittleRocksPowerup); }\n"
+				"\t\treturn true;\n\t}\n} }\n"_s, "ArcaneWeapons::MeteorGun::Weapon()"_s, guess);
+			expect(guessed && guess.Complete && guess.Params.size() == 2 && guess.Params[1].Type == ScriptParamType::Bool &&
+				guess.Params[1].Default == 1.0 && guess.Params[0].Name == "Little rocks normal"_s, "parameters guessed from a library");
+
+			guessed = GuessScriptWeaponTemplate("Pathfinder.asc"_s,
+				"namespace WeaponVMega { namespace Pathfinder {\n\tclass Weapon : MLLEWeapons::WeaponInterface { }\n"
+				"\tbool Count(uint, se::WeaponHook@, jjSTREAM@ parameter) {\n\t\tint p;\n"
+				"\t\tparameter.pop(p); node1 = p;\n\t\tparameter.pop(p); node2 = p;\n\t\tparameter.pop(Unknown.Thing);\n\t\treturn true;\n\t}\n} }\n"_s,
+				"WeaponVMega::Pathfinder::Weapon()"_s, guess);
+			expect(guessed && !guess.Complete && guess.Params.size() == 2 && guess.Params[0].Type == ScriptParamType::Int32 &&
+				guess.Params[1].Name == "Node 2"_s, "a guess named by where the values go stops at an unknown type");
+
+			// Against the descriptions MLLE ships, where they are, only told
+			String source = fs::CombinePath({ ContentResolver::Get().GetSourcePath(), "mlleweapons"_s });
+			String descriptions = fs::CombinePath(source, "Weapons"_s);
+			if (fs::DirectoryExists(descriptions)) {
+				templates.clear();
+				const String directories[] = { descriptions };
+				FindScriptWeaponTemplates(directories, templates);
+				String mlleWeapons;
+				String mlleWeaponsPath = fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), "MLLE-Weapons.asc"_s));
+				if (auto m = (mlleWeaponsPath.empty() ? nullptr : fs::Open(mlleWeaponsPath, FileAccess::Read)); m != nullptr && m->IsValid() && m->GetSize() > 0) {
+					mlleWeapons = String{NoInit, std::size_t(m->GetSize())};
+					m->Read(mlleWeapons.data(), std::int64_t(mlleWeapons.size()));
+				}
+				const StringView includes[] = { mlleWeapons };
+				std::int32_t same = 0, differ = 0;
+				for (const ScriptWeaponTemplate& weaponTemplate : templates) {
+					String path = fs::FindPathCaseInsensitive(fs::CombinePath(source, weaponTemplate.Library));
+					auto s = (path.empty() ? nullptr : fs::Open(path, FileAccess::Read));
+					if (s == nullptr || !s->IsValid() || s->GetSize() <= 0) {
+						continue;
+					}
+					String text{NoInit, std::size_t(s->GetSize())};
+					s->Read(text.data(), std::int64_t(text.size()));
+					ScriptWeaponTemplate fromScript;
+					bool ok = GuessScriptWeaponTemplate(weaponTemplate.Library, text, weaponTemplate.Constructor, fromScript, includes);
+					bool match = (ok && fromScript.Params.size() == weaponTemplate.Params.size());
+					for (std::size_t i = 0; match && i < weaponTemplate.Params.size(); i++) {
+						match = (GetScriptParamSize(fromScript.Params[i].Type) == GetScriptParamSize(weaponTemplate.Params[i].Type));
+					}
+					if (match) {
+						same++;
+					} else {
+						differ++;
+						LOGI("Guessed parameters of \"{}\" differ from its description: {} guessed, {} described{}", weaponTemplate.Name,
+							std::int32_t(fromScript.Params.size()), std::int32_t(weaponTemplate.Params.size()), ok ? "" : ", no function found");
+					}
+				}
+				LOGI("Guessed parameters of {} weapons of MLLE match their descriptions, {} differ", same, differ);
+			}
+
+			if (problems == 0) {
+				LOGI("Script weapon templates test passed");
+			}
+			return problems;
+		}
+
+		std::int32_t TestScriptWeaponHeader()
+		{
+			std::int32_t problems = 0;
+			auto expect = [&problems](bool condition, const char* what) {
+				if (!condition) {
+					LOGE("Script weapons: {}", what);
+					problems++;
+				}
+			};
+
+			StringView library = "namespace Ns {\n\tnamespace Inner {\n\t\tclass Weapon : MLLEWeapons::WeaponInterface {\n\t\t\t// class Fake : MLLEWeaponApply\n\t\t}\n\t}\n"
+				"\tshared abstract class Base : MLLEWeaponApply { }\n\tclass Other { }\n}\nclass Top : se::WeaponInterface, MLLEWeaponApply { }\n"_s;
+			SmallVector<ScriptWeaponClass, 4> found;
+			FindScriptWeapons("Library.asc"_s, library, found);
+			expect(found.size() == 2 && found[0].Constructor == "Ns::Inner::Weapon()"_s && found[1].Constructor == "Top()"_s && found[0].Library == "Library.asc"_s,
+				"the weapons of a library");
+			found.clear();
+			FindScriptWeapons("SEroller.asc"_s, "namespace se {\n\tshared class RollerWeapon : WeaponInterface { }\n}\n"_s, found);
+			expect(found.empty(), "a weapon of the standard weapon interface alone isn't one MLLE can set up");
+
+			StringView script = "const bool MLLESetupSuccessful = MLLE::Setup(array<MLLEWeaponApply@> = {null, null, null, null, null, null, null, null, ArcaneWeapons::TornadoGun::Weapon()}); ///@MLLE-Generated\r\n"
+				"#include \"MLLE-Include-1.7w.asc\" ///@MLLE-Generated\r\n"
+				"#pragma require \"Level-MLLE-Data-1.j2l\" ///@MLLE-Generated\r\n"
+				"#include \"ArcaneWeapon6.asc\" ///@MLLE-Generated\r\n"
+				"#pragma require \"ArcaneWeapon6.asc\" ///@MLLE-Generated\r\n"
+				"\r\n"
+				"void onLevelBegin() { }\r\n"_s;
+			WeaponsDescription weapons;
+			weapons.Weapons[8].Kind = WeaponKind::Script;
+			weapons.Weapons[8].ScriptLibrary = "ArcaneWeapon6.asc"_s;
+			weapons.Weapons[8].ScriptConstructor = "ArcaneWeapons::TornadoGun::Weapon()"_s;
+			expect(UpdateScriptWeaponLines(script, weapons) == script, "a script with the same weapons stays as it is");
+
+			weapons.Weapons[2].Kind = WeaponKind::Script;
+			weapons.Weapons[2].ScriptLibrary = "BubbleGun.asc"_s;
+			weapons.Weapons[2].ScriptConstructor = "BubbleGun::Weapon()"_s;
+			String updated = UpdateScriptWeaponLines(script, weapons);
+			expect(updated.contains("{null, null, BubbleGun::Weapon(), null, null, null, null, null, ArcaneWeapons::TornadoGun::Weapon()}"_s) &&
+				updated.contains("#include \"BubbleGun.asc\" ///@MLLE-Generated\r\n"_s) && updated.contains("#include \"ArcaneWeapon6.asc\" ///@MLLE-Generated\r\n"_s) &&
+				updated.contains("#pragma require \"Level-MLLE-Data-1.j2l\""_s) && updated.hasSuffix("\r\nvoid onLevelBegin() { }\r\n"_s), "a weapon added");
+
+			WeaponsDescription none;
+			String removed = UpdateScriptWeaponLines(updated, none);
+			expect(removed.contains("MLLE::Setup(); ///@MLLE-Generated"_s) && !removed.contains("BubbleGun"_s) && !removed.contains("ArcaneWeapon6"_s) &&
+				removed.contains("void onLevelBegin"_s), "all weapons removed");
+			expect(UpdateScriptWeaponLines("void onLevelBegin() { }\n"_s, none) == "void onLevelBegin() { }\n"_s, "a script without weapons stays as it is");
+			String setUps[MaxScriptWeapons];
+			FindHandWrittenScriptWeapons("void onLevelLoad() {\n\tLaserBlaster::NonBouncing().Apply(WEAPON::ICE, MLLE::WeaponHook);\n"
+				"\t// Other::Weapon().Apply(WEAPON::RF);\n\tif (x) { Gun().Apply(9); }\n}\n"_s
+				"const bool MLLESetupSuccessful = MLLE::Setup(array<MLLEWeaponApply@> = {X().Apply(WEAPON::BLASTER)}); ///@MLLE-Generated\n"_s, setUps);
+			expect(setUps[2] == "LaserBlaster::NonBouncing()"_s && setUps[8] == "Gun()"_s && setUps[4].empty() && setUps[0].empty(),
+				"weapons the script sets up by itself");
+
+			String fresh = UpdateScriptWeaponLines("void onLevelBegin() { }\n"_s, weapons);
+			expect(fresh.hasPrefix("const bool MLLESetupSuccessful = MLLE::Setup(array<MLLEWeaponApply@>"_s) && fresh.contains("#include \"MLLE-Include-1.7w.asc\""_s) &&
+				fresh.hasSuffix("void onLevelBegin() { }\n"_s), "lines added to a script without them");
+
+			if (problems == 0) {
+				LOGI("Script weapons test passed");
+			}
+			return problems;
+		}
+
 		TestResult TestLevel(StringView path, ITileSetLibrary& library, std::uint32_t seed, CatalogScan& scan)
 		{
 			auto s = fs::Open(path, FileAccess::Read);
@@ -2761,6 +3099,10 @@ namespace Jazz2::Editor
 			problems += TestZipWriter();
 			problems += TestLevelTextTranslations();
 			problems += TestEpisodeFile();
+			problems += TestWeaponsChunk();
+			problems += TestWeaponPreview();
+			problems += TestScriptWeaponHeader();
+			problems += TestScriptWeaponTemplates();
 			problems += ToolActions::SelfTest();
 			problems += PlayPathHistory::SelfTest();
 			problems += ActionRegistry::SelfTest();

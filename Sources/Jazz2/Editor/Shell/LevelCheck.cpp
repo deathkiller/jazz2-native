@@ -5,6 +5,7 @@
 #include "LevelStatistics.h"
 #include "ShellCommon.h"
 #include "ShellPanels.h"
+#include "WeaponsDialog.h"
 #include "../Tools/EditorContext.h"
 #include "../Document/CommandHistory.h"
 #include "../Document/LevelDocument.h"
@@ -456,6 +457,54 @@ namespace Jazz2::Editor
 		}
 		if (reflections > 1) {
 			add(LevelProblemSeverity::Warning, _fx("editor", "{} layers are drawn as a reflection, only the last one is shown", reflections), Vector2i(-1, -1), -1, firstReflection);
+		}
+
+		// Weapons
+		WeaponsDescription weapons;
+		switch (ReadLevelWeapons(document, weapons)) {
+			case Formats::WeaponsChunk::ReadResult::NewerVersion:
+				add(LevelProblemSeverity::Info, _x("editor", "The weapons of the level are of a newer version, this version of the game plays it with its own weapons"));
+				break;
+			case Formats::WeaponsChunk::ReadResult::Damaged:
+				add(LevelProblemSeverity::Error, _x("editor", "The weapons of the level are damaged, the game plays it with its own weapons"));
+				break;
+			default: {
+				for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
+					const WeaponDefinition& weapon = weapons.Weapons[i];
+					String name = GetLevelWeaponName(weapons, WeaponType(i));
+					if (weapon.StartAmmo > 0 && weapon.Options.Maximum > 0 && weapon.StartAmmo > weapon.Options.Maximum) {
+						add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} starts with more ammo than it can have", name));
+					}
+					if (weapon.Kind == WeaponKind::Custom) {
+						for (const WeaponShotOptions* shot : { &weapon.Shot, &weapon.ShotPowered }) {
+							if (shot->Strength <= 0 && shot->AreaStrength <= 0 && shot->FreezeDuration <= 0.0f && shot->Knockback == 0.0f) {
+								add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} does no harm, its shot has no damage, blast or freezing", name));
+								break;
+							}
+						}
+					} else if (weapon.Kind == WeaponKind::Script && weapon.ScriptConstructor.empty()) {
+						add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} is script-driven, but nothing creates it", name));
+					}
+				}
+				// Ammo of a weapon the level doesn't allow can't be taken
+				std::int32_t forbidden = 0;
+				CheckedEvent firstForbidden = {};
+				for (const CheckedEvent& checked : events) {
+					EventType type = EventType(checked.Record->Type);
+					std::uint8_t weapon = checked.Record->Params[0];
+					if ((type == EventType::Ammo || type == EventType::PowerUpWeapon) && weapon < std::uint8_t(WeaponType::Count) && !weapons.Weapons[weapon].Options.Allowed) {
+						if (forbidden == 0) {
+							firstForbidden = checked;
+						}
+						forbidden++;
+					}
+				}
+				if (forbidden > 0) {
+					add(LevelProblemSeverity::Warning, _fnx("editor", "{} ammo or power-up of a weapon that isn't allowed", "{} ammo or power-ups of weapons that aren't allowed", forbidden, forbidden),
+						firstForbidden.Cell, firstForbidden.OffGrid);
+				}
+				break;
+			}
 		}
 
 		// Errors first, each kind in the order it was found
@@ -952,6 +1001,35 @@ namespace Jazz2::Editor
 				add(LevelProblemSeverity::Warning, _fx("editor", "The level has a script, which can refer to the first {} tile IDs only, the level uses {}",
 					LevelDocument::ScriptTileIdLimit, usedTileIds));
 			}
+		}
+
+		// Weapons of the script need their libraries next to the level or in the files of the original game, and a game that
+		// runs scripts; sprites of animations of the game need to exist
+		const WeaponsDescription& weapons = GetCachedLevelWeapons(session);
+		bool hasScriptWeapons = false;
+		for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
+			const WeaponDefinition& weapon = weapons.Weapons[i];
+			String name = GetLevelWeaponName(weapons, WeaponType(i));
+			if (weapon.Kind == WeaponKind::Script && !weapon.ScriptLibrary.empty()) {
+				hasScriptWeapons = true;
+				StringView filePath = session.GetFilePath();
+				StringView sourcePath = ContentResolver::Get().GetSourcePath();
+				bool found = ((!filePath.empty() && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(fs::GetDirectoryName(filePath), weapon.ScriptLibrary)))) ||
+					(!sourcePath.empty() && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, weapon.ScriptLibrary)))));
+				if (!found) {
+					add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} needs the script library \"{}\", which isn't found", name, weapon.ScriptLibrary));
+				}
+			}
+			for (const WeaponSprite* sprite : { &weapon.Shot.Sprite, &weapon.Shot.AltSprite, &weapon.ShotPowered.Sprite, &weapon.ShotPowered.AltSprite,
+				&weapon.HudIcon, &weapon.HudIconPowered, &weapon.Pickup }) {
+				if (!sprite->Metadata.empty() && ContentResolver::Get().RequestMetadata(sprite->Metadata) == nullptr) {
+					add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} uses the animation \"{}\", which isn't found", name, sprite->Metadata));
+					break;
+				}
+			}
+		}
+		if (hasScriptWeapons) {
+			add(LevelProblemSeverity::Info, _x("editor", "Script-driven weapons work only where the game is allowed to run scripts of levels"));
 		}
 	}
 

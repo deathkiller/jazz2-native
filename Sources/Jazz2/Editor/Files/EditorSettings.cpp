@@ -94,6 +94,7 @@ namespace Jazz2::Editor
 		UiScale = std::clamp<float>(JsonAccess::GetFloat(doc, "UiScale", 0.0f), 0.0f, 8.0f);
 		ShowGrid = JsonAccess::GetBool(doc, "ShowGrid", true);
 		PauseLayerMovement = JsonAccess::GetBool(doc, "PauseLayerMovement", false);
+		EventsOnTop = JsonAccess::GetBool(doc, "EventsOnTop", false);
 		PreviewTexturedLayers = JsonAccess::GetBool(doc, "PreviewTexturedLayers", false);
 		OverriddenAssets = JsonAccess::GetBool(doc, "OverriddenAssets", true);
 		Tool = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "Tool", 5), 0, 255);
@@ -173,6 +174,7 @@ namespace Jazz2::Editor
 		doc["UiScale"] = UiScale;
 		doc["ShowGrid"] = ShowGrid;
 		doc["PauseLayerMovement"] = PauseLayerMovement;
+		doc["EventsOnTop"] = EventsOnTop;
 		doc["PreviewTexturedLayers"] = PreviewTexturedLayers;
 		doc["OverriddenAssets"] = OverriddenAssets;
 		doc["Tool"] = Json::Int(Tool);

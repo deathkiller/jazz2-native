@@ -174,6 +174,11 @@ namespace Jazz2::Editor
 		return ContentResolver::Get().TryLoadLevel(s, _fullPath, GetLevelLoadOptions(), descriptor);
 	}
 
+	void PlayTestLevelHandler::LoadLevelScripts(StringView fullPath)
+	{
+		LevelHandler::LoadLevelScripts(fullPath, _options.ScriptText);
+	}
+
 	LevelLoadOptions PlayTestLevelHandler::GetLevelLoadOptions() const
 	{
 		LevelLoadOptions options;
@@ -182,6 +187,22 @@ namespace Jazz2::Editor
 	}
 
 	void PlayTestLevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
+	{
+		SpawnPlayersAtStart(levelInit);
+
+		// A weapon to try, as if the players had found a lot of its ammo
+		if (_options.GiveWeapon < WeaponType::Count) {
+			for (Actors::Player* player : _players) {
+				player->AddAmmo(_options.GiveWeapon, INT16_MAX / 256);
+				if (_options.GiveWeaponPowered) {
+					player->AddWeaponUpgrade(_options.GiveWeapon, 0x01);
+				}
+				player->SwitchToWeaponByIndex(std::uint32_t(_options.GiveWeapon));
+			}
+		}
+	}
+
+	void PlayTestLevelHandler::SpawnPlayersAtStart(const LevelInitialization& levelInit)
 	{
 		Vector2f spawnPosition;
 		if (!_options.HasSpawnPosition || !_playTestDebug->FindClearPlayerPosition(_options.SpawnPosition, 160.0f, spawnPosition)) {

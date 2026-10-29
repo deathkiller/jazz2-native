@@ -44,8 +44,12 @@ namespace Jazz2::Editor
 		ScriptGraphics(const ScriptGraphics&) = delete;
 		ScriptGraphics& operator=(const ScriptGraphics&) = delete;
 
-		/** @brief Runs the script of a level and takes the sprites it gives the objects, returns `false` if there are none */
-		bool Capture(IRootController* root, const LevelDocument& document, StringView levelName, StringView fullPath);
+		/**
+		 * @brief Runs the script of a level and takes the sprites it gives the objects, returns `false` if there are none
+		 *
+		 * A non-empty @p scriptText is run in place of the script file, see @ref DocumentFiles::GetUnsavedScript().
+		 */
+		bool Capture(IRootController* root, const LevelDocument& document, StringView levelName, StringView fullPath, StringView scriptText = {});
 		/** @brief Forgets all sprites */
 		void Clear();
 		/** @brief Returns `true` if there are no sprites */
@@ -58,6 +62,12 @@ namespace Jazz2::Editor
 		 * the game, only with other frames, plays it only if @p ownAnimated says the sprite of the game does too.
 		 */
 		Resources::GraphicResource* Find(const Formats::EventRecord& event, bool animated, bool ownAnimated);
+		/**
+		 * @brief Returns the sprite a weapon of the script shows on the screen, as the hook of the weapons of MLLE draws it, or `nullptr`
+		 *
+		 * The weapon is a @ref WeaponType, the blaster is 0.
+		 */
+		Resources::GraphicResource* FindWeaponIcon(std::int32_t weapon, bool powered);
 
 	private:
 		struct Look
@@ -94,6 +104,8 @@ namespace Jazz2::Editor
 		SmallVector<Variant, 0> _variants;
 		// Sprites of the variants, parameters that look the same share one
 		SmallVector<std::unique_ptr<Sprite>, 0> _variantSprites;
+		// Sprites of the weapons of the script on the screen, usual and powered up, see LevelScriptLoader::GetWeaponSprite()
+		std::unique_ptr<Sprite> _weaponIcons[9][2];
 		// Types of the game the events with sprites convert to, sorted, the events of other types aren't looked up
 		SmallVector<std::uint16_t, 0> _types;
 		// Made on first use, it probes all converters of events
@@ -104,6 +116,8 @@ namespace Jazz2::Editor
 		void TakeSprites(Scripting::LevelScriptLoader& scripts, Vector2i levelSize);
 		bool GetLook(Scripting::LevelScriptLoader& scripts, std::uint8_t eventId, std::int32_t tileX, std::int32_t tileY, Look& look);
 		std::unique_ptr<Sprite> MakeSprite(Scripting::LevelScriptLoader& scripts, std::uint8_t eventId, const Look& look, SmallVectorImpl<std::uint32_t>& colors);
+		std::unique_ptr<Sprite> MakeFramesSprite(Scripting::LevelScriptLoader& scripts, const Look& look, const std::uint32_t* palette, float ticksPerFrame,
+			SmallVectorImpl<std::uint32_t>& colors);
 		Sprite* FindSprite(const Formats::EventRecord& event);
 	};
 }

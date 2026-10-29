@@ -66,6 +66,8 @@ namespace Jazz2::Editor
 
 	protected:
 		bool LoadLevel(LevelDescriptor& descriptor) override;
+		/** @brief Loads the scripts of the level, the weapons of the script as the editor has them, see @ref PlayTestOptions::ScriptText */
+		void LoadLevelScripts(StringView fullPath) override;
 
 	private:
 		SmallVector<std::uint8_t, 0> _levelData;

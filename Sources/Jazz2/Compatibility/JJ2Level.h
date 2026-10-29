@@ -5,6 +5,7 @@
 #include "JJ2Event.h"
 #include "JJ2Version.h"
 #include "EventConverter.h"
+#include "../WeaponDefinition.h"
 #include "../WeatherType.h"
 #include "../Formats/LevelFile.h"
 #include "../Formats/TileSetFile.h"
@@ -336,7 +337,7 @@ namespace Jazz2::Compatibility
 		SmallVector<std::uint8_t, TextEventStringsCount> _levelTokenTextIds;
 		SmallVector<String, 0> _eventMusic;
 		SmallVector<OffGridEvent, 0> _offGridEvents;
-		SmallVector<std::uint8_t, 0> _mlleWeapons;
+		WeaponsDescription _weapons;
 		SmallVector<std::uint8_t, 0> _mlleSpriteRecolors;
 
 		void LoadMetadata(JJ2Block& block, bool strictParser);
@@ -346,6 +347,9 @@ namespace Jazz2::Compatibility
 		bool LoadEvents(JJ2Block& block, bool strictParser);
 		bool LoadLayers(JJ2Block& dictBlock, JJ2Block& layoutBlock, bool strictParser);
 		void LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser);
+		void LoadMlleWeapons(JJ2Block& block, std::uint32_t version);
+		ConversionResult ConvertEvent(EventConverter& eventConverter, JJ2Event eventType, std::uint32_t tileParams);
+		void LoadScriptWeapons(StringView scriptPath);
 		void CheckWaterLevelAroundStart();
 		// Returns the event of a tile of the grid, `nullptr` if it has none
 		const TileEventSection* FindEvent(std::int32_t x, std::int32_t y) const;

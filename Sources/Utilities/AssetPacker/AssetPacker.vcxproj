@@ -162,6 +162,8 @@
     <ClCompile Include="..\..\Jazz2\Formats\LevelFile.cpp" />
     <ClCompile Include="..\..\Jazz2\Formats\LevelPreview.cpp" />
     <ClCompile Include="..\..\Jazz2\Formats\LevelTextsChunk.cpp" />
+    <ClCompile Include="..\..\Jazz2\Formats\WeaponsChunk.cpp" />
+    <ClCompile Include="..\..\Jazz2\WeaponDefinition.cpp" />
     <ClCompile Include="..\..\Jazz2\Formats\TileSetFile.cpp" />
     <ClCompile Include="..\..\Jazz2\Tiles\LayerTypes.cpp" />
     <ClCompile Include="..\..\nCine\Base\Algorithms.cpp" />
@@ -218,6 +220,8 @@
     <ClInclude Include="..\..\Jazz2\Formats\LevelFile.h" />
     <ClInclude Include="..\..\Jazz2\Formats\LevelPreview.h" />
     <ClInclude Include="..\..\Jazz2\Formats\LevelTextsChunk.h" />
+    <ClInclude Include="..\..\Jazz2\Formats\WeaponsChunk.h" />
+    <ClInclude Include="..\..\Jazz2\WeaponDefinition.h" />
     <ClInclude Include="..\..\Jazz2\Formats\TileSetFile.h" />
     <ClInclude Include="..\..\Jazz2\Tiles\LayerTypes.h" />
     <ClInclude Include="..\..\Jazz2\EventType.h" />

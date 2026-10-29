@@ -96,17 +96,20 @@ namespace Jazz2::Actors::Weapons
 
 	void ElectroShot::CreateParticles(ILevelHandler* levelHandler, Metadata* metadata, Vector2f pos, std::uint16_t layer, float currentStep, bool facingLeft, bool poweredUp)
 	{
-		auto tilemap = levelHandler->TileMap();
-		if (tilemap == nullptr || metadata == nullptr) {
-			return;
+		if (metadata != nullptr) {
+			CreateParticles(levelHandler, metadata->FindAnimation((AnimState)1), pos, layer, currentStep, facingLeft, poweredUp); // Particle
 		}
+	}
 
-		auto* res = metadata->FindAnimation((AnimState)1); // Particle
-		if (res == nullptr || res->Base->TextureDiffuse == nullptr) {
+	void ElectroShot::CreateParticles(ILevelHandler* levelHandler, const GraphicResource* res, Vector2f pos, std::uint16_t layer, float currentStep, bool facingLeft, bool poweredUp)
+	{
+		auto tilemap = levelHandler->TileMap();
+		if (tilemap == nullptr || res == nullptr || res->Base == nullptr || res->Base->TextureDiffuse == nullptr) {
 			return;
 		}
 
 		auto& resBase = res->Base;
+		std::int32_t frameCount = std::max(res->FrameCount, 1);
 		Vector2i texSize = resBase->TextureDiffuse->GetSize();
 
 		for (int i = 0; i < 6; i++) {
@@ -135,7 +138,7 @@ namespace Jazz2::Actors::Weapons
 
 			debris.Time = 60.0f;
 
-			std::int32_t curAnimFrame = (poweredUp ? 2 : 0) + Random().Fast(0, 2);
+			std::int32_t curAnimFrame = res->FrameOffset + ((poweredUp ? 2 : 0) + Random().Fast(0, 2)) % frameCount;
 			Recti frameRect = resBase->GetFrameRect(curAnimFrame);
 			debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
 			debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
@@ -175,7 +178,7 @@ namespace Jazz2::Actors::Weapons
 
 			spark.Time = 24.0f;
 
-			std::int32_t sparkAnimFrame = (poweredUp ? 2 : 0) + Random().Fast(0, 2);
+			std::int32_t sparkAnimFrame = res->FrameOffset + ((poweredUp ? 2 : 0) + Random().Fast(0, 2)) % frameCount;
 			Recti sparkFrameRect = resBase->GetFrameRect(sparkAnimFrame);
 			spark.TexScaleX = (float(sparkFrameRect.W) / float(texSize.X));
 			spark.TexBiasX = (float(sparkFrameRect.X) / float(texSize.X));

@@ -158,7 +158,7 @@ namespace Jazz2::Actors::Solid
 				Fall(fallDirection);
 				shotBase->DecreaseHealth(1);
 				return true;
-			} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(shotBase)) {
+			} else if (shotBase->GetFrozenDuration() > 0.0f) {
 				shotBase->DecreaseHealth(INT32_MAX);
 				return true;
 			}

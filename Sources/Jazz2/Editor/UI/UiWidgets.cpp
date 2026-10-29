@@ -835,7 +835,8 @@ namespace Jazz2::Editor
 	}
 
 	UiForm::UiForm(float spacing, UiThickness padding)
-		: UiStack(UiOrientation::Vertical, spacing, padding), MaxLabelWidth(120.0f), MaxLabelFraction(0.5f), _labelColumn(0.0f), _maxLabelColumn(0.0f)
+		: UiStack(UiOrientation::Vertical, spacing, padding), MaxLabelWidth(120.0f), MaxLabelFraction(0.5f), MinLabelWidth(0.0f), _labelColumn(0.0f),
+			_maxLabelColumn(0.0f)
 	{
 	}
 
@@ -848,7 +849,7 @@ namespace Jazz2::Editor
 	{
 		float padding = context.Px(Padding.Left) + context.Px(Padding.Right);
 		_maxLabelColumn = std::min(context.Px(MaxLabelWidth), std::floor((width - padding) * MaxLabelFraction));
-		_labelColumn = 0.0f;
+		_labelColumn = std::min(context.Px(MinLabelWidth), _maxLabelColumn);
 		for (auto& child : _children) {
 			if (!child->IsShown()) {
 				continue;

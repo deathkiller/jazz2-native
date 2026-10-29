@@ -104,7 +104,7 @@ namespace Jazz2::Editor::EventCatalogParts
 
 		static const EventParamField AmmoFields[] = {
 			// TRANSLATORS: Parameter of an event in the event properties
-			EnumField(_x("editor", "Weapon"), 0, 8, AmmoTypes, 1),
+			EnumField(_x("editor", "Weapon"), 0, 8, AmmoTypes, 1).AsWeapon(),
 		};
 		// AmmoCollectible::OnActivatedAsync(), by WeaponType; the upgraded ammo (animation 1) is shown only when the first
 		// local player has the upgrade
@@ -116,7 +116,7 @@ namespace Jazz2::Editor::EventCatalogParts
 
 		static const EventParamField PowerUpWeaponFields[] = {
 			// TRANSLATORS: Parameter of an event in the event properties
-			EnumField(_x("editor", "Weapon"), 0, 8, WeaponTypes).WithDescription(_x("editor", "Gives 25 ammo and the upgrade")),
+			EnumField(_x("editor", "Weapon"), 0, 8, WeaponTypes).WithDescription(_x("editor", "Gives 25 ammo and the upgrade")).AsWeapon(),
 		};
 		// PowerUpWeaponMonitor::OnActivatedAsync(), by WeaponType; the blaster monitor shows the character of the first local
 		// player, Jazz (PlayerType::Jazz) without one
@@ -142,7 +142,7 @@ namespace Jazz2::Editor::EventCatalogParts
 
 		static const EventParamField AmmoContainerFields[] = {
 			// TRANSLATORS: Parameter of an event in the event properties
-			EnumField(_x("editor", "Weapon"), 0, 8, AmmoContainerTypes).WithDescription(_x("editor", "Releases 5 ammo of the weapon, Random releases 4 to 6 ammo of the weapons the players have")),
+			EnumField(_x("editor", "Weapon"), 0, 8, AmmoContainerTypes).WithDescription(_x("editor", "Releases 5 ammo of the weapon, Random releases 4 to 6 ammo of the weapons the players have")).AsWeapon(),
 		};
 		// AmmoCrate::OnActivatedAsync(), by WeaponType, Blaster and Thunderbolt use the generic crate
 		constexpr std::uint32_t CrateAnimation = std::uint32_t(AnimState::Idle);

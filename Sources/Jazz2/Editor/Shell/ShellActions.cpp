@@ -109,7 +109,7 @@ namespace Jazz2::Editor
 
 		// The frame of what the game shows around the pointer, in a few sizes
 		{
-			auto& frame = actions.Add(ActionIds::ViewScreenFrame,_x("editor", "Show Game Screen Frame"), EditorIcon::Fit, [settings]() {
+			auto& frame = actions.Add(ActionIds::ViewScreenFrame,_x("editor", "Show Game Screen Frame"), EditorIcon::ScreenFrame, [settings]() {
 				settings->ShowScreenFrame = !settings->ShowScreenFrame;
 				settings->Save();
 			});

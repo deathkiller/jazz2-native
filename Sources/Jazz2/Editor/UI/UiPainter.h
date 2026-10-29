@@ -151,7 +151,7 @@ namespace Jazz2::Editor
 
 		/** @brief Draws a part of a texture, rotated clockwise by @p angle in radians around the center of the rectangle */
 		void Image(const Texture& texture, const Rectf& rect, const Vector4f& texCoords, const Colorf& color,
-			std::int32_t paletteOffset = -1, UiLayer layer = UiLayer::Content, float angle = 0.0f);
+			std::int32_t paletteOffset = -1, UiLayer layer = UiLayer::Content, float angle = 0.0f, UI::BlendMode blend = UI::BlendMode::Normal);
 		/**
 		 * @brief Draws a tile of a level
 		 *

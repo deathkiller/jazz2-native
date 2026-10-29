@@ -151,6 +151,12 @@ namespace Jazz2::Editor
 		/** @brief Returns the path of the script of the level, next to its file, empty if it wasn't saved yet */
 		String GetScriptPath() const;
 		/**
+		 * @brief Returns the script of the level with the lines of the weapons of the script as they're now, empty if they're as in its file
+		 *
+		 * They're written into the file only when the level is saved, a play-test runs this text in place of the file.
+		 */
+		String GetUnsavedScript() const;
+		/**
 		 * @brief Opens the script of the level in the program of `EditorSettings::ScriptEditor` or the one the system has for it
 		 *
 		 * A script that doesn't exist yet is made from a template first, once the user agrees to it.
@@ -189,6 +195,12 @@ namespace Jazz2::Editor
 		bool CreateScript(StringView path);
 		// Opens a script that exists, see EditScript()
 		void OpenScript(StringView path);
+		// Writes the lines of the script that set up the weapons of the script, if the weapons changed since the level
+		// was opened or saved (see UpdateScriptWeaponLines()), so a script whose weapons weren't touched stays as it is
+		void UpdateScriptWeapons();
+		// The script with the lines of the weapons as they're now, `false` if the weapons weren't changed or the lines are the same
+		bool GetUpdatedScript(String& path, String& text, String& updated) const;
+		void RememberSavedWeapons();
 
 		struct WatchedTileSet
 		{
@@ -211,6 +223,8 @@ namespace Jazz2::Editor
 		SmallVector<WatchedTileSet, 2> _watchedTileSets;
 		std::int64_t _watchedScriptTime = 0;
 		float _watchTime = 0.0f;
+		// The chunk of the weapons as it was when the level was opened or saved last
+		SmallVector<std::uint8_t, 0> _savedWeapons;
 		// See AcquireLock()
 		String _lockPath;
 		String _lockId;

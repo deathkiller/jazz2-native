@@ -687,7 +687,7 @@ namespace Jazz2::Editor
 			size->TextFunc = [state, title]() { return FormatImage(title ? state->Episode.Title : state->Episode.Background); };
 			size->Width = 90.0f;
 			// TRANSLATORS: Button in the Episode dialog that replaces the title or background image of the episode by a PNG file, and its tooltip
-			row->Add<UiButton>(_x("editor", "Import"), EditorIcon::Folder, [s, state, title]() { ImportImage(*s, state, title); })->Tooltip = _x("editor", "Replace it by a PNG image");
+			row->Add<UiButton>(_x("editor", "Import"), EditorIcon::Import, [s, state, title]() { ImportImage(*s, state, title); })->Tooltip = _x("editor", "Replace it by a PNG image");
 			auto* exportButton = row->Add<UiButton>(StringView(), EditorIcon::Export, [s, state, title]() { ExportImage(*s, state, title); });
 			exportButton->Tooltip = _x("editor", "Save it as a PNG image");
 			exportButton->IsEnabledFunc = [state, title]() { return !(title ? state->Episode.Title : state->Episode.Background).IsEmpty(); };

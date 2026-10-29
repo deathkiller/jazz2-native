@@ -919,19 +919,42 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	bool mlleGetWeapons(Legacy::jjSTREAM* data) {
-		// What the include of weapons of MLLE reads of the level, see Formats::ScriptDataChunk
+	static const WeaponDefinition* GetScriptWeapon(std::uint32_t slot) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		ArrayView<const std::uint8_t> weapons = owner->GetLevelHandler()->GetCustomWeapons();
-		bool hasWeapons = (data != nullptr && !weapons.empty());
-		if (hasWeapons) {
-			data->write(String(reinterpret_cast<const char*>(weapons.data()), weapons.size()));
+		if (slot < 1 || slot > std::uint32_t(WeaponType::Count)) {
+			return nullptr;
+		}
+		const WeaponDefinition& definition = owner->GetLevelHandler()->GetWeaponDefinition(WeaponType(slot - 1));
+		return (definition.Kind == WeaponKind::Script ? &definition : nullptr);
+	}
+
+	bool mlleGetWeaponParams(std::uint32_t slot, Legacy::jjSTREAM* data) {
+		// The parameters of a weapon the script sets up, see Formats::WeaponsChunk
+		const WeaponDefinition* definition = GetScriptWeapon(slot);
+		bool isScriptWeapon = (data != nullptr && definition != nullptr);
+		if (isScriptWeapon && !definition->ScriptParams.empty()) {
+			data->write(String(reinterpret_cast<const char*>(definition->ScriptParams.data()), definition->ScriptParams.size()));
 		}
 		// A handle passed to a native function is the function's to release
 		if (data != nullptr) {
 			data->Release();
 		}
-		return hasWeapons;
+		return isScriptWeapon;
+	}
+
+	std::uint8_t mlleGetWeaponAmmoCrate(std::uint32_t slot) {
+		const WeaponDefinition* definition = GetScriptWeapon(slot);
+		return (definition != nullptr ? definition->AmmoCrateEvent : 0);
+	}
+
+	std::int16_t mlleGetWeaponHookArgument() {
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return owner->GetLevelHandler()->GetWeapons().ScriptHookArgument;
+	}
+
+	void mlleSetWeaponSprite(std::uint32_t slot, bool powered, std::uint32_t firstFrame, std::uint32_t frameCount) {
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		owner->OnWeaponSprite(slot, powered, firstFrame, frameCount);
 	}
 
 	void mlleSpawnOffgrids() {
@@ -2693,7 +2716,10 @@ namespace Jazz2::Scripting
 		engine->SetDefaultNamespace("MLLE");
 		engine->RegisterGlobalFunction("bool Setup()", asFUNCTION(mlleSetup), asCALL_CDECL);
 		// For the include of weapons, see LevelScriptLoader::OnProcessInclude()
-		engine->RegisterGlobalFunction("bool _GetWeapons(jjSTREAM@ data)", asFUNCTION(mlleGetWeapons), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool _GetWeaponParams(uint slot, jjSTREAM@ data)", asFUNCTION(mlleGetWeaponParams), asCALL_CDECL);
+		engine->RegisterGlobalFunction("uint8 _GetWeaponAmmoCrate(uint slot)", asFUNCTION(mlleGetWeaponAmmoCrate), asCALL_CDECL);
+		engine->RegisterGlobalFunction("int16 _GetWeaponHookArgument()", asFUNCTION(mlleGetWeaponHookArgument), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void _SetWeaponSprite(uint slot, bool powerup, uint firstFrame, uint frameCount)", asFUNCTION(mlleSetWeaponSprite), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void ReapplyPalette()", asMETHOD(jjPAL, apply), asCALL_THISCALL_ASGLOBAL, &_mllePalette);
 		engine->RegisterGlobalFunction("void SpawnOffgrids()", asFUNCTION(mlleSpawnOffgrids), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void SpawnOffgridsLocal()", asFUNCTION(mlleSpawnOffgridsLocal), asCALL_CDECL);

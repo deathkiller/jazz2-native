@@ -62,6 +62,10 @@ set(SOURCES
 	# The translated level texts, a chunk only the game reads, but the formats verifier and fuzzer check it too
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelTextsChunk.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Formats/LevelTextsChunk.h
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/WeaponsChunk.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Formats/WeaponsChunk.h
+	${NCINE_SOURCE_DIR}/Jazz2/WeaponDefinition.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/WeaponDefinition.h
 	# The base layer and the original-data converters, both shared with the game; the engine itself is
 	# deliberately not linked, so the tool has no renderer and no window backend
 	${ASSET_PACKER_SHARED_SOURCES}

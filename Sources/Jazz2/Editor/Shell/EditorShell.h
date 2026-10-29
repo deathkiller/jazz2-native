@@ -10,6 +10,11 @@
 
 #include <memory>
 
+namespace nCine
+{
+	class Texture;
+}
+
 namespace Jazz2::Rendering
 {
 	class PolylineRenderer;
@@ -185,6 +190,10 @@ namespace Jazz2::Editor
 		SmallVector<EventLink, 0> _selectedLinks;
 		std::uint32_t _selectedLinksKey = 0;
 		std::uint32_t _eventsSerial = 0;
+		// How lit the level is around its ambient light events, a texel per block of tiles, see DrawAmbientLight()
+		std::unique_ptr<nCine::Texture> _ambientTexture;
+		std::int32_t _ambientStep = 1;
+		std::uint32_t _ambientKey = 0;
 
 		AnnotationCache _annotations;
 
@@ -221,6 +230,8 @@ namespace Jazz2::Editor
 		bool IsMovingEvents() const;
 		void DrawEventLinks(UiPainter& painter, const LayerView& view, float alpha);
 		void DrawSelectedEventDetails(UiPainter& painter, const LayerView& view);
+		// While an ambient light event is selected, darkens the level as the game would
+		void DrawAmbientLight(UiPainter& painter, const LayerView& view);
 		void DrawPlayPath(UiPainter& painter);
 	};
 }

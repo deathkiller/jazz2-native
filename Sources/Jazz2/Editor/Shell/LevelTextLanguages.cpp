@@ -362,7 +362,7 @@ namespace Jazz2::Editor
 		exportTranslation->Tooltip = _x("editor", "Writes the texts with their translation to the chosen language");
 		exportTranslation->IsEnabledFunc = [state]() { return !state->Language.empty(); };
 		// TRANSLATORS: Button in the Level Texts dialog, .po is the file extension of a gettext catalog, keep it
-		auto* importTranslation = row->Add<UiButton>(_x("editor", "Import .po"), EditorIcon::Folder, [s, state]() { ImportCatalog(*s, state); });
+		auto* importTranslation = row->Add<UiButton>(_x("editor", "Import .po"), EditorIcon::Import, [s, state]() { ImportCatalog(*s, state); });
 		importTranslation->Tooltip = _x("editor", "Reads the translations of a gettext catalog into the level");
 	}
 

@@ -229,6 +229,8 @@ namespace Jazz2::Editor
 		bool DirectionNegative = false;
 		/** @brief Arrow the value adds to, the values of an arrow are summed up --- a belt, an accelerating belt and a wind */
 		std::uint8_t DirectionGroup = 0;
+		/** @brief The value is a @ref WeaponType, its options are shown by the names the level gives its weapons */
+		bool IsWeapon = false;
 
 		/** @brief Returns the field with a unit */
 		constexpr EventParamField WithUnit(ParamUnit unit) const {
@@ -268,6 +270,12 @@ namespace Jazz2::Editor
 		constexpr EventParamField Hide() const {
 			EventParamField copy = *this;
 			copy.Hidden = true;
+			return copy;
+		}
+		/** @brief Returns the field whose value is a weapon, see @ref IsWeapon */
+		constexpr EventParamField AsWeapon() const {
+			EventParamField copy = *this;
+			copy.IsWeapon = true;
 			return copy;
 		}
 		/** @brief Returns the field shown multiplied by a scale */

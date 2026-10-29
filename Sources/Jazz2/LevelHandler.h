@@ -233,8 +233,12 @@ namespace Jazz2
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
 		bool HandlePlayerFire(Actors::Player* player, WeaponType weaponType) override;
-		bool IsWeaponFireCapped(WeaponType weaponType) override;
-		bool IsWeaponSoundMuted(WeaponType weaponType) override;
+		const WeaponDefinition& GetWeaponDefinition(WeaponType weaponType) const override;
+		/** @brief Returns what the level makes of a weapon, which a script may change, `nullptr` for no weapon */
+		WeaponDefinition* GetWritableWeaponDefinition(WeaponType weaponType);
+		const WeaponsDescription& GetWeapons() const override {
+			return _weapons;
+		}
 		void SetCheckpoint(Actors::Player* player, Vector2f pos) override;
 		void RollbackToCheckpoint(Actors::Player* player) override;
 		void HandleActivateSugarRush(Actors::Player* player) override;
@@ -247,10 +251,6 @@ namespace Jazz2
 		StringView GetScriptText(std::uint32_t textId);
 		/** @brief Sets a level text as the original game has it, which scripts read back, the text shown has to be set too */
 		void OverrideScriptText(std::uint32_t textId, StringView value);
-		/** @brief Returns the custom weapons the level sets up for its script, empty if it has none (see @ref Formats::ScriptDataChunk) */
-		ArrayView<const std::uint8_t> GetCustomWeapons() const {
-			return _customWeapons;
-		}
 		Vector2f GetCameraPos(Actors::Player* player) const override;
 		void LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width) override;
 		void OverrideCameraView(Actors::Player* player, CameraOverride modeX, float x, CameraOverride modeY, float y,
@@ -395,6 +395,12 @@ namespace Jazz2
 		// node refers to it, so it's declared before it and outlives it
 		std::unique_ptr<Editor::PlayTestDebug> _playTestDebug;
 #endif
+		// The images of the weapons of the level, declared before the actors that draw them, so it outlives them
+		struct AcquiredWeaponImages {
+			SmallVector<String, 0> Paths;
+			~AcquiredWeaponImages();
+		};
+		AcquiredWeaponImages _weaponImages;
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Texture> _noiseTexture;
 		SmallVector<std::unique_ptr<Rendering::PlayerViewport>, 0> _assignedViewports;
@@ -424,7 +430,7 @@ namespace Jazz2
 		SmallVector<LocalizedLevelTexts, 0> _localizedLevelTexts;
 		// The level texts as the original game had them, see Formats::ScriptDataChunk
 		SmallVector<String, 0> _scriptTexts;
-		SmallVector<std::uint8_t, 0> _customWeapons;
+		WeaponsDescription _weapons;
 #if defined(WITH_ANGELSCRIPT)
 		// Tile images the level replaces, for the script to read (see LevelScriptLoader::ResolveTileSetPixels())
 		SmallVector<Formats::TileDiffuseOverride, 0> _tileDiffuseOverrides;
@@ -530,6 +536,8 @@ namespace Jazz2
 		 * being edited.
 		 */
 		virtual void LoadLevelScripts(StringView fullPath);
+		/** @brief Loads the scripts of the level, with @p scriptText read in place of the `.j2as` file if it's not empty */
+		void LoadLevelScripts(StringView fullPath, StringView scriptText);
 		/** @brief Creates HUD */
 		virtual std::unique_ptr<UI::HUD> CreateHUD();
 		/** @brief Spawns all players */

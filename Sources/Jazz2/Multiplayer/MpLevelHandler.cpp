@@ -6482,9 +6482,8 @@ namespace Jazz2::Multiplayer
 				std::memset(player->_inventory.WeaponUpgrades, 0, sizeof(player->_inventory.WeaponUpgrades));
 				std::memset(player->_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(player->_inventoryCheckpoint.WeaponUpgrades));
 
-				player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-				player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 				player->_currentWeapon = WeaponType::Blaster;
+				player->ApplyLevelWeaponRules();
 			}
 		});
 		return true;
@@ -7576,14 +7575,12 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
-				// TODO: Drop number of gems accorting to the gun strength (usually 3 times)
-				std::uint32_t treasureLost = std::min<std::uint32_t>(peerDesc->TreasureCollected, 3u);
+				std::uint32_t treasureLost = std::min<std::uint32_t>(peerDesc->TreasureCollected, std::uint32_t(std::max<std::int32_t>(mpPlayer->_gemsLostOnHit, 0)));
+				// If the player is dead, drop half of the collected treasure instead
+				if (mpPlayer->_health <= 0 && treasureLost < peerDesc->TreasureCollected / 2) {
+					treasureLost = peerDesc->TreasureCollected / 2;
+				}
 				if (treasureLost > 0) {
-					// If the player is dead, drop half of the collected treasure instead
-					if (mpPlayer->_health <= 0 && treasureLost < peerDesc->TreasureCollected / 2) {
-						treasureLost = peerDesc->TreasureCollected / 2;
-					}
-
 					peerDesc->TreasureCollected -= treasureLost;
 
 					if (peerDesc->RemotePeer) {
@@ -9989,9 +9986,8 @@ namespace Jazz2::Multiplayer
 				std::memset(peerDesc->Player->_inventory.WeaponUpgrades, 0, sizeof(peerDesc->Player->_inventory.WeaponUpgrades));
 				std::memset(peerDesc->Player->_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(peerDesc->Player->_inventoryCheckpoint.WeaponUpgrades));
 
-				peerDesc->Player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-				peerDesc->Player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 				peerDesc->Player->_currentWeapon = WeaponType::Blaster;
+				peerDesc->Player->ApplyLevelWeaponRules();
 				// A spectator keeps its zero health, with any it would count as a living player
 				if (peerDesc->Player->_playerType != PlayerType::Spectate) {
 					peerDesc->Player->_health = (serverConfig.InitialPlayerHealth > 0

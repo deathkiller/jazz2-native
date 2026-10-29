@@ -1957,14 +1957,18 @@ namespace Jazz2::Actors
 
 	void ActorBase::HandleFrozenStateChange(ActorBase* shot)
 	{
-		if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(shot)) {
-			if (runtime_cast<ActorBase>(freezerShot->GetOwner()) != this) {
-				_frozenTimeLeft = freezerShot->GetFrozenDuration();
+		auto* shotBase = runtime_cast<Weapons::ShotBase>(shot);
+		if (shotBase == nullptr) {
+			return;
+		}
+		float frozenDuration = shotBase->GetFrozenDuration();
+		if (frozenDuration > 0.0f) {
+			if (runtime_cast<ActorBase>(shotBase->GetOwner()) != this) {
+				_frozenTimeLeft = frozenDuration;
 				_renderer.AnimPaused = true;
-				freezerShot->DecreaseHealth(INT32_MAX);
+				shotBase->DecreaseHealth(INT32_MAX);
 			}
-		} else if (runtime_cast<Weapons::ToasterShot>(shot) || runtime_cast<Weapons::ShieldFireShot>(shot) ||
-				   runtime_cast<Weapons::Thunderbolt>(shot)) {
+		} else if (shotBase->ThawsFrozen()) {
 			_frozenTimeLeft = std::min(1.0f, _frozenTimeLeft);
 		}
 	}

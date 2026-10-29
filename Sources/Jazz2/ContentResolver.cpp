@@ -7,6 +7,7 @@
 #include "Formats/LevelFile.h"
 #include "Formats/LevelTextsChunk.h"
 #include "Formats/TileSetFile.h"
+#include "Formats/WeaponsChunk.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
 #include "Compatibility/AssetConverter.h"
@@ -1097,6 +1098,96 @@ namespace Jazz2
 		if (pinned) {
 			_pinnedMetadata.emplace_back(metadata, 1);
 			metadata->Flags |= MetadataFlags::Pinned;
+		}
+	}
+
+	Metadata* ContentResolver::AcquireWeaponImage(const WeaponImage& image)
+	{
+		if (image.FrameWidth <= 0 || image.FrameHeight <= 0 || image.FrameCount <= 0 ||
+			image.Pixels.size() != std::size_t(image.FrameWidth) * image.FrameHeight * image.FrameCount) {
+			return nullptr;
+		}
+
+		String path = fs::ToNativeSeparators(WeaponsDescription::GetImageMetadataPath(image));
+		auto it = _cachedMetadata.find(path);
+		if (it != _cachedMetadata.end()) {
+			MarkReferenced(*it->second);
+			PinMetadata(it->second.get(), true);
+			return it->second.get();
+		}
+
+		// Frames side by side, each with the transparent margin a converted frame has
+		constexpr std::int32_t Border = GenericGraphicResource::FrameBorder;
+		const Vector2i cell = Vector2i(image.FrameWidth + Border * 2, image.FrameHeight + Border * 2);
+		const std::int32_t width = cell.X * image.FrameCount;
+		const std::int32_t height = cell.Y;
+		const std::size_t pixelCount = std::size_t(width) * height;
+		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(pixelCount);
+		std::memset(pixels.get(), 0, pixelCount);
+		for (std::int32_t f = 0; f < image.FrameCount; f++) {
+			for (std::int32_t y = 0; y < image.FrameHeight; y++) {
+				const std::uint8_t* src = &image.Pixels[(std::size_t(f) * image.FrameHeight + y) * image.FrameWidth];
+				std::memcpy(&pixels[std::size_t(Border + y) * width + f * cell.X + Border], src, image.FrameWidth);
+			}
+		}
+
+		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
+		graphics->Flags |= GenericGraphicResourceFlags::Indexed;
+		std::unique_ptr<std::uint8_t[]> mask = std::make_unique<std::uint8_t[]>((pixelCount + 7) / 8);
+		std::memset(mask.get(), 0, (pixelCount + 7) / 8);
+		for (std::size_t i = 0; i < pixelCount; i++) {
+			if (pixels[i] != 0) {
+				mask[i >> 3] |= std::uint8_t(1) << (i & 7);
+			}
+		}
+		graphics->Mask = Death::move(mask);
+		graphics->MaskStride = width;
+		if (!_isHeadless) {
+			bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
+			graphics->TextureDiffuse = CreateIndexedTexture(path.data(), pixels.get(), width, height, 1, paletteBaseTransparent);
+			graphics->TextureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
+			graphics->TextureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
+		}
+		// As the frame rate of a metadata file
+		graphics->AnimDuration = (image.FrameRate > 0.0f ? (1.0f / image.FrameRate) * 5.0f : 0.0f);
+		graphics->FrameDimensions = cell;
+		graphics->FrameConfiguration = Vector2i(image.FrameCount, 1);
+		graphics->FrameCount = image.FrameCount;
+		graphics->Hotspot = Vector2i(image.HotspotX + Border, image.HotspotY + Border);
+		graphics->Coldspot = Vector2i(InvalidValue, InvalidValue);
+		graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
+		GenericGraphicResource* base = graphics.get();
+		_cachedGraphics.emplace(Pair(String(path), IndexedGraphicsCacheKey), Death::move(graphics));
+
+		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
+		metadata->Path = path;
+		metadata->CacheKey = Death::move(path);
+		metadata->Flags |= MetadataFlags::Referenced;
+		metadata->BoundingBox = GenericGraphicResource::GetDefaultBoundingBox(cell);
+		GraphicResource& animation = metadata->Animations.emplace_back();
+		animation.Base = base;
+		animation.State = AnimState::Default;
+		animation.AnimDuration = base->AnimDuration;
+		animation.FrameCount = base->FrameCount;
+		animation.FrameOffset = 0;
+		animation.LoopMode = AnimationLoopMode::Loop;
+
+		Metadata* result = _cachedMetadata.emplace(metadata->CacheKey, Death::move(metadata)).first->second.get();
+		PinMetadata(result, true);
+		return result;
+	}
+
+	void ContentResolver::ReleaseWeaponImage(StringView path)
+	{
+		String pathNormalized = fs::ToNativeSeparators(path);
+		auto it = _cachedMetadata.find(pathNormalized);
+		if (it == _cachedMetadata.end()) {
+			return;
+		}
+		PinMetadata(it->second.get(), false);
+		if ((it->second->Flags & MetadataFlags::Pinned) != MetadataFlags::Pinned) {
+			_cachedMetadata.erase(it);
+			_cachedGraphics.erase(Pair(pathNormalized, IndexedGraphicsCacheKey));
 		}
 	}
 
@@ -3012,13 +3103,14 @@ namespace Jazz2
 			return false;
 		}
 
-		// Only the translations of the level texts, the properties of the layers and the data of the script are needed of the
+		// Only the translations of the level texts, the properties of the layers, the data of the script and the weapons are needed of the
 		// chunks, but a critical one this version doesn't know means the level can't be played as it was made (see
 		// Formats::LevelFile::IsCriticalChunk())
 		{
 			SmallVector<Formats::ChunkRecord, 0> chunks;
 			reader.ReadSelectedChunks(chunks, [](std::uint32_t tag, std::uint32_t) {
-				return (tag == Formats::LevelTextsChunk::Tag || tag == Formats::LayerPropertiesChunk::Tag || tag == Formats::ScriptDataChunk::Tag);
+				return (tag == Formats::LevelTextsChunk::Tag || tag == Formats::LayerPropertiesChunk::Tag || tag == Formats::ScriptDataChunk::Tag ||
+					tag == Formats::WeaponsChunk::Tag);
 			});
 			if (!reader.IsValid()) {
 				LOGE("Level \"{}\" cannot be read: {}", fullPath, reader.GetError());
@@ -3072,10 +3164,14 @@ namespace Jazz2
 							descriptor.ScriptTexts.emplace_back(Formats::ScriptDataChunk::ReadText(texts, std::int32_t(i)));
 						}
 					}
-					auto weapons = Formats::ScriptDataChunk::ReadSection(chunk.Data, Formats::ScriptDataChunk::Section::Weapons);
-					descriptor.CustomWeapons.append(weapons.begin(), weapons.end());
 					auto recolors = Formats::ScriptDataChunk::ReadSection(chunk.Data, Formats::ScriptDataChunk::Section::Recolors);
 					descriptor.SpriteRecolors.append(recolors.begin(), recolors.end());
+				} else if (chunk.Tag == Formats::WeaponsChunk::Tag) {
+					switch (Formats::WeaponsChunk::Read(chunk.Data, descriptor.Weapons)) {
+						case Formats::WeaponsChunk::ReadResult::Damaged: LOGW("Level \"{}\" has damaged weapons, those of the game are used", fullPath); break;
+						case Formats::WeaponsChunk::ReadResult::NewerVersion: LOGW("Level \"{}\" has weapons of a newer version, those of the game are used", fullPath); break;
+						default: break;
+					}
 				}
 			}
 		}

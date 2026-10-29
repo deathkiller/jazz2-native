@@ -881,14 +881,7 @@ namespace Jazz2::UI
 		AnimState currentWeaponAnim = GetCurrentWeapon(player, weapon, pos);
 
 		char stringBuffer[32];
-		StringView ammoCount;
-		if (player->_inventory.WeaponAmmo[(int32_t)weapon] == UINT16_MAX) {
-			ammoCount = "x\u221E"_s;
-		} else {
-			stringBuffer[0] = 'x';
-			i32tos(player->_inventory.WeaponAmmo[(int32_t)weapon] / 256, stringBuffer + 1);
-			ammoCount = stringBuffer;
-		}
+		StringView ammoCount = FormatAmmoCount(player, weapon, stringBuffer);
 
 		std::int32_t charOffset = 0;
 		if constexpr (Font::ShadowsEnabled) {
@@ -898,6 +891,18 @@ namespace Jazz2::UI
 		}
 		_smallFont->DrawString(this, ammoCount, charOffset, right - 40.0f, bottom - 2.0f, FontLayer,
 			Alignment::BottomLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+
+		if (const GraphicResource* customIcon = FindCustomWeaponIcon(player, weapon)) {
+			pos = Vector2f(right - 40.0f, bottom - 2.0f);
+			if (customIcon->Base->FrameDimensions.Y < 20) {
+				pos.Y -= roundFast((20 - customIcon->Base->FrameDimensions.Y) * 0.5f);
+			}
+			if constexpr (Font::ShadowsEnabled) {
+				DrawGraphics(customIcon, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			}
+			DrawGraphics(customIcon, -1, pos.X, pos.Y, MainLayer, Alignment::BottomRight, Colorf::White);
+			return;
+		}
 
 		auto* res = _metadata->FindAnimation(currentWeaponAnim);
 		if (res != nullptr) {
@@ -1362,8 +1367,44 @@ namespace Jazz2::UI
 
 	void HUD::DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
 	{
-		auto* res = _metadata->FindAnimation(state);
-		if (res == nullptr) {
+		DrawGraphics(_metadata->FindAnimation(state), frame, x, y, z, align, color, scaleX, scaleY, additiveBlending, angle);
+	}
+
+	StringView HUD::FormatAmmoCount(Actors::Player* player, WeaponType weapon, char (&buffer)[32])
+	{
+		std::uint16_t ammo = player->_inventory.WeaponAmmo[(std::int32_t)weapon];
+		if (ammo == UINT16_MAX) {
+			return "x∞"_s;
+		}
+		// The ammo a pickup gives is multiplied, so is the count shown divided (see WeaponOptions::Multiplier)
+		std::int32_t multiplier = std::max<std::int32_t>(_levelHandler->GetWeaponDefinition(weapon).Options.Multiplier, 1);
+		buffer[0] = 'x';
+		i32tos(ammo / (256 * multiplier), buffer + 1);
+		return buffer;
+	}
+
+	const GraphicResource* HUD::FindCustomWeaponIcon(Actors::Player* player, WeaponType weapon)
+	{
+		if (weapon >= WeaponType::Count) {
+			return nullptr;
+		}
+		const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(weapon);
+		bool powered = ((player->_inventory.WeaponUpgrades[(std::int32_t)weapon] & 0x01) != 0);
+		const WeaponSprite& sprite = (powered && !definition.HudIconPowered.IsEmpty() ? definition.HudIconPowered : definition.HudIcon);
+		if (sprite.IsEmpty()) {
+			return nullptr;
+		}
+		Metadata* metadata = ContentResolver::Get().RequestMetadata(_levelHandler->GetWeapons().GetSpriteMetadataPath(sprite));
+		if (metadata == nullptr) {
+			return nullptr;
+		}
+		const GraphicResource* res = metadata->FindAnimation(AnimState(sprite.AnimState));
+		return (res != nullptr && res->Base != nullptr && res->Base->TextureDiffuse != nullptr ? res : nullptr);
+	}
+
+	void HUD::DrawGraphics(const GraphicResource* res, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
+	{
+		if (res == nullptr || res->Base == nullptr || res->Base->TextureDiffuse == nullptr) {
 			return;
 		}
 
@@ -1719,14 +1760,22 @@ namespace Jazz2::UI
 				// rounds on its own, so the icon jumped back and forth by a pixel while animating at full size.
 				Vector2f topLeft = Vector2f(roundf(pos.X), roundf(pos.Y));
 				Alignment align = Alignment::Center;
-				if (auto* weaponRes = _metadata->FindAnimation(weapon)) {
+				const GraphicResource* customIcon = FindCustomWeaponIcon(player, (WeaponType)i);
+				if (customIcon != nullptr) {
+					topLeft.X = roundf(center.X + x - customIcon->Base->FrameDimensions.X * scale * 0.5f);
+					topLeft.Y = roundf(center.Y + y - customIcon->Base->FrameDimensions.Y * scale * 0.5f);
+					align = Alignment::TopLeft;
+				} else if (auto* weaponRes = _metadata->FindAnimation(weapon)) {
 					topLeft.X = roundf(pos.X - weaponRes->Base->FrameDimensions.X * scale * 0.5f);
 					topLeft.Y = roundf(pos.Y - weaponRes->Base->FrameDimensions.Y * scale * 0.5f);
 					align = Alignment::TopLeft;
 				}
 
 				bool drawn = false;
-				if ((WeaponType)i == WeaponType::Blaster) {
+				if (customIcon != nullptr) {
+					DrawGraphics(customIcon, -1, topLeft.X, topLeft.Y, MainLayer + 10, align, weaponColor, scale, scale);
+					drawn = true;
+				} else if ((WeaponType)i == WeaponType::Blaster) {
 					std::int32_t paletteOffset = player->GetPaletteOffset();
 					if (paletteOffset >= 0) {
 						if (_metadataIndexed == nullptr) {
@@ -1741,14 +1790,7 @@ namespace Jazz2::UI
 
 				if (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) {
 					char stringBuffer[32];
-					StringView ammoCount;
-					if (player->_inventory.WeaponAmmo[i] == UINT16_MAX) {
-						ammoCount = "x\u221E"_s;
-					} else {
-						stringBuffer[0] = 'x';
-						i32tos(player->_inventory.WeaponAmmo[i] / 256, stringBuffer + 1);
-						ammoCount = stringBuffer;
-					}
+					StringView ammoCount = FormatAmmoCount(player, (WeaponType)i, stringBuffer);
 
 					std::int32_t charOffset = 0;
 					_smallFont->DrawString(this, ammoCount, charOffset, center.X + x * 1.4f, center.Y + y * 1.4f, FontLayer,

@@ -46,6 +46,10 @@ namespace Jazz2::Actors::Weapons
 			return WeaponType::Thunderbolt;
 		}
 
+		bool ThawsFrozen() const override {
+			return true;
+		}
+
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;

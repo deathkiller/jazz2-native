@@ -522,7 +522,7 @@ namespace Jazz2::Editor
 		EditorSession* session = &_session;
 		// TRANSLATORS: Menu in the menu bar of the editor
 		_menuBar->AddMenu(_x("editor", "File"), [addActions, session](SmallVectorImpl<UiMenuEntry>& entries) {
-			addActions(entries, { ActionIds::FileNew, ActionIds::FileOpen });
+			addActions(entries, { ActionIds::FileNew, ActionIds::FileOpen, nullptr, ActionIds::FileSave, ActionIds::FileSaveAs, ActionIds::FileExport, ActionIds::FileExportPackage });
 			// Recent files, the one open now first and checked, as a level just saved under a new name is
 			const auto& recentFiles = session->GetSettings().RecentFiles;
 			StringView openPath = session->GetFilePath();
@@ -556,7 +556,7 @@ namespace Jazz2::Editor
 				entries.push_back(Death::move(entry));
 				shown++;
 			}
-			addActions(entries, { nullptr, ActionIds::FileSave, ActionIds::FileSaveAs, ActionIds::FileExport, ActionIds::FileExportPackage, nullptr, ActionIds::FileRecovery, nullptr, ActionIds::FileExit });
+			addActions(entries, { nullptr, ActionIds::FileRecovery, nullptr, ActionIds::FileExit });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor
 		_menuBar->AddMenu(_x("editor", "Edit"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
@@ -568,13 +568,13 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Menu in the menu bar of the editor, the camera, what is drawn over the level and the look of the editor
 		_menuBar->AddMenu(_x("editor", "View"), [addActions, addSubmenu](SmallVectorImpl<UiMenuEntry>& entries) {
 			addActions(entries, { ActionIds::ViewZoomIn, ActionIds::ViewZoomOut, ActionIds::ViewZoomGame, ActionIds::ViewFit, nullptr, ActionIds::ViewGrid, ActionIds::ViewMasks, ActionIds::ViewEvents,
-				ActionIds::ViewPlayPath, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewPreviewTextured, ActionIds::ViewOverriddenAssets });
+				ActionIds::ViewEventsOnTop, ActionIds::ViewPlayPath, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewPreviewTextured, ActionIds::ViewOverriddenAssets });
 			entries.push_back(UiMenuEntry::Separator());
 			// TRANSLATORS: Submenu in the View menu, shows where the player can get and with which character
 			addSubmenu(entries, _x("editor", "Reachable Area"), EditorIcon::Reach, { ActionIds::ViewReachability, nullptr, ActionIds::ViewReachAny, ActionIds::ViewReachJazz,
 				ActionIds::ViewReachSpaz, ActionIds::ViewReachLori, nullptr, ActionIds::ViewReachFromMpStarts });
 			// TRANSLATORS: Submenu in the View menu, the frame around the pointer that shows what the game screen would show
-			addSubmenu(entries, _x("editor", "Game Screen Frame"), EditorIcon::Fit, { ActionIds::ViewScreenFrame, nullptr, ActionIds::ViewScreenFrameGame, ActionIds::ViewScreenFrame4x3,
+			addSubmenu(entries, _x("editor", "Game Screen Frame"), EditorIcon::ScreenFrame, { ActionIds::ViewScreenFrame, nullptr, ActionIds::ViewScreenFrameGame, ActionIds::ViewScreenFrame4x3,
 				ActionIds::ViewScreenFrame16x9, ActionIds::ViewScreenFrameSplit });
 			addActions(entries, { ActionIds::ViewCompareSaved, nullptr, ActionIds::ViewNavigator, ActionIds::ViewAddNote });
 			entries.push_back(UiMenuEntry::Separator());
@@ -605,7 +605,7 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Menu in the menu bar of the editor, the level as a whole
 		_menuBar->AddMenu(_x("editor", "Level"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
 			// Making tile sets, adding tiles to them, exporting and rearranging them is in the Tile Sets dialog
-			addActions(entries, { ActionIds::LevelProperties, ActionIds::LevelTexts, ActionIds::LevelEpisode, ActionIds::LevelStatistics, ActionIds::LevelCheck, ActionIds::EventsList, ActionIds::LevelSnapOffGrid, ActionIds::LevelReloadEvents, ActionIds::LevelEditScript, nullptr, ActionIds::LevelAnimations, ActionIds::LevelTileSets, ActionIds::LevelPalette, ActionIds::LevelEditTile, ActionIds::LevelApplyTileChanges });
+			addActions(entries, { ActionIds::LevelProperties, ActionIds::LevelTexts, ActionIds::LevelWeapons, ActionIds::LevelEpisode, ActionIds::LevelStatistics, ActionIds::LevelCheck, ActionIds::EventsList, ActionIds::LevelSnapOffGrid, ActionIds::LevelReloadEvents, ActionIds::LevelEditScript, nullptr, ActionIds::LevelAnimations, ActionIds::LevelTileSets, ActionIds::LevelPalette, ActionIds::LevelEditTile, ActionIds::LevelApplyTileChanges });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor, for play-testing the level
 		_menuBar->AddMenu(_x("editor", "Play"), [addActions, addSubmenu](SmallVectorImpl<UiMenuEntry>& entries) {
@@ -661,7 +661,7 @@ namespace Jazz2::Editor
 		}
 		_toolbar->Add<UiSeparator>(UiOrientation::Vertical)->IsVisibleFunc = notNarrow;
 		EditorSettings* settings = &_session.GetSettings();
-		for (const char* id : { ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewMasks, ActionIds::ViewEvents, ActionIds::ViewOverriddenAssets, ActionIds::ViewPlayPath,
+		for (const char* id : { ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewMasks, ActionIds::ViewEvents, ActionIds::ViewEventsOnTop, ActionIds::ViewOverriddenAssets, ActionIds::ViewPlayPath,
 			ActionIds::ViewReachability }) {
 			if (UiButton* button = AddActionButton(_toolbar, id)) {
 				bool expert = IsExpertAction(id);
@@ -1701,7 +1701,14 @@ namespace Jazz2::Editor
 		float animTime = _session.GetAnimTime();
 		bool moving = (editingEvents && IsMovingEvents());
 		std::uint8_t difficultyBit = GetDifficultyFlag(_session.GetSettings().PlayDifficulty);
-		constexpr std::uint16_t Z = std::uint16_t(ILevelHandler::MainPlaneZ);
+		// Over the layer in front of all others if asked for
+		std::int32_t z = ILevelHandler::MainPlaneZ;
+		if (_session.GetSettings().EventsOnTop) {
+			for (const DocumentLayer& layer : document.Layers) {
+				z = std::max(z, ILevelHandler::MainPlaneZ - std::int32_t(layer.Record.Depth) + 1);
+			}
+		}
+		const std::uint16_t Z = std::uint16_t(std::min<std::int32_t>(z, 0xDFFF));
 
 		if (to.X >= from.X && to.Y >= from.Y) {
 			for (std::int32_t y = from.Y; y <= to.Y; y++) {
@@ -1785,6 +1792,10 @@ namespace Jazz2::Editor
 		std::uint8_t difficultyBit = GetDifficultyFlag(_session.GetSettings().PlayDifficulty);
 		// See DrawMaskGlyphs()
 		bool maskGlyphs = (_session.GetMaskMode() != 0 && _session.GetCurrentLayer() == spriteLayer && tileSize >= 8.0f);
+
+		if (editingEvents) {
+			DrawAmbientLight(painter, view);
+		}
 
 		for (std::int32_t y = from.Y; y <= to.Y; y++) {
 			std::uint32_t rowEnd = std::uint32_t(y) * std::uint32_t(gridSize.X) + std::uint32_t(to.X);
@@ -1879,6 +1890,64 @@ namespace Jazz2::Editor
 			// Drawn as those on the grid, told apart by the mark in the corner
 			previews.DrawPlaced(painter, event.Event, rect, view.Scale, eventAlpha, animTime, Vector2f(float(event.X), float(event.Y)), true, true);
 		}
+	}
+
+	void EditorShell::DrawAmbientLight(UiPainter& painter, const LayerView& view)
+	{
+		LevelDocument& document = _session.GetDocument();
+		Vector2i gridSize = document.GetEventGridSize();
+		bool isSelected = false;
+		for (std::uint32_t cell : _session.GetEventSelection().GetCells()) {
+			std::uint8_t intensity;
+			if (EventPreviews::GetAmbientLight(document.GetEvent(std::int32_t(cell % std::uint32_t(gridSize.X)), std::int32_t(cell / std::uint32_t(gridSize.X))), intensity)) {
+				isSelected = true;
+				break;
+			}
+		}
+		if (!isSelected) {
+			return;
+		}
+
+		// Made again when the events change, events painted while a stroke goes on only change their number
+		std::uint32_t key = (2166136261u ^ _eventsSerial) * 16777619u;
+		key = (key ^ std::uint32_t(document.Events.size())) * 16777619u;
+		key = (key ^ EventCatalog::GetRevision()) * 16777619u;
+		if (_ambientTexture == nullptr || key != _ambientKey) {
+			_ambientKey = key;
+			_ambientStep = std::max<std::int32_t>(1, (std::max(gridSize.X, gridSize.Y) + 1023) / 1024);
+			Vector2i size;
+			SmallVector<std::uint8_t, 0> intensities;
+			if (!EventPreviews::CollectAmbientLight(document, _ambientStep, size, intensities)) {
+				_ambientTexture = nullptr;
+				return;
+			}
+			// White, the color of the darkness is given when it's drawn
+			SmallVector<std::uint8_t, 0> texels;
+			texels.resize(intensities.size() * 4, 255);
+			for (std::size_t i = 0; i < intensities.size(); i++) {
+				texels[i * 4 + 3] = std::uint8_t(255 - intensities[i]);
+			}
+			if (_ambientTexture == nullptr || _ambientTexture->GetWidth() != size.X || _ambientTexture->GetHeight() != size.Y) {
+				_ambientTexture = std::make_unique<nCine::Texture>("EditorAmbientLight", nCine::Texture::Format::RGBA8, size.X, size.Y);
+				_ambientTexture->SetMinFiltering(nCine::SamplerFilter::Linear);
+				_ambientTexture->SetMagFiltering(nCine::SamplerFilter::Linear);
+				_ambientTexture->SetWrap(nCine::SamplerWrapping::ClampToEdge);
+			}
+			_ambientTexture->LoadFromTexels(texels.data(), 0, 0, size.X, size.Y);
+		}
+		if (_ambientTexture == nullptr) {
+			return;
+		}
+
+		// The game blends the view into the ambient color of the level by how dark it is, see the Combine shader; not
+		// quite black, so the level can still be seen
+		constexpr float MaxDarkness = 0.85f;
+		std::uint32_t color = document.Properties.AmbientColor;
+		Colorf darkness((color & 0xff) / 255.0f, ((color >> 8) & 0xff) / 255.0f, ((color >> 16) & 0xff) / 255.0f, MaxDarkness);
+		float blockSize = 32.0f * float(_ambientStep) * view.Scale;
+		Vector2f origin = view.WorldToScreen(Vector2f(0.0f, 0.0f));
+		Rectf rect(origin.X, origin.Y, float(_ambientTexture->GetWidth()) * blockSize, float(_ambientTexture->GetHeight()) * blockSize);
+		painter.Image(*_ambientTexture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), darkness, -1, UiLayer::Back);
 	}
 
 	void EditorShell::DrawSelectedEventDetails(UiPainter& painter, const LayerView& view)

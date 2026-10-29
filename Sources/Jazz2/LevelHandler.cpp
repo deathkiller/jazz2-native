@@ -250,6 +250,13 @@ namespace Jazz2
 		TracyPlot("Actors", 0LL);
 	}
 
+	LevelHandler::AcquiredWeaponImages::~AcquiredWeaponImages()
+	{
+		for (const String& path : Paths) {
+			ContentResolver::Get().ReleaseWeaponImage(path);
+		}
+	}
+
 	void LevelHandler::ReleaseScripts()
 	{
 #if defined(WITH_ANGELSCRIPT)
@@ -778,7 +785,12 @@ namespace Jazz2
 		_levelTexts = Death::move(descriptor.LevelTexts);
 		_localizedLevelTexts = Death::move(descriptor.LocalizedTexts);
 		_scriptTexts = Death::move(descriptor.ScriptTexts);
-		_customWeapons = Death::move(descriptor.CustomWeapons);
+		_weapons = Death::move(descriptor.Weapons);
+		for (const WeaponImage& image : _weapons.Images) {
+			if (Metadata* metadata = ContentResolver::Get().AcquireWeaponImage(image)) {
+				_weaponImages.Paths.push_back(metadata->Path);
+			}
+		}
 #if defined(WITH_ANGELSCRIPT)
 		_tileDiffuseOverrides = Death::move(descriptor.TileDiffuseOverrides);
 		_spriteRecolors = Death::move(descriptor.SpriteRecolors);
@@ -803,19 +815,26 @@ namespace Jazz2
 
 	void LevelHandler::LoadLevelScripts(StringView fullPath)
 	{
+		LoadLevelScripts(fullPath, {});
+	}
+
+	void LevelHandler::LoadLevelScripts(StringView fullPath, StringView scriptText)
+	{
 #if defined(WITH_ANGELSCRIPT) || defined(DEATH_TRACE)
 		// TODO: Allow script signing
 		if (PreferencesCache::AllowUnsignedScripts) {
 			const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
 			String scriptPath = (foundDot == fullPath.end() ? fullPath : fullPath.prefix(foundDot.begin())) + ".j2as"_s;
-			if (auto scriptPathCaseInsensitive = fs::FindPathCaseInsensitive(scriptPath)) {
-				if (fs::IsReadableFile(scriptPathCaseInsensitive)) {
+			String scriptPathCaseInsensitive = fs::FindPathCaseInsensitive(scriptPath);
+			if (scriptPathCaseInsensitive.empty() && !scriptText.empty()) {
+				scriptPathCaseInsensitive = scriptPath;
+			}
+			if (!scriptPathCaseInsensitive.empty() && (!scriptText.empty() || fs::IsReadableFile(scriptPathCaseInsensitive))) {
 #	if defined(WITH_ANGELSCRIPT)
-					_scripts = std::make_unique<Scripting::LevelScriptLoader>(this, scriptPathCaseInsensitive);
+				_scripts = std::make_unique<Scripting::LevelScriptLoader>(this, scriptPathCaseInsensitive, scriptText);
 #	else
-					LOGW("Level requires scripting, but scripting support is disabled in this build");
+				LOGW("Level requires scripting, but scripting support is disabled in this build");
 #	endif
-				}
 			}
 		}
 #endif
@@ -1853,24 +1872,18 @@ namespace Jazz2
 		return false;
 	}
 
-	bool LevelHandler::IsWeaponFireCapped(WeaponType weaponType)
+	const WeaponDefinition& LevelHandler::GetWeaponDefinition(WeaponType weaponType) const
 	{
-#if defined(WITH_ANGELSCRIPT)
-		if (_scripts != nullptr) {
-			return _scripts->IsWeaponFireCapped(weaponType);
+		if (weaponType >= WeaponType::Count) {
+			static const WeaponDefinition None = WeaponDefinition::MakeDefault(WeaponType::Unknown);
+			return None;
 		}
-#endif
-		return false;
+		return _weapons.Weapons[std::int32_t(weaponType)];
 	}
 
-	bool LevelHandler::IsWeaponSoundMuted(WeaponType weaponType)
+	WeaponDefinition* LevelHandler::GetWritableWeaponDefinition(WeaponType weaponType)
 	{
-#if defined(WITH_ANGELSCRIPT)
-		if (_scripts != nullptr) {
-			return _scripts->IsWeaponSoundMuted(weaponType);
-		}
-#endif
-		return false;
+		return (weaponType < WeaponType::Count ? &_weapons.Weapons[std::int32_t(weaponType)] : nullptr);
 	}
 
 	void LevelHandler::SetCheckpoint(Actors::Player* player, Vector2f pos)

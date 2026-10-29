@@ -5,6 +5,7 @@
 #include "PropertyRows.h"
 #include "ShellCommon.h"
 #include "ShellPanels.h"
+#include "WeaponsDialog.h"
 #include "../Tools/EditorContext.h"
 #include "../Common/EventStamp.h"
 #include "../Document/CommandHistory.h"
@@ -923,7 +924,7 @@ namespace Jazz2::Editor
 		static const FlagRow FlagRows[] = {
 			// TRANSLATORS: Check boxes in the event properties with their tooltips, the labels are also names of undo steps in the history
 			{ _x("editor", "Multiplayer only"), _x("editor", "The event is in the level only in multiplayer"), Formats::EventRecord::MultiplayerOnly, MixedMultiplayer },
-			{ _x("editor", "Illuminated"), _x("editor", "The object glows in the dark"), Formats::EventRecord::Illuminated, MixedIlluminated },
+			{ _x("editor", "Illuminate Surroundings"), _x("editor", "The object glows in the dark"), Formats::EventRecord::Illuminated, MixedIlluminated },
 			{ _x("editor", "Generator"), _x("editor", "The object appears again a while after it's gone"), Formats::EventRecord::Generator, MixedGenerator },
 		};
 		for (const FlagRow& flagRow : FlagRows) {
@@ -1160,20 +1161,20 @@ namespace Jazz2::Editor
 				}
 				case ParamType::Enum: {
 					auto* row = AddRow(rows, label, tooltip);
-					auto* dropdown = row->Add<UiDropdown>([read, f]() {
+					auto* dropdown = row->Add<UiDropdown>([self, read, f]() {
 						std::int32_t value = read();
 						for (std::uint8_t j = 0; j < f->OptionCount; j++) {
 							if (f->Options[j].Value == value) {
-								return String(f->Options[j].Label);
+								return GetEventOptionLabel(self->_session, *f, f->Options[j]);
 							}
 						}
 						return FormatInteger(value);
-					}, [read, write, f](SmallVectorImpl<UiMenuEntry>& entries) {
+					}, [self, read, write, f](SmallVectorImpl<UiMenuEntry>& entries) {
 						std::int32_t current = read();
 						for (std::uint8_t j = 0; j < f->OptionCount; j++) {
 							std::int32_t value = f->Options[j].Value;
 							UiMenuEntry entry;
-							entry.Label = f->Options[j].Label;
+							entry.Label = GetEventOptionLabel(self->_session, *f, f->Options[j]);
 							entry.IsChecked = [current, value]() { return (current == value); };
 							entry.Execute = [write, value]() { write(value, true); };
 							entries.push_back(Death::move(entry));
@@ -1281,11 +1282,11 @@ namespace Jazz2::Editor
 			}
 			case ParamType::Enum: {
 				auto* row = AddRow(rows, label, tooltip);
-				auto* dropdown = row->Add<UiDropdown>([read, f]() {
+				auto* dropdown = row->Add<UiDropdown>([self, read, f]() {
 					std::int32_t value = read();
 					for (std::uint8_t i = 0; i < f->OptionCount; i++) {
 						if (f->Options[i].Value == value) {
-							return String(f->Options[i].Label);
+							return GetEventOptionLabel(self->_session, *f, f->Options[i]);
 						}
 					}
 					return FormatInteger(value);
@@ -1294,7 +1295,7 @@ namespace Jazz2::Editor
 					for (std::uint8_t i = 0; i < f->OptionCount; i++) {
 						std::int32_t value = f->Options[i].Value;
 						UiMenuEntry entry;
-						entry.Label = f->Options[i].Label;
+						entry.Label = GetEventOptionLabel(self->_session, *f, f->Options[i]);
 						entry.IsChecked = [current, value]() { return (current == value); };
 						entry.Execute = [self, f, value]() {
 							self->Change(f->Name, [f, value](Formats::EventRecord& event) {

@@ -3,6 +3,11 @@
 #include "../Player.h"
 #include "../Enemies/EnemyBase.h"
 #include "../Weapons/BlasterShot.h"
+#include "../Weapons/BouncerShot.h"
+#include "../Weapons/CustomShot.h"
+#include "../Weapons/ElectroShot.h"
+#include "../Weapons/FreezerShot.h"
+#include "../Weapons/SeekerShot.h"
 
 using namespace Jazz2::Tiles;
 
@@ -162,26 +167,40 @@ namespace Jazz2::Actors::Environment
 						SetState(ActorState::CollideWithTileset, true);
 						TileCollisionParams params = { TileDestructType::None, true };
 						if (_levelHandler->IsPositionEmpty(this, AABBf(_pos.X - 2.0f, _pos.Y - 2.0f, _pos.X + 2.0f, _pos.Y + 2.0f), params)) {
-							uint8_t shotParams[1] = { 0 };
+							// The weapon the player holds if the level lets birds fire it (see WeaponOptions::ComesFromBirds), the blaster
+							// otherwise, and it doesn't take any ammo
+							WeaponType weaponType = _owner->GetCurrentWeapon();
+							const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(weaponType);
+							bool fromBirds = (definition.Options.ComesFromBirds && weaponType < WeaponType::Count);
+							bool custom = (fromBirds && definition.Kind == WeaponKind::Custom);
+							if (!fromBirds) {
+								weaponType = WeaponType::Blaster;
+							}
+							std::uint8_t upgrades = (fromBirds && definition.Options.ComesFromBirdsPowerup ? (_owner->GetWeaponUpgrades()[(std::int32_t)weaponType] & 0x01) : 0);
+							std::uint8_t shotParams[3] = { upgrades, std::uint8_t(weaponType), 0 };
 							std::shared_ptr<ActorBase> sharedOwner = _owner->shared_from_this();
 
-							std::shared_ptr<Weapons::BlasterShot> shot1 = std::make_shared<Weapons::BlasterShot>();
-							shot1->OnActivated(ActorActivationDetails(
-								_levelHandler,
-								Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2),
-								shotParams
-							));
-							shot1->OnFire(sharedOwner, _pos, _speed, 0.0f, IsFacingLeft());
-							_levelHandler->AddActor(shot1);
-
-							std::shared_ptr<Weapons::BlasterShot> shot2 = std::make_shared<Weapons::BlasterShot>();
-							shot2->OnActivated(ActorActivationDetails(
-								_levelHandler,
-								Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2),
-								shotParams
-							));
-							shot2->OnFire(sharedOwner, _pos, _speed, IsFacingLeft() ? -0.18f : 0.18f, IsFacingLeft());
-							_levelHandler->AddActor(shot2);
+							auto fire = [&](auto shot, float angle) {
+								shot->OnActivated(ActorActivationDetails(
+									_levelHandler,
+									Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2),
+									shotParams
+								));
+								shot->OnFire(sharedOwner, _pos, _speed, angle, IsFacingLeft());
+								_levelHandler->AddActor(shot);
+							};
+							for (float angle : { 0.0f, IsFacingLeft() ? -0.18f : 0.18f }) {
+								if (custom) {
+									fire(std::make_shared<Weapons::CustomShot>(), angle);
+								} else switch (weaponType) {
+									case WeaponType::Bouncer: fire(std::make_shared<Weapons::BouncerShot>(), angle); break;
+									case WeaponType::Freezer: fire(std::make_shared<Weapons::FreezerShot>(), angle); break;
+									case WeaponType::Seeker: fire(std::make_shared<Weapons::SeekerShot>(), angle); break;
+									case WeaponType::Electro: fire(std::make_shared<Weapons::ElectroShot>(), angle); break;
+									case WeaponType::Blaster: fire(std::make_shared<Weapons::BlasterShot>(), angle); break;
+									default: shotParams[0] = 0; fire(std::make_shared<Weapons::BlasterShot>(), angle); break;
+								}
+							}
 
 							PlaySfx("Fire"_s, 0.5f);
 							_fireCooldown = 32.0f;

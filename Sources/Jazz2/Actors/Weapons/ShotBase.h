@@ -37,12 +37,18 @@ namespace Jazz2::Actors::Weapons
 		Player* GetOwner();
 		/** @brief Returns weapon type */
 		virtual WeaponType GetWeaponType();
+		/** @brief Returns the weapon of the level that fired the shot, the same as @ref GetWeaponType() unless the level made its own */
+		virtual WeaponType GetSourceWeapon();
 		/** @brief Returns `true` if the shot is of the powered-up weapon */
 		bool IsUpgraded() const {
 			return ((_upgrades & 0x01) != 0);
 		}
 		/** @brief Triggers shot ricochet */
 		void TriggerRicochet(ActorBase* other);
+		/** @brief Returns how long the shot freezes what it hits, 0 if it doesn't */
+		virtual float GetFrozenDuration() const;
+		/** @brief Returns `true` if the shot thaws what's frozen */
+		virtual bool ThawsFrozen() const;
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT

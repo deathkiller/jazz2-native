@@ -1781,7 +1781,7 @@ namespace Jazz2::Editor
 
 			// To change the tile in another program and bring it back
 			// TRANSLATORS: Button in the tile editor, takes the pixels of the tile from a PNG image
-			auto* importImage = right->Add<UiButton>(_x("editor", "Import PNG"), EditorIcon::Folder, [s, state]() {
+			auto* importImage = right->Add<UiButton>(_x("editor", "Import PNG"), EditorIcon::Import, [s, state]() {
 				// TRANSLATORS: Title of the file picker of the image the tile is taken from
 				ShowOpenImageDialog(*s, _x("editor", "Import Tile"), [s, state](StringView path) {
 					PngImage image;
