@@ -1,4 +1,4 @@
-#include "ElectroShot.h"
+﻿#include "ElectroShot.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
 #include "../../Tiles/TileMap.h"
@@ -109,7 +109,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		auto& resBase = res->Base;
-		std::int32_t frameCount = std::max(res->FrameCount, 1);
+		std::int32_t frameCount = std::max<std::int32_t>(res->FrameCount, 1);
 		Vector2i texSize = resBase->TextureDiffuse->GetSize();
 
 		for (int i = 0; i < 6; i++) {

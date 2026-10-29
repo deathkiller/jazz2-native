@@ -600,7 +600,7 @@ namespace Jazz2::Editor
 			if (options.Look == ShotLook::Electro) {
 				// Rings of sparks left behind, each smaller and fainter as it gets older, see ElectroShot::CreateParticles()
 				constexpr std::int32_t Lifetime = 10;
-				std::int32_t frameCount = std::max(resource->FrameCount, 1);
+				std::int32_t frameCount = std::max<std::int32_t>(resource->FrameCount, 1);
 				for (std::int32_t age = Lifetime - 1; age >= 0; age--) {
 					std::int32_t step = frame - age;
 					if (step < 2) {

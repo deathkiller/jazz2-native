@@ -308,8 +308,9 @@ namespace Jazz2::Formats
 			return true;
 		}
 
+		// The limits take the type of the value, an int32_t isn't an int everywhere (long on PSP)
 		template<typename T>
-		T Clamped(T value, T min, T max)
+		T Clamped(T value, typename std::common_type<T>::type min, typename std::common_type<T>::type max)
 		{
 			return std::clamp<T>(value, min, max);
 		}

@@ -166,7 +166,7 @@ namespace Jazz2::Actors::Weapons
 		if (_options.PassesWalls) {
 			destructType |= TileDestructType::IgnoreSolidTiles;
 		}
-		TileCollisionParams params = { destructType, false, blocksAs, std::max(_baseStrength, 1) };
+		TileCollisionParams params = { destructType, false, blocksAs, std::max<std::int32_t>(_baseStrength, 1) };
 		_levelHandler->IsPositionEmpty(this, AABBInner, params);
 		if (params.TilesDestroyed > 0) {
 			if (auto* player = runtime_cast<Player>(_owner.get())) {
@@ -248,7 +248,7 @@ namespace Jazz2::Actors::Weapons
 		if (_options.PassesWalls) {
 			destructType |= TileDestructType::IgnoreSolidTiles;
 		}
-		TileCollisionParams params = { destructType, _speed.Y >= 0.0f, blocksAs, std::max(_baseStrength, 1) };
+		TileCollisionParams params = { destructType, _speed.Y >= 0.0f, blocksAs, std::max<std::int32_t>(_baseStrength, 1) };
 		for (std::int32_t i = 0; i < n && params.WeaponStrength > 0 && !_detonated; i++) {
 			Move(timeMult / n, params);
 		}
