@@ -967,7 +967,8 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		auto selection = std::make_shared<PaletteSelection>();
 		// TRANSLATORS: Title of the dialog that edits the palette of the level and its additional palettes
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Palettes"));
+		auto dialog = std::make_unique<UiDialog>(_x("editor", "Palettes"), true);
+		dialog->MaxScreenHeightFraction = 0.9f;
 		auto* content = dialog->GetContent();
 		AddPaletteBar(content, session);
 

@@ -897,60 +897,6 @@ namespace Jazz2::Editor
 			}
 		};
 
-		/**
-		 * The window of the episode, as large as the screen allows up to a part of it, the list of levels grows with it.
-		 * On a screen too small even for the smallest list, the content of the window scrolls.
-		 */
-		class EpisodeWindow : public UiDialog
-		{
-			DEATH_RUNTIME_OBJECT(UiDialog);
-
-		public:
-			// The list that takes what the window can grow by
-			UiScrollView* List = nullptr;
-			// The columns of the properties and of the levels, and the column of the levels, or none
-			UiElement* Columns = nullptr;
-			UiElement* ListColumn = nullptr;
-
-			// Height of the list in units until the window was laid out
-			EpisodeWindow(StringView title, float listHeight)
-				: UiDialog(title, true), _listHeight(listHeight)
-			{
-				// 70 % of the width of the screen up to a width, the list as wide, and at most 65 % of its height
-				MinScreenWidthFraction = 0.7f;
-				MaxStretchedWidth = 720.0f;
-				MaxScreenHeightFraction = 0.65f;
-			}
-
-			Vector2f Measure(const UiContext& context, Vector2f available) override
-			{
-				// A list without a height of its own would be as tall as all of its rows, the whole content would scroll then,
-				// so it's given what's left of the part of the screen by what's around it as the window was laid out the last
-				// time --- that doesn't depend on the list, so the list fits from the next frame on
-				if (List != nullptr && _contentScroll != nullptr && context.Scale > 0.0f && Bounds.H > 0.0f && _contentScroll->Bounds.H > 0.0f) {
-					float limit = std::floor(available.Y * MaxScreenHeightFraction);
-					// The title, the buttons and the padding, then the rest of the content, which is laid out in full in the scroll view
-					float around = (Bounds.H - _contentScroll->Bounds.H);
-					if (Columns != nullptr && ListColumn != nullptr) {
-						// Only what's above the columns and above the list in its column
-						around += (_content->Bounds.H - Columns->Bounds.H) + (ListColumn->Bounds.H - List->Bounds.H);
-					} else {
-						around += (_content->Bounds.H - List->Bounds.H);
-					}
-					_listHeight = std::max(std::floor((limit - around) / context.Scale), MinListHeight);
-				}
-				if (List != nullptr) {
-					List->Height = _listHeight;
-				}
-				return UiDialog::Measure(context, available);
-			}
-
-		private:
-			static constexpr float MinListHeight = 120.0f;
-
-			float _listHeight;
-		};
-
 		void ShowEpisodeWindow(IEditorContext& session, const std::shared_ptr<EpisodeState>& state)
 		{
 			UiSurface* surface = session.GetSurface();
@@ -959,10 +905,13 @@ namespace Jazz2::Editor
 			}
 			state->ReadLevels();
 			IEditorContext* s = &session;
-			// The list grows with the window, it's this tall only until the window was laid out once
+			// The list of levels has no scroll bar of its own, the whole content scrolls with it
 			// TRANSLATORS: Title of the Episode dialog, which shows the episode of the level and its levels
-			auto dialog = std::make_unique<EpisodeWindow>(_x("editor", "Episode"), 180.0f);
-			EpisodeWindow* dialogPtr = dialog.get();
+			auto dialog = std::make_unique<UiDialog>(_x("editor", "Episode"), true);
+			dialog->MinScreenWidthFraction = 0.7f;
+			dialog->MaxStretchedWidth = 720.0f;
+			dialog->MaxScreenHeightFraction = 0.8f;
+			UiDialog* dialogPtr = dialog.get();
 			UiStack* content = dialog->GetContent();
 
 			if (state->IsNoEpisode) {
@@ -971,9 +920,7 @@ namespace Jazz2::Editor
 				content->Add<UiLabel>(_x("editor", "Levels of no episode"), UiTheme::TextHeader);
 				// TRANSLATORS: "unknown" is the name of a folder, keep it as it is
 				content->Add<UiLabel>(_x("editor", "They're in \"unknown\", which isn't an episode, the game finds them there by their names"), UiTheme::TextDim);
-				auto* scroll = content->Add<UiScrollView>();
-				dialogPtr->List = scroll;
-				scroll->SetContent<EpisodeLevelList>(session, state, dialogPtr);
+				content->Add<EpisodeLevelList>(session, state, dialogPtr);
 
 				ShowModal(*surface, Death::move(dialog));
 				return;
@@ -985,7 +932,6 @@ namespace Jazz2::Editor
 
 			// The properties in the first column, the levels in the second one
 			auto* columns = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 4.0f);
-			dialogPtr->Columns = columns;
 			UiForm* form = columns->Add<UiForm>(UiTheme::Spacing);
 			{
 				// TRANSLATORS: Label of the name of the episode shown in the game in the Episode dialog
@@ -1061,11 +1007,8 @@ namespace Jazz2::Editor
 
 			auto* levels = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
 			levels->Flex = 1.0f;
-			dialogPtr->ListColumn = levels;
 			levels->Add<UiLabel>(_x("editor", "Levels, in the order the links lead from the first one"), UiTheme::TextHeader);
-			auto* scroll = levels->Add<UiScrollView>();
-			dialogPtr->List = scroll;
-			scroll->SetContent<EpisodeLevelList>(session, state, dialogPtr);
+			levels->Add<EpisodeLevelList>(session, state, dialogPtr);
 
 			dialog->AddButton(_("Save"), [s, state]() {
 				if (state->Episode.Write(state->FilePath, state->Exists)) {

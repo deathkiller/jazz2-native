@@ -64,7 +64,7 @@ namespace Jazz2::Editor
 		a.Add(ActionIds::FileExportPackage, _x("editor", "Export Package"), EditorIcon::Export, [this]() { ShowExportPackageDialog(*this); });
 		// TRANSLATORS: Menu item in the File menu, opens the list of copies of levels the editor saved by itself
 		a.Add(ActionIds::FileRecovery, _x("editor", "Recovery Copies"), EditorIcon::None, [this]() { ShowRecoveryDialog(*this); });
-		a.Add(ActionIds::FileExit, _("Exit Editor"), EditorIcon::Close, [this]() { _files->ExitEditor(); });
+		a.Add(ActionIds::FileExit, _("Exit Editor"), EditorIcon::CloseSmall, [this]() { _files->ExitEditor(); });
 	}
 
 	void EditorSession::CreateEditActions()

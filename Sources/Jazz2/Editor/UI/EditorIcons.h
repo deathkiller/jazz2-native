@@ -94,6 +94,8 @@ namespace Jazz2::Editor
 		Passthrough,
 		// A sprite in front of the one it replaces, what the script of the level gives objects instead of theirs
 		OverriddenAssets,
+		// A smaller and thinner Close, for the menu bar
+		CloseSmall,
 		// Shown by the pointer, see UiCursorOverlay
 		CursorResizeHorizontal,
 		CursorResizeVertical,

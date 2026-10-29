@@ -3304,7 +3304,7 @@ namespace Jazz2::Editor
 
 	void StatusBar::Draw(UiPainter& painter)
 	{
-		painter.FillRect(Bounds, UiTheme::PanelHeader);
+		painter.FillRect(Bounds, painter.Backdrop(Bounds, UiTheme::PanelHeader, false));
 		float thickness = std::max(1.0f, std::round(painter.GetScale() * 0.5f));
 		painter.FillRect(Rectf(Bounds.X, Bounds.Y, Bounds.W, thickness), UiTheme::PanelBorderDim);
 

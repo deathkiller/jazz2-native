@@ -50,6 +50,7 @@ namespace Jazz2::Compatibility
 		static const Pair<StringView, StringView> SpecialLevelTokens[] = {
 			{ "end"_s, ":end"_s },
 			{ "endepis"_s, ":end"_s },
+			{ "endgame"_s, ":end"_s },
 			{ "ending"_s, ":credits"_s }
 		};
 

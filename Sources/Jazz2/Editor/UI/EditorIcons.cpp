@@ -607,18 +607,37 @@ namespace Jazz2::Editor
 		const char* const IconClose[16] = {
 			"................",
 			"................",
-			"..++........++..",
-			"..###......###..",
-			"...###....###...",
-			"....###..###....",
-			".....######.....",
-			"......####......",
-			"......####......",
-			".....######.....",
-			"....###..###....",
-			"...###....###...",
-			"..###......###..",
-			"..++........++..",
+			"................",
+			"...671....176...",
+			"...7#71..17#7...",
+			"...17#7117#71...",
+			"....17#77#71....",
+			".....17##71.....",
+			".....17##71.....",
+			"....17#77#71....",
+			"...17#7117#71...",
+			"...7#71..17#7...",
+			"...671....176...",
+			"................",
+			"................",
+			"................",
+		};
+
+		const char* const IconCloseSmall[16] = {
+			"................",
+			"................",
+			"................",
+			"................",
+			"....45....54....",
+			"....5#5..5#5....",
+			".....5#55#5.....",
+			"......5##5......",
+			"......5##5......",
+			".....5#55#5.....",
+			"....5#5..5#5....",
+			"....45....54....",
+			"................",
+			"................",
 			"................",
 			"................",
 		};
@@ -1746,6 +1765,7 @@ namespace Jazz2::Editor
 			case EditorIcon::PlayOutline: return IconPlayOutline;
 			case EditorIcon::Passthrough: return IconPassthrough;
 			case EditorIcon::OverriddenAssets: return IconOverriddenAssets;
+			case EditorIcon::CloseSmall: return IconCloseSmall;
 			case EditorIcon::CursorResizeHorizontal: return IconCursorResizeHorizontal;
 			case EditorIcon::CursorResizeVertical: return IconCursorResizeVertical;
 			case EditorIcon::CursorResizeNWSE: return IconCursorResizeNWSE;

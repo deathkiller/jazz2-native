@@ -442,6 +442,7 @@ namespace Jazz2::Editor
 		UiDialog* dialogPtr = dialog.get();
 		// Wide enough for long names next to two shortcuts, the list grows with it
 		dialog->MinScreenWidthFraction = 0.58f;
+		dialog->MaxScreenHeightFraction = 0.85f;
 		auto* content = dialog->GetContent();
 
 		// What isn't an action, so isn't in the list, in rows as the list has them
@@ -466,9 +467,11 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Placeholder of the search box in the Keyboard Shortcuts dialog, "Ctrl+S" is an example of a shortcut as the list shows it
 		search->Placeholder = _x("editor", "Search, or keys such as Ctrl+S...");
 		search->Flex = 1.0f;
+		// Shorter on a small screen, by what's left between the rows above and the buttons
 		auto* scroll = content->Add<UiScrollView>();
 		scroll->Width = 416.0f;
 		scroll->Height = 230.0f;
+		scroll->Flex = 1.0f;
 		ShortcutList* list = scroll->SetContent<ShortcutList>(session);
 
 		auto fill = std::make_shared<Function<void(StringView)>>();
