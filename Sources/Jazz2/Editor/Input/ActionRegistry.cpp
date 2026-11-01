@@ -262,6 +262,12 @@ namespace Jazz2::Editor
 			return nullptr;
 		}
 #endif
+#if !defined(WITH_ANGELSCRIPT)
+		// Overridden assets come only from the script of the level
+		if (id == "view.overriddenAssets"_s) {
+			return nullptr;
+		}
+#endif
 		// A typo in an identifier would only leave a menu item or a button out, so it's said once
 		for (const String& missing : _missingIds) {
 			if (missing == id) {

@@ -1004,11 +1004,11 @@ namespace Death { namespace IO {
 				}
 
 #	if defined(DEATH_TARGET_VITA)
-				if ((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && SCE_S_ISDIR(entry->d_stat.st_attr))
+				if ((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && SCE_S_ISDIR(entry->d_stat.st_mode))
 					goto Retry;
-				if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && SCE_S_ISREG(entry->d_stat.st_attr))
+				if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && SCE_S_ISREG(entry->d_stat.st_mode))
 					goto Retry;
-				if ((_options & EnumerationOptions::SkipSpecial) == EnumerationOptions::SkipSpecial && !SCE_S_ISDIR(entry->d_stat.st_attr) && !SCE_S_ISREG(entry->d_stat.st_attr) && !SCE_S_ISLNK(entry->d_stat.st_attr))
+				if ((_options & EnumerationOptions::SkipSpecial) == EnumerationOptions::SkipSpecial && !SCE_S_ISDIR(entry->d_stat.st_mode) && !SCE_S_ISREG(entry->d_stat.st_mode) && !SCE_S_ISLNK(entry->d_stat.st_mode))
 					goto Retry;
 #	else
 				if ((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && entry->d_type == DT_DIR)
@@ -2600,7 +2600,25 @@ namespace Death { namespace IO {
 			return false;
 		}
 #	endif
-		return (::rename(nullTerminatedOldPath.data(), nullTerminatedNewPath.data()) == 0);
+		if (::rename(nullTerminatedOldPath.data(), nullTerminatedNewPath.data()) == 0) {
+			return true;
+		}
+
+		// Some console file systems don't replace an existing file, so it's moved aside and restored if the move still fails
+		if (!FileExists(newPath)) {
+			return false;
+		}
+		String backupPath = newPath + "~"_s;
+		RemoveFile(backupPath);
+		if (::rename(nullTerminatedNewPath.data(), backupPath.data()) != 0) {
+			return false;
+		}
+		if (::rename(nullTerminatedOldPath.data(), nullTerminatedNewPath.data()) != 0) {
+			::rename(backupPath.data(), nullTerminatedNewPath.data());
+			return false;
+		}
+		RemoveFile(backupPath);
+		return true;
 #endif
 	}
 

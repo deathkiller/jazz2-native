@@ -101,6 +101,8 @@
 #			endif
 #		endif
 #	endif
+#else
+#	include "../Threading/Spinlock.h"
 #endif
 
 namespace Death { namespace Trace {
@@ -1281,6 +1283,8 @@ namespace Death { namespace Trace {
 		void Store(TransitEvent transitEvent, Containers::StringView threadId) noexcept;
 		/** @brief Processes all stored transit events */
 		void Process(Containers::Function<void(TransitEvent const& event, Containers::StringView threadId)>&& callback) noexcept;
+		/** @brief Moves all stored transit events to a new storage, this one is left empty */
+		BacktraceStorage Take() noexcept;
 		/** @brief Resizes the storage to the specified capacity */
 		void SetCapacity(std::uint32_t capacity) noexcept;
 
@@ -1453,6 +1457,7 @@ namespace Death { namespace Trace {
 		void ProcessEvents() noexcept;
 #else
 		TraceLevel _backtraceFlushLevel;
+		Threading::Spinlock _backtraceLock;
 #endif
 	};
 

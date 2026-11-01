@@ -16,6 +16,8 @@ extern "C" {
 }
 #elif defined(DEATH_TARGET_PSP)
 #	include <pspthreadman.h>
+#elif defined(DEATH_TARGET_VITA)
+#	include <psp2/kernel/threadmgr.h>
 #elif defined(DEATH_TARGET_WINDOWS)
 #	include "../CommonWindows.h"
 #	define __DEATH_SPINLOCK_CAN_YIELD
@@ -66,6 +68,12 @@ namespace Death { namespace Threading {
 			// Single core without time-slicing, spinning would starve the holder
 			(void)spins;
 			sceKernelDelayThread(50);
+#elif defined(DEATH_TARGET_VITA)
+			// No time-slicing, a higher-priority spinner on the holder's core would starve it
+			if (++spins >= 64) {
+				spins = 0;
+				sceKernelDelayThread(50);
+			}
 #else
 #	if defined(__DEATH_SPINLOCK_CAN_YIELD)
 			// The holder may have been preempted

@@ -304,6 +304,10 @@ namespace Death { namespace Trace {
 
 	void BacktraceStorage::Store(TransitEvent transitEvent, StringView threadId) noexcept
 	{
+		if (_capacity == 0) {
+			return;
+		}
+
 		if (_storedEvents.size() < _capacity) {
 			_storedEvents.emplace_back(threadId, Death::move(transitEvent));
 		} else {
@@ -336,6 +340,16 @@ namespace Death { namespace Trace {
 
 		_storedEvents.clear();
 		_index = 0;
+	}
+
+	BacktraceStorage BacktraceStorage::Take() noexcept
+	{
+		BacktraceStorage taken;
+		taken._capacity = _capacity;
+		taken._index = _index;
+		taken._storedEvents = Death::move(_storedEvents);
+		_index = 0;
+		return taken;
 	}
 
 	void BacktraceStorage::SetCapacity(std::uint32_t capacity) noexcept
@@ -950,7 +964,12 @@ namespace Death { namespace Trace {
 	void LoggerBackend::FlushBacktraceAsync() noexcept
 	{
 		if (_backtraceStorage != nullptr) {
-			_backtraceStorage->Process(
+			// Only taken under the lock, the sinks are called without it
+			_backtraceLock.lock();
+			BacktraceStorage taken = _backtraceStorage->Take();
+			_backtraceLock.unlock();
+
+			taken.Process(
 				[this](TransitEvent const& te, StringView threadId) { DispatchEntryToSinks(te.Level,
 					te.Timestamp, te.FunctionName, te.Message.data(), static_cast<std::int32_t>(te.Message.size()), threadId); });
 		}
@@ -975,7 +994,9 @@ namespace Death { namespace Trace {
 			transitEvent.Level = TraceLevel::Deferred;
 			std::memcpy(&transitEvent.Message[0], content, contentLength);
 
+			_backtraceLock.lock();
 			_backtraceStorage->Store(Death::move(transitEvent), threadId);
+			_backtraceLock.unlock();
 		} else {
 			DispatchEntryToSinks(TraceLevel::Deferred, timestamp, functionName, content, contentLength, {});
 		}

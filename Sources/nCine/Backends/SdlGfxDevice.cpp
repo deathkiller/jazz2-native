@@ -977,7 +977,23 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::updateMonitors()
 	{
-#if defined(WITH_SDL3)
+#if defined(DEATH_TARGET_VITA)
+		// One fixed "monitor" (the built-in panel), so windowScalingFactor() and the monitor queries stay valid
+		_numMonitors = 1;
+		_monitors[0].name = "LCD";
+		_monitors[0].position = Vector2i(0, 0);
+		_monitors[0].scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].numVideoModes = 1;
+#	if defined(WITH_SDL3)
+		if (const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay())) {
+			convertVideoModeInfo(*mode, _monitors[0].videoModes[0]);
+		}
+#	else
+		SDL_DisplayMode mode;
+		SDL_GetCurrentDisplayMode(0, &mode);
+		convertVideoModeInfo(mode, _monitors[0].videoModes[0]);
+#	endif
+#elif defined(WITH_SDL3)
 		LOGD("Updating list of monitors...");
 
 		// SDL3 identifies displays by opaque SDL_DisplayID (enumerated via SDL_GetDisplays), not a 0-based index
@@ -1014,7 +1030,7 @@ namespace nCine::Backends
 			SDL_free(modes);
 		}
 		SDL_free(displays);
-#elif !defined(DEATH_TARGET_VITA)
+#else
 		LOGD("Updating list of monitors...");
 
 		const int monitorCount = SDL_GetNumVideoDisplays();
