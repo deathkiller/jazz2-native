@@ -23,6 +23,7 @@ namespace Jazz2::Actors::Weapons
 		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
+		SetFrozenDuration((_upgrades & 0x1) != 0 ? 280.0f : 200.0f * 60.0f / 70.0f);
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::ApplyGravitation, false);

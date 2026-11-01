@@ -457,11 +457,12 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPALCOLOR", "uint8 getLight() const", asMETHOD(jjPALCOLOR, getLight), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPALCOLOR", "void setHSL(int hue, uint8 sat, uint8 light)", asMETHOD(jjPALCOLOR, setHSL), asCALL_THISCALL);
 		engine->SetDefaultNamespace("COLOR");
+		/** @brief Component of a @ref jjPALCOLOR */
 		engine->RegisterEnum("Component");
-		engine->RegisterEnumValue("Component", "RED", 0);
-		engine->RegisterEnumValue("Component", "GREEN", 1);
-		engine->RegisterEnumValue("Component", "BLUE", 2);
-		engine->RegisterEnumValue("Component", "ALPHA", 3);
+		engine->RegisterEnumValue("Component", "RED", 0);	///< Red component
+		engine->RegisterEnumValue("Component", "GREEN", 1);	///< Green component
+		engine->RegisterEnumValue("Component", "BLUE", 2);	///< Blue component
+		engine->RegisterEnumValue("Component", "ALPHA", 3);	///< Alpha component
 		engine->SetDefaultNamespace("");
 		engine->RegisterObjectMethod("jjPALCOLOR", "void swizzle(COLOR::Component red, COLOR::Component green, COLOR::Component blue)", asMETHOD(jjPALCOLOR, swizzle), asCALL_THISCALL);
 
@@ -469,7 +470,15 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectBehaviour("jjPAL", asBEHAVE_FACTORY, "jjPAL@ f()", asFUNCTION(jjPAL::Create), asCALL_CDECL);
 		engine->RegisterObjectBehaviour("jjPAL", asBEHAVE_ADDREF, "void f()", asMETHOD(jjPAL, AddRef), asCALL_THISCALL);
 		engine->RegisterObjectBehaviour("jjPAL", asBEHAVE_RELEASE, "void f()", asMETHOD(jjPAL, Release), asCALL_THISCALL);
+		/**
+		 * @brief Palette the game currently draws with
+		 *
+		 * @ref jjPAL::apply() on any palette copies its colors here. Changes made to it directly also need @ref apply() to
+		 * take effect.
+		 * @partialsupport
+		 */
 		engine->RegisterGlobalProperty("jjPAL jjPalette", &jjPalette);
+		/** @brief Original palette of the level, as it was when the script was loaded */
 		engine->RegisterGlobalProperty("const jjPAL jjBackupPalette", &jjBackupPalette);
 		engine->RegisterObjectMethod("jjPAL", "jjPAL& opAssign(const jjPAL &in)", asMETHOD(jjPAL, operator=), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPAL", "bool opEquals(const jjPAL &in) const", asMETHOD(jjPAL, operator==), asCALL_THISCALL);
@@ -489,66 +498,75 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPAL", "uint8 findNearestColor(jjPALCOLOR color) const", asMETHOD(jjPAL, findNearestColor), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("SPRITE");
+		/**
+		 * @brief How the colors of a sprite, tile, text or shape are rendered
+		 *
+		 * Most drawing functions take a mode together with a `uint8` parameter whose meaning depends on the mode. Some
+		 * of the blending modes are only approximated.
+		 */
 		engine->RegisterEnum("Mode");
-		engine->RegisterEnumValue("Mode", "NORMAL", spriteType_NORMAL);
-		engine->RegisterEnumValue("Mode", "TRANSLUCENT", spriteType_TRANSLUCENT);
-		engine->RegisterEnumValue("Mode", "TINTED", spriteType_TINTED);
-		engine->RegisterEnumValue("Mode", "GEM", spriteType_GEM);
-		engine->RegisterEnumValue("Mode", "INVISIBLE", spriteType_INVISIBLE);
-		engine->RegisterEnumValue("Mode", "SINGLECOLOR", spriteType_SINGLECOLOR);
-		engine->RegisterEnumValue("Mode", "RESIZED", spriteType_RESIZED);
-		engine->RegisterEnumValue("Mode", "NEONGLOW", spriteType_NEONGLOW);
-		engine->RegisterEnumValue("Mode", "FROZEN", spriteType_FROZEN);
-		engine->RegisterEnumValue("Mode", "PLAYER", spriteType_PLAYER);
-		engine->RegisterEnumValue("Mode", "PALSHIFT", spriteType_PALSHIFT);
-		engine->RegisterEnumValue("Mode", "SHADOW", spriteType_SHADOW);
-		engine->RegisterEnumValue("Mode", "SINGLEHUE", spriteType_SINGLEHUE);
-		engine->RegisterEnumValue("Mode", "BRIGHTNESS", spriteType_BRIGHTNESS);
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTCOLOR", spriteType_TRANSLUCENTCOLOR);
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTPLAYER", spriteType_TRANSLUCENTPLAYER);
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTPALSHIFT", spriteType_TRANSLUCENTPALSHIFT);
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTSINGLEHUE", spriteType_TRANSLUCENTSINGLEHUE);
-		engine->RegisterEnumValue("Mode", "ALPHAMAP", spriteType_ALPHAMAP);
-		engine->RegisterEnumValue("Mode", "MENUPLAYER", spriteType_MENUPLAYER);
-		engine->RegisterEnumValue("Mode", "BLEND_NORMAL", spriteType_BLENDNORMAL);
-		engine->RegisterEnumValue("Mode", "BLEND_DARKEN", spriteType_BLENDDARKEN);
-		engine->RegisterEnumValue("Mode", "BLEND_LIGHTEN", spriteType_BLENDLIGHTEN);
-		engine->RegisterEnumValue("Mode", "BLEND_HUE", spriteType_BLENDHUE);
-		engine->RegisterEnumValue("Mode", "BLEND_SATURATION", spriteType_BLENDSATURATION);
-		engine->RegisterEnumValue("Mode", "BLEND_COLOR", spriteType_BLENDCOLOR);
-		engine->RegisterEnumValue("Mode", "BLEND_LUMINANCE", spriteType_BLENDLUMINANCE);
-		engine->RegisterEnumValue("Mode", "BLEND_MULTIPLY", spriteType_BLENDMULTIPLY);
-		engine->RegisterEnumValue("Mode", "BLEND_SCREEN", spriteType_BLENDSCREEN);
-		engine->RegisterEnumValue("Mode", "BLEND_DISSOLVE", spriteType_BLENDDISSOLVE);
-		engine->RegisterEnumValue("Mode", "BLEND_OVERLAY", spriteType_BLENDOVERLAY);
-		engine->RegisterEnumValue("Mode", "BLEND_HARDLIGHT", spriteType_BLENDHARDLIGHT);
-		engine->RegisterEnumValue("Mode", "BLEND_SOFTLIGHT", spriteType_BLENDSOFTLIGHT);
-		engine->RegisterEnumValue("Mode", "BLEND_DIFFERENCE", spriteType_BLENDDIFFERENCE);
-		engine->RegisterEnumValue("Mode", "BLEND_DODGE", spriteType_BLENDDODGE);
-		engine->RegisterEnumValue("Mode", "BLEND_BURN", spriteType_BLENDBURN);
-		engine->RegisterEnumValue("Mode", "BLEND_EXCLUSION", spriteType_BLENDEXCLUSION);
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTTILE", spriteType_TRANSLUCENTTILE);
-		engine->RegisterEnumValue("Mode", "CHROMAKEY", spriteType_CHROMAKEY);
-		engine->RegisterEnumValue("Mode", "MAPPING", spriteType_MAPPING);
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTMAPPING", spriteType_TRANSLUCENTMAPPING);
-		engine->RegisterEnumValue("Mode", "INVERSE", spriteType_INVERSE);
+		engine->RegisterEnumValue("Mode", "NORMAL", spriteType_NORMAL);	///< Drawn with its own colors
+		engine->RegisterEnumValue("Mode", "TRANSLUCENT", spriteType_TRANSLUCENT);	///< Drawn half transparent
+		engine->RegisterEnumValue("Mode", "TINTED", spriteType_TINTED);	///< Mixed with the palette color `param`
+		engine->RegisterEnumValue("Mode", "GEM", spriteType_GEM);	///< Drawn like a gem, `param` selects the gem color
+		engine->RegisterEnumValue("Mode", "INVISIBLE", spriteType_INVISIBLE);	///< Not drawn at all @partialsupport
+		engine->RegisterEnumValue("Mode", "SINGLECOLOR", spriteType_SINGLECOLOR);	///< Shape filled with the palette color `param`
+		engine->RegisterEnumValue("Mode", "RESIZED", spriteType_RESIZED);	///< Drawn like `NORMAL`
+		engine->RegisterEnumValue("Mode", "NEONGLOW", spriteType_NEONGLOW);	///< Brightness added to what is behind, `param` selects the color channels
+		engine->RegisterEnumValue("Mode", "FROZEN", spriteType_FROZEN);	///< Drawn frozen in ice
+		engine->RegisterEnumValue("Mode", "PLAYER", spriteType_PLAYER);	///< Drawn in the fur colors of the player with index `param`
+		engine->RegisterEnumValue("Mode", "PALSHIFT", spriteType_PALSHIFT);	///< Palette indices shifted by `param`
+		engine->RegisterEnumValue("Mode", "SHADOW", spriteType_SHADOW);	///< Darkens what is behind, in the shape of the sprite
+		engine->RegisterEnumValue("Mode", "SINGLEHUE", spriteType_SINGLEHUE);	///< Drawn in shades of the palette gradient starting at index `param`
+		engine->RegisterEnumValue("Mode", "BRIGHTNESS", spriteType_BRIGHTNESS);	///< Brightness scaled by `param`, 128 is unchanged
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTCOLOR", spriteType_TRANSLUCENTCOLOR);	///< Translucent variant of @ref SINGLECOLOR
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTPLAYER", spriteType_TRANSLUCENTPLAYER);	///< Translucent variant of `PLAYER`
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTPALSHIFT", spriteType_TRANSLUCENTPALSHIFT);	///< Translucent variant of `PALSHIFT`
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTSINGLEHUE", spriteType_TRANSLUCENTSINGLEHUE);	///< Translucent variant of @ref SINGLEHUE
+		engine->RegisterEnumValue("Mode", "ALPHAMAP", spriteType_ALPHAMAP);	///< Palette color `param`, with the sprite's palette indices used as its opacity
+		engine->RegisterEnumValue("Mode", "MENUPLAYER", spriteType_MENUPLAYER);	///< Player colors as used in menus
+		engine->RegisterEnumValue("Mode", "BLEND_NORMAL", spriteType_BLENDNORMAL);	///< Normal blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_DARKEN", spriteType_BLENDDARKEN);	///< Darken blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_LIGHTEN", spriteType_BLENDLIGHTEN);	///< Lighten blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_HUE", spriteType_BLENDHUE);	///< Hue blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_SATURATION", spriteType_BLENDSATURATION);	///< Saturation blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_COLOR", spriteType_BLENDCOLOR);	///< Color blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_LUMINANCE", spriteType_BLENDLUMINANCE);	///< Luminance blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_MULTIPLY", spriteType_BLENDMULTIPLY);	///< Multiply blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_SCREEN", spriteType_BLENDSCREEN);	///< Screen blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_DISSOLVE", spriteType_BLENDDISSOLVE);	///< Random pixels drawn, `param` is their density
+		engine->RegisterEnumValue("Mode", "BLEND_OVERLAY", spriteType_BLENDOVERLAY);	///< Overlay blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_HARDLIGHT", spriteType_BLENDHARDLIGHT);	///< Hard light blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_SOFTLIGHT", spriteType_BLENDSOFTLIGHT);	///< Soft light blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_DIFFERENCE", spriteType_BLENDDIFFERENCE);	///< Difference blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_DODGE", spriteType_BLENDDODGE);	///< Color dodge blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_BURN", spriteType_BLENDBURN);	///< Color burn blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_EXCLUSION", spriteType_BLENDEXCLUSION);	///< Exclusion blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTTILE", spriteType_TRANSLUCENTTILE);	///< Translucent the way translucent tiles are
+		engine->RegisterEnumValue("Mode", "CHROMAKEY", spriteType_CHROMAKEY);	///< Drawn only over pixels of the palette color `param`
+		engine->RegisterEnumValue("Mode", "MAPPING", spriteType_MAPPING);	///< Colors remapped by mapping `param`, see @ref jjSpriteModeSetMapping()
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTMAPPING", spriteType_TRANSLUCENTMAPPING);	///< Translucent variant of @ref MAPPING
+		engine->RegisterEnumValue("Mode", "INVERSE", spriteType_INVERSE);	///< Inverted colors
+		/** @brief How a sprite is flipped, used as the `direction` of drawing functions */
 		engine->RegisterEnum("Direction");
-		engine->RegisterEnumValue("Direction", "FLIPNONE", 0x00);
-		engine->RegisterEnumValue("Direction", "FLIPH", 0xFF - 0x100);
-		engine->RegisterEnumValue("Direction", "FLIPV", 0x40);
-		engine->RegisterEnumValue("Direction", "FLIPHV", 0xBF - 0x100);
+		engine->RegisterEnumValue("Direction", "FLIPNONE", 0x00);	///< Not flipped
+		engine->RegisterEnumValue("Direction", "FLIPH", 0xFF - 0x100);	///< Flipped horizontally
+		engine->RegisterEnumValue("Direction", "FLIPV", 0x40);	///< Flipped vertically
+		engine->RegisterEnumValue("Direction", "FLIPHV", 0xBF - 0x100);	///< Flipped both horizontally and vertically
 		engine->SetDefaultNamespace("TILE");
+		/** @brief Part of a tile to draw, see @ref jjCANVAS::drawTile() */
 		engine->RegisterEnum("Quadrant");
-		engine->RegisterEnumValue("Quadrant", "TOPLEFT", 0);
-		engine->RegisterEnumValue("Quadrant", "TOPRIGHT", 1);
-		engine->RegisterEnumValue("Quadrant", "BOTTOMLEFT", 2);
-		engine->RegisterEnumValue("Quadrant", "BOTTOMRIGHT", 3);
-		engine->RegisterEnumValue("Quadrant", "ALLQUADRANTS", 4);
+		engine->RegisterEnumValue("Quadrant", "TOPLEFT", 0);	///< Top left quarter only
+		engine->RegisterEnumValue("Quadrant", "TOPRIGHT", 1);	///< Top right quarter only
+		engine->RegisterEnumValue("Quadrant", "BOTTOMLEFT", 2);	///< Bottom left quarter only
+		engine->RegisterEnumValue("Quadrant", "BOTTOMRIGHT", 3);	///< Bottom right quarter only
+		engine->RegisterEnumValue("Quadrant", "ALLQUADRANTS", 4);	///< The whole tile
+		/** @brief Bits of a tile value besides the tile index */
 		engine->RegisterEnum("Flags");
-		engine->RegisterEnumValue("Flags", "RAWRANGE", FLAG_HFLIPPED_TILE - 1);
-		engine->RegisterEnumValue("Flags", "HFLIPPED", FLAG_HFLIPPED_TILE);
-		engine->RegisterEnumValue("Flags", "VFLIPPED", FLAG_VFLIPPED_TILE);
-		engine->RegisterEnumValue("Flags", "ANIMATED", FLAG_ANIMATED_TILE);
+		engine->RegisterEnumValue("Flags", "RAWRANGE", FLAG_HFLIPPED_TILE - 1);	///< Mask of the bits holding the tile index
+		engine->RegisterEnumValue("Flags", "HFLIPPED", FLAG_HFLIPPED_TILE);	///< Tile is flipped horizontally
+		engine->RegisterEnumValue("Flags", "VFLIPPED", FLAG_VFLIPPED_TILE);	///< Tile is flipped vertically
+		engine->RegisterEnumValue("Flags", "ANIMATED", FLAG_ANIMATED_TILE);	///< Index refers to an animated tile
 		engine->SetDefaultNamespace("");
 
 		engine->RegisterObjectMethod("jjPLAYER", "SPRITE::Mode get_spriteMode() const", asMETHOD(jjPLAYER, get_spriteMode), asCALL_THISCALL);
@@ -556,11 +574,38 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 get_spriteParam() const", asMETHOD(jjPLAYER, get_spriteParam), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 set_spriteParam(uint8)", asMETHOD(jjPLAYER, set_spriteParam), asCALL_THISCALL);
 
+		/**
+		 * @brief Defines a color mapping for @ref SPRITE::MAPPING, with colors of its own
+		 *
+		 * Like the overload without `rgbMapping`, but also stores a color for each of the 256 indices.
+		 */
 		engine->RegisterGlobalFunction("void jjSpriteModeSetMapping(uint8 index, const array<uint8> &in indexMapping, const jjPAL &in rgbMapping)", asFUNCTION(jjSpriteModeSetMapping), asCALL_CDECL);
+		/**
+		 * @brief Defines a color mapping for @ref SPRITE::MAPPING
+		 *
+		 * `index` is the mapping number used as the parameter of @ref SPRITE::MAPPING and
+		 * @ref SPRITE::TRANSLUCENTMAPPING. `indexMapping` gives the new palette index for each index; indices past its
+		 * end map to themselves.
+		 * @partialsupport Currently the mapping is only stored so it can be read back, sprites aren't drawn with it
+		 * yet.
+		 */
 		engine->RegisterGlobalFunction("void jjSpriteModeSetMapping(uint8 index, const array<uint8> &in indexMapping)", asFUNCTION(jjSpriteModeSetIndexMapping), asCALL_CDECL);
+		/** @brief Returns whether a mapping with the given index was defined by @ref jjSpriteModeSetMapping() */
 		engine->RegisterGlobalFunction("bool jjSpriteModeIsMappingUsed(uint8 index)", asFUNCTION(jjSpriteModeIsMappingUsed), asCALL_CDECL);
+		/** @brief Returns the lowest mapping index not defined yet, or -1 if all 256 are in use */
 		engine->RegisterGlobalFunction("int jjSpriteModeFirstFreeMapping()", asFUNCTION(jjSpriteModeFirstFreeMapping), asCALL_CDECL);
+		/**
+		 * @brief Returns a copy of the index mapping with the given index
+		 *
+		 * The array always has 256 elements. For a mapping that wasn't defined, each index maps to itself.
+		 */
 		engine->RegisterGlobalFunction("array<uint8>@ jjSpriteModeGetIndexMapping(uint8 index)", asFUNCTION(jjSpriteModeGetIndexMapping), asCALL_CDECL);
+		/**
+		 * @brief Returns a copy of the color mapping with the given index
+		 *
+		 * Returns the colors given to @ref jjSpriteModeSetMapping(); for a mapping defined without them, or not defined
+		 * at all, the colors of @ref jjPalette the index mapping points to. Never returns `null`.
+		 */
 		engine->RegisterGlobalFunction("jjPAL@ jjSpriteModeGetColorMapping(uint8 index)", asFUNCTION(jjSpriteModeGetColorMapping), asCALL_CDECL);
 	}
 }

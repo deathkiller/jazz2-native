@@ -2423,41 +2423,133 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::RegisterLegacyLayerGlobals(asIScriptEngine* engine)
 	{
+		/**
+		 * @brief Returns the horizontal offset of the original layers in pixels, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::xOffset of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("float get_jjLayerXOffset(uint8)", asFUNCTION(get_layerXOffset), asCALL_CDECL);
 		engine->RegisterGlobalFunction("float set_jjLayerXOffset(uint8, float)", asFUNCTION(set_layerXOffset), asCALL_CDECL);
+		/**
+		 * @brief Returns the vertical offset of the original layers in pixels, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::yOffset of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("float get_jjLayerYOffset(uint8)", asFUNCTION(get_layerYOffset), asCALL_CDECL);
 		engine->RegisterGlobalFunction("float set_jjLayerYOffset(uint8, float)", asFUNCTION(set_layerYOffset), asCALL_CDECL);
+		/**
+		 * @brief Returns the width of the original layers in tiles, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::width of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("int get_jjLayerWidth(uint8)", asFUNCTION(get_layerWidth), asCALL_CDECL);
+		/**
+		 * @brief Returns the width of the original layers in tiles including widening for tiling, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::widthReal of `jjLayers[layer]`, always equal to @ref jjLayerWidth.
+		 */
 		engine->RegisterGlobalFunction("int get_jjLayerWidthReal(uint8)", asFUNCTION(get_layerRealWidth), asCALL_CDECL);
+		/**
+		 * @brief Returns the width of the original layers in groups of four tiles, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::widthRounded of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("int get_jjLayerWidthRounded(uint8)", asFUNCTION(get_layerRoundedWidth), asCALL_CDECL);
+		/**
+		 * @brief Returns the height of the original layers in tiles, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::height of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("int get_jjLayerHeight(uint8)", asFUNCTION(get_layerHeight), asCALL_CDECL);
+		/**
+		 * @brief Returns the horizontal parallax speed of the original layers, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::xSpeed of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("float get_jjLayerXSpeed(uint8)", asFUNCTION(get_layerXSpeed), asCALL_CDECL);
 		engine->RegisterGlobalFunction("float set_jjLayerXSpeed(uint8, float)", asFUNCTION(set_layerXSpeed), asCALL_CDECL);
+		/**
+		 * @brief Returns the vertical parallax speed of the original layers, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::ySpeed of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("float get_jjLayerYSpeed(uint8)", asFUNCTION(get_layerYSpeed), asCALL_CDECL);
 		engine->RegisterGlobalFunction("float set_jjLayerYSpeed(uint8, float)", asFUNCTION(set_layerYSpeed), asCALL_CDECL);
+		/**
+		 * @brief Returns the horizontal automatic scrolling speed of the original layers, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::xAutoSpeed of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("float get_jjLayerXAutoSpeed(uint8)", asFUNCTION(get_layerXAutoSpeed), asCALL_CDECL);
 		engine->RegisterGlobalFunction("float set_jjLayerXAutoSpeed(uint8, float)", asFUNCTION(set_layerXAutoSpeed), asCALL_CDECL);
+		/**
+		 * @brief Returns the vertical automatic scrolling speed of the original layers, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::yAutoSpeed of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("float get_jjLayerYAutoSpeed(uint8)", asFUNCTION(get_layerYAutoSpeed), asCALL_CDECL);
 		engine->RegisterGlobalFunction("float set_jjLayerYAutoSpeed(uint8, float)", asFUNCTION(set_layerYAutoSpeed), asCALL_CDECL);
+		/**
+		 * @brief Whether the original layers are drawn, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::hasTiles of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("bool get_jjLayerHasTiles(uint8)", asFUNCTION(get_layerHasTiles), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool set_jjLayerHasTiles(uint8, bool)", asFUNCTION(set_layerHasTiles), asCALL_CDECL);
+		/**
+		 * @brief Whether the original layers repeat vertically, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::tileHeight of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("bool get_jjLayerTileHeight(uint8)", asFUNCTION(get_layerTileHeight), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool set_jjLayerTileHeight(uint8, bool)", asFUNCTION(set_layerTileHeight), asCALL_CDECL);
+		/**
+		 * @brief Whether the original layers repeat horizontally, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::tileWidth of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("bool get_jjLayerTileWidth(uint8)", asFUNCTION(get_layerTileWidth), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool set_jjLayerTileWidth(uint8, bool)", asFUNCTION(set_layerTileWidth), asCALL_CDECL);
+		/**
+		 * @brief Whether the original layers are shifted down depending on the resolution, indexed by layer number from 1 to 8
+		 *
+		 * A shortcut for @ref jjLAYER::limitVisibleRegion of `jjLayers[layer]`.
+		 */
 		engine->RegisterGlobalFunction("bool get_jjLayerLimitVisibleRegion(uint8)", asFUNCTION(get_layerLimitVisibleRegion), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool set_jjLayerLimitVisibleRegion(uint8, bool)", asFUNCTION(set_layerLimitVisibleRegion), asCALL_CDECL);
 
+		/**
+		 * @brief Changes the horizontal speed or automatic speed of one of the original layers
+		 *
+		 * A shortcut for @ref jjLAYER::setXSpeed() of `jjLayers[layerID]`.
+		 *
+		 * @note Currently the same as assigning the property, the layer isn't shifted to stay where it was before
+		 *		the change.
+		 */
 		engine->RegisterGlobalFunction("void jjSetLayerXSpeed(uint8 layerID, float newspeed, bool newSpeedIsAnAutoSpeed)", asFUNCTION(setLayerXSpeedSeamlessly), asCALL_CDECL);
+		/**
+		 * @brief Changes the vertical speed or automatic speed of one of the original layers
+		 *
+		 * A shortcut for @ref jjLAYER::setYSpeed() of `jjLayers[layerID]`.
+		 *
+		 * @note Currently the same as assigning the property, the layer isn't shifted to stay where it was before
+		 *		the change.
+		 */
 		engine->RegisterGlobalFunction("void jjSetLayerYSpeed(uint8 layerID, float newspeed, bool newSpeedIsAnAutoSpeed)", asFUNCTION(setLayerYSpeedSeamlessly), asCALL_CDECL);
 	}
 
 	void LevelScriptLoader::RegisterLegacyTexturedBackground(asIScriptEngine* engine)
 	{
 		engine->SetDefaultNamespace("TEXTURE");
+		/**
+		 * @brief Image a textured layer is drawn with
+		 *
+		 * Every texture is 256×256 pixels. Apart from @ref FROMTILES and `CUSTOM`, the values are built-in textures named
+		 * after the tile sets they were taken from, read from a data file in the game's `Source` directory.
+		 */
 		engine->RegisterEnum("Texture");
-		engine->RegisterEnumValue("Texture", "FROMTILES", 0);
-		engine->RegisterEnumValue("Texture", "LAYER8", 0);
+		engine->RegisterEnumValue("Texture", "FROMTILES", 0);	///< The 8×8 tiles at the top left corner of the layer
+		engine->RegisterEnumValue("Texture", "LAYER8", 0);		///< Former name of @ref FROMTILES
 		engine->RegisterEnumValue("Texture", "NORMAL", 1);
 		engine->RegisterEnumValue("Texture", "PSYCH", 2);
 		engine->RegisterEnumValue("Texture", "MEDIVO", 3);
@@ -2473,15 +2565,16 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Texture", "WTF", 13);
 		engine->RegisterEnumValue("Texture", "MUCKAMOKNIGHT", 14);
 		engine->RegisterEnumValue("Texture", "DESOLATION", 15);
-		engine->RegisterEnumValue("Texture", "CUSTOM", ~0);
+		engine->RegisterEnumValue("Texture", "CUSTOM", ~0);	///< An image given by @ref jjPIXELMAP::makeTexture(), assigning it has no use
+		/** @brief Effect a textured layer is drawn with, see @ref jjLAYER::textureStyle */
 		engine->RegisterEnum("Style");
-		engine->RegisterEnumValue("Style", "WARPHORIZON", tbgModeWARPHORIZON);
-		engine->RegisterEnumValue("Style", "TUNNEL", tbgModeTUNNEL);
-		engine->RegisterEnumValue("Style", "MENU", tbgModeMENU);
-		engine->RegisterEnumValue("Style", "TILEMENU", tbgModeTILEMENU);
-		engine->RegisterEnumValue("Style", "WAVE", tbgModeWAVE);
-		engine->RegisterEnumValue("Style", "CYLINDER", tbgModeCYLINDER);
-		engine->RegisterEnumValue("Style", "REFLECTION", tbgModeREFLECTION);
+		engine->RegisterEnumValue("Style", "WARPHORIZON", tbgModeWARPHORIZON);	///< Floor and ceiling stretching to a horizon, see @ref jjLAYER::warpHorizon
+		engine->RegisterEnumValue("Style", "TUNNEL", tbgModeTUNNEL);			///< Rings shrinking into the distance, see @ref jjLAYER::tunnel
+		engine->RegisterEnumValue("Style", "MENU", tbgModeMENU);				///< Rotating background of the main menu, currently drawn as @ref WARPHORIZON, see @ref jjLAYER::menu
+		engine->RegisterEnumValue("Style", "TILEMENU", tbgModeTILEMENU);		///< Rotating background of the main menu made of the texture and tiles, see @ref jjLAYER::tileMenu
+		engine->RegisterEnumValue("Style", "WAVE", tbgModeWAVE);				///< Flat repeated texture distorted by sine waves, see @ref jjLAYER::wave
+		engine->RegisterEnumValue("Style", "CYLINDER", tbgModeCYLINDER);		///< Inside of a horizontal tube, see @ref jjLAYER::cylinder
+		engine->RegisterEnumValue("Style", "REFLECTION", tbgModeREFLECTION);	///< Plane below the horizon mirroring what's above it, see @ref jjLAYER::reflection
 		engine->SetDefaultNamespace("");
 
 		engine->RegisterGlobalFunction("void jjSetDarknessColor(jjPALCOLOR color = jjPALCOLOR())", asFUNCTION(jjSetDarknessColor), asCALL_CDECL);
@@ -2489,6 +2582,7 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 paletteColorID = 207)", asFUNCTION(jjSetFadeColorsFromPalette), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSetFadeColors(jjPALCOLOR color)", asFUNCTION(jjSetFadeColorsFromPalcolor), asCALL_CDECL);
 		engine->RegisterGlobalFunction("jjPALCOLOR jjGetFadeColors()", asFUNCTION(jjGetFadeColors), asCALL_CDECL);
+		/** @deprecated Changes of the textured background are applied automatically, there's no need to call it anymore. */
 		engine->RegisterGlobalFunction("void jjUpdateTexturedBG()", asFUNCTION(jjUpdateTexturedBG), asCALL_CDECL); // Deprecated
 		engine->RegisterGlobalFunction("TEXTURE::Texture get_jjTexturedBGTexture()", asFUNCTION(get_jjTexturedBGTexture), asCALL_CDECL);
 		engine->RegisterGlobalFunction("TEXTURE::Texture set_jjTexturedBGTexture(TEXTURE::Texture)", asFUNCTION(set_jjTexturedBGTexture), asCALL_CDECL);
@@ -2537,97 +2631,218 @@ namespace Jazz2::Scripting
 
 		// The parameters of the texture styles, objects of the layer itself (see jjLAYER::TextureStyleParams) - the fade color
 		// and the stars are of the layer, each style takes them as one of its own parameters
+		/**
+		 * @brief Properties of the warp horizon effect of a layer, see @ref jjLAYER::warpHorizon
+		 *
+		 * The values are shared with the other texture styles of the same layer, changing one here changes the
+		 * corresponding property of the others too.
+		 */
 		engine->RegisterObjectType("jjLAYERWARPHORIZON", 0, asOBJ_REF | asOBJ_NOHANDLE);
+		/**
+		 * @brief Returns the horizontal position of the vanishing point as a fraction of the view
+		 *
+		 * 0.5 (the default) is the middle. With @ref SURFACE::INNERLAYER it's a fraction of the layer instead.
+		 */
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "float get_fadePositionX() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "float set_fadePositionX(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Returns the vertical position of the horizon as a fraction of the view
+		 *
+		 * 0.5 (the default) is the middle. With @ref SURFACE::INNERLAYER it's a fraction of the layer instead.
+		 */
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "float get_fadePositionY() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "float set_fadePositionY(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the texture fades into the fade color towards the horizon, `true` by default */
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "bool get_fade() const", asFUNCTION(jjLAYER::GetStyleFade), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "bool set_fade(bool)", asFUNCTION(jjLAYER::SetStyleFade), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether small stars are shown along the horizon, `false` by default */
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "bool get_stars() const", asFUNCTION(jjLAYER::GetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "bool set_stars(bool)", asFUNCTION(jjLAYER::SetTextureStars), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the color the texture fades into near the horizon, only its red, green and blue are used */
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "jjPALCOLOR getFadeColor() const", asFUNCTION(jjLAYER::GetFadeColor), asCALL_CDECL_OBJFIRST);
+		/** @brief Sets the color the texture fades into near the horizon, only its red, green and blue are used */
 		engine->RegisterObjectMethod("jjLAYERWARPHORIZON", "void setFadeColor(jjPALCOLOR)", asFUNCTION(jjLAYER::SetFadeColor), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectProperty("jjLAYER", "jjLAYERWARPHORIZON warpHorizon", asOFFSET(jjLAYER, warpHorizon));
 
+		/**
+		 * @brief Properties of the tunnel effect of a layer, see @ref jjLAYER::tunnel
+		 *
+		 * The values are shared with the other texture styles of the same layer, see @ref jjLAYERWARPHORIZON.
+		 */
 		engine->RegisterObjectType("jjLAYERTUNNEL", 0, asOBJ_REF | asOBJ_NOHANDLE);
+		/** @brief Returns the horizontal position of the tunnel's center as a fraction of the view, 0.5 by default */
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "float get_fadePositionX() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "float set_fadePositionX(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the vertical position of the tunnel's center as a fraction of the view, 0.5 by default */
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "float get_fadePositionY() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "float set_fadePositionY(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the texture fades into the fade color towards the center, `true` by default */
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "bool get_fade() const", asFUNCTION(jjLAYER::GetStyleFade), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "bool set_fade(bool)", asFUNCTION(jjLAYER::SetStyleFade), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the rings twist into a spiral towards the center, `false` by default */
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "bool get_spiral() const", asFUNCTION(jjLAYER::GetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "bool set_spiral(bool)", asFUNCTION(jjLAYER::SetTextureStars), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the color the texture fades into towards the center, only its red, green and blue are used */
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "jjPALCOLOR getFadeColor() const", asFUNCTION(jjLAYER::GetFadeColor), asCALL_CDECL_OBJFIRST);
+		/** @brief Sets the color the texture fades into towards the center, only its red, green and blue are used */
 		engine->RegisterObjectMethod("jjLAYERTUNNEL", "void setFadeColor(jjPALCOLOR)", asFUNCTION(jjLAYER::SetFadeColor), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectProperty("jjLAYER", "jjLAYERTUNNEL tunnel", asOFFSET(jjLAYER, tunnel));
 
+		/**
+		 * @brief Properties of the menu effect of a layer, see @ref jjLAYER::menu
+		 *
+		 * The values are shared with the other texture styles of the same layer, see @ref jjLAYERWARPHORIZON. The palette
+		 * rows are stored in the red, green and blue of the fade color.
+		 *
+		 * @partialsupport This style isn't drawn yet, a layer with it is drawn as a warp horizon.
+		 */
 		engine->RegisterObjectType("jjLAYERMENU", 0, asOBJ_REF | asOBJ_NOHANDLE);
+		/** @brief Returns the horizontal position of the point everything rotates around as a fraction of the view, 0.5 by default */
 		engine->RegisterObjectMethod("jjLAYERMENU", "float get_pivotX() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERMENU", "float set_pivotX(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the vertical position of the point everything rotates around as a fraction of the view, 0.5 by default */
 		engine->RegisterObjectMethod("jjLAYERMENU", "float get_pivotY() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERMENU", "float set_pivotY(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the 16-color palette row of the rotating part at the back */
 		engine->RegisterObjectMethod("jjLAYERMENU", "uint8 get_palrow16() const", asFUNCTION(jjLAYER::GetTextureComponent<0>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERMENU", "uint8 set_palrow16(uint8)", asFUNCTION(jjLAYER::SetTextureComponent<0>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the 16-color palette row of the rotating part in the middle */
 		engine->RegisterObjectMethod("jjLAYERMENU", "uint8 get_palrow32() const", asFUNCTION(jjLAYER::GetTextureComponent<1>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERMENU", "uint8 set_palrow32(uint8)", asFUNCTION(jjLAYER::SetTextureComponent<1>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the 16-color palette row of the rotating part in front */
 		engine->RegisterObjectMethod("jjLAYERMENU", "uint8 get_palrow256() const", asFUNCTION(jjLAYER::GetTextureComponent<2>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERMENU", "uint8 set_palrow256(uint8)", asFUNCTION(jjLAYER::SetTextureComponent<2>), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the palette rows are gradients from light to dark instead of from dark to light, `false` by default */
 		engine->RegisterObjectMethod("jjLAYERMENU", "bool get_lightToDark() const", asFUNCTION(jjLAYER::GetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERMENU", "bool set_lightToDark(bool)", asFUNCTION(jjLAYER::SetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectProperty("jjLAYER", "jjLAYERMENU menu", asOFFSET(jjLAYER, menu));
 
+		/**
+		 * @brief Properties of the tile menu effect of a layer, see @ref jjLAYER::tileMenu
+		 *
+		 * The values are shared with the other texture styles of the same layer, see @ref jjLAYERWARPHORIZON.
+		 */
 		engine->RegisterObjectType("jjLAYERTILEMENU", 0, asOBJ_REF | asOBJ_NOHANDLE);
+		/** @brief Returns the horizontal position of the point everything rotates around as a fraction of the view, 0.5 by default */
 		engine->RegisterObjectMethod("jjLAYERTILEMENU", "float get_pivotX() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERTILEMENU", "float set_pivotX(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the vertical position of the point everything rotates around as a fraction of the view, 0.5 by default */
 		engine->RegisterObjectMethod("jjLAYERTILEMENU", "float get_pivotY() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERTILEMENU", "float set_pivotY(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the rotating parts are drawn at full size instead of half size, `false` by default */
 		engine->RegisterObjectMethod("jjLAYERTILEMENU", "bool get_fullSize() const", asFUNCTION(jjLAYER::GetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERTILEMENU", "bool set_fullSize(bool)", asFUNCTION(jjLAYER::SetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectProperty("jjLAYER", "jjLAYERTILEMENU tileMenu", asOFFSET(jjLAYER, tileMenu));
 
+		/**
+		 * @brief Properties of the wave effect of a layer, see @ref jjLAYER::wave
+		 *
+		 * The values are shared with the other texture styles of the same layer, see @ref jjLAYERWARPHORIZON. The
+		 * wavelengths and the speed are stored in the red, green and blue of the fade color.
+		 */
 		engine->RegisterObjectType("jjLAYERWAVE", 0, asOBJ_REF | asOBJ_NOHANDLE);
+		/**
+		 * @brief Returns how far the waves shift the rows of the texture horizontally
+		 *
+		 * In units of 128 pixels, 0.5 by default.
+		 */
 		engine->RegisterObjectMethod("jjLAYERWAVE", "float get_amplitudeX() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWAVE", "float set_amplitudeX(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Returns how far the waves shift the columns of the texture vertically
+		 *
+		 * In units of 128 pixels, 0.5 by default.
+		 */
 		engine->RegisterObjectMethod("jjLAYERWAVE", "float get_amplitudeY() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWAVE", "float set_amplitudeY(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Returns the wavelength of the waves that shift the rows
+		 *
+		 * The wave repeats every `wavelengthX + 1` rows, values such as 255 that are one less than a power of two
+		 * work best.
+		 */
 		engine->RegisterObjectMethod("jjLAYERWAVE", "uint8 get_wavelengthX() const", asFUNCTION(jjLAYER::GetTextureComponent<0>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWAVE", "uint8 set_wavelengthX(uint8)", asFUNCTION(jjLAYER::SetTextureComponent<0>), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Returns the wavelength of the waves that shift the columns
+		 *
+		 * The wave repeats every `wavelengthY + 1` columns, see @ref wavelengthX.
+		 */
 		engine->RegisterObjectMethod("jjLAYERWAVE", "uint8 get_wavelengthY() const", asFUNCTION(jjLAYER::GetTextureComponent<1>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWAVE", "uint8 set_wavelengthY(uint8)", asFUNCTION(jjLAYER::SetTextureComponent<1>), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Returns how fast the waves move along the texture
+		 *
+		 * Independent of the speeds of the layer: each 70th of a second, the waves move by 1/1024 of their period times
+		 * this value. The sign, together with @ref distortionAngle, decides the direction.
+		 */
 		engine->RegisterObjectMethod("jjLAYERWAVE", "int8 get_waveSpeed() const", asFUNCTION(jjLAYER::GetWaveSpeed), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWAVE", "int8 set_waveSpeed(int8)", asFUNCTION(jjLAYER::SetWaveSpeed), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the movement of the waves is turned by 90 degrees, `false` by default */
 		engine->RegisterObjectMethod("jjLAYERWAVE", "bool get_distortionAngle() const", asFUNCTION(jjLAYER::GetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERWAVE", "bool set_distortionAngle(bool)", asFUNCTION(jjLAYER::SetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectProperty("jjLAYER", "jjLAYERWAVE wave", asOFFSET(jjLAYER, wave));
 
+		/**
+		 * @brief Properties of the cylinder effect of a layer, see @ref jjLAYER::cylinder
+		 *
+		 * The values are shared with the other texture styles of the same layer, see @ref jjLAYERWARPHORIZON.
+		 */
 		engine->RegisterObjectType("jjLAYERCYLINDER", 0, asOBJ_REF | asOBJ_NOHANDLE);
+		/** @brief Returns the horizontal position of the center of the horizon as a fraction of the view, 0.5 by default */
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "float get_fadePositionX() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "float set_fadePositionX(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Returns the vertical position of the center of the horizon as a fraction of the view
+		 *
+		 * 0.5 by default, values far from it tend to look odd, especially with @ref halfSize.
+		 */
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "float get_fadePositionY() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "float set_fadePositionY(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the texture fades into the fade color towards the horizon, `true` by default */
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "bool get_fade() const", asFUNCTION(jjLAYER::GetStyleFade), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "bool set_fade(bool)", asFUNCTION(jjLAYER::SetStyleFade), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the texture is repeated four times across the view with a stronger curve, `false` by default */
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "bool get_halfSize() const", asFUNCTION(jjLAYER::GetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "bool set_halfSize(bool)", asFUNCTION(jjLAYER::SetTextureStars), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the color the texture fades into near the horizon, only its red, green and blue are used */
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "jjPALCOLOR getFadeColor() const", asFUNCTION(jjLAYER::GetFadeColor), asCALL_CDECL_OBJFIRST);
+		/** @brief Sets the color the texture fades into near the horizon, only its red, green and blue are used */
 		engine->RegisterObjectMethod("jjLAYERCYLINDER", "void setFadeColor(jjPALCOLOR)", asFUNCTION(jjLAYER::SetFadeColor), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectProperty("jjLAYER", "jjLAYERCYLINDER cylinder", asOFFSET(jjLAYER, cylinder));
 
+		/**
+		 * @brief Properties of the reflection effect of a layer, see @ref jjLAYER::reflection
+		 *
+		 * The values are shared with the other texture styles of the same layer, see @ref jjLAYERWARPHORIZON, except
+		 * @ref tintColor. The tint opacity, the distance and the distortion are stored in the red, green and blue of the
+		 * fade color.
+		 */
 		engine->RegisterObjectType("jjLAYERREFLECTION", 0, asOBJ_REF | asOBJ_NOHANDLE);
+		/** @brief Returns the horizontal position of the vanishing point as a fraction of the view, 0.5 by default */
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "float get_fadePositionX() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "float set_fadePositionX(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::X>), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Returns the vertical position of the horizon as a fraction of the view
+		 *
+		 * Everything below the horizon mirrors what's above it. When there are more rows below than above, the top row
+		 * of the view is repeated, and a horizon at the very top reflects black. 0.5 by default.
+		 */
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "float get_top() const", asFUNCTION(jjLAYER::GetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "float set_top(float)", asFUNCTION(jjLAYER::SetStyleValue<&jjLAYER::TextureStyleParams::Y>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the opacity of the @ref tintColor drawn over the reflection, 0 (no tint) by default */
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "uint8 get_tintOpacity() const", asFUNCTION(jjLAYER::GetTextureComponent<0>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "uint8 set_tintOpacity(uint8)", asFUNCTION(jjLAYER::SetTextureComponent<0>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns how far away the reflecting plane appears, higher values make the texture smaller, 0 by default */
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "uint8 get_distance() const", asFUNCTION(jjLAYER::GetTextureComponent<1>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "uint8 set_distance(uint8)", asFUNCTION(jjLAYER::SetTextureComponent<1>), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns how strongly the texture ripples the mirrored image, 0 (a clean mirror) by default */
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "uint8 get_distortion() const", asFUNCTION(jjLAYER::GetTextureComponent<2>), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "uint8 set_distortion(uint8)", asFUNCTION(jjLAYER::SetTextureComponent<2>), asCALL_CDECL_OBJFIRST);
+		/** @brief Whether the reflection is blurred horizontally, `false` by default */
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "bool get_blur() const", asFUNCTION(jjLAYER::GetTextureStars), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "bool set_blur(bool)", asFUNCTION(jjLAYER::SetTextureStars), asCALL_CDECL_OBJFIRST);
+		/** @brief Returns the palette entry of the tint drawn over the reflection, 192 by default */
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "uint8 get_tintColor() const", asFUNCTION(jjLAYER::GetStyleTintColor), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYERREFLECTION", "uint8 set_tintColor(uint8)", asFUNCTION(jjLAYER::SetStyleTintColor), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectProperty("jjLAYER", "jjLAYERREFLECTION reflection", asOFFSET(jjLAYER, reflection));
@@ -2651,28 +2866,93 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("bool jjTilesFromTileset32(const string &in filename, uint firstTileID, uint tileCount, const jjPAL@ palette = null)", asFUNCTION(jjLAYER::jjTilesFromTileset32), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("LAYERSPEEDMODEL");
+		/** @brief How the speed properties of a layer position it on one axis, see @ref jjLAYER::xSpeedModel */
 		engine->RegisterEnum("LayerSpeedModel");
+		/**
+		 * @brief The default model
+		 *
+		 * The layer follows the camera by its speed and scrolls by its automatic speed. Currently the same as
+		 * @ref BOTHSPEEDS.
+		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "NORMAL", 0);
+		/**
+		 * @brief Fixed to the view, the usual model of layer 8
+		 *
+		 * @partialsupport A layer drawn as tiles ignores its speeds and offsets and stays at the top left corner of the
+		 * view, a textured layer takes its position from layer 5 instead.
+		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "LAYER8", 1);
+		/**
+		 * @brief Both the speed and the automatic speed move the layer
+		 *
+		 * For example, clouds that drift constantly while also following the camera a little. Currently the same as
+		 * `NORMAL`.
+		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "BOTHSPEEDS", 2);
+		/**
+		 * @brief Like @ref BOTHSPEEDS, but positioned from the top left corner of the level
+		 *
+		 * The origin of the layer doesn't depend on the resolution. Ignores @ref jjLAYER::limitVisibleRegion.
+		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "FROMSTART", 3);
+		/**
+		 * @brief Scrolls the layer so it exactly spans the level
+		 *
+		 * @partialsupport Ignores the speeds: one edge of the layer is visible at one edge of the level and the
+		 * opposite edge at the opposite edge of the level, so a larger layer moves faster.
+		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "FITLEVEL", 4);
+		/**
+		 * @brief Speeds are multiples of the size of the view
+		 *
+		 * With the camera at the top or left edge of the level, the layer is offset by the view size times its speed,
+		 * at the bottom or right edge by the view size times its automatic speed, and it moves smoothly in between.
+		 * Ignores @ref jjLAYER::limitVisibleRegion.
+		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "SPEEDMULTIPLIERS", 5);
 		engine->SetDefaultNamespace("");
 		engine->RegisterObjectProperty("jjLAYER", "LAYERSPEEDMODEL::LayerSpeedModel xSpeedModel", asOFFSET(jjLAYER, SpeedModeX));
 		engine->RegisterObjectProperty("jjLAYER", "LAYERSPEEDMODEL::LayerSpeedModel ySpeedModel", asOFFSET(jjLAYER, SpeedModeY));
 
 		engine->SetDefaultNamespace("SURFACE");
+		/** @brief Where and whether a layer is drawn textured, see @ref jjLAYER::textureSurface */
 		engine->RegisterEnum("Surface");
+		/** @brief Drawn as tiles, the default */
 		engine->RegisterEnumValue("Surface", "UNTEXTURED", jjLAYER::TextureSurfaceStyles::Untextured);
+		/**
+		 * @brief Over the whole view, compatible with older levels
+		 *
+		 * The usual surface of a warp horizon made in a level editor. @ref FULLSCREEN is usually the better choice.
+		 */
 		engine->RegisterEnumValue("Surface", "LEGACY", jjLAYER::TextureSurfaceStyles::Legacy);
+		/** @brief Over the whole view of each player */
 		engine->RegisterEnumValue("Surface", "FULLSCREEN", jjLAYER::TextureSurfaceStyles::FullScreen);
+		/**
+		 * @brief Only where the layer would be drawn as tiles, as a window into an effect over the whole view
+		 *
+		 * The inner speeds of the layer move the texture. A fade position of 0.5 is still the middle of the view.
+		 * @partialsupport Not supported by @ref TEXTURE::WAVE.
+		 */
 		engine->RegisterEnumValue("Surface", "INNERWINDOW", jjLAYER::TextureSurfaceStyles::InnerWindow);
+		/**
+		 * @brief Only where the layer would be drawn as tiles, as an effect of its own
+		 *
+		 * Like @ref INNERWINDOW, but positions such as the fade position are fractions of the layer instead of the
+		 * view.
+		 * @partialsupport Not supported by @ref TEXTURE::WAVE.
+		 */
 		engine->RegisterEnumValue("Surface", "INNERLAYER", jjLAYER::TextureSurfaceStyles::InnerLayer);
 		engine->SetDefaultNamespace("");
 		engine->RegisterObjectMethod("jjLAYER", "SURFACE::Surface get_textureSurface() const", asMETHOD(jjLAYER, GetTextureSurface), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjLAYER", "void set_textureSurface(SURFACE::Surface)", asMETHOD(jjLAYER, SetTextureSurface), asCALL_THISCALL);
 
+		/**
+		 * @brief Static or animated tile of the level
+		 *
+		 * Mainly used to read and change the frames and the speed of animated tiles. There's exactly one instance for
+		 * each tile ID, so it can't be constructed, only reached through @ref jjTiles, which gives read-only access to
+		 * static and animated tiles, or @ref jjAnimatedTiles, which allows changing animated tiles.
+		 */
 		engine->RegisterObjectType("jjTILE", 0, asOBJ_REF);
 		engine->RegisterObjectBehaviour("jjTILE", asBEHAVE_ADDREF, "void f()", asMETHOD(jjTILE, AddRef), asCALL_THISCALL);
 		engine->RegisterObjectBehaviour("jjTILE", asBEHAVE_RELEASE, "void f()", asMETHOD(jjTILE, Release), asCALL_THISCALL);
@@ -2696,16 +2976,43 @@ namespace Jazz2::Scripting
 
 		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel, int yPixel)", asFUNCTION(jjMaskedPixel), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel, int yPixel, uint8 layer)", asFUNCTION(jjMaskedPixelLayer), asCALL_CDECL);
+		/**
+		 * @brief Returns whether a pixel is solid
+		 *
+		 * Only the sprite layer has collision masks, so this always tests `jjLayers[4]`, see @ref jjMaskedPixel().
+		 */
 		engine->RegisterObjectMethod("jjLAYER", "bool maskedPixel(int xPixel, int yPixel) const", asFUNCTION(LayerMaskedPixel), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel, int lineLength, int yPixel)", asFUNCTION(jjMaskedHLine), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel, int lineLength, int yPixel, uint8 layer)", asFUNCTION(jjMaskedHLineLayer), asCALL_CDECL);
+		/**
+		 * @brief Returns whether any pixel of a horizontal line is solid
+		 *
+		 * Only the sprite layer has collision masks, so this always tests `jjLayers[4]`, see @ref jjMaskedHLine().
+		 */
 		engine->RegisterObjectMethod("jjLAYER", "bool maskedHLine(int xPixel, int lineLength, int yPixel) const", asFUNCTION(LayerMaskedHLine), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedVLine), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel, int yPixel, int lineLength,uint8 layer)", asFUNCTION(jjMaskedVLineLayer), asCALL_CDECL);
+		/**
+		 * @brief Returns whether any pixel of a vertical line is solid
+		 *
+		 * Only the sprite layer has collision masks, so this always tests `jjLayers[4]`, see @ref jjMaskedVLine().
+		 */
 		engine->RegisterObjectMethod("jjLAYER", "bool maskedVLine(int xPixel, int yPixel, int lineLength) const", asFUNCTION(LayerMaskedVLine), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedTopVLine), asCALL_CDECL);
 		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength,uint8 layer)", asFUNCTION(jjMaskedTopVLineLayer), asCALL_CDECL);
+		/**
+		 * @brief Returns where the topmost solid pixel of a vertical line is
+		 *
+		 * Only the sprite layer has collision masks, so this always tests `jjLayers[4]`, see @ref jjMaskedTopVLine().
+		 */
 		engine->RegisterObjectMethod("jjLAYER", "int maskedTopVLine(int xPixel, int yPixel, int lineLength) const", asFUNCTION(LayerMaskedTopVLine), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Returns the event of the tile where a mask function last found a solid pixel
+		 *
+		 * Updated whenever @ref jjMaskedPixel(), @ref jjMaskedHLine(), @ref jjMaskedVLine() or @ref jjMaskedTopVLine() find a
+		 * solid pixel. Useful to let something pass through tiles with certain events, such as one-way platforms,
+		 * hooks or vines.
+		 */
 		engine->RegisterGlobalFunction("uint8 get_jjEventAtLastMaskedPixel()", asFUNCTION(get_jjEventAtLastMaskedPixel), asCALL_CDECL);
 	}
 
@@ -2716,15 +3023,44 @@ namespace Jazz2::Scripting
 		engine->SetDefaultNamespace("MLLE");
 		engine->RegisterGlobalFunction("bool Setup()", asFUNCTION(mlleSetup), asCALL_CDECL);
 		// For the include of weapons, see LevelScriptLoader::OnProcessInclude()
+		/**
+		 * @brief Writes the parameters of a script weapon into a stream
+		 *
+		 * Used internally by the custom weapons support. `slot` is from 1 to 9. Returns `false` if the slot doesn't
+		 * hold a script weapon.
+		 */
 		engine->RegisterGlobalFunction("bool _GetWeaponParams(uint slot, jjSTREAM@ data)", asFUNCTION(mlleGetWeaponParams), asCALL_CDECL);
+		/**
+		 * @brief Returns the event of the ammo crate of a script weapon
+		 *
+		 * Used internally by the custom weapons support. `slot` is from 1 to 9. Returns 0 if the slot doesn't hold a
+		 * script weapon.
+		 */
 		engine->RegisterGlobalFunction("uint8 _GetWeaponAmmoCrate(uint slot)", asFUNCTION(mlleGetWeaponAmmoCrate), asCALL_CDECL);
+		/**
+		 * @brief Returns the argument of the hook shared by the script weapons, -1 for none
+		 *
+		 * Used internally by the custom weapons support.
+		 */
 		engine->RegisterGlobalFunction("int16 _GetWeaponHookArgument()", asFUNCTION(mlleGetWeaponHookArgument), asCALL_CDECL);
+		/**
+		 * @brief Sets the animation frames a script weapon shows on the screen
+		 *
+		 * Used internally by the custom weapons support. `slot` is from 1 to 9, `powerup` selects the powered-up
+		 * version, and the frames are indices into @ref jjAnimFrames.
+		 */
 		engine->RegisterGlobalFunction("void _SetWeaponSprite(uint slot, bool powerup, uint firstFrame, uint frameCount)", asFUNCTION(mlleSetWeaponSprite), asCALL_CDECL);
+		/** @brief Applies @ref MLLE::Palette as the current palette */
 		engine->RegisterGlobalFunction("void ReapplyPalette()", asMETHOD(jjPAL, apply), asCALL_THISCALL_ASGLOBAL, &_mllePalette);
 		engine->RegisterGlobalFunction("void SpawnOffgrids()", asFUNCTION(mlleSpawnOffgrids), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void SpawnOffgridsLocal()", asFUNCTION(mlleSpawnOffgridsLocal), asCALL_CDECL);
 		engine->RegisterGlobalFunction("jjLAYER@ GetLayer(const ::string &in name)", asFUNCTION(mlleGetLayer), asCALL_CDECL);
 		// A handle in MLLE, it's never reassigned by its scripts, only changed and applied
+		/**
+		 * @brief Palette the level was made with
+		 *
+		 * A script may change it and apply it again by @ref MLLE::ReapplyPalette().
+		 */
 		engine->RegisterGlobalProperty("jjPAL Palette", &_mllePalette);
 	}
 }

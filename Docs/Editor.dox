@@ -436,12 +436,14 @@ the chosen language, and <b>Import .po</b> reads one back.
 
 <b>Weapons</b> in the <b>Level</b> menu shows the ten weapons of the level, each of them is:
 
--   <b>Weapon of the game</b>, maybe with other ammo options: the most ammo (with a multiplier of what a pickup gives),
+-   <b>Original weapon</b>, maybe with other ammo options: the most ammo (with a multiplier of what a pickup gives),
     ammo at the start or full at every start, infinite ammo, whether it's allowed or can be powered up, whether gun
     crates give it and birds fire it, whether a shield fires in its place, bubbles under water, and the gems a player hit
     by it loses in Treasure Hunt --- the options JJ2+ scripts know as `jjWEAPON`, which scripts read and change too,
 -   a <b>Custom weapon</b>, which the game fires itself, also online, without a script: how often it fires, how many shots
-    at once and how they spread, recoil and sound, and for its shot and its powered-up shot the speed, gravity, damage,
+    at once and how they spread, recoil and sound (of the game by its name, or embedded in the level), whether only while
+    the player stands as the thunderbolt, and for its shot and its powered-up shot the speed, the acceleration (below 0
+    it slows down until it stops), gravity, damage,
     bounces, passing through enemies or walls, homing, freezing, a trigger (on a hit, an enemy close for a mine, or a
     timer), a blast with its damage and push, the explosion, the light and the look (a sprite, a glowing sprite as the
     pepper spray, a swirl of sparks as the electro blaster, or a beam as the thunderbolt, which reaches as far as the
@@ -459,10 +461,14 @@ multiplier, a script counts ammo in rounds times the multiplier.
 A custom weapon is shown firing in a firing range below its pages, held for most of a second, with walls and a target;
 the player, the character chosen in the <b>Play</b> menu, and the target are moved by dragging them. The sound of firing is played by the button next to it. <b>Try It</b> plays the level from
 the middle of the view with the weapon in hand and full of ammo. On the <b>Animations</b> page, the shots, the icon on
-the screen and the ammo can be animations of the game or embedded images --- PNG strips with the frames side by side,
-imported into the colors of the sprites and kept in the level --- each shown playing as in the game. The ammo of a
-weapon named by the level is shown by that name in the event properties. A value the level changed is marked
-<b>(changed)</b> next to it, as are the weapons in the list, with their animated icons on the screen. A weapon the
+the screen and the ammo can be animations of the game or embedded images --- PNG images of frames in rows and columns,
+imported into the colors of the sprites and kept in the level whole, with the columns, rows and number of frames
+changed below each --- each shown playing as in the game. Sounds in WAV or Ogg Vorbis, up to 2 MB each, are embedded
+there too, kept in the level as the files are, and a custom weapon fires with one of them chosen next to its
+<b>Sound</b>; they're played as the game's own sounds, also by the clients of a server, which get them with the level.
+The ammo of a weapon named by the level is shown by that name
+in the event properties. A value the level changed is marked by a pencil next to it, as are the weapons in the list,
+with their numbers and animated icons on the screen. A weapon the
 script of the level sets up, as MLLE does or by its own code, is marked <b>(script)</b> and shows the icon the script
 gives it on the screen, or its ammo; one set up by its own code is told on the first page and its <b>Script</b> page, as how it looks
 and fires in the game comes from the script then.
@@ -502,6 +508,39 @@ When the level is saved and its script-driven weapons changed, the lines of its 
 editor shows of the script run the script with those lines as they are in the editor. Script-driven weapons work only
 while scripts of levels are allowed in the options of the game. The weapons are kept in the chunk
 @cpp "WPNS" @ce (see @ref editor-formats-chunks), a level of a newer version of it is shown but not changed.
+
+<b>Template</b> on the first page makes the weapon as a template describes it with one click: a weapon of a script, or
+a custom weapon described by an item with @cpp "Kind": "Custom" @ce of the same `.json` files in `Editor/Weapons/`. The
+images and sounds a custom weapon needs are files next to its template, embedded in the level when it's made, an image or
+a sound the level already has isn't embedded again. The button next to it saves a custom weapon as a template, with its
+images and sounds as files next to it, so the same weapon can be made in other levels:
+
+@code{.json}
+{
+	"Weapons": [{
+		"Kind": "Custom",
+		"Name": "Plasma Gun",
+		"BasedOn": "Blaster",
+		"Options": { "Maximum": 50 },
+		"Fire": { "Cooldown": 12, "SpreadAngle": 10, "SoundFile": "plasma.wav" },
+		"Shot": {
+			"Sprite": { "File": "plasma.png", "Columns": 4, "Rows": 1, "Frames": 4, "FrameRate": 12, "HotspotX": 8, "HotspotY": 8 },
+			"Speed": 4, "Acceleration": 0.5, "Look": "Glow", "DestroysBlocksAs": "Own"
+		},
+		"ShotPowered": { "Strength": 2 },
+		"HudIcon": { "Metadata": "UI/HUD", "AnimState": 3 }
+	}]
+}
+@endcode
+
+The names are those of the fields of @ref Jazz2::WeaponDefinition (@ref Jazz2::WeaponOptions as @cpp "Options" @ce,
+@ref Jazz2::WeaponFireOptions as @cpp "Fire" @ce, @ref Jazz2::WeaponShotOptions as @cpp "Shot" @ce and
+@cpp "ShotPowered" @ce), with angles in degrees, @cpp "AmmoPerShot" @ce in rounds and choices by their names. What a
+template doesn't describe is as the weapon of the game it's made from has it, the name and the ammo options as the level
+has them, and the icons too if the weapon is a custom weapon already; the powered-up shot is as the usual one with what @cpp "ShotPowered" @ce changes of it. A sprite is an
+animation of the game by its metadata and animation state, or an image file with how its frames are laid out, the size
+of the image tells them if it doesn't say. @cpp "Sound" @ce is a sound of the game by its name, @cpp "SoundFile" @ce
+a file to embed.
 
 @subsection editor-level-episode Episode
 

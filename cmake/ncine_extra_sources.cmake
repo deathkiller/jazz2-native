@@ -2107,6 +2107,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/ToolOptionsBar.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/WeaponsDialog.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/WeaponScripts.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/WeaponTemplates.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/WeaponPreview.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/RulesFile.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/SmartTileModel.h
@@ -2251,6 +2252,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/ToolOptionsBar.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/WeaponsDialog.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/WeaponScripts.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/WeaponTemplates.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/WeaponPreview.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/RulesFile.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Smart/SmartTileModel.cpp

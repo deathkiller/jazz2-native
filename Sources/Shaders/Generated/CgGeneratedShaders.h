@@ -728,7 +728,7 @@ float4 main(PsInput _input) : COLOR
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)(1.0 - light.x)));
+	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)(1.0 - light.x)));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -828,7 +828,7 @@ float4 main(PsInput _input) : COLOR
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)(1.0 - light.x)));
+	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)(1.0 - light.x)));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1012,7 +1012,7 @@ float4 main(PsInput _input) : COLOR
 	blur = float4(gray, gray, gray, blur.w);
 	float darknessStrength = 1.0 - light.x;
 	darknessStrength = min(1.0, darknessStrength + isTexelAbove * vWaterLine.w);
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * vConstants.x, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * vConstants.x, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1196,7 +1196,7 @@ float4 main(PsInput _input) : COLOR
 	blur = float4(gray, gray, gray, blur.w);
 	float darknessStrength = 1.0 - light.x;
 	darknessStrength = min(1.0, darknessStrength + isTexelAbove * vWaterLine.w);
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * vConstants.x, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * vConstants.x, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1322,7 +1322,7 @@ float4 main(PsInput _input) : COLOR
 		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1448,7 +1448,7 @@ float4 main(PsInput _input) : COLOR
 		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -5873,6 +5873,175 @@ float4 main(PsInput _input) : COLOR
 	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	float alpha = tex2D(uTexturePalette, float2(palX, palY)).w * src.w;
 	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)" },
+			{ "SpriteChromaKey", "",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	vPaletteOffset = palOffset;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vPaletteOffset = vPaletteOffset;
+	return _output;
+}
+)",
+				R"(uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vPaletteOffset = _input.vPaletteOffset;
+	COLOR = vColor;
+	float4 src = tex2D(uTexture, vTexCoords);
+	float4 color = src;
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
+	COLOR = float4(color.xyz, color.w * keyed) * COLOR;
+	return COLOR;
+}
+)" },
+			{ "SpriteChromaKey", "USE_PALETTE",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	vPaletteOffset = palOffset;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	_output.vPaletteOffset = vPaletteOffset;
+	return _output;
+}
+)",
+				R"(uniform float2 uTargetSizeInv;
+uniform float4 uKeyColor;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTexturePalette : TEXUNIT1;
+uniform sampler2D uTextureBehind : TEXUNIT2;
+
+static float4 gl_FragCoord;
+static float2 vTexCoords;
+static float4 vColor;
+static float vPaletteOffset;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float vPaletteOffset : TEXCOORD2;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	vPaletteOffset = _input.vPaletteOffset;
+	COLOR = vColor;
+	float4 src = tex2D(uTexture, vTexCoords);
+	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float4 color = tex2D(uTexturePalette, float2(palX, palY));
+	color.w *= src.w;
+	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
+	float3 difference = abs(behind - uKeyColor.xyz);
+	float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
+	COLOR = float4(color.xyz, color.w * keyed) * COLOR;
 	return COLOR;
 }
 )" },

@@ -734,8 +734,8 @@ static void RefCombineLighting(std::uint8_t* pixels, std::int32_t fbWidth, std::
 			if (darkT <= 0.0f && g <= 0.0f) {
 				continue;
 			}
-			const float lit = 1.0f + g;
-			const float core = (g > 0.7f ? g - 0.7f : 0.0f);
+			const float lit = 1.0f + 0.607f * g;
+			const float core = 0.2f * g + (g > 0.7f ? g - 0.7f : 0.0f);
 			float cr = (px[0] / 255.0f) * lit + core;
 			float cg = (px[1] / 255.0f) * lit + core;
 			float cb = (px[2] / 255.0f) * lit + core;

@@ -15,7 +15,7 @@ namespace Jazz2::Formats
 	{
 		constexpr std::uint8_t ShotIds = 64;
 		constexpr std::uint8_t ShotPoweredIds = 128;
-		constexpr std::uint8_t ShotIdCount = 28;
+		constexpr std::uint8_t ShotIdCount = 29;
 
 		bool IsShotPoweredId(std::uint8_t id)
 		{
@@ -190,8 +190,8 @@ namespace Jazz2::Formats
 		}
 
 		// Calls f(id, field, baselineField) for each property of a block
-		template<typename F>
-		void VisitOptions(WeaponOptions& o, const WeaponOptions& b, F&& f)
+		template<typename TOptions, typename F>
+		void VisitOptions(TOptions& o, const WeaponOptions& b, F&& f)
 		{
 			f(16, o.Infinite, b.Infinite);
 			f(17, o.Replenishes, b.Replenishes);
@@ -212,8 +212,8 @@ namespace Jazz2::Formats
 			f(32, o.ComesFromBirdsPowerup, b.ComesFromBirdsPowerup);
 		}
 
-		template<typename F>
-		void VisitFire(WeaponFireOptions& o, const WeaponFireOptions& b, F&& f)
+		template<typename TFire, typename F>
+		void VisitFire(TFire& o, const WeaponFireOptions& b, F&& f)
 		{
 			f(40, o.Cooldown, b.Cooldown);
 			f(41, o.FastFireStep, b.FastFireStep);
@@ -226,10 +226,12 @@ namespace Jazz2::Formats
 			f(48, o.Sound, b.Sound);
 			f(49, o.LoopSound, b.LoopSound);
 			f(50, o.Flare, b.Flare);
+			f(51, o.StandStill, b.StandStill);
+			f(52, o.SoundIndex, b.SoundIndex);
 		}
 
-		template<typename F>
-		void VisitShot(WeaponShotOptions& o, const WeaponShotOptions& b, std::uint8_t first, F&& f)
+		template<typename TShot, typename F>
+		void VisitShot(TShot& o, const WeaponShotOptions& b, std::uint8_t first, F&& f)
 		{
 			f(first + 0, o.Sprite, b.Sprite);
 			f(first + 1, o.Speed, b.Speed);
@@ -259,30 +261,53 @@ namespace Jazz2::Formats
 			f(first + 25, o.AltSprite, b.AltSprite);
 			f(first + 26, o.FlipX, b.FlipX);
 			f(first + 27, o.FlipY, b.FlipY);
+			f(first + 28, o.Acceleration, b.Acceleration);
 		}
 
-		template<typename F>
-		void VisitWeapon(WeaponDefinition& o, const WeaponDefinition& b, F&& f)
+		// The properties of a custom weapon, besides its powered-up shot, see WeaponDefinition::GetCustom()
+		template<typename TCustom, typename F>
+		void VisitCustom(TCustom& o, const CustomWeaponOptions& b, F&& f)
+		{
+			f(5, o.BasedOn, b.BasedOn);
+			f(9, o.HudIcon, b.HudIcon);
+			f(10, o.HudIconPowered, b.HudIconPowered);
+			f(11, o.Pickup, b.Pickup);
+			VisitFire(o.Fire, b.Fire, f);
+			VisitShot(o.Shot, b.Shot, ShotIds, f);
+		}
+
+		template<typename TWeapon, typename F>
+		void VisitWeapon(TWeapon& o, const WeaponDefinition& b, F&& f)
 		{
 			f(1, o.Kind, b.Kind);
 			f(2, o.Name, b.Name);
 			f(3, o.StartAmmo, b.StartAmmo);
 			f(4, o.AmmoCrateEvent, b.AmmoCrateEvent);
-			f(5, o.BasedOn, b.BasedOn);
+			f(8, o.ScriptParams, b.ScriptParams);
+			VisitOptions(o.Options, b.Options, f);
+		}
+
+		// What only the editor needs, see WeaponEditorData
+		template<typename TEditorData, typename F>
+		void VisitEditorData(TEditorData& o, const WeaponEditorData& b, F&& f)
+		{
 			f(6, o.ScriptLibrary, b.ScriptLibrary);
 			f(7, o.ScriptConstructor, b.ScriptConstructor);
-			f(8, o.ScriptParams, b.ScriptParams);
-			f(9, o.HudIcon, b.HudIcon);
-			f(10, o.HudIconPowered, b.HudIconPowered);
-			f(11, o.Pickup, b.Pickup);
-			VisitOptions(o.Options, b.Options, f);
-			VisitFire(o.Fire, b.Fire, f);
-			VisitShot(o.Shot, b.Shot, ShotIds, f);
+		}
+
+		bool IsEditorId(std::uint8_t id)
+		{
+			return (id == 6 || id == 7);
+		}
+
+		bool IsCustomId(std::uint8_t id)
+		{
+			return (id == 5 || (id >= 9 && id <= 11) || (id >= 40 && id <= 52) || (id >= ShotIds && id < ShotIds + ShotIdCount));
 		}
 
 		bool IsKnownId(std::uint8_t id)
 		{
-			return ((id >= 1 && id <= 11) || (id >= 16 && id <= 32) || (id >= 40 && id <= 50) ||
+			return ((id >= 1 && id <= 11) || (id >= 16 && id <= 32) || (id >= 40 && id <= 52) ||
 				(id >= ShotIds && id < ShotIds + ShotIdCount) || IsShotPoweredId(id));
 		}
 
@@ -331,6 +356,7 @@ namespace Jazz2::Formats
 			}
 			shot.Speed = Clamped(shot.Speed, -64.0f, 64.0f);
 			shot.Gravity = Clamped(shot.Gravity, -4.0f, 4.0f);
+			shot.Acceleration = Clamped(shot.Acceleration, -4.0f, 4.0f);
 			shot.Lifetime = Clamped(shot.Lifetime, 1.0f, 3600.0f);
 			shot.Strength = Clamped(shot.Strength, 0, 1000);
 			shot.Pierce = Clamped(shot.Pierce, 0, 255);
@@ -357,15 +383,12 @@ namespace Jazz2::Formats
 			shot.LightIntensity = Clamped(shot.LightIntensity, 0.0f, 1.0f);
 		}
 
-		void Sanitize(WeaponDefinition& weapon, std::int32_t imageCount)
+		void Sanitize(WeaponDefinition& weapon, std::int32_t imageCount, std::int32_t soundCount)
 		{
 			if (weapon.Kind > WeaponKind::Script) {
 				weapon.Kind = WeaponKind::Stock;
 			}
-			if (weapon.BasedOn >= WeaponType::Count) {
-				weapon.BasedOn = WeaponType::Unknown;
-			}
-			weapon.StartAmmo = Clamped(weapon.StartAmmo, 0, 255);
+			weapon.StartAmmo = Clamped<std::uint16_t>(weapon.StartAmmo, 0, 255);
 			weapon.Options.Multiplier = Clamped(weapon.Options.Multiplier, 1, 256);
 			weapon.Options.Maximum = Clamped(weapon.Options.Maximum, -1, 255);
 			weapon.Options.GemsLost = Clamped(weapon.Options.GemsLost, 0, 255);
@@ -376,22 +399,32 @@ namespace Jazz2::Formats
 			if (std::uint32_t(weapon.Options.Spread) > std::uint32_t(WeaponSpread::Toaster)) {
 				weapon.Options.Spread = WeaponSpread::Normal;
 			}
-			weapon.Fire.Cooldown = Clamped(weapon.Fire.Cooldown, 1.0f, 3600.0f);
-			weapon.Fire.FastFireStep = Clamped(weapon.Fire.FastFireStep, 0.0f, 100.0f);
-			weapon.Fire.ShotsPerFire = Clamped<std::uint8_t>(weapon.Fire.ShotsPerFire, 1, 32);
-			weapon.Fire.SpreadAngle = Clamped(weapon.Fire.SpreadAngle, 0.0f, 6.3f);
-			weapon.Fire.RandomSpread = Clamped(weapon.Fire.RandomSpread, 0.0f, 3.15f);
-			weapon.Fire.Recoil = Clamped(weapon.Fire.Recoil, -32.0f, 32.0f);
-			for (WeaponSprite* sprite : { &weapon.HudIcon, &weapon.HudIconPowered, &weapon.Pickup }) {
+			if (!weapon.HasCustom()) {
+				return;
+			}
+			CustomWeaponOptions& custom = weapon.GetCustom();
+			if (custom.BasedOn >= WeaponType::Count) {
+				custom.BasedOn = WeaponType::Unknown;
+			}
+			for (WeaponSprite* sprite : { &custom.HudIcon, &custom.HudIconPowered, &custom.Pickup }) {
 				if (sprite->Image >= imageCount || sprite->Image < -1) {
 					sprite->Image = -1;
 				}
 			}
-			Sanitize(weapon.Shot, imageCount);
-			Sanitize(weapon.ShotPowered, imageCount);
+			custom.Fire.Cooldown = Clamped(custom.Fire.Cooldown, 1.0f, 3600.0f);
+			custom.Fire.FastFireStep = Clamped(custom.Fire.FastFireStep, 0.0f, 100.0f);
+			custom.Fire.ShotsPerFire = Clamped<std::uint8_t>(custom.Fire.ShotsPerFire, 1, 32);
+			custom.Fire.SpreadAngle = Clamped(custom.Fire.SpreadAngle, 0.0f, 6.3f);
+			custom.Fire.RandomSpread = Clamped(custom.Fire.RandomSpread, 0.0f, 3.15f);
+			custom.Fire.Recoil = Clamped(custom.Fire.Recoil, -32.0f, 32.0f);
+			if (custom.Fire.SoundIndex >= soundCount || custom.Fire.SoundIndex < -1) {
+				custom.Fire.SoundIndex = -1;
+			}
+			Sanitize(custom.Shot, imageCount);
+			Sanitize(custom.ShotPowered, imageCount);
 		}
 
-		bool ReadWeapon(const std::uint8_t* p, const std::uint8_t* end, WeaponDefinition& weapon, WeaponType weaponType)
+		bool ReadWeapon(const std::uint8_t* p, const std::uint8_t* end, WeaponDefinition& weapon, WeaponType weaponType, WeaponEditorData* editorData)
 		{
 			SmallVector<Property, 64> properties;
 			if (!ReadProperties(p, end, properties)) {
@@ -399,24 +432,39 @@ namespace Jazz2::Formats
 			}
 
 			const WeaponDefinition baseline = WeaponDefinition::MakeDefault(weaponType);
+			const CustomWeaponOptions defaults;
 			weapon = baseline;
 			for (const Property& property : properties) {
+				auto decode = [&property](std::uint8_t id, auto& field, const auto&) {
+					if (id == property.Id) {
+						Decode(property.Value, field);
+					}
+				};
 				if (!IsKnownId(property.Id)) {
-					weapon.UnknownProperties.append(property.Whole.begin(), property.Whole.end());
+					if (editorData != nullptr) {
+						editorData->UnknownProperties.append(property.Whole.begin(), property.Whole.end());
+					}
+				} else if (IsEditorId(property.Id)) {
+					if (editorData != nullptr) {
+						VisitEditorData(*editorData, WeaponEditorData(), decode);
+					}
+				} else if (IsCustomId(property.Id)) {
+					VisitCustom(weapon.GetCustom(), defaults, decode);
 				} else if (!IsShotPoweredId(property.Id)) {
-					VisitWeapon(weapon, baseline, [&property](std::uint8_t id, auto& field, const auto&) {
-						if (id == property.Id) {
-							Decode(property.Value, field);
-						}
-					});
+					VisitWeapon(weapon, baseline, decode);
 				}
 			}
 
-			// What the powered-up shot doesn't have is as the shot
-			weapon.ShotPowered = weapon.Shot;
+			// Only a custom weapon has the options of one, what the powered-up shot doesn't have is as the shot
+			if (weapon.Kind != WeaponKind::Custom) {
+				weapon.ResetCustom();
+				return true;
+			}
+			CustomWeaponOptions& custom = weapon.GetCustom();
+			custom.ShotPowered = custom.Shot;
 			for (const Property& property : properties) {
 				if (IsShotPoweredId(property.Id)) {
-					VisitShot(weapon.ShotPowered, weapon.Shot, ShotPoweredIds, [&property](std::uint8_t id, auto& field, const auto&) {
+					VisitShot(custom.ShotPowered, custom.Shot, ShotPoweredIds, [&property](std::uint8_t id, auto& field, const auto&) {
 						if (id == property.Id) {
 							Decode(property.Value, field);
 						}
@@ -426,7 +474,7 @@ namespace Jazz2::Formats
 			return true;
 		}
 
-		void WriteWeapon(const WeaponDefinition& weapon, WeaponType weaponType, SmallVectorImpl<std::uint8_t>& data)
+		void WriteWeapon(const WeaponDefinition& weapon, WeaponType weaponType, const WeaponEditorData* editorData, SmallVectorImpl<std::uint8_t>& data)
 		{
 			SmallVector<std::uint8_t, 64> value;
 			auto write = [&data, &value](std::uint8_t id, const auto& field, const auto& baseline) {
@@ -441,72 +489,86 @@ namespace Jazz2::Formats
 			};
 
 			const WeaponDefinition baseline = WeaponDefinition::MakeDefault(weaponType);
-			WeaponDefinition& source = const_cast<WeaponDefinition&>(weapon);
-			VisitWeapon(source, baseline, write);
-			VisitShot(source.ShotPowered, weapon.Shot, ShotPoweredIds, write);
-			data.append(weapon.UnknownProperties.begin(), weapon.UnknownProperties.end());
+			VisitWeapon(weapon, baseline, write);
+			if (weapon.Kind == WeaponKind::Custom) {
+				const CustomWeaponOptions& custom = weapon.GetCustom();
+				VisitCustom(custom, CustomWeaponOptions(), write);
+				VisitShot(custom.ShotPowered, custom.Shot, ShotPoweredIds, write);
+			}
+			if (editorData != nullptr) {
+				if (weapon.Kind == WeaponKind::Script) {
+					VisitEditorData(*editorData, WeaponEditorData(), write);
+				}
+				data.append(editorData->UnknownProperties.begin(), editorData->UnknownProperties.end());
+			}
+		}
+
+		bool IsValid(const WeaponImage& image)
+		{
+			return (image.Width >= 1 && image.Width <= WeaponsChunk::MaxImageSize && image.Height >= 1 && image.Height <= WeaponsChunk::MaxImageSize &&
+				image.FrameColumns >= 1 && image.FrameRows >= 1 && image.GetFrameWidth() >= 1 && image.GetFrameWidth() <= WeaponsChunk::MaxFrameSize &&
+				image.GetFrameHeight() >= 1 && image.GetFrameHeight() <= WeaponsChunk::MaxFrameSize && image.FrameCount >= 1 &&
+				image.FrameCount <= WeaponsChunk::MaxFrameCount && image.FrameCount <= image.FrameColumns * image.FrameRows &&
+				image.Pixels.size() == std::size_t(image.Width) * std::size_t(image.Height));
 		}
 
 		bool ReadImage(const std::uint8_t* p, const std::uint8_t* end, WeaponImage& image)
 		{
-			std::uint32_t width, height, count;
-			if (!ReadVarUint(p, end, width) || !ReadVarUint(p, end, height) || !ReadVarUint(p, end, count) ||
-				width < 1 || width > WeaponsChunk::MaxFrameSize || height < 1 || height > WeaponsChunk::MaxFrameSize ||
-				count < 1 || count > WeaponsChunk::MaxFrameCount || end - p < 8) {
+			std::uint32_t width, height, columns, rows, count;
+			if (!ReadVarUint(p, end, width) || !ReadVarUint(p, end, height) || !ReadVarUint(p, end, columns) || !ReadVarUint(p, end, rows) ||
+				!ReadVarUint(p, end, count) || width > std::uint32_t(WeaponsChunk::MaxImageSize) || height > std::uint32_t(WeaponsChunk::MaxImageSize) ||
+				columns > width || rows > height || count > std::uint32_t(WeaponsChunk::MaxFrameCount) || end - p < 8) {
 				return false;
 			}
-			float rate;
-			if (!Decode(ArrayView<const std::uint8_t>(p, 4), rate)) {
-				rate = 10.0f;
-			}
-			p += 4;
-			std::int16_t hotspotX = std::int16_t(p[0] | (p[1] << 8));
-			std::int16_t hotspotY = std::int16_t(p[2] | (p[3] << 8));
-			p += 4;
-			// The frames one below another, in the image content of the other images of the game, one channel
-			std::size_t pixelCount = std::size_t(width) * height * count;
-			if (p >= end) {
-				return false;
-			}
-			image.FrameWidth = std::int32_t(width);
-			image.FrameHeight = std::int32_t(height);
+			image.Width = std::int32_t(width);
+			image.Height = std::int32_t(height);
+			image.FrameColumns = std::int32_t(columns);
+			image.FrameRows = std::int32_t(rows);
 			image.FrameCount = std::int32_t(count);
-			image.FrameRate = std::clamp<float>(rate, 0.0f, 120.0f);
-			image.HotspotX = hotspotX;
-			image.HotspotY = hotspotY;
-			// The decoder writes four bytes a pixel, see JJ2Anims::ReadImageContent()
+			if (!Decode(ArrayView<const std::uint8_t>(p, 4), image.FrameRate)) {
+				image.FrameRate = 10.0f;
+			}
+			image.FrameRate = std::clamp<float>(image.FrameRate, 0.0f, 120.0f);
+			p += 4;
+			image.HotspotX = std::int16_t(p[0] | (p[1] << 8));
+			image.HotspotY = std::int16_t(p[2] | (p[3] << 8));
+			p += 4;
+			std::size_t pixelCount = std::size_t(width) * height;
+			if (p >= end || pixelCount == 0) {
+				return false;
+			}
+			// The sheet in the image content of the other images of the game, one channel; the decoder writes four bytes a
+			// pixel, see JJ2Anims::ReadImageContent()
 			image.Pixels.resize_for_overwrite(pixelCount + 3);
 			Death::IO::MemoryStream s(p, std::int64_t(end - p));
-			Compatibility::JJ2Anims::ReadImageContent(s, image.Pixels.data(), std::int32_t(width), std::int32_t(height * count), 1);
+			Compatibility::JJ2Anims::ReadImageContent(s, image.Pixels.data(), std::int32_t(width), std::int32_t(height), 1);
 			image.Pixels.resize(pixelCount);
-			return true;
+			return IsValid(image);
 		}
 
 		void WriteImage(const WeaponImage& image, SmallVectorImpl<std::uint8_t>& data)
 		{
-			WriteVarUint(data, std::uint32_t(image.FrameWidth));
-			WriteVarUint(data, std::uint32_t(image.FrameHeight));
+			WriteVarUint(data, std::uint32_t(image.Width));
+			WriteVarUint(data, std::uint32_t(image.Height));
+			WriteVarUint(data, std::uint32_t(image.FrameColumns));
+			WriteVarUint(data, std::uint32_t(image.FrameRows));
 			WriteVarUint(data, std::uint32_t(image.FrameCount));
 			Encode(data, image.FrameRate);
 			Encode(data, std::uint16_t(std::int16_t(image.HotspotX)));
 			Encode(data, std::uint16_t(std::int16_t(image.HotspotY)));
 			Death::IO::MemoryStream s(std::int64_t(image.Pixels.size() / 2 + 16));
-			Compatibility::JJ2Anims::WriteImageContent(s, image.Pixels.data(), image.FrameWidth, image.FrameHeight * image.FrameCount, 1);
+			Compatibility::JJ2Anims::WriteImageContent(s, image.Pixels.data(), image.Width, image.Height, 1);
 			Encode(data, s.GetBuffer(), std::size_t(s.GetSize()));
-		}
-
-		bool IsValid(const WeaponImage& image)
-		{
-			return (image.FrameWidth >= 1 && image.FrameWidth <= WeaponsChunk::MaxFrameSize &&
-				image.FrameHeight >= 1 && image.FrameHeight <= WeaponsChunk::MaxFrameSize &&
-				image.FrameCount >= 1 && image.FrameCount <= WeaponsChunk::MaxFrameCount &&
-				image.Pixels.size() == std::size_t(image.FrameWidth) * image.FrameHeight * image.FrameCount);
 		}
 	}
 
-	WeaponsChunk::ReadResult WeaponsChunk::Read(ArrayView<const std::uint8_t> data, WeaponsDescription& weapons)
+	WeaponsChunk::ReadResult WeaponsChunk::Read(ArrayView<const std::uint8_t> data, WeaponsDescription& weapons, ArrayView<WeaponEditorData> editorData)
 	{
+		DEATH_DEBUG_ASSERT(editorData.empty() || editorData.size() == std::size_t(WeaponType::Count), "One for each weapon is needed");
 		weapons = WeaponsDescription();
+		for (WeaponEditorData& item : editorData) {
+			item = WeaponEditorData();
+		}
 		const std::uint8_t* p = data.data();
 		const std::uint8_t* end = p + data.size();
 		if (end - p < 3 || *p == 0) {
@@ -526,6 +588,7 @@ namespace Jazz2::Formats
 			return ReadResult::Damaged;
 		}
 		bool seen[std::int32_t(WeaponType::Count)] = {};
+		WeaponEditorData readEditorData[std::int32_t(WeaponType::Count)];
 		for (std::uint32_t i = 0; i < weaponCount; i++) {
 			std::uint32_t size;
 			if (p >= end) {
@@ -537,7 +600,7 @@ namespace Jazz2::Formats
 			}
 			// A weapon this version doesn't have is skipped
 			if (slot < std::uint8_t(WeaponType::Count)) {
-				if (seen[slot] || !ReadWeapon(p, p + size, read.Weapons[slot], WeaponType(slot))) {
+				if (seen[slot] || !ReadWeapon(p, p + size, read.Weapons[slot], WeaponType(slot), editorData.empty() ? nullptr : &readEditorData[slot])) {
 					return ReadResult::Damaged;
 				}
 				seen[slot] = true;
@@ -561,35 +624,62 @@ namespace Jazz2::Formats
 			p += size;
 		}
 
+		// Sounds, a file name and its contents each
+		std::uint32_t soundCount;
+		if (!ReadVarUint(p, end, soundCount) || soundCount > MaxSounds) {
+			return ReadResult::Damaged;
+		}
+		for (std::uint32_t i = 0; i < soundCount; i++) {
+			std::uint32_t size, nameLength;
+			if (!ReadVarUint(p, end, size) || std::uint32_t(end - p) < size || size > MaxSoundSize) {
+				return ReadResult::Damaged;
+			}
+			const std::uint8_t* recordEnd = p + size;
+			if (!ReadVarUint(p, recordEnd, nameLength) || std::uint32_t(recordEnd - p) < nameLength || nameLength > 255) {
+				return ReadResult::Damaged;
+			}
+			WeaponSound& sound = read.Sounds.emplace_back();
+			sound.Name = String(reinterpret_cast<const char*>(p), nameLength);
+			p += nameLength;
+			sound.Data.assign(p, recordEnd);
+			p = recordEnd;
+		}
+
 		for (WeaponDefinition& weapon : read.Weapons) {
-			Sanitize(weapon, std::int32_t(read.Images.size()));
+			Sanitize(weapon, std::int32_t(read.Images.size()), std::int32_t(read.Sounds.size()));
 		}
 		weapons = Death::move(read);
+		for (std::size_t i = 0; i < editorData.size(); i++) {
+			editorData[i] = Death::move(readEditorData[i]);
+		}
 		return ReadResult::Success;
 	}
 
-	void WeaponsChunk::Write(const WeaponsDescription& weapons, SmallVectorImpl<std::uint8_t>& data)
+	void WeaponsChunk::Write(const WeaponsDescription& weapons, SmallVectorImpl<std::uint8_t>& data, ArrayView<const WeaponEditorData> editorData)
 	{
+		DEATH_DEBUG_ASSERT(editorData.empty() || editorData.size() == std::size_t(WeaponType::Count), "One for each weapon is needed");
 		data.clear();
-		if (weapons.IsDefault()) {
+		auto isWritten = [&weapons, &editorData](std::int32_t i) {
+			return (!weapons.Weapons[i].IsDefault(WeaponType(i)) || (!editorData.empty() && !editorData[i].UnknownProperties.empty()));
+		};
+		std::uint32_t weaponCount = 0;
+		for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
+			weaponCount += (isWritten(i) ? 1 : 0);
+		}
+		if (weaponCount == 0 && weapons.IsDefault()) {
 			return;
 		}
 
 		data.push_back(Version);
 		Encode(data, std::uint16_t(weapons.ScriptHookArgument));
-
-		std::uint32_t weaponCount = 0;
-		for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
-			weaponCount += (weapons.Weapons[i].IsDefault(WeaponType(i)) ? 0 : 1);
-		}
 		WriteVarUint(data, weaponCount);
 		SmallVector<std::uint8_t, 0> record;
 		for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
-			if (weapons.Weapons[i].IsDefault(WeaponType(i))) {
+			if (!isWritten(i)) {
 				continue;
 			}
 			record.clear();
-			WriteWeapon(weapons.Weapons[i], WeaponType(i), record);
+			WriteWeapon(weapons.Weapons[i], WeaponType(i), editorData.empty() ? nullptr : &editorData[i], record);
 			data.push_back(std::uint8_t(i));
 			WriteVarUint(data, std::uint32_t(record.size()));
 			data.append(record.begin(), record.end());
@@ -608,6 +698,19 @@ namespace Jazz2::Formats
 			written++;
 			record.clear();
 			WriteImage(image, record);
+			WriteVarUint(data, std::uint32_t(record.size()));
+			data.append(record.begin(), record.end());
+		}
+
+		std::uint32_t soundCount = std::uint32_t(std::min<std::size_t>(weapons.Sounds.size(), MaxSounds));
+		WriteVarUint(data, soundCount);
+		for (std::uint32_t i = 0; i < soundCount; i++) {
+			const WeaponSound& sound = weapons.Sounds[i];
+			StringView name = sound.Name.prefix(std::min<std::size_t>(sound.Name.size(), 255));
+			record.clear();
+			WriteVarUint(record, std::uint32_t(name.size()));
+			Encode(record, name.data(), name.size());
+			Encode(record, sound.Data.data(), sound.Data.size());
 			WriteVarUint(data, std::uint32_t(record.size()));
 			data.append(record.begin(), record.end());
 		}

@@ -57,6 +57,12 @@ int PrepareSystemFunction(asCScriptFunction *func, asSSystemFunctionInterface *i
 
 int CallSystemFunction(int id, asCContext *context);
 
+#ifdef AS_NATIVE_THUNKS
+// Calls a function with a thunk outside of the script VM. The obj is the object
+// of a method or the object passed as an argument, args are as on the script stack
+asQWORD CallSystemFunctionThunk(const asSSystemFunctionInterface *internal, void *obj, asDWORD *args);
+#endif
+
 inline asPWORD FuncPtrToUInt(asFUNCTION_t func)
 {
 	// A little trickery as the C++ standard doesn't allow direct
@@ -110,6 +116,12 @@ struct asSSystemFunctionInterface
 	int                  compositeOffset;
 	bool                 isCompositeIndirect;
 	void                *auxiliary; // can be used for functors, e.g. by asCALL_THISCALL_ASGLOBAL or asCALL_THISCALL_OBJFIRST
+#ifdef AS_NATIVE_THUNKS
+	asNATIVETHUNK_t      thunk;
+	int                  thunkArgCount;
+	asSFuncPtr           thunkFunc; // the whole function or method pointer
+	asCArray<asWORD>     thunkArgs; // see asSNativeCall::argOffsets
+#endif
 
 	struct SClean
 	{
@@ -143,6 +155,12 @@ struct asSSystemFunctionInterface
 		compositeOffset     = 0;
 		isCompositeIndirect = false;
 		auxiliary           = 0;
+#ifdef AS_NATIVE_THUNKS
+		thunk               = 0;
+		thunkArgCount       = 0;
+		thunkFunc           = asSFuncPtr();
+		thunkArgs.SetLength(0);
+#endif
 
 		paramAutoHandles.SetLength(0);
 		cleanArgs.SetLength(0);
@@ -162,6 +180,12 @@ struct asSSystemFunctionInterface
 		compositeOffset     = in.compositeOffset;
 		isCompositeIndirect = in.isCompositeIndirect;
 		auxiliary           = in.auxiliary;
+#ifdef AS_NATIVE_THUNKS
+		thunk               = in.thunk;
+		thunkArgCount       = in.thunkArgCount;
+		thunkFunc           = in.thunkFunc;
+		thunkArgs           = in.thunkArgs;
+#endif
 
 		cleanArgs           = in.cleanArgs;
 		paramAutoHandles    = in.paramAutoHandles;

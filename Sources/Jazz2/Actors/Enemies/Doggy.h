@@ -24,6 +24,11 @@ namespace Jazz2::Actors::Enemies
 
 		bool OnHandleCollision(ActorBase* other) override;
 
+		/** @brief Returns `true` while it dashes after being shot */
+		bool IsAttacking() const {
+			return (_attackTime > 0.0f);
+		}
+
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;

@@ -62,7 +62,8 @@ namespace Jazz2::Editor
 	enum class UiBackdrop : std::uint8_t
 	{
 		Panels,		/**< The tree of the interface, over the level and what is shown over the level */
-		Overlays	/**< Windows, menus and messages, also over the panels */
+		Overlays,	/**< Windows, menus and messages, also over the panels */
+		UnderModal	/**< Windows under a modal window, drawn into the picture of the level with the panels then, see @ref UiSurface::HasStackedModal() */
 	};
 
 	/**
@@ -124,6 +125,13 @@ namespace Jazz2::Editor
 		bool HasModal() const;
 		/** @brief Returns `true` if any element is shown over the interface */
 		bool HasOverlays() const;
+		/**
+		 * @brief Returns `true` if a modal element is shown over another element shown over the interface, as a file picker over a dialog
+		 *
+		 * While the tree of the interface is drawn into the picture of the level, the elements under the top modal one are
+		 * drawn there too, over @ref UiBackdrop::UnderModal, so the picture behind the modal one has them.
+		 */
+		bool HasStackedModal() const;
 		/** @brief Returns `true` if an element is shown over the interface and isn't closing */
 		bool IsOverlayShown(const UiElement* element) const;
 
@@ -264,6 +272,8 @@ namespace Jazz2::Editor
 		SceneNode* GetPanelsNode();
 		/** @brief Returns the depth the panels are drawn from, what is shown over the level is drawn below it */
 		static std::uint16_t GetPanelsDepth();
+		/** @brief Returns the depth elements shown over the interface are drawn from, see @ref HasStackedModal() */
+		static std::uint16_t GetOverlaysDepth();
 		/**
 		 * @brief Returns `true` while the tree of the interface is drawn into the picture of the level
 		 *
@@ -286,6 +296,13 @@ namespace Jazz2::Editor
 		bool TouchInput = false;
 		/** @brief Whether windows that aren't modal are hidden, as while a level is played, they're shown again after */
 		bool WindowsHidden = false;
+		/**
+		 * @brief Height of the bottom of the screen a keyboard of the system covers, in pixels, set every frame
+		 *
+		 * A text box typed into stays above it --- a window it's in is moved up, the panels are laid out above the
+		 * keyboard if it's in them and would be covered.
+		 */
+		float KeyboardInset = 0.0f;
 		/**
 		 * @brief Part of each edge of the screen the interface keeps clear of, as a fraction of its width or height
 		 *
@@ -393,9 +410,21 @@ namespace Jazz2::Editor
 		// Frame the tree of the interface was drawn into the picture of the level in
 		std::uint32_t _panelsDrawnFrame = 0;
 		bool _drawingInLevel = false;
+		// Elements shown over the interface drawn into the picture of the level in that frame, from the first one
+		std::size_t _overlaysInLevel = 0;
+		// Kept above the keyboard of the system, see KeyboardInset: a window moved up, or the panels laid out above it for a box
+		const UiElement* _keyboardWindow = nullptr;
+		float _keyboardShift = 0.0f;
+		const UiElement* _keyboardRootFocus = nullptr;
+		float _keyboardRootInset = 0.0f;
+		std::int32_t _keyboardScrollFrames = 0;
 
 		void DrawPanelsInto(UI::Canvas& canvas);
 		void DrawRoot(UiPainter& painter, Vector2f screenSize, bool inLevel);
+		void DrawOverlay(UiPainter& painter, std::size_t index, std::int32_t slot, Vector2f screenSize, const Rectf& safe);
+		// Number of elements under the top modal one if any of them is active, 0 otherwise
+		std::size_t GetStackedOverlayCount() const;
+		void UpdateKeyboardAvoidance();
 
 		UiElement* HitTestAll(Vector2f pos, bool& blocked);
 		void SetHover(UiElement* element);

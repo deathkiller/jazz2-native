@@ -59,8 +59,10 @@ void fragment() {
 	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
 	blur = vec4(gray, gray, gray, blur.a);
 
+	// Brightness also adds white: JJ2+ brightens a dark color more than a multiply would (measured on greys 32, 64
+	// and 130), the same as before on grey 130
 	COLOR = mix(mix(
-		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(1.0 - light.r));

@@ -32,6 +32,10 @@ namespace Jazz2::Actors::Weapons
 		inline std::int32_t GetStrength() {
 			return _strength;
 		}
+		/** @brief Sets strength (damage) */
+		void SetStrength(std::int32_t value) {
+			_strength = value;
+		}
 
 		/** @brief Returns owner of the shot */
 		Player* GetOwner();
@@ -46,7 +50,13 @@ namespace Jazz2::Actors::Weapons
 		/** @brief Triggers shot ricochet */
 		void TriggerRicochet(ActorBase* other);
 		/** @brief Returns how long the shot freezes what it hits, 0 if it doesn't */
-		virtual float GetFrozenDuration() const;
+		float GetFrozenDuration() const {
+			return _frozenDuration;
+		}
+		/** @brief Sets how long the shot freezes what it hits, 0 if it doesn't */
+		void SetFrozenDuration(float value) {
+			_frozenDuration = value;
+		}
 		/** @brief Returns `true` if the shot thaws what's frozen */
 		virtual bool ThawsFrozen() const;
 
@@ -78,5 +88,6 @@ namespace Jazz2::Actors::Weapons
 
 	private:
 		TimeStamp _lastRicochetTime;
+		float _frozenDuration;
 	};
 }

@@ -685,7 +685,7 @@ namespace Jazz2::Editor
 
 	void EditorShell::CreateToolStrip()
 	{
-		_toolStrip = Add<UiPanel>(UiPanelStyle::Panel, UiOrientation::Vertical, 0.0f, UiThickness(5.0f));
+		_toolStrip = Add<UiPanel>(UiPanelStyle::Docked, UiOrientation::Vertical, 0.0f, UiThickness(5.0f));
 		// A short window scrolls the buttons that don't fit, by the wheel or a finger, the strip is too narrow to give a bar
 		// room of its own, so it's only a mark over the buttons
 		auto* scroll = _toolStrip->Add<UiScrollView>();

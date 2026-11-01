@@ -42,9 +42,7 @@ namespace Jazz2::Actors::Solid
 			return std::int32_t(std::round(_speed / SpeedUnit));
 		}
 		/** @brief Sets the speed in the units of the parameter of the event, negative swings the other way */
-		void SetEventSpeed(std::int32_t value) {
-			_speed = float(value) * SpeedUnit;
-		}
+		void SetEventSpeed(std::int32_t value);
 		/** @brief Draws only the chain, something else draws the platform itself */
 		void SetBodyHidden(bool value) {
 			_bodyHidden = value;
@@ -82,8 +80,8 @@ namespace Jazz2::Actors::Solid
 		};
 #endif
 
-		// Radians a frame for a unit of the speed parameter of the event
-		static constexpr float SpeedUnit = 0.0072f;
+		// Radians a frame for a unit of the speed parameter of the event, 1/1024 of a turn a tick as in JJ2 (measured)
+		static constexpr float SpeedUnit = 6.28318531f / 1024.0f * 70.0f / 60.0f;
 		// How far above the platform its top is, where the feet of a player stand (see OnUpdateHitbox())
 		static constexpr float StandingTop = 5.0f;
 

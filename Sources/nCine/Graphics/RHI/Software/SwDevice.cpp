@@ -574,7 +574,7 @@ namespace nCine::RHI::Software
 		// In-place combine over the viewport region, matching the core of Combine(WithWater).shader with the
 		// (heavy, blur-dependent) grayscale night-vision term dropped:
 		//   main = water tint/waves (underwater rows only)
-		//   lit  = main * (1 + g) + max(g - 0.7, 0)
+		//   lit  = main * (1 + 0.607 g) + 0.2 g + max(g - 0.7, 0)
 		//   out  = mix(lit, ambientRGB, clamp(1 - r, 0, 1))  (+ above-deep-water darkness)
 		// The water colour ops run before the lighting mix, in the same order as the shader. The half-resolution
 		// lightmap is sampled point-wise (both channels clamped to [0,1] to match the shader path's RG8 lighting

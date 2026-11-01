@@ -68,7 +68,7 @@ namespace Jazz2::Editor
 		: _side(side), _dockButton(nullptr), _floating(false), _buttonShowsFloating(true), _floatAmount(0.0f), _previewAmount(0.0f),
 			_moving(false), _undockPending(false), _overDockZone(false), _restoreBounds(false), _resizeEdges(0), _hoverEdges(0), _scale(1.0f)
 	{
-		_panel = Add<UiPanel>(UiPanelStyle::Panel, UiOrientation::Vertical, UiTheme::Spacing, UiThickness(UiTheme::Padding));
+		_panel = Add<UiPanel>(UiPanelStyle::Docked, UiOrientation::Vertical, UiTheme::Spacing, UiThickness(UiTheme::Padding));
 
 		_header = _panel->Add<UiDragBar>(2.0f);
 		_header->Tooltip = tooltip;
@@ -300,8 +300,8 @@ namespace Jazz2::Editor
 		_dockBounds = bounds;
 		_scale = context.Scale;
 		Bounds = GetTargetBounds(context, bounds);
-		// A shadow under it once it's off its place
-		_panel->Style = (IsLifted() ? UiPanelStyle::Floating : UiPanelStyle::Panel);
+		// A shadow and rounded corners once it's off its place
+		_panel->Style = (IsLifted() ? UiPanelStyle::Floating : UiPanelStyle::Docked);
 		_panel->Arrange(context, Bounds);
 	}
 

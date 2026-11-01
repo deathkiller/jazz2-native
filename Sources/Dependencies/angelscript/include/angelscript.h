@@ -44,6 +44,20 @@
 #include <stdint.h>
 #endif
 
+// WebAssembly can't call a function through a pointer of a different type, so native calls go
+// through thunks generated from the exact C++ type of each registered function. It can also be
+// enabled on other platforms by defining AS_NATIVE_THUNKS.
+#if !defined(AS_NATIVE_THUNKS) && defined(__EMSCRIPTEN__) && !defined(AS_MAX_PORTABILITY)
+ #define AS_NATIVE_THUNKS
+#endif
+
+#ifdef AS_NATIVE_THUNKS
+#include <new>
+#include <string.h>
+#include <type_traits>
+#include <utility>
+#endif
+
 #ifdef AS_USE_NAMESPACE
  #define BEGIN_AS_NAMESPACE namespace AngelScript {
  #define END_AS_NAMESPACE }
@@ -441,8 +455,27 @@ typedef void (*asJITFunction)(asSVMRegisters* registers, asPWORD jitArg);
 // GNUC should not complain about the usage as I'm not using 0 as the base pointer.
 #define asOFFSET(s,m) ((int)(size_t)(&reinterpret_cast<s*>(100000)->m)-100000)
 
+#ifdef AS_NATIVE_THUNKS
+// State of one native call passed to a thunk
+struct asSNativeCall
+{
+	const void    *func;       // Stored function or method pointer
+	void          *thisObj;    // Object of a method
+	void          *argObj;     // Object passed as the first or last argument
+	asDWORD       *args;       // Arguments laid out as on the script stack
+	const asWORD  *argOffsets; // Stack offset of each C++ argument, 0x8000 = passed by pointer, 0xFFFF = argObj
+	void          *retPointer; // Memory for a value returned by value
+	asQWORD        retValue;   // Returned primitive, pointer or reference
+	asBYTE         objPos;     // Position of argObj if argOffsets is null, 1 = first, 2 = last
+};
+typedef void (*asNATIVETHUNK_t)(asSNativeCall &call);
+#endif
+
 #define asFUNCTION(f) AS_NAMESPACE_QUALIFIER asFunctionPtr(f)
-#if (defined(_MSC_VER) && _MSC_VER <= 1200) || (defined(__BORLANDC__) && __BORLANDC__ < 0x590)
+#if defined(AS_NATIVE_THUNKS)
+// The type of the function must be kept for the thunk
+#define asFUNCTIONPR(f,p,r) AS_NAMESPACE_QUALIFIER asFunctionPtr(static_cast<r (*)p>(f))
+#elif (defined(_MSC_VER) && _MSC_VER <= 1200) || (defined(__BORLANDC__) && __BORLANDC__ < 0x590)
 // MSVC 6 has a bug that prevents it from properly compiling using the correct asFUNCTIONPR with operator >
 // so we need to use ordinary C style cast instead of static_cast. The drawback is that the compiler can't
 // check that the cast is really valid.
@@ -464,6 +497,10 @@ struct asSFuncPtr
 		for( size_t n = 0; n < sizeof(ptr.dummy); n++ )
 			ptr.dummy[n] = 0;
 		flag = f;
+#ifdef AS_NATIVE_THUNKS
+		thunk = 0;
+		thunkArgCount = 0;
+#endif
 	}
 
 	void CopyMethodPtr(const void *mthdPtr, size_t size)
@@ -482,6 +519,10 @@ struct asSFuncPtr
 		struct {asFUNCTION_t func; char dummy[25-sizeof(asFUNCTION_t)];} f;
 	} ptr;
 	asBYTE flag; // 1 = generic, 2 = global func, 3 = method
+#ifdef AS_NATIVE_THUNKS
+	asNATIVETHUNK_t thunk;
+	asBYTE          thunkArgCount; // Number of C++ arguments
+#endif
 };
 
 #if defined(__BORLANDC__)
@@ -503,8 +544,13 @@ template <typename T>
  #define AS_METHOD_AMBIGUITY_CAST(t) static_cast<t >
 #endif
 
+#ifdef AS_NATIVE_THUNKS
+#define asMETHOD(c,m) AS_NAMESPACE_QUALIFIER asMethodPtr<c>(&c::m)
+#define asMETHODPR(c,m,p,r) AS_NAMESPACE_QUALIFIER asMethodPtr<c>(AS_METHOD_AMBIGUITY_CAST(r (c::*)p)(&c::m))
+#else
 #define asMETHOD(c,m) AS_NAMESPACE_QUALIFIER asSMethodPtr<sizeof(void (c::*)())>::Convert((void (c::*)())(&c::m))
 #define asMETHODPR(c,m,p,r) AS_NAMESPACE_QUALIFIER asSMethodPtr<sizeof(void (c::*)())>::Convert(AS_METHOD_AMBIGUITY_CAST(r (c::*)p)(&c::m))
+#endif
 
 #else // Class methods are disabled
 
@@ -1419,6 +1465,277 @@ struct asSMethodPtr<SINGLE_PTR_SIZE+4*sizeof(int)>
 #endif
 
 #endif // AS_NO_CLASS_METHODS
+
+#ifdef AS_NATIVE_THUNKS
+
+// Native call thunks
+
+namespace asNativeThunk
+{
+	// Size of an argument on the script stack in dwords
+	template<class T>
+	constexpr asWORD StackSize()
+	{
+		if constexpr (std::is_reference<T>::value || std::is_pointer<T>::value || std::is_class<T>::value || std::is_union<T>::value)
+			return asWORD(sizeof(void*) / 4);
+		else
+			return asWORD((sizeof(T) + 3) / 4);
+	}
+
+	// Stack offsets of arguments when the function wasn't prepared for a script declaration
+	template<class... A>
+	struct Offsets
+	{
+		asWORD natural[sizeof...(A) + 1];
+		const asWORD *ptr;
+
+		Offsets(const asSNativeCall &c) : ptr(c.argOffsets)
+		{
+			if( ptr == 0 )
+			{
+				const asWORD sizes[] = { StackSize<A>()..., 0 };
+				const asUINT count = asUINT(sizeof...(A));
+				asWORD offset = 0;
+				for( asUINT n = 0; n < count; n++ )
+				{
+					if( (c.objPos == 1 && n == 0) || (c.objPos == 2 && n == count - 1) )
+						natural[n] = 0xFFFF;
+					else
+					{
+						natural[n] = offset;
+						offset = asWORD(offset + sizes[n]);
+					}
+				}
+				ptr = natural;
+			}
+		}
+	};
+
+	template<class T>
+	struct Arg
+	{
+		static T Get(const asSNativeCall &c, asWORD offset)
+		{
+			if constexpr (std::is_class<T>::value || std::is_union<T>::value)
+			{
+				// Objects by value are always passed by pointer, the script engine
+				// destroys its copy after the call, so it can be moved from
+				if( offset == 0xFFFF )
+					return *static_cast<T*>(c.argObj);
+				T *obj;
+				memcpy(&obj, c.args + (offset & 0x7FFF), sizeof(obj));
+				return std::move(*obj);
+			}
+			else if constexpr (std::is_pointer<T>::value)
+			{
+				if( offset == 0xFFFF )
+					return static_cast<T>(c.argObj);
+				T value;
+				memcpy(&value, c.args + offset, sizeof(T));
+				return value;
+			}
+			else
+			{
+				T value;
+				if( offset == 0xFFFF )
+					memcpy(&value, c.argObj, sizeof(T));
+				else if( offset & 0x8000 )
+				{
+					// Registered value type of primitive type
+					const T *ref;
+					memcpy(&ref, c.args + (offset & 0x7FFF), sizeof(ref));
+					value = *ref;
+				}
+				else
+					memcpy(&value, c.args + offset, sizeof(T));
+				return value;
+			}
+		}
+	};
+
+	template<class T>
+	struct Arg<T&>
+	{
+		static T &Get(const asSNativeCall &c, asWORD offset)
+		{
+			if( offset == 0xFFFF )
+				return *static_cast<T*>(c.argObj);
+			T *ref;
+			memcpy(&ref, c.args + (offset & 0x7FFF), sizeof(ref));
+			return *ref;
+		}
+	};
+
+	template<class T>
+	struct Arg<T&&>
+	{
+		static T &&Get(const asSNativeCall &c, asWORD offset)
+		{
+			return std::move(Arg<T&>::Get(c, offset));
+		}
+	};
+
+	template<class R>
+	struct Ret
+	{
+		typedef typename std::remove_cv<typename std::remove_reference<R>::type>::type V;
+
+		template<class F>
+		static void Call(asSNativeCall &c, F &&f)
+		{
+			if constexpr (std::is_void<R>::value)
+				f();
+			else if constexpr (std::is_reference<R>::value)
+			{
+				R r = f();
+				if constexpr (std::is_copy_constructible<V>::value)
+				{
+					// Declared to return a value in the script
+					if( c.retPointer )
+					{
+						::new(c.retPointer) V(r);
+						return;
+					}
+				}
+				const volatile void *p = &reinterpret_cast<const volatile char&>(r);
+				memcpy(&c.retValue, &p, sizeof(p));
+			}
+			else if constexpr (std::is_class<V>::value || std::is_union<V>::value)
+			{
+				// Objects by value are always returned in memory
+				if( c.retPointer )
+					::new(c.retPointer) V(f());
+				else
+					f();
+			}
+			else
+			{
+				V r = f();
+				if( c.retPointer )
+					::new(c.retPointer) V(r);
+				else
+					memcpy(&c.retValue, &r, sizeof(V) < sizeof(c.retValue) ? sizeof(V) : sizeof(c.retValue));
+			}
+		}
+	};
+
+	template<class F>
+	struct Function;
+
+	template<class R, class... A>
+	struct Function<R(A...)>
+	{
+		typedef R (*Ptr)(A...);
+
+		static void Call(asSNativeCall &c)
+		{
+			Invoke(c, std::index_sequence_for<A...>());
+		}
+
+		template<size_t... I>
+		static void Invoke(asSNativeCall &c, std::index_sequence<I...>)
+		{
+			Ptr f = reinterpret_cast<Ptr>(*static_cast<const asFUNCTION_t*>(c.func));
+			Offsets<A...> o(c);
+			(void)o;
+			Ret<R>::Call(c, [&]() -> R { return f(Arg<A>::Get(c, o.ptr[I])...); });
+		}
+	};
+
+#ifndef AS_NO_CLASS_METHODS
+	// Method pointer of a base class converted to the registered class C
+	template<class C, class M>
+	struct Rebind;
+
+	template<class C, class M>
+	struct Method;
+
+#define AS_NATIVE_THUNK_METHOD(QUALIFIERS) \
+	template<class C, class B, class R, class... A> \
+	struct Rebind<C, R (B::*)(A...) QUALIFIERS> \
+	{ \
+		typedef R (C::*Type)(A...) QUALIFIERS; \
+		static const asUINT ArgCount = asUINT(sizeof...(A)); \
+	}; \
+	template<class C, class R, class... A> \
+	struct Method<C, R (C::*)(A...) QUALIFIERS> \
+	{ \
+		typedef R (C::*Ptr)(A...) QUALIFIERS; \
+		static void Call(asSNativeCall &c) \
+		{ \
+			Invoke(c, std::index_sequence_for<A...>()); \
+		} \
+		template<size_t... I> \
+		static void Invoke(asSNativeCall &c, std::index_sequence<I...>) \
+		{ \
+			Ptr m; \
+			memcpy(&m, c.func, sizeof(Ptr)); \
+			C *obj = static_cast<C*>(c.thisObj); \
+			Offsets<A...> o(c); \
+			(void)o; \
+			Ret<R>::Call(c, [&]() -> R { return (obj->*m)(Arg<A>::Get(c, o.ptr[I])...); }); \
+		} \
+	};
+
+#define AS_NATIVE_THUNK_NONE
+	AS_NATIVE_THUNK_METHOD(AS_NATIVE_THUNK_NONE)
+	AS_NATIVE_THUNK_METHOD(const)
+#if defined(__cpp_noexcept_function_type)
+	AS_NATIVE_THUNK_METHOD(noexcept)
+	AS_NATIVE_THUNK_METHOD(const noexcept)
+#endif
+
+#undef AS_NATIVE_THUNK_NONE
+#undef AS_NATIVE_THUNK_METHOD
+#endif
+}
+
+// Global functions with a thunk, generic functions are recognized by their type
+template <class R, class... A>
+inline asSFuncPtr asFunctionPtr(R (*func)(A...))
+{
+	if constexpr (std::is_same<R (*)(A...), asGENFUNC_t>::value)
+	{
+		asSFuncPtr p(1);
+		p.ptr.f.func = reinterpret_cast<asFUNCTION_t>(func);
+		return p;
+	}
+	else
+	{
+		asSFuncPtr p(2);
+		p.ptr.f.func = reinterpret_cast<asFUNCTION_t>(func);
+		p.thunk = &asNativeThunk::Function<R(A...)>::Call;
+		p.thunkArgCount = asBYTE(sizeof...(A));
+		return p;
+	}
+}
+
+#if defined(__cpp_noexcept_function_type)
+template <class R, class... A>
+inline asSFuncPtr asFunctionPtr(R (*func)(A...) noexcept)
+{
+	return asFunctionPtr(static_cast<R (*)(A...)>(func));
+}
+#endif
+
+#ifndef AS_NO_CLASS_METHODS
+// Methods with a thunk, used by asMETHOD() and asMETHODPR()
+template <class C, class M>
+inline asSFuncPtr asMethodPtr(M mthd)
+{
+	typedef asNativeThunk::Rebind<C, M> Traits;
+	typename Traits::Type m = mthd;
+	static_assert(sizeof(m) <= sizeof(asSFuncPtr().ptr.dummy), "Unsupported method pointer");
+
+	asSFuncPtr p(3);
+	p.CopyMethodPtr(&m, sizeof(m));
+	p.thunk = &asNativeThunk::Method<C, typename Traits::Type>::Call;
+	p.thunkArgCount = asBYTE(Traits::ArgCount);
+	return p;
+}
+#endif
+
+#endif // AS_NATIVE_THUNKS
 
 //----------------------------------------------------------------
 // JIT compiler

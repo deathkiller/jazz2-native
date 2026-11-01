@@ -14,6 +14,9 @@
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/Graphics/Texture.h"
+#include "../../../nCine/Graphics/RenderQueue.h"
+#include "../../../nCine/Graphics/RenderResources.h"
+#include "../../../nCine/Graphics/Viewport.h"
 
 #include <algorithm>
 #include <cmath>
@@ -169,15 +172,90 @@ namespace Jazz2::Scripting
 				}
 			}
 
+			// The copy of the scene the sprites of SPRITE::CHROMAKEY are keyed against, see ScriptWorldCanvas::OnDraw()
+			struct KeyedDraw
+			{
+				Texture* Behind;
+				Vector2f TargetSizeInv;
+			};
+
+#if defined(TILEMAP_LAYER_EFFECTS)
+			// Draws only over the pixels of the copy of the key color, as SPRITE::CHROMAKEY of JJ2+
+			static void DrawKeyedTexture(UI::Canvas* canvas, const KeyedDraw& keyed, const Texture& texture, Vector2f pos, std::uint16_t z,
+				Vector2f size, const Vector4f& texCoords, const Colorf& color, float angle, std::int32_t paletteOffset, std::uint8_t keyIndex)
+			{
+				bool indexed = (paletteOffset >= 0);
+				auto& resolver = ContentResolver::Get();
+				Shader* shader = resolver.GetShader(indexed ? PrecompiledShader::SpriteChromaKeyPalette : PrecompiledShader::SpriteChromaKey);
+				if (shader == nullptr) {
+					canvas->DrawTexture(texture, pos, z, size, texCoords, color, UI::BlendMode::Normal, angle, paletteOffset);
+					return;
+				}
+
+				RenderCommand* command = canvas->RentRenderCommand();
+				Material& material = command->GetMaterial();
+				if (material.SetShader(shader)) {
+					material.ReserveUniformsDataMemory();
+					command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+					if (auto* uniform = material.Uniform(Material::TextureUniformName)) {
+						uniform->SetIntValue(0);
+					}
+					if (auto* uniform = material.Uniform("uTexturePalette")) {
+						uniform->SetIntValue(1);
+					}
+					if (auto* uniform = material.Uniform("uTextureBehind")) {
+						uniform->SetIntValue(2);
+					}
+				}
+				material.SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+				if (auto* uniform = material.Uniform("uTargetSizeInv")) {
+					uniform->SetFloatValue(keyed.TargetSizeInv.X, keyed.TargetSizeInv.Y);
+				}
+				if (auto* uniform = material.Uniform("uKeyColor")) {
+					// The copy may have fewer bits per channel than the palette, a channel within a step of them is the same color
+					constexpr float KeyTolerance = (Texture::ColorTargetFormat == Texture::Format::RGB565 ? 1.5f / 31.0f : 1.5f / 255.0f);
+					std::uint32_t c = resolver.GetPalettes()[keyIndex];
+					uniform->SetFloatValue((c & 0xFF) / 255.0f, ((c >> 8) & 0xFF) / 255.0f, ((c >> 16) & 0xFF) / 255.0f, KeyTolerance);
+				}
+
+				auto* instanceUniforms = command->GetInstanceUniforms();
+				instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
+				instanceUniforms->SpriteSize->SetFloatVector(size.Data());
+				instanceUniforms->Color->SetFloatVector(color.Data());
+				if (indexed && instanceUniforms->PaletteOffset != nullptr) {
+					instanceUniforms->PaletteOffset->SetFloatValue(float(paletteOffset));
+				}
+
+				// Turned about its center, as UI::Canvas::DrawTexture() turns a rectangle
+				Matrix4x4f worldMatrix = Matrix4x4f::Translation(pos.X, pos.Y, 0.0f);
+				if (std::abs(angle) > 0.01f) {
+					worldMatrix.Translate(size.X * 0.5f, size.Y * 0.5f, 0.0f);
+					worldMatrix.RotateZ(angle);
+					worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
+				}
+				command->SetTransformation(worldMatrix);
+				command->SetLayer(z);
+				material.SetTexture(0, texture);
+				if (indexed) {
+					if (Texture* palette = resolver.GetPaletteTexture()) {
+						material.SetTexture(1, *palette);
+					}
+				}
+				material.SetTexture(2, *keyed.Behind);
+				canvas->DrawRenderCommand(command);
+			}
+#endif
+
 			// Draws a single animation frame of a resolved graphic onto a HUD canvas, following the HUD::DrawElement
 			// pattern. The sprite is anchored at the frame's hotspot, optionally flipped (by `SPRITE::Direction` or a
 			// negative scale), scaled and rotated (angle in JJ2 units where 1024 = a full turn). Indexed graphics draw
 			// through the palette-remap shader against the live sprite palette (so they recolor with jjPalette), or the
 			// row of the shared palette texture of the sprite mode (see LevelScriptLoader::GetSpritePaletteOffset()).
+			// SPRITE::CHROMAKEY is keyed with @p keyed, it's drawn as usual without it.
 			static void DrawSpriteFrame(UI::Canvas* canvas, std::uint16_t z, GenericGraphicResource* base, std::int32_t frame,
 					float x, float y, std::int8_t direction, float scaleX, float scaleY, std::int32_t angle,
 					std::uint32_t mode, std::uint8_t param, std::int32_t spritePaletteOffset, bool translucentFrame = false,
-					std::int32_t firstRow = 0, std::int32_t rowCount = 0)
+					std::int32_t firstRow = 0, std::int32_t rowCount = 0, const KeyedDraw* keyed = nullptr)
 			{
 				if (base == nullptr || base->TextureDiffuse == nullptr || base->FrameCount <= 0 || base->FrameConfiguration.X <= 0 ||
 					mode == spriteType_INVISIBLE) {
@@ -278,8 +356,39 @@ namespace Jazz2::Scripting
 					float c = std::cos(angleRad), s = std::sin(angleRad);
 					pos += fromMiddle - Vector2f(fromMiddle.X * c - fromMiddle.Y * s, fromMiddle.X * s + fromMiddle.Y * c);
 				}
+#if defined(TILEMAP_LAYER_EFFECTS)
+				if (mode == spriteType_CHROMAKEY && keyed != nullptr) {
+					DrawKeyedTexture(canvas, *keyed, *base->TextureDiffuse.get(), pos, z, size, texCoords, color, angleRad, paletteOffset, param);
+					return;
+				}
+#endif
 				// NEONGLOW adds the brightness of its row of the palette to what's behind (see GetSpritePaletteOffset())
 				canvas->DrawTexture(*base->TextureDiffuse.get(), pos, z, size, texCoords, color, blending, angleRad, paletteOffset, shader);
+			}
+
+			// Returns where a sprite drawn in the level covers, turned ones by the circle about the hotspot through its corners
+			static AABBf GetSpriteDrawBounds(const ScriptWorldCanvas::SpriteDraw& draw, Vector2f anchor)
+			{
+				GenericGraphicResource* base = draw.Graphics;
+				float x = anchor.X + draw.X, y = anchor.Y + draw.Y;
+				if (base == nullptr || base->FrameCount <= 0 || base->FrameConfiguration.X <= 0) {
+					return AABBf(x, y, x, y);
+				}
+				std::int32_t frame = std::clamp(draw.Cell, 0, base->FrameCount - 1);
+				std::uint8_t directionBits = std::uint8_t(draw.Direction);
+				bool flipX = (((directionBits & 0x80) != 0) != (draw.ScaleX < 0.0f));
+				bool flipY = ((((directionBits & 0x80) != 0) != ((directionBits & 0x40) != 0)) != (draw.ScaleY < 0.0f));
+				float scaleX = std::abs(draw.ScaleX), scaleY = std::abs(draw.ScaleY);
+				Recti rect = base->GetFrameRect(frame);
+				Vector2i frameAnchor = base->GetFrameAnchor(frame, flipX, flipY);
+				float left = x - frameAnchor.X * scaleX, top = y - frameAnchor.Y * scaleY;
+				float right = left + rect.W * scaleX, bottom = top + rect.H * scaleY;
+				if (draw.Angle != 0) {
+					float radius = std::sqrt(std::max((x - left) * (x - left), (right - x) * (right - x)) +
+						std::max((y - top) * (y - top), (bottom - y) * (bottom - y)));
+					return AABBf(x - radius, y - radius, x + radius, y + radius);
+				}
+				return AABBf(left, top, right, bottom);
 			}
 
 			// Draws a frame as a swinging vine, its rows from the top at the position down (the frame repeats), the hotspot
@@ -398,16 +507,61 @@ namespace Jazz2::Scripting
 			for (const TileDraw& draw : _tiles) {
 				DrawTileQuad(this, draw.Z, draw.TileMap, draw.Tile, draw.Quadrant, draw.X, draw.Y);
 			}
+
+			// SPRITE::CHROMAKEY goes a depth past what it overlaps on its layer, where the scene is copied for it
+			const KeyedDraw* keyed = nullptr;
+#if defined(TILEMAP_LAYER_EFFECTS)
+			constexpr std::uint16_t MaxKeyedSteps = 4;
+			struct KeyedEntry {
+				std::uint16_t Z;
+				std::uint16_t Step;
+				AABBf Bounds;
+			};
+			SmallVector<KeyedEntry, 16> keyedEntries;
+			bool anyKeyed = false;
+			KeyedDraw keyedDraw;
+			const Viewport* view = RenderResources::GetCurrentViewport();
+			Tiles::LayerEffectsTarget* effects = (EffectsOwner != nullptr && view != nullptr ? EffectsOwner->GetLayerEffectsTarget(view) : nullptr);
+			if (effects != nullptr && effects->View != nullptr && effects->BehindCopy != nullptr && effects->CopyPasses != 0) {
+				const Vector2i targetSize = view->GetSize();
+				keyedDraw.Behind = effects->BehindCopy;
+				keyedDraw.TargetSizeInv = Vector2f(targetSize.X > 0 ? 1.0f / targetSize.X : 0.0f, targetSize.Y > 0 ? 1.0f / targetSize.Y : 0.0f);
+				keyed = &keyedDraw;
+			}
+#endif
 			for (const SpriteDraw& draw : _sprites) {
 				// Following the object in every frame, not only in the ticks of the script (a player drawn by `onPlayerDraw()`)
 				Vector2f anchor = (draw.Anchor != nullptr ? draw.Anchor->GetPos() : Vector2f::Zero);
+				std::uint16_t z = draw.Z;
+#if defined(TILEMAP_LAYER_EFFECTS)
+				bool isKeyed = (draw.Mode == spriteType_CHROMAKEY && draw.VineLength <= 0);
+				if (keyed != nullptr && (isKeyed || anyKeyed)) {
+					// A keyed sprite sees everything drawn under it before (the eye over the pupil), the others stay over it
+					AABBf bounds = GetSpriteDrawBounds(draw, anchor);
+					std::uint16_t step = (isKeyed ? 1 : 0);
+					for (const KeyedEntry& entry : keyedEntries) {
+						if (entry.Z == draw.Z && entry.Bounds.Overlaps(bounds)) {
+							step = std::max<std::uint16_t>(step, std::uint16_t(entry.Step + (isKeyed ? 1 : 0)));
+						}
+					}
+					step = std::min<std::uint16_t>(step, MaxKeyedSteps);
+					if (isKeyed) {
+						anyKeyed = true;
+						effects->View->RequestSplit(std::uint16_t(draw.Z + step), effects->CopyPasses);
+					}
+					if (step > 0) {
+						keyedEntries.push_back(KeyedEntry { draw.Z, step, bounds });
+						z = std::uint16_t(draw.Z + step);
+					}
+				}
+#endif
 				if (draw.VineLength > 0) {
-					DrawSwingingVineFrame(this, draw.Z, draw.Graphics, draw.Cell, anchor.X + draw.X, anchor.Y + draw.Y, draw.VineLength,
+					DrawSwingingVineFrame(this, z, draw.Graphics, draw.Cell, anchor.X + draw.X, anchor.Y + draw.Y, draw.VineLength,
 						draw.VineCurvature, draw.Mode, draw.Param, draw.PaletteOffset, draw.TranslucentFrame);
 					continue;
 				}
-				DrawSpriteFrame(this, draw.Z, draw.Graphics, draw.Cell, anchor.X + draw.X, anchor.Y + draw.Y, draw.Direction, draw.ScaleX,
-					draw.ScaleY, draw.Angle, draw.Mode, draw.Param, draw.PaletteOffset, draw.TranslucentFrame);
+				DrawSpriteFrame(this, z, draw.Graphics, draw.Cell, anchor.X + draw.X, anchor.Y + draw.Y, draw.Direction, draw.ScaleX,
+					draw.ScaleY, draw.Angle, draw.Mode, draw.Param, draw.PaletteOffset, draw.TranslucentFrame, 0, 0, keyed);
 			}
 			for (const TextDraw& draw : _texts) {
 				// Where the HUD puts text of the size against the position (see jjCANVAS::DrawScriptText())
@@ -640,12 +794,15 @@ namespace Jazz2::Scripting
 		}
 		void jjCANVAS::DrawTextExtSize(std::int32_t xPixel, int32_t yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t mode, std::uint8_t param) {
 			// Only how the letters move and the alignment are taken of the appearance (see jjTEXTAPPEARANCE::constructorMode())
-			std::uint32_t stringMode = (appearance.xAmp != 0 && appearance.yAmp != 0 ? 4 : (appearance.yAmp != 0 ? 3
-				: (appearance.align == jjTEXTAPPEARANCE::align_RIGHT ? 2 : 0)));
-			DrawScriptText(xPixel, yPixel, text, size, stringMode, mode, param, appearance.newline == jjTEXTAPPEARANCE::ch_SPECIAL, appearance.spacing);
+			std::uint32_t stringMode = (appearance.xAmp != 0 && appearance.yAmp != 0 ? 4 : (appearance.yAmp != 0 ? 3 : 0));
+			DrawScriptText(xPixel, yPixel, text, size, stringMode, mode, param, appearance.newline == jjTEXTAPPEARANCE::ch_SPECIAL, appearance.spacing,
+				appearance.align);
 		}
 		void jjCANVAS::DrawScriptText(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t stringMode,
-			std::uint32_t spriteMode, std::uint8_t param, bool newLines, std::int32_t spacing) {
+			std::uint32_t spriteMode, std::uint8_t param, bool newLines, std::int32_t spacing, jjTEXTAPPEARANCE::align_ align) {
+			if (stringMode == 2) {
+				align = jjTEXTAPPEARANCE::align_RIGHT;
+			}
 			ScriptTextStyle style = GetScriptTextStyle(size);
 			if (style.Font == nullptr) {
 				return;
@@ -714,13 +871,23 @@ namespace Jazz2::Scripting
 				start = i + 1;
 			}
 
+			float width = 0.0f;
+			for (const Piece& piece : pieces) {
+				width += piece.Width;
+			}
+			bool alignRight = (align == jjTEXTAPPEARANCE::align_RIGHT);
+			UI::Alignment textAlign = UI::Alignment::TopLeft;
 			float x;
-			if (stringMode == 2 || xPixel >= 0x4000) {
-				float width = 0.0f;
-				for (const Piece& piece : pieces) {
-					width += piece.Width;
+			if (align == jjTEXTAPPEARANCE::align_CENTER || alignRight) {
+				if (pieces.size() == 1 && pieces[0].Frame < 0) {
+					// The font aligns each line on its own
+					x = xPixel + Offset.X;
+					textAlign = (alignRight ? UI::Alignment::TopRight : UI::Alignment::Top);
+				} else {
+					x = xPixel + Offset.X - (alignRight ? width : std::round(width * 0.5f));
 				}
-				x = (stringMode == 2 ? xPixel + Offset.X - width : GetTextX(xPixel, width));
+			} else if (xPixel >= 0x4000) {
+				x = GetTextX(xPixel, width);
 			} else {
 				x = xPixel + Offset.X;
 			}
@@ -731,7 +898,7 @@ namespace Jazz2::Scripting
 					// Added to what's behind, which keeps its hue as in JJ2+ (lavender over purple bricks)
 					Target->AdditiveText = (spriteMode == spriteType_BLENDLUMINANCE);
 					style.Font->DrawString(Target, piece.Text, charOffset, x, yPixel + Offset.Y + style.OffsetY, z,
-						UI::Alignment::TopLeft, color, style.Scale, angleOffset, varianceX, varianceY, speed, style.CharSpacing, style.LineSpacing);
+						textAlign, color, style.Scale, angleOffset, varianceX, varianceY, speed, style.CharSpacing, style.LineSpacing);
 					Target->AdditiveText = false;
 				} else {
 					// 10 pixels higher than the frame drawn as a sprite, as the characters of JJ2+ (see drawString())
@@ -899,6 +1066,14 @@ namespace Jazz2::Scripting
 			owner->GetSpritePaletteOffset(mode, param) };
 		draw.TranslucentFrame = translucent;
 		owner->GetWorldCanvas().AddSprite(draw);
+#if defined(TILEMAP_LAYER_EFFECTS)
+		if (mode == Legacy::spriteType_CHROMAKEY) {
+			// The views copy the scene for it from now on
+			if (Tiles::TileMap* tileMap = owner->GetLevelHandler()->TileMap()) {
+				tileMap->RequestKeyedSprites();
+			}
+		}
+#endif
 	}
 
 	static void DrawWorldSolid(LevelScriptLoader* owner, float x, float y, float width, float height, std::uint8_t color,
@@ -978,6 +1153,7 @@ namespace Jazz2::Scripting
 			_worldCanvas = std::make_unique<Legacy::ScriptWorldCanvas>();
 			// In the order the script draws, as in JJ2+ (a bomb drawn behind a pumpkin)
 			_worldCanvas->OrderedDraws = true;
+			_worldCanvas->EffectsOwner = _levelHandler;
 			_worldCanvas->setParent(_levelHandler->_rootNode.get());
 		}
 		return *_worldCanvas;
@@ -1198,15 +1374,17 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "bool monospace", asOFFSET(jjTEXTAPPEARANCE, monospace));
 		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "bool skipInitialHash", asOFFSET(jjTEXTAPPEARANCE, skipInitialHash));
 		engine->SetDefaultNamespace("STRING");
+		/** @brief How a special character of text is treated, see @ref jjTEXTAPPEARANCE */
 		engine->RegisterEnum("SignTreatment");
-		engine->RegisterEnumValue("SignTreatment", "HIDESIGN", jjTEXTAPPEARANCE::ch_HIDE);
-		engine->RegisterEnumValue("SignTreatment", "DISPLAYSIGN", jjTEXTAPPEARANCE::ch_DISPLAY);
-		engine->RegisterEnumValue("SignTreatment", "SPECIALSIGN", jjTEXTAPPEARANCE::ch_SPECIAL);
+		engine->RegisterEnumValue("SignTreatment", "HIDESIGN", jjTEXTAPPEARANCE::ch_HIDE);	///< The character is left out
+		engine->RegisterEnumValue("SignTreatment", "DISPLAYSIGN", jjTEXTAPPEARANCE::ch_DISPLAY);	///< The character is drawn like any other
+		engine->RegisterEnumValue("SignTreatment", "SPECIALSIGN", jjTEXTAPPEARANCE::ch_SPECIAL);	///< The character has its special meaning
+		/** @brief Horizontal alignment of text, see @ref jjTEXTAPPEARANCE::align */
 		engine->RegisterEnum("Alignment");
-		engine->RegisterEnumValue("Alignment", "DEFAULT", jjTEXTAPPEARANCE::align_DEFAULT);
-		engine->RegisterEnumValue("Alignment", "LEFT", jjTEXTAPPEARANCE::align_LEFT);
-		engine->RegisterEnumValue("Alignment", "CENTER", jjTEXTAPPEARANCE::align_CENTER);
-		engine->RegisterEnumValue("Alignment", "RIGHT", jjTEXTAPPEARANCE::align_RIGHT);
+		engine->RegisterEnumValue("Alignment", "DEFAULT", jjTEXTAPPEARANCE::align_DEFAULT);	///< Alignment selected by the x coordinate
+		engine->RegisterEnumValue("Alignment", "LEFT", jjTEXTAPPEARANCE::align_LEFT);	///< Text starts at the x coordinate
+		engine->RegisterEnumValue("Alignment", "CENTER", jjTEXTAPPEARANCE::align_CENTER);	///< Text is centered on the x coordinate
+		engine->RegisterEnumValue("Alignment", "RIGHT", jjTEXTAPPEARANCE::align_RIGHT);	///< Text ends at the x coordinate
 		engine->SetDefaultNamespace("");
 		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment at", asOFFSET(jjTEXTAPPEARANCE, at));
 		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment caret", asOFFSET(jjTEXTAPPEARANCE, caret));
@@ -1232,19 +1410,103 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, STRING::Size size = STRING::SMALL, STRING::Mode mode = STRING::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawTextBasicSize), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0)", asMETHOD(jjCANVAS, DrawTextExtSize), asCALL_THISCALL);
 
+		/**
+		 * @brief Draws a single pixel into the level
+		 *
+		 * Unlike the @ref jjCANVAS methods, the `jjDraw*` functions only queue the drawing; it happens later in the
+		 * frame, in the order of the calls. Coordinates are in level pixels. `layerZ` selects the layer the graphic
+		 * appears in front of, 4 being the sprite layer; if the layer order was changed, its distance from 4 counts
+		 * from the sprite layer.
+		 * @partialsupport `layerXY` and `playerID` are currently ignored: the graphic always uses level coordinates and
+		 * every player sees it.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawPixel(float xPixel, float yPixel, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawPixel), asCALL_CDECL);
+		/**
+		 * @brief Draws a filled rectangle into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawRectangle(); see @ref jjDrawPixel() for the layer and player
+		 * parameters.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawRectangle(float xPixel, float yPixel, int width, int height, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRectangle), asCALL_CDECL);
+		/**
+		 * @brief Draws a frame of an animation set into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawSprite(); see @ref jjDrawPixel() for the layer and player parameters.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSprite), asCALL_CDECL);
+		/**
+		 * @brief Draws a frame given by its index in @ref jjAnimFrames into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawSpriteFromCurFrame(); see @ref jjDrawPixel() for the layer and player
+		 * parameters.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSpriteFromCurFrame), asCALL_CDECL);
+		/**
+		 * @brief Draws a scaled frame of an animation set into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawResizedSprite(); see @ref jjDrawPixel() for the layer and player
+		 * parameters.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawResizedSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawResizedSprite), asCALL_CDECL);
+		/**
+		 * @brief Draws a scaled frame given by its index in @ref jjAnimFrames into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawResizedSpriteFromCurFrame(); see @ref jjDrawPixel() for the layer and
+		 * player parameters.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawResizedSpriteFromCurFrame), asCALL_CDECL);
+		/**
+		 * @brief Draws a rotated and scaled frame of an animation set into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawRotatedSprite(); see @ref jjDrawPixel() for the layer and player
+		 * parameters.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawRotatedSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRotatedSprite), asCALL_CDECL);
+		/**
+		 * @brief Draws a rotated and scaled frame given by its index in @ref jjAnimFrames into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawRotatedSpriteFromCurFrame(); see @ref jjDrawPixel() for the layer and
+		 * player parameters.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRotatedSpriteFromCurFrame), asCALL_CDECL);
 
+		/**
+		 * @brief Draws a frame bent like a swinging vine into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawSwingingVineSpriteFromCurFrame(); see @ref jjDrawPixel() for the layer
+		 * and player parameters.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int length, int curvature, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSwingingVineSpriteFromCurFrame), asCALL_CDECL);
+		/**
+		 * @brief Draws a tile of the tile set into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawTile(); see @ref jjDrawPixel() for the layer and player parameters.
+		 * The tile is only drawn, it doesn't become solid.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawTile(float xPixel, float yPixel, uint16 tile, TILE::Quadrant tileQuadrant = TILE::ALLQUADRANTS, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawTile), asCALL_CDECL);
+		/**
+		 * @brief Draws text in one of the built-in font sizes into the level
+		 *
+		 * The level counterpart of @ref jjCANVAS::drawString(); see @ref jjDrawPixel() for the layer and player
+		 * parameters.
+		 * @partialsupport Of the string modes, only @ref STRING::PALSHIFT currently has an effect here, the others draw
+		 * plain text.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, STRING::Size size = STRING::SMALL, STRING::Mode mode = STRING::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawString), asCALL_CDECL);
+		/**
+		 * @brief Draws text in one of the built-in font sizes into the level, with a custom appearance
+		 *
+		 * See @ref jjDrawPixel() for the layer and player parameters.
+		 * @partialsupport Currently only `spriteMode` and `param2` are used to color the text; the appearance and
+		 * `param1` have no effect here.
+		 */
 		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawStringEx), asCALL_CDECL);
+		/**
+		 * @brief Returns the width of text in one of the built-in font sizes
+		 *
+		 * Measured in pixels, taking `spacing` and the treatment of line feeds from the appearance into account; for
+		 * text of several lines, the width of the widest one. Works before the HUD exists, e.g. in @ref onLevelLoad().
+		 */
 		engine->RegisterGlobalFunction("int jjGetStringWidth(const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in style)", asFUNCTION(jjGetStringWidth), asCALL_CDECL);
 	}
 }

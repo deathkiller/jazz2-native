@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Weapons
 	CustomShot::CustomShot()
 		: _slot(WeaponType::Blaster), _basedOn(WeaponType::Blaster), _fired(0), _pierceLeft(0), _bouncesLeft(0),
 			_baseStrength(0), _detonated(false), _bubbleInWater(false), _flipX(false), _lookStep(0.0f), _particleSpawnTime(0.0f),
-			_farPoint(Vector2f::Zero)
+			_farPoint(Vector2f::Zero), _direction(1.0f, 0.0f)
 	{
 	}
 
@@ -32,8 +32,8 @@ namespace Jazz2::Actors::Weapons
 		_slot = (details.Params[1] < std::uint8_t(WeaponType::Count) ? WeaponType(details.Params[1]) : WeaponType::Blaster);
 
 		const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(_slot);
-		_basedOn = (definition.BasedOn != WeaponType::Unknown ? definition.BasedOn : _slot);
-		_options = ((_upgrades & 0x01) != 0 ? definition.ShotPowered : definition.Shot);
+		_basedOn = definition.GetCustom().GetBasedOn(_slot);
+		_options = ((_upgrades & 0x01) != 0 ? definition.GetCustom().ShotPowered : definition.GetCustom().Shot);
 		if ((details.Params[2] & IsBubble) != 0) {
 			_options = WeaponShotOptions();
 			_options.Sprite.Metadata = "Common/AmbientBubbles"_s;
@@ -51,6 +51,7 @@ namespace Jazz2::Actors::Weapons
 		_strength = _baseStrength = _options.Strength;
 		_pierceLeft = _options.Pierce;
 		_bouncesLeft = _options.Bounces;
+		SetFrozenDuration(_options.FreezeDuration);
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::ApplyGravitation, false);
@@ -67,7 +68,7 @@ namespace Jazz2::Actors::Weapons
 		}
 		if (path.empty() || !SetAnimation(state)) {
 			WeaponDefinition stock = WeaponDefinition::MakeCustom(_slot, _basedOn);
-			const WeaponSprite& stockSprite = ((_upgrades & 0x01) != 0 ? stock.ShotPowered.Sprite : stock.Shot.Sprite);
+			const WeaponSprite& stockSprite = ((_upgrades & 0x01) != 0 ? stock.GetCustom().ShotPowered.Sprite : stock.GetCustom().Shot.Sprite);
 			async_await RequestMetadataAsync(stockSprite.Metadata);
 			if (!SetAnimation(AnimState(stockSprite.AnimState))) {
 				SetAnimation(AnimState::Idle);
@@ -86,7 +87,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		if ((details.Params[2] & PlaysSound) != 0) {
-			PlaySfx(definition.Fire.Sound);
+			PlaySfx(_levelHandler->GetWeapons().GetFireSoundIdentifier(definition.GetCustom().Fire));
 		}
 
 		async_return true;
@@ -109,6 +110,7 @@ namespace Jazz2::Actors::Weapons
 			_speed.X = std::max(0.0f, inherited) + cosAngle * _options.Speed;
 		}
 		_speed.Y = sinAngle * _options.Speed;
+		_direction = Vector2f(isFacingLeft ? -cosAngle : cosAngle, sinAngle);
 
 		if (_options.Look == ShotLook::Beam) {
 			// It stays at the muzzle, so it's seen from the first frame
@@ -187,11 +189,6 @@ namespace Jazz2::Actors::Weapons
 	WeaponType CustomShot::GetSourceWeapon()
 	{
 		return _slot;
-	}
-
-	float CustomShot::GetFrozenDuration() const
-	{
-		return _options.FreezeDuration;
 	}
 
 	bool CustomShot::ThawsFrozen() const
@@ -292,6 +289,15 @@ namespace Jazz2::Actors::Weapons
 
 	void CustomShot::Move(float timeMult, TileCollisionParams& params)
 	{
+		// Faster the way it flies, or slower down to a stop, the way it was fired if it doesn't move yet
+		if (_options.Acceleration != 0.0f) {
+			float length = _speed.Length();
+			if (length > 0.001f) {
+				_direction = _speed / length;
+			}
+			float newLength = std::max(length + _options.Acceleration * timeMult, 0.0f);
+			_speed = _direction * newLength;
+		}
 		_speed.X = std::clamp(_speed.X + _externalForce.X * timeMult, -16.0f, 16.0f);
 		_speed.Y = std::clamp(_speed.Y + (_options.Gravity + _externalForce.Y) * timeMult, -16.0f, 16.0f);
 

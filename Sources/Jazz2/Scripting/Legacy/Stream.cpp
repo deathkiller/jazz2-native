@@ -478,6 +478,11 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjSTREAM", "bool pop(::string &out value)", asMETHODPR(jjSTREAM, pop, (String&), bool), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjSTREAM", "bool pop(jjSTREAM &out value)", asMETHODPR(jjSTREAM, pop, (jjSTREAM&), bool), asCALL_THISCALL);
 
+		/**
+		 * @brief Sends a stream of data between the server and clients in multiplayer
+		 *
+		 * @partialsupport Currently has no effect and always returns `true`.
+		 */
 		engine->RegisterGlobalFunction("bool jjSendPacket(const jjSTREAM &in packet, int toClientID = 0, uint toScriptModuleID = ::jjScriptModuleID)", asFUNCTION(jjSendPacket), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjZlibCompress(const jjSTREAM &in input, jjSTREAM &out output)", asFUNCTION(jjSTREAM::ZlibCompress), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjZlibUncompress(const jjSTREAM &in input, jjSTREAM &out output, uint size)", asFUNCTION(jjSTREAM::ZlibUncompress), asCALL_CDECL);
@@ -495,7 +500,19 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjRNG", "void seed(uint64 value = 5489)", asMETHOD(jjRNG, seed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjRNG", "void discard(uint64 count = 1)", asMETHOD(jjRNG, discard), asCALL_THISCALL);
 
+		/**
+		 * @brief Interface a script module implements to offer functionality to other modules
+		 *
+		 * To call further methods, the other module casts the handle to a `shared` type both modules declare in the
+		 * same way.
+		 * @partialsupport Obtaining the interface of another module isn't supported yet.
+		 */
 		engine->RegisterInterface("jjPUBLICINTERFACE");
+		/**
+		 * @brief Returns the version of the module or of its interface
+		 *
+		 * Implementations should return a fixed, descriptive string, e.g. `"1.0"` for the first release.
+		 */
 		engine->RegisterInterfaceMethod("jjPUBLICINTERFACE", "string getVersion() const");
 		// TODO
 		//engine->RegisterGlobalFunction("jjPUBLICINTERFACE@ jjGetPublicInterface(const string &in moduleName)", asFUNCTION(getPublicInterface), asCALL_CDECL);

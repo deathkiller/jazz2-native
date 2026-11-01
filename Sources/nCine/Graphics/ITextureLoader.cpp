@@ -107,7 +107,7 @@ namespace nCine
 		}
 #endif
 
-		LOGF("Unknown extension: {}", extension);
+		LOGE("Texture file with extension \".{}\" is not supported", extension);
 		fileHandle.reset(nullptr);
 		return std::make_unique<InvalidTextureLoader>(Death::move(fileHandle));
 	}

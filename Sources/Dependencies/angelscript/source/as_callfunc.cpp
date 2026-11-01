@@ -58,6 +58,15 @@ int DetectCallingConvention(bool isMethod, const asSFuncPtr &ptr, int callConv, 
 	internal->Clear();
 	internal->func      = ptr.ptr.f.func;
 	internal->auxiliary = 0;
+#ifdef AS_NATIVE_THUNKS
+	internal->thunk         = ptr.thunk;
+	internal->thunkArgCount = ptr.thunkArgCount;
+	internal->thunkFunc     = ptr;
+
+	// Without a thunk, only the generic calling convention can be used
+	if( internal->func && ptr.thunk == 0 && callConv != asCALL_GENERIC )
+		return asNOT_SUPPORTED;
+#endif
 
 	// Was a compatible calling convention specified?
 	if( internal->func )
@@ -142,6 +151,8 @@ int DetectCallingConvention(bool isMethod, const asSFuncPtr &ptr, int callConv, 
 			}
 
 			internal->callConv = thisCallConv;
+#ifndef AS_NATIVE_THUNKS
+			// With thunks, the method is called through the whole method pointer instead
 #ifdef GNU_STYLE_VIRTUAL_METHOD
 			if( (size_t(ptr.ptr.f.func) & 1) )
 				internal->callConv = (internalCallConv)(thisCallConv + 2);
@@ -161,6 +172,7 @@ int DetectCallingConvention(bool isMethod, const asSFuncPtr &ptr, int callConv, 
 			if( VIRTUAL_BASE_OFFSET(ptr) != 0 )
 				return asNOT_SUPPORTED;
 #endif
+#endif // !AS_NATIVE_THUNKS
 		}
 		else
 #endif
@@ -262,6 +274,94 @@ int PrepareSystemFunction(asCScriptFunction *func, asSSystemFunctionInterface *i
 	// This should never happen, as when AS_MAX_PORTABILITY is on, all functions
 	// are asCALL_GENERIC, which are prepared by PrepareSystemFunctionGeneric
 	asASSERT(false);
+#elif defined(AS_NATIVE_THUNKS)
+	// The thunk knows the C++ types, so values are always returned in memory and objects are
+	// always passed by pointer, the layout of the object doesn't matter
+	if( func->returnType.IsReference() || func->returnType.IsObjectHandle() )
+	{
+		internal->hostReturnInMemory = false;
+		internal->hostReturnSize     = sizeof(void*)/4;
+		internal->hostReturnFloat    = false;
+	}
+	else if( func->returnType.IsObject() )
+	{
+		internal->hostReturnInMemory = true;
+		internal->hostReturnSize     = sizeof(void*)/4;
+		internal->hostReturnFloat    = false;
+	}
+	else
+	{
+		internal->hostReturnInMemory = false;
+		internal->hostReturnSize     = func->returnType.GetSizeInMemoryDWords();
+		internal->hostReturnFloat    = func->returnType.IsEqualExceptConst(asCDataType::CreatePrimitive(ttFloat, true)) ||
+		                               func->returnType.IsEqualExceptConst(asCDataType::CreatePrimitive(ttDouble, true));
+	}
+
+	internal->paramSize = func->GetSpaceNeededForArguments();
+	internal->takesObjByVal = false;
+	internal->cleanArgs.SetLength(0);
+	internal->thunkArgs.SetLength(0);
+
+	const internalCallConv callConv = internal->callConv;
+	if( callConv == ICC_CDECL_OBJFIRST || callConv == ICC_THISCALL_OBJFIRST || callConv == ICC_VIRTUAL_THISCALL_OBJFIRST )
+		internal->thunkArgs.PushLast(0xFFFF);
+
+	int offset = 0;
+	for( asUINT n = 0; n < func->parameterTypes.GetLength(); n++ )
+	{
+		asCDataType &dt = func->parameterTypes[n];
+		bool byValue = dt.IsObject() && !dt.IsObjectHandle() && !dt.IsReference();
+
+		if( byValue )
+		{
+			internal->takesObjByVal = true;
+			internal->thunkArgs.PushLast(asWORD(offset | 0x8000));
+
+			// The thunk only moves from the object, so it's destroyed here
+			asSSystemFunctionInterface::SClean clean;
+			clean.op  = 1; // call free
+			clean.ot  = CastToObjectType(dt.GetTypeInfo());
+			clean.off = short(offset);
+			if( clean.ot->beh.destruct )
+				clean.op = 2; // call destruct, then free
+			internal->cleanArgs.PushLast(clean);
+		}
+		else if( dt.GetTokenType() == ttQuestion )
+		{
+			// The reference and the type id are separate arguments
+			internal->thunkArgs.PushLast(asWORD(offset));
+			internal->thunkArgs.PushLast(asWORD(offset + AS_PTR_SIZE));
+		}
+		else
+			internal->thunkArgs.PushLast(asWORD(offset));
+
+		if( n < internal->paramAutoHandles.GetLength() && internal->paramAutoHandles[n] )
+		{
+			asSSystemFunctionInterface::SClean clean;
+			clean.op  = 0; // call release
+			if (dt.IsFuncdef())
+				clean.ot = &engine->functionBehaviours;
+			else
+				clean.ot  = CastToObjectType(dt.GetTypeInfo());
+			clean.off = short(offset);
+			internal->cleanArgs.PushLast(clean);
+		}
+
+		offset += byValue ? AS_PTR_SIZE : dt.GetSizeOnStackDWords();
+	}
+
+	if( callConv == ICC_CDECL_OBJLAST || callConv == ICC_THISCALL_OBJLAST || callConv == ICC_VIRTUAL_THISCALL_OBJLAST )
+		internal->thunkArgs.PushLast(0xFFFF);
+
+	if( int(internal->thunkArgs.GetLength()) != internal->thunkArgCount )
+	{
+		engine->WriteMessage("", 0, 0, asMSGTYPE_INFORMATION, func->GetDeclarationStr().AddressOf());
+
+		asCString str;
+		str.Format(TXT_NATIVE_ARG_COUNT_d_d, internal->thunkArgCount, int(internal->thunkArgs.GetLength()));
+		engine->WriteMessage("", 0, 0, asMSGTYPE_ERROR, str.AddressOf());
+		engine->ConfigError(asINVALID_CONFIGURATION, 0, 0, 0);
+	}
 #else
 	// References are always returned as primitive data
 	if( func->returnType.IsReference() || func->returnType.IsObjectHandle() )
@@ -556,6 +656,79 @@ int PrepareSystemFunction(asCScriptFunction *func, asSSystemFunctionInterface *i
 	return 0;
 }
 
+#ifdef AS_NATIVE_THUNKS
+
+static asQWORD CallThunk(const asSSystemFunctionInterface *sysFunc, void *thisObj, void *argObj, asDWORD *args, void *retPointer)
+{
+	asSNativeCall call;
+	call.func       = &sysFunc->thunkFunc.ptr;
+	call.thisObj    = thisObj;
+	call.argObj     = argObj;
+	call.args       = args;
+	call.argOffsets = sysFunc->thunkArgs.GetLength() ? sysFunc->thunkArgs.AddressOf() : 0;
+	call.retPointer = retPointer;
+	call.retValue   = 0;
+
+	switch( sysFunc->callConv )
+	{
+	case ICC_CDECL_OBJFIRST:
+	case ICC_THISCALL_OBJFIRST:
+	case ICC_VIRTUAL_THISCALL_OBJFIRST:
+		call.objPos = 1;
+		break;
+	case ICC_CDECL_OBJLAST:
+	case ICC_THISCALL_OBJLAST:
+	case ICC_VIRTUAL_THISCALL_OBJLAST:
+		call.objPos = 2;
+		break;
+	default:
+		call.objPos = 0;
+		break;
+	}
+
+	sysFunc->thunk(call);
+	return call.retValue;
+}
+
+asQWORD CallSystemFunctionThunk(const asSSystemFunctionInterface *sysFunc, void *obj, asDWORD *args)
+{
+	void *thisObj = 0;
+	void *argObj = 0;
+	switch( sysFunc->callConv )
+	{
+	case ICC_THISCALL:
+	case ICC_VIRTUAL_THISCALL:
+		// The auxiliary object is used by asCALL_THISCALL_ASGLOBAL
+		thisObj = sysFunc->auxiliary ? sysFunc->auxiliary : obj;
+		break;
+	case ICC_THISCALL_OBJFIRST:
+	case ICC_THISCALL_OBJLAST:
+	case ICC_VIRTUAL_THISCALL_OBJFIRST:
+	case ICC_VIRTUAL_THISCALL_OBJLAST:
+		thisObj = sysFunc->auxiliary;
+		argObj = obj;
+		break;
+	case ICC_CDECL_OBJFIRST:
+	case ICC_CDECL_OBJLAST:
+		argObj = obj;
+		break;
+	default:
+		break;
+	}
+
+	if( thisObj )
+	{
+		// For composition we need to add the offset and/or dereference the pointer
+		thisObj = (void*)((char*)thisObj + sysFunc->compositeOffset);
+		if( sysFunc->isCompositeIndirect )
+			thisObj = *((void**)thisObj);
+	}
+
+	return CallThunk(sysFunc, thisObj, argObj, args, 0);
+}
+
+#endif
+
 #ifdef AS_MAX_PORTABILITY
 
 int CallSystemFunction(int id, asCContext *context)
@@ -620,6 +793,34 @@ asQWORD CallSystemFunctionNative(asCContext *context, asCScriptFunction *descr, 
 // retQW      - This output parameter should be used if the function returns a value in registers. This is a pointer to an array of QWORDs
 // secondObj  - This is the object pointer that the proxy method should invoke its method on when the call convention is THISCALL_OBJFIRST/LAST
 void CallSystemFunctionNative(asCContext *context, asCScriptFunction *descr, void *obj, asDWORD *args, void *retPointer, asQWORD *retQW, void *secondObj);
+
+#endif
+
+#ifdef AS_NATIVE_THUNKS
+
+asQWORD CallSystemFunctionNative(asCContext *context, asCScriptFunction *descr, void *obj, asDWORD *args, void *retPointer, asQWORD &retQW2, void *secondObj)
+{
+	UNUSED_VAR(context);
+	UNUSED_VAR(retQW2);
+
+	asSSystemFunctionInterface *sysFunc = descr->sysFuncIntf;
+	switch( sysFunc->callConv )
+	{
+	case ICC_THISCALL:
+	case ICC_VIRTUAL_THISCALL:
+		return CallThunk(sysFunc, obj, 0, args, retPointer);
+	case ICC_THISCALL_OBJFIRST:
+	case ICC_THISCALL_OBJLAST:
+	case ICC_VIRTUAL_THISCALL_OBJFIRST:
+	case ICC_VIRTUAL_THISCALL_OBJLAST:
+		return CallThunk(sysFunc, obj, secondObj, args, retPointer);
+	case ICC_CDECL_OBJFIRST:
+	case ICC_CDECL_OBJLAST:
+		return CallThunk(sysFunc, 0, obj, args, retPointer);
+	default:
+		return CallThunk(sysFunc, 0, 0, args, retPointer);
+	}
+}
 
 #endif
 

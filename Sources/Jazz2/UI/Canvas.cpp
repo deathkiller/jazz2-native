@@ -607,6 +607,8 @@ namespace Jazz2::UI
 			// can have been freed since (e.g., a menu section's preview palette that was destroyed on navigating
 			// back), so clear it to avoid binding a dangling pointer. Palette draws re-bind unit 1 after renting.
 			command->GetMaterial().SetTexture(1, nullptr);
+			// The same for the copy of the scene a keyed sprite of a level script samples at unit 2
+			command->GetMaterial().SetTexture(2, nullptr);
 		} else {
 			command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Sprite)).get();
 			command->GetMaterial().SetBlendingEnabled(true);

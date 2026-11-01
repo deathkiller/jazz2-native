@@ -2,6 +2,7 @@
 
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
+#include "WeaponTemplates.h"
 #include "../../WeaponDefinition.h"
 
 #include <Containers/ArrayView.h>
@@ -20,6 +21,17 @@ namespace Jazz2::Editor
 		String Library;
 		/** @brief Script code that creates the weapon, such as `ArcaneWeapons::TornadoGun::Weapon()` */
 		String Constructor;
+	};
+
+	/**
+		@brief Weapons of a level as the editor changes them
+
+		With what only the editor needs of them, which the game doesn't read, see @ref WeaponEditorData.
+	*/
+	struct LevelWeapons : WeaponsDescription
+	{
+		/** @brief What only the editor needs of each weapon, by @ref WeaponType */
+		WeaponEditorData EditorData[std::int32_t(WeaponType::Count)];
 	};
 
 	/** @brief Most weapons of a script, MLLE sets up the first nine */
@@ -130,11 +142,14 @@ namespace Jazz2::Editor
 	 *
 	 * An object or an array of them, or an object with `Weapons`, each with `Name`, `Library`, `Constructor`, `Image`,
 	 * `Hooks` and `Params`, each parameter with `Name`, `Type`, `Default`, `Min`, `Max`, `Description` and `Options`
-	 * of `Name` and `Value`. Returns how many were read, -1 if the text isn't JSON.
+	 * of `Name` and `Value`. An item with `"Kind": "Custom"` is a custom weapon, read into @p customTemplates if
+	 * given (see @ref ReadCustomWeaponTemplate()). Returns how many were read, -1 if the text isn't JSON.
 	 */
-	std::int32_t ReadWeaponTemplates(StringView text, StringView sourcePath, SmallVectorImpl<ScriptWeaponTemplate>& templates);
-	/** @brief Reads all descriptions of weapons (`.json` and `.ini`) in directories */
-	void FindScriptWeaponTemplates(Death::Containers::ArrayView<const String> directories, SmallVectorImpl<ScriptWeaponTemplate>& templates);
+	std::int32_t ReadWeaponTemplates(StringView text, StringView sourcePath, SmallVectorImpl<ScriptWeaponTemplate>& templates,
+		SmallVectorImpl<CustomWeaponTemplate>* customTemplates = nullptr);
+	/** @brief Reads all descriptions of weapons (`.json` and `.ini`) in directories, custom weapons into @p customTemplates if given */
+	void FindScriptWeaponTemplates(Death::Containers::ArrayView<const String> directories, SmallVectorImpl<ScriptWeaponTemplate>& templates,
+		SmallVectorImpl<CustomWeaponTemplate>* customTemplates = nullptr);
 	/**
 	 * @brief Guesses the parameters of a weapon from the text of its library
 	 *
@@ -192,7 +207,7 @@ namespace Jazz2::Editor
 	 * the line endings the text has. A script without such lines gets them at its start, if it needs them. Returns
 	 * the text as it is if nothing changes.
 	 */
-	String UpdateScriptWeaponLines(StringView script, const WeaponsDescription& weapons);
+	String UpdateScriptWeaponLines(StringView script, const LevelWeapons& weapons);
 }
 
 #endif

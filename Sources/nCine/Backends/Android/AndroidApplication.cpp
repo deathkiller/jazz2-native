@@ -7,6 +7,8 @@
 #include "AndroidJniHelper.h"
 #include "../../tracy.h"
 
+#include <algorithm>
+
 #include <android/input.h>
 
 #include <IO/AndroidAssetStream.h>
@@ -365,6 +367,20 @@ namespace nCine
 	bool AndroidApplication::IsScreenKeyboardVisible()
 	{
 		return _isInitialized && AndroidJniWrap_InputMethodManager::isSoftInputVisible();
+	}
+
+	std::int32_t AndroidApplication::GetScreenKeyboardInset()
+	{
+		if (!_isInitialized || _gfxDevice == nullptr || !AndroidJniWrap_InputMethodManager::isSoftInputVisible()) {
+			return 0;
+		}
+		Recti bounds = AndroidJniWrap_Activity::getVisibleBounds();
+		if (bounds.H <= 0) {
+			return 0;
+		}
+		// The window is drawn edge-to-edge and its surface isn't resized, so it's as high as the drawable
+		const std::int32_t height = _gfxDevice->drawableHeight();
+		return std::clamp<std::int32_t>(height - (bounds.Y + bounds.H), 0, height);
 	}
 
 	bool AndroidApplication::ToggleScreenKeyboard()

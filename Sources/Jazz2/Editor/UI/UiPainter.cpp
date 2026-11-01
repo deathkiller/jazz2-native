@@ -181,7 +181,7 @@ namespace Jazz2::Editor
 			ApplyOpacity(Colorf::White));
 	}
 
-	void UiPainter::Panel(const Rectf& rect, bool shadow, const Colorf& fill, const Colorf& border)
+	void UiPainter::Panel(const Rectf& rect, bool shadow, const Colorf& fill, const Colorf& border, bool rounded)
 	{
 		if (shadow) {
 			// The middle of the shadow is under the panel, which is nearly opaque, it's left out instead of being drawn
@@ -189,6 +189,11 @@ namespace Jazz2::Editor
 			float spread = float(_skin.GetShadowSpread());
 			Rectf shadowRect(rect.X - spread, rect.Y - spread + spread * 0.35f, rect.W + spread * 2.0f, rect.H + spread * 2.0f);
 			DrawNineSlice(_skin.GetShadow(), shadowRect, UiTheme::Shadow, UiLayer::Back, false);
+		}
+		if (!rounded) {
+			FillRect(rect, Backdrop(rect, fill, false), UiLayer::Fill);
+			Frame(rect, border, std::max(1.0f, std::round(_scale)), UiLayer::Fill);
+			return;
 		}
 		RoundRect(rect, Backdrop(rect, fill, true), UiLayer::Fill);
 		RoundRectBorder(rect, border, UiLayer::Fill);

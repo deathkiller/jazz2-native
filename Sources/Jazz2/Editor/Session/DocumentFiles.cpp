@@ -410,8 +410,8 @@ namespace Jazz2::Editor
 			return false;
 		}
 
-		WeaponsDescription weapons;
-		if (!data.empty() && Formats::WeaponsChunk::Read(data, weapons) != Formats::WeaponsChunk::ReadResult::Success) {
+		LevelWeapons weapons;
+		if (!data.empty() && Formats::WeaponsChunk::Read(data, weapons, weapons.EditorData) != Formats::WeaponsChunk::ReadResult::Success) {
 			return false;
 		}
 		text = {};

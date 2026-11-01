@@ -75,6 +75,8 @@ namespace Jazz2::Scripting
 			// Without a player, it stands for the players that aren't in the game, see LevelScriptLoader::GetPlayerBackingStore()
 			isLocal = (player != nullptr);
 			isActive = (player != nullptr);
+			// JJ2+ starts the blaster's count at 99, it never spends it
+			_infiniteAmmo[std::int32_t(WeaponType::Blaster)] = 99;
 		}
 		jjPLAYER::~jjPLAYER() {
 		}
@@ -131,25 +133,35 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
+			// The hitbox goes along, a move of the player from a stale one would end up inside what it's next to
+			float delta = value - _player->_pos.X;
 			_player->_pos.X = value;
+			_player->AABBInner.L += delta;
+			_player->AABBInner.R += delta;
 			// A scripted move is a teleport, not a path the player walked, so nothing between the two positions
 			// may be collided with or triggered (see Actors::ActorBase::ResetPathTracking())
 			_player->ResetPathTracking();
 			return _player->_pos.X;
 		}
+		// A player standing on the ground is 0.6 to 1.9 px lower in JJ2+ (measured), scripts test the ground by `yPos + 21`
+		static constexpr float PlayerOffsetY = 1.0f;
+
 		float jjPLAYER::get_yPos() const {
 			if (_player == nullptr) {
 				return {};
 			}
-			return _player->_pos.Y;
+			return _player->_pos.Y + PlayerOffsetY;
 		}
 		float jjPLAYER::set_yPos(float value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->_pos.Y = value;
+			float delta = value - PlayerOffsetY - _player->_pos.Y;
+			_player->_pos.Y = value - PlayerOffsetY;
+			_player->AABBInner.T += delta;
+			_player->AABBInner.B += delta;
 			_player->ResetPathTracking();
-			return _player->_pos.Y;
+			return value;
 		}
 		float jjPLAYER::get_xAcc() const {
 			if (_player == nullptr) {
@@ -225,14 +237,43 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
+			if (_hasPendingYSpeed) {
+				return _pendingYSpeed;
+			}
 			return _player->_speed.Y * PlayerSpeedToTicks;
 		}
 		float jjPLAYER::set_ySpeed(float value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->_speed.Y = value / PlayerSpeedToTicks;
+			if (_levelScriptLoader->_objectBehaviorDepth > 0) {
+				// JJ2+ moves the players before the objects, what a behavior sets moves the player from the next tick (a sword
+				// stabbing up, measured), the frames of the game until then would move it by it already
+				_pendingYSpeed = value;
+				_pendingYSpeedTick = _levelScriptLoader->GetGameTick();
+				_hasPendingYSpeed = true;
+				return value;
+			}
+			_hasPendingYSpeed = false;
+			ApplyYSpeed(value);
 			return value;
+		}
+		void jjPLAYER::ApplyYSpeed(float value) {
+			if (_player->_currentSpecialMove == Actors::Player::SpecialMoveType::Buttstomp) {
+				// A buttstomp sets the speed itself in every tick, as measured in JJ2+ (a pole holding the player, a jump off it)
+				return;
+			}
+			_player->_speed.Y = value / PlayerSpeedToTicks;
+			if (value < 0.0f) {
+				// An assigned rise slows by the live Jump key, as a float-up column's (a sword stabbing up)
+				_player->_riseFromFloatUp = true;
+			}
+		}
+		void jjPLAYER::ApplyPendingSpeed(std::int32_t currentTick) {
+			if (_hasPendingYSpeed && _player != nullptr && currentTick > _pendingYSpeedTick) {
+				_hasPendingYSpeed = false;
+				ApplyYSpeed(_pendingYSpeed);
+			}
 		}
 
 		void jjPLAYER::freeze(bool frozen) {
@@ -303,6 +344,10 @@ namespace Jazz2::Scripting
 		static std::int32_t ToWeaponIndex(std::int32_t number) {
 			return (number >= 1 && number <= std::int32_t(WeaponType::Count) ? number - 1 : -1);
 		}
+		// As ToWeaponIndex(), `WEAPON::CURRENT` is the selected weapon (measured in JJ2+ on `ammo` and `powerup`)
+		static std::int32_t ToWeaponIndex(const Actors::Player* player, std::int32_t number) {
+			return (number == 0 && player != nullptr ? std::int32_t(player->GetCurrentWeapon()) : ToWeaponIndex(number));
+		}
 
 		std::int8_t jjPLAYER::get_currWeapon() const {
 			if (_player == nullptr) {
@@ -354,8 +399,12 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->_invulnerableTime = value * FrameTimer::FramesPerSecond / 70.0f;
-			_player->SetState(Actors::ActorState::IsInvulnerable, _player->_invulnerableTime > 0.0f);
+			if (value > 0) {
+				// As JJ2+ shows it, in the bubble of the invincibility carrot
+				_player->SetInvulnerability(value * FrameTimer::FramesPerSecond / 70.0f, Actors::Player::InvulnerableType::Shielded);
+			} else {
+				_player->SetInvulnerability(0.0f, Actors::Player::InvulnerableType::Transient);
+			}
 			return value;
 		}
 
@@ -384,11 +433,8 @@ namespace Jazz2::Scripting
 				return {};
 			}
 			// Negative values are clamped so invincibility is never reduced below zero
-			_player->_invulnerableTime += duration * FrameTimer::FramesPerSecond / 70.0f;
-			if (_player->_invulnerableTime < 0.0f) {
-				_player->_invulnerableTime = 0.0f;
-			}
-			_player->SetState(Actors::ActorState::IsInvulnerable, _player->_invulnerableTime > 0.0f);
+			float timeLeft = std::max(_player->_invulnerableTime + duration * FrameTimer::FramesPerSecond / 70.0f, 0.0f);
+			_player->SetInvulnerability(timeLeft, Actors::Player::InvulnerableType::Shielded);
 			return (std::int32_t)(_player->_invulnerableTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
 
@@ -570,22 +616,26 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			return (std::int32_t)(_player->_inTubeTime * 70.0f / FrameTimer::FramesPerSecond);
+			if (_player->_inTubeTime > 0.0f) {
+				return (std::int32_t)(_player->_inTubeTime * 70.0f / FrameTimer::FramesPerSecond);
+			}
+			return std::max(_ballTime - (_levelScriptLoader->GetGameTick() - _ballTimeTick), 0);
 		}
 		std::int32_t jjPLAYER::set_rolling(std::int32_t value) {
 			if (_player == nullptr) {
 				return {};
 			}
-		
+
 			if (value > 0) {
-				if (_player->_inTubeTime <= 0) {
-					_player->EndDamagingMove();
-					_player->SetAnimation(AnimState::Dash | AnimState::Jump);
-					_player->_controllable = false;
-					_player->SetState(Actors::ActorState::CanJump | Actors::ActorState::ApplyGravitation, false);
-				}
-				_player->_inTubeTime = value * FrameTimer::FramesPerSecond / 70.0f;
+				// Measured in JJ2+, the player keeps falling and running in a ball (a sword spinning), it isn't a sucker tube
+				_ballTime = value;
+				_ballTimeTick = _levelScriptLoader->GetGameTick();
+				// Curled up as after a sucker tube for as long, the pose only
+				_player->_tubeBallPoseLeft = std::max(_player->_tubeBallPoseLeft, value * FrameTimer::FramesPerSecond / 70.0f);
+				// ...which can't shoot meanwhile (measured), as on a pinball paddle
+				_player->_onPinballPaddleTime = std::max(_player->_onPinballPaddleTime, value * FrameTimer::FramesPerSecond / 70.0f);
 			} else {
+				_ballTime = 0;
 				if (_player->_inTubeTime > 0) {
 					_player->_controllable = true;
 					_player->SetState(Actors::ActorState::ApplyGravitation | Actors::ActorState::CollideWithTileset, true);
@@ -638,7 +688,53 @@ namespace Jazz2::Scripting
 		}
 
 		void jjPLAYER::suckerTube(std::int32_t xSpeed, std::int32_t ySpeed, bool center, bool noclip, bool trigSample) {
-			noop();
+			if (_player == nullptr) {
+				return;
+			}
+			noop(); // TODO: trigSample
+
+			// As touching a tube event of these speeds (see Player::HandleAreaEventAt())
+			using Actors::Player;
+			Player* player = _player;
+			if (player->_currentTransition != nullptr && (player->_currentTransition->State == AnimState::TransitionWarpOut ||
+				player->_currentTransition->State == AnimState::TransitionWarpOutFreefall)) {
+				player->_currentTransitionCancellable = true;
+				player->CancelTransition();
+			}
+			player->EndDamagingMove();
+			player->SetAnimation(AnimState::Dash | AnimState::Jump);
+			player->_tubeBallPoseLeft = Player::TubeBallPoseTime;
+			player->_controllable = false;
+			player->SetState(Actors::ActorState::CanJump, false);
+
+			bool isReforged = player->_levelHandler->IsReforged();
+			player->_speed = Vector2f(float(xSpeed) * Player::LegacyFrameRateScale, float(ySpeed) * Player::LegacyFrameRateScale);
+			if (center) {
+				Vector2f pos = player->_pos;
+				if (xSpeed == 0 || ySpeed != 0) {
+					pos.X = std::floor(pos.X / 32.0f) * 32.0f + 16.0f;
+				}
+				if (ySpeed == 0 || xSpeed != 0) {
+					pos.Y = std::floor(pos.Y / 32.0f) * 32.0f + Player::TubeSnapY;
+				}
+				player->MoveInstantly(pos, Actors::MoveType::Absolute | Actors::MoveType::Force);
+				player->ResetPathTracking();
+			}
+
+			player->SetState(Actors::ActorState::CollideWithTileset, !noclip);
+			if (noclip || isReforged) {
+				player->SetState(Actors::ActorState::ApplyGravitation, false);
+			} else {
+				player->SetState(Actors::ActorState::ApplyGravitation, true);
+			}
+			player->_inTubeTime = (noclip ? 600.0f : Player::TubeControlTime);
+			// The rise decays at the held rate whatever the jump key did or does, as a spring's (measured)
+			player->_jumpReleased = false;
+			player->_riseFromFloatUp = false;
+			player->_riseOwnedByJump = false;
+			player->_isSpring = (ySpeed < 0);
+			player->_tubeHeldSpeedY = std::min(player->_speed.Y, 0.0f);
+			player->_tubeHeldTimeLeft = 140.0f / Player::LegacyFrameRateScale;
 		}
 		void jjPLAYER::poleSpin(float xSpeed, float ySpeed, std::uint32_t delay) {
 			noop();
@@ -884,7 +980,10 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Down, value);
+			// JJ2+ has one key for both, it buttstomps in the air
+			auto* levelScripts = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			levelScripts->OverridePlayerInput(_player, PlayerAction::Down, value);
+			levelScripts->OverridePlayerInput(_player, PlayerAction::Buttstomp, value);
 			return value;
 		}
 		bool jjPLAYER::set_playerKeyFirePressed(bool value) {
@@ -917,14 +1016,14 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjPLAYER::get_powerup(std::uint8_t number) {
-			std::int32_t index = ToWeaponIndex(number);
+			std::int32_t index = ToWeaponIndex(_player, number);
 			if (_player == nullptr || index < 0) {
 				return false;
 			}
 			return (_player->_inventory.WeaponUpgrades[index] & 0x01) == 0x01;
 		}
 		bool jjPLAYER::set_powerup(std::uint8_t number, bool value) {
-			std::int32_t index = ToWeaponIndex(number);
+			std::int32_t index = ToWeaponIndex(_player, number);
 			if (_player == nullptr || index < 0) {
 				return false;
 			}
@@ -934,7 +1033,7 @@ namespace Jazz2::Scripting
 			return value;
 		}
 		std::int32_t jjPLAYER::get_ammo(std::uint8_t number) const {
-			std::int32_t index = ToWeaponIndex(number);
+			std::int32_t index = ToWeaponIndex(_player, number);
 			if (_player == nullptr || index < 0) {
 				return 0;
 			}
@@ -946,19 +1045,21 @@ namespace Jazz2::Scripting
 			return ammo / 256;
 		}
 		std::int32_t jjPLAYER::set_ammo(std::uint8_t number, std::int32_t value) {
-			std::int32_t index = ToWeaponIndex(number);
+			std::int32_t index = ToWeaponIndex(_player, number);
 			if (_player == nullptr || index < 0) {
 				return value;
 			}
 			// A weapon of `jjWEAPON::infinite` that the player has gets the unlimited ammo the HUD shows as such
 			std::uint16_t& ammo = _player->_inventory.WeaponAmmo[index];
 			std::int32_t count = std::clamp<std::int32_t>(value, 0, UINT16_MAX / 256 - 1);
-			if (_levelScriptLoader->GetWeapon(number)->Infinite) {
+			if (_levelScriptLoader->GetWeapon(std::uint8_t(index + 1))->Infinite) {
 				if (count > 0) {
 					ammo = UINT16_MAX;
 					_infiniteAmmo[index] = std::uint16_t(count);
 				} else if (index != std::int32_t(WeaponType::Blaster)) {
 					ammo = 0;
+				} else {
+					_infiniteAmmo[index] = 0;
 				}
 			} else {
 				ammo = std::uint16_t(count * 256);
@@ -980,8 +1081,8 @@ namespace Jazz2::Scripting
 				return {};
 			}
 
-			_player->WarpToPosition(Vector2f(xTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2,
-				yTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2),
+			// As measured in JJ2+, at the top left corner of the tile, half a pixel above it
+			_player->WarpToPosition(Vector2f(float(xTile * TileSet::DefaultTileSize), float(yTile * TileSet::DefaultTileSize) - 0.5f - PlayerOffsetY),
 				fast ? WarpFlags::Fast : WarpFlags::Default);
 			return true;
 		}
@@ -1207,12 +1308,94 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjPLAYER::fireBulletDirection(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, std::uint32_t direction) {
-			noop();
-			return 0;
+			// As measured in JJ2+: right and left turn the player that way, the current one is up while looking up
+			if (_player == nullptr) {
+				return 0;
+			}
+			constexpr float HalfPi = 1.5707963f;
+			float angle;
+			switch (direction) {
+				case dirRIGHT: _player->SetFacingLeft(false); angle = HalfPi; break;
+				case dirLEFT: _player->SetFacingLeft(true); angle = 3.0f * HalfPi; break;
+				case dirUP: angle = 0.0f; break;
+				default: {
+					bool lookingUp = ((_player->_currentAnimation->State & AnimState::Lookup) == AnimState::Lookup);
+					angle = (lookingUp ? 0.0f : (_player->IsFacingLeft() ? 3.0f * HalfPi : HalfPi));
+					break;
+				}
+			}
+			return fireBulletAngle(gun, depleteAmmo, requireAmmo, angle);
 		}
+
+		template<typename T>
+		Actors::ActorBase* jjPLAYER::FireAimedNativeShot(WeaponType weaponType, float aimAngle) {
+			// The shot of the game turned to the angle (0 up, clockwise), the side it goes to is the side it faces
+			Vector3i initialPos;
+			Vector2f gunspotPos;
+			float angle;
+			_player->GetFirePointAndAngle(initialPos, gunspotPos, angle);
+			float x = std::sin(aimAngle), y = -std::cos(aimAngle);
+			bool left = (x < -0.0001f || (std::abs(x) <= 0.0001f && _player->IsFacingLeft()));
+			float shotAngle = (left ? std::atan2(-y, -x) : std::atan2(y, x));
+
+			std::uint8_t shotParams[1] = { _player->_inventory.WeaponUpgrades[(std::int32_t)weaponType] };
+			std::shared_ptr<T> shot = std::make_shared<T>();
+			shot->OnActivated(Actors::ActorActivationDetails(_player->_levelHandler, initialPos, shotParams));
+			shot->OnFire(_player->shared_from_this(), gunspotPos, _player->_speed, shotAngle, left);
+			_player->_levelHandler->AddActor(shot);
+			return shot.get();
+		}
+
 		std::int32_t jjPLAYER::fireBulletAngle(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, float angle) {
-			noop();
-			return 0;
+			// At the angle as measured in JJ2+ (0 up, clockwise)
+			if (_player == nullptr) {
+				return 0;
+			}
+			std::int32_t index = (gun == 0 ? std::int32_t(_player->_currentWeapon) : ToWeaponIndex(gun));
+			if (index < 0 || index >= std::int32_t(WeaponType::Count)) {
+				return 0;
+			}
+			WeaponType weaponType = WeaponType(index);
+			auto& ammo = _player->_inventory.WeaponAmmo[index];
+			bool infinite = (weaponType == WeaponType::Blaster || ammo == UINT16_MAX);
+			// The blaster's count is never spent, but JJ2+ still refuses it at 0
+			if (requireAmmo && (weaponType == WeaponType::Blaster ? get_ammo(std::uint8_t(index + 1)) <= 0 : (!infinite && ammo < 256))) {
+				return 0;
+			}
+			constexpr float TwoPi = 6.2831853f;
+			angle = std::fmod(angle, TwoPi);
+			if (angle < 0.0f) {
+				angle += TwoPi;
+			}
+			Actors::ActorBase* shot = nullptr;
+			if (!FireScriptedWeapon(weaponType, angle, &shot)) {
+				switch (weaponType) {
+					case WeaponType::Blaster: shot = FireAimedNativeShot<Actors::Weapons::BlasterShot>(weaponType, angle); break;
+					case WeaponType::Bouncer: shot = FireAimedNativeShot<Actors::Weapons::BouncerShot>(weaponType, angle); break;
+					case WeaponType::Freezer: shot = FireAimedNativeShot<Actors::Weapons::FreezerShot>(weaponType, angle); break;
+					case WeaponType::Seeker: shot = FireAimedNativeShot<Actors::Weapons::SeekerShot>(weaponType, angle); break;
+					case WeaponType::RF: shot = FireAimedNativeShot<Actors::Weapons::RFShot>(weaponType, angle); break;
+					case WeaponType::Toaster: shot = FireAimedNativeShot<Actors::Weapons::ToasterShot>(weaponType, angle); break;
+					case WeaponType::Pepper: shot = FireAimedNativeShot<Actors::Weapons::PepperShot>(weaponType, angle); break;
+					case WeaponType::Electro: shot = FireAimedNativeShot<Actors::Weapons::ElectroShot>(weaponType, angle); break;
+					default: noop(); break;
+				}
+			}
+			if (shot == nullptr) {
+				return 0;
+			}
+			if (depleteAmmo && !infinite) {
+				ammo = std::uint16_t(ammo - 256);
+			}
+			// The weapon waits for the next shot as after one the player fired (see Player::FireCurrentWeapon())
+			std::int32_t fastFire = (_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+			_player->_weaponCooldown = std::max(_player->_weaponCooldown, 30.0f - (fastFire * 2.76f));
+			// A script ends a buttstomp by `buttstomp = 121` before it fires down (a sword), as measured in JJ2+
+			if (buttstomp >= 41 && _player->_currentSpecialMove == Actors::Player::SpecialMoveType::Buttstomp) {
+				_player->EndDamagingMove();
+			}
+			jjOBJ* obj = _levelScriptLoader->GetObjectView(shot);
+			return (obj != nullptr ? obj->objectID : 0);
 		}
 
 		// The top left corner of the view, as JJ2+ has it - the layer coordinate of the sprite layer there (see GetLayerPositionInView())
@@ -1275,8 +1458,13 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjPLAYER::doesCollide(const jjOBJ* object, bool always) const {
-			noop();
-			return false;
+			// The pixels of the frame the object shows against those of the player, as jjOBJ::doesCollidePlayer()
+			bool result = (object != nullptr && _player != nullptr && DoesObjectTouchPlayer(_levelScriptLoader, *object, *_player));
+			if (object != nullptr) {
+				// A handle passed to a native function is the function's to release
+				const_cast<jjOBJ*>(object)->Release();
+			}
+			return result;
 		}
 		int jjPLAYER::getObjectHitForce(const jjOBJ& target) const {
 			noop();
@@ -1429,8 +1617,11 @@ namespace Jazz2::Scripting
 			jjOBJ* standingOn = (_player->_carryingObject != nullptr && _player->GetHealth() > 0
 				? _levelScriptLoader->GetObjectView(_player->_carryingObject) : nullptr);
 			platform = (standingOn != nullptr ? standingOn->objectID : 0);
+			if (platform == 0 && _pushedTick >= _levelScriptLoader->GetGameTick() - 1) {
+				platform = _pushedObject;
+			}
 		}
-		bool jjPLAYER::FireScriptedWeapon(WeaponType weaponType) {
+		bool jjPLAYER::FireScriptedWeapon(WeaponType weaponType, float aimAngle, Actors::ActorBase** lastShot) {
 			// The bullet of the weapon must have a behavior of the script, the behavior moves the bullets then
 			std::uint8_t bullet;
 			switch (weaponType) {
@@ -1447,29 +1638,33 @@ namespace Jazz2::Scripting
 			// one, RF two or three when powered up, every other spread one
 			WeaponSpread spread = _levelScriptLoader->GetWeapon(std::int32_t(weaponType) + 1)->Spread;
 			bool upgraded = ((_player->_inventory.WeaponUpgrades[(std::int32_t)weaponType] & 0x01) != 0);
-			bool angled = (spread == WeaponSpread::Double || spread == WeaponSpread::Triple || spread == WeaponSpread::DoubleOrTriple);
+			bool angled = (spread == WeaponSpread::Double || spread == WeaponSpread::Triple || spread == WeaponSpread::DoubleOrTriple) && aimAngle < 0.0f;
 			bool straight = (!angled || spread == WeaponSpread::Triple || (spread == WeaponSpread::DoubleOrTriple && upgraded));
 			for (std::int8_t slot = -1; slot <= 1; slot++) {
 				if (slot == 0 ? !straight : !angled) {
 					continue;
 				}
+				Actors::ActorBase* shot = nullptr;
 				switch (weaponType) {
-					case WeaponType::Blaster: FireSpreadShot<Actors::Weapons::BlasterShot>(weaponType, slot); break;
-					case WeaponType::Bouncer: FireSpreadShot<Actors::Weapons::BouncerShot>(weaponType, slot); break;
-					case WeaponType::Freezer: FireSpreadShot<Actors::Weapons::FreezerShot>(weaponType, slot); break;
-					case WeaponType::Seeker: FireSpreadShot<Actors::Weapons::SeekerShot>(weaponType, slot); break;
-					case WeaponType::RF: FireSpreadShot<Actors::Weapons::RFShot>(weaponType, slot); break;
-					case WeaponType::Toaster: FireSpreadShot<Actors::Weapons::ToasterShot>(weaponType, slot); break;
-					case WeaponType::Pepper: FireSpreadShot<Actors::Weapons::PepperShot>(weaponType, slot); break;
-					case WeaponType::Electro: FireSpreadShot<Actors::Weapons::ElectroShot>(weaponType, slot); break;
+					case WeaponType::Blaster: shot = FireSpreadShot<Actors::Weapons::BlasterShot>(weaponType, slot, aimAngle); break;
+					case WeaponType::Bouncer: shot = FireSpreadShot<Actors::Weapons::BouncerShot>(weaponType, slot, aimAngle); break;
+					case WeaponType::Freezer: shot = FireSpreadShot<Actors::Weapons::FreezerShot>(weaponType, slot, aimAngle); break;
+					case WeaponType::Seeker: shot = FireSpreadShot<Actors::Weapons::SeekerShot>(weaponType, slot, aimAngle); break;
+					case WeaponType::RF: shot = FireSpreadShot<Actors::Weapons::RFShot>(weaponType, slot, aimAngle); break;
+					case WeaponType::Toaster: shot = FireSpreadShot<Actors::Weapons::ToasterShot>(weaponType, slot, aimAngle); break;
+					case WeaponType::Pepper: shot = FireSpreadShot<Actors::Weapons::PepperShot>(weaponType, slot, aimAngle); break;
+					case WeaponType::Electro: shot = FireSpreadShot<Actors::Weapons::ElectroShot>(weaponType, slot, aimAngle); break;
 					default: break;
+				}
+				if (lastShot != nullptr && shot != nullptr) {
+					*lastShot = shot;
 				}
 			}
 			return true;
 		}
 
 		template<typename T>
-		void jjPLAYER::FireSpreadShot(WeaponType weaponType, std::int8_t slot) {
+		Actors::ActorBase* jjPLAYER::FireSpreadShot(WeaponType weaponType, std::int8_t slot, float aimAngle) {
 			Vector3i initialPos;
 			Vector2f gunspotPos;
 			float angle;
@@ -1481,9 +1676,11 @@ namespace Jazz2::Scripting
 			shot->OnActivated(Actors::ActorActivationDetails(_player->_levelHandler, initialPos, shotParams));
 			shot->OnFire(_player->shared_from_this(), gunspotPos, _player->_speed, angle + angleOffset, _player->IsFacingLeft());
 			// Its view is made as JJ2+ fires it when the level adds it (see LevelScriptLoader::EnsureObjectView())
-			_levelScriptLoader->_firingBullet = { shot.get(), slot, gunspotPos.Y - _player->_pos.Y };
+			bool upward = (aimAngle < 0.0f && !_player->_inWater && std::abs(std::sin(angle)) > 0.5f);
+			_levelScriptLoader->_firingBullet = { shot.get(), slot, gunspotPos.Y - _player->_pos.Y, upward, aimAngle };
 			_player->_levelHandler->AddActor(shot);
 			_levelScriptLoader->_firingBullet = {};
+			return shot.get();
 		}
 
 		bool jjPLAYERDRAW::get_shield(std::int32_t shield) const {
@@ -1596,12 +1793,22 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectType("jjPLAYER", sizeof(jjPLAYER), asOBJ_REF | asOBJ_NOCOUNT);
 		engine->RegisterGlobalFunction("const int get_jjPlayerCount()", asFUNCTION(get_jjPlayerCount), asCALL_CDECL);
 		engine->RegisterGlobalFunction("const int get_jjLocalPlayerCount()", asFUNCTION(get_jjLocalPlayerCount), asCALL_CDECL);
+		/** @deprecated Use @ref jjLocalPlayers or @ref jjPlayers instead, or the player a hook gets as its parameter. */
 		engine->RegisterGlobalFunction("jjPLAYER@ get_jjP()", asFUNCTION(get_jjP), asCALL_CDECL); // Deprecated
+		/**
+		 * @brief Alias of @ref jjP, the only global without the `jj` prefix
+		 * @deprecated Use @ref jjLocalPlayers or @ref jjPlayers instead, or the player a hook gets as its parameter.
+		 */
 		engine->RegisterGlobalFunction("jjPLAYER@ get_p()", asFUNCTION(get_jjP), asCALL_CDECL); // Deprecated
 		engine->RegisterGlobalFunction("jjPLAYER@ get_jjPlayers(uint8)", asFUNCTION(get_jjPlayers), asCALL_CDECL);
 		engine->RegisterGlobalFunction("jjPLAYER@ get_jjLocalPlayers(uint8)", asFUNCTION(get_jjLocalPlayers), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("WEAPON");
+		/**
+		 * @brief Weapon a player can use
+		 *
+		 * Numbered from 1, so plain numbers 1 to 9 work in their place, e.g. as an index of @ref jjPLAYER::ammo or @ref jjWeapons.
+		 */
 		engine->RegisterEnum("Weapon");
 		engine->RegisterEnumValue("Weapon", "BLASTER", 1);
 		engine->RegisterEnumValue("Weapon", "BOUNCER", 2);
@@ -1610,40 +1817,56 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Weapon", "RF", 5);
 		engine->RegisterEnumValue("Weapon", "TOASTER", 6);
 		engine->RegisterEnumValue("Weapon", "TNT", 7);
-		engine->RegisterEnumValue("Weapon", "GUN8", 8);
-		engine->RegisterEnumValue("Weapon", "GUN9", 9);
-		engine->RegisterEnumValue("Weapon", "CURRENT", 0);
+		engine->RegisterEnumValue("Weapon", "GUN8", 8);	///< Pepper spray, or the fireball gun when it is enabled
+		engine->RegisterEnumValue("Weapon", "GUN9", 9);	///< Electro blaster, or the blade gun when it is enabled
+		engine->RegisterEnumValue("Weapon", "CURRENT", 0);	///< The weapon the player has selected
+		/**
+		 * @brief How a weapon fires while the fire key is held
+		 *
+		 * Used by @ref jjWEAPON::style.
+		 */
 		engine->RegisterEnum("Style");
-		engine->RegisterEnumValue("Style", "NORMAL", wsNORMAL);
-		engine->RegisterEnumValue("Style", "MISSILE", wsMISSILE);
-		engine->RegisterEnumValue("Style", "POPCORN", wsPOPCORN);
-		engine->RegisterEnumValue("Style", "CAPPED", wsCAPPED);
+		engine->RegisterEnumValue("Style", "NORMAL", wsNORMAL);	///< Fires repeatedly, as fast as @ref jjPLAYER::fastfire allows
+		engine->RegisterEnumValue("Style", "MISSILE", wsMISSILE);	///< Fires once per press of the fire key
+		engine->RegisterEnumValue("Style", "POPCORN", wsPOPCORN);	///< Fires repeatedly by @ref jjPLAYER::fastfire, but never faster than a fixed limit
+		engine->RegisterEnumValue("Style", "CAPPED", wsCAPPED);	///< Like NORMAL, but pressing fire faster doesn't beat @ref jjPLAYER::fastfire
+		/**
+		 * @brief Older name of CAPPED
+		 * @deprecated Use @ref WEAPON::CAPPED instead, this is only its older name.
+		 */
 		engine->RegisterEnumValue("Style", "TUNA", wsCAPPED); // Deprecated
 		engine->SetDefaultNamespace("SPREAD");
+		/**
+		 * @brief How many bullets a weapon fires at once and where
+		 *
+		 * Used by @ref jjWEAPON::spread.
+		 */
 		engine->RegisterEnum("Spread");
-		engine->RegisterEnumValue("Spread", "NORMAL", wspNORMAL);
-		engine->RegisterEnumValue("Spread", "ICE", wspNORMALORDIRECTIONANDAIM);
-		engine->RegisterEnumValue("Spread", "ICEPU", wspDIRECTIONANDAIM);
-		engine->RegisterEnumValue("Spread", "RF", wspDOUBLEORTRIPLE);
-		engine->RegisterEnumValue("Spread", "RFNORMAL", wspDOUBLE);
-		engine->RegisterEnumValue("Spread", "RFPU", wspTRIPLE);
-		engine->RegisterEnumValue("Spread", "TOASTER", wspREFLECTSFASTFIRE);
-		engine->RegisterEnumValue("Spread", "GUN8", wspNORMALORBBGUN);
-		engine->RegisterEnumValue("Spread", "PEPPERSPRAY", wspBBGUN);
+		engine->RegisterEnumValue("Spread", "NORMAL", wspNORMAL);	///< One bullet
+		engine->RegisterEnumValue("Spread", "ICE", wspNORMALORDIRECTIONANDAIM);	///< NORMAL without a powerup, ICEPU with it
+		engine->RegisterEnumValue("Spread", "ICEPU", wspDIRECTIONANDAIM);	///< Two bullets, one where the player faces and one where it aims
+		engine->RegisterEnumValue("Spread", "RF", wspDOUBLEORTRIPLE);	///< RFNORMAL without a powerup, RFPU with it
+		engine->RegisterEnumValue("Spread", "RFNORMAL", wspDOUBLE);	///< Two bullets, angled up and down
+		engine->RegisterEnumValue("Spread", "RFPU", wspTRIPLE);	///< Three bullets, angled up, straight and angled down
+		engine->RegisterEnumValue("Spread", "TOASTER", wspREFLECTSFASTFIRE);	///< One bullet whose speed depends partly on @ref jjPLAYER::fastfire
+		engine->RegisterEnumValue("Spread", "GUN8", wspNORMALORBBGUN);	///< NORMAL when the fireball gun is enabled, PEPPERSPRAY otherwise
+		engine->RegisterEnumValue("Spread", "PEPPERSPRAY", wspBBGUN);	///< Two bullets of pepper spray
 		engine->SetDefaultNamespace("GEM");
+		/** @brief Color of a gem */
 		engine->RegisterEnum("Color");
 		engine->RegisterEnumValue("Color", "RED", 1);
 		engine->RegisterEnumValue("Color", "GREEN", 2);
 		engine->RegisterEnumValue("Color", "BLUE", 3);
 		engine->RegisterEnumValue("Color", "PURPLE", 4);
 		engine->SetDefaultNamespace("SHIELD");
+		/** @brief Shield a player can have */
 		engine->RegisterEnum("Shield");
-		engine->RegisterEnumValue("Shield", "NONE", 0);
+		engine->RegisterEnumValue("Shield", "NONE", 0);	///< No shield
 		engine->RegisterEnumValue("Shield", "FIRE", 1);
-		engine->RegisterEnumValue("Shield", "BUBBLE", 2);
-		engine->RegisterEnumValue("Shield", "WATER", 2);
-		engine->RegisterEnumValue("Shield", "LIGHTNING", 3);
-		engine->RegisterEnumValue("Shield", "PLASMA", 3);
+		engine->RegisterEnumValue("Shield", "BUBBLE", 2);	///< Water shield, same as WATER
+		engine->RegisterEnumValue("Shield", "WATER", 2);	///< Same as BUBBLE
+		engine->RegisterEnumValue("Shield", "LIGHTNING", 3);	///< Same as PLASMA
+		engine->RegisterEnumValue("Shield", "PLASMA", 3);	///< Same as LIGHTNING
 		engine->RegisterEnumValue("Shield", "LASER", 4);
 
 		engine->SetDefaultNamespace("");
@@ -1715,9 +1938,16 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjPLAYER", "const int clientID", asOFFSET(jjPLAYER, clientID));
 		engine->RegisterObjectMethod("jjPLAYER", "int8 get_playerID() const", asMETHOD(jjPLAYER, get_playerID), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_localPlayerID() const", asMETHOD(jjPLAYER, get_localPlayerID), asCALL_THISCALL);
+		/**
+		 * @brief Whether the player isn't on the blue team
+		 *
+		 * Also true for the green and yellow teams, use team instead.
+		 * @partialsupport Teams aren't tracked for scripts yet, so it's currently always false.
+		 */
 		engine->RegisterObjectProperty("jjPLAYER", "const bool teamRed", asOFFSET(jjPLAYER, team));
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_running() const", asMETHOD(jjPLAYER, get_running), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool set_running(bool)", asMETHOD(jjPLAYER, set_running), asCALL_THISCALL);
+		/** @deprecated Use @ref jjPLAYER::doubleJumpCount instead, which also supports more jumps in the air. */
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_alreadyDoubleJumped() const", asMETHOD(jjPLAYER, get_alreadyDoubleJumped), asCALL_THISCALL); // Deprecated
 		engine->RegisterObjectMethod("jjPLAYER", "bool set_alreadyDoubleJumped(bool)", asMETHOD(jjPLAYER, set_alreadyDoubleJumped), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_doubleJumpCount() const", asMETHOD(jjPLAYER, get_doubleJumpCount), asCALL_THISCALL);
@@ -1793,13 +2023,18 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "bool warpToID(uint8 warpID, bool fast = false)", asMETHOD(jjPLAYER, warpToID), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("CHAR");
+		/**
+		 * @brief Character a player can be
+		 *
+		 * Each value is the index of the animation set the character uses.
+		 */
 		engine->RegisterEnum("Char");
 		engine->RegisterEnumValue("Char", "JAZZ", Legacy::AnimationTables::GetSetID(mJAZZ, versionTSF));
 		engine->RegisterEnumValue("Char", "SPAZ", Legacy::AnimationTables::GetSetID(mSPAZ, versionTSF));
 		engine->RegisterEnumValue("Char", "LORI", Legacy::AnimationTables::GetSetID(mLORI, versionTSF));
 
 		engine->RegisterEnumValue("Char", "BIRD", Legacy::AnimationTables::GetSetID(mBIRD, versionTSF));
-		engine->RegisterEnumValue("Char", "BIRD2", Legacy::AnimationTables::GetSetID(mCHUCK, versionTSF));
+		engine->RegisterEnumValue("Char", "BIRD2", Legacy::AnimationTables::GetSetID(mCHUCK, versionTSF));	///< Bird using the sprites of Chuck
 		engine->RegisterEnumValue("Char", "FROG", Legacy::AnimationTables::GetSetID(mFROG, versionTSF));
 		engine->SetDefaultNamespace("");
 
@@ -1811,8 +2046,9 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char set_charOrig(CHAR::Char)", asMETHOD(jjPLAYER, set_charOrig), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("TEAM");
+		/** @brief Team in team-based game modes */
 		engine->RegisterEnum("Color");
-		engine->RegisterEnumValue("Color", "NEUTRAL", -1);
+		engine->RegisterEnumValue("Color", "NEUTRAL", -1);	///< No team
 		engine->RegisterEnumValue("Color", "BLUE", 0);
 		engine->RegisterEnumValue("Color", "RED", 1);
 		engine->RegisterEnumValue("Color", "GREEN", 2);
@@ -1820,12 +2056,22 @@ namespace Jazz2::Scripting
 		engine->SetDefaultNamespace("");
 
 		engine->SetDefaultNamespace("CHAT");
+		/**
+		 * @brief Kind of a chat message
+		 *
+		 * @partialsupport Currently not used, chat hooks aren't called.
+		 */
 		engine->RegisterEnum("Type");
-		engine->RegisterEnumValue("Type", "NORMAL", 0);
-		engine->RegisterEnumValue("Type", "TEAMCHAT", 1);
-		engine->RegisterEnumValue("Type", "WHISPER", 2);
-		engine->RegisterEnumValue("Type", "ME", 3);
+		engine->RegisterEnumValue("Type", "NORMAL", 0);	///< Message to everyone
+		engine->RegisterEnumValue("Type", "TEAMCHAT", 1);	///< Message to the sender's team
+		engine->RegisterEnumValue("Type", "WHISPER", 2);	///< Private message to one player
+		engine->RegisterEnumValue("Type", "ME", 3);	///< Action message, as sent by the `/me` command
 		engine->SetDefaultNamespace("");
+		/**
+		 * @brief Team the player belongs to
+		 *
+		 * A @ref TEAM::Color value. Teams aren't tracked for scripts yet, so it can't be relied on.
+		 */
 		engine->RegisterObjectProperty("jjPLAYER", "const TEAM::Color team", asOFFSET(jjPLAYER, team));
 
 		engine->RegisterObjectMethod("jjPLAYER", "void kill()", asMETHOD(jjPLAYER, kill), asCALL_THISCALL);
@@ -1835,29 +2081,79 @@ namespace Jazz2::Scripting
 		//engine->RegisterGlobalFunction("array<jjPLAYER@>@ jjPlayersWithClientID(int clientID)", asFUNCTION(getPlayersWithClientID), asCALL_CDECL);*/
 
 		engine->SetDefaultNamespace("TIMER");
+		/** @brief State of a player's timer */
 		engine->RegisterEnum("State");
 		engine->RegisterEnumValue("State", "STOPPED", 0);
 		engine->RegisterEnumValue("State", "STARTED", 1);
 		engine->RegisterEnumValue("State", "PAUSED", 2);
 		engine->SetDefaultNamespace("STRING");
+		/** @brief How drawn text is styled or animated */
 		engine->RegisterEnum("Mode");
 		engine->RegisterEnumValue("Mode", "NORMAL", 0);
 		engine->RegisterEnumValue("Mode", "DARK", 1);
-		engine->RegisterEnumValue("Mode", "RIGHTALIGN", 2);
+		engine->RegisterEnumValue("Mode", "RIGHTALIGN", 2);	///< Text ends at the given position instead of starting there
 		engine->RegisterEnumValue("Mode", "BOUNCE", 3);
 		engine->RegisterEnumValue("Mode", "SPIN", 4);
 		engine->RegisterEnumValue("Mode", "PALSHIFT", 5);
+		/** @brief Size of text */
 		engine->RegisterEnum("Size");
 		engine->RegisterEnumValue("Size", "SMALL", 1);
 		engine->RegisterEnumValue("Size", "MEDIUM", 0);
 		engine->RegisterEnumValue("Size", "LARGE", 2);
 		engine->SetDefaultNamespace("");
 
+		/**
+		 * @brief Shows a message to the local player
+		 *
+		 * Small text is added to the messages at the bottom of the screen, other sizes are shown in big letters the
+		 * way a Text event shows text.
+		 * @param text Text of the message
+		 * @param sendToAll Currently ignored
+		 * @param size @ref STRING::Size of the text
+		 * @partialsupport The `sendToAll` parameter is currently ignored.
+		 */
 		engine->RegisterGlobalFunction("void jjAlert(const ::string &in text, bool sendToAll = false, STRING::Size size = STRING::SMALL)", asFUNCTION(jjAlert), asCALL_CDECL);
+		/**
+		 * @brief Writes text to the log
+		 *
+		 * @param text Text to write
+		 * @param timestamp Currently ignored
+		 * @partialsupport The text isn't shown in the game. The `timestamp` parameter is currently ignored.
+		 */
 		engine->RegisterGlobalFunction("void jjPrint(const ::string &in text, bool timestamp = false)", asFUNCTION(jjPrint), asCALL_CDECL);
+		/**
+		 * @brief Writes debugging text to the log
+		 *
+		 * Written as a debug message, so it only appears when the log includes those.
+		 * @param text Text to write
+		 * @param timestamp Currently ignored
+		 * @partialsupport The `timestamp` parameter is currently ignored.
+		 */
 		engine->RegisterGlobalFunction("void jjDebug(const ::string &in text, bool timestamp = false)", asFUNCTION(jjDebug), asCALL_CDECL);
+		/**
+		 * @brief Sends a line of chat
+		 *
+		 * Currently the text is only added to the messages at the bottom of the screen and to the log. Commands,
+		 * text starting with `/`, are ignored.
+		 * @param text Text of the message
+		 * @param teamchat Currently ignored
+		 */
 		engine->RegisterGlobalFunction("void jjChat(const ::string &in text, bool teamchat = false)", asFUNCTION(jjChat), asCALL_CDECL);
+		/**
+		 * @brief Writes a console message
+		 *
+		 * The text is added to the messages at the bottom of the screen as an important message, and to the log.
+		 * @param text Text of the message
+		 * @param sendToAll Currently ignored
+		 * @partialsupport The `sendToAll` parameter is currently ignored.
+		 */
 		engine->RegisterGlobalFunction("void jjConsole(const ::string &in text, bool sendToAll = false)", asFUNCTION(jjConsole), asCALL_CDECL);
+		/**
+		 * @brief Writes text to the log
+		 *
+		 * Written as a debug message, so it only appears when the log includes those. The text isn't shown in the
+		 * game.
+		 */
 		engine->RegisterGlobalFunction("void jjSpy(const ::string &in text)", asFUNCTION(jjSpy), asCALL_CDECL);
 
 		engine->RegisterObjectMethod("jjPLAYER", "TIMER::State get_timerState() const", asMETHOD(jjPLAYER, get_timerState), asCALL_THISCALL);
@@ -1870,8 +2166,10 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "int get_timerTime() const", asMETHOD(jjPLAYER, get_timerTime), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_timerTime(int)", asMETHOD(jjPLAYER, set_timerTime), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "void timerFunction(const string functionName)", asMETHOD(jjPLAYER, timerFunction), asCALL_THISCALL);
+		/** @brief Callback that takes no arguments */
 		engine->RegisterFuncdef("void jjVOIDFUNC()");
 		engine->RegisterObjectMethod("jjPLAYER", "void timerFunction(jjVOIDFUNC@ function)", asMETHOD(jjPLAYER, timerFunctionPtr), asCALL_THISCALL);
+		/** @brief Callback that takes a player */
 		engine->RegisterFuncdef("void jjVOIDFUNCPLAYER(jjPLAYER@)");
 		engine->RegisterObjectMethod("jjPLAYER", "void timerFunction(jjVOIDFUNCPLAYER@ function)", asMETHOD(jjPLAYER, timerFunctionFuncPtr), asCALL_THISCALL);
 
@@ -1886,20 +2184,26 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "void showText(uint textID, uint offset, STRING::Size size = STRING::SMALL)", asMETHOD(jjPLAYER, showTextByID), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("FLIGHT");
+		/**
+		 * @brief How a player is flying
+		 *
+		 * Used by @ref jjPLAYER::fly.
+		 */
 		engine->RegisterEnum("Mode");
-		engine->RegisterEnumValue("Mode", "NONE", 0);
-		engine->RegisterEnumValue("Mode", "FLYCARROT", 1);
-		engine->RegisterEnumValue("Mode", "AIRBOARD", -1);
+		engine->RegisterEnumValue("Mode", "NONE", 0);	///< Not flying
+		engine->RegisterEnumValue("Mode", "FLYCARROT", 1);	///< Flying with a copter, as from a fly carrot
+		engine->RegisterEnumValue("Mode", "AIRBOARD", -1);	///< Riding an airboard
 		engine->SetDefaultNamespace("");
 		engine->RegisterObjectMethod("jjPLAYER", "FLIGHT::Mode get_fly() const", asMETHOD(jjPLAYER, get_fly), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "FLIGHT::Mode set_fly(FLIGHT::Mode)", asMETHOD(jjPLAYER, set_fly), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("DIRECTION");
+		/** @brief Direction to fire in */
 		engine->RegisterEnum("Dir");
 		engine->RegisterEnumValue("Dir", "RIGHT", dirRIGHT);
 		engine->RegisterEnumValue("Dir", "LEFT", dirLEFT);
 		engine->RegisterEnumValue("Dir", "UP", dirUP);
-		engine->RegisterEnumValue("Dir", "CURRENT", dirCURRENT);
+		engine->RegisterEnumValue("Dir", "CURRENT", dirCURRENT);	///< Where the player currently aims
 		engine->SetDefaultNamespace("");
 
 		engine->RegisterObjectMethod("jjPLAYER", "int fireBullet(uint8 gun = 0, bool depleteAmmo = true, bool requireAmmo = true, DIRECTION::Dir direction = DIRECTION::CURRENT)", asMETHOD(jjPLAYER, fireBulletDirection), asCALL_THISCALL);
@@ -1926,39 +2230,137 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::RegisterLegacyCharacters(asIScriptEngine* engine)
 	{
+		/**
+		 * @brief Options of one weapon
+		 *
+		 * Reached through @ref jjWeapons, indexed by @ref WEAPON::Weapon. These are the options the game itself plays the level
+		 * by, so changing them changes how the weapon behaves for every player.
+		 */
 		engine->RegisterObjectType("jjWEAPON", sizeof(jjWEAPON), asOBJ_REF | asOBJ_NOCOUNT);
 		engine->RegisterGlobalFunction("jjWEAPON@ get_jjWeapons(int)", asFUNCTION(get_jjWEAPON), asCALL_CDECL);
+		/**
+		 * @brief Whether the ammo of the weapon never runs out
+		 *
+		 * The HUD shows such ammo as unlimited. True by default for the blaster only. Changing it converts the ammo
+		 * every player has of the weapon accordingly.
+		 */
 		engine->RegisterObjectMethod("jjWEAPON", "bool get_infinite() const", asFUNCTION(get_jjWEAPON_infinite), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjWEAPON", "bool set_infinite(bool)", asFUNCTION(set_jjWEAPON_infinite), asCALL_CDECL_OBJFIRST);
+		/**
+		 * @brief Whether the ammo is refilled to the maximum when the level starts
+		 *
+		 * False by default.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool replenishes", asOFFSET(jjWEAPON, Replenishes));
+		/**
+		 * @brief Whether an active shield fires in place of the weapon
+		 *
+		 * True by default for the blaster only.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByShield", asOFFSET(jjWEAPON, ReplacedByShield));
+		/**
+		 * @brief Whether the weapon fires air bubbles under water
+		 *
+		 * False by default.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool replacedByBubbles", asOFFSET(jjWEAPON, ReplacedByBubbles));
+		/**
+		 * @brief Whether gun crates and gun barrels can drop ammo of the weapon
+		 *
+		 * True by default for every weapon but the blaster.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromGunCrates", asOFFSET(jjWEAPON, ComesFromGunCrates));
+		/**
+		 * @brief Whether bullets turn towards where the player aims over a few shots
+		 *
+		 * Kept for scripts, the game's own weapons don't use it.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool gradualAim", asOFFSET(jjWEAPON, GradualAim));
+		/**
+		 * @brief How many times as much ammo pickups give
+		 *
+		 * The ammo shown on the HUD is divided by it. 1 by default.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "int multiplier", asOFFSET(jjWEAPON, Multiplier));
+		/**
+		 * @brief Most ammo of the weapon a player can carry
+		 *
+		 * 0 or less means the default of 99, higher values are capped at 255. -1 by default.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "int maximum", asOFFSET(jjWEAPON, Maximum));
+		/**
+		 * @brief Gems a player hit by the weapon loses in Treasure Hunt
+		 *
+		 * 3 by default.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "int gemsLost", asOFFSET(jjWEAPON, GemsLost));
+		/**
+		 * @brief Gems a player hit by the powered-up weapon loses in Treasure Hunt
+		 *
+		 * 3 by default.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "int gemsLostPowerup", asOFFSET(jjWEAPON, GemsLostPowerup));
+		/**
+		 * @brief How the weapon fires while the fire key is held
+		 *
+		 * A @ref WEAPON::Style value.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "int8 style", asOFFSET(jjWEAPON, Style));
+		/**
+		 * @brief How many bullets the weapon fires at once
+		 *
+		 * @partialsupport Currently only used by weapons whose bullets a script behavior controls.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "SPREAD::Spread spread", asOFFSET(jjWEAPON, Spread));
+		/** @brief Whether the sound of firing the weapon is played */
 		engine->RegisterObjectProperty("jjWEAPON", "bool defaultSample", asOFFSET(jjWEAPON, DefaultSample));
+		/**
+		 * @brief Whether the weapon can be used in the level
+		 *
+		 * When false, players can't fire it and lose their ammo of it when the level starts. True by default.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool allowed", asOFFSET(jjWEAPON, Allowed));
+		/**
+		 * @brief Whether the weapon can be powered up in the level
+		 *
+		 * When false, players don't get or keep the powerup of it. True by default.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool allowedPowerup", asOFFSET(jjWEAPON, AllowedPowerup));
+		/**
+		 * @brief Whether a companion bird fires the weapon
+		 *
+		 * Otherwise the bird fires blaster bullets, whatever weapon the player has selected.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirds", asOFFSET(jjWEAPON, ComesFromBirds));
+		/**
+		 * @brief Whether a companion bird fires the weapon powered up
+		 *
+		 * Only when comesFromBirds is true and the player has the powerup of the weapon.
+		 */
 		engine->RegisterObjectProperty("jjWEAPON", "bool comesFromBirdsPowerup", asOFFSET(jjWEAPON, ComesFromBirdsPowerup));
 
 		engine->SetDefaultNamespace("AIR");
+		/**
+		 * @brief What a character does when jump is pressed in the air
+		 *
+		 * Used by @ref jjCHARACTER::airJump.
+		 */
 		engine->RegisterEnum("Jump");
-		engine->RegisterEnumValue("Jump", "NONE", airjumpNONE);
-		engine->RegisterEnumValue("Jump", "HELICOPTER", airjumpHELICOPTER);
-		engine->RegisterEnumValue("Jump", "DOUBLEJUMP", airjumpSPAZ);
+		engine->RegisterEnumValue("Jump", "NONE", airjumpNONE);	///< Nothing
+		engine->RegisterEnumValue("Jump", "HELICOPTER", airjumpHELICOPTER);	///< Helicopter ears
+		engine->RegisterEnumValue("Jump", "DOUBLEJUMP", airjumpSPAZ);	///< Another jump in the air
 		engine->SetDefaultNamespace("GROUND");
+		/**
+		 * @brief What a character does when jump is pressed while crouching
+		 *
+		 * Used by @ref jjCHARACTER::groundJump.
+		 */
 		engine->RegisterEnum("Jump");
-		engine->RegisterEnumValue("Jump", "CROUCH", groundjumpNONE);
-		engine->RegisterEnumValue("Jump", "JUMP", groundjumpREGULARJUMP);
-		engine->RegisterEnumValue("Jump", "JAZZ", groundjumpJAZZ);
-		engine->RegisterEnumValue("Jump", "SPAZ", groundjumpSPAZ);
-		engine->RegisterEnumValue("Jump", "LORI", groundjumpLORI);
+		engine->RegisterEnumValue("Jump", "CROUCH", groundjumpNONE);	///< Keeps crouching without jumping
+		engine->RegisterEnumValue("Jump", "JUMP", groundjumpREGULARJUMP);	///< A plain jump that doesn't turn into a buttstomp
+		engine->RegisterEnumValue("Jump", "JAZZ", groundjumpJAZZ);	///< The move of Jazz
+		engine->RegisterEnumValue("Jump", "SPAZ", groundjumpSPAZ);	///< The move of Spaz
+		engine->RegisterEnumValue("Jump", "LORI", groundjumpLORI);	///< The move of Lori
 		engine->SetDefaultNamespace("");
 		engine->RegisterObjectType("jjCHARACTER", sizeof(jjCHARACTER), asOBJ_REF | asOBJ_NOCOUNT);
 		engine->RegisterGlobalFunction("jjCHARACTER@ get_jjCharacters(CHAR::Char)", asFUNCTION(get_jjCHARACTER), asCALL_CDECL);

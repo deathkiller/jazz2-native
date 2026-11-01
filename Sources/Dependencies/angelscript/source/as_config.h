@@ -386,8 +386,9 @@
 
 // Emscripten compiler toolchain
 // ref: https://emscripten.org/
-#if defined(__EMSCRIPTEN__)
-  #define AS_MAX_PORTABILITY
+// Native calls go through thunks, see angelscript.h
+#if defined(__EMSCRIPTEN__) && !defined(AS_MAX_PORTABILITY) && !defined(AS_NATIVE_THUNKS)
+  #define AS_NATIVE_THUNKS
 #endif
 
 
@@ -1392,10 +1393,19 @@
 // conventions, then compile with AS_MAX_PORTABILITY
 #if (!defined(AS_X86) && !defined(AS_SH4) && !defined(AS_MIPS) && !defined(AS_PPC) && \
 	 !defined(AS_PPC_64) && !defined(AS_XENON) && !defined(AS_X64_GCC) && !defined(AS_X64_MSVC) && \
-	 !defined(AS_ARM) && !defined(AS_ARM64) && !defined(AS_X64_MINGW) && !defined(AS_RISCV64) && !defined(AS_E2K))
+	 !defined(AS_ARM) && !defined(AS_ARM64) && !defined(AS_X64_MINGW) && !defined(AS_RISCV64) && !defined(AS_E2K)) && \
+	!defined(AS_NATIVE_THUNKS)
 	#ifndef AS_MAX_PORTABILITY
 		#define AS_MAX_PORTABILITY
 	#endif
+#endif
+
+// Thunks are independent of the platform calling conventions, so the platform doesn't
+// need to be known (AS_MAX_PORTABILITY defined by the user disables thunks earlier)
+#if defined(AS_NATIVE_THUNKS)
+	#undef AS_MAX_PORTABILITY
+	#undef AS_NO_THISCALL_FUNCTOR_METHOD
+	#undef RETURN_VALUE_MAX_SIZE
 #endif
 
 // If the platform doesn't support atomic instructions we can't allow

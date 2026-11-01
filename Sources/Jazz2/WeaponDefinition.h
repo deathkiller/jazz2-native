@@ -5,6 +5,8 @@
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 
+#include <memory>
+
 using namespace Death::Containers;
 
 namespace Jazz2
@@ -160,6 +162,8 @@ namespace Jazz2
 	{
 		/** @brief Name of the sound of firing, from the metadata of the shot, or of the player */
 		String Sound;
+		/** @brief Index of an embedded sound of firing (see @ref WeaponsDescription::Sounds) in place of @ref Sound, -1 for none */
+		std::int32_t SoundIndex = -1;
 		/** @brief Frames between shots */
 		float Cooldown = 30.0f;
 		/** @brief Frames each fast fire takes from the cooldown */
@@ -176,6 +180,8 @@ namespace Jazz2
 		std::uint8_t ShotsPerFire = 1;
 		/** @brief Whether it fires under water */
 		bool AllowedInWater = true;
+		/** @brief Whether it fires only while the player stands, not while walking, running or on a pole, as the thunderbolt */
+		bool StandStill = false;
 		/** @brief Whether the sound plays in a loop while it fires */
 		bool LoopSound = false;
 		/** @brief Whether the muzzle flashes */
@@ -196,6 +202,8 @@ namespace Jazz2
 		WeaponSprite AltSprite;
 		/** @brief Speed in pixels a frame */
 		float Speed = 10.0f;
+		/** @brief Speed added the way it flies each frame, below 0 it slows down to a stop */
+		float Acceleration = 0.0f;
 		/** @brief Speed added downwards each frame */
 		float Gravity = 0.0f;
 		/** @brief Frames it lasts */
@@ -253,47 +261,75 @@ namespace Jazz2
 		}
 	};
 
+	/** @brief How a custom weapon fires and what, and how it looks, only a custom weapon has it */
+	struct CustomWeaponOptions
+	{
+		/** @brief How it fires */
+		WeaponFireOptions Fire;
+		/** @brief Shot it fires */
+		WeaponShotOptions Shot;
+		/** @brief Shot it fires powered up */
+		WeaponShotOptions ShotPowered;
+		/** @brief Icon on the screen, empty for the icon of the weapon of the game */
+		WeaponSprite HudIcon;
+		/** @brief Icon on the screen while powered up, empty for @ref HudIcon */
+		WeaponSprite HudIconPowered;
+		/** @brief Sprite of its ammo, empty for the ammo of the weapon of the game */
+		WeaponSprite Pickup;
+		/** @brief Weapon of the game it was made from, it keeps its rules for crates and bosses, @ref WeaponType::Unknown for the weapon it replaces */
+		WeaponType BasedOn = WeaponType::Unknown;
+
+		/** @brief Returns the weapon of the game it was made from, @p slot if it's not set */
+		WeaponType GetBasedOn(WeaponType slot) const {
+			return (BasedOn != WeaponType::Unknown ? BasedOn : slot);
+		}
+
+		bool operator==(const CustomWeaponOptions& other) const;
+		bool operator!=(const CustomWeaponOptions& other) const {
+			return !operator==(other);
+		}
+	};
+
 	/**
 		@brief What a level makes of one of the weapons
 
 		@ref WeaponKind::Stock keeps the weapon of the game and changes only its @ref Options and ammo.
-		@ref WeaponKind::Custom fires shots of @ref Shot (@ref ShotPowered when powered up) as @ref Fire says.
+		@ref WeaponKind::Custom fires shots as its @ref GetCustom() says, which only a custom weapon has allocated.
 		@ref WeaponKind::Script is set up by the script of the level, which gets @ref ScriptParams.
 	*/
 	struct WeaponDefinition
 	{
 		/** @brief Name, empty for the name of the weapon of the game */
 		String Name;
-		/** @brief How it fires, for @ref WeaponKind::Custom */
-		WeaponFireOptions Fire;
-		/** @brief Shot it fires, for @ref WeaponKind::Custom */
-		WeaponShotOptions Shot;
-		/** @brief Shot it fires powered up, for @ref WeaponKind::Custom */
-		WeaponShotOptions ShotPowered;
-		/** @brief Icon on the screen */
-		WeaponSprite HudIcon;
-		/** @brief Icon on the screen while powered up */
-		WeaponSprite HudIconPowered;
-		/** @brief Sprite of its ammo */
-		WeaponSprite Pickup;
-		/** @brief Script file that has the weapon, for @ref WeaponKind::Script */
-		String ScriptLibrary;
-		/** @brief Script code that creates the weapon, for @ref WeaponKind::Script */
-		String ScriptConstructor;
 		/** @brief Parameters the script gets, for @ref WeaponKind::Script */
 		SmallVector<std::uint8_t, 0> ScriptParams;
-		/** @brief Properties of a newer version, kept as they are */
-		SmallVector<std::uint8_t, 0> UnknownProperties;
 		/** @brief Options as JJ2+ scripts know them */
 		WeaponOptions Options = {};
 		/** @brief Ammo a player has when the level starts, in whole rounds */
-		std::int32_t StartAmmo = 0;
+		std::uint16_t StartAmmo = 0;
 		/** @brief What the level makes of it */
 		WeaponKind Kind = WeaponKind::Stock;
 		/** @brief Event that becomes an ammo crate of it, 0 for none */
 		std::uint8_t AmmoCrateEvent = 0;
-		/** @brief Weapon of the game it was made from, it keeps its rules for crates and bosses */
-		WeaponType BasedOn = WeaponType::Unknown;
+
+		WeaponDefinition() = default;
+		WeaponDefinition(const WeaponDefinition& other);
+		WeaponDefinition(WeaponDefinition&& other) noexcept = default;
+		WeaponDefinition& operator=(const WeaponDefinition& other);
+		WeaponDefinition& operator=(WeaponDefinition&& other) noexcept = default;
+
+		/** @brief Returns how it fires and what, the defaults if it has none of its own */
+		const CustomWeaponOptions& GetCustom() const;
+		/** @brief Returns how it fires and what to change, made with the defaults if it has none yet */
+		CustomWeaponOptions& GetCustom();
+		/** @brief Returns `true` if it has options of a custom weapon of its own */
+		bool HasCustom() const {
+			return (_custom != nullptr);
+		}
+		/** @brief Forgets the options of a custom weapon */
+		void ResetCustom() {
+			_custom = nullptr;
+		}
 
 		/** @brief Returns the weapon of the game */
 		static WeaponDefinition MakeDefault(WeaponType weaponType);
@@ -307,16 +343,70 @@ namespace Jazz2
 		bool operator!=(const WeaponDefinition& other) const {
 			return !operator==(other);
 		}
+
+	private:
+		// Only a custom weapon has it, most weapons of a level aren't custom
+		std::unique_ptr<CustomWeaponOptions> _custom;
 	};
 
-	/** @brief Image of a custom weapon, frames side by side */
+	/**
+		@brief What a level keeps of a weapon only for the editor
+
+		The game doesn't read it (see @ref Formats::WeaponsChunk::Read()), so it isn't a part of @ref WeaponDefinition.
+	*/
+	struct WeaponEditorData
+	{
+		/** @brief Script file that has the weapon, for @ref WeaponKind::Script */
+		String ScriptLibrary;
+		/** @brief Script code that creates the weapon, for @ref WeaponKind::Script */
+		String ScriptConstructor;
+		/** @brief Properties of a newer version, kept as they are */
+		SmallVector<std::uint8_t, 0> UnknownProperties;
+
+		/** @brief Returns `true` if there's nothing to keep */
+		bool IsEmpty() const {
+			return (ScriptLibrary.empty() && ScriptConstructor.empty() && UnknownProperties.empty());
+		}
+
+		bool operator==(const WeaponEditorData& other) const;
+		bool operator!=(const WeaponEditorData& other) const {
+			return !operator==(other);
+		}
+	};
+
+	/** @brief Sound of a custom weapon, a file kept in the level */
+	struct WeaponSound
+	{
+		/** @brief File name, its extension tells the format (`.wav`, `.ogg`) */
+		String Name;
+		/** @brief Contents of the file */
+		SmallVector<std::uint8_t, 0> Data;
+
+		bool operator==(const WeaponSound& other) const;
+		bool operator!=(const WeaponSound& other) const {
+			return !operator==(other);
+		}
+	};
+
+	/**
+		@brief Image of a custom weapon, a sheet of frames in rows and columns
+
+		The frames go by rows from the top left, as @cpp FrameConfiguration @ce of a metadata file has them. A sheet
+		that isn't a whole number of frames wide or high leaves the rest out.
+	*/
 	struct WeaponImage
 	{
-		/** @brief Width of a frame */
-		std::int32_t FrameWidth = 0;
-		/** @brief Height of a frame */
-		std::int32_t FrameHeight = 0;
-		/** @brief Number of frames */
+		/** @brief Palette index of each pixel of the sheet, by rows, 0 is transparent */
+		SmallVector<std::uint8_t, 0> Pixels;
+		/** @brief Width of the sheet */
+		std::int32_t Width = 0;
+		/** @brief Height of the sheet */
+		std::int32_t Height = 0;
+		/** @brief Frames in a row */
+		std::int32_t FrameColumns = 1;
+		/** @brief Rows of frames */
+		std::int32_t FrameRows = 1;
+		/** @brief Number of frames, at most @ref FrameColumns times @ref FrameRows */
 		std::int32_t FrameCount = 0;
 		/** @brief Speed of the animation, as `FrameRate` of a metadata file */
 		float FrameRate = 10.0f;
@@ -324,8 +414,15 @@ namespace Jazz2
 		std::int32_t HotspotX = 0;
 		/** @brief Point of a frame that's at the position of the actor */
 		std::int32_t HotspotY = 0;
-		/** @brief Palette index of each pixel, frames one after another, 0 is transparent */
-		SmallVector<std::uint8_t, 0> Pixels;
+
+		/** @brief Returns the width of a frame */
+		std::int32_t GetFrameWidth() const {
+			return (FrameColumns > 0 ? Width / FrameColumns : 0);
+		}
+		/** @brief Returns the height of a frame */
+		std::int32_t GetFrameHeight() const {
+			return (FrameRows > 0 ? Height / FrameRows : 0);
+		}
 
 		bool operator==(const WeaponImage& other) const;
 		bool operator!=(const WeaponImage& other) const {
@@ -340,6 +437,8 @@ namespace Jazz2
 		WeaponDefinition Weapons[std::int32_t(WeaponType::Count)];
 		/** @brief Images the weapons use */
 		SmallVector<WeaponImage, 0> Images;
+		/** @brief Sounds the weapons use */
+		SmallVector<WeaponSound, 0> Sounds;
 		/** @brief Argument of the hook the weapons of the script share, -1 for none */
 		std::int16_t ScriptHookArgument = -1;
 
@@ -357,5 +456,14 @@ namespace Jazz2
 		static String GetImageMetadataPath(const WeaponImage& image);
 		/** @brief Returns the path of the metadata of a sprite, empty if it's the sprite of the weapon of the game */
 		String GetSpriteMetadataPath(const WeaponSprite& sprite) const;
+		/**
+		 * @brief Returns the identifier a sound is played by while a level that has it is loaded
+		 *
+		 * As @ref GetImageMetadataPath(), it comes from what the sound is. Actors play it as a sound of their own (see
+		 * @ref ContentResolver::FindWeaponSound()), also on the clients of a server.
+		 */
+		static String GetSoundIdentifier(const WeaponSound& sound);
+		/** @brief Returns the identifier of the sound of firing, an embedded one or the name of one, empty for none */
+		String GetFireSoundIdentifier(const WeaponFireOptions& fire) const;
 	};
 }

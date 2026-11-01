@@ -25,10 +25,6 @@ namespace Jazz2::Actors::Weapons
 			return WeaponType::Freezer;
 		}
 
-		float GetFrozenDuration() const override {
-			return ((_upgrades & 0x1) != 0 ? 280.0f : 200.0f * 60.0f / 70.0f);
-		}
-
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;

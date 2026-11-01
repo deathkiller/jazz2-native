@@ -1388,9 +1388,9 @@ namespace Jazz2::UI
 		if (weapon >= WeaponType::Count) {
 			return nullptr;
 		}
-		const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(weapon);
+		const CustomWeaponOptions& custom = _levelHandler->GetWeaponDefinition(weapon).GetCustom();
 		bool powered = ((player->_inventory.WeaponUpgrades[(std::int32_t)weapon] & 0x01) != 0);
-		const WeaponSprite& sprite = (powered && !definition.HudIconPowered.IsEmpty() ? definition.HudIconPowered : definition.HudIcon);
+		const WeaponSprite& sprite = (powered && !custom.HudIconPowered.IsEmpty() ? custom.HudIconPowered : custom.HudIcon);
 		if (sprite.IsEmpty()) {
 			return nullptr;
 		}

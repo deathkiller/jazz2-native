@@ -13,6 +13,7 @@
 #include "Files/AutosaveService.h"
 #include "Files/ContentTileSetLibrary.h"
 #include "Files/EpisodeFile.h"
+#include "Files/JsonFile.h"
 #include "Files/PoFile.h"
 #include "Files/ZipWriter.h"
 #include "../Formats/LevelTextsChunk.h"
@@ -46,6 +47,8 @@
 #include <cstdio>
 #include <cstring>
 #include <limits>
+
+#include <jsoncpp/json.h>
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
@@ -2688,50 +2691,79 @@ namespace Jazz2::Editor
 				}
 			};
 
-			WeaponsDescription weapons;
+			LevelWeapons weapons;
 			SmallVector<std::uint8_t, 0> data;
-			Formats::WeaponsChunk::Write(weapons, data);
+			Formats::WeaponsChunk::Write(weapons, data, weapons.EditorData);
 			expect(data.empty(), "no chunk for the weapons of the game");
 
 			weapons.ScriptHookArgument = 5;
 			weapons.Weapons[3] = WeaponDefinition::MakeCustom(WeaponType::Seeker, WeaponType::Bouncer);
 			weapons.Weapons[3].Name = "Boomerang"_s;
-			weapons.Weapons[3].ShotPowered.Speed = 7.5f;
-			weapons.Weapons[3].Shot.Sprite.Image = 0;
-			weapons.Weapons[3].Fire.Sound = "Fire"_s;
+			weapons.Weapons[3].GetCustom().ShotPowered.Speed = 7.5f;
+			weapons.Weapons[3].GetCustom().Shot.Sprite.Image = 0;
+			weapons.Weapons[3].GetCustom().Fire.Sound = "Fire"_s;
+			weapons.Weapons[3].GetCustom().Fire.SoundIndex = 0;
+			weapons.Weapons[3].GetCustom().Shot.Acceleration = -0.25f;
+			weapons.Weapons[3].GetCustom().HudIcon.Image = 0;
+			weapons.Weapons[3].GetCustom().Pickup.Metadata = "Collectible/AmmoBouncer"_s;
 			weapons.Weapons[5].Options.Maximum = 40;
 			weapons.Weapons[5].Options.Infinite = true;
 			weapons.Weapons[5].StartAmmo = 12;
 			weapons.Weapons[8].Kind = WeaponKind::Script;
-			weapons.Weapons[8].ScriptLibrary = "Library.asc"_s;
-			weapons.Weapons[8].ScriptConstructor = "Ns::Weapon()"_s;
+			weapons.EditorData[8].ScriptLibrary = "Library.asc"_s;
+			weapons.EditorData[8].ScriptConstructor = "Ns::Weapon()"_s;
 			weapons.Weapons[8].ScriptParams = { 1, 2, 3 };
 			weapons.Weapons[8].AmmoCrateEvent = 77;
-			weapons.Weapons[2].UnknownProperties = { 250, 2, 0xAA, 0xBB };
+			weapons.EditorData[2].UnknownProperties = { 250, 2, 0xAA, 0xBB };
 			WeaponImage& image = weapons.Images.emplace_back();
-			image.FrameWidth = 4;
-			image.FrameHeight = 3;
-			image.FrameCount = 2;
+			// Three frames of 4 × 3 in two rows of two
+			image.Width = 8;
+			image.Height = 6;
+			image.FrameColumns = 2;
+			image.FrameRows = 2;
+			image.FrameCount = 3;
 			image.FrameRate = 8.0f;
 			image.HotspotX = 2;
 			image.HotspotY = -1;
-			for (std::int32_t i = 0; i < 4 * 3 * 2; i++) {
+			for (std::int32_t i = 0; i < 8 * 6; i++) {
 				image.Pixels.push_back(std::uint8_t(i * 7));
 			}
+			WeaponSound& sound = weapons.Sounds.emplace_back();
+			sound.Name = "zap.wav"_s;
+			sound.Data = { 'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E' };
 
-			Formats::WeaponsChunk::Write(weapons, data);
-			WeaponsDescription read;
-			expect(Formats::WeaponsChunk::Read(data, read) == Formats::WeaponsChunk::ReadResult::Success, "read back");
+			Formats::WeaponsChunk::Write(weapons, data, weapons.EditorData);
+			LevelWeapons read;
+			expect(Formats::WeaponsChunk::Read(data, read, read.EditorData) == Formats::WeaponsChunk::ReadResult::Success, "read back");
 			expect(read.ScriptHookArgument == 5 && read.Images.size() == 1 && read.Images[0] == image, "the hook and the images");
+			expect(read.Sounds.size() == 1 && read.Sounds[0] == sound, "the sounds");
+			expect(read.GetFireSoundIdentifier(read.Weapons[3].GetCustom().Fire) == WeaponsDescription::GetSoundIdentifier(sound), "an embedded sound of firing");
+			expect(!read.Weapons[5].HasCustom() && read.Weapons[3].HasCustom(), "only a custom weapon has its options allocated");
+			expect(read.Weapons[3].GetCustom().BasedOn == WeaponType::Bouncer && read.Weapons[3].GetCustom().HudIcon.Image == 0, "what it's made from and its icon");
+
+			// What only a custom weapon has isn't written for another one
+			WeaponsDescription stockOnly;
+			stockOnly.Weapons[4].StartAmmo = 3;
+			stockOnly.Weapons[4].GetCustom().HudIcon.Metadata = "UI/HUD"_s;
+			SmallVector<std::uint8_t, 0> stockData;
+			Formats::WeaponsChunk::Write(stockOnly, stockData);
+			WeaponsDescription stockRead;
+			expect(Formats::WeaponsChunk::Read(stockData, stockRead) == Formats::WeaponsChunk::ReadResult::Success && stockRead.Weapons[4].StartAmmo == 3 &&
+				!stockRead.Weapons[4].HasCustom(), "an stock weapon keeps no icon");
 			for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
-				expect(read.Weapons[i] == weapons.Weapons[i], "a weapon is the same");
+				expect(read.Weapons[i] == weapons.Weapons[i] && read.EditorData[i] == weapons.EditorData[i], "a weapon is the same");
 			}
 			SmallVector<std::uint8_t, 0> again;
-			Formats::WeaponsChunk::Write(read, again);
+			Formats::WeaponsChunk::Write(read, again, read.EditorData);
+
+			// The game skips what only the editor needs
+			WeaponsDescription game;
+			expect(Formats::WeaponsChunk::Read(data, game) == Formats::WeaponsChunk::ReadResult::Success && game.Weapons[8] == weapons.Weapons[8] &&
+				game.Weapons[8].ScriptParams.size() == 3, "read by the game");
 			expect(again.size() == data.size() && std::memcmp(again.data(), data.data(), data.size()) == 0, "written the same again, with the property it doesn't know");
 
 			// A weapon this version doesn't have is skipped
-			const std::uint8_t unknownSlot[] = { 1, 0xFF, 0xFF, 1, 20, 1, 0x55, 0 };
+			const std::uint8_t unknownSlot[] = { 1, 0xFF, 0xFF, 1, 20, 1, 0x55, 0, 0 };
 			expect(Formats::WeaponsChunk::Read(unknownSlot, read) == Formats::WeaponsChunk::ReadResult::Success && read.IsDefault(), "an unknown weapon is skipped");
 
 			SmallVector<std::uint8_t, 0> newer = data;
@@ -2770,10 +2802,17 @@ namespace Jazz2::Editor
 			expect(shots.size() == 2 && shots[0].Points.size() > 1 && shots[0].Points[1].Y < 0.0f && shots[1].Points[1].Y > 0.0f, "two RF shots spread up and down");
 
 			WeaponDefinition piercing = blaster;
-			piercing.Shot.Pierce = 1;
-			piercing.Shot.Lifetime = 600.0f;
+			piercing.GetCustom().Shot.Pierce = 1;
+			piercing.GetCustom().Shot.Lifetime = 600.0f;
 			SimulateWeapon(piercing, false, shots);
 			expect(shots.size() == 1 && shots[0].TargetHits == 1 && shots[0].End == SimulatedShotEnd::Wall, "a piercing shot passes through to the wall");
+
+			WeaponDefinition slowing = blaster;
+			slowing.GetCustom().Shot.Acceleration = -1.0f;
+			slowing.GetCustom().Shot.Lifetime = 60.0f;
+			SimulateWeapon(slowing, false, shots);
+			expect(shots.size() == 1 && shots[0].End == SimulatedShotEnd::Lifetime && shots[0].Points.back().X - shots[0].Points[0].X < 80.0f,
+				"a shot slowing down stops short of the target");
 
 			FiringRange behind;
 			behind.Muzzle = Vector2f(200.0f, 0.0f);
@@ -2803,6 +2842,110 @@ namespace Jazz2::Editor
 
 			if (problems == 0) {
 				LOGI("Weapon preview test passed");
+			}
+			return problems;
+		}
+
+		// A custom weapon written as a template and made again from it in another weapon
+		std::int32_t TestCustomWeaponTemplates()
+		{
+			std::int32_t problems = 0;
+			auto expect = [&problems](bool condition, const char* what) {
+				if (!condition) {
+					LOGE("Custom weapon templates: {}", what);
+					problems++;
+				}
+			};
+
+			WeaponsDescription weapons;
+			WeaponDefinition& weapon = weapons.Weapons[2];
+			weapon = WeaponDefinition::MakeCustom(WeaponType::Freezer, WeaponType::Seeker);
+			weapon.Name = "Template test"_s;
+			weapon.Options.Maximum = 50;
+			weapon.Options.Style = WeaponStyle::Missile;
+			CustomWeaponOptions& custom = weapon.GetCustom();
+			custom.Fire.Cooldown = 12.5f;
+			custom.Fire.AmmoPerShot = 128;
+			custom.Fire.SoundIndex = 0;
+			custom.Fire.StandStill = true;
+			custom.Shot.Acceleration = 0.25f;
+			custom.Shot.Look = ShotLook::Glow;
+			custom.Shot.FlipY = ShotFlip::Random;
+			custom.Shot.Sprite = WeaponSprite();
+			custom.Shot.Sprite.Image = 0;
+			custom.Shot.DestroysBlocksAs = WeaponType::TNT;
+			custom.ShotPowered.Speed = 3.0f;
+			custom.ShotPowered.Sprite = WeaponSprite();
+			custom.ShotPowered.Sprite.Metadata = "Weapon/Blaster"_s;
+			custom.ShotPowered.Sprite.AnimState = 2;
+			WeaponImage& image = weapons.Images.emplace_back();
+			image.Width = 8;
+			image.Height = 4;
+			image.FrameColumns = 2;
+			image.FrameCount = 2;
+			image.Pixels.resize(32);
+			WeaponSound& sound = weapons.Sounds.emplace_back();
+			sound.Name = "zap.wav"_s;
+
+			Json::Value item;
+			WriteCustomWeaponTemplate(weapon, weapons, [](std::int32_t) { return String("zap.png"_s); }, [](std::int32_t) { return String("zap.wav"_s); }, item);
+			Json::Value file(Json::objectValue);
+			file["Weapons"].append(item);
+			std::string text = WriteWeaponTemplateFile(file);
+
+			SmallVector<ScriptWeaponTemplate, 1> scriptTemplates;
+			SmallVector<CustomWeaponTemplate, 1> customTemplates;
+			std::int32_t read = ReadWeaponTemplates(StringView(text.data(), text.size()), "Weapons/Test.json"_s, scriptTemplates, &customTemplates);
+			expect(read == 1 && scriptTemplates.empty() && customTemplates.size() == 1, "a custom weapon read as one");
+			if (customTemplates.size() != 1) {
+				return problems;
+			}
+			const CustomWeaponTemplate& weaponTemplate = customTemplates[0];
+			expect(weaponTemplate.Name == "Template test"_s && weaponTemplate.BasedOn == WeaponType::Seeker, "the name and the weapon it's made from");
+
+			// In another weapon, the files next to the template are embedded
+			WeaponDefinition applied = WeaponDefinition::MakeCustom(WeaponType::Bouncer, WeaponType::Seeker);
+			std::int32_t imageCount = 0, soundCount = 0;
+			bool layoutRead = true;
+			bool complete = ApplyCustomWeaponTemplate(weaponTemplate, applied, [&](const WeaponTemplateImage& templateImage) {
+				imageCount++;
+				layoutRead &= (fs::GetFileName(templateImage.Path) == "zap.png"_s && templateImage.FrameColumns == 2 && templateImage.FrameRows == 1 &&
+					templateImage.FrameCount == 2 && templateImage.HasHotspot);
+				return 0;
+			}, [&](StringView path) {
+				soundCount++;
+				return (fs::GetFileName(path) == "zap.wav"_s ? 0 : -1);
+			});
+			expect(complete && imageCount >= 1 && soundCount == 1 && layoutRead, "the image and the sound next to the template");
+			// Angles are in degrees in the file, a float in radians may come back a step off
+			CustomWeaponOptions made = applied.GetCustom();
+			expect(std::abs(made.Shot.HomingTurnRate - custom.Shot.HomingTurnRate) < 1e-6f &&
+				std::abs(made.ShotPowered.HomingTurnRate - custom.ShotPowered.HomingTurnRate) < 1e-6f, "angles");
+			made.Shot.HomingTurnRate = custom.Shot.HomingTurnRate;
+			made.ShotPowered.HomingTurnRate = custom.ShotPowered.HomingTurnRate;
+			expect(applied.Name == weapon.Name && applied.Options.Maximum == 50 && applied.Options.Style == WeaponStyle::Missile, "the name and the options");
+			expect(made.Fire == custom.Fire && made.Shot == custom.Shot && made.ShotPowered == custom.ShotPowered, "how it fires and what");
+
+			Json::Value again;
+			WriteCustomWeaponTemplate(applied, weapons, [](std::int32_t) { return String("zap.png"_s); }, [](std::int32_t) { return String("zap.wav"_s); }, again);
+			expect(WriteWeaponTemplateFile(again) == WriteWeaponTemplateFile(item), "written the same again");
+			if (WriteWeaponTemplateFile(again) != WriteWeaponTemplateFile(item)) {
+				LOGW("{}\n----\n{}", WriteWeaponTemplateFile(item).c_str(), WriteWeaponTemplateFile(again).c_str());
+			}
+
+			// What a template doesn't describe is kept, an image that can't be embedded is as in the game
+			CustomWeaponTemplate partial;
+			Json::Value value;
+			expect(JsonFile::Parse(R"json({ "Kind": "custom", "BasedOn": "rf", "Shot": { "Speed": 2, "Sprite": { "File": "missing.png" } } })json"_s, value) &&
+				ReadCustomWeaponTemplate(value, "Weapons/Partial.json"_s, partial) && partial.BasedOn == WeaponType::RF, "a template with little in it");
+			applied = WeaponDefinition::MakeCustom(WeaponType::RF, WeaponType::RF);
+			WeaponDefinition stock = applied;
+			complete = ApplyCustomWeaponTemplate(partial, applied, [](const WeaponTemplateImage&) { return -1; }, [](StringView) { return -1; });
+			expect(!complete && applied.GetCustom().Shot.Speed == 2.0f && applied.GetCustom().ShotPowered.Speed == 2.0f &&
+				applied.GetCustom().Shot.Sprite == stock.GetCustom().Shot.Sprite && applied.GetCustom().Fire == stock.GetCustom().Fire, "the rest kept");
+
+			if (problems == 0) {
+				LOGI("Custom weapon templates test passed");
 			}
 			return problems;
 		}
@@ -2956,21 +3099,21 @@ namespace Jazz2::Editor
 				"#pragma require \"ArcaneWeapon6.asc\" ///@MLLE-Generated\r\n"
 				"\r\n"
 				"void onLevelBegin() { }\r\n"_s;
-			WeaponsDescription weapons;
+			LevelWeapons weapons;
 			weapons.Weapons[8].Kind = WeaponKind::Script;
-			weapons.Weapons[8].ScriptLibrary = "ArcaneWeapon6.asc"_s;
-			weapons.Weapons[8].ScriptConstructor = "ArcaneWeapons::TornadoGun::Weapon()"_s;
+			weapons.EditorData[8].ScriptLibrary = "ArcaneWeapon6.asc"_s;
+			weapons.EditorData[8].ScriptConstructor = "ArcaneWeapons::TornadoGun::Weapon()"_s;
 			expect(UpdateScriptWeaponLines(script, weapons) == script, "a script with the same weapons stays as it is");
 
 			weapons.Weapons[2].Kind = WeaponKind::Script;
-			weapons.Weapons[2].ScriptLibrary = "BubbleGun.asc"_s;
-			weapons.Weapons[2].ScriptConstructor = "BubbleGun::Weapon()"_s;
+			weapons.EditorData[2].ScriptLibrary = "BubbleGun.asc"_s;
+			weapons.EditorData[2].ScriptConstructor = "BubbleGun::Weapon()"_s;
 			String updated = UpdateScriptWeaponLines(script, weapons);
 			expect(updated.contains("{null, null, BubbleGun::Weapon(), null, null, null, null, null, ArcaneWeapons::TornadoGun::Weapon()}"_s) &&
 				updated.contains("#include \"BubbleGun.asc\" ///@MLLE-Generated\r\n"_s) && updated.contains("#include \"ArcaneWeapon6.asc\" ///@MLLE-Generated\r\n"_s) &&
 				updated.contains("#pragma require \"Level-MLLE-Data-1.j2l\""_s) && updated.hasSuffix("\r\nvoid onLevelBegin() { }\r\n"_s), "a weapon added");
 
-			WeaponsDescription none;
+			LevelWeapons none;
 			String removed = UpdateScriptWeaponLines(updated, none);
 			expect(removed.contains("MLLE::Setup(); ///@MLLE-Generated"_s) && !removed.contains("BubbleGun"_s) && !removed.contains("ArcaneWeapon6"_s) &&
 				removed.contains("void onLevelBegin"_s), "all weapons removed");
@@ -3103,6 +3246,7 @@ namespace Jazz2::Editor
 			problems += TestWeaponPreview();
 			problems += TestScriptWeaponHeader();
 			problems += TestScriptWeaponTemplates();
+			problems += TestCustomWeaponTemplates();
 			problems += ToolActions::SelfTest();
 			problems += PlayPathHistory::SelfTest();
 			problems += ActionRegistry::SelfTest();

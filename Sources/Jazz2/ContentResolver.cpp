@@ -145,7 +145,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set - bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 20;
+	static constexpr std::uint64_t ShadersVersion = 21;
 
 	ContentResolver& ContentResolver::Get()
 	{
@@ -1103,8 +1103,10 @@ namespace Jazz2
 
 	Metadata* ContentResolver::AcquireWeaponImage(const WeaponImage& image)
 	{
-		if (image.FrameWidth <= 0 || image.FrameHeight <= 0 || image.FrameCount <= 0 ||
-			image.Pixels.size() != std::size_t(image.FrameWidth) * image.FrameHeight * image.FrameCount) {
+		const std::int32_t frameWidth = image.GetFrameWidth();
+		const std::int32_t frameHeight = image.GetFrameHeight();
+		if (frameWidth <= 0 || frameHeight <= 0 || image.FrameCount <= 0 || image.FrameCount > image.FrameColumns * image.FrameRows ||
+			image.Pixels.size() != std::size_t(image.Width) * std::size_t(image.Height)) {
 			return nullptr;
 		}
 
@@ -1116,18 +1118,21 @@ namespace Jazz2
 			return it->second.get();
 		}
 
-		// Frames side by side, each with the transparent margin a converted frame has
+		// The frames in the grid of the sheet, each with the transparent margin a converted frame has
 		constexpr std::int32_t Border = GenericGraphicResource::FrameBorder;
-		const Vector2i cell = Vector2i(image.FrameWidth + Border * 2, image.FrameHeight + Border * 2);
-		const std::int32_t width = cell.X * image.FrameCount;
-		const std::int32_t height = cell.Y;
+		const Vector2i cell = Vector2i(frameWidth + Border * 2, frameHeight + Border * 2);
+		const std::int32_t columns = image.FrameColumns;
+		const std::int32_t rows = (image.FrameCount + columns - 1) / columns;
+		const std::int32_t width = cell.X * columns;
+		const std::int32_t height = cell.Y * rows;
 		const std::size_t pixelCount = std::size_t(width) * height;
 		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(pixelCount);
 		std::memset(pixels.get(), 0, pixelCount);
 		for (std::int32_t f = 0; f < image.FrameCount; f++) {
-			for (std::int32_t y = 0; y < image.FrameHeight; y++) {
-				const std::uint8_t* src = &image.Pixels[(std::size_t(f) * image.FrameHeight + y) * image.FrameWidth];
-				std::memcpy(&pixels[std::size_t(Border + y) * width + f * cell.X + Border], src, image.FrameWidth);
+			const std::int32_t column = f % columns, row = f / columns;
+			for (std::int32_t y = 0; y < frameHeight; y++) {
+				const std::uint8_t* src = &image.Pixels[std::size_t(row * frameHeight + y) * image.Width + std::size_t(column * frameWidth)];
+				std::memcpy(&pixels[std::size_t(row * cell.Y + Border + y) * width + column * cell.X + Border], src, frameWidth);
 			}
 		}
 
@@ -1151,7 +1156,7 @@ namespace Jazz2
 		// As the frame rate of a metadata file
 		graphics->AnimDuration = (image.FrameRate > 0.0f ? (1.0f / image.FrameRate) * 5.0f : 0.0f);
 		graphics->FrameDimensions = cell;
-		graphics->FrameConfiguration = Vector2i(image.FrameCount, 1);
+		graphics->FrameConfiguration = Vector2i(columns, rows);
 		graphics->FrameCount = image.FrameCount;
 		graphics->Hotspot = Vector2i(image.HotspotX + Border, image.HotspotY + Border);
 		graphics->Coldspot = Vector2i(InvalidValue, InvalidValue);
@@ -1189,6 +1194,50 @@ namespace Jazz2
 			_cachedMetadata.erase(it);
 			_cachedGraphics.erase(Pair(pathNormalized, IndexedGraphicsCacheKey));
 		}
+	}
+
+	String ContentResolver::AcquireWeaponSound(const WeaponSound& sound)
+	{
+		String identifier = WeaponsDescription::GetSoundIdentifier(sound);
+		auto it = _weaponSounds.find(identifier);
+		if (it != _weaponSounds.end()) {
+			it->second->References++;
+			return identifier;
+		}
+
+		auto entry = std::make_unique<WeaponSoundEntry>();
+		entry->References = 1;
+#if defined(WITH_AUDIO) && !defined(NCINE_HAS_NATIVE_AUDIO)
+		// Decoded from the contents of the file, its name tells the format
+		if (!_isHeadless && !sound.Data.empty()) {
+			auto s = std::make_unique<MemoryStream>(InPlaceInit, arrayView(sound.Data));
+			auto resource = std::make_unique<GenericSoundResource>(Death::move(s), sound.Name);
+			if (resource->Buffer.numSamples() > 0) {
+				entry->Resource = Death::move(resource);
+				entry->Sound.Buffers.push_back(entry->Resource.get());
+			}
+		}
+#endif
+		entry->Sound.Unavailable = entry->Sound.Buffers.empty();
+		_weaponSounds.emplace(identifier, Death::move(entry));
+		return identifier;
+	}
+
+	void ContentResolver::ReleaseWeaponSound(StringView identifier)
+	{
+		auto it = _weaponSounds.find(String::nullTerminatedView(identifier));
+		if (it != _weaponSounds.end() && --it->second->References <= 0) {
+			_weaponSounds.erase(it);
+		}
+	}
+
+	Resources::SoundResource* ContentResolver::FindWeaponSound(StringView identifier)
+	{
+		if (!identifier.hasPrefix("Level/WeaponSound/"_s)) {
+			return nullptr;
+		}
+		auto it = _weaponSounds.find(String::nullTerminatedView(identifier));
+		return (it != _weaponSounds.end() ? &it->second->Sound : nullptr);
 	}
 
 	void ContentResolver::RetainLoadedResources()
@@ -3830,6 +3879,17 @@ namespace Jazz2
 			ditherShader = CompileShader("BackgroundDither", ShadersGen::BackgroundDither);
 			if (ditherShader != nullptr && !ditherShader->IsLinked()) {
 				ditherShader = nullptr;
+			}
+
+			// Keyed sprites of level scripts, drawn as usual where the shader is missing
+			for (PrecompiledShader spriteShader : { PrecompiledShader::SpriteChromaKey, PrecompiledShader::SpriteChromaKeyPalette }) {
+				auto& shader = _precompiledShaders[(std::int32_t)spriteShader];
+				shader = (spriteShader == PrecompiledShader::SpriteChromaKey
+					? CompileShader("SpriteChromaKey", ShadersGen::SpriteChromaKey)
+					: CompileShader("SpriteChromaKeyPalette", ShadersGen::SpriteChromaKey, "USE_PALETTE"));
+				if (shader != nullptr && !shader->IsLinked()) {
+					shader = nullptr;
+				}
 			}
 		}
 

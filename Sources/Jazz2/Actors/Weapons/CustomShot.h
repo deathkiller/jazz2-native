@@ -33,7 +33,6 @@ namespace Jazz2::Actors::Weapons
 		/** @brief Returns the weapon of the game it's made from, @ref GetSourceWeapon() is the weapon of the level that fired it */
 		WeaponType GetWeaponType() override;
 		WeaponType GetSourceWeapon() override;
-		float GetFrozenDuration() const override;
 		bool ThawsFrozen() const override;
 
 	protected:
@@ -64,6 +63,8 @@ namespace Jazz2::Actors::Weapons
 		float _particleSpawnTime;
 		// The end of a beam, see ShotLook::Beam
 		Vector2f _farPoint;
+		// The way it flies, kept while it stands still, see WeaponShotOptions::Acceleration
+		Vector2f _direction;
 		// Identity only, never dereferenced, an enemy is hit once while the shot passes through it
 		SmallVector<const ActorBase*, MaxRememberedHits> _hitActors;
 

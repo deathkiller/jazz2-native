@@ -18,30 +18,30 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::RegisterLegacyEnumValues(asIScriptEngine* engine)
 	{
 		engine->SetDefaultNamespace("STATE");
-		engine->RegisterEnumValue("State", "START", sSTART);
+		engine->RegisterEnumValue("State", "START", sSTART); ///< Initial state of a newly created object
 		engine->RegisterEnumValue("State", "SLEEP", sSLEEP);
 		engine->RegisterEnumValue("State", "WAKE", sWAKE);
-		engine->RegisterEnumValue("State", "KILL", sKILL);
-		engine->RegisterEnumValue("State", "DEACTIVATE", sDEACTIVATE);
+		engine->RegisterEnumValue("State", "KILL", sKILL); ///< The object is being destroyed
+		engine->RegisterEnumValue("State", "DEACTIVATE", sDEACTIVATE); ///< The object is being deactivated, far away from all players
 		engine->RegisterEnumValue("State", "WALK", sWALK);
 		engine->RegisterEnumValue("State", "JUMP", sJUMP);
 		engine->RegisterEnumValue("State", "FIRE", sFIRE);
 		engine->RegisterEnumValue("State", "FLY", sFLY);
 		engine->RegisterEnumValue("State", "BOUNCE", sBOUNCE);
-		engine->RegisterEnumValue("State", "EXPLODE", sEXPLODE);
+		engine->RegisterEnumValue("State", "EXPLODE", sEXPLODE); ///< A bullet hit something and is going away
 		engine->RegisterEnumValue("State", "ROCKETFLY", sROCKETFLY);
 		engine->RegisterEnumValue("State", "STILL", sSTILL);
-		engine->RegisterEnumValue("State", "FLOAT", sFLOAT);
+		engine->RegisterEnumValue("State", "FLOAT", sFLOAT); ///< A pickup floating in place, not touched yet
 		engine->RegisterEnumValue("State", "HIT", sHIT);
 		engine->RegisterEnumValue("State", "SPRING", sSPRING);
-		engine->RegisterEnumValue("State", "ACTION", sACTION);
+		engine->RegisterEnumValue("State", "ACTION", sACTION); ///< Used by some objects when a player or a bullet hits them
 		engine->RegisterEnumValue("State", "DONE", sDONE);
 		engine->RegisterEnumValue("State", "PUSH", sPUSH);
 		engine->RegisterEnumValue("State", "FALL", sFALL);
-		engine->RegisterEnumValue("State", "FLOATFALL", sFLOATFALL);
+		engine->RegisterEnumValue("State", "FLOATFALL", sFLOATFALL); ///< A pickup that falls to the ground
 		engine->RegisterEnumValue("State", "CIRCLE", sCIRCLE);
 		engine->RegisterEnumValue("State", "ATTACK", sATTACK);
-		engine->RegisterEnumValue("State", "FREEZE", sFREEZE);
+		engine->RegisterEnumValue("State", "FREEZE", sFREEZE); ///< The object is frozen
 		engine->RegisterEnumValue("State", "FADEIN", sFADEIN);
 		engine->RegisterEnumValue("State", "FADEOUT", sFADEOUT);
 		engine->RegisterEnumValue("State", "HIDE", sHIDE);
@@ -480,10 +480,15 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Sample", "SONCSHIP_SCRAPE", sSONCSHIP_SCRAPE);
 		engine->RegisterEnumValue("Sample", "SONCSHIP_SHIPLOOP", sSONCSHIP_SHIPLOOP);
 		engine->RegisterEnumValue("Sample", "SONCSHIP_TARGETLOCK", sSONCSHIP_TARGETLOCK);
+		/** @deprecated Use @ref SOUND::SONCSHIP_METAL1 instead, this is only another name of it. */
 		engine->RegisterEnumValue("Sample", "SONICSHIP_METAL1", sSONCSHIP_METAL1); // Private/deprecated
+		/** @deprecated Use @ref SOUND::SONCSHIP_MISSILE2 instead, this is only another name of it. */
 		engine->RegisterEnumValue("Sample", "SONICSHIP_MISSILE2", sSONCSHIP_MISSILE2); // Private/deprecated
+		/** @deprecated Use @ref SOUND::SONCSHIP_SCRAPE instead, this is only another name of it. */
 		engine->RegisterEnumValue("Sample", "SONICSHIP_SCRAPE", sSONCSHIP_SCRAPE); // Private/deprecated
+		/** @deprecated Use @ref SOUND::SONCSHIP_SHIPLOOP instead, this is only another name of it. */
 		engine->RegisterEnumValue("Sample", "SONICSHIP_SHIPLOOP", sSONCSHIP_SHIPLOOP); // Private/deprecated
+		/** @deprecated Use @ref SOUND::SONCSHIP_TARGETLOCK instead, this is only another name of it. */
 		engine->RegisterEnumValue("Sample", "SONICSHIP_TARGETLOCK", sSONCSHIP_TARGETLOCK); // Private/deprecated
 		engine->RegisterEnumValue("Sample", "SPAZSOUNDS_AUTSCH1", sSPAZSOUNDS_AUTSCH1);
 		engine->RegisterEnumValue("Sample", "SPAZSOUNDS_AUTSCH2", sSPAZSOUNDS_AUTSCH2);
@@ -576,54 +581,74 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Sample", "ZDOG_WAF3", sZDOG_WAF3);
 
 		engine->SetDefaultNamespace("AREA");
-		engine->RegisterEnumValue("Area", "ONEWAY", areaONEWAY);
-		engine->RegisterEnumValue("Area", "HURT", areaHURT);
-		engine->RegisterEnumValue("Area", "VINE", areaVINE);
-		engine->RegisterEnumValue("Area", "HOOK", areaHOOK);
-		engine->RegisterEnumValue("Area", "SLIDE", areaSLIDE);
-		engine->RegisterEnumValue("Area", "HPOLE", areaHPOLE);
-		engine->RegisterEnumValue("Area", "VPOLE", areaVPOLE);
-		engine->RegisterEnumValue("Area", "FLYOFF", areaFLYOFF);
-		engine->RegisterEnumValue("Area", "RICOCHET", areaRICOCHET);
-		engine->RegisterEnumValue("Area", "BELTRIGHT", areaBELTRIGHT);
-		engine->RegisterEnumValue("Area", "BELTLEFT", areaBELTLEFT);
-		engine->RegisterEnumValue("Area", "ACCBELTRIGHT", areaBELTACCRIGHT);
-		engine->RegisterEnumValue("Area", "ACCBELTLEFT", areaBELTACCLEFT);
-		engine->RegisterEnumValue("Area", "STOPENEMY", areaSTOPENEMY);
-		engine->RegisterEnumValue("Area", "WINDLEFT", areaWINDLEFT);
-		engine->RegisterEnumValue("Area", "WINDRIGHT", areaWINDRIGHT);
-		engine->RegisterEnumValue("Area", "EOL", areaEOL);
-		engine->RegisterEnumValue("Area", "WARPEOL", areaWARPEOL);
-		engine->RegisterEnumValue("Area", "REVERTMORPH", areaENDMORPH);
-		engine->RegisterEnumValue("Area", "FLOATUP", areaFLOATUP);
-		engine->RegisterEnumValue("Area", "TRIGGERROCK", areaROCKTRIGGER);
+		engine->RegisterEnumValue("Area", "ONEWAY", areaONEWAY); ///< Tile the player stands on but can jump up through
+		engine->RegisterEnumValue("Area", "HURT", areaHURT); ///< Tile that hurts the player
+		engine->RegisterEnumValue("Area", "VINE", areaVINE); ///< Vine the player hangs from and moves along
+		engine->RegisterEnumValue("Area", "HOOK", areaHOOK); ///< Tile the player hangs from without moving
+		engine->RegisterEnumValue("Area", "SLIDE", areaSLIDE); ///< Slippery floor
+		engine->RegisterEnumValue("Area", "HPOLE", areaHPOLE); ///< Pole that spins the player and flings them sideways
+		engine->RegisterEnumValue("Area", "VPOLE", areaVPOLE); ///< Pole that spins the player and flings them up or down
+		engine->RegisterEnumValue("Area", "FLYOFF", areaFLYOFF); ///< Takes away the airboard and the flying carrot
+		engine->RegisterEnumValue("Area", "RICOCHET", areaRICOCHET); ///< Tile that bullets bounce off
+		engine->RegisterEnumValue("Area", "BELTRIGHT", areaBELTRIGHT); ///< Conveyor belt moving to the right
+		engine->RegisterEnumValue("Area", "BELTLEFT", areaBELTLEFT); ///< Conveyor belt moving to the left
+		engine->RegisterEnumValue("Area", "ACCBELTRIGHT", areaBELTACCRIGHT); ///< Conveyor belt to the right that speeds up the player
+		engine->RegisterEnumValue("Area", "ACCBELTLEFT", areaBELTACCLEFT); ///< Conveyor belt to the left that speeds up the player
+		engine->RegisterEnumValue("Area", "STOPENEMY", areaSTOPENEMY); ///< Area walking enemies can't enter
+		engine->RegisterEnumValue("Area", "WINDLEFT", areaWINDLEFT); ///< Wind pushing the player to the left
+		engine->RegisterEnumValue("Area", "WINDRIGHT", areaWINDRIGHT); ///< Wind pushing the player to the right
+		engine->RegisterEnumValue("Area", "EOL", areaEOL); ///< Ends the level
+		engine->RegisterEnumValue("Area", "WARPEOL", areaWARPEOL); ///< Ends the level with a warp
+		engine->RegisterEnumValue("Area", "REVERTMORPH", areaENDMORPH); ///< Turns a morphed player back into their character
+		engine->RegisterEnumValue("Area", "FLOATUP", areaFLOATUP); ///< Lifts players up while they're inside
+		engine->RegisterEnumValue("Area", "TRIGGERROCK", areaROCKTRIGGER); ///< Sets the rolling rocks with the same ID rolling
 		engine->RegisterEnumValue("Area", "DIMLIGHT", areaDIMLIGHT);
-		engine->RegisterEnumValue("Area", "SETLIGHT", areaSETLIGHT);
-		engine->RegisterEnumValue("Area", "LIMITXSCROLL", areaLIMITXSCROLL);
-		engine->RegisterEnumValue("Area", "RESETLIGHT", areaRESETLIGHT);
-		engine->RegisterEnumValue("Area", "WARPSECRET", areaWARPSECRET);
+		engine->RegisterEnumValue("Area", "SETLIGHT", areaSETLIGHT); ///< Changes the ambient lighting
+		engine->RegisterEnumValue("Area", "LIMITXSCROLL", areaLIMITXSCROLL); ///< Limits how far the view scrolls horizontally
+		engine->RegisterEnumValue("Area", "RESETLIGHT", areaRESETLIGHT); ///< Restores the lighting the level started with
+		engine->RegisterEnumValue("Area", "WARPSECRET", areaWARPSECRET); ///< Warps to the secret level
 		engine->RegisterEnumValue("Area", "ECHO", areaECHO);
-		engine->RegisterEnumValue("Area", "ACTIVATEBOSS", areaBOSSTRIGGER);
-		engine->RegisterEnumValue("Area", "JAZZLEVELSTART", areaJAZZLEVELSTART);
+		engine->RegisterEnumValue("Area", "ACTIVATEBOSS", areaBOSSTRIGGER); ///< Starts the boss fight
+		engine->RegisterEnumValue("Area", "JAZZLEVELSTART", areaJAZZLEVELSTART); ///< Starting position of Jazz
+		/**
+		 * @brief Same as JAZZLEVELSTART
+		 * @deprecated Use @ref AREA::JAZZLEVELSTART instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Area", "JAZZSTART", areaJAZZLEVELSTART); // Private/deprecated
-		engine->RegisterEnumValue("Area", "SPAZLEVELSTART", areaSPAZLEVELSTART);
+		engine->RegisterEnumValue("Area", "SPAZLEVELSTART", areaSPAZLEVELSTART); ///< Starting position of Spaz
+		/**
+		 * @brief Same as SPAZLEVELSTART
+		 * @deprecated Use @ref AREA::SPAZLEVELSTART instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Area", "SPAZSTART", areaSPAZLEVELSTART); // Private/deprecated
-		engine->RegisterEnumValue("Area", "MPLEVELSTART", areaMPLEVELSTART);
+		engine->RegisterEnumValue("Area", "MPLEVELSTART", areaMPLEVELSTART); ///< Starting position in multiplayer games
+		/**
+		 * @brief Same as MPLEVELSTART
+		 * @deprecated Use @ref AREA::MPLEVELSTART instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Area", "MPSTART", areaMPLEVELSTART); // Private/deprecated
-		engine->RegisterEnumValue("Area", "LORILEVELSTART", areaLORILEVELSTART);
+		engine->RegisterEnumValue("Area", "LORILEVELSTART", areaLORILEVELSTART); ///< Starting position of Lori
+		/**
+		 * @brief Same as LORILEVELSTART
+		 * @deprecated Use @ref AREA::LORILEVELSTART instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Area", "LORISTART", areaLORILEVELSTART); // Private/deprecated
-		engine->RegisterEnumValue("Area", "WARP", areaWARP);
-		engine->RegisterEnumValue("Area", "WARPTARGET", areaWARPTARGET);
+		engine->RegisterEnumValue("Area", "WARP", areaWARP); ///< Warps the player to the WARPTARGET with the same ID
+		engine->RegisterEnumValue("Area", "WARPTARGET", areaWARPTARGET); ///< Destination of a WARP
 		engine->RegisterEnumValue("Area", "PATH", areaAREAID);
+		/**
+		 * @brief Same as PATH
+		 * @deprecated Use @ref AREA::PATH instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Area", "AREAID", areaAREAID); // Private/deprecated
-		engine->RegisterEnumValue("Area", "NOFIREZONE", areaNOFIREZONE);
-		engine->RegisterEnumValue("Area", "TRIGGERZONE", areaTRIGGERZONE);
+		engine->RegisterEnumValue("Area", "NOFIREZONE", areaNOFIREZONE); ///< Blocks or allows firing
+		engine->RegisterEnumValue("Area", "TRIGGERZONE", areaTRIGGERZONE); ///< Turns a trigger on or off when a player enters it
 
-		engine->RegisterEnumValue("Area", "SUCKERTUBE", aSUCKERTUBE);
-		engine->RegisterEnumValue("Area", "TEXT", aTEXT);
-		engine->RegisterEnumValue("Area", "WATERLEVEL", aWATERLEVEL);
-		engine->RegisterEnumValue("Area", "MORPHFROG", aMORPHFROG);
-		engine->RegisterEnumValue("Area", "WATERBLOCK", aWATERBLOCK);
+		engine->RegisterEnumValue("Area", "SUCKERTUBE", aSUCKERTUBE); ///< Tube that drives the player along
+		engine->RegisterEnumValue("Area", "TEXT", aTEXT); ///< Shows a text of the level
+		engine->RegisterEnumValue("Area", "WATERLEVEL", aWATERLEVEL); ///< Changes the water level when a player touches it
+		engine->RegisterEnumValue("Area", "MORPHFROG", aMORPHFROG); ///< Turns the player into a frog
+		engine->RegisterEnumValue("Area", "WATERBLOCK", aWATERBLOCK); ///< Shallow water the player wades in
 
 		engine->SetDefaultNamespace("OBJECT");
 		engine->RegisterEnumValue("Object", "BLASTERBULLET", aPLAYERBULLET1);
@@ -644,27 +669,35 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "ELECTROBULLETPU", aPLAYERBULLETP9);
 		engine->RegisterEnumValue("Object", "FIRESHIELDBULLET", aPLAYERBULLETC1);
 		engine->RegisterEnumValue("Object", "WATERSHIELDBULLET", aPLAYERBULLETC2);
+		/**
+		 * @brief Same as WATERSHIELDBULLET
+		 * @deprecated Use @ref OBJECT::WATERSHIELDBULLET instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "BUBBLESHIELDBULLET", aPLAYERBULLETC2); // Private/deprecated
 		engine->RegisterEnumValue("Object", "LIGHTNINGSHIELDBULLET", aPLAYERBULLETC3);
+		/**
+		 * @brief Same as LIGHTNINGSHIELDBULLET
+		 * @deprecated Use @ref OBJECT::LIGHTNINGSHIELDBULLET instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "PLASMASHIELDBULLET", aPLAYERBULLETC3); // Private/deprecated
 		engine->RegisterEnumValue("Object", "BULLET", aBULLET);
 		engine->RegisterEnumValue("Object", "SMOKERING", aCATSMOKE);
 		engine->RegisterEnumValue("Object", "SHARD", aSHARD);
 		engine->RegisterEnumValue("Object", "EXPLOSION", aEXPLOSION);
 		engine->RegisterEnumValue("Object", "BOUNCEONCE", aBOUNCEONCE);
-		engine->RegisterEnumValue("Object", "FLICKERGEM", aREDGEMTEMP);
-		engine->RegisterEnumValue("Object", "LASER", aPLAYERLASER);
+		engine->RegisterEnumValue("Object", "FLICKERGEM", aREDGEMTEMP); ///< Gem that blinks for a while and then disappears
+		engine->RegisterEnumValue("Object", "LASER", aPLAYERLASER); ///< Beam fired with the laser shield
 		engine->RegisterEnumValue("Object", "UTERUSSPIKEBALL", aUTERUSEL);
 		engine->RegisterEnumValue("Object", "BIRD", aBIRD);
 		engine->RegisterEnumValue("Object", "BUBBLE", aBUBBLE);
-		engine->RegisterEnumValue("Object", "ICEAMMO3", aGUN3AMMO3);
-		engine->RegisterEnumValue("Object", "BOUNCERAMMO3", aGUN2AMMO3);
-		engine->RegisterEnumValue("Object", "SEEKERAMMO3", aGUN4AMMO3);
-		engine->RegisterEnumValue("Object", "RFAMMO3", aGUN5AMMO3);
-		engine->RegisterEnumValue("Object", "TOASTERAMMO3", aGUN6AMMO3);
-		engine->RegisterEnumValue("Object", "TNTAMMO3", aGUN7AMMO3);
-		engine->RegisterEnumValue("Object", "GUN8AMMO3", aGUN8AMMO3);
-		engine->RegisterEnumValue("Object", "GUN9AMMO3", aGUN9AMMO3);
+		engine->RegisterEnumValue("Object", "ICEAMMO3", aGUN3AMMO3); ///< Ammo pickup for Ice
+		engine->RegisterEnumValue("Object", "BOUNCERAMMO3", aGUN2AMMO3); ///< Ammo pickup for Bouncer
+		engine->RegisterEnumValue("Object", "SEEKERAMMO3", aGUN4AMMO3); ///< Ammo pickup for Seeker
+		engine->RegisterEnumValue("Object", "RFAMMO3", aGUN5AMMO3); ///< Ammo pickup for RF
+		engine->RegisterEnumValue("Object", "TOASTERAMMO3", aGUN6AMMO3); ///< Ammo pickup for Toaster
+		engine->RegisterEnumValue("Object", "TNTAMMO3", aGUN7AMMO3); ///< Ammo pickup for TNT
+		engine->RegisterEnumValue("Object", "GUN8AMMO3", aGUN8AMMO3); ///< Ammo pickup for the eighth weapon
+		engine->RegisterEnumValue("Object", "GUN9AMMO3", aGUN9AMMO3); ///< Ammo pickup for the ninth weapon
 		engine->RegisterEnumValue("Object", "TURTLESHELL", aTURTLESHELL);
 		engine->RegisterEnumValue("Object", "SWINGINGVINE", aSWINGVINE);
 		engine->RegisterEnumValue("Object", "BOMB", aBOMB);
@@ -677,15 +710,15 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "CARROTBARREL", aCARROTBARREL);
 		engine->RegisterEnumValue("Object", "ONEUPBARREL", a1UPBARREL);
 		engine->RegisterEnumValue("Object", "BOMBCRATE", aBOMBCRATE);
-		engine->RegisterEnumValue("Object", "ICEAMMO15", aGUN3AMMO15);
-		engine->RegisterEnumValue("Object", "BOUNCERAMMO15", aGUN2AMMO15);
-		engine->RegisterEnumValue("Object", "SEEKERAMMO15", aGUN4AMMO15);
-		engine->RegisterEnumValue("Object", "RFAMMO15", aGUN5AMMO15);
-		engine->RegisterEnumValue("Object", "TOASTERAMMO15", aGUN6AMMO15);
+		engine->RegisterEnumValue("Object", "ICEAMMO15", aGUN3AMMO15); ///< Box with more ammo for Ice
+		engine->RegisterEnumValue("Object", "BOUNCERAMMO15", aGUN2AMMO15); ///< Box with more ammo for Bouncer
+		engine->RegisterEnumValue("Object", "SEEKERAMMO15", aGUN4AMMO15); ///< Box with more ammo for Seeker
+		engine->RegisterEnumValue("Object", "RFAMMO15", aGUN5AMMO15); ///< Box with more ammo for RF
+		engine->RegisterEnumValue("Object", "TOASTERAMMO15", aGUN6AMMO15); ///< Box with more ammo for Toaster
 		engine->RegisterEnumValue("Object", "TNT", aTNT);
 		engine->RegisterEnumValue("Object", "AIRBOARDGENERATOR", aAIRBOARDGENERATOR);
 		engine->RegisterEnumValue("Object", "FROZENSPRING", aFROZENGREENSPRING);
-		engine->RegisterEnumValue("Object", "FASTFIRE", aGUNFASTFIRE);
+		engine->RegisterEnumValue("Object", "FASTFIRE", aGUNFASTFIRE); ///< Pickup that makes the player fire faster
 		engine->RegisterEnumValue("Object", "SPRINGCRATE", aSPRINGCRATE);
 		engine->RegisterEnumValue("Object", "REDGEM", aREDGEM);
 		engine->RegisterEnumValue("Object", "GREENGEM", aGREENGEM);
@@ -695,34 +728,58 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "BIRDCAGE", aBIRDCAGE);
 		engine->RegisterEnumValue("Object", "GUNBARREL", aGUNBARREL);
 		engine->RegisterEnumValue("Object", "GEMCRATE", aGEMCRATE);
-		engine->RegisterEnumValue("Object", "MORPH", aMORPHMONITOR);
-		engine->RegisterEnumValue("Object", "CARROT", aENERGYUP);
-		engine->RegisterEnumValue("Object", "FULLENERGY", aFULLENERGY);
+		engine->RegisterEnumValue("Object", "MORPH", aMORPHMONITOR); ///< Monitor that turns the player into another character
+		engine->RegisterEnumValue("Object", "CARROT", aENERGYUP); ///< Carrot that restores some health
+		engine->RegisterEnumValue("Object", "FULLENERGY", aFULLENERGY); ///< Carrot that restores full health
 		engine->RegisterEnumValue("Object", "FIRESHIELD", aFIRESHIELD);
 		engine->RegisterEnumValue("Object", "WATERSHIELD", aWATERSHIELD);
+		/**
+		 * @brief Same as WATERSHIELD
+		 * @deprecated Use @ref OBJECT::WATERSHIELD instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "BUBBLESHIELD", aWATERSHIELD); // Private/deprecated
 		engine->RegisterEnumValue("Object", "LIGHTNINGSHIELD", aLIGHTSHIELD);
+		/**
+		 * @brief Same as LIGHTNINGSHIELD
+		 * @deprecated Use @ref OBJECT::LIGHTNINGSHIELD instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "PLASMASHIELD", aLIGHTSHIELD); // Private/deprecated
 		engine->RegisterEnumValue("Object", "FASTFEET", aFASTFEET);
-		engine->RegisterEnumValue("Object", "ONEUP", aEXTRALIFE);
+		engine->RegisterEnumValue("Object", "ONEUP", aEXTRALIFE); ///< Extra life
+		/**
+		 * @brief Same as ONEUP
+		 * @deprecated Use @ref OBJECT::ONEUP instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "EXTRALIFE", aEXTRALIFE); // Private/deprecated
+		/**
+		 * @brief Same as ONEUP
+		 * @deprecated Use @ref OBJECT::ONEUP instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "EXTRALIVE", aEXTRALIFE); // Private/deprecated
-		engine->RegisterEnumValue("Object", "EOLPOST", aENDOFLEVELPOST);
-		engine->RegisterEnumValue("Object", "SAVEPOST", aSAVEPOST);
+		engine->RegisterEnumValue("Object", "EOLPOST", aENDOFLEVELPOST); ///< Signpost at the end of the level
+		engine->RegisterEnumValue("Object", "SAVEPOST", aSAVEPOST); ///< Checkpoint
+		/**
+		 * @brief Same as SAVEPOST
+		 * @deprecated Use @ref OBJECT::SAVEPOST instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "CHECKPOINT", aSAVEPOST); // Private/deprecated
-		engine->RegisterEnumValue("Object", "BONUSPOST", aBONUSLEVELPOST);
+		engine->RegisterEnumValue("Object", "BONUSPOST", aBONUSLEVELPOST); ///< Signpost leading to a bonus level
 		engine->RegisterEnumValue("Object", "REDSPRING", aREDSPRING);
 		engine->RegisterEnumValue("Object", "GREENSPRING", aGREENSPRING);
 		engine->RegisterEnumValue("Object", "BLUESPRING", aBLUESPRING);
 		engine->RegisterEnumValue("Object", "INVINCIBILITY", aINVINCIBILITY);
 		engine->RegisterEnumValue("Object", "EXTRATIME", aEXTRATIME);
 		engine->RegisterEnumValue("Object", "FREEZER", aFREEZER);
+		/**
+		 * @brief Same as FREEZER
+		 * @deprecated Use @ref OBJECT::FREEZER instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "FREEZEENEMIES", aFREEZER); // Private/deprecated
 		engine->RegisterEnumValue("Object", "HORREDSPRING", aHREDSPRING);
 		engine->RegisterEnumValue("Object", "HORGREENSPRING", aHGREENSPRING);
 		engine->RegisterEnumValue("Object", "HORBLUESPRING", aHBLUESPRING);
-		engine->RegisterEnumValue("Object", "BIRDMORPH", aBIRDMORPHMONITOR);
-		engine->RegisterEnumValue("Object", "TRIGGERCRATE", aTRIGGERCRATE);
+		engine->RegisterEnumValue("Object", "BIRDMORPH", aBIRDMORPHMONITOR); ///< Monitor that turns the player into a bird
+		engine->RegisterEnumValue("Object", "TRIGGERCRATE", aTRIGGERCRATE); ///< Crate that changes a trigger when broken
 		engine->RegisterEnumValue("Object", "FLYCARROT", aFLYCARROT);
 		engine->RegisterEnumValue("Object", "RECTREDGEM", aRECTREDGEM);
 		engine->RegisterEnumValue("Object", "RECTGREENGEM", aRECTGREENGEM);
@@ -733,6 +790,10 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "DRAGON", aDRAGON);
 		engine->RegisterEnumValue("Object", "LIZARD", aLIZARD);
 		engine->RegisterEnumValue("Object", "BEE", aBUMBEE);
+		/**
+		 * @brief Same as BEE
+		 * @deprecated Use @ref OBJECT::BEE instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "BUMBEE", aBUMBEE); // Private/deprecated
 		engine->RegisterEnumValue("Object", "RAPIER", aRAPIER);
 		engine->RegisterEnumValue("Object", "SPARK", aSPARK);
@@ -755,17 +816,17 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "FISH", aFISH);
 		engine->RegisterEnumValue("Object", "MOTH", aMOTH);
 		engine->RegisterEnumValue("Object", "STEAM", aSTEAM);
-		engine->RegisterEnumValue("Object", "ROTATINGROCK", aROCK);
+		engine->RegisterEnumValue("Object", "ROTATINGROCK", aROCK); ///< Rock that starts rolling by @ref AREA::TRIGGERROCK
 		engine->RegisterEnumValue("Object", "BLASTERPOWERUP", aGUN1POWER);
 		engine->RegisterEnumValue("Object", "BOUNCERPOWERUP", aGUN2POWER);
 		engine->RegisterEnumValue("Object", "ICEPOWERUP", aGUN3POWER);
 		engine->RegisterEnumValue("Object", "SEEKERPOWERUP", aGUN4POWER);
 		engine->RegisterEnumValue("Object", "RFPOWERUP", aGUN5POWER);
 		engine->RegisterEnumValue("Object", "TOASTERPOWERUP", aGUN6POWER);
-		engine->RegisterEnumValue("Object", "LEFTPADDLE", aPINLEFTPADDLE);
-		engine->RegisterEnumValue("Object", "RIGHTPADDLE", aPINRIGHTPADDLE);
-		engine->RegisterEnumValue("Object", "FIVEHUNDREDBUMP", aPIN500BUMP);
-		engine->RegisterEnumValue("Object", "CARROTBUMP", aPINCARROTBUMP);
+		engine->RegisterEnumValue("Object", "LEFTPADDLE", aPINLEFTPADDLE); ///< Left pinball paddle
+		engine->RegisterEnumValue("Object", "RIGHTPADDLE", aPINRIGHTPADDLE); ///< Right pinball paddle
+		engine->RegisterEnumValue("Object", "FIVEHUNDREDBUMP", aPIN500BUMP); ///< Pinball bumper that gives 500 points
+		engine->RegisterEnumValue("Object", "CARROTBUMP", aPINCARROTBUMP); ///< Pinball bumper with a carrot
 		engine->RegisterEnumValue("Object", "APPLE", aAPPLE);
 		engine->RegisterEnumValue("Object", "BANANA", aBANANA);
 		engine->RegisterEnumValue("Object", "CHERRY", aCHERRY);
@@ -773,10 +834,14 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "PEAR", aPEAR);
 		engine->RegisterEnumValue("Object", "PRETZEL", aPRETZEL);
 		engine->RegisterEnumValue("Object", "STRAWBERRY", aSTRAWBERRY);
-		engine->RegisterEnumValue("Object", "STEADYLIGHT", aSTEADYLIGHT);
-		engine->RegisterEnumValue("Object", "PULZELIGHT", aPULZELIGHT);
+		engine->RegisterEnumValue("Object", "STEADYLIGHT", aSTEADYLIGHT); ///< Light source that shines steadily
+		engine->RegisterEnumValue("Object", "PULZELIGHT", aPULZELIGHT); ///< Light source that pulses
+		/**
+		 * @brief Same as PULZELIGHT
+		 * @deprecated Use @ref OBJECT::PULZELIGHT instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "PULSELIGHT", aPULZELIGHT); // Private/deprecated
-		engine->RegisterEnumValue("Object", "FLICKERLIGHT", aFLICKERLIGHT);
+		engine->RegisterEnumValue("Object", "FLICKERLIGHT", aFLICKERLIGHT); ///< Light source that flickers
 		engine->RegisterEnumValue("Object", "QUEEN", aQUEENBOSS);
 		engine->RegisterEnumValue("Object", "FLOATSUCKER", aFLOATSUCKER);
 		engine->RegisterEnumValue("Object", "BRIDGE", aBRIDGE);
@@ -789,10 +854,22 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "LETTUCE", aLETTUCE);
 		engine->RegisterEnumValue("Object", "EGGPLANT", aEGGPLANT);
 		engine->RegisterEnumValue("Object", "CUCUMB", aCUCUMB);
+		/**
+		 * @brief Same as CUCUMB
+		 * @deprecated Use @ref OBJECT::CUCUMB instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "CUCUMBER", aCUCUMB); // Private/deprecated
 		engine->RegisterEnumValue("Object", "COKE", aCOKE);
+		/**
+		 * @brief Same as COKE
+		 * @deprecated Use @ref OBJECT::COKE instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "SOFTDRINK", aCOKE); // Private/deprecated
 		engine->RegisterEnumValue("Object", "PEPSI", aPEPSI);
+		/**
+		 * @brief Same as COKE
+		 * @deprecated Use @ref OBJECT::COKE instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "SODAPOP", aCOKE); // Private/deprecated
 		engine->RegisterEnumValue("Object", "MILK", aMILK);
 		engine->RegisterEnumValue("Object", "PIE", aPIE);
@@ -802,6 +879,10 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "CHIPS", aCHIPS);
 		engine->RegisterEnumValue("Object", "CANDY", aCANDY1);
 		engine->RegisterEnumValue("Object", "CHOCBAR", aCHOCBAR);
+		/**
+		 * @brief Same as CHOCBAR
+		 * @deprecated Use @ref OBJECT::CHOCBAR instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "CHOCOLATEBAR", aCHOCBAR); // Private/deprecated
 		engine->RegisterEnumValue("Object", "ICECREAM", aICECREAM);
 		engine->RegisterEnumValue("Object", "BURGER", aBURGER);
@@ -815,17 +896,21 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "CHEESE", aCHEESE);
 		engine->RegisterEnumValue("Object", "FLOATLIZARD", aFLOATLIZARD);
 		engine->RegisterEnumValue("Object", "STANDMONKEY", aSTANDMONKEY);
-		engine->RegisterEnumValue("Object", "DESTRUCTSCENERY", aDESTRUCTSCENERY);
-		engine->RegisterEnumValue("Object", "DESTRUCTSCENERYBOMB", aDESTRUCTSCENERYBOMB);
+		engine->RegisterEnumValue("Object", "DESTRUCTSCENERY", aDESTRUCTSCENERY); ///< Scenery destroyed by shooting it
+		engine->RegisterEnumValue("Object", "DESTRUCTSCENERYBOMB", aDESTRUCTSCENERYBOMB); ///< Scenery destroyed only by TNT
+		/**
+		 * @brief Same as DESTRUCTSCENERYBOMB
+		 * @deprecated Use @ref OBJECT::DESTRUCTSCENERYBOMB instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Object", "TNTDESTRUCTSCENERY", aDESTRUCTSCENERYBOMB); // Private/deprecated
-		engine->RegisterEnumValue("Object", "COLLAPSESCENERY", aCOLLAPSESCENERY);
-		engine->RegisterEnumValue("Object", "STOMPSCENERY", aSTOMPSCENERY);
+		engine->RegisterEnumValue("Object", "COLLAPSESCENERY", aCOLLAPSESCENERY); ///< Scenery that collapses when stood on
+		engine->RegisterEnumValue("Object", "STOMPSCENERY", aSTOMPSCENERY); ///< Scenery destroyed by a buttstomp
 		engine->RegisterEnumValue("Object", "GEMSTOMP", aGEMSTOMP);
 		engine->RegisterEnumValue("Object", "RAVEN", aRAVEN);
 		engine->RegisterEnumValue("Object", "TUBETURTLE", aTUBETURTLE);
 		engine->RegisterEnumValue("Object", "GEMRING", aGEMRING);
 		engine->RegisterEnumValue("Object", "SMALLTREE", aROTSMALLTREE);
-		engine->RegisterEnumValue("Object", "AMBIENTSOUND", aAMBIENTSOUND);
+		engine->RegisterEnumValue("Object", "AMBIENTSOUND", aAMBIENTSOUND); ///< Plays an ambient sound
 		engine->RegisterEnumValue("Object", "UTERUS", aUTERUS);
 		engine->RegisterEnumValue("Object", "CRAB", aCRAB);
 		engine->RegisterEnumValue("Object", "WITCH", aWITCH);
@@ -844,9 +929,9 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "SONICPLATFORM", aSONICPLATFORM);
 		engine->RegisterEnumValue("Object", "SPIKEPLATFORM", aSPIKEPLATFORM);
 		engine->RegisterEnumValue("Object", "SPIKEBOLL", aSPIKEBOLL);
-		engine->RegisterEnumValue("Object", "GENERATOR", aGENERATOR);
+		engine->RegisterEnumValue("Object", "GENERATOR", aGENERATOR); ///< Creates an object again some time after the previous one is gone
 		engine->RegisterEnumValue("Object", "EVA", aEVA);
-		engine->RegisterEnumValue("Object", "BUBBLER", aBUBBLER);
+		engine->RegisterEnumValue("Object", "BUBBLER", aBUBBLER); ///< Releases bubbles
 		engine->RegisterEnumValue("Object", "TNTPOWERUP", aTNTPOWER);
 		engine->RegisterEnumValue("Object", "GUN8POWERUP", aGUN8POWER);
 		engine->RegisterEnumValue("Object", "GUN9POWERUP", aGUN9POWER);
@@ -860,14 +945,14 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "WARP", areaWARP);
 		engine->RegisterEnumValue("Object", "BIGROCK", aBIGROCK);
 		engine->RegisterEnumValue("Object", "BIGBOX", aBIGBOX);
-		engine->RegisterEnumValue("Object", "TRIGGERSCENERY", aTRIGGERSCENERY);
+		engine->RegisterEnumValue("Object", "TRIGGERSCENERY", aTRIGGERSCENERY); ///< Scenery that changes with the state of a trigger
 		engine->RegisterEnumValue("Object", "BOLLY", aSONICBOSS);
 		engine->RegisterEnumValue("Object", "BUTTERFLY", aBUTTERFLY);
 		engine->RegisterEnumValue("Object", "BEEBOY", aBEEBOY);
 		engine->RegisterEnumValue("Object", "SNOW", aSNOW);
 		engine->RegisterEnumValue("Object", "TWEEDLEBOSS", aTWEEDLEBOSS);
 		engine->RegisterEnumValue("Object", "AIRBOARD", aAIRBOARD);
-		engine->RegisterEnumValue("Object", "CTFBASE", aFLAG);
+		engine->RegisterEnumValue("Object", "CTFBASE", aFLAG); ///< Base of a team in Capture the Flag
 		engine->RegisterEnumValue("Object", "XMASNORMTURTLE", aXNORMTURTLE);
 		engine->RegisterEnumValue("Object", "XMASLIZARD", aXLIZARD);
 		engine->RegisterEnumValue("Object", "XMASFLOATLIZARD", aXFLOATLIZARD);
@@ -876,8 +961,8 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "PACMANGHOST", aZGHOST);
 
 		engine->SetDefaultNamespace("BEHAVIOR");
-		engine->RegisterEnumValue("Behavior", "DEFAULT", -1);
-		engine->RegisterEnumValue("Behavior", "INACTIVE", aUNKNOWN);
+		engine->RegisterEnumValue("Behavior", "DEFAULT", -1); ///< The behavior the object already has, for @ref jjAddObject() and @ref jjOBJ::behave()
+		engine->RegisterEnumValue("Behavior", "INACTIVE", aUNKNOWN); ///< No behavior, use @ref jjDeleteObject() to remove an object instead of setting it
 		engine->RegisterEnumValue("Behavior", "BLASTERBULLET", aPLAYERBULLET1);
 		engine->RegisterEnumValue("Behavior", "BOUNCERBULLET", aPLAYERBULLET2);
 		engine->RegisterEnumValue("Behavior", "ICEBULLET", aPLAYERBULLET3);
@@ -896,8 +981,16 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "ELECTROBULLETPU", aPLAYERBULLETP9);
 		engine->RegisterEnumValue("Behavior", "FIRESHIELDBULLET", aPLAYERBULLETC1);
 		engine->RegisterEnumValue("Behavior", "WATERSHIELDBULLET", aPLAYERBULLETC2);
+		/**
+		 * @brief Same as WATERSHIELDBULLET
+		 * @deprecated Use @ref BEHAVIOR::WATERSHIELDBULLET instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "BUBBLESHIELDBULLET", aPLAYERBULLETC2); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "LIGHTNINGSHIELDBULLET", aPLAYERBULLETC3);
+		/**
+		 * @brief Same as LIGHTNINGSHIELDBULLET
+		 * @deprecated Use @ref BEHAVIOR::LIGHTNINGSHIELDBULLET instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "PLASMASHIELDBULLET", aPLAYERBULLETC3); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "BULLET", aBULLET);
 		engine->RegisterEnumValue("Behavior", "SMOKERING", aCATSMOKE);
@@ -952,15 +1045,35 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "FULLENERGY", aFULLENERGY);
 		engine->RegisterEnumValue("Behavior", "FIRESHIELD", aFIRESHIELD);
 		engine->RegisterEnumValue("Behavior", "WATERSHIELD", aWATERSHIELD);
+		/**
+		 * @brief Same as WATERSHIELD
+		 * @deprecated Use @ref BEHAVIOR::WATERSHIELD instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "BUBBLESHIELD", aWATERSHIELD); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "LIGHTNINGSHIELD", aLIGHTSHIELD);
+		/**
+		 * @brief Same as LIGHTNINGSHIELD
+		 * @deprecated Use @ref BEHAVIOR::LIGHTNINGSHIELD instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "PLASMASHIELD", aLIGHTSHIELD); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "FASTFEET", aFASTFEET);
 		engine->RegisterEnumValue("Behavior", "ONEUP", aEXTRALIFE);
+		/**
+		 * @brief Same as ONEUP
+		 * @deprecated Use @ref BEHAVIOR::ONEUP instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "EXTRALIFE", aEXTRALIFE); // Private/deprecated
+		/**
+		 * @brief Same as ONEUP
+		 * @deprecated Use @ref BEHAVIOR::ONEUP instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "EXTRALIVE", aEXTRALIFE); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "EOLPOST", aENDOFLEVELPOST);
 		engine->RegisterEnumValue("Behavior", "SAVEPOST", aSAVEPOST);
+		/**
+		 * @brief Same as SAVEPOST
+		 * @deprecated Use @ref BEHAVIOR::SAVEPOST instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "CHECKPOINT", aSAVEPOST); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "BONUSPOST", aBONUSLEVELPOST);
 		engine->RegisterEnumValue("Behavior", "REDSPRING", aREDSPRING);
@@ -969,6 +1082,10 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "INVINCIBILITY", aINVINCIBILITY);
 		engine->RegisterEnumValue("Behavior", "EXTRATIME", aEXTRATIME);
 		engine->RegisterEnumValue("Behavior", "FREEZER", aFREEZER);
+		/**
+		 * @brief Same as FREEZER
+		 * @deprecated Use @ref BEHAVIOR::FREEZER instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "FREEZEENEMIES", aFREEZER); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "HORREDSPRING", aHREDSPRING);
 		engine->RegisterEnumValue("Behavior", "HORGREENSPRING", aHGREENSPRING);
@@ -985,6 +1102,10 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "DRAGON", aDRAGON);
 		engine->RegisterEnumValue("Behavior", "LIZARD", aLIZARD);
 		engine->RegisterEnumValue("Behavior", "BEE", aBUMBEE);
+		/**
+		 * @brief Same as BEE
+		 * @deprecated Use @ref BEHAVIOR::BEE instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "BUMBEE", aBUMBEE); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "RAPIER", aRAPIER);
 		engine->RegisterEnumValue("Behavior", "SPARK", aSPARK);
@@ -1027,6 +1148,10 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "STRAWBERRY", aSTRAWBERRY);
 		engine->RegisterEnumValue("Behavior", "STEADYLIGHT", aSTEADYLIGHT);
 		engine->RegisterEnumValue("Behavior", "PULZELIGHT", aPULZELIGHT);
+		/**
+		 * @brief Same as PULZELIGHT
+		 * @deprecated Use @ref BEHAVIOR::PULZELIGHT instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "PULSELIGHT", aPULZELIGHT); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "FLICKERLIGHT", aFLICKERLIGHT);
 		engine->RegisterEnumValue("Behavior", "QUEEN", aQUEENBOSS);
@@ -1041,10 +1166,22 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "LETTUCE", aLETTUCE);
 		engine->RegisterEnumValue("Behavior", "EGGPLANT", aEGGPLANT);
 		engine->RegisterEnumValue("Behavior", "CUCUMB", aCUCUMB);
+		/**
+		 * @brief Same as CUCUMB
+		 * @deprecated Use @ref BEHAVIOR::CUCUMB instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "CUCUMBER", aCUCUMB); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "COKE", aCOKE);
+		/**
+		 * @brief Same as COKE
+		 * @deprecated Use @ref BEHAVIOR::COKE instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "SOFTDRINK", aCOKE); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "PEPSI", aPEPSI);
+		/**
+		 * @brief Same as COKE
+		 * @deprecated Use @ref BEHAVIOR::COKE instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "SODAPOP", aCOKE); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "MILK", aMILK);
 		engine->RegisterEnumValue("Behavior", "PIE", aPIE);
@@ -1054,6 +1191,10 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "CHIPS", aCHIPS);
 		engine->RegisterEnumValue("Behavior", "CANDY", aCANDY1);
 		engine->RegisterEnumValue("Behavior", "CHOCBAR", aCHOCBAR);
+		/**
+		 * @brief Same as CHOCBAR
+		 * @deprecated Use @ref BEHAVIOR::CHOCBAR instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "CHOCOLATEBAR", aCHOCBAR); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "ICECREAM", aICECREAM);
 		engine->RegisterEnumValue("Behavior", "BURGER", aBURGER);
@@ -1069,6 +1210,10 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "STANDMONKEY", aSTANDMONKEY);
 		engine->RegisterEnumValue("Behavior", "DESTRUCTSCENERY", aDESTRUCTSCENERY);
 		engine->RegisterEnumValue("Behavior", "DESTRUCTSCENERYBOMB", aDESTRUCTSCENERYBOMB);
+		/**
+		 * @brief Same as DESTRUCTSCENERYBOMB
+		 * @deprecated Use @ref BEHAVIOR::DESTRUCTSCENERYBOMB instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Behavior", "TNTDESTRUCTSCENERY", aDESTRUCTSCENERYBOMB); // Private/deprecated
 		engine->RegisterEnumValue("Behavior", "COLLAPSESCENERY", aCOLLAPSESCENERY);
 		engine->RegisterEnumValue("Behavior", "STOMPSCENERY", aSTOMPSCENERY);
@@ -1127,18 +1272,18 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "CAT", aZCAT);
 		engine->RegisterEnumValue("Behavior", "PACMANGHOST", aZGHOST);
 
-		engine->RegisterEnumValue("Behavior", "WALKINGENEMY", aCOUNT + 1);
-		engine->RegisterEnumValue("Behavior", "ROCKETTURTLEPLUS", aCOUNT + 2);
-		engine->RegisterEnumValue("Behavior", "BOLLYTOP", aCOUNT + 3);
-		engine->RegisterEnumValue("Behavior", "BOLLYBOTTOM", aCOUNT + 4);
-		engine->RegisterEnumValue("Behavior", "PLATFORM", aCOUNT + 5);
-		engine->RegisterEnumValue("Behavior", "SPRING", aCOUNT + 6);
-		engine->RegisterEnumValue("Behavior", "AMMO15", aCOUNT + 7);
-		engine->RegisterEnumValue("Behavior", "MONITOR", aCOUNT + 8);
-		engine->RegisterEnumValue("Behavior", "CRATE", aCOUNT + 9);
-		engine->RegisterEnumValue("Behavior", "PICKUP", aCOUNT + 10);
+		engine->RegisterEnumValue("Behavior", "WALKINGENEMY", aCOUNT + 1); ///< Simple walking enemy that turns around at walls and edges
+		engine->RegisterEnumValue("Behavior", "ROCKETTURTLEPLUS", aCOUNT + 2); ///< Rocket turtle boss with a speed set
+		engine->RegisterEnumValue("Behavior", "BOLLYTOP", aCOUNT + 3); ///< Upper part of the Bolly boss, the behavior of @ref OBJECT::BOLLY
+		engine->RegisterEnumValue("Behavior", "BOLLYBOTTOM", aCOUNT + 4); ///< Lower part of the Bolly boss
+		engine->RegisterEnumValue("Behavior", "PLATFORM", aCOUNT + 5); ///< All swinging platforms
+		engine->RegisterEnumValue("Behavior", "SPRING", aCOUNT + 6); ///< All springs, horizontal ones too
+		engine->RegisterEnumValue("Behavior", "AMMO15", aCOUNT + 7); ///< All boxes with more ammo
+		engine->RegisterEnumValue("Behavior", "MONITOR", aCOUNT + 8); ///< All power-ups, shields and morph monitors
+		engine->RegisterEnumValue("Behavior", "CRATE", aCOUNT + 9); ///< All crates and barrels, trigger crates too
+		engine->RegisterEnumValue("Behavior", "PICKUP", aCOUNT + 10); ///< Floating pickups such as food, ammo, gems or carrots
 		engine->RegisterEnumValue("Behavior", "DIAMONDSAREFOREVER", aCOUNT + 11);
-		engine->RegisterEnumValue("Behavior", "FLAG", aCOUNT + 12);
+		engine->RegisterEnumValue("Behavior", "FLAG", aCOUNT + 12); ///< The moving part of @ref OBJECT::CTFBASE
 		engine->RegisterEnumValue("Behavior", "MONKEYBULLET", aCOUNT + 13);
 		engine->RegisterEnumValue("Behavior", "BILSYBULLET", aCOUNT + 14);
 		engine->RegisterEnumValue("Behavior", "BOLLYBULLET", aCOUNT + 15);
@@ -1147,19 +1292,19 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Behavior", "TUFBOSSBULLET", aCOUNT + 18);
 		engine->RegisterEnumValue("Behavior", "ROBOTSHARD", aCOUNT + 19);
 		engine->RegisterEnumValue("Behavior", "BONE", aCOUNT + 20);
-		engine->RegisterEnumValue("Behavior", "EXPLOSION2", aCOUNT + 21);
+		engine->RegisterEnumValue("Behavior", "EXPLOSION2", aCOUNT + 21); ///< A pickup that was collected
 		engine->RegisterEnumValue("Behavior", "BURNING", aCOUNT + 22);
 		engine->RegisterEnumValue("Behavior", "AIRBOARDFALL", aCOUNT + 23);
 		engine->RegisterEnumValue("Behavior", "BIRDFEATHER", aCOUNT + 24);
 		engine->RegisterEnumValue("Behavior", "UFO", aCOUNT + 25);
 		engine->RegisterEnumValue("Behavior", "CORPSE", aCOUNT + 26);
-		engine->RegisterEnumValue("Behavior", "BIGOBJECT", aCOUNT + 27);
+		engine->RegisterEnumValue("Behavior", "BIGOBJECT", aCOUNT + 27); ///< Both BIGBOX and BIGROCK
 		// Both bumpers of pinball, as PLATFORM is all the platforms
-		engine->RegisterEnumValue("Behavior", "BUMP", aCOUNT + 28);
+		engine->RegisterEnumValue("Behavior", "BUMP", aCOUNT + 28); ///< Both pinball bumpers
 		// The spray of the pepper spray, a bullet of a script moves as any other here
-		engine->RegisterEnumValue("Behavior", "PEPPERBULLET", aCOUNT + 29);
+		engine->RegisterEnumValue("Behavior", "PEPPERBULLET", aCOUNT + 29); ///< Both bullets of Pepper Spray
 		// All the poles, a pole runs its own behavior by it
-		engine->RegisterEnumValue("Behavior", "POLE", aCOUNT + 30);
+		engine->RegisterEnumValue("Behavior", "POLE", aCOUNT + 30); ///< All poles
 
 		engine->SetDefaultNamespace("ANIM");
 		engine->RegisterEnumValue("Set", "AMMO", Legacy::AnimationTables::GetSetID(mAMMO, versionTSF));
@@ -1243,6 +1388,10 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Set", "SMALTREE", Legacy::AnimationTables::GetSetID(mSMALTREE, versionTSF));
 		engine->RegisterEnumValue("Set", "SNOW", Legacy::AnimationTables::GetSetID(mSNOW, versionTSF));
 		engine->RegisterEnumValue("Set", "SONCSHIP", Legacy::AnimationTables::GetSetID(mSONCSHIP, versionTSF));
+		/**
+		 * @brief Same as SONCSHIP
+		 * @deprecated Use @ref ANIM::SONCSHIP instead, this is only another name of it.
+		 */
 		engine->RegisterEnumValue("Set", "SONICSHIP", Legacy::AnimationTables::GetSetID(mSONCSHIP, versionTSF)); // Private/deprecated
 		engine->RegisterEnumValue("Set", "SONICPLAT", Legacy::AnimationTables::GetSetID(mSONICPLAT, versionTSF));
 		engine->RegisterEnumValue("Set", "SPARK", Legacy::AnimationTables::GetSetID(mSPARK, versionTSF));
@@ -1287,6 +1436,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Set", "PLUS_RETICLES", Legacy::AnimationTables::GetSetID(mZZRETICLES, versionTSF));
 		engine->RegisterEnumValue("Set", "PLUS_SCENERY", Legacy::AnimationTables::GetSetID(mZZSCENERY, versionTSF));
 		engine->RegisterEnumValue("Set", "PLUS_WARP", Legacy::AnimationTables::GetSetID(mZZWARP, versionTSF));
+		/** @brief Animation sets free for scripts to load their own animations into */
 		engine->RegisterGlobalFunction("Set get_CUSTOM(uint8)", asFUNCTION(getCustomSetID), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("RABBIT");

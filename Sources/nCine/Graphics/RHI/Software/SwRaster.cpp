@@ -988,8 +988,9 @@ namespace nCine::RHI::Software
 					if (darkT <= 0.0f && g <= 0.0f) {
 						continue; // Fully lit, no brightness core: leave the scene pixel as-is
 					}
-					const float lit = 1.0f + g;
-					const float core = (g > 0.7f ? g - 0.7f : 0.0f);
+					// Brightness also adds white, as JJ2+ brightens dark colors more than a multiply would (see Combine.shader)
+					const float lit = 1.0f + 0.607f * g;
+					const float core = 0.2f * g + (g > 0.7f ? g - 0.7f : 0.0f);
 					float cr = (px[0] / 255.0f) * lit + core;
 					float cg = (px[1] / 255.0f) * lit + core;
 					float cb = (px[2] / 255.0f) * lit + core;
@@ -1011,6 +1012,8 @@ namespace nCine::RHI::Software
 				const __m128 halff = _mm_set1_ps(0.5f);
 				const __m128 c255f = _mm_set1_ps(255.0f);
 				const __m128 coreT = _mm_set1_ps(0.7f);
+				const __m128 litScale = _mm_set1_ps(0.607f);
+				const __m128 whiteScale = _mm_set1_ps(0.2f);
 				const __m128 vAmbR = _mm_set1_ps(ambR);
 				const __m128 vAmbG = _mm_set1_ps(ambG);
 				const __m128 vAmbB = _mm_set1_ps(ambB);
@@ -1049,8 +1052,8 @@ namespace nCine::RHI::Software
 						continue;
 					}
 
-					const __m128 lit = _mm_add_ps(onef, g);
-					const __m128 core = _mm_and_ps(_mm_sub_ps(g, coreT), _mm_cmpgt_ps(g, coreT));
+					const __m128 lit = _mm_add_ps(onef, _mm_mul_ps(g, litScale));
+					const __m128 core = _mm_add_ps(_mm_mul_ps(g, whiteScale), _mm_and_ps(_mm_sub_ps(g, coreT), _mm_cmpgt_ps(g, coreT)));
 
 					// Deinterleave the 4 RGBA8 pixels into per-channel float vectors
 					const __m128i pix = _mm_loadu_si128(reinterpret_cast<const __m128i*>(px));
@@ -1089,8 +1092,8 @@ namespace nCine::RHI::Software
 					if (darkT <= 0.0f && g <= 0.0f) {
 						continue;
 					}
-					const float lit = 1.0f + g;
-					const float core = (g > 0.7f ? g - 0.7f : 0.0f);
+					const float lit = 1.0f + 0.607f * g;
+					const float core = 0.2f * g + (g > 0.7f ? g - 0.7f : 0.0f);
 					float cr = (px[0] / 255.0f) * lit + core;
 					float cg = (px[1] / 255.0f) * lit + core;
 					float cb = (px[2] / 255.0f) * lit + core;

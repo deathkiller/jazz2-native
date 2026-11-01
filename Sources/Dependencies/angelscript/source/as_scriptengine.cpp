@@ -85,6 +85,9 @@ AS_API const char * asGetLibraryOptions()
 #ifdef AS_MAX_PORTABILITY
 		"AS_MAX_PORTABILITY "
 #endif
+#ifdef AS_NATIVE_THUNKS
+		"AS_NATIVE_THUNKS "
+#endif
 #ifdef AS_DEBUG
 		"AS_DEBUG "
 #endif
@@ -4424,6 +4427,13 @@ void asCScriptEngine::CallObjectMethod(void *obj, int func) const
 
 void asCScriptEngine::CallObjectMethod(void *obj, asSSystemFunctionInterface *i, asCScriptFunction *s) const
 {
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+	{
+		CallSystemFunctionThunk(i, obj, 0);
+		return;
+	}
+#endif
 #if defined(__GNUC__) || defined(AS_PSVITA)
 	if( i->callConv == ICC_GENERIC_METHOD )
 	{
@@ -4548,6 +4558,11 @@ bool asCScriptEngine::CallObjectMethodRetBool(void *obj, int func) const
 	asASSERT( s != 0 );
 	asSSystemFunctionInterface *i = s->sysFuncIntf;
 
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+		return (CallSystemFunctionThunk(i, obj, 0) & 0xFF) != 0;
+#endif
+
 #if defined(__GNUC__) || defined(AS_PSVITA)
 	if( i->callConv == ICC_GENERIC_METHOD )
 	{
@@ -4626,6 +4641,11 @@ int asCScriptEngine::CallObjectMethodRetInt(void *obj, int func) const
 	asCScriptFunction *s = scriptFunctions[func];
 	asASSERT( s != 0 );
 	asSSystemFunctionInterface *i = s->sysFuncIntf;
+
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+		return int(asDWORD(CallSystemFunctionThunk(i, obj, 0)));
+#endif
 
 #if defined(__GNUC__) || defined(AS_PSVITA)
 	if( i->callConv == ICC_GENERIC_METHOD )
@@ -4706,6 +4726,11 @@ void *asCScriptEngine::CallObjectMethodRetPtr(void *obj, int func) const
 	asASSERT( s != 0 );
 	asSSystemFunctionInterface *i = s->sysFuncIntf;
 
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+		return (void*)asPWORD(CallSystemFunctionThunk(i, obj, 0));
+#endif
+
 #if defined(__GNUC__) || defined(AS_PSVITA)
 	if( i->callConv == ICC_GENERIC_METHOD )
 	{
@@ -4785,6 +4810,11 @@ void *asCScriptEngine::CallObjectMethodRetPtr(void *obj, int param1, asCScriptFu
 	asASSERT( func != 0 );
 	asSSystemFunctionInterface *i = func->sysFuncIntf;
 
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+		return (void*)asPWORD(CallSystemFunctionThunk(i, obj, reinterpret_cast<asDWORD*>(&param1)));
+#endif
+
 #ifndef AS_NO_CLASS_METHODS
 	if( i->callConv == ICC_THISCALL || i->callConv == ICC_VIRTUAL_THISCALL )
 	{
@@ -4862,6 +4892,10 @@ void *asCScriptEngine::CallGlobalFunctionRetPtr(int func, void *param1) const
 
 void *asCScriptEngine::CallGlobalFunctionRetPtr(asSSystemFunctionInterface *i, asCScriptFunction *s) const
 {
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+		return (void*)asPWORD(CallSystemFunctionThunk(i, i->auxiliary, 0));
+#endif
 	if( i->callConv == ICC_CDECL )
 	{
 		void *(*f)() = (void *(*)())(i->func);
@@ -4889,6 +4923,10 @@ void *asCScriptEngine::CallGlobalFunctionRetPtr(asSSystemFunctionInterface *i, a
 
 void *asCScriptEngine::CallGlobalFunctionRetPtr(asSSystemFunctionInterface *i, asCScriptFunction *s, void *param1) const
 {
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+		return (void*)asPWORD(CallSystemFunctionThunk(i, i->auxiliary, reinterpret_cast<asDWORD*>(&param1)));
+#endif
 	if( i->callConv == ICC_CDECL )
 	{
 		void *(*f)(void *) = (void *(*)(void *))(i->func);
@@ -4928,6 +4966,13 @@ void asCScriptEngine::CallObjectMethod(void *obj, void *param, int func) const
 
 void asCScriptEngine::CallObjectMethod(void *obj, void *param, asSSystemFunctionInterface *i, asCScriptFunction *s) const
 {
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+	{
+		CallSystemFunctionThunk(i, obj, reinterpret_cast<asDWORD*>(&param));
+		return;
+	}
+#endif
 #if defined(__GNUC__) || defined(AS_PSVITA)
 	if( i->callConv == ICC_CDECL_OBJLAST )
 	{
@@ -5012,6 +5057,14 @@ void asCScriptEngine::CallObjectMethod(void *obj, void *param, asSSystemFunction
 
 void asCScriptEngine::CallGlobalFunction(void *param1, void *param2, asSSystemFunctionInterface *i, asCScriptFunction *s) const
 {
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+	{
+		void *params[2] = {param1, param2};
+		CallSystemFunctionThunk(i, 0, reinterpret_cast<asDWORD*>(params));
+		return;
+	}
+#endif
 	if( i->callConv == ICC_CDECL )
 	{
 		void (*f)(void *, void *) = (void (*)(void *, void *))(i->func);
@@ -5038,6 +5091,13 @@ void asCScriptEngine::CallGlobalFunction(void *param1, void *param2, asSSystemFu
 
 bool asCScriptEngine::CallGlobalFunctionRetBool(void *param1, void *param2, asSSystemFunctionInterface *i, asCScriptFunction *s) const
 {
+#ifdef AS_NATIVE_THUNKS
+	if( i->thunk )
+	{
+		void *params[2] = {param1, param2};
+		return (CallSystemFunctionThunk(i, 0, reinterpret_cast<asDWORD*>(params)) & 0xFF) != 0;
+	}
+#endif
 	if( i->callConv == ICC_CDECL )
 	{
 		bool (*f)(void *, void *) = (bool (*)(void *, void *))(i->func);

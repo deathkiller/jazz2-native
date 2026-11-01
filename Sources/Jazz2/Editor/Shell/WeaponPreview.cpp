@@ -89,6 +89,7 @@ namespace Jazz2::Editor
 			const Vector2f targetCenter = Vector2f(target.X + target.W * 0.5f, target.Y + target.H * 0.5f);
 			Vector2f pos = range.Muzzle;
 			Vector2f speed = Vector2f(std::cos(angle) * options.Speed, std::sin(angle) * options.Speed);
+			Vector2f direction = Vector2f(std::cos(angle), std::sin(angle));
 			std::int32_t pierceLeft = options.Pierce;
 			std::int32_t bouncesLeft = options.Bounces;
 			bool wasInTarget = false;
@@ -109,7 +110,7 @@ namespace Jazz2::Editor
 				}
 
 				if (options.HomingTurnRate > 0.0f && (targetCenter - pos).Length() <= options.HomingRange && !resting) {
-					float length = std::max(speed.Length(), options.Speed);
+					float length = (options.Acceleration != 0.0f ? speed.Length() : std::max(speed.Length(), options.Speed));
 					float current = std::atan2(speed.Y, speed.X);
 					float wanted = std::atan2(targetCenter.Y - pos.Y, targetCenter.X - pos.X);
 					float delta = wanted - current;
@@ -124,6 +125,14 @@ namespace Jazz2::Editor
 				}
 
 				if (!resting) {
+					// As CustomShot::Move()
+					if (options.Acceleration != 0.0f) {
+						float length = speed.Length();
+						if (length > 0.001f) {
+							direction = speed / length;
+						}
+						speed = direction * std::max(length + options.Acceleration, 0.0f);
+					}
 					speed.X = std::clamp(speed.X, -16.0f, 16.0f);
 					speed.Y = std::clamp(speed.Y + options.Gravity, -16.0f, 16.0f);
 				}
@@ -248,12 +257,12 @@ namespace Jazz2::Editor
 	void SimulateWeapon(const WeaponDefinition& weapon, bool powered, SmallVectorImpl<SimulatedShot>& shots, const FiringRange& range, std::int32_t volley)
 	{
 		shots.clear();
-		const WeaponShotOptions& options = (powered ? weapon.ShotPowered : weapon.Shot);
-		std::int32_t count = std::max<std::int32_t>(weapon.Fire.ShotsPerFire, 1);
+		const WeaponShotOptions& options = (powered ? weapon.GetCustom().ShotPowered : weapon.GetCustom().Shot);
+		std::int32_t count = std::max<std::int32_t>(weapon.GetCustom().Fire.ShotsPerFire, 1);
 		for (std::int32_t i = 0; i < count; i++) {
 			std::int32_t sample = volley * count + i;
-			float offset = (count > 1 ? weapon.Fire.SpreadAngle * (float(i) / float(count - 1) - 0.5f) : 0.0f);
-			offset += weapon.Fire.RandomSpread * SpreadSample(sample);
+			float offset = (count > 1 ? weapon.GetCustom().Fire.SpreadAngle * (float(i) / float(count - 1) - 0.5f) : 0.0f);
+			offset += weapon.GetCustom().Fire.RandomSpread * SpreadSample(sample);
 			SimulatedShot& shot = shots.emplace_back();
 			SimulateShot(options, range.FacingLeft ? Pi + offset : offset, range, shot);
 			// What's random is evenly spread too
@@ -270,7 +279,7 @@ namespace Jazz2::Editor
 		constexpr std::int32_t MaxVolleys = 12;
 
 		shots.clear();
-		float cooldown = std::max(weapon.Fire.Cooldown, 1.0f);
+		float cooldown = std::max(weapon.GetCustom().Fire.Cooldown, 1.0f);
 		std::int32_t volleys = (weapon.Options.Style == WeaponStyle::Missile ? 1 : std::clamp<std::int32_t>(std::int32_t(std::ceil(HeldFrames / cooldown)), 1, MaxVolleys));
 		SmallVector<SimulatedShot, 4> volleyShots;
 		for (std::int32_t v = 0; v < volleys; v++) {
@@ -300,12 +309,12 @@ namespace Jazz2::Editor
 		}
 		float extentX = 2.0f * float(std::max(hotspot.X, cell.X - hotspot.X));
 		float extentY = 2.0f * float(std::max(hotspot.Y, cell.Y - hotspot.Y));
-		float scale = std::min({ rect.W / extentX, rect.H / extentY, std::max(std::floor(painter.GetScale()), 1.0f) });
-		scale = (scale >= 1.0f ? std::floor(scale) : scale);
+		// Grows with the scale of the interface, as its icons do
+		float scale = std::min({ rect.W / extentX, rect.H / extentY, painter.GetScale() });
 		Vector2i offset = base.GetFrameOffset(frame);
 		Vector2f center = Vector2f(std::round(rect.X + rect.W * 0.5f), std::round(rect.Y + rect.H * 0.5f));
 		Rectf target(std::round(center.X - float(hotspot.X - offset.X) * scale), std::round(center.Y - float(hotspot.Y - offset.Y) * scale),
-			frameRect.W * scale, frameRect.H * scale);
+			std::round(frameRect.W * scale), std::round(frameRect.H * scale));
 		painter.Image(*base.TextureDiffuse, target, GetTexCoords(base, frame, false), Colorf::White, GetPaletteOffset(resource), UiLayer::Content, 0.0f,
 			additive ? UI::BlendMode::Additive : UI::BlendMode::Normal);
 	}
@@ -506,12 +515,13 @@ namespace Jazz2::Editor
 
 		float inset = painter.Px(2.0f);
 		painter.PushClip(Rectf(Bounds.X + inset, Bounds.Y + inset, Bounds.W - inset * 2.0f, Bounds.H - inset * 2.0f));
-		const WeaponShotOptions& options = (powered ? weapon.ShotPowered : weapon.Shot);
+		const WeaponShotOptions& options = (powered ? weapon.GetCustom().ShotPowered : weapon.GetCustom().Shot);
 		Colorf wallColor = Colorf(1.0f, 1.0f, 1.0f, options.PassesWalls ? 0.15f : 0.4f);
-		painter.Line(toScreen(Vector2f(LeftWallX, FiringRange::FloorY)), toScreen(Vector2f(FiringRange::WallX, FiringRange::FloorY)), 1.0f, wallColor);
-		painter.Line(toScreen(Vector2f(LeftWallX, FiringRange::CeilingY)), toScreen(Vector2f(FiringRange::WallX, FiringRange::CeilingY)), 1.0f, wallColor);
-		painter.Line(toScreen(Vector2f(LeftWallX, FiringRange::CeilingY)), toScreen(Vector2f(LeftWallX, FiringRange::FloorY)), 1.0f, wallColor);
-		painter.Line(toScreen(Vector2f(FiringRange::WallX, FiringRange::CeilingY)), toScreen(Vector2f(FiringRange::WallX, FiringRange::FloorY)), 1.0f, wallColor);
+		float wallThickness = std::max(1.0f, std::round(painter.GetScale()));
+		painter.Line(toScreen(Vector2f(LeftWallX, FiringRange::FloorY)), toScreen(Vector2f(FiringRange::WallX, FiringRange::FloorY)), wallThickness, wallColor);
+		painter.Line(toScreen(Vector2f(LeftWallX, FiringRange::CeilingY)), toScreen(Vector2f(FiringRange::WallX, FiringRange::CeilingY)), wallThickness, wallColor);
+		painter.Line(toScreen(Vector2f(LeftWallX, FiringRange::CeilingY)), toScreen(Vector2f(LeftWallX, FiringRange::FloorY)), wallThickness, wallColor);
+		painter.Line(toScreen(Vector2f(FiringRange::WallX, FiringRange::CeilingY)), toScreen(Vector2f(FiringRange::WallX, FiringRange::FloorY)), wallThickness, wallColor);
 
 		if (hasGun) {
 			DrawAnchored(painter, *player, player->GetFrameForTime(animTime), toScreen(_playerPos), scale, facingLeft, 0.0f,
@@ -558,8 +568,8 @@ namespace Jazz2::Editor
 		String path = weapons->GetSpriteMetadataPath(options.Sprite);
 		std::uint32_t state = options.Sprite.AnimState;
 		if (path.empty()) {
-			WeaponDefinition stock = WeaponDefinition::MakeCustom(slot, weapon.BasedOn != WeaponType::Unknown ? weapon.BasedOn : slot);
-			const WeaponSprite& stockSprite = (powered ? stock.ShotPowered.Sprite : stock.Shot.Sprite);
+			WeaponDefinition stock = WeaponDefinition::MakeCustom(slot, weapon.GetCustom().GetBasedOn(slot));
+			const WeaponSprite& stockSprite = (powered ? stock.GetCustom().ShotPowered.Sprite : stock.GetCustom().Shot.Sprite);
 			path = stockSprite.Metadata;
 			state = stockSprite.AnimState;
 		}

@@ -252,68 +252,222 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::RegisterLegacyLevel(asIScriptEngine* engine)
 	{
 		engine->SetDefaultNamespace("SNOWING");
+		/** @brief Kind of weather effect */
 		engine->RegisterEnum("Type");
-		engine->RegisterEnumValue("Type", "SNOW", 0);
-		engine->RegisterEnumValue("Type", "FLOWER", 1);
-		engine->RegisterEnumValue("Type", "RAIN", 2);
-		engine->RegisterEnumValue("Type", "LEAF", 3);
+		engine->RegisterEnumValue("Type", "SNOW", 0);		///< Snowflakes
+		engine->RegisterEnumValue("Type", "FLOWER", 1);		///< Flower petals
+		engine->RegisterEnumValue("Type", "RAIN", 2);		///< Raindrops
+		engine->RegisterEnumValue("Type", "LEAF", 3);		///< Falling leaves
 		engine->SetDefaultNamespace("");
+		/**
+		 * @brief Whether a weather effect is active
+		 *
+		 * Reflects the weather of the level, including changes made by weather events. Assigning it turns the effect
+		 * on or off once the current script callback returns; @ref jjSnowingType selects the kind of weather.
+		 */
 		engine->RegisterGlobalProperty("bool jjIsSnowing", &snowing);
+		/** @brief Whether the weather effect is limited to outdoor areas of the level */
 		engine->RegisterGlobalProperty("bool jjIsSnowingOutdoorsOnly", &snowingOutdoors);
+		/**
+		 * @brief Intensity of the weather effect
+		 *
+		 * Only matters while @ref jjIsSnowing is `true`.
+		 */
 		engine->RegisterGlobalProperty("uint8 jjSnowingIntensity", &snowingIntensity);
+		/**
+		 * @brief Kind of the weather effect
+		 *
+		 * Only matters while @ref jjIsSnowing is `true`.
+		 */
 		engine->RegisterGlobalProperty("SNOWING::Type jjSnowingType", &snowingType);
 
+		/**
+		 * @brief State of the level triggers, indexed by trigger ID
+		 *
+		 * The same triggers that Trigger Zone and Trigger Crate events turn on and off, so tiles tied to a trigger
+		 * react to assignments too.
+		 */
 		engine->RegisterGlobalFunction("bool get_jjTriggers(uint8)", asFUNCTION(get_jjTriggers), asCALL_CDECL);
+		/** @brief Sets the state of a level trigger */
 		engine->RegisterGlobalFunction("bool set_jjTriggers(uint8, bool)", asFUNCTION(set_jjTriggers), asCALL_CDECL);
+		/**
+		 * @brief Flips the state of a level trigger
+		 *
+		 * Behaves like the switch option of Trigger Zone and Trigger Crate events.
+		 *
+		 * @return New state of the trigger
+		 */
 		engine->RegisterGlobalFunction("bool jjSwitchTrigger(uint8 id)", asFUNCTION(jjSwitchTrigger), asCALL_CDECL);
 
+		/**
+		 * @brief Whether each numbered `onFunction#` callback may be called by Text events
+		 *
+		 * All entries start as `true`. When a Text event with the vanish option calls `onFunction#`, the entry with
+		 * the same number becomes `false` and further Text events skip the callback until it is enabled again.
+		 */
 		engine->RegisterGlobalFunction("bool get_jjEnabledASFunctions(uint8)", asFUNCTION(isNumberedASFunctionEnabled), asCALL_CDECL);
+		/** @brief Sets whether a numbered `onFunction#` callback may be called by Text events */
 		engine->RegisterGlobalFunction("bool set_jjEnabledASFunctions(uint8, bool)", asFUNCTION(setNumberedASFunctionEnabled), asCALL_CDECL);
+		/** @brief Sets every entry of @ref jjEnabledASFunctions back to `true` */
 		engine->RegisterGlobalFunction("void jjEnableEachASFunction()", asFUNCTION(reenableAllNumberedASFunctions), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("WATERLIGHT");
+		/** @brief How ambient lighting behaves when the level has water */
 		engine->RegisterEnum("wl");
-		engine->RegisterEnumValue("wl", "NONE", 0);
-		engine->RegisterEnumValue("wl", "GLOBAL", 1);
-		engine->RegisterEnumValue("wl", "LAGUNICUS", 3);
+		engine->RegisterEnumValue("wl", "NONE", 0);			///< Full brightness everywhere while water is active, ignoring ambient lighting
+		engine->RegisterEnumValue("wl", "GLOBAL", 1);		///< Ambient lighting applies equally above and below the water surface
+		engine->RegisterEnumValue("wl", "LAGUNICUS", 3);	///< Full brightness above water, darker the deeper below the surface the player is
 		engine->SetDefaultNamespace("WATERINTERACTION");
+		/** @brief How local players move underwater */
 		engine->RegisterEnum("WaterInteraction");
-		engine->RegisterEnumValue("WaterInteraction", "POSITIONBASED", waterInteraction_POSITIONBASED);
-		engine->RegisterEnumValue("WaterInteraction", "SWIM", waterInteraction_SWIM);
-		engine->RegisterEnumValue("WaterInteraction", "LOWGRAVITY", waterInteraction_LOWGRAVITY);
+		engine->RegisterEnumValue("WaterInteraction", "POSITIONBASED", waterInteraction_POSITIONBASED);	///< Swimming or low gravity, chosen by how deep the water level is
+		engine->RegisterEnumValue("WaterInteraction", "SWIM", waterInteraction_SWIM);						///< Players swim
+		engine->RegisterEnumValue("WaterInteraction", "LOWGRAVITY", waterInteraction_LOWGRAVITY);			///< Players move normally but fall more slowly
 		engine->SetDefaultNamespace("");
+		/**
+		 * @brief How ambient lighting behaves when the level has water
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalProperty("WATERLIGHT::wl jjWaterLighting", &waterLightMode);
+		/**
+		 * @brief How local players move underwater
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalProperty("WATERINTERACTION::WaterInteraction jjWaterInteraction", &waterInteraction);
+		/**
+		 * @brief Current height of the water surface in pixels
+		 *
+		 * Measured from the top of the level. Read-only, use @ref jjSetWaterLevel() to change it.
+		 */
 		engine->RegisterGlobalFunction("float get_jjWaterLevel()", asFUNCTION(getWaterLevel), asCALL_CDECL);
+		/**
+		 * @brief Height in pixels the water surface is moving towards
+		 *
+		 * Differs from @ref jjWaterLevel only while the water is still moving after a non-instant @ref jjSetWaterLevel().
+		 */
 		engine->RegisterGlobalFunction("float get_jjWaterTarget()", asFUNCTION(getWaterLevel2), asCALL_CDECL);
+		/**
+		 * @brief Moves the water surface to a new height
+		 *
+		 * The height is in pixels, unlike the Water Level event, which uses tiles (32 pixels each). If `instant` is
+		 * `true`, the surface jumps there immediately. Otherwise @ref jjWaterTarget is set and the surface moves by
+		 * @ref jjWaterChangeSpeed pixels every tick until it gets there; a negative target is treated as 0.
+		 *
+		 * @return The requested height
+		 */
 		engine->RegisterGlobalFunction("float jjSetWaterLevel(float yPixel, bool instant)", asFUNCTION(setWaterLevel), asCALL_CDECL);
+		/**
+		 * @brief Speed of the water surface after a non-instant @ref jjSetWaterLevel()
+		 *
+		 * In pixels per tick, 1 by default.
+		 */
 		engine->RegisterGlobalFunction("float get_jjWaterChangeSpeed()", asFUNCTION(get_waterChangeSpeed), asCALL_CDECL);
+		/** @brief Sets the speed of the water surface */
 		engine->RegisterGlobalFunction("float set_jjWaterChangeSpeed(float)", asFUNCTION(set_waterChangeSpeed), asCALL_CDECL);
+		/**
+		 * @brief Layer the water is drawn in front of
+		 *
+		 * 1 by default. Any value outside 1 to 8 hides the water. This only affects drawing, players still swim in
+		 * hidden water.
+		 *
+		 * @partialsupport Visible water is always drawn in front of all layers, the exact layer number currently
+		 * doesn't matter.
+		 */
 		engine->RegisterGlobalFunction("int get_jjWaterLayer()", asFUNCTION(get_waterLayer), asCALL_CDECL);
+		/** @brief Sets the layer the water is drawn in front of */
 		engine->RegisterGlobalFunction("int set_jjWaterLayer(int)", asFUNCTION(set_waterLayer), asCALL_CDECL);
+		/**
+		 * @brief Sets the colors of the water from two RGB colors
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalFunction("void jjSetWaterGradient(uint8 red1, uint8 green1, uint8 blue1, uint8 red2, uint8 green2, uint8 blue2)", asFUNCTION(setWaterGradient), asCALL_CDECL);
+		/**
+		 * @brief Sets the colors of the water from two palette colors
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalFunction("void jjSetWaterGradient(jjPALCOLOR color1, jjPALCOLOR color2)", asFUNCTION(setWaterGradientFromColors), asCALL_CDECL);
+		/**
+		 * @brief Sets the colors of the water from the textured background colors of the palette
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalFunction("void jjSetWaterGradient()", asFUNCTION(setWaterGradientToTBG), asCALL_CDECL);
+		/**
+		 * @brief Restores the default colors of the water
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalFunction("void jjResetWaterGradient()", asFUNCTION(resetWaterGradient), asCALL_CDECL);
 
+		/**
+		 * @brief Starts every rolling rock with the given rock ID
+		 *
+		 * Same as touching a Trigger Rock event.
+		 */
 		engine->RegisterGlobalFunction("void jjTriggerRock(uint8 id)", asFUNCTION(triggerRock), asCALL_CDECL);
 
+		/**
+		 * @brief Ends the level and continues with the given level
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalFunction("void jjNxt(const string &in filename, bool warp = false, bool fast = false)", asFUNCTION(cycleTo), asCALL_CDECL);
+		/**
+		 * @brief Ends the level and continues with the next one
+		 *
+		 * With `warp`, the level is left as through a warp exit. With `fast`, the transition to the next level is
+		 * shortened.
+		 */
 		engine->RegisterGlobalFunction("void jjNxt(bool warp = false, bool fast = false)", asFUNCTION(jjNxt), asCALL_CDECL);
 
 		engine->RegisterGlobalFunction("bool get_jjEnabledTeams(uint8)", asFUNCTION(getEnabledTeam), asCALL_CDECL);
 
+		/**
+		 * @brief Virtual-key code of the key that opens the chat prompt
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalProperty("uint8 jjKeyChat", &ChatKey);
 		engine->RegisterGlobalFunction("bool get_jjKey(uint8)", asFUNCTION(getKeyDown), asCALL_CDECL);
 		engine->RegisterGlobalFunction("int get_jjMouseX()", asFUNCTION(getCursorX), asCALL_CDECL);
 		engine->RegisterGlobalFunction("int get_jjMouseY()", asFUNCTION(getCursorY), asCALL_CDECL);
 
+		/**
+		 * @brief Whether a coin warp in single player turns the remaining coins into gems
+		 *
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalProperty("bool jjWarpsTransmuteCoins", &warpsTransmuteCoins);
+		/**
+		 * @brief Whether crates made by a generator take their parameters from the tile where they land
+		 *
+		 * Instead of the tile of the generator.
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalProperty("bool jjDelayGeneratedCrateOrigins", &delayGeneratedCrateOrigins);
+		/**
+		 * @brief Whether the background layer moves by its own speeds
+		 *
+		 * A shortcut for the speed models of `jjLayers[8]`: `false` keeps the layer fixed in the original way of
+		 * layer 8, `true` makes it scroll by its own speeds like any other layer. Only a background layer that the level
+		 * itself left fixed is affected.
+		 */
 		engine->RegisterGlobalFunction("bool get_jjUseLayer8Speeds()", asFUNCTION(getUseLayer8Speeds), asCALL_CDECL);
+		/** @brief Sets whether the background layer moves by its own speeds */
 		engine->RegisterGlobalFunction("bool set_jjUseLayer8Speeds(bool)", asFUNCTION(setUseLayer8Speeds), asCALL_CDECL);
 
+		/**
+		 * @brief Whether players may get a sugar rush in this level
+		 *
+		 * Used by multiplayer servers to detect cheating.
+		 * @partialsupport Currently has no effect.
+		 */
 		engine->RegisterGlobalProperty("bool jjSugarRushAllowed", &g_levelHasFood);
+		/** @brief Alternative name of @ref jjSugarRushAllowed */
 		engine->RegisterGlobalProperty("bool jjSugarRushesAllowed", &g_levelHasFood);
 
 		engine->RegisterGlobalFunction("int jjEventGet(uint16 xTile, uint16 yTile)", asFUNCTION(GetEvent), asCALL_CDECL);

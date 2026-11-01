@@ -39,7 +39,7 @@
 
 #include "as_config.h"
 
-#ifndef AS_MAX_PORTABILITY
+#if !defined(AS_MAX_PORTABILITY) && !defined(AS_NATIVE_THUNKS)
 #ifdef AS_PPC_64
 #if AS_PTR_SIZE == 2
 // TODO: Add support for PPC 64bit platforms with 64bit pointers, for example Linux PPC64 (big endian) and PPC64 (little endian)

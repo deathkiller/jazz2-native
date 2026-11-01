@@ -37,7 +37,7 @@ namespace Jazz2::Scripting
 		if (tileMap == nullptr) {
 			return false;
 		}
-		Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
+		Tiles::TileCollisionParams params = { Tiles::TileDestructType::SuspendTiles, true };
 		return !tileMap->IsTileEmpty(aabb, params);
 	}
 

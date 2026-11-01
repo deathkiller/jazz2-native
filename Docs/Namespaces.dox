@@ -16,7 +16,8 @@ To get in touch with the developers and the community, you can use the official 
 
 For getting started guide, see @ref building --- and @ref consoles "Building for consoles" for the
 console targets. For game-specific API documentation, see @ref Jazz2
-namespace. For common utility functions and generic containers, see @ref Death "the shared root namespace".
+namespace. For the API available to level scripts, see the [scripting documentation](scripting/index.html).
+For common utility functions and generic containers, see @ref Death "the shared root namespace".
 In addition, @ref CommonBase.h contains common configuration-specific and platform-specific
 definitions. For **nCine** game engine documentation, see @ref nCine namespace. The **nCine** game
 engine used in this game has been extensively modified, so the original documentation no longer

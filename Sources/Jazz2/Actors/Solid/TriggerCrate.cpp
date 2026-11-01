@@ -72,7 +72,7 @@ namespace Jazz2::Actors::Solid
 		return _levelHandler->IsReforged() || runtime_cast<Weapons::TNT>(collider);
 	}
 
-	bool TriggerCrate::OnPerish(ActorBase* collider)
+	void TriggerCrate::SwitchTrigger()
 	{
 		if (_newState == TriggerCrateState::Toggle) {
 			// Toggle
@@ -81,6 +81,11 @@ namespace Jazz2::Actors::Solid
 			// Turn off/on
 			_levelHandler->SetTrigger(_triggerId, _newState == TriggerCrateState::On);
 		}
+	}
+
+	bool TriggerCrate::OnPerish(ActorBase* collider)
+	{
+		SwitchTrigger();
 
 		PlaySfx("Break"_s);
 

@@ -278,6 +278,18 @@ namespace Jazz2
 		/** @brief Releases an image acquired by @ref AcquireWeaponImage(), by the path of its metadata */
 		void ReleaseWeaponImage(StringView path);
 		/**
+		 * @brief Makes a sound of the weapons of a level playable by its identifier while the level is loaded
+		 *
+		 * Returns the identifier (see @ref WeaponsDescription::GetSoundIdentifier()), any actor plays it as a sound of its
+		 * own by it (see @ref FindWeaponSound()). As images, two levels that have the same sound share it. A dedicated server
+		 * and a build without audio only know the identifier, so it's still sent to the clients.
+		 */
+		String AcquireWeaponSound(const WeaponSound& sound);
+		/** @brief Releases a sound acquired by @ref AcquireWeaponSound(), by its identifier */
+		void ReleaseWeaponSound(StringView identifier);
+		/** @brief Returns a sound of the weapons of a level acquired, by its identifier, `nullptr` if there's none */
+		Resources::SoundResource* FindWeaponSound(StringView identifier);
+		/**
 		 * @brief Keeps everything loaded across the loadings that follow, until @ref ReleaseLoadedResources()
 		 *
 		 * Nothing is released at the end of a loading while any is held, also what was loaded since, see
@@ -846,6 +858,16 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;
 #endif
+		// Sounds of the weapons of the loaded levels by their identifiers, with how many levels have them, see AcquireWeaponSound()
+		struct WeaponSoundEntry
+		{
+			std::int32_t References = 0;
+			Resources::SoundResource Sound;
+#if defined(WITH_AUDIO)
+			std::unique_ptr<GenericSoundResource> Resource;
+#endif
+		};
+		HashMap<String, std::unique_ptr<WeaponSoundEntry>> _weaponSounds;
 		// How many times each metadata is pinned, see PinMetadata(), and how many retains are held, see RetainLoadedResources()
 		SmallVector<Pair<Metadata*, std::int32_t>, 0> _pinnedMetadata;
 		std::int32_t _retainedResources = 0;

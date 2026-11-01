@@ -820,7 +820,7 @@ namespace Jazz2::Scripting::Legacy
 	}
 
 	bool AnimationTables::DoFramesCollide(const jjANIMFRAME& frame1, std::int32_t x1, std::int32_t y1, std::int32_t direction1,
-		const jjANIMFRAME& frame2, std::int32_t x2, std::int32_t y2, std::int32_t direction2, bool always)
+		const jjANIMFRAME& frame2, std::int32_t x2, std::int32_t y2, std::int32_t direction2, bool always, const Recti* clip)
 	{
 		EnsureFrameImage(const_cast<jjANIMFRAME&>(frame1));
 		EnsureFrameImage(const_cast<jjANIMFRAME&>(frame2));
@@ -860,6 +860,12 @@ namespace Jazz2::Scripting::Legacy
 		std::int32_t top = std::max<std::int32_t>(p1.Top, p2.Top);
 		std::int32_t right = std::min<std::int32_t>(p1.Left + frame1.width, p2.Left + frame2.width);
 		std::int32_t bottom = std::min<std::int32_t>(p1.Top + frame1.height, p2.Top + frame2.height);
+		if (clip != nullptr) {
+			left = std::max<std::int32_t>(left, clip->X);
+			top = std::max<std::int32_t>(top, clip->Y);
+			right = std::min<std::int32_t>(right, clip->X + clip->W);
+			bottom = std::min<std::int32_t>(bottom, clip->Y + clip->H);
+		}
 
 		// A single pixel is enough for bullets, otherwise it takes about eight as JJ2+ says
 		std::int32_t required = (always ? 1 : 8);
@@ -981,7 +987,7 @@ namespace Jazz2::Scripting::Legacy
 			if (_pathAnimations.empty()) {
 				// Every animation of the sets of the original by the path of its sprite sheet, as ResolveSet() makes them,
 				// with the separators the cache of the graphics has
-				for (std::uint32_t setID = 0; setID < _plusFirstSetID + _plusSetCount && setID < CustomFirstSetID; setID++) {
+				for (std::uint32_t setID = 0; setID < GetCustomFirstSetID(); setID++) {
 					std::uint32_t fileSet;
 					auto* mapping = GetFileSet(setID, fileSet);
 					std::uint32_t count = (mapping != nullptr ? mapping->GetItemCount(fileSet) : 0);

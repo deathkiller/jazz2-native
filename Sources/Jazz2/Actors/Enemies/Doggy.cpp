@@ -3,6 +3,7 @@
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/FreezerShot.h"
+#include "../Player.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -134,13 +135,16 @@ namespace Jazz2::Actors::Enemies
 			HandleFrozenStateChange(shotBase);
 
 			if (shotBase->GetFrozenDuration() <= 0.0f) {
+				// Measured in JJ2+: it turns to the shooter and dashes at 3 px/tick for 16 ticks
+				if (Player* owner = shotBase->GetOwner()) {
+					SetFacingLeft(owner->GetPos().X < _pos.X);
+				}
 				if (_attackTime <= 0.0f) {
 					PlaySfx("Attack");
-					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * _attackSpeed;
 					SetAnimation(AnimState::TransitionAttack);
 				}
-
-				_attackTime = 200.0f;
+				_speed.X = (IsFacingLeft() ? -3.0f : 3.0f) * 70.0f / 60.0f;
+				_attackTime = 16.0f * 60.0f / 70.0f;
 				_noiseCooldown = 45.0f;
 			}
 		}

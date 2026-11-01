@@ -37,8 +37,8 @@ namespace Jazz2::Actors::Collectibles
 		class IlluminateLights
 		{
 		public:
-			/** @brief Seeds the swarm */
-			void Create();
+			/** @brief Seeds the swarm at @p elapsedFrames of the level, every swarm is in the same phase at the same time */
+			void Create(float elapsedFrames);
 			/** @brief Returns `true` if the swarm hasn't been seeded yet */
 			bool IsEmpty() const {
 				return _lights.empty();
@@ -60,6 +60,7 @@ namespace Jazz2::Actors::Collectibles
 			};
 
 			SmallVector<Light, 0> _lights;
+			float _time = 0.0f;
 		};
 
 		/** @brief Creates a new instance */

@@ -48,7 +48,9 @@ jobs:
       run: |
         mkdir -p ./build/docs/
         ./m.css/documentation/doxygen.py ./Docs/Config.py
-        
+        # Scripting API, needs the Doxygen XML above for links to C++
+        ./m.css/documentation/angelscript.py ./Docs/ConfigScripting.py
+
     - name: 'Upload Package'
       uses: actions/upload-artifact@v7
       with:

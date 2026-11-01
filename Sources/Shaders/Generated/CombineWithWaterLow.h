@@ -159,7 +159,7 @@ void main() {
 	}
 
 	COLOR = mix(mix(
-		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));
@@ -250,7 +250,7 @@ void main() {
 	}
 
 	COLOR = mix(mix(
-		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));
@@ -449,7 +449,7 @@ void main() {
 	}
 
 	COLOR = mix(mix(
-		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));
@@ -541,7 +541,7 @@ void main() {
 	}
 
 	COLOR = mix(mix(
-		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));

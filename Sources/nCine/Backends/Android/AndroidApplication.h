@@ -87,6 +87,7 @@ namespace nCine
 
 		bool CanShowScreenKeyboard() override;
 		bool IsScreenKeyboardVisible() override;
+		std::int32_t GetScreenKeyboardInset() override;
 		bool ToggleScreenKeyboard() override;
 		bool ShowScreenKeyboard(Containers::StringView initialText = {},
 			Containers::Function<void(Containers::StringView)>&& onCompleted = {}) override;

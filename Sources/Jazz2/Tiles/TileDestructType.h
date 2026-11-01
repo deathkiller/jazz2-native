@@ -23,6 +23,7 @@ namespace Jazz2::Tiles
 
 		IgnoreSolidTiles = 0x20,	/**< Solid tiles are ignored during collision */
 		VerticalMove = 0x40,		/**< Movement is vertical */
+		SuspendTiles = 0x80,		/**< Masks of tiles players hang from (vines, hooks) are solid too */
 	};
 
 	DEATH_ENUM_FLAGS(TileDestructType);

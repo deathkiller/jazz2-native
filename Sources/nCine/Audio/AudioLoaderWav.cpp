@@ -72,7 +72,7 @@ namespace nCine
 		_numSamples = std::int32_t(_dataSize / (_numChannels * _bytesPerSample));
 		_duration = float(_numSamples) / _frequency;
 
-		LOGD("Duration: {:.2}s, channels: {}, frequency: {} Hz", _duration, _numChannels, _frequency);
+		//LOGD("Duration: {:.2}s, channels: {}, frequency: {} Hz", _duration, _numChannels, _frequency);
 
 		_hasLoaded = true;
 	}

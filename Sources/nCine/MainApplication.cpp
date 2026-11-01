@@ -1126,6 +1126,34 @@ namespace nCine
 #endif
 	}
 
+	std::int32_t MainApplication::GetScreenKeyboardInset()
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		HWND tip = ::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL);
+		HWND window = ::GetActiveWindow();
+		RECT tipRect, clientRect;
+		if (tip == NULL || window == NULL || !::IsWindowVisible(tip) || !::GetWindowRect(tip, &tipRect) || !::GetClientRect(window, &clientRect)) {
+			return 0;
+		}
+		POINT topLeft = { clientRect.left, clientRect.top };
+		POINT bottomRight = { clientRect.right, clientRect.bottom };
+		::ClientToScreen(window, &topLeft);
+		::ClientToScreen(window, &bottomRight);
+		if (tipRect.left >= bottomRight.x || tipRect.right <= topLeft.x || tipRect.top >= bottomRight.y || tipRect.bottom <= topLeft.y) {
+			return 0;
+		}
+		const LONG covered = bottomRight.y - (tipRect.top > topLeft.y ? tipRect.top : topLeft.y);
+		const LONG clientHeight = bottomRight.y - topLeft.y;
+		if (covered <= 0 || clientHeight <= 0) {
+			return 0;
+		}
+		// The drawable may be larger than the client area with DPI scaling
+		return std::int32_t(std::int64_t(covered) * _gfxDevice->drawableHeight() / clientHeight);
+#else
+		return 0;
+#endif
+	}
+
 	bool MainApplication::ToggleScreenKeyboard()
 	{
 #if defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)

@@ -12,35 +12,53 @@
 
 namespace Jazz2::Actors::Collectibles
 {
-	void CollectibleBase::IlluminateLights::Create()
+	namespace
 	{
+		// A number from 0 to 1, the same for the same seed
+		float GetSwarmHash(std::uint32_t seed)
+		{
+			std::uint32_t h = seed * 0x9E3779B1u;
+			h ^= h >> 15;
+			h *= 0x2C1B3C6Du;
+			h ^= h >> 12;
+			return float(h & 0xFFFF) / 65535.0f;
+		}
+	}
+
+	void CollectibleBase::IlluminateLights::Create(float elapsedFrames)
+	{
+		// The same swarm for every object, as JJ2+ shows it
+		_time = elapsedFrames;
 		_lights.reserve(LightCount);
 		for (std::int32_t i = 0; i < LightCount; i++) {
 			auto& light = _lights.emplace_back();
-			light.Intensity = Random().NextFloat(0.22f, 0.42f);
-			light.Distance = Random().NextFloat(4.0f, 36.0f);
-			light.Phase = Random().NextFloat(0.0f, fTwoPi);
-			light.Speed = Random().NextFloat(-0.12f, -0.04f);
+			std::uint32_t seed = std::uint32_t(i) * 4u;
+			light.Intensity = 0.22f + 0.2f * GetSwarmHash(seed);
+			// Three in ten spots close to the object, the others farther out
+			light.Distance = (i < LightCount * 3 / 10 ? 8.0f + 16.0f * GetSwarmHash(seed + 1u) : 24.0f + 18.0f * GetSwarmHash(seed + 1u));
+			light.Phase = fTwoPi * GetSwarmHash(seed + 2u);
+			light.Speed = -(0.04f + 0.08f * GetSwarmHash(seed + 3u));
 		}
 	}
 
 	void CollectibleBase::IlluminateLights::OnUpdate(float timeMult)
 	{
-		for (auto& current : _lights) {
-			current.Phase += current.Speed * timeMult;
-		}
+		_time += timeMult;
 	}
 
 	void CollectibleBase::IlluminateLights::OnEmitLights(SmallVectorImpl<LightEmitter>& lights, Vector2f pos) const
 	{
+		// Fitted to the illuminated pickups of JJ2+, averaged over time in darkness and in full light
 		for (const auto& current : _lights) {
+			// Both waves repeat after 200 pi, which keeps the angle small
+			float phase = std::fmod(current.Phase + current.Speed * _time, 200.0f * fPi);
 			auto& light = lights.emplace_back();
-			light.Pos = Vector2f(pos.X + cosApprox(current.Phase + cosApprox(current.Phase * 0.33f) * 0.33f) * current.Distance,
-				pos.Y + sinApprox(current.Phase + sinApprox(current.Phase) * 0.33f) * current.Distance);
-			light.Intensity = current.Intensity * 0.7f;
-			light.Brightness = current.Intensity;
+			light.Pos = Vector2f(pos.X + cosApprox(phase + cosApprox(phase * 0.33f) * 0.33f) * current.Distance,
+				pos.Y + sinApprox(phase + sinApprox(phase) * 0.33f) * current.Distance);
+			light.Intensity = current.Intensity;
+			light.Brightness = current.Intensity * 0.8f;
 			light.RadiusNear = 0.0f;
-			light.RadiusFar = current.Intensity * 86.0f;
+			light.RadiusFar = 32.0f;
 		}
 	}
 
@@ -53,7 +71,8 @@ namespace Jazz2::Actors::Collectibles
 	{
 		_elasticity = 0.6f;
 
-		SetState(ActorState::SkipPerPixelCollisions, true);
+		// Collected by the pixels of both frames, as measured in the original
+		SetState(ActorState::SkipPerPixelCollisions, false);
 
 		Vector2f pos = _pos;
 		_phase = ((pos.X / 32) + (pos.Y / 32)) * 2.0f;
@@ -73,7 +92,7 @@ namespace Jazz2::Actors::Collectibles
 		}
 
 		if ((details.State & ActorState::Illuminated) == ActorState::Illuminated) {
-			_illuminateLights.Create();
+			_illuminateLights.Create(_levelHandler->GetElapsedFrames());
 		}
 
 		async_return true;

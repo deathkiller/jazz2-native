@@ -95,7 +95,7 @@
 
 #include "as_config.h"
 
-#ifndef AS_MAX_PORTABILITY
+#if !defined(AS_MAX_PORTABILITY) && !defined(AS_NATIVE_THUNKS)
 #if defined(AS_XENON)
 
 #include "as_callfunc.h"

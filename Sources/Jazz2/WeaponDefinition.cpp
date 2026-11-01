@@ -66,13 +66,14 @@ namespace Jazz2
 	{
 		return (Cooldown == other.Cooldown && FastFireStep == other.FastFireStep && AmmoPerShot == other.AmmoPerShot &&
 			ShotsPerFire == other.ShotsPerFire && SpreadAngle == other.SpreadAngle && RandomSpread == other.RandomSpread &&
-			AllowedInWater == other.AllowedInWater && Recoil == other.Recoil && Sound == other.Sound &&
-			LoopSound == other.LoopSound && Flare == other.Flare);
+			AllowedInWater == other.AllowedInWater && StandStill == other.StandStill && Recoil == other.Recoil && Sound == other.Sound &&
+			SoundIndex == other.SoundIndex && LoopSound == other.LoopSound && Flare == other.Flare);
 	}
 
 	bool WeaponShotOptions::operator==(const WeaponShotOptions& other) const
 	{
-		return (Sprite == other.Sprite && AltSprite == other.AltSprite && FlipX == other.FlipX && FlipY == other.FlipY && Speed == other.Speed && InheritPlayerSpeed == other.InheritPlayerSpeed &&
+		return (Sprite == other.Sprite && AltSprite == other.AltSprite && FlipX == other.FlipX && FlipY == other.FlipY && Speed == other.Speed &&
+			Acceleration == other.Acceleration && InheritPlayerSpeed == other.InheritPlayerSpeed &&
 			Gravity == other.Gravity && Lifetime == other.Lifetime && Strength == other.Strength && Pierce == other.Pierce &&
 			Bounces == other.Bounces && Elasticity == other.Elasticity && PassesWalls == other.PassesWalls &&
 			HomingTurnRate == other.HomingTurnRate && HomingRange == other.HomingRange &&
@@ -81,6 +82,46 @@ namespace Jazz2
 			AreaStrength == other.AreaStrength && Knockback == other.Knockback && Explosion == other.Explosion &&
 			LightRadius == other.LightRadius && LightIntensity == other.LightIntensity &&
 			RotatesWithSpeed == other.RotatesWithSpeed && Look == other.Look);
+	}
+
+	bool CustomWeaponOptions::operator==(const CustomWeaponOptions& other) const
+	{
+		return (Fire == other.Fire && Shot == other.Shot && ShotPowered == other.ShotPowered && HudIcon == other.HudIcon &&
+			HudIconPowered == other.HudIconPowered && Pickup == other.Pickup && BasedOn == other.BasedOn);
+	}
+
+	WeaponDefinition::WeaponDefinition(const WeaponDefinition& other)
+	{
+		*this = other;
+	}
+
+	WeaponDefinition& WeaponDefinition::operator=(const WeaponDefinition& other)
+	{
+		if (this == &other) {
+			return *this;
+		}
+		Name = other.Name;
+		ScriptParams = other.ScriptParams;
+		Options = other.Options;
+		StartAmmo = other.StartAmmo;
+		Kind = other.Kind;
+		AmmoCrateEvent = other.AmmoCrateEvent;
+		_custom = (other._custom != nullptr ? std::make_unique<CustomWeaponOptions>(*other._custom) : nullptr);
+		return *this;
+	}
+
+	const CustomWeaponOptions& WeaponDefinition::GetCustom() const
+	{
+		static const CustomWeaponOptions Defaults;
+		return (_custom != nullptr ? *_custom : Defaults);
+	}
+
+	CustomWeaponOptions& WeaponDefinition::GetCustom()
+	{
+		if (_custom == nullptr) {
+			_custom = std::make_unique<CustomWeaponOptions>();
+		}
+		return *_custom;
 	}
 
 	WeaponDefinition WeaponDefinition::MakeDefault(WeaponType weaponType)
@@ -97,11 +138,12 @@ namespace Jazz2
 
 		WeaponDefinition definition = MakeDefault(weaponType);
 		definition.Kind = WeaponKind::Custom;
-		definition.BasedOn = basedOn;
 
-		WeaponFireOptions& fire = definition.Fire;
-		WeaponShotOptions& shot = definition.Shot;
-		WeaponShotOptions& powered = definition.ShotPowered;
+		CustomWeaponOptions& custom = definition.GetCustom();
+		custom.BasedOn = basedOn;
+		WeaponFireOptions& fire = custom.Fire;
+		WeaponShotOptions& shot = custom.Shot;
+		WeaponShotOptions& powered = custom.ShotPowered;
 		shot.LightRadius = 20.0f;
 		switch (basedOn) {
 			default:
@@ -258,6 +300,7 @@ namespace Jazz2
 				fire.AmmoPerShot = 80;
 				fire.RandomSpread = 0.16f;
 				fire.AllowedInWater = false;
+				fire.StandStill = true;
 				fire.Recoil = 2.0f;
 				fire.Sound = "WeaponThunderbolt"_s;
 				fire.LoopSound = true;
@@ -280,18 +323,26 @@ namespace Jazz2
 	bool WeaponDefinition::operator==(const WeaponDefinition& other) const
 	{
 		return (Kind == other.Kind && Name == other.Name && Options == other.Options && StartAmmo == other.StartAmmo &&
-			AmmoCrateEvent == other.AmmoCrateEvent && BasedOn == other.BasedOn && Fire == other.Fire && Shot == other.Shot &&
-			ShotPowered == other.ShotPowered && HudIcon == other.HudIcon && HudIconPowered == other.HudIconPowered &&
-			Pickup == other.Pickup && ScriptLibrary == other.ScriptLibrary && ScriptConstructor == other.ScriptConstructor &&
-			ScriptParams.size() == other.ScriptParams.size() && std::equal(ScriptParams.begin(), ScriptParams.end(), other.ScriptParams.begin()) &&
+			AmmoCrateEvent == other.AmmoCrateEvent && GetCustom() == other.GetCustom() &&
+			ScriptParams.size() == other.ScriptParams.size() && std::equal(ScriptParams.begin(), ScriptParams.end(), other.ScriptParams.begin()));
+	}
+
+	bool WeaponEditorData::operator==(const WeaponEditorData& other) const
+	{
+		return (ScriptLibrary == other.ScriptLibrary && ScriptConstructor == other.ScriptConstructor &&
 			UnknownProperties.size() == other.UnknownProperties.size() &&
 			std::equal(UnknownProperties.begin(), UnknownProperties.end(), other.UnknownProperties.begin()));
 	}
 
+	bool WeaponSound::operator==(const WeaponSound& other) const
+	{
+		return (Name == other.Name && Data.size() == other.Data.size() && std::equal(Data.begin(), Data.end(), other.Data.begin()));
+	}
+
 	bool WeaponImage::operator==(const WeaponImage& other) const
 	{
-		return (FrameWidth == other.FrameWidth && FrameHeight == other.FrameHeight && FrameCount == other.FrameCount &&
-			FrameRate == other.FrameRate && HotspotX == other.HotspotX && HotspotY == other.HotspotY &&
+		return (Width == other.Width && Height == other.Height && FrameColumns == other.FrameColumns && FrameRows == other.FrameRows &&
+			FrameCount == other.FrameCount && FrameRate == other.FrameRate && HotspotX == other.HotspotX && HotspotY == other.HotspotY &&
 			Pixels.size() == other.Pixels.size() && std::equal(Pixels.begin(), Pixels.end(), other.Pixels.begin()));
 	}
 
@@ -304,7 +355,7 @@ namespace Jazz2
 
 	String WeaponsDescription::GetImageMetadataPath(const WeaponImage& image)
 	{
-		const std::int32_t header[6] = { image.FrameWidth, image.FrameHeight, image.FrameCount,
+		const std::int32_t header[8] = { image.Width, image.Height, image.FrameColumns, image.FrameRows, image.FrameCount,
 			std::int32_t(image.FrameRate * 1000.0f), image.HotspotX, image.HotspotY };
 		std::uint64_t hash = Death::Cryptography::xxHash3(reinterpret_cast<const char*>(image.Pixels.data()), image.Pixels.size());
 		hash ^= Death::Cryptography::xxHash3(reinterpret_cast<const char*>(header), sizeof(header)) * 0x9E3779B97F4A7C15ull;
@@ -319,9 +370,23 @@ namespace Jazz2
 		return sprite.Metadata;
 	}
 
+	String WeaponsDescription::GetSoundIdentifier(const WeaponSound& sound)
+	{
+		std::uint64_t hash = Death::Cryptography::xxHash3(reinterpret_cast<const char*>(sound.Data.data()), sound.Data.size());
+		return Death::format("Level/WeaponSound/{:.16x}", hash);
+	}
+
+	String WeaponsDescription::GetFireSoundIdentifier(const WeaponFireOptions& fire) const
+	{
+		if (fire.SoundIndex >= 0) {
+			return (fire.SoundIndex < std::int32_t(Sounds.size()) ? GetSoundIdentifier(Sounds[fire.SoundIndex]) : String());
+		}
+		return fire.Sound;
+	}
+
 	bool WeaponsDescription::IsDefault() const
 	{
-		if (ScriptHookArgument != -1 || !Images.empty()) {
+		if (ScriptHookArgument != -1 || !Images.empty() || !Sounds.empty()) {
 			return false;
 		}
 		for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {

@@ -14,7 +14,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ShotBase::ShotBase()
-		: _timeLeft(0), _upgrades(0), _strength(0), _lastRicochet(nullptr)
+		: _timeLeft(0), _upgrades(0), _strength(0), _lastRicochet(nullptr), _frozenDuration(0.0f)
 	{
 	}
 
@@ -38,11 +38,6 @@ namespace Jazz2::Actors::Weapons
 	WeaponType ShotBase::GetSourceWeapon()
 	{
 		return GetWeaponType();
-	}
-
-	float ShotBase::GetFrozenDuration() const
-	{
-		return 0.0f;
 	}
 
 	bool ShotBase::ThawsFrozen() const

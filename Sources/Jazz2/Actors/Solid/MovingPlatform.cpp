@@ -45,7 +45,8 @@ namespace Jazz2::Actors::Solid
 		_speed = params.GetInt8(2) * SpeedUnit;
 		std::uint8_t sync = params.GetUint8(1);
 		_isSwing = params.GetBool(4);
-		_phase = sync * fPiOver2 - _speed * _levelHandler->GetElapsedFrames();
+		// The angle of JJ2 is speed * ticks, its zero hangs straight down (measured, swinging ones not)
+		_phase = (sync + (_isSwing ? 0 : 1)) * fPiOver2 - _speed * _levelHandler->GetElapsedFrames();
 
 		_originPos = _pos;
 		_lastPos = _originPos;
@@ -87,6 +88,17 @@ namespace Jazz2::Actors::Solid
 		}
 
 		async_return true;
+	}
+
+	void MovingPlatform::SetEventSpeed(std::int32_t value)
+	{
+		// The swing follows from the time, as in JJ2 (measured: angle = speed * ticks) - a new speed puts it where that
+		// speed would be by now, not on from where the old one left it
+		float speed = float(value) * SpeedUnit;
+		if (speed != _speed) {
+			_phase = std::fmod(_phase - (speed - _speed) * _levelHandler->GetElapsedFrames(), fTwoPi);
+			_speed = speed;
+		}
 	}
 
 	void MovingPlatform::OnUpdate(float timeMult)

@@ -87,7 +87,7 @@ namespace Jazz2::Scripting
 		@brief **AngelScript** dictionary
 		
 		Reference-counted, garbage-collected associative container mapping string keys to @ref CScriptDictValue
-		entries, exposed to scripts as the `dictionary` type. It supports setting, retrieving and removing
+		entries, exposed to scripts as the @ref dictionary type. It supports setting, retrieving and removing
 		keyed values of arbitrary script types as well as enumerating its keys.
 	*/
 	class CScriptDictionary

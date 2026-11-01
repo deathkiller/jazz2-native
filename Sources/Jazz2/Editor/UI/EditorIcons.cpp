@@ -1633,8 +1633,6 @@ namespace Jazz2::Editor
 		};
 
 		// A beetle, the debug tools
-		// A magnifying glass in the colors of the game, a closer look at the level played, with an outline, see
-		// EditorIcons::GetPixelColor()
 		// The blaster of Spaz in gray, as the fast fire shows it, with a small Play over its corner
 		const char* const IconWeapon[16] = {
 			"...........GGGG.",
@@ -1655,6 +1653,28 @@ namespace Jazz2::Editor
 			"..oo.oooo.oo....",
 		};
 
+		// A pencil, a value changed from what it was
+		const char* const IconPencil[16] = {
+			"................",
+			"................",
+			"................",
+			".........+##+...",
+			"........+##+....",
+			".......++++.....",
+			"......+##+......",
+			".....+##+.......",
+			"....+##+........",
+			"...+##+.........",
+			"..+#+...........",
+			"..#.............",
+			"................",
+			"................",
+			"................",
+			"................",
+		};
+
+		// A magnifying glass in the colors of the game, a closer look at the level played, with an outline, see
+		// EditorIcons::GetPixelColor()
 		const char* const IconDebug[16] = {
 			"....oooo........",
 			"...owwwGoo......",
@@ -1992,6 +2012,7 @@ namespace Jazz2::Editor
 			case EditorIcon::CursorResizeNESW: return IconCursorResizeNESW;
 			case EditorIcon::CursorMove: return IconCursorMove;
 			case EditorIcon::Weapon: return IconWeapon;
+			case EditorIcon::Pencil: return IconPencil;
 			default: return IconNone;
 		}
 	}

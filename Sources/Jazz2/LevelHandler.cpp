@@ -250,10 +250,13 @@ namespace Jazz2
 		TracyPlot("Actors", 0LL);
 	}
 
-	LevelHandler::AcquiredWeaponImages::~AcquiredWeaponImages()
+	LevelHandler::AcquiredWeaponAssets::~AcquiredWeaponAssets()
 	{
-		for (const String& path : Paths) {
+		for (const String& path : Images) {
 			ContentResolver::Get().ReleaseWeaponImage(path);
+		}
+		for (const String& identifier : Sounds) {
+			ContentResolver::Get().ReleaseWeaponSound(identifier);
 		}
 	}
 
@@ -788,8 +791,11 @@ namespace Jazz2
 		_weapons = Death::move(descriptor.Weapons);
 		for (const WeaponImage& image : _weapons.Images) {
 			if (Metadata* metadata = ContentResolver::Get().AcquireWeaponImage(image)) {
-				_weaponImages.Paths.push_back(metadata->Path);
+				_weaponAssets.Images.push_back(metadata->Path);
 			}
+		}
+		for (const WeaponSound& sound : _weapons.Sounds) {
+			_weaponAssets.Sounds.push_back(ContentResolver::Get().AcquireWeaponSound(sound));
 		}
 #if defined(WITH_ANGELSCRIPT)
 		_tileDiffuseOverrides = Death::move(descriptor.TileDiffuseOverrides);
@@ -1505,6 +1511,9 @@ namespace Jazz2
 	{
 		*collider = nullptr;
 
+		if (self->GetState(Actors::ActorState::CollideWithSuspendTiles)) {
+			params.DestructType |= TileDestructType::SuspendTiles;
+		}
 		if (self->GetState(Actors::ActorState::CollideWithTileset)) {
 			if (_tileMap != nullptr) {
 				if (self->GetState(Actors::ActorState::CollideWithTilesetReduced) && aabb.B - aabb.T >= 20.0f) {
@@ -1519,6 +1528,21 @@ namespace Jazz2
 					if (!params.Downwards) {
 						params.Downwards = false;
 						if (!_tileMap->IsTileEmpty(aabbTop, params)) {
+							return false;
+						}
+					} else if (aabb.B - aabb.T >= 23.0f && self->GetState(Actors::ActorState::CollideWithTilesetLegacy)) {
+						// A player with the head in a ceiling (warped there) doesn't fall until it's out of it, as measured in JJ2+
+						AABBf aabbHead = aabb;
+						aabbHead.T = aabb.B - 23.0f;
+						aabbHead.B = aabbBottom.T;
+						AABBf currentHead = self->AABBInner;
+						currentHead.T = currentHead.B - 23.0f;
+						currentHead.B = aabbHead.B + (currentHead.B - aabb.B);
+						// Out of it at once if the speed of a whole step gets it there, the game moves by smaller steps
+						AABBf nextHead = currentHead + Vector2f(0.0f, std::max(self->GetSpeed().Y, 0.0f));
+						TileCollisionParams headParams = { TileDestructType::None, true };
+						if (aabbHead.B > aabbHead.T && !_tileMap->IsTileEmpty(currentHead, headParams) && !_tileMap->IsTileEmpty(aabbHead, headParams) &&
+							!_tileMap->IsTileEmpty(nextHead, headParams)) {
 							return false;
 						}
 					}
@@ -1908,8 +1932,9 @@ namespace Jazz2
 
 	void LevelHandler::RollbackToCheckpoint(Actors::Player* player)
 	{
-		// Reset the camera
+		// Reset the camera, also a freeze of a script (JJ2+ lets it go on death)
 		LimitCameraView(player, player->_pos, 0, 0);
+		OverrideCameraView(player, CameraOverride::Follow, 0.0f, CameraOverride::Follow, 0.0f, false, true);
 
 		WarpCameraToTarget(player);
 
@@ -2775,7 +2800,13 @@ namespace Jazz2
 						}
 					}
 
-					if (!isInside && actor->OnTileDeactivated()) {
+					bool deactivates = !isInside;
+#if defined(WITH_ANGELSCRIPT)
+					if (deactivates && actor->GetUpdateOverride() != nullptr) {
+						deactivates = actor->GetUpdateOverride()->OnTileDeactivated(actor.get());
+					}
+#endif
+					if (deactivates && actor->OnTileDeactivated()) {
 						if ((actor->_state & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
 							_eventMap->ResetGenerator(originTile.X, originTile.Y);
 						}

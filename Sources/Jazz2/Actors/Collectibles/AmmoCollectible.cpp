@@ -34,8 +34,8 @@ namespace Jazz2::Actors::Collectibles
 
 		_weaponType = (WeaponType)details.Params[0];
 
-		// The level may give the ammo of a weapon its own look
-		const WeaponSprite& pickup = _levelHandler->GetWeaponDefinition(_weaponType).Pickup;
+		// A custom weapon may give its ammo its own look
+		const WeaponSprite& pickup = _levelHandler->GetWeaponDefinition(_weaponType).GetCustom().Pickup;
 		if (!pickup.IsEmpty()) {
 			async_await RequestMetadataAsync(_levelHandler->GetWeapons().GetSpriteMetadataPath(pickup));
 			if (SetAnimation(AnimState(pickup.AnimState))) {

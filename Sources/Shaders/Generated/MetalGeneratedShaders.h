@@ -700,7 +700,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float4 blur = (blur1 + blur2) * float4(0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(1.0 - light.x));
+	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(1.0 - light.x));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -812,7 +812,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float4 blur = (blur1 + blur2) * float4(0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(1.0 - light.x));
+	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(1.0 - light.x));
 	COLOR.w = 1.0;
 	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	return COLOR;
@@ -987,7 +987,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
-	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1173,7 +1173,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
-	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	return COLOR;
@@ -1295,7 +1295,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
-	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1428,7 +1428,7 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
-	COLOR = mix(mix(main_ * (1.0 + light.y) + max(light.y - 0.7, 0.0) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	COLOR.xyz = reduceColors(COLOR.xyz, _in.gl_FragCoord.xy);
 	return COLOR;
@@ -5596,6 +5596,168 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	float alpha = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY)).w * src.w;
 	COLOR = float4(COLOR.x, COLOR.y, COLOR.z, alpha * COLOR.w);
+	return COLOR;
+}
+)__SHDR__";
+
+}
+
+namespace Jazz2::ShadersGen
+{
+	inline constexpr char SpriteChromaKey_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char SpriteChromaKey_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float4 color = src;
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	float3 difference = abs(behind - _globals.uKeyColor.xyz);
+	float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
+	COLOR = float4(color.xyz, color.w * keyed) * COLOR;
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char SpriteChromaKey_USE_PALETTE_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vColor = _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char SpriteChromaKey_USE_PALETTE_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float4 uKeyColor;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTexturePalette [[texture(1)]], sampler uTexturePalette_smplr [[sampler(1)]], texture2d<float> uTextureBehind [[texture(2)]], sampler uTextureBehind_smplr [[sampler(2)]])
+{
+	float4 COLOR = float4(0);
+	COLOR = _in.vColor;
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float palIndex = floor(_in.vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float4 color = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY));
+	color.w *= src.w;
+	float3 behind = uTextureBehind.sample(uTextureBehind_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).xyz;
+	float3 difference = abs(behind - _globals.uKeyColor.xyz);
+	float keyed = step(max(max(difference.x, difference.y), difference.z), _globals.uKeyColor.w);
+	COLOR = float4(color.xyz, color.w * keyed) * COLOR;
 	return COLOR;
 }
 )__SHDR__";

@@ -31,7 +31,7 @@ namespace Jazz2::Compatibility
 		/** @brief Episodes the original game and its expansions came with */
 		static const StringView OriginalEpisodes[] = {
 			"prince"_s, "rescue"_s, "flash"_s, "monk"_s, "share"_s,
-			"xmas98"_s, "xmas99"_s, "secretf"_s, "hh17"_s, "hh18"_s, "hh24"_s
+			"xmas98"_s, "xmas99"_s, "secretf"_s
 		};
 
 		/**

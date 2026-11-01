@@ -38,7 +38,10 @@ namespace Jazz2::Actors::Weapons
 		SetAnimation(state);
 		PlaySfx("Fire"_s);
 
-		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::Additive);
+		// Measured in JJ2+: the plain spray is drawn opaque, the powered-up one wasn't measured
+		if (_levelHandler->IsReforged() || (_upgrades & 0x01) != 0) {
+			_renderer.setBlendingPreset(DrawableNode::BlendingPreset::Additive);
+		}
 
 		async_return true;
 	}

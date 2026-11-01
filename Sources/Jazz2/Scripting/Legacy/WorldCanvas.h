@@ -5,6 +5,11 @@
 #include "Common.h"
 #include "../../UI/Canvas.h"
 
+namespace Jazz2
+{
+	class LevelHandler;
+}
+
 namespace Jazz2::Actors
 {
 	class ActorBase;
@@ -111,6 +116,9 @@ namespace Jazz2::Scripting::Legacy
 		void AddText(TextDraw draw) {
 			_texts.push_back(Death::move(draw));
 		}
+		/** @brief Level whose views give the copy of the scene the sprites of `SPRITE::CHROMAKEY` are keyed against, see @ref OnDraw() */
+		LevelHandler* EffectsOwner = nullptr;
+
 		/** @brief Removes everything drawn */
 		void Clear() {
 			_sprites.clear();

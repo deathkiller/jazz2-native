@@ -34,16 +34,14 @@ namespace Jazz2::Scripting::Legacy
 		sprite sheet of its own, made on first use.
 
 		The set IDs are those of the animation file of the game (the "Set ID" of Jazz Sprite Dynamite, from 0),
-		which differ between 1.23 and 1.24 after the dragon. The sets of `plus.j2a` follow, the custom sets start
-		at @ref CustomFirstSetID.
+		which differ between 1.23 and 1.24 after the dragon. The sets of `plus.j2a` follow, and the custom sets right
+		after them (see @ref GetCustomFirstSetID()).
 	*/
 	class AnimationTables
 	{
 	public:
-		/** @brief Set ID of `ANIM::CUSTOM[0]` */
-		static constexpr std::uint32_t CustomFirstSetID = 256;
-		/** @brief Number of set IDs */
-		static constexpr std::uint32_t SetCount = CustomFirstSetID + 256;
+		/** @brief Number of set IDs, the custom sets of both versions of the game included */
+		static constexpr std::uint32_t SetCount = 512;
 		/** @brief Number of entries the animation table can have, `jjOBJ::curAnim` is 16-bit */
 		static constexpr std::uint32_t MaxAnimations = INT16_MAX;
 		/** @brief Number of entries the frame table can have, the animation file of the game has less than 15 000 */
@@ -67,6 +65,14 @@ namespace Jazz2::Scripting::Legacy
 
 		/** @brief Returns the set ID of a set of the original, -1 if the version of the game doesn't have it */
 		static std::int32_t GetSetID(anim set, bool isTSF);
+		/**
+		 * @brief Returns the set ID of `ANIM::CUSTOM[0]`, right after the sets of `plus.j2a`
+		 *
+		 * The first custom sets fit in `uint8`, as in JJ2+ - scripts pass them to `jjOBJ::determineCurAnim()` so.
+		 */
+		std::uint32_t GetCustomFirstSetID() const {
+			return _plusFirstSetID + _plusSetCount;
+		}
 
 		/**
 			@brief Returns the entry of a set, AddRef'd, or `nullptr` with a script exception if there's no such set
@@ -144,7 +150,7 @@ namespace Jazz2::Scripting::Legacy
 			@p always a single common pixel is enough, otherwise it takes a few.
 		*/
 		bool DoFramesCollide(const jjANIMFRAME& frame1, std::int32_t x1, std::int32_t y1, std::int32_t direction1,
-			const jjANIMFRAME& frame2, std::int32_t x2, std::int32_t y2, std::int32_t direction2, bool always);
+			const jjANIMFRAME& frame2, std::int32_t x2, std::int32_t y2, std::int32_t direction2, bool always, const Recti* clip = nullptr);
 
 		/**
 			@brief Returns the graphics to draw a frame of an animation of a set with, and the frame of the graphics

@@ -1868,6 +1868,64 @@ void BatchedSingleColor_USE_PALETTE_Fragment(const nCine::RHI::Software::Fragmen
 	packColor(COLOR, in.rgba);
 }
 
+		// --- SpriteChromaKey ---
+struct SpriteChromaKey_Uniforms
+{
+	nCine::RHI::Software::sw::vec2 uTargetSizeInv;
+	nCine::RHI::Software::sw::vec4 uKeyColor;
+};
+
+void SpriteChromaKey_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
+{
+	using namespace nCine::RHI::Software::sw;
+	const SpriteChromaKey_Uniforms* unis = static_cast<const SpriteChromaKey_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec4 src = swTexturePrimary(in, 0);
+	vec4 color = src;
+	float keyed = 1.0f;
+	COLOR = vec4(color.rgb(), color.a * keyed) * COLOR;
+	packColor(COLOR, in.rgba);
+}
+
+		// --- SpriteChromaKey_USE_PALETTE ---
+struct SpriteChromaKey_USE_PALETTE_Uniforms
+{
+	nCine::RHI::Software::sw::vec2 uTargetSizeInv;
+	nCine::RHI::Software::sw::vec4 uKeyColor;
+	float vPaletteOffset;
+};
+
+void SpriteChromaKey_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RHI::Software::sw;
+	SpriteChromaKey_USE_PALETTE_Uniforms* io = static_cast<SpriteChromaKey_USE_PALETTE_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
+}
+
+void SpriteChromaKey_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
+{
+	using namespace nCine::RHI::Software::sw;
+	const SpriteChromaKey_USE_PALETTE_Uniforms* unis = static_cast<const SpriteChromaKey_USE_PALETTE_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec4 src = swTexturePrimary(in, 0);
+	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
+	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
+	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
+	vec4 color = swTexture(in, 1, vec2(palX, palY));
+	color.a *= src.a;
+	float keyed = 1.0f;
+	COLOR = vec4(color.rgb(), color.a * keyed) * COLOR;
+	packColor(COLOR, in.rgba);
+}
+
 		// --- TexturedBackground ---
 struct TexturedBackground_Uniforms
 {
@@ -3067,6 +3125,14 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 		const SwGeneratedUniformField Downsample_Fields[] = {
 			{ "uPixelOffset", (std::uint32_t)offsetof(Downsample_Uniforms, uPixelOffset), 2 },
 		};
+		const SwGeneratedUniformField SpriteChromaKey_Fields[] = {
+			{ "uTargetSizeInv", (std::uint32_t)offsetof(SpriteChromaKey_Uniforms, uTargetSizeInv), 2 },
+			{ "uKeyColor", (std::uint32_t)offsetof(SpriteChromaKey_Uniforms, uKeyColor), 4 },
+		};
+		const SwGeneratedUniformField SpriteChromaKey_USE_PALETTE_Fields[] = {
+			{ "uTargetSizeInv", (std::uint32_t)offsetof(SpriteChromaKey_USE_PALETTE_Uniforms, uTargetSizeInv), 2 },
+			{ "uKeyColor", (std::uint32_t)offsetof(SpriteChromaKey_USE_PALETTE_Uniforms, uKeyColor), 4 },
+		};
 		const SwGeneratedUniformField TexturedBackground_Fields[] = {
 			{ "uViewSize", (std::uint32_t)offsetof(TexturedBackground_Uniforms, uViewSize), 2 },
 			{ "uCameraPos", (std::uint32_t)offsetof(TexturedBackground_Uniforms, uCameraPos), 2 },
@@ -3262,6 +3328,8 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "SingleColor_USE_PALETTE", &SingleColor_USE_PALETTE_Fragment, (std::uint32_t)sizeof(SingleColor_USE_PALETTE_Uniforms), nullptr, 0, &SingleColor_USE_PALETTE_ComputeVaryings },
 			{ "BatchedSingleColor", &BatchedSingleColor_Fragment, (std::uint32_t)sizeof(BatchedSingleColor_Uniforms), nullptr, 0, nullptr },
 			{ "BatchedSingleColor_USE_PALETTE", &BatchedSingleColor_USE_PALETTE_Fragment, (std::uint32_t)sizeof(BatchedSingleColor_USE_PALETTE_Uniforms), nullptr, 0, &BatchedSingleColor_USE_PALETTE_ComputeVaryings },
+			{ "SpriteChromaKey", &SpriteChromaKey_Fragment, (std::uint32_t)sizeof(SpriteChromaKey_Uniforms), SpriteChromaKey_Fields, 2, nullptr },
+			{ "SpriteChromaKey_USE_PALETTE", &SpriteChromaKey_USE_PALETTE_Fragment, (std::uint32_t)sizeof(SpriteChromaKey_USE_PALETTE_Uniforms), SpriteChromaKey_USE_PALETTE_Fields, 2, &SpriteChromaKey_USE_PALETTE_ComputeVaryings },
 			{ "TexturedBackground", &TexturedBackground_Fragment, (std::uint32_t)sizeof(TexturedBackground_Uniforms), TexturedBackground_Fields, 5, nullptr },
 			{ "TexturedBackground_DITHER", &TexturedBackground_DITHER_Fragment, (std::uint32_t)sizeof(TexturedBackground_DITHER_Uniforms), TexturedBackground_DITHER_Fields, 5, nullptr },
 			{ "TexturedBackground_KEYED", &TexturedBackground_KEYED_Fragment, (std::uint32_t)sizeof(TexturedBackground_KEYED_Uniforms), TexturedBackground_KEYED_Fields, 9, nullptr },

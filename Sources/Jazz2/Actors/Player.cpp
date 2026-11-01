@@ -308,7 +308,7 @@ namespace Jazz2::Actors
 
 		if (_playerType == PlayerType::Spectate) {
 			// Spectate mode - no collision, no gravity, invisible
-			SetState(ActorState::PreserveOnRollback | ActorState::ExcludeSimilar, true);
+			SetState(ActorState::PreserveOnRollback | ActorState::ExcludeSimilar | ActorState::CollideWithTilesetLegacy, true);
 			SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, false);
 			_health = 0;
 			_maxHealth = 0;
@@ -319,7 +319,7 @@ namespace Jazz2::Actors
 			AABBInner = {};
 		} else {
 			SetState(ActorState::PreserveOnRollback | ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects |
-				ActorState::IsSolidObject | ActorState::ExcludeSimilar | ActorState::KeepsMomentumWhenFrozen, true);
+				ActorState::IsSolidObject | ActorState::ExcludeSimilar | ActorState::KeepsMomentumWhenFrozen | ActorState::CollideWithTilesetLegacy, true);
 
 			_health = 5;
 			_maxHealth = _health;
@@ -804,6 +804,22 @@ namespace Jazz2::Actors
 		}
 		
 		TryStandardMovement(timeMult, params);
+
+		if (_tubeHeldSpeedY < 0.0f) {
+			// A launch of a script keeps its speed while the player is held under a floor (see OnHitCeiling()) or still overlaps
+			// one, as measured in JJ2+ (24 ticks under a railing, 3 more rising out of it) - gone once the player flies free
+			// The floor right under the feet counts too (measured: held until the feet are 2 px above the railing)
+			TileCollisionParams probe = { TileDestructType::None, true };
+			AABBf box = AABBInner;
+			box.B += 3.0f;
+			_tubeHeldTimeLeft -= timeMult;
+			if (_tubeHeldTimeLeft > 0.0f && (_speed.Y == _tubeHeldSpeedY || !_levelHandler->IsPositionEmpty(this, box, probe))) {
+				_speed.Y = _tubeHeldSpeedY;
+				_unstuckCooldown = std::max(_unstuckCooldown, 2.0f);
+			} else {
+				_tubeHeldSpeedY = 0.0f;
+			}
+		}
 
 		// The original's rise never overshoots the apex by more than one tick of fall gravity. Where the
 		// deceleration would carry the speed further than that, it ends the rise at zero instead and only
@@ -1383,7 +1399,10 @@ namespace Jazz2::Actors
 			UpdateRevUp(timeMult);
 		}
 
-		HandleWeaponFire(areaWeaponAllowed);
+		// A buttstomp started this frame blocks the shot like the check above, or the shoot pose cancels its start
+		if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
+			HandleWeaponFire(areaWeaponAllowed);
+		}
 	}
 
 	bool Player::IsRevvingUp() const
@@ -1478,7 +1497,8 @@ namespace Jazz2::Actors
 		}
 
 		const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(_weaponSoundType);
-		StringView identifier = (definition.Kind == WeaponKind::Custom && !definition.Fire.Sound.empty() ? StringView(definition.Fire.Sound)
+		String customSound = (definition.Kind == WeaponKind::Custom ? _levelHandler->GetWeapons().GetFireSoundIdentifier(definition.GetCustom().Fire) : String());
+		StringView identifier = (!customSound.empty() ? StringView(customSound)
 			: (_weaponSoundType == WeaponType::Thunderbolt ? "WeaponThunderbolt"_s : "WeaponToaster"_s));
 		_weaponSoundType = WeaponType::Unknown;
 
@@ -4325,6 +4345,14 @@ namespace Jazz2::Actors
 			_externalForce.Y = 0.0f;
 		}
 
+		if (_tubeHeldSpeedY < 0.0f) {
+			// Held under a floor, a launch of a script keeps its speed until it gets out, as measured in JJ2+ (a ring of fire
+			// rising under a railing pulls the player below it, where it waits for the ring to throw it again)
+			_speed.Y = _tubeHeldSpeedY;
+			// Neither pushed out sideways in the meantime
+			_unstuckCooldown = std::max(_unstuckCooldown, 2.0f);
+		}
+
 		// An uppercut that reaches a ceiling is over there and then in the original. This engine counted the rest
 		// of its ticks out against the ceiling instead, holding the pose and the nearly weightless gravity while
 		// the player went nowhere, and only let go once the countdown expired. EndDamagingMove() is written for a
@@ -4862,6 +4890,11 @@ namespace Jazz2::Actors
 		} else {
 			// Only certain ones don't need to be preserved from earlier state, others should be set as expected
 			AnimState composite = (_currentAnimation->State & CompositeAnimMask);
+			if (_suspendType == SuspendType::None && !CanJump() && (composite & AnimState::Lookup) == AnimState::Lookup) {
+				// Looking up ends in the air (a script's launch), shots go sideways there, as in the original
+				composite &= ~AnimState::Lookup;
+				_wasUpPressed = false;
+			}
 			// A buttstomp that ran under the tube's ball (see TubeBallPoseTime) gets its own pose back
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp && !IsButtstompStarting()) {
 				composite |= AnimState::Buttstomp;
@@ -6255,6 +6288,7 @@ namespace Jazz2::Actors
 
 				SetAnimation(AnimState::Dash | AnimState::Jump);
 				_tubeBallPoseLeft = TubeBallPoseTime;
+				_tubeHeldSpeedY = 0.0f;
 
 				_controllable = false;
 				SetState(ActorState::CanJump, false);
@@ -6471,6 +6505,12 @@ namespace Jazz2::Actors
 				buffer = nullptr;
 			}
 			
+			return _levelHandler->PlaySfx(this, identifier, buffer, Vector3f::Zero, true, gain, pitch);
+		}
+
+		// A sound of the weapons of the level, see ActorBase::PlaySfx()
+		if (auto* sound = ContentResolver::Get().FindWeaponSound(identifier)) {
+			AudioBuffer* buffer = (!sound->Buffers.empty() ? &sound->Buffers[0]->Buffer : nullptr);
 			return _levelHandler->PlaySfx(this, identifier, buffer, Vector3f::Zero, true, gain, pitch);
 		}
 
@@ -6930,7 +6970,7 @@ namespace Jazz2::Actors
 			if (weaponType == WeaponType::Blaster) {
 				ammoDecrease = 0;
 			} else if (definition.Kind == WeaponKind::Custom) {
-				ammoDecrease = definition.Fire.AmmoPerShot;
+				ammoDecrease = definition.GetCustom().Fire.AmmoPerShot;
 			}
 		} else if (definition.Kind == WeaponKind::Custom && !(weaponType == WeaponType::Blaster && _activeShield != ShieldType::None &&
 			definition.Options.ReplacedByShield)) {
@@ -7023,8 +7063,12 @@ namespace Jazz2::Actors
 
 	bool Player::FireCustomWeapon(WeaponType weaponType, const WeaponDefinition& definition, std::uint16_t& ammoDecrease)
 	{
-		const WeaponFireOptions& fire = definition.Fire;
+		const WeaponFireOptions& fire = definition.GetCustom().Fire;
 		if (!fire.AllowedInWater && _inWater) {
+			return false;
+		}
+		// As the thunderbolt, see FireWeaponThunderbolt()
+		if (fire.StandStill && (_isActivelyPushing || _isAttachedToPole)) {
 			return false;
 		}
 		if (definition.Options.Style == WeaponStyle::Missile && !_levelHandler->PlayerActionHit(this, PlayerAction::Fire)) {
@@ -7036,8 +7080,10 @@ namespace Jazz2::Actors
 		float angle;
 		GetFirePointAndAngle(initialPos, gunspotPos, angle);
 
-		bool playSound = (definition.Options.DefaultSample && !fire.Sound.empty());
-		bool playerHasSound = (playSound && _metadata->Sounds.find(String::nullTerminatedView(fire.Sound)) != _metadata->Sounds.end());
+		// An embedded sound is played by the player as its own, a named one by the player if it has it, by the shot otherwise
+		String sound = _levelHandler->GetWeapons().GetFireSoundIdentifier(fire);
+		bool playSound = (definition.Options.DefaultSample && !sound.empty());
+		bool playerHasSound = (playSound && (fire.SoundIndex >= 0 || _metadata->Sounds.find(String::nullTerminatedView(sound)) != _metadata->Sounds.end()));
 
 		std::int32_t count = std::max<std::int32_t>(fire.ShotsPerFire, 1);
 		for (std::int32_t i = 0; i < count; i++) {
@@ -7056,9 +7102,9 @@ namespace Jazz2::Actors
 
 		if (playerHasSound) {
 			if (fire.LoopSound) {
-				StartWeaponSfx(weaponType, fire.Sound, 0.6f, 1.0f);
+				StartWeaponSfx(weaponType, sound, 0.6f, 1.0f);
 			} else {
-				PlayPlayerSfx(fire.Sound);
+				PlayPlayerSfx(sound);
 			}
 		}
 
@@ -7441,7 +7487,7 @@ namespace Jazz2::Actors
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(_inventory.WeaponAmmo)); i++) {
 			if (_inventory.WeaponAmmo[i] != 0) {
 				const WeaponDefinition& definition = _levelHandler->GetWeaponDefinition(WeaponType(i));
-				String path = (definition.Kind == WeaponKind::Custom ? _levelHandler->GetWeapons().GetSpriteMetadataPath(definition.Shot.Sprite) : String());
+				String path = (definition.Kind == WeaponKind::Custom ? _levelHandler->GetWeapons().GetSpriteMetadataPath(definition.GetCustom().Shot.Sprite) : String());
 				PreloadMetadataAsync(path.empty() ? String("Weapon/"_s + WeaponNames[i]) : path);
 			}
 		}
@@ -8592,7 +8638,7 @@ namespace Jazz2::Actors
 		if (switchTo) {
 			SetCurrentWeapon(weaponType, SetCurrentWeaponReason::AddAmmo);
 
-			String customPath = (definition.Kind == WeaponKind::Custom ? _levelHandler->GetWeapons().GetSpriteMetadataPath(definition.Shot.Sprite) : String());
+			String customPath = (definition.Kind == WeaponKind::Custom ? _levelHandler->GetWeapons().GetSpriteMetadataPath(definition.GetCustom().Shot.Sprite) : String());
 			if (!customPath.empty()) {
 				PreloadMetadataAsync(customPath);
 			} else switch (_currentWeapon) {

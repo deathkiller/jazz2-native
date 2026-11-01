@@ -43,6 +43,7 @@ namespace Jazz2::Scripting
 	namespace Legacy
 	{
 		class jjPLAYER;
+		class ScriptObjectHost;
 		class EventTranslator;
 		class ScriptWorldCanvas;
 		class ScriptLayerCanvas;
@@ -78,6 +79,7 @@ namespace Jazz2::Scripting
 		friend class Legacy::jjTILE;
 		friend class Legacy::jjPIXELMAP;
 		friend class Legacy::jjCOLORMAP;
+		friend class Legacy::ScriptObjectHost;
 
 	public:
 		/**
@@ -250,6 +252,8 @@ namespace Jazz2::Scripting
 		Legacy::jjOBJ* GetObjectById(std::int32_t objectId);
 		/** @brief Returns the script view of an object of the level, not AddRef'd, `nullptr` if it has no object ID (see @ref OnActorAdded()) */
 		Legacy::jjOBJ* GetObjectView(Actors::ActorBase* actor);
+		/** @brief Runs the behavior of the script of an object of the game a script just made once, as JJ2+ runs it for a new object */
+		void RunNewObjectBehavior(std::int32_t objectId);
 		/** @brief Returns the top left corner of the view of a player on the screen (`jjPLAYER::subscreenX/Y`) */
 		Vector2i GetPlayerSubscreenPosition(Actors::Player* player) const;
 		/** @brief Returns the object ID of the boss that's active (`jjPLAYER::boss`), 0 for none */
@@ -549,6 +553,8 @@ namespace Jazz2::Scripting
 		HashMap<std::int32_t, asITypeInfo*> _eventTypeToTypeInfo;
 		BitArray _enabledCallbacks;
 		HashMap<std::uint8_t, std::unique_ptr<jjPLAYER>> _playerBackingStore;
+		// How many behaviors of objects are running, a player's speed they set moves the player from the next tick
+		std::int32_t _objectBehaviorDepth = 0;
 		// The controls of each local player the scripts set in the last tick and what to, see OverridePlayerInput()
 		std::uint64_t _inputOverrideMask[Input::ControlScheme::MaxSupportedPlayers] = {};
 		std::uint64_t _inputOverrideValue[Input::ControlScheme::MaxSupportedPlayers] = {};
@@ -621,7 +627,11 @@ namespace Jazz2::Scripting
 			// Where a bullet a player fired is in the spread of a weapon whose bullets a script controls, -1 angled up, 0
 			// straight, 1 angled down, NotSpread for any other object - and how far below the player the gunspot was
 			std::int8_t SpreadSlot;
+			// The bullet was fired up
+			bool Upward;
 			float GunspotOffsetY;
+			// The angle `jjPLAYER::fireBullet()` fired it at (0 up, clockwise), negative for none
+			float AimAngle;
 		};
 		static constexpr std::int8_t NotSpread = INT8_MIN;
 		SmallVector<ObjectSlot, 0> _objectSlots;
@@ -630,6 +640,8 @@ namespace Jazz2::Scripting
 			const Actors::ActorBase* Shot;
 			std::int8_t SpreadSlot;
 			float GunspotOffsetY;
+			bool Upward;
+			float AimAngle;
 		};
 		FiringBullet _firingBullet = {};
 		// The object ID of each object of the level that has one, an entry of an object that's gone stays until its ID is
@@ -683,6 +695,10 @@ namespace Jazz2::Scripting
 		Actors::ActorBase* _swappingActor = nullptr;
 		// A player activated the boss of the level, which is one of the script, see OnBossAreaActivated()
 		bool _bossAreaActivated = false;
+	public:
+		// `jjVerticalSplitscreen`, as a script set it
+		bool _verticalSplitscreen = false;
+	private:
 
 		// Gives an object of the level an object ID, `object` is its script view if it has one already (taken over)
 		std::int32_t RegisterObject(const std::shared_ptr<Actors::ActorBase>& actor, Legacy::jjOBJ* object, std::uint8_t eventId);

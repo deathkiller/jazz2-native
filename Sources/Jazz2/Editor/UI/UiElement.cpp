@@ -437,6 +437,9 @@ namespace Jazz2::Editor
 				painter.RoundRect(Bounds, UiTheme::InputFill);
 				painter.RoundRectBorder(Bounds, UiTheme::PanelBorderDim);
 				break;
+			case UiPanelStyle::Docked:
+				painter.Panel(Bounds, false, UiTheme::PanelFill, UiTheme::PanelBorderDim, false);
+				break;
 			default:
 				break;
 		}

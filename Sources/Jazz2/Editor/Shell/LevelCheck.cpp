@@ -460,7 +460,7 @@ namespace Jazz2::Editor
 		}
 
 		// Weapons
-		WeaponsDescription weapons;
+		LevelWeapons weapons;
 		switch (ReadLevelWeapons(document, weapons)) {
 			case Formats::WeaponsChunk::ReadResult::NewerVersion:
 				add(LevelProblemSeverity::Info, _x("editor", "The weapons of the level are of a newer version, this version of the game plays it with its own weapons"));
@@ -476,13 +476,13 @@ namespace Jazz2::Editor
 						add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} starts with more ammo than it can have", name));
 					}
 					if (weapon.Kind == WeaponKind::Custom) {
-						for (const WeaponShotOptions* shot : { &weapon.Shot, &weapon.ShotPowered }) {
+						for (const WeaponShotOptions* shot : { &weapon.GetCustom().Shot, &weapon.GetCustom().ShotPowered }) {
 							if (shot->Strength <= 0 && shot->AreaStrength <= 0 && shot->FreezeDuration <= 0.0f && shot->Knockback == 0.0f) {
 								add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} does no harm, its shot has no damage, blast or freezing", name));
 								break;
 							}
 						}
-					} else if (weapon.Kind == WeaponKind::Script && weapon.ScriptConstructor.empty()) {
+					} else if (weapon.Kind == WeaponKind::Script && weapons.EditorData[i].ScriptConstructor.empty()) {
 						add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} is script-driven, but nothing creates it", name));
 					}
 				}
@@ -1005,23 +1005,25 @@ namespace Jazz2::Editor
 
 		// Weapons of the script need their libraries next to the level or in the files of the original game, and a game that
 		// runs scripts; sprites of animations of the game need to exist
-		const WeaponsDescription& weapons = GetCachedLevelWeapons(session);
+		const LevelWeapons& weapons = GetCachedLevelWeapons(session);
 		bool hasScriptWeapons = false;
 		for (std::int32_t i = 0; i < std::int32_t(WeaponType::Count); i++) {
 			const WeaponDefinition& weapon = weapons.Weapons[i];
+			StringView library = weapons.EditorData[i].ScriptLibrary;
 			String name = GetLevelWeaponName(weapons, WeaponType(i));
-			if (weapon.Kind == WeaponKind::Script && !weapon.ScriptLibrary.empty()) {
+			if (weapon.Kind == WeaponKind::Script && !library.empty()) {
 				hasScriptWeapons = true;
 				StringView filePath = session.GetFilePath();
 				StringView sourcePath = ContentResolver::Get().GetSourcePath();
-				bool found = ((!filePath.empty() && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(fs::GetDirectoryName(filePath), weapon.ScriptLibrary)))) ||
-					(!sourcePath.empty() && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, weapon.ScriptLibrary)))));
+				bool found = ((!filePath.empty() && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(fs::GetDirectoryName(filePath), library)))) ||
+					(!sourcePath.empty() && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, library)))));
 				if (!found) {
-					add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} needs the script library \"{}\", which isn't found", name, weapon.ScriptLibrary));
+					add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} needs the script library \"{}\", which isn't found", name, library));
 				}
 			}
-			for (const WeaponSprite* sprite : { &weapon.Shot.Sprite, &weapon.Shot.AltSprite, &weapon.ShotPowered.Sprite, &weapon.ShotPowered.AltSprite,
-				&weapon.HudIcon, &weapon.HudIconPowered, &weapon.Pickup }) {
+			const CustomWeaponOptions& custom = weapon.GetCustom();
+			for (const WeaponSprite* sprite : { &custom.Shot.Sprite, &custom.Shot.AltSprite, &custom.ShotPowered.Sprite, &custom.ShotPowered.AltSprite,
+				&custom.HudIcon, &custom.HudIconPowered, &custom.Pickup }) {
 				if (!sprite->Metadata.empty() && ContentResolver::Get().RequestMetadata(sprite->Metadata) == nullptr) {
 					add(LevelProblemSeverity::Warning, _fx("editor", "Weapon {} uses the animation \"{}\", which isn't found", name, sprite->Metadata));
 					break;

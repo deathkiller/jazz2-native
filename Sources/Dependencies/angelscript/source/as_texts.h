@@ -338,6 +338,7 @@
 #define TXT_NON_POD_REQUIRE_CONSTR_DESTR_BEHAVIOUR       "A non-pod value type must have at least one constructor and the destructor behaviours"
 #define TXT_CANNOT_PASS_TYPE_s_BY_VAL                    "Can't pass type '%s' by value unless the application type is informed in the registration"
 #define TXT_CANNOT_RET_TYPE_s_BY_VAL                     "Can't return type '%s' by value unless the application type is informed in the registration"
+#define TXT_NATIVE_ARG_COUNT_d_d                         "The application function has %d arguments, but the declaration needs %d"
 // TODO: Should be something like "This platform requires that AngelScript knows the exact content of the type '%s' in order to pass by value to application in native calling convention"
 #define TXT_DONT_SUPPORT_TYPE_s_BY_VAL                   "Don't support passing type '%s' by value to application in native calling convention on this platform"
 // TODO: Should be something like "This platform requires that AngelScript knows the exact content of the type '%s' in order to return by value from application in native calling convention"

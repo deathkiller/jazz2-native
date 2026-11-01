@@ -37,6 +37,7 @@
 #include "ShieldLightning.h"
 #include "Silhouette.h"
 #include "SingleColor.h"
+#include "SpriteChromaKey.h"
 #include "TexturedBackground.h"
 #include "TexturedBackgroundCylinder.h"
 #include "TexturedBackgroundReflection.h"
@@ -93,6 +94,7 @@ namespace Jazz2::ShadersGen
 		&Silhouette,
 		&SingleColor,
 		&BatchedSingleColor,
+		&SpriteChromaKey,
 		&TexturedBackground,
 		&TexturedBackgroundCylinder,
 		&TexturedBackgroundReflection,

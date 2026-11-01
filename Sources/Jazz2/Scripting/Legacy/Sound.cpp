@@ -239,13 +239,35 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::RegisterLegacySound(asIScriptEngine* engine)
 	{
+		/**
+		 * @brief Loads a music file and starts playing it
+		 *
+		 * With `forceReload`, the file is started again even if it is already playing. With `temporary`, the music
+		 * isn't kept as the level's music, so it plays only until the level's own music is restored, e.g. after the
+		 * player dies.
+		 * @partialsupport Currently always returns `false`, even when the music starts.
+		 */
 		engine->RegisterGlobalFunction("bool jjMusicLoad(string &in filename, bool forceReload = false, bool temporary = false)", asFUNCTION(jjMusicLoad), asCALL_CDECL);
+		/** @brief Stops the current music */
 		engine->RegisterGlobalFunction("void jjMusicStop()", asFUNCTION(jjMusicStop), asCALL_CDECL);
+		/** @brief Starts playing the current music, or restarts it */
 		engine->RegisterGlobalFunction("void jjMusicPlay()", asFUNCTION(jjMusicPlay), asCALL_CDECL);
+		/**
+		 * @brief Pauses the current music
+		 *
+		 * @partialsupport Currently stops the music the same way as @ref jjMusicStop().
+		 */
 		engine->RegisterGlobalFunction("void jjMusicPause()", asFUNCTION(jjMusicPause), asCALL_CDECL);
+		/**
+		 * @brief Resumes paused music
+		 *
+		 * @partialsupport Only has an effect on music in the paused state, which @ref jjMusicPause() currently doesn't
+		 * produce.
+		 */
 		engine->RegisterGlobalFunction("void jjMusicResume()", asFUNCTION(jjMusicResume), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("SOUND");
+		/** @brief Sound samples of the original game, used by @ref jjSample() and related functions */
 		engine->RegisterEnum("Sample");
 		engine->SetDefaultNamespace("");
 		engine->RegisterGlobalFunction("void jjSample(float xPixel, float yPixel, SOUND::Sample sample, int volume = 63, int frequency = 0)", asFUNCTION(playSample), asCALL_CDECL);
@@ -254,11 +276,41 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("bool jjSampleIsLoaded(SOUND::Sample sample)", asFUNCTION(isSampleLoaded), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjSampleLoad(SOUND::Sample sample, string& in filename)", asFUNCTION(loadSample), asCALL_CDECL);
 
+		/**
+		 * @brief Whether the game produces any audio
+		 *
+		 * @partialsupport Currently always `false`.
+		 */
 		engine->RegisterGlobalProperty("const bool jjSoundEnabled", &soundEnabled);
+		/**
+		 * @brief Whether sound effects are enabled in the settings
+		 *
+		 * @partialsupport Currently always `false`.
+		 */
 		engine->RegisterGlobalProperty("const bool jjSoundFXActive", &soundFXActive);
+		/**
+		 * @brief Whether music is enabled in the settings
+		 *
+		 * @partialsupport Currently always `false`.
+		 */
 		engine->RegisterGlobalProperty("const bool jjMusicActive", &musicActive);
+		/**
+		 * @brief Volume of sound effects set in the settings
+		 *
+		 * @partialsupport Currently always 0.
+		 */
 		engine->RegisterGlobalProperty("const int jjSoundFXVolume", &soundFXVolume);
+		/**
+		 * @brief Volume of music set in the settings
+		 *
+		 * @partialsupport Currently always 0.
+		 */
 		engine->RegisterGlobalProperty("const int jjMusicVolume", &musicVolume);
+		/**
+		 * @brief Strength of the echo effect, as set by the Echo event
+		 *
+		 * @partialsupport Currently starts at 0 and changing it has no effect.
+		 */
 		engine->RegisterGlobalProperty("int jjEcho", &levelEcho);
 
 		engine->RegisterGlobalFunction("void jjSetModPosition(int order, int row, bool reset)", asFUNCTION(jjSetModPosition), asCALL_CDECL);

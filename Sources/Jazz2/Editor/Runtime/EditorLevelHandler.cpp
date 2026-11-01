@@ -252,7 +252,7 @@ namespace Jazz2::Editor
 		viewport->UpdateCamera(0.0f);
 	}
 
-	void EditorLevelHandler::SetFrameBlur(bool below, bool whole)
+	void EditorLevelHandler::SetFrameBlur(bool below, bool whole, bool windows)
 	{
 #if defined(RHI_CAP_POSTPROCESSING)
 		Texture* frame = _upscalePass.GetTargetTexture();
@@ -261,6 +261,7 @@ namespace Jazz2::Editor
 		bool available = (PreferencesCache::BlurEffects && frame != nullptr && frameView != nullptr && viewport != nullptr);
 		below = (below && available);
 		whole = (whole && available);
+		windows = (windows && below);
 
 		if (below) {
 			_belowBlur.Prepare(frame, viewport);
@@ -270,19 +271,31 @@ namespace Jazz2::Editor
 				}
 			}
 		}
+		if (windows) {
+			_windowsBlur.Prepare(frame, viewport);
+			if (_windowsBlurBits == 0) {
+				for (auto& pass : _windowsBlur.Passes) {
+					_windowsBlurBits |= frameView->AddSplitPass(pass->GetView());
+				}
+			}
+		}
 		if (whole) {
 			_wholeBlur.Prepare(frame, viewport);
 		}
-		if (_belowBlur.IsInChain() == below && _wholeBlur.IsInChain() == whole) {
+		if (_belowBlur.IsInChain() == below && _windowsBlur.IsInChain() == windows && _wholeBlur.IsInChain() == whole) {
 			return;
 		}
 
 		_belowBlur.RemoveFromChain();
+		_windowsBlur.RemoveFromChain();
 		_wholeBlur.RemoveFromChain();
 		// The chain is drawn from its end, so the whole image is blurred after everything else, once it's done. The passes
 		// below a layer are only visited with the chain, the image draws them itself.
 		if (whole) {
 			_wholeBlur.InsertIntoChain();
+		}
+		if (windows) {
+			_windowsBlur.InsertIntoChain();
 		}
 		if (below) {
 			_belowBlur.InsertIntoChain();
@@ -304,6 +317,17 @@ namespace Jazz2::Editor
 	bool EditorLevelHandler::CanBlurFrameBelow() const
 	{
 		return (_belowBlurBits != 0 && _upscalePass.GetView() != nullptr && _belowBlur.IsInChain());
+	}
+
+	Texture* EditorLevelHandler::RequestFrameBlurBelowWindows(std::uint16_t layer)
+	{
+#if defined(RHI_CAP_POSTPROCESSING)
+		if (_windowsBlurBits != 0 && CanBlurFrameBelow() && _windowsBlur.IsInChain()) {
+			_upscalePass.GetView()->RequestSplit(layer, _windowsBlurBits);
+			return _windowsBlur.GetTarget();
+		}
+#endif
+		return nullptr;
 	}
 
 	Texture* EditorLevelHandler::GetFrameBlur() const

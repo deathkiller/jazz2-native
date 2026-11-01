@@ -99,6 +99,19 @@ namespace Jazz2::Scripting::Legacy
 	*/
 	bool DoesObjectTouch(LevelScriptLoader* levelScripts, const jjOBJ& obj, const AABBf& box);
 
+	/** @brief Returns `true` if a player touches the frame of a `jjOBJ` by the pixels of its own frame, as JJ2+ collides them (measured) */
+	bool DoesObjectTouchPlayer(LevelScriptLoader* levelScripts, const jjOBJ& obj, Actors::Player& player, bool wholeFrame = false);
+
+	/** @brief Returns the box a `jjOBJ` is solid by while its behavior calls `jjOBJ::beSolid()`, `false` if it shows no frame */
+	bool GetSolidObjectBox(LevelScriptLoader* levelScripts, const jjOBJ& obj, AABBf& box);
+
+	/** @brief Returns the box a player touches objects by in JJ2+ when its frame isn't known (measured on a pole) */
+	inline AABBf GetLegacyPlayerBox(Actors::ActorBase& player) {
+		Vector2f pos = player.GetPos();
+		float left = (player.IsFacingLeft() ? 18.0f : 17.0f);
+		return AABBf(pos.X - left, pos.Y - 14.0f, pos.X + 35.0f - left, pos.Y + 9.0f);
+	}
+
 	/**
 		@brief Drives an object of the game by a behavior of a level script, as JJ2+ does with the objects whose template
 		(`jjObjectPresets`) has a behavior of the script
@@ -171,6 +184,13 @@ namespace Jazz2::Scripting::Legacy
 		 * The game's own light of an illuminated object brightens its surroundings beyond full light, JJ2+ doesn't.
 		 */
 		bool OwnsLights() const override;
+		/**
+		 * @brief Tells the behavior to deactivate the object, as JJ2+ does by `STATE::DEACTIVATE`
+		 *
+		 * The behavior deactivates it (and deletes what it made), an object whose `deactivates` is `false` stays. One whose
+		 * behavior hasn't run yet is deactivated by the game.
+		 */
+		bool OnTileDeactivated(Actors::ActorBase* actor) override;
 
 		/**
 		 * @brief Makes the object a platform for this tick, as `jjOBJ::bePlatform()`
@@ -181,6 +201,28 @@ namespace Jazz2::Scripting::Legacy
 		void BePlatform(float xOld, float yOld, std::int32_t width);
 		/** @brief Lets go of the players standing on the object, as `jjOBJ::clearPlatform()` */
 		void ClearPlatform();
+		/**
+		 * @brief Makes the object solid for this tick, as `jjOBJ::beSolid()`
+		 *
+		 * As measured in JJ2+, an object that isn't solid by itself is solid by its frame then, where it is (it isn't put on
+		 * the ground), and only while the behavior keeps making it solid.
+		 */
+		void BeSolid();
+		/**
+		 * @brief Lifts the players standing on a solid object that moved up by @p deltaY from @p oldBox
+		 *
+		 * As measured in JJ2+, a solid object a behavior moves carries them up, they fall when it goes down and stay
+		 * where they are when it goes sideways.
+		 */
+		static void LiftStandingPlayers(LevelScriptLoader* levelScripts, const AABBf& oldBox, float deltaY);
+		/** @brief Tells the behavior of an object a script controls entirely of the players touching it, as @ref TouchPlayersByBox() does for the others */
+		static void TouchPlayers(LevelScriptLoader* levelScripts, jjOBJ& obj);
+		/** @brief Tells the behavior of a solid object a player stands or lands on of it, once in a tick, as @ref TouchPlayers() */
+		static void TouchStandingPlayer(LevelScriptLoader* levelScripts, jjOBJ& obj, Actors::Player& player);
+		/** @brief Returns the force a player touching a special object hits it by, 1 while attacking, a buttstomp only by its first touch */
+		static std::int32_t GetTouchForce(LevelScriptLoader* levelScripts, jjOBJ& obj, Actors::Player& player);
+		/** @brief Runs the behavior for the tick the object is made in, before its first update, see @ref LevelScriptLoader::RunNewObjectBehavior() */
+		void RunFirstTick();
 		/** @brief Runs the object's own update, as `jjOBJ::behave()` with a behavior of the game */
 		void RunOwnBehavior(bool draw);
 		/**
@@ -222,9 +264,11 @@ namespace Jazz2::Scripting::Legacy
 		 * @brief Sets up the bullet of a weapon whose bullets a script controls as JJ2+ fires it, see @ref IsScriptedBullet()
 		 *
 		 * @p spreadSlot is -1 for the bullet angled up, 0 for the straight one and 1 for the one angled down, @p gunspotOffsetY
-		 * how far below the player the gunspot of the pose it was fired in was.
+		 * how far below the player the gunspot of the pose it was fired in was, @p upward if the player aimed up, @p aimAngle
+		 * the angle a script fired it at (0 up, clockwise, negative for none).
 		 */
-		static void InitializeScriptedBullet(jjOBJ& obj, const jjOBJ& preset, Actors::ActorBase& actor, std::int8_t spreadSlot, float gunspotOffsetY);
+		static void InitializeScriptedBullet(jjOBJ& obj, const jjOBJ& preset, Actors::ActorBase& actor, std::int8_t spreadSlot, float gunspotOffsetY,
+			bool upward = false, float aimAngle = -1.0f);
 		/**
 			@brief Makes the object of the game follow a behavior that moves the object itself (`BEHAVIOR::WALKINGENEMY`)
 
@@ -235,7 +279,7 @@ namespace Jazz2::Scripting::Legacy
 		void Draw();
 		/** @brief Removes the object, the event it comes from isn't spawned again */
 		void Delete();
-		/** @brief Removes the object, the event it comes from spawns it again when it's seen again */
+		/** @brief Removes the object, the event it comes from spawns it again when it's seen again if it's an object of the level */
 		void Deactivate();
 
 		/**
@@ -267,6 +311,8 @@ namespace Jazz2::Scripting::Legacy
 		static void DeleteActor(Actors::ActorBase& actor);
 		/** @brief Removes an object of the game, the event it comes from spawns it again when it's seen again */
 		static void DeactivateActor(Actors::ActorBase& actor);
+		/** @brief Returns `true` if an object a script made is told to deactivate now, too far from every player */
+		static bool IsOutOfActivationRange(LevelScriptLoader* levelScripts, const jjOBJ& obj);
 		/**
 		 * @brief Runs a behavior of the script on a `jjOBJ`, `false` if it isn't one
 		 *
@@ -279,8 +325,8 @@ namespace Jazz2::Scripting::Legacy
 		 * Returns `true` if the method of the behavior returned `true` or a global one was called.
 		 */
 		static bool CallObjectHit(LevelScriptLoader* levelScripts, jjOBJ& obj, jjOBJ* bullet, jjPLAYER* player, std::int32_t force);
-		/** @brief Draws the current frame of a `jjOBJ` where it is in the level (@p offsetY lower), as `jjOBJ::draw()` */
-		static void DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj, float offsetY = 0.0f);
+		/** @brief Draws the current frame of a `jjOBJ` where it is in the level (@p offsetY lower), as `jjOBJ::draw()`, translucent if @p translucent */
+		static void DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj, float offsetY = 0.0f, bool translucent = false);
 		/** @brief Returns `true` if an object of a `direction` (`SPRITE::Direction`) is drawn upside down */
 		static bool IsUpsideDown(std::int8_t direction);
 		/**
@@ -290,6 +336,15 @@ namespace Jazz2::Scripting::Legacy
 		 * standing on the ground, its hitbox flipped with it.
 		 */
 		static void TurnUpsideDown(Actors::ActorBase& actor);
+		/**
+		 * @brief Breaks the destructible scenery a bullet of a player touches, as a shot of its weapon breaks it, returns `true` if it broke any
+		 *
+		 * By the pixels of the frame the bullet shows, by its position without one. Its weapon is @p weaponType, or the one of
+		 * `var[3]` (1 to 9, the weapons of scripts set it) - one that doesn't freeze breaks it as the Blaster where the Freezer
+		 * would freeze it. The tiles in @p hitTiles aren't hit again, the ones it breaks are added there.
+		 */
+		static bool BreakScenery(LevelScriptLoader* levelScripts, Actors::ActorBase& actor, const jjOBJ& bullet, WeaponType weaponType,
+			std::int32_t strength, SmallVectorImpl<std::int32_t>* hitTiles = nullptr);
 
 	private:
 		class UpsideDownOverride;
@@ -335,17 +390,28 @@ namespace Jazz2::Scripting::Legacy
 		std::int32_t _playerHitTick = INT32_MIN;
 		// The bullet hits what its frame collides with right now, the collision isn't swallowed then (see CollideByFrame())
 		bool _collidingByFrame = false;
+		// The tiles of scenery a bullet going through them broke already (see HitScenery())
+		SmallVector<std::int32_t, 2> _hitSceneryTiles;
 		// The tick the behavior made the object a platform in, and how wide (0 as its frame), see BePlatform()
 		static constexpr std::int32_t NoPlatform = INT32_MIN;
 		std::int32_t _platformTick = NoPlatform;
 		std::int16_t _platformWidth = 0;
+		// Solid by itself, and as it was when the behavior made it a platform (see ClearPlatform())
+		bool _nativeSolid = false;
+		bool _solidBeforePlatform = false;
+		// The tick the behavior made the object solid in (see BeSolid()), and its hitbox at the end of the last tick it was
+		std::int32_t _solidTick = INT32_MIN;
+		AABBf _liftBox;
+		float _liftY = 0.0f;
+		bool _liftValid = false;
 		// The frame _frameRect and _pixelBounds are of (from its hotspot), both empty if it has no pixels
 		std::uint32_t _boundsFrame;
 		Recti _frameRect;
 		Recti _pixelBounds;
 
-		// Runs the behavior for one tick of the scripts, returns `false` if the object is gone
-		bool UpdateTick(Actors::ActorBase* actor);
+		// Runs the behavior for one tick of the scripts, returns `false` if the object is gone - the one it's made in isn't
+		// told to deactivate (see RunFirstTick())
+		bool UpdateTick(Actors::ActorBase* actor, bool firstTick = false);
 		// Makes _frameRect and _pixelBounds those of the frame the object shows, returns `false` if it has no pixels
 		bool UpdateFrameBounds();
 		// Returns the hitbox of the pixels of the frame the object shows, `false` if the object keeps its own (see OnUpdateHitbox())
@@ -362,6 +428,14 @@ namespace Jazz2::Scripting::Legacy
 		bool CollidesByFrame() const;
 		// Hits what the frame of the bullet collides with, as JJ2 has bullets hit objects (a sword)
 		void CollideByFrame();
+		// Returns `true` for a special object the script collides itself, which players touch by the box of JJ2+
+		bool TouchesPlayersByBox() const;
+		// Tells the script of the players touching it, before its behavior runs, as JJ2+ collides players first
+		void TouchPlayersByBox();
+		// Collects a pickup for the players touching it by the pixels of their frames, before its behavior runs, returns `false` if it's gone
+		bool TouchPlayersAsPickup();
+		// Breaks the scenery a bullet of a player a script moves touches, in the tick it was still flying in (see BreakScenery())
+		void HitScenery(std::int8_t previousState);
 		// Draws the object as the last tick left it, by itself or its frame
 		void FinishTicks();
 		// Returns the platform of the game an object made this platform, `nullptr` if this isn't one or it wasn't made so

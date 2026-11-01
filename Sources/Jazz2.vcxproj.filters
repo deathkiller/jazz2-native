@@ -2358,6 +2358,9 @@
     <ClInclude Include="Jazz2\Editor\Shell\WeaponScripts.h">
       <Filter>Header Files\Jazz2\Editor\Shell</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\WeaponTemplates.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Editor\Shell\WeaponPreview.h">
       <Filter>Header Files\Jazz2\Editor\Shell</Filter>
     </ClInclude>
@@ -3966,6 +3969,9 @@
       <Filter>Source Files\Jazz2\Editor\Shell</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Shell\WeaponScripts.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\WeaponTemplates.cpp">
       <Filter>Source Files\Jazz2\Editor\Shell</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Shell\WeaponPreview.cpp">

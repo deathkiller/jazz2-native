@@ -202,6 +202,27 @@ namespace Jazz2::Editor
 		return false;
 	}
 
+	bool UiSurface::HasStackedModal() const
+	{
+		return (GetStackedOverlayCount() > 0);
+	}
+
+	std::size_t UiSurface::GetStackedOverlayCount() const
+	{
+		for (std::size_t i = _overlays.size(); i > 0; i--) {
+			if (!IsActive(_overlays[i - 1]) || !_overlays[i - 1].Options.Modal) {
+				continue;
+			}
+			for (std::size_t j = 0; j < i - 1; j++) {
+				if (IsActive(_overlays[j])) {
+					return i - 1;
+				}
+			}
+			return 0;
+		}
+		return 0;
+	}
+
 	bool UiSurface::IsOverlayShown(const UiElement* element) const
 	{
 		for (const Overlay& overlay : _overlays) {
@@ -918,7 +939,7 @@ namespace Jazz2::Editor
 			x = _pointerPos.X - offset * 0.5625f - size * 0.5f;
 		}
 		if (y + size > screenSize.Y) {
-			y = _pointerPos.Y - offset - size * 0.5f;
+			y = _pointerPos.Y - offset * 0.25f - size * 0.5f;
 		}
 		Rectf rect(std::round(x), std::round(y), size, size);
 
@@ -986,6 +1007,7 @@ namespace Jazz2::Editor
 			UiElement* element = _overlays[i].Element.get();
 			element->Update(timeMult);
 		}
+		UpdateKeyboardAvoidance();
 
 		if (_touchHold == TouchHold::Waiting && _touchDown && _capture != nullptr && !_touchScrolling) {
 			// The finger rested on it long enough, it drags it from now on, which the device tells by a short buzz
@@ -1033,6 +1055,44 @@ namespace Jazz2::Editor
 		}
 	}
 
+	void UiSurface::UpdateKeyboardAvoidance()
+	{
+		UiElement* focus = (KeyboardInset > 0.0f && _focus != nullptr && runtime_cast<UiTextBox>(_focus) != nullptr && IsShownInTree(_focus) ? _focus : nullptr);
+		std::int32_t index = (focus != nullptr ? GetOverlayIndexOf(focus) : -2);
+		float keyboardTop = GetScreenSize().Y - KeyboardInset - std::round(8.0f * _scale);
+		Rectf box = (focus != nullptr ? focus->Bounds : Rectf());
+
+		// A window is moved up as far as the box needs, measured from where it would be without it, its top stays on the screen
+		float shift = 0.0f;
+		const UiElement* window = (index >= 0 ? _overlays[index].Element.get() : nullptr);
+		if (window != nullptr) {
+			float applied = (window == _keyboardWindow ? _keyboardShift : 0.0f);
+			shift = std::max(0.0f, box.Y + box.H + applied - keyboardTop);
+			shift = std::round(std::min(shift, std::max(0.0f, box.Y + applied - GetSafeBounds().Y)));
+		}
+		_keyboardWindow = (shift > 0.0f ? window : nullptr);
+		_keyboardShift = shift;
+
+		// The panels are laid out above the keyboard for a box it would cover, as long as a box in them is typed into
+		if (index == -1) {
+			if (_keyboardRootFocus != focus) {
+				_keyboardRootFocus = focus;
+				_keyboardRootInset = (_keyboardRootInset > 0.0f || box.Y + box.H > keyboardTop ? KeyboardInset : 0.0f);
+				_keyboardScrollFrames = 2;
+			} else if (_keyboardRootInset > 0.0f) {
+				_keyboardRootInset = KeyboardInset;
+			}
+			// Once they're laid out so, the list the box is in is scrolled to it
+			if (_keyboardScrollFrames > 0 && --_keyboardScrollFrames == 0) {
+				EnsureVisible(focus);
+			}
+		} else {
+			_keyboardRootFocus = nullptr;
+			_keyboardRootInset = 0.0f;
+			_keyboardScrollFrames = 0;
+		}
+	}
+
 	class UiSurface::PanelsCanvas : public UI::Canvas
 	{
 	public:
@@ -1066,6 +1126,11 @@ namespace Jazz2::Editor
 		return std::uint16_t(UiPainter::BaseDepth + RootSlot * UiPainter::SlotDepth);
 	}
 
+	std::uint16_t UiSurface::GetOverlaysDepth()
+	{
+		return std::uint16_t(UiPainter::BaseDepth + FirstOverlaySlot * UiPainter::SlotDepth);
+	}
+
 	void UiSurface::DrawPanelsInto(UI::Canvas& canvas)
 	{
 		// The picture of the level is drawn before the screen, the surface knows by the frame it's drawn already
@@ -1083,6 +1148,23 @@ namespace Jazz2::Editor
 		_drawingInLevel = true;
 		DrawRoot(painter, screenSize, true);
 		_drawingInLevel = false;
+
+		// What is under a modal window is drawn here too, so the whole blurred picture the modal one is drawn over has it
+		_overlaysInLevel = 0;
+		std::size_t stacked = GetStackedOverlayCount();
+		Rectf backdropBounds;
+		const Texture* backdrop = (stacked > 0 && GetBackdrop ? GetBackdrop(UiBackdrop::UnderModal, screenSize, backdropBounds, true) : nullptr);
+		if (backdrop != nullptr) {
+			painter.SetBackdrop(backdrop, backdropBounds, UiTheme::BackdropWindowFillOpacity, FirstOverlaySlot);
+			Rectf safe = GetSafeBounds();
+			std::int32_t slot = FirstOverlaySlot;
+			for (std::size_t i = 0; i < stacked; i++) {
+				if (IsActive(_overlays[i])) {
+					DrawOverlay(painter, i, slot++, screenSize, safe);
+				}
+			}
+			_overlaysInLevel = stacked;
+		}
 		UiElement::EndLayout();
 	}
 
@@ -1094,10 +1176,39 @@ namespace Jazz2::Editor
 		painter.SetBackdrop(backdrop, backdropBounds, UiTheme::BackdropFillOpacity, RootSlot);
 
 		if (_root != nullptr && _root->IsShown()) {
-			_root->Arrange(GetContext(), Rectf(0.0f, 0.0f, screenSize.X, screenSize.Y));
+			_root->Arrange(GetContext(), Rectf(0.0f, 0.0f, screenSize.X, std::max(screenSize.Y - _keyboardRootInset, 1.0f)));
 			painter.SetSlot(RootSlot);
 			_root->Draw(painter);
 		}
+	}
+
+	void UiSurface::DrawOverlay(UiPainter& painter, std::size_t index, std::int32_t slot, Vector2f screenSize, const Rectf& safe)
+	{
+		UiContext context = GetContext();
+		UiElement* element = _overlays[index].Element.get();
+		const UiOverlayOptions& options = _overlays[index].Options;
+		Vector2f size = element->MeasureCached(context, Vector2f(safe.W, safe.H));
+		size.X = std::min(size.X, safe.W);
+		size.Y = std::min(size.Y, safe.H);
+		Vector2f pos = (options.Centered
+			? Vector2f(std::round(safe.X + (safe.W - size.X) * 0.5f), std::round(safe.Y + (safe.H - size.Y) * 0.4f))
+			: options.Position);
+		if (!options.Centered && options.FallbackRight >= 0.0f && pos.X + size.X > safe.X + safe.W) {
+			pos.X = options.FallbackRight - size.X;
+		}
+		// Moved to fit the screen
+		pos.X = std::clamp(pos.X, safe.X, safe.X + safe.W - size.X);
+		pos.Y = std::clamp(pos.Y, safe.Y, safe.Y + safe.H - size.Y);
+		if (element == _keyboardWindow) {
+			pos.Y -= _keyboardShift;
+		}
+		element->Arrange(context, Rectf(pos.X, pos.Y, size.X, size.Y));
+
+		painter.SetSlot(slot);
+		if (options.Modal) {
+			painter.FillRect(Rectf(0.0f, 0.0f, screenSize.X, screenSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.45f), UiLayer::Back);
+		}
+		element->Draw(painter);
 	}
 
 	bool UiSurface::OnDraw(RenderQueue& renderQueue)
@@ -1108,7 +1219,6 @@ namespace Jazz2::Editor
 		ViewSize = Vector2i(std::int32_t(screenSize.X), std::int32_t(screenSize.Y));
 		ClipRect = Rectf(0.0f, 0.0f, 0.0f, 0.0f);
 
-		UiContext context = GetContext();
 		bool panelsDrawn = (_panelsDrawnFrame == theApplication().GetFrameCount());
 		if (!panelsDrawn) {
 			_lines->BeginFrame();
@@ -1127,32 +1237,10 @@ namespace Jazz2::Editor
 		// Windows and menus stay in the part of the screen that isn't cut off
 		Rectf safe = GetSafeBounds();
 		std::int32_t slot = FirstOverlaySlot;
-		for (std::size_t i = 0; i < _overlays.size(); i++) {
-			if (!IsActive(_overlays[i])) {
-				continue;
+		for (std::size_t i = (panelsDrawn ? std::min(_overlaysInLevel, _overlays.size()) : 0); i < _overlays.size(); i++) {
+			if (IsActive(_overlays[i])) {
+				DrawOverlay(painter, i, slot++, screenSize, safe);
 			}
-
-			UiElement* element = _overlays[i].Element.get();
-			const UiOverlayOptions& options = _overlays[i].Options;
-			Vector2f size = element->MeasureCached(context, Vector2f(safe.W, safe.H));
-			size.X = std::min(size.X, safe.W);
-			size.Y = std::min(size.Y, safe.H);
-			Vector2f pos = (options.Centered
-				? Vector2f(std::round(safe.X + (safe.W - size.X) * 0.5f), std::round(safe.Y + (safe.H - size.Y) * 0.4f))
-				: options.Position);
-			if (!options.Centered && options.FallbackRight >= 0.0f && pos.X + size.X > safe.X + safe.W) {
-				pos.X = options.FallbackRight - size.X;
-			}
-			// Moved to fit the screen
-			pos.X = std::clamp(pos.X, safe.X, safe.X + safe.W - size.X);
-			pos.Y = std::clamp(pos.Y, safe.Y, safe.Y + safe.H - size.Y);
-			element->Arrange(context, Rectf(pos.X, pos.Y, size.X, size.Y));
-
-			painter.SetSlot(slot++);
-			if (options.Modal) {
-				painter.FillRect(Rectf(0.0f, 0.0f, screenSize.X, screenSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.45f), UiLayer::Back);
-			}
-			element->Draw(painter);
 		}
 
 		painter.SetSlot(slot);

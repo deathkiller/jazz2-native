@@ -530,6 +530,16 @@ namespace Jazz2::Actors
 		// standing on the floor or leaning against a wall is not stuck and `TryUnstuck()` leaves it alone.
 		if (_pos == posBefore && (movementAttempted || (_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation)) {
 			TryUnstuck();
+			if (_speed.Y > 0.0f && (_state & ActorState::CollideWithTilesetLegacy) == ActorState::CollideWithTilesetLegacy) {
+				// A player held by the head in a ceiling creeps up into it by a 16th of its falling speed, as measured in JJ2+
+				AABBf head = AABBInner;
+				head.T = head.B - 23.0f;
+				head.B = head.T + 5.0f;
+				TileCollisionParams headParams = { TileDestructType::None, true };
+				if (auto* tiles = _levelHandler->TileMap(); tiles != nullptr && !tiles->IsTileEmpty(head, headParams)) {
+					MoveInstantly(Vector2f(0.0f, -_speed.Y * timeMult / 16.0f), MoveType::Relative | MoveType::Force);
+				}
+			}
 		}
 
 		// Reduce all forces if they are present
@@ -551,6 +561,11 @@ namespace Jazz2::Actors
 				// Actor is going down
 				AABBf aabb = AABBInner;
 				aabb.B += CollisionCheckStep;
+				if ((_state & ActorState::CollideWithTilesetReduced) == ActorState::CollideWithTilesetReduced && aabb.B - aabb.T >= 20.0f) {
+					// Only the part a reduced hitbox falls by is the floor (see LevelHandler::IsPositionEmpty()), a head in a ceiling isn't -
+					// for a player only what's right under its feet, as measured in JJ2+ (one held in a ceiling keeps falling faster)
+					aabb.T = std::max(aabb.T, aabb.B - ((_state & ActorState::CollideWithTilesetLegacy) == ActorState::CollideWithTilesetLegacy ? 2.0f : std::max(14.0f, (aabb.B - aabb.T) - 10.0f)));
+				}
 				if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
 					// There is still some space below - only apply gravity
 					SetState(ActorState::CanJump, false);
@@ -785,8 +800,17 @@ namespace Jazz2::Actors
 		// player score for a hole they never moved through. IsSupportedAfterMove() avoids this the same way.
 		TileCollisionParams paramsEscape = { TileDestructType::None, true };
 
+		// A player is only lifted out of tiles it sank into, one in a wall stays there, as measured in JJ2+ (warped into one)
+		std::size_t directionCount = sizeof(Directions) / sizeof(Directions[0]);
+		if ((_state & ActorState::CollideWithTilesetLegacy) == ActorState::CollideWithTilesetLegacy) {
+			auto* tiles = _levelHandler->TileMap();
+			if (tiles != nullptr && !tiles->IsTileEmpty(aabb, paramsProbe)) {
+				directionCount = 1;
+			}
+		}
 		for (float distance = 2.0f; distance <= MaxUnstuckDistance; distance += 2.0f) {
-			for (const Vector2f& direction : Directions) {
+			for (std::size_t i = 0; i < directionCount; i++) {
+				const Vector2f& direction = Directions[i];
 				if (MoveInstantly(direction * distance, MoveType::Relative, paramsEscape)) {
 					// The escape is a forced relocation, not a path the actor took - it's expressed as a relative
 					// move only because the free spot is searched for around the actor - so nothing on the way to
@@ -1141,6 +1165,12 @@ namespace Jazz2::Actors
 				buffer = nullptr;
 			}
 
+			return _levelHandler->PlaySfx(this, identifier, buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch, flags);
+		}
+
+		// A sound of the weapons of the level, as any actor's own (see WeaponsDescription::GetSoundIdentifier())
+		if (auto* sound = ContentResolver::Get().FindWeaponSound(identifier)) {
+			AudioBuffer* buffer = (!sound->Buffers.empty() ? &sound->Buffers[0]->Buffer : nullptr);
 			return _levelHandler->PlaySfx(this, identifier, buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch, flags);
 		}
 

@@ -214,17 +214,43 @@ namespace Jazz2::Scripting
 		engine->SetTypeInfoUserDataCleanupCallback(CleanupTypeInfoArrayCache, ARRAY_CACHE);
 
 		// Register the array type as a template
+		/**
+		 * @brief Dynamic array of elements of type `T`
+		 *
+		 * A reference type, so assigning a handle shares the same array, while the `=` operator copies the
+		 * elements. Elements are accessed by zero-based index, see @ref array::length for the number of elements.
+		 * Can be created from an initialization list, e.g. `array<int> a = {1, 2, 3};`, and `T[]` is
+		 * a shorter way to write `array<T>`. Elements of object types must have a default constructor.
+		 */
 		r = engine->RegisterObjectType("array<class T>", 0, asOBJ_REF | asOBJ_GC | asOBJ_TEMPLATE); RETURN_ASSERT(r >= 0);
 
 		// Register a callback for validating the subtype before it is used
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_TEMPLATE_CALLBACK, "bool f(int&in, bool&out)", asFUNCTION(ScriptArrayTemplateCallback), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		// Templates receive the object type as the first parameter. To the script writer this is hidden
+		/** @brief Creates an empty array */
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_FACTORY, "array<T>@ f(int&in)", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Creates an array with the given number of default-initialized elements
+		 *
+		 * Elements of object types are created with their default constructor.
+		 * @param length Number of elements
+		 */
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_FACTORY, "array<T>@ f(int&in, uint length) explicit", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*, std::uint32_t), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Creates an array with the given number of copies of a value
+		 *
+		 * @param length Number of elements
+		 * @param value Value every element is set to
+		 */
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_FACTORY, "array<T>@ f(int&in, uint length, const T &in value)", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*, std::uint32_t, void*), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		// Register the factory that will be used for initialization lists
+		/**
+		 * @brief Creates an array from an initialization list
+		 *
+		 * Used by `{a, b, c}` syntax, the elements are taken in the listed order.
+		 */
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_LIST_FACTORY, "array<T>@ f(int&in type, int&in list) {repeat T}", asFUNCTIONPR(CScriptArray::Create, (asITypeInfo*, void*), CScriptArray*), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		// The memory management methods
@@ -232,50 +258,213 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectBehaviour("array<T>", asBEHAVE_RELEASE, "void f()", asMETHOD(CScriptArray, Release), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		// The index operator returns the template subtype
+		/**
+		 * @brief Accesses the element at the given index
+		 *
+		 * An index equal to or greater than @ref array::length raises a script exception.
+		 * @param index Zero-based index of the element
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "T &opIndex(uint index)", asMETHODPR(CScriptArray, At, (std::uint32_t), void*), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Reads the element at the given index
+		 *
+		 * An index equal to or greater than @ref array::length raises a script exception.
+		 * @param index Zero-based index of the element
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "const T &opIndex(uint index) const", asMETHODPR(CScriptArray, At, (std::uint32_t) const, const void*), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		// The assignment operator
+		/**
+		 * @brief Replaces the content with copies of the elements of another array
+		 *
+		 * The array is resized to match the other one. Handles are copied as handles, so they keep
+		 * pointing to the same objects.
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "array<T> &opAssign(const array<T>&in)", asMETHOD(CScriptArray, operator=), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		// Other methods
+		/**
+		 * @brief Inserts an element at the given index
+		 *
+		 * Elements from `index` onward move one position up. An index greater than @ref array::length raises
+		 * a script exception, an index equal to it appends.
+		 * @param index Position of the new element
+		 * @param value Value to insert
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void insertAt(uint index, const T&in value)", asMETHODPR(CScriptArray, InsertAt, (std::uint32_t, void*), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Inserts all elements of another array at the given index
+		 *
+		 * An index greater than @ref array::length raises a script exception. The array may also be inserted into itself.
+		 * @param index Position of the first inserted element
+		 * @param arr Array whose elements are copied in
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void insertAt(uint index, const array<T>& arr)", asMETHODPR(CScriptArray, InsertAt, (std::uint32_t, const CScriptArray&), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Appends an element to the end of the array
+		 *
+		 * @param value Value to append
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void insertLast(const T&in value)", asMETHOD(CScriptArray, InsertLast), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Removes the element at the given index
+		 *
+		 * Following elements move one position down. An index equal to or greater than @ref array::length
+		 * raises a script exception.
+		 * @param index Index of the element to remove
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void removeAt(uint index)", asMETHOD(CScriptArray, RemoveAt), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Removes the last element
+		 *
+		 * Raises a script exception if the array is empty.
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void removeLast()", asMETHOD(CScriptArray, RemoveLast), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Removes a range of elements
+		 *
+		 * A `start` greater than @ref array::length raises a script exception. A `count` reaching past the end
+		 * removes everything from `start` to the end.
+		 * @param start Index of the first element to remove
+		 * @param count Number of elements to remove
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void removeRange(uint start, uint count)", asMETHOD(CScriptArray, RemoveRange), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// TODO: Should length() and resize() be deprecated as the property accessors do the same thing?
 		// TODO: Register as size() for consistency with other types
 #if AS_USE_ACCESSORS != 1
 		r = engine->RegisterObjectMethod("array<T>", "uint length() const", asMETHOD(CScriptArray, GetSize), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 #endif
+		/**
+		 * @brief Preallocates memory for the given number of elements
+		 *
+		 * Doesn't change @ref array::length, it only avoids repeated reallocation when many elements are added
+		 * later. A value smaller than the current capacity does nothing.
+		 * @param length Number of elements to make room for
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void reserve(uint length)", asMETHOD(CScriptArray, Reserve), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Changes the number of elements
+		 *
+		 * Elements are removed from or added to the end, new elements are default-initialized.
+		 * @param length New number of elements
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void resize(uint length)", asMETHODPR(CScriptArray, Resize, (std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Sorts the elements in ascending order
+		 *
+		 * Elements of object types must implement @ref opCmp, otherwise a script exception is raised. Null
+		 * handles are placed first. Use @ref array::sort() for a custom order.
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void sortAsc()", asMETHODPR(CScriptArray, SortAsc, (), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Sorts a range of elements in ascending order
+		 *
+		 * Elements of object types must implement @ref opCmp. A range that doesn't fit into the array raises
+		 * a script exception.
+		 * @param startAt Index of the first element to sort
+		 * @param count Number of elements to sort
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void sortAsc(uint startAt, uint count)", asMETHODPR(CScriptArray, SortAsc, (std::uint32_t, std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Sorts the elements in descending order
+		 *
+		 * Elements of object types must implement @ref opCmp, otherwise a script exception is raised.
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void sortDesc()", asMETHODPR(CScriptArray, SortDesc, (), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Sorts a range of elements in descending order
+		 *
+		 * Elements of object types must implement @ref opCmp. A range that doesn't fit into the array raises
+		 * a script exception.
+		 * @param startAt Index of the first element to sort
+		 * @param count Number of elements to sort
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void sortDesc(uint startAt, uint count)", asMETHODPR(CScriptArray, SortDesc, (std::uint32_t, std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/** @brief Reverses the order of the elements */
 		r = engine->RegisterObjectMethod("array<T>", "void reverse()", asMETHOD(CScriptArray, Reverse), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// The token 'if_handle_then_const' tells the engine that if the type T is a handle, then it should refer to a read-only object
+		/**
+		 * @brief Finds the first element equal to a value
+		 *
+		 * Elements of object types are compared with `opEquals` or @ref opCmp, if the type has neither,
+		 * a script exception is raised. Use @ref array::findByRef() to look for a specific object instead.
+		 * @param value Value to look for
+		 * @return Index of the first matching element, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "int find(const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, Find, (void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// TODO: It should be "int find(const T&in value, uint startAt = 0) const"
+		/**
+		 * @brief Finds the first element equal to a value, starting at the given index
+		 *
+		 * Elements of object types are compared with `opEquals` or @ref opCmp, if the type has neither,
+		 * a script exception is raised.
+		 * @param startAt Index where the search begins
+		 * @param value Value to look for
+		 * @return Index of the first matching element, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "int find(uint startAt, const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, Find, (std::uint32_t, void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Finds the first element that is the given object
+		 *
+		 * Compares object identity instead of value, so it works for any type and finds only the exact
+		 * instance. For arrays of handles, pass a handle to the object to look for.
+		 * @param value Object to look for
+		 * @return Index of the first matching element, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "int findByRef(const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, FindByRef, (void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// TODO: It should be "int findByRef(const T&in value, uint startAt = 0) const"
+		/**
+		 * @brief Finds the first element that is the given object, starting at the given index
+		 *
+		 * Compares object identity instead of value.
+		 * @param startAt Index where the search begins
+		 * @param value Object to look for
+		 * @return Index of the first matching element, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "int findByRef(uint startAt, const T&in if_handle_then_const value) const", asMETHODPR(CScriptArray, FindByRef, (std::uint32_t, void*) const, int), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Returns whether both arrays have equal elements
+		 *
+		 * Arrays are equal if they have the same length and every pair of elements at the same index is equal.
+		 * Elements of object types are compared with `opEquals` or @ref opCmp.
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "bool opEquals(const array<T>&in) const", asMETHOD(CScriptArray, operator==), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		
+		/** @brief Returns `true` if the array has no elements */
 		r = engine->RegisterObjectMethod("array<T>", "bool isEmpty() const", asMETHOD(CScriptArray, IsEmpty), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/** @brief Returns `true` if the array has no elements, same as @ref array::isEmpty() */
 		r = engine->RegisterObjectMethod("array<T>", "bool empty() const", asMETHOD(CScriptArray, IsEmpty), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		// Sort with callback for comparison
+		/**
+		 * @brief Comparison callback for @ref array::sort()
+		 *
+		 * @param a First element
+		 * @param b Second element
+		 * @return `true` if `a` should be placed before `b`
+		 */
 		r = engine->RegisterFuncdef("bool array<T>::less(const T&in if_handle_then_const a, const T&in if_handle_then_const b)"); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Sorts elements using a custom comparison function
+		 *
+		 * The first argument is a function matching @ref array::less, that returns `true` if its first argument
+		 * should come before the second one. The function must not modify the array. The range is cut
+		 * at the end of the array, a `startAt` at or past the end raises a script exception. The order
+		 * of elements that compare as equal isn't preserved.
+		 * @param startAt Index of the first element to sort
+		 * @param count Number of elements to sort, by default all up to the end
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "void sort(const less &in, uint startAt = 0, uint count = uint(-1))", asMETHODPR(CScriptArray, Sort, (asIScriptFunction*, std::uint32_t, std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 #if AS_USE_STLNAMES != 1 && AS_USE_ACCESSORS == 1
 		// Register virtual properties
+		/**
+		 * @brief Number of elements in the array
+		 *
+		 * Setting it resizes the array, the same as @ref array::resize().
+		 */
 		r = engine->RegisterObjectMethod("array<T>", "uint get_length() const property", asMETHOD(CScriptArray, GetSize), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		/** @brief Sets the number of elements */
 		r = engine->RegisterObjectMethod("array<T>", "void set_length(uint) property", asMETHODPR(CScriptArray, Resize, (std::uint32_t), void), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 #endif
 

@@ -111,7 +111,8 @@ namespace Jazz2::Actors::Environment
 
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
-			if (player->GetCarryingObject() == this) {
+			// Only one hanging from it, a script may make the vine a platform the player stands on (a trapeze)
+			if (player->GetCarryingObject() == this && player->_suspendType == SuspendType::SwingingVine) {
 				// The phase of the chunk the player is actually hanging from - `lastChunk` below is
 				// `_chunkPos[ChunkCount - 1]`, so the offset has to be that index, not the count. Taking it
 				// one step further along evaluated a phase the tip of the vine never has, which let the

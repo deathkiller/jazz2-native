@@ -266,7 +266,7 @@ namespace Jazz2::Events
 				tile.IsEventActive = wasEventActive;
 
 				if (respawnActors && respawn && tile.Event != EventType::Empty) {
-					SpawnTileEvent(tile, x, y, Actors::ActorState::None, ILevelHandler::MainPlaneZ);
+					SpawnTileEvent(tile, x, y, Actors::ActorState::None, ILevelHandler::SpritePlaneZ);
 				}
 			}
 		}

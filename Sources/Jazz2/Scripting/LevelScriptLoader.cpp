@@ -39,8 +39,8 @@
 		do {																											\
 			std::int32_t column = 0; const char* sectionName = nullptr;													\
 			std::int32_t line = ctx->GetExceptionLineNumber(&column, &sectionName);										\
-			LOGE("{}:{}({}) ‡ An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",			\
-				sectionName, line, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());	\
+			__DEATH_TRACE(TraceLevel::Error, "AngelScript!", "An exception \"{}\" occurred in \"{}\" (called from \"{}:{}({})\")",	\
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration(), sectionName, line, column);	\
 		} while (false)
 #else
 #	define AS_LOG_EXCEPTION(ctx) do {} while (false)
@@ -98,6 +98,7 @@ class jjHELPPAGE {
 	// MLLE::Setup() of the include of weapons of MLLE, in place of it: the game already plays by the options of the weapons
 	// of the level (see Formats::WeaponsChunk), the weapons of the script are set up with a hook they share, and then the
 	// rest of what it sets up. The hook tells which sprites the weapons show on the screen, so the editor shows them too.
+	// The hook is there for any weapon the script names, the script calls it also if the options couldn't be read.
 	static constexpr StringView MlleWeaponsSetup = R"(
 namespace MLLE {
 	se::WeaponHook@ WeaponHook;
@@ -114,14 +115,15 @@ namespace MLLE {
 
 	bool Setup(array<MLLEWeaponApply@> weapons) {
 		for (uint slot = 1; slot <= weapons.length && slot <= 9; ++slot) {
-			jjSTREAM parameters;
-			if (weapons[slot - 1] !is null && _GetWeaponParams(slot, parameters)) {
-				if (WeaponHook is null) {
-					int16 hookArgument = _GetWeaponHookArgument();
-					@WeaponHook = (hookArgument < 0 ? _WeaponHook() : _WeaponHook(uint8(hookArgument)));
-				}
-				weapons[slot - 1].Apply(slot, WeaponHook, parameters, _GetWeaponAmmoCrate(slot));
+			if (weapons[slot - 1] is null)
+				continue;
+			if (WeaponHook is null) {
+				int16 hookArgument = _GetWeaponHookArgument();
+				@WeaponHook = (hookArgument < 0 ? _WeaponHook() : _WeaponHook(uint8(hookArgument)));
 			}
+			jjSTREAM parameters;
+			if (_GetWeaponParams(slot, parameters))
+				weapons[slot - 1].Apply(slot, WeaponHook, parameters, _GetWeaponAmmoCrate(slot));
 		}
 		return Setup();
 	}
@@ -247,10 +249,10 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 #if defined(DEATH_TARGET_BIG_ENDIAN)
 			{ "TARGET_BIG_ENDIAN"_s, true },
 #endif
-
-#if defined(RHI_GL_PROFILE_ES)
-			{ "RHI_GL_PROFILE_ES"_s, true },
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
+			{ "TARGET_CONSTRAINED_MEMORY"_s, true },
 #endif
+
 #if defined(WITH_AUDIO)
 			{ "WITH_AUDIO"_s, true },
 #endif
@@ -281,7 +283,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 		auto contextType = AddScriptFromFile(scriptPath, DefinedSymbols);
 		if (contextType == ScriptContextType::Unknown) {
-			LOGE("Cannot compile the script. Please correct the code and try again.");
+			LOGE("Cannot compile the script \"{}\"", scriptPath);
 #if defined(DEATH_DEBUG)
 			levelHandler->_console->WriteLine(UI::MessageLevel::Error, "Cannot compile the script. Please correct the code and try again."_s);
 #endif
@@ -292,7 +294,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		RegisterBuiltInFunctions(GetEngine());
 		switch (GetContextType()) {
 			case ScriptContextType::Legacy:
-				LOGD("Compiling script with \"Legacy\" context");
+				LOGD("Compiling script \"{}\" with \"Legacy\" context", scriptPath);
 #if defined(DEATH_DEBUG)
 				levelHandler->_console->WriteLine(UI::MessageLevel::Debug, "Compiling script with \"Legacy\" context"_s);
 #endif
@@ -306,7 +308,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 				GetEngine()->SetEngineProperty(asEP_FOREACH_SUPPORT, false);
 				break;
 			case ScriptContextType::Standard:
-				LOGD("Compiling script with \"Standard\" context");
+				LOGD("Compiling script \"{}\" with \"Standard\" context", scriptPath);
 #if defined(DEATH_DEBUG)
 				levelHandler->_console->WriteLine(UI::MessageLevel::Debug, "Compiling script with \"Standard\" context"_s);
 #endif
@@ -320,14 +322,14 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 		ScriptBuildResult r = Build();
 		if (r != ScriptBuildResult::Success) {
-			LOGE("Cannot compile the script. Please correct the code and try again.");
+			LOGE("Cannot compile the script \"{}\"", scriptPath);
 #if defined(DEATH_DEBUG)
 			levelHandler->_console->WriteLine(UI::MessageLevel::Error, "Cannot compile the script. Please correct the code and try again."_s);
 #endif
 			return;
 		}
 
-		LOGD("Script compiled successfully.");
+		LOGD("Script \"{}\" compiled successfully", scriptPath);
 
 		// Enable all callbacks by default
 		_enabledCallbacks.setAll();
@@ -441,8 +443,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 	void LevelScriptLoader::OnProcessPragma(StringView content, ScriptContextType& contextType)
 	{
-		// #pragma target Jazz² Resurrection - Changes script context type to Standard
-		if (content == "target Jazz² Resurrection"_s || content == "target Jazz2 Resurrection"_s) {
+		// #pragma target Resurrection - Changes script context type to Standard
+		if (content == "target Resurrection"_s) {
 			contextType = ScriptContextType::Standard;
 		}
 	}
@@ -521,7 +523,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			OnBeforeScriptCall();
 			asIScriptContext* ctx = GetEngine()->RequestContext();
 			if (GetMainModule()->ResetGlobalVars(ctx) < 0) {
-				LOGE("Cannot initialize all global variables of the script. Please correct the code and try again.");
+				LOGE("Cannot initialize all global variables of the script");
 			}
 			GetEngine()->ReturnContext(ctx);
 			OnAfterScriptCall();
@@ -643,6 +645,9 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		// What the script drew in the level lasts until it updates again, in the next tick - a frame without one draws it
 		// again, the objects draw only in ticks too (see Legacy::ScriptObjectHost::OnUpdate())
 		std::int32_t currentTick = GetGameTick();
+		for (auto& store : _playerBackingStore) {
+			store.second->ApplyPendingSpeed(currentTick);
+		}
 		// Frames of JJ2+ are its ticks, scripts time what they draw by it (blinking, animations)
 		renderFrame = currentTick;
 		if (_worldCanvas != nullptr && _canvasClearTick != currentTick) {
@@ -901,6 +906,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 							ctx->SetArgObject(0, p);
 						} else {
 							// Player is required but wasn't provided
+							GetEngine()->ReturnContext(ctx);
+							OnAfterScriptCall();
 							return;
 						}
 					}
@@ -909,7 +916,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			}
 			if (func->GetParam(paramIdx, &typeId) >= 0) {
 				if (typeId == asTYPEID_BOOL || typeId == asTYPEID_INT8 || typeId == asTYPEID_UINT8) {
-					ctx->SetArgByte(1, eventParams[1]);
+					// The first argument of a function without a player (onFunction1(bool))
+					ctx->SetArgByte(paramIdx, eventParams[1]);
 					paramIdx++;
 				}
 			}
@@ -924,7 +932,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			return;
 		}
 
-		LOGW("Callback function \"{}\" was not found in the script. Please correct the code and try again.", funcName);
+		LOGW("Callback function \"{}\" was not found in the script", funcName);
 	}
 
 	bool LevelScriptLoader::OnDraw(UI::HUD* hud, Actors::Player* player, const Rectf& view, DrawType type)
@@ -1015,7 +1023,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		for (std::int32_t number = 8; number >= 1; number--) {
 			asIScriptFunction* func = _onDrawLayer[number - 1];
 			std::int32_t index = GetLayerIndex(number);
-			if (func == nullptr || index < 0 || index >= std::int32_t(tileMap->_layers.size())) {
+			// As measured in JJ2+, a layer out of the order or without `hasTiles` doesn't call its hook
+			if (func == nullptr || index < 0 || index >= std::int32_t(tileMap->_layers.size()) || !tileMap->_layers[index].Visible) {
 				continue;
 			}
 
@@ -1139,35 +1148,127 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 		// Math functions
 		int r;
+		/** @brief Cosine of an angle given in radians */
 		r = engine->RegisterGlobalFunction("float cos(float)", asFUNCTIONPR(cosf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/** @brief Sine of an angle given in radians */
 		r = engine->RegisterGlobalFunction("float sin(float)", asFUNCTIONPR(sinf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/** @brief Tangent of an angle given in radians */
 		r = engine->RegisterGlobalFunction("float tan(float)", asFUNCTIONPR(tanf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
+		/**
+		 * @brief Arc cosine in radians
+		 *
+		 * Returns an angle in the range 0 to pi. The argument must be in the range -1 to 1, otherwise the result is NaN.
+		 */
 		r = engine->RegisterGlobalFunction("float acos(float)", asFUNCTIONPR(acosf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Arc sine in radians
+		 *
+		 * Returns an angle in the range -pi/2 to pi/2. The argument must be in the range -1 to 1, otherwise the result is NaN.
+		 */
 		r = engine->RegisterGlobalFunction("float asin(float)", asFUNCTIONPR(asinf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Arc tangent in radians
+		 *
+		 * Returns an angle in the range -pi/2 to pi/2.
+		 * @see @ref atan2()
+		 */
 		r = engine->RegisterGlobalFunction("float atan(float)", asFUNCTIONPR(atanf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Angle of a direction vector in radians
+		 *
+		 * Takes the Y component first and the X component second, as in C. Uses the signs of both to pick
+		 * the quadrant, so the result covers the full range -pi to pi.
+		 */
 		r = engine->RegisterGlobalFunction("float atan2(float, float)", asFUNCTIONPR(atan2f, (float, float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
+		/** @brief Hyperbolic cosine */
 		r = engine->RegisterGlobalFunction("float cosh(float)", asFUNCTIONPR(coshf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/** @brief Hyperbolic sine */
 		r = engine->RegisterGlobalFunction("float sinh(float)", asFUNCTIONPR(sinhf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/** @brief Hyperbolic tangent */
 		r = engine->RegisterGlobalFunction("float tanh(float)", asFUNCTIONPR(tanhf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
+		/**
+		 * @brief Natural (base e) logarithm
+		 *
+		 * Zero gives negative infinity, negative values give NaN.
+		 */
 		r = engine->RegisterGlobalFunction("float log(float)", asFUNCTIONPR(logf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Base 10 logarithm
+		 *
+		 * Zero gives negative infinity, negative values give NaN.
+		 */
 		r = engine->RegisterGlobalFunction("float log10(float)", asFUNCTIONPR(log10f, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
+		/**
+		 * @brief Raises a number to a power
+		 *
+		 * Takes the base first and the exponent second. A negative base with a non-integer exponent gives NaN.
+		 */
 		r = engine->RegisterGlobalFunction("float pow(float, float)", asFUNCTIONPR(powf, (float, float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Square root
+		 *
+		 * Negative values give NaN.
+		 */
 		r = engine->RegisterGlobalFunction("float sqrt(float)", asFUNCTIONPR(sqrtf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
+		/** @brief Rounds up to the nearest whole number */
 		r = engine->RegisterGlobalFunction("float ceil(float)", asFUNCTIONPR(ceilf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/** @brief Absolute value of a floating-point number */
 		r = engine->RegisterGlobalFunction("float abs(float)", asFUNCTIONPR(fabsf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/** @brief Rounds down to the nearest whole number */
 		r = engine->RegisterGlobalFunction("float floor(float)", asFUNCTIONPR(floorf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Fractional part of a number
+		 *
+		 * Removes the whole part and keeps the sign, so `fraction(2.75)` is `0.75` and `fraction(-2.75)` is `-0.75`.
+		 */
 		r = engine->RegisterGlobalFunction("float fraction(float)", asFUNCTIONPR(asFractionf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
+		/**
+		 * @brief Returns whether two floating-point numbers are nearly equal
+		 *
+		 * Takes the two values and an optional tolerance. Equal values always match. If either value is
+		 * zero, the absolute difference is compared to the tolerance. Otherwise the test is relative:
+		 * the difference divided by the sum of both absolute values must be less than the tolerance.
+		 */
 		r = engine->RegisterGlobalFunction("bool closeTo(float, float, float = 0.00001f)", asFUNCTION(asCloseTo), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Returns whether two double-precision numbers are nearly equal
+		 *
+		 * Same test as the `float` overload, with a smaller default tolerance.
+		 */
 		r = engine->RegisterGlobalFunction("bool closeTo(double, double, double = 0.0000000001)", asFUNCTION(asCloseToDouble), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Reinterprets 32 bits as a `float`
+		 *
+		 * The bits are taken as an IEEE 754 single-precision number without any numeric conversion.
+		 * @see @ref fpToIEEE()
+		 */
 		r = engine->RegisterGlobalFunction("float fpFromIEEE(uint)", asFUNCTION(asFloatFromIEEE), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Raw IEEE 754 bits of a `float`
+		 *
+		 * Returns the bit pattern of the number unchanged, not its numeric value.
+		 * @see @ref fpFromIEEE()
+		 */
 		r = engine->RegisterGlobalFunction("uint fpToIEEE(float)", asFUNCTION(asFloatToIEEE), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Reinterprets 64 bits as a `double`
+		 *
+		 * The bits are taken as an IEEE 754 double-precision number without any numeric conversion.
+		 * @see @ref fpToIEEE()
+		 */
 		r = engine->RegisterGlobalFunction("double fpFromIEEE(uint64)", asFUNCTION(asDoubleFromIEEE), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Raw IEEE 754 bits of a `double`
+		 *
+		 * Returns the bit pattern of the number unchanged, not its numeric value.
+		 * @see @ref fpFromIEEE()
+		 */
 		r = engine->RegisterGlobalFunction("uint64 fpToIEEE(double)", asFUNCTION(asDoubleToIEEE), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		// Needs the array type, so it can't be part of RegisterString()

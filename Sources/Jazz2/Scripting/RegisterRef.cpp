@@ -244,20 +244,44 @@ namespace Jazz2::Scripting
 
 #if AS_CAN_USE_CPP11
 		// With C++11 it is possible to use asGetTypeTraits to automatically determine the flags that represent the C++ class
+		/**
+		 * @brief Handle to an object of any reference type
+		 *
+		 * Holds a handle without knowing the type of the object, e.g. to keep different kinds of objects in
+		 * one `array<ref>`. Use handle assignment to store an object, `@r = obj;`, and `cast<T>(r)` to get
+		 * a typed handle back. The `is` operator compares identity, e.g. `r is obj` or `r is null`.
+		 */
 		r = engine->RegisterObjectType("ref", sizeof(CScriptHandle), asOBJ_VALUE | asOBJ_ASHANDLE | asOBJ_GC | asGetTypeTraits<CScriptHandle>()); DEATH_ASSERT(r >= 0);
 #else
 		r = engine->RegisterObjectType("ref", sizeof(CScriptHandle), asOBJ_VALUE | asOBJ_ASHANDLE | asOBJ_GC | asOBJ_APP_CLASS_CDAK); DEATH_ASSERT(r >= 0);
 #endif
+		/** @brief Creates a null handle */
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f()", asFUNCTIONPR(Construct, (CScriptHandle*), void), asCALL_CDECL_OBJFIRST); DEATH_ASSERT(r >= 0);
+		/** @brief Creates a handle to the same object as another `ref` */
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ref &in)", asFUNCTIONPR(Construct, (CScriptHandle*, const CScriptHandle&), void), asCALL_CDECL_OBJFIRST); DEATH_ASSERT(r >= 0);
+		/** @brief Creates a handle to the given object */
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ?&in)", asFUNCTIONPR(Construct, (CScriptHandle*, void*, std::int32_t), void), asCALL_CDECL_OBJFIRST); DEATH_ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_DESTRUCT, "void f()", asFUNCTIONPR(Destruct, (CScriptHandle*), void), asCALL_CDECL_OBJFIRST); DEATH_ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_ENUMREFS, "void f(int&in)", asMETHOD(CScriptHandle, EnumReferences), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_RELEASEREFS, "void f(int&in)", asMETHOD(CScriptHandle, ReleaseReferences), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		/**
+		 * @brief Converts to a typed handle
+		 *
+		 * Used by `cast<T>(r)`. Returns null if the handle is null or the object isn't of type `T`
+		 * or a type derived from it.
+		 */
 		r = engine->RegisterObjectMethod("ref", "void opCast(?&out)", asMETHODPR(CScriptHandle, Cast, (void**, std::int32_t), void), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		/** @brief Makes this handle refer to the same object as another `ref` */
 		r = engine->RegisterObjectMethod("ref", "ref &opHndlAssign(const ref &in)", asMETHOD(CScriptHandle, operator=), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		/**
+		 * @brief Makes this handle refer to the given object
+		 *
+		 * Assigning `null` clears the handle.
+		 */
 		r = engine->RegisterObjectMethod("ref", "ref &opHndlAssign(const ?&in)", asMETHOD(CScriptHandle, Assign), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		/** @brief Returns whether both handles refer to the same object */
 		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ref &in) const", asMETHODPR(CScriptHandle, operator==, (const CScriptHandle&) const, bool), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		/** @brief Returns whether this handle refers to the given object */
 		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ?&in) const", asMETHODPR(CScriptHandle, Equals, (void*, std::int32_t) const, bool), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
 	}
 }

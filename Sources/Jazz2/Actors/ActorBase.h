@@ -131,6 +131,10 @@ namespace Jazz2::Actors
 		virtual bool OwnsLights() const {
 			return false;
 		}
+		/** @brief Called when the object is out of reach of the players, returns `false` if what drives it keeps it or deactivates it itself */
+		virtual bool OnTileDeactivated(ActorBase* actor) {
+			return true;
+		}
 	};
 #endif
 
@@ -206,6 +210,10 @@ namespace Jazz2::Actors
 		CollideWithSolidObjectsBelow = 0x4000000,
 		/** @brief Ignore solid collisions agains similar objects that have this flag */
 		ExcludeSimilar = 0x8000000,
+		/** @brief Masks of tiles players hang from (vines, hooks) are solid to it as well */
+		CollideWithSuspendTiles = 0x10000000,
+		/** @brief Tiles hold a reduced hitbox by its head and lift it only straight up, its feet alone find the floor, as the original's player */
+		CollideWithTilesetLegacy = 0x20000000,
 	};
 
 	DEATH_ENUM_FLAGS(ActorState);

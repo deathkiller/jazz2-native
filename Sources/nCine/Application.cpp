@@ -2639,6 +2639,11 @@ namespace nCine
 		return false;
 	}
 
+	std::int32_t Application::GetScreenKeyboardInset()
+	{
+		return 0;
+	}
+
 	bool Application::ToggleScreenKeyboard()
 	{
 		return false;

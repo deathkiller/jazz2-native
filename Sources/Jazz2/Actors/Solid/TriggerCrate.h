@@ -34,6 +34,9 @@ namespace Jazz2::Actors::Solid
 		bool OnHandleCollision(ActorBase* other) override;
 		bool CanCauseDamage(ActorBase* collider) override;
 
+		/** @brief Sets, clears or toggles its trigger, as it does when destroyed */
+		void SwitchTrigger();
+
 		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 

@@ -236,6 +236,12 @@ namespace nCine
 		virtual bool CanShowScreenKeyboard();
 		/** @brief Returns `true` if the screen (software) keyboard is currently shown, always `false` if it cannot be queried */
 		virtual bool IsScreenKeyboardVisible();
+		/**
+		 * @brief Returns how much of the bottom of the drawable the screen (software) keyboard covers, in pixels
+		 *
+		 * Always 0 if it's hidden or the platform can't tell. Something being typed into should be moved above it.
+		 */
+		virtual std::int32_t GetScreenKeyboardInset();
 		/** @brief Toggles the screen (software) keyboard */
 		virtual bool ToggleScreenKeyboard();
 		/**

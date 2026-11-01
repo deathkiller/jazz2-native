@@ -325,7 +325,8 @@ namespace Jazz2::Editor
 		Panel,			/**< As a panel with a border */
 		Floating,		/**< As a panel with a border and a shadow */
 		Header,			/**< As the header of a panel */
-		Inset			/**< As a sunken area, such as a list */
+		Inset,			/**< As a sunken area, such as a list */
+		Docked			/**< As a panel with a border and square corners, docked at an edge of the screen */
 	};
 
 	/**

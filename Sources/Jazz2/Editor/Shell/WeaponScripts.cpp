@@ -97,12 +97,17 @@ namespace Jazz2::Editor
 			return (lowercase.hasSuffix(".asc"_s) || lowercase.hasSuffix(".as"_s));
 		}
 
-		String MakeSetupLine(const WeaponsDescription& weapons)
+		// A weapon a script sets up, with the code that creates it
+		bool IsScriptWeapon(const LevelWeapons& weapons, std::int32_t i)
+		{
+			return (weapons.Weapons[i].Kind == WeaponKind::Script && !weapons.EditorData[i].ScriptConstructor.empty());
+		}
+
+		String MakeSetupLine(const LevelWeapons& weapons)
 		{
 			std::int32_t last = -1;
 			for (std::int32_t i = 0; i < MaxScriptWeapons; i++) {
-				const WeaponDefinition& weapon = weapons.Weapons[i];
-				if (weapon.Kind == WeaponKind::Script && !weapon.ScriptConstructor.empty()) {
+				if (IsScriptWeapon(weapons, i)) {
 					last = i;
 				}
 			}
@@ -111,19 +116,18 @@ namespace Jazz2::Editor
 			}
 			String entries;
 			for (std::int32_t i = 0; i <= last; i++) {
-				const WeaponDefinition& weapon = weapons.Weapons[i];
 				if (i > 0) {
 					entries += ", "_s;
 				}
-				entries += (weapon.Kind == WeaponKind::Script && !weapon.ScriptConstructor.empty() ? StringView(weapon.ScriptConstructor) : "null"_s);
+				entries += (IsScriptWeapon(weapons, i) ? StringView(weapons.EditorData[i].ScriptConstructor) : "null"_s);
 			}
 			return "const bool MLLESetupSuccessful = MLLE::Setup(array<MLLEWeaponApply@> = {"_s + entries + "}); "_s + GeneratedMark;
 		}
 
-		bool HasScriptWeapons(const WeaponsDescription& weapons)
+		bool HasScriptWeapons(const LevelWeapons& weapons)
 		{
 			for (std::int32_t i = 0; i < MaxScriptWeapons; i++) {
-				if (weapons.Weapons[i].Kind == WeaponKind::Script && !weapons.Weapons[i].ScriptConstructor.empty()) {
+				if (IsScriptWeapon(weapons, i)) {
 					return true;
 				}
 			}
@@ -309,7 +313,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	String UpdateScriptWeaponLines(StringView script, const WeaponsDescription& weapons)
+	String UpdateScriptWeaponLines(StringView script, const LevelWeapons& weapons)
 	{
 		StringView newline = (script.contains("\r\n"_s) ? "\r\n"_s : "\n"_s);
 		bool hasWeapons = HasScriptWeapons(weapons);
@@ -317,8 +321,8 @@ namespace Jazz2::Editor
 		// The libraries the weapons need, each once
 		SmallVector<String, 4> libraries;
 		for (std::int32_t i = 0; i < MaxScriptWeapons; i++) {
-			const WeaponDefinition& weapon = weapons.Weapons[i];
-			if (weapon.Kind != WeaponKind::Script || weapon.ScriptConstructor.empty() || weapon.ScriptLibrary.empty()) {
+			const WeaponEditorData& weapon = weapons.EditorData[i];
+			if (!IsScriptWeapon(weapons, i) || weapon.ScriptLibrary.empty()) {
 				continue;
 			}
 			bool known = false;
@@ -678,7 +682,8 @@ namespace Jazz2::Editor
 		return std::int32_t(templates.size() - first);
 	}
 
-	std::int32_t ReadWeaponTemplates(StringView text, StringView sourcePath, SmallVectorImpl<ScriptWeaponTemplate>& templates)
+	std::int32_t ReadWeaponTemplates(StringView text, StringView sourcePath, SmallVectorImpl<ScriptWeaponTemplate>& templates,
+		SmallVectorImpl<CustomWeaponTemplate>* customTemplates)
 	{
 		using namespace JsonAccess;
 
@@ -694,6 +699,14 @@ namespace Jazz2::Editor
 		String directory = fs::GetDirectoryName(sourcePath);
 		std::int32_t added = 0;
 		auto addWeapon = [&](const Json::Value& value) {
+			if (customTemplates != nullptr) {
+				CustomWeaponTemplate custom;
+				if (ReadCustomWeaponTemplate(value, sourcePath, custom)) {
+					customTemplates->push_back(Death::move(custom));
+					added++;
+					return;
+				}
+			}
 			ScriptWeaponTemplate weaponTemplate;
 			weaponTemplate.Source = ScriptWeaponTemplateSource::Json;
 			weaponTemplate.SourcePath = sourcePath;
@@ -771,7 +784,8 @@ namespace Jazz2::Editor
 		return added;
 	}
 
-	void FindScriptWeaponTemplates(Death::Containers::ArrayView<const String> directories, SmallVectorImpl<ScriptWeaponTemplate>& templates)
+	void FindScriptWeaponTemplates(Death::Containers::ArrayView<const String> directories, SmallVectorImpl<ScriptWeaponTemplate>& templates,
+		SmallVectorImpl<CustomWeaponTemplate>* customTemplates)
 	{
 		for (const String& directory : directories) {
 			if (directory.empty() || !fs::DirectoryExists(directory)) {
@@ -784,7 +798,7 @@ namespace Jazz2::Editor
 					continue;
 				}
 				String text = ReadTextFile(item);
-				std::int32_t count = (ini ? ReadMlleWeaponTemplates(text, item, templates) : ReadWeaponTemplates(text, item, templates));
+				std::int32_t count = (ini ? ReadMlleWeaponTemplates(text, item, templates) : ReadWeaponTemplates(text, item, templates, customTemplates));
 				if (count < 0) {
 					LOGW("Weapons of \"{}\" can't be read, it isn't JSON", item);
 				}

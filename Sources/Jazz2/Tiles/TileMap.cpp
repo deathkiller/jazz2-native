@@ -924,7 +924,8 @@ namespace Jazz2::Tiles
 				}
 
 				if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles &&
-					tile.HasSuspendType == SuspendType::None && ((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
+					(tile.HasSuspendType == SuspendType::None || (params.DestructType & TileDestructType::SuspendTiles) == TileDestructType::SuspendTiles) &&
+					((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
 					std::int32_t tileId = ResolveTileID(tile);
 					TileSet* tileSet = ResolveTileSet(tileId);
 					if (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId)) {
@@ -1047,7 +1048,8 @@ namespace Jazz2::Tiles
 				}
 
 				if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles &&
-					tile.HasSuspendType == SuspendType::None && ((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
+					(tile.HasSuspendType == SuspendType::None || (params.DestructType & TileDestructType::SuspendTiles) == TileDestructType::SuspendTiles) &&
+					((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
 					std::int32_t tileId = ResolveTileID(tile);
 					TileSet* tileSet = ResolveTileSet(tileId);
 					if (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId)) {
@@ -3921,8 +3923,8 @@ namespace Jazz2::Tiles
 		// Also when the renderer type stays, then the call above returns early
 		UpdateTexturedLayers();
 #if defined(TILEMAP_LAYER_EFFECTS)
-		if (neededBehindCopy != needsBehindCopy(layer.Description) && _owner != nullptr) {
-			_owner->OnLayerEffectsChanged();
+		if (neededBehindCopy != needsBehindCopy(layer.Description)) {
+			NotifyLayerEffectsChanged();
 		}
 #endif
 		return true;
@@ -4954,6 +4956,39 @@ namespace Jazz2::Tiles
 		layer.Layout.Set(layoutIndex, tile);
 	}
 
+	std::uint16_t TileMap::GetPlacedTile(std::int32_t x, std::int32_t y) const
+	{
+		std::uint16_t current = GetTile(_sprLayerIndex, x, y);
+		const TileMapLayer& layer = _layers[_sprLayerIndex];
+		if (x < 0 || y < 0 || x >= layer.LayoutSize.X || y >= layer.LayoutSize.Y) {
+			return current;
+		}
+		const LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
+		if (tile.DestructAnimation < 0) {
+			return current;
+		}
+		std::uint16_t flips = (current & (TileFlagFlipX | TileFlagFlipY));
+		if (tile.DestructAnimation >= std::int32_t(_animatedTilesOffset)) {
+			return std::uint16_t(((tile.DestructAnimation - _animatedTilesOffset) & TileIndexMask) | TileFlagAnimated | flips);
+		}
+		return std::uint16_t((tile.DestructAnimation & TileIndexMask) | flips);
+	}
+
+	std::uint16_t TileMap::GetTriggeredTile(std::uint16_t tileValue, bool triggerOn) const
+	{
+		// As SetTrigger() switches the tiles it drives
+		if ((tileValue & TileFlagAnimated) != TileFlagAnimated) {
+			return (triggerOn ? std::uint16_t(0) : tileValue);
+		}
+		std::size_t index = (tileValue & TileIndexMask);
+		if (index >= _animatedTiles.size() || _animatedTiles[index].Tiles.empty()) {
+			return 0;
+		}
+		const auto& frames = _animatedTiles[index].Tiles;
+		std::uint16_t tileId = frames[triggerOn && frames.size() > 1 ? 1 : 0].TileID;
+		return std::uint16_t((tileId & TileIndexMask) | (tileValue & (TileFlagFlipX | TileFlagFlipY)));
+	}
+
 	Vector2i TileMap::GetLayerSize(std::int32_t layerIndex) const
 	{
 		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
@@ -5091,7 +5126,7 @@ namespace Jazz2::Tiles
 					xrayTiles++;
 				}
 			}
-			LOGI("Layer {} ({}x{}, depth {}) changed to renderer type {} - {} tile(s), {} animated tile(s)",
+			LOGD("Layer {} ({}x{}, depth {}) changed to renderer type {} - {} tile(s), {} animated tile(s)",
 				layerIndex, layer.LayoutSize.X, layer.LayoutSize.Y, layer.Description.Depth, (std::int32_t)type, tileCount, xrayTiles);
 		}
 #endif
@@ -5116,8 +5151,8 @@ namespace Jazz2::Tiles
 			}
 		}
 #	endif
-		if ((hadEffect || hasEffect) && _owner != nullptr) {
-			_owner->OnLayerEffectsChanged();
+		if (hadEffect || hasEffect) {
+			NotifyLayerEffectsChanged();
 		}
 #else
 		// Reduced right away, as when a level is loaded (see LoadLayer())
@@ -5266,12 +5301,41 @@ namespace Jazz2::Tiles
 
 	bool TileMap::HasChromaKeyLayers() const
 	{
+		if (_keyedSprites) {
+			return true;
+		}
 		for (const auto& layer : _layers) {
 			if (layer.Description.ReadsBehind()) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	void TileMap::RequestKeyedSprites()
+	{
+		if (_keyedSprites) {
+			return;
+		}
+		bool hadCopy = HasChromaKeyLayers();
+		_keyedSprites = true;
+		if (!hadCopy) {
+			NotifyLayerEffectsChanged();
+		}
+	}
+
+	void TileMap::NotifyLayerEffectsChanged()
+	{
+		// A script sets up its layers one by one, the passes are allocated again only once what they need changes
+		std::int32_t needs = (HasXRayLayers() ? 1 : 0) | (HasReflectionLayers() ? 4 : 0) | (HasChromaKeyLayers() ? 8 : 0);
+		if (HasBlurBehindLayers()) {
+			needs |= (BlurBehindLayersNeedSharpCopy() ? 2 | 16 : 2);
+		}
+		if (needs == _notifiedLayerEffects || _owner == nullptr) {
+			return;
+		}
+		_notifiedLayerEffects = needs;
+		_owner->OnLayerEffectsChanged();
 	}
 
 	bool TileMap::BlurBehindLayersNeedSharpCopy()

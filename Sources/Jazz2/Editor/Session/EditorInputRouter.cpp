@@ -78,6 +78,9 @@ namespace Jazz2::Editor
 				theApplication().HideScreenKeyboard();
 			}
 		}
+		if (UiSurface* surface = _context.GetSurface()) {
+			surface->KeyboardInset = (_screenKeyboardShown ? float(theApplication().GetScreenKeyboardInset()) : 0.0f);
+		}
 	}
 
 	bool EditorInputRouter::ShowScreenKeyboard(UiTextBox& field)

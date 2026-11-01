@@ -395,12 +395,13 @@ namespace Jazz2
 		// node refers to it, so it's declared before it and outlives it
 		std::unique_ptr<Editor::PlayTestDebug> _playTestDebug;
 #endif
-		// The images of the weapons of the level, declared before the actors that draw them, so it outlives them
-		struct AcquiredWeaponImages {
-			SmallVector<String, 0> Paths;
-			~AcquiredWeaponImages();
+		// The images and sounds of the weapons of the level, declared before the actors that draw and play them, so it outlives them
+		struct AcquiredWeaponAssets {
+			SmallVector<String, 0> Images;
+			SmallVector<String, 0> Sounds;
+			~AcquiredWeaponAssets();
 		};
-		AcquiredWeaponImages _weaponImages;
+		AcquiredWeaponAssets _weaponAssets;
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Texture> _noiseTexture;
 		SmallVector<std::unique_ptr<Rendering::PlayerViewport>, 0> _assignedViewports;

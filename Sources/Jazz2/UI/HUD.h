@@ -231,7 +231,7 @@ namespace Jazz2::UI
 		/** @brief Draws an animation of any metadata, nothing for `nullptr` */
 		void DrawGraphics(const GraphicResource* res, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
-		/** @brief Returns the icon the level gives a weapon, `nullptr` for the icon of the game (see @ref WeaponDefinition::HudIcon) */
+		/** @brief Returns the icon the level gives a weapon, `nullptr` for the icon of the game (see @ref CustomWeaponOptions::HudIcon) */
 		const GraphicResource* FindCustomWeaponIcon(Actors::Player* player, WeaponType weapon);
 		/** @brief Writes the ammo of a weapon as the screen shows it, returns a view of the buffer or of a literal */
 		StringView FormatAmmoCount(Actors::Player* player, WeaponType weapon, char (&buffer)[32]);

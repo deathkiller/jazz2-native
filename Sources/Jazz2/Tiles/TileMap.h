@@ -851,6 +851,10 @@ namespace Jazz2::Tiles
 		void SetTrigger(std::uint8_t triggerId, bool newState);
 		/** @brief Makes a tile of the sprite layer switched by a trigger an ordinary one, as it shows now, what drives it switches it then */
 		void ClearTileTrigger(std::int32_t x, std::int32_t y);
+		/** @brief Returns the tile of the sprite layer as the level placed it (an animated one of scenery or a trigger), in the form of @ref GetTile() */
+		std::uint16_t GetPlacedTile(std::int32_t x, std::int32_t y) const;
+		/** @brief Returns the tile a trigger tile shows by the trigger, the second frame of an animated one or none, in the form of @ref GetTile() */
+		std::uint16_t GetTriggeredTile(std::uint16_t tileValue, bool triggerOn) const;
 
 		/** @brief Returns number of layers */
 		std::int32_t GetLayerCount() const {
@@ -1015,8 +1019,10 @@ namespace Jazz2::Tiles
 		bool BlurBehindLayersNeedSharpCopy();
 		/** @brief Returns `true` if any layer is a @ref LayerRendererType::Reflection layer, which needs a sharp copy of the scene behind it */
 		bool HasReflectionLayers() const;
-		/** @brief Returns `true` if any layer is drawn keyed (see @ref LayerBlend::ChromaKey) or a textured one translucent, which needs a sharp copy of the scene behind it */
+		/** @brief Returns `true` if any layer is drawn keyed (see @ref LayerBlend::ChromaKey) or a textured one translucent, or sprites are (see @ref RequestKeyedSprites()), which needs a sharp copy of the scene behind it */
 		bool HasChromaKeyLayers() const;
+		/** @brief Tells the owner that sprites drawn keyed need a sharp copy of the scene behind them from now on, once */
+		void RequestKeyedSprites();
 #endif
 
 		/** @brief Creates a checkpoint for eventual rollback */
@@ -1525,6 +1531,10 @@ namespace Jazz2::Tiles
 		};
 
 		EffectLayerState _effectLayer;
+		// Sprites are drawn keyed, see RequestKeyedSprites()
+		bool _keyedSprites = false;
+		// What the owner was last told the special layers need, see NotifyLayerEffectsChanged(), -1 if never
+		std::int32_t _notifiedLayerEffects = -1;
 		SmallVector<EffectMeshGroup, 4> _effectMeshGroups;
 		SmallVector<ReflectionColumn, 0> _reflectionColumns;
 		/// A pool of their own, so the commands of the ordinary layers never see the third texture these bind
@@ -1573,6 +1583,8 @@ namespace Jazz2::Tiles
 		void DrawReflection(RenderQueue& renderQueue, const Rectf& cullingRect, const Rectf& area, const TileMapLayer& layer, Texture* texture, Vector2f shift);
 		/** @brief Draws what is behind the sprite layer again in the colors of the 16-bit renderer of JJ2+, see @ref DitheringScope::BehindSprites */
 		void DrawBackgroundDither(RenderQueue& renderQueue, const Rectf& cullingRect);
+		/** @brief Tells the owner about the passes the special layers need, only when they changed since it was last told */
+		void NotifyLayerEffectsChanged();
 #else
 		/** @brief Turns the animated tiles of an x-ray layer into what they show outside the mask, see @ref LayerRendererType::XRay */
 		void ReduceXRayLayer(TileMapLayer& layer);

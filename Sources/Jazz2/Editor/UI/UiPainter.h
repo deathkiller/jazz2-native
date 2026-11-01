@@ -120,8 +120,8 @@ namespace Jazz2::Editor
 		 * are left out.
 		 */
 		Colorf Backdrop(const Rectf& rect, const Colorf& fill, bool rounded);
-		/** @brief Draws a panel, its shadow, background and border */
-		void Panel(const Rectf& rect, bool shadow = true, const Colorf& fill = UiTheme::PanelFill, const Colorf& border = UiTheme::PanelBorderDim);
+		/** @brief Draws a panel, its shadow, background and border, with square corners unless @p rounded */
+		void Panel(const Rectf& rect, bool shadow = true, const Colorf& fill = UiTheme::PanelFill, const Colorf& border = UiTheme::PanelBorderDim, bool rounded = true);
 		/** @brief Draws a line, antialiased unless it's horizontal or vertical */
 		void Line(Vector2f from, Vector2f to, float thickness, const Colorf& color, UiLayer layer = UiLayer::Overlay);
 		/** @brief Draws an antialiased line through points, with mitered corners */

@@ -574,6 +574,8 @@ namespace Jazz2::Resources
 		TexturedBackgroundCylinderKeyed,	/**< Chroma key or translucent variant of @ref TexturedBackgroundCylinder */
 		TexturedBackgroundWaveKeyed,		/**< Chroma key or translucent variant of @ref TexturedBackgroundWave */
 		BackgroundDither,					/**< What is behind the sprite layer in the colors of the 16-bit renderer of JJ2+, see @ref DitheringScope::BehindSprites */
+		SpriteChromaKey,					/**< Sprite of a level script drawn only over the key color, as `SPRITE::CHROMAKEY` */
+		SpriteChromaKeyPalette,				/**< Palette variant of @ref SpriteChromaKey */
 #endif
 
 #if !defined(DISABLE_RESCALE_SHADERS)

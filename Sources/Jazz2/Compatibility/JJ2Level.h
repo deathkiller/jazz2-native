@@ -338,6 +338,7 @@ namespace Jazz2::Compatibility
 		SmallVector<String, 0> _eventMusic;
 		SmallVector<OffGridEvent, 0> _offGridEvents;
 		WeaponsDescription _weapons;
+		WeaponEditorData _weaponsEditorData[std::int32_t(WeaponType::Count)];
 		SmallVector<std::uint8_t, 0> _mlleSpriteRecolors;
 
 		void LoadMetadata(JJ2Block& block, bool strictParser);

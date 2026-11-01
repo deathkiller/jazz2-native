@@ -1481,6 +1481,10 @@ namespace Jazz2::Actors
 		float _onPinballPaddleTime = 0.0f;
 		// Counts down from TubeBallPoseTime, re-armed on every tube tile
 		float _tubeBallPoseLeft = 0.0f;
+		// The rise a sucker tube of a script gave, kept against a ceiling while the tube lasts (see OnHitCeiling())
+		float _tubeHeldSpeedY = 0.0f;
+		// Frames the speed can be held for at most, a ceiling it never gets past mustn't keep the player for good
+		float _tubeHeldTimeLeft = 0.0f;
 		float _controllableTimeout;
 		// The run-in-place wind-up accumulator: what it currently holds, how much the press being held has
 		// already contributed (so it can be capped), how many presses have landed, how much of the tap window

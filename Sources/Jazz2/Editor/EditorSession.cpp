@@ -215,6 +215,9 @@ namespace Jazz2::Editor
 			if (inLevel) {
 				// The image of the level is at the size of the screen in the editor
 				bounds = Rectf(0.0f, 0.0f, screenSize.X, screenSize.Y);
+				if (backdrop == UiBackdrop::UnderModal) {
+					return _editHandler->RequestFrameBlurBelowWindows(UiSurface::GetOverlaysDepth());
+				}
 				Texture* whole = (backdrop == UiBackdrop::Overlays ? _editHandler->GetFrameBlur() : nullptr);
 				return (whole != nullptr ? whole : _editHandler->RequestFrameBlurBelow(UiSurface::GetPanelsDepth()));
 			}
@@ -242,10 +245,10 @@ namespace Jazz2::Editor
 			return tileMap->IsTileEmpty(aabb, params);
 		};
 		_eventPreviews.ScriptSprite = [this](const Formats::EventRecord& event, bool animated, bool ownAnimated) -> GraphicResource* {
-			// Ammo the level gives a look of its own (see WeaponDefinition::Pickup)
+			// Ammo a custom weapon gives a look of its own (see CustomWeaponOptions::Pickup)
 			if (EventType(event.Type) == EventType::Ammo && event.Params[0] < std::uint8_t(WeaponType::Count)) {
 				const WeaponsDescription& weapons = GetCachedLevelWeapons(*this);
-				const WeaponSprite& pickup = weapons.Weapons[event.Params[0]].Pickup;
+				const WeaponSprite& pickup = weapons.Weapons[event.Params[0]].GetCustom().Pickup;
 				if (!pickup.IsEmpty()) {
 					Metadata* metadata = ContentResolver::Get().RequestMetadata(weapons.GetSpriteMetadataPath(pickup));
 					if (GraphicResource* resource = (metadata != nullptr ? metadata->FindAnimation(AnimState(pickup.AnimState)) : nullptr)) {
@@ -747,10 +750,11 @@ namespace Jazz2::Editor
 			if (_smartTilesUsed && !_smartTiles.IsReady()) {
 				_smartTiles.Update();
 			}
-			// Panels blur the level with what is shown over it, windows and menus also the panels
+			// Panels blur the level with what is shown over it, windows and menus also the panels, a modal window over
+			// another one also the windows under it
 			if (_surface != nullptr) {
 				bool editing = _playTest->IsEditing();
-				_editHandler->SetFrameBlur(editing, editing && _surface->HasOverlays());
+				_editHandler->SetFrameBlur(editing, editing && _surface->HasOverlays(), editing && _surface->HasStackedModal());
 				_editHandler->SetFrameContent(_surface->GetPanelsNode());
 			}
 			_editHandler->OnBeginFrame();

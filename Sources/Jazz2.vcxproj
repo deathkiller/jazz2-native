@@ -929,6 +929,7 @@
     <ClInclude Include="Jazz2\Editor\Shell\ToolOptionsBar.h" />
     <ClInclude Include="Jazz2\Editor\Shell\WeaponsDialog.h" />
     <ClInclude Include="Jazz2\Editor\Shell\WeaponScripts.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\WeaponTemplates.h" />
     <ClInclude Include="Jazz2\Editor\Shell\WeaponPreview.h" />
     <ClInclude Include="Jazz2\Editor\Tools\ShapeTool.h" />
     <ClInclude Include="Jazz2\Editor\Tools\ToolActions.h" />
@@ -1468,6 +1469,7 @@
     <ClCompile Include="Jazz2\Editor\Shell\ToolOptionsBar.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\WeaponsDialog.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\WeaponScripts.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\WeaponTemplates.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\WeaponPreview.cpp" />
     <ClCompile Include="Jazz2\Editor\Smart\RulesFile.cpp" />
     <ClCompile Include="Jazz2\Editor\Smart\SmartTileModel.cpp" />

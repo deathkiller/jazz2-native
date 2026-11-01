@@ -773,92 +773,322 @@ namespace Jazz2::Scripting
 		std::int32_t r;
 
 		// Register the string type
+		/**
+		 * @brief Text string
+		 *
+		 * A mutable sequence of bytes, usually holding UTF-8 text. Strings are value types, so assigning one
+		 * string to another makes a copy. Lengths, positions and indices are counted in bytes, not characters.
+		 * Numbers and booleans can be assigned to or concatenated with a string directly, see @ref formatInt()
+		 * and @ref formatFloat() for control over the formatting.
+		 */
 		r = engine->RegisterObjectType("string", sizeof(String), asOBJ_VALUE | asGetTypeTraits<String>()); RETURN_ASSERT(r >= 0);
 
 		r = engine->RegisterStringFactory("string", GetStringFactoryInstance());
 
 		// Register the object operator overloads
+		/** @brief Creates an empty string */
 		r = engine->RegisterObjectBehaviour("string", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(ConstructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Creates a copy of another string */
 		r = engine->RegisterObjectBehaviour("string", asBEHAVE_CONSTRUCT, "void f(const string &in)", asFUNCTION(CopyConstructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectBehaviour("string", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(DestructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Replaces the content with a copy of another string */
 		r = engine->RegisterObjectMethod("string", "string &opAssign(const string &in)", asMETHODPR(String, operator=, (const String&), String&), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// Need to use a wrapper on Mac OS X 10.7/XCode 4.3 and CLang/LLVM, otherwise the linker fails
+		/** @brief Appends another string */
 		r = engine->RegisterObjectMethod("string", "string &opAddAssign(const string &in)", asFUNCTION(AddAssignStringToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		//r = engine->RegisterObjectMethod("string", "string &opAddAssign(const string &in)", asMETHODPR(string, operator+=, (const string&), string&), asCALL_THISCALL); RETURN_ASSERT( r >= 0 );
 
 		// Need to use a wrapper for operator== otherwise gcc 4.7 fails to compile
+		/**
+		 * @brief Returns whether both strings have the same content
+		 *
+		 * The comparison is exact and case-sensitive.
+		 */
 		r = engine->RegisterObjectMethod("string", "bool opEquals(const string &in) const", asFUNCTIONPR(StringEquals, (const String&, const String&), bool), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Compares two strings, used by the `<`, `<=`, `>` and `>=` operators
+		 *
+		 * Compares byte by byte, so uppercase letters sort before lowercase ones.
+		 * @return Negative value if this string sorts first, zero if both are equal, positive value otherwise
+		 */
 		r = engine->RegisterObjectMethod("string", "int opCmp(const string &in) const", asFUNCTION(StringCmp), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with another string appended */
 		r = engine->RegisterObjectMethod("string", "string opAdd(const string &in) const", asFUNCTION(StringConcat), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
 
 		// The string length can be accessed through methods or through virtual property
 #if AS_USE_ACCESSORS != 1
 		r = engine->RegisterObjectMethod("string", "uint length() const", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #endif
+		/**
+		 * @brief Changes the length of the string
+		 *
+		 * Takes the new length in bytes. A shorter length cuts the string, a longer one pads it with zero bytes.
+		 */
 		r = engine->RegisterObjectMethod("string", "void resize(uint)", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #if AS_USE_STLNAMES != 1 && AS_USE_ACCESSORS == 1
 		// Don't register these if STL names is used, as they conflict with the method size()
+		/**
+		 * @brief Length of the string in bytes
+		 *
+		 * Read-only, use @ref string::resize() to change it. A character outside ASCII takes more than one byte in UTF-8.
+		 */
 		r = engine->RegisterObjectMethod("string", "uint get_length() const property", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		//r = engine->RegisterObjectMethod("string", "void set_length(uint) property", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #endif
 		// Need to use a wrapper on Mac OS X 10.7/XCode 4.3 and CLang/LLVM, otherwise the linker fails
 		//r = engine->RegisterObjectMethod("string", "bool empty() const", asMETHOD(string, empty), asCALL_THISCALL); RETURN_ASSERT( r >= 0 );
+		/** @brief Returns `true` if the string has no content */
 		r = engine->RegisterObjectMethod("string", "bool empty() const", asFUNCTION(StringIsEmpty), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
 		// Register the index operator, both as a mutator and as an inspector
 		// Note that we don't register the operator[] directly, as it doesn't do bounds checking
+		/**
+		 * @brief Accesses a single byte of the string
+		 *
+		 * The byte can be read and changed in place. An index equal to or greater than @ref string::length
+		 * raises a script exception.
+		 */
 		r = engine->RegisterObjectMethod("string", "uint8 &opIndex(uint)", asFUNCTION(StringCharAt), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Reads a single byte of the string
+		 *
+		 * An index equal to or greater than @ref string::length raises a script exception.
+		 */
 		r = engine->RegisterObjectMethod("string", "const uint8 &opIndex(uint) const", asFUNCTION(StringCharAt), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
 		// Automatic conversion from values
+		/**
+		 * @brief Replaces the content with a number converted to text
+		 *
+		 * Uses up to 6 decimal places with trailing zeros removed, but always keeps one digit after the decimal point.
+		 */
 		r = engine->RegisterObjectMethod("string", "string &opAssign(double)", asFUNCTION(AssignDoubleToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Appends a number converted to text */
 		r = engine->RegisterObjectMethod("string", "string &opAddAssign(double)", asFUNCTION(AddAssignDoubleToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with a number appended as text */
 		r = engine->RegisterObjectMethod("string", "string opAdd(double) const", asFUNCTION(AddStringDouble), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with a number prepended as text */
 		r = engine->RegisterObjectMethod("string", "string opAdd_r(double) const", asFUNCTION(AddDoubleString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
+		/**
+		 * @brief Replaces the content with a number converted to text
+		 *
+		 * Uses up to 6 decimal places with trailing zeros removed, but always keeps one digit after the decimal point.
+		 */
 		r = engine->RegisterObjectMethod("string", "string &opAssign(float)", asFUNCTION(AssignFloatToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Appends a number converted to text */
 		r = engine->RegisterObjectMethod("string", "string &opAddAssign(float)", asFUNCTION(AddAssignFloatToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with a number appended as text */
 		r = engine->RegisterObjectMethod("string", "string opAdd(float) const", asFUNCTION(AddStringFloat), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with a number prepended as text */
 		r = engine->RegisterObjectMethod("string", "string opAdd_r(float) const", asFUNCTION(AddFloatString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
+		/** @brief Replaces the content with an integer converted to decimal text */
 		r = engine->RegisterObjectMethod("string", "string &opAssign(int64)", asFUNCTION(AssignInt64ToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Appends an integer converted to decimal text */
 		r = engine->RegisterObjectMethod("string", "string &opAddAssign(int64)", asFUNCTION(AddAssignInt64ToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with an integer appended as decimal text */
 		r = engine->RegisterObjectMethod("string", "string opAdd(int64) const", asFUNCTION(AddStringInt64), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with an integer prepended as decimal text */
 		r = engine->RegisterObjectMethod("string", "string opAdd_r(int64) const", asFUNCTION(AddInt64String), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
+		/** @brief Replaces the content with an unsigned integer converted to decimal text */
 		r = engine->RegisterObjectMethod("string", "string &opAssign(uint64)", asFUNCTION(AssignUInt64ToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Appends an unsigned integer converted to decimal text */
 		r = engine->RegisterObjectMethod("string", "string &opAddAssign(uint64)", asFUNCTION(AddAssignUInt64ToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with an unsigned integer appended as decimal text */
 		r = engine->RegisterObjectMethod("string", "string opAdd(uint64) const", asFUNCTION(AddStringUInt64), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with an unsigned integer prepended as decimal text */
 		r = engine->RegisterObjectMethod("string", "string opAdd_r(uint64) const", asFUNCTION(AddUInt64String), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
+		/** @brief Replaces the content with `true` or `false` */
 		r = engine->RegisterObjectMethod("string", "string &opAssign(bool)", asFUNCTION(AssignBoolToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Appends `true` or `false` */
 		r = engine->RegisterObjectMethod("string", "string &opAddAssign(bool)", asFUNCTION(AddAssignBoolToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with `true` or `false` appended */
 		r = engine->RegisterObjectMethod("string", "string opAdd(bool) const", asFUNCTION(AddStringBool), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		/** @brief Returns a new string with `true` or `false` prepended */
 		r = engine->RegisterObjectMethod("string", "string opAdd_r(bool) const", asFUNCTION(AddBoolString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
 		// Utilities
+		/**
+		 * @brief Returns a part of the string
+		 *
+		 * A `start` at or past the end gives an empty string. A negative `count`, or one that reaches past
+		 * the end, takes everything up to the end.
+		 * @param start Byte position where the part begins
+		 * @param count Number of bytes to take, or -1 for the rest of the string
+		 */
 		r = engine->RegisterObjectMethod("string", "string substr(uint start = 0, int count = -1) const", asFUNCTION(StringSubString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Finds the first occurrence of a substring
+		 *
+		 * Searches for the given substring from `start` towards the end.
+		 * @param start Byte position where the search begins, a position past the end finds nothing
+		 * @return Byte position of the match, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("string", "int findFirst(const string &in, uint start = 0) const", asFUNCTION(StringFindFirst), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Finds the first byte that is one of the given characters
+		 *
+		 * The first argument is a set of characters, any of which counts as a match.
+		 * @param start Byte position where the search begins, a position past the end finds nothing
+		 * @return Byte position of the match, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("string", "int findFirstOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Finds the first byte that is none of the given characters
+		 *
+		 * The first argument is a set of characters to skip, e.g. `" \t"` to find the first non-blank character.
+		 * @param start Byte position where the search begins
+		 * @return Byte position of the match, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("string", "int findFirstNotOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstNotOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Finds the last occurrence of a substring
+		 *
+		 * Searches for the given substring backwards, only matches that begin at `start` or before it are found.
+		 * @param start Last byte position where a match may begin, -1 or any position past the end searches the whole string
+		 * @return Byte position of the match, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("string", "int findLast(const string &in, int start = -1) const", asFUNCTION(StringFindLast), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Finds the last byte that is one of the given characters
+		 *
+		 * The first argument is a set of characters, any of which counts as a match.
+		 * @param start Byte position where the backward search begins, -1 or any position past the end searches the whole string
+		 * @return Byte position of the match, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("string", "int findLastOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Finds the last byte that is none of the given characters
+		 *
+		 * The first argument is a set of characters to skip, e.g. `" \t"` to find the last non-blank character.
+		 * @param start Byte position where the backward search begins, -1 or any position past the end searches the whole string
+		 * @return Byte position of the match, or -1 if not found
+		 */
 		r = engine->RegisterObjectMethod("string", "int findLastNotOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastNotOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Inserts another string at the given position
+		 *
+		 * A position greater than @ref string::length raises a script exception, a position equal to it appends.
+		 * @param pos Byte position where the text is inserted
+		 * @param other Text to insert
+		 */
 		r = engine->RegisterObjectMethod("string", "void insert(uint pos, const string &in other)", asFUNCTION(StringInsert), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Removes a part of the string
+		 *
+		 * A position greater than @ref string::length raises a script exception. A negative `count`, or one
+		 * that reaches past the end, removes everything up to the end.
+		 * @param pos Byte position of the first removed byte
+		 * @param count Number of bytes to remove, or -1 for the rest of the string
+		 */
 		r = engine->RegisterObjectMethod("string", "void erase(uint pos, int count = -1)", asFUNCTION(StringErase), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
+		/**
+		 * @brief Formats a signed integer as text
+		 *
+		 * The `options` string may contain any of these characters:
+		 * - `l` --- align to the left within `width` (pads on the right with spaces)
+		 * - `0` --- pad with zeros instead of spaces (ignored together with `l`)
+		 * - `+` --- always write the sign, also for positive numbers
+		 * - ` ` (space) --- write a space in place of the sign for positive numbers
+		 * - `h` --- write as lowercase hexadecimal
+		 * - `H` --- write as uppercase hexadecimal
+		 *
+		 * Hexadecimal output of a negative number shows its 64-bit two's complement form.
+		 * @param val Value to format
+		 * @param options Formatting flags, see above
+		 * @param width Minimum number of characters, the result is never cut to fit
+		 * @note Keep the result shorter than 64 characters, longer output is not supported.
+		 */
 		r = engine->RegisterGlobalFunction("string formatInt(int64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Formats an unsigned integer as text
+		 *
+		 * Accepts the same `options` as @ref formatInt(), the sign options have no effect on unsigned values.
+		 * @param val Value to format
+		 * @param options Formatting flags, see @ref formatInt()
+		 * @param width Minimum number of characters, the result is never cut to fit
+		 * @note Keep the result shorter than 64 characters, longer output is not supported.
+		 */
 		r = engine->RegisterGlobalFunction("string formatUInt(uint64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatUInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Formats a floating-point number as text
+		 *
+		 * The `options` string may contain any of these characters:
+		 * - `l` --- align to the left within `width` (pads on the right with spaces)
+		 * - `0` --- pad with zeros instead of spaces (ignored together with `l`)
+		 * - `+` --- always write the sign, also for positive numbers
+		 * - ` ` (space) --- write a space in place of the sign for positive numbers
+		 * - `e` --- use exponent notation with a lowercase `e`, e.g. `1.5e+03`
+		 * - `E` --- use exponent notation with an uppercase `E`
+		 *
+		 * The decimal separator is always `.`. The value is rounded to the requested number of decimal places,
+		 * so with the default `precision` of 0 no decimal places are written at all.
+		 * @param val Value to format
+		 * @param options Formatting flags, see above
+		 * @param width Minimum number of characters, the result is never cut to fit
+		 * @param precision Number of digits after the decimal point
+		 * @note Keep the result shorter than 64 characters, longer output (e.g. very large values without
+		 *       exponent notation) is not supported.
+		 */
 		r = engine->RegisterGlobalFunction("string formatFloat(double val, const string &in options = \"\", uint width = 0, uint precision = 0)", asFUNCTION(formatFloat), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Parses a signed integer from the beginning of a string
+		 *
+		 * Reads an optional `+` or `-` sign followed by digits and stops at the first character that doesn't
+		 * belong to the number. Leading whitespace and prefixes like `0x` are not accepted. Values that don't
+		 * fit into 64 bits overflow silently.
+		 * @param base Number base, only 10 and 16 are supported, any other base returns 0
+		 * @param byteCount Receives the number of bytes that were read, 0 if nothing could be parsed
+		 * @return Parsed value, or 0 if the string doesn't start with a number
+		 */
 		r = engine->RegisterGlobalFunction("int64 parseInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Parses an unsigned integer from the beginning of a string
+		 *
+		 * Reads digits and stops at the first character that doesn't belong to the number. No sign is
+		 * accepted, leading whitespace and prefixes like `0x` neither. Values that don't fit into 64 bits
+		 * overflow silently.
+		 * @param base Number base, only 10 and 16 are supported, any other base returns 0
+		 * @param byteCount Receives the number of bytes that were read, 0 if nothing could be parsed
+		 * @return Parsed value, or 0 if the string doesn't start with a number
+		 */
 		r = engine->RegisterGlobalFunction("uint64 parseUInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseUInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Parses a floating-point number from the beginning of a string
+		 *
+		 * Skips leading whitespace, then reads an optional sign, digits with `.` as the decimal separator
+		 * (regardless of the system language) and an optional exponent such as `e-3`. Parsing stops at
+		 * the first character that doesn't belong to the number.
+		 * @param byteCount Receives the number of bytes that were read, 0 if nothing could be parsed
+		 * @return Parsed value, or 0 if the string doesn't start with a number
+		 */
 		r = engine->RegisterGlobalFunction("double parseFloat(const string &in, uint &out byteCount = 0)", asFUNCTION(parseFloat), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 	}
 
 	void RegisterStringUtils(asIScriptEngine* engine)
 	{
 		std::int32_t r;
+		/**
+		 * @brief Splits the string into parts at every occurrence of a delimiter
+		 *
+		 * The delimiters themselves are not included. Adjacent delimiters, or one at the start or the end,
+		 * produce empty parts, so the result always has one more element than there are delimiters.
+		 * An empty delimiter returns the whole string as the only element.
+		 * @return New array of the parts
+		 * @see @ref join()
+		 */
 		r = engine->RegisterObjectMethod("string", "array<string>@ split(const string &in) const", asFUNCTION(StringSplit), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		/**
+		 * @brief Joins an array of strings into one string
+		 *
+		 * Takes the array first and the delimiter second. The delimiter is put between the elements, not
+		 * before the first or after the last one. An empty array gives an empty string.
+		 * @see @ref string::split()
+		 */
 		r = engine->RegisterGlobalFunction("string join(const array<string> &in, const string &in)", asFUNCTION(StringJoin), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 	}
 }

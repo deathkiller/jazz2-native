@@ -2,6 +2,7 @@
 
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
+#include "WeaponScripts.h"
 #include "../Events/EventCatalog.h"
 #include "../../WeaponDefinition.h"
 #include "../../Formats/WeaponsChunk.h"
@@ -22,9 +23,9 @@ namespace Jazz2::Editor
 	 */
 	void ShowWeaponsDialog(IEditorContext& session);
 	/** @brief Reads the weapons of a level, returns why if they can't be changed, see @ref Formats::WeaponsChunk::Read() */
-	Formats::WeaponsChunk::ReadResult ReadLevelWeapons(const LevelDocument& document, WeaponsDescription& weapons);
+	Formats::WeaponsChunk::ReadResult ReadLevelWeapons(const LevelDocument& document, LevelWeapons& weapons);
 	/** @brief Changes the weapons of the level as an undoable step, changes while a value is dragged are merged until @p final */
-	bool ChangeLevelWeapons(IEditorContext& session, StringView name, Death::Containers::Function<void(WeaponsDescription&)>&& change, bool final = true);
+	bool ChangeLevelWeapons(IEditorContext& session, StringView name, Death::Containers::Function<void(LevelWeapons&)>&& change, bool final = true);
 	/** @brief Returns the name of a weapon, as the level names it or as the game does */
 	String GetLevelWeaponName(const WeaponsDescription& weapons, WeaponType weaponType);
 	/** @brief Returns the name of a weapon of the game */
@@ -34,7 +35,7 @@ namespace Jazz2::Editor
 	 *
 	 * For what asks for them every frame. They're as the game has them if they can't be read.
 	 */
-	const WeaponsDescription& GetCachedLevelWeapons(IEditorContext& session);
+	const LevelWeapons& GetCachedLevelWeapons(IEditorContext& session);
 	/**
 	 * @brief Returns the label of an option of a parameter of an event
 	 *

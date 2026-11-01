@@ -118,6 +118,8 @@ namespace Jazz2::Editor
 		EventsOnTop,
 		// The blaster of Spaz with a small Play, trying a weapon
 		Weapon,
+		// A pencil, a value changed from what it was
+		Pencil,
 		// Shown by the pointer, see UiCursorOverlay
 		CursorResizeHorizontal,
 		CursorResizeVertical,

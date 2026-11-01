@@ -66,6 +66,9 @@ namespace Jazz2::Compatibility
 		_hasMlleData = false;
 		_hasScript = false;
 		_weapons = WeaponsDescription();
+		for (WeaponEditorData& editorData : _weaponsEditorData) {
+			editorData = WeaponEditorData();
+		}
 		_darknessColor = 0;
 		_weatherType = WeatherType::None;
 		_weatherIntensity = 0;
@@ -832,10 +835,10 @@ namespace Jazz2::Compatibility
 
 		String directory = fs::GetDirectoryName(scriptPath);
 		for (std::size_t i = 0; i < constructors.size() && i < 9; i++) {
-			WeaponDefinition& weapon = _weapons.Weapons[i];
-			if (weapon.Kind != WeaponKind::Script || constructors[i].empty()) {
+			if (_weapons.Weapons[i].Kind != WeaponKind::Script || constructors[i].empty()) {
 				continue;
 			}
+			WeaponEditorData& weapon = _weaponsEditorData[i];
 			weapon.ScriptConstructor = constructors[i];
 			if (libraries.size() == 1) {
 				weapon.ScriptLibrary = libraries[0];
@@ -1343,7 +1346,7 @@ namespace Jazz2::Compatibility
 		}
 		Formats::ChunkRecord weaponsChunk;
 		weaponsChunk.Tag = Formats::WeaponsChunk::Tag;
-		Formats::WeaponsChunk::Write(_weapons, weaponsChunk.Data);
+		Formats::WeaponsChunk::Write(_weapons, weaponsChunk.Data, _weaponsEditorData);
 		if (!weaponsChunk.Data.empty()) {
 			chunks.push_back(Death::move(weaponsChunk));
 		}

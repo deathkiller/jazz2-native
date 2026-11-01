@@ -230,7 +230,7 @@ namespace Jazz2::Actors::Multiplayer
 		SetState((GetState() & ~RemotedFlags) | (state & RemotedFlags));
 
 		if (GetState(ActorState::Illuminated) && _illuminateLights.IsEmpty()) {
-			_illuminateLights.Create();
+			_illuminateLights.Create(_levelHandler->GetElapsedFrames());
 		}
 
 		// Objects that draw themselves with a non-default blending mode (additive shots, for instance) look

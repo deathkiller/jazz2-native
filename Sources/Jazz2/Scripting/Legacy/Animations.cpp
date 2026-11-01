@@ -309,7 +309,8 @@ namespace Jazz2::Scripting
 	}
 
 	std::uint32_t getCustomSetID(std::uint8_t index) {
-		return Legacy::AnimationTables::CustomFirstSetID + index;
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return owner->GetAnimationTables().GetCustomFirstSetID() + index;
 	}
 
 	void LevelScriptLoader::RegisterLegacyAnimations(asIScriptEngine* engine)

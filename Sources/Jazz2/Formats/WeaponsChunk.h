@@ -14,12 +14,16 @@ namespace Jazz2::Formats
 
 		The payload is @cpp u8 @ce version (@ref Version), @cpp i16 @ce argument of the hook of the weapons of the script,
 		@cpp varuint @ce number of weapons, and for each @cpp u8 @ce @ref WeaponType, @cpp varuint @ce size and its
-		properties, then @cpp varuint @ce number of images, and for each @cpp varuint @ce size and @cpp varuint @ce frame
-		width, frame height, frame count, @cpp f32 @ce speed of the animation, @cpp i16 @ce hotspot X and Y and the palette
-		indices of the frames one below another, in the image content of the other images of the game with one channel (see
-		@ref Compatibility::JJ2Anims::WriteImageContent()). A property is @cpp u8 @ce id, @cpp varuint @ce size and its value, one that isn't there is as the
-		weapon of the game has it. A reader skips a property it doesn't know, and the editor keeps it. A version newer
-		than @ref Version changes what properties mean, a reader leaves such a chunk alone.
+		properties, then @cpp varuint @ce number of images, and for each @cpp varuint @ce size and @cpp varuint @ce width
+		and height of the sheet, columns and rows of frames and frame count, @cpp f32 @ce speed of the animation,
+		@cpp i16 @ce hotspot X and Y and the palette indices of the sheet, in the image content of the other images of the
+		game with one channel (see @ref Compatibility::JJ2Anims::WriteImageContent()), then @cpp varuint @ce number of
+		sounds, and for each @cpp varuint @ce size, @cpp varuint @ce length of the file name, the name and the contents of
+		the file. Only a custom weapon has the properties of how it fires, of its shots, of its icons and ammo sprite, and
+		of the weapon of the game it's made from. A property is @cpp u8 @ce id,
+		@cpp varuint @ce size and its value, one that isn't there is as the weapon of the game has it. A reader skips a
+		property it doesn't know, and the editor keeps it. A version newer than @ref Version changes what properties
+		mean, a reader leaves such a chunk alone.
 	*/
 	struct WeaponsChunk
 	{
@@ -33,6 +37,12 @@ namespace Jazz2::Formats
 		static constexpr std::int32_t MaxFrameSize = 256;
 		/** @brief Most frames of an image */
 		static constexpr std::int32_t MaxFrameCount = 64;
+		/** @brief Largest width and height of the sheet of an image */
+		static constexpr std::int32_t MaxImageSize = 4096;
+		/** @brief Most sounds a level can have */
+		static constexpr std::uint32_t MaxSounds = 32;
+		/** @brief Largest file of a sound in bytes */
+		static constexpr std::uint32_t MaxSoundSize = 2 * 1024 * 1024;
 
 		/** @brief Result of @ref Read() */
 		enum class ReadResult {
@@ -43,9 +53,14 @@ namespace Jazz2::Formats
 
 		WeaponsChunk() = delete;
 
-		/** @brief Reads the payload */
-		static ReadResult Read(ArrayView<const std::uint8_t> data, WeaponsDescription& weapons);
-		/** @brief Writes the payload, nothing if the level doesn't change any weapon */
-		static void Write(const WeaponsDescription& weapons, SmallVectorImpl<std::uint8_t>& data);
+		/**
+		 * @brief Reads the payload
+		 *
+		 * What only the editor needs is read into @p editorData, one for each @ref WeaponType, if it's given, the game
+		 * skips it.
+		 */
+		static ReadResult Read(ArrayView<const std::uint8_t> data, WeaponsDescription& weapons, ArrayView<WeaponEditorData> editorData = {});
+		/** @brief Writes the payload, with @p editorData if given, nothing if the level doesn't change any weapon */
+		static void Write(const WeaponsDescription& weapons, SmallVectorImpl<std::uint8_t>& data, ArrayView<const WeaponEditorData> editorData = {});
 	};
 }

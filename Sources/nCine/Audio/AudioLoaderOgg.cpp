@@ -77,7 +77,7 @@ namespace nCine
 #endif
 
 		DEATH_ASSERT(_numChannels == 1 || _numChannels == 2, ("Unsupported number of channels: {}", _numChannels), );
-		LOGD("Duration: {:.2}s, channels: {}, frequency: {} Hz", _duration, _numChannels, _frequency);
+		//LOGD("Duration: {:.2}s, channels: {}, frequency: {} Hz", _duration, _numChannels, _frequency);
 
 		_hasLoaded = true;
 	}

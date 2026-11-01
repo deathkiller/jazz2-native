@@ -106,9 +106,11 @@ namespace Jazz2::Editor
 		 *
 		 * Called every frame. With @p below, the image is blurred in the middle of being drawn when it's asked for by
 		 * @ref RequestFrameBlurBelow(), with @p whole once it's drawn, see @ref GetFrameBlur(). The passes are made the
-		 * first time and only drawn while they're enabled. Nothing is blurred without the blur effects.
+		 * first time and only drawn while they're enabled. Nothing is blurred without the blur effects. With @p windows
+		 * (only together with @p below), it's also blurred in the middle below the windows drawn into it, see
+		 * @ref RequestFrameBlurBelowWindows().
 		 */
-		void SetFrameBlur(bool below, bool whole);
+		void SetFrameBlur(bool below, bool whole, bool windows = false);
 		/**
 		 * @brief Blurs the image of the level as it's drawn below a layer in this frame, returns the blurred image or `nullptr`
 		 *
@@ -117,6 +119,13 @@ namespace Jazz2::Editor
 		Texture* RequestFrameBlurBelow(std::uint16_t layer);
 		/** @brief Returns `true` if the image can be blurred below a layer in this frame, see @ref RequestFrameBlurBelow() */
 		bool CanBlurFrameBelow() const;
+		/**
+		 * @brief Blurs the image of the level as it's drawn below the windows drawn into it in this frame, returns the blurred image or `nullptr`
+		 *
+		 * For windows under a modal window, which are drawn into the image then, so the whole blurred image has them too.
+		 * Called as @ref RequestFrameBlurBelow(), with a layer above it.
+		 */
+		Texture* RequestFrameBlurBelowWindows(std::uint16_t layer);
 		/** @brief Returns the whole image of the level blurred with what is drawn into it, or `nullptr` if it isn't blurred, see @ref SetFrameBlur() */
 		Texture* GetFrameBlur() const;
 
@@ -168,6 +177,8 @@ namespace Jazz2::Editor
 		// Drawn in the middle of the image, see Viewport::AddSplitPass(), and after the image
 		FrameBlur _belowBlur;
 		std::uint32_t _belowBlurBits = 0;
+		FrameBlur _windowsBlur;
+		std::uint32_t _windowsBlurBits = 0;
 		FrameBlur _wholeBlur;
 		// Only compared with the children of the image, it may be destroyed already
 		SceneNode* _frameContent = nullptr;

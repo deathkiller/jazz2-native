@@ -686,7 +686,7 @@ namespace Jazz2::Rendering
 		}
 
 		// Hand the finished lightmap, this viewport's rectangle and the water parameters to the software device.
-		// The actual in-place combine (lit = main * (1 + g) + max(g - 0.7, 0); out = mix(lit, ambientRGB,
+		// The actual in-place combine (lit = main * (1 + 0.607 g) + 0.2 g + max(g - 0.7, 0); out = mix(lit, ambientRGB,
 		// clamp(1 - r, 0, 1)), with the water tint/waves applied to the underwater rows first) runs there during
 		// the Draw phase, once the scene is in the screen buffer and before the HUD. The lightmap pointer must
 		// outlive this call: _swLightmap is a member reused across frames, and the device consumes the entry in

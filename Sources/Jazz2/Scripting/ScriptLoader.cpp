@@ -1039,9 +1039,9 @@ namespace Jazz2::Scripting
 		}
 
 		if (msg.section != nullptr && msg.section[0] != '\0') {
-			__DEATH_TRACE(level, "AS!", "{}:{}({}): {}", msg.section, msg.row, msg.col, msg.message);
+			__DEATH_TRACE(level, "AngelScript!", "{}:{}({}): {}", msg.section, msg.row, msg.col, msg.message);
 		} else {
-			__DEATH_TRACE(level, "AS!", "{}", msg.message);
+			__DEATH_TRACE(level, "AngelScript!", "{}", msg.message);
 		}
 	}
 }

@@ -68,7 +68,7 @@ namespace nCine
 		}
 #	endif
 
-		LOGF("Unknown extension: {}", extension);
+		LOGE("Audio file with extension \".{}\" is not supported", extension);
 #endif
 		return std::make_unique<InvalidAudioLoader>();
 	}
