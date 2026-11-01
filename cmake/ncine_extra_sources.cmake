@@ -902,6 +902,10 @@ endif()
 if(ANGELSCRIPT_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGELSCRIPT")
 	target_link_libraries(${NCINE_APP} PRIVATE Angelscript)
+	# The external includes directory can still contain an older angelscript.h, the bundled one must come first
+	get_target_property(_angelscriptIncludeDirs Angelscript INTERFACE_INCLUDE_DIRECTORIES)
+	target_include_directories(${NCINE_APP} BEFORE PRIVATE ${_angelscriptIncludeDirs})
+	unset(_angelscriptIncludeDirs)
 endif()
 
 if(NCINE_WITH_IMGUI AND NOT DEDICATED_SERVER)

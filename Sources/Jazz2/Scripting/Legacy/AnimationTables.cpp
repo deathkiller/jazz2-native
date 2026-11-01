@@ -1002,7 +1002,7 @@ namespace Jazz2::Scripting::Legacy
 						} else {
 							// The objects of the game show the graphics as this item of the original (the gems of a level, not
 							// those of the HUD), whatever else shows them too
-							String path = fs::ToNativeSeparators(entry->Name + ".aura"_s);
+							String path = fs::ToNativeSeparators(String(entry->Name + ".aura"_s));
 							auto existing = _pathAnimations.find(path);
 							if (existing != _pathAnimations.end()) {
 								existing->second = (setID << 16) | i;

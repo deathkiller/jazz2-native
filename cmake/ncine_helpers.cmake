@@ -571,8 +571,8 @@ function(ncine_apply_compiler_options target)
 		endif()
 
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-			target_compile_options(${target} PRIVATE "-Wno-switch" "-Wno-unknown-pragmas"
-				"-Wno-reorder-ctor" "-Wno-braced-scalar-init" "-Wno-deprecated-builtins")
+			# Not for MASM sources, ml64 rejects these
+			target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:-Wno-switch;-Wno-unknown-pragmas;-Wno-reorder-ctor;-Wno-braced-scalar-init;-Wno-deprecated-builtins>")
 		endif()
 	else() # GCC and LLVM
 		target_compile_options(${target} PRIVATE 

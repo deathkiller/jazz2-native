@@ -104,95 +104,90 @@ namespace Jazz2::Scripting
 		return Containers::DateTime::UtcNow().ToUnixMilliseconds();
 	}
 
-	bool jjRegexIsValid(const String& expression)
+	namespace
 	{
-		try {
-			std::regex r(expression.begin(), expression.end());
-			return true;
-		} catch (std::regex_error& e) {
-			return false;
+		// std::regex reports an invalid expression only by throwing, without exceptions it terminates instead
+		template<class T, class Func>
+		T RunRegex(Func&& func, T fallback, bool logError = true)
+		{
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
+			try {
+				return func();
+			} catch (std::regex_error& e) {
+				if (logError) {
+					LOGE("Failed to process regular expression: {}", e.what());
+				}
+				return fallback;
+			}
+#else
+			static_cast<void>(fallback);
+			static_cast<void>(logError);
+			return func();
+#endif
 		}
-	}
-	bool jjRegexMatch(const String& text, const String& expression, bool ignoreCase)
-	{
-		try {
+
+		std::regex CreateRegex(const String& expression, bool ignoreCase)
+		{
 			auto flags = std::regex_constants::ECMAScript;
 			if (ignoreCase) {
 				flags |= std::regex_constants::icase;
 			}
-			std::regex r(expression.begin(), expression.end(), flags);
-			return std::regex_match(text.begin(), text.end(), r);
-		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: {}", e.what());
-			return false;
+			return std::regex(expression.begin(), expression.end(), flags);
 		}
+	}
+
+	bool jjRegexIsValid(const String& expression)
+	{
+		return RunRegex([&]() {
+			std::regex r(expression.begin(), expression.end());
+			return true;
+		}, false, false);
+	}
+	bool jjRegexMatch(const String& text, const String& expression, bool ignoreCase)
+	{
+		return RunRegex([&]() {
+			std::regex r = CreateRegex(expression, ignoreCase);
+			return std::regex_match(text.begin(), text.end(), r);
+		}, false);
 	}
 
 	bool jjRegexMatchWithResults(const String& text, const String& expression, CScriptArray& results, bool ignoreCase)
 	{
-		try {
-			auto flags = std::regex_constants::ECMAScript;
-			if (ignoreCase) {
-				flags |= std::regex_constants::icase;
-			}
+		return RunRegex([&]() {
 			std::match_results<const char*> m;
-			std::regex r(expression.begin(), expression.end(), flags);
+			std::regex r = CreateRegex(expression, ignoreCase);
 			bool success = std::regex_match(text.begin(), text.end(), m, r);
 			// TODO: Results
 			return success;
-		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: {}", e.what());
-			return false;
-		}
+		}, false);
 	}
 	bool jjRegexSearch(const String& text, const String& expression, bool ignoreCase)
 	{
-		try {
-			auto flags = std::regex_constants::ECMAScript;
-			if (ignoreCase) {
-				flags |= std::regex_constants::icase;
-			}
-			std::regex r(expression.begin(), expression.end(), flags);
+		return RunRegex([&]() {
+			std::regex r = CreateRegex(expression, ignoreCase);
 			return std::regex_search(text.begin(), text.end(), r);
-		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: {}", e.what());
-			return false;
-		}
+		}, false);
 	}
 
 	bool jjRegexSearchWithResults(const String& text, const String& expression, CScriptArray& results, bool ignoreCase)
 	{
-		try {
-			auto flags = std::regex_constants::ECMAScript;
-			if (ignoreCase) {
-				flags |= std::regex_constants::icase;
-			}
+		return RunRegex([&]() {
 			std::match_results<const char*> m;
-			std::regex r(expression.begin(), expression.end(), flags);
+			std::regex r = CreateRegex(expression, ignoreCase);
 			bool success = std::regex_search(text.begin(), text.end(), m, r);
 			// TODO: Results
 			return success;
-		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: {}", e.what());
-			return false;
-		}
+		}, false);
 	}
-	
+
 	String jjRegexReplace(const String& text, const String& expression, const String& replacement, bool ignoreCase)
 	{
-		try {
-			auto flags = std::regex_constants::ECMAScript;
-			if (ignoreCase) {
-				flags |= std::regex_constants::icase;
-			}
-			std::regex r(expression.begin(), expression.end(), flags);
+		return RunRegex([&]() {
+			std::regex r = CreateRegex(expression, ignoreCase);
 			std::string textStr = text;
 			std::string replacementStr = replacement;
-			return std::regex_replace(textStr, r, replacementStr);
-		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: {}", e.what());
-			return text;
-		}
+			return String(std::regex_replace(textStr, r, replacementStr));
+		}, String(text));
 	}
 
 	std::int32_t GetFPS() {

@@ -2740,10 +2740,14 @@ namespace Jazz2::Scripting::Legacy
 	{
 		void LogBehaviorException(asIScriptContext* ctx)
 		{
+#if defined(DEATH_TRACE)
 			std::int32_t column = 0; const char* sectionName = nullptr;
 			std::int32_t line = ctx->GetExceptionLineNumber(&column, &sectionName);
 			__DEATH_TRACE(TraceLevel::Error, "AngelScript!", "An exception \"{}\" occurred in \"{}\" (called from \"{}:{}({})\")",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration(), sectionName, line, column);
+#else
+			static_cast<void>(ctx);
+#endif
 		}
 	}
 
