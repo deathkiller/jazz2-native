@@ -4,6 +4,8 @@
 
 #include <angelscript.h>
 
+#include <cstdint>
+
 namespace Jazz2::Scripting
 {
 	/**
