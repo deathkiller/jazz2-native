@@ -1774,7 +1774,7 @@ namespace Jazz2::Editor
 				MakeCustomFrom(weapon, slot, weaponTemplate.BasedOn);
 				complete = ApplyCustomWeaponTemplate(weaponTemplate, weapon, [&weapons, &error](const WeaponTemplateImage& image) {
 					return AddTemplateImage(weapons, image, error);
-				}, [&weapons, &error](StringView path) {
+				}, [&weapons, &error](StringView path) -> std::int32_t {
 					WeaponSound sound;
 					if (!ReadSoundFile(path, sound, error)) {
 						return -1;

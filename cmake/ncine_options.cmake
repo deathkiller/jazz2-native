@@ -6,21 +6,12 @@ option(NCINE_PROFILING "Enable runtime profiling" OFF)
 cmake_dependent_option(NCINE_N64_SIZE_OPTIMIZATION "Build the cold parts of the Nintendo 64 port for size (-Os) to leave more RDRAM to the game" ON "PLATFORM_N64" OFF)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 
-# Targets opt into interprocedural optimization (LTO/LTCG) through the INTERPROCEDURAL_OPTIMIZATION
-# property in `ncine_apply_compiler_options()`. Letting CMake drive LTO (instead of passing `-flto`/`/GL`
-# by hand) also makes it use the LTO-aware archiver wrappers (gcc-ar/gcc-ranlib, llvm-ar/llvm-ranlib) for
-# static libraries, which fixes the "archive has no index; run ranlib to add one" link error. Probe once
-# here (before any dependency targets in `ncine_imported_targets.cmake`) and just turn the option off if
-# the toolchain can't do it.
-# LTO is also disabled on Sega Dreamcast: GCC 15.2 sh-elf crashes with an internal compiler error
-# (gen_reg_rtx) when streaming some units back in during the LTO link
-# The Nintendo 64 is excluded conservatively: libdragon's own build never exercises LTO against its
-# n64.ld linker script and --wrap'ed constructor sequencing, so it is the least-tested combination
-# The two PowerPC Amiga targets join the list for a toolchain reason rather than a code-size one:
-# neither GCC can produce a usable LTO archive here, so CMake's own IPO probe fails - on MorphOS with
-# "-fno-fat-lto-objects are supported only with linker plugin", on AmigaOS 4 when it archives the probe
-# iOS is excluded for a tooling reason as well: CMake's IPO probe builds its test project against the device SDK
-# whatever CMAKE_OSX_SYSROOT says, so it fails for every simulator build and would turn the option off anyway.
+# LTO goes through CMake's INTERPROCEDURAL_OPTIMIZATION, so static libraries get the LTO-aware archivers.
+# Probed once here, before any dependency target, and turned off if the toolchain can't do it. Excluded:
+#  - Dreamcast: GCC 15.2 sh-elf crashes (ICE in gen_reg_rtx) during the LTO link
+#  - Nintendo 64: libdragon never tests LTO with its linker script and wrapped constructors
+#  - Amiga PowerPC (MorphOS, AmigaOS 4): their GCCs can't produce a usable LTO archive
+#  - iOS: CMake's IPO probe always builds against the device SDK, so it fails for simulator builds
 cmake_dependent_option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link-time optimization when in release" ON "NOT NCINE_BUILD_ANDROID;NOT PLATFORM_DREAMCAST;NOT PLATFORM_N64;NOT PLATFORM_AMIGA;NOT PLATFORM_MORPHOS;NOT PLATFORM_AMIGAOS4;NOT IOS" OFF)
 if(NCINE_LINKTIME_OPTIMIZATION)
 	include(CheckIPOSupported)
@@ -39,34 +30,23 @@ option(NCINE_VERSION_FROM_GIT "Try to set current game version from GIT reposito
 # Libretro core: shared library driven by the frontend, no window backend
 option(NCINE_BUILD_LIBRETRO "Build as a libretro core (shared library)" OFF)
 if(NCINE_BUILD_LIBRETRO)
-	# Rendering backend (RHI) of the libretro core: "Software" presents the CPU rasterizer's
-	# framebuffer through retro_video_refresh (works everywhere); "OpenGL" renders on the GPU into
-	# the frontend's FBO via SET_HW_RENDER. The other backends cannot present through the libretro
-	# API, so the generic RHI selection below is skipped for this build.
+	# Only Software (through retro_video_refresh) and OpenGL (into the frontend's FBO) can present through libretro
 	set(NCINE_PREFERRED_RHI "Software" CACHE STRING "Rendering backend for the libretro core: Software or OpenGL")
 	set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "Software;OpenGL")
 	if(NOT NCINE_PREFERRED_RHI MATCHES "^(Software|OpenGL)$")
 		message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" for the libretro core (expected Software or OpenGL)")
 	endif()
 	if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
-		# The hardware core targets OpenGL|ES 3.0 only - the common denominator of RetroArch's
-		# GPU platforms (KMS/GLES boards like Recalbox on Pi, desktop Mesa via EGL)
+		# OpenGL|ES 3.0 is the common denominator of RetroArch's GPU platforms
 		set(_NCINE_RHI_GL_PROFILE_FORCED "ES3")
 	endif()
 endif()
 
 # ── Window/input backend family ───────────────────────────────────────────────────────────────────────
-# There are two kinds of platform in this project. Most of them get their window, their graphics context
-# and their input devices from a windowing library - GLFW, SDL2, SDL3 or Qt5 - which NCINE_PREFERRED_BACKEND
-# below chooses between. The consoles and the classic Amiga have a backend of their own instead, because
-# their SDKs either ship no such library at all, or ship one that is layered on the very interface the
-# backend drives directly; the per-platform arms in ncine_extra_sources.cmake spell out each one's reason.
-#
-# NCINE_NATIVE_WINDOW_BACKEND names that backend and is empty on every platform that uses a library, which
-# makes it the single answer the rest of the build keys on: a windowing library, a desktop OpenGL or an
-# OpenAL is then looked for only where something could actually use one (see ncine_imported_targets.cmake),
-# instead of every platform probing for all of them. NCINE_PLATFORM_SUMMARY is the label the configure
-# prints for such a platform, so the list of them lives here and nowhere else.
+# Most platforms get their window, context and input from a library (GLFW, SDL2, SDL3), chosen by
+# NCINE_PREFERRED_BACKEND. The consoles and the classic Amiga have a native backend instead, named by
+# NCINE_NATIVE_WINDOW_BACKEND (empty elsewhere); the rest of the build only looks for a windowing library,
+# desktop OpenGL or OpenAL where it is empty.
 if(WINDOWS_PHONE OR WINDOWS_STORE)
 	set(NCINE_NATIVE_WINDOW_BACKEND "Uwp")
 	set(NCINE_PLATFORM_SUMMARY "Windows RT")
@@ -92,7 +72,7 @@ elseif(PLATFORM_PS3)
 	set(NCINE_NATIVE_WINDOW_BACKEND "Ps3")
 	set(NCINE_PLATFORM_SUMMARY "PlayStation 3 (PSL1GHT backend)")
 elseif(PLATFORM_AMIGA)
-	# Only the classic 68k Amiga: the PowerPC ones (AmigaOS 4.1, MorphOS) have a maintained SDL2 and use it
+	# Only the classic 68k Amiga, the PowerPC ones (AmigaOS 4.1, MorphOS) use SDL2
 	set(NCINE_NATIVE_WINDOW_BACKEND "Amiga")
 	set(NCINE_PLATFORM_SUMMARY "Amiga (AmigaOS 3.x, Intuition/CyberGraphX backend)")
 else()
@@ -100,8 +80,7 @@ else()
 endif()
 
 if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NCINE_BUILD_LIBRETRO)
-	# Only platforms that take their window from a library get to choose which one; the rest have exactly
-	# one backend, named above, and no fallback to offer
+	# Only platforms with a windowing library can choose one
 	if(NOT NCINE_NATIVE_WINDOW_BACKEND)
 		if(NINTENDO_SWITCH OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS OR IOS)
 			set(_NCINE_DEFAULT_BACKEND "SDL2")
@@ -113,197 +92,102 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 	endif()
 
 	if(IOS AND NOT NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
-		# SDL2 is the port's window, touch, game-controller and application-lifecycle layer (see
-		# Docs/Building.dox); GLFW has no iOS port, and the SDL3 fork of the backend has not been built there
+		# GLFW has no iOS port and the SDL3 backend hasn't been built there
 		message(FATAL_ERROR "Invalid NCINE_PREFERRED_BACKEND \"${NCINE_PREFERRED_BACKEND}\" for iOS (expected SDL2)")
 	endif()
 
 	if((PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS) AND NOT NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
-		# SDL2 is the only one of them that exists on the PowerPC Amigas - there is no GLFW, no SDL3 and
-		# no Qt5 - so an overridden value cannot be honoured and is rejected instead of falling back
+		# SDL2 is the only windowing library on the PowerPC Amigas
 		message(FATAL_ERROR "Invalid NCINE_PREFERRED_BACKEND \"${NCINE_PREFERRED_BACKEND}\" for AmigaOS 4.1/MorphOS (expected SDL2)")
 	endif()
 
 	if(PLATFORM_MORPHOS)
-		# MorphOS (the project's own cmake/toolchains/morphos.cmake toolchain file sets PLATFORM_MORPHOS):
-		# two backends are possible, and neither is the engine's shader path - MorphOS's 3D interface is
-		# TinyGL, a fixed-function OpenGL 1.x with no shader support of any kind.
-		#
-		# "LegacyGL" drives that interface through the fixed-function GL backend, which is the same idea as
-		# the PVR/GX/GU/GS/RDP console backends (it consumes the same transpiled `fixed_function` effect
-		# tables) with OpenGL 1.3 texture combiners in place of each console's TEV. It needs a 3D card
-		# tinygl.library supports - a Radeon on a PowerBook/Efika/Sam or a PCI Radeon/Voodoo/Permedia in a
-		# Pegasos - and SDL2 creates the context for it.
-		#
-		# "Software" is the CPU rasterizer, and remains available for a machine whose graphics card TinyGL
-		# does not support - and for emulation, where there is no 3D at all (QEMU's ATI card does not
-		# implement the CCE DMA path tinygl.library drives), which is also why the GL path has not been
-		# verified on this system yet. See Docs/Amiga.dox.
-		#
-		# A LegacyGL build does not start without tinygl.library: it is opened before main() by the SDK's
-		# own initializer, which is what puts the call vectors in place (see MorphOSTinyGl.cpp).
+		# TinyGL is a fixed-function OpenGL 1.x, driven by the LegacyGL backend (needs a supported 3D card);
+		# Software is the fallback, also for emulators without 3D. See Docs/Amiga.dox.
 		set(NCINE_PREFERRED_RHI "LegacyGL" CACHE STRING "Rendering backend on MorphOS: LegacyGL or Software")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "LegacyGL;Software")
 		if(NOT NCINE_PREFERRED_RHI MATCHES "^(Software|LegacyGL)$")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on MorphOS (expected LegacyGL or Software)")
 		endif()
 	elseif(PLATFORM_AMIGAOS4)
-		# AmigaOS 4.1 (the project's own cmake/toolchains/os4.cmake toolchain file sets PLATFORM_AMIGAOS4):
-		# the same two backends as MorphOS, for the same reason - the hardware is a real Radeon and the
-		# way to it that this SDK ships is MiniGL, a fixed-function OpenGL 1.x over Warp3D. So "LegacyGL"
-		# drives it with the same backend TinyGL gets, and it is the default here as well; MiniGL
-		# advertises GL_EXT_texture_env_combine, which is what that backend expresses its effects with.
-		#
-		# What MiniGL has no trace of is framebuffer objects, so a render target is drawn into the back
-		# buffer and copied into its texture instead (see LegacyGlRenderTarget) - that path is compiled
-		# in rather than probed here, because the entry points do not even exist to call.
-		#
-		# The other road to this hardware is Warp3D Nova's ogles2.library, which the engine's ES2 profile
-		# would match (the same one the PS Vita's vitaGL build uses) - but this SDK ships no GLES2 headers
-		# or link library for it, so that stays a separate project. "Software" remains available as the
-		# fallback for a machine with no 3D driver.
+		# MiniGL (fixed-function OpenGL 1.x over Warp3D) through LegacyGL, as on MorphOS; it has no FBOs, so render
+		# targets are copied from the back buffer (see LegacyGlRenderTarget). Software is the fallback.
 		set(NCINE_PREFERRED_RHI "LegacyGL" CACHE STRING "Rendering backend on AmigaOS 4: LegacyGL or Software")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "LegacyGL;Software")
 		if(NOT NCINE_PREFERRED_RHI MATCHES "^(Software|LegacyGL)$")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on AmigaOS 4 (expected LegacyGL or Software)")
 		endif()
 	elseif(PLATFORM_AMIGA)
-		# Classic Amiga (the project's own cmake/toolchains/amiga.cmake toolchain file sets PLATFORM_AMIGA):
-		# the only rendering backend is the CPU software rasterizer, presented through the bespoke Amiga
-		# window backend into an RTG (Picasso96/CyberGraphX) chunky framebuffer. No Amiga this port can run
-		# on has texturing or blending hardware - RTG cards accelerate at most blits and fills - so unlike
-		# the fixed-function consoles there is no hardware pipeline to drive: the Software RHI, which the
-		# desktop and Vita builds already ship, IS the renderer here (see Docs/AmigaPortDesign.md).
+		# Classic Amiga has no texturing hardware, the software rasterizer presents into an RTG framebuffer
 		set(NCINE_PREFERRED_RHI "Software" CACHE STRING "Rendering backend on Amiga: Software")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "Software")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "Software")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Amiga (expected Software)")
 		endif()
 	elseif(PLATFORM_N64)
-		# Nintendo 64 (the project's own cmake/toolchains/n64.cmake toolchain file sets PLATFORM_N64): the
-		# only rendering backend is the fixed-function RDP one, driven through libdragon's rdpq command
-		# queue, presented through the bespoke N64 window backend. libdragon's OpenGL 1.1 is layered on
-		# that very same rdpq/RSP pipeline, so it could only cost performance - the same reasoning as
-		# pspgl and gsKit above. The RDP has no programmable shading at all, so like PVR/GX/GU/GS this
-		# backend consumes the transpiled `fixed_function` effect tables.
+		# Fixed-function RDP through libdragon's rdpq (its OpenGL is layered on the same pipeline)
 		set(NCINE_PREFERRED_RHI "RDP" CACHE STRING "Rendering backend on Nintendo 64: RDP")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "RDP")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "RDP")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo 64 (expected RDP)")
 		endif()
 	elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
-		# Nintendo Wii/GameCube (the devkitPro toolchain files set NINTENDO_WII/NINTENDO_GAMECUBE): the only
-		# rendering backend is the fixed-function GX one (Flipper/Hollywood), presented through the bespoke
-		# Ogc window backend (no SDL/GLFW on these consoles in this engine).
+		# Fixed-function GX (Flipper/Hollywood)
 		set(NCINE_PREFERRED_RHI "GX" CACHE STRING "Rendering backend on Nintendo Wii/GameCube: GX")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GX")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "GX")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo Wii/GameCube (expected GX)")
 		endif()
 	elseif(NINTENDO_3DS)
-		# Nintendo 3DS (the devkitPro 3DS.cmake toolchain file sets NINTENDO_3DS): the only rendering backend is
-		# the fixed-function PICA200 one, driven through citro3d (the GPU command buffer, the render targets and
-		# the display transfer - the same layer sceGu is on the PSP), presented through the bespoke Ctr window
-		# backend. The PICA200 has a programmable VERTEX stage but no fragment shaders at all - six texture
-		# combiner stages in the GX's TEV mould - so like PVR/GX/GU/GS/RDP this backend consumes the transpiled
-		# `fixed_function` effect tables; the one vertex program it needs is a passthrough assembled by picasso
-		# at build time. citro2d is layered on citro3d and adds nothing the engine would use.
+		# Fixed-function PICA200 through citro3d (programmable vertex stage only, a passthrough built by picasso)
 		set(NCINE_PREFERRED_RHI "PICA" CACHE STRING "Rendering backend on Nintendo 3DS: PICA")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "PICA")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "PICA")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo 3DS (expected PICA)")
 		endif()
 	elseif(PLATFORM_DREAMCAST)
-		# Sega Dreamcast (the KallistiOS toolchain file sets PLATFORM_DREAMCAST): the only rendering backend
-		# is the fixed-function PowerVR one, presented through the bespoke Dc window backend.
+		# Fixed-function PowerVR
 		set(NCINE_PREFERRED_RHI "PVR" CACHE STRING "Rendering backend on Sega Dreamcast: PVR")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "PVR")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "PVR")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Sega Dreamcast (expected PVR)")
 		endif()
 	elseif(PLATFORM_PS2)
-		# PlayStation 2 (the ps2dev.cmake toolchain file sets PLATFORM_PS2): the only rendering backend is
-		# the fixed-function GS one, driven by writing GIF packets to the Graphics Synthesizer directly,
-		# presented through the bespoke Ps2 window backend. gsKit ships with the toolchain and is layered on
-		# the same GIF interface, so it could only cost performance. The GS has no programmable shading at
-		# all, so this is a fixed-function backend in the same sense as PVR/GX/GU and consumes the same
-		# transpiled `fixed_function` effect tables.
+		# Fixed-function GS, driven by GIF packets directly (gsKit is layered on the same interface)
 		set(NCINE_PREFERRED_RHI "GS" CACHE STRING "Rendering backend on PlayStation 2: GS")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GS")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "GS")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PlayStation 2 (expected GS)")
 		endif()
 	elseif(PLATFORM_PSP)
-		# PlayStation Portable (the pspdev toolchain file sets PLATFORM_PSP/PSP): the only rendering backend
-		# is the fixed-function GU one (the Allegrex GE, driven through sceGu), presented through the bespoke
-		# Psp window backend. There is an OpenGL|ES wrapper on the platform (libGL/pspgl), but it is layered
-		# on the very same GE this backend drives directly, so it could only cost performance.
+		# Fixed-function GU through sceGu (pspgl is layered on the same GE)
 		set(NCINE_PREFERRED_RHI "GU" CACHE STRING "Rendering backend on PlayStation Portable: GU")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GU")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "GU")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PlayStation Portable (expected GU)")
 		endif()
 	elseif(PLATFORM_PS3)
-		# PlayStation 3 (the project's own cmake/toolchains/ps3dev.cmake toolchain file sets PLATFORM_PS3):
-		# the rendering backend is the native RSX one, driven by writing NV40 command packets into the GPU's
-		# FIFO through PSL1GHT's librsx/libgcm_sys, presented through the bespoke Ps3 window backend.
-		#
-		# Note where this sits relative to the other consoles. The RSX is an NV47 - a fully PROGRAMMABLE part
-		# with real vertex and fragment shaders - so despite being a console backend it belongs with GXM (and
-		# with OpenGL/D3D11/Vulkan) rather than with the fixed-function PVR/GX/GU/GS tier: it advertises
-		# RHI_CAP_SHADERS, runs the whole bloom / lighting / combine / rescale chain, and consumes no
-		# `fixed_function` effect tables at all. What differs from GXM is only WHEN the shaders are compiled:
-		# the Vita has SceShaccCg on the console, while the PS3 has no runtime shader compiler, so the same Cg
-		# the emitter already produces is compiled offline by cgcomp into RSX microcode and embedded in the
-		# executable - the arrangement the Vulkan backend uses for its SPIR-V.
+		# Programmable RSX through PSL1GHT, with shaders compiled offline by cgcomp (no runtime compiler)
 		set(NCINE_PREFERRED_RHI "RSX" CACHE STRING "Rendering backend on PlayStation 3: RSX")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "RSX")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "RSX")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PlayStation 3 (expected RSX)")
 		endif()
 	elseif(VITA)
-		# PS Vita (the VitaSDK toolchain sets VITA): three backends are possible. "GXM" drives the console's
-		# own graphics API (sceGxm) directly, which is the same idea as the PVR/GX/GU backends on the older
-		# consoles - except that the Vita's PowerVR SGX is a fully programmable part, so GXM is a SHADER
-		# backend and keeps the whole post-processing chain; it only removes the OpenGL translation layer.
-		# That makes it the default. "OpenGL" runs through vitaGL, an OpenGL|ES 2.0 implementation layered on
-		# that very same sceGxm, so selecting it pins NCINE_RHI_GL_PROFILE to ES2 below. Note that the
-		# "libshacccg.suprx" firmware module is a requirement of the *platform* rather than of either backend:
-		# both compile their shaders on the console through SceShaccCg (GXM the generated Cg for sceGxm,
-		# vitaGL the GLSL handed to glCompileShader), so neither runs without it. The CPU software renderer is
-		# the third alternative. Direct3D 11 and Vulkan do not exist on the platform. The window backend is
-		# always SDL2 on Vita.
+		# GXM (native sceGxm, default), OpenGL (ES 2.0 through vitaGL) or Software; both GPU backends compile
+		# shaders on the console, so libshacccg.suprx is required. The window backend is always SDL2.
 		set(NCINE_PREFERRED_RHI "GXM" CACHE STRING "Rendering backend on PS Vita: GXM (native sceGxm), OpenGL (ES 2.0 via vitaGL) or Software")
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GXM;OpenGL;Software")
 
 		if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
-			# vitaGL IS an OpenGL|ES 2.0 implementation, so the ES2 profile is not a choice here
 			set(_NCINE_RHI_GL_PROFILE_FORCED "ES2")
 		elseif(NOT NCINE_PREFERRED_RHI MATCHES "^(GXM|Software)$")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PS Vita (expected GXM, OpenGL or Software)")
 		endif()
 	else()
-		# Rendering backend (RHI) selection. OpenGL is the default; the software (CPU), Direct3D 11, Vulkan and
-		# Metal backends are mutually exclusive alternatives chosen through this single option. The non-OpenGL
-		# backends present through the SDL2 window (software via SDL_Renderer, D3D11 via a DXGI swap chain, Vulkan
-		# via a VkSwapchainKHR, Metal via the window's CAMetalLayer), so any of them forces the SDL2 window backend.
-		# Direct3D 11 requires Windows + MSVC; Vulkan is header-only (Khronos Vulkan-Headers via FetchContent) with
-		# a dynamically loaded runtime library (vulkan-1.dll on Windows, libvulkan.so on Linux, and on macOS the
-		# Vulkan SDK's loader over MoltenVK - the backend enables the portability extensions MoltenVK needs, but
-		# the loader has to be installed or shipped next to the executable); Metal is macOS-only and header-only
-		# too (Apple's metal-cpp via FetchContent), compiling the offline MSL sources on the device at load time.
-		# The rest of the build keys on this variable directly (NCINE_PREFERRED_RHI STREQUAL "...").
-		# "LegacyGL" is the fixed-function OpenGL 1.x backend. Its target is MorphOS' TinyGL (see the arm
-		# above); it is offered on the desktop because that is where it can be developed and looked at -
-		# a desktop GL runs the same 1.3 combiner pipeline, so what renders wrongly here renders wrongly
-		# there. It is not a sensible choice for an actual desktop build, where the OpenGL backend is
-		# better in every respect.
-		#
-		# iOS (CMAKE_SYSTEM_NAME=iOS, which sets IOS): Metal is the platform's graphics API and the default there.
-		# "OpenGL" is the OpenGL|ES 3.0 profile over the system's OpenGLES framework - deprecated by Apple since
-		# iOS 12 but still present, and the one backend the iOS Simulator can run on a Mac without a Metal GPU.
-		# "Software" presents through SDL_Renderer like everywhere else. Vulkan (MoltenVK) and D3D11 are not
-		# offered: nothing on the platform provides them.
+		# Desktop rendering backend, OpenGL by default (Metal on iOS). D3D11 needs Windows + MSVC, Metal needs Apple,
+		# Vulkan loads its runtime dynamically (MoltenVK on macOS). LegacyGL (fixed-function, for MorphOS) is offered
+		# here only to develop it. iOS offers Metal, OpenGL (ES 3.0) and Software.
 		if(IOS)
 			set(_NCINE_DEFAULT_RHI "Metal")
 		else()
@@ -322,8 +206,7 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" (expected OpenGL, LegacyGL, Software, D3D11, Vulkan, or Metal)")
 		endif()
 
-		# The non-OpenGL backends present through the SDL window, so force an SDL window backend.
-		# An explicit SDL3 choice is honored; otherwise fall back to SDL2.
+		# The non-OpenGL backends present through the SDL window, so force SDL2 unless SDL3 was chosen
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "OpenGL" AND NOT NCINE_PREFERRED_BACKEND MATCHES "^(SDL2|SDL3)$")
 			set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred core backend" FORCE)
 		endif()
@@ -333,21 +216,12 @@ endif()
 if(EMSCRIPTEN)
 	option(NCINE_WITH_THREADS "Enable Emscripten Pthreads support" OFF)
 elseif(PLATFORM_N64 OR PLATFORM_PS2 OR PLATFORM_PS3 OR PLATFORM_AMIGA OR PLATFORM_MORPHOS)
-	# These consoles are single-threaded, each for its own reason, and none is a configuration change
-	# away from working:
-	#  - PS2: a thread created through PS2SDK's libpthreadglue never appears to be scheduled.
-	#  - PS3: PSL1GHT ships no pthreads at all - newlib installs <pthread.h>, nothing implements it.
-	#  - N64: libdragon ships no pthreads either (its cooperative kthread kernel is a different API),
-	#    and a single 93 MHz core has nothing for a second thread to win anyway.
-	#  - Amiga: m68k-amigaos-gcc has no gthreads/std::thread (AmigaOS Exec tasks are a different API), and
-	#    every machine in this port's range is a single core anyway.
-	#  - MorphOS: it HAS working pthreads, but its <pthread.h> includes <exec/semaphores.h>, which puts
-	#    exec's `struct Task` in the global namespace - and that is also the name of the engine's
-	#    coroutine type, so every one of the 264 unqualified `Task<...>` declarations in the game becomes
-	#    ambiguous as soon as anything includes the header. Nothing else in the SDK does (SDL2's headers
-	#    are clean), so the way out is to not use pthreads rather than to rename a type across the game.
-	# TODO: The first two have cycles to spare for a background asset loader (the EE, and the Cell's
-	# second PPE thread plus the SPEs).
+	# Single-threaded:
+	#  - PS2: threads from libpthreadglue never get scheduled
+	#  - PS3, N64: no pthreads in the SDK
+	#  - Amiga: no std::thread in m68k-amigaos-gcc, and single-core machines anyway
+	#  - MorphOS: <pthread.h> pulls exec's global `struct Task`, which clashes with the engine's Task<...>
+	# TODO: PS2 and PS3 have cycles to spare for a background asset loader
 	option(NCINE_WITH_THREADS "Enable support for threads" OFF)
 else()
 	option(NCINE_WITH_THREADS "Enable support for threads" ON)
@@ -361,7 +235,7 @@ else()
 		if(NCINE_ARM_PROCESSOR)
 			set(NCINE_ARCH_EXTENSIONS "" CACHE STRING "Specifies architecture for code generation (armv8.0 - armv8.8)")
 		else()
-			set(NCINE_ARCH_EXTENSIONS "" CACHE STRING "Specifies architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)")   
+			set(NCINE_ARCH_EXTENSIONS "" CACHE STRING "Specifies architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)")
 		endif()
 
 		if(WINDOWS_PHONE OR WINDOWS_STORE)
@@ -369,12 +243,7 @@ else()
 			set(NCINE_UWP_CERTIFICATE_PATH "" CACHE STRING "Code-signing certificate path (Windows RT only)")
 			set(NCINE_UWP_CERTIFICATE_PASSWORD "" CACHE STRING "Code-signing certificate password (Windows RT only)")
 
-			# Rendering backend (RHI) on UWP (Windows Store / Xbox): Direct3D 11 is the default. Unlike the
-			# desktop D3D11 build it must not force the SDL2 backend: UWP renders through UwpGfxDevice, which
-			# drives a DXGI flip-model swap chain from the CoreWindow (see UwpGfxDevice / D3D11Device).
-			# Selecting "OpenGL" chooses the ANGLE (OpenGL|ES) renderer instead. Picking D3D11 demotes ANGLE to
-			# an opt-in fallback (its libs are then not required); "OpenGL" restores ANGLE as the renderer so
-			# UWP always has a working backend. (Software and Vulkan are not supported on UWP.)
+			# D3D11 renders through UwpGfxDevice (no SDL2), OpenGL means ANGLE. Software and Vulkan aren't supported.
 			set(NCINE_PREFERRED_RHI "D3D11" CACHE STRING "Rendering backend on UWP: D3D11 or OpenGL (ANGLE)")
 			set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "D3D11;OpenGL")
 			if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
@@ -396,10 +265,7 @@ else()
 		cmake_dependent_option(NCINE_ASSEMBLE_DEB "Assemble DEB package of the game" OFF "NOT NCINE_BUILD_FLATPAK" OFF)
 		cmake_dependent_option(NCINE_ASSEMBLE_RPM "Assemble RPM package of the game" OFF "NOT NCINE_BUILD_FLATPAK" OFF)
 
-		# A distribution package belongs under "/usr", the FHS and Debian Policy keep packages out of "/usr/local".
-		# CPack already defaults the DEB/RPM payload there, but `CMAKE_INSTALL_PREFIX` - baked into the executable
-		# as `NCINE_INSTALL_PREFIX` - defaults to "/usr/local", so the game searched where its package never wrote.
-		# Decided here because "ncine_installation.cmake" is included long after that compile definition is set.
+		# Packages install under "/usr", and the prefix is baked into the executable, so set it before it's used
 		if((NCINE_ASSEMBLE_DEB OR NCINE_ASSEMBLE_RPM) AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 			set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Install path prefix, prepended onto install directories" FORCE)
 		endif()
@@ -411,40 +277,30 @@ else()
 	endif()
 endif()
 
-# The Android host build never runs the platform selection above (it only drives the on-device build through
-# Gradle), but it still has to decide the profile it passes down, and Android is a GL-only platform here
+# The Android host build skips the selection above, but still passes the profile down, and Android is GL-only
 if(NCINE_BUILD_ANDROID AND NOT NCINE_PREFERRED_RHI)
 	set(NCINE_PREFERRED_RHI "OpenGL")
 endif()
 
 # ── OpenGL family profile ─────────────────────────────────────────────────────────────────────────────
-# Which profile of the OpenGL family the GL backend targets. This is the single switch that used to be two
-# (an "is this a GLES build" flag plus a separate "strict ES 2.0" flag), and it drives everything downstream:
-# which client library is imported (desktop GL / GLES2+EGL), which headers `CommonHeaders.h` includes, the
-# context version `AppConfiguration` requests, and the shader dialect the GL backend consumes.
-#
+# Only for the OpenGL backend; it selects the client library, headers, context version and shader dialect.
 #   Core  OpenGL 3.3 core profile - desktop GL, GLSL 330, UBOs, gl_VertexID
 #   ES3   OpenGL|ES 3.0 (and WebGL 2 on Emscripten) - ESSL 300 es, UBOs, gl_VertexID
 #   ES2   OpenGL|ES 2.0 - ESSL 100, no UBOs, no gl_VertexID, no buffer mapping, no MRT
-#
-# Only the OpenGL backend has a profile; the other `NCINE_PREFERRED_RHI` values ignore this and the variable
-# is not offered for them. Every profile is buildable on every platform that can provide the corresponding
-# client library, so an ES2 (or ES3) build on desktop or Android is a normal configuration and not a special
-# case - it is how the low-end paths get tested without the target hardware.
+# Any profile with an available client library is a normal configuration, e.g. ES2 on desktop for testing.
 if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
 	if(DEFINED _NCINE_RHI_GL_PROFILE_FORCED)
-		# Platforms whose only GL implementation fixes the profile (PS Vita's vitaGL is ES 2.0, the
-		# libretro core targets ES 3.0): not a choice, so it is set rather than offered.
+		# Fixed by the platform's only GL implementation (vitaGL, the libretro core)
 		set(NCINE_RHI_GL_PROFILE "${_NCINE_RHI_GL_PROFILE_FORCED}")
 	else()
 		if(EMSCRIPTEN)
-			# WebGL 2 is OpenGL|ES 3.0; WebGL 1 (ES2) is below what the pipeline needs from a browser
+			# WebGL 2, WebGL 1 is below what the pipeline needs
 			set(_NCINE_RHI_GL_PROFILE_DEFAULT "ES3")
 		elseif(ANDROID OR NCINE_BUILD_ANDROID OR NINTENDO_SWITCH OR IOS OR NCINE_WITH_ANGLE)
-			# GLES-only platforms, and ANGLE (which is an OpenGL|ES implementation on top of D3D/Vulkan)
+			# GLES-only platforms and ANGLE
 			set(_NCINE_RHI_GL_PROFILE_DEFAULT "ES3")
 		elseif(NCINE_ARM_PROCESSOR AND UNIX AND NOT APPLE)
-			# ARM/aarch64 Linux boards: GLES is the implementation that is actually accelerated there
+			# GLES is what's accelerated on ARM Linux boards
 			set(_NCINE_RHI_GL_PROFILE_DEFAULT "ES3")
 		else()
 			set(_NCINE_RHI_GL_PROFILE_DEFAULT "Core")
@@ -456,104 +312,43 @@ if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
 			message(FATAL_ERROR "Invalid NCINE_RHI_GL_PROFILE \"${NCINE_RHI_GL_PROFILE}\" (expected Core, ES3 or ES2)")
 		endif()
 
-		# The GLES-only platforms above have no desktop GL to fall back to
 		if(NCINE_RHI_GL_PROFILE STREQUAL "Core" AND (EMSCRIPTEN OR ANDROID OR NCINE_BUILD_ANDROID OR NINTENDO_SWITCH OR IOS OR NCINE_WITH_ANGLE))
 			message(FATAL_ERROR "NCINE_RHI_GL_PROFILE=Core is not available on this platform (no desktop OpenGL; use ES3 or ES2)")
 		endif()
 		if(IOS AND NCINE_RHI_GL_PROFILE STREQUAL "ES2")
-			# The ES2 profile resolves its vertex-array-object entry points through EGL (see GLVertexArrayObject.cpp),
-			# and iOS has no EGL - its contexts come from EAGL through SDL. Every iOS device that runs a supported
-			# iOS has an ES 3.0 GPU anyway.
+			# ES2 resolves its VAO entry points through EGL, which iOS doesn't have
 			message(FATAL_ERROR "NCINE_RHI_GL_PROFILE=ES2 is not available on iOS (use ES3)")
 		endif()
 	endif()
 endif()
 
-# GLEW loads desktop OpenGL entry points, so it is only relevant to a Core profile build (on Windows it is
-# also how the desktop GL functions beyond 1.1 are reached at all)
+# GLEW loads desktop OpenGL entry points, so only for the Core profile
 if(NCINE_RHI_GL_PROFILE STREQUAL "Core" AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT EMSCRIPTEN)
 	option(NCINE_WITH_GLEW "Use GLEW library" ON)
 endif()
 
 # ── 16-bit color surfaces ─────────────────────────────────────────────────────────────────────────────
-# Trades color depth for memory and bandwidth: RGB565 instead of RGBA8, with no destination alpha (blend
-# factors reading it see opaque). This is a performance option, so each backend applies it as far as it pays
-# off there, which is not the same depth in both:
-#
-#   OpenGL   every color surface it can - a 5/6/5 default framebuffer is requested from the window system
-#            AND the scene, blur and rescale render targets become RGB565 (see Texture::ColorTargetFormat),
-#            which halves the bandwidth each post-processing pass reads and writes them with
-#   Software  the screen buffer only, where it halves the per-frame upload to the present surface. Its
-#            render targets stay 4-byte RGBA on purpose: the rasterizer's inner loops work on RGBA8 either
-#            way, so packed targets would only add a pack/unpack per span and cost time rather than save it
-#
-# The console backends present through a format their hardware fixes - the Dreamcast's PowerVR is RGB565
-# either way, GX copies out to a YUV XFB - so there is nothing to switch there, and a D3D11/Vulkan swap
-# chain in 5/6/5 is not something drivers reliably offer.
+# RGB565 instead of RGBA8, without destination alpha. OpenGL uses it for the framebuffer and render targets,
+# Software only for the screen buffer (its rasterizer works in RGBA8). Consoles have fixed formats.
 cmake_dependent_option(NCINE_RHI_USE_FB16 "Use 16-bit (RGB565) color surfaces instead of RGBA8" OFF "NCINE_PREFERRED_RHI STREQUAL Software OR NCINE_PREFERRED_RHI STREQUAL OpenGL" OFF)
 if(PLATFORM_AMIGA)
-	# The Amiga present path copies the screen buffer into an RTG bitmap whose native 16-bit format is
-	# big-endian R5G6B5 - exactly what the native-endian FB16 buffer holds on the big-endian 68k - so
-	# 16-bit is both the halved-bandwidth choice and the conversion-free one. Forced rather than
-	# defaulted: the backend's present path only implements the FB16 layout.
+	# The Amiga present path only implements the native big-endian R5G6B5 layout
 	set(NCINE_RHI_USE_FB16 ON)
 endif()
 
 cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward library for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT IOS AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
-# LZ4 is built (from source, see FindLz4.cmake) only for the consoles that cannot convert the game data on the
-# device: nothing but a tree made by the asset packer ever reaches them, and it gives them their sprite sheets and
-# tilesets in LZ4 (see JJ2Anims::ImageCompression), which they decode faster than the game's own format
+# Only for consoles that get game data from the asset packer, which stores sprites and tilesets in LZ4
 cmake_dependent_option(NCINE_WITH_LZ4 "Enable LZ4 compression support" ON "PLATFORM_N64 OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR NINTENDO_GAMECUBE" OFF)
 #option(NCINE_WITH_ZSTD "Enable Zstd compression support" OFF)
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
 cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON "NCINE_WITH_AUDIO" OFF)
-# The game's music is entirely tracker modules, and there are two libraries here that can play them.
-# They are alternatives, never both: whichever is enabled provides the module path (see the audio
-# section of "ncine_extra_sources.cmake").
-#
-#  - libopenmpt is the reference decoder - every format the game ships, including the four ".mo3"
-#    tracks, and the most accurate playback. It is also the heavy one: floating-point mixing written
-#    for desktop CPUs.
-#  - libxmp is an order of magnitude lighter. Its mixer is integer throughout (the only double-
-#    precision arithmetic in it is the resonant-filter coefficient setup, run per filter change rather
-#    than per sample), it is plain C89 that builds with every toolchain here, and its Galaxy Music
-#    System loaders read the original ".j2b" modules directly. What it costs is coverage: it has no
-#    MO3 support, so 4 of the 56 shipped tracks are silent wherever it is used, and its playback is
-#    less exact on the edge cases libopenmpt is famous for getting right. Converting those four files
-#    offline in the AssetPacker would remove that last difference.
-#
-# So NCINE_WITH_XMP is available everywhere - it is how a platform that cannot afford libopenmpt gets
-# music at all, and it is a legitimate choice on any other target that would rather spend the CPU
-# elsewhere. It defaults on exactly where libopenmpt cannot be used and the machine can still hold a
-# module: a loaded module costs libxmp between 0.5 MB and 4 MB of RAM (measured over this game's
-# tracks; the largest is "grabbag.it"), plus about 0.2 MB of player state.
-# The Wii, the GameCube and the Dreamcast are on that list for memory rather than for CPU. Measured
-# over this game's tracks, one loaded module costs libopenmpt 4.6-12.5 MB against libxmp's 0.5-4 MB -
-# two to three times more - and the GameCube has 24 MB with no second pool to hide it in (the Wii
-# shares the port and the content, so it follows the same choice). Neither SDK packages libopenmpt
-# either, so that path also compiles the whole of it into a console binary.
-# The Dreamcast is the same trade one size tighter: the heap it has to fit a module into is the window
-# between the loaded ELF and the top of its 16 MB, about 13.8 MB (see Docs/Consoles.dox), and with a
-# module holding up to 12.5 MB of that the larger levels ran the allocator out. libopenmpt does work
-# there - it plays the whole soundtrack, and it has to be compiled from source like on the devkitPro
-# consoles - but not at a size the game can afford next to a big level, which is what decides it.
-#
-# The PS Vita is on the list for CPU rather than for memory, which makes it the odd one out: it has the
-# RAM for libopenmpt and plays the whole soundtrack with it. What it does not have is the headroom - a
-# 444 MHz Cortex-A9 also running the game logic, and a float mixer written for desktop CPUs is a
-# measurable slice of that. libxmp's integer mixer buys the frame time back, and VitaSDK packages it so
-# this picks the SDK's copy up rather than compiling it. The price is the 4 ".mo3" tracks of the 56
-# shipped, which libxmp cannot read and which are silent until the AssetPacker converts them offline.
-#
-# The PlayStation 2 is on the list because libopenmpt cannot be built for it at all - see the arm below -
-# while libxmp's C89 compiles for the EE toolchain unchanged and the console has the memory for a module
-# several times over. Now that the SPU2 is reachable (see Ps2AudioDevice) that is the difference between a
-# soundtrack and silence, at the same cost of the 4 ".mo3" tracks every libxmp target pays.
-# The Nintendo 3DS joins the list for CPU and memory at once: a 268 MHz ARM11 (804 MHz on the New 3DS) is
-# the PSP's class, and the application memory of an Old 3DS is 64 MB shared with the GPU-visible linear heap
-# every texture lives in - so the module decoder that costs 0.5-4 MB rather than 4.6-12.5 MB is the one that
-# leaves room for the tilesets
+# Music is tracker modules, played by either libopenmpt (accurate, heavy float mixer) or libxmp (integer mixer,
+# 0.5-4 MB per module vs 4.6-12.5 MB, but no MO3 - 4 of 56 tracks are silent). libxmp is the default on:
+#  - Wii, GameCube, Dreamcast: memory
+#  - PS Vita, 3DS: CPU (and memory on the 3DS)
+#  - PS2: libopenmpt doesn't compile there
+#  - PSP, Amiga: see below
 if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_3DS OR VITA)
 	set(_ncineXmpDefault ON)
 else()
@@ -562,46 +357,33 @@ endif()
 cmake_dependent_option(NCINE_WITH_XMP "Enable module (libxmp) audio file support instead of libopenmpt" ${_ncineXmpDefault} "NCINE_WITH_AUDIO" OFF)
 
 if(NCINE_WITH_XMP)
-	# The two decoders serve the same purpose, so enabling libxmp turns libopenmpt off rather than
-	# building both into the binary
+	# Never both decoders
 	set(NCINE_WITH_OPENMPT OFF)
 elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_AMIGA)
-	# Turning libxmp off on one of these does NOT bring libopenmpt back - it cannot be used on any of
-	# them, each for a reason outside this project. They are left with sound effects and no soundtrack:
-	#  - PSP: the library builds and plays correctly, but the FIRST module a process loads costs a fixed
-	#    ~29 s inside it (every later one ~1.8 s), which points at the Allegrex having no
-	#    double-precision unit. There is nowhere to hide that on a handheld.
-	#  - PS2: it does not compile for the EE toolchain - `mpt/format/default_floatingpoint.hpp` calls
-	#    `std::to_chars(char*, char*, const double&)`, ambiguous against newlib's overloads on GCC 15.
-	#    This console is therefore the one place where turning libxmp OFF really does mean silence rather
-	#    than falling back to libopenmpt, which is why it defaults ON there (see the block above).
-	#  - N64: a decoded module's runtime state plus the streaming buffers do not fit next to the game
-	#    in 8 MB of RDRAM, so it is not even worth the code size. That is also why libxmp is not the
-	#    default there despite being far lighter - its own per-module cost (up to 4 MB, see above) is
-	#    most of the console's memory, and the ROM packaging drops the whole "Music" directory to stay
-	#    inside the 64 MB cartridge ceiling anyway.
-	#  - Amiga: libopenmpt's mixer is written for machines two orders of magnitude faster than a 68060;
-	#    there is no port and no prospect of one being real-time on the classic tier.
-	# The shared way out for all of them would be pre-rendering the modules offline - the AssetPacker
-	# already re-encodes cinematics for the Dreamcast, so it is the natural place for it.
-	# (The PS3 used to be on this list. It is not any more - see Findlibopenmpt.cmake, which puts the
-	# library into its single-threaded mode so it never reaches the std::mutex PSL1GHT lacks.)
+	# libopenmpt can't be used here, so without libxmp there's no music:
+	#  - PSP: the first module takes ~29 s to load (no double-precision unit)
+	#  - PS2: doesn't compile (ambiguous std::to_chars in newlib on GCC 15)
+	#  - N64: doesn't fit in 8 MB, and the ROM drops the music anyway
+	#  - Amiga: far too slow for a 68060
 	set(NCINE_WITH_OPENMPT OFF)
 else()
 	cmake_dependent_option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON "NCINE_WITH_AUDIO" OFF)
 endif()
 
-option(NCINE_WITH_ANGELSCRIPT "Enable AngelScript scripting support" OFF)
+# Only where AngelScript has native calling conventions (Emscripten through native thunks), the scripting API isn't registered for the generic one
+if(WIN32 OR APPLE OR ANDROID OR NCINE_BUILD_ANDROID OR EMSCRIPTEN OR (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|i[3-6]86|aarch64|arm64|arm.*|riscv64)$"))
+	set(_ncineAngelscriptDefault ON)
+else()
+	set(_ncineAngelscriptDefault OFF)
+endif()
+option(NCINE_WITH_ANGELSCRIPT "Enable AngelScript scripting support" ${_ncineAngelscriptDefault})
 option(NCINE_WITH_IMGUI "Enable integration with Dear ImGui" OFF)
 option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
 #option(NCINE_WITH_RENDERDOC "Enable integration with RenderDoc" OFF)
 
 cmake_dependent_option(NCINE_COMPILE_OPENMPT "Compile libopenmpt from sources instead of using library" OFF "NCINE_WITH_OPENMPT" OFF)
 if((PLATFORM_PSP OR PLATFORM_PS3) AND NCINE_WITH_OPENMPT)
-	# Neither pspdev nor ps3dev packages libopenmpt, and the fallback the other platforms take when the
-	# library is missing - resolving it at run time - cannot work on a console that has no dynamic loader.
-	# So the library has to come from sources; it cross-compiles and links for both platforms as it stands
-	# (the PS3 additionally needs the single-threaded switch, see Findlibopenmpt.cmake).
+	# No packaged libopenmpt and no dynamic loader for the runtime fallback (PS3 also needs single-threaded mode)
 	set(NCINE_COMPILE_OPENMPT ON)
 endif()
 
@@ -609,10 +391,7 @@ set(NCINE_CONTENT_DIR "${CMAKE_SOURCE_DIR}/Content" CACHE PATH "Set path to the 
 cmake_dependent_option(NCINE_CREATE_CONTENT_SYMLINK "Create symbolic link to the game data directory in target directory" OFF "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT IOS AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
 
 # ── iOS ───────────────────────────────────────────────────────────────────────────────────────────────
-# Cross-compiled from a Mac with Xcode (`-DCMAKE_SYSTEM_NAME=iOS`, see Docs/Building.dox). The
-# bundle is assembled by cmake/ncine_ios_bundle.cmake; these decide how it is identified and signed. The
-# identifier defaults to the one the macOS bundle uses; a device build signed with a personal team has to use
-# an identifier that team's provisioning covers, which is what the option is for.
+# Identification and signing of the bundle (see Docs/Building.dox); a personal team needs its own identifier
 if(IOS)
 	set(NCINE_IOS_BUNDLE_IDENTIFIER "${NCINE_REVERSE_DNS}" CACHE STRING "Bundle identifier of the iOS application")
 	set(NCINE_IOS_DEVELOPMENT_TEAM "" CACHE STRING "Apple Developer team ID used to sign the iOS application (empty: unsigned, simulator only)")
@@ -622,9 +401,7 @@ if(IOS)
 endif()
 
 # ── GameCube ──────────────────────────────────────────────────────────────────────────────────────────
-# The game ID of the GameCube disc image (`NCINE_GAMECUBE_GAME_ID`, see Sources/Main.h). Declared for every build
-# rather than for the GameCube alone, because AssetPacker - a host tool - takes it as the default of `create-image
-# --game-id=`, while the GameCube build compiles it into the game and passes it to the tool explicitly.
+# Game ID of the disc image, declared everywhere because the host AssetPacker uses it as a default too
 set(GAMECUBE_GAME_ID "GJJEJR" CACHE STRING "Game ID of the GameCube disc image, six characters")
 if(NOT NINTENDO_GAMECUBE)
 	mark_as_advanced(GAMECUBE_GAME_ID)
@@ -643,8 +420,7 @@ endif()
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	option(NCINE_GCC_HARDENING "Enable memory corruption mitigation methods of GCC" OFF)
 	if(NCINE_GCC_HARDENING)
-		# Required for `POSITION_INDEPENDENT_CODE` to also add the PIE link options to executables (CMP0083).
-		# It has to be called in directory scope, so it can't be part of `ncine_apply_compiler_options()`.
+		# Needed for PIE link options (CMP0083), must be called in directory scope
 		include(CheckPIESupported)
 		check_pie_supported(OUTPUT_VARIABLE _pieSupportOutput LANGUAGES C CXX)
 		if(NOT CMAKE_CXX_LINK_PIE_SUPPORTED)
@@ -658,44 +434,22 @@ endif()
 # Shared library options
 option(DEATH_DEBUG_SYMBOLS "Create debug symbols for executable" ${WIN32})
 option(DEATH_TRACE "Enable runtime event tracing" ON)
-# In the libretro core the async trace logger thread races with the frontend's core load/unload cycle
-# PlayStation 2 is excluded for the same reason as the other consoles: the trace worker is a thread whose
-# scheduling cannot be relied on there, and a log line that never leaves the queue is worse than a slow one -
-# it makes the platform undebuggable. Synchronous tracing writes straight to the EE's serial port instead
-# (see Application::OnTraceReceived).
-# The PSP is excluded for the second half of that reason alone - it does have working threads - because the
-# trace stream is the only debugging channel the console has, and a queued line is a line that is not there
-# after a crash.
-# The Nintendo 3DS is excluded for the PSP's reason: the trace file on the SD card (and the emulator's log)
-# is the only debugging channel, and a line still sitting in the worker's queue when the game dies is a line
-# that is not there.
+# Synchronous where the trace is the only debugging channel (a queued line is lost on a crash), where thread
+# scheduling can't be relied on, and in the libretro core (the worker races with core load/unload)
 cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT NINTENDO_3DS;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
-# Every file open, read, seek and close raises a trace line of its own. That is what makes a missing or
-# truncated asset findable, so it stays on wherever tracing is on - but on a console where tracing is
-# synchronous (see DEATH_TRACE_ASYNC above) the formatting and the emit both land on the thread doing the
-# I/O, and level streaming turns into thousands of them per load. Turn it off to keep the trace stream
-# (crashes, warnings, the shader cache) without paying for the I/O firehose.
+# A trace line per file operation; turn off to save the cost on consoles with synchronous tracing
 cmake_dependent_option(DEATH_TRACE_VERBOSE_IO "Trace every file I/O operation" ON "DEATH_TRACE" OFF)
 if(DEATH_TRACE)
 	set(DEATH_TRACE_LOG_PATH "" CACHE PATH "Override path to trace log file if specified (and force writing traces to file on some platforms)")
 endif()
-# Relaxed floating-point model in release (`/fp:fast`, `-ffast-math` and the `-Ofast` that implies it).
-# It's off by default because it's not a free speed-up: the compiler is allowed to reassociate arithmetic,
-# assume no NaNs/infinities (which folds `isnan()`/`isinf()` to a constant false) and flush denormals, all
-# of which have already caused platform-specific differences in this project. Turn it on per build when
-# the target has been measured to benefit from it and its results verified.
+# Off by default: it breaks isnan()/isinf() and has caused platform-specific differences before
 option(DEATH_USE_FAST_MATH "Enable relaxed floating-point optimizations when in release" OFF)
 option(DEATH_USE_RUNTIME_CAST "Enable runtime_cast<T>() optimization" ON)
 cmake_dependent_option(DEATH_WITH_VC_LTL "Build with VC-LTL on Windows" ON "WIN32" OFF)
 
-# Check if we can use IFUNC for CPU dispatch. Linux with glibc and Android with API 18+ has it,
-# but e.g. Alpine Linux with musl doesn't, and on Android with API < 30 we don't get AT_HWCAP passed
-# into the resolver and can't call getauxval() ourselves because it's too early at that point,
-# which makes it pretty useless. Plus it also needs a certain binutils version and a capable compiler,
-# so it's easiest to just verify the whole thing. The feature is supported on ELF platforms only,
-# so general Linux/BSD but not Apple.
+# IFUNC for CPU dispatch needs ELF, glibc (not musl), Android API 30+ and a capable toolchain, so it's tested
 if(NCINE_BUILD_ANDROID)
-	# Support is checked later against Android NDK toolchain (see "/android/app/src/main/cpp/CMakeLists.txt").
+	# Checked later against the NDK toolchain (see "/android/app/src/main/cpp/CMakeLists.txt")
 	set(_DEATH_CPU_CAN_USE_IFUNC ON)
 	set(_DEATH_CPU_USE_IFUNC_DEFAULT ON)
 elseif(UNIX AND NOT APPLE AND NOT NCINE_BUILD_LIBRETRO)
@@ -716,9 +470,7 @@ int main() { return foo() - 42; }\
 	set(CMAKE_REQUIRED_QUIET OFF)
 	if(_DEATH_CPU_CAN_USE_IFUNC)
 		set(_DEATH_CPU_USE_IFUNC_DEFAULT ON)
-		# On GCC 4.8, if --coverage or -fprofile-arcs is enabled, the ifunc dispatchers cause a segfault.
-		# On Ubuntu 20.04 at least. Not the case with GCC 5 there, not the case with GCC 4.8 on Arch.
-		# Can't find any upstream bug report or commit that would be related to this.
+		# IFUNC dispatchers segfault with --coverage on GCC 4.8
 		if(NCINE_CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9")
 			if(NOT DEFINED DEATH_CPU_USE_IFUNC)
 				message(WARNING "Disabling DEATH_CPU_USE_IFUNC by default as it may crash when used together with --coverage on GCC 4.8.")
@@ -726,10 +478,7 @@ int main() { return foo() - 42; }\
 			set(_DEATH_CPU_USE_IFUNC_DEFAULT OFF)
 		endif()
 
-		# If sanitizers are enabled, call into the dispatch function crashes. Upstream bugreport
-		# https://github.com/google/sanitizers/issues/342 suggests using __attribute__((no_sanitize_address)),
-		# but that doesn't work / can't be used because it would mean marking basically everything including
-		# the actual implementation that's being dispatched to.
+		# IFUNC dispatchers crash with sanitizers (https://github.com/google/sanitizers/issues/342)
 		if(NCINE_ADDRESS_SANITIZER OR NCINE_UNDEFINED_SANITIZER)
 			if(NOT DEFINED DEATH_CPU_USE_IFUNC)
 				message(WARNING "Disabling DEATH_CPU_USE_IFUNC by default as it crashes when used together with sanitizers. See https://github.com/google/sanitizers/issues/342 for more information.")
@@ -745,9 +494,7 @@ else()
 endif()
 cmake_dependent_option(DEATH_CPU_USE_IFUNC "Allow using GNU IFUNC for runtime CPU dispatch" ${_DEATH_CPU_USE_IFUNC_DEFAULT} "_DEATH_CPU_CAN_USE_IFUNC" OFF)
 
-# Runtime CPU dispatch. Enabled by default everywhere except on Emscripten because there a dispatch through
-# a function pointer is prohibitively slow. Elsewhere dispatch through a function pointer or through IFUNC adds
-# only a minimal overhead over a compile-time dispatch, and the benefits are significant.
+# Runtime CPU dispatch, except on Emscripten where calls through a function pointer are too slow
 if(EMSCRIPTEN)
 	set(_DEATH_CPU_USE_RUNTIME_DISPATCH_DEFAULT OFF)
 else()
@@ -758,67 +505,23 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
 cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT NCINE_PREFERRED_RHI STREQUAL GU;NOT NCINE_PREFERRED_RHI STREQUAL GS;NOT NCINE_PREFERRED_RHI STREQUAL RDP;NOT NCINE_PREFERRED_RHI STREQUAL PICA;NOT NCINE_PREFERRED_RHI STREQUAL LegacyGL;NOT VITA" ON)
-# The single-draw tilemap mesh stays off where the backend cannot consume it: the software backend
-# rasterizes per tile. The GX, PVR, GU and LegacyGL backends all consume the whole-layer mesh directly
-# (see GxDevice::DispatchTileMesh and its counterparts), so they keep it on - on the GU it is also what
-# lets a whole layer go out as one GE draw call
+# Off for Software, which rasterizes per tile
 cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software" OFF)
 
-# Even the local (splitscreen) half of multiplayer is built on NetworkManagerBase, which owns an
-# `nCine::Thread` unconditionally on every non-Emscripten platform, so the whole feature needs threads.
-# Emscripten reaches NetworkManagerBase through its own thread-free arm instead.
+# Needs threads even for local splitscreen (NetworkManagerBase owns a thread), Emscripten has its own path
 cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)
-# The libogc consoles keep local splitscreen (WITH_MULTIPLAYER) but have no online transport (no enet/BSD
-# sockets stack wired up) - the transport split keeps the engine+local path fully functional without it
-# PlayStation 2 is excluded because PS2SDK has a socket stack (ps2ip), but the bundled IXWebSocket includes
-# <netinet/ip.h>, which PS2SDK does not ship - so the WebSocket transport cannot compile there as it stands.
-# Local splitscreen (WITH_MULTIPLAYER) is unaffected.
-# AmigaOS 4 and MorphOS are excluded for the same reason as each other: both bsdsocket stacks are
-# IPv4-only - neither SDK has a <netinet/in6.h> or a `struct in6_addr` anywhere - while the bundled ENet
-# is built around IPv6 addresses with IPv4-mapped ones inside them. Local splitscreen (WITH_MULTIPLAYER)
-# is unaffected.
-# TODO: ENET_IPV6=0 is what the PSP arm below uses to get past exactly that, so these two are no longer
-# blocked on the address family - what is left for them is threads (see NCINE_WITH_THREADS above).
-# Neither Sony handheld is excluded, although both stacks are IPv4-only: ENET_IPV6=0 covers the address
-# family for them (see ncine_extra_sources.cmake), and what each one needs on top of that lives with the
-# code it belongs to. The PSP has three pieces of the sockets API missing from pspdev's newlib, filled in
-# inside the vendored enet.h - poll() over select(), getaddrinfo()/getnameinfo() over
-# gethostbyname()/gethostbyaddr(). The Vita needs none of that; what it needs is nCine/Backends/Vita/
-# VitaLibcCompat.cpp, because VitaSDK's inet_pton() answers -1 where POSIX says 0 and both libcurl and
-# ENet read that as "yes, an address" (see the file). The <sys/ioctl.h> that used to be given as the Vita's
-# blocker turned out to be an unused include - ENet only ever calls ioctl() in its _WIN32 arm.
-# Both verified against a real ENet peer, under PPSSPP and Vita3K respectively.
-# The Nintendo 3DS is not excluded either. libctru's BSD sockets (soc:u) come with getaddrinfo() and
-# poll(), unlike pspdev's, so the vendored enet.h needs only arms for the two calls libctru has no spelling
-# of at all - sendmsg() and recvmsg(), which go through sendto() and recvfrom() there - and ENET_IPV6=0 like
-# the Sony handhelds (see ncine_extra_sources.cmake). What the service does need is a dedicated 1 MB
-# buffer at bring-up, which CtrPlatform::Initialize() hands it once per process, before anything can open
-# a socket; the WLAN itself is the system's business on this console, so there is no counterpart to
-# PspNetwork::ScopedConnection. Verified under Azahar against an ENet peer on the host and with an HTTPS
-# request (the update check) through the staged CA bundle.
+# Online transport (ENet) is unavailable on:
+#  - libogc consoles, N64, Dreamcast: no sockets stack wired up
+#  - PS2: the bundled IXWebSocket needs <netinet/ip.h>, which PS2SDK lacks
+#  - AmigaOS 4, MorphOS: IPv4-only stacks (TODO: ENET_IPV6=0 as on the PSP, then only threads are missing)
+# PSP, Vita and 3DS work with ENET_IPV6=0 and small shims (see ncine_extra_sources.cmake)
 cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PS2;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
-# IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
-# PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used, and
-# on the Vita that is now the transport that carries online play rather than a fallback).
-# AmigaOS 4 is excluded for one header rather than the stack: its bsdsocket headers cover everything
-# else IXWebSocket wants, but there is no <poll.h> anywhere in the SDK - the OS offers select() and
-# the library's own WaitSelect - and IXWebSocket includes it unconditionally. MorphOS does ship <poll.h>
-# and is named here only to keep the exclusion explicit: this option follows WITH_ONLINE_MULTIPLAYER,
-# which is already off there for the ENet reason above.
-# The PSP is excluded for both of the reasons above at once: pspdev has neither <netinet/ip.h> nor a
-# <poll.h> header (the shim that gets ENet past that is a private engine header, not something the
-# library's own `#include <poll.h>` can find). The ENet transport carries online play there.
-# The Nintendo 3DS is excluded for the Vita's reason: libctru has <poll.h>, but no <netinet/ip.h>. ENet
-# carries online play there as well.
+# IXWebSocket needs <netinet/ip.h> and <poll.h>: no <netinet/ip.h> on Switch, Vita, 3DS and PSP, no <poll.h>
+# on AmigaOS 4 and PSP (MorphOS is off through WITH_ONLINE_MULTIPLAYER). ENet carries online play there.
 cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT NINTENDO_3DS;NOT PLATFORM_PSP;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
-	# Default to the OS-native TLS backend on Apple (SecureTransport, a system framework) to avoid depending on
-	# a Homebrew OpenSSL whose architecture must match the build — the x86_64 cross-build on Apple Silicon runners
-	# otherwise links the arm64-only Homebrew OpenSSL and fails with undefined symbols. Windows defaults to its
-	# own native provider (Schannel) for the same reason, as it additionally needs no OpenSSL runtime libraries
-	# next to the executable. This includes UWP, where every entry point it uses is exported by `WindowsApp`
-	# (only the headers hide them behind the desktop API family, which `IXSocketSChannel.h` works around).
+	# OS-native TLS on Apple (SecureTransport) and Windows (Schannel, also UWP), so no OpenSSL is needed there
 	if(APPLE)
 		set(WITH_WEBSOCKET_TLS_BACKEND "SecureTransport" CACHE STRING "TLS backend for WebSocket transport (None, SecureTransport, Schannel, OpenSSL, mbedTLS)")
 	elseif(WIN32)
@@ -831,23 +534,14 @@ endif()
 
 cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer support also in Shareware Demo" ON "SHAREWARE_DEMO_ONLY;WITH_ONLINE_MULTIPLAYER" OFF)
 
-# The built-in level editor (see `Sources/Jazz2/Editor` and Docs/Editor.dox). It saves levels and tile sets, so it is
-# left out where nothing can be saved - the Nintendo 64, the Dreamcast, the GameCube and the PlayStation 2 read all
-# their content from a cartridge or a disc. The web keeps it, saving there is a download. A dedicated server has no
-# interface to edit with, and the Shareware Demo has only the episodes of the demo to play.
+# Built-in level editor (see Docs/Editor.dox), not where nothing can be saved (cartridge/disc-only consoles),
+# on a dedicated server or in the Shareware Demo
 cmake_dependent_option(WITH_EDITOR "Enable the built-in level editor" ON "NOT DEDICATED_SERVER;NOT SHAREWARE_DEMO_ONLY;NOT PLATFORM_N64;NOT PLATFORM_DREAMCAST;NOT NINTENDO_GAMECUBE;NOT PLATFORM_PS2" OFF)
 
-# The game itself, which is what nearly every build is for. Without it, only the offline tools below are built.
 option(NCINE_BUILD_GAME "Build the game itself, turn off to build only the offline tools" ON)
 
-# The two offline tools (see `Sources/Utilities`) are executables for the build machine, which is why both
-# are forced off for every cross-compiled target. Beyond that they are never installed, never packaged and
-# never invoked by the game's own build - the headers ShaderCompiler produces are committed to the
-# repository - so a build whose only product is a package, a container image or a headless server compiles
-# them just to throw them away. Those configurations default to off and can still ask for the tools
-# explicitly; on a normal desktop build they stay on, because that is where they get used.
-# The one cross-compiled exception is the AssetPacker built with Emscripten instead of the game: that is its web
-# version (see Sources/Utilities/AssetPacker/Web), a product of its own rather than a build tool.
+# Offline tools (see `Sources/Utilities`) are host executables, so off when cross-compiling (except the web
+# AssetPacker). Packaging, server and libretro builds don't need them by default.
 if(DEDICATED_SERVER OR NCINE_BUILD_FLATPAK OR NCINE_BUILD_LIBRETRO)
 	set(_ncineBuildOfflineTools OFF)
 else()
@@ -866,9 +560,5 @@ if(NOT NCINE_BUILD_GAME AND NOT NCINE_BUILD_ASSET_PACKER AND NOT NCINE_BUILD_SHA
 	message(WARNING "Nothing to build: the game is turned off (NCINE_BUILD_GAME) and so are both offline tools")
 endif()
 
-# The movement probe (see `Sources/Jazz2/Tests`) drives the player through a fixed matrix of scenarios and
-# logs its trajectory, so a run can be compared against the same run in the original game. It is a
-# measurement harness rather than a game feature - it takes the first player over completely - so it is off
-# by default and only a developer investigating movement accuracy turns it on. Debug builds get it for free
-# because that is where it is used; with it off, none of it is compiled and `/physics-probe` is not a switch.
+# Movement trajectory probe for comparing against the original game (see `Sources/Jazz2/Tests`), developers only
 option(WITH_PHYSICS_PROBE "Build the movement trajectory probe (see Sources/Jazz2/Tests)" OFF)
