@@ -30,6 +30,7 @@
 #include "../../Tiles/TileMap.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cstring>
 
 

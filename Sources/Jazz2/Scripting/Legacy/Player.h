@@ -23,7 +23,7 @@ namespace Jazz2::Scripting
 		 */
 		class jjPLAYER
 		{
-			friend class LevelScriptLoader;
+			friend class Scripting::LevelScriptLoader;
 			friend class jjLAYER;	// jjLAYER::getXPosition/getYPosition read the player's camera
 			friend class jjOBJ;		// jjOBJ::doesCollidePlayer() reads the hitbox of the player
 

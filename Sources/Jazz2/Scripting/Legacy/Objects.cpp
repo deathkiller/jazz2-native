@@ -23,6 +23,7 @@
 #include "../../../nCine/Base/Algorithms.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 
 #include <Containers/StringConcatenable.h>
@@ -1282,10 +1283,9 @@ namespace Jazz2::Scripting
 			}
 		}
 		void jjOBJ::behave3(jjVOIDFUNCOBJ behavior, bool draw) {
-			// The funcdef handle arrives as an AngelScript function pointer (see jjAddObjectEx), with a reference that is
-			// this function's to release - the temporary takes it over
+			// The funcdef handle comes with a reference that is this function's to release - the temporary takes it over
 			jjBEHAVIOR function;
-			function.function = reinterpret_cast<asIScriptFunction*>(behavior);
+			function.function = behavior;
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			ScriptObjectHost::CallScriptBehavior(owner, *this, function, draw);
 		}
@@ -1326,11 +1326,10 @@ namespace Jazz2::Scripting
 			return id;
 		}
 		std::int32_t jjOBJ::jjAddObjectEx(std::uint8_t eventID, float xPixel, float yPixel, std::uint16_t creatorID, std::uint32_t creatorType, jjVOIDFUNCOBJ behavior) {
-			// The funcdef handle is passed by AngelScript as an asIScriptFunction*, with a reference that is this function's
-			// to release - the temporary takes it over
+			// The funcdef handle comes with a reference that is this function's to release - the temporary takes it over
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			jjBEHAVIOR function;
-			function.function = reinterpret_cast<asIScriptFunction*>(behavior);
+			function.function = behavior;
 
 			// The object of the game the event has, driven by the behavior, so the behavior can run the object's own one
 			std::int32_t id = owner->AddObjectFromEvent(eventID, xPixel, yPixel);

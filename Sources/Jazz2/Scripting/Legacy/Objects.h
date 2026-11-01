@@ -85,7 +85,8 @@ namespace Jazz2::Scripting
 		// Drives an object of the game by a behavior of the script (see ObjectHost.h)
 		class ScriptObjectHost;
 
-		using jjVOIDFUNCOBJ = void(*)(jjOBJ* obj);
+		// A handle of the script funcdef "void jjVOIDFUNCOBJ(jjOBJ@)"
+		using jjVOIDFUNCOBJ = asIScriptFunction*;
 
 		/**
 		 * @brief An object of the level

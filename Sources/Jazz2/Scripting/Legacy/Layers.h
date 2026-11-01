@@ -562,7 +562,7 @@ namespace Jazz2::Scripting
 			// Points the parameters of the texture styles to this layer
 			void BindTextureParams();
 
-			friend class LevelScriptLoader;
+			friend class Scripting::LevelScriptLoader;
 			friend class jjPIXELMAP;	// A pixel map can be made of the tiles of a layer
 			friend class jjCOLORMAP;
 		};
