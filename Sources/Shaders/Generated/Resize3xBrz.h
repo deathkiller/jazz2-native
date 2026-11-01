@@ -19,14 +19,14 @@ namespace Jazz2::ShadersGen
 	inline constexpr char Resize3xBrz_Vs[] =
 R"__SHDR__(#line 1
 
-out vec2 vPixelCoords;
-out vec4 vTexCoords1;
-out vec4 vTexCoords2;
-out vec4 vTexCoords3;
-out vec4 vTexCoords4;
-out vec4 vTexCoords5;
-out vec4 vTexCoords6;
-out vec4 vTexCoords7;
+out highp vec2 vPixelCoords;
+out highp vec4 vTexCoords1;
+out highp vec4 vTexCoords2;
+out highp vec4 vTexCoords3;
+out highp vec4 vTexCoords4;
+out highp vec4 vTexCoords5;
+out highp vec4 vTexCoords6;
+out highp vec4 vTexCoords7;
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -43,6 +43,8 @@ layout (std140) uniform InstanceBlock
 
 const float one_third = 1.0 / 3.0;
 const float two_third = 2.0 / 3.0;
+
+const highp vec3 ReduceWeights = vec3(65536.0, 256.0, 1.0);
 
 void main()
 {
@@ -73,14 +75,14 @@ void main()
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
 
-varying vec2 vPixelCoords;
-varying vec4 vTexCoords1;
-varying vec4 vTexCoords2;
-varying vec4 vTexCoords3;
-varying vec4 vTexCoords4;
-varying vec4 vTexCoords5;
-varying vec4 vTexCoords6;
-varying vec4 vTexCoords7;
+varying highp vec2 vPixelCoords;
+varying highp vec4 vTexCoords1;
+varying highp vec4 vTexCoords2;
+varying highp vec4 vTexCoords3;
+varying highp vec4 vTexCoords4;
+varying highp vec4 vTexCoords5;
+varying highp vec4 vTexCoords6;
+varying highp vec4 vTexCoords7;
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -94,6 +96,8 @@ uniform mat4 uViewMatrix;
 
 const float one_third = 1.0 / 3.0;
 const float two_third = 2.0 / 3.0;
+
+const highp vec3 ReduceWeights = vec3(65536.0, 256.0, 1.0);
 
 void main()
 {
@@ -124,31 +128,17 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vPixelCoords;
-in vec4 vTexCoords1;
-in vec4 vTexCoords2;
-in vec4 vTexCoords3;
-in vec4 vTexCoords4;
-in vec4 vTexCoords5;
-in vec4 vTexCoords6;
-in vec4 vTexCoords7;
-
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-};
-
-
+in highp vec2 vPixelCoords;
+in highp vec4 vTexCoords1;
+in highp vec4 vTexCoords2;
+in highp vec4 vTexCoords3;
+in highp vec4 vTexCoords4;
+in highp vec4 vTexCoords5;
+in highp vec4 vTexCoords6;
+in highp vec4 vTexCoords7;
 
 #define BLEND_NONE 0
 #define BLEND_NORMAL 1
@@ -163,9 +153,7 @@ const float two_third = 2.0 / 3.0;
 
 uniform sampler2D uTexture;
 
-float Reduce(vec3 color) {
-	return dot(color, vec3(65536.0, 256.0, 1.0));
-}
+const highp vec3 ReduceWeights = vec3(65536.0, 256.0, 1.0);
 
 float DistYCbCr(vec3 pixA, vec3 pixB) {
 	const vec3 w = vec3(0.2627, 0.6780, 0.0593);
@@ -188,11 +176,11 @@ bool IsBlendingNeeded(ivec4 blend) {
 }
 
 void ScalePixel(ivec4 blend, vec3 k[9], inout vec3 dst[9]) {
-	float v0 = Reduce(k[0]);
-	float v4 = Reduce(k[4]);
-	float v5 = Reduce(k[5]);
-	float v7 = Reduce(k[7]);
-	float v8 = Reduce(k[8]);
+	highp float v0 = dot(k[0], ReduceWeights);
+	highp float v4 = dot(k[4], ReduceWeights);
+	highp float v5 = dot(k[5], ReduceWeights);
+	highp float v7 = dot(k[7], ReduceWeights);
+	highp float v8 = dot(k[8], ReduceWeights);
 
 	float dist_01_04 = DistYCbCr(k[1], k[4]);
 	float dist_03_08 = DistYCbCr(k[3], k[8]);
@@ -240,16 +228,16 @@ void main() {
 	src[10] = texture(uTexture, vTexCoords7.xz).rgb;
 	src[11] = texture(uTexture, vTexCoords7.xw).rgb;
 
-	float v[9];
-	v[0] = Reduce(src[0]);
-	v[1] = Reduce(src[1]);
-	v[2] = Reduce(src[2]);
-	v[3] = Reduce(src[3]);
-	v[4] = Reduce(src[4]);
-	v[5] = Reduce(src[5]);
-	v[6] = Reduce(src[6]);
-	v[7] = Reduce(src[7]);
-	v[8] = Reduce(src[8]);
+	highp float v[9];
+	v[0] = dot(src[0], ReduceWeights);
+	v[1] = dot(src[1], ReduceWeights);
+	v[2] = dot(src[2], ReduceWeights);
+	v[3] = dot(src[3], ReduceWeights);
+	v[4] = dot(src[4], ReduceWeights);
+	v[5] = dot(src[5], ReduceWeights);
+	v[6] = dot(src[6], ReduceWeights);
+	v[7] = dot(src[7], ReduceWeights);
+	v[8] = dot(src[8], ReduceWeights);
 
 	ivec4 blendResult = ivec4(BLEND_NONE);
 
@@ -394,27 +382,16 @@ void main() {
 	inline constexpr char Resize3xBrz_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vPixelCoords;
-varying vec4 vTexCoords1;
-varying vec4 vTexCoords2;
-varying vec4 vTexCoords3;
-varying vec4 vTexCoords4;
-varying vec4 vTexCoords5;
-varying vec4 vTexCoords6;
-varying vec4 vTexCoords7;
-
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-
-
+varying highp vec2 vPixelCoords;
+varying highp vec4 vTexCoords1;
+varying highp vec4 vTexCoords2;
+varying highp vec4 vTexCoords3;
+varying highp vec4 vTexCoords4;
+varying highp vec4 vTexCoords5;
+varying highp vec4 vTexCoords6;
+varying highp vec4 vTexCoords7;
 
 #define BLEND_NONE 0
 #define BLEND_NORMAL 1
@@ -429,9 +406,7 @@ const float two_third = 2.0 / 3.0;
 
 uniform sampler2D uTexture;
 
-float Reduce(vec3 color) {
-	return dot(color, vec3(65536.0, 256.0, 1.0));
-}
+const highp vec3 ReduceWeights = vec3(65536.0, 256.0, 1.0);
 
 float DistYCbCr(vec3 pixA, vec3 pixB) {
 	const vec3 w = vec3(0.2627, 0.6780, 0.0593);
@@ -454,11 +429,11 @@ bool IsBlendingNeeded(ivec4 blend) {
 }
 
 void ScalePixel(ivec4 blend, vec3 k[9], inout vec3 dst[9]) {
-	float v0 = Reduce(k[0]);
-	float v4 = Reduce(k[4]);
-	float v5 = Reduce(k[5]);
-	float v7 = Reduce(k[7]);
-	float v8 = Reduce(k[8]);
+	highp float v0 = dot(k[0], ReduceWeights);
+	highp float v4 = dot(k[4], ReduceWeights);
+	highp float v5 = dot(k[5], ReduceWeights);
+	highp float v7 = dot(k[7], ReduceWeights);
+	highp float v8 = dot(k[8], ReduceWeights);
 
 	float dist_01_04 = DistYCbCr(k[1], k[4]);
 	float dist_03_08 = DistYCbCr(k[3], k[8]);
@@ -506,16 +481,16 @@ void main() {
 	src[10] = texture2D(uTexture, vTexCoords7.xz).rgb;
 	src[11] = texture2D(uTexture, vTexCoords7.xw).rgb;
 
-	float v[9];
-	v[0] = Reduce(src[0]);
-	v[1] = Reduce(src[1]);
-	v[2] = Reduce(src[2]);
-	v[3] = Reduce(src[3]);
-	v[4] = Reduce(src[4]);
-	v[5] = Reduce(src[5]);
-	v[6] = Reduce(src[6]);
-	v[7] = Reduce(src[7]);
-	v[8] = Reduce(src[8]);
+	highp float v[9];
+	v[0] = dot(src[0], ReduceWeights);
+	v[1] = dot(src[1], ReduceWeights);
+	v[2] = dot(src[2], ReduceWeights);
+	v[3] = dot(src[3], ReduceWeights);
+	v[4] = dot(src[4], ReduceWeights);
+	v[5] = dot(src[5], ReduceWeights);
+	v[6] = dot(src[6], ReduceWeights);
+	v[7] = dot(src[7], ReduceWeights);
+	v[8] = dot(src[8], ReduceWeights);
 
 	ivec4 blendResult = ivec4(BLEND_NONE);
 

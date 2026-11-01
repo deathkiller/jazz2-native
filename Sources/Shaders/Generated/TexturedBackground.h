@@ -399,8 +399,8 @@ float bayer4(vec2 pixel) {
 	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
 }
 
-vec3 reduceColors(vec3 color, vec2 pixel) {
-	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+vec3 reduceColors(vec3 rgb, vec2 pixel) {
+	return floor(rgb * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
 }
 
 #define DITHER_TEXTURE_SIZE 256.0
@@ -492,7 +492,7 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 }
 
@@ -1466,8 +1466,8 @@ float bayer4(vec2 pixel) {
 	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
 }
 
-vec3 reduceColors(vec3 color, vec2 pixel) {
-	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+vec3 reduceColors(vec3 rgb, vec2 pixel) {
+	return floor(rgb * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
 }
 
 #define DITHER_TEXTURE_SIZE 256.0
@@ -1554,7 +1554,7 @@ void main() {
 	}
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * (1.0 - uHorizonOffset.z));
-	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 }
 

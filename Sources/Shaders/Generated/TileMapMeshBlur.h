@@ -24,7 +24,7 @@ in vec2 aTexCoords;
 in vec4 aColor;
 in float aAxisY;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 out highp vec2 vPos;
@@ -65,7 +65,7 @@ attribute vec2 aTexCoords;
 attribute vec4 aColor;
 attribute float aAxisY;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 varying highp vec4 vScale;
@@ -81,7 +81,7 @@ uniform mat4 uViewMatrix;
 
 
 
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
 void main()
 {
@@ -103,34 +103,19 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
 in highp vec2 vPos;
 in highp float vAxisY;
 
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-	float palOffset;
-};
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTextureBehind;
 uniform sampler2D uTextureSharp;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
 out vec4 COLOR;
 
@@ -148,8 +133,8 @@ void main() {
 	unitsPerPixel.x = (abs(unitsPerPixel.x) < 0.000001 ? 1.0 : unitsPerPixel.x);
 	unitsPerPixel.y = (abs(unitsPerPixel.y) < 0.000001 ? 1.0 : unitsPerPixel.y);
 	vec2 offset = displacement * strength * 0.25 / unitsPerPixel;
-	vec2 uv = (gl_FragCoord.xy + offset) * uTargetSizeInv;
-	vec2 reflectionUv = vec2(gl_FragCoord.x + offset.x, gl_FragCoord.y + 2.0 * (vAxisY - vPos.y) / unitsPerPixel.y + offset.y) * uTargetSizeInv;
+	highp vec2 uv = (gl_FragCoord.xy + offset) * uTargetSizeInv;
+	highp vec2 reflectionUv = vec2(gl_FragCoord.x + offset.x, gl_FragCoord.y + 2.0 * (vAxisY - vPos.y) / unitsPerPixel.y + offset.y) * uTargetSizeInv;
 	reflectionAmount *= clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) / (8.0 * uTargetSizeInv.y), 0.0, 1.0);
 
 	vec3 sharp = texture(uTextureSharp, uv).rgb;
@@ -157,8 +142,8 @@ void main() {
 	vec3 reflected = mix(texture(uTextureSharp, reflectionUv).rgb, texture(uTextureBehind, reflectionUv).rgb, blurAmount);
 	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
-	vec3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
-	COLOR = vec4(color / max(alpha, 0.0001), alpha * strength);
+	vec3 shown = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
+	COLOR = vec4(shown / max(alpha, 0.0001), alpha * strength);
 }
 
 )__SHDR__";
@@ -168,29 +153,17 @@ void main() {
 	inline constexpr char TileMapMeshBlur_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 varying highp vec4 vScale;
 
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-	uniform float palOffset;
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTextureBehind;
 uniform sampler2D uTextureSharp;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
 
 void main() {
@@ -202,8 +175,8 @@ void main() {
 	vec2 displacement = (tile.rg * 255.0 - 128.0) * on;
 	float displaced = step(0.5, max(abs(displacement.x), abs(displacement.y)));
 	float strength = vColor.a * on;
-	vec2 uv = gl_FragCoord.xy * uTargetSizeInv + displacement * (strength * vScale.xy);
-	vec2 reflectionUv = vec2(uv.x, uv.y + vScale.z);
+	highp vec2 uv = gl_FragCoord.xy * uTargetSizeInv + displacement * (strength * vScale.xy);
+	highp vec2 reflectionUv = vec2(uv.x, uv.y + vScale.z);
 	float reflectionAmount = tile.b * on * clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) * vScale.w, 0.0, 1.0);
 
 	vec3 sharp = texture2D(uTextureSharp, uv).rgb;
@@ -211,8 +184,8 @@ void main() {
 	vec3 reflected = mix(texture2D(uTextureSharp, reflectionUv).rgb, texture2D(uTextureBehind, reflectionUv).rgb, blurAmount);
 	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
-	vec3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
-	COLOR = vec4(color / max(alpha, 0.0001), alpha * strength);
+	vec3 shown = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
+	COLOR = vec4(shown / max(alpha, 0.0001), alpha * strength);
 	gl_FragColor = COLOR;
 }
 
@@ -259,7 +232,7 @@ in vec2 aTexCoords;
 in vec4 aColor;
 in float aAxisY;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 out highp vec2 vPos;
@@ -302,7 +275,7 @@ attribute vec2 aTexCoords;
 attribute vec4 aColor;
 attribute float aAxisY;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 varying highp vec4 vScale;
@@ -319,7 +292,7 @@ uniform mat4 uViewMatrix;
 
 
 uniform sampler2D uTexturePalette;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
 void main()
 {
@@ -341,35 +314,20 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
 in highp vec2 vPos;
 in highp float vAxisY;
 
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-	float palOffset;
-};
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 uniform sampler2D uTextureBehind;
 uniform sampler2D uTextureSharp;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
 out vec4 COLOR;
 
@@ -391,8 +349,8 @@ void main() {
 	unitsPerPixel.x = (abs(unitsPerPixel.x) < 0.000001 ? 1.0 : unitsPerPixel.x);
 	unitsPerPixel.y = (abs(unitsPerPixel.y) < 0.000001 ? 1.0 : unitsPerPixel.y);
 	vec2 offset = displacement * strength * 0.25 / unitsPerPixel;
-	vec2 uv = (gl_FragCoord.xy + offset) * uTargetSizeInv;
-	vec2 reflectionUv = vec2(gl_FragCoord.x + offset.x, gl_FragCoord.y + 2.0 * (vAxisY - vPos.y) / unitsPerPixel.y + offset.y) * uTargetSizeInv;
+	highp vec2 uv = (gl_FragCoord.xy + offset) * uTargetSizeInv;
+	highp vec2 reflectionUv = vec2(gl_FragCoord.x + offset.x, gl_FragCoord.y + 2.0 * (vAxisY - vPos.y) / unitsPerPixel.y + offset.y) * uTargetSizeInv;
 	reflectionAmount *= clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) / (8.0 * uTargetSizeInv.y), 0.0, 1.0);
 
 	vec3 sharp = texture(uTextureSharp, uv).rgb;
@@ -400,8 +358,8 @@ void main() {
 	vec3 reflected = mix(texture(uTextureSharp, reflectionUv).rgb, texture(uTextureBehind, reflectionUv).rgb, blurAmount);
 	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
-	vec3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
-	COLOR = vec4(color / max(alpha, 0.0001), alpha * strength);
+	vec3 shown = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
+	COLOR = vec4(shown / max(alpha, 0.0001), alpha * strength);
 }
 
 )__SHDR__";
@@ -411,30 +369,18 @@ void main() {
 	inline constexpr char TileMapMeshBlur_USE_PALETTE_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 varying highp vec4 vScale;
-
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-	uniform float palOffset;
-
-
 
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 uniform sampler2D uTextureBehind;
 uniform sampler2D uTextureSharp;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
 
 void main() {
@@ -450,8 +396,8 @@ void main() {
 	vec2 displacement = (tile.rg * 255.0 - 128.0) * on;
 	float displaced = step(0.5, max(abs(displacement.x), abs(displacement.y)));
 	float strength = vColor.a * on;
-	vec2 uv = gl_FragCoord.xy * uTargetSizeInv + displacement * (strength * vScale.xy);
-	vec2 reflectionUv = vec2(uv.x, uv.y + vScale.z);
+	highp vec2 uv = gl_FragCoord.xy * uTargetSizeInv + displacement * (strength * vScale.xy);
+	highp vec2 reflectionUv = vec2(uv.x, uv.y + vScale.z);
 	float reflectionAmount = tile.b * on * clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) * vScale.w, 0.0, 1.0);
 
 	vec3 sharp = texture2D(uTextureSharp, uv).rgb;
@@ -459,8 +405,8 @@ void main() {
 	vec3 reflected = mix(texture2D(uTextureSharp, reflectionUv).rgb, texture2D(uTextureBehind, reflectionUv).rgb, blurAmount);
 	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
-	vec3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
-	COLOR = vec4(color / max(alpha, 0.0001), alpha * strength);
+	vec3 shown = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
+	COLOR = vec4(shown / max(alpha, 0.0001), alpha * strength);
 	gl_FragColor = COLOR;
 }
 

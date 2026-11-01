@@ -2300,6 +2300,32 @@ namespace
 		}
 	}
 
+#if defined(SHAREWARE_DEMO_ONLY)
+	bool PreferencesCache::IsEpisodeUnlocked(StringView episodeName)
+	{
+		static const struct {
+			StringView Name;
+			UnlockableEpisodes Flag;
+		} LockedEpisodes[] = {
+			{ "prince"_s, UnlockableEpisodes::FormerlyAPrince },
+			{ "rescue"_s, UnlockableEpisodes::JazzInTime },
+			{ "flash"_s, UnlockableEpisodes::Flashback },
+			{ "monk"_s, UnlockableEpisodes::FunkyMonkeys },
+			{ "xmas98"_s, UnlockableEpisodes::ChristmasChronicles },
+			{ "xmas99"_s, UnlockableEpisodes::ChristmasChronicles },
+			{ "secretf"_s, UnlockableEpisodes::TheSecretFiles }
+		};
+
+		// The case doesn't matter, the same episode can be spelled differently, see GetEpisodeEnd() above
+		for (const auto& episode : LockedEpisodes) {
+			if (StringUtils::equalsIgnoreCase(episodeName, episode.Name)) {
+				return ((UnlockedEpisodes & episode.Flag) != UnlockableEpisodes::None);
+			}
+		}
+		return true;
+	}
+#endif
+
 	void PreferencesCache::TryLoadPreferredLanguage()
 	{
 		auto& i18n = I18n::Get();

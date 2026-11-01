@@ -1,8 +1,8 @@
 program TileMapMeshChromaKey;
 variant USE_PALETTE;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
+// The blend modes (see BlendModes.inc) dither and hash by the position of the pixel on screen, which needs more than
+// half precision
 precision highp;
 
 // A chroma key layer (see Tiles::LayerBlend::ChromaKey), or one of a blend mode that takes the scene behind it, in the
@@ -43,8 +43,8 @@ void fragment() {
 #endif
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	if (uBlendMode.x > 0.5) {
-		vec4 color = tile * vColor;
-		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+		vec4 tinted = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, tinted.rgb, tinted.a, behind, gl_FragCoord.xy);
 	} else {
 		vec3 difference = abs(behind - uKeyColor.rgb);
 		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);

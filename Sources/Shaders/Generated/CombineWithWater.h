@@ -126,16 +126,6 @@ precision mediump float;
 in vec2 vTexCoords;
 in vec2 vViewSizeInv;
 
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-};
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
 uniform sampler2D uTextureBlurHalf;
@@ -282,13 +272,6 @@ varying vec2 vRaysPos;
 varying vec4 vWavePhases;
 varying vec4 vWaterLine;
 varying vec2 vConstants;
-
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-
-
 
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
@@ -518,16 +501,6 @@ precision mediump float;
 in vec2 vTexCoords;
 in vec2 vViewSizeInv;
 
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-};
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
 uniform sampler2D uTextureBlurHalf;
@@ -601,8 +574,8 @@ float bayer4(vec2 pixel) {
 	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
 }
 
-vec3 reduceColors(vec3 color, vec2 pixel) {
-	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+vec3 reduceColors(vec3 rgb, vec2 pixel) {
+	return floor(rgb * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
 }
 
 out vec4 COLOR;
@@ -666,7 +639,7 @@ void main() {
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0;
-	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 }
 
 )__SHDR__";
@@ -690,13 +663,6 @@ varying vec2 vRaysPos;
 varying vec4 vWavePhases;
 varying vec4 vWaterLine;
 varying vec2 vConstants;
-
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-
-
 
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;

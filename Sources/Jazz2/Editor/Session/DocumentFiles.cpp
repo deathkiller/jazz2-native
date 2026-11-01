@@ -293,6 +293,16 @@ namespace Jazz2::Editor
 		// Why a level can't be opened in the editor, read from the start of its file, or an empty string if it can
 		String GetOpenProblem(StringView path)
 		{
+#if defined(SHAREWARE_DEMO_ONLY)
+			String episode = IEditorContext::MakeLevelName(path).partition('/')[0];
+			if (!PreferencesCache::IsEpisodeUnlocked(episode)) {
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+				return _fx("editor", "The episode \"{}\" has to be imported first", episode);
+#	else
+				return _fx("editor", "The episode \"{}\" isn't available in the Shareware Demo", episode);
+#	endif
+			}
+#endif
 			auto s = fs::Open(path, FileAccess::Read);
 			Formats::LevelHeader header;
 			if (!s->IsValid() || !Formats::LevelFile::ReadHeader(*s, header)) {

@@ -314,6 +314,15 @@ Assert (-not $fs.Contains('uProjectionMatrix') -and -not $fs.Contains('uViewMatr
 Assert (-not $fs.Contains('InstanceBlock') -and -not $fs.Contains('modelMatrix')) 'UniformTrim: VS-only block not eliminated from FS'
 Assert (-not $fs.Contains('uLights') -and -not $fs.Contains('LIGHT_COUNT')) 'UniformTrim: uLights + its fallback trio not eliminated from FS'
 Assert ($fs.Contains('uniform sampler2D uTexture;')) 'UniformTrim: FS lost its sampler'
+
+# BlockPrecision: the uniform block members of the GL FS are "highp" like in the VS, a block shared by both stages
+# must have the same precision in both on ES (a mediump FS would fail to link otherwise)
+$h = Emit 'TileMap'
+$vs = Get-Source $h 'TileMap_Vs'
+$fs = Get-Source $h 'TileMap_Fs'
+Assert ($null -ne $vs -and $null -ne $fs) 'BlockPrecision: sources missing'
+Assert ($fs.Contains("{`n	highp mat4 modelMatrix;`n	highp vec4 color;`n	highp vec4 texRect;`n	highp vec2 spriteSize;`n	highp float palOffset;`n};")) 'BlockPrecision: FS block members are not highp'
+Assert ($vs.Contains("{`n	mat4 modelMatrix;")) 'BlockPrecision: VS block members must stay as declared'
 Assert ($fs.Contains('uniform vec2 uPair, uOther;')) 'UniformTrim: FS lost the multi-name declaration (conservative keep when ANY name is read)'
 Assert ($vs.Contains('uniform float uUnusedBoth;')) 'UniformTrim: uUnusedBoth eliminated from VS (must stay - unused in BOTH stages)'
 Assert ($fs.Contains('uniform float uUnusedBoth;')) 'UniformTrim: uUnusedBoth eliminated from FS (must stay - unused in BOTH stages)'

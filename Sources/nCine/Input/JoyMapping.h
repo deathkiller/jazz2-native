@@ -65,6 +65,8 @@ namespace nCine
 
 		/** @brief Returns `true` if the specified joystick has a valid mapping assigned */
 		bool IsJoyMapped(std::int32_t joyId) const;
+		/** @brief Returns `true` if the mapping of the specified joystick drives the axis by something the joystick has */
+		bool HasMappedAxis(std::int32_t joyId, AxisName axis) const;
 		/** @brief Returns the unified mapped state of the specified joystick */
 		const JoyMappedState& GetMappedState(std::int32_t joyId) const;
 		/** @brief Normalizes a joystick axis vector, clamping values within the dead zone to zero */

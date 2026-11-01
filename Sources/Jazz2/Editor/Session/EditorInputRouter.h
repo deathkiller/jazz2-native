@@ -165,6 +165,9 @@ namespace Jazz2::Editor
 		// Frames the sticks have been held for, they move faster then
 		float _gamepadCursorHold = 0.0f;
 		float _gamepadPanHold = 0.0f;
+		// B is held to turn the left stick into the right one, which a gamepad without it does, and whether it was moved
+		bool _gamepadStickWithB = false;
+		bool _gamepadStickWithBMoved = false;
 		bool _gamepadPicking = false;
 		// The finger that pressed the bar shown over a level being played, it's the pointer, not a finger of the game, -1 if none
 		std::int32_t _barTouchId = -1;

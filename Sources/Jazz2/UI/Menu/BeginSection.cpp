@@ -106,8 +106,14 @@ namespace Jazz2::UI::Menu
 #endif
 
 #if defined(WITH_EDITOR)
-		// TRANSLATORS: Menu item in main menu
-		_items.emplace_back(Item::LevelEditor, _("Level Editor"));
+#	if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
+		// The editor needs at least one imported episode, episodes can be imported only in the web version
+		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None)
+#	endif
+		{
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(Item::LevelEditor, _("Level Editor"));
+		}
 #endif
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(Item::Highscores, _("Highscores"));

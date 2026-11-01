@@ -216,6 +216,272 @@ void BatchedColorized_Fragment(const nCine::RHI::Software::FragmentShaderInput& 
 	packColor(COLOR, in.rgba);
 }
 
+		// --- Combine ---
+struct Combine_Uniforms
+{
+	nCine::RHI::Software::sw::vec4 uAmbientColor;
+	float uTime;
+	nCine::RHI::Software::sw::vec2 vViewSizeInv;
+};
+
+void Combine_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RHI::Software::sw;
+	Combine_Uniforms* io = static_cast<Combine_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
+}
+
+static nCine::RHI::Software::sw::vec2 Combine_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float h = dot(p, vec2(12.9898f, 78.233f));
+	float h2 = dot(p, vec2(37.271f, 377.632f));
+	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
+}
+
+static nCine::RHI::Software::sw::vec2 Combine_noiseTexCoords(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 position)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec2 seed = position + fract(unis->uTime * 0.01f);
+	return clamp(position + Combine_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
+}
+
+void Combine_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec4 blur1 = swTexture(in, 2, vec2(in.u, in.v));
+	vec4 blur2 = swTexture(in, 3, vec2(in.u, in.v));
+	vec4 main = swTexturePrimary(in, 0);
+	vec4 light = swTexture(in, 1, Combine_noiseTexCoords(in, vec2(in.u, in.v)));
+	vec4 blur = (blur1 + blur2) * vec4(0.5f);
+	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
+	blur = vec4(gray, gray, gray, blur.a);
+	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(1.0f - light.r));
+	COLOR.a = 1.0f;
+	packColor(COLOR, in.rgba);
+}
+
+		// --- Combine_DITHER ---
+struct Combine_DITHER_Uniforms
+{
+	nCine::RHI::Software::sw::vec4 uAmbientColor;
+	float uTime;
+	nCine::RHI::Software::sw::vec2 vViewSizeInv;
+};
+
+void Combine_DITHER_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RHI::Software::sw;
+	Combine_DITHER_Uniforms* io = static_cast<Combine_DITHER_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
+}
+
+static nCine::RHI::Software::sw::vec2 Combine_DITHER_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_DITHER_Uniforms* unis = static_cast<const Combine_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float h = dot(p, vec2(12.9898f, 78.233f));
+	float h2 = dot(p, vec2(37.271f, 377.632f));
+	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
+}
+
+static nCine::RHI::Software::sw::vec2 Combine_DITHER_noiseTexCoords(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 position)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_DITHER_Uniforms* unis = static_cast<const Combine_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec2 seed = position + fract(unis->uTime * 0.01f);
+	return clamp(position + Combine_DITHER_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
+}
+
+void Combine_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_DITHER_Uniforms* unis = static_cast<const Combine_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec4 blur1 = swTexture(in, 2, vec2(in.u, in.v));
+	vec4 blur2 = swTexture(in, 3, vec2(in.u, in.v));
+	vec4 main = swTexturePrimary(in, 0);
+	vec4 light = swTexture(in, 1, Combine_DITHER_noiseTexCoords(in, vec2(in.u, in.v)));
+	vec4 blur = (blur1 + blur2) * vec4(0.5f);
+	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
+	blur = vec4(gray, gray, gray, blur.a);
+	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(1.0f - light.r));
+	COLOR.a = 1.0f;
+	packColor(COLOR, in.rgba);
+}
+
+		// --- CombineWithWaterLow ---
+struct CombineWithWaterLow_Uniforms
+{
+	nCine::RHI::Software::sw::vec4 uAmbientColor;
+	float uTime;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
+	float uWaterLevel;
+	nCine::RHI::Software::sw::vec2 vViewSizeInv;
+};
+
+void CombineWithWaterLow_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RHI::Software::sw;
+	CombineWithWaterLow_Uniforms* io = static_cast<CombineWithWaterLow_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
+}
+
+static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float h = dot(p, vec2(12.9898f, 78.233f));
+	float h2 = dot(p, vec2(37.271f, 377.632f));
+	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
+}
+
+static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_noiseTexCoords(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 position)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec2 seed = position + fract(unis->uTime * 0.01f);
+	return clamp(position + CombineWithWaterLow_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
+}
+
+void CombineWithWaterLow_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec3 waterColor = vec3(0.4f, 0.6f, 0.8f);
+	vec2 uvLocal = vec2(in.u, in.v);
+	vec2 uvWorldCenter = unis->uCameraPos.xy() * unis->vViewSizeInv.xy();
+	vec2 uvWorld = uvLocal + uvWorldCenter;
+	float isTexelBelow = 1.0f - step(uvLocal.y, unis->uWaterLevel);
+	float isTexelAbove = 1.0f - isTexelBelow;
+	vec2 uv = clamp(uvLocal + vec2(0.008f * sin(unis->uTime * 16.0f + uvWorld.y * 20.0f) * isTexelBelow, 0.0f), vec2(0.0f), vec2(1.0f));
+	vec4 main = swTexture(in, 0, uv);
+	float topDist = abs(uvLocal.y - unis->uWaterLevel);
+	float topGradient = max(1.0f - topDist, 0.0f);
+	float isNearTop = 0.2f * topGradient * topGradient;
+	float isVeryNearTop = 1.0f - step(unis->vViewSizeInv.y, topDist);
+	main.rgb() = mix(main.rgb(), waterColor, vec3(isTexelBelow * 0.4f)) + vec3((isNearTop + 0.2f * isVeryNearTop) * isTexelBelow);
+	vec4 blur1 = swTexture(in, 2, uv);
+	vec4 blur2 = swTexture(in, 3, uv);
+	vec4 light = swTexture(in, 1, CombineWithWaterLow_noiseTexCoords(in, uv));
+	vec4 blur = (blur1 + blur2) * vec4(0.5f);
+	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
+	blur = vec4(gray, gray, gray, blur.a);
+	float darknessStrength = 1.0f - light.r;
+	if (unis->uWaterLevel < 0.4f) {
+		float aboveWaterDarkness = isTexelAbove * (0.4f - unis->uWaterLevel);
+		darknessStrength = min(1.0f, darknessStrength + aboveWaterDarkness);
+	}
+	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
+	COLOR.a = 1.0f;
+	packColor(COLOR, in.rgba);
+}
+
+		// --- CombineWithWaterLow_DITHER ---
+struct CombineWithWaterLow_DITHER_Uniforms
+{
+	nCine::RHI::Software::sw::vec4 uAmbientColor;
+	float uTime;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
+	float uWaterLevel;
+	nCine::RHI::Software::sw::vec2 vViewSizeInv;
+};
+
+void CombineWithWaterLow_DITHER_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RHI::Software::sw;
+	CombineWithWaterLow_DITHER_Uniforms* io = static_cast<CombineWithWaterLow_DITHER_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
+}
+
+static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_DITHER_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float h = dot(p, vec2(12.9898f, 78.233f));
+	float h2 = dot(p, vec2(37.271f, 377.632f));
+	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
+}
+
+static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_DITHER_noiseTexCoords(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 position)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec2 seed = position + fract(unis->uTime * 0.01f);
+	return clamp(position + CombineWithWaterLow_DITHER_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
+}
+
+void CombineWithWaterLow_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec3 waterColor = vec3(0.4f, 0.6f, 0.8f);
+	vec2 uvLocal = vec2(in.u, in.v);
+	vec2 uvWorldCenter = unis->uCameraPos.xy() * unis->vViewSizeInv.xy();
+	vec2 uvWorld = uvLocal + uvWorldCenter;
+	float isTexelBelow = 1.0f - step(uvLocal.y, unis->uWaterLevel);
+	float isTexelAbove = 1.0f - isTexelBelow;
+	vec2 uv = clamp(uvLocal + vec2(0.008f * sin(unis->uTime * 16.0f + uvWorld.y * 20.0f) * isTexelBelow, 0.0f), vec2(0.0f), vec2(1.0f));
+	vec4 main = swTexture(in, 0, uv);
+	float topDist = abs(uvLocal.y - unis->uWaterLevel);
+	float topGradient = max(1.0f - topDist, 0.0f);
+	float isNearTop = 0.2f * topGradient * topGradient;
+	float isVeryNearTop = 1.0f - step(unis->vViewSizeInv.y, topDist);
+	main.rgb() = mix(main.rgb(), waterColor, vec3(isTexelBelow * 0.4f)) + vec3((isNearTop + 0.2f * isVeryNearTop) * isTexelBelow);
+	vec4 blur1 = swTexture(in, 2, uv);
+	vec4 blur2 = swTexture(in, 3, uv);
+	vec4 light = swTexture(in, 1, CombineWithWaterLow_DITHER_noiseTexCoords(in, uv));
+	vec4 blur = (blur1 + blur2) * vec4(0.5f);
+	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
+	blur = vec4(gray, gray, gray, blur.a);
+	float darknessStrength = 1.0f - light.r;
+	if (unis->uWaterLevel < 0.4f) {
+		float aboveWaterDarkness = isTexelAbove * (0.4f - unis->uWaterLevel);
+		darknessStrength = min(1.0f, darknessStrength + aboveWaterDarkness);
+	}
+	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
+	COLOR.a = 1.0f;
+	packColor(COLOR, in.rgba);
+}
+
 		// --- DefaultBatchedMeshSprites ---
 struct DefaultBatchedMeshSprites_Uniforms
 {
@@ -2807,6 +3073,37 @@ void TileMapMesh_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 	packColor(COLOR, in.rgba);
 }
 
+		// --- TileMapMeshPalette ---
+struct TileMapMeshPalette_Uniforms
+{
+	float vPaletteOffset;
+};
+
+void TileMapMeshPalette_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RHI::Software::sw;
+	TileMapMeshPalette_Uniforms* io = static_cast<TileMapMeshPalette_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
+}
+
+void TileMapMeshPalette_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
+{
+	using namespace nCine::RHI::Software::sw;
+	const TileMapMeshPalette_Uniforms* unis = static_cast<const TileMapMeshPalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec4 src = swTexturePrimary(in, 0);
+	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
+	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
+	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
+	vec4 paletteColor = swTexture(in, 1, vec2(palX, palY));
+	COLOR = vec4(paletteColor.rgb(), paletteColor.a * src.a) * vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	packColor(COLOR, in.rgba);
+}
+
 		// --- Tinted ---
 struct Tinted_Uniforms
 {
@@ -3122,6 +3419,26 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "uPixelOffset", (std::uint32_t)offsetof(Blur_Uniforms, uPixelOffset), 2 },
 			{ "uDirection", (std::uint32_t)offsetof(Blur_Uniforms, uDirection), 2 },
 		};
+		const SwGeneratedUniformField Combine_Fields[] = {
+			{ "uAmbientColor", (std::uint32_t)offsetof(Combine_Uniforms, uAmbientColor), 4 },
+			{ "uTime", (std::uint32_t)offsetof(Combine_Uniforms, uTime), 1 },
+		};
+		const SwGeneratedUniformField Combine_DITHER_Fields[] = {
+			{ "uAmbientColor", (std::uint32_t)offsetof(Combine_DITHER_Uniforms, uAmbientColor), 4 },
+			{ "uTime", (std::uint32_t)offsetof(Combine_DITHER_Uniforms, uTime), 1 },
+		};
+		const SwGeneratedUniformField CombineWithWaterLow_Fields[] = {
+			{ "uAmbientColor", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uAmbientColor), 4 },
+			{ "uTime", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uTime), 1 },
+			{ "uCameraPos", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uCameraPos), 2 },
+			{ "uWaterLevel", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWaterLevel), 1 },
+		};
+		const SwGeneratedUniformField CombineWithWaterLow_DITHER_Fields[] = {
+			{ "uAmbientColor", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uAmbientColor), 4 },
+			{ "uTime", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uTime), 1 },
+			{ "uCameraPos", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uCameraPos), 2 },
+			{ "uWaterLevel", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWaterLevel), 1 },
+		};
 		const SwGeneratedUniformField Downsample_Fields[] = {
 			{ "uPixelOffset", (std::uint32_t)offsetof(Downsample_Uniforms, uPixelOffset), 2 },
 		};
@@ -3296,6 +3613,10 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "Blur", &Blur_Fragment, (std::uint32_t)sizeof(Blur_Uniforms), Blur_Fields, 2, nullptr },
 			{ "Colorized", &Colorized_Fragment, (std::uint32_t)sizeof(Colorized_Uniforms), nullptr, 0, nullptr },
 			{ "BatchedColorized", &BatchedColorized_Fragment, (std::uint32_t)sizeof(BatchedColorized_Uniforms), nullptr, 0, nullptr },
+			{ "Combine", &Combine_Fragment, (std::uint32_t)sizeof(Combine_Uniforms), Combine_Fields, 2, &Combine_ComputeVaryings },
+			{ "Combine_DITHER", &Combine_DITHER_Fragment, (std::uint32_t)sizeof(Combine_DITHER_Uniforms), Combine_DITHER_Fields, 2, &Combine_DITHER_ComputeVaryings },
+			{ "CombineWithWaterLow", &CombineWithWaterLow_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_Uniforms), CombineWithWaterLow_Fields, 4, &CombineWithWaterLow_ComputeVaryings },
+			{ "CombineWithWaterLow_DITHER", &CombineWithWaterLow_DITHER_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_DITHER_Uniforms), CombineWithWaterLow_DITHER_Fields, 4, &CombineWithWaterLow_DITHER_ComputeVaryings },
 			{ "DefaultBatchedMeshSprites", &DefaultBatchedMeshSprites_Fragment, (std::uint32_t)sizeof(DefaultBatchedMeshSprites_Uniforms), nullptr, 0, nullptr },
 			{ "DefaultBatchedMeshSpritesNoTexture", &DefaultBatchedMeshSpritesNoTexture_Fragment, (std::uint32_t)sizeof(DefaultBatchedMeshSpritesNoTexture_Uniforms), nullptr, 0, nullptr },
 			{ "DefaultBatchedSpritesNoTexture", &DefaultBatchedSpritesNoTexture_Fragment, (std::uint32_t)sizeof(DefaultBatchedSpritesNoTexture_Uniforms), nullptr, 0, nullptr },
@@ -3350,6 +3671,7 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "TexturedBackgroundWave_DITHER", &TexturedBackgroundWave_DITHER_Fragment, (std::uint32_t)sizeof(TexturedBackgroundWave_DITHER_Uniforms), TexturedBackgroundWave_DITHER_Fields, 4, nullptr },
 			{ "TexturedBackgroundWave_KEYED", &TexturedBackgroundWave_KEYED_Fragment, (std::uint32_t)sizeof(TexturedBackgroundWave_KEYED_Uniforms), TexturedBackgroundWave_KEYED_Fields, 8, nullptr },
 			{ "TileMapMesh", &TileMapMesh_Fragment, (std::uint32_t)sizeof(TileMapMesh_Uniforms), nullptr, 0, nullptr },
+			{ "TileMapMeshPalette", &TileMapMeshPalette_Fragment, (std::uint32_t)sizeof(TileMapMeshPalette_Uniforms), nullptr, 0, &TileMapMeshPalette_ComputeVaryings },
 			{ "Tinted", &Tinted_Fragment, (std::uint32_t)sizeof(Tinted_Uniforms), nullptr, 0, nullptr },
 			{ "Tinted_USE_PALETTE", &Tinted_USE_PALETTE_Fragment, (std::uint32_t)sizeof(Tinted_USE_PALETTE_Uniforms), nullptr, 0, &Tinted_USE_PALETTE_ComputeVaryings },
 			{ "BatchedTinted", &BatchedTinted_Fragment, (std::uint32_t)sizeof(BatchedTinted_Uniforms), nullptr, 0, nullptr },

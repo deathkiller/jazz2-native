@@ -465,8 +465,10 @@ The following parameters can be used to customize the build:
     -   It is far lighter --- an integer mixer rather than a floating-point one --- but it does not read
         <b>MO3</b>, so four of the game's tracks are silent under it, and its playback is less exact than
         libopenmpt's on the edge cases
--   `NCINE_WITH_ANGELSCRIPT` (default @cpp OFF @ce) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
+-   `NCINE_WITH_ANGELSCRIPT` (default @cpp ON @ce where native calling conventions are available) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
     -   Built from the bundled sources in `Sources/Dependencies/angelscript` (2.39.0 WIP), nothing is downloaded
+    -   On by default on **Windows**, **Linux** (x86, x64, ARM, ARM64 and RISC-V), **macOS**, **Android**, **iOS**,
+        **Nintendo Switch**, **PlayStation Vita** and **Emscripten**, off elsewhere
 -   `NCINE_WITH_LUA` @m_class{m-label m-danger m-flat} **deprecated** --- Enable [Lua](https://www.lua.org/) scripting support
 -   `NCINE_WITH_IMGUI` (default @cpp OFF @ce) --- Enable integration with [Dear ImGui](https://github.com/ocornut/imgui) library
     -   `IMGUI_VERSION_TAG` allows to specify the version to be downloaded
@@ -600,7 +602,9 @@ The platform itself is selected with CMake's own variables --- `CMAKE_SYSTEM_NAM
 -   `SHAREWARE_DEMO_ALLOW_MULTIPLAYER` (default @cpp ON @ce if `SHAREWARE_DEMO_ONLY`) --- Enable multiplayer support also in Shareware Demo
 -   `WITH_EDITOR` (default @cpp ON @ce) --- Enable the built-in level editor, see @ref editor
     -   Not available on **Nintendo 64**, **Dreamcast**, **GameCube** and **PlayStation 2**, which can't save
-        anything, in a dedicated server and in the Shareware Demo
+        anything, and in a dedicated server
+    -   In the Shareware Demo, it opens only levels of unlocked episodes, and on **Emscripten** it needs at least one
+        imported episode
     -   Also defines `WITH_PNG_ENCODER`, which compiles in the encoder of @ref nCine::PngCodec --- the game itself
         only reads PNG images, so a build without the editor leaves it out. AssetPacker defines it on its own
 

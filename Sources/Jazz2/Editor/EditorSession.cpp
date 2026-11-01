@@ -89,6 +89,21 @@ namespace Jazz2::Editor
 			}
 		}
 
+#if defined(SHAREWARE_DEMO_ONLY)
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+		// The editor needs at least one imported episode, episodes can be imported only in the web version
+		if (PreferencesCache::UnlockedEpisodes == UnlockableEpisodes::None) {
+			LOGE("No episode was imported, the level editor isn't available");
+			return false;
+		}
+#	endif
+		// Levels of locked episodes stay closed as in EpisodeSelectSection
+		if (!fullPath.empty() && !PreferencesCache::IsEpisodeUnlocked(MakeLevelName(fullPath).partition('/')[0])) {
+			LOGE("Level \"{}\" is in a locked episode", fullPath);
+			return false;
+		}
+#endif
+
 		bool showOpenDialog = false;
 		if (fullPath.empty()) {
 			if (!editorInit.FilePath.empty() || !editorInit.LevelName.empty()) {

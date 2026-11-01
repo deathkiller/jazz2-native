@@ -4,6 +4,7 @@
 #include "Msl.h"
 #include "Vulkan.h"
 
+#include <cctype>
 #include <utility>
 
 #include <Base/Format.h>
@@ -321,6 +322,66 @@ namespace ShaderCompiler
 
 	namespace
 	{
+		/** Whether the declaration @p line starts with a numeric type that takes a precision qualifier (not `bool` or a struct) */
+		bool TakesPrecision(StringView line)
+		{
+			std::size_t length = 0;
+			while (length < line.size() && (std::isalnum(static_cast<unsigned char>(line[length])) || line[length] == '_')) {
+				length++;
+			}
+			StringView type = line.prefix(length);
+			if (type == "float"_s || type == "int"_s || type == "uint"_s) {
+				return true;
+			}
+			// vecN, ivecN, uvecN, matN and matNxM
+			for (StringView prefix : { "vec"_s, "ivec"_s, "uvec"_s, "mat"_s }) {
+				if (type.hasPrefix(prefix) && type.size() > prefix.size() && type[prefix.size()] >= '2' && type[prefix.size()] <= '4') {
+					StringView rest = type.exceptPrefix(prefix.size() + 1);
+					return (rest.empty() || (prefix == "mat"_s && rest.size() == 2 && rest[0] == 'x' && rest[1] >= '2' && rest[1] <= '4'));
+				}
+			}
+			return false;
+		}
+
+		/**
+			Adds `highp` to the members of the uniform blocks of a fragment stage that have no precision of their own.
+			On ES, a block shared with the vertex stage (`highp` by default) must have the same precision in both,
+			but a fragment stage with `precision mediump float` would make it `mediump` and the program fails to link
+			("Precisions of uniform block member differ"). Desktop GLSL 3.30 accepts and ignores the qualifier.
+		*/
+		String AddBlockMemberPrecision(StringView source)
+		{
+			String result;
+			bool inBlock = false;
+			bool blockOpening = false;
+			while (!source.empty()) {
+				std::size_t end = source.findOr('\n', source.end()).begin() - source.begin();
+				StringView line = source.prefix(end < source.size() ? end + 1 : end);
+				source = source.exceptPrefix(line.size());
+
+				StringView trimmed = line.trimmed();
+				if (!inBlock) {
+					if (blockOpening && trimmed.hasPrefix('{')) {
+						inBlock = true;
+						blockOpening = false;
+					} else if (trimmed.hasPrefix("layout"_s) && trimmed.contains(" uniform "_s) && !trimmed.contains(';')) {
+						inBlock = trimmed.contains('{');
+						blockOpening = !inBlock;
+					}
+				} else if (trimmed.hasPrefix('}')) {
+					inBlock = false;
+				} else if (!trimmed.hasPrefix('#') && TakesPrecision(trimmed)) {
+					std::size_t indent = trimmed.begin() - line.begin();
+					result += line.prefix(indent);
+					result += "highp "_s;
+					result += line.exceptPrefix(indent);
+					continue;
+				}
+				result += line;
+			}
+			return result;
+		}
+
 		// Both backends' symbols are ALWAYS defined by their aggregate - as the real array when the
 		// compiler was there, as a null pointer otherwise - so the per-shader table can name them
 		// unconditionally. Sizes are named too (`<symbol>Size`) rather than baked in as literals here: an
@@ -391,7 +452,8 @@ namespace ShaderCompiler
 					output += "#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)\n";
 					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs" : "_Fs") + "[] =\n";
 					output += "R\"__SHDR__(";
-					output += source;
+					// Only the GL text, the other backends below take the uniform blocks from the same `source`
+					output += (vertexStage ? String(source) : AddBlockMemberPrecision(source));
 					output += ")__SHDR__\";\n";
 					output += "#endif\n";
 					output += "\n";

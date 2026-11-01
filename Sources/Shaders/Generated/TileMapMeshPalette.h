@@ -23,7 +23,7 @@ in vec2 aPosition;
 in vec2 aTexCoords;
 in vec4 aColor;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
@@ -60,7 +60,7 @@ attribute vec2 aPosition;
 attribute vec2 aTexCoords;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
@@ -91,28 +91,12 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
-
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-	float palOffset;
-};
-
-
-
 
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
@@ -124,8 +108,8 @@ void main() {
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 color = texture(uTexturePalette, vec2(palX, palY));
-	COLOR = vec4(color.rgb, color.a * src.a) * vColor;
+	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
+	COLOR = vec4(paletteColor.rgb, paletteColor.a * src.a) * vColor;
 }
 
 )__SHDR__";
@@ -135,24 +119,11 @@ void main() {
 	inline constexpr char TileMapMeshPalette_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
-
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-	uniform float palOffset;
-
-
-
 
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
@@ -164,8 +135,8 @@ void main() {
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 color = texture2D(uTexturePalette, vec2(palX, palY));
-	COLOR = vec4(color.rgb, color.a * src.a) * vColor;
+	vec4 paletteColor = texture2D(uTexturePalette, vec2(palX, palY));
+	COLOR = vec4(paletteColor.rgb, paletteColor.a * src.a) * vColor;
 	gl_FragColor = COLOR;
 }
 

@@ -709,6 +709,36 @@ namespace nCine
 		return (joyId >= 0 && joyId < MaxNumJoysticks && _assignedMappings[joyId].isValid);
 	}
 
+	bool JoyMapping::HasMappedAxis(std::int32_t joyId, AxisName axis) const
+	{
+		if (!IsJoyMapped(joyId)) {
+			return false;
+		}
+
+		const MappingDescription& desc = _assignedMappings[joyId].desc;
+		// A mapping can name an axis the joystick doesn't have - the built-in one of the PSP lists a right stick
+		std::int32_t numAxes = _inputManager->joyNumAxes(joyId);
+		if (numAxes > MappingDescription::MaxNumAxes) {
+			numAxes = MappingDescription::MaxNumAxes;
+		}
+		for (std::int32_t i = 0; i < numAxes; i++) {
+			if (desc.axes[i].name == axis) {
+				return true;
+			}
+		}
+		for (const MappingDescription::AxisSource& source : desc.buttonAxes) {
+			if (source.name == axis) {
+				return true;
+			}
+		}
+		for (const MappingDescription::AxisSource& source : desc.hatAxes) {
+			if (source.name == axis) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	const JoyMappedState& JoyMapping::GetMappedState(std::int32_t joyId) const
 	{
 		if (joyId < 0 || joyId >= MaxNumJoysticks) {

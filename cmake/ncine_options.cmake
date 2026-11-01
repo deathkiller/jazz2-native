@@ -371,7 +371,7 @@ else()
 endif()
 
 # Only where AngelScript has native calling conventions (Emscripten through native thunks), the scripting API isn't registered for the generic one
-if(WIN32 OR APPLE OR ANDROID OR NCINE_BUILD_ANDROID OR EMSCRIPTEN OR (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|i[3-6]86|aarch64|arm64|arm.*|riscv64)$"))
+if(WIN32 OR APPLE OR ANDROID OR NCINE_BUILD_ANDROID OR EMSCRIPTEN OR NINTENDO_SWITCH OR VITA OR (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|i[3-6]86|aarch64|arm64|arm.*|riscv64)$"))
 	set(_ncineAngelscriptDefault ON)
 else()
 	set(_ncineAngelscriptDefault OFF)
@@ -534,9 +534,9 @@ endif()
 
 cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer support also in Shareware Demo" ON "SHAREWARE_DEMO_ONLY;WITH_ONLINE_MULTIPLAYER" OFF)
 
-# Built-in level editor (see Docs/Editor.dox), not where nothing can be saved (cartridge/disc-only consoles),
-# on a dedicated server or in the Shareware Demo
-cmake_dependent_option(WITH_EDITOR "Enable the built-in level editor" ON "NOT DEDICATED_SERVER;NOT SHAREWARE_DEMO_ONLY;NOT PLATFORM_N64;NOT PLATFORM_DREAMCAST;NOT NINTENDO_GAMECUBE;NOT PLATFORM_PS2" OFF)
+# Built-in level editor (see Docs/Editor.dox), not where nothing can be saved (cartridge/disc-only consoles)
+# or on a dedicated server. In the Shareware Demo, it opens only unlocked episodes (web: once one is imported).
+cmake_dependent_option(WITH_EDITOR "Enable the built-in level editor" ON "NOT DEDICATED_SERVER;NOT PLATFORM_N64;NOT PLATFORM_DREAMCAST;NOT NINTENDO_GAMECUBE;NOT PLATFORM_PS2" OFF)
 
 option(NCINE_BUILD_GAME "Build the game itself, turn off to build only the offline tools" ON)
 

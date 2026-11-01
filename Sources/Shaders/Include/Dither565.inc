@@ -9,12 +9,13 @@ float bayer2(vec2 pixel) {
 	return fract(pixel.x * 0.5 + pixel.y * pixel.y * 0.75);
 }
 
-// From 0 to 15/16 in a 4x4 pattern of the pixels
+// From 0 to 15/16 in a 4x4 pattern of the pixels, @p pixel is the position in the pattern - mod(gl_FragCoord.xy, 4.0) taken
+// at the full precision of gl_FragCoord, as the squares above overflow half precision on anything but the first rows
 float bayer4(vec2 pixel) {
 	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
 }
 
-vec3 reduceColors(vec3 color, vec2 pixel) {
-	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+vec3 reduceColors(vec3 rgb, vec2 pixel) {
+	return floor(rgb * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
 }
 #endif

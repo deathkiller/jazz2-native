@@ -1,9 +1,5 @@
 program TileMapMeshPalette;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-precision highp;
-
 #include "Include/TileMapVs.inc"
 
 uniform sampler2D uTexture : texture_unit(0);
@@ -15,8 +11,8 @@ void fragment() {
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 color = texture(uTexturePalette, vec2(palX, palY));
-	COLOR = vec4(color.rgb, color.a * src.a) * vColor;
+	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
+	COLOR = vec4(paletteColor.rgb, paletteColor.a * src.a) * vColor;
 }
 
 void fixed_function() {

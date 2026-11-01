@@ -717,6 +717,43 @@
 			#define STDCALL_RETURN_SIMPLE_IN_MEMORY_MIN_SIZE  5
 		#endif
 
+	// PlayStation Vita with VitaSDK (GCC), the same ARM EABI with hard float as Linux, but without __linux__
+	#elif defined(__vita__)
+		#undef COMPLEX_MASK
+		#define COMPLEX_MASK (asOBJ_APP_CLASS_DESTRUCTOR | asOBJ_APP_CLASS_COPY_CONSTRUCTOR | asOBJ_APP_ARRAY)
+		#undef COMPLEX_RETURN_MASK
+		#define COMPLEX_RETURN_MASK (asOBJ_APP_CLASS_DESTRUCTOR | asOBJ_APP_CLASS_COPY_CONSTRUCTOR | asOBJ_APP_ARRAY)
+
+		#define AS_ARM
+
+		// The stack unwind on exceptions fails due to the assembler code in as_callfunc_arm_gcc.S
+		#define AS_NO_EXCEPTIONS
+
+		#undef STDCALL
+		#define STDCALL
+
+		#define CDECL_RETURN_SIMPLE_IN_MEMORY
+		#define STDCALL_RETURN_SIMPLE_IN_MEMORY
+		#define THISCALL_RETURN_SIMPLE_IN_MEMORY
+
+		#undef THISCALL_RETURN_SIMPLE_IN_MEMORY_MIN_SIZE
+		#undef CDECL_RETURN_SIMPLE_IN_MEMORY_MIN_SIZE
+		#undef STDCALL_RETURN_SIMPLE_IN_MEMORY_MIN_SIZE
+
+		#define THISCALL_RETURN_SIMPLE_IN_MEMORY_MIN_SIZE 2
+		#define CDECL_RETURN_SIMPLE_IN_MEMORY_MIN_SIZE 2
+		#define STDCALL_RETURN_SIMPLE_IN_MEMORY_MIN_SIZE 2
+
+		#if defined(__FAST_MATH__) && __FAST_MATH__ == 1
+			#error -ffast-math is not supported with native calling conventions
+		#endif
+
+		#if (defined(__SOFTFP__) && __SOFTFP__ == 1) || defined(__ARM_PCS)
+			#define AS_SOFTFP
+		#endif
+
+		#undef AS_NO_THISCALL_FUNCTOR_METHOD
+
 	// Marmalade is a cross platform SDK. It uses g++ to compile for iOS and Android
 	#elif defined(__S3E__)
 		#ifndef AS_MARMALADE

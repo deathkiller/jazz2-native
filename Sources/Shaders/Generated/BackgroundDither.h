@@ -92,15 +92,15 @@ float bayer4(vec2 pixel) {
 	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
 }
 
-vec3 reduceColors(vec3 color, vec2 pixel) {
-	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+vec3 reduceColors(vec3 rgb, vec2 pixel) {
+	return floor(rgb * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
 }
 
 out vec4 COLOR;
 
 void main() {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
-	behind = reduceColors(behind, gl_FragCoord.xy);
+	behind = reduceColors(behind, mod(gl_FragCoord.xy, 4.0));
 	COLOR = vec4(behind, 1.0);
 }
 

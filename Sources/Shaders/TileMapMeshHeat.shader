@@ -1,10 +1,6 @@
 program TileMapMeshHeat;
 variant USE_PALETTE;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-precision highp;
-
 // The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
 // drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
 // measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
@@ -28,7 +24,7 @@ attribute vec2 aTexCoords;
 attribute vec4 aHeat;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;

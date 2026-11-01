@@ -23,7 +23,7 @@ in vec2 aPosition;
 in vec2 aTexCoords;
 in vec4 aColor;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
@@ -60,7 +60,7 @@ attribute vec2 aPosition;
 attribute vec2 aTexCoords;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
@@ -98,21 +98,9 @@ precision mediump float;
 #endif
 #endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
-
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-	float palOffset;
-};
-
-
-
 
 float blendLuminosity(vec3 c) {
 	return dot(c, vec3(0.3, 0.59, 0.11));
@@ -227,8 +215,8 @@ void main() {
 	vec4 tile = src;
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	if (uBlendMode.x > 0.5) {
-		vec4 color = tile * vColor;
-		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+		vec4 tinted = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, tinted.rgb, tinted.a, behind, gl_FragCoord.xy);
 	} else {
 		vec3 difference = abs(behind - uKeyColor.rgb);
 		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
@@ -249,18 +237,9 @@ precision highp float;
 precision mediump float;
 #endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
-
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-	uniform float palOffset;
-
-
-
 
 float blendLuminosity(vec3 c) {
 	return dot(c, vec3(0.3, 0.59, 0.11));
@@ -375,8 +354,8 @@ void main() {
 	vec4 tile = src;
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	if (uBlendMode.x > 0.5) {
-		vec4 color = tile * vColor;
-		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+		vec4 tinted = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, tinted.rgb, tinted.a, behind, gl_FragCoord.xy);
 	} else {
 		vec3 difference = abs(behind - uKeyColor.rgb);
 		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
@@ -427,7 +406,7 @@ in vec2 aPosition;
 in vec2 aTexCoords;
 in vec4 aColor;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
@@ -466,7 +445,7 @@ attribute vec2 aPosition;
 attribute vec2 aTexCoords;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
@@ -506,21 +485,9 @@ precision mediump float;
 #endif
 #endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
-
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-	float palOffset;
-};
-
-
-
 
 float blendLuminosity(vec3 c) {
 	return dot(c, vec3(0.3, 0.59, 0.11));
@@ -640,8 +607,8 @@ void main() {
 	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	if (uBlendMode.x > 0.5) {
-		vec4 color = tile * vColor;
-		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+		vec4 tinted = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, tinted.rgb, tinted.a, behind, gl_FragCoord.xy);
 	} else {
 		vec3 difference = abs(behind - uKeyColor.rgb);
 		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);
@@ -662,18 +629,9 @@ precision highp float;
 precision mediump float;
 #endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
-
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-	uniform float palOffset;
-
-
-
 
 float blendLuminosity(vec3 c) {
 	return dot(c, vec3(0.3, 0.59, 0.11));
@@ -793,8 +751,8 @@ void main() {
 	vec4 tile = vec4(paletteColor.rgb, paletteColor.a * src.a);
 	vec3 behind = texture2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 	if (uBlendMode.x > 0.5) {
-		vec4 color = tile * vColor;
-		COLOR = blendModeResult(uBlendMode, color.rgb, color.a, behind, gl_FragCoord.xy);
+		vec4 tinted = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, tinted.rgb, tinted.a, behind, gl_FragCoord.xy);
 	} else {
 		vec3 difference = abs(behind - uKeyColor.rgb);
 		float keyed = step(max(max(difference.r, difference.g), difference.b), uKeyColor.a);

@@ -159,7 +159,7 @@ void fragment() {
 	// Without the fade, the circles go on into the center
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity * uTunnel.z);
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 #endif
 #if KEYED
 	COLOR = keyedColor(COLOR.rgb);

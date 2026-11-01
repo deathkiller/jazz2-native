@@ -1120,13 +1120,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 #if defined(SHAREWARE_DEMO_ONLY)
 			// Check if specified episode is unlocked, used only if compiled with SHAREWARE_DEMO_ONLY
-			bool isEpisodeLocked = (p[0] == "unknown"_s) ||
-				(p[0] == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) ||
-				(p[0] == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) ||
-				(p[0] == "flash"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::Flashback) == UnlockableEpisodes::None) ||
-				(p[0] == "monk"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FunkyMonkeys) == UnlockableEpisodes::None) ||
-				((p[0] == "xmas98"_s || p[0] == "xmas99"_s) && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::ChristmasChronicles) == UnlockableEpisodes::None) ||
-				(p[0] == "secretf"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::TheSecretFiles) == UnlockableEpisodes::None);
+			bool isEpisodeLocked = (p[0] == "unknown"_s) || !PreferencesCache::IsEpisodeUnlocked(p[0]);
 
 			if (isEpisodeLocked) {
 				newHandler = std::make_shared<Menu::MainMenu>(this, false);

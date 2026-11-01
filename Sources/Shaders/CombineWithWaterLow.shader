@@ -110,7 +110,7 @@ void fragment() {
 	COLOR.a = 1.0;
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
 	// The whole scene in the colors of the 16-bit renderer of JJ2+, the HUD is drawn after it
-	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 #endif
 }
 

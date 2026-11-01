@@ -20,6 +20,8 @@ namespace Jazz2::ShadersGen
 R"__SHDR__(#line 1
 
 out vec2 vPos;
+out vec4 vColor;
+out vec2 vRadii;
 
 layout (std140) uniform InstanceBlock
 {
@@ -38,6 +40,8 @@ void main()
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vPos = aPosition - vec2(0.5, 0.5);
+	vColor = color;
+	vRadii = texRect.xy;
 }
 )__SHDR__";
 #endif
@@ -48,6 +52,8 @@ R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
 
 varying vec2 vPos;
+varying vec4 vColor;
+varying vec2 vRadii;
 
 	uniform mat4 modelMatrix;
 	uniform vec4 color;
@@ -63,6 +69,8 @@ void main()
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vPos = aPosition - vec2(0.5, 0.5);
+	vColor = color;
+	vRadii = texRect.xy;
 }
 )__SHDR__";
 #endif
@@ -72,32 +80,22 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 #endif
 
 in vec2 vPos;
-
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-};
+in vec4 vColor;
+in vec2 vRadii;
 
 out vec4 COLOR;
 
 void main() {
 	float dist = length(vPos);
-	float softness = texRect.y;
+	float softness = vRadii.y;
 	float outerAlpha = 1.0 - smoothstep(0.5 - softness, 0.5, dist);
-	float innerRadius = texRect.x * 0.5;
+	float innerRadius = vRadii.x * 0.5;
 	float innerAlpha = (innerRadius > 0.0) ? smoothstep(innerRadius - softness, innerRadius, dist) : 1.0;
-	COLOR = vec4(color.rgb, color.a * outerAlpha * innerAlpha);
+	COLOR = vec4(vColor.rgb, vColor.a * outerAlpha * innerAlpha);
 }
 
 )__SHDR__";
@@ -107,28 +105,21 @@ void main() {
 	inline constexpr char TouchCircle_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
 varying vec2 vPos;
-
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
+varying vec4 vColor;
+varying vec2 vRadii;
 
 
 void main() {
 	vec4 COLOR;
 	float dist = length(vPos);
-	float softness = texRect.y;
+	float softness = vRadii.y;
 	float outerAlpha = 1.0 - smoothstep(0.5 - softness, 0.5, dist);
-	float innerRadius = texRect.x * 0.5;
+	float innerRadius = vRadii.x * 0.5;
 	float innerAlpha = (innerRadius > 0.0) ? smoothstep(innerRadius - softness, innerRadius, dist) : 1.0;
-	COLOR = vec4(color.rgb, color.a * outerAlpha * innerAlpha);
+	COLOR = vec4(vColor.rgb, vColor.a * outerAlpha * innerAlpha);
 	gl_FragColor = COLOR;
 }
 

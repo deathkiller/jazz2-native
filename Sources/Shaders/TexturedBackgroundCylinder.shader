@@ -52,7 +52,7 @@ void fragment() {
 
 	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), fade * uCylinder.z);
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	COLOR.rgb = reduceColors(COLOR.rgb, gl_FragCoord.xy);
+	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 #endif
 #if KEYED
 	COLOR = keyedColor(COLOR.rgb);

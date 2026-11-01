@@ -24,7 +24,7 @@ in vec2 aTexCoords;
 in vec4 aHeat;
 in vec4 aColor;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out vec3 vHeat;
 out vec4 vColor;
 out highp float vPaletteOffset;
@@ -63,7 +63,7 @@ attribute vec2 aTexCoords;
 attribute vec4 aHeat;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
@@ -95,14 +95,10 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in vec3 vHeat;
 in vec4 vColor;
 in highp float vPaletteOffset;
@@ -138,13 +134,9 @@ void main() {
 	inline constexpr char TileMapMeshHeat_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
@@ -215,7 +207,7 @@ in vec2 aTexCoords;
 in vec4 aHeat;
 in vec4 aColor;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out vec3 vHeat;
 out vec4 vColor;
 out highp float vPaletteOffset;
@@ -256,7 +248,7 @@ attribute vec2 aTexCoords;
 attribute vec4 aHeat;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
@@ -290,14 +282,10 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in vec3 vHeat;
 in vec4 vColor;
 in highp float vPaletteOffset;
@@ -339,13 +327,9 @@ void main() {
 	inline constexpr char TileMapMeshHeat_USE_PALETTE_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec3 vHeat;
 varying vec4 vColor;
 varying highp float vPaletteOffset;

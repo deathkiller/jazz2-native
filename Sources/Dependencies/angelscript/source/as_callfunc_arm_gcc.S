@@ -43,7 +43,7 @@
 
 #if defined(__arm__) || defined(__ARM__) || defined(I3D_ARCH_ARM)
 
-#if !defined(__linux__) || defined(__ANDROID__) || defined(ANDROID) || defined(__SOFTFP__) || defined(__ARM_PCS)
+#if (!defined(__linux__) && !defined(__vita__)) || defined(__ANDROID__) || defined(ANDROID) || defined(__SOFTFP__) || defined(__ARM_PCS)
 
 /* iOS, Android, Marmalade, and Linux with soft-float ABI goes here */
 
@@ -293,7 +293,7 @@ nomoreargsarmFuncR0R1:
     ldmia   sp!, {r4-r8, pc}
 
 /* --------------------------------------------------------------------------------------------*/
-#elif defined(__linux__) && !defined(__SOFTFP__) && !defined(__ARM_PCS)
+#elif (defined(__linux__) || defined(__vita__)) && !defined(__SOFTFP__) && !defined(__ARM_PCS)
 
 /* The Linux with hard-float ABI code goes here */
 

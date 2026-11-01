@@ -15,6 +15,7 @@
 #include "../UI/UiMenu.h"
 #include "../UI/UiPainter.h"
 #include "../UI/UiSurface.h"
+#include "../../PreferencesCache.h"
 
 #include "../../../nCine/Graphics/Texture.h"
 #include "../../../nCine/I18n.h"
@@ -1156,6 +1157,11 @@ namespace Jazz2::Editor
 					if (name.empty() || name == "unknown"_s) {
 						continue;
 					}
+#if defined(SHAREWARE_DEMO_ONLY)
+					if (!PreferencesCache::IsEpisodeUnlocked(name)) {
+						continue;
+					}
+#endif
 					std::size_t index = 0;
 					while (index < targets.size() && targets[index].Name != name) {
 						index++;

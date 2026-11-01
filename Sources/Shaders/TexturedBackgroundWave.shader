@@ -40,7 +40,7 @@ void fragment() {
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
 	vec3 color = texture(TEXTURE, texturePos).rgb;
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	color = reduceColors(color, gl_FragCoord.xy);
+	color = reduceColors(color, mod(gl_FragCoord.xy, 4.0));
 #endif
 #if KEYED
 	COLOR = keyedColor(color);

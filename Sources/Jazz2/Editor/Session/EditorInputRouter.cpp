@@ -42,6 +42,14 @@ namespace Jazz2::Editor
 		constexpr float GamepadBoostFrames = 60.0f;
 		// How much the zoom changes a frame with a trigger pulled all the way, as a logarithm, about 3× a second
 		constexpr float GamepadZoomRate = 0.02f;
+		// Units of the height of the screen below which the cursor and the view move slower, in proportion down to half,
+		// so they take about as long to cross a small screen as a large one
+		constexpr float GamepadSpeedReferenceHeight = 540.0f;
+		constexpr float GamepadMinSpeedFactor = 0.5f;
+		// Units from the top or the bottom edge of a list that scrolls where the cursor scrolls it, and the units a frame
+		// it scrolls by with the cursor at the very edge
+		constexpr float GamepadEdgeScrollZone = 12.0f;
+		constexpr float GamepadEdgeScrollSpeed = 6.0f;
 	}
 
 	EditorInputRouter::EditorInputRouter(IEditorContext& context, IInputRouterHost& host, PlayTestController& playTest)
@@ -454,9 +462,11 @@ namespace Jazz2::Editor
 	{
 		IInputManager& input = theApplication().GetInputManager();
 		const JoyMappedState* state = nullptr;
+		std::int32_t joyId = -1;
 		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks; i++) {
 			if (input.isJoyMapped(i)) {
 				state = &input.joyMappedState(i);
+				joyId = i;
 				break;
 			}
 		}
@@ -499,6 +509,24 @@ namespace Jazz2::Editor
 		float scale = surface.GetScale();
 		EditorCamera& camera = _context.GetEditHandler()->GetCamera();
 		Vector2f cursor = _gamepadCursor;
+		Vector2f screen = surface.GetScreenSize();
+		float speedFactor = std::clamp(screen.Y / (scale * GamepadSpeedReferenceHeight), GamepadMinSpeedFactor, 1.0f);
+
+		// Without a right stick (as on the PSP), the left stick is the right one while B is held, it moves the view or
+		// scrolls a list then - so B is the right button of a mouse only when let go without moving the stick
+		if (!input.joyHasMappedAxis(joyId, AxisName::RightX)) {
+			if (wasPressed(ButtonName::B)) {
+				_gamepadStickWithB = !surface.HasOverlays();
+				_gamepadStickWithBMoved = false;
+			}
+			if (_gamepadStickWithB && isHeld(ButtonName::B)) {
+				rightStick = leftStick;
+				leftStick = Vector2f::Zero;
+				if (rightStick.Length() > 0.0f) {
+					_gamepadStickWithBMoved = true;
+				}
+			}
+		}
 
 		// The left stick moves the cursor, faster the farther it's pushed, and faster the longer it's held, so it's
 		// precise for a short push and quick across the screen
@@ -507,7 +535,7 @@ namespace Jazz2::Editor
 		if (push > 0.0f) {
 			_gamepadCursorHold = std::min(_gamepadCursorHold + timeMult, GamepadBoostFrames);
 			float boost = 1.0f + (GamepadMaxBoost - 1.0f) * (_gamepadCursorHold / GamepadBoostFrames);
-			cursor += leftStick * (GamepadCursorSpeed * scale * push * boost * timeMult);
+			cursor += leftStick * (GamepadCursorSpeed * scale * speedFactor * push * boost * timeMult);
 		} else {
 			_gamepadCursorHold = 0.0f;
 		}
@@ -582,11 +610,41 @@ namespace Jazz2::Editor
 			}
 		}
 
-		Vector2f screen = surface.GetScreenSize();
 		cursor.X = std::clamp(cursor.X, 0.0f, screen.X - 1.0f);
 		cursor.Y = std::clamp(cursor.Y, 0.0f, screen.Y - 1.0f);
 		bool cursorMoved = (cursor.X != _gamepadCursor.X || cursor.Y != _gamepadCursor.Y);
 		_gamepadCursor = cursor;
+
+		// A list that scrolls follows the cursor held near its top or bottom edge, faster the closer to it, as the cursor
+		// can't be pushed past the edge to the rows cut off there - a menu taller than the screen included
+		if (_radialMenu == nullptr) {
+			UiScrollView* edgeView = nullptr;
+			for (UiElement* element = surface.GetHover(); element != nullptr && edgeView == nullptr; element = element->GetParent()) {
+				UiScrollView* scrollView = runtime_cast<UiScrollView>(element);
+				if (scrollView != nullptr && scrollView->IsScrollable()) {
+					edgeView = scrollView;
+				}
+			}
+			if (edgeView != nullptr) {
+				float zone = std::min(std::round(GamepadEdgeScrollZone * scale), edgeView->Bounds.H * 0.25f);
+				float fromTop = cursor.Y - edgeView->Bounds.Y;
+				float fromBottom = edgeView->Bounds.Y + edgeView->Bounds.H - 1.0f - cursor.Y;
+				float depth = 0.0f;
+				if (fromTop < zone) {
+					depth = -(1.0f - std::max(fromTop, 0.0f) / zone);
+				} else if (fromBottom < zone) {
+					depth = 1.0f - std::max(fromBottom, 0.0f) / zone;
+				}
+				if (depth != 0.0f) {
+					float scroll = edgeView->GetScroll();
+					edgeView->ScrollTo(scroll + depth * GamepadEdgeScrollSpeed * scale * timeMult, true);
+					if (edgeView->GetScroll() != scroll) {
+						// The row under the cursor changed
+						cursorMoved = true;
+					}
+				}
+			}
+		}
 
 		// The right stick moves the view, the triggers zoom at the cursor
 		// Over a list that scrolls, the right stick scrolls it, it moves the view otherwise
@@ -606,7 +664,7 @@ namespace Jazz2::Editor
 		if (rightStick.Length() > 0.0f && !scrolled) {
 			_gamepadPanHold = std::min(_gamepadPanHold + timeMult, GamepadBoostFrames);
 			float boost = 1.0f + (GamepadMaxBoost - 1.0f) * (_gamepadPanHold / GamepadBoostFrames);
-			camera.PanBy(rightStick * (GamepadPanSpeed * scale * rightStick.Length() * boost * timeMult));
+			camera.PanBy(rightStick * (GamepadPanSpeed * scale * speedFactor * rightStick.Length() * boost * timeMult));
 			cursorMoved = true;
 		} else {
 			_gamepadPanHold = 0.0f;
@@ -632,12 +690,21 @@ namespace Jazz2::Editor
 				escape.sym = Keys::Escape;
 				escape.mod = 0;
 				surface.OnKeyPressed(escape);
-			} else {
+			} else if (!_gamepadStickWithB) {
 				PointerDown(_gamepadCursor, MouseButton::Right);
 			}
 		}
 		if (wasReleased(ButtonName::B)) {
-			PointerUp(_gamepadCursor, MouseButton::Right);
+			if (_gamepadStickWithB) {
+				// A click of the right button, unless the stick was moved
+				_gamepadStickWithB = false;
+				if (!_gamepadStickWithBMoved) {
+					PointerDown(_gamepadCursor, MouseButton::Right);
+					PointerUp(_gamepadCursor, MouseButton::Right);
+				}
+			} else {
+				PointerUp(_gamepadCursor, MouseButton::Right);
+			}
 		}
 
 		// A dialog waiting for an answer gets only the cursor and A and B, as the keyboard goes only to it, the level

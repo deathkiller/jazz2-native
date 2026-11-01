@@ -275,8 +275,8 @@ float bayer4(vec2 pixel) {
 	return bayer2(pixel * 0.5) * 0.25 + bayer2(pixel);
 }
 
-vec3 reduceColors(vec3 color, vec2 pixel) {
-	return floor(color * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
+vec3 reduceColors(vec3 rgb, vec2 pixel) {
+	return floor(rgb * DITHER_LEVELS + vec3(bayer4(pixel))) / DITHER_LEVELS;
 }
 
 #define DITHER_TEXTURE_SIZE 256.0
@@ -296,7 +296,7 @@ void main() {
 
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
 	vec3 color = texture(uTexture, texturePos).rgb;
-	color = reduceColors(color, gl_FragCoord.xy);
+	color = reduceColors(color, mod(gl_FragCoord.xy, 4.0));
 	COLOR = vec4(color * opacity, opacity);
 }
 

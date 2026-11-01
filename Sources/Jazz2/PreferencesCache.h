@@ -559,6 +559,10 @@ namespace Jazz2
 		static EpisodeContinuationStateWithLevel* GetEpisodeContinue(StringView episodeName, bool createIfNotFound = false);
 		/** @brief Removes information about episode continuation (resets progress) */
 		static void RemoveEpisodeContinue(StringView episodeName);
+#if defined(SHAREWARE_DEMO_ONLY) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Returns `true` if the episode isn't one of @ref UnlockableEpisodes or it's already in @ref UnlockedEpisodes */
+		static bool IsEpisodeUnlocked(StringView episodeName);
+#endif
 		/** @brief Resets all touch button layouts to their default positions and sizes */
 		static void ResetTouchButtons();
 		/** @brief Resets all @ref SafeArea insets back to zero, i.e. to the whole view */

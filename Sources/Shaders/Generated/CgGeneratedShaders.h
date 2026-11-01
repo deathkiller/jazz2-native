@@ -681,11 +681,6 @@ VsOutput main(VsInput _input)
 				R"(uniform float4 uAmbientColor;
 uniform float uTime;
 
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
 uniform sampler2D uTextureBlurHalf : TEXUNIT2;
@@ -780,11 +775,6 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float4 uAmbientColor;
 uniform float uTime;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -912,11 +902,6 @@ VsOutput main(VsInput _input)
 }
 )",
 				R"(uniform float4 uAmbientColor;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -1097,11 +1082,6 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float4 uAmbientColor;
 
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
 uniform sampler2D uTextureBlurHalf : TEXUNIT2;
@@ -1251,11 +1231,6 @@ uniform float uTime;
 uniform float2 uCameraPos;
 uniform float uWaterLevel;
 
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
 uniform sampler2D uTextureBlurHalf : TEXUNIT2;
@@ -1376,11 +1351,6 @@ VsOutput main(VsInput _input)
 uniform float uTime;
 uniform float2 uCameraPos;
 uniform float uWaterLevel;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -3548,6 +3518,7 @@ uniform float2 spriteSize;
 
 static const float one_third = 1.0 / 3.0;
 static const float two_third = 2.0 / 3.0;
+static const float3 ReduceWeights = float3(65536.0, 256.0, 1.0);
 
 static float2 aQuadCorner;
 static float4 gl_Position;
@@ -3608,15 +3579,11 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static const float one_third = 1.0 / 3.0;
 static const float two_third = 2.0 / 3.0;
+static const float3 ReduceWeights = float3(65536.0, 256.0, 1.0);
 
 static float2 vPixelCoords;
 static float4 vTexCoords1;
@@ -3640,11 +3607,6 @@ struct PsInput
 	float4 vTexCoords6 : TEXCOORD6;
 	float4 vTexCoords7 : TEXCOORD7;
 };
-
-float Reduce(float3 color)
-{
-	return dot(color, float3(65536.0, 256.0, 1.0));
-}
 
 float DistYCbCr(float3 pixA, float3 pixB)
 {
@@ -3670,11 +3632,11 @@ bool IsBlendingNeeded(int4 blend)
 
 void ScalePixel(int4 blend, float3 k[9], inout float3 dst[9])
 {
-	float v0 = Reduce(k[0]);
-	float v4 = Reduce(k[4]);
-	float v5 = Reduce(k[5]);
-	float v7 = Reduce(k[7]);
-	float v8 = Reduce(k[8]);
+	float v0 = dot(k[0], ReduceWeights);
+	float v4 = dot(k[4], ReduceWeights);
+	float v5 = dot(k[5], ReduceWeights);
+	float v7 = dot(k[7], ReduceWeights);
+	float v8 = dot(k[8], ReduceWeights);
 	float dist_01_04 = DistYCbCr(k[1], k[4]);
 	float dist_03_08 = DistYCbCr(k[3], k[8]);
 	bool haveShallowLine = 2.2 * dist_01_04 <= dist_03_08 && v0 != v4 && v5 != v4;
@@ -3723,15 +3685,15 @@ float4 main(PsInput _input) : COLOR
 	src[10] = tex2D(uTexture, vTexCoords7.xz).xyz;
 	src[11] = tex2D(uTexture, vTexCoords7.xw).xyz;
 	float v[9];
-	v[0] = Reduce(src[0]);
-	v[1] = Reduce(src[1]);
-	v[2] = Reduce(src[2]);
-	v[3] = Reduce(src[3]);
-	v[4] = Reduce(src[4]);
-	v[5] = Reduce(src[5]);
-	v[6] = Reduce(src[6]);
-	v[7] = Reduce(src[7]);
-	v[8] = Reduce(src[8]);
+	v[0] = dot(src[0], ReduceWeights);
+	v[1] = dot(src[1], ReduceWeights);
+	v[2] = dot(src[2], ReduceWeights);
+	v[3] = dot(src[3], ReduceWeights);
+	v[4] = dot(src[4], ReduceWeights);
+	v[5] = dot(src[5], ReduceWeights);
+	v[6] = dot(src[6], ReduceWeights);
+	v[7] = dot(src[7], ReduceWeights);
+	v[8] = dot(src[8], ReduceWeights);
 	int4 blendResult = ((int4)0);
 	if (!(v[0] == v[1] && v[3] == v[2] || v[0] == v[3] && v[1] == v[2])) {
 		float dist_03_01 = DistYCbCr(src[4], src[0]) + DistYCbCr(src[0], src[8]) + DistYCbCr(src[14], src[2]) + DistYCbCr(src[2], src[10]) + 4.0 * DistYCbCr(src[3], src[1]);
@@ -4858,8 +4820,6 @@ uniform float4 color;
 uniform float4 texRect;
 uniform float2 spriteSize;
 
-static float4x4 bayerIndex = float4x4(float4(0.0625, 0.5625, 0.1875, 0.6875), float4(0.8125, 0.3125, 0.9375, 0.4375), float4(0.25, 0.75, 0.125, 0.625), float4(1.0, 0.5, 0.875, 0.375));
-
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vPixelCoords;
@@ -4892,14 +4852,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
-uniform sampler2D uTexture : TEXUNIT0;
-
-static float4x4 bayerIndex = float4x4(float4(0.0625, 0.5625, 0.1875, 0.6875), float4(0.8125, 0.3125, 0.9375, 0.4375), float4(0.25, 0.75, 0.125, 0.625), float4(1.0, 0.5, 0.875, 0.375));
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vPixelCoords;
 static float2 vTexCoords;
@@ -4912,9 +4865,11 @@ struct PsInput
 	float2 vTexCoords : TEXCOORD1;
 };
 
-float dither4x4(float2 position, float brightness)
+float dither4x4(float2 cell, float brightness)
 {
-	float bayerValue = bayerIndex[int((position.x - (4.0) * floor((position.x) / (4.0))))][int((position.y - (4.0) * floor((position.y) / (4.0))))];
+	float2 fine = floor(cell);
+	float2 coarse = floor(fine * 0.5);
+	float bayerValue = frac(fine.y * 0.5 + fine.x * fine.x * 0.75) + frac(coarse.y * 0.5 + coarse.x * coarse.x * 0.75) * 0.25 + 0.0625;
 	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
 }
 
@@ -4922,24 +4877,24 @@ float4 main(PsInput _input) : COLOR
 {
 	vPixelCoords = _input.vPixelCoords;
 	vTexCoords = _input.vTexCoords;
-	float3 color = tex2D(uTexture, vTexCoords).xyz;
-	float gray = dot((color - ((float3)0.5)) * float3(1.4, 1.2, 1.0) + ((float3)0.5), float3(0.3, 0.7, 0.1));
-	gray = dither4x4(vPixelCoords, gray);
+	float3 rgb = tex2D(uTexture, vTexCoords).xyz;
+	float gray = dot((rgb - ((float3)0.5)) * float3(1.4, 1.2, 1.0) + ((float3)0.5), float3(0.3, 0.7, 0.1));
+	gray = dither4x4((vPixelCoords - (4.0) * floor((vPixelCoords) / (4.0))), gray);
 	float palette = abs(1.0 - gray) * 0.75 + 0.125;
 	if (palette < 0.25) {
-		color = float3(0.675, 0.710, 0.420);
+		rgb = float3(0.675, 0.710, 0.420);
 	} else {
 		if (palette < 0.5) {
-			color = float3(0.463, 0.518, 0.283);
+			rgb = float3(0.463, 0.518, 0.283);
 		} else {
 			if (palette < 0.75) {
-				color = float3(0.247, 0.314, 0.247);
+				rgb = float3(0.247, 0.314, 0.247);
 			} else {
-				color = float3(0.1, 0.134, 0.151);
+				rgb = float3(0.1, 0.134, 0.151);
 			}
 		}
 	}
-	COLOR = float4(color, 1.0);
+	COLOR = float4(rgb, 1.0);
 	return COLOR;
 }
 )" },
@@ -8776,12 +8731,6 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float2 uTargetSizeInv;
 
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
 uniform sampler2D uTextureSharp : TEXUNIT3;
@@ -8824,8 +8773,8 @@ float4 main(PsInput _input) : COLOR
 	float3 reflected = lerp(tex2D(uTextureSharp, reflectionUv).xyz, tex2D(uTextureBehind, reflectionUv).xyz, ((float3)(blurAmount)));
 	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
-	float3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
-	COLOR = float4(color / max(alpha, 0.0001), alpha * strength);
+	float3 shown = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
+	COLOR = float4(shown / max(alpha, 0.0001), alpha * strength);
 	return COLOR;
 }
 )" },
@@ -8894,12 +8843,6 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float2 uTargetSizeInv;
 
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -8947,8 +8890,8 @@ float4 main(PsInput _input) : COLOR
 	float3 reflected = lerp(tex2D(uTextureSharp, reflectionUv).xyz, tex2D(uTextureBehind, reflectionUv).xyz, ((float3)(blurAmount)));
 	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
-	float3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
-	COLOR = float4(color / max(alpha, 0.0001), alpha * strength);
+	float3 shown = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
+	COLOR = float4(shown / max(alpha, 0.0001), alpha * strength);
 	return COLOR;
 }
 )" },
@@ -9005,12 +8948,6 @@ VsOutput main(VsInput _input)
 				R"(uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float2 uBlendMode;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureBehind : TEXUNIT2;
@@ -9176,8 +9113,8 @@ float4 main(PsInput _input) : COLOR
 	float4 tile = src;
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
 	if (uBlendMode.x > 0.5) {
-		float4 color = tile * vColor;
-		COLOR = blendModeResult(uBlendMode, color.xyz, color.w, behind, gl_FragCoord.xy);
+		float4 tinted = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, tinted.xyz, tinted.w, behind, gl_FragCoord.xy);
 	} else {
 		float3 difference = abs(behind - uKeyColor.xyz);
 		float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
@@ -9241,12 +9178,6 @@ VsOutput main(VsInput _input)
 				R"(uniform float2 uTargetSizeInv;
 uniform float4 uKeyColor;
 uniform float2 uBlendMode;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
@@ -9417,8 +9348,8 @@ float4 main(PsInput _input) : COLOR
 	float4 tile = float4(paletteColor.xyz, paletteColor.w * src.w);
 	float3 behind = tex2D(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).xyz;
 	if (uBlendMode.x > 0.5) {
-		float4 color = tile * vColor;
-		COLOR = blendModeResult(uBlendMode, color.xyz, color.w, behind, gl_FragCoord.xy);
+		float4 tinted = tile * vColor;
+		COLOR = blendModeResult(uBlendMode, tinted.xyz, tinted.w, behind, gl_FragCoord.xy);
 	} else {
 		float3 difference = abs(behind - uKeyColor.xyz);
 		float keyed = step(max(max(difference.x, difference.y), difference.z), uKeyColor.w);
@@ -9677,13 +9608,7 @@ VsOutput main(VsInput _input)
 	return _output;
 }
 )",
-				R"(uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
-uniform sampler2D uTexture : TEXUNIT0;
+				R"(uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 
 static float2 vTexCoords;
@@ -9708,8 +9633,8 @@ float4 main(PsInput _input) : COLOR
 	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
 	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
 	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	float4 color = tex2D(uTexturePalette, float2(palX, palY));
-	COLOR = float4(color.xyz, color.w * src.w) * vColor;
+	float4 paletteColor = tex2D(uTexturePalette, float2(palX, palY));
+	COLOR = float4(paletteColor.xyz, paletteColor.w * src.w) * vColor;
 	return COLOR;
 }
 )" },
@@ -9779,12 +9704,6 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float2 uTargetSizeInv;
 
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureMask : TEXUNIT2;
 
@@ -9806,9 +9725,8 @@ struct PsInput
 	float vPaletteOffset : TEXCOORD4;
 };
 
-float4 tileSample(float2 uv)
+float4 tileSample(float4 src)
 {
-	float4 src = tex2D(uTexture, uv);
 	return src;
 }
 
@@ -9820,8 +9738,8 @@ float4 main(PsInput _input) : COLOR
 	vWeights = _input.vWeights;
 	vColor = _input.vColor;
 	vPaletteOffset = _input.vPaletteOffset;
-	float4 frame0 = tileSample(vTexCoords);
-	float4 frame1 = tileSample(vTexCoords1);
+	float4 frame0 = tileSample(tex2D(uTexture, vTexCoords));
+	float4 frame1 = tileSample(tex2D(uTexture, vTexCoords1));
 	frame0 = float4(frame0.xyz * frame0.w, frame0.w) * vWeights.x;
 	frame1 = float4(frame1.xyz * frame1.w, frame1.w) * vWeights.y;
 	float mask = tex2D(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).x;
@@ -9898,12 +9816,6 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float2 uTargetSizeInv;
 
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTexturePalette : TEXUNIT1;
 uniform sampler2D uTextureMask : TEXUNIT2;
@@ -9926,14 +9838,13 @@ struct PsInput
 	float vPaletteOffset : TEXCOORD4;
 };
 
-float4 tileSample(float2 uv)
+float4 tileSample(float4 src)
 {
-	float4 src = tex2D(uTexture, uv);
 	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
 	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
 	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	float4 color = tex2D(uTexturePalette, float2(palX, palY));
-	return float4(color.xyz, color.w * src.w);
+	float4 paletteColor = tex2D(uTexturePalette, float2(palX, palY));
+	return float4(paletteColor.xyz, paletteColor.w * src.w);
 }
 
 float4 main(PsInput _input) : COLOR
@@ -9944,8 +9855,8 @@ float4 main(PsInput _input) : COLOR
 	vWeights = _input.vWeights;
 	vColor = _input.vColor;
 	vPaletteOffset = _input.vPaletteOffset;
-	float4 frame0 = tileSample(vTexCoords);
-	float4 frame1 = tileSample(vTexCoords1);
+	float4 frame0 = tileSample(tex2D(uTexture, vTexCoords));
+	float4 frame1 = tileSample(tex2D(uTexture, vTexCoords1));
 	frame0 = float4(frame0.xyz * frame0.w, frame0.w) * vWeights.x;
 	frame1 = float4(frame1.xyz * frame1.w, frame1.w) * vWeights.y;
 	float mask = tex2D(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).x;
@@ -10290,6 +10201,8 @@ uniform float2 spriteSize;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vPos;
+static float4 vColor;
+static float2 vRadii;
 
 struct VsInput
 {
@@ -10300,6 +10213,8 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vPos : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float2 vRadii : TEXCOORD2;
 };
 
 VsOutput main(VsInput _input)
@@ -10309,35 +10224,40 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vPos = aPosition - float2(0.5, 0.5);
+	vColor = color;
+	vRadii = texRect.xy;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vPos = vPos;
+	_output.vColor = vColor;
+	_output.vRadii = vRadii;
 	return _output;
 }
 )",
-				R"(uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
-static float2 vPos;
+				R"(static float2 vPos;
+static float4 vColor;
+static float2 vRadii;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vPos : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+	float2 vRadii : TEXCOORD2;
 };
 
 float4 main(PsInput _input) : COLOR
 {
 	vPos = _input.vPos;
+	vColor = _input.vColor;
+	vRadii = _input.vRadii;
 	float dist = length(vPos);
-	float softness = texRect.y;
+	float softness = vRadii.y;
 	float outerAlpha = 1.0 - smoothstep(0.5 - softness, 0.5, dist);
-	float innerRadius = texRect.x * 0.5;
+	float innerRadius = vRadii.x * 0.5;
 	float innerAlpha = innerRadius > 0.0 ? smoothstep(innerRadius - softness, innerRadius, dist) : 1.0;
-	COLOR = float4(color.xyz, color.w * outerAlpha * innerAlpha);
+	COLOR = float4(vColor.xyz, vColor.w * outerAlpha * innerAlpha);
 	return COLOR;
 }
 )" },

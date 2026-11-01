@@ -23,7 +23,7 @@ in vec2 aPosition;
 in vec2 aTexCoords;
 in vec4 aColor;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out vec4 vColor;
 
 uniform mat4 uProjectionMatrix;
@@ -57,7 +57,7 @@ attribute vec2 aPosition;
 attribute vec2 aTexCoords;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 
 uniform mat4 uProjectionMatrix;
@@ -88,7 +88,7 @@ R"__SHDR__(#line 1
 precision mediump float;
 #endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in vec4 vColor;
 
 uniform sampler2D uTexture;
@@ -108,7 +108,7 @@ R"__SHDR__(#line 1
 
 precision mediump float;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 
 uniform sampler2D uTexture;

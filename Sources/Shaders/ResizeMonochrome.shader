@@ -1,8 +1,5 @@
 program ResizeMonochrome;
 
-// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
-precision highp;
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -14,8 +11,9 @@ layout (std140) uniform InstanceBlock
 	vec2 spriteSize;
 };
 
-varying vec2 vPixelCoords;
-varying vec2 vTexCoords;
+// In the pixels of the whole view and across it, both beyond what half precision can tell apart
+varying highp vec2 vPixelCoords;
+varying highp vec2 vTexCoords;
 
 void vertex() {
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
@@ -26,33 +24,32 @@ void vertex() {
 	vTexCoords = aPosition;
 }
 
-mat4 bayerIndex = mat4(
-	vec4(0.0625, 0.5625, 0.1875, 0.6875),
-	vec4(0.8125, 0.3125, 0.9375, 0.4375),
-	vec4(0.25, 0.75, 0.125, 0.625),
-	vec4(1.0, 0.5, 0.875, 0.375));
-
 uniform sampler2D uTexture : texture_unit(0);
 
-float dither4x4(vec2 position, float brightness) {
-	float bayerValue = bayerIndex[int(mod(position.x, 4.0))][int(mod(position.y, 4.0))];
+// @p cell is the position in the 4x4 pattern, mod(vPixelCoords, 4.0) taken at the precision of the pixel coordinates.
+// The threshold is the ordered pattern from 1/16 to 1, worked out instead of looked up - a table indexed by the pixel
+// doesn't compile for OpenGL|ES 2.0 or the PlayStation 3
+float dither4x4(vec2 cell, float brightness) {
+	vec2 fine = floor(cell);
+	vec2 coarse = floor(fine * 0.5);
+	float bayerValue = fract(fine.y * 0.5 + fine.x * fine.x * 0.75) + fract(coarse.y * 0.5 + coarse.x * coarse.x * 0.75) * 0.25 + 0.0625;
 	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
 }
 
 void fragment() {
-	vec3 color = texture(uTexture, vTexCoords).rgb;
-	float gray = dot(((color - vec3(0.5)) * vec3(1.4, 1.2, 1.0)) + vec3(0.5), vec3(0.3, 0.7, 0.1));
-	gray = dither4x4(vPixelCoords, gray);
+	vec3 rgb = texture(uTexture, vTexCoords).rgb;
+	float gray = dot(((rgb - vec3(0.5)) * vec3(1.4, 1.2, 1.0)) + vec3(0.5), vec3(0.3, 0.7, 0.1));
+	gray = dither4x4(mod(vPixelCoords, 4.0), gray);
 	float palette = (abs(1.0 - gray) * 0.75) + 0.125;
 
 	if (palette < 0.25) {
-		color = vec3(0.675, 0.710, 0.420);
+		rgb = vec3(0.675, 0.710, 0.420);
 	} else if (palette < 0.5) {
-		color = vec3(0.463, 0.518, 0.283);
+		rgb = vec3(0.463, 0.518, 0.283);
 	} else if (palette < 0.75) {
-		color = vec3(0.247, 0.314, 0.247);
+		rgb = vec3(0.247, 0.314, 0.247);
 	} else {
-		color = vec3(0.1, 0.134, 0.151);
+		rgb = vec3(0.1, 0.134, 0.151);
 	}
-	COLOR = vec4(color, 1.0);
+	COLOR = vec4(rgb, 1.0);
 }

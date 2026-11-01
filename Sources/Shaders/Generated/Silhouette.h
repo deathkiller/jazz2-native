@@ -23,7 +23,7 @@ in vec2 aPosition;
 in vec2 aTexCoords;
 in vec4 aColor;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out float vAlpha;
 out highp float vPaletteOffset;
 
@@ -59,7 +59,7 @@ attribute vec2 aPosition;
 attribute vec2 aTexCoords;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying float vAlpha;
 varying highp float vPaletteOffset;
 
@@ -89,14 +89,10 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in float vAlpha;
 in highp float vPaletteOffset;
 
@@ -117,13 +113,9 @@ void main() {
 	inline constexpr char Silhouette_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying float vAlpha;
 varying highp float vPaletteOffset;
 
@@ -176,7 +168,7 @@ in vec2 aPosition;
 in vec2 aTexCoords;
 in vec4 aColor;
 
-out vec2 vTexCoords;
+out highp vec2 vTexCoords;
 out float vAlpha;
 out highp float vPaletteOffset;
 
@@ -214,7 +206,7 @@ attribute vec2 aPosition;
 attribute vec2 aTexCoords;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying float vAlpha;
 varying highp float vPaletteOffset;
 
@@ -246,14 +238,10 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
+in highp vec2 vTexCoords;
 in float vAlpha;
 in highp float vPaletteOffset;
 
@@ -278,13 +266,9 @@ void main() {
 	inline constexpr char Silhouette_USE_PALETTE_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
+varying highp vec2 vTexCoords;
 varying float vAlpha;
 varying highp float vPaletteOffset;
 

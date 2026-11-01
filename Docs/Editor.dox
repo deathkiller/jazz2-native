@@ -10,8 +10,9 @@ namespace Jazz2 {
 
 The game has a built-in level editor, included by the `WITH_EDITOR` build option (see
 @ref building-config-params-game). It's on by default on every platform that can save files, except the
-<b>Nintendo 64</b>, <b>Dreamcast</b>, <b>GameCube</b> and <b>PlayStation 2</b>, and never in a dedicated server or
-the Shareware Demo.
+<b>Nintendo 64</b>, <b>Dreamcast</b>, <b>GameCube</b> and <b>PlayStation 2</b>, and never in a dedicated server.
+In the Shareware Demo, levels of locked episodes can't be opened in it, and the web version offers it only after at
+least one episode is imported.
 
 The editor works with the game's own level format. Original `.j2l` levels are converted on the first start (see
 @ref paths) and can be opened from @cpp "Cache/" @ce.

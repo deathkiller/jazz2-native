@@ -16,7 +16,7 @@ uniform sampler2D uTextureBehind : texture_unit(2);
 void fragment() {
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;
 #if !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	behind = reduceColors(behind, gl_FragCoord.xy);
+	behind = reduceColors(behind, mod(gl_FragCoord.xy, 4.0));
 #endif
 	COLOR = vec4(behind, 1.0);
 }

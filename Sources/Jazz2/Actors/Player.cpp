@@ -5092,7 +5092,11 @@ namespace Jazz2::Actors
 		if ((state & AnimState::Spring) == AnimState::Spring) {
 			// The spring launch pose follows the same rule off the **vertical** speed, with its own floor and
 			// ceiling - see LegacySpringAnimMinFrameTicks. It is the one airborne pose that does: an ordinary
-			// jump and fall keep the animation's own rate whatever the player is doing.
+			// jump and fall keep the animation's own rate whatever the player is doing. Shooting during the
+			// launch is the shooting pose, which keeps its own rate too
+			if ((state & AnimState::Shoot) == AnimState::Shoot) {
+				return;
+			}
 			float speedTicks = std::abs(_speed.Y) / LegacyFrameRateScale;
 			frameTicks = std::clamp(LegacyRunAnimFrameTicks - speedTicks,
 				LegacySpringAnimMinFrameTicks, LegacySpringAnimMaxFrameTicks);

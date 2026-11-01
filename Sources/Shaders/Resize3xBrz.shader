@@ -1,8 +1,5 @@
 program Resize3xBrz;
 
-// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
-precision highp;
-
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -14,15 +11,16 @@ layout (std140) uniform InstanceBlock
 	vec2 spriteSize;
 };
 
-varying vec2 vPixelCoords;
-varying vec2 vTexCoords0;
-varying vec4 vTexCoords1;
-varying vec4 vTexCoords2;
-varying vec4 vTexCoords3;
-varying vec4 vTexCoords4;
-varying vec4 vTexCoords5;
-varying vec4 vTexCoords6;
-varying vec4 vTexCoords7;
+// In the pixels of the whole view and across it, both beyond what half precision can tell apart
+varying highp vec2 vPixelCoords;
+varying highp vec2 vTexCoords0;
+varying highp vec4 vTexCoords1;
+varying highp vec4 vTexCoords2;
+varying highp vec4 vTexCoords3;
+varying highp vec4 vTexCoords4;
+varying highp vec4 vTexCoords5;
+varying highp vec4 vTexCoords6;
+varying highp vec4 vTexCoords7;
 
 void vertex() {
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
@@ -59,9 +57,10 @@ const float two_third = 2.0 / 3.0;
 
 uniform sampler2D uTexture : texture_unit(0);
 
-float Reduce(vec3 color) {
-	return dot(color, vec3(65536.0, 256.0, 1.0));
-}
+// A pixel packed into one number, so pixels are compared exactly by comparing the numbers - it takes the 24 bits of a
+// pixel, more than half precision has, so the packed numbers are highp (an operand of highp makes the whole dot product
+// highp) while everything else in the shader can be of half precision
+const highp vec3 ReduceWeights = vec3(65536.0, 256.0, 1.0);
 
 float DistYCbCr(vec3 pixA, vec3 pixB) {
 	const vec3 w = vec3(0.2627, 0.6780, 0.0593);
@@ -84,11 +83,11 @@ bool IsBlendingNeeded(ivec4 blend) {
 }
 
 void ScalePixel(ivec4 blend, vec3 k[9], inout vec3 dst[9]) {
-	float v0 = Reduce(k[0]);
-	float v4 = Reduce(k[4]);
-	float v5 = Reduce(k[5]);
-	float v7 = Reduce(k[7]);
-	float v8 = Reduce(k[8]);
+	highp float v0 = dot(k[0], ReduceWeights);
+	highp float v4 = dot(k[4], ReduceWeights);
+	highp float v5 = dot(k[5], ReduceWeights);
+	highp float v7 = dot(k[7], ReduceWeights);
+	highp float v8 = dot(k[8], ReduceWeights);
 
 	float dist_01_04 = DistYCbCr(k[1], k[4]);
 	float dist_03_08 = DistYCbCr(k[3], k[8]);
@@ -134,16 +133,16 @@ void fragment() {
 	src[10] = texture(uTexture, vTexCoords7.xz).rgb;
 	src[11] = texture(uTexture, vTexCoords7.xw).rgb;
 
-	float v[9];
-	v[0] = Reduce(src[0]);
-	v[1] = Reduce(src[1]);
-	v[2] = Reduce(src[2]);
-	v[3] = Reduce(src[3]);
-	v[4] = Reduce(src[4]);
-	v[5] = Reduce(src[5]);
-	v[6] = Reduce(src[6]);
-	v[7] = Reduce(src[7]);
-	v[8] = Reduce(src[8]);
+	highp float v[9];
+	v[0] = dot(src[0], ReduceWeights);
+	v[1] = dot(src[1], ReduceWeights);
+	v[2] = dot(src[2], ReduceWeights);
+	v[3] = dot(src[3], ReduceWeights);
+	v[4] = dot(src[4], ReduceWeights);
+	v[5] = dot(src[5], ReduceWeights);
+	v[6] = dot(src[6], ReduceWeights);
+	v[7] = dot(src[7], ReduceWeights);
+	v[8] = dot(src[8], ReduceWeights);
 
 	ivec4 blendResult = ivec4(BLEND_NONE);
 

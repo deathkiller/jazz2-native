@@ -155,6 +155,8 @@ namespace nCine
 			@ref IInputEventHandler::OnJoyDisconnected() callbacks.
 		*/
 		bool isJoyMapped(int joyId) const;
+		/** @brief Returns `true` if the mapping of the joystick drives the axis by something the joystick has */
+		bool joyHasMappedAxis(int joyId, AxisName axis) const;
 		/** @brief Returns the unified mapped state of the specified joystick */
 		const JoyMappedState& joyMappedState(int joyId) const;
 		/** @brief Normalizes a joystick axis vector, clamping values within the dead zone to zero */

@@ -14,7 +14,8 @@ attribute vec2 aPosition;
 attribute vec2 aTexCoords;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+// The tile sets are large textures, half precision would miss their texels
+varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 

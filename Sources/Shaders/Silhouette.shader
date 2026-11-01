@@ -1,10 +1,6 @@
 program Silhouette;
 variant USE_PALETTE;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-precision highp;
-
 // The coverage of the actors behind an x-ray tile layer (see Rendering::XRayMaskRenderer): every sprite
 // arrives as one quad of a mesh in the 8-float layout of the tile-layer meshes, already in world space, and
 // only its alpha is written - premultiplied white, so overlapping sprites add up to their union.
@@ -25,7 +21,8 @@ attribute vec2 aPosition;
 attribute vec2 aTexCoords;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
+// The sprite sheets are large textures, half precision would miss their texels
+varying highp vec2 vTexCoords;
 varying float vAlpha;
 varying highp float vPaletteOffset;
 

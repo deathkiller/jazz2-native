@@ -1,10 +1,6 @@
 program TileMapMeshXRay;
 variant USE_PALETTE;
 
-// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
-// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
-precision highp;
-
 // The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
 // its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
 // 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
@@ -29,8 +25,8 @@ attribute vec2 aTexCoords1;
 attribute vec2 aWeights;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
-varying vec2 vTexCoords1;
+varying highp vec2 vTexCoords;
+varying highp vec2 vTexCoords1;
 varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
@@ -41,16 +37,16 @@ uniform sampler2D uTexturePalette : texture_unit(1);
 #endif
 uniform sampler2D uTextureMask : texture_unit(2);
 // One over the size of the target being drawn into, which the mask has too
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
-vec4 tileSample(vec2 uv) {
-	vec4 src = texture(uTexture, uv);
+// A texel of a tile in its colors, read by the caller with the texture coordinates at their own precision
+vec4 tileSample(vec4 src) {
 #if USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 color = texture(uTexturePalette, vec2(palX, palY));
-	return vec4(color.rgb, color.a * src.a);
+	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
+	return vec4(paletteColor.rgb, paletteColor.a * src.a);
 #else
 	return src;
 #endif
@@ -66,8 +62,8 @@ void vertex() {
 }
 
 void fragment() {
-	vec4 frame0 = tileSample(vTexCoords);
-	vec4 frame1 = tileSample(vTexCoords1);
+	vec4 frame0 = tileSample(texture(uTexture, vTexCoords));
+	vec4 frame1 = tileSample(texture(uTexture, vTexCoords1));
 	// Mixed premultiplied, so a partly covered pixel blends the two frames instead of darkening towards the
 	// black of the empty one
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;

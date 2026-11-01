@@ -215,6 +215,11 @@ namespace nCine
 		return _joyMapping.IsJoyMapped(joyId);
 	}
 
+	bool IInputManager::joyHasMappedAxis(int joyId, AxisName axis) const
+	{
+		return _joyMapping.HasMappedAxis(joyId, axis);
+	}
+
 	const JoyMappedState& IInputManager::joyMappedState(int joyId) const
 	{
 		return _joyMapping.GetMappedState(joyId);

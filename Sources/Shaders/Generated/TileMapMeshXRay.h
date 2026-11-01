@@ -25,8 +25,8 @@ in vec2 aTexCoords1;
 in vec2 aWeights;
 in vec4 aColor;
 
-out vec2 vTexCoords;
-out vec2 vTexCoords1;
+out highp vec2 vTexCoords;
+out highp vec2 vTexCoords1;
 out vec2 vWeights;
 out vec4 vColor;
 out highp float vPaletteOffset;
@@ -67,8 +67,8 @@ attribute vec2 aTexCoords1;
 attribute vec2 aWeights;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
-varying vec2 vTexCoords1;
+varying highp vec2 vTexCoords;
+varying highp vec2 vTexCoords1;
 varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
@@ -101,44 +101,28 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
-in vec2 vTexCoords1;
+in highp vec2 vTexCoords;
+in highp vec2 vTexCoords1;
 in vec2 vWeights;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-	float palOffset;
-};
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTextureMask;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
-vec4 tileSample(vec2 uv) {
-	vec4 src = texture(uTexture, uv);
+vec4 tileSample(vec4 src) {
 	return src;
 }
 
 out vec4 COLOR;
 
 void main() {
-	vec4 frame0 = tileSample(vTexCoords);
-	vec4 frame1 = tileSample(vTexCoords1);
+	vec4 frame0 = tileSample(texture(uTexture, vTexCoords));
+	vec4 frame1 = tileSample(texture(uTexture, vTexCoords1));
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
 	float mask = texture(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
@@ -153,40 +137,27 @@ void main() {
 	inline constexpr char TileMapMeshXRay_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
-varying vec2 vTexCoords1;
+varying highp vec2 vTexCoords;
+varying highp vec2 vTexCoords1;
 varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-	uniform float palOffset;
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTextureMask;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
-vec4 tileSample(vec2 uv) {
-	vec4 src = texture2D(uTexture, uv);
+vec4 tileSample(vec4 src) {
 	return src;
 }
 
 
 void main() {
 	vec4 COLOR;
-	vec4 frame0 = tileSample(vTexCoords);
-	vec4 frame1 = tileSample(vTexCoords1);
+	vec4 frame0 = tileSample(texture2D(uTexture, vTexCoords));
+	vec4 frame1 = tileSample(texture2D(uTexture, vTexCoords1));
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
 	float mask = texture2D(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
@@ -239,8 +210,8 @@ in vec2 aTexCoords1;
 in vec2 aWeights;
 in vec4 aColor;
 
-out vec2 vTexCoords;
-out vec2 vTexCoords1;
+out highp vec2 vTexCoords;
+out highp vec2 vTexCoords1;
 out vec2 vWeights;
 out vec4 vColor;
 out highp float vPaletteOffset;
@@ -283,8 +254,8 @@ attribute vec2 aTexCoords1;
 attribute vec2 aWeights;
 attribute vec4 aColor;
 
-varying vec2 vTexCoords;
-varying vec2 vTexCoords1;
+varying highp vec2 vTexCoords;
+varying highp vec2 vTexCoords1;
 varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
@@ -319,49 +290,33 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
 #endif
-#endif
 
-in vec2 vTexCoords;
-in vec2 vTexCoords1;
+in highp vec2 vTexCoords;
+in highp vec2 vTexCoords1;
 in vec2 vWeights;
 in vec4 vColor;
 in highp float vPaletteOffset;
 
-layout (std140) uniform InstanceBlock
-{
-	mat4 modelMatrix;
-	vec4 color;
-	vec4 texRect;
-	vec2 spriteSize;
-	float palOffset;
-};
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 uniform sampler2D uTextureMask;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
-vec4 tileSample(vec2 uv) {
-	vec4 src = texture(uTexture, uv);
+vec4 tileSample(vec4 src) {
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 color = texture(uTexturePalette, vec2(palX, palY));
-	return vec4(color.rgb, color.a * src.a);
+	vec4 paletteColor = texture(uTexturePalette, vec2(palX, palY));
+	return vec4(paletteColor.rgb, paletteColor.a * src.a);
 }
 
 out vec4 COLOR;
 
 void main() {
-	vec4 frame0 = tileSample(vTexCoords);
-	vec4 frame1 = tileSample(vTexCoords1);
+	vec4 frame0 = tileSample(texture(uTexture, vTexCoords));
+	vec4 frame1 = tileSample(texture(uTexture, vTexCoords1));
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
 	float mask = texture(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
@@ -376,45 +331,32 @@ void main() {
 	inline constexpr char TileMapMeshXRay_USE_PALETTE_Fs100[] =
 R"__SHDR__(#line 1
 
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 
-varying vec2 vTexCoords;
-varying vec2 vTexCoords1;
+varying highp vec2 vTexCoords;
+varying highp vec2 vTexCoords1;
 varying vec2 vWeights;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
-	uniform mat4 modelMatrix;
-	uniform vec4 color;
-	uniform vec4 texRect;
-	uniform vec2 spriteSize;
-	uniform float palOffset;
-
-
-
 uniform sampler2D uTexture;
 uniform sampler2D uTexturePalette;
 uniform sampler2D uTextureMask;
-uniform vec2 uTargetSizeInv;
+uniform highp vec2 uTargetSizeInv;
 
-vec4 tileSample(vec2 uv) {
-	vec4 src = texture2D(uTexture, uv);
+vec4 tileSample(vec4 src) {
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
-	vec4 color = texture2D(uTexturePalette, vec2(palX, palY));
-	return vec4(color.rgb, color.a * src.a);
+	vec4 paletteColor = texture2D(uTexturePalette, vec2(palX, palY));
+	return vec4(paletteColor.rgb, paletteColor.a * src.a);
 }
 
 
 void main() {
 	vec4 COLOR;
-	vec4 frame0 = tileSample(vTexCoords);
-	vec4 frame1 = tileSample(vTexCoords1);
+	vec4 frame0 = tileSample(texture2D(uTexture, vTexCoords));
+	vec4 frame1 = tileSample(texture2D(uTexture, vTexCoords1));
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
 	float mask = texture2D(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
