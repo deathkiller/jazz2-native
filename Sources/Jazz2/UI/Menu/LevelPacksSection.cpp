@@ -216,7 +216,7 @@ namespace Jazz2::UI::Menu
 
 		// As many tiles in a row as fit, so a small screen shows a single column
 		float availableWidth = contentBounds.W - 24.0f;
-		_columns = std::max(1, std::int32_t((availableWidth + TileGap) / (TileWidth + TileGap)));
+		_columns = std::max<std::int32_t>(1, std::int32_t((availableWidth + TileGap) / (TileWidth + TileGap)));
 		std::int32_t rows = (std::int32_t(_items.size()) + _columns - 1) / _columns;
 		float gridWidth = _columns * TileWidth + (_columns - 1) * TileGap;
 		float left = std::round(centerX - gridWidth * 0.5f);

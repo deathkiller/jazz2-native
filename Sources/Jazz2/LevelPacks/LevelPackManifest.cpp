@@ -136,7 +136,7 @@ namespace Jazz2::LevelPacks
 	bool LevelPackManifest::Write(StringView path) const
 	{
 		Json::Value doc(Json::objectValue);
-		doc["Version"] = FormatVersion;
+		doc["Version"] = Json::Int(FormatVersion);
 		doc["Id"] = ToJson(Id);
 		doc["Source"] = ToJson(Source);
 		doc["Title"] = ToJson(Title);

@@ -118,17 +118,6 @@ namespace Jazz2::UI::Menu
 		item.Description.DisplayName = _("Level Packs");
 		item.Description.FirstLevel = ":level-packs"_s;
 		item.Description.Position = UINT16_MAX;
-		// Drawn as the title image of an episode, the name is shown instead if it's not there
-		if (auto s = ContentResolver::Get().OpenContentFile("Animations/UI/level_packs.png"_s)) {
-			PngRgbaImage image;
-			if (s->IsValid() && PngCodec::DecodeRgba(*s, image) == PngError::None) {
-				auto texture = std::make_unique<Texture>("LevelPacksLogo", Texture::Format::RGBA8, image.Width, image.Height);
-				texture->LoadFromTexels(image.Pixels.get(), 0, 0, image.Width, image.Height);
-				texture->SetMinFiltering(SamplerFilter::Linear);
-				texture->SetMagFiltering(SamplerFilter::Linear);
-				item.Description.TitleImage = Death::move(texture);
-			}
-		}
 		item.Flags = EpisodeDataFlags::RedirectToLevelPacks | EpisodeDataFlags::IsAvailable;
 		_episodes.insert(_episodes.begin() + index, Death::move(item));
 	}
