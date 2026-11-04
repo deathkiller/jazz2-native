@@ -4,7 +4,7 @@
 
 #include "RulesFile.h"
 #include "SmartTileModel.h"
-#include "../Files/JsonAccess.h"
+#include "../../Utils/JsonAccess.h"
 #include "../Common/StampClipboard.h"
 
 #include <Containers/StringConcatenable.h>
@@ -113,16 +113,16 @@ namespace Jazz2::Editor
 		// The file can be written by hand or come with a tile set, a value of another type than expected is left out
 		Json::Value doc;
 		if (RulesFile::Read(tileSet, doc)) {
-			const Json::Value& terrains = JsonAccess::Member(doc, "terrains");
+			const Json::Value& terrains = Utils::JsonAccess::Member(doc, "terrains");
 			if (terrains.isArray()) {
 				for (const Json::Value& value : terrains) {
 					if (!value.isObject()) {
 						continue;
 					}
-					String name = JsonAccess::GetString(value, "name", "Ground"_s);
+					String name = Utils::JsonAccess::GetString(value, "name", "Ground"_s);
 					std::int32_t index = AddTerrain(name.empty() ? "Ground"_s : StringView(name));
 					Terrain& terrain = _terrains[index];
-					const Json::Value& patterns = JsonAccess::Member(value, "patterns");
+					const Json::Value& patterns = Utils::JsonAccess::Member(value, "patterns");
 					if (!patterns.isObject()) {
 						continue;
 					}
@@ -132,7 +132,7 @@ namespace Jazz2::Editor
 							LOGW("Rules of tile set \"{}\" have a pattern \"{}\" that isn't a number from 0 to 255, it's left out", tileSet, patternName.c_str());
 							continue;
 						}
-						const Json::Value& list = JsonAccess::Member(patterns, patternName.c_str());
+						const Json::Value& list = Utils::JsonAccess::Member(patterns, patternName.c_str());
 						if (!list.isArray()) {
 							continue;
 						}
@@ -141,20 +141,20 @@ namespace Jazz2::Editor
 							if (!tile.isObject()) {
 								continue;
 							}
-							std::uint32_t tileIndex = JsonAccess::GetUInt(tile, "i", 0);
+							std::uint32_t tileIndex = Utils::JsonAccess::GetUInt(tile, "i", 0);
 							if (tileIndex > UINT16_MAX) {
 								continue;
 							}
 							RuleTile rule;
-							rule.TileSet = JsonAccess::GetString(tile, "s");
+							rule.TileSet = Utils::JsonAccess::GetString(tile, "s");
 							rule.Index = std::uint16_t(tileIndex);
-							rule.Flags = std::uint8_t(JsonAccess::GetUInt(tile, "f", 0) & 0x03);
+							rule.Flags = std::uint8_t(Utils::JsonAccess::GetUInt(tile, "f", 0) & 0x03);
 							tiles.push_back(Death::move(rule));
 						}
 					}
 				}
 			}
-			const Json::Value& slopes = JsonAccess::Member(doc, "slopes");
+			const Json::Value& slopes = Utils::JsonAccess::Member(doc, "slopes");
 			if (slopes.isObject()) {
 				for (const std::string& slopeName : slopes.getMemberNames()) {
 					std::int32_t index;
@@ -162,14 +162,14 @@ namespace Jazz2::Editor
 						LOGW("Rules of tile set \"{}\" have a slope \"{}\" that isn't a tile from 1 to 65535, it's left out", tileSet, slopeName.c_str());
 						continue;
 					}
-					const Json::Value& value = JsonAccess::Member(slopes, slopeName.c_str());
+					const Json::Value& value = Utils::JsonAccess::Member(slopes, slopeName.c_str());
 					if (!value.isObject()) {
 						continue;
 					}
 					SlopeTag tag;
-					tag.Excluded = JsonAccess::GetBool(value, "x", false);
-					tag.Left = std::clamp(JsonAccess::GetFloat(value, "l", 0.0f), 0.0f, 32.0f);
-					tag.Right = std::clamp(JsonAccess::GetFloat(value, "r", 0.0f), 0.0f, 32.0f);
+					tag.Excluded = Utils::JsonAccess::GetBool(value, "x", false);
+					tag.Left = std::clamp(Utils::JsonAccess::GetFloat(value, "l", 0.0f), 0.0f, 32.0f);
+					tag.Right = std::clamp(Utils::JsonAccess::GetFloat(value, "r", 0.0f), 0.0f, 32.0f);
 					SetSlope(std::uint16_t(index), &tag);
 				}
 			}

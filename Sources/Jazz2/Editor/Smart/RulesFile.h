@@ -51,7 +51,7 @@ namespace Jazz2::Editor
 		 */
 		static bool Write(StringView tileSet, const Json::Value& doc);
 		/**
-		 * @brief Writes the rules of a tile set only into the temporary file of @p path, see @ref AtomicFile::Stage()
+		 * @brief Writes the rules of a tile set only into the temporary file of @p path, see @ref Utils::AtomicFile::Stage()
 		 *
 		 * For rules that change together with other files, they're committed or discarded with them. Returns `false`
 		 * as @ref Write() does, or if the file couldn't be written.

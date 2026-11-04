@@ -7,7 +7,7 @@
 #include "TextPrompt.h"
 #include "TileSetsDialog.h"
 #include "../Tools/EditorContext.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Imaging/PaletteMatch.h"
 #include "../Imaging/PngCodec.h"
@@ -258,7 +258,7 @@ namespace Jazz2::Editor
 			const TileImportResult& result = job.Result;
 
 			// A file that isn't written whole isn't left there, it would take the name
-			if (!AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
+			if (!Utils::AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
 				session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 				return false;
 			}
@@ -594,7 +594,7 @@ namespace Jazz2::Editor
 		GetLevelPalette(session, tileSet.Palette);
 		tileSet.Columns = 0;
 		// A file that isn't written whole isn't left there, it would take the name
-		if (!AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
+		if (!Utils::AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
 			session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 			return false;
 		}
@@ -709,7 +709,7 @@ namespace Jazz2::Editor
 			return false;
 		}
 		// A file that isn't written whole isn't left there, it would take the name
-		if (!AtomicFile::Write(path, [&data](Stream& s) { return Formats::TileSetFile::Write(s, data); })) {
+		if (!Utils::AtomicFile::Write(path, [&data](Stream& s) { return Formats::TileSetFile::Write(s, data); })) {
 			session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 			return false;
 		}

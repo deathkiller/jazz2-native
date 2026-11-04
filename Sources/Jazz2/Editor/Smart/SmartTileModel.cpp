@@ -2,7 +2,7 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Common/ToolMath.h"
 #include "../../ContentResolver.h"
@@ -619,7 +619,7 @@ namespace Jazz2::Editor
 			}
 
 			fs::CreateDirectories(fs::GetDirectoryName(CachePath));
-			if (!AtomicFile::Write(CachePath, writer.Data.data(), std::int64_t(writer.Data.size()))) {
+			if (!Utils::AtomicFile::Write(CachePath, writer.Data.data(), std::int64_t(writer.Data.size()))) {
 				LOGW("Cache of the tiles of \"{}\" cannot be written", TileSet);
 			}
 			ReadSinceSave = 0;

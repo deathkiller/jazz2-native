@@ -4,7 +4,7 @@
 
 #include "RulesFile.h"
 #include "../Common/TileSource.h"
-#include "../Files/JsonAccess.h"
+#include "../../Utils/JsonAccess.h"
 
 #include <algorithm>
 #include <cstring>
@@ -39,7 +39,7 @@ namespace Jazz2::Editor
 			return false;
 		}
 		// The file can be written by hand or come with a tile set, a value of another type than expected is left out
-		const Json::Value& list = JsonAccess::Member(doc, "prefabs");
+		const Json::Value& list = Utils::JsonAccess::Member(doc, "prefabs");
 		if (!list.isArray()) {
 			return true;
 		}
@@ -48,27 +48,27 @@ namespace Jazz2::Editor
 				continue;
 			}
 			TilePrefab prefab;
-			prefab.Name = JsonAccess::GetString(item, "name");
-			prefab.Width = JsonAccess::GetInt(item, "width", 0);
-			prefab.Height = JsonAccess::GetInt(item, "height", 0);
+			prefab.Name = Utils::JsonAccess::GetString(item, "name");
+			prefab.Width = Utils::JsonAccess::GetInt(item, "width", 0);
+			prefab.Height = Utils::JsonAccess::GetInt(item, "height", 0);
 			if (prefab.Width <= 0 || prefab.Height <= 0 || prefab.Width > 256 || prefab.Height > 256 ||
-				!ReadTiles(JsonAccess::Member(item, "tiles"), prefab.Width * prefab.Height, prefab.Tiles)) {
+				!ReadTiles(Utils::JsonAccess::Member(item, "tiles"), prefab.Width * prefab.Height, prefab.Tiles)) {
 				continue;
 			}
 			// Tiles of other layers and events, by newer versions
-			const Json::Value& layers = JsonAccess::Member(item, "layers");
+			const Json::Value& layers = Utils::JsonAccess::Member(item, "layers");
 			if (layers.isArray()) {
 				for (const Json::Value& value : layers) {
 					LayerTiles layer;
-					layer.FromLayer = std::clamp<std::int32_t>(JsonAccess::GetInt(value, "o", 0), -255, 255);
-					if (layer.FromLayer != 0 && ReadTiles(JsonAccess::Member(value, "tiles"), prefab.Width * prefab.Height, layer.Tiles)) {
+					layer.FromLayer = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(value, "o", 0), -255, 255);
+					if (layer.FromLayer != 0 && ReadTiles(Utils::JsonAccess::Member(value, "tiles"), prefab.Width * prefab.Height, layer.Tiles)) {
 						prefab.ExtraLayers.push_back(Death::move(layer));
 					}
 				}
 			}
-			ReadEvents(JsonAccess::Member(item, "events"), Vector2i(prefab.Width, prefab.Height), prefab.Events);
+			ReadEvents(Utils::JsonAccess::Member(item, "events"), Vector2i(prefab.Width, prefab.Height), prefab.Events);
 			// Those off the grid by pixels, by even newer versions
-			ReadEvents(JsonAccess::Member(item, "offgrid"), Vector2i(prefab.Width * 32, prefab.Height * 32), prefab.OffGridEvents);
+			ReadEvents(Utils::JsonAccess::Member(item, "offgrid"), Vector2i(prefab.Width * 32, prefab.Height * 32), prefab.OffGridEvents);
 			prefabs.push_back(Death::move(prefab));
 		}
 		return true;
@@ -117,8 +117,8 @@ namespace Jazz2::Editor
 			return;
 		}
 		for (const Json::Value& value : events) {
-			std::int32_t x = JsonAccess::GetInt(value, "x", -1), y = JsonAccess::GetInt(value, "y", -1);
-			std::uint32_t type = JsonAccess::GetUInt(value, "type", 0);
+			std::int32_t x = Utils::JsonAccess::GetInt(value, "x", -1), y = Utils::JsonAccess::GetInt(value, "y", -1);
+			std::uint32_t type = Utils::JsonAccess::GetUInt(value, "type", 0);
 			if (x < 0 || y < 0 || x >= limit.X || y >= limit.Y || type == 0 || type > UINT16_MAX) {
 				continue;
 			}
@@ -126,13 +126,13 @@ namespace Jazz2::Editor
 			event.Offset = Vector2i(x, y);
 			std::memset(&event.Event, 0, sizeof(event.Event));
 			event.Event.Type = std::uint16_t(type);
-			event.Event.Flags = std::uint8_t(JsonAccess::GetUInt(value, "flags", 0) & 0xFF);
-			event.Event.GeneratorFlags = std::uint8_t(JsonAccess::GetUInt(value, "gen", 0) & 0xFF);
-			event.Event.GeneratorDelay = std::uint8_t(JsonAccess::GetUInt(value, "delay", 0) & 0xFF);
-			const Json::Value& params = JsonAccess::Member(value, "p");
+			event.Event.Flags = std::uint8_t(Utils::JsonAccess::GetUInt(value, "flags", 0) & 0xFF);
+			event.Event.GeneratorFlags = std::uint8_t(Utils::JsonAccess::GetUInt(value, "gen", 0) & 0xFF);
+			event.Event.GeneratorDelay = std::uint8_t(Utils::JsonAccess::GetUInt(value, "delay", 0) & 0xFF);
+			const Json::Value& params = Utils::JsonAccess::Member(value, "p");
 			if (params.isArray()) {
 				for (Json::ArrayIndex j = 0; j < params.size() && j < Json::ArrayIndex(Formats::LevelFile::EventParamsSize); j++) {
-					event.Event.Params[j] = std::uint8_t(JsonAccess::ToUInt(params[j], 0) & 0xFF);
+					event.Event.Params[j] = std::uint8_t(Utils::JsonAccess::ToUInt(params[j], 0) & 0xFF);
 				}
 			}
 		}
@@ -166,14 +166,14 @@ namespace Jazz2::Editor
 		}
 		for (const Json::Value& value : tiles) {
 			Tile& tile = result.emplace_back();
-			std::uint32_t index = JsonAccess::GetUInt(value, "i", 0);
+			std::uint32_t index = Utils::JsonAccess::GetUInt(value, "i", 0);
 			if (!value.isObject() || index > UINT16_MAX) {
 				continue;
 			}
 			tile.Present = true;
-			tile.TileSet = JsonAccess::GetString(value, "set");
+			tile.TileSet = Utils::JsonAccess::GetString(value, "set");
 			tile.Index = std::uint16_t(index);
-			tile.Flags = std::uint8_t(JsonAccess::GetUInt(value, "f", 0) & 0xFF);
+			tile.Flags = std::uint8_t(Utils::JsonAccess::GetUInt(value, "f", 0) & 0xFF);
 		}
 		return true;
 	}

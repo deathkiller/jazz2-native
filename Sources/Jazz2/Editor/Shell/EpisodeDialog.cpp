@@ -8,7 +8,7 @@
 #include "../Tools/EditorContext.h"
 #include "../Document/Commands.h"
 #include "../Document/LevelDocument.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/EpisodeFile.h"
 #include "../Imaging/PngCodec.h"
 #include "../UI/UiDialogs.h"
@@ -194,7 +194,7 @@ namespace Jazz2::Editor
 		}
 
 		// Changes the links of a level file by @p fix, which returns whether it changed the link it got; with @p stage, the
-		// file is written only into its temporary file (see AtomicFile::Stage()), otherwise it's replaced and the previous
+		// file is written only into its temporary file (see Utils::AtomicFile::Stage()), otherwise it's replaced and the previous
 		// one is kept as ".bak", in both cases only if any link was changed
 		template<class F>
 		bool RewriteLinks(StringView path, F&& fix, bool& changed, bool stage = false)
@@ -219,7 +219,7 @@ namespace Jazz2::Editor
 			auto save = [&document](Stream& s) {
 				return document.Save(s);
 			};
-			return (stage ? AtomicFile::Stage(path, save) : AtomicFile::Write(path, save, true));
+			return (stage ? Utils::AtomicFile::Stage(path, save) : Utils::AtomicFile::Write(path, save, true));
 		}
 
 		// Changes the links of the level being edited by @p fix as a step of its history, as they're saved with it, returns
@@ -419,7 +419,7 @@ namespace Jazz2::Editor
 			}
 			auto discardStaged = [&staged]() {
 				for (const String& path : staged) {
-					AtomicFile::Discard(path);
+					Utils::AtomicFile::Discard(path);
 				}
 			};
 			if (!failedNames.empty()) {
@@ -461,17 +461,17 @@ namespace Jazz2::Editor
 
 			// The files replaced already are put back if one can't be
 			std::size_t committed = 0;
-			while (committed < staged.size() && AtomicFile::Commit(staged[committed], true)) {
+			while (committed < staged.size() && Utils::AtomicFile::Commit(staged[committed], true)) {
 				committed++;
 			}
 			auto rollBackLinks = [&]() {
 				for (std::size_t i = 0; i < committed; i++) {
-					if (!AtomicFile::RestoreBackup(staged[i], true)) {
+					if (!Utils::AtomicFile::RestoreBackup(staged[i], true)) {
 						LOGE("File \"{}\" couldn't be put back, its previous content is in \"{}.bak\"", staged[i], staged[i]);
 					}
 				}
 				for (std::size_t i = committed; i < staged.size(); i++) {
-					AtomicFile::Discard(staged[i]);
+					Utils::AtomicFile::Discard(staged[i]);
 				}
 			};
 			if (committed < staged.size()) {
@@ -577,7 +577,7 @@ namespace Jazz2::Editor
 				PngImage png;
 				png.Create(image.Width, image.Height, false);
 				std::memcpy(png.Pixels.data(), image.Pixels.data(), std::min<std::size_t>(png.Pixels.size(), image.Pixels.size()));
-				if (!AtomicFile::Write(path, [&png](Stream& stream) { return PngCodec::Encode(stream, png); })) {
+				if (!Utils::AtomicFile::Write(path, [&png](Stream& stream) { return PngCodec::Encode(stream, png); })) {
 					s->ShowMessage(_x("editor", "The file couldn't be written"));
 				}
 			});

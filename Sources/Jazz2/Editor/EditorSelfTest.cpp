@@ -13,9 +13,11 @@
 #include "Files/AutosaveService.h"
 #include "Files/ContentTileSetLibrary.h"
 #include "Files/EpisodeFile.h"
-#include "Files/JsonFile.h"
+#include "../Utils/JsonFile.h"
 #include "Files/PoFile.h"
-#include "Files/ZipWriter.h"
+#include "../Utils/ZipArchive.h"
+#include "../Utils/ZipFormat.h"
+#include "../Utils/ZipWriter.h"
 #include "../Formats/LevelTextsChunk.h"
 #include "Imaging/PaletteFile.h"
 #include "Imaging/PaletteMatch.h"
@@ -39,6 +41,7 @@
 
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
+#include <Cryptography/Sha256.h>
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
 
@@ -2557,7 +2560,7 @@ namespace Jazz2::Editor
 				}
 			};
 			static const char Check[] = "123456789";
-			expect(ZipWriter::Crc32(ArrayView<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(Check), 9)) == 0xCBF43926u, "CRC-32");
+			expect(Utils::ZipWriter::Crc32(ArrayView<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(Check), 9)) == 0xCBF43926u, "CRC-32");
 
 			SmallVector<std::uint8_t, 0> text;
 			for (std::int32_t i = 0; i < 200; i++) {
@@ -2565,7 +2568,7 @@ namespace Jazz2::Editor
 			}
 			MemoryStream zip(4096);
 			{
-				ZipWriter writer(zip);
+				Utils::ZipWriter writer(zip);
 				expect(writer.AddFile("dir/text.txt"_s, text), "a file added");
 				expect(writer.AddFile("empty.bin"_s, {}), "an empty file added");
 				expect(writer.Finish(), "finished");
@@ -2589,10 +2592,138 @@ namespace Jazz2::Editor
 					std::memcpy(unpacked.data(), content, originalSize);
 				}
 				expect(originalSize == text.size() && std::memcmp(unpacked.data(), text.data(), text.size()) == 0, "the file read back");
-				expect(read32(14) == ZipWriter::Crc32(text), "the checksum of the file");
+				expect(read32(14) == Utils::ZipWriter::Crc32(text), "the checksum of the file");
 			}
 			if (problems == 0) {
 				LOGI("ZIP writer test passed");
+			}
+			return problems;
+		}
+
+		// Files written by the ZIP writer are read back by the reader, and a damaged or oversized entry is refused
+		std::int32_t TestZipArchive()
+		{
+			std::int32_t problems = 0;
+			auto expect = [&problems](bool condition, const char* what) {
+				if (!condition) {
+					LOGE("ZIP archive: {}", what);
+					problems++;
+				}
+			};
+
+			expect(Utils::ZipFormat::DecodeCp437("a\x81\xE1"_s) == "a\xC3\xBC\xC3\x9F"_s, "a name in code page 437");
+
+			SmallVector<std::uint8_t, 0> text, noise;
+			for (std::int32_t i = 0; i < 5000; i++) {
+				text.push_back(std::uint8_t('a' + (i % 7)));
+			}
+			std::uint32_t seed = 12345;
+			for (std::int32_t i = 0; i < 3000; i++) {
+				seed = seed * 1664525u + 1013904223u;
+				noise.push_back(std::uint8_t(seed >> 24));
+			}
+
+			MemoryStream zip(16384);
+			{
+				Utils::ZipWriter writer(zip);
+				writer.AddFile("dir/text.txt"_s, text);
+				writer.AddFile("noise.bin"_s, noise);
+				writer.AddFile("empty.bin"_s, {});
+				expect(writer.Finish(), "the archive written");
+			}
+
+			String path = fs::CombinePath(fs::GetTempDirectory(), "Jazz2.ZipArchiveTest.zip"_s);
+			auto writeArchive = [&](std::int64_t size, std::int64_t damagedOffset) {
+				auto s = fs::Open(path, FileAccess::Write);
+				SmallVector<std::uint8_t, 0> bytes;
+				bytes.resize_for_overwrite(std::size_t(size));
+				std::memcpy(bytes.data(), zip.GetBuffer(), std::size_t(size));
+				if (damagedOffset >= 0) {
+					bytes[std::size_t(damagedOffset)] ^= 0x5A;
+				}
+				return (s->IsValid() && s->Write(bytes.data(), size) == size);
+			};
+
+			expect(writeArchive(zip.GetSize(), -1), "the archive saved");
+			Utils::ZipArchive archive;
+			expect(archive.Open(path) == Utils::ZipError::None, "the archive opened");
+			auto entries = archive.GetEntries();
+			expect(entries.size() == 3, "three entries");
+			if (problems == 0) {
+				expect(entries[0].Name == "dir/text.txt"_s && entries[0].Method == Utils::ZipFormat::MethodDeflated, "a deflated entry");
+				expect(entries[1].Method == Utils::ZipFormat::MethodStored, "a stored entry");
+				const SmallVector<std::uint8_t, 0>* expected[] = { &text, &noise };
+				for (std::int32_t i = 0; i < 2; i++) {
+					MemoryStream out(1024);
+					expect(archive.Extract(entries[i], out) == Utils::ZipError::None, "an entry extracted");
+					expect(out.GetSize() == std::int64_t(expected[i]->size()) && std::memcmp(out.GetBuffer(), expected[i]->data(), expected[i]->size()) == 0, "an entry read back");
+				}
+				MemoryStream empty(16);
+				expect(archive.Extract(entries[2], empty) == Utils::ZipError::None && empty.GetSize() == 0, "an empty entry");
+				MemoryStream limited(16);
+				expect(archive.Extract(entries[0], limited, 100) == Utils::ZipError::TooLarge && limited.GetSize() == 0, "a size limit");
+
+				std::uint64_t dataOffset = entries[1].LocalHeaderOffset + Utils::ZipFormat::LocalFileHeaderSize + entries[1].Name.size();
+				expect(writeArchive(zip.GetSize(), std::int64_t(dataOffset) + 100), "the damaged archive saved");
+				Utils::ZipArchive damaged;
+				MemoryStream ignored(1024);
+				expect(damaged.Open(path) == Utils::ZipError::None && damaged.Extract(damaged.GetEntries()[1], ignored) == Utils::ZipError::ChecksumMismatch, "a damaged entry refused");
+
+				expect(writeArchive(zip.GetSize() - 30, -1), "the truncated archive saved");
+				Utils::ZipArchive truncated;
+				expect(truncated.Open(path) != Utils::ZipError::None, "a truncated archive refused");
+			}
+			fs::RemoveFile(path);
+
+			if (problems == 0) {
+				LOGI("ZIP archive test passed");
+			}
+			return problems;
+		}
+
+		// The digest matches the published test vectors, also when the data comes in uneven parts
+		std::int32_t TestSha256()
+		{
+			std::int32_t problems = 0;
+			auto toHex = [](const std::uint8_t (&digest)[Death::Cryptography::Sha256::DigestLength]) {
+				static const char Digits[] = "0123456789abcdef";
+				String hex(Death::Containers::NoInit, Death::Cryptography::Sha256::DigestLength * 2);
+				for (std::size_t i = 0; i < Death::Cryptography::Sha256::DigestLength; i++) {
+					hex[i * 2] = Digits[digest[i] >> 4];
+					hex[i * 2 + 1] = Digits[digest[i] & 0x0F];
+				}
+				return hex;
+			};
+			auto check = [&](StringView input, StringView expected) {
+				std::uint8_t digest[Death::Cryptography::Sha256::DigestLength];
+				Death::Cryptography::Sha256::Compute(input.data(), input.size(), digest);
+				if (toHex(digest) != expected) {
+					LOGE("SHA-256: digest of \"{}\" is {}", input, toHex(digest));
+					problems++;
+				}
+			};
+			check(""_s, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"_s);
+			check("abc"_s, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"_s);
+			check("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"_s, "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"_s);
+
+			Death::Cryptography::Sha256 sha;
+			SmallVector<char, 0> chunk;
+			chunk.resize(997, 'a');
+			std::size_t remaining = 1000000;
+			while (remaining > 0) {
+				std::size_t length = std::min<std::size_t>(remaining, chunk.size());
+				sha.Update(chunk.data(), length);
+				remaining -= length;
+			}
+			std::uint8_t digest[Death::Cryptography::Sha256::DigestLength];
+			sha.Finish(digest);
+			if (toHex(digest) != "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0"_s) {
+				LOGE("SHA-256: digest of a million characters is {}", toHex(digest));
+				problems++;
+			}
+
+			if (problems == 0) {
+				LOGI("SHA-256 test passed");
 			}
 			return problems;
 		}
@@ -2936,7 +3067,7 @@ namespace Jazz2::Editor
 			// What a template doesn't describe is kept, an image that can't be embedded is as in the game
 			CustomWeaponTemplate partial;
 			Json::Value value;
-			expect(JsonFile::Parse(R"json({ "Kind": "custom", "BasedOn": "rf", "Shot": { "Speed": 2, "Sprite": { "File": "missing.png" } } })json"_s, value) &&
+			expect(Utils::JsonFile::Parse(R"json({ "Kind": "custom", "BasedOn": "rf", "Shot": { "Speed": 2, "Sprite": { "File": "missing.png" } } })json"_s, value) &&
 				ReadCustomWeaponTemplate(value, "Weapons/Partial.json"_s, partial) && partial.BasedOn == WeaponType::RF, "a template with little in it");
 			applied = WeaponDefinition::MakeCustom(WeaponType::RF, WeaponType::RF);
 			WeaponDefinition stock = applied;
@@ -3240,6 +3371,8 @@ namespace Jazz2::Editor
 			problems += TestEventMerge();
 			problems += TestCommandArchive();
 			problems += TestZipWriter();
+			problems += TestZipArchive();
+			problems += TestSha256();
 			problems += TestLevelTextTranslations();
 			problems += TestEpisodeFile();
 			problems += TestWeaponsChunk();

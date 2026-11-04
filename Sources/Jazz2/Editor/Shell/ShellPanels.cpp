@@ -22,7 +22,7 @@
 #include "../Tools/BlockGrab.h"
 #include "../Tools/EditorTool.h"
 #include "../Common/TileSource.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Imaging/LevelThumbnail.h"
 #include "../Imaging/PaletteMatch.h"
 #include "../Imaging/PngCodec.h"
@@ -496,7 +496,7 @@ namespace Jazz2::Editor
 				PngImage png = MakeTextureImage(texture->data(), LayerTextureSize, ContentResolver::Get().GetPalettes().data());
 				// The folder of textures may not be there yet
 				fs::CreateDirectories(fs::GetDirectoryName(path));
-				if (!AtomicFile::Write(path, [&png](Stream& stream) { return PngCodec::Encode(stream, png); })) {
+				if (!Utils::AtomicFile::Write(path, [&png](Stream& stream) { return PngCodec::Encode(stream, png); })) {
 					s->ShowMessage(_x("editor", "The file couldn't be written"));
 					return;
 				}

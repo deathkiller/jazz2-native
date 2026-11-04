@@ -3,7 +3,7 @@
 #if defined(WITH_EDITOR)
 
 #include "PngCodec.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../../../nCine/I18n.h"
 
 #include <Containers/StaticArray.h>
@@ -243,7 +243,7 @@ namespace Jazz2::Editor
 				image.Palette[i] = palette[i] | 0xFF000000u;
 			}
 			image.PaletteSize = 256;
-			return AtomicFile::Write(path, [&image](Stream& s) { return PngCodec::Encode(s, image); });
+			return Utils::AtomicFile::Write(path, [&image](Stream& s) { return PngCodec::Encode(s, image); });
 		}
 
 		if (format == Format::Act) {
@@ -256,7 +256,7 @@ namespace Jazz2::Editor
 			// All 256 used, the first one transparent, as it is in the game
 			data[768] = 0x01; data[769] = 0x00;
 			data[770] = 0x00; data[771] = 0x00;
-			return AtomicFile::Write(path, data, std::int64_t(sizeof(data)));
+			return Utils::AtomicFile::Write(path, data, std::int64_t(sizeof(data)));
 		}
 
 		String text;
@@ -278,7 +278,7 @@ namespace Jazz2::Editor
 				text += StringView(line, std::size_t(length));
 			}
 		}
-		return AtomicFile::Write(path, text.data(), std::int64_t(text.size()));
+		return Utils::AtomicFile::Write(path, text.data(), std::int64_t(text.size()));
 	}
 }
 

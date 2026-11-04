@@ -24,6 +24,9 @@
 #include "../Compatibility/AnimSetMapping.h"
 #include "../Compatibility/EventConverter.h"
 #include "../Compatibility/JJ2Strings.h"
+#if defined(WITH_LEVEL_PACKS)
+#	include "../LevelPacks/LevelPackLibrary.h"
+#endif
 #include "../Rendering/PlayerViewport.h"
 #include "../UI/HUD.h"
 #include "../UI/InGameConsole.h"
@@ -438,6 +441,15 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 				return nextToScript;
 			}
 		}
+#if defined(WITH_LEVEL_PACKS)
+		// A level of a pack has its libraries among the original files of the pack
+		if (_levelHandler != nullptr) {
+			String packFile = LevelPacks::LevelPackLibrary::Get().FindOriginalFile(_levelHandler->GetLevelName(), includePath);
+			if (!packFile.empty() && fs::IsReadableFile(packFile)) {
+				return packFile;
+			}
+		}
+#endif
 		auto sourcePath = ContentResolver::Get().GetSourcePath();
 		return fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, includePath));
 	}

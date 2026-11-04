@@ -796,14 +796,14 @@ namespace Jazz2::Editor
 				painter.Icon(entry.Kind.Icon, Rectf(rect.X + padding, rect.Y, iconSize, rect.H), entry.Kind.Color);
 			}
 			float x = rect.X + padding * 2.0f + iconSize;
-			painter.TextInRect(entry.Name, Rectf(x, rect.Y, rect.X + rect.W - x, rect.H), UiTheme::Text);
+			painter.TextInRect(entry.Label.empty() ? entry.Name : entry.Label, Rectf(x, rect.Y, rect.X + rect.W - x, rect.H), UiTheme::Text);
 			if (entry.Special >= 0 && entry.Special < std::int32_t(_special.size())) {
 				// The value itself after the name
 				x += painter.MeasureText(entry.Name) + padding * 2.0f;
 				painter.TextInRect(_special[entry.Special].Value, Rectf(x, rect.Y, std::max(rect.X + rect.W - x, 0.0f), rect.H), UiTheme::TextDim);
 			}
 		};
-		_rows->RowText = [this](std::int32_t index) { return _entries[index].Name; };
+		_rows->RowText = [this](std::int32_t index) { return (_entries[index].Label.empty() ? _entries[index].Name : _entries[index].Label); };
 		_rows->RowTooltip = [this](std::int32_t index) {
 			return (index >= 0 && index < std::int32_t(_entries.size()) ? _entries[index].Kind.Description : String());
 		};
@@ -955,20 +955,30 @@ namespace Jazz2::Editor
 		auto isHidden = [](StringView path, StringView name) {
 			return (!ShowHiddenFiles && (name.hasPrefix('.') || fs::IsHidden(path)));
 		};
+		// A place may show other names than those of the files, they're sorted by what's shown
+		auto labelFunc = (root != nullptr && IsInRoot(_directory, _rootIndex) ? root->LabelFunc : nullptr);
 		if (fs::DirectoryExists(_directory)) {
 			for (auto item : fs::Directory(_directory, fs::EnumerationOptions::SkipFiles)) {
 				String name = fs::GetFileName(item);
 				if (isHidden(item, name)) {
 					continue;
 				}
-				String key = StringUtils::lowercase(name);
-				directories.push_back({ Death::move(key), { Death::move(name), true } });
+				Entry entry{Death::move(name), true};
+				if (labelFunc != nullptr) {
+					entry.Label = labelFunc(item, true);
+				}
+				String key = StringUtils::lowercase(entry.Label.empty() ? entry.Name : entry.Label);
+				directories.push_back({ Death::move(key), Death::move(entry) });
 			}
 			for (auto item : fs::Directory(_directory, fs::EnumerationOptions::SkipDirectories)) {
 				String name = fs::GetFileName(item);
 				if (MatchesExtension(name) && !isHidden(item, name)) {
-					String key = StringUtils::lowercase(name);
-					files.push_back({ Death::move(key), { Death::move(name), false } });
+					Entry entry{Death::move(name), false};
+					if (labelFunc != nullptr) {
+						entry.Label = labelFunc(item, false);
+					}
+					String key = StringUtils::lowercase(entry.Label.empty() ? entry.Name : entry.Label);
+					files.push_back({ Death::move(key), Death::move(entry) });
 				}
 			}
 		}

@@ -269,6 +269,11 @@ namespace Jazz2
 	String ContentResolver::FindContentFile(StringView path) const
 	{
 		String fullPath;
+#if defined(WITH_LEVEL_PACKS)
+		if (TryGetLevelPackContentPath(path, fullPath)) {
+			return (!fullPath.empty() && fs::IsReadableFile(fullPath) ? fullPath : String());
+		}
+#endif
 		StringView userContentPath = GetUserContentPath();
 		if (!userContentPath.empty()) {
 			fullPath = fs::CombinePath(userContentPath, path);
@@ -286,6 +291,13 @@ namespace Jazz2
 		if (fs::IsReadableFile(fullPath)) {
 			return fullPath;
 		}
+
+#if defined(WITH_LEVEL_PACKS)
+		fullPath = fs::CombinePath(GetLevelPacksCachePath(), path);
+		if (fs::IsReadableFile(fullPath)) {
+			return fullPath;
+		}
+#endif
 
 		return {};
 	}
@@ -305,6 +317,22 @@ namespace Jazz2
 			return s;
 		};
 
+#if defined(WITH_LEVEL_PACKS)
+		String packPath;
+		if (TryGetLevelPackContentPath(path, packPath)) {
+			fullPath = {};
+			if (packPath.empty() || (CheckContentFileFirst && !fs::IsReadableFile(packPath))) {
+				return nullptr;
+			}
+			auto s = fs::Open(packPath, FileAccess::Read, bufferSize);
+			if (!s->IsValid() || s->GetSize() < 0) {
+				return nullptr;
+			}
+			fullPath = Death::move(packPath);
+			return s;
+		}
+#endif
+
 		StringView userContentPath = GetUserContentPath();
 		if (!userContentPath.empty()) {
 			if (auto s = tryOpen(userContentPath)) {
@@ -317,10 +345,61 @@ namespace Jazz2
 		if (auto s = tryOpen(GetCachePath())) {
 			return s;
 		}
+#if defined(WITH_LEVEL_PACKS)
+		if (auto s = tryOpen(GetLevelPacksCachePath())) {
+			return s;
+		}
+#endif
 
 		fullPath = {};
 		return nullptr;
 	}
+
+#if defined(WITH_LEVEL_PACKS)
+	String ContentResolver::GetLevelPacksPath(bool create)
+	{
+		StringView contentPath = GetWritableContentPath(create);
+		if (contentPath.empty()) {
+			return {};
+		}
+		String path = fs::CombinePath(contentPath, "LevelPacks"_s);
+		if (create && !fs::DirectoryExists(path) && !fs::CreateDirectories(path)) {
+			return {};
+		}
+		return path;
+	}
+
+	String ContentResolver::GetLevelPacksCachePath() const
+	{
+		return fs::CombinePath(GetCachePath(), "LevelPacks"_s);
+	}
+
+	bool ContentResolver::TryGetLevelPackContentPath(StringView path, String& result) const
+	{
+		static constexpr StringView Prefix = "Episodes"_s;
+		if (path.size() < Prefix.size() + 2 || !path.hasPrefix(Prefix) || (path[Prefix.size()] != '/' && path[Prefix.size()] != '\\') ||
+			path[Prefix.size() + 1] != '+') {
+			return false;
+		}
+
+		result = {};
+		StringView rest = path.exceptPrefix(Prefix.size() + 2);
+		// Only the folder of the pack is checked here, the rest is a level name as anywhere else
+		std::size_t folderLength = 0;
+		while (folderLength < rest.size() && rest[folderLength] != '/' && rest[folderLength] != '\\' && rest[folderLength] != '.') {
+			char c = rest[folderLength];
+			if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-')) {
+				return true;
+			}
+			folderLength++;
+		}
+		if (folderLength == 0 || rest.find(".."_s) != nullptr) {
+			return true;
+		}
+		result = fs::CombinePath(GetLevelPacksCachePath(), path);
+		return true;
+	}
+#endif
 
 	StringView ContentResolver::GetCachePath() const
 	{
@@ -3449,6 +3528,16 @@ namespace Jazz2
 				fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
 				found = fs::IsReadableFile(fullPath);
 			}
+#		if defined(WITH_LEVEL_PACKS)
+			if (!found && path.contains('~')) {
+				// Music of level packs is played from their stored original files
+				String levelPacksPath = GetLevelPacksPath(false);
+				if (!levelPacksPath.empty()) {
+					fullPath = fs::CombinePath({ levelPacksPath, "Files"_s, path });
+					found = fs::IsReadableFile(fullPath);
+				}
+			}
+#		endif
 			if (!found) {
 				// "Source" directory must be case in-sensitive
 				fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));

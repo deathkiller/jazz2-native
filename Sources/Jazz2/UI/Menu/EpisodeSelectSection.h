@@ -21,7 +21,8 @@ namespace Jazz2::UI::Menu
 		CanContinue = 0x08,
 		CheatsUsed = 0x10,
 		LevelsInUnknownDirectory = 0x20,
-		RedirectToCustomLevels = 0x40
+		RedirectToCustomLevels = 0x40,
+		RedirectToLevelPacks = 0x80
 	};
 
 	DEATH_ENUM_FLAGS(EpisodeDataFlags);
@@ -79,5 +80,8 @@ namespace Jazz2::UI::Menu
 		void HandleTap(std::int32_t row, Vector2i touchPos);
 		void OnAfterTransition();
 		void AddEpisode(StringView episodeFile);
+#if defined(WITH_LEVEL_PACKS)
+		void AddLevelPacksItem();
+#endif
 	};
 }

@@ -2,8 +2,8 @@
 
 #if defined(WITH_EDITOR)
 
-#include "JsonAccess.h"
-#include "JsonFile.h"
+#include "../../Utils/JsonAccess.h"
+#include "../../Utils/JsonFile.h"
 #include "../../PreferencesCache.h"
 
 #include <Containers/StringConcatenable.h>
@@ -27,11 +27,11 @@ namespace Jazz2::Editor
 			if (!value.isObject()) {
 				return;
 			}
-			placement.Floating = JsonAccess::GetBool(value, "Floating", false);
-			placement.X = std::clamp<float>(JsonAccess::GetFloat(value, "X", 0.0f), -10000.0f, 10000.0f);
-			placement.Y = std::clamp<float>(JsonAccess::GetFloat(value, "Y", 0.0f), -10000.0f, 10000.0f);
-			placement.Width = std::clamp<float>(JsonAccess::GetFloat(value, "Width", 0.0f), 0.0f, 4000.0f);
-			placement.Height = std::clamp<float>(JsonAccess::GetFloat(value, "Height", 0.0f), 0.0f, 4000.0f);
+			placement.Floating = Utils::JsonAccess::GetBool(value, "Floating", false);
+			placement.X = std::clamp<float>(Utils::JsonAccess::GetFloat(value, "X", 0.0f), -10000.0f, 10000.0f);
+			placement.Y = std::clamp<float>(Utils::JsonAccess::GetFloat(value, "Y", 0.0f), -10000.0f, 10000.0f);
+			placement.Width = std::clamp<float>(Utils::JsonAccess::GetFloat(value, "Width", 0.0f), 0.0f, 4000.0f);
+			placement.Height = std::clamp<float>(Utils::JsonAccess::GetFloat(value, "Height", 0.0f), 0.0f, 4000.0f);
 		}
 
 		Json::Value WritePlacement(const EditorSettings::PanelPlacement& placement)
@@ -53,7 +53,7 @@ namespace Jazz2::Editor
 				return;
 			}
 			for (const Json::Value& item : value) {
-				std::int32_t number = JsonAccess::ToInt(item, -1);
+				std::int32_t number = Utils::JsonAccess::ToInt(item, -1);
 				if (number >= 0 && number <= UINT16_MAX && std::int32_t(numbers.size()) < maxCount &&
 					std::find(numbers.begin(), numbers.end(), std::uint16_t(number)) == numbers.end()) {
 					numbers.push_back(std::uint16_t(number));
@@ -87,63 +87,63 @@ namespace Jazz2::Editor
 	void EditorSettings::Load()
 	{
 		Json::Value doc;
-		if (JsonFile::Read(GetPath(), doc, 1024 * 1024, "Editor settings"_s) != JsonFile::ReadResult::Ok) {
+		if (Utils::JsonFile::Read(GetPath(), doc, 1024 * 1024, "Editor settings"_s) != Utils::JsonFile::ReadResult::Ok) {
 			return;
 		}
 
-		UiScale = std::clamp<float>(JsonAccess::GetFloat(doc, "UiScale", 0.0f), 0.0f, 8.0f);
-		ShowGrid = JsonAccess::GetBool(doc, "ShowGrid", true);
-		PauseLayerMovement = JsonAccess::GetBool(doc, "PauseLayerMovement", false);
-		EventsOnTop = JsonAccess::GetBool(doc, "EventsOnTop", false);
-		PreviewTexturedLayers = JsonAccess::GetBool(doc, "PreviewTexturedLayers", false);
-		OverriddenAssets = JsonAccess::GetBool(doc, "OverriddenAssets", true);
-		Tool = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "Tool", 5), 0, 255);
-		PickerEvents = JsonAccess::GetBool(doc, "PickerEvents", false);
+		UiScale = std::clamp<float>(Utils::JsonAccess::GetFloat(doc, "UiScale", 0.0f), 0.0f, 8.0f);
+		ShowGrid = Utils::JsonAccess::GetBool(doc, "ShowGrid", true);
+		PauseLayerMovement = Utils::JsonAccess::GetBool(doc, "PauseLayerMovement", false);
+		EventsOnTop = Utils::JsonAccess::GetBool(doc, "EventsOnTop", false);
+		PreviewTexturedLayers = Utils::JsonAccess::GetBool(doc, "PreviewTexturedLayers", false);
+		OverriddenAssets = Utils::JsonAccess::GetBool(doc, "OverriddenAssets", true);
+		Tool = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "Tool", 5), 0, 255);
+		PickerEvents = Utils::JsonAccess::GetBool(doc, "PickerEvents", false);
 		// The original tile sets have 10 tiles in a row, the key was renamed when the default became 10
-		TilePickerColumns = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "TileColumns", 10), 1, 32);
-		RightPanelWidth = std::clamp<float>(JsonAccess::GetFloat(doc, "RightPanelWidth", 165.0f), 80.0f, 600.0f);
-		LayerListHeight = std::clamp<float>(JsonAccess::GetFloat(doc, "LayerListHeight", 96.0f), 32.0f, 600.0f);
-		PickerPanelWidth = std::clamp<float>(JsonAccess::GetFloat(doc, "PickerPanelWidth", 180.0f), 80.0f, 800.0f);
-		Layout = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "Layout", 0), 0, 2);
-		Expert = JsonAccess::GetBool(doc, "Expert", true);
-		ReadPlacement(JsonAccess::Member(doc, "PickerPanelPlacement"), PickerPanelPlacement);
-		ReadPlacement(JsonAccess::Member(doc, "RightPanelPlacement"), RightPanelPlacement);
-		PlayCharacter = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "PlayCharacter", 1), 1, 3);
-		PlayDifficulty = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "PlayDifficulty", 2), 1, 3);
-		PlayGameMode = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "PlayGameMode", 0), 0, 255);
-		PlayPlayerCount = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "PlayPlayerCount", 2), 1, 4);
-		Theme = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "Theme", 0), 0, 1);
-		ReducedMotion = JsonAccess::GetBool(doc, "ReducedMotion", false);
-		ReadableFont = JsonAccess::GetBool(doc, "ReadableFont", true);
-		ScriptEditor = JsonAccess::ToString(JsonAccess::Member(doc, "ScriptEditor"));
+		TilePickerColumns = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "TileColumns", 10), 1, 32);
+		RightPanelWidth = std::clamp<float>(Utils::JsonAccess::GetFloat(doc, "RightPanelWidth", 165.0f), 80.0f, 600.0f);
+		LayerListHeight = std::clamp<float>(Utils::JsonAccess::GetFloat(doc, "LayerListHeight", 96.0f), 32.0f, 600.0f);
+		PickerPanelWidth = std::clamp<float>(Utils::JsonAccess::GetFloat(doc, "PickerPanelWidth", 180.0f), 80.0f, 800.0f);
+		Layout = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "Layout", 0), 0, 2);
+		Expert = Utils::JsonAccess::GetBool(doc, "Expert", true);
+		ReadPlacement(Utils::JsonAccess::Member(doc, "PickerPanelPlacement"), PickerPanelPlacement);
+		ReadPlacement(Utils::JsonAccess::Member(doc, "RightPanelPlacement"), RightPanelPlacement);
+		PlayCharacter = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "PlayCharacter", 1), 1, 3);
+		PlayDifficulty = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "PlayDifficulty", 2), 1, 3);
+		PlayGameMode = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "PlayGameMode", 0), 0, 255);
+		PlayPlayerCount = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "PlayPlayerCount", 2), 1, 4);
+		Theme = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "Theme", 0), 0, 1);
+		ReducedMotion = Utils::JsonAccess::GetBool(doc, "ReducedMotion", false);
+		ReadableFont = Utils::JsonAccess::GetBool(doc, "ReadableFont", true);
+		ScriptEditor = Utils::JsonAccess::ToString(Utils::JsonAccess::Member(doc, "ScriptEditor"));
 		{
-			const Json::Value& tools = JsonAccess::Member(doc, "Tools");
-			Tools.AcrossSeams = JsonAccess::GetBool(tools, "AcrossSeams", true);
-			Tools.IgnoreFlips = JsonAccess::GetBool(tools, "IgnoreFlips", false);
-			Tools.OnlyEmpty = JsonAccess::GetBool(tools, "OnlyEmpty", false);
-			Tools.WandGlobal = JsonAccess::GetBool(tools, "WandGlobal", false);
-			Tools.Shape = std::clamp<std::int32_t>(JsonAccess::GetInt(tools, "Shape", 0), 0, 3);
-			Tools.EventMode = std::clamp<std::int32_t>(JsonAccess::GetInt(tools, "EventMode", 0), 0, 3);
-			Tools.MeasureArcs = std::clamp<std::int32_t>(JsonAccess::GetInt(tools, "MeasureArcs", 0x07), 0, 0xFF);
-			Tools.MeasureCollisions = JsonAccess::GetBool(tools, "MeasureCollisions", true);
-			Tools.MirrorSwapTeams = JsonAccess::GetBool(tools, "MirrorSwapTeams", false);
+			const Json::Value& tools = Utils::JsonAccess::Member(doc, "Tools");
+			Tools.AcrossSeams = Utils::JsonAccess::GetBool(tools, "AcrossSeams", true);
+			Tools.IgnoreFlips = Utils::JsonAccess::GetBool(tools, "IgnoreFlips", false);
+			Tools.OnlyEmpty = Utils::JsonAccess::GetBool(tools, "OnlyEmpty", false);
+			Tools.WandGlobal = Utils::JsonAccess::GetBool(tools, "WandGlobal", false);
+			Tools.Shape = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(tools, "Shape", 0), 0, 3);
+			Tools.EventMode = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(tools, "EventMode", 0), 0, 3);
+			Tools.MeasureArcs = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(tools, "MeasureArcs", 0x07), 0, 0xFF);
+			Tools.MeasureCollisions = Utils::JsonAccess::GetBool(tools, "MeasureCollisions", true);
+			Tools.MirrorSwapTeams = Utils::JsonAccess::GetBool(tools, "MirrorSwapTeams", false);
 		}
 		{
-			const Json::Value& playTest = JsonAccess::Member(doc, "PlayTest");
-			PlayTest.TimeScale = std::clamp<float>(JsonAccess::GetFloat(playTest, "TimeScale", 1.0f), 0.05f, 4.0f);
-			PlayTest.ShowHitboxes = JsonAccess::GetBool(playTest, "ShowHitboxes", false);
-			PlayTest.ShowEventZones = JsonAccess::GetBool(playTest, "ShowEventZones", false);
-			PlayTest.ShowDeaths = JsonAccess::GetBool(playTest, "ShowDeaths", false);
-			PlayTest.ReachCharacter = std::clamp<std::int32_t>(JsonAccess::GetInt(playTest, "ReachCharacter", 0), 0, 3);
-			PlayTest.ReachFromMpStarts = JsonAccess::GetBool(playTest, "ReachFromMpStarts", false);
+			const Json::Value& playTest = Utils::JsonAccess::Member(doc, "PlayTest");
+			PlayTest.TimeScale = std::clamp<float>(Utils::JsonAccess::GetFloat(playTest, "TimeScale", 1.0f), 0.05f, 4.0f);
+			PlayTest.ShowHitboxes = Utils::JsonAccess::GetBool(playTest, "ShowHitboxes", false);
+			PlayTest.ShowEventZones = Utils::JsonAccess::GetBool(playTest, "ShowEventZones", false);
+			PlayTest.ShowDeaths = Utils::JsonAccess::GetBool(playTest, "ShowDeaths", false);
+			PlayTest.ReachCharacter = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(playTest, "ReachCharacter", 0), 0, 3);
+			PlayTest.ReachFromMpStarts = Utils::JsonAccess::GetBool(playTest, "ReachFromMpStarts", false);
 		}
-		ShowScreenFrame = JsonAccess::GetBool(doc, "ShowScreenFrame", false);
-		ScreenFrameKind = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "ScreenFrameKind", 0), 0, 3);
-		CheckLevelFilter = std::clamp<std::int32_t>(JsonAccess::GetInt(doc, "CheckLevelFilter", 7), 0, 7);
-		ReadNumbers(JsonAccess::Member(doc, "RecentEvents"), RecentEvents, MaxRecentItems);
-		ReadNumbers(JsonAccess::Member(doc, "FavoriteEvents"), FavoriteEvents, MaxFavoriteItems);
+		ShowScreenFrame = Utils::JsonAccess::GetBool(doc, "ShowScreenFrame", false);
+		ScreenFrameKind = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "ScreenFrameKind", 0), 0, 3);
+		CheckLevelFilter = std::clamp<std::int32_t>(Utils::JsonAccess::GetInt(doc, "CheckLevelFilter", 7), 0, 7);
+		ReadNumbers(Utils::JsonAccess::Member(doc, "RecentEvents"), RecentEvents, MaxRecentItems);
+		ReadNumbers(Utils::JsonAccess::Member(doc, "FavoriteEvents"), FavoriteEvents, MaxFavoriteItems);
 		TileFavorites.clear();
-		const Json::Value& tileFavorites = JsonAccess::Member(doc, "TileFavorites");
+		const Json::Value& tileFavorites = Utils::JsonAccess::Member(doc, "TileFavorites");
 		if (tileFavorites.isObject()) {
 			for (auto it = tileFavorites.begin(); it != tileFavorites.end(); ++it) {
 				if (!it->isObject()) {
@@ -152,15 +152,15 @@ namespace Jazz2::Editor
 				auto name = it.name();
 				TileSetFavorites& favorites = TileFavorites.emplace_back();
 				favorites.TileSet = String(name.data(), name.size());
-				ReadNumbers(JsonAccess::Member(*it, "Recent"), favorites.Recent, MaxRecentItems);
-				ReadNumbers(JsonAccess::Member(*it, "Favorites"), favorites.Favorites, MaxFavoriteItems);
+				ReadNumbers(Utils::JsonAccess::Member(*it, "Recent"), favorites.Recent, MaxRecentItems);
+				ReadNumbers(Utils::JsonAccess::Member(*it, "Favorites"), favorites.Favorites, MaxFavoriteItems);
 			}
 		}
 		RecentFiles.clear();
-		const Json::Value& recent = JsonAccess::Member(doc, "RecentFiles");
+		const Json::Value& recent = Utils::JsonAccess::Member(doc, "RecentFiles");
 		if (recent.isArray()) {
 			for (const Json::Value& item : recent) {
-				String path = JsonAccess::ToString(item);
+				String path = Utils::JsonAccess::ToString(item);
 				if (!path.empty() && std::int32_t(RecentFiles.size()) < MaxRecentFiles) {
 					RecentFiles.push_back(Death::move(path));
 				}
@@ -242,7 +242,7 @@ namespace Jazz2::Editor
 		}
 
 		// Through a temporary file, a crash or a full disk while it's written would lose all settings otherwise
-		if (!JsonFile::Write(GetPath(), doc)) {
+		if (!Utils::JsonFile::Write(GetPath(), doc)) {
 			return false;
 		}
 #if defined(DEATH_TARGET_EMSCRIPTEN)

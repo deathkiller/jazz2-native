@@ -3,9 +3,9 @@
 #if defined(WITH_EDITOR)
 
 #include "../../../Main.h"
-#include "../Files/AtomicFile.h"
-#include "../Files/JsonAccess.h"
-#include "../Files/JsonFile.h"
+#include "../../Utils/AtomicFile.h"
+#include "../../Utils/JsonAccess.h"
+#include "../../Utils/JsonFile.h"
 
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
@@ -348,12 +348,12 @@ namespace Jazz2::Editor
 				return true;
 			}
 			if (value.isString()) {
-				return Shortcut::Parse(JsonAccess::ToString(value), result);
+				return Shortcut::Parse(Utils::JsonAccess::ToString(value), result);
 			}
 			if (value.isArray() && value.size() == 2) {
 				// The number of a key changes when a key is added to the list, it's only taken if it still has a name
-				std::int32_t key = JsonAccess::ToInt(value[0], -1);
-				std::int32_t modifiers = JsonAccess::ToInt(value[1], -1);
+				std::int32_t key = Utils::JsonAccess::ToInt(value[0], -1);
+				std::int32_t modifiers = Utils::JsonAccess::ToInt(value[1], -1);
 				if (key < 0 || key >= std::int32_t(Keys::Count) || modifiers < 0 || GetKeyName(Keys(key)).empty()) {
 					return false;
 				}
@@ -377,7 +377,7 @@ namespace Jazz2::Editor
 	bool ActionRegistry::LoadOverrides(StringView path)
 	{
 		Json::Value doc;
-		if (JsonFile::Read(path, doc, 1024 * 1024, "Editor shortcuts"_s) != JsonFile::ReadResult::Ok) {
+		if (Utils::JsonFile::Read(path, doc, 1024 * 1024, "Editor shortcuts"_s) != Utils::JsonFile::ReadResult::Ok) {
 			return false;
 		}
 		for (auto& action : _actions) {
@@ -385,10 +385,10 @@ namespace Jazz2::Editor
 			if (!doc.isMember(id)) {
 				continue;
 			}
-			const Json::Value& value = JsonAccess::Member(doc, id.c_str());
+			const Json::Value& value = Utils::JsonAccess::Member(doc, id.c_str());
 			if (value.isObject()) {
 				// Both shortcuts, each may be missing, it keeps its default then
-				const Json::Value& key = JsonAccess::Member(value, "Key");
+				const Json::Value& key = Utils::JsonAccess::Member(value, "Key");
 				if (!key.isNull() || value.isMember("Key")) {
 					Shortcut shortcut;
 					if (ReadShortcut(key, shortcut)) {
@@ -397,7 +397,7 @@ namespace Jazz2::Editor
 						LOGW("Editor shortcut of \"{}\" cannot be read", action->Id);
 					}
 				}
-				const Json::Value& alternate = JsonAccess::Member(value, "Alternate");
+				const Json::Value& alternate = Utils::JsonAccess::Member(value, "Alternate");
 				if (!alternate.isNull() || value.isMember("Alternate")) {
 					Shortcut shortcut;
 					if (ReadShortcut(alternate, shortcut)) {
@@ -715,7 +715,7 @@ namespace Jazz2::Editor
 		builder["indentation"] = "\t";
 		std::string text = Json::writeString(builder, doc);
 
-		if (!AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
+		if (!Utils::AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
 			return false;
 		}
 #if defined(DEATH_TARGET_EMSCRIPTEN)

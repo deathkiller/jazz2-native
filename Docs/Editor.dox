@@ -1111,7 +1111,7 @@ All reading and writing of levels --- by the converter, the game and the editor 
 The editor holds a level as an @ref Editor::LevelDocument. Loading and saving is lossless --- the file comes out byte
 for byte the same. Tiles are referred to by tile set and index, so adding a tile set or an animated tile doesn't change
 any layer. Every file is written to a temporary file first and replaces the target only once it's complete
-(@ref Editor::AtomicFile).
+(@ref Utils::AtomicFile).
 
 @subsection editor-formats-chunks Chunks
 

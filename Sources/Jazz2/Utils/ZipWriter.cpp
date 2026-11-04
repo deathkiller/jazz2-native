@@ -1,8 +1,9 @@
 ﻿#include "ZipWriter.h"
 
-#if defined(WITH_EDITOR)
+#if defined(WITH_EDITOR) || defined(WITH_LEVEL_PACKS)
 
-#include "../../../nCine/Base/Algorithms.h"
+#include "ZipFormat.h"
+#include "../../nCine/Base/Algorithms.h"
 
 #include <Containers/DateTime.h>
 #include <IO/MemoryStream.h>
@@ -14,7 +15,7 @@ using namespace Death::Containers;
 using namespace Death::IO;
 using namespace Death::IO::Compression;
 
-namespace Jazz2::Editor
+namespace Jazz2::Utils
 {
 	namespace
 	{
@@ -35,14 +36,7 @@ namespace Jazz2::Editor
 		: _target(target), _offset(0), _failed(false)
 	{
 		// All files get the time the archive is made, in the DOS format of local time ZIP uses
-		DateTime::Tm local = DateTime::UtcNow().Partitioned(DateTime::Local);
-		if (local.IsValid() && local.Year >= 1980) {
-			_time = std::uint16_t((local.Hour << 11) | (local.Minute << 5) | (local.Second / 2));
-			_date = std::uint16_t(((local.Year - 1980) << 9) | ((local.Month + 1) << 5) | local.Day);
-		} else {
-			_time = 0;
-			_date = (1 << 5) | 1;
-		}
+		ZipFormat::ToDosDateTime(DateTime::UtcNow(), _time, _date);
 	}
 
 	std::uint32_t ZipWriter::Crc32(ArrayView<const std::uint8_t> data)
@@ -97,7 +91,7 @@ namespace Jazz2::Editor
 		entry.CompressedSize = (deflated ? std::uint32_t(compressed.GetSize()) : entry.Size);
 
 		SmallVector<std::uint8_t, 64> header;
-		Put32(header, 0x04034B50);	// Local file header
+		Put32(header, ZipFormat::LocalFileHeaderSignature);
 		Put16(header, 20);			// Version needed, 2.0 for Deflate
 		Put16(header, 0x0800);		// The name is UTF-8
 		Put16(header, entry.Method);
@@ -127,7 +121,7 @@ namespace Jazz2::Editor
 		std::uint64_t directoryOffset = _offset;
 		for (const Entry& entry : _entries) {
 			SmallVector<std::uint8_t, 64> header;
-			Put32(header, 0x02014B50);	// Central directory file header
+			Put32(header, ZipFormat::CentralDirectorySignature);
 			Put16(header, 20);			// Made by, 2.0
 			Put16(header, 20);			// Version needed
 			Put16(header, 0x0800);		// The name is UTF-8
@@ -153,7 +147,7 @@ namespace Jazz2::Editor
 		}
 
 		SmallVector<std::uint8_t, 64> end;
-		Put32(end, 0x06054B50);		// End of central directory
+		Put32(end, ZipFormat::EndOfCentralDirectorySignature);
 		Put16(end, 0);				// Disk number
 		Put16(end, 0);				// Disk with the directory
 		Put16(end, std::uint32_t(_entries.size()));

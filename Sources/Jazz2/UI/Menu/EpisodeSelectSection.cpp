@@ -16,6 +16,10 @@
 #	include "CreateServerOptionsSection.h"
 #	include "CreateLocalGameOptionsSection.h"
 #endif
+#if defined(WITH_LEVEL_PACKS)
+#	include "LevelPacksSection.h"
+#	include "../../../nCine/Graphics/PngCodec.h"
+#endif
 
 #include <cstring>
 #include <Containers/StringConcatenable.h>
@@ -60,6 +64,15 @@ namespace Jazz2::UI::Menu
 		addEpisodesIn(resolver.GetContentPath());
 		addEpisodesIn(resolver.GetCachePath());
 
+#if defined(WITH_LEVEL_PACKS)
+		// Episodes of level packs are named with "+", so they never take the place of another episode
+		for (auto item : fs::Directory(fs::CombinePath(resolver.GetLevelPacksCachePath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories)) {
+			if (fs::GetFileName(item).hasPrefix('+')) {
+				AddEpisode(item);
+			}
+		}
+#endif
+
 #if defined(WITH_AUDIO)
 		audioDevice.endBlockingOperation();
 #endif
@@ -81,7 +94,45 @@ namespace Jazz2::UI::Menu
 		nCine::sort(_episodes.begin(), _episodes.end(), [](const EpisodeData& a, const EpisodeData& b) -> bool {
 			return (a.Description.Position < b.Description.Position);
 		});
+
+#if defined(WITH_LEVEL_PACKS)
+		AddLevelPacksItem();
+#endif
 	}
+
+#if defined(WITH_LEVEL_PACKS)
+	void EpisodeSelectSection::AddLevelPacksItem()
+	{
+		// Right before the custom levels, or last if there are none
+		std::size_t index = _episodes.size();
+		for (std::size_t i = 0; i < _episodes.size(); i++) {
+			if ((_episodes[i].Flags & EpisodeDataFlags::RedirectToCustomLevels) == EpisodeDataFlags::RedirectToCustomLevels) {
+				index = i;
+				break;
+			}
+		}
+
+		EpisodeData item;
+		item.Description.Name = ":level-packs"_s;
+		// TRANSLATORS: Item in the episode list (Play Story section) that opens the list of level packs
+		item.Description.DisplayName = _("Level Packs");
+		item.Description.FirstLevel = ":level-packs"_s;
+		item.Description.Position = UINT16_MAX;
+		// Drawn as the title image of an episode, the name is shown instead if it's not there
+		if (auto s = ContentResolver::Get().OpenContentFile("Animations/UI/level_packs.png"_s)) {
+			PngRgbaImage image;
+			if (s->IsValid() && PngCodec::DecodeRgba(*s, image) == PngError::None) {
+				auto texture = std::make_unique<Texture>("LevelPacksLogo", Texture::Format::RGBA8, image.Width, image.Height);
+				texture->LoadFromTexels(image.Pixels.get(), 0, 0, image.Width, image.Height);
+				texture->SetMinFiltering(SamplerFilter::Linear);
+				texture->SetMagFiltering(SamplerFilter::Linear);
+				item.Description.TitleImage = Death::move(texture);
+			}
+		}
+		item.Flags = EpisodeDataFlags::RedirectToLevelPacks | EpisodeDataFlags::IsAvailable;
+		_episodes.insert(_episodes.begin() + index, Death::move(item));
+	}
+#endif
 
 	void EpisodeSelectSection::OnShow(IMenuContainer* root)
 	{
@@ -444,6 +495,12 @@ namespace Jazz2::UI::Menu
 			_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 			bool redirectToCustomLevels = ((selectedItem.Flags & EpisodeDataFlags::RedirectToCustomLevels) == EpisodeDataFlags::RedirectToCustomLevels);
+#if defined(WITH_LEVEL_PACKS)
+			if ((selectedItem.Flags & EpisodeDataFlags::RedirectToLevelPacks) == EpisodeDataFlags::RedirectToLevelPacks) {
+				_root->SwitchToSection<LevelPacksSection>(_mode, _privateServer);
+				return;
+			}
+#endif
 
 #if defined(WITH_MULTIPLAYER)
 			if (_mode == EpisodeSelectMode::OnlineMultiplayer) {

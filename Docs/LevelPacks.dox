@@ -1,0 +1,174 @@
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+/** @page level-packs Level packs
+@brief Installing, playing and removing packs of levels made by the community
+
+@tableofcontents
+
+@m_class{m-noindent}
+
+A level pack is an archive of original Jazz Jackrabbit 2 files --- levels, episodes, tile sets, music, scripts and
+anything else the scripts load --- as the level archive of the community offers them. An installed pack is converted
+the same way as the original game, so its levels are ready to play, and it can be removed again without leaving
+anything behind. Level packs are compiled only if `WITH_LEVEL_PACKS` and the game has an HTTP backend (WinHTTP on
+Windows, libcurl elsewhere).
+
+@section level-packs-playing Playing
+
+In the main menu choose <b>Play Story</b> → <b>Level Packs</b>. The installed packs are shown as tiles with a
+preview, several in a row if the screen is wide enough. A pack shows its details, its episodes and all its levels,
+any of which can be started, and it can be removed there too. Episodes of the packs are listed in <b>Play Story</b>
+along with the episodes of the game, their progress is saved the same way.
+
+@m_class{m-noindent}
+
+A pack whose levels need a tile set or music that neither the pack nor the game has is marked with `!`, its levels
+may look or sound wrong.
+
+@section level-packs-names Names of levels
+
+A level of a pack is named with a `+` and the identifier of the pack, so it never takes the place of a level of the
+game or of another pack:
+
+-   @cpp "+1234/battle1" @ce --- a level of the pack @cpp 1234 @ce that belongs to no episode
+-   @cpp "+1234_hh18/hh18_level01" @ce --- a level of the episode `hh18` of the same pack
+
+@m_class{m-noindent}
+
+The identifier is the number of the pack in the level database, so a server playlist names the same level on every
+machine. A pack installed from a file of its own gets @cpp local- @ce and a part of the hash of the archive instead.
+Links between the levels of a pack stay inside the pack.
+
+@section level-packs-cli Installing from the command line
+
+Packs can be managed without starting the game, which is how a dedicated server gets them too:
+
+Argument | Description
+-------- | -----------
+`--install-pack <file>` | Installs a pack from a ZIP archive, or installs it again. Can be given more times
+`--remove-pack <id>` | Removes a pack, the identifier can also be given as a level name, e.g. @cpp "+1234/battle1" @ce
+`--list-packs` | Lists the installed packs with their episodes and levels
+
+@m_class{m-noindent}
+
+The game exits once they're done, unless `--server` is given too, then the server starts afterwards. A running
+server installs and removes packs with the `/packs` command, see @ref multiplayer-commands. A client that doesn't
+have the pack of the level being played gets the level from the server, as any other level.
+
+@code{.sh}
+./jazz2 --install-pack Holiday-Hare-18.zip --list-packs
+./jazz2 --install-pack Battle-Pack.zip --server server.json
+@endcode
+
+@section level-packs-storage Where packs are kept
+
+-   The original files of all packs are kept in `LevelPacks` of the content directory the game can write to (see
+    @ref Jazz2::ContentResolver::GetWritableContentPath()), each of them once. A file that more packs have is kept
+    only once, and a file that's the same as the one of the original game isn't kept at all.
+-   Each installed pack has a record in `LevelPacks/Packs`, the files it has are listed there.
+-   The converted levels and tile sets are in `Cache/LevelPacks`. They're converted again from the original files
+    when the cache is rebuilt or a new version of the game converts levels differently.
+-   Removing a pack removes its record and its converted levels, and every kept file no other pack has.
+
+@m_class{m-noindent}
+
+Only ZIP archives are installed, stored or compressed by Deflate. Only files the game or a script can use are taken
+from them (levels, tile sets, episodes, scripts, music, sounds, sprites and images), the folders in the archive don't
+matter. An archive with two different files of the same name is refused.
+
+@section level-packs-scripts Scripts
+
+Scripts of the levels are used only if the game is compiled with scripting. A script finds the files of its pack by
+their original names, the files it includes, the sounds, sprites and images it loads and the levels it takes layers
+of. Files that the pack doesn't have are looked for in the original game as before.
+
+@section level-packs-editor Level editor
+
+The levels of the installed packs are listed in the file dialogs of the level editor under <b>Level packs</b>, with
+the names of the packs, their episodes and their levels. They can be opened, but not saved where they are --- they
+would be replaced by the next conversion. <b>Save As</b> puts a copy into the user content instead, together with the
+tile sets and the music of the pack it uses, so the copy works even once the pack is removed.
+
+@section level-packs-api Level database API
+
+@m_class{m-block m-warning}
+
+@par Proposal
+The level database doesn't offer this yet, it's what the game is going to expect. The names and the shape of it are
+open to change.
+
+All responses are JSON in UTF-8, served over HTTPS. Images are PNG, archives are ZIP. Every response, images and
+archives included, should have `Access-Control-Allow-Origin: *`, so the web version of the game can use it too.
+
+@subsection level-packs-api-search Searching packs
+
+@code{.sh}
+GET /api/packs?query=<text>&type=<type>&tag=<tag>&sort=<newest|rating|downloads>&page=<1..>&perPage=<1..100>
+@endcode
+
+Every parameter is optional. `type` and `tag` can be given more times, a pack has to have all of them.
+
+@code{.json}
+{
+    "total": 1234,
+    "page": 1,
+    "perPage": 48,
+    "items": [
+        {
+            "id": "8123",
+            "title": "Holiday Hare '18",
+            "authors": [ "Author One", "Author Two" ],
+            "types": [ "SinglePlayer", "Episode" ],
+            "tags": [ "Christmas", "Contest" ],
+            "rating": 8.7,
+            "downloads": 15320,
+            "updated": "2018-12-24T12:00:00Z",
+            "version": "3",
+            "size": 7865635,
+            "hasScript": true,
+            "thumbnail": "https://.../8123/thumbnail.png"
+        }
+    ]
+}
+@endcode
+
+@subsection level-packs-api-details Details of a pack
+
+@code{.sh}
+GET /api/packs/<id>
+@endcode
+
+The same fields as in the search, and:
+
+@code{.json}
+{
+    "description": "Plain text, paragraphs separated by an empty line",
+    "screenshots": [ "https://.../8123/screenshot-1.png" ],
+    "levels": [
+        { "file": "HH18_level01.j2l", "title": "Penguinvasion", "types": [ "SinglePlayer" ] }
+    ],
+    "dependencies": [ "4567" ],
+    "download": {
+        "url": "https://.../8123/v3/HolidayHare18.zip",
+        "fileName": "HolidayHare18.zip",
+        "size": 7865635,
+        "sha256": "lowercase hexadecimal SHA-256 of the archive"
+    }
+}
+@endcode
+
+@subsection level-packs-api-rules Requirements
+
+-   `id` is a string of digits that never changes and isn't used again for another pack.
+-   `version` changes whenever the archive does. The game offers an update when it differs from the installed one.
+-   The archive is always ZIP. A pack uploaded as RAR or 7z should be offered repacked as ZIP. `size` and `sha256`
+    are of the archive the URL returns, the game refuses an archive that doesn't match them.
+-   `thumbnail` is 256 × 144 pixels, screenshots are at most 1280 pixels wide.
+-   `types` take these values: `SinglePlayer`, `Cooperative`, `Battle`, `CaptureTheFlag`, `Race`, `TreasureHunt`,
+    `Episode`, `TileSet`, `Mutator`, `Other`.
+-   `dependencies` are packs that have to be installed for this one to work, e.g. a pack of tile sets.
+-   An error is answered with an HTTP status other than 200 and `{ "error": "Description" }`.
+*/
+
+}

@@ -3,6 +3,7 @@
 #include "ConversionProgress.h"
 #include "JJ2Version.h"
 
+#include <Containers/Function.h>
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
@@ -76,6 +77,53 @@ namespace Jazz2::Compatibility
 			SmallVectorImpl<String>* SkippedLevels = nullptr;
 		};
 
+		/**
+			@brief How the levels of a level pack are converted, and what came out of it, see @ref ConvertLevelPack()
+
+			Levels of no episode go to the episode @ref EpisodePrefix, levels of an episode `e` of the pack to
+			`<EpisodePrefix>_e`, so the links between them stay inside the pack.
+		*/
+		struct LevelPackConversion
+		{
+			/** @brief A converted level */
+			struct Level
+			{
+				/** @brief Name to load the level by, `episode/level` */
+				String Name;
+				/** @brief Name shown to the player */
+				String DisplayName;
+			};
+
+			/** @brief A converted episode */
+			struct Episode
+			{
+				/** @brief Name of the episode */
+				String Name;
+				/** @brief Name shown to the player */
+				String DisplayName;
+				/** @brief First level of the episode, without the episode */
+				String FirstLevel;
+			};
+
+			/** @brief Episode of the levels of no episode, e.g. `+1234` */
+			String EpisodePrefix;
+			/** @brief Maps a tile set name, lowercase without extension, to the path written into the levels */
+			Function<String(StringView)> TileSetPath;
+			/** @brief Maps a music file name, lowercase with extension, to the name written into the levels */
+			Function<String(StringView)> MusicPath;
+			/** @brief Whether the scripts of the levels are copied next to them */
+			bool CopyScripts = true;
+
+			/** @brief Levels that were converted */
+			SmallVector<Level, 0> Levels;
+			/** @brief Episodes that were converted */
+			SmallVector<Episode, 0> Episodes;
+			/** @brief Original names of the tile sets the levels use, they're converted by the caller */
+			SmallVector<String, 0> UsedTileSets;
+			/** @brief Original names of the music files the levels use */
+			SmallVector<String, 0> UsedMusic;
+		};
+
 		/** @brief Name of the package the first-run conversion writes its sprites and sounds into */
 		static constexpr StringView SourcePackage = "Source.pak"_s;
 		/**
@@ -110,5 +158,15 @@ namespace Jazz2::Compatibility
 		static void ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll, ConversionProgress progress = {});
 		/** @brief Converts the episodes, levels and used tilesets that @p options allow into the output directory */
 		static void ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll, const ConversionOptions& options, ConversionProgress progress = {});
+		/**
+		 * @brief Converts the episodes and levels of a level pack into the `Episodes` directory of the output directory
+		 *
+		 * Every level gets a preview. The tile sets aren't converted, only listed in @ref LevelPackConversion::UsedTileSets.
+		 */
+		static void ConvertLevelPack(StringView sourcePath, StringView targetPath, LevelPackConversion& pack, ConversionProgress progress = {});
+
+	private:
+		static void ConvertLevelsInternal(StringView sourcePath, StringView targetPath, bool recreateAll, const ConversionOptions& options,
+			LevelPackConversion* pack, ConversionProgress progress);
 	};
 }

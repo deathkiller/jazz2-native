@@ -63,6 +63,10 @@
 #	endif
 #endif
 
+#if defined(WITH_LEVEL_PACKS)
+#	include "Jazz2/LevelPacks/LevelPackLibrary.h"
+#endif
+
 #if defined(WITH_MULTIPLAYER)
 #	include "Jazz2/Multiplayer/NetworkManager.h"
 #	include "Jazz2/Multiplayer/INetworkHandler.h"
@@ -281,6 +285,10 @@ private:
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
 	static void ExtractPakFile(StringView pakFile, StringView targetPath);
+#if defined(WITH_LEVEL_PACKS)
+	static bool IsLevelPackSwitch(StringView arg, bool& takesValue);
+	static bool RunLevelPackCommands(const AppConfiguration& config, bool& handled);
+#endif
 };
 
 #if defined(WITH_LIBRETRO)
@@ -422,6 +430,16 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 	// Write crash memory dumps next to the config file instead of next to the executable
 	theApplication().SetCrashDumpDirectory(PreferencesCache::GetDirectory());
 
+#if defined(WITH_LEVEL_PACKS)
+	// Level packs are managed without starting the game, a server goes on afterwards
+	bool levelPackCommands = false;
+	RunLevelPackCommands(config, levelPackCommands);
+	if (levelPackCommands && !isServer) {
+		theApplication().Quit();
+		return;
+	}
+#endif
+
 	config.windowTitle = NCINE_APP_NAME;
 	if (isServer) {
 		config.withGraphics = false;
@@ -505,9 +523,21 @@ void GameEventHandler::OnInitialize()
 #if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	StringView configPath;
+#	if defined(WITH_LEVEL_PACKS)
+	for (std::int32_t i = 0; i < config.argc(); i++) {
+		bool takesValue;
+		if (IsLevelPackSwitch(config.argv(i), takesValue)) {
+			i += (takesValue ? 1 : 0);
+			continue;
+		}
+		configPath = config.argv(i);
+		break;
+	}
+#	else
 	if (config.argc() > 0) {
 		configPath = config.argv(0);
 	}
+#	endif
 	RunDedicatedServer(configPath);
 #else
 #	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_AMIGAOS) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
@@ -2297,7 +2327,16 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll, Compatibility::Conve
 	ZoneScopedC(0x888888);
 
 	auto& resolver = ContentResolver::Get();
+#if defined(WITH_LEVEL_PACKS)
+	Compatibility::AssetConverter::ConvertLevels(resolver.GetSourcePath(), resolver.GetCachePath(), recreateAll, progress.Narrow(0.0f, 0.9f));
+
+	// Installed level packs are converted again by a new version of the converter
+	auto& levelPacks = LevelPacks::LevelPackLibrary::Get();
+	levelPacks.CleanUp();
+	levelPacks.ReconvertStale(progress.Narrow(0.9f, 1.0f));
+#else
 	Compatibility::AssetConverter::ConvertLevels(resolver.GetSourcePath(), resolver.GetCachePath(), recreateAll, progress);
+#endif
 }
 #endif
 
@@ -2584,6 +2623,112 @@ void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 
 	LOGI("{} files extracted successfully, {} files failed with error", successCount, errorCount);
 }
+
+#if defined(WITH_LEVEL_PACKS)
+bool GameEventHandler::IsLevelPackSwitch(StringView arg, bool& takesValue)
+{
+	if (arg == "--install-pack"_s || arg == "/install-pack"_s || arg == "--remove-pack"_s || arg == "/remove-pack"_s) {
+		takesValue = true;
+		return true;
+	}
+	if (arg == "--list-packs"_s || arg == "/list-packs"_s || arg == "--update-packs"_s || arg == "/update-packs"_s) {
+		takesValue = false;
+		return true;
+	}
+	return false;
+}
+
+bool GameEventHandler::RunLevelPackCommands(const AppConfiguration& config, bool& handled)
+{
+	handled = false;
+	bool success = true;
+	auto& library = LevelPacks::LevelPackLibrary::Get();
+
+	for (std::int32_t i = 0; i < config.argc(); i++) {
+		StringView arg = config.argv(i);
+		bool takesValue;
+		if (!IsLevelPackSwitch(arg, takesValue)) {
+			continue;
+		}
+		if (!handled) {
+			handled = true;
+#	if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
+			theApplication().AttachTraceTarget(Application::ConsoleTarget);
+#	endif
+			library.CleanUp();
+		}
+		if (takesValue && i + 1 >= config.argc()) {
+			LOGE("\"{}\" needs a value", arg);
+			success = false;
+			continue;
+		}
+
+		if (arg == "--install-pack"_s || arg == "/install-pack"_s) {
+			StringView source = config.argv(++i);
+			if (!fs::IsReadableFile(source)) {
+				// Only local files until the level database can be reached
+				LOGE("Level pack \"{}\" cannot be found, downloading it isn't supported yet", source);
+				success = false;
+				continue;
+			}
+
+			std::int32_t lastReported = -1;
+			Function<void(float)> report = [&lastReported](float value) {
+				std::int32_t percent = std::int32_t(value * 100.0f);
+				if (percent / 10 != lastReported / 10) {
+					lastReported = percent;
+					LOGI("Installing... {}%", percent);
+				}
+			};
+			LevelPacks::LevelPackInfo info;
+			String installedId;
+			auto result = library.Install(source, info, Compatibility::ConversionProgress(&report), nullptr, &installedId);
+			if (result == LevelPacks::LevelPackResult::Success) {
+				if (auto pack = library.FindPack(installedId)) {
+					LOGI("Level pack \"{}\" was installed as \"{}\"", pack->Title, pack->Id);
+					for (const auto& level : pack->Levels) {
+						LOGI("  {} - {}", level.Name, level.DisplayName);
+					}
+					for (const String& missing : pack->MissingAssets) {
+						LOGW("  Missing \"{}\"", missing);
+					}
+				}
+			} else {
+				LOGE("Level pack \"{}\" cannot be installed: {}", source, LevelPacks::LevelPackLibrary::GetResultDescription(result));
+				success = false;
+			}
+		} else if (arg == "--remove-pack"_s || arg == "/remove-pack"_s) {
+			StringView id = config.argv(++i);
+			if (id.hasPrefix('+')) {
+				id = LevelPacks::LevelPackLibrary::GetPackId(id);
+			}
+			auto result = library.Remove(id);
+			if (result == LevelPacks::LevelPackResult::Success) {
+				LOGI("Level pack \"{}\" was removed", id);
+			} else {
+				LOGE("Level pack \"{}\" cannot be removed: {}", id, LevelPacks::LevelPackLibrary::GetResultDescription(result));
+				success = false;
+			}
+		} else if (arg == "--list-packs"_s || arg == "/list-packs"_s) {
+			auto packs = library.GetPacks();
+			LOGI("{} level packs installed", packs.size());
+			for (const auto& pack : packs) {
+				LOGI("{} - {} ({} levels, {} episodes)", pack->Id, pack->Title, pack->Levels.size(), pack->Episodes.size());
+				for (const auto& episode : pack->Episodes) {
+					LOGI("  Episode {}/ - {}", episode.Name, episode.DisplayName);
+				}
+				for (const auto& level : pack->Levels) {
+					LOGI("  {} - {}", level.Name, level.DisplayName);
+				}
+			}
+		} else {
+			LOGE("Level packs cannot be updated yet, the level database cannot be reached");
+			success = false;
+		}
+	}
+	return success;
+}
+#endif
 
 #if defined(DEATH_TARGET_ANDROID) || defined(WITH_LIBRETRO)
 std::unique_ptr<IAppEventHandler> CreateAppEventHandler()

@@ -2,8 +2,8 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../Files/JsonAccess.h"
-#include "../Files/JsonFile.h"
+#include "../../Utils/JsonAccess.h"
+#include "../../Utils/JsonFile.h"
 #include "../../Compatibility/EventConverter.h"
 #include "../../Compatibility/JJ2Level.h"
 // Before I18n.h, its _f() formats through Death::format()
@@ -284,7 +284,7 @@ namespace Jazz2::Editor
 		// level scripts of anyone, so every value is read through JsonAccess, a value of another type is taken as missing.
 		std::unique_ptr<ExtensionEvent> ParseExtension(const Json::Value& value, StringView source, EventExtensionScope scope)
 		{
-			using namespace JsonAccess;
+			using namespace Utils::JsonAccess;
 
 			if (!value.isObject()) {
 				// TRANSLATORS: Error in event descriptions from a file or a level script, object as in a JSON object
@@ -922,13 +922,13 @@ namespace Jazz2::Editor
 	std::int32_t EventCatalog::LoadExtensions(StringView json, StringView source, EventExtensionScope scope)
 	{
 		Json::Value doc; std::string errors;
-		if (!JsonFile::Parse(json, doc, &errors)) {
+		if (!Utils::JsonFile::Parse(json, doc, &errors)) {
 			// TRANSLATORS: Error in event descriptions, {} is the error message of the JSON parser
 			ReportError(scope, source, _fx("editor", "The event descriptions can't be read - {}", StringView(errors.data(), errors.size()).trimmed()));
 			return 0;
 		}
 		const Json::Value* list = &doc;
-		const Json::Value& events = JsonAccess::Member(doc, "Events");
+		const Json::Value& events = Utils::JsonAccess::Member(doc, "Events");
 		if (events.isArray()) {
 			list = &events;
 		}

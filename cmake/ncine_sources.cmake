@@ -11,6 +11,7 @@ set(SHARED_SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringUtils.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.cpp
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.cpp
+	${NCINE_SOURCE_DIR}/Shared/Cryptography/Sha256.cpp
 	${NCINE_SOURCE_DIR}/Shared/Cryptography/xxHash.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.cpp
@@ -530,4 +531,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/UserProfileOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TextInputBuffer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/WidgetSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/AtomicFile.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/JsonFile.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/ZipArchive.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/ZipFormat.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/ZipWriter.cpp
 )

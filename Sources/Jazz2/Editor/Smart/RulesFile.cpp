@@ -3,7 +3,7 @@
 #if defined(WITH_EDITOR)
 
 #include "../Files/ContentTileSetLibrary.h"
-#include "../Files/JsonFile.h"
+#include "../../Utils/JsonFile.h"
 #include "../../ContentResolver.h"
 #include "../../Formats/LevelFile.h"
 
@@ -42,9 +42,9 @@ namespace Jazz2::Editor
 		}
 		String path = ContentResolver::Get().FindContentFile(fs::CombinePath("Tilesets"_s, String(fs::ToNativeSeparators(tileSet) + ".rules"_s)));
 		// An empty file left behind counts as none, there's nothing in it to lose
-		switch (JsonFile::Read(path, doc, MaxRulesSize, String("Rules of tile set \""_s + tileSet + "\""_s))) {
-			case JsonFile::ReadResult::Ok: return ReadResult::Ok;
-			case JsonFile::ReadResult::Unreadable: return ReadResult::Unreadable;
+		switch (Utils::JsonFile::Read(path, doc, MaxRulesSize, String("Rules of tile set \""_s + tileSet + "\""_s))) {
+			case Utils::JsonFile::ReadResult::Ok: return ReadResult::Ok;
+			case Utils::JsonFile::ReadResult::Unreadable: return ReadResult::Unreadable;
 			default: return ReadResult::Missing;
 		}
 	}
@@ -76,7 +76,7 @@ namespace Jazz2::Editor
 			return false;
 		}
 		// The rules that were there stay whole if the new ones can't be written, and are kept as .bak
-		return JsonFile::Write(path, doc, true);
+		return Utils::JsonFile::Write(path, doc, true);
 	}
 
 	bool RulesFile::Stage(StringView tileSet, const Json::Value& doc, String& path)
@@ -89,7 +89,7 @@ namespace Jazz2::Editor
 		if (target.empty()) {
 			return false;
 		}
-		if (!JsonFile::Stage(target, doc)) {
+		if (!Utils::JsonFile::Stage(target, doc)) {
 			return false;
 		}
 		path = Death::move(target);

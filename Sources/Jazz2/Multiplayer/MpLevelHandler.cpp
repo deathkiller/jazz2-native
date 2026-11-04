@@ -16,6 +16,11 @@
 #	include "../Scripting/LevelScriptLoader.h"
 #endif
 
+#if defined(WITH_LEVEL_PACKS)
+#	include "../LevelPacks/LevelPackLibrary.h"
+#	include "../../nCine/Threading/Thread.h"
+#endif
+
 #include "../../nCine/Application.h"
 #include "../../nCine/I18n.h"
 #include "../../nCine/Base/Random.h"
@@ -2475,6 +2480,46 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+#if defined(WITH_LEVEL_PACKS) && defined(WITH_THREADS)
+	void MpLevelHandler::ProcessLevelPacksCommand(const Peer& peer, StringView args)
+	{
+		auto& library = LevelPacks::LevelPackLibrary::Get();
+		auto p = args.partition(' ');
+		StringView action = p[0];
+		StringView value = p[2].trimmed();
+
+		if (action.empty() || action == "list"_s) {
+			auto packs = library.GetPacks();
+			SendMessage(peer, UI::MessageLevel::Confirm, format("{} level packs installed", std::int32_t(packs.size())));
+			for (const auto& pack : packs) {
+				SendMessage(peer, UI::MessageLevel::Confirm, format("{} - {} ({} levels)", pack->GetEpisodePrefix(), pack->Title, std::int32_t(pack->Levels.size())));
+			}
+		} else if (action == "install"_s && !value.empty()) {
+			// Converting takes a while, the game goes on meanwhile and the result is in the log
+			String path = value;
+			SendMessage(peer, UI::MessageLevel::Confirm, format("Installing level pack \"{}\"...", path));
+			Thread thread([path = Death::move(path)]() {
+				String installedId;
+				auto result = LevelPacks::LevelPackLibrary::Get().Install(path, {}, {}, nullptr, &installedId);
+				if (result == LevelPacks::LevelPackResult::Success) {
+					LOGI("Level pack \"{}\" was installed as \"+{}\"", path, installedId);
+				} else {
+					LOGE("Level pack \"{}\" cannot be installed: {}", path, LevelPacks::LevelPackLibrary::GetResultDescription(result));
+				}
+			});
+			thread.Detach();
+		} else if (action == "remove"_s && !value.empty()) {
+			StringView id = (value.hasPrefix('+') ? LevelPacks::LevelPackLibrary::GetPackId(value) : value);
+			auto result = library.Remove(id);
+			SendMessage(peer, UI::MessageLevel::Confirm, result == LevelPacks::LevelPackResult::Success
+				? String(format("Level pack \"{}\" was removed", id))
+				: String(format("Level pack \"{}\" cannot be removed: {}", id, LevelPacks::LevelPackLibrary::GetResultDescription(result))));
+		} else {
+			SendMessage(peer, UI::MessageLevel::Confirm, "Usage: /packs [list | install <file> | remove <id>]"_s);
+		}
+	}
+#endif
+
 	bool MpLevelHandler::ProcessCommand(const Peer& peer, StringView line, bool isAdmin)
 	{
 		char infoBuffer[256];
@@ -2962,6 +3007,13 @@ namespace Jazz2::Multiplayer
 				}
 			}
 			return true;
+#if defined(WITH_LEVEL_PACKS) && defined(WITH_THREADS)
+		} else if (line == "/packs"_s || line.hasPrefix("/packs "_s)) {
+			if (isAdmin) {
+				ProcessLevelPacksCommand(peer, line.exceptPrefix(6).trimmed());
+			}
+			return true;
+#endif
 		} else if (line.hasPrefix("/ip "_s)) {
 			if (isAdmin) {
 				if (auto playerName = line.exceptPrefix("/ip "_s)) {

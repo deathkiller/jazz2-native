@@ -136,7 +136,8 @@ entry doesn't set are inherited from the root, so the root holds common rules an
 
 -   @cpp "LevelName" @ce is a level of no episode (@cpp "battle1" @ce), a level of an episode
     (@cpp "prince/castle1" @ce), or an episode with a trailing slash (@cpp "prince/" @ce), which starts at its
-    first level.
+    first level. A level of an installed level pack is named with a `+`, e.g. @cpp "+1234/battle1" @ce, see
+    @ref level-packs.
 -   Play starts at @cpp "PlaylistIndex" @ce and advances after each round, wrapping around at the end.
 -   @cpp "RandomizePlaylist" @ce shuffles the list on start and on every wrap.
 -   A Cooperation entry with a story level continues through its episode's next levels with the same
@@ -313,6 +314,7 @@ Command | Description
 `/ip <player>` | Address and Unique Player ID of a player
 `/endpoints` | Endpoints the server is reachable at, including @cpp "ServerAddressOverride" @ce
 `/refresh` | Reloads the configuration file, see @ref multiplayer-config-reload
+`/packs [list]`, `/packs install <file>`, `/packs remove <id>` | Lists, installs or removes level packs, see @ref level-packs. Installing runs in the background, the result is in the log
 `/vote cancel` | Cancels the active poll
 `/exit`, `/quit` | Shuts the dedicated server down (its own console only)
 
@@ -325,6 +327,7 @@ Argument | Description
 `/config <path>` | Path to the preferences file. Relative server configuration paths are resolved against its directory
 `/log` | Attaches a console to the process (<b>Windows</b> only, where non-server builds have none)
 `/log:file[:<name>]` | Writes the trace log to a file in the preferences directory, @cpp "Jazz2.log" @ce by default
+`--install-pack <file>`, `--remove-pack <id>`, `--list-packs` | Manages level packs and exits, or goes on with `--server`, see @ref level-packs-cli
 
 @m_class{m-noindent}
 

@@ -144,6 +144,8 @@ namespace Jazz2::Editor
 		String Path;
 		/** @brief Whether files can be saved there */
 		bool Writable;
+		/** @brief Returns the name shown for a file or a folder in it instead of its own, or an empty string, optional */
+		String (*LabelFunc)(StringView path, bool isDirectory) = nullptr;
 	};
 
 	/** @brief How a file is shown in the list of a file dialog, see @ref UiFileDialog::KindFunc */
@@ -270,6 +272,8 @@ namespace Jazz2::Editor
 		{
 			String Name;
 			bool IsDirectory;
+			// Shown instead of the name if it's not empty, see UiFileRoot::LabelFunc
+			String Label;
 			// KindFunc is asked once the row is seen, on the worker if it's Asynchronous
 			bool KindKnown = false;
 			bool KindPending = false;

@@ -2,7 +2,7 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../Files/JsonAccess.h"
+#include "../../Utils/JsonAccess.h"
 
 #include <Containers/StringUtils.h>
 #include <IO/FileSystem.h>
@@ -115,7 +115,7 @@ namespace Jazz2::Editor
 		template<class T>
 		bool ParseEnum(const Json::Value& value, T& result)
 		{
-			using namespace JsonAccess;
+			using namespace Utils::JsonAccess;
 
 			ArrayView<const StringView> names = GetEnumNames(T());
 			if (value.isString()) {
@@ -156,7 +156,7 @@ namespace Jazz2::Editor
 			template<class T>
 			void operator()(const char* name, T& field)
 			{
-				const Json::Value& value = JsonAccess::Member(Object, name);
+				const Json::Value& value = Utils::JsonAccess::Member(Object, name);
 				if (!value.isNull()) {
 					Read(value, field);
 				}
@@ -164,44 +164,44 @@ namespace Jazz2::Editor
 
 			void Angle(const char* name, float& field)
 			{
-				field = JsonAccess::ToFloat(JsonAccess::Member(Object, name), field * DegreesPerRadian) / DegreesPerRadian;
+				field = Utils::JsonAccess::ToFloat(Utils::JsonAccess::Member(Object, name), field * DegreesPerRadian) / DegreesPerRadian;
 			}
 
 			void Ammo(const char* name, std::uint16_t& field)
 			{
-				float rounds = JsonAccess::ToFloat(JsonAccess::Member(Object, name), float(field) / 256.0f);
+				float rounds = Utils::JsonAccess::ToFloat(Utils::JsonAccess::Member(Object, name), float(field) / 256.0f);
 				field = std::uint16_t(std::clamp<std::int32_t>(std::int32_t(std::round(rounds * 256.0f)), 0, UINT16_MAX));
 			}
 
 			void Read(const Json::Value& value, bool& field)
 			{
-				field = JsonAccess::ToBool(value, field);
+				field = Utils::JsonAccess::ToBool(value, field);
 			}
 
 			void Read(const Json::Value& value, float& field)
 			{
-				field = JsonAccess::ToFloat(value, field);
+				field = Utils::JsonAccess::ToFloat(value, field);
 			}
 
 			void Read(const Json::Value& value, std::int32_t& field)
 			{
-				field = JsonAccess::ToInt(value, field);
+				field = Utils::JsonAccess::ToInt(value, field);
 			}
 
 			void Read(const Json::Value& value, std::uint8_t& field)
 			{
-				field = std::uint8_t(std::clamp<std::int32_t>(JsonAccess::ToInt(value, field), 0, UINT8_MAX));
+				field = std::uint8_t(std::clamp<std::int32_t>(Utils::JsonAccess::ToInt(value, field), 0, UINT8_MAX));
 			}
 
 			void Read(const Json::Value& value, std::uint16_t& field)
 			{
-				field = std::uint16_t(std::clamp<std::int32_t>(JsonAccess::ToInt(value, field), 0, UINT16_MAX));
+				field = std::uint16_t(std::clamp<std::int32_t>(Utils::JsonAccess::ToInt(value, field), 0, UINT16_MAX));
 			}
 
 			void Read(const Json::Value& value, String& field)
 			{
 				if (value.isString()) {
-					field = JsonAccess::ToString(value);
+					field = Utils::JsonAccess::ToString(value);
 				}
 			}
 
@@ -213,7 +213,7 @@ namespace Jazz2::Editor
 
 			void Read(const Json::Value& value, WeaponType& field)
 			{
-				if (value.isString() && StringUtils::equalsIgnoreCase(JsonAccess::ToString(value), OwnWeaponName)) {
+				if (value.isString() && StringUtils::equalsIgnoreCase(Utils::JsonAccess::ToString(value), OwnWeaponName)) {
 					field = WeaponType::Unknown;
 				} else {
 					ParseEnum(value, field);
@@ -223,7 +223,7 @@ namespace Jazz2::Editor
 			// An animation of the game, or an image file next to the template, empty for the sprite of the weapon of the game
 			void Read(const Json::Value& value, WeaponSprite& field)
 			{
-				using namespace JsonAccess;
+				using namespace Utils::JsonAccess;
 
 				WeaponSprite sprite;
 				String metadata = GetString(value, "Metadata");
@@ -346,7 +346,7 @@ namespace Jazz2::Editor
 
 	bool ReadCustomWeaponTemplate(const Json::Value& value, StringView sourcePath, CustomWeaponTemplate& result)
 	{
-		using namespace JsonAccess;
+		using namespace Utils::JsonAccess;
 
 		if (!StringUtils::equalsIgnoreCase(GetString(value, "Kind"), "Custom"_s)) {
 			return false;
@@ -364,7 +364,7 @@ namespace Jazz2::Editor
 	bool ApplyCustomWeaponTemplate(const CustomWeaponTemplate& weaponTemplate, WeaponDefinition& weapon,
 		Function<std::int32_t(const WeaponTemplateImage&)>&& addImage, Function<std::int32_t(StringView)>&& addSound)
 	{
-		using namespace JsonAccess;
+		using namespace Utils::JsonAccess;
 
 		if (weaponTemplate.Description == nullptr) {
 			return false;

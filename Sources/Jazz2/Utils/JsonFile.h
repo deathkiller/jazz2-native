@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(WITH_EDITOR) || defined(WITH_LEVEL_PACKS) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../../../Main.h"
+#include "../../Main.h"
 
 #include <Containers/String.h>
 #include <Containers/StringView.h>
@@ -11,7 +11,7 @@
 
 #include <string>
 
-namespace Jazz2::Editor
+namespace Jazz2::Utils
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::String;
@@ -19,9 +19,9 @@ namespace Jazz2::Editor
 #endif
 
 	/**
-		@brief Reads and writes the JSON files of the editor
+		@brief Reads and writes JSON files that hold a single object
 
-		Settings, shortcuts and rules of tile sets are JSON objects, read whole into memory and written through
+		Editor settings, shortcuts, rules of tile sets and level pack manifests are JSON objects, read whole into memory and written through
 		@ref AtomicFile, tab-indented so they can be edited by hand. The values read are still of any type, they're
 		read through @ref JsonAccess.
 	*/

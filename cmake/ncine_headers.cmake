@@ -36,6 +36,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/Tags.h
 	${NCINE_SOURCE_DIR}/Shared/Core/ITraceSink.h
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.h
+	${NCINE_SOURCE_DIR}/Shared/Cryptography/Sha256.h
 	${NCINE_SOURCE_DIR}/Shared/Cryptography/xxHash.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.h
@@ -563,6 +564,12 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TextInputBuffer.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/Tweening.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/WidgetSection.h
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/AtomicFile.h
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/JsonAccess.h
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/JsonFile.h
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/ZipArchive.h
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/ZipFormat.h
+	${NCINE_SOURCE_DIR}/Jazz2/Utils/ZipWriter.h
 )
 
 # CPU software rendering backend headers (used only when the software backend is selected)

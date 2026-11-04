@@ -168,11 +168,28 @@ namespace Jazz2
 		 * and tile sets there. Nothing can be saved on the web, a file is downloaded instead.
 		 */
 		StringView GetWritableContentPath(bool create);
+#if defined(WITH_LEVEL_PACKS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Returns path to the directory of installed level packs, or an empty string if there is none
+		 *
+		 * The original files of the packs are kept there, in `"LevelPacks"` of the directory returned by
+		 * @ref GetWritableContentPath(), so they survive a rebuild of the cache.
+		 */
+		String GetLevelPacksPath(bool create);
+		/**
+		 * @brief Returns path to the converted level packs in the `"Cache"` directory
+		 *
+		 * Levels of a pack are named with a `+` prefix, e.g. `+1234/battle1`, and they're looked up only here, in
+		 * `Episodes/+1234/battle1.j2l`. Tile sets and other files of the packs are searched here last.
+		 */
+		String GetLevelPacksCachePath() const;
+#endif
 		/**
 		 * @brief Returns full path to a file in the user `"Content"`, `"Content"` or `"Cache"` directory
 		 *
 		 * The directories are searched in this order, @p path is relative to them. Returns an empty string if the
-		 * file wasn't found in any of them. Files in mounted `.pak` files aren't considered.
+		 * file wasn't found in any of them. Files in mounted `.pak` files aren't considered. Levels and episodes of
+		 * level packs are found only in @ref GetLevelPacksCachePath().
 		 */
 		String FindContentFile(StringView path) const;
 		/** @brief Returns path to `"Cache"` directory */
@@ -720,6 +737,10 @@ namespace Jazz2
 		String GetUserContentCandidate() const;
 		// Opens the file FindContentFile() would find
 		std::unique_ptr<Stream> OpenFoundContentFile(StringView path, String& fullPath, std::int32_t bufferSize) const;
+#if defined(WITH_LEVEL_PACKS)
+		// Whether it's "Episodes/+<pack>...", then "result" is its path in the converted level packs (empty if it's not a valid one)
+		bool TryGetLevelPackContentPath(StringView path, String& result) const;
+#endif
 
 		// Cache key offset for indexed graphics (palette indices kept in the texture instead of baked), distinct
 		// from any real paletteOffset so indexed and baked variants of the same sprite are cached separately

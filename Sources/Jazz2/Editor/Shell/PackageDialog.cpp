@@ -6,12 +6,12 @@
 #include "TextPrompt.h"
 #include "../Tools/EditorContext.h"
 #include "../Document/Commands.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Files/EpisodeFile.h"
-#include "../Files/JsonAccess.h"
-#include "../Files/JsonFile.h"
-#include "../Files/ZipWriter.h"
+#include "../../Utils/JsonAccess.h"
+#include "../../Utils/JsonFile.h"
+#include "../../Utils/ZipWriter.h"
 #include "../Imaging/LevelThumbnail.h"
 #include "../Imaging/PngCodec.h"
 #include "../UI/UiDialogs.h"
@@ -85,16 +85,16 @@ namespace Jazz2::Editor
 			}
 			Json::Value info;
 			StringView text(reinterpret_cast<const char*>(chunk->Data.data()) + 1, chunk->Data.size() - 1);
-			if (!JsonFile::Parse(text, info) || !info.isObject()) {
+			if (!Utils::JsonFile::Parse(text, info) || !info.isObject()) {
 				return;
 			}
-			state.Name = JsonAccess::GetString(info, "name", state.Name);
-			state.Author = JsonAccess::GetString(info, "author", state.Author);
-			state.Version = JsonAccess::GetString(info, "version", state.Version);
-			state.Description = JsonAccess::GetString(info, "description", state.Description);
-			state.Tags = JsonAccess::GetString(info, "tags", state.Tags);
-			state.WholeEpisode = JsonAccess::GetBool(info, "wholeEpisode", state.WholeEpisode);
-			state.EditorData = JsonAccess::GetBool(info, "editorData", state.EditorData);
+			state.Name = Utils::JsonAccess::GetString(info, "name", state.Name);
+			state.Author = Utils::JsonAccess::GetString(info, "author", state.Author);
+			state.Version = Utils::JsonAccess::GetString(info, "version", state.Version);
+			state.Description = Utils::JsonAccess::GetString(info, "description", state.Description);
+			state.Tags = Utils::JsonAccess::GetString(info, "tags", state.Tags);
+			state.WholeEpisode = Utils::JsonAccess::GetBool(info, "wholeEpisode", state.WholeEpisode);
+			state.EditorData = Utils::JsonAccess::GetBool(info, "editorData", state.EditorData);
 		}
 
 		void StorePackageInfo(IEditorContext& session, const PackageState& state)
@@ -107,7 +107,7 @@ namespace Jazz2::Editor
 			info["tags"] = state.Tags.data();
 			info["wholeEpisode"] = state.WholeEpisode;
 			info["editorData"] = state.EditorData;
-			std::string text = JsonFile::ToString(info, true);
+			std::string text = Utils::JsonFile::ToString(info, true);
 
 			SmallVector<std::uint8_t, 0> data;
 			data.push_back(PackageInfoVersion);
@@ -348,11 +348,11 @@ namespace Jazz2::Editor
 					files.append(item.ArchivePath.data());
 				}
 			}
-			std::string manifestText = JsonFile::ToString(manifest);
+			std::string manifestText = Utils::JsonFile::ToString(manifest);
 
 			bool missing = false;
-			bool written = AtomicFile::Write(path, [&](Stream& s) {
-				ZipWriter zip(s);
+			bool written = Utils::AtomicFile::Write(path, [&](Stream& s) {
+				Utils::ZipWriter zip(s);
 				if (!zip.AddFile("manifest.json"_s, ArrayView<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(manifestText.data()), manifestText.size()))) {
 					return false;
 				}

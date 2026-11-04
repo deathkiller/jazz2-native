@@ -201,6 +201,12 @@ namespace Jazz2::Editor
 		// The script with the lines of the weapons as they're now, `false` if the weapons weren't changed or the lines are the same
 		bool GetUpdatedScript(String& path, String& text, String& updated) const;
 		void RememberSavedWeapons();
+#if defined(WITH_LEVEL_PACKS)
+		// Name of a level pack or its level in the file dialog, see UiFileRoot::LabelFunc
+		static String GetLevelPackLabel(StringView path, bool isDirectory);
+		// Copies the tile sets and the music of a level pack the level uses into the user content
+		void CopyLevelPackAssets(const LevelDocument& document);
+#endif
 
 		struct WatchedTileSet
 		{

@@ -607,6 +607,9 @@ The platform itself is selected with CMake's own variables --- `CMAKE_SYSTEM_NAM
         imported episode
     -   Also defines `WITH_PNG_ENCODER`, which compiles in the encoder of @ref nCine::PngCodec --- the game itself
         only reads PNG images, so a build without the editor leaves it out. AssetPacker defines it on its own
+-   `WITH_LEVEL_PACKS` (default @cpp ON @ce) --- Enable installing level packs, see @ref level-packs
+    -   Only with an HTTP backend (Windows, or libcurl found) and zlib, otherwise it's left out
+    -   Not available on **Emscripten** yet
 
 */
 

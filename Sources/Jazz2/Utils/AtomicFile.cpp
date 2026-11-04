@@ -1,6 +1,6 @@
 ﻿#include "AtomicFile.h"
 
-#if defined(WITH_EDITOR)
+#if defined(WITH_EDITOR) || defined(WITH_LEVEL_PACKS)
 
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
@@ -18,7 +18,7 @@ using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
-namespace Jazz2::Editor
+namespace Jazz2::Utils
 {
 	namespace
 	{

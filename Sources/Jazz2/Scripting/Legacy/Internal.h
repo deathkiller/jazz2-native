@@ -6,6 +6,9 @@
 #include "../LevelScriptLoader.h"
 #include "../../ContentResolver.h"
 #include "../../LevelHandler.h"
+#if defined(WITH_LEVEL_PACKS)
+#	include "../../LevelPacks/LevelPackLibrary.h"
+#endif
 
 #include <Containers/StringUtils.h>
 
@@ -25,6 +28,17 @@ namespace Jazz2::Scripting
 		if (name.hasSuffix(".j2t"_s)) {
 			name = String(name.exceptSuffix(".j2t"_s));
 		}
+#if defined(WITH_LEVEL_PACKS)
+		// A tile set of a pack is converted under a name of its own
+		if (asGetActiveContext() != nullptr) {
+			if (auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>()) {
+				String packTileSet = LevelPacks::LevelPackLibrary::Get().FindTileSet(owner->GetLevelHandler()->GetLevelName(), name);
+				if (!packTileSet.empty()) {
+					return packTileSet;
+				}
+			}
+		}
+#endif
 		return (Formats::LevelFile::IsSafeTileSetPath(name) ? name : String());
 	}
 

@@ -269,6 +269,10 @@ namespace Jazz2::Multiplayer
 		// Server-only methods
 		/** @brief Processes the specified server command */
 		bool ProcessCommand(const Peer& peer, StringView line, bool isAdmin);
+#if defined(WITH_LEVEL_PACKS) && defined(WITH_THREADS)
+		/** @brief Lists, installs or removes level packs, the arguments of `/packs` */
+		void ProcessLevelPacksCommand(const Peer& peer, StringView args);
+#endif
 		/** @brief Sends the message to the specified peer */
 		void SendMessage(const Peer& peer, UI::MessageLevel level, StringView message);
 		/** @brief Sends the message to all authenticated peers */

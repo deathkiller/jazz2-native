@@ -2300,6 +2300,22 @@ namespace
 		}
 	}
 
+	void PreferencesCache::RemoveEpisodeEnd(StringView episodeName)
+	{
+		if (episodeName.empty()) {
+			return;
+		}
+
+		if (_episodeEnd.erase(String::nullTerminatedView(episodeName)) == 0) {
+			for (auto it = _episodeEnd.begin(); it != _episodeEnd.end(); ++it) {
+				if (StringUtils::equalsIgnoreCase(it->first, episodeName)) {
+					_episodeEnd.erase(it);
+					break;
+				}
+			}
+		}
+	}
+
 #if defined(SHAREWARE_DEMO_ONLY)
 	bool PreferencesCache::IsEpisodeUnlocked(StringView episodeName)
 	{

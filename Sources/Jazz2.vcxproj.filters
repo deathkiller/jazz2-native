@@ -238,6 +238,18 @@
     <Filter Include="Header Files\Jazz2\UI">
       <UniqueIdentifier>{ba8465dc-da58-4362-b4fe-1c831c184563}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Jazz2\LevelPacks">
+      <UniqueIdentifier>{a950b5b6-46fd-466d-b1c5-20bae829dee0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\LevelPacks">
+      <UniqueIdentifier>{c8a546b8-4819-4586-91fe-365bce21dece}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Utils">
+      <UniqueIdentifier>{844d8e14-5bd4-4bfb-82b5-c8ad1da887a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Utils">
+      <UniqueIdentifier>{1ca17b3e-2142-4471-b1dc-84475c279298}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\Jazz2\UI\Menu">
       <UniqueIdentifier>{5de8bce6-a2aa-4513-886c-4bdcb532a14e}</UniqueIdentifier>
     </Filter>
@@ -1136,6 +1148,12 @@
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Solid\PushableBox.h">
       <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\LevelPackDetailSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\LevelPacksSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
@@ -2232,6 +2250,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h">
       <Filter>Header Files\Shared\Base</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Cryptography\Sha256.h">
+      <Filter>Header Files\Shared\Cryptography</Filter>
+    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Cryptography\xxHash.h">
       <Filter>Header Files\Shared\Cryptography</Filter>
     </ClInclude>
@@ -2280,17 +2301,17 @@
     <ClInclude Include="Jazz2\Editor\EditorSessionPrivate.h">
       <Filter>Header Files\Jazz2\Editor</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\Files\AtomicFile.h">
-      <Filter>Header Files\Jazz2\Editor\Files</Filter>
+    <ClInclude Include="Jazz2\Utils\AtomicFile.h">
+      <Filter>Header Files\Jazz2\Utils</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Editor\Files\EpisodeFile.h">
       <Filter>Header Files\Jazz2\Editor\Files</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\Files\JsonAccess.h">
-      <Filter>Header Files\Jazz2\Editor\Files</Filter>
+    <ClInclude Include="Jazz2\Utils\JsonAccess.h">
+      <Filter>Header Files\Jazz2\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\Files\JsonFile.h">
-      <Filter>Header Files\Jazz2\Editor\Files</Filter>
+    <ClInclude Include="Jazz2\Utils\JsonFile.h">
+      <Filter>Header Files\Jazz2\Utils</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Editor\Files\PoFile.h">
       <Filter>Header Files\Jazz2\Editor\Files</Filter>
@@ -2298,8 +2319,20 @@
     <ClInclude Include="Jazz2\Editor\Files\TileSetDataCache.h">
       <Filter>Header Files\Jazz2\Editor\Files</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\Files\ZipWriter.h">
-      <Filter>Header Files\Jazz2\Editor\Files</Filter>
+    <ClInclude Include="Jazz2\LevelPacks\LevelPackLibrary.h">
+      <Filter>Header Files\Jazz2\LevelPacks</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\LevelPacks\LevelPackManifest.h">
+      <Filter>Header Files\Jazz2\LevelPacks</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Utils\ZipArchive.h">
+      <Filter>Header Files\Jazz2\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Utils\ZipFormat.h">
+      <Filter>Header Files\Jazz2\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Utils\ZipWriter.h">
+      <Filter>Header Files\Jazz2\Utils</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Editor\Imaging\TileMasks.h">
       <Filter>Header Files\Jazz2\Editor\Imaging</Filter>
@@ -3260,6 +3293,12 @@
     <ClCompile Include="Jazz2\Actors\Solid\PushableBox.cpp">
       <Filter>Source Files\Jazz2\Actors\Solid</Filter>
     </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\LevelPackDetailSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\LevelPacksSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
@@ -3848,6 +3887,9 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Base\Format.cpp">
       <Filter>Source Files\Shared\Base</Filter>
     </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Cryptography\Sha256.cpp">
+      <Filter>Source Files\Shared\Cryptography</Filter>
+    </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Cryptography\xxHash.cpp">
       <Filter>Source Files\Shared\Cryptography</Filter>
     </ClCompile>
@@ -3917,14 +3959,14 @@
     <ClCompile Include="Jazz2\Editor\Events\EventPreviews.Sounds.cpp">
       <Filter>Source Files\Jazz2\Editor\Events</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\Files\AtomicFile.cpp">
-      <Filter>Source Files\Jazz2\Editor\Files</Filter>
+    <ClCompile Include="Jazz2\Utils\AtomicFile.cpp">
+      <Filter>Source Files\Jazz2\Utils</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Files\EpisodeFile.cpp">
       <Filter>Source Files\Jazz2\Editor\Files</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\Files\JsonFile.cpp">
-      <Filter>Source Files\Jazz2\Editor\Files</Filter>
+    <ClCompile Include="Jazz2\Utils\JsonFile.cpp">
+      <Filter>Source Files\Jazz2\Utils</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Files\PoFile.cpp">
       <Filter>Source Files\Jazz2\Editor\Files</Filter>
@@ -3932,8 +3974,20 @@
     <ClCompile Include="Jazz2\Editor\Files\TileSetDataCache.cpp">
       <Filter>Source Files\Jazz2\Editor\Files</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\Files\ZipWriter.cpp">
-      <Filter>Source Files\Jazz2\Editor\Files</Filter>
+    <ClCompile Include="Jazz2\LevelPacks\LevelPackLibrary.cpp">
+      <Filter>Source Files\Jazz2\LevelPacks</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\LevelPacks\LevelPackManifest.cpp">
+      <Filter>Source Files\Jazz2\LevelPacks</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Utils\ZipArchive.cpp">
+      <Filter>Source Files\Jazz2\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Utils\ZipFormat.cpp">
+      <Filter>Source Files\Jazz2\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Utils\ZipWriter.cpp">
+      <Filter>Source Files\Jazz2\Utils</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Runtime\PlayPathHistory.cpp">
       <Filter>Source Files\Jazz2\Editor\Runtime</Filter>

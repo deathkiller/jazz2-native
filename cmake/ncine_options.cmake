@@ -538,6 +538,9 @@ cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer supp
 # or on a dedicated server. In the Shareware Demo, it opens only unlocked episodes (web: once one is imported).
 cmake_dependent_option(WITH_EDITOR "Enable the built-in level editor" ON "NOT DEDICATED_SERVER;NOT PLATFORM_N64;NOT PLATFORM_DREAMCAST;NOT NINTENDO_GAMECUBE;NOT PLATFORM_PS2" OFF)
 
+# Level packs (see Docs/LevelPacks.dox), only with an HTTP backend and zlib, checked in ncine_extra_sources.cmake
+cmake_dependent_option(WITH_LEVEL_PACKS "Enable installing level packs" ON "NOT EMSCRIPTEN" OFF)
+
 option(NCINE_BUILD_GAME "Build the game itself, turn off to build only the offline tools" ON)
 
 # Offline tools (see `Sources/Utilities`) are host executables, so off when cross-compiling (except the web

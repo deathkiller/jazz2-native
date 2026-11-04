@@ -11,9 +11,9 @@
 #include "../Document/LevelDocument.h"
 #include "../Document/Commands.h"
 #include "../Document/DocumentSnapshot.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/ContentTileSetLibrary.h"
-#include "../Files/JsonAccess.h"
+#include "../../Utils/JsonAccess.h"
 #include "../Imaging/TileImages.h"
 #include "../Runtime/TileDrawing.h"
 #include "../Smart/RulesFile.h"
@@ -339,7 +339,7 @@ namespace Jazz2::Editor
 			SmallVector<std::pair<String, std::int32_t>, 0> _counts;
 		};
 
-		// A level file changed to the new order of its tile set, only into its temporary file, see AtomicFile::Stage(),
+		// A level file changed to the new order of its tile set, only into its temporary file, see Utils::AtomicFile::Stage(),
 		// on any thread, it reads only files and @p tileSets
 		bool StageLevelFile(ITileSetLibrary& tileSets, StringView path, StringView tileSet, ArrayView<const std::int32_t> order, ArrayView<const std::int32_t> mergedInto)
 		{
@@ -353,7 +353,7 @@ namespace Jazz2::Editor
 			if (RemapLevelToTileSetOrder(document, order, tileSet, mergedInto) < 0) {
 				return false;
 			}
-			return AtomicFile::Stage(path, [&document](Stream& s) {
+			return Utils::AtomicFile::Stage(path, [&document](Stream& s) {
 				return document.Save(s, false, 9);
 			});
 		}
@@ -368,7 +368,7 @@ namespace Jazz2::Editor
 		void DiscardStaged(ArrayView<const StagedFile> staged)
 		{
 			for (const StagedFile& file : staged) {
-				AtomicFile::Discard(file.Path);
+				Utils::AtomicFile::Discard(file.Path);
 			}
 		}
 
@@ -377,19 +377,19 @@ namespace Jazz2::Editor
 		std::int32_t CommitStaged(ArrayView<const StagedFile> staged)
 		{
 			std::size_t committed = 0;
-			while (committed < staged.size() && AtomicFile::Commit(staged[committed].Path, true)) {
+			while (committed < staged.size() && Utils::AtomicFile::Commit(staged[committed].Path, true)) {
 				committed++;
 			}
 			if (committed == staged.size()) {
 				return -1;
 			}
 			for (std::size_t i = 0; i < committed; i++) {
-				if (!AtomicFile::RestoreBackup(staged[i].Path, staged[i].Existed)) {
+				if (!Utils::AtomicFile::RestoreBackup(staged[i].Path, staged[i].Existed)) {
 					LOGE("File \"{}\" couldn't be put back, its previous content is in \"{}.bak\"", staged[i].Path, staged[i].Path);
 				}
 			}
 			for (std::size_t i = committed; i < staged.size(); i++) {
-				AtomicFile::Discard(staged[i].Path);
+				Utils::AtomicFile::Discard(staged[i].Path);
 			}
 			return std::int32_t(committed);
 		}
@@ -404,7 +404,7 @@ namespace Jazz2::Editor
 				return false;
 			}
 			auto isTarget = [ownTileSet, tileSet](const Json::Value& item, const char* key) {
-				String name = JsonAccess::GetString(item, key);
+				String name = Utils::JsonAccess::GetString(item, key);
 				return (name.empty() ? ownTileSet : IsSameTileSet(name, tileSet));
 			};
 			auto remapIndex = [newIndex](std::uint32_t index) {
@@ -426,7 +426,7 @@ namespace Jazz2::Editor
 						Json::Value kept(Json::arrayValue);
 						for (Json::Value& item : list) {
 							if (item.isObject() && isTarget(item, "s")) {
-								std::uint32_t index = JsonAccess::GetUInt(item, "i", 0);
+								std::uint32_t index = Utils::JsonAccess::GetUInt(item, "i", 0);
 								std::int32_t newPosition = remapIndex(index);
 								if (newPosition <= 0) {
 									changed = true;
@@ -453,7 +453,7 @@ namespace Jazz2::Editor
 					if (!tile.isObject() || !isTarget(tile, "set")) {
 						continue;
 					}
-					std::uint32_t index = JsonAccess::GetUInt(tile, "i", 0);
+					std::uint32_t index = Utils::JsonAccess::GetUInt(tile, "i", 0);
 					std::int32_t newPosition = remapIndex(index);
 					if (newPosition <= 0) {
 						// Not painted anymore, as a removed tile isn't in the level either
@@ -1043,13 +1043,13 @@ namespace Jazz2::Editor
 		{
 			if (rules.isObject()) {
 				auto isOwn = [ownTileSet, tileSet](const Json::Value& item, const char* key) {
-					String name = JsonAccess::GetString(item, key);
+					String name = Utils::JsonAccess::GetString(item, key);
 					return (name.empty() ? ownTileSet : IsSameTileSet(name, tileSet));
 				};
-				const Json::Value& terrains = JsonAccess::Member(rules, "terrains");
+				const Json::Value& terrains = Utils::JsonAccess::Member(rules, "terrains");
 				if (terrains.isArray()) {
 					for (const Json::Value& terrain : terrains) {
-						const Json::Value& patterns = JsonAccess::Member(terrain, "patterns");
+						const Json::Value& patterns = Utils::JsonAccess::Member(terrain, "patterns");
 						if (!patterns.isObject()) {
 							continue;
 						}
@@ -1060,7 +1060,7 @@ namespace Jazz2::Editor
 							}
 							for (const Json::Value& item : list) {
 								if (item.isObject() && isOwn(item, "s")) {
-									mark(std::int32_t(JsonAccess::GetUInt(item, "i", 0)));
+									mark(std::int32_t(Utils::JsonAccess::GetUInt(item, "i", 0)));
 								}
 							}
 						}
@@ -1073,23 +1073,23 @@ namespace Jazz2::Editor
 					}
 					for (const Json::Value& tile : tiles) {
 						if (tile.isObject() && isOwn(tile, "set")) {
-							mark(std::int32_t(JsonAccess::GetUInt(tile, "i", 0)));
+							mark(std::int32_t(Utils::JsonAccess::GetUInt(tile, "i", 0)));
 						}
 					}
 				};
-				const Json::Value& prefabs = JsonAccess::Member(rules, "prefabs");
+				const Json::Value& prefabs = Utils::JsonAccess::Member(rules, "prefabs");
 				if (prefabs.isArray()) {
 					for (const Json::Value& prefab : prefabs) {
-						markTiles(JsonAccess::Member(prefab, "tiles"));
-						const Json::Value& layers = JsonAccess::Member(prefab, "layers");
+						markTiles(Utils::JsonAccess::Member(prefab, "tiles"));
+						const Json::Value& layers = Utils::JsonAccess::Member(prefab, "layers");
 						if (layers.isArray()) {
 							for (const Json::Value& layer : layers) {
-								markTiles(JsonAccess::Member(layer, "tiles"));
+								markTiles(Utils::JsonAccess::Member(layer, "tiles"));
 							}
 						}
 					}
 				}
-				const Json::Value& slopes = JsonAccess::Member(rules, "slopes");
+				const Json::Value& slopes = Utils::JsonAccess::Member(rules, "slopes");
 				if (ownTileSet && slopes.isObject()) {
 					for (const std::string& name : slopes.getMemberNames()) {
 						mark(std::atoi(name.c_str()));
@@ -1525,7 +1525,7 @@ namespace Jazz2::Editor
 					}
 					stream = nullptr;
 					// The backup stays, it can be put back again
-					if (!AtomicFile::Write(file, bytes.data(), std::int64_t(bytes.size()))) {
+					if (!Utils::AtomicFile::Write(file, bytes.data(), std::int64_t(bytes.size()))) {
 						continue;
 					}
 					restored++;
@@ -1604,7 +1604,7 @@ namespace Jazz2::Editor
 					}
 					job->Staged.push_back({ level, true });
 				}
-				if (!AtomicFile::Stage(job->TileSetPath, [&job](Stream& stream) { return Formats::TileSetFile::Write(stream, job->NewTileSet); })) {
+				if (!Utils::AtomicFile::Stage(job->TileSetPath, [&job](Stream& stream) { return Formats::TileSetFile::Write(stream, job->NewTileSet); })) {
 					job->TileSetFailed = true;
 					return;
 				}
@@ -1844,7 +1844,7 @@ namespace Jazz2::Editor
 			}
 			Formats::TileSetData tileSet;
 			BuildTileSet(*original, state->Order, tileSet);
-			if (!AtomicFile::Write(path, [&tileSet](Stream& stream) { return Formats::TileSetFile::Write(stream, tileSet); })) {
+			if (!Utils::AtomicFile::Write(path, [&tileSet](Stream& stream) { return Formats::TileSetFile::Write(stream, tileSet); })) {
 				s->ShowMessage(_x("editor", "The tile set couldn't be saved"));
 				return;
 			}
@@ -2020,7 +2020,7 @@ namespace Jazz2::Editor
 			staged.push_back({ level, true });
 		}
 		bool existed = fs::FileExists(path);
-		if (!AtomicFile::Stage(path, [&data](Stream& s) { return Formats::TileSetFile::Write(s, data); })) {
+		if (!Utils::AtomicFile::Stage(path, [&data](Stream& s) { return Formats::TileSetFile::Write(s, data); })) {
 			DiscardStaged(staged);
 			session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 			return false;

@@ -7,7 +7,7 @@
 #include "../Tools/EditorContext.h"
 #include "../Common/TileSource.h"
 #include "../Document/Commands.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Imaging/PaletteMatch.h"
 #include "../Imaging/TileMasks.h"
@@ -231,7 +231,7 @@ namespace Jazz2::Editor
 			}
 			// Written next to it first, so a tile set that can't be saved whole isn't lost, the one written over is kept
 			// as a backup, undo doesn't change the file back
-			if (!AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); }, intoItself)) {
+			if (!Utils::AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); }, intoItself)) {
 				session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 				return false;
 			}

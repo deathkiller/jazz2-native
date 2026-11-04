@@ -500,6 +500,12 @@ See also @ref third-party for the licenses of the libraries used.
 
 	@experimental
 */
+/** @dir Jazz2/Utils
+	@brief Namespace @ref Jazz2::Utils
+*/
+/** @namespace Jazz2::Utils
+	@brief Files written safely, JSON files and ZIP archives, compiled only if `WITH_EDITOR` or `WITH_LEVEL_PACKS`
+*/
 
 /** @dir Utilities/AssetPacker
 	@brief Namespace @ref Jazz2::AssetPacker

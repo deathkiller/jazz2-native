@@ -1,8 +1,8 @@
 #pragma once
 
-#if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(WITH_EDITOR) || defined(WITH_LEVEL_PACKS) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../../../Main.h"
+#include "../../Main.h"
 
 #include <Containers/ArrayView.h>
 #include <Containers/SmallVector.h>
@@ -10,7 +10,7 @@
 #include <Containers/StringView.h>
 #include <IO/Stream.h>
 
-namespace Jazz2::Editor
+namespace Jazz2::Utils
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::ArrayView;

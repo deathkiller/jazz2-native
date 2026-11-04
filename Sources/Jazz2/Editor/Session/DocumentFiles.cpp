@@ -5,7 +5,7 @@
 #include "../EditorInitialization.h"
 #include "../Document/CommandArchive.h"
 #include "../Events/EventCatalog.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Files/EditorSettings.h"
 #include "../Files/TileSetDataCache.h"
@@ -30,6 +30,9 @@
 #include "../../Formats/LevelPreview.h"
 #include "../../Formats/TileSetFile.h"
 #include "../../Formats/WeaponsChunk.h"
+#if defined(WITH_LEVEL_PACKS)
+#	include "../../LevelPacks/LevelPackLibrary.h"
+#endif
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
@@ -455,7 +458,7 @@ namespace Jazz2::Editor
 		if (!GetUpdatedScript(path, text, updated)) {
 			return;
 		}
-		if (AtomicFile::Write(path, updated.data(), std::int64_t(updated.size()))) {
+		if (Utils::AtomicFile::Write(path, updated.data(), std::int64_t(updated.size()))) {
 			_watchedScriptTime = GetModificationTime(path);
 			LOGI("Weapons of the script written into \"{}\"", path);
 		} else {
@@ -498,7 +501,94 @@ namespace Jazz2::Editor
 			// TRANSLATORS: Name of a place in the file dialog, the folder of the converted content of the original game
 			roots.push_back({ _x("editor", "Cache"), fs::CombinePath(cache, "Episodes"_s), false });
 		}
+#if defined(WITH_LEVEL_PACKS)
+		String levelPacks = fs::CombinePath(resolver.GetLevelPacksCachePath(), "Episodes"_s);
+		if (!forSaving && fs::DirectoryExists(levelPacks)) {
+			// TRANSLATORS: Name of a place in the file dialog, the installed level packs
+			UiFileRoot root{ _x("editor", "Level packs"), Death::move(levelPacks), false };
+			root.LabelFunc = GetLevelPackLabel;
+			roots.push_back(Death::move(root));
+		}
+#endif
 	}
+
+#if defined(WITH_LEVEL_PACKS)
+	String DocumentFiles::GetLevelPackLabel(StringView path, bool isDirectory)
+	{
+		auto& library = LevelPacks::LevelPackLibrary::Get();
+		if (isDirectory) {
+			// A folder is a pack, or an episode of a pack
+			StringView name = fs::GetFileName(path);
+			auto pack = library.FindPack(LevelPacks::LevelPackLibrary::GetPackId(name));
+			if (pack == nullptr) {
+				return {};
+			}
+			for (const auto& episode : pack->Episodes) {
+				if (episode.Name == name) {
+					return String(pack->Title + " - "_s + episode.DisplayName);
+				}
+			}
+			// TRANSLATORS: Shown in the file dialog after the name of a level pack, the folder of its levels of no episode
+			return String(pack->Title + " - "_s + _x("editor", "Levels"));
+		}
+
+		String levelName = IEditorContext::MakeLevelName(path);
+		auto pack = library.FindPackOfLevel(levelName);
+		if (pack == nullptr) {
+			return {};
+		}
+		for (const auto& level : pack->Levels) {
+			if (StringUtils::equalsIgnoreCase(level.Name, levelName) && !level.DisplayName.empty()) {
+				return String(level.DisplayName + " ("_s + fs::GetFileNameWithoutExtension(path) + ")"_s);
+			}
+		}
+		return {};
+	}
+
+	void DocumentFiles::CopyLevelPackAssets(const LevelDocument& document)
+	{
+		// A level of a pack names its tile sets and music by stored files of the pack, "<name>~<hash>", they're copied
+		// along, so the level still works once the pack is removed
+		auto& resolver = ContentResolver::Get();
+		StringView userContent = resolver.GetWritableContentPath(true);
+		if (userContent.empty()) {
+			return;
+		}
+
+		SmallVector<StringView, 8> tileSets;
+		tileSets.push_back(document.Properties.DefaultTileSet);
+		for (const auto& extra : document.ExtraTileSets) {
+			tileSets.push_back(extra.Name);
+		}
+		for (StringView tileSet : tileSets) {
+			if (!tileSet.contains('~')) {
+				continue;
+			}
+			String fileName = tileSet + ".j2t"_s;
+			String target = fs::CombinePath({ userContent, "Tilesets"_s, fileName });
+			String source = fs::CombinePath({ resolver.GetLevelPacksCachePath(), "Tilesets"_s, fileName });
+			if (!fs::FileExists(target) && fs::IsReadableFile(source)) {
+				fs::CreateDirectories(fs::GetDirectoryName(target));
+				if (!fs::Copy(source, target, false)) {
+					LOGW("Tile set \"{}\" cannot be copied to \"{}\"", source, target);
+				}
+			}
+		}
+
+		StringView music = document.Properties.Music;
+		String levelPacksPath = resolver.GetLevelPacksPath(false);
+		if (music.contains('~') && !levelPacksPath.empty()) {
+			String target = fs::CombinePath({ userContent, "Music"_s, music });
+			String source = fs::CombinePath({ levelPacksPath, "Files"_s, music });
+			if (!fs::FileExists(target) && fs::IsReadableFile(source)) {
+				fs::CreateDirectories(fs::GetDirectoryName(target));
+				if (!fs::Copy(source, target, false)) {
+					LOGW("Music \"{}\" cannot be copied to \"{}\"", source, target);
+				}
+			}
+		}
+	}
+#endif
 
 	void DocumentFiles::GetImageRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots)
 	{
@@ -809,7 +899,7 @@ namespace Jazz2::Editor
 		// Written next to the target first, every write checked and flushed, then it replaces the target in one step,
 		// so a failed write --- a full disk too --- never leaves a damaged level behind
 		LevelFlags extraFlags = (exportOnly && _exportNotEditable ? LevelFlags::NotEditable : LevelFlags::None);
-		if (!AtomicFile::Write(path, [&document, exportOnly, extraFlags](Stream& s) {
+		if (!Utils::AtomicFile::Write(path, [&document, exportOnly, extraFlags](Stream& s) {
 			return document.Save(s, exportOnly, 9, extraFlags);
 		})) {
 			LOGE("Level cannot be saved to \"{}\"", path);
@@ -849,6 +939,11 @@ namespace Jazz2::Editor
 		if (!SaveTo(path, false)) {
 			return false;
 		}
+#if defined(WITH_LEVEL_PACKS)
+		if (_levelName.hasPrefix('+')) {
+			CopyLevelPackAssets(_context.GetDocument());
+		}
+#endif
 
 		// The script of the level goes along
 		if (!previousPath.empty()) {
@@ -907,8 +1002,12 @@ namespace Jazz2::Editor
 		if (CanSaveInPlace()) {
 			directory = fs::GetDirectoryName(_filePath);
 		} else {
-			auto p = _levelName.partition('/');
-			directory = fs::CombinePath(roots[0].Path, p[0]);
+			// A folder named with "+" is of a level pack, the game doesn't look for it anywhere else
+			StringView episode = _levelName.partition('/')[0];
+			if (episode.hasPrefix('+')) {
+				episode = episode.exceptPrefix(1);
+			}
+			directory = fs::CombinePath(roots[0].Path, episode);
 		}
 		String name;
 		if (_filePath.empty()) {
@@ -1193,7 +1292,7 @@ namespace Jazz2::Editor
 			"void onLevelBegin()\r\n"_s
 			"{\r\n"_s
 			"}\r\n"_s;
-		if (!AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
+		if (!Utils::AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
 			_context.ShowMessage(_x("editor", "The script couldn't be made"));
 			return false;
 		}
@@ -1424,7 +1523,7 @@ namespace Jazz2::Editor
 	void DocumentFiles::WriteLock()
 	{
 		// A folder that can't be written to has no lock, it's only a warning anyway
-		if (!_lockPath.empty() && !AtomicFile::Write(_lockPath, _lockId.data(), std::int64_t(_lockId.size()))) {
+		if (!_lockPath.empty() && !Utils::AtomicFile::Write(_lockPath, _lockId.data(), std::int64_t(_lockId.size()))) {
 			_lockPath = {};
 		}
 	}

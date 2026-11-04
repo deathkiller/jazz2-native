@@ -1,6 +1,6 @@
 ﻿#include "JsonFile.h"
 
-#if defined(WITH_EDITOR)
+#if defined(WITH_EDITOR) || defined(WITH_LEVEL_PACKS)
 
 #include "AtomicFile.h"
 
@@ -12,7 +12,7 @@
 
 using namespace Death::IO;
 
-namespace Jazz2::Editor
+namespace Jazz2::Utils
 {
 	JsonFile::ReadResult JsonFile::Read(StringView path, Json::Value& value, std::int64_t maxSize, StringView what)
 	{

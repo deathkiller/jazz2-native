@@ -1008,7 +1008,7 @@ namespace Jazz2::Compatibility
 			// arace2.j2l uses hauntedh.j2t, but this file doesn't exist in some distributions
 			Tileset = "hauntedh1"_s;
 		}
-		properties.DefaultTileSet = Tileset;
+		properties.DefaultTileSet = (TileSetPathMapping ? TileSetPathMapping(Tileset) : String(Tileset));
 
 		// Default Music
 		StringUtils::lowercaseInPlace(Music);
@@ -1017,6 +1017,9 @@ namespace Jazz2::Compatibility
 			properties.Music = Death::move(music);
 		} else {
 			properties.Music = Music;
+		}
+		if (MusicPathMapping && !Music.empty()) {
+			properties.Music = MusicPathMapping(properties.Music);
 		}
 
 		// Alpha is the starting light intensity
@@ -1072,7 +1075,7 @@ namespace Jazz2::Compatibility
 				tileset.Name = tileset.Name.exceptSuffix(".j2t"_s);
 			}
 
-			record.Name = tileset.Name;
+			record.Name = (TileSetPathMapping ? TileSetPathMapping(tileset.Name) : String(tileset.Name));
 			record.Offset = tileset.Offset;
 			record.Count = tileset.Count;
 			std::memset(record.Remapping, 0, sizeof(record.Remapping));

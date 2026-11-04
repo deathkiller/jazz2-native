@@ -501,11 +501,37 @@ namespace Jazz2::Compatibility
 
 	void AssetConverter::ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll, const ConversionOptions& options, ConversionProgress progress)
 	{
+		ConvertLevelsInternal(sourcePath, targetPath, recreateAll, options, nullptr, progress);
+	}
+
+	void AssetConverter::ConvertLevelPack(StringView sourcePath, StringView targetPath, LevelPackConversion& pack, ConversionProgress progress)
+	{
+		ConversionOptions everything;
+		ConvertLevelsInternal(sourcePath, targetPath, true, everything, &pack, progress);
+	}
+
+	void AssetConverter::ConvertLevelsInternal(StringView sourcePath, StringView targetPath, bool recreateAll, const ConversionOptions& options,
+		LevelPackConversion* pack, ConversionProgress progress)
+	{
 		LOGI("Searching for levels...");
 
 		Compatibility::EventConverter eventConverter;
 
-		bool hasChristmasChronicles = fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "xmas99.j2e"_s)));
+		bool hasChristmasChronicles = (pack == nullptr && fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "xmas99.j2e"_s))));
+
+		// An episode of a pack is named after the pack
+		auto MapPackEpisode = [pack](StringView episodeName) -> String {
+			if (episodeName.empty() || episodeName == "unknown"_s) {
+				return pack->EpisodePrefix;
+			}
+			String name = pack->EpisodePrefix + "_"_s + episodeName;
+			for (char& c : name.exceptPrefix(pack->EpisodePrefix.size())) {
+				if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-')) {
+					c = '-';
+				}
+			}
+			return name;
+		};
 
 		// A level goes into the directory of the episode that leads to it, under its own name, and a level of no episode
 		// into "unknown". Which levels an episode leads to can only be answered once every level's file is known.
@@ -533,7 +559,7 @@ namespace Jazz2::Compatibility
 			HashMap<String, bool> reachable;
 			CollectEpisodeLevels(levelFiles, episode.FirstLevel, reachable);
 			// "xmas98" is converted as "xmas99", see below
-			StringView episodeName = (episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name));
+			StringView episodeName = (pack == nullptr && episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name));
 			const bool isAllowed = (filtering && IsAllowedEpisode(episode.Name, options));
 			for (auto& level : reachable) {
 				claims[level.first].Add(episodeName);
@@ -544,16 +570,31 @@ namespace Jazz2::Compatibility
 		}
 
 		HashMap<String, String> levelEpisodes = AssignEpisodeLevels(claims);
-		for (const auto& unreachable : UnreachableEpisodeLevels) {
-			levelEpisodes.emplace(String(unreachable.first()), String(unreachable.second()));
-			if (filtering && IsAllowedEpisode(unreachable.second(), options)) {
-				allowedLevels.emplace(String(unreachable.first()), true);
+		if (pack != nullptr) {
+			// Every level of the pack is named with its episode, so a link from an episode to a level of no episode stays in the pack too
+			for (auto& pair : levelEpisodes) {
+				pair.second = MapPackEpisode(pair.second);
+			}
+			for (const auto& pair : levelFiles) {
+				if (pair.first.find("-mlle-data-"_s) == nullptr && !levelEpisodes.contains(pair.first)) {
+					levelEpisodes.emplace(pair.first, pack->EpisodePrefix);
+				}
+			}
+		} else {
+			for (const auto& unreachable : UnreachableEpisodeLevels) {
+				levelEpisodes.emplace(String(unreachable.first()), String(unreachable.second()));
+				if (filtering && IsAllowedEpisode(unreachable.second(), options)) {
+					allowedLevels.emplace(String(unreachable.first()), true);
+				}
 			}
 		}
 
-		auto GetLevelEpisode = [&levelEpisodes](StringView levelName) -> StringView {
+		auto GetLevelEpisode = [&levelEpisodes, pack](StringView levelName) -> StringView {
 			auto it = levelEpisodes.find(levelName);
-			return (it != levelEpisodes.end() && !it->second.empty() ? StringView(it->second) : "unknown"_s);
+			if (it != levelEpisodes.end() && !it->second.empty()) {
+				return it->second;
+			}
+			return (pack != nullptr ? StringView(pack->EpisodePrefix) : "unknown"_s);
 		};
 
 		auto LevelTokenConversion = [&levelEpisodes](StringView levelToken) -> Compatibility::JJ2Level::LevelToken {
@@ -590,8 +631,10 @@ namespace Jazz2::Compatibility
 			}
 		};
 
-		auto EpisodePrevNext = [](Compatibility::JJ2Episode* episode) -> Pair<String, String> {
-			if (episode->Name == "prince"_s) {
+		auto EpisodePrevNext = [pack](Compatibility::JJ2Episode* episode) -> Pair<String, String> {
+			if (pack != nullptr) {
+				return { {}, {} };
+			} else if (episode->Name == "prince"_s) {
 				return { {}, "rescue"_s };
 			} else if (episode->Name == "rescue"_s) {
 				return { "prince"_s, "flash"_s };
@@ -652,6 +695,25 @@ namespace Jazz2::Compatibility
 				}
 
 				Compatibility::JJ2Episode episode;
+				if (pack != nullptr) {
+					// The custom-levels entry of the original game is no episode of a pack
+					if (episode.Open(item) && episode.Name != "home"_s) {
+						String episodeName = MapPackEpisode(episode.Name);
+						if (episode.Position >= UINT16_MAX) {
+							episode.Position = UINT16_MAX - 1;
+						}
+						String firstLevel = LevelTokenConversion(NormalizeLevelToken(episode.FirstLevel)).Level;
+						String displayName = EpisodeNameConversion(&episode);
+						String fullPath = fs::CombinePath(episodesPath, String(episodeName + ".j2e"_s));
+						episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
+
+						auto& converted = pack->Episodes.emplace_back();
+						converted.Name = Death::move(episodeName);
+						converted.DisplayName = Death::move(displayName);
+						converted.FirstLevel = Death::move(firstLevel);
+					}
+					continue;
+				}
 				if (episode.Open(item)) {
 					if (hasChristmasChronicles && episode.Name == "xmas98"_s) {
 						continue;
@@ -673,7 +735,10 @@ namespace Jazz2::Compatibility
 			} else if (extension == "j2l"_s) {
 				// Level
 				String levelName = fs::GetFileNameWithoutExtension(item);
-				if (levelName.find("-MLLE-Data-"_s) == nullptr) {
+				// The files of a pack are stored in lowercase
+				bool isMlleData = (pack != nullptr ? StringUtils::lowercase(levelName).find("-mlle-data-"_s) != nullptr
+					: levelName.find("-MLLE-Data-"_s) != nullptr);
+				if (!isMlleData) {
 					if (filtering) {
 						// Decided on the file name rather than the level's own recorded name, so a level that is
 						// filtered out never has to be opened at all
@@ -726,27 +791,41 @@ namespace Jazz2::Compatibility
 				StringView episodeName = GetLevelEpisode(level.LevelName);
 				String fullPath = fs::CombinePath({ episodesPath, episodeName, String(level.LevelName + ".j2l"_s) });
 
+				if (pack != nullptr) {
+					level.TileSetPathMapping = [pack](StringView name) { return pack->TileSetPath ? pack->TileSetPath(name) : String(name); };
+					level.MusicPathMapping = [pack](StringView name) { return pack->MusicPath ? pack->MusicPath(name) : String(name); };
+				}
+
 				fs::CreateDirectories(fs::GetDirectoryName(fullPath));
-				if (episodeName == "unknown"_s) {
-					// The list of custom levels shows the levels of no episode, each with its preview
+				if (episodeName == "unknown"_s || pack != nullptr) {
+					// The list of custom levels shows the levels of no episode, each with its preview, and so does a level pack
 					level.Convert(fullPath, eventConverter, LevelTokenConversion, [&sharedLock, &previewTilesets](StringView name, ArrayView<const std::int32_t> tiles, std::int32_t& tileCount) {
+						// A tile set of a pack is named "<name>~<hash>", the original file is "<name>.j2t"
+						StringView originalName = name.partition('~')[0];
 						ConversionLock lock(sharedLock);
-						return previewTilesets.Get(name, tiles, tileCount);
+						return previewTilesets.Get(originalName, tiles, tileCount);
 					}, lockedTextureLookup);
 				} else {
 					level.Convert(fullPath, eventConverter, LevelTokenConversion, {}, lockedTextureLookup);
 				}
 
 				// Also copy level script file if exists
-				StringView foundDot = item.findLastOr('.', item.end());
-				String scriptPath = item.prefix(foundDot.begin()) + ".j2as"_s;
-				auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
-				if (fs::IsReadableFile(adjustedPath)) {
-					foundDot = fullPath.findLastOr('.', fullPath.end());
-					fs::Copy(adjustedPath, String(fullPath.prefix(foundDot.begin()) + ".j2as"_s));
+				if (pack == nullptr || pack->CopyScripts) {
+					StringView foundDot = item.findLastOr('.', item.end());
+					String scriptPath = item.prefix(foundDot.begin()) + ".j2as"_s;
+					auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
+					if (fs::IsReadableFile(adjustedPath)) {
+						foundDot = fullPath.findLastOr('.', fullPath.end());
+						fs::Copy(adjustedPath, String(fullPath.prefix(foundDot.begin()) + ".j2as"_s));
+					}
 				}
 
 				ConversionLock lock(sharedLock);
+				if (pack != nullptr) {
+					auto& converted = pack->Levels.emplace_back();
+					converted.Name = episodeName + "/"_s + level.LevelName;
+					converted.DisplayName = Compatibility::JJ2Strings::RecodeString(level.DisplayName, true);
+				}
 				usedTilesets.emplace(level.Tileset, true);
 				for (auto& extraTileset : level.ExtraTilesets) {
 					usedTilesets.emplace(extraTileset.Name, true);
@@ -769,6 +848,25 @@ namespace Jazz2::Compatibility
 			ConversionLock lock(sharedLock);
 			levelProgress.ReportStep(++levelsDone, std::int32_t(pendingLevels.size()));
 		});
+
+		if (pack != nullptr) {
+			// The tile sets of a pack are shared with other packs, the caller converts only those that aren't there yet
+			for (auto& pair : usedTilesets) {
+				if (!pair.first.empty()) {
+					pack->UsedTileSets.push_back(pair.first);
+				}
+			}
+			for (auto& pair : usedMusic) {
+				pack->UsedMusic.push_back(pair.first);
+			}
+			std::sort(pack->Levels.begin(), pack->Levels.end(), [](const LevelPackConversion::Level& a, const LevelPackConversion::Level& b) {
+				return a.Name < b.Name;
+			});
+			std::sort(pack->UsedTileSets.begin(), pack->UsedTileSets.end());
+			std::sort(pack->UsedMusic.begin(), pack->UsedMusic.end());
+			progress.Report(1.0f);
+			return;
+		}
 
 		if (options.CopyUsedMusic) {
 			// Not every track the game plays is named by a level. The main menu picks one of three, and each

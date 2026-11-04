@@ -10,7 +10,7 @@
 #include "../Document/Commands.h"
 #include "../Document/LevelDocument.h"
 #include "../Events/EventPreviews.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/EditorSettings.h"
 #include "../Imaging/PngCodec.h"
 #include "../Imaging/Quantizer.h"
@@ -1624,7 +1624,7 @@ namespace Jazz2::Editor
 			png.Palette[0] &= 0x00FFFFFFu;
 			png.PaletteSize = 256;
 			std::memcpy(png.Pixels.data(), image.Pixels.data(), std::min(png.Pixels.size(), image.Pixels.size()));
-			return AtomicFile::Write(path, [&png](Stream& stream) { return nCine::PngCodec::Encode(stream, png); });
+			return Utils::AtomicFile::Write(path, [&png](Stream& stream) { return nCine::PngCodec::Encode(stream, png); });
 		}
 
 		void ExportImage(IEditorContext& session, const WeaponImage& image)
@@ -1842,7 +1842,7 @@ namespace Jazz2::Editor
 				}, [&](std::int32_t index) -> String {
 					const WeaponSound& sound = weapons.Sounds[index];
 					String fileName = baseName + "-"_s + (sound.Name.empty() ? StringView("sound.wav"_s) : StringView(sound.Name));
-					if (!AtomicFile::Write(fs::CombinePath(targetDirectory, fileName), sound.Data.data(), std::int64_t(sound.Data.size()))) {
+					if (!Utils::AtomicFile::Write(fs::CombinePath(targetDirectory, fileName), sound.Data.data(), std::int64_t(sound.Data.size()))) {
 						failed = true;
 						return {};
 					}
@@ -1851,7 +1851,7 @@ namespace Jazz2::Editor
 				Json::Value file(Json::objectValue);
 				file["Weapons"].append(Death::move(item));
 				std::string text = WriteWeaponTemplateFile(file);
-				if (failed || !AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
+				if (failed || !Utils::AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
 					s->ShowMessage(_x("editor", "The file couldn't be written"));
 					return;
 				}

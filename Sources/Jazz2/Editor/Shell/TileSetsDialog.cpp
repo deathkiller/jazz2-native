@@ -14,7 +14,7 @@
 #include "../Common/TileSource.h"
 #include "../Document/Commands.h"
 #include "../Document/DocumentSnapshot.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Imaging/PaletteMatch.h"
 #include "../Imaging/PngCodec.h"
@@ -1009,18 +1009,18 @@ namespace Jazz2::Editor
 			String maskPath = PngCodec::GetMasksPath(path);
 			// Through temporary files, a failed write leaves the images that were there, and neither is replaced
 			// unless both were written whole
-			bool saved = AtomicFile::Stage(path, [&sheet](Stream& st) { return PngCodec::Encode(st, sheet); });
-			if (saved && !AtomicFile::Stage(maskPath, [&masks](Stream& st) { return PngCodec::Encode(st, masks); })) {
-				AtomicFile::Discard(path);
+			bool saved = Utils::AtomicFile::Stage(path, [&sheet](Stream& st) { return PngCodec::Encode(st, sheet); });
+			if (saved && !Utils::AtomicFile::Stage(maskPath, [&masks](Stream& st) { return PngCodec::Encode(st, masks); })) {
+				Utils::AtomicFile::Discard(path);
 				saved = false;
 			}
-			if (saved && !AtomicFile::Commit(path)) {
-				AtomicFile::Discard(path);
-				AtomicFile::Discard(maskPath);
+			if (saved && !Utils::AtomicFile::Commit(path)) {
+				Utils::AtomicFile::Discard(path);
+				Utils::AtomicFile::Discard(maskPath);
 				saved = false;
 			}
-			if (saved && !AtomicFile::Commit(maskPath)) {
-				AtomicFile::Discard(maskPath);
+			if (saved && !Utils::AtomicFile::Commit(maskPath)) {
+				Utils::AtomicFile::Discard(maskPath);
 				saved = false;
 			}
 			if (!saved) {
@@ -1330,7 +1330,7 @@ namespace Jazz2::Editor
 				// default tile set refers to the tiles of its extra ones by IDs after all of its tiles, so those levels are
 				// changed with it, and it isn't written if any of them can't be; copies of the files before are kept
 				if (target.Type == TileTarget::Kind::NewTileSet) {
-					if (!AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
+					if (!Utils::AtomicFile::Write(path, [&tileSet](Stream& s) { return Formats::TileSetFile::Write(s, tileSet); })) {
 						session.ShowMessage(_x("editor", "The tile set couldn't be saved"));
 						return false;
 					}

@@ -5,7 +5,7 @@
 #include "TextPrompt.h"
 #include "../Tools/EditorContext.h"
 #include "../Document/Commands.h"
-#include "../Files/AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Files/PoFile.h"
 #include "../UI/UiDialogs.h"
 #include "../UI/UiMenu.h"
@@ -164,7 +164,7 @@ namespace Jazz2::Editor
 				MakeEntries(s->GetDocument(), languageCopy.empty() ? nullptr : FindExact(languages, languageCopy), entries);
 				String projectName = (s->GetDocument().Properties.DisplayName.empty() ? GetLevelFileStem(*s) : s->GetDocument().Properties.DisplayName);
 				String text = PoFile::Write(entries, languageCopy, projectName);
-				if (AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
+				if (Utils::AtomicFile::Write(path, text.data(), std::int64_t(text.size()))) {
 					s->ShowMessage(_fnx("editor", "{} text was exported", "{} texts were exported", std::int32_t(entries.size()), std::int32_t(entries.size())));
 				} else {
 					s->ShowMessage(_x("editor", "The file couldn't be written"));

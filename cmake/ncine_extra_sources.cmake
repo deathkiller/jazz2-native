@@ -1836,6 +1836,28 @@ if(WITH_PHYSICS_PROBE)
 	)
 endif()
 
+if(WITH_LEVEL_PACKS)
+	if((WIN32 OR CURL_FOUND) AND ZLIB_FOUND)
+		message(STATUS "Building the game with level packs")
+		target_compile_definitions(${NCINE_APP} PUBLIC "WITH_LEVEL_PACKS")
+
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/Jazz2/LevelPacks/LevelPackLibrary.h
+			${NCINE_SOURCE_DIR}/Jazz2/LevelPacks/LevelPackManifest.h
+			${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LevelPackDetailSection.h
+			${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LevelPacksSection.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/Jazz2/LevelPacks/LevelPackLibrary.cpp
+			${NCINE_SOURCE_DIR}/Jazz2/LevelPacks/LevelPackManifest.cpp
+			${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LevelPackDetailSection.cpp
+			${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LevelPacksSection.cpp
+		)
+	else()
+		message(STATUS "Level packs are disabled, they need an HTTP backend and zlib")
+	endif()
+endif()
+
 if(WITH_EDITOR)
 	message(STATUS "Building the game with the level editor")
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_EDITOR")
@@ -1866,17 +1888,13 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventGizmos.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviewResolver.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviews.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/AtomicFile.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/AutosaveService.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/ContentTileSetLibrary.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/EditorSettings.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/EpisodeFile.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/JsonAccess.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/JsonFile.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/PoFile.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/TileSetDataCache.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/WebFileBridge.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/ZipWriter.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/AccentColor.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/LevelThumbnail.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/PaletteFile.h
@@ -2016,16 +2034,13 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviews.Overlays.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviews.Sounds.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Events/EventPreviews.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/AtomicFile.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/AutosaveService.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/ContentTileSetLibrary.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/EditorSettings.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/EpisodeFile.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/JsonFile.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/PoFile.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/TileSetDataCache.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/WebFileBridge.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/Files/ZipWriter.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/AccentColor.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/LevelThumbnail.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Imaging/PaletteFile.cpp

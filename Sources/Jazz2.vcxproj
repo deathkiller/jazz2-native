@@ -138,7 +138,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;WITH_LEVEL_PACKS;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -162,7 +162,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;WITH_LEVEL_PACKS;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -187,7 +187,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;WITH_EDITOR;WITH_LEVEL_PACKS;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -209,7 +209,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;WITH_LEVEL_PACKS;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -232,7 +232,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;WITH_EDITOR;WITH_ANGELSCRIPT;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;_WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;WITH_EDITOR;WITH_LEVEL_PACKS;WITH_ANGELSCRIPT;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;_WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -258,7 +258,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_EDITOR;WITH_LEVEL_PACKS;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -326,6 +326,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\WebRequest.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Containers.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Cryptography\Sha256.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Cryptography\xxHash.h" />
     <ClInclude Include="Dependencies\enet\enet.h" />
     <ClInclude Include="Dependencies\enet\ifaddrs-android.h" />
@@ -691,6 +692,8 @@
     <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\InputDiagnosticsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\LanguageSelectSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\LevelPackDetailSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\LevelPacksSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuContainerBase.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuResources.h" />
@@ -903,13 +906,17 @@
     <ClInclude Include="Jazz2\Editor\Runtime\PlayTestDebug.h" />
     <ClInclude Include="Jazz2\Editor\Document\CommandArchive.h" />
     <ClInclude Include="Jazz2\Editor\EditorSessionPrivate.h" />
-    <ClInclude Include="Jazz2\Editor\Files\AtomicFile.h" />
+    <ClInclude Include="Jazz2\Utils\AtomicFile.h" />
     <ClInclude Include="Jazz2\Editor\Files\EpisodeFile.h" />
-    <ClInclude Include="Jazz2\Editor\Files\JsonAccess.h" />
-    <ClInclude Include="Jazz2\Editor\Files\JsonFile.h" />
+    <ClInclude Include="Jazz2\Utils\JsonAccess.h" />
+    <ClInclude Include="Jazz2\Utils\JsonFile.h" />
     <ClInclude Include="Jazz2\Editor\Files\PoFile.h" />
     <ClInclude Include="Jazz2\Editor\Files\TileSetDataCache.h" />
-    <ClInclude Include="Jazz2\Editor\Files\ZipWriter.h" />
+    <ClInclude Include="Jazz2\LevelPacks\LevelPackLibrary.h" />
+    <ClInclude Include="Jazz2\LevelPacks\LevelPackManifest.h" />
+    <ClInclude Include="Jazz2\Utils\ZipArchive.h" />
+    <ClInclude Include="Jazz2\Utils\ZipFormat.h" />
+    <ClInclude Include="Jazz2\Utils\ZipWriter.h" />
     <ClInclude Include="Jazz2\Editor\Imaging\TileMasks.h" />
     <ClInclude Include="Jazz2\Editor\Runtime\PlayPathHistory.h" />
     <ClInclude Include="Jazz2\Editor\Runtime\PlayTestController.h" />
@@ -991,6 +998,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\WebRequest.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Base\Format.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Cryptography\Sha256.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Cryptography\xxHash.cpp" />
     <ClCompile Include="Dependencies\jsoncpp\reader.cpp" />
     <ClCompile Include="Dependencies\jsoncpp\value.cpp" />
@@ -1192,6 +1200,8 @@
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\InputDiagnosticsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\LanguageSelectSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\LevelPackDetailSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\LevelPacksSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\IMenuContainer.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MenuContainerBase.cpp" />
@@ -1398,16 +1408,20 @@
     <ClCompile Include="Jazz2\Editor\Events\EventPreviews.Overlays.cpp" />
     <ClCompile Include="Jazz2\Editor\Events\EventPreviews.Sounds.cpp" />
     <ClCompile Include="Jazz2\Editor\Events\EventPreviews.cpp" />
-    <ClCompile Include="Jazz2\Editor\Files\AtomicFile.cpp" />
+    <ClCompile Include="Jazz2\Utils\AtomicFile.cpp" />
     <ClCompile Include="Jazz2\Editor\Files\AutosaveService.cpp" />
     <ClCompile Include="Jazz2\Editor\Files\ContentTileSetLibrary.cpp" />
     <ClCompile Include="Jazz2\Editor\Files\EditorSettings.cpp" />
     <ClCompile Include="Jazz2\Editor\Files\EpisodeFile.cpp" />
-    <ClCompile Include="Jazz2\Editor\Files\JsonFile.cpp" />
+    <ClCompile Include="Jazz2\Utils\JsonFile.cpp" />
     <ClCompile Include="Jazz2\Editor\Files\PoFile.cpp" />
     <ClCompile Include="Jazz2\Editor\Files\TileSetDataCache.cpp" />
     <ClCompile Include="Jazz2\Editor\Files\WebFileBridge.cpp" />
-    <ClCompile Include="Jazz2\Editor\Files\ZipWriter.cpp" />
+    <ClCompile Include="Jazz2\LevelPacks\LevelPackLibrary.cpp" />
+    <ClCompile Include="Jazz2\LevelPacks\LevelPackManifest.cpp" />
+    <ClCompile Include="Jazz2\Utils\ZipArchive.cpp" />
+    <ClCompile Include="Jazz2\Utils\ZipFormat.cpp" />
+    <ClCompile Include="Jazz2\Utils\ZipWriter.cpp" />
     <ClCompile Include="Jazz2\Editor\Imaging\AccentColor.cpp" />
     <ClCompile Include="Jazz2\Editor\Imaging\LevelThumbnail.cpp" />
     <ClCompile Include="Jazz2\Editor\Imaging\PaletteFile.cpp" />

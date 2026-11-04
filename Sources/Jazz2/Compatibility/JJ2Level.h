@@ -110,6 +110,11 @@ namespace Jazz2::Compatibility
 		/** @brief Minimum and starting lighting level */
 		std::uint8_t LightingMin, LightingStart;
 
+		/** @brief Maps a tile set name, lowercase without extension, to the path written into the converted level, if set */
+		Function<String(StringView)> TileSetPathMapping;
+		/** @brief Maps a music file name, lowercase with extension, to the name written into the converted level, if set */
+		Function<String(StringView)> MusicPathMapping;
+
 		/** @brief Creates a new instance */
 		JJ2Level() : _version(JJ2Version::Unknown), _animCount(0), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasPitInstantDeath(false), _hasCTF(false), _hasLaps(false), _useLevelPalette(false) { }
 

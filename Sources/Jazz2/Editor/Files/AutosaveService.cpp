@@ -2,7 +2,7 @@
 
 #if defined(WITH_EDITOR)
 
-#include "AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../Document/CommandArchive.h"
 #include "../../PreferencesCache.h"
 
@@ -153,7 +153,7 @@ namespace Jazz2::Editor
 			PendingCopy* pending = _pending.get();
 			_job = std::make_unique<BackgroundJob>();
 			_job->Start([pending](JobProgress&) {
-				pending->Success = AtomicFile::Write(pending->Path, [pending](Stream& s) {
+				pending->Success = Utils::AtomicFile::Write(pending->Path, [pending](Stream& s) {
 					return pending->Document.Save(s, false, 1);
 				});
 			}, "Recovery copy");
@@ -165,7 +165,7 @@ namespace Jazz2::Editor
 		document.ReplaceChunk(CommandArchive::Chunk, Death::move(archive));
 		// Written next to the copy first and checked, so a full disk never replaces a good copy by a damaged one,
 		// saved quickly, it's only a copy
-		bool success = AtomicFile::Write(path, [&document](Stream& s) {
+		bool success = Utils::AtomicFile::Write(path, [&document](Stream& s) {
 			return document.Save(s, false, 1);
 		});
 		document.SetChunk(RecoveryChunk, {});

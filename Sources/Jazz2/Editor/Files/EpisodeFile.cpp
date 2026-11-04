@@ -2,7 +2,7 @@
 
 #if defined(WITH_EDITOR)
 
-#include "AtomicFile.h"
+#include "../../Utils/AtomicFile.h"
 #include "../../ContentFileTypes.h"
 #include "../../Compatibility/JJ2Anims.h"
 #include "../../Formats/LevelFile.h"
@@ -99,7 +99,7 @@ namespace Jazz2::Editor
 
 	bool EpisodeFile::Write(StringView path, bool keepBackup) const
 	{
-		return AtomicFile::Write(path, [this](Stream& s) {
+		return Utils::AtomicFile::Write(path, [this](Stream& s) {
 			s.WriteValueAsLE<std::uint64_t>(Signature);
 			s.WriteValue<std::uint8_t>(ContentFileType::Episode);
 			s.WriteValueAsLE<std::uint16_t>(Flags);

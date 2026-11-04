@@ -539,6 +539,20 @@ namespace Jazz2::Editor
 		}
 
 		// Places tile sets are looked for, the first one that has a tile set is the one the game uses
+#if defined(WITH_LEVEL_PACKS)
+		// Files of level packs are stored as "<name>~<hash>.<extension>", shown by their own name
+		String GetStoredFileLabel(StringView path, bool isDirectory)
+		{
+			StringView name = fs::GetFileName(path);
+			StringView tilde = name.findLast('~');
+			if (isDirectory || tilde == nullptr) {
+				return {};
+			}
+			StringView dot = name.findLastOr('.', name.end());
+			return String(name.prefix(tilde.begin()) + name.suffix(dot.begin()));
+		}
+#endif
+
 		void GetTileSetRoots(SmallVectorImpl<UiFileRoot>& roots)
 		{
 			auto& resolver = ContentResolver::Get();
@@ -551,6 +565,12 @@ namespace Jazz2::Editor
 			roots.push_back({ _x("editor", "Content"), fs::CombinePath(resolver.GetContentPath(), "Tilesets"_s), false });
 			// TRANSLATORS: Name of a place tile sets are picked from, the folder of the files converted from the original game
 			roots.push_back({ _x("editor", "Cache"), fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s), false });
+#if defined(WITH_LEVEL_PACKS)
+			// TRANSLATORS: Name of a place tile sets are picked from, the tile sets of the installed level packs
+			UiFileRoot levelPacks{ _x("editor", "Level packs"), fs::CombinePath(resolver.GetLevelPacksCachePath(), "Tilesets"_s), false };
+			levelPacks.LabelFunc = GetStoredFileLabel;
+			roots.push_back(Death::move(levelPacks));
+#endif
 			for (std::size_t i = 0; i < roots.size(); ) {
 				if (!fs::DirectoryExists(roots[i].Path)) {
 					roots.erase(roots.begin() + i);
@@ -686,6 +706,15 @@ namespace Jazz2::Editor
 			// TRANSLATORS: Place in the file dialog choosing the music of the level, the folder of the original game
 			roots.push_back({ _x("editor", "Original game"), String(source.trimmedSuffix("/\\"_s)), false });
 		}
+#if defined(WITH_LEVEL_PACKS)
+		String levelPacksPath = resolver.GetLevelPacksPath(false);
+		if (!levelPacksPath.empty()) {
+			// TRANSLATORS: Place in the file dialog choosing the music of the level, the music of the installed level packs
+			UiFileRoot levelPacks{ _x("editor", "Level packs"), fs::CombinePath(levelPacksPath, "Files"_s), false };
+			levelPacks.LabelFunc = GetStoredFileLabel;
+			roots.push_back(Death::move(levelPacks));
+		}
+#endif
 		// Opens where the music is now, the first place that has it is the one that is played
 		String directory, fileName;
 		SmallVector<String, 4> rootPaths;

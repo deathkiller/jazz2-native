@@ -2,8 +2,8 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../Files/JsonAccess.h"
-#include "../Files/JsonFile.h"
+#include "../../Utils/JsonAccess.h"
+#include "../../Utils/JsonFile.h"
 
 #include <Containers/StaticArray.h>
 #include <Containers/StringConcatenable.h>
@@ -685,10 +685,10 @@ namespace Jazz2::Editor
 	std::int32_t ReadWeaponTemplates(StringView text, StringView sourcePath, SmallVectorImpl<ScriptWeaponTemplate>& templates,
 		SmallVectorImpl<CustomWeaponTemplate>* customTemplates)
 	{
-		using namespace JsonAccess;
+		using namespace Utils::JsonAccess;
 
 		Json::Value doc;
-		if (!JsonFile::Parse(text, doc)) {
+		if (!Utils::JsonFile::Parse(text, doc)) {
 			return -1;
 		}
 		const Json::Value* list = &doc;
