@@ -136,7 +136,21 @@ namespace Jazz2::Scripting
 	}
 
 	void LevelScriptLoader::cycleTo(const String& filename, bool warp, bool fast) {
-		noop();
+		ExitType exitType = (warp ? ExitType::Warp : ExitType::Normal);
+		if (fast) {
+			exitType |= ExitType::FastTransition;
+		}
+
+		// As the converter names levels, without the extension and in lower case
+		StringView name = filename;
+		if (name.size() > 4) {
+			StringView extension = name.exceptPrefix(name.size() - 4);
+			if (StringUtils::equalsIgnoreCase(extension, ".j2l"_s) || StringUtils::equalsIgnoreCase(extension, ".lev"_s)) {
+				name = name.exceptSuffix(4);
+			}
+		}
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		_this->_levelHandler->BeginLevelChange(nullptr, exitType, StringUtils::lowercase(name));
 	}
 	void LevelScriptLoader::jjNxt(bool warp, bool fast)
 	{
@@ -413,7 +427,9 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Ends the level and continues with the given level
 		 *
-		 * @partialsupport Currently has no effect.
+		 * The file name may include the `.j2l` extension. With `warp`, the level is left as through a warp exit. With
+		 * `fast`, the transition to the next level is shortened.
+		 * @partialsupport A name without an episode is looked for in the current episode only.
 		 */
 		engine->RegisterGlobalFunction("void jjNxt(const string &in filename, bool warp = false, bool fast = false)", asFUNCTION(cycleTo), asCALL_CDECL);
 		/**

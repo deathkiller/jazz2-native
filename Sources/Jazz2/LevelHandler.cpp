@@ -1522,16 +1522,35 @@ namespace Jazz2
 					aabbTop.B = aabbTop.T + 6.0f;
 					AABBf aabbBottom = aabb;
 					aabbBottom.T = aabbBottom.B - std::max(14.0f, (aabb.B - aabb.T) - 10.0f);
+					bool legacyHead = (aabb.B - aabb.T >= 23.0f && self->GetState(Actors::ActorState::CollideWithTilesetLegacy));
 					if (!_tileMap->IsTileEmpty(aabbBottom, params)) {
-						return false;
+						bool blocked = true;
+						if (legacyHead && params.Downwards) {
+							// One-way tiles stop only the feet on their way down, as measured in JJ2+
+							TileDestructType suspendTiles = (params.DestructType & TileDestructType::SuspendTiles);
+							TileCollisionParams solidParams = { suspendTiles, false };
+							if (_tileMap->IsTileEmpty(aabbBottom, solidParams)) {
+								AABBf aabbFeet = aabbBottom;
+								aabbFeet.T = std::min(aabb.B, self->AABBInner.B) - 4.0f;
+								TileCollisionParams feetParams = { suspendTiles, true };
+								blocked = !_tileMap->IsTileEmpty(aabbFeet, feetParams);
+							}
+						}
+						if (blocked) {
+							return false;
+						}
 					}
 					if (!params.Downwards) {
 						params.Downwards = false;
+						if (legacyHead) {
+							// No gap between the parts for a head to slip into a ceiling
+							aabbTop.B = std::max(aabbTop.B, aabbBottom.T);
+						}
 						if (!_tileMap->IsTileEmpty(aabbTop, params)) {
 							return false;
 						}
-					} else if (aabb.B - aabb.T >= 23.0f && self->GetState(Actors::ActorState::CollideWithTilesetLegacy)) {
-						// A player with the head in a ceiling (warped there) doesn't fall until it's out of it, as measured in JJ2+
+					} else if (legacyHead) {
+						// A player with the head in a ceiling (warped there) doesn't fall until it's out of it, no move puts it there and one-way tiles let it through, as measured in JJ2+
 						AABBf aabbHead = aabb;
 						aabbHead.T = aabb.B - 23.0f;
 						aabbHead.B = aabbBottom.T;
@@ -1540,9 +1559,9 @@ namespace Jazz2
 						currentHead.B = aabbHead.B + (currentHead.B - aabb.B);
 						// Out of it at once if the speed of a whole step gets it there, the game moves by smaller steps
 						AABBf nextHead = currentHead + Vector2f(0.0f, std::max(self->GetSpeed().Y, 0.0f));
-						TileCollisionParams headParams = { TileDestructType::None, true };
-						if (aabbHead.B > aabbHead.T && !_tileMap->IsTileEmpty(currentHead, headParams) && !_tileMap->IsTileEmpty(aabbHead, headParams) &&
-							!_tileMap->IsTileEmpty(nextHead, headParams)) {
+						TileCollisionParams headParams = { TileDestructType::None, false };
+						if (aabbHead.B > aabbHead.T && !_tileMap->IsTileEmpty(aabbHead, headParams) &&
+							(_tileMap->IsTileEmpty(currentHead, headParams) || !_tileMap->IsTileEmpty(nextHead, headParams))) {
 							return false;
 						}
 					}
@@ -1826,7 +1845,6 @@ namespace Jazz2
 	{
 #if defined(WITH_ANGELSCRIPT)
 		if (_scripts != nullptr) {
-			// TODO: killer
 			_scripts->OnPlayerDied(player, nullptr);
 		}
 #endif
@@ -2869,6 +2887,11 @@ namespace Jazz2
 		auto p = _levelName.partition('/');
 
 		levelInit.Difficulty = _difficulty;
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			levelInit.Difficulty = _scripts->GetNextLevelDifficulty(_difficulty);
+		}
+#endif
 		levelInit.IsReforged = _isReforged;
 		levelInit.CheatsUsed = _cheatsUsed;
 		levelInit.LastExitType = _nextLevelType;

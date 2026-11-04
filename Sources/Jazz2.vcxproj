@@ -232,7 +232,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;WITH_EDITOR;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;WITH_EDITOR;WITH_ANGELSCRIPT;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;_WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -552,6 +552,7 @@
     <ClInclude Include="Jazz2\Editor\Shell\HelpDialogs.h" />
     <ClInclude Include="Jazz2\Editor\Shell\LayerDialogs.h" />
     <ClInclude Include="Jazz2\Editor\Shell\LevelDialogs.h" />
+    <ClInclude Include="Jazz2\Editor\Shell\FilePickers.h" />
     <ClInclude Include="Jazz2\Editor\Shell\LevelCheck.h" />
     <ClInclude Include="Jazz2\Editor\Shell\LevelStatistics.h" />
     <ClInclude Include="Jazz2\Editor\Shell\Navigator.h" />
@@ -1444,6 +1445,7 @@
     <ClCompile Include="Jazz2\Editor\Shell\LayerDialogs.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\LayerResizeHandles.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\LevelDialogs.cpp" />
+    <ClCompile Include="Jazz2\Editor\Shell\FilePickers.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\LevelCheck.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\LevelStatistics.cpp" />
     <ClCompile Include="Jazz2\Editor\Shell\LevelTextLanguages.cpp" />

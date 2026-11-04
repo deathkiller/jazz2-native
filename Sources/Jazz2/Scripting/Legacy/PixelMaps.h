@@ -44,7 +44,12 @@ namespace Jazz2::Scripting
 			static jjPIXELMAP* CreateFromSize(std::uint32_t width, std::uint32_t height);
 			/** @brief Creates a copy of another pixel map */
 			static jjPIXELMAP* CreateFromOther(const jjPIXELMAP& other);
-			/** @brief Creates a pixel map with the size and the image of an animation frame */
+			/**
+			 * @brief Creates a pixel map with the size and the image of an animation frame
+			 *
+			 * @partialsupport `palette` is ignored, a 32-bit frame gives the indices of its colors in @ref jjPalette as it
+			 * was when the frame was saved.
+			 */
 			static jjPIXELMAP* CreateFromFrame(const jjANIMFRAME* animFrame, const jjPAL* palette);
 			/**
 			 * @brief Creates a pixel map from an area of one of the original layers
@@ -251,6 +256,7 @@ namespace Jazz2::Scripting
 			 *
 			 * @ref TEXTURE::FROMTILES takes the 8×8 tiles at the top left corner of `jjLayers[8]`, see the same constructor of
 			 * @ref jjPIXELMAP.
+			 * @partialsupport True color tiles of @ref TEXTURE::FROMTILES are reduced to the nearest colors of `palette`.
 			 */
 			static jjCOLORMAP* CreateFromTexture(std::uint32_t texture, const jjPAL& palette);
 			/**
@@ -264,7 +270,8 @@ namespace Jazz2::Scripting
 			 * @brief Creates a color map from an area of one of the original layers
 			 *
 			 * `left`, `top`, `width` and `height` are in pixels, `layer` is a number from 1 to 8, as in @ref jjLayers. True
-			 * color tiles are reduced to the nearest colors of `palette` first.
+			 * color tiles keep their own colors, the others take those of `palette`. The part out of the layer is
+			 * transparent.
 			 */
 			static jjCOLORMAP* CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer, const jjPAL& palette);
 			/**
@@ -316,7 +323,8 @@ namespace Jazz2::Scripting
 			 * If the tile set is drawn palette-indexed, the colors become the nearest entries of @ref jjPalette and any
 			 * pixel with non-zero alpha is opaque, so the tile follows later palette changes.
 			 * @partialsupport The rules of @ref jjPIXELMAP::save() for tiles apply: the map has to be 32×32, flips in
-			 * `tileID` flip the image, `hFlip` has no effect and animated tiles fail.
+			 * `tileID` flip the image, `hFlip` has no effect and animated tiles fail. A palette-indexed tile set (the usual
+			 * case) loses the true colors and partial alpha.
 			 */
 			bool saveToTile(std::uint16_t tileID, bool hFlip) const;
 			/**

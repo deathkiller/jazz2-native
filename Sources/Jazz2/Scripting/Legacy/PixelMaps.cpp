@@ -523,10 +523,43 @@ namespace Jazz2::Scripting
 			indices->Release();
 			return map;
 		}
-		jjCOLORMAP* jjCOLORMAP::CreateFromTile(std::uint16_t tileID, const jjPAL& palette) {
+		// Reads a tile as a layer holds it into its own colors, with its flip flags and the frame an animated one shows now,
+		// transparent if it has none (as ReadTileImage() reads the indices)
+		static void ReadTileColors(LevelScriptLoader* owner, std::uint16_t tile, const jjPAL& palette, jjPALCOLOR* pixels)
+		{
 			constexpr std::uint32_t Size = TileSet::DefaultTileSize;
-			jjCOLORMAP* map = Create(Size, Size);
-			if (map == nullptr) {
+			std::memset(pixels, 0, Size * Size * sizeof(jjPALCOLOR));
+
+			auto* tileMap = owner->GetLevelHandler()->TileMap();
+			if (tileMap == nullptr) {
+				return;
+			}
+			std::int32_t tileId = (tile & TileMap::TileIndexMask);
+			if ((tile & TileMap::TileFlagAnimated) != 0) {
+				tileId = tileMap->ResolveStaticTileId(tileMap->GetStaticTileCount() + tileId);
+				if (tileId < 0) {
+					return;
+				}
+			}
+			jjPALCOLOR source[Size * Size];
+			if (!owner->GetTileColors(tileId, source, palette)) {
+				return;
+			}
+			bool flipX = ((tile & TileMap::TileFlagFlipX) != 0);
+			bool flipY = ((tile & TileMap::TileFlagFlipY) != 0);
+			for (std::uint32_t y = 0; y < Size; y++) {
+				const jjPALCOLOR* src = &source[(flipY ? Size - 1 - y : y) * Size];
+				for (std::uint32_t x = 0; x < Size; x++) {
+					pixels[y * Size + x] = src[flipX ? Size - 1 - x : x];
+				}
+			}
+		}
+
+		// The colors of a part of a layer in pixels, the tiles out of the layer are empty
+		static jjCOLORMAP* CreateColorMapFromEngineLayer(jjCOLORMAP* map, std::uint32_t left, std::uint32_t top, std::int32_t layerIndex, const jjPAL& palette)
+		{
+			constexpr std::uint32_t Size = TileSet::DefaultTileSize;
+			if (map == nullptr || layerIndex < 0) {
 				return map;
 			}
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -534,47 +567,39 @@ namespace Jazz2::Scripting
 			if (tileMap == nullptr) {
 				return map;
 			}
-			// An animated tile is the frame it shows now, as jjPIXELMAP has it
-			std::int32_t tileId = (tileID & TileMap::TileIndexMask);
-			if ((tileID & TileMap::TileFlagAnimated) != 0) {
-				tileId = tileMap->ResolveStaticTileId(tileMap->GetStaticTileCount() + tileId);
-				if (tileId < 0) {
-					return map;
+			std::uint32_t width = map->width, height = map->height;
+			jjPALCOLOR tilePixels[Size * Size];
+			std::int32_t lastTile = -1;
+			for (std::uint32_t y = 0; y < height; y++) {
+				std::uint64_t py = std::uint64_t(top) + y;
+				for (std::uint32_t x = 0; x < width; x++) {
+					std::uint64_t px = std::uint64_t(left) + x;
+					std::int32_t tile = tileMap->GetTile(layerIndex, std::int32_t(px / Size), std::int32_t(py / Size));
+					if (tile != lastTile) {
+						ReadTileColors(owner, std::uint16_t(tile), palette, tilePixels);
+						lastTile = tile;
+					}
+					*map->GetPixel(x, y) = tilePixels[(py % Size) * Size + (px % Size)];
 				}
 			}
-			jjPALCOLOR source[Size * Size];
-			if (!owner->GetTileColors(tileId, source, palette)) {
-				return map;
-			}
-			// As jjPIXELMAP has it, every tile can be drawn flipped
-			bool flipX = ((tileID & TileMap::TileFlagFlipX) != 0);
-			bool flipY = ((tileID & TileMap::TileFlagFlipY) != 0);
-			for (std::uint32_t y = 0; y < Size; y++) {
-				const jjPALCOLOR* src = &source[(flipY ? Size - 1 - y : y) * Size];
-				for (std::uint32_t x = 0; x < Size; x++) {
-					map->_pixels[y * Size + x] = src[flipX ? Size - 1 - x : x];
-				}
+			return map;
+		}
+
+		jjCOLORMAP* jjCOLORMAP::CreateFromTile(std::uint16_t tileID, const jjPAL& palette) {
+			constexpr std::uint32_t Size = TileSet::DefaultTileSize;
+			jjCOLORMAP* map = Create(Size, Size);
+			if (map != nullptr) {
+				// As jjPIXELMAP has it, an animated tile is the frame it shows now and every tile can be drawn flipped
+				ReadTileColors(ScriptLoader::FromActiveContext<LevelScriptLoader>(), tileID, palette, map->_pixels.get());
 			}
 			return map;
 		}
 		jjCOLORMAP* jjCOLORMAP::CreateFromLayer(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, std::uint32_t layer, const jjPAL& palette) {
-			// TODO: A true color tile of the layer is in the nearest colors of the palette
-			jjPIXELMAP* indices = jjPIXELMAP::CreateFromLayer(left, top, width, height, layer, &palette);
-			if (indices == nullptr) {
-				return nullptr;
-			}
-			jjCOLORMAP* map = CreateFromPixelMap(*indices, palette);
-			indices->Release();
-			return map;
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			return CreateColorMapFromEngineLayer(Create(width, height), left, top, owner->GetLayerIndex(std::int32_t(layer)), palette);
 		}
 		jjCOLORMAP* jjCOLORMAP::CreateFromLayerObject(std::uint32_t left, std::uint32_t top, std::uint32_t width, std::uint32_t height, const jjLAYER& layer, const jjPAL& palette) {
-			jjPIXELMAP* indices = jjPIXELMAP::CreateFromLayerObject(left, top, width, height, &layer, &palette);
-			if (indices == nullptr) {
-				return nullptr;
-			}
-			jjCOLORMAP* map = CreateFromPixelMap(*indices, palette);
-			indices->Release();
-			return map;
+			return CreateColorMapFromEngineLayer(Create(width, height), left, top, layer._layerIndex, palette);
 		}
 		jjCOLORMAP* jjCOLORMAP::CreateFromFilename(const String& filename) {
 			// The real colors and alpha of the file, whatever kind of image it is; JJ2+ gives a 1 × 1 map for a file it can't read

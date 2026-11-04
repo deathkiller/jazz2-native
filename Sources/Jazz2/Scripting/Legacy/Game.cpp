@@ -38,8 +38,19 @@ namespace Jazz2::Scripting
 			// As GetDifficulty() gives it, the difficulties of the game start after the default one
 			auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			_this->_levelHandler->_difficulty = (GameDifficulty)(std::int32_t(GameDifficulty::Easy) + value);
+			_this->DifficultyForNextLevel = value;
 		}
 		return value;
+	}
+	GameDifficulty LevelScriptLoader::GetNextLevelDifficulty(GameDifficulty current) const {
+		if (DifficultyForNextLevel >= 0 && DifficultyForNextLevel <= 2) {
+			return (GameDifficulty)(std::int32_t(GameDifficulty::Easy) + DifficultyForNextLevel);
+		}
+		return current;
+	}
+	std::uint32_t LevelScriptLoader::GetActiveGameTicks() {
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return std::uint32_t(std::max(_this->_onLevelUpdateLastFrame, 0));
 	}
 
 	String getLevelFileName() {
@@ -328,7 +339,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Checks whether a regular expression matches the whole text, with captured groups
 		 *
-		 * @note `results` is currently left unchanged, only the return value is set.
+		 * `results` receives the whole match first and then each captured group, or nothing if there's no match.
 		 */
 		engine->RegisterGlobalFunction("bool jjRegexMatch(const string &in text, const string &in expression, array<string> &out results, bool ignoreCase = false)", asFUNCTION(jjRegexMatchWithResults), asCALL_CDECL);
 		/**
@@ -340,7 +351,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Checks whether a regular expression matches any part of the text, with captured groups
 		 *
-		 * @note `results` is currently left unchanged, only the return value is set.
+		 * `results` receives the first match first and then each captured group, or nothing if there's no match.
 		 */
 		engine->RegisterGlobalFunction("bool jjRegexSearch(const string &in text, const string &in expression, array<string> &out results, bool ignoreCase = false)", asFUNCTION(jjRegexSearchWithResults), asCALL_CDECL);
 		/**
@@ -376,9 +387,10 @@ namespace Jazz2::Scripting
 		 * @brief Number of game ticks elapsed while the game was actually running
 		 *
 		 * Meant to exclude time spent paused or waiting for a multiplayer game to start.
-		 * @partialsupport Currently always 0.
+		 * @partialsupport Currently the same as @ref jjGameTicks, which doesn't count paused time either, but
+		 * multiplayer games waiting to start are counted.
 		 */
-		engine->RegisterGlobalProperty("const uint jjActiveGameTicks", &gameTicksSpentWhileActive);
+		engine->RegisterGlobalFunction("uint get_jjActiveGameTicks()", asFUNCTION(GetActiveGameTicks), asCALL_CDECL);
 		/**
 		 * @brief Frame counter used to time drawing and automatic layer movement
 		 *
@@ -396,21 +408,20 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Whether the local player is logged in as an administrator of the server
 		 *
-		 * Always `false`.
+		 * @partialsupport Always `false`, also in multiplayer.
 		 */
 		engine->RegisterGlobalFunction("bool get_jjIsAdmin()", asFUNCTION(isAdmin), asCALL_CDECL);
 		/**
 		 * @brief Whether this instance of the game hosts a multiplayer server
 		 *
-		 * Always `false`.
+		 * @partialsupport Always `false`, also when the script runs on a multiplayer server.
 		 */
 		engine->RegisterGlobalProperty("const bool jjIsServer", &isServer);
 		/**
 		 * @brief Current difficulty
 		 *
-		 * 0 for Easy, 1 for Normal and 2 for Hard.
-		 * @partialsupport Assigning a value outside this range is ignored, and assigning doesn't change
-		 * @ref jjDifficultyNext.
+		 * 0 for Easy, 1 for Normal and 2 for Hard. Assigning it also changes @ref jjDifficultyNext.
+		 * @partialsupport Assigning a value outside this range (such as 3 for Turbo) is ignored.
 		 */
 		engine->RegisterGlobalFunction("int get_jjDifficulty()", asFUNCTION(GetDifficulty), asCALL_CDECL);
 		/** @brief Sets the current difficulty */
@@ -418,7 +429,8 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Difficulty to use for the next level
 		 *
-		 * @partialsupport Currently has no effect, the next level keeps the current difficulty.
+		 * Starts as the current difficulty. Values outside 0 to 2 keep the current difficulty.
+		 * @partialsupport Turbo (3) isn't supported.
 		 */
 		engine->RegisterGlobalProperty("int jjDifficultyNext", &DifficultyForNextLevel);
 		/**
@@ -495,19 +507,20 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Base mode of the current game
 		 *
-		 * Doesn't reflect a custom mode, see @ref jjGameCustom for that. Always @ref GAME::SP.
+		 * Doesn't reflect a custom mode, see @ref jjGameCustom for that.
+		 * @partialsupport Always @ref GAME::SP, also in multiplayer.
 		 */
 		engine->RegisterGlobalProperty("const GAME::Mode jjGameMode", &gameMode);
 		/**
 		 * @brief Custom mode of the current game, if any
 		 *
-		 * Always @ref GAME::NOCUSTOM.
+		 * @partialsupport Always @ref GAME::NOCUSTOM, also in multiplayer team modes.
 		 */
 		engine->RegisterGlobalProperty("const GAME::Custom jjGameCustom", &customMode);
 		/**
 		 * @brief Whether players from other computers can join, and over which network
 		 *
-		 * Always @ref GAME::LOCAL.
+		 * @partialsupport Always @ref GAME::LOCAL, also in online multiplayer.
 		 */
 		engine->RegisterGlobalProperty("const GAME::Connection jjGameConnection", &partyMode);
 	}

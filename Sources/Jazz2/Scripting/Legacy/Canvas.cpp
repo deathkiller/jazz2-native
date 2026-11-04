@@ -134,7 +134,11 @@ namespace Jazz2::Scripting
 					case spriteType_TRANSLUCENTCOLOR:
 					case spriteType_TRANSLUCENTPALSHIFT:
 					case spriteType_TRANSLUCENTSINGLEHUE:
+					case spriteType_TRANSLUCENTPLAYER:
 						return 0.5f;
+					case spriteType_TRANSLUCENTTILE:
+						// As translucent as the translucent tiles are drawn
+						return Tiles::TileMap::TranslucentTileAlpha / 255.0f;
 					case spriteType_GEM:
 						// As measured in JJ2+, 3/4 of the gem and 1/4 of what's behind
 						return 0.75f;
@@ -338,6 +342,10 @@ namespace Jazz2::Scripting
 					float level = param / 255.0f;
 					color = Colorf(level, level, level, 1.0f);
 					blending = UI::BlendMode::Difference;
+				} else if (shader == nullptr && mode == spriteType_BRIGHTNESS) {
+					// The colors scaled by param/128, as a layer of the mode is
+					float level = param / 128.0f;
+					color = Colorf(level, level, level, 1.0f);
 				} else if (shader == nullptr && mode != spriteType_SHADOW) {
 					// Also where the backend has no such shader
 					color = Colorf(1.0f, 1.0f, 1.0f, SpriteModeToAlpha(mode, param));
@@ -886,7 +894,7 @@ namespace Jazz2::Scripting
 				} else {
 					x = xPixel + Offset.X - (alignRight ? width : std::round(width * 0.5f));
 				}
-			} else if (xPixel >= 0x4000) {
+			} else if (xPixel >= 0x4000 && align != jjTEXTAPPEARANCE::align_LEFT) {
 				x = GetTextX(xPixel, width);
 			} else {
 				x = xPixel + Offset.X;
@@ -991,6 +999,7 @@ namespace Jazz2::Scripting
 				switch (appearance != nullptr ? appearance->align : jjTEXTAPPEARANCE::align_DEFAULT) {
 					case jjTEXTAPPEARANCE::align_CENTER: return xPixel + Offset.X - std::round(width * 0.5f);
 					case jjTEXTAPPEARANCE::align_RIGHT: return xPixel + Offset.X - width;
+					case jjTEXTAPPEARANCE::align_LEFT: return xPixel + Offset.X;
 					default: return GetTextX(xPixel, xPixel >= 0x4000 ? width : 0.0f);
 				}
 			};
@@ -1020,8 +1029,18 @@ namespace Jazz2::Scripting
 		}
 
 		void jjCANVAS::drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param) {
-			// The frames of the animation are the characters from the space on, each as wide as its frame
-			DrawAnimationText(xPixel, yPixel, text, animation, nullptr, mode, param);
+			// The frames of the animation are the characters from the space on, each as wide as its frame. The mode is STRING::Mode,
+			// DARK is drawn translucent, the letters of BOUNCE and SPIN don't move.
+			jjTEXTAPPEARANCE appearance{};
+			appearance.spacing = 0;
+			appearance.align = (mode == 2 ? jjTEXTAPPEARANCE::align_RIGHT : jjTEXTAPPEARANCE::align_DEFAULT);
+			std::uint32_t spriteMode;
+			switch (mode) {
+				case 1: spriteMode = spriteType_TRANSLUCENT; break;
+				case 5: spriteMode = spriteType_PALSHIFT; break;
+				default: spriteMode = spriteType_NORMAL; break;
+			}
+			DrawAnimationText(xPixel, yPixel, text, animation, &appearance, spriteMode, param);
 		}
 
 		void jjCANVAS::drawStringEx(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t spriteMode, std::uint8_t param2) {
@@ -1170,7 +1189,8 @@ namespace Jazz2::Scripting
 			case Legacy::spriteType_GEM: kind = 2; break;
 			case Legacy::spriteType_ALPHAMAP: kind = 3; break;
 			case Legacy::spriteType_NEONGLOW: kind = 4; param = std::min<std::uint8_t>(param, 6); break;
-			case Legacy::spriteType_PLAYER: {
+			case Legacy::spriteType_PLAYER:
+			case Legacy::spriteType_TRANSLUCENTPLAYER: {
 				// In the colors of the fur of the player of the parameter
 				for (Actors::Player* player : _levelHandler->_players) {
 					if (player->GetPlayerIndex() == param) {
@@ -1426,12 +1446,14 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawRectangle(); see @ref jjDrawPixel() for the layer and player
 		 * parameters.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawRectangle(float xPixel, float yPixel, int width, int height, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRectangle), asCALL_CDECL);
 		/**
 		 * @brief Draws a frame of an animation set into the level
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawSprite(); see @ref jjDrawPixel() for the layer and player parameters.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSprite), asCALL_CDECL);
 		/**
@@ -1439,6 +1461,7 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawSpriteFromCurFrame(); see @ref jjDrawPixel() for the layer and player
 		 * parameters.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSpriteFromCurFrame), asCALL_CDECL);
 		/**
@@ -1446,6 +1469,7 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawResizedSprite(); see @ref jjDrawPixel() for the layer and player
 		 * parameters.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawResizedSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawResizedSprite), asCALL_CDECL);
 		/**
@@ -1453,6 +1477,7 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawResizedSpriteFromCurFrame(); see @ref jjDrawPixel() for the layer and
 		 * player parameters.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawResizedSpriteFromCurFrame), asCALL_CDECL);
 		/**
@@ -1460,6 +1485,7 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawRotatedSprite(); see @ref jjDrawPixel() for the layer and player
 		 * parameters.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawRotatedSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRotatedSprite), asCALL_CDECL);
 		/**
@@ -1467,6 +1493,7 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawRotatedSpriteFromCurFrame(); see @ref jjDrawPixel() for the layer and
 		 * player parameters.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRotatedSpriteFromCurFrame), asCALL_CDECL);
 
@@ -1475,6 +1502,7 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawSwingingVineSpriteFromCurFrame(); see @ref jjDrawPixel() for the layer
 		 * and player parameters.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int length, int curvature, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSwingingVineSpriteFromCurFrame), asCALL_CDECL);
 		/**
@@ -1482,6 +1510,7 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawTile(); see @ref jjDrawPixel() for the layer and player parameters.
 		 * The tile is only drawn, it doesn't become solid.
+		 * @partialsupport `layerXY` and `playerID` are ignored, as in @ref jjDrawPixel().
 		 */
 		engine->RegisterGlobalFunction("void jjDrawTile(float xPixel, float yPixel, uint16 tile, TILE::Quadrant tileQuadrant = TILE::ALLQUADRANTS, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawTile), asCALL_CDECL);
 		/**
@@ -1489,16 +1518,17 @@ namespace Jazz2::Scripting
 		 *
 		 * The level counterpart of @ref jjCANVAS::drawString(); see @ref jjDrawPixel() for the layer and player
 		 * parameters.
-		 * @partialsupport Of the string modes, only @ref STRING::PALSHIFT currently has an effect here, the others draw
-		 * plain text.
+		 * @partialsupport The string modes have no effect here, the text is drawn plain. `layerXY` and `playerID` are
+		 * ignored, and frames of the font a script replaced and `^` as ∞ aren't drawn.
 		 */
 		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, STRING::Size size = STRING::SMALL, STRING::Mode mode = STRING::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawString), asCALL_CDECL);
 		/**
 		 * @brief Draws text in one of the built-in font sizes into the level, with a custom appearance
 		 *
 		 * See @ref jjDrawPixel() for the layer and player parameters.
-		 * @partialsupport Currently only `spriteMode` and `param2` are used to color the text; the appearance and
-		 * `param1` have no effect here.
+		 * @partialsupport Only `spriteMode` and `param2` are used to color the text, with the subset of modes
+		 * @ref jjCANVAS::drawString() supports (`BLEND_LUMINANCE` isn't added to what's behind); the appearance, `param1`,
+		 * `layerXY` and `playerID` have no effect here.
 		 */
 		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawStringEx), asCALL_CDECL);
 		/**

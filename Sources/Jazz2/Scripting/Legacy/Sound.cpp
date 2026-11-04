@@ -4,6 +4,7 @@
 #include "Internal.h"
 
 #include "../../Compatibility/AnimSetMapping.h"
+#include "../../PreferencesCache.h"
 
 #include "../../../nCine/Audio/AudioBuffer.h"
 #include "../../../nCine/Audio/AudioBufferPlayer.h"
@@ -22,9 +23,12 @@ namespace Jazz2::Scripting
 
 #if defined(WITH_AUDIO)
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		_this->_levelHandler->BeginPlayMusic(filename, !temporary, forceReload);
-#endif
+		bool result = _this->_levelHandler->BeginPlayMusic(filename, !temporary, forceReload);
+		// The music that already plays is kept, which counts as success
+		return (result || (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_musicCurrentPath == filename));
+#else
 		return false;
+#endif
 	}
 	void LevelScriptLoader::jjMusicStop() {
 
@@ -48,8 +52,8 @@ namespace Jazz2::Scripting
 
 #if defined(WITH_AUDIO)
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		if (_this->_levelHandler->_music != nullptr) {
-			_this->_levelHandler->_music->stop();
+		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->isPlaying()) {
+			_this->_levelHandler->_music->pause();
 		}
 #endif
 	}
@@ -206,6 +210,40 @@ namespace Jazz2::Scripting
 		return owner->LoadSample(sample, filename);
 	}
 
+	static std::int32_t getSoundFXVolume() {
+#if defined(WITH_AUDIO)
+		if (ContentResolver::Get().IsHeadless()) {
+			return 0;
+		}
+		return std::int32_t(std::round(std::clamp(PreferencesCache::MasterVolume * PreferencesCache::SfxVolume, 0.0f, 1.0f) * 100.0f));
+#else
+		return 0;
+#endif
+	}
+	static std::int32_t getMusicVolume() {
+#if defined(WITH_AUDIO)
+		if (ContentResolver::Get().IsHeadless()) {
+			return 0;
+		}
+		return std::int32_t(std::round(std::clamp(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume, 0.0f, 1.0f) * 100.0f));
+#else
+		return 0;
+#endif
+	}
+	static bool getSoundEnabled() {
+#if defined(WITH_AUDIO)
+		return !ContentResolver::Get().IsHeadless();
+#else
+		return false;
+#endif
+	}
+	static bool getSoundFXActive() {
+		return (getSoundFXVolume() > 0);
+	}
+	static bool getMusicActive() {
+		return (getMusicVolume() > 0);
+	}
+
 	// TODO
 
 	void jjSetModPosition(std::int32_t order, std::int32_t row, bool reset) {
@@ -245,7 +283,7 @@ namespace Jazz2::Scripting
 		 * With `forceReload`, the file is started again even if it is already playing. With `temporary`, the music
 		 * isn't kept as the level's music, so it plays only until the level's own music is restored, e.g. after the
 		 * player dies.
-		 * @partialsupport Currently always returns `false`, even when the music starts.
+		 * @return Whether the music was loaded or is already playing
 		 */
 		engine->RegisterGlobalFunction("bool jjMusicLoad(string &in filename, bool forceReload = false, bool temporary = false)", asFUNCTION(jjMusicLoad), asCALL_CDECL);
 		/** @brief Stops the current music */
@@ -255,15 +293,10 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Pauses the current music
 		 *
-		 * @partialsupport Currently stops the music the same way as @ref jjMusicStop().
+		 * @ref jjMusicResume() continues it where it was paused.
 		 */
 		engine->RegisterGlobalFunction("void jjMusicPause()", asFUNCTION(jjMusicPause), asCALL_CDECL);
-		/**
-		 * @brief Resumes paused music
-		 *
-		 * @partialsupport Only has an effect on music in the paused state, which @ref jjMusicPause() currently doesn't
-		 * produce.
-		 */
+		/** @brief Resumes the music paused by @ref jjMusicPause() */
 		engine->RegisterGlobalFunction("void jjMusicResume()", asFUNCTION(jjMusicResume), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("SOUND");
@@ -279,33 +312,33 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Whether the game produces any audio
 		 *
-		 * @partialsupport Currently always `false`.
+		 * `false` in a build without audio or when no audio is output (a dedicated server).
 		 */
-		engine->RegisterGlobalProperty("const bool jjSoundEnabled", &soundEnabled);
+		engine->RegisterGlobalFunction("bool get_jjSoundEnabled()", asFUNCTION(getSoundEnabled), asCALL_CDECL);
 		/**
 		 * @brief Whether sound effects are enabled in the settings
 		 *
-		 * @partialsupport Currently always `false`.
+		 * `false` when their volume is set to 0.
 		 */
-		engine->RegisterGlobalProperty("const bool jjSoundFXActive", &soundFXActive);
+		engine->RegisterGlobalFunction("bool get_jjSoundFXActive()", asFUNCTION(getSoundFXActive), asCALL_CDECL);
 		/**
 		 * @brief Whether music is enabled in the settings
 		 *
-		 * @partialsupport Currently always `false`.
+		 * `false` when its volume is set to 0.
 		 */
-		engine->RegisterGlobalProperty("const bool jjMusicActive", &musicActive);
+		engine->RegisterGlobalFunction("bool get_jjMusicActive()", asFUNCTION(getMusicActive), asCALL_CDECL);
 		/**
 		 * @brief Volume of sound effects set in the settings
 		 *
-		 * @partialsupport Currently always 0.
+		 * From 0 to 100, including the master volume.
 		 */
-		engine->RegisterGlobalProperty("const int jjSoundFXVolume", &soundFXVolume);
+		engine->RegisterGlobalFunction("int get_jjSoundFXVolume()", asFUNCTION(getSoundFXVolume), asCALL_CDECL);
 		/**
 		 * @brief Volume of music set in the settings
 		 *
-		 * @partialsupport Currently always 0.
+		 * From 0 to 100, including the master volume.
 		 */
-		engine->RegisterGlobalProperty("const int jjMusicVolume", &musicVolume);
+		engine->RegisterGlobalFunction("int get_jjMusicVolume()", asFUNCTION(getMusicVolume), asCALL_CDECL);
 		/**
 		 * @brief Strength of the echo effect, as set by the Echo event
 		 *

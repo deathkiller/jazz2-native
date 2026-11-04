@@ -123,10 +123,6 @@ namespace Jazz2::Scripting
 			 * game removes them only at the end of the frame.
 			 */
 			bool get_isActive() const;
-			/** @brief Returns the light type emitted by the object */
-			std::uint32_t get_lightType() const;
-			/** @brief Sets the light type emitted by the object */
-			std::uint32_t set_lightType(std::uint32_t value) const;
 
 			/**
 			 * @brief Makes this object hit another one as a bullet
@@ -137,7 +133,8 @@ namespace Jazz2::Scripting
 			 * @param target          Object being hit
 			 * @param playerHandling  Currently ignored
 			 * @return The target object
-			 * @partialsupport The `playerHandling` parameter is currently ignored.
+			 * @partialsupport The `playerHandling` parameter is ignored. The target's @ref scriptedCollisions and @ref bulletHandling
+			 * aren't taken into account, and nothing happens if either object exists only for the script.
 			 */
 			jjOBJ* objectHit(jjOBJ* target, std::uint32_t playerHandling);
 			/**
@@ -158,6 +155,7 @@ namespace Jazz2::Scripting
 			 * Either a @ref BEHAVIOR::Behavior constant, a @ref jjVOIDFUNCOBJ function or a @ref jjBEHAVIORINTERFACE instance. Assigning
 			 * to the behavior of a template in @ref jjObjectPresets (typically in @ref onLevelLoad()) changes every object of that
 			 * event created afterward.
+			 * @partialsupport Not every built-in behavior is available, see @ref behave1().
 			 */
 			jjBEHAVIOR behavior;
 
@@ -165,8 +163,10 @@ namespace Jazz2::Scripting
 			 * @brief Runs a built-in behavior for the object once
 			 *
 			 * Doesn't change @ref jjOBJ::behavior. With @ref BEHAVIOR::DEFAULT, the object's own behavior runs instead. Typically
-			 * called from a custom behavior to reuse a built-in one. Only some built-in behaviors are available for
-			 * objects controlled entirely by a script.
+			 * called from a custom behavior to reuse a built-in one.
+			 * @partialsupport An object a script made runs only the bullet behaviors, `CRATE`, `EXPLOSION`, `SHARD`,
+			 * `WALKINGENEMY` and `INACTIVE`, any other only moves it by its speeds. An object of the game runs its own
+			 * update for most behaviors. Seeker bullets don't home and RF bullets fly straight.
 			 *
 			 * @param behavior  Behavior to run
 			 * @param draw      Whether the object should be drawn
@@ -355,6 +355,7 @@ namespace Jazz2::Scripting
 			 * @brief Legacy hit flags
 			 *
 			 * Use @ref jjOBJ::bulletHandling, @ref jjOBJ::causesRicochet, @ref jjOBJ::isFreezable and @ref jjOBJ::isBlastable instead.
+			 * @partialsupport It isn't tied to those properties, writing it has no effect.
 			 */
 			std::int8_t noHit = 0;
 
@@ -365,6 +366,7 @@ namespace Jazz2::Scripting
 			 * - @ref HANDLING::IGNOREBULLET --- neither the object nor the bullet is affected
 			 * - @ref HANDLING::DESTROYBULLET --- the bullet is destroyed, the object is unaffected
 			 * - @ref HANDLING::DETECTBULLET --- the object is unaffected, the bullet is usually destroyed
+			 * @partialsupport Bullets of the game go through objects that exist only for the script.
 			 */
 			std::uint32_t get_bulletHandling();
 			/** @brief Sets how the object reacts when a bullet touches it */
@@ -381,6 +383,7 @@ namespace Jazz2::Scripting
 			 * @brief Returns whether ice bullets freeze the object
 			 *
 			 * When false, ice bullets hit the object like any other bullet.
+			 * @partialsupport Objects that exist only for the script aren't frozen by bullets of the game.
 			 */
 			bool get_freezable();
 			/** @brief Sets whether ice bullets freeze the object */
@@ -400,13 +403,18 @@ namespace Jazz2::Scripting
 			 * For enemies, the number of hits the object can still take.
 			 */
 			std::int8_t energy = 0;
-			/** @brief Size of the light emitted by the object, see @ref jjOBJ::lightType */
+			/**
+			 * @brief Size of the light emitted by the object, see @ref jjOBJ::lightType
+			 *
+			 * @partialsupport On an object of the game, a new size takes effect only together with another lightType.
+			 */
 			std::int8_t light = 0;
 			/**
 			 * @brief Legacy object category
 			 *
 			 * Use @ref jjOBJ::playerHandling, @ref jjOBJ::isTarget, @ref jjOBJ::triggersTNT, @ref jjOBJ::deactivates and
 			 * @ref jjOBJ::scriptedCollisions instead.
+			 * @partialsupport It isn't tied to those properties, writing it has no effect.
 			 */
 			std::uint8_t objType = 0;
 
@@ -450,6 +458,7 @@ namespace Jazz2::Scripting
 			 * When true and @ref jjOBJ::playerHandling is @ref HANDLING::PICKUP or @ref HANDLING::SPECIAL, collisions with players
 			 * and bullets call @ref onObjectHit() of the object's behavior class, or the global @ref onObjectHit() function,
 			 * instead of the game's own handling.
+			 * @partialsupport Bullets of the game go through objects that exist only for the script, they aren't told of them.
 			 */
 			bool get_scriptedCollisions();
 			/** @brief Sets whether the script decides what happens when the object is hit */
@@ -462,7 +471,12 @@ namespace Jazz2::Scripting
 			 * that has been destroyed.
 			 */
 			std::int8_t state = 0;
-			/** @brief Score the object is worth when a player destroys it */
+			/**
+			 * @brief Score the object is worth when a player destroys it
+			 *
+			 * @partialsupport Only enemies of the game award it. A template in @ref jjObjectPresets reads 0 until a script
+			 * sets it, and setting it back to 0 there keeps the score of the game.
+			 */
 			std::uint16_t points = 0;
 			/**
 			 * @brief Event the object was created from
@@ -525,7 +539,8 @@ namespace Jazz2::Scripting
 			 * Uses the position, direction and @ref jjOBJ::curFrame of the object, which is enough for most objects.
 			 *
 			 * @return Always 0
-			 * @partialsupport
+			 * @partialsupport On an object of the game it only marks the object to be drawn once in the tick, at its final
+			 * position, so several calls show only the last frame and a call outside its behavior lasts until the next tick.
 			 */
 			std::int32_t draw();
 			/**
@@ -548,7 +563,8 @@ namespace Jazz2::Scripting
 			 * @param yOld    Vertical position of the object in the previous tick
 			 * @param width   Width of the platform in pixels, 0 to derive it from the current frame
 			 * @param height  Currently ignored
-			 * @partialsupport The `height` parameter is currently ignored.
+			 * @partialsupport The `height` parameter is ignored, and it has no effect on objects that exist only for the
+			 * script.
 			 */
 			void bePlatform(float xOld, float yOld, std::int32_t width, std::int32_t height);
 			/**
@@ -569,7 +585,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Makes a bullet bounce off
 			 *
-			 * @return True if the object is a bullet of the game and bounced, false otherwise
+			 * A bullet a script made turns around, a bullet of the game bounces off as from a wall.
+			 * @return True if the object is a bullet and bounced, false otherwise
 			 */
 			bool ricochet();
 			/**
@@ -626,7 +643,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Possibly drops a random pickup, as destroyed enemies and crates do
 			 *
-			 * @partialsupport Currently has no effect.
+			 * One time in `frequency`, a carrot, a fast fire or a red gem falls out of the object.
+			 * @partialsupport `player` is ignored, the pickup doesn't depend on the player's weapons.
 			 */
 			void grantPickup(jjPLAYER* player, std::int32_t frequency);
 
@@ -732,6 +750,8 @@ namespace Jazz2::Scripting
 				float SkinOffsetY;
 				// The animation has more frames than the graphics of the game, the frame is drawn as it is (see PullFromActor())
 				bool LongerAnim;
+				// The score of an enemy of the game
+				std::uint16_t Points;
 			};
 			SyncedState _synced = {};
 
@@ -748,8 +768,9 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the palette color of one pixel of the particle
 			 *
-			 * @partialsupport Indices 0 to 7 are available, reading other ones gives 0 and writing them has no effect.
-			 * Only the first color is currently drawn, as a square of the particle's size.
+			 * Row by row, a square of `size + 1` pixels on each side.
+			 * @partialsupport Indices 0 to 7 are available, reading other ones gives 0 and writing them has no effect, so
+			 * the last pixel of a 3×3 square can't be reached.
 			 */
 			std::uint8_t get_color(std::int32_t i) const;
 			/** @brief Sets the palette color of one pixel of the particle */
@@ -950,7 +971,7 @@ namespace Jazz2::Scripting
 			std::int32_t _refCount;
 			// Ticks since the particle was made, or since a leaf landed
 			std::uint16_t _age;
-			// What the size of a star shrinks from
+			// What the size of a star shrinks from, or the sway phase of a snowflake of the weather
 			float _scale;
 			// Made by the weather of the level, see LevelScriptLoader::SpawnWeatherParticles()
 			bool _weather;

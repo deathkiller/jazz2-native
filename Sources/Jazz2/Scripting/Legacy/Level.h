@@ -28,6 +28,8 @@ namespace Jazz2::Scripting
 	 *
 	 * @param offset Position of the first bit, relative to the first parameter
 	 * @param length Number of bits, negative for a signed value
+	 * @partialsupport The difficulty bits of the events of a converted level aren't kept, they read 0 unless a
+	 * script wrote them.
 	 */
 	std::int32_t GetEventParamWrapper(std::uint16_t tx, std::uint16_t ty, std::int32_t offset, std::int32_t length);
 	/**
@@ -35,6 +37,7 @@ namespace Jazz2::Scripting
 	 *
 	 * `newEventID` is the new event number, e.g. an @ref OBJECT::Object or @ref AREA::Area constant. Only the event ID
 	 * changes, the parameters already stored on the tile are kept.
+	 * @partialsupport A generator event (an object that respawns) can't be written, it's refused with a warning.
 	 */
 	void SetEventByte(std::uint16_t tx, std::uint16_t ty, std::uint8_t newEventId);
 	/**
@@ -47,13 +50,14 @@ namespace Jazz2::Scripting
 	 * @param offset Position of the first bit, relative to the first parameter
 	 * @param length Number of bits, negative for a signed value
 	 * @param newValue Value to store
+	 * @partialsupport The parameters of a generator event can't be written, they're refused with a warning.
 	 */
 	void SetEventParam(std::uint16_t tx, std::uint16_t ty, int8_t offset, std::int8_t length, std::int32_t newValue);
 	/**
 	 * @brief Returns the type of a tile, indexed by tile ID
 	 *
-	 * 0 is an ordinary tile, 1 translucent, 3 invisible and 5 heat-distorted. Other types from the original game are
-	 * kept as assigned, but such tiles are drawn as ordinary ones.
+	 * 0 is an ordinary tile, 1 translucent, 3 invisible and 5 heat-distorted.
+	 * @partialsupport Other types are kept as assigned, but such tiles are drawn as ordinary ones.
 	 */
 	std::int8_t GetTileType(std::uint16_t tile);
 	/** @brief Sets the type of a tile, indexed by tile ID */

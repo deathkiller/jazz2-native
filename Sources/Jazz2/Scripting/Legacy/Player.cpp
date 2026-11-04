@@ -18,7 +18,14 @@
 #include "../../Actors/Weapons/SeekerShot.h"
 #include "../../Actors/Weapons/ToasterShot.h"
 #include "../../Compatibility/JJ2Strings.h"
+#include "../../PreferencesCache.h"
 #include "../../Rendering/PlayerViewport.h"
+
+#if defined(WITH_MULTIPLAYER)
+#	include "../../Multiplayer/MpLevelHandler.h"
+#	include "../../Multiplayer/Teams.h"
+#	include "../../Actors/Multiplayer/MpPlayer.h"
+#endif
 
 #include "../../../nCine/Base/Algorithms.h"
 
@@ -299,8 +306,9 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			noop();
-			// TODO: if boss active, return false
+			if (bossActive || !_levelScriptLoader->GetLevelHandler()->CanActivateSugarRush()) {
+				return false;
+			}
 			_player->ActivateSugarRush((float)time * 60.0f / 70.0f);
 			return true;
 		}
@@ -379,8 +387,9 @@ namespace Jazz2::Scripting
 		}*/
 
 		std::int32_t jjPLAYER::get_invincibility() const {
-			if (_player == nullptr) {
-				return {};
+			// The blinking after a hurt is `blink`, not this
+			if (_player == nullptr || _player->_invulnerableTime <= 0.0f || _player->GetInvulnerableType() == Actors::Player::InvulnerableType::Blinking) {
+				return 0;
 			}
 			return (std::int32_t)(_player->_invulnerableTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
@@ -402,7 +411,8 @@ namespace Jazz2::Scripting
 			if (value > 0) {
 				// As JJ2+ shows it, in the bubble of the invincibility carrot
 				_player->SetInvulnerability(value * FrameTimer::FramesPerSecond / 70.0f, Actors::Player::InvulnerableType::Shielded);
-			} else {
+			} else if (get_invincibility() > 0) {
+				// Only the invincibility ends, not the blinking
 				_player->SetInvulnerability(0.0f, Actors::Player::InvulnerableType::Transient);
 			}
 			return value;
@@ -432,10 +442,10 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			// Negative values are clamped so invincibility is never reduced below zero
-			float timeLeft = std::max(_player->_invulnerableTime + duration * FrameTimer::FramesPerSecond / 70.0f, 0.0f);
-			_player->SetInvulnerability(timeLeft, Actors::Player::InvulnerableType::Shielded);
-			return (std::int32_t)(_player->_invulnerableTime * 70.0f / FrameTimer::FramesPerSecond);
+			// Negative values are clamped so invincibility is never reduced below zero, blinking isn't extended
+			std::int32_t ticksLeft = std::max(get_invincibility() + duration, 0);
+			set_invincibility(ticksLeft);
+			return get_invincibility();
 		}
 
 		std::int32_t jjPLAYER::get_food() const {
@@ -470,6 +480,11 @@ namespace Jazz2::Scripting
 				return {};
 			}
 			if (numberOfCoins > _player->_inventory.Coins) {
+				if (_player->_bonusWarpTimer <= 0.0f) {
+					_levelScriptLoader->GetLevelHandler()->HandlePlayerCoins(_player, _player->_inventory.Coins, _player->_inventory.Coins);
+					_player->PlaySfx("BonusWarpNotEnoughCoins"_s);
+					_player->_bonusWarpTimer = 400.0f;
+				}
 				return false;
 			}
 			_player->AddCoins(-numberOfCoins);
@@ -492,7 +507,6 @@ namespace Jazz2::Scripting
 			return value;
 		}
 		bool jjPLAYER::testForGems(std::int32_t numberOfGems, std::uint32_t type) {
-			noop();
 			std::int32_t* count = GetGemCount(type);
 			if (count != nullptr && numberOfGems <= *count) {
 				if (numberOfGems > 0) {
@@ -500,7 +514,11 @@ namespace Jazz2::Scripting
 				}
 				return true;
 			}
-			// TODO: Show warning message
+			if (count != nullptr && _player->_bonusWarpTimer <= 0.0f) {
+				_levelScriptLoader->GetLevelHandler()->HandlePlayerGems(_player, std::uint8_t(type - 1), *count, *count);
+				_player->PlaySfx("BonusWarpNotEnoughCoins"_s);
+				_player->_bonusWarpTimer = 400.0f;
+			}
 			return false;
 		}
 
@@ -659,18 +677,40 @@ namespace Jazz2::Scripting
 			return _player->_playerIndex;
 		}
 
+		std::int32_t jjPLAYER::get_team() const {
+#if defined(WITH_MULTIPLAYER)
+			auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler());
+			if (mpHandler != nullptr && Jazz2::Multiplayer::IsTeamGameMode(mpHandler->GetGameMode())) {
+				if (auto* mpPlayer = runtime_cast<Actors::Multiplayer::MpPlayer>(_player)) {
+					if (auto peerDesc = mpPlayer->GetPeerDescriptor()) {
+						return peerDesc->Team;
+					}
+				}
+			}
+#endif
+			// TEAM::BLUE, as in single player
+			return 0;
+		}
+		bool jjPLAYER::get_teamRed() const {
+			return (get_team() != 0);
+		}
+
 		bool jjPLAYER::get_running() const {
 			if (_player == nullptr) {
 				return {};
 			}
-			noop(); return _player->_isRunPressed;
+			return _player->_isRunPressed;
 		}
 		bool jjPLAYER::set_running(bool value) {
 			if (_player == nullptr) {
 				return {};
 			}
 			_player->_isRunPressed = value;
-			return _player->_isRunPressed;
+			// Without toggle run the flag follows the key each frame, so the key is held for this tick
+			if (!PreferencesCache::ToggleRunAction) {
+				_levelScriptLoader->OverridePlayerInput(_player, PlayerAction::Run, value);
+			}
+			return value;
 		}
 
 		std::int32_t jjPLAYER::get_stoned() {
@@ -903,8 +943,11 @@ namespace Jazz2::Scripting
 			return value;
 		}
 		std::uint8_t jjPLAYER::resetLight() {
-			noop();
-			return 0;
+			if (_player == nullptr) {
+				return {};
+			}
+			_levelScriptLoader->_levelHandler->SetAmbientLight(_player, _levelScriptLoader->_levelHandler->GetDefaultAmbientLight());
+			return get_lighting();
 		}
 
 		bool jjPLAYER::get_playerKeyLeftPressed() {
@@ -1101,19 +1144,44 @@ namespace Jazz2::Scripting
 		}
 
 		std::uint32_t jjPLAYER::morph(bool rabbitsOnly, bool morphEffect) {
-			noop();
-			return 0;
+			if (_player == nullptr) {
+				return {};
+			}
+			static const PlayerType Order[] = { PlayerType::Jazz, PlayerType::Spaz, PlayerType::Lori, PlayerType::Bird, PlayerType::Frog };
+			std::int32_t count = (rabbitsOnly ? 3 : std::int32_t(arraySize(Order)));
+			PlayerType current = (_player->_playerType == PlayerType::Bird2 ? PlayerType::Bird : _player->_playerType);
+			std::int32_t index = -1;
+			for (std::int32_t i = 0; i < std::int32_t(arraySize(Order)); i++) {
+				if (Order[i] == current) {
+					index = i;
+					break;
+				}
+			}
+			bool isTSF = _levelScriptLoader->IsTSF();
+			// A character whose sprites aren't available is skipped
+			for (std::int32_t i = 1; i <= count; i++) {
+				PlayerType next = (index >= count ? Order[i - 1] : Order[(index + i) % count]);
+				if ((next == PlayerType::Lori && !isTSF) || next == _player->_playerType) {
+					continue;
+				}
+				if (morphEffect ? _player->MorphTo(next) : _player->MorphToInstantly(next)) {
+					break;
+				}
+			}
+			return PlayerTypeToChar(_player->_playerType, isTSF);
 		}
 		std::uint32_t jjPLAYER::morphTo(std::uint32_t charNew, bool morphEffect) {
 			if (_player == nullptr) {
 				return {};
 			}
-			noop();
-			// TODO: morphEffect
 			PlayerType playerType = CharToPlayerType(charNew);
-			// MorphTo() leaves the player as it is if the character's sprites aren't available (the bird in the shareware data)
+			// The player stays as it is if the character's sprites aren't available (the bird in the shareware data)
 			if (playerType != PlayerType::None) {
-				_player->MorphTo(playerType);
+				if (morphEffect) {
+					_player->MorphTo(playerType);
+				} else {
+					_player->MorphToInstantly(playerType);
+				}
 			}
 			return PlayerTypeToChar(_player->_playerType);
 		}
@@ -1121,10 +1189,12 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			noop();
-			// TODO: morphEffect
 			// JJ2+ reverts to charOrig, the same as a Revert Morph area does
-			_player->MorphTo(_player->_playerTypeOriginal);
+			if (morphEffect) {
+				_player->MorphTo(_player->_playerTypeOriginal);
+			} else {
+				_player->MorphToInstantly(_player->_playerTypeOriginal);
+			}
 			return PlayerTypeToChar(_player->_playerType);
 		}
 		std::uint32_t jjPLAYER::get_charCurr() const {
@@ -1466,9 +1536,27 @@ namespace Jazz2::Scripting
 			}
 			return result;
 		}
-		int jjPLAYER::getObjectHitForce(const jjOBJ& target) const {
-			noop();
-			return 0;
+		std::int32_t jjPLAYER::getObjectHitForce(const jjOBJ* target) const {
+			std::int32_t result = 0;
+			if (_player != nullptr) {
+				using Actors::Player;
+				auto move = _player->GetSpecialMove();
+				if (_player->HasSugarRush() || (move == Player::SpecialMoveType::Buttstomp && !_player->IsButtstompStarting())) {
+					result = 1;
+				} else if (move != Player::SpecialMoveType::None && move != Player::SpecialMoveType::Buttstomp) {
+					result = -1;
+				} else if (target != nullptr) {
+					std::shared_ptr<Actors::ActorBase> actor = target->_actor.lock();
+					if (actor != nullptr && _player->IsRammingFrozen(actor.get())) {
+						result = -101;
+					}
+				}
+			}
+			if (target != nullptr) {
+				// A handle passed to a native function is the function's to release
+				const_cast<jjOBJ*>(target)->Release();
+			}
+			return result;
 		}
 		bool jjPLAYER::objectHit(jjOBJ* target, std::int32_t force, std::uint32_t playerHandling) {
 			// The player collides with the target as the game would have it, even where they aren't, the script sees the
@@ -1942,9 +2030,8 @@ namespace Jazz2::Scripting
 		 * @brief Whether the player isn't on the blue team
 		 *
 		 * Also true for the green and yellow teams, use team instead.
-		 * @partialsupport Teams aren't tracked for scripts yet, so it's currently always false.
 		 */
-		engine->RegisterObjectProperty("jjPLAYER", "const bool teamRed", asOFFSET(jjPLAYER, team));
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_teamRed() const", asMETHOD(jjPLAYER, get_teamRed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_running() const", asMETHOD(jjPLAYER, get_running), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool set_running(bool)", asMETHOD(jjPLAYER, set_running), asCALL_THISCALL);
 		/** @deprecated Use @ref jjPLAYER::doubleJumpCount instead, which also supports more jumps in the air. */
@@ -2067,12 +2154,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Type", "WHISPER", 2);	///< Private message to one player
 		engine->RegisterEnumValue("Type", "ME", 3);	///< Action message, as sent by the `/me` command
 		engine->SetDefaultNamespace("");
-		/**
-		 * @brief Team the player belongs to
-		 *
-		 * A @ref TEAM::Color value. Teams aren't tracked for scripts yet, so it can't be relied on.
-		 */
-		engine->RegisterObjectProperty("jjPLAYER", "const TEAM::Color team", asOFFSET(jjPLAYER, team));
+		engine->RegisterObjectMethod("jjPLAYER", "TEAM::Color get_team() const", asMETHOD(jjPLAYER, get_team), asCALL_THISCALL);
 
 		engine->RegisterObjectMethod("jjPLAYER", "void kill()", asMETHOD(jjPLAYER, kill), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool hurt(int8 damage = 1, bool forceHurt = false, jjPLAYER@ attacker = null)", asMETHOD(jjPLAYER, hurt), asCALL_THISCALL);
@@ -2137,6 +2219,7 @@ namespace Jazz2::Scripting
 		 * text starting with `/`, are ignored.
 		 * @param text Text of the message
 		 * @param teamchat Currently ignored
+		 * @partialsupport The message isn't sent to other players, `teamchat` is ignored and commands aren't run.
 		 */
 		engine->RegisterGlobalFunction("void jjChat(const ::string &in text, bool teamchat = false)", asFUNCTION(jjChat), asCALL_CDECL);
 		/**

@@ -41,14 +41,31 @@ namespace Jazz2::Scripting::Legacy
 		// Value of BEHAVIOR::DEFAULT, the behavior the object has in the game
 		constexpr std::uint32_t DefaultBehavior = UINT32_MAX;
 
+		// BEHAVIOR::SPRING, measured in JJ2+: frame 0 for 2 ticks, then 1-4 for 4 ticks each, -1 at rest
+		std::int32_t GetSpringBounceFrame(const Actors::Environment::Spring* spring)
+		{
+			float time = spring->GetTimeSinceLaunch();
+			std::int32_t ticks = (time >= 0.0f ? std::int32_t(time * 70.0f / 60.0f + 0.5f) : 18);
+			return (ticks < 18 ? (ticks + 2) / 4 : -1);
+		}
+
 		// HANDLING::Player and HANDLING::Bullet of JJ2+
 		constexpr std::uint32_t hPLAYERBULLET = 1;
 		constexpr std::uint32_t hENEMYBULLET = 2;
 		constexpr std::uint32_t hPARTICLE = 3;
 		constexpr std::uint32_t hPICKUP = 5;
+		constexpr std::uint32_t hDELAYEDPICKUP = 6;
+		constexpr std::uint32_t hHURT = 7;
 		constexpr std::uint32_t hSPECIAL = 8;
 		constexpr std::uint32_t hIGNOREBULLET = 1;
 		constexpr std::uint32_t hDESTROYBULLET = 2;
+		constexpr std::uint32_t hDETECTBULLET = 3;
+
+		// A delayed pickup is collected as a pickup, without the delay
+		constexpr std::uint32_t ResolveSetPlayerHandling(std::uint32_t handling)
+		{
+			return (handling == hDELAYEDPICKUP ? hPICKUP : handling);
+		}
 
 		// CREATOR::Type of JJ2+
 		constexpr std::uint32_t cOBJECT = 0;
@@ -1024,7 +1041,7 @@ namespace Jazz2::Scripting::Legacy
 		// runs (with the handling of its template then - a pickup of a script is collected as the game's)
 		jjOBJ& obj = *_obj;
 		bool isCollectible = (runtime_cast<Actors::Collectibles::CollectibleBase>(_actor) != nullptr);
-		std::uint32_t handling = (obj._playerHandlingSet ? obj._playerHandling : (isCollectible || GetDefaultPlayerHandling(obj.eventID) == hPICKUP ? hPICKUP : hSPECIAL));
+		std::uint32_t handling = (obj._playerHandlingSet ? ResolveSetPlayerHandling(obj._playerHandling) : (isCollectible || GetDefaultPlayerHandling(obj.eventID) == hPICKUP ? hPICKUP : hSPECIAL));
 		if (handling != hPICKUP || obj.curFrame == 0 || _actor->GetState(Actors::ActorState::IsDestroyed)) {
 			return true;
 		}
@@ -1047,7 +1064,7 @@ namespace Jazz2::Scripting::Legacy
 	void ScriptObjectHost::TouchPlayers(LevelScriptLoader* levelScripts, jjOBJ& obj)
 	{
 		// A special object is told of a touch by the force of it, a pickup by 0, as measured in JJ2+
-		std::uint32_t handling = (obj._playerHandlingSet ? obj._playerHandling : GetDefaultPlayerHandling(obj.eventID));
+		std::uint32_t handling = (obj._playerHandlingSet ? ResolveSetPlayerHandling(obj._playerHandling) : GetDefaultPlayerHandling(obj.eventID));
 		if (!obj._scriptedCollisions || (handling != hSPECIAL && handling != hPICKUP) || obj.curFrame == 0) {
 			return;
 		}
@@ -1064,7 +1081,7 @@ namespace Jazz2::Scripting::Legacy
 
 	void ScriptObjectHost::TouchStandingPlayer(LevelScriptLoader* levelScripts, jjOBJ& obj, Actors::Player& player)
 	{
-		std::uint32_t handling = (obj._playerHandlingSet ? obj._playerHandling : GetDefaultPlayerHandling(obj.eventID));
+		std::uint32_t handling = (obj._playerHandlingSet ? ResolveSetPlayerHandling(obj._playerHandling) : GetDefaultPlayerHandling(obj.eventID));
 		std::int32_t tick = levelScripts->GetGameTick();
 		if (!obj._scriptedCollisions || (handling != hSPECIAL && handling != hPICKUP) || obj._touchTick == tick || player.GetHealth() <= 0) {
 			return;
@@ -1114,7 +1131,6 @@ namespace Jazz2::Scripting::Legacy
 			// Bullets go through pickups, particles, explosions and other bullets in JJ2 (a pickup of the game would stop the
 			// sword here), as the player collides with them
 			constexpr std::uint32_t hEXPLOSION = 4;
-			constexpr std::uint32_t hDELAYEDPICKUP = 6;
 			std::uint32_t handling = (target->_playerHandlingSet ? target->_playerHandling
 				: (runtime_cast<Actors::Collectibles::CollectibleBase>(other) != nullptr ? hPICKUP : GetDefaultPlayerHandling(target->eventID)));
 			if (handling == hPICKUP || handling == hDELAYEDPICKUP || handling == hPARTICLE || handling == hEXPLOSION ||
@@ -1205,13 +1221,21 @@ namespace Jazz2::Scripting::Legacy
 		}
 
 		// What the object is to players, the game handles a pickup as one, anything else as special
-		std::uint32_t playerHandling = (obj._playerHandlingSet ? obj._playerHandling
+		std::uint32_t playerHandling = (obj._playerHandlingSet ? ResolveSetPlayerHandling(obj._playerHandling)
 			: (runtime_cast<Actors::Collectibles::CollectibleBase>(actor) != nullptr || GetDefaultPlayerHandling(obj.eventID) == hPICKUP ? hPICKUP : hSPECIAL));
 
 		if (obj._playerHandlingSet && playerHandling == hPARTICLE) {
 			// A particle collides with nothing, players and bullets go through it whatever its `bulletHandling` is, as in JJ2+ -
 			// a moth flies off a player by its behavior there, here by the collision (a script can make them particles)
 			return (player == nullptr || runtime_cast<Actors::Environment::Moth>(actor) == nullptr);
+		}
+
+		if (player != nullptr && obj._playerHandlingSet && playerHandling == hHURT) {
+			// Hurts a player who touches it, an attack doesn't hurt it
+			if (!player->IsInvulnerable()) {
+				player->TakeDamage(1, 4.0f * (player->GetPos().X > actor->GetPos().X ? 1.0f : -1.0f));
+			}
+			return true;
 		}
 
 		if (player != nullptr && obj._playerHandlingSet && playerHandling != hPICKUP && !obj._scriptedCollisions &&
@@ -1265,6 +1289,16 @@ namespace Jazz2::Scripting::Legacy
 			}
 			if (obj._bulletHandling == hDESTROYBULLET) {
 				// The bullet stops without harm
+				shot->DecreaseHealth(INT32_MAX);
+				return true;
+			}
+			if (obj._bulletHandling == hDETECTBULLET) {
+				// The behavior is told of the bullet, which stops without harming the object
+				if (obj._scriptedCollisions) {
+					Actors::Player* shooter = shot->GetOwner();
+					CallObjectHit(_levelScripts, obj, _levelScripts->GetObjectView(shot),
+						shooter != nullptr ? _levelScripts->GetPlayerBackingStore(shooter) : nullptr, shot->GetStrength());
+				}
 				shot->DecreaseHealth(INT32_MAX);
 				return true;
 			}
@@ -1775,7 +1809,8 @@ namespace Jazz2::Scripting::Legacy
 		// until it's hit
 		bool isVine = (runtime_cast<Actors::Environment::SwingingVine>(_actor) != nullptr);
 		if (_obj->state == sSTART) {
-			bool sleeps = (runtime_cast<ScriptSceneryObject>(_actor) != nullptr || runtime_cast<Actors::Solid::PinballBumper>(_actor) != nullptr);
+			bool sleeps = (runtime_cast<ScriptSceneryObject>(_actor) != nullptr || runtime_cast<Actors::Solid::PinballBumper>(_actor) != nullptr ||
+				runtime_cast<Actors::Environment::Spring>(_actor) != nullptr);
 			_obj->state = (isVine ? sACTION : (sleeps ? sSLEEP : sSTILL));
 			_obj->_synced.State = _obj->state;
 		} else if ((_obj->state == sSTILL || _obj->state == sWALK) && runtime_cast<Actors::Enemies::EnemyBase>(_actor) != nullptr) {
@@ -2375,6 +2410,10 @@ namespace Jazz2::Scripting::Legacy
 			// Hit by something of the game, it flashes for 5 ticks as JJ2 makes it
 			obj.justHit = 5;
 		}
+		if (auto* enemy = runtime_cast<Actors::Enemies::EnemyBase>(&actor)) {
+			obj.points = std::uint16_t(std::min<std::uint32_t>(enemy->GetScoreValue(), UINT16_MAX));
+			obj._synced.Points = obj.points;
+		}
 		if (actor._health <= 0 || actor.GetState(Actors::ActorState::IsDestroyed)) {
 			obj.state = sKILL;
 		} else if (auto* scenery = runtime_cast<ScriptSceneryObject>(&actor)) {
@@ -2406,6 +2445,11 @@ namespace Jazz2::Scripting::Legacy
 				}
 			} else if (obj.state == sACTION || obj.state == sBOUNCE || obj.state == sSTILL) {
 				obj.state = sSLEEP;
+			}
+		} else if (auto* spring = runtime_cast<Actors::Environment::Spring>(&actor)) {
+			// As measured in JJ2+: STATE::SPRING while it shows the launch, it sleeps otherwise
+			if (obj.state == sSLEEP || obj.state == sSPRING || obj.state == sSTILL) {
+				obj.state = (GetSpringBounceFrame(spring) >= 0 ? sSPRING : sSLEEP);
 			}
 		} else if (auto* collectible = runtime_cast<Actors::Collectibles::CollectibleBase>(&actor)) {
 			// A pickup of JJ2 floats where it was placed, one an object makes (or one shot down) falls - scripts delete the coins
@@ -2484,7 +2528,11 @@ namespace Jazz2::Scripting::Legacy
 				std::uint32_t position = std::uint32_t(std::max<std::int32_t>(actor._renderer.CurrentFrame, 0));
 				std::int32_t age = levelScripts->GetGameTick() - levelScripts->GetObjectSpawnTick(obj.objectID);
 				bool byAge = true;
-				if (shownAnim != nativeAnim && actor._renderer.FrameCount <= 1) {
+				if (auto* spring = runtime_cast<Actors::Environment::Spring>(&actor)) {
+					// BEHAVIOR::SPRING animates once per launch, then rests on the first frame
+					position = std::uint32_t(std::max<std::int32_t>(GetSpringBounceFrame(spring), 0));
+					byAge = false;
+				} else if (shownAnim != nativeAnim && actor._renderer.FrameCount <= 1) {
 					// The object of the game doesn't animate, nor does the behavior of JJ2 (crates), the frame stays where a script
 					// set it (gifts open only once they break)
 					position = std::uint32_t(std::max<std::int32_t>(obj.frameID, 0));
@@ -2542,8 +2590,8 @@ namespace Jazz2::Scripting::Legacy
 		// frame would float above the ground or sink into it, and putOnGround() of the script would push it through
 		// By the first frame of the animation, the others often have no coldspot (as the converter takes it)
 		if (auto* spring = runtime_cast<Actors::Environment::Spring>(&actor)) {
-			// A spring on the floor is 9 px above it in JJ2+ (measured), 16 px lower than the spring of the game
-			return (spring->GetLegacyLaunchSpeed().Y < 0.0f ? 16.0f : 0.0f);
+			// A spring on the floor is 9 px above it in JJ2+ (measured), the spring of the game rests a pixel higher
+			return (spring->GetLegacyLaunchSpeed().Y < 0.0f ? 1.0f : 0.0f);
 		}
 
 		auto& tables = levelScripts->GetAnimationTables();
@@ -2628,6 +2676,11 @@ namespace Jazz2::Scripting::Legacy
 			// No energy doesn't kill it, as measured in JJ2+, only the next hit does (a serpent counts down to the next
 			// level with none)
 			actor.SetHealth(std::max<std::int32_t>(obj.energy, 1));
+		}
+		if (obj.points != synced.Points) {
+			if (auto* enemy = runtime_cast<Actors::Enemies::EnemyBase>(&actor)) {
+				enemy->SetScoreValue(obj.points);
+			}
 		}
 		if (auto* shot = runtime_cast<Actors::Weapons::ShotBase>(&actor)) {
 			// A bullet hurts by its `animSpeed` and freezes by its `freeze`, as in JJ2+ (a laser on the slot of the Freezer)
@@ -2999,6 +3052,11 @@ namespace Jazz2::Scripting
 		// The energy a script gave the template, also what a hosted object starts with (a clown hurt below 100)
 		if (preset->energy != preset->_synced.Energy) {
 			actor->SetHealth(std::max<std::int32_t>(preset->energy, 1));
+		}
+		if (preset->points != preset->_synced.Points) {
+			if (auto* enemy = runtime_cast<Actors::Enemies::EnemyBase>(actor.get())) {
+				enemy->SetScoreValue(preset->points);
+			}
 		}
 		// An animation a script gave the template is what the objects show (see jjOBJ::CopyTemplate())
 		if (Legacy::ScriptObjectHost::NeedsHost(*preset) || (preset->curAnim > 0 && preset->curAnim != preset->_synced.CurAnim)) {

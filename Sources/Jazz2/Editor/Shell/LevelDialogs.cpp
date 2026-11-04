@@ -2,9 +2,11 @@
 
 #if defined(WITH_EDITOR)
 
+#include "FilePickers.h"
 #include "PropertyRows.h"
 #include "ShellCommon.h"
 #include "TextPrompt.h"
+#include "TileSetsDialog.h"
 #include "../Tools/EditorContext.h"
 #include "../Common/TileStamp.h"
 #include "../Document/CommandHistory.h"
@@ -96,55 +98,17 @@ namespace Jazz2::Editor
 			return row;
 		}
 
-		// A level of the same episode is written without the episode, as the original levels have it
-		String MakeLevelReference(StringView levelName, StringView currentLevelName)
-		{
-			auto picked = levelName.partition('/');
-			auto current = currentLevelName.partition('/');
-			if (!picked[1].empty() && !current[1].empty() && picked[0] == current[0]) {
-				return picked[2];
-			}
-			return levelName;
-		}
-
 		void AddLevelProperty(UiElement* parent, IEditorContext& session, StringView label, String Formats::LevelProperties::* member, StringView placeholder = {})
 		{
 			IEditorContext* s = &session;
 			auto* row = AddTextProperty(parent, session, label, member, placeholder);
 			String title = label;
 			auto* pick = row->Add<UiButton>(StringView(), EditorIcon::Folder, [s, member, title]() {
-				UiSurface* surface = s->GetSurface();
-				if (surface == nullptr) {
-					return;
-				}
-				SmallVector<UiFileRoot, 4> roots;
-				s->GetFileRoots(false, roots);
-				// Opens where the level is now, or next to the level being edited, the next level is usually there
-				StringView filePath = s->GetFilePath();
-				String directory = (!filePath.empty() ? String(fs::GetDirectoryName(filePath)) : String());
-				String fileName;
-				StringView current = s->GetDocument().Properties.*member;
-				StringView episode = s->GetLevelName().partition('/')[0];
-				if (!current.empty() && (current.contains('/') || !episode.empty())) {
-					String levelName = (current.contains('/') ? String(current) : String(episode + "/"_s + current));
-					for (const UiFileRoot& root : roots) {
-						String path = fs::FindPathCaseInsensitive(fs::CombinePath(root.Path, String(levelName + ".j2l"_s)));
-						if (fs::IsReadableFile(path)) {
-							directory = fs::GetDirectoryName(path);
-							fileName = fs::GetFileName(path);
-							break;
-						}
-					}
-				}
-				UiFileDialog* dialog = UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".j2l"_s, directory, fileName, [s, member](StringView path) {
-					// The level is looked up by its name, so it doesn't matter which root it was picked from
-					SetTextProperty(*s, member, MakeLevelReference(IEditorContext::MakeLevelName(path), s->GetLevelName()));
-				}, false);
-				dialog->PreviewFunc = [](StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size) {
-					return Formats::LevelPreview::Read(path, rgba, size);
-				};
+				ShowLevelPicker(*s, title, s->GetDocument().Properties.*member, [s, member](StringView reference) {
+					SetTextProperty(*s, member, reference);
+				});
 			});
-			pick->Tooltip = _x("editor", "Choose a level");
+			pick->Tooltip = _x("editor", "Choose a level, or the end of the episode or of the game");
 		}
 
 		void AddMusicProperty(UiElement* parent, IEditorContext& session, StringView label, String Formats::LevelProperties::* member, StringView placeholder = {})
@@ -153,63 +117,9 @@ namespace Jazz2::Editor
 			auto* row = AddTextProperty(parent, session, label, member, placeholder);
 			String title = label;
 			auto* pick = row->Add<UiButton>(StringView(), EditorIcon::Folder, [s, member, title]() {
-				UiSurface* surface = s->GetSurface();
-				if (surface == nullptr) {
-					return;
-				}
-				// As ContentResolver::GetMusic() looks for it, the value is the path relative to one of them
-				auto& resolver = ContentResolver::Get();
-				SmallVector<UiFileRoot, 4> roots;
-				StringView userContent = resolver.GetUserContentPath();
-				if (!userContent.empty()) {
-					// TRANSLATORS: Place in the file dialog choosing the music of the level, the folder of content added by the user
-					roots.push_back({ _x("editor", "User content"), fs::CombinePath(userContent, "Music"_s), false });
-				}
-				StringView content = resolver.GetContentPath();
-				if (!content.empty()) {
-					// TRANSLATORS: Place in the file dialog choosing the music of the level, the folder of content of the game
-					roots.push_back({ _x("editor", "Content"), fs::CombinePath(content, "Music"_s), false });
-				}
-				StringView source = resolver.GetSourcePath();
-				if (!source.empty()) {
-					// Without the trailing separator, so the paths of files in it can be made relative to it
-					// TRANSLATORS: Place in the file dialog choosing the music of the level, the folder of the original game
-					roots.push_back({ _x("editor", "Original game"), String(source.trimmedSuffix("/\\"_s)), false });
-				}
-				// Opens where the music is now, the first place that has it is the one that is played
-				StringView current = s->GetDocument().Properties.*member;
-				String directory, fileName;
-				SmallVector<String, 4> rootPaths;
-				for (std::size_t i = 0; i < roots.size(); ) {
-					if (!fs::DirectoryExists(roots[i].Path)) {
-						roots.erase(roots.begin() + i);
-						continue;
-					}
-					if (directory.empty() && !current.empty()) {
-						String path = fs::FindPathCaseInsensitive(fs::CombinePath(roots[i].Path, current));
-						if (fs::IsReadableFile(path)) {
-							directory = fs::GetDirectoryName(path);
-							fileName = fs::GetFileName(path);
-						}
-					}
-					rootPaths.push_back(roots[i].Path);
-					i++;
-				}
-				UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".j2b;.it;.mo3;.mod;.s3m;.xm;.ogg;.wav"_s, directory, fileName,
-					[s, member, rootPaths = Death::move(rootPaths)](StringView path) {
-						String value = fs::GetFileName(path);
-						for (const String& rootPath : rootPaths) {
-							if (path.hasPrefix(rootPath)) {
-								StringView rest = path.exceptPrefix(rootPath.size());
-								while (!rest.empty() && (rest[0] == '/' || rest[0] == '\\')) {
-									rest = rest.exceptPrefix(1);
-								}
-								value = fs::FromNativeSeparators(rest);
-								break;
-							}
-						}
-						SetTextProperty(*s, member, value);
-					}, false);
+				ShowMusicPicker(*s, title, s->GetDocument().Properties.*member, [s, member](StringView value) {
+					SetTextProperty(*s, member, value);
+				});
 			});
 			pick->Tooltip = _x("editor", "Choose music, it starts playing right away");
 		}
@@ -921,6 +831,13 @@ namespace Jazz2::Editor
 			auto* row = AddRow(content, _x("editor", "Tile set"));
 			auto* label = row->Add<UiLabel>();
 			label->TextFunc = [s]() { return s->GetDocument().Properties.DefaultTileSet; };
+			label->Flex = 1.0f;
+			auto* pick = row->Add<UiButton>(StringView(), EditorIcon::Folder, [s]() {
+				ShowTileSetPicker(*s, _x("editor", "Default Tile Set"), s->GetDocument().Properties.DefaultTileSet, [s](StringView name) {
+					SetDefaultTileSet(*s, name);
+				});
+			});
+			pick->Tooltip = _x("editor", "Choose another default tile set, the tiles keep their positions in it");
 		}
 
 		content->Add<UiSeparator>();

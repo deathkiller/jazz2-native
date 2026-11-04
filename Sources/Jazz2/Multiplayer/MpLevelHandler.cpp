@@ -1473,8 +1473,8 @@ namespace Jazz2::Multiplayer
 	{
 #if defined(WITH_ANGELSCRIPT)
 		if (_scripts != nullptr) {
-			// TODO: killer
-			_scripts->OnPlayerDied(player, nullptr);
+			Actors::ActorBase* killer = (_isServer ? GetWeaponOwner(static_cast<PlayerOnServer*>(player)->_lastAttacker.get()) : nullptr);
+			_scripts->OnPlayerDied(player, killer);
 		}
 #endif
 

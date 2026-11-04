@@ -36,6 +36,10 @@ namespace Jazz2::Actors::Environment
 		Vector2f GetLegacyLaunchSpeed() const;
 		/** @brief Launches by a speed as the original has it, which also decides the way it faces */
 		void SetLegacyLaunchSpeed(Vector2f speed);
+		/** @brief Returns frames elapsed since the last launch, or -1 if it hasn't launched yet */
+		float GetTimeSinceLaunch() const {
+			return _launchTime;
+		}
 		/** @brief Thaws a frozen spring */
 		void Thaw();
 
@@ -69,8 +73,10 @@ namespace Jazz2::Actors::Environment
 		State _state;
 		float _strength;
 		float _cooldown;
+		float _launchTime;
 
 		void ApplyOrientation();
+		void SettleOnGround();
 		void UpdateStrength();
 	};
 }

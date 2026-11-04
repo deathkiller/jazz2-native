@@ -1673,6 +1673,126 @@ namespace Jazz2::Editor
 			"................",
 		};
 
+		// A softened page with hills and the sun, a level
+		const char* const IconLevelFile[16] = {
+			"................",
+			"...7#####71.....",
+			"...#11111##1....",
+			"...#11111#6#1...",
+			"...#12421####...",
+			"...#17#51111#...",
+			"...#15#31111#...",
+			"...#11111111#...",
+			"...#11111111#...",
+			"...#26631122#...",
+			"...#6###55###...",
+			"...##########...",
+			"...##########...",
+			"...##########...",
+			"...##########...",
+			"................",
+		};
+
+		// The page of a level with a badge of a prompt in its corner, a level with a script
+		const char* const IconScriptedLevelFile[16] = {
+			"................",
+			"...7#####71.....",
+			"...#11111##1....",
+			"...#11111#6#1...",
+			"...#12421####...",
+			"...#17#51111#...",
+			"...#15#311116...",
+			"...#1111.12222..",
+			"...#111.5#####73",
+			"...#2651#6#####7",
+			"...#6#53#62#####",
+			"...###53##62####",
+			"...###53##35####",
+			"...###63#45#223#",
+			"...####1#7##6676",
+			"........47####72",
+		};
+
+		// A page with a badge of a cross in its corner, a file that couldn't be read
+		const char* const IconBrokenFile[16] = {
+			"................",
+			"...7#####71.....",
+			"...#11111##1....",
+			"...#11111#6#1...",
+			"...#11111####...",
+			"...#11111111#...",
+			"...#255551116...",
+			"...#1111.12222..",
+			"...#255.5#####73",
+			"...#1111#######7",
+			"...#1113#72762##",
+			"...#1113##6227##",
+			"...#1113##6227##",
+			"...#1113##2763##",
+			"...####1#######6",
+			"........47####72",
+		};
+
+		// A softened page with four tiles
+		const char* const IconTileSetFile[16] = {
+			"................",
+			"...7#####71.....",
+			"...#11111##1....",
+			"...#11111#6#1...",
+			"...#11111####...",
+			"...#11111111#...",
+			"...#11111111#...",
+			"...#16##3321#...",
+			"...#1###3331#...",
+			"...#1###3331#...",
+			"...#1333###1#...",
+			"...#1333###1#...",
+			"...#1233##61#...",
+			"...#11111111#...",
+			"...##########...",
+			"................",
+		};
+
+		// A softened page with a block of a smooth gradient, tiles of any colors
+		const char* const IconTrueColorTileSetFile[16] = {
+			"................",
+			"...7#####71.....",
+			"...#11111##1....",
+			"...#11111#6#1...",
+			"...#11111####...",
+			"...#11111111#...",
+			"...#11111111#...",
+			"...#1#776651#...",
+			"...#17766541#...",
+			"...#17665441#...",
+			"...#16654431#...",
+			"...#16544331#...",
+			"...#15443321#...",
+			"...#11111111#...",
+			"...##########...",
+			"................",
+		};
+
+		// The page of File with a note
+		const char* const IconMusicFile[16] = {
+			"................",
+			"...6#####6......",
+			"...#.....##3....",
+			"...#.....#3#....",
+			"...#.....6##6...",
+			"...#....##..#...",
+			"...#....#+#.#...",
+			"...#....#.+.#...",
+			"...#....#...#...",
+			"...#....#...#...",
+			"...#..###...#...",
+			"...#.####...#...",
+			"...#.+##+...#...",
+			"...#........#...",
+			"...6########6...",
+			"................",
+		};
+
 		// A magnifying glass in the colors of the game, a closer look at the level played, with an outline, see
 		// EditorIcons::GetPixelColor()
 		const char* const IconDebug[16] = {
@@ -2013,6 +2133,12 @@ namespace Jazz2::Editor
 			case EditorIcon::CursorMove: return IconCursorMove;
 			case EditorIcon::Weapon: return IconWeapon;
 			case EditorIcon::Pencil: return IconPencil;
+			case EditorIcon::LevelFile: return IconLevelFile;
+			case EditorIcon::ScriptedLevelFile: return IconScriptedLevelFile;
+			case EditorIcon::BrokenFile: return IconBrokenFile;
+			case EditorIcon::TileSetFile: return IconTileSetFile;
+			case EditorIcon::MusicFile: return IconMusicFile;
+			case EditorIcon::TrueColorTileSetFile: return IconTrueColorTileSetFile;
 			default: return IconNone;
 		}
 	}

@@ -1125,6 +1125,14 @@ namespace Jazz2::UI
 		// Every actor updates, collides and draws every frame, so the count is what Logic and Visit mostly scale with
 		char value[16];
 		overlay.AddRow("Actors"_s, { value, formatInto(value, "{}", _levelHandler->_actors.size()) });
+
+#if defined(WITH_ANGELSCRIPT)
+		if (_levelHandler->_scripts != nullptr) {
+			asUINT gcObjects = 0;
+			_levelHandler->_scripts->GetEngine()->GetGCStatistics(&gcObjects);
+			overlay.AddRow("GC objects"_s, { value, formatInto(value, "{}", gcObjects) });
+		}
+#endif
 	}
 
 #if defined(NCINE_HAS_TOUCH_CONTROLS)

@@ -11,7 +11,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Environment
 {
 	Spring::Spring()
-		: _cooldown(0.0f)
+		: _cooldown(0.0f), _launchTime(-1.0f)
 	{
 	}
 
@@ -27,6 +27,7 @@ namespace Jazz2::Actors::Environment
 		}
 
 		_cooldown = (_delay > 0 ? _delay : 6.0f);
+		_launchTime = 0.0f;
 
 		SetTransition(_currentAnimation->State | (AnimState)0x200, false);
 		switch (_orientation) {
@@ -73,16 +74,7 @@ namespace Jazz2::Actors::Environment
 		UpdateStrength();
 
 		if (GetState(ActorState::ApplyGravitation)) {
-			OnUpdateHitbox();
-
-			// Apply instant gravitation
-			std::int32_t i = 10;
-			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
-				// Nothing to do...
-			}
-			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative)) {
-				// Nothing to do...
-			}
+			SettleOnGround();
 		}
 
 		if (_state == State::Frozen) {
@@ -120,6 +112,20 @@ namespace Jazz2::Actors::Environment
 
 		// Red starts at 1 in "Object/Spring"
 		SetAnimation((AnimState)(((_type + 1) << 10) | (orientationBit << 12)));
+	}
+
+	void Spring::SettleOnGround()
+	{
+		OnUpdateHitbox();
+
+		// Apply instant gravitation
+		std::int32_t i = 10;
+		while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
+			// Nothing to do...
+		}
+		while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative)) {
+			// Nothing to do...
+		}
 	}
 
 	void Spring::UpdateStrength()
@@ -191,6 +197,12 @@ namespace Jazz2::Actors::Environment
 		if (orientation != _orientation) {
 			_orientation = orientation;
 			ApplyOrientation();
+			// Turned to the floor, it falls on it as a spring placed there
+			bool onFloor = (orientation == Orientation::Bottom);
+			SetState(ActorState::ApplyGravitation, onFloor);
+			if (onFloor) {
+				SettleOnGround();
+			}
 		}
 		// The speed of its own color launches as the spring of the game does
 		if (speed == GetLegacyLaunchSpeed()) {
@@ -231,6 +243,9 @@ namespace Jazz2::Actors::Environment
 
 		if (_cooldown > 0.0f) {
 			_cooldown -= timeMult;
+		}
+		if (_launchTime >= 0.0f) {
+			_launchTime += timeMult;
 		}
 		if (_state == State::Heated) {
 			// Cannot be directly in `Spring::OnHandleCollision()` due to bug in `BaseSprite::updateRenderCommand()`,

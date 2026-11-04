@@ -18,6 +18,13 @@
 #	include <CommonWindows.h>
 #endif
 
+// Files are read on a thread of their own where the platform has threads, as BackgroundJob does
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#	define UI_FILE_DIALOG_THREADED
+#	include "../../../nCine/Threading/Thread.h"
+#	include "../../../nCine/Threading/ThreadSync.h"
+#endif
+
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
@@ -351,56 +358,338 @@ namespace Jazz2::Editor
 		return dialogPtr;
 	}
 
-	class UiFileDialog::FilePreview : public UiElement
+	class UiFileDialog::FileDetails : public UiElement
 	{
 	public:
-		std::unique_ptr<Texture> Image;
+		static constexpr float ColumnWidth = 220.0f;
+		static constexpr float MinLabelWidth = 0.4f;
+		static constexpr float LabelGap = 24.0f;
+		static constexpr float RowGap = 4.0f;
+		static constexpr float ImageMaxHeight = UiTheme::RowHeight * 9.0f;
 
-		FilePreview()
+		std::unique_ptr<Texture> Image;
+		SmallVector<UiFileInfo::Row, 8> Rows;
+
+		FileDetails()
 		{
 			Visible = false;
 		}
 
 		Vector2f Measure(const UiContext& context, Vector2f available) override
 		{
-			if (Image == nullptr) {
+			if (Image == nullptr && Rows.empty()) {
 				return Vector2f::Zero;
 			}
-			// Twice as large as it's stored, as large as the list is high at most, and its border
-			Vector2i size = Image->GetSize();
-			float scale = std::min(2.0f, context.Px(UiTheme::RowHeight * 6.0f) / float(size.Y));
-			float border = GetBorder(context.Px(1.0f));
-			return Vector2f(std::floor(size.X * scale) + border * 2.0f, std::floor(size.Y * scale) + border * 2.0f);
+			float width = context.Px(ColumnWidth);
+			float height = GetImageSize(width, context.Px(ImageMaxHeight), context.Px(1.0f)).Y;
+			if (!Rows.empty()) {
+				std::int32_t lineCount = 0;
+				SmallVector<StringView, 4> lines;
+				for (const UiFileInfo::Row& row : Rows) {
+					if (row.Label.empty()) {
+						WrapText(row.Value, width, [&context](StringView text) { return context.MeasureText(text); }, lines);
+						lineCount += std::max<std::int32_t>(std::int32_t(lines.size()), 1);
+					} else {
+						lineCount++;
+					}
+				}
+				height += (height > 0.0f ? context.Px(UiTheme::Spacing * 2.0f) : 0.0f) + lineCount * context.Px(UiTheme::RowHeight) +
+					float(Rows.size() - 1) * context.Px(RowGap);
+			}
+			return Vector2f(width, height);
 		}
 
 		void Draw(UiPainter& painter) override
 		{
-			if (Image == nullptr) {
-				return;
-			}
-			// The row may stretch it, it's kept as it's shaped, at the top - as the level select of the game shows it, in a
-			// thin black border with its corners rounded off by leaving them out
+			// At the top - as the level select of the game shows it, in a thin black border with its corners rounded off by
+			// leaving them out
 			float border = GetBorder(painter.Px(1.0f));
-			Vector2i size = Image->GetSize();
-			float scale = std::min((Bounds.W - border * 2.0f) / float(size.X), (Bounds.H - border * 2.0f) / float(size.Y));
-			Rectf rect(std::round(Bounds.X) + border, std::round(Bounds.Y) + border, std::floor(size.X * scale), std::floor(size.Y * scale));
-			if (rect.W <= 0.0f || rect.H <= 0.0f) {
-				return;
+			Vector2f imageSize = GetImageSize(Bounds.W, painter.Px(ImageMaxHeight), painter.Px(1.0f));
+			float y = std::round(Bounds.Y);
+			if (Image != nullptr && imageSize.X > border * 2.0f && imageSize.Y > border * 2.0f) {
+				Rectf rect(std::round(Bounds.X) + border, y + border, imageSize.X - border * 2.0f, imageSize.Y - border * 2.0f);
+				const Colorf borderColor(0.0f, 0.0f, 0.0f, 1.0f);
+				painter.FillRect(Rectf(rect.X, rect.Y - border, rect.W, border), borderColor, UiLayer::Content);
+				painter.FillRect(Rectf(rect.X, rect.Y + rect.H, rect.W, border), borderColor, UiLayer::Content);
+				painter.FillRect(Rectf(rect.X - border, rect.Y, border, rect.H), borderColor, UiLayer::Content);
+				painter.FillRect(Rectf(rect.X + rect.W, rect.Y, border, rect.H), borderColor, UiLayer::Content);
+				painter.Image(*Image, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Content);
+				y += imageSize.Y + painter.Px(UiTheme::Spacing * 2.0f);
 			}
-			const Colorf borderColor(0.0f, 0.0f, 0.0f, 1.0f);
-			painter.FillRect(Rectf(rect.X, rect.Y - border, rect.W, border), borderColor, UiLayer::Content);
-			painter.FillRect(Rectf(rect.X, rect.Y + rect.H, rect.W, border), borderColor, UiLayer::Content);
-			painter.FillRect(Rectf(rect.X - border, rect.Y, border, rect.H), borderColor, UiLayer::Content);
-			painter.FillRect(Rectf(rect.X + rect.W, rect.Y, border, rect.H), borderColor, UiLayer::Content);
-			painter.Image(*Image, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Content);
+
+			float rowHeight = painter.Px(UiTheme::RowHeight);
+			float rowGap = painter.Px(RowGap);
+			// The values start together after the widest label, at 40-45% of the column
+			float labelWidth = 0.0f;
+			for (const UiFileInfo::Row& row : Rows) {
+				if (!row.Label.empty()) {
+					labelWidth = std::max(labelWidth, painter.MeasureText(row.Label));
+				}
+			}
+			labelWidth = std::min(std::max(labelWidth + painter.Px(LabelGap), std::floor(Bounds.W * MinLabelWidth)), std::floor(Bounds.W * 0.45f));
+			_rowsTop = y;
+			_rowBottoms.clear();
+			SmallVector<StringView, 4> lines;
+			for (const UiFileInfo::Row& row : Rows) {
+				if (!_rowBottoms.empty()) {
+					y += rowGap;
+				}
+				if (row.Label.empty()) {
+					// A message without a label on as many lines as it needs
+					WrapText(row.Value, Bounds.W, [&painter](StringView text) { return painter.MeasureText(text); }, lines);
+					for (StringView line : lines) {
+						painter.TextInRect(line, Rectf(Bounds.X, y, Bounds.W, rowHeight), row.Color);
+						y += rowHeight;
+					}
+					if (lines.empty()) {
+						y += rowHeight;
+					}
+				} else {
+					painter.TextInRect(row.Label, Rectf(Bounds.X, y, labelWidth, rowHeight), UiTheme::TextDim);
+					// Cut off where the column ends, the whole value is in the tooltip
+					Rectf rect(Bounds.X + labelWidth, y, Bounds.W - labelWidth, rowHeight);
+					painter.PushClip(rect);
+					painter.TextInRect(row.Value, rect, row.Color);
+					painter.PopClip();
+					y += rowHeight;
+				}
+				_rowBottoms.push_back(y);
+			}
+		}
+
+		bool AcceptsPointer() const override
+		{
+			return true;
+		}
+
+		StringView GetTooltip(Vector2f pos) const override
+		{
+			// The whole value of the row pointed at, it may be cut off
+			if (pos.Y < _rowsTop) {
+				return {};
+			}
+			for (std::size_t i = 0; i < _rowBottoms.size() && i < Rows.size(); i++) {
+				if (pos.Y < _rowBottoms[i]) {
+					return Rows[i].Value;
+				}
+			}
+			return {};
 		}
 
 	private:
+		// Where the rows were drawn, to find the one pointed at
+		float _rowsTop = 0.0f;
+		SmallVector<float, 8> _rowBottoms;
+
 		static float GetBorder(float pixel)
 		{
 			return std::max(1.0f, std::round(pixel));
 		}
+
+		// Breaks a text at spaces into lines of a width, a word wider than it gets a line of its own
+		template<class Measurer>
+		static void WrapText(StringView text, float width, const Measurer& measure, SmallVectorImpl<StringView>& lines)
+		{
+			lines.clear();
+			StringView rest = text.trimmed();
+			while (!rest.empty()) {
+				std::size_t end = rest.size();
+				if (measure(rest) > width) {
+					std::size_t fits = 0, firstBreak = rest.size();
+					for (std::size_t i = 1; i < rest.size(); i++) {
+						if (rest[i] != ' ') {
+							continue;
+						}
+						firstBreak = std::min(firstBreak, i);
+						if (measure(rest.prefix(i)) > width) {
+							break;
+						}
+						fits = i;
+					}
+					end = (fits > 0 ? fits : firstBreak);
+				}
+				lines.push_back(rest.prefix(end));
+				rest = rest.exceptPrefix(end).trimmedPrefix();
+			}
+		}
+
+		// Twice as large as it's stored at most, as wide as the column and not higher than the given height, with its border
+		Vector2f GetImageSize(float width, float maxHeight, float pixel) const
+		{
+			if (Image == nullptr) {
+				return Vector2f::Zero;
+			}
+			float border = GetBorder(pixel);
+			Vector2i size = Image->GetSize();
+			float scale = std::min({ 2.0f, (width - border * 2.0f) / float(size.X), maxHeight / float(size.Y) });
+			if (scale <= 0.0f) {
+				return Vector2f::Zero;
+			}
+			return Vector2f(std::floor(size.X * scale) + border * 2.0f, std::floor(size.Y * scale) + border * 2.0f);
+		}
 	};
+
+	/**
+		Reads files for a file dialog on a thread of its own, see @ref UiFileDialog::Asynchronous
+
+		The kinds of the rows are read newest first, so the rows seen now come before those scrolled past, and the
+		details of the selected file before all of them, only the last one asked for. Results are taken by the user
+		interface each frame, those of an older listing or selection are dropped there. The thread is started with
+		the first request and stopped and joined when the worker goes, which waits for the file being read.
+	*/
+	class UiFileDialog::Worker
+	{
+#if defined(UI_FILE_DIALOG_THREADED)
+	public:
+		struct Request
+		{
+			bool IsInfo = false;
+			std::uint32_t Generation = 0;
+			std::int32_t Index = -1;
+			String Path;
+		};
+
+		struct Result
+		{
+			Request From;
+			bool Success = false;
+			UiFileKind Kind;
+			UiFileInfo Info;
+		};
+
+		Worker(Function<bool(StringView, UiFileKind&)>& kindFunc, Function<bool(StringView, UiFileInfo&)>& infoFunc)
+			: _kindFunc(kindFunc), _infoFunc(infoFunc)
+		{
+		}
+
+		~Worker()
+		{
+			_lock.Lock();
+			_stop = true;
+			_kinds.clear();
+			_hasInfo = false;
+			_lock.Unlock();
+			_wake.Broadcast();
+			if (_started) {
+				_thread.Join();
+			}
+		}
+
+		Worker(const Worker&) = delete;
+		Worker& operator=(const Worker&) = delete;
+
+		bool Post(Request&& request)
+		{
+			if (_broken) {
+				return false;
+			}
+			_lock.Lock();
+			if (request.IsInfo) {
+				_info = Death::move(request);
+				_hasInfo = true;
+			} else {
+				_kinds.push_back(Death::move(request));
+			}
+			bool start = !_started;
+			_started = true;
+			_lock.Unlock();
+			if (start) {
+				_thread = nCine::Thread(Run, this);
+				if (!_thread) {
+					LOGE("Thread of the file dialog couldn't be started");
+					_lock.Lock();
+					_started = false;
+					_kinds.clear();
+					_hasInfo = false;
+					_lock.Unlock();
+					// The files are read right away from now on
+					_broken = true;
+					return false;
+				}
+			}
+			_wake.Signal();
+			return true;
+		}
+
+		void DropKinds()
+		{
+			_lock.Lock();
+			_kinds.clear();
+			_lock.Unlock();
+		}
+
+		void TakeResults(SmallVectorImpl<Result>& results)
+		{
+			_lock.Lock();
+			for (Result& result : _results) {
+				results.push_back(Death::move(result));
+			}
+			_results.clear();
+			_lock.Unlock();
+		}
+
+	private:
+		Function<bool(StringView, UiFileKind&)>& _kindFunc;
+		Function<bool(StringView, UiFileInfo&)>& _infoFunc;
+		nCine::Thread _thread;
+		nCine::Mutex _lock;
+		nCine::CondVariable _wake;
+		SmallVector<Request, 0> _kinds;
+		Request _info;
+		bool _hasInfo = false;
+		bool _stop = false;
+		bool _started = false;
+		bool _broken = false;
+		SmallVector<Result, 0> _results;
+
+		static void Run(void* arg)
+		{
+			nCine::Thread::SetCurrentName("FileDialog");
+			static_cast<Worker*>(arg)->Loop();
+		}
+
+		void Loop()
+		{
+			while (true) {
+				_lock.Lock();
+				while (!_stop && !_hasInfo && _kinds.empty()) {
+					_wake.Wait(_lock);
+				}
+				if (_stop) {
+					_lock.Unlock();
+					return;
+				}
+				Result result;
+				if (_hasInfo) {
+					result.From = Death::move(_info);
+					_hasInfo = false;
+				} else {
+					result.From = Death::move(_kinds.back());
+					_kinds.pop_back();
+				}
+				_lock.Unlock();
+
+				if (result.From.IsInfo) {
+					result.Success = (_infoFunc && _infoFunc(result.From.Path, result.Info));
+				} else {
+					result.Success = (_kindFunc && _kindFunc(result.From.Path, result.Kind));
+				}
+
+				_lock.Lock();
+				if (!_stop) {
+					_results.push_back(Death::move(result));
+				}
+				_lock.Unlock();
+			}
+		}
+#endif
+	};
+
+	UiFileDialog::~UiFileDialog()
+	{
+		// Waits for the file being read, the functions it calls are members of the dialog
+		_worker = nullptr;
+	}
 
 	UiFileDialog::UiFileDialog(StringView title, UiFileDialogMode mode, SmallVectorImpl<UiFileRoot>&& roots, StringView extension,
 		StringView initialDirectory, StringView initialName, Function<void(StringView)>&& onChosen, bool anywhere)
@@ -481,14 +770,17 @@ namespace Jazz2::Editor
 		_list = listRow->Add<UiScrollView>();
 		_list->Flex = 1.0f;
 		_list->Height = 150.0f;
-		_preview = listRow->Add<FilePreview>();
+		_preview = listRow->Add<FileDetails>();
 		// Only the rows that are seen are drawn, a directory may have thousands of files
 		_rows = _list->SetContent<UiVirtualList>();
 		// A little taller than other lists, it's what the dialog is for, and easier to hit
 		_rows->RowHeight = UiTheme::RowHeight + 4.0f;
 		_rows->CountFunc = [this]() { return std::int32_t(_entries.size()); };
 		_rows->DrawRow = [this](UiPainter& painter, std::int32_t index, const Rectf& rect, bool selected, float hover) {
-			const Entry& entry = _entries[index];
+			Entry& entry = _entries[index];
+			if (!entry.IsDirectory && !entry.KindKnown && !entry.KindPending) {
+				ResolveKind(index);
+			}
 			if (selected) {
 				painter.RoundRect(rect, UiTheme::Selection);
 			} else if (hover > 0.0f) {
@@ -498,12 +790,23 @@ namespace Jazz2::Editor
 			}
 			float iconSize = painter.Px(UiTheme::IconSize);
 			float padding = painter.Px(UiTheme::Padding);
-			painter.Icon(entry.IsDirectory ? (entry.Name == ".."_s ? EditorIcon::Up : EditorIcon::Folder) : EditorIcon::File,
-				Rectf(rect.X + padding, rect.Y, iconSize, rect.H), entry.IsDirectory ? UiTheme::Accent : UiTheme::IconColor);
+			if (entry.IsDirectory) {
+				painter.Icon(entry.Name == ".."_s ? EditorIcon::Up : EditorIcon::Folder, Rectf(rect.X + padding, rect.Y, iconSize, rect.H), UiTheme::Accent);
+			} else {
+				painter.Icon(entry.Kind.Icon, Rectf(rect.X + padding, rect.Y, iconSize, rect.H), entry.Kind.Color);
+			}
 			float x = rect.X + padding * 2.0f + iconSize;
 			painter.TextInRect(entry.Name, Rectf(x, rect.Y, rect.X + rect.W - x, rect.H), UiTheme::Text);
+			if (entry.Special >= 0 && entry.Special < std::int32_t(_special.size())) {
+				// The value itself after the name
+				x += painter.MeasureText(entry.Name) + padding * 2.0f;
+				painter.TextInRect(_special[entry.Special].Value, Rectf(x, rect.Y, std::max(rect.X + rect.W - x, 0.0f), rect.H), UiTheme::TextDim);
+			}
 		};
 		_rows->RowText = [this](std::int32_t index) { return _entries[index].Name; };
+		_rows->RowTooltip = [this](std::int32_t index) {
+			return (index >= 0 && index < std::int32_t(_entries.size()) ? _entries[index].Kind.Description : String());
+		};
 		_rows->OnSelectionChanged = [this](std::int32_t index) { Choose(index, false); };
 		_rows->OnActivated = [this](std::int32_t index) { Choose(index, true); };
 
@@ -586,7 +889,8 @@ namespace Jazz2::Editor
 		// Wide enough for long file names and the buttons of the places, as much of the window as is sensible, and the
 		// list as high, it's what the dialog is for
 		float scale = std::max(context.Scale, 0.5f);
-		float widthUnits = std::clamp(available.X * 0.6f / scale, 360.0f, 640.0f);
+		// Wider with the details of the files next to the list
+		float widthUnits = (InfoFunc ? std::clamp(available.X * 0.65f / scale, 460.0f, 720.0f) : std::clamp(available.X * 0.6f / scale, 360.0f, 640.0f));
 		float listUnits = std::clamp(available.Y * 0.45f / scale, 150.0f, 360.0f);
 		_list->Height = std::floor(listUnits);
 		Vector2f size = UiDialog::Measure(context, available);
@@ -599,6 +903,24 @@ namespace Jazz2::Editor
 		_directory = directory;
 		_entries.clear();
 		_selected = -1;
+		// What the worker reads for the rows listed before is dropped
+		_listGeneration++;
+#if defined(UI_FILE_DIALOG_THREADED)
+		if (_worker != nullptr) {
+			_worker->DropKinds();
+		}
+#endif
+
+		if (_mode == UiFileDialogMode::Open) {
+			for (std::size_t i = 0; i < _special.size(); i++) {
+				Entry entry{_special[i].Label, false};
+				entry.KindKnown = true;
+				entry.Kind.Icon = _special[i].Icon;
+				entry.Kind.Description = _special[i].Description;
+				entry.Special = std::int32_t(i);
+				_entries.push_back(Death::move(entry));
+			}
+		}
 
 		const UiFileRoot* root = (_rootIndex < std::int32_t(_roots.size()) ? &_roots[_rootIndex] : nullptr);
 		// Up only as far as the root, not above it
@@ -721,13 +1043,119 @@ namespace Jazz2::Editor
 			_pendingTyped = {};
 			NavigateToTyped(typed);
 		}
+		// A few files a frame are looked into without the worker, a folder may have thousands of them
+		_kindBudget = 6;
+		TakeWorkerResults();
 		UpdatePreview(timeMult);
 		UiDialog::Update(timeMult);
 	}
 
+	void UiFileDialog::ResolveKind(std::int32_t index)
+	{
+		Entry& entry = _entries[index];
+		if (!KindFunc) {
+			entry.KindKnown = true;
+			return;
+		}
+		String path = fs::CombinePath(_directory, entry.Name);
+#if defined(UI_FILE_DIALOG_THREADED)
+		if (Asynchronous) {
+			if (_worker == nullptr) {
+				_worker = std::make_unique<Worker>(KindFunc, InfoFunc);
+			}
+			Worker::Request request;
+			request.Generation = _listGeneration;
+			request.Index = index;
+			request.Path = path;
+			if (_worker->Post(Death::move(request))) {
+				// Dim until it's known
+				entry.KindPending = true;
+				entry.Kind = UiFileKind();
+				entry.Kind.Color = UiTheme::IconDisabled;
+				return;
+			}
+		}
+#endif
+		if (_kindBudget <= 0) {
+			return;
+		}
+		_kindBudget--;
+		entry.KindKnown = true;
+		if (!KindFunc(path, entry.Kind)) {
+			entry.Kind = UiFileKind();
+		}
+	}
+
+	void UiFileDialog::TakeWorkerResults()
+	{
+#if defined(UI_FILE_DIALOG_THREADED)
+		if (_worker == nullptr) {
+			return;
+		}
+		SmallVector<Worker::Result, 8> results;
+		_worker->TakeResults(results);
+		for (Worker::Result& result : results) {
+			if (result.From.IsInfo) {
+				// Only the last one asked for, while its file is still selected
+				if (result.From.Generation != _infoGeneration || result.From.Path != _previewPath) {
+					continue;
+				}
+				if (result.Success) {
+					ShowInfo(Death::move(result.Info));
+				} else {
+					_preview->Visible = false;
+				}
+			} else if (result.From.Generation == _listGeneration && result.From.Index >= 0 && result.From.Index < std::int32_t(_entries.size())) {
+				Entry& entry = _entries[result.From.Index];
+				entry.KindPending = false;
+				entry.KindKnown = true;
+				entry.Kind = (result.Success ? Death::move(result.Kind) : UiFileKind());
+			}
+		}
+#endif
+	}
+
+	void UiFileDialog::SetSpecialEntries(SmallVectorImpl<UiFileSpecialEntry>&& entries, StringView selectedValue, Function<void(StringView)>&& onChosen)
+	{
+		String selectedName;
+		if (_selected >= 0 && _selected < std::int32_t(_entries.size()) && _entries[_selected].Special < 0 && !_entries[_selected].IsDirectory) {
+			selectedName = _entries[_selected].Name;
+		}
+		_special = Death::move(entries);
+		_onSpecialChosen = Death::move(onChosen);
+		// Listed again with them at the top, the selection stays
+		String directory = _directory;
+		Navigate(directory);
+		for (std::int32_t i = 0; i < std::int32_t(_entries.size()); i++) {
+			const Entry& entry = _entries[i];
+			if (entry.Special >= 0 ? (_special[entry.Special].Value == selectedValue && !selectedValue.empty())
+				: (!entry.IsDirectory && !selectedName.empty() && entry.Name == selectedName)) {
+				_selected = i;
+				_rows->SetSelected(i, true);
+				break;
+			}
+		}
+	}
+
 	void UiFileDialog::UpdatePreview(float timeMult)
 	{
-		if (!PreviewFunc) {
+		if (_selected >= 0 && _selected < std::int32_t(_entries.size()) && _entries[_selected].Special >= 0) {
+			// Shown at once, there's nothing to read
+			const UiFileSpecialEntry& special = _special[_entries[_selected].Special];
+			String key = "\x01"_s + special.Value;
+			if (key != _previewPath) {
+				_previewPath = Death::move(key);
+				_previewDelay = 0.0f;
+				_preview->Image = nullptr;
+				_preview->Rows.clear();
+				_preview->Rows.push_back({ {}, special.Description });
+				// TRANSLATORS: Label next to a special value selected in a file dialog, such as the end of the episode instead of the next level
+				_preview->Rows.push_back({ _x("editor", "Value"), special.Value, UiTheme::TextAccent });
+				_preview->Visible = true;
+			}
+			return;
+		}
+		if (!InfoFunc) {
 			return;
 		}
 		String path;
@@ -737,7 +1165,9 @@ namespace Jazz2::Editor
 		if (path != _previewPath) {
 			// Read once the selection rests, not for every file the keys go through; the one shown stays until then
 			_previewPath = Death::move(path);
-			_previewDelay = 8.0f;
+			_previewDelay = (Asynchronous ? 4.0f : 8.0f);
+			// What is read for the file before isn't shown anymore
+			_infoGeneration++;
 			if (_previewPath.empty()) {
 				_preview->Visible = false;
 			}
@@ -747,17 +1177,47 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		SmallVector<std::uint8_t, 0> rgba;
-		Vector2i size;
-		if (!PreviewFunc(_previewPath, rgba, size)) {
+#if defined(UI_FILE_DIALOG_THREADED)
+		if (Asynchronous) {
+			if (_worker == nullptr) {
+				_worker = std::make_unique<Worker>(KindFunc, InfoFunc);
+			}
+			Worker::Request request;
+			request.IsInfo = true;
+			request.Generation = _infoGeneration;
+			request.Index = _selected;
+			request.Path = _previewPath;
+			if (_worker->Post(Death::move(request))) {
+				return;
+			}
+		}
+#endif
+		UiFileInfo info;
+		if (!InfoFunc(_previewPath, info)) {
 			_preview->Visible = false;
 			return;
 		}
-		if (_preview->Image == nullptr || _preview->Image->GetSize() != size) {
-			_preview->Image = std::make_unique<Texture>("FilePreview", Texture::Format::RGBA8, size.X, size.Y);
+		ShowInfo(Death::move(info));
+	}
+
+	void UiFileDialog::ShowInfo(UiFileInfo&& info)
+	{
+		if (info.HasKind && _selected >= 0 && _selected < std::int32_t(_entries.size())) {
+			_entries[_selected].Kind = Death::move(info.Kind);
+			_entries[_selected].KindKnown = true;
+			_entries[_selected].KindPending = false;
 		}
-		_preview->Image->LoadFromTexels(rgba.data(), 0, 0, size.X, size.Y);
-		_preview->Visible = true;
+		Vector2i size = info.ImageSize;
+		if (info.Rgba.size() >= std::size_t(size.X) * std::size_t(size.Y) * 4 && size.X > 0 && size.Y > 0) {
+			if (_preview->Image == nullptr || _preview->Image->GetSize() != size) {
+				_preview->Image = std::make_unique<Texture>("FilePreview", Texture::Format::RGBA8, size.X, size.Y);
+			}
+			_preview->Image->LoadFromTexels(info.Rgba.data(), 0, 0, size.X, size.Y);
+		} else {
+			_preview->Image = nullptr;
+		}
+		_preview->Rows = Death::move(info.Rows);
+		_preview->Visible = (_preview->Image != nullptr || !_preview->Rows.empty());
 	}
 
 	void UiFileDialog::NavigateToTyped(StringView text)
@@ -857,13 +1317,33 @@ namespace Jazz2::Editor
 			if (_selected < 0 || _selected >= std::int32_t(_entries.size()) || _entries[_selected].IsDirectory) {
 				return;
 			}
+			std::int32_t special = _entries[_selected].Special;
+			if (special >= 0 && special < std::int32_t(_special.size())) {
+				String value = _special[special].Value;
+				Function<void(StringView)> onSpecialChosen = Death::move(_onSpecialChosen);
+				Close();
+				if (onSpecialChosen) {
+					onSpecialChosen(value);
+				}
+				return;
+			}
 			path = fs::CombinePath(_directory, _entries[_selected].Name);
 		}
 
+		if (ConfirmFunc) {
+			ConfirmFunc(path, [this, path]() { Choose(path); });
+		} else {
+			Choose(path);
+		}
+	}
+
+	void UiFileDialog::Choose(StringView path)
+	{
+		String chosenPath = path;
 		Function<void(StringView)> onChosen = Death::move(_onChosen);
 		Close();
 		if (onChosen) {
-			onChosen(path);
+			onChosen(chosenPath);
 		}
 	}
 

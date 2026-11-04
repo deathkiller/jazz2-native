@@ -35,7 +35,7 @@ namespace Jazz2::Scripting
 			 *
 			 * For text in a built-in size, a non-zero value together with a non-zero @ref yAmp makes the letters spin
 			 * in place.
-			 * @partialsupport The magnitude is currently not taken into account.
+			 * @partialsupport The magnitude is currently not taken into account, and text drawn with a font animation ignores it.
 			 */
 			std::int32_t xAmp;
 			/**
@@ -43,7 +43,7 @@ namespace Jazz2::Scripting
 			 *
 			 * For text in a built-in size, a non-zero value makes the letters bounce up and down (or spin, if @ref xAmp
 			 * is non-zero too).
-			 * @partialsupport The magnitude is currently not taken into account.
+			 * @partialsupport The magnitude is currently not taken into account, and text drawn with a font animation ignores it.
 			 */
 			std::int32_t yAmp;
 			/**
@@ -62,6 +62,7 @@ namespace Jazz2::Scripting
 			 *
 			 * With @ref STRING::DISPLAYSIGN it is drawn as a regular character, otherwise it starts a new line. Applies to
 			 * text drawn with a font animation.
+			 * @partialsupport Ignored for text in a built-in size, and @ref STRING::HIDESIGN starts a new line too.
 			 */
 			ch_ at = ch_HIDE;
 			/**
@@ -69,6 +70,7 @@ namespace Jazz2::Scripting
 			 *
 			 * With @ref STRING::DISPLAYSIGN it is drawn as a regular character, otherwise it is left out. Applies to text
 			 * drawn with a font animation.
+			 * @partialsupport Ignored for text in a built-in size, and @ref STRING::SPECIALSIGN works as @ref STRING::HIDESIGN.
 			 */
 			ch_ caret = ch_HIDE;
 			/**
@@ -76,6 +78,7 @@ namespace Jazz2::Scripting
 			 *
 			 * With @ref STRING::DISPLAYSIGN it is drawn as a regular character, otherwise it is left out. Applies to text
 			 * drawn with a font animation.
+			 * @partialsupport Ignored for text in a built-in size, and @ref STRING::SPECIALSIGN works as @ref STRING::HIDESIGN.
 			 */
 			ch_ hash = ch_HIDE;
 			/**
@@ -90,6 +93,7 @@ namespace Jazz2::Scripting
 			 *
 			 * With @ref STRING::DISPLAYSIGN it is drawn as a regular character, otherwise it is left out. Applies to text
 			 * drawn with a font animation.
+			 * @partialsupport Ignored for text in a built-in size, and @ref STRING::SPECIALSIGN works as @ref STRING::HIDESIGN.
 			 */
 			ch_ pipe = ch_HIDE;
 			/**
@@ -97,6 +101,7 @@ namespace Jazz2::Scripting
 			 *
 			 * With @ref STRING::DISPLAYSIGN it is drawn as a regular character, otherwise it is left out. Applies to text
 			 * drawn with a font animation.
+			 * @partialsupport Ignored for text in a built-in size, and @ref STRING::SPECIALSIGN works as @ref STRING::HIDESIGN.
 			 */
 			ch_ section = ch_HIDE;
 			/**
@@ -104,6 +109,7 @@ namespace Jazz2::Scripting
 			 *
 			 * With @ref STRING::DISPLAYSIGN it is drawn as a regular character, otherwise it is left out. Applies to text
 			 * drawn with a font animation.
+			 * @partialsupport Ignored for text in a built-in size, and @ref STRING::SPECIALSIGN works as @ref STRING::HIDESIGN.
 			 */
 			ch_ tilde = ch_HIDE;
 			/**
@@ -255,6 +261,8 @@ namespace Jazz2::Scripting
 			 * text at the given position, `BOUNCE` and @ref SPIN move the letters, and `PALSHIFT` shifts the font colors
 			 * by `param` palette entries. The x coordinate can also select alignment, see @ref jjTEXTAPPEARANCE::align.
 			 * Characters whose frames a script replaced in the font animations are drawn with those frames.
+			 * @partialsupport `PALSHIFT` shifts only the replaced frames and `^` drawn as ∞, not the letters of the game
+			 * font. `DARK` is a fixed color, and `BOUNCE` and `SPIN` move the letters as the menus of the game do.
 			 */
 			void DrawTextBasicSize(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, std::uint32_t mode, std::uint8_t param);
 			/**
@@ -262,7 +270,10 @@ namespace Jazz2::Scripting
 			 *
 			 * Uses `spacing`, `align` and @ref newline of the appearance, and lets the letters bounce or spin when its
 			 * amplitudes are non-zero.
-			 * @partialsupport The text is drawn in `spriteMode` with `param2`; `param1` is currently ignored.
+			 * @partialsupport The text is drawn in `spriteMode` with `param2`; `param1` is ignored. Of the appearance, the
+			 * other treatments of characters are ignored and the amplitudes only count as zero or non-zero. Only
+			 * translucent, single color, single hue, shadow, brightness and the `BLEND_*` modes (as opacity) change the
+			 * letters of the game font, `PALSHIFT` doesn't.
 			 */
 			void DrawTextExtSize(std::int32_t xPixel, std::int32_t yPixel, const String& text, std::uint32_t size, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t mode, std::uint8_t param);
 			/**
@@ -284,9 +295,9 @@ namespace Jazz2::Scripting
 			 *
 			 * Frame 0 of the animation is the space and each further frame the next character code, as in the built-in
 			 * font animations. A space is 7 pixels wide, other characters as wide as their frames. `@` and line feeds
-			 * start a new line, and `|`, `#`, `~`, `^` and `§` are left out.
-			 *
-			 * @note `mode` is currently passed on as a sprite mode, so only @ref STRING::NORMAL draws as expected.
+			 * start a new line, and `|`, `#`, `~`, `^` and `§` are left out. `mode` is a @ref STRING::Mode: @ref RIGHTALIGN
+			 * ends the text at the given position and `PALSHIFT` shifts the colors by `param` palette entries.
+			 * @partialsupport @ref DARK draws the letters translucent, and the letters of `BOUNCE` and @ref SPIN don't move.
 			 */
 			void drawString(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, std::uint32_t mode, std::uint8_t param);
 
@@ -294,9 +305,9 @@ namespace Jazz2::Scripting
 			 * @brief Draws text using the frames of an animation as the font, with a custom appearance
 			 *
 			 * Uses `spacing` and `align` of the appearance, and draws the special characters it sets to
-			 * @ref STRING::DISPLAYSIGN as regular characters. The letters don't move. The text is drawn in `spriteMode`
-			 * with `param2`; `param1` is currently ignored.
-			 * @partialsupport
+			 * @ref STRING::DISPLAYSIGN as regular characters. The text is drawn in `spriteMode` with `param2`.
+			 * @partialsupport `param1`, @ref jjTEXTAPPEARANCE::xAmp, @ref jjTEXTAPPEARANCE::yAmp, `monospace` and
+			 * `skipInitialHash` are ignored, @ref STRING::SPECIALSIGN works as @ref STRING::HIDESIGN.
 			 */
 			void drawStringEx(std::int32_t xPixel, std::int32_t yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, std::uint8_t param1, std::uint32_t spriteMode, std::uint8_t param2);
 

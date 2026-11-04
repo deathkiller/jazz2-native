@@ -2,6 +2,7 @@
 
 #if defined(WITH_EDITOR)
 
+#include "FilePickers.h"
 #include "FxTileGenerator.h"
 #include "ProgressDialog.h"
 #include "ShellCommon.h"
@@ -96,69 +97,6 @@ namespace Jazz2::Editor
 			if (cleared > 0) {
 				session.ShowMessage(_fnx("editor", "{} tile that isn't in the tile sets anymore was cleared", "{} tiles that aren't in the tile sets anymore were cleared", cleared, cleared));
 			}
-		}
-
-		// Places tile sets are looked for, the first one that has a tile set is the one the game uses
-		void GetTileSetRoots(SmallVectorImpl<UiFileRoot>& roots)
-		{
-			auto& resolver = ContentResolver::Get();
-			StringView userContent = resolver.GetUserContentPath();
-			if (!userContent.empty()) {
-				// TRANSLATORS: Name of a place tile sets are picked from, the folder of the content added by the user
-				roots.push_back({ _x("editor", "User content"), fs::CombinePath(userContent, "Tilesets"_s), false });
-			}
-			// TRANSLATORS: Name of a place tile sets are picked from, the folder of the content of the game
-			roots.push_back({ _x("editor", "Content"), fs::CombinePath(resolver.GetContentPath(), "Tilesets"_s), false });
-			// TRANSLATORS: Name of a place tile sets are picked from, the folder of the files converted from the original game
-			roots.push_back({ _x("editor", "Cache"), fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s), false });
-			for (std::size_t i = 0; i < roots.size(); ) {
-				if (!fs::DirectoryExists(roots[i].Path)) {
-					roots.erase(roots.begin() + i);
-				} else {
-					i++;
-				}
-			}
-		}
-
-		// Lets a tile set be picked, the name it's referred to by is passed on
-		void PickTileSet(IEditorContext& session, StringView title, StringView current, Function<void(StringView)>&& onPicked)
-		{
-			UiSurface* surface = session.GetSurface();
-			if (surface == nullptr) {
-				return;
-			}
-			SmallVector<UiFileRoot, 4> roots;
-			GetTileSetRoots(roots);
-			SmallVector<String, 4> rootPaths;
-			for (const UiFileRoot& root : roots) {
-				rootPaths.push_back(root.Path);
-			}
-			String directory, fileName;
-			String currentPath = ContentTileSetLibrary::FindTileSetFile(current);
-			if (!current.empty() && !currentPath.empty()) {
-				directory = fs::GetDirectoryName(currentPath);
-				fileName = fs::GetFileName(currentPath);
-			}
-			UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".j2t"_s, directory, fileName,
-				[rootPaths = Death::move(rootPaths), onPicked = Death::move(onPicked)](StringView path) mutable {
-					// Tile sets are referred to by their path relative to "Tilesets", without the extension
-					StringView name = fs::GetFileName(path);
-					for (const String& rootPath : rootPaths) {
-						// As the file system compares paths, the dialog may give the path in another case
-						if (IsPathInside(path, rootPath) && path.size() > rootPath.size()) {
-							name = path.exceptPrefix(rootPath.size());
-							while (!name.empty() && (name[0] == '/' || name[0] == '\\')) {
-								name = name.exceptPrefix(1);
-							}
-							break;
-						}
-					}
-					String result = fs::FromNativeSeparators(name);
-					if (StringUtils::lowercase(result).hasSuffix(".j2t"_s)) {
-						result = result.exceptSuffix(std::size_t(4));
-					}
-					onPicked(result);
-				}, false);
 		}
 
 		// Returns whether a tile set has any true color tile, which isn't remapped to the palette
@@ -715,7 +653,7 @@ namespace Jazz2::Editor
 			row->Add<DefaultTileSetRow>(session, selection)->Flex = 1.0f;
 			auto* pick = row->Add<UiButton>(StringView(), EditorIcon::Folder, [s]() {
 				// TRANSLATORS: Title of the file picker that chooses the default tile set of the level
-				PickTileSet(*s, _x("editor", "Default Tile Set"), s->GetDocument().Properties.DefaultTileSet, [s](StringView name) {
+				ShowTileSetPicker(*s, _x("editor", "Default Tile Set"), s->GetDocument().Properties.DefaultTileSet, [s](StringView name) {
 					SetDefaultTileSet(*s, name);
 				});
 			});
@@ -739,7 +677,7 @@ namespace Jazz2::Editor
 					return;
 				}
 				// TRANSLATORS: Title of the file picker and the question that add an extra tile set to the level
-				PickTileSet(*s, _x("editor", "Add Tile Set"), {}, [s, selection](StringView name) {
+				ShowTileSetPicker(*s, _x("editor", "Add Tile Set"), {}, [s, selection](StringView name) {
 					String nameCopy = name;
 					auto add = [s, selection, nameCopy](std::int32_t matchColors) {
 						if (AddExtraTileSet(*s, nameCopy, matchColors)) {
@@ -847,7 +785,7 @@ namespace Jazz2::Editor
 				}
 				std::int32_t index = selection->Index;
 				// TRANSLATORS: Title of the file picker that chooses another tile set in place of the selected extra tile set
-				PickTileSet(*s, _x("editor", "Replace Tile Set"), tileSet->Name, [s, index](StringView name) {
+				ShowTileSetPicker(*s, _x("editor", "Replace Tile Set"), tileSet->Name, [s, index](StringView name) {
 					LevelDocument& document = s->GetDocument();
 					std::int32_t tileCount = s->GetTileSetLibrary().GetTileCount(name);
 					if (tileCount <= 0 || index >= std::int32_t(document.ExtraTileSets.size())) {

@@ -210,6 +210,17 @@ namespace Jazz2::Scripting
 			}
 
 		public:
+			/** @brief Returns the behavior a bullet of a weapon runs as (`aBULLET`, `aPLAYERBULLET2` or `aPLAYERBULLET6`), any other behavior as it is */
+			static std::uint32_t ResolveWeaponBulletBehavior(std::uint32_t behaviorId)
+			{
+				if (behaviorId < aPLAYERBULLET1 || behaviorId > aPLAYERBULLETC3) {
+					return behaviorId;
+				}
+				// A bouncer bounces (snowballs), a flame of the toaster burns out, the others fly as a bullet does
+				return (behaviorId == aPLAYERBULLET6 || behaviorId == aPLAYERBULLETP6 ? aPLAYERBULLET6 :
+					(behaviorId == aPLAYERBULLET2 || behaviorId == aPLAYERBULLETP2 ? aPLAYERBULLET2 : aBULLET));
+			}
+
 			/** @brief Runs the behavior of the object for one tick of the scripts, the one it's made in isn't told to deactivate */
 			void RunTick(bool firstTick = false)
 			{
@@ -267,9 +278,9 @@ namespace Jazz2::Scripting
 						// A bullet of a weapon flies as a bullet, a flame of the toaster as one - also in the tick it's made in, so a
 						// script that gives it another behavior next has it flying already (as measured in JJ2+, a dragon
 						// breathes fire by speeds of its own)
-						behaviorId = (_obj->eventID == aPLAYERBULLET6 || _obj->eventID == aPLAYERBULLETP6 ? aPLAYERBULLET6 :
-							(_obj->eventID == aPLAYERBULLET2 || _obj->eventID == aPLAYERBULLETP2 ? aPLAYERBULLET2 : aBULLET));
+						behaviorId = _obj->eventID;
 					}
+					behaviorId = ResolveWeaponBulletBehavior(behaviorId);
 					switch (behaviorId) {
 						case BehaviorPepperBullet:
 						case aBULLET:
@@ -314,6 +325,11 @@ namespace Jazz2::Scripting
 							Remove();
 							break;
 						default: {
+							if (_obj->state == sKILL) {
+								// A behavior of the game that only moves the object is done with it once it's killed
+								Remove();
+								return;
+							}
 							// In units of the 60 frames in a second, as a tick is
 							constexpr float TickTimeMult = 60.0f / 70.0f;
 							_obj->xSpeed += _obj->xAcc * TickTimeMult;
@@ -775,15 +791,24 @@ namespace Jazz2::Scripting
 			{
 				constexpr std::uint32_t HandlingEnemy = 0;
 				constexpr std::uint32_t HandlingEnemyBullet = 2;
+				constexpr std::uint32_t HandlingHurt = 7;
 
 				jjOBJ& obj = *_obj;
 				bool isEnemy = (obj._playerHandlingSet && obj._playerHandling == HandlingEnemy);
-				if ((obj._playerHandling != HandlingEnemyBullet && !isEnemy) || obj.state == sEXPLODE || obj.state == sKILL ||
+				bool hurts = (obj._playerHandlingSet && obj._playerHandling == HandlingHurt);
+				if ((obj._playerHandling != HandlingEnemyBullet && !isEnemy && !hurts) || obj.state == sEXPLODE || obj.state == sKILL ||
 					GetState(Actors::ActorState::IsDestroyed)) {
 					return;
 				}
 				for (Actors::Player* player : _levelScripts->GetPlayers()) {
 					if (player->GetHealth() <= 0 || player->IsFrozen() || !DoesObjectTouch(_levelScripts, obj, player->AABBInner)) {
+						continue;
+					}
+					if (hurts) {
+						// Hurts every player who touches it, an attack doesn't hurt it
+						if (!player->IsInvulnerable()) {
+							player->TakeDamage(1, 4.0f * (player->GetPos().X > obj.xPos ? 1.0f : -1.0f));
+						}
 						continue;
 					}
 					if (isEnemy) {
@@ -815,6 +840,7 @@ namespace Jazz2::Scripting
 				constexpr std::uint32_t HandlingPlayerBullet = 1;
 				constexpr std::uint32_t HandlingSpecial = 8;
 				constexpr std::uint32_t HandlingDestroyBullet = 2;
+				constexpr std::uint32_t HandlingDetectBullet = 3;
 				constexpr std::uint32_t CreatorPlayer = 0x8000;
 
 				jjOBJ& obj = *_obj;
@@ -853,6 +879,15 @@ namespace Jazz2::Scripting
 							continue;
 						}
 						if (target->_bulletHandling == HandlingDestroyBullet) {
+							obj.state = sEXPLODE;
+							break;
+						}
+						if (target->_bulletHandling == HandlingDetectBullet) {
+							// The behavior is told of the bullet, which stops without harming the object
+							if (target->_scriptedCollisions) {
+								jjPLAYER* p = (owner != nullptr ? _levelScripts->GetPlayerBackingStore(owner) : nullptr);
+								ScriptObjectHost::CallObjectHit(_levelScripts, *target, &obj, p, strength);
+							}
 							obj.state = sEXPLODE;
 							break;
 						}
@@ -1075,15 +1110,6 @@ namespace Jazz2::Scripting
 			std::shared_ptr<Actors::ActorBase> actor = _actor.lock();
 			return (actor != nullptr && !actor->GetState(Actors::ActorState::IsDestroyed));
 		}
-		std::uint32_t jjOBJ::get_lightType() const {
-			noop();
-			return 0;
-		}
-		std::uint32_t jjOBJ::set_lightType(std::uint32_t value) const {
-			noop();
-			return 0;
-		}
-
 		jjOBJ* jjOBJ::objectHit(jjOBJ* target, std::uint32_t playerHandling) {
 			// This is a bullet that hits the target as the game would have it, even where they aren't - the game handles the
 			// collision of the two objects of the game, the script sees the energy the target has then
@@ -1254,19 +1280,10 @@ namespace Jazz2::Scripting
 				}
 				// BEHAVIOR::CRATE of JJ2+
 				constexpr std::uint32_t BehaviorCrate = aCOUNT + 9;
-				switch (behavior) {
+				switch (ScriptLegacyObject::ResolveWeaponBulletBehavior(behavior)) {
 					case aUNKNOWN: _wrapper->Remove(); break;
 					case ScriptLegacyObject::BehaviorPepperBullet: _wrapper->RunBullet(draw, true); break;
-					case aBULLET:
-					// The other bullets of the weapons go as a bullet does, a bouncer bounces (snowballs)
-					case aPLAYERBULLET1:
-					case aPLAYERBULLET3:
-					case aPLAYERBULLET4:
-					case aPLAYERBULLET5:
-					case aPLAYERBULLET9:
-					case aPLAYERBULLETC1:
-					case aPLAYERBULLETC2:
-					case aPLAYERBULLETC3: _wrapper->RunBullet(draw); break;
+					case aBULLET: _wrapper->RunBullet(draw); break;
 					case aPLAYERBULLET2: _wrapper->RunBouncerBullet(draw); break;
 					case ScriptLegacyObject::BehaviorBilsyBullet: _wrapper->RunBilsyBullet(draw); break;
 					case aPLAYERBULLET6: _wrapper->RunToasterBullet(draw); break;
@@ -1364,8 +1381,12 @@ namespace Jazz2::Scripting
 		void jjOBJ::jjKillObject(std::int32_t objectID) {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			auto* actor = owner->GetScriptObject(objectID);
-			if (actor != nullptr) {
-				actor->DecreaseHealth(INT32_MAX);	// kill (triggers perish)
+			if (auto* wrapper = runtime_cast<ScriptLegacyObject>(actor)) {
+				// Its behavior runs the death code in its next tick, as in JJ2+
+				wrapper->GetObject()->state = sKILL;
+			} else if (actor != nullptr) {
+				// An object of the game dies its own way, its host tells the behavior of the script (see ScriptObjectHost::OnPerish())
+				actor->DecreaseHealth(INT32_MAX);
 			}
 		}
 
@@ -1646,7 +1667,19 @@ namespace Jazz2::Scripting
 			ySpeed = 0.0f;
 		}
 		bool jjOBJ::ricochet() {
-			// A shot of the game turns around as off a wall, an object of a script isn't one
+			if (_wrapper != nullptr) {
+				// A bullet a script controls turns around as off an object that causes ricochets (see ScriptLegacyObject::HitEnemies())
+				constexpr std::uint32_t HandlingPlayerBullet = 1;
+				constexpr std::uint32_t HandlingEnemyBullet = 2;
+				if (_playerHandling != HandlingPlayerBullet && _playerHandling != HandlingEnemyBullet) {
+					return false;
+				}
+				xSpeed = -xSpeed;
+				xAcc = -xAcc;
+				direction = std::int8_t(-direction);
+				return true;
+			}
+			// A shot of the game turns around as off a wall
 			std::shared_ptr<Actors::ActorBase> actor = _actor.lock();
 			auto* shot = runtime_cast<Actors::Weapons::ShotBase>(actor.get());
 			if (shot == nullptr) {
@@ -1759,7 +1792,16 @@ namespace Jazz2::Scripting
 			image->Release();
 		}
 		void jjOBJ::grantPickup(jjPLAYER* player, std::int32_t frequency) {
-			noop();
+			// One time in `frequency` a pickup falls out of the object, chosen as the enemies of the game choose theirs (see
+			// Actors::Enemies::EnemyBase::TryGenerateRandomDrop())
+			if (frequency > 1 && Random().Next(0, std::uint32_t(frequency)) != 0) {
+				return;
+			}
+			constexpr std::uint32_t CreatorObject = 0;
+			constexpr std::uint32_t BehaviorDefault = UINT32_MAX;
+			std::uint32_t pick = Random().Next(0, 10);
+			std::uint8_t eventID = (pick < 2 ? std::uint8_t(aENERGYUP) : (pick < 4 ? std::uint8_t(aGUNFASTFIRE) : std::uint8_t(aREDGEM)));
+			jjAddObject(eventID, xPos, yPos, std::uint16_t(objectID), CreatorObject, BehaviorDefault);
 		}
 
 		std::int32_t jjOBJ::findNearestPlayerEx(std::int32_t maxDistance, std::int32_t& foundDistance) const {
@@ -1991,8 +2033,9 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::UpdateParticles(std::int32_t currentTick)
 	{
 		// As measured in JJ2+ - most fall by their speeds, the colored ones change their color now and then and are gone at the
-		// last one, a string speeds up and is gone above the view, a leaf drifts down by itself and lies on the ground a while
+		// last one, a string speeds up and is gone above the view, a leaf drifts by its speed with a jiggle and lies on the ground a while
 		constexpr std::int32_t LeafFrames = 17;
+		constexpr std::int32_t LeafFrameSteps = 32;
 		Tiles::TileMap* tileMap = _levelHandler->TileMap();
 		auto isMasked = [tileMap](float x, float y) {
 			Tiles::TileCollisionParams params = { Tiles::TileDestructType::SuspendTiles, true };
@@ -2006,6 +2049,30 @@ namespace Jazz2::Scripting
 		if (_particlesTick >= currentTick) {
 			// Drawn already in this tick, the level keeps what was drawn until the next one
 			return;
+		}
+		// Leaves and the weather are gone just outside of the views, a bit further for bigger sprites, as measured in JJ2+
+		SmallVector<Rectf, 4> views;
+		for (const auto& viewport : _levelHandler->_assignedViewports) {
+			if (auto* player = runtime_cast<Actors::Player>(viewport->GetTargetActor())) {
+				views.push_back(_levelHandler->GetCameraView(player));
+			}
+		}
+		auto isOutsideViews = [&views](const Legacy::jjPARTICLE& p, float left, float top, float right, float bottom) {
+			return !views.empty() && std::none_of(views.begin(), views.end(), [&](const Rectf& view) {
+				return (p.xPos >= view.X - left && p.yPos >= view.Y - top && p.xPos <= view.X + view.W + right && p.yPos <= view.Y + view.H + bottom);
+			});
+		};
+		auto leafJiggle = []() {
+			return float(Random().Next(0, 32)) / 8.0f;
+		};
+		std::int32_t rainFrameCount = 0;
+		{
+			auto& tables = GetAnimationTables();
+			std::uint32_t firstAnim = tables.GetFirstAnim(Legacy::AnimationTables::GetSetID(Legacy::mCOMMON, versionTSF));
+			std::uint32_t frameCount, firstFrame;
+			if (firstAnim != 0 && tables.GetAnimationFrames(firstAnim + 2, frameCount, firstFrame)) {
+				rainFrameCount = std::int32_t(frameCount);
+			}
 		}
 		while (_particlesTick < currentTick) {
 			_particlesTick++;
@@ -2079,16 +2146,56 @@ namespace Jazz2::Scripting
 					case Legacy::particleSNOW: {
 						std::uint16_t frameBase;
 						std::memcpy(&frameBase, &data[3], sizeof(frameBase));
+						if (!p._weather) {
+							p.xPos += p.xSpeed;
+							p.yPos += p.ySpeed;
+							remove = (frameBase == 0 || data[2] == 0 || --data[2] == 0);
+							break;
+						}
+						// A flake of the weather melts on the ground for 70 ticks (`countup`), a frame further every 8 ticks
+						if (data[1] > 0) {
+							data[1]++;
+							if ((data[1] & 7) == 0 && data[0] < 7) {
+								data[0]++;
+							}
+							remove = (frameBase == 0 || data[1] > 70);
+							break;
+						}
 						p.xPos += p.xSpeed;
 						p.yPos += p.ySpeed;
-						remove = (frameBase == 0 || data[2] == 0 || --data[2] == 0);
+						// It speeds up downwards and sways to the sides by a phase of its own
+						p.ySpeed += Random().FastFloat(0.0f, 1.0f / 64.0f);
+						p._scale += fTwoPi / 360.0f;
+						p.xSpeed += Random().FastFloat(0.0f, 1.0f / 64.0f) * sinf(p._scale);
+						if (data[2] > 0) {
+							data[2]--;
+						}
+						if (isMasked(p.xPos, p.yPos)) {
+							p.xSpeed = p.ySpeed = 0.0f;
+							data[1] = 1;
+						}
+						remove = (frameBase == 0 || isOutsideViews(p, 4.0f, 8.0f, 6.0f, 2.0f));
 						break;
 					}
 					case Legacy::particleRAIN:
-						p.xPos += p.xSpeed;
-						p.yPos += p.ySpeed;
-						data[0] = std::uint8_t(Random().Next(0, 8));
-						remove = (p._age >= 122);
+						if (!p._weather) {
+							p.xPos += p.xSpeed;
+							p.yPos += p.ySpeed;
+							data[0] = std::uint8_t(Random().Next(0, 8));
+							remove = (p._age >= 122);
+							break;
+						}
+						// A drop of the weather falls with frames 1-7, then splashes where it hit the ground with frames 8-17
+						if (data[0] >= 8) {
+							remove = (++data[0] > 17);
+						} else if (isMasked(p.xPos, p.yPos)) {
+							data[0] = 8;
+						} else {
+							p.xPos += p.xSpeed;
+							p.yPos += p.ySpeed;
+							data[0] = std::uint8_t(data[0] % 7 + 1);
+							remove = isOutsideViews(p, 8.0f, 64.0f, 8.0f, 12.0f);
+						}
 						break;
 					case Legacy::particleFLOWER:
 						// Stops for good in a wall, still turning and shrinking
@@ -2104,25 +2211,42 @@ namespace Jazz2::Scripting
 						p.yPos += p.ySpeed;
 						p.ySpeed += 1.0f / 64.0f;
 						data[2] = std::uint8_t(data[2] + data[3]);
+						if (data[0] != std::uint8_t(p._scale)) {
+							// The size a script gave it
+							p._scale = float(data[0]);
+						}
 						p._scale *= 0.97f;
 						data[0] = std::uint8_t(p._scale);
 						remove = (p._scale < 2.0f);
 						break;
 					case Legacy::particleLEAF: {
-						// `countup` counts the ticks it lies on the ground
+						// `countup` counts the ticks it lies on the ground, where it still settles down by the jiggle
 						if (data[1] > 0) {
+							float y = p.yPos + leafJiggle();
+							if (data[2] != 0 || !isMasked(p.xPos, y)) {
+								p.yPos = y;
+							}
 							remove = (++data[1] >= 140);
-							break;
+						} else {
+							// Its speed and a jiggle of 0-3.875 px to the left and down, it stays where it would hit a wall
+							float x = p.xPos + p.xSpeed - leafJiggle();
+							float y = p.yPos + p.ySpeed + leafJiggle();
+							if (data[2] == 0 && isMasked(x, y)) {
+								data[1] = 1;
+								data[0] = std::uint8_t(Random().Next(0, 3));
+							} else {
+								p.xPos = x;
+								p.yPos = y;
+								if (Random().Next(0, 2) != 0) {
+									data[0] = std::uint8_t((data[0] + 1) % LeafFrameSteps);
+								}
+							}
 						}
-						p.xPos -= Random().FastFloat(0.0f, 2.3f);
-						p.yPos += Random().FastFloat(-0.25f, 2.05f);
-						if ((p._age & 1) == 0) {
-							data[0] = std::uint8_t((data[0] + 1) % (LeafFrames * 2));
+						if (!views.empty()) {
+							remove |= isOutsideViews(p, 14.0f, 12.0f, 16.0f, 12.0f);
+						} else {
+							remove |= (p._age >= 320);
 						}
-						if (data[2] == 0 && isMasked(p.xPos, p.yPos + 1.0f)) {
-							data[1] = 1;
-						}
-						remove = (p._age >= 320);
 						break;
 					}
 					default:
@@ -2130,8 +2254,8 @@ namespace Jazz2::Scripting
 						break;
 				}
 
-				// Weather of the outdoors only is gone where it falls into a wall
-				if (p._weather && snowingOutdoors && p.particleType != Legacy::particleLEAF && isMasked(p.xPos, p.yPos)) {
+				// Flowers of the outdoors only are gone where they fall into a wall, the rest of the weather lands there
+				if (p._weather && snowingOutdoors && p.particleType == Legacy::particleFLOWER && isMasked(p.xPos, p.yPos)) {
 					remove = true;
 				}
 				if (remove) {
@@ -2220,6 +2344,10 @@ namespace Jazz2::Scripting
 							? p._snowFrameBase : frameBase);
 						frame = (base != 0 ? base + data[0] : 0);
 					} else {
+						// A splash past the frames of the drops isn't drawn
+						if (p._weather && data[0] >= 8 && std::int32_t(data[0]) >= rainFrameCount) {
+							break;
+						}
 						std::memcpy(&frameBase, &data[1], sizeof(frameBase));
 						frame = (frameBase != 0 ? frameBase + data[0] : 0);
 					}
@@ -2238,15 +2366,25 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::SpawnWeatherParticles()
 	{
-		// JJ2+ makes the weather of particles scripts see (`jjParticles`), which they steer or remove - as many in a tick
-		// as the intensity, across the view of each player, rain from above it
+		// JJ2+ makes the weather of particles scripts see (`jjParticles`), which they steer or remove - one more try in a tick
+		// than the intensity, around the view of each player, as measured
 		if (!snowing || snowingType < 0 || snowingType > 3 || PreferencesCache::Particles == ParticleQuality::Off ||
 			ContentResolver::Get().IsHeadless()) {
 			return;
 		}
 		static constexpr std::uint32_t Types[] = { Legacy::particleSNOW, Legacy::particleFLOWER, Legacy::particleRAIN, Legacy::particleLEAF };
 		std::uint32_t type = Types[snowingType];
-		float rate = float(std::max<std::int32_t>(snowingIntensity, 1)) * (PreferencesCache::Particles == ParticleQuality::Low ? 0.5f : 1.0f);
+		std::int32_t perTick = std::max<std::int32_t>(snowingIntensity + 1, 1);
+		float rate = float(perTick) * (PreferencesCache::Particles == ParticleQuality::Low ? 0.5f : 1.0f);
+
+		// The wind, the same for all new leaves and drops, a sine of 4096 ticks - leaves from -12 to 4 px per tick, rain from -4 to 4
+		float windSine = sinf(float((_particlesTick >> 2) & 1023) * fTwoPi / 1024.0f);
+		Tiles::TileMap* tileMap = _levelHandler->TileMap();
+		auto isMasked = [tileMap](float x, float y) {
+			Tiles::TileCollisionParams params = { Tiles::TileDestructType::SuspendTiles, true };
+			float px = std::floor(x), py = std::floor(y);
+			return (tileMap != nullptr && !tileMap->IsTileEmpty(AABBf(px, py, px, py), params));
+		};
 
 		// The frames of a snowflake, the first animation of the set of snow
 		std::uint32_t snowFirstFrame = 0, snowFrameCount = 0;
@@ -2287,30 +2425,39 @@ namespace Jazz2::Scripting
 				}
 			}
 			for (std::int32_t i = 0; i < count; i++) {
+				float spawnX = 0.0f, spawnY = 0.0f;
+				if (type != Legacy::particleFLOWER) {
+					// Up to 32 px around the view, but not in its bottom 32 px; rain never in a wall, the outdoors only weather neither
+					spawnX = view.X + Random().FastFloat(-32.0f, view.W + 32.0f);
+					spawnY = view.Y + Random().FastFloat(-32.0f, view.H - 32.0f);
+					if ((snowingOutdoors || type == Legacy::particleRAIN) && isMasked(spawnX, spawnY)) {
+						continue;
+					}
+				}
 				Legacy::jjPARTICLE* p = AddScriptParticle(type);
 				if (p == nullptr) {
 					return;
 				}
 				p->_weather = true;
-				// Further to the right too, snow drifts left
-				p->xPos = view.X + Random().FastFloat(-view.W * 0.1f, view.W * 1.25f);
+				p->xPos = spawnX;
+				p->yPos = spawnY;
 				switch (type) {
 					case Legacy::particleSNOW: {
-						p->yPos = view.Y + Random().FastFloat(-16.0f, view.H);
-						p->xSpeed = Random().FastFloat(-1.0f, -0.25f);
-						p->ySpeed = Random().FastFloat(0.75f, 2.0f);
+						// The sway of a flake has a phase of its own, `countdown` is only set outside of the outdoors only weather
+						p->xSpeed = Random().FastFloat(-0.76f, -0.49f);
+						p->ySpeed = Random().FastFloat(0.0f, 2.0f);
+						p->_scale = Random().FastFloat(0.0f, fTwoPi);
 						std::uint8_t* data = p->GENERIC.raw;
 						data[0] = std::uint8_t(Random().Next(0, std::int32_t(std::min<std::uint32_t>(snowFrameCount, 255))));
+						data[2] = (snowingOutdoors ? 0 : 35);
 						std::uint16_t frameBase = std::uint16_t(std::min<std::uint32_t>(snowFirstFrame, UINT16_MAX));
 						std::memcpy(&data[3], &frameBase, sizeof(frameBase));
 						p->_snowFrameBase = snowFirstFrame;
 						break;
 					}
 					case Legacy::particleRAIN:
-						p->xPos -= view.W * 0.25f;
-						p->yPos = view.Y + Random().FastFloat(-view.H * 0.5f, view.H * 0.5f);
-						p->xSpeed = Random().FastFloat(1.5f, 2.0f);
-						p->ySpeed = Random().FastFloat(6.0f, 7.0f);
+						p->xSpeed = 4.0f * windSine;
+						p->ySpeed = 7.5f;
 						break;
 					case Legacy::particleFLOWER: {
 						// Anywhere in the view, white, 64 ticks long (now and then 128), drifting left and down
@@ -2326,9 +2473,15 @@ namespace Jazz2::Scripting
 						data[4] = (Random().Next(0, 5) == 0 ? 7 : 6);
 						break;
 					}
-					default:
-						p->yPos = view.Y + Random().FastFloat(-32.0f, view.H * 0.5f);
+					case Legacy::particleLEAF: {
+						// Falls through everything unless it's outdoors only, then it lands
+						p->xSpeed = -4.0f + 8.0f * windSine;
+						p->ySpeed = 1.25f;
+						std::uint8_t* data = p->GENERIC.raw;
+						data[0] = std::uint8_t(Random().Next(0, 32));
+						data[2] = (snowingOutdoors ? 0 : 1);
 						break;
+					}
 				}
 			}
 		}
@@ -2566,8 +2719,8 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief How much of the lighting players are allowed to turn off
 		 *
-		 * Defaults to @ref LIGHT::OPTIONAL.
-		 * @partialsupport The value is stored, but the game currently doesn't act on it.
+		 * Defaults to @ref LIGHT::OPTIONAL. The value is only stored, the game has no option to turn lighting off, so
+		 * it's always shown as with @ref LIGHT::COMPLETE.
 		 */
 		engine->RegisterGlobalProperty("LIGHT::Enforce jjEnforceLighting", &enforceAmbientLighting);
 
@@ -2610,21 +2763,21 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Bullet", "HURTBYBULLET", 0);	///< The object loses energy, the bullet is usually destroyed
 		engine->RegisterEnumValue("Bullet", "IGNOREBULLET", 1);	///< Neither the object nor the bullet is affected
 		engine->RegisterEnumValue("Bullet", "DESTROYBULLET", 2);	///< The bullet is destroyed, the object is unaffected
-		engine->RegisterEnumValue("Bullet", "DETECTBULLET", 3);	///< The object is unaffected, the bullet is usually destroyed
+		engine->RegisterEnumValue("Bullet", "DETECTBULLET", 3);	///< The object is unaffected, the bullet is destroyed and @ref onObjectHit() is called if @ref jjOBJ::scriptedCollisions is set
 		/** @brief How an object reacts when a player touches it, see @ref jjOBJ::playerHandling */
 		engine->RegisterEnum("Player");
 		engine->RegisterEnumValue("Player", "ENEMY", 0);	///< Hurts the player, unless the player attacks it
 		engine->RegisterEnumValue("Player", "PLAYERBULLET", 1);	///< Bullet fired by a player, hits enemies and other players
 		engine->RegisterEnumValue("Player", "ENEMYBULLET", 2);	///< Bullet fired by an enemy, hurts players
-		engine->RegisterEnumValue("Player", "PARTICLE", 3);	///< No special handling
+		engine->RegisterEnumValue("Player", "PARTICLE", 3);	///< Players and bullets go through it
 		engine->RegisterEnumValue("Player", "EXPLOSION", 4);	///< No special handling
 		engine->RegisterEnumValue("Player", "PICKUP", 5);	///< Collected by the player, with an effect depending on @ref jjOBJ::eventID
-		engine->RegisterEnumValue("Player", "DELAYEDPICKUP", 6);	///< No special handling
-		engine->RegisterEnumValue("Player", "HURT", 7);	///< No special handling
+		engine->RegisterEnumValue("Player", "DELAYEDPICKUP", 6);	///< A pickup collected only after a short delay @partialsupport Collected at once, as @ref PICKUP.
+		engine->RegisterEnumValue("Player", "HURT", 7);	///< Hurts the player, attacks don't harm it
 		engine->RegisterEnumValue("Player", "SPECIAL", 8);	///< Reacts to players and bullets in a way specific to the object
-		engine->RegisterEnumValue("Player", "DYING", 9);	///< No special handling
-		engine->RegisterEnumValue("Player", "SPECIALDONE", 10);	///< No special handling
-		engine->RegisterEnumValue("Player", "SELFCOLLISION", 11);	///< No special handling
+		engine->RegisterEnumValue("Player", "DYING", 9);	///< No special handling @partialsupport What this value means in JJ2+ isn't implemented.
+		engine->RegisterEnumValue("Player", "SPECIALDONE", 10);	///< No special handling @partialsupport What this value means in JJ2+ isn't implemented.
+		engine->RegisterEnumValue("Player", "SELFCOLLISION", 11);	///< No special handling @partialsupport What this value means in JJ2+ isn't implemented.
 		engine->SetDefaultNamespace("");
 
 		// TODO
@@ -2668,7 +2821,6 @@ namespace Jazz2::Scripting
 		 * @brief Tells whether the player is currently able to harm objects
 		 *
 		 * The value has the same meaning as the `force` argument of @ref jjPLAYER::objectHit().
-		 * @partialsupport Currently always returns 0.
 		 */
 		engine->RegisterObjectMethod("jjPLAYER", "int getObjectHitForce(const jjOBJ@ target = null) const", asMETHOD(jjPLAYER, getObjectHitForce), asCALL_THISCALL);
 		/**
@@ -2683,7 +2835,8 @@ namespace Jazz2::Scripting
 		 *                        special move, -101 for running fast into a frozen object
 		 * @param playerHandling  Currently ignored
 		 * @return Whether the object was affected
-		 * @partialsupport The `playerHandling` parameter is currently ignored.
+		 * @partialsupport The `playerHandling` parameter is ignored, and so is `force` unless the object has
+		 * @ref jjOBJ::scriptedCollisions set, the game decides by what the player does then.
 		 */
 		engine->RegisterObjectMethod("jjPLAYER", "bool objectHit(jjOBJ@ target, int force, HANDLING::Player playerHandling)", asMETHOD(jjPLAYER, objectHit), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjOBJ", "jjOBJ@ objectHit(jjOBJ@ target, HANDLING::Player playerHandling)", asMETHOD(jjOBJ, objectHit), asCALL_THISCALL);
@@ -2878,7 +3031,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Type", "FLOWER", particleFLOWER);	///< Spinning flower that shrinks over time, see @ref jjPARTICLE::flower
 		engine->RegisterEnumValue("Type", "LEAF", particleLEAF);	///< Drifting leaf that settles on the ground, see @ref jjPARTICLE::leaf
 		engine->RegisterEnumValue("Type", "STAR", particleSTAR);	///< Shrinking star, as shown during a sugar rush, see @ref jjPARTICLE::star
-		engine->RegisterEnumValue("Type", "TILE", particleTILE);	///< Falling piece of a tile, currently disappears right away without being shown
+		engine->RegisterEnumValue("Type", "TILE", particleTILE);	///< Falling piece of a tile @partialsupport It disappears right away without being shown.
 		engine->SetDefaultNamespace("");
 	}
 
@@ -2933,7 +3086,7 @@ namespace Jazz2::Scripting
 		 * @deprecated Not meant to be used by its name, it's reached through @ref jjPARTICLE::smoke.
 		 */
 		engine->RegisterObjectType("jjPARTICLESMOKE", 9, asOBJ_VALUE | asOBJ_POD);  // Private/deprecated
-		/** @brief Decreases slowly over the particle's life, defaults to 71 */
+		/** @brief Decreases slowly over the particle's life, defaults to 71 @partialsupport The particle disappears after 102 ticks whatever its value is. */
 		engine->RegisterObjectProperty("jjPARTICLESMOKE", "uint8 countdown", 0);
 		/**
 		 * @brief Properties of a @ref PARTICLE::SMOKE particle
@@ -2993,9 +3146,9 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectType("jjPARTICLESNOW", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
 		/** @brief Frame shown, counted from `frameBase`, defaults to 0 */
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 frame", 0);
-		/** @brief Currently not used by the game @partialsupport */
+		/** @brief Ticks a snowflake of the weather melts on the ground, it disappears after 70 */
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 countup", 1);
-		/** @brief Remaining lifetime in ticks, defaults to 35 */
+		/** @brief Remaining lifetime in ticks, defaults to 35, the weather only counts it down */
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint8 countdown", 2);
 		/** @brief First frame of the snowflake animation, an index of @ref jjAnimFrames, the particle disappears while it is 0 */
 		engine->RegisterObjectProperty("jjPARTICLESNOW", "uint16 frameBase", 3);
@@ -3003,7 +3156,8 @@ namespace Jazz2::Scripting
 		 * @brief Properties of a @ref PARTICLE::SNOW particle
 		 *
 		 * A snowflake sprite that moves by its speed until its lifetime runs out. A new snow particle has no
-		 * `frameBase`, so set one or it disappears right away.
+		 * `frameBase`, so set one or it disappears right away. A snowflake of the weather sways and speeds up
+		 * downwards instead, melts where it hits the ground and disappears outside of the view.
 		 */
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLESNOW snow", asOFFSET(jjPARTICLE, GENERIC));
 		/**
@@ -3011,14 +3165,15 @@ namespace Jazz2::Scripting
 		 * @deprecated Not meant to be used by its name, it's reached through @ref jjPARTICLE::rain.
 		 */
 		engine->RegisterObjectType("jjPARTICLERAIN", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
-		/** @brief Frame shown, counted from `frameBase`, picked at random every tick */
+		/** @brief Frame shown, counted from `frameBase`, picked at random every tick - the weather falls with 1-7 and splashes with 8-17 */
 		engine->RegisterObjectProperty("jjPARTICLERAIN", "uint8 frame", 0);
 		/** @brief First frame of the raindrop animation, an index of @ref jjAnimFrames */
 		engine->RegisterObjectProperty("jjPARTICLERAIN", "uint16 frameBase", 1);
 		/**
 		 * @brief Properties of a @ref PARTICLE::RAIN particle
 		 *
-		 * A raindrop sprite that falls by its speed, 6 pixels per tick by default, and disappears after a while.
+		 * A raindrop sprite that falls by its speed, 6 pixels per tick by default, and disappears after a while. A drop
+		 * of the weather splashes where it hits the ground instead and disappears outside of the view.
 		 */
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLERAIN rain", asOFFSET(jjPARTICLE, GENERIC));
 		/**
@@ -3026,7 +3181,7 @@ namespace Jazz2::Scripting
 		 * @deprecated Not meant to be used by its name, it's reached through @ref jjPARTICLE::leaf.
 		 */
 		engine->RegisterObjectType("jjPARTICLELEAF", 9, asOBJ_VALUE | asOBJ_POD); // Private/deprecated
-		/** @brief Animation step of the drifting leaf, two steps per frame shown */
+		/** @brief Animation step of the drifting leaf (0-31), two steps per frame shown */
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint8 frame", 0);
 		/** @brief 0 while the leaf drifts, then counts the ticks it lies on the ground until it disappears at 140 */
 		engine->RegisterObjectProperty("jjPARTICLELEAF", "uint8 countup", 1);
@@ -3039,8 +3194,8 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Properties of a @ref PARTICLE::LEAF particle
 		 *
-		 * A leaf sprite that drifts down and to the left with some random jiggle, ignoring its speed, then lies on the
-		 * ground for a while.
+		 * A leaf sprite that drifts by its speed with a random jiggle down and to the left, then lies on the ground for
+		 * a while. It disappears outside of the view.
 		 */
 		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLELEAF leaf", asOFFSET(jjPARTICLE, GENERIC));
 		/**
@@ -3073,9 +3228,9 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 size", 0);
 		/** @brief Palette color, defaults to 40 */
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 color", 1);
-		/** @brief Current rotation, 256 is a full turn */
+		/** @brief Current rotation, 256 is a full turn @partialsupport The star is drawn as a square that doesn't turn. */
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 angle", 2);
-		/** @brief Change of `angle` every tick, defaults to 0 */
+		/** @brief Change of `angle` every tick, defaults to 0 @partialsupport The star is drawn as a square that doesn't turn. */
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "int8 angularSpeed", 3);
 		/** @brief 0 for a filled star, 1 for an outline, currently not used by the game @partialsupport */
 		engine->RegisterObjectProperty("jjPARTICLESTAR", "uint8 frame", 4);

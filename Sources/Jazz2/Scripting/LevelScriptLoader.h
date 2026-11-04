@@ -490,6 +490,10 @@ namespace Jazz2::Scripting
 		void OnLevelUpdate(float timeMult);
 		/** @brief Returns the number of the current tick of the scripts of JJ2+, 70 of them in a second (`jjGameTicks`) */
 		std::int32_t GetGameTick() const;
+		/** @brief Returns the difficulty of the next level (`jjDifficultyNext`), or @p current if it's not a valid one */
+		GameDifficulty GetNextLevelDifficulty(GameDifficulty current) const;
+		/** @brief Changes the speed or the auto speed of a layer on one axis, keeping it in place in the view of the first player */
+		void SetLayerSpeedSeamlessly(Legacy::jjLAYER& layer, bool vertical, float newSpeed, bool newSpeedIsAnAutoSpeed);
 		/** @brief Called when a level callback is triggered */
 		void OnLevelCallback(Actors::ActorBase* initiator, std::uint8_t* eventParams);
 		/** @brief Called when a part of viewport or HUD is drawn */
@@ -841,7 +845,6 @@ namespace Jazz2::Scripting
 		// The option of the Plus menu of JJ2+ to show the hearts of the health that's missing, which this game doesn't have
 		bool jjShowMaxHealth = false;
 		std::uint32_t jjScriptModuleID = 0;
-		std::uint32_t gameTicksSpentWhileActive = 0;
 		std::int32_t renderFrame = 0;
 
 		bool versionTSF = true;
@@ -878,11 +881,6 @@ namespace Jazz2::Scripting
 
 		std::uint8_t ChatKey = 0;
 
-		bool soundEnabled = false;
-		bool soundFXActive = false;
-		bool musicActive = false;
-		std::int32_t soundFXVolume = false;
-		std::int32_t musicVolume = false;
 		std::int32_t levelEcho = 0;
 
 		bool warpsTransmuteCoins = false;
@@ -955,6 +953,7 @@ namespace Jazz2::Scripting
 
 		static std::int32_t GetDifficulty();
 		static std::int32_t SetDifficulty(std::int32_t value);
+		static std::uint32_t GetActiveGameTicks();
 
 		static String get_jjMusicFileName();
 

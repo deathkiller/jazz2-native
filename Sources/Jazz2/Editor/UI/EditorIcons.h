@@ -120,6 +120,18 @@ namespace Jazz2::Editor
 		Weapon,
 		// A pencil, a value changed from what it was
 		Pencil,
+		// A page with hills, a level file
+		LevelFile,
+		// A level file with a badge of a prompt, a level with a script next to it
+		ScriptedLevelFile,
+		// A page with a badge of a cross, a file that couldn't be read
+		BrokenFile,
+		// A page with tiles, a tile set file
+		TileSetFile,
+		// A page with a note, a music file
+		MusicFile,
+		// A page with a gradient, a tile set with true color tiles
+		TrueColorTileSetFile,
 		// Shown by the pointer, see UiCursorOverlay
 		CursorResizeHorizontal,
 		CursorResizeVertical,

@@ -535,7 +535,7 @@ namespace Jazz2::Actors
 				AABBf head = AABBInner;
 				head.T = head.B - 23.0f;
 				head.B = head.T + 5.0f;
-				TileCollisionParams headParams = { TileDestructType::None, true };
+				TileCollisionParams headParams = { TileDestructType::None, false };
 				if (auto* tiles = _levelHandler->TileMap(); tiles != nullptr && !tiles->IsTileEmpty(head, headParams)) {
 					MoveInstantly(Vector2f(0.0f, -_speed.Y * timeMult / 16.0f), MoveType::Relative | MoveType::Force);
 				}

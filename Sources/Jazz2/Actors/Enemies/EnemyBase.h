@@ -31,6 +31,15 @@ namespace Jazz2::Actors::Enemies
 			return (_canHurtPlayer && _frozenTimeLeft <= 0.0f);
 		}
 
+		/** @brief Returns the score awarded for destroying the enemy */
+		std::uint32_t GetScoreValue() const {
+			return _scoreValue;
+		}
+		/** @brief Sets the score awarded for destroying the enemy */
+		void SetScoreValue(std::uint32_t value) {
+			_scoreValue = value;
+		}
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring

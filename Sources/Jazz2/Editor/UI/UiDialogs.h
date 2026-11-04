@@ -146,6 +146,56 @@ namespace Jazz2::Editor
 		bool Writable;
 	};
 
+	/** @brief How a file is shown in the list of a file dialog, see @ref UiFileDialog::KindFunc */
+	struct UiFileKind
+	{
+		/** @brief Icon */
+		EditorIcon Icon = EditorIcon::File;
+		/** @brief Color of the icon */
+		Colorf Color = UiTheme::IconColor;
+		/** @brief Tooltip of the row, optional */
+		String Description;
+	};
+
+	/** @brief Row at the top of the list of a file dialog that stands for a value instead of a file, see @ref UiFileDialog::SetSpecialEntries() */
+	struct UiFileSpecialEntry
+	{
+		/** @brief Name shown */
+		String Label;
+		/** @brief Value chosen, shown after the name */
+		String Value;
+		/** @brief Icon */
+		EditorIcon Icon = EditorIcon::None;
+		/** @brief What it does, shown next to the list and as the tooltip */
+		String Description;
+	};
+
+	/** @brief What a file dialog shows about the selected file next to the list, see @ref UiFileDialog::InfoFunc */
+	struct UiFileInfo
+	{
+		/** @brief Row of a label and its value */
+		struct Row
+		{
+			/** @brief Label, the value takes the whole row without it */
+			String Label;
+			/** @brief Value */
+			String Value;
+			/** @brief Color of the value, a text color */
+			Colorf Color = UiTheme::Text;
+		};
+
+		/** @brief Picture, RGBA row by row, empty for none */
+		SmallVector<std::uint8_t, 0> Rgba;
+		/** @brief Size of the picture in pixels */
+		Vector2i ImageSize;
+		/** @brief Rows below the picture */
+		SmallVector<Row, 8> Rows;
+		/** @brief Whether @ref Kind replaces how the file is shown in the list, as read more thoroughly */
+		bool HasKind = false;
+		/** @brief How the file is shown in the list, with @ref HasKind */
+		UiFileKind Kind;
+	};
+
 	/**
 		@brief Picks a file to open or to save to
 
@@ -174,11 +224,39 @@ namespace Jazz2::Editor
 		static inline bool ShowHiddenFiles = false;
 
 		/**
-		 * @brief Reads the picture of a file shown next to the list, RGBA row by row, returns `false` if the file has none
+		 * @brief Reads what is shown about a file next to the list, its picture and details, returns `false` if there's nothing
 		 *
 		 * Asked once a file stays selected for a moment.
 		 */
-		Function<bool(StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size)> PreviewFunc;
+		Function<bool(StringView path, UiFileInfo& info)> InfoFunc;
+		/**
+		 * @brief Tells how a file is shown in the list, returns `false` to show it as any other file
+		 *
+		 * Asked once for each file as its row is first seen, only for a few of them in a frame, so it may read the start of the file.
+		 */
+		Function<bool(StringView path, UiFileKind& kind)> KindFunc;
+		/**
+		 * @brief Whether @ref KindFunc and @ref InfoFunc may run on a thread of their own
+		 *
+		 * They must touch nothing the user interface uses then. The rows show a dim icon until it's known, and the
+		 * details of the selected file appear once they're read. Without threads they're asked as without it.
+		 */
+		bool Asynchronous = false;
+		/**
+		 * @brief Asked before a file is chosen, while the dialog stays open, the file is chosen once it calls `proceed`
+		 *
+		 * The dialog stays open if it doesn't, e.g. to ask whether to overwrite a file, so another name can be entered.
+		 */
+		Function<void(StringView path, Function<void()>&& proceed)> ConfirmFunc;
+
+		~UiFileDialog() override;
+
+		/**
+		 * @brief Lists values that aren't files at the top of the list in every folder, only when opening
+		 *
+		 * The entry of @p selectedValue is selected, @p onChosen gets the value of the one chosen instead of a file.
+		 */
+		void SetSpecialEntries(SmallVectorImpl<UiFileSpecialEntry>&& entries, StringView selectedValue, Function<void(StringView)>&& onChosen);
 
 		/** @brief Shows a file dialog */
 		static UiFileDialog* Show(UiSurface& surface, StringView title, UiFileDialogMode mode, SmallVectorImpl<UiFileRoot>&& roots,
@@ -192,6 +270,12 @@ namespace Jazz2::Editor
 		{
 			String Name;
 			bool IsDirectory;
+			// KindFunc is asked once the row is seen, on the worker if it's Asynchronous
+			bool KindKnown = false;
+			bool KindPending = false;
+			UiFileKind Kind;
+			// Index in _special, -1 for a file or a directory
+			std::int32_t Special = -1;
 		};
 
 		UiFileDialogMode _mode;
@@ -211,13 +295,26 @@ namespace Jazz2::Editor
 		String _pendingNavigation;
 		bool _navigationPending = false;
 		String _pendingTyped;
-		// The picture of the selected file, see PreviewFunc, and the file it waits to show
-		class FilePreview;
-		FilePreview* _preview;
+		// The picture and details of the selected file, see InfoFunc, and the file it waits to show
+		class FileDetails;
+		FileDetails* _preview;
 		String _previewPath;
 		float _previewDelay = 0.0f;
+		// Rows whose KindFunc may still be asked in this frame
+		std::int32_t _kindBudget = 0;
+		SmallVector<UiFileSpecialEntry, 2> _special;
+		Function<void(StringView)> _onSpecialChosen;
+		// Results of the worker of an older listing or selection are dropped
+		std::uint32_t _listGeneration = 0;
+		std::uint32_t _infoGeneration = 0;
+		// Reads the files off the user interface with Asynchronous, last so it's stopped before the rest goes
+		class Worker;
+		std::unique_ptr<Worker> _worker;
 
 		void UpdatePreview(float timeMult);
+		void ShowInfo(UiFileInfo&& info);
+		void ResolveKind(std::int32_t index);
+		void TakeWorkerResults();
 
 		void Navigate(StringView directory);
 		// Goes to a typed path, a directory or the directory of a file, which is chosen then
@@ -225,6 +322,7 @@ namespace Jazz2::Editor
 		bool MatchesExtension(StringView name) const;
 		void Choose(std::int32_t index, bool confirm);
 		void Confirm();
+		void Choose(StringView path);
 		bool IsWritable() const;
 		String GetRelativeDirectory() const;
 		// Whether a path is in a place, the place of the whole computer has every path

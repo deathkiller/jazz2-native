@@ -2,6 +2,7 @@
 
 #include "ScriptLoader.h"
 #include "../ContentResolver.h"
+#include "../../nCine/Base/FrameStatistics.h"
 
 #include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
@@ -15,7 +16,7 @@ namespace Jazz2::Scripting
 	void* ScriptLoader::_lastOwner = nullptr;
 
 	ScriptLoader::ScriptLoader()
-		: _module(nullptr), _scriptContextType(ScriptContextType::Unknown)
+		: _module(nullptr), _scriptContextType(ScriptContextType::Unknown), _timedContextDepth(0)
 	{
 		_engine = asCreateScriptEngine();
 		_engine->SetEngineProperty(asEP_COPY_SCRIPT_SECTIONS, true);
@@ -1007,8 +1008,12 @@ namespace Jazz2::Scripting
 
 	asIScriptContext* ScriptLoader::RequestContextCallback(asIScriptEngine* engine, void* param)
 	{
-		// Check if there is a free context available in the pool
 		auto _this = static_cast<ScriptLoader*>(param);
+		if (FrameStatistics::IsEnabled() && _this->_timedContextDepth++ == 0) {
+			_this->_timedContextStart = TimeStamp::now();
+		}
+
+		// Check if there is a free context available in the pool
 		if (!_this->_contextPool.empty()) {
 			return _this->_contextPool.pop_back_val();
 		} else {
@@ -1027,6 +1032,12 @@ namespace Jazz2::Scripting
 		// Place the context into the pool for when it will be needed again
 		auto _this = static_cast<ScriptLoader*>(param);
 		_this->_contextPool.push_back(ctx);
+
+		// Calls within one frame add up into the same counter
+		if (_this->_timedContextDepth > 0 && --_this->_timedContextDepth == 0) {
+			FrameStatistics::AddCounter("Script", _this->_timedContextStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("Script calls", 1.0f, FrameStatistics::Unit::Number);
+		}
 	}
 
 	void ScriptLoader::Message(const asSMessageInfo& msg)

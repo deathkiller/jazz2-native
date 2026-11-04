@@ -55,10 +55,14 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Whether the screen is split vertically when there are exactly two local players
 	 *
-	 * @partialsupport Always returns `false`.
+	 * @partialsupport Returns the value a script assigned, `false` before that, not how the screen is split.
 	 */
 	bool getSplitscreenType();
-	/** @brief Sets whether the screen is split vertically, currently has no effect */
+	/**
+	 * @brief Sets whether the screen is split vertically
+	 *
+	 * @partialsupport The value is only stored, the split follows the player's settings.
+	 */
 	bool setSplitscreenType(bool value);
 
 	// TODO

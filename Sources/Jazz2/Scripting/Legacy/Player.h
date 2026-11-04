@@ -41,7 +41,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the score shown on the HUD
 			 *
-			 * Currently the same value as score, so setting either one changes both.
+			 * @partialsupport The HUD shows the score without counting up to it, so this is the same value as score and
+			 * setting either one changes both.
 			 */
 			std::int32_t get_scoreDisplayed() const;
 			/** @brief Sets the score shown on the HUD */
@@ -123,7 +124,7 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Vertical speed the player gains by jumping
 			 *
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 and has no effect.
 			 */
 			float jumpStrength = 0.0f;
 			/**
@@ -154,8 +155,8 @@ namespace Jazz2::Scripting
 			 * @brief Gives the player a sugar rush
 			 *
 			 * @param time Duration in ticks
-			 * @return Always true, even while a boss fight is active
-			 * @partialsupport
+			 * @return False without starting it while a boss fight is active or the game mode doesn't allow it,
+			 *		true otherwise
 			 */
 			bool startSugarRush(std::int32_t time);
 			/** @brief Returns how many hearts the player has left */
@@ -196,7 +197,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the remaining invincibility in ticks
 			 *
-			 * Assigning a positive value makes the player invincible for that long.
+			 * Assigning a positive value makes the player invincible for that long, 0 or less ends it.
+			 * @partialsupport Invincibility and `blink` share one timer, starting one ends the other.
 			 */
 			std::int32_t get_invincibility() const;
 			/** @brief Sets the remaining invincibility in ticks */
@@ -204,8 +206,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the type of light the player emits
 			 *
-			 * Either @ref LIGHT::PLAYER, the default, or @ref LIGHT::NONE. Assigning @ref LIGHT::NONE turns the player's light off,
-			 * any other type turns the default light back on.
+			 * Either @ref LIGHT::PLAYER, the default, or @ref LIGHT::NONE. Assigning @ref LIGHT::NONE turns the player's light off.
+			 * @partialsupport Any other type turns the default light back on, it reads back as @ref LIGHT::PLAYER.
 			 */
 			std::uint32_t get_lightType() const;
 			/** @brief Sets the type of light the player emits */
@@ -224,6 +226,7 @@ namespace Jazz2::Scripting
 			 *
 			 * @param duration Ticks to add, a negative value shortens it but never below 0
 			 * @return The remaining invincibility in ticks
+			 * @partialsupport While the player blinks, the blinking ends and the invincibility starts from 0.
 			 */
 			std::int32_t extendInvincibility(std::int32_t duration);
 			/**
@@ -340,26 +343,31 @@ namespace Jazz2::Scripting
 			 * @brief Returns the index of the player
 			 *
 			 * Currently the same as localPlayerID.
+			 * @partialsupport Every player counts as local, also in online multiplayer.
 			 */
 			std::int8_t get_playerID() const;
 			/**
 			 * @brief Returns the index of the player among local players
 			 *
 			 * 0 to 3 in a splitscreen game.
+			 * @partialsupport Every player counts as local, also in online multiplayer.
 			 */
 			std::int32_t get_localPlayerID() const;
 
 			/**
-			 * @brief Team the player belongs to
+			 * @brief Returns the team the player belongs to
 			 *
-			 * Teams aren't tracked for scripts yet, so it can't be relied on.
+			 * A @ref TEAM::Color value, @ref TEAM::BLUE outside of team-based game modes.
 			 */
-			bool team = false;
+			std::int32_t get_team() const;
+			/** @brief Returns whether the player isn't on the blue team */
+			bool get_teamRed() const;
 
 			/**
 			 * @brief Returns whether the player is running
 			 *
-			 * Follows the run key. Assigning it makes the player run or stop running.
+			 * Follows the run key. Assigning it holds or releases the run key for the current tick, or switches running
+			 * on or off when the run key toggles.
 			 */
 			bool get_running() const;
 			/** @brief Sets whether the player is running */
@@ -395,8 +403,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Buttstomp phase of the player
 			 *
-			 * Currently 1 while the player is buttstomping and 50 otherwise. The game refreshes it, so assigning it has
-			 * no lasting effect.
+			 * The game refreshes it, so assigning it has no lasting effect.
+			 * @partialsupport Reads only 1 while the player is buttstomping and 50 otherwise, not the phases between.
 			 */
 			std::int32_t buttstomp = 0;
 			/**
@@ -416,8 +424,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Special move the player is performing
 			 *
-			 * 0 when there's none. Currently a non-zero value identifies the move rather than how long it has lasted.
-			 * The game refreshes it, so assigning it has no lasting effect.
+			 * 0 when there's none. The game refreshes it, so assigning it has no lasting effect.
+			 * @partialsupport A non-zero value identifies the move rather than how long it has lasted.
 			 */
 			std::int32_t specialMove = 0;
 			/**
@@ -464,6 +472,7 @@ namespace Jazz2::Scripting
 			 * @brief Whether the player is controlled on this machine
 			 *
 			 * True for every player in the level, false for a handle that doesn't stand for a player.
+			 * @partialsupport Also true for players of other machines in online multiplayer.
 			 */
 			bool isLocal = true;
 			/**
@@ -594,7 +603,7 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Resets the ambient light to the level's default
 			 *
-			 * @partialsupport Currently has no effect and always returns 0.
+			 * @return The new ambient light level
 			 */
 			std::uint8_t resetLight();
 
@@ -714,7 +723,11 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Changes the player into the next character
 			 *
-			 * @partialsupport Currently has no effect and always returns 0.
+			 * Cycles through Jazz, Spaz, Lori (TSF only), the bird and the frog, skipping characters whose sprites
+			 * aren't available.
+			 * @param rabbitsOnly Whether to cycle only through the rabbits
+			 * @param morphEffect Whether to show the morphing effect
+			 * @return The player's character afterwards
 			 */
 			std::uint32_t morph(bool rabbitsOnly, bool morphEffect);
 			/**
@@ -722,18 +735,16 @@ namespace Jazz2::Scripting
 			 *
 			 * The player stays as it is if the sprites of that character aren't available.
 			 * @param charNew The new character
-			 * @param morphEffect Currently ignored
+			 * @param morphEffect Whether to show the morphing effect
 			 * @return The player's character afterwards
-			 * @partialsupport The `morphEffect` parameter is currently ignored.
 			 */
 			std::uint32_t morphTo(std::uint32_t charNew, bool morphEffect);
 			/**
 			 * @brief Changes the player back into its original character
 			 *
 			 * Works like the Revert Morph event, the player becomes charOrig.
-			 * @param morphEffect Currently ignored
+			 * @param morphEffect Whether to show the morphing effect
 			 * @return The player's character afterwards
-			 * @partialsupport The `morphEffect` parameter is currently ignored.
 			 */
 			std::uint32_t revertMorph(bool morphEffect);
 			/**
@@ -787,6 +798,7 @@ namespace Jazz2::Scripting
 			 * @param ticks Time on the timer in ticks
 			 * @param startPaused Whether the timer starts paused
 			 * @return @ref TIMER::PAUSED if `startPaused` is true, @ref TIMER::STARTED otherwise
+			 * @partialsupport The timer isn't shown on the HUD.
 			 */
 			std::uint32_t timerStart(std::int32_t ticks, bool startPaused);
 			/**
@@ -903,6 +915,7 @@ namespace Jazz2::Scripting
 			 * The text appears the way a Text event shows it.
 			 * @param text Text to show
 			 * @param size @ref STRING::Size of the text
+			 * @partialsupport Every player sees the text, not only this one.
 			 */
 			void showText(const String& text, std::uint32_t size);
 			/**
@@ -912,6 +925,7 @@ namespace Jazz2::Scripting
 			 * @param textID Index of the text string in the level
 			 * @param offset Which part of the string to show, when it is split into parts by `|` characters
 			 * @param size @ref STRING::Size of the text
+			 * @partialsupport Every player sees the text, not only this one.
 			 */
 			void showTextByID(std::uint32_t textID, std::uint32_t offset, std::uint32_t size);
 
@@ -928,13 +942,15 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Makes the player fire in a direction
 			 *
-			 * @partialsupport Currently has no effect and always returns 0.
+			 * @partialsupport TNT and Thunderbolt aren't fired, it returns 0 for them. A weapon the script doesn't control fires
+			 * one bullet, without the spread of its powered-up shots.
 			 */
 			std::int32_t fireBulletDirection(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, std::uint32_t direction);
 			/**
 			 * @brief Makes the player fire at an angle
 			 *
-			 * @partialsupport Currently has no effect and always returns 0.
+			 * @partialsupport TNT and Thunderbolt aren't fired, it returns 0 for them. A weapon the script doesn't control fires
+			 * one bullet, without the spread of its powered-up shots.
 			 */
 			std::int32_t fireBulletAngle(std::uint8_t gun, bool depleteAmmo, bool requireAmmo, float angle);
 
@@ -1044,9 +1060,10 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns how hard the player would hit an object
 			 *
-			 * @partialsupport Currently always returns 0.
+			 * 1 during a buttstomp or a sugar rush, -1 during another special move, -101 when running fast into the
+			 * frozen @p target, 0 otherwise.
 			 */
-			std::int32_t getObjectHitForce(const jjOBJ& target) const;
+			std::int32_t getObjectHitForce(const jjOBJ* target) const;
 			/**
 			 * @brief Makes the player collide with an object
 			 *
@@ -1058,7 +1075,7 @@ namespace Jazz2::Scripting
 			 *		buttstomp or sugar rush, -1 for a special move
 			 * @param playerHandling Currently ignored
 			 * @return Whether the object was affected
-			 * @partialsupport The `playerHandling` parameter is currently ignored.
+			 * @partialsupport The `playerHandling` parameter is ignored, and so is `force` for collisions the game handles.
 			 */
 			bool objectHit(jjOBJ* target, std::int32_t force, std::uint32_t playerHandling);
 			/**
@@ -1194,72 +1211,72 @@ namespace Jazz2::Scripting
 			 * @brief What the character does when jump is pressed in the air
 			 *
 			 * An @ref AIR::Jump value.
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			int airJump;
 			/**
 			 * @brief What the character does when jump is pressed while crouching
 			 *
 			 * A @ref GROUND::Jump value.
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			int groundJump;
 			/**
 			 * @brief Most jumps the character can make in the air
 			 *
 			 * Applies when airJump is @ref AIR::DOUBLEJUMP.
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			int doubleJumpCountMax;
 			/**
 			 * @brief Horizontal speed gained by a double jump
 			 *
 			 * Relative to the direction the player faces, negative values push backwards.
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			float doubleJumpXSpeed;
 			/**
 			 * @brief Vertical speed gained by a double jump
 			 *
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			float doubleJumpYSpeed;
 			/**
 			 * @brief Longest time the character can use helicopter ears
 			 *
 			 * Applies when airJump is @ref AIR::HELICOPTER.
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			int helicopterDurationMax;
 			/**
 			 * @brief Horizontal speed while using helicopter ears
 			 *
 			 * Relative to the direction the player faces, negative values push backwards.
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			float helicopterXSpeed;
 			/**
 			 * @brief Vertical speed while using helicopter ears
 			 *
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			float helicopterYSpeed;
 			/**
 			 * @brief Whether the character's special moves cause damage
 			 *
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			bool canHurt;
 			/**
 			 * @brief Whether the character can run
 			 *
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			bool canRun;
 			/**
 			 * @brief Whether morph monitors can turn a player into the character
 			 *
-			 * @partialsupport Currently has no effect.
+			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
 			 */
 			bool morphBoxCycle;
 		};

@@ -64,11 +64,10 @@ namespace Jazz2::Scripting
 			 * @brief Appends the bytes of a string to the stream
 			 *
 			 * Unlike `push()`, no length is stored, so the text can be read back only with `get()` and a known size, or
-			 * with @ref getLine().
-			 * @partialsupport Always returns `true`.
+			 * with @ref getLine(). Always returns `true`.
 			 */
 			bool write(const String& value);
-			/** @brief Appends the unread bytes of another stream, without storing their length; always returns `true` @partialsupport */
+			/** @brief Appends the unread bytes of another stream, without storing their length; always returns `true` */
 			bool write(const jjSTREAM& value);
 			/**
 			 * @brief Reads `count` bytes from the front of the stream into a string
@@ -183,8 +182,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the CRC-32 checksum of the contents of a stream
 			 *
-			 * Uses the standard CRC-32 of zlib; pass a previous result as `crc` to continue a checksum.
-			 * @partialsupport Always returns 0 in builds without zlib support.
+			 * Uses the standard CRC-32 of zlib; pass a previous result as `crc` to continue a checksum. Always returns 0 in builds
+			 * without zlib support.
 			 */
 			static std::uint32_t CRC32(const jjSTREAM& input, std::uint32_t crc);
 

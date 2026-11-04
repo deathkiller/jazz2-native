@@ -394,20 +394,12 @@ namespace Jazz2::Scripting
 
 		void jjLAYER::setXSpeed(float newspeed, bool newSpeedIsAnAutoSpeed) const {
 			// const_cast: registered const, but it mutates the proxy fields the loader syncs to the engine each frame
-			jjLAYER* self = const_cast<jjLAYER*>(this);
-			if (newSpeedIsAnAutoSpeed) {
-				self->xAutoSpeed = newspeed;
-			} else {
-				self->xSpeed = newspeed;
-			}
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			owner->SetLayerSpeedSeamlessly(*const_cast<jjLAYER*>(this), false, newspeed, newSpeedIsAnAutoSpeed);
 		}
 		void jjLAYER::setYSpeed(float newspeed, bool newSpeedIsAnAutoSpeed) const {
-			jjLAYER* self = const_cast<jjLAYER*>(this);
-			if (newSpeedIsAnAutoSpeed) {
-				self->yAutoSpeed = newspeed;
-			} else {
-				self->ySpeed = newspeed;
-			}
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			owner->SetLayerSpeedSeamlessly(*const_cast<jjLAYER*>(this), true, newspeed, newSpeedIsAnAutoSpeed);
 		}
 		float jjLAYER::getXPosition(const jjPLAYER* play) const {
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -988,9 +980,9 @@ namespace Jazz2::Scripting
 			return 0.0f;
 		}
 		value = Legacy::jjLAYER::ToStoredOffset(value);
-		layer->Description.OffsetX = value;
+		layer->Description.OffsetX = value + (proxy != nullptr ? proxy->_offsetDeltaX : 0.0f);
 		if (proxy != nullptr) {
-			proxy->xOffset = value;
+			proxy->xOffset = proxy->_syncedOffsetX = value;
 		}
 		return value;
 	}
@@ -1008,9 +1000,9 @@ namespace Jazz2::Scripting
 			return 0.0f;
 		}
 		value = Legacy::jjLAYER::ToStoredOffset(value);
-		layer->Description.OffsetY = value;
+		layer->Description.OffsetY = value + (proxy != nullptr ? proxy->_offsetDeltaY : 0.0f);
 		if (proxy != nullptr) {
-			proxy->yOffset = value;
+			proxy->yOffset = proxy->_syncedOffsetY = value;
 		}
 		return value;
 	}
@@ -1174,7 +1166,7 @@ namespace Jazz2::Scripting
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		Legacy::jjLAYER* proxy;
 		auto* layer = _this->ResolveLayerNumber(id, &proxy);
-		return (layer != nullptr && layer->Description.UseInherentOffset);
+		return (proxy != nullptr ? proxy->limitVisibleRegion : (layer != nullptr && layer->Description.UseInherentOffset));
 	}
 	bool LevelScriptLoader::set_layerLimitVisibleRegion(std::uint8_t id, bool value) {
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -1184,33 +1176,24 @@ namespace Jazz2::Scripting
 			return false;
 		}
 		layer->Description.UseInherentOffset = value;
+		if (proxy != nullptr) {
+			proxy->limitVisibleRegion = value;
+		}
 		return value;
 	}
 
 	void LevelScriptLoader::setLayerXSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
-		noop();
-
-		// TODO: Shortcut global functions for setXSpeed and setYSpeed on the same-indexed jjLayers objects.
-		// TODO: Changes the X or Y speed.Unlike the basic properties like xSpeed and yAutoSpeed,
-		// these functions will ensure that the layer remains in the same position it was before its speeds were changed.
-
-		if (newSpeedIsAnAutoSpeed) {
-			set_layerXAutoSpeed(id, newspeed);
-		} else {
-			set_layerXSpeed(id, newspeed);
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		Legacy::jjLAYER* proxy;
+		if (_this->ResolveLayerNumber(id, &proxy) != nullptr && proxy != nullptr) {
+			proxy->setXSpeed(newspeed, newSpeedIsAnAutoSpeed);
 		}
 	}
 	void LevelScriptLoader::setLayerYSpeedSeamlessly(std::uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
-		noop();
-
-		// TODO: Shortcut global functions for setXSpeed and setYSpeed on the same-indexed jjLayers objects.
-		// TODO: Changes the X or Y speed.Unlike the basic properties like xSpeed and yAutoSpeed,
-		// these functions will ensure that the layer remains in the same position it was before its speeds were changed.
-
-		if (newSpeedIsAnAutoSpeed) {
-			set_layerYAutoSpeed(id, newspeed);
-		} else {
-			set_layerYSpeed(id, newspeed);
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		Legacy::jjLAYER* proxy;
+		if (_this->ResolveLayerNumber(id, &proxy) != nullptr && proxy != nullptr) {
+			proxy->setYSpeed(newspeed, newSpeedIsAnAutoSpeed);
 		}
 	}
 
@@ -2281,24 +2264,83 @@ namespace Jazz2::Scripting
 
 			// The engine advances OffsetX/Y itself for auto-scrolling layers (TileMap::OnUpdate), so only push when the
 			// script actually changed the proxy; otherwise pull the engine's current value so reads stay live
+			// What the engine adds to it, the auto-scroll among it, stays apart from the offset of the script, as in JJ2+
 			if (layer->xOffset != layer->_syncedOffsetX) {
 				layer->xOffset = Legacy::jjLAYER::ToStoredOffset(layer->xOffset);
-				desc.OffsetX = layer->xOffset;
+				desc.OffsetX = layer->xOffset + layer->_offsetDeltaX;
 			} else {
-				layer->xOffset = desc.OffsetX;
+				layer->_offsetDeltaX = desc.OffsetX - layer->xOffset;
 			}
 			layer->_syncedOffsetX = layer->xOffset;
 			if (layer->yOffset != layer->_syncedOffsetY) {
 				layer->yOffset = Legacy::jjLAYER::ToStoredOffset(layer->yOffset);
-				desc.OffsetY = layer->yOffset;
+				desc.OffsetY = layer->yOffset + layer->_offsetDeltaY;
 			} else {
-				layer->yOffset = desc.OffsetY;
+				layer->_offsetDeltaY = desc.OffsetY - layer->yOffset;
 			}
 			layer->_syncedOffsetY = layer->yOffset;
 		}
 		// The speed models of layer 8 were pushed above as they're without it
 		if (_layer8Fixed >= 0) {
 			ApplyUseLayer8Speeds();
+		}
+	}
+
+	void LevelScriptLoader::SetLayerSpeedSeamlessly(Legacy::jjLAYER& layer, bool vertical, float newSpeed, bool newSpeedIsAnAutoSpeed)
+	{
+		// As measured in JJ2+: a new speed stops the auto speed, a new auto speed keeps the speed, and the layer stays where it
+		// is in the view of the first player in any speed model - by an offset of its own, xOffset/yOffset don't change
+		float& speed = (vertical ? layer.ySpeed : layer.xSpeed);
+		float& autoSpeed = (vertical ? layer.yAutoSpeed : layer.xAutoSpeed);
+		auto tileMap = _levelHandler->_tileMap.get();
+		std::int32_t index = layer._layerIndex;
+		if (tileMap == nullptr || index < 0 || index >= (std::int32_t)tileMap->_layers.size() || tileMap->_sprLayerIndex < 0) {
+			if (newSpeedIsAnAutoSpeed) {
+				autoSpeed = newSpeed;
+			} else {
+				speed = newSpeed;
+				autoSpeed = 0.0f;
+			}
+			return;
+		}
+
+		auto& tileLayer = tileMap->_layers[index];
+		Vector2i sprLayoutSize = tileMap->_layers[tileMap->_sprLayerIndex].LayoutSize;
+		Rectf view = _levelHandler->GetCameraView(_levelHandler->_players.empty() ? nullptr : _levelHandler->_players[0]);
+		// The origin as the layer is drawn with the speeds of the proxy, which are pushed to it only later (see SyncLayerProperties())
+		auto getOrigin = [&]() {
+			Tiles::LayerDescription desc = tileLayer.Description;
+			desc.SpeedModelX = FromScriptSpeedModel(layer.SpeedModeX);
+			desc.SpeedModelY = FromScriptSpeedModel(layer.SpeedModeY);
+			desc.SpeedX = layer.xSpeed;
+			desc.SpeedY = layer.ySpeed;
+			desc.AutoSpeedX = Tiles::LayerDescription::FromOriginalAutoSpeed(layer.xAutoSpeed, desc.SpeedModelX);
+			desc.AutoSpeedY = Tiles::LayerDescription::FromOriginalAutoSpeed(layer.yAutoSpeed, desc.SpeedModelY);
+			desc.UseInherentOffset = layer.limitVisibleRegion;
+			Vector2f origin = desc.GetGameplayOrigin(tileLayer.LayoutSize, sprLayoutSize, view);
+			return (vertical ? origin.Y : origin.X);
+		};
+
+		float before = getOrigin();
+		if (newSpeedIsAnAutoSpeed) {
+			autoSpeed = newSpeed;
+		} else {
+			speed = newSpeed;
+			autoSpeed = 0.0f;
+		}
+		float delta = getOrigin() - before;
+		// Given to the layer at once, so getXPosition()/getYPosition() don't see it moved until the next frame
+		auto& desc = tileLayer.Description;
+		if (vertical) {
+			desc.SpeedY = layer.ySpeed;
+			desc.AutoSpeedY = Tiles::LayerDescription::FromOriginalAutoSpeed(layer.yAutoSpeed, desc.SpeedModelY);
+			desc.OffsetY += delta;
+			layer._offsetDeltaY += delta;
+		} else {
+			desc.SpeedX = layer.xSpeed;
+			desc.AutoSpeedX = Tiles::LayerDescription::FromOriginalAutoSpeed(layer.xAutoSpeed, desc.SpeedModelX);
+			desc.OffsetX += delta;
+			layer._offsetDeltaX += delta;
 		}
 	}
 
@@ -2313,8 +2355,20 @@ namespace Jazz2::Scripting
 	// TODO
 
 	std::uint16_t jjGetStaticTile(std::uint16_t tileID) {
-		noop();
-		return 0;
+		if ((tileID & TileMap::TileFlagAnimated) == 0) {
+			return tileID;
+		}
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		auto tileMap = owner->GetLevelHandler()->TileMap();
+		if (tileMap == nullptr) {
+			return 0;
+		}
+		std::int32_t tileId = tileMap->ResolveStaticTileId(tileMap->GetStaticTileCount() + (tileID & TileMap::TileIndexMask));
+		if (tileId < 0) {
+			return 0;
+		}
+		// The flips of the animated tile stay, the flags of the frames aren't kept
+		return std::uint16_t((tileID & (TileMap::TileFlagFlipX | TileMap::TileFlagFlipY)) | (tileId & TileMap::TileIndexMask));
 	}
 	std::uint16_t jjTileGet(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
@@ -2522,18 +2576,12 @@ namespace Jazz2::Scripting
 		 * @brief Changes the horizontal speed or automatic speed of one of the original layers
 		 *
 		 * A shortcut for @ref jjLAYER::setXSpeed() of `jjLayers[layerID]`.
-		 *
-		 * @note Currently the same as assigning the property, the layer isn't shifted to stay where it was before
-		 *		the change.
 		 */
 		engine->RegisterGlobalFunction("void jjSetLayerXSpeed(uint8 layerID, float newspeed, bool newSpeedIsAnAutoSpeed)", asFUNCTION(setLayerXSpeedSeamlessly), asCALL_CDECL);
 		/**
 		 * @brief Changes the vertical speed or automatic speed of one of the original layers
 		 *
 		 * A shortcut for @ref jjLAYER::setYSpeed() of `jjLayers[layerID]`.
-		 *
-		 * @note Currently the same as assigning the property, the layer isn't shifted to stay where it was before
-		 *		the change.
 		 */
 		engine->RegisterGlobalFunction("void jjSetLayerYSpeed(uint8 layerID, float newspeed, bool newSpeedIsAnAutoSpeed)", asFUNCTION(setLayerYSpeedSeamlessly), asCALL_CDECL);
 	}
@@ -2871,8 +2919,9 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief The default model
 		 *
-		 * The layer follows the camera by its speed and scrolls by its automatic speed. Currently the same as
-		 * @ref BOTHSPEEDS.
+		 * The layer follows the camera by its speed, or scrolls by its automatic speed if it has one.
+		 * @partialsupport The automatic speed overrides the speed only for layers loaded with the level, a speed
+		 * assigned later moves the layer as @ref BOTHSPEEDS does.
 		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "NORMAL", 0);
 		/**
@@ -2885,8 +2934,8 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Both the speed and the automatic speed move the layer
 		 *
-		 * For example, clouds that drift constantly while also following the camera a little. Currently the same as
-		 * `NORMAL`.
+		 * For example, clouds that drift constantly while also following the camera a little.
+		 * @partialsupport Such a layer reads back as `NORMAL`.
 		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "BOTHSPEEDS", 2);
 		/**
@@ -2898,8 +2947,8 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Scrolls the layer so it exactly spans the level
 		 *
-		 * @partialsupport Ignores the speeds: one edge of the layer is visible at one edge of the level and the
-		 * opposite edge at the opposite edge of the level, so a larger layer moves faster.
+		 * The speeds are ignored: one edge of the layer is visible at one edge of the level and the opposite edge at the
+		 * opposite edge of the level, so a larger layer moves faster.
 		 */
 		engine->RegisterEnumValue("LayerSpeedModel", "FITLEVEL", 4);
 		/**
@@ -2979,7 +3028,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Returns whether a pixel is solid
 		 *
-		 * Only the sprite layer has collision masks, so this always tests `jjLayers[4]`, see @ref jjMaskedPixel().
+		 * @partialsupport The layer is ignored, the masks of `jjLayers[4]` are tested, see @ref jjMaskedPixel().
 		 */
 		engine->RegisterObjectMethod("jjLAYER", "bool maskedPixel(int xPixel, int yPixel) const", asFUNCTION(LayerMaskedPixel), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel, int lineLength, int yPixel)", asFUNCTION(jjMaskedHLine), asCALL_CDECL);
@@ -2987,7 +3036,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Returns whether any pixel of a horizontal line is solid
 		 *
-		 * Only the sprite layer has collision masks, so this always tests `jjLayers[4]`, see @ref jjMaskedHLine().
+		 * @partialsupport The layer is ignored, the masks of `jjLayers[4]` are tested, see @ref jjMaskedHLine().
 		 */
 		engine->RegisterObjectMethod("jjLAYER", "bool maskedHLine(int xPixel, int lineLength, int yPixel) const", asFUNCTION(LayerMaskedHLine), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedVLine), asCALL_CDECL);
@@ -2995,7 +3044,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Returns whether any pixel of a vertical line is solid
 		 *
-		 * Only the sprite layer has collision masks, so this always tests `jjLayers[4]`, see @ref jjMaskedVLine().
+		 * @partialsupport The layer is ignored, the masks of `jjLayers[4]` are tested, see @ref jjMaskedVLine().
 		 */
 		engine->RegisterObjectMethod("jjLAYER", "bool maskedVLine(int xPixel, int yPixel, int lineLength) const", asFUNCTION(LayerMaskedVLine), asCALL_CDECL_OBJFIRST);
 		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedTopVLine), asCALL_CDECL);
@@ -3003,7 +3052,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Returns where the topmost solid pixel of a vertical line is
 		 *
-		 * Only the sprite layer has collision masks, so this always tests `jjLayers[4]`, see @ref jjMaskedTopVLine().
+		 * @partialsupport The layer is ignored, the masks of `jjLayers[4]` are tested, see @ref jjMaskedTopVLine().
 		 */
 		engine->RegisterObjectMethod("jjLAYER", "int maskedTopVLine(int xPixel, int yPixel, int lineLength) const", asFUNCTION(LayerMaskedTopVLine), asCALL_CDECL_OBJFIRST);
 		/**

@@ -30,16 +30,17 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Creates a new empty layer of the given size in tiles
 			 *
-			 * @partialsupport The new layer has no tiles yet, doesn't move with the camera (both speeds are 0) and
-			 * isn't drawn until it's included in @ref jjLayerOrderSet().
+			 * The new layer has no tiles yet, doesn't move with the camera (both speeds are 0) and isn't drawn until it's
+			 * included in @ref jjLayerOrderSet().
+			 * @partialsupport If the level can't take another layer, the layer is only a standalone copy of the
+			 * properties, its tiles can't be set and it's never drawn.
 			 */
 			static jjLAYER* CreateFromSize(std::uint32_t width, std::uint32_t height);
 			/**
 			 * @brief Creates a new layer as a copy of another one
 			 *
 			 * The copy takes the tiles, the texture and all other properties of the layer except its sprite mode, which
-			 * starts as @ref SPRITE::NORMAL.
-			 * @partialsupport It isn't drawn until it's included in @ref jjLayerOrderSet().
+			 * starts as @ref SPRITE::NORMAL. It isn't drawn until it's included in @ref jjLayerOrderSet().
 			 */
 			static jjLAYER* CreateCopy(jjLAYER* other);
 
@@ -92,9 +93,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Horizontal offset of the layer in pixels
 			 *
-			 * Added to the position of the layer regardless of its speeds. On a layer with an automatic speed, the value
-			 * also advances as the layer scrolls. Stored in 16.16 fixed point, so a value out of the range of roughly
-			 * -32768 to 32767 becomes 0.
+			 * Added to the position of the layer regardless of its speeds. The automatic speed scrolls the layer without
+			 * changing it. Stored in 16.16 fixed point, so a value out of the range of roughly -32768 to 32767 becomes 0.
 			 */
 			float xOffset = 0;
 			/** @brief Vertical offset of the layer in pixels, see `xOffset` */
@@ -140,19 +140,17 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Changes the horizontal speed or automatic speed of the layer
 			 *
-			 * Sets @ref xAutoSpeed if `newSpeedIsAnAutoSpeed` is `true`, otherwise `xSpeed`.
-			 *
-			 * @note Currently the same as assigning the property, the layer isn't shifted to stay where it was before
-			 *		the change.
+			 * Sets @ref xAutoSpeed if `newSpeedIsAnAutoSpeed` is `true`, otherwise `xSpeed` and sets @ref xAutoSpeed to 0.
+			 * Unlike assigning the properties, the layer stays where it was in the view of the first player, in every
+			 * speed model. `xOffset` doesn't change, the layer is moved by an offset of its own.
 			 */
 			void setXSpeed(float newspeed, bool newSpeedIsAnAutoSpeed) const;
 			/**
 			 * @brief Changes the vertical speed or automatic speed of the layer
 			 *
-			 * Sets @ref yAutoSpeed if `newSpeedIsAnAutoSpeed` is `true`, otherwise `ySpeed`.
-			 *
-			 * @note Currently the same as assigning the property, the layer isn't shifted to stay where it was before
-			 *		the change.
+			 * Sets @ref yAutoSpeed if `newSpeedIsAnAutoSpeed` is `true`, otherwise `ySpeed` and sets @ref yAutoSpeed to 0.
+			 * Unlike assigning the properties, the layer stays where it was in the view of the first player, in every
+			 * speed model. `yOffset` doesn't change, the layer is moved by an offset of its own.
 			 */
 			void setYSpeed(float newspeed, bool newSpeedIsAnAutoSpeed) const;
 			/**
@@ -448,6 +446,8 @@ namespace Jazz2::Scripting
 			 *
 			 * @ref jjLayers and the global functions that take a layer number keep referring to the original eight layers
 			 * after the order changes.
+			 * @partialsupport A layer that couldn't be added to the level (see @ref CreateFromSize()) is left out without
+			 * an error.
 			 */
 			static bool jjLayerOrderSet(const CScriptArray& order);
 			/**
@@ -502,13 +502,13 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Prepares a rectangular area of the layer for @ref tileSet()
 			 *
-			 * @partialsupport Currently has no effect, every tile can already be changed on its own.
+			 * Has no effect, every tile can already be changed on its own.
 			 */
 			void generateSettableTileArea(int xTile, int yTile, int width, int height);
 			/**
 			 * @brief Prepares the whole layer for @ref tileSet()
 			 *
-			 * @partialsupport Currently has no effect, every tile can already be changed on its own.
+			 * Has no effect, every tile can already be changed on its own.
 			 */
 			void generateSettableTileAreaAll();
 
@@ -534,6 +534,10 @@ namespace Jazz2::Scripting
 			// itself): if the proxy value still equals this, the engine's value is authoritative; otherwise the script changed it.
 			float _syncedOffsetX = 0.0f;
 			float _syncedOffsetY = 0.0f;
+			// What the engine adds to the offsets of the script: the auto-scroll and what keeps the layer in place when
+			// setXSpeed()/setYSpeed() change its speeds, which JJ2+ doesn't show in xOffset/yOffset either
+			float _offsetDeltaX = 0.0f;
+			float _offsetDeltaY = 0.0f;
 			// The sprite mode of a standalone layer, and the parameter of any layer - it's kept even while the mode doesn't use it,
 			// as in JJ2+. The mode of a level layer is its renderer type, see get_spriteMode(), unless a script set one, some
 			// modes are only like the renderer type they're drawn with.
@@ -657,13 +661,13 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Spawns the objects placed off the tile grid
 	 *
-	 * @partialsupport Currently has no effect, these objects are already placed when the level is converted.
+	 * Has no effect, these objects are already placed when the level is converted.
 	 */
 	void mlleSpawnOffgrids();
 	/**
 	 * @brief Spawns the objects placed off the tile grid, for local players only
 	 *
-	 * @partialsupport Currently has no effect, these objects are already placed when the level is converted.
+	 * Has no effect, these objects are already placed when the level is converted.
 	 */
 	void mlleSpawnOffgridsLocal();
 	/** @brief Returns the layer of the given name, or null if the level has no such layer */
@@ -768,7 +772,9 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Returns the frame an animated tile currently shows
 	 *
-	 * @partialsupport Currently always returns 0.
+	 * A tile that isn't animated is returned as it is.
+	 * @partialsupport Flips of the frame itself aren't included, and an animated tile whose frame is another
+	 * animated tile gives 0.
 	 */
 	std::uint16_t jjGetStaticTile(std::uint16_t tileID);
 	/**
@@ -786,7 +792,7 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Prepares a rectangular area of one of the original layers for @ref jjTileSet()
 	 *
-	 * @partialsupport Currently has no effect, every tile can already be changed on its own.
+	 * Has no effect, every tile can already be changed on its own.
 	 */
 	void jjGenerateSettableTileArea(std::uint8_t layer, std::int32_t xTile, std::int32_t yTile, std::int32_t width, std::int32_t height);
 
@@ -801,7 +807,7 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Returns whether a pixel is solid, see @ref jjMaskedPixel()
 	 *
-	 * @partialsupport Only the sprite layer has collision masks, so `layer` is ignored.
+	 * @partialsupport `layer` is ignored, the masks of the sprite layer are tested.
 	 */
 	bool jjMaskedPixelLayer(std::int32_t xPixel, std::int32_t yPixel, std::uint8_t layer);
 	/**
@@ -814,7 +820,7 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Returns whether any pixel of a horizontal line is solid, see @ref jjMaskedHLine()
 	 *
-	 * @partialsupport Only the sprite layer has collision masks, so `layer` is ignored.
+	 * @partialsupport `layer` is ignored, the masks of the sprite layer are tested.
 	 */
 	bool jjMaskedHLineLayer(std::int32_t xPixel, std::int32_t lineLength, std::int32_t yPixel, std::uint8_t layer);
 	/**
@@ -827,7 +833,7 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Returns whether any pixel of a vertical line is solid, see @ref jjMaskedVLine()
 	 *
-	 * @partialsupport Only the sprite layer has collision masks, so `layer` is ignored.
+	 * @partialsupport `layer` is ignored, the masks of the sprite layer are tested.
 	 */
 	bool jjMaskedVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer);
 	/**
@@ -841,7 +847,7 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Returns where the topmost solid pixel of a vertical line is, see @ref jjMaskedTopVLine()
 	 *
-	 * @partialsupport Only the sprite layer has collision masks, so `layer` is ignored.
+	 * @partialsupport `layer` is ignored, the masks of the sprite layer are tested.
 	 */
 	std::int32_t jjMaskedTopVLineLayer(std::int32_t xPixel, std::int32_t yPixel, std::int32_t lineLength, std::uint8_t layer);
 }

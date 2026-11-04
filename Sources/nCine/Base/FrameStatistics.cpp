@@ -58,7 +58,7 @@ namespace nCine
 
 	void FrameStatistics::AddDrawCalls(std::uint32_t drawCalls, std::uint32_t renderCommands)
 	{
-		if (!_enabled) {
+		if DEATH_LIKELY(!_enabled) {
 			return;
 		}
 
@@ -69,7 +69,7 @@ namespace nCine
 
 	void FrameStatistics::AddCounter(const char* name, float value, Unit unit, float limit)
 	{
-		if (!_enabled) {
+		if DEATH_LIKELY(!_enabled) {
 			return;
 		}
 
@@ -101,7 +101,7 @@ namespace nCine
 
 	void FrameStatistics::EndFrame(const float* phaseTimes, float frameTime)
 	{
-		if (!_enabled) {
+		if DEATH_LIKELY(!_enabled) {
 			return;
 		}
 

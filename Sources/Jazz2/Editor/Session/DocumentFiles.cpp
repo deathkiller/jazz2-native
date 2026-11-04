@@ -15,6 +15,7 @@
 #include "../Imaging/LevelThumbnail.h"
 #include "../Imaging/PngCodec.h"
 #include "../Imaging/TileImages.h"
+#include "../Shell/FilePickers.h"
 #include "../Shell/TextPrompt.h"
 #include "../Shell/WeaponScripts.h"
 #include "../Tools/EditorContext.h"
@@ -703,9 +704,7 @@ namespace Jazz2::Editor
 		};
 		// TRANSLATORS: Title of the file dialog that opens a level to edit
 		UiFileDialog* dialog = UiFileDialog::Show(*_context.GetSurface(), _x("editor", "Open Level"), UiFileDialogMode::Open, Death::move(roots), ".j2l"_s, directory, {}, open);
-		dialog->PreviewFunc = [](StringView path, SmallVectorImpl<std::uint8_t>& rgba, Vector2i& size) {
-			return Formats::LevelPreview::Read(path, rgba, size);
-		};
+		SetupLevelFileDialog(*dialog);
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		// The browser has the files of the computer, a level is uploaded into the game
 		// TRANSLATORS: Button in the Open Level dialog of the web version, picks a level file of the computer to upload
@@ -737,6 +736,13 @@ namespace Jazz2::Editor
 		auto* tileSetBox = tileSetRow->Add<UiTextBox>(settings->TileSet);
 		tileSetBox->Width = 120.0f;
 		tileSetBox->OnChanged = [settings](StringView text) { settings->TileSet = text; };
+		tileSetRow->Add<UiButton>(StringView(), EditorIcon::Folder, [this, settings, tileSetBox]() {
+			// TRANSLATORS: Title of the file dialog choosing the tile set of a new level
+			ShowTileSetPicker(_context, _x("editor", "Tile Set of the New Level"), tileSetBox->Text.trimmed(), [settings, tileSetBox](StringView name) {
+				tileSetBox->Text = name;
+				settings->TileSet = name;
+			});
+		})->Tooltip = _x("editor", "Choose a tile set");
 
 		auto* widthRow = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
 		// TRANSLATORS: Label in the New Level dialog, the width of the level in tiles, keep it short
@@ -919,11 +925,15 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Titles of the file dialog that exports the level to be played, or saves it under another name
 		UiFileDialog* fileDialog = UiFileDialog::Show(surface, exportOnly ? _x("editor", "Export Level") : _x("editor", "Save Level As"), UiFileDialogMode::Save, Death::move(roots), ".j2l"_s,
 			directory, name, [this, exportOnly, sharedOnSaved](StringView chosenPath) {
-			String path = chosenPath;
-			auto save = [this, exportOnly, sharedOnSaved, path]() {
-				SaveAsConfirmed(path, exportOnly, sharedOnSaved);
-			};
+			SaveAsConfirmed(chosenPath, exportOnly, sharedOnSaved);
+		});
+		if (fileDialog == nullptr) {
+			return;
+		}
 
+		// Asked while the file dialog stays open, so another name can be entered instead
+		fileDialog->ConfirmFunc = [this, exportOnly](StringView chosenPath, Function<void()>&& proceed) {
+			String path = chosenPath;
 			bool overSource = (exportOnly && IsSameFile(path, _filePath));
 			if (overSource && _exportNotEditable) {
 				// The editor couldn't open its own level again
@@ -963,18 +973,20 @@ namespace Jazz2::Editor
 			}
 
 			if (warning.empty()) {
-				save();
+				proceed();
 			} else {
+				auto sharedProceed = std::make_shared<Function<void()>>(Death::move(proceed));
 				UiMessageDialog::Show(*_context.GetSurface(), exportOnly ? _x("editor", "Export Level") : _x("editor", "Save Level As"), String(warning + "\n"_s + _x("editor", "Do you want to continue?")),
-					{ _("Save"), _x("editor", "Cancel") }, [save](std::int32_t button) {
+					{ _("Save"), _x("editor", "Cancel") }, [sharedProceed](std::int32_t button) {
 					if (button == 0) {
-						save();
+						(*sharedProceed)();
 					}
 				});
 			}
-		});
+		};
 
-		if (exportOnly && fileDialog != nullptr) {
+		SetupLevelFileDialog(*fileDialog);
+		if (exportOnly) {
 			// Whether the editor can open the exported level again, chosen along with where it goes
 			_exportNotEditable = false;
 			// TRANSLATORS: Check box in the Export Level dialog, keeps the exported level from being opened in the editor

@@ -1917,6 +1917,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LayerDialogs.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LayerResizeHandles.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelDialogs.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/FilePickers.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelCheck.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelStatistics.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelTextLanguages.h
@@ -2062,6 +2063,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LayerDialogs.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LayerResizeHandles.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelDialogs.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/FilePickers.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelCheck.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelStatistics.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Shell/LevelTextLanguages.cpp

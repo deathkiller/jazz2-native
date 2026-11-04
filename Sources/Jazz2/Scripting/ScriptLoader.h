@@ -4,6 +4,7 @@
 
 #include "../../Main.h"
 #include "../../nCine/Base/HashMap.h"
+#include "../../nCine/Base/TimeStamp.h"
 
 #include <angelscript.h>
 
@@ -174,6 +175,9 @@ namespace Jazz2::Scripting
 		asIScriptModule* _module;
 		ScriptContextType _scriptContextType;
 		SmallVector<asIScriptContext*, 4> _contextPool;
+		// Nesting of the contexts being timed for the performance overlay, only the outermost one is measured
+		std::uint32_t _timedContextDepth;
+		TimeStamp _timedContextStart;
 
 		HashMap<String, bool> _includedFiles;
 		SmallVector<RawMetadataDeclaration, 0> _foundDeclarations;

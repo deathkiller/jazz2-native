@@ -134,6 +134,16 @@ namespace Jazz2::Scripting
 			}
 			return std::regex(expression.begin(), expression.end(), flags);
 		}
+
+		// The whole match first, then the captured groups (empty for a group that didn't take part)
+		void StoreRegexResults(const std::match_results<const char*>& m, CScriptArray& results)
+		{
+			results.Resize(std::uint32_t(m.size()));
+			for (std::size_t i = 0; i < m.size(); i++) {
+				String& item = *static_cast<String*>(results.At(std::uint32_t(i)));
+				item = (m[i].matched ? String(m[i].first, std::size_t(m[i].length())) : String());
+			}
+		}
 	}
 
 	bool jjRegexIsValid(const String& expression)
@@ -157,7 +167,7 @@ namespace Jazz2::Scripting
 			std::match_results<const char*> m;
 			std::regex r = CreateRegex(expression, ignoreCase);
 			bool success = std::regex_match(text.begin(), text.end(), m, r);
-			// TODO: Results
+			StoreRegexResults(m, results);
 			return success;
 		}, false);
 	}
@@ -175,7 +185,7 @@ namespace Jazz2::Scripting
 			std::match_results<const char*> m;
 			std::regex r = CreateRegex(expression, ignoreCase);
 			bool success = std::regex_search(text.begin(), text.end(), m, r);
-			// TODO: Results
+			StoreRegexResults(m, results);
 			return success;
 		}, false);
 	}

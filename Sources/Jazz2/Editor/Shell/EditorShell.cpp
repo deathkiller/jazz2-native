@@ -529,12 +529,16 @@ namespace Jazz2::Editor
 			auto makeLabel = [](StringView path) {
 				return String(fs::GetFileName(fs::GetDirectoryName(path)) + "/"_s + fs::GetFileName(path));
 			};
+			auto getIcon = [](StringView path) {
+				String scriptPath = fs::CombinePath(fs::GetDirectoryName(path), String(fs::GetFileNameWithoutExtension(path) + ".j2as"_s));
+				return (fs::FileExists(scriptPath) ? EditorIcon::ScriptedLevelFile : EditorIcon::LevelFile);
+			};
 			std::int32_t shown = 0;
 			if (!openPath.empty() && fs::FileExists(openPath)) {
 				entries.push_back(UiMenuEntry::Separator());
 				UiMenuEntry entry;
 				entry.Label = makeLabel(openPath);
-				entry.Icon = EditorIcon::File;
+				entry.Icon = getIcon(openPath);
 				entry.IsChecked = []() { return true; };
 				// Open already, choosing it does nothing
 				entry.Execute = []() {};
@@ -550,7 +554,7 @@ namespace Jazz2::Editor
 				}
 				UiMenuEntry entry;
 				entry.Label = makeLabel(path);
-				entry.Icon = EditorIcon::File;
+				entry.Icon = getIcon(path);
 				String pathCopy = path;
 				entry.Execute = [session, pathCopy]() { session->OpenFile(pathCopy); };
 				entries.push_back(Death::move(entry));

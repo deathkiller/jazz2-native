@@ -122,9 +122,9 @@ void onPlayerTimerEnd(jjPLAYER@ player);
 	@brief Called when a player dies
 
 	@param victim   The player who died
-	@param killer   The player responsible for the death, the game currently always passes `null`
+	@param killer   The player responsible for the death, or `null` if not killed by another player
 	@callback
-	@partialsupport
+	@partialsupport `killer` is always `null` on multiplayer clients.
 */
 void onRoast(jjPLAYER@ victim, jjPLAYER@ killer);
 
@@ -208,14 +208,35 @@ bool onDrawLives(jjPLAYER@ player, jjCANVAS@ canvas);
 /**
 	@brief Called when the HUD draws the score of a player
 
-	Called every frame for the view of each player. The HUD of multiplayer games doesn't call it.
+	Called every frame for the view of each player.
 	@param player   The player whose view is drawn
 	@param canvas   Canvas covering the view of the player
 	@return `true` if the script drew its own version and the game should skip the default one, `false` to draw
 		the default one too
 	@callback
+	@partialsupport The HUD of multiplayer games doesn't call it.
 */
 bool onDrawScore(jjPLAYER@ player, jjCANVAS@ canvas);
+
+/**
+	@brief Called when the HUD draws the timer of a player
+	@param player   The player whose view is drawn
+	@param canvas   Canvas covering the view of the player
+	@return `true` if the script drew its own version and the game should skip the default one
+	@callback
+	@partialsupport Never called by the game, the timer of a player isn't shown on the HUD.
+*/
+bool onDrawPlayerTimer(jjPLAYER@ player, jjCANVAS@ canvas);
+
+/**
+	@brief Called when the HUD draws the information of the game mode of a multiplayer game
+	@param player   The player whose view is drawn
+	@param canvas   Canvas covering the view of the player
+	@return `true` if the script drew its own version and the game should skip the default one
+	@callback
+	@partialsupport Never called by the game.
+*/
+bool onDrawGameModeHUD(jjPLAYER@ player, jjCANVAS@ canvas);
 
 /**
 	@brief Draws into the level at layer 1

@@ -475,7 +475,7 @@ namespace Jazz2::Scripting
 		 *
 		 * @ref jjPAL::apply() on any palette copies its colors here. Changes made to it directly also need @ref apply() to
 		 * take effect.
-		 * @partialsupport
+		 * @partialsupport The game font and the rest of the HUD the game draws itself don't follow its changes.
 		 */
 		engine->RegisterGlobalProperty("jjPAL jjPalette", &jjPalette);
 		/** @brief Original palette of the level, as it was when the script was loaded */
@@ -507,46 +507,46 @@ namespace Jazz2::Scripting
 		engine->RegisterEnum("Mode");
 		engine->RegisterEnumValue("Mode", "NORMAL", spriteType_NORMAL);	///< Drawn with its own colors
 		engine->RegisterEnumValue("Mode", "TRANSLUCENT", spriteType_TRANSLUCENT);	///< Drawn half transparent
-		engine->RegisterEnumValue("Mode", "TINTED", spriteType_TINTED);	///< Mixed with the palette color `param`
-		engine->RegisterEnumValue("Mode", "GEM", spriteType_GEM);	///< Drawn like a gem, `param` selects the gem color
-		engine->RegisterEnumValue("Mode", "INVISIBLE", spriteType_INVISIBLE);	///< Not drawn at all @partialsupport
+		engine->RegisterEnumValue("Mode", "TINTED", spriteType_TINTED);	///< Mixed with the palette color `param` @partialsupport Text in the game font and rectangles are drawn plain.
+		engine->RegisterEnumValue("Mode", "GEM", spriteType_GEM);	///< Drawn like a gem, `param` selects the gem color @partialsupport Text in the game font is drawn plain.
+		engine->RegisterEnumValue("Mode", "INVISIBLE", spriteType_INVISIBLE);	///< Not drawn at all @partialsupport Text drawn in this mode stays visible.
 		engine->RegisterEnumValue("Mode", "SINGLECOLOR", spriteType_SINGLECOLOR);	///< Shape filled with the palette color `param`
 		engine->RegisterEnumValue("Mode", "RESIZED", spriteType_RESIZED);	///< Drawn like `NORMAL`
-		engine->RegisterEnumValue("Mode", "NEONGLOW", spriteType_NEONGLOW);	///< Brightness added to what is behind, `param` selects the color channels
-		engine->RegisterEnumValue("Mode", "FROZEN", spriteType_FROZEN);	///< Drawn frozen in ice
-		engine->RegisterEnumValue("Mode", "PLAYER", spriteType_PLAYER);	///< Drawn in the fur colors of the player with index `param`
-		engine->RegisterEnumValue("Mode", "PALSHIFT", spriteType_PALSHIFT);	///< Palette indices shifted by `param`
+		engine->RegisterEnumValue("Mode", "NEONGLOW", spriteType_NEONGLOW);	///< Brightness added to what is behind, `param` selects the color channels @partialsupport Approximated, `param` above 6 counts as 6. Text in the game font and rectangles are drawn plain.
+		engine->RegisterEnumValue("Mode", "FROZEN", spriteType_FROZEN);	///< Drawn frozen in ice @partialsupport Drawn as the game draws frozen objects. Text in the game font and rectangles are drawn plain.
+		engine->RegisterEnumValue("Mode", "PLAYER", spriteType_PLAYER);	///< Drawn in the fur colors of the player with index `param` @partialsupport Text in the game font and rectangles are drawn plain.
+		engine->RegisterEnumValue("Mode", "PALSHIFT", spriteType_PALSHIFT);	///< Palette indices shifted by `param` @partialsupport Text in the game font and rectangles aren't shifted.
 		engine->RegisterEnumValue("Mode", "SHADOW", spriteType_SHADOW);	///< Darkens what is behind, in the shape of the sprite
-		engine->RegisterEnumValue("Mode", "SINGLEHUE", spriteType_SINGLEHUE);	///< Drawn in shades of the palette gradient starting at index `param`
-		engine->RegisterEnumValue("Mode", "BRIGHTNESS", spriteType_BRIGHTNESS);	///< Brightness scaled by `param`, 128 is unchanged
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTCOLOR", spriteType_TRANSLUCENTCOLOR);	///< Translucent variant of @ref SINGLECOLOR
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTPLAYER", spriteType_TRANSLUCENTPLAYER);	///< Translucent variant of `PLAYER`
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTPALSHIFT", spriteType_TRANSLUCENTPALSHIFT);	///< Translucent variant of `PALSHIFT`
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTSINGLEHUE", spriteType_TRANSLUCENTSINGLEHUE);	///< Translucent variant of @ref SINGLEHUE
-		engine->RegisterEnumValue("Mode", "ALPHAMAP", spriteType_ALPHAMAP);	///< Palette color `param`, with the sprite's palette indices used as its opacity
-		engine->RegisterEnumValue("Mode", "MENUPLAYER", spriteType_MENUPLAYER);	///< Player colors as used in menus
+		engine->RegisterEnumValue("Mode", "SINGLEHUE", spriteType_SINGLEHUE);	///< Drawn in shades of the palette gradient starting at index `param` @partialsupport Rectangles are drawn plain.
+		engine->RegisterEnumValue("Mode", "BRIGHTNESS", spriteType_BRIGHTNESS);	///< Brightness scaled by `param`, 128 is unchanged @partialsupport Rectangles are drawn plain.
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTCOLOR", spriteType_TRANSLUCENTCOLOR);	///< Translucent variant of @ref SINGLECOLOR @partialsupport Text in the game font is drawn plain.
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTPLAYER", spriteType_TRANSLUCENTPLAYER);	///< Translucent variant of `PLAYER` @partialsupport Text in the game font is drawn plain, rectangles only translucent.
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTPALSHIFT", spriteType_TRANSLUCENTPALSHIFT);	///< Translucent variant of `PALSHIFT` @partialsupport Text in the game font is drawn plain, rectangles only translucent.
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTSINGLEHUE", spriteType_TRANSLUCENTSINGLEHUE);	///< Translucent variant of @ref SINGLEHUE @partialsupport Text in the game font is drawn plain, rectangles only translucent.
+		engine->RegisterEnumValue("Mode", "ALPHAMAP", spriteType_ALPHAMAP);	///< Palette color `param`, with the sprite's palette indices used as its opacity @partialsupport Text in the game font and rectangles are drawn plain.
+		engine->RegisterEnumValue("Mode", "MENUPLAYER", spriteType_MENUPLAYER);	///< Player colors as used in menus @partialsupport Drawn as `NORMAL`.
 		engine->RegisterEnumValue("Mode", "BLEND_NORMAL", spriteType_BLENDNORMAL);	///< Normal blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_DARKEN", spriteType_BLENDDARKEN);	///< Darken blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_LIGHTEN", spriteType_BLENDLIGHTEN);	///< Lighten blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_HUE", spriteType_BLENDHUE);	///< Hue blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_SATURATION", spriteType_BLENDSATURATION);	///< Saturation blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_COLOR", spriteType_BLENDCOLOR);	///< Color blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_LUMINANCE", spriteType_BLENDLUMINANCE);	///< Luminance blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_MULTIPLY", spriteType_BLENDMULTIPLY);	///< Multiply blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_SCREEN", spriteType_BLENDSCREEN);	///< Screen blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_DISSOLVE", spriteType_BLENDDISSOLVE);	///< Random pixels drawn, `param` is their density
-		engine->RegisterEnumValue("Mode", "BLEND_OVERLAY", spriteType_BLENDOVERLAY);	///< Overlay blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_HARDLIGHT", spriteType_BLENDHARDLIGHT);	///< Hard light blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_SOFTLIGHT", spriteType_BLENDSOFTLIGHT);	///< Soft light blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_DIFFERENCE", spriteType_BLENDDIFFERENCE);	///< Difference blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_DODGE", spriteType_BLENDDODGE);	///< Color dodge blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_BURN", spriteType_BLENDBURN);	///< Color burn blending, `param` is the opacity
-		engine->RegisterEnumValue("Mode", "BLEND_EXCLUSION", spriteType_BLENDEXCLUSION);	///< Exclusion blending, `param` is the opacity
+		engine->RegisterEnumValue("Mode", "BLEND_DARKEN", spriteType_BLENDDARKEN);	///< Darken blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_LIGHTEN", spriteType_BLENDLIGHTEN);	///< Lighten blending, `param` is the opacity @partialsupport Sprites and rectangles are added to what is behind, ignoring `param`; text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_HUE", spriteType_BLENDHUE);	///< Hue blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_SATURATION", spriteType_BLENDSATURATION);	///< Saturation blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_COLOR", spriteType_BLENDCOLOR);	///< Color blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_LUMINANCE", spriteType_BLENDLUMINANCE);	///< Luminance blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text is approximated.
+		engine->RegisterEnumValue("Mode", "BLEND_MULTIPLY", spriteType_BLENDMULTIPLY);	///< Multiply blending, `param` is the opacity @partialsupport Sprites are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_SCREEN", spriteType_BLENDSCREEN);	///< Screen blending, `param` is the opacity @partialsupport Sprites are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_DISSOLVE", spriteType_BLENDDISSOLVE);	///< Random pixels drawn, `param` is their density @partialsupport Sprites and rectangles are drawn translucent by `param` instead.
+		engine->RegisterEnumValue("Mode", "BLEND_OVERLAY", spriteType_BLENDOVERLAY);	///< Overlay blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_HARDLIGHT", spriteType_BLENDHARDLIGHT);	///< Hard light blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_SOFTLIGHT", spriteType_BLENDSOFTLIGHT);	///< Soft light blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_DIFFERENCE", spriteType_BLENDDIFFERENCE);	///< Difference blending, `param` is the opacity @partialsupport Approximated for sprites by scaling their colors by `param`; text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_DODGE", spriteType_BLENDDODGE);	///< Color dodge blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_BURN", spriteType_BLENDBURN);	///< Color burn blending, `param` is the opacity @partialsupport Only layers are blended, sprites and rectangles are drawn as `NORMAL` and text only takes the opacity.
+		engine->RegisterEnumValue("Mode", "BLEND_EXCLUSION", spriteType_BLENDEXCLUSION);	///< Exclusion blending, `param` is the opacity @partialsupport Sprites and rectangles are drawn as `BLEND_DIFFERENCE`, text only takes the opacity.
 		engine->RegisterEnumValue("Mode", "TRANSLUCENTTILE", spriteType_TRANSLUCENTTILE);	///< Translucent the way translucent tiles are
-		engine->RegisterEnumValue("Mode", "CHROMAKEY", spriteType_CHROMAKEY);	///< Drawn only over pixels of the palette color `param`
-		engine->RegisterEnumValue("Mode", "MAPPING", spriteType_MAPPING);	///< Colors remapped by mapping `param`, see @ref jjSpriteModeSetMapping()
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTMAPPING", spriteType_TRANSLUCENTMAPPING);	///< Translucent variant of @ref MAPPING
-		engine->RegisterEnumValue("Mode", "INVERSE", spriteType_INVERSE);	///< Inverted colors
+		engine->RegisterEnumValue("Mode", "CHROMAKEY", spriteType_CHROMAKEY);	///< Drawn only over pixels of the palette color `param` @partialsupport Only sprites drawn into the level by the `jjDraw*` functions are keyed, and not by every renderer; elsewhere they're drawn as `NORMAL`, as are text and rectangles.
+		engine->RegisterEnumValue("Mode", "MAPPING", spriteType_MAPPING);	///< Colors remapped by mapping `param`, see @ref jjSpriteModeSetMapping() @partialsupport Only layers are remapped, sprites, text and rectangles are drawn as `NORMAL`.
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTMAPPING", spriteType_TRANSLUCENTMAPPING);	///< Translucent variant of @ref MAPPING @partialsupport Only layers are remapped, sprites, text and rectangles are drawn as `NORMAL`.
+		engine->RegisterEnumValue("Mode", "INVERSE", spriteType_INVERSE);	///< Inverted colors @partialsupport Drawn as `NORMAL`.
 		/** @brief How a sprite is flipped, used as the `direction` of drawing functions */
 		engine->RegisterEnum("Direction");
 		engine->RegisterEnumValue("Direction", "FLIPNONE", 0x00);	///< Not flipped
@@ -578,6 +578,7 @@ namespace Jazz2::Scripting
 		 * @brief Defines a color mapping for @ref SPRITE::MAPPING, with colors of its own
 		 *
 		 * Like the overload without `rgbMapping`, but also stores a color for each of the 256 indices.
+		 * @partialsupport Currently the mapping is only stored so it can be read back, sprites aren't drawn with it yet.
 		 */
 		engine->RegisterGlobalFunction("void jjSpriteModeSetMapping(uint8 index, const array<uint8> &in indexMapping, const jjPAL &in rgbMapping)", asFUNCTION(jjSpriteModeSetMapping), asCALL_CDECL);
 		/**

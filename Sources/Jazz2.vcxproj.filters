@@ -1983,6 +1983,9 @@
     <ClInclude Include="Jazz2\Editor\Shell\LevelDialogs.h">
       <Filter>Header Files\Jazz2\Editor\Shell</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Editor\Shell\FilePickers.h">
+      <Filter>Header Files\Jazz2\Editor\Shell</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Editor\Shell\LevelCheck.h">
       <Filter>Header Files\Jazz2\Editor\Shell</Filter>
     </ClInclude>
@@ -2655,6 +2658,9 @@
       <Filter>Source Files\Jazz2\Editor\Shell</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Shell\LevelDialogs.cpp">
+      <Filter>Source Files\Jazz2\Editor\Shell</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Editor\Shell\FilePickers.cpp">
       <Filter>Source Files\Jazz2\Editor\Shell</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Editor\Shell\LevelCheck.cpp">
