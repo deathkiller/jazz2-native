@@ -4,8 +4,9 @@
 
 #include "ShellCommon.h"
 #include "../Events/EventPreviews.h"
-#include "../UI/UiDock.h"
-#include "../UI/UiMenu.h"
+#include "../../UI/Windows/Dock.h"
+#include "../../UI/Windows/Menu.h"
+#include "../UI/EditorUi.h"
 #include "../../EventType.h"
 
 #include <memory>
@@ -32,12 +33,12 @@ namespace Jazz2::Editor
 		The menu bar and the toolbar at the top, the tools on the left with the tiles and the events to pick from next
 		to them, the layers and their properties on the right and the status bar at the bottom. The level is shown
 		behind all of it, the part the panels leave uncovered is the view (see @ref GetViewRect()). The panel on the
-		left with the tiles and the one on the right can float over the level instead, see @ref UiDockFrame. The shell
+		left with the tiles and the one on the right can float over the level instead, see @ref UI::Windows::DockFrame. The shell
 		also draws what is shown over the level --- the grid, the selection and what the tool in use shows.
 	*/
-	class EditorShell : public UiElement
+	class EditorShell : public Element
 	{
-		DEATH_RUNTIME_OBJECT(UiElement);
+		DEATH_RUNTIME_OBJECT(Element);
 
 	public:
 		explicit EditorShell(EditorSession& session);
@@ -60,43 +61,43 @@ namespace Jazz2::Editor
 		static bool IsExpertAction(StringView actionId);
 
 		/** @brief Returns a dialog shown under an identifier, see @ref ShowSingleDialog() */
-		UiElement* FindDialog(StringView id) const;
+		Element* FindDialog(StringView id) const;
 		/** @brief Remembers a dialog shown under an identifier until it's closed, with what to do when it's to be shown again */
-		void TrackDialog(StringView id, UiElement* dialog, Function<void()>&& onShownAgain);
+		void TrackDialog(StringView id, Element* dialog, Function<void()>&& onShownAgain);
 		/** @brief Forgets a dialog that was closed */
-		void ForgetDialog(UiElement* dialog);
+		void ForgetDialog(Element* dialog);
 		/** @brief Does what a dialog was shown with for when it's to be shown again, see @ref TrackDialog() */
-		void ShowDialogAgain(UiElement* dialog);
+		void ShowDialogAgain(Element* dialog);
 
-		void Arrange(const UiContext& context, const Rectf& bounds) override;
-		void Draw(UiPainter& painter) override;
+		void Arrange(const Context& context, const Rectf& bounds) override;
+		void Draw(Painter& painter) override;
 		void Update(float timeMult) override;
-		UiElement* HitTest(Vector2f pos) override;
+		Element* HitTest(Vector2f pos) override;
 
 		/** @brief Draws the sprites of the events into the level, among its layers, their marks are drawn over it */
 		void DrawSceneEvents(UI::Canvas& canvas);
 
 	private:
 		EditorSession& _session;
-		UiMenuBar* _menuBar;
-		UiPanel* _toolbar;
-		UiPanel* _toolStrip;
+		MenuBar* _menuBar;
+		Panel* _toolbar;
+		Panel* _toolStrip;
 		// The buttons of the tools, they scroll in the strip when it's too short for them
-		UiStack* _toolStripItems;
-		UiDockFrame* _rightFrame;
-		UiPanel* _rightDock;
-		UiElement* _layersPanel;
-		UiDockFrame* _pickerFrame;
-		UiPanel* _pickerDock;
+		Stack* _toolStripItems;
+		DockFrame* _rightFrame;
+		Panel* _rightDock;
+		Element* _layersPanel;
+		DockFrame* _pickerFrame;
+		Panel* _pickerDock;
 		// Panels that float, or are on their way, are drawn over the others in this order, the last one on top
-		SmallVector<UiDockFrame*, 2> _floatOrder;
-		UiElement* _statusBar;
-		UiPanel* _playBar;
-		UiSplitter* _rightSplitter;
-		UiSplitter* _layersSplitter;
-		UiSplitter* _pickerSplitter;
+		SmallVector<DockFrame*, 2> _floatOrder;
+		Element* _statusBar;
+		Panel* _playBar;
+		Splitter* _rightSplitter;
+		Splitter* _layersSplitter;
+		Splitter* _pickerSplitter;
 		// Handles on the frame of the layer being edited that resize it, see LayerResizeHandles
-		UiElement* _resizeHandles = nullptr;
+		Element* _resizeHandles = nullptr;
 		float _rightDockWidth;
 		float _layerListHeight;
 		// How far the bar of the level being played has come in, 0 to 1
@@ -106,7 +107,7 @@ namespace Jazz2::Editor
 		Rectf _viewRect;
 		// Part of the screen what is shown over the level is drawn in, also under the panels while they show it blurred
 		Rectf _drawRect;
-		// Part of the screen the panels are in, the edges a display may cut off are around it, see UiSurface::GetSafeBounds()
+		// Part of the screen the panels are in, the edges a display may cut off are around it, see Surface::GetSafeBounds()
 		Rectf _safeArea;
 		// Laid out for a small screen, with the panels in drawers, and for a very narrow one with the tools at the bottom
 		bool _compact = false;
@@ -154,7 +155,7 @@ namespace Jazz2::Editor
 		struct ShownDialog
 		{
 			String Id;
-			UiElement* Element;
+			UI::Windows::Element* Element;
 			Function<void()> OnShownAgain;
 		};
 		SmallVector<ShownDialog, 4> _shownDialogs;
@@ -200,39 +201,39 @@ namespace Jazz2::Editor
 		void OnDocumentChanged(const DocumentChanges& changes);
 		void UpdateEventLinks();
 		// What the game shows around the pointer, see EditorSettings::ShowScreenFrame
-		void DrawScreenFrame(UiPainter& painter);
+		void DrawScreenFrame(Painter& painter);
 
 		void CreateMenuBar();
 		void CreateToolbar();
 		void CreateToolStrip();
-		UiButton* AddActionButton(UiElement* parent, StringView actionId, bool showText = false);
+		Button* AddActionButton(Element* parent, StringView actionId, bool showText = false);
 
-		void DrawGrid(UiPainter& painter, const LayerView& view);
-		void DrawSelection(UiPainter& painter, const LayerView& view);
+		void DrawGrid(Painter& painter, const LayerView& view);
+		void DrawSelection(Painter& painter, const LayerView& view);
 		// Returns how many tiles a side of a block drawn as one is, more than one only when tiles are a few pixels small
 		static std::int32_t GetCellUnit(const LayerView& view);
-		void DrawLayerBounds(UiPainter& painter, const LayerView& view);
-		void DrawRepeatedLayerBounds(UiPainter& painter, const LayerView& view, const Rectf& topLeft, const Rectf& bottomRight);
+		void DrawLayerBounds(Painter& painter, const LayerView& view);
+		void DrawRepeatedLayerBounds(Painter& painter, const LayerView& view, const Rectf& topLeft, const Rectf& bottomRight);
 		// Where a layer is on the screen, of a layer that repeats the copy that is framed, see DrawLayerBounds()
 		Rectf GetLayerFrame(const LayerView& view) const;
-		void DrawMasks(UiPainter& painter, const LayerView& view);
+		void DrawMasks(Painter& painter, const LayerView& view);
 		// Over the masks of the sprite layer, symbols of what the events of its tiles make them do
-		void DrawMaskGlyphs(UiPainter& painter, const LayerView& view);
+		void DrawMaskGlyphs(Painter& painter, const LayerView& view);
 		// Bookmarks and notes, see Annotation
-		void DrawAnnotations(UiPainter& painter);
+		void DrawAnnotations(Painter& painter);
 		// Tiles the player can get to, see PlayOverlays::GetReachability()
-		void DrawReachability(UiPainter& painter);
+		void DrawReachability(Painter& painter);
 		// Returns `true` if the masks show a symbol for an event, instead of its mark
 		static bool HasMaskGlyph(EventType type);
 		// Without the links and the selection if there is a hole, events that reach into it are left out
-		void DrawEvents(UiPainter& painter, const Rectf& area, Vector2f holeCenter = Vector2f(), float holeRadius = -1.0f);
+		void DrawEvents(Painter& painter, const Rectf& area, Vector2f holeCenter = Vector2f(), float holeRadius = -1.0f);
 		// Whether the event tool drags the selected events away, they're faded where they were, a dragged handle doesn't
 		bool IsMovingEvents() const;
-		void DrawEventLinks(UiPainter& painter, const LayerView& view, float alpha);
-		void DrawSelectedEventDetails(UiPainter& painter, const LayerView& view);
+		void DrawEventLinks(Painter& painter, const LayerView& view, float alpha);
+		void DrawSelectedEventDetails(Painter& painter, const LayerView& view);
 		// While an ambient light event is selected, darkens the level as the game would
-		void DrawAmbientLight(UiPainter& painter, const LayerView& view);
-		void DrawPlayPath(UiPainter& painter);
+		void DrawAmbientLight(Painter& painter, const LayerView& view);
+		void DrawPlayPath(Painter& painter);
 	};
 }
 

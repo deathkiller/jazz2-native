@@ -5,7 +5,8 @@
 #include "EditorLevelHandler.h"
 #include "PlayTestLevelHandler.h"
 #include "RuntimeSync.h"
-#include "../UI/UiTheme.h"
+#include "../../UI/Windows/Theme.h"
+#include "../UI/EditorUi.h"
 #if defined(WITH_MULTIPLAYER)
 #	include "PlayTestMpLevelHandler.h"
 #endif
@@ -717,7 +718,7 @@ namespace Jazz2::Editor
 		}
 		_musicFadeTime += timeMult;
 		// With reduced motion, the music is muffled or opened up at once, as the rest changes at once then
-		float t = (UiTheme::ReducedMotion ? 1.0f : std::min(_musicFadeTime / MusicFadeFrames, 1.0f));
+		float t = (Theme::ReducedMotion ? 1.0f : std::min(_musicFadeTime / MusicFadeFrames, 1.0f));
 		float eased = t * t * (3.0f - 2.0f * t);
 		// The cutoff is heard on a log scale, so it's faded on one
 		float value = _musicFadeFrom * std::pow(_musicFadeTo / _musicFadeFrom, eased);

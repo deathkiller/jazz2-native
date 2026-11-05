@@ -89,10 +89,10 @@ namespace Jazz2::Editor
 			}
 		}
 		// As the game looks for it, see Level Properties
-		SmallVector<UiFileRoot, 4> roots;
+		SmallVector<FileRoot, 4> roots;
 		GetFileRoots(false, roots);
 		SmallVector<String, 4> episodeRoots;
-		for (const UiFileRoot& root : roots) {
+		for (const FileRoot& root : roots) {
 			episodeRoots.push_back(root.Path);
 		}
 		return FindLevelFile(levelName, _files->GetLevelName(), episodeRoots);
@@ -108,7 +108,7 @@ namespace Jazz2::Editor
 			ShowMessage(_fx("editor", "The level \"{}\" that follows wasn't found", levelName));
 			return;
 		}
-		UiMessageDialog::Show(*_surface, _x("editor", "Level Finished"), _fx("editor", "The level that follows is \"{}\".", levelName),
+		MessageDialog::Show(*_surface, _x("editor", "Level Finished"), _fx("editor", "The level that follows is \"{}\".", levelName),
 			// TRANSLATORS: Buttons of the dialog after a play-tested level was finished - open the following level in the editor, leave the editor and play it, or stay in this level
 			{ _x("editor", "Edit It"), _x("editor", "Play On"), _x("editor", "Stay Here") }, [this, next, path](std::int32_t button) {
 			if (button == 0) {
@@ -137,7 +137,7 @@ namespace Jazz2::Editor
 		_input->ReleasePointer(true);
 		// The sound of the selected event isn't heard in the game, see UpdateEventSound()
 		_eventPreviews.StopSound();
-		if (UiSurface* surface = _surface.get()) {
+		if (Surface* surface = _surface.get()) {
 			surface->ClosePopups();
 			surface->SetFocus(nullptr);
 			surface->DismissTooltip();

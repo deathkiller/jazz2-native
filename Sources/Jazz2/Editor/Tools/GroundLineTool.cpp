@@ -1042,7 +1042,7 @@ namespace Jazz2::Editor
 		return (!_points.empty() || _dragSpline >= 0);
 	}
 
-	void GroundLineTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void GroundLineTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		std::int32_t layerIndex = _host.GetCurrentLayer();
 		LayerView view = _host.GetLayerView(layerIndex);
@@ -1103,10 +1103,10 @@ namespace Jazz2::Editor
 						continue;
 					}
 					Vector2f a(owned.X * 32.0f, owned.Y * 32.0f + left), b(owned.X * 32.0f + 32.0f, owned.Y * 32.0f + right);
-					// Colors of what is right and wrong, as the theme has them, see UiTheme
-					Colorf color = (miss <= 4.0f ? UiTheme::OverlayGood : UiTheme::OverlayBad);
+					// Colors of what is right and wrong, as the theme has them, see Theme
+					Colorf color = (miss <= 4.0f ? Theme::OverlayGood : Theme::OverlayBad);
 					color.A = (miss <= 4.0f ? 0.45f : std::clamp(0.4f + miss / 32.0f, 0.4f, 0.95f));
-					painter.Line(view.WorldToScreen(a + view.Origin), view.WorldToScreen(b + view.Origin), std::max(1.0f, thickness * 0.75f), color, UiLayer::Overlay);
+					painter.Line(view.WorldToScreen(a + view.Origin), view.WorldToScreen(b + view.Origin), std::max(1.0f, thickness * 0.75f), color, PaintLayer::Overlay);
 				}
 			}
 
@@ -1116,11 +1116,11 @@ namespace Jazz2::Editor
 			}
 			bool active = (i == hoverSpline || i == _dragSpline || i == selectedSpline);
 			Colorf color = (active ? Colorf(1.0f, 0.95f, 0.5f, 0.95f) : Colorf(0.6f, 1.0f, 0.4f, 0.7f));
-			painter.Polyline(screenLine, thickness, color, UiLayer::Overlay);
+			painter.Polyline(screenLine, thickness, color, PaintLayer::Overlay);
 			for (std::int32_t j = 0; j < std::int32_t(shown.Points.size()); j++) {
 				Vector2f p = view.WorldToScreen(shown.Points[j] + view.Origin);
 				bool hovered = (i == hoverSpline && j == hoverPoint);
-				painter.Circle(p, hovered ? handle * 1.6f : handle, hovered ? UiTheme::Cursor : UiTheme::Accent, UiLayer::OverlayText);
+				painter.Circle(p, hovered ? handle * 1.6f : handle, hovered ? Theme::Cursor : Theme::Accent, PaintLayer::OverlayText);
 			}
 		}
 
@@ -1155,12 +1155,12 @@ namespace Jazz2::Editor
 				Rectf rect = (drawing.Kind == SplineKind::Ceiling
 					? Rectf(a.X, top - depth, b.X - a.X, bottom - top + depth)
 					: Rectf(a.X, top, b.X - a.X, bottom - top + depth));
-				painter.FillRect(rect, Colorf(0.55f, 0.4f, 0.2f, 0.12f), UiLayer::Fill);
+				painter.FillRect(rect, Colorf(0.55f, 0.4f, 0.2f, 0.12f), PaintLayer::Fill);
 			}
 		}
-		painter.Polyline(screenLine, thickness, Colorf(0.6f, 1.0f, 0.4f, 0.85f), UiLayer::Overlay);
+		painter.Polyline(screenLine, thickness, Colorf(0.6f, 1.0f, 0.4f, 0.85f), PaintLayer::Overlay);
 		for (const Vector2f& p : _points) {
-			painter.Circle(view.WorldToScreen(p + view.Origin), handle, UiTheme::Accent, UiLayer::OverlayText);
+			painter.Circle(view.WorldToScreen(p + view.Origin), handle, Theme::Accent, PaintLayer::OverlayText);
 		}
 	}
 

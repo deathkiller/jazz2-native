@@ -3,10 +3,13 @@
 #include "../Primitives/Vector2.h"
 #include "../Primitives/Rect.h"
 #include "DisplayMode.h"
+#include "AuxiliaryWindow.h"
 #include "../AppConfiguration.h"
 #include "../../Main.h"
 
 #include <Containers/SmallVector.h>
+
+#include <memory>
 
 using namespace Death::Containers;
 
@@ -239,6 +242,46 @@ namespace nCine
 
 		/** @brief Returns the scaling factor for the application window */
 		float windowScalingFactor() const;
+
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Returns `true` if windows besides the main one can be made, see @ref createAuxiliaryWindow()
+		 *
+		 * Only desktop systems where windows can be placed anywhere have them, with a graphics backend that can present
+		 * into another window.
+		 */
+		inline virtual bool supportsAuxiliaryWindows() const { return false; }
+		/** @brief Makes a hidden window besides the main one, `nullptr` if it can't be made, see @ref AuxiliaryWindow */
+		inline virtual std::unique_ptr<AuxiliaryWindow> createAuxiliaryWindow(const AuxiliaryWindowDesc& desc) { return nullptr; }
+		/** @brief Shows the contents of every auxiliary window, called once a frame after it's drawn */
+		void presentAuxiliaryWindows() {
+			for (AuxiliaryWindow* window : AuxiliaryWindow::GetAll()) {
+				window->Present();
+			}
+		}
+		/** @brief Returns the position of the pointer on the desktop in pixels, `false` if it isn't known */
+		inline virtual bool globalMousePosition(Vector2i& position) const { return false; }
+		/**
+		 * @brief Returns the mouse buttons held now as the system has them, `false` if it isn't known
+		 *
+		 * Bits 0, 1 and 2 are the left, the right and the middle button. Unlike the events, it's never left behind when a
+		 * release goes to a window of the application that was just shown or moved under the pointer.
+		 */
+		inline virtual bool globalMouseButtons(std::uint32_t& buttons) const { return false; }
+		/**
+		 * @brief Returns the part of the display at a point of the desktop that windows may take, without the taskbar
+		 *
+		 * The display nearest to the point if it's on none. In units of the desktop, as positions of windows are.
+		 * Returns `false` if it isn't known.
+		 */
+		inline virtual bool desktopWorkArea(Vector2i point, Recti& area) const { return false; }
+		/**
+		 * @brief Returns the scale of the display the main window is on, 1 for 100 %, see @ref AuxiliaryWindow::GetContentScale()
+		 *
+		 * By default it's how many pixels the main window has for a unit of the desktop.
+		 */
+		inline virtual float windowContentScale() const { return (_width > 0 ? float(_drawableWidth) / float(_width) : 1.0f); }
+#endif
 
 	protected:
 		static constexpr float DefaultDPI = 96.0f;

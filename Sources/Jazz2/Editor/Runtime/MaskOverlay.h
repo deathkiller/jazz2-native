@@ -5,6 +5,7 @@
 #include "../Common/LayerView.h"
 #include "../Document/LevelDocument.h"
 #include "../../../nCine/Graphics/Texture.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/SmallVector.h>
 
@@ -21,14 +22,17 @@ namespace Jazz2::Rendering
 	class PolylineRenderer;
 }
 
+namespace Jazz2::UI::Windows
+{
+	class Painter;
+}
+
 namespace Jazz2::Editor
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::SmallVector;
 	using nCine::Texture;
 #endif
-
-	class UiPainter;
 
 	/**
 		@brief Shows the collision masks of a layer over the level
@@ -71,7 +75,7 @@ namespace Jazz2::Editor
 		 * @param viewRect   Part of the screen the level is seen in
 		 * @param alone      Whether the masks are shown instead of the level, not over it
 		 */
-		void Draw(UiPainter& painter, Tiles::TileMap& tileMap, const LevelDocument& document, std::int32_t layer,
+		void Draw(Painter& painter, Tiles::TileMap& tileMap, const LevelDocument& document, std::int32_t layer,
 			const LayerView& view, const Rectf& viewRect, bool alone);
 
 	private:

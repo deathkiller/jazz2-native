@@ -1912,13 +1912,13 @@ namespace nCine::RHI::Vulkan
 		// across in a signalled state - the core resize-freeze fix. The per-frame image-available semaphore + fence
 		// are recreated too (belt and braces: guarantees no stale signalled state survives the resize).
 
-		// Defined with the secondary swap chains further down: they track which frame fence last used each of their
+		// Defined with the auxiliary swap chains further down: they track which frame fence last used each of their
 		// images, so every one of those references has to be dropped when the fences themselves are destroyed
-		void ForgetFrameFencesInSecondarySwapchains();
+		void ForgetFrameFencesInAuxiliarySwapchains();
 
 		void DestroyFrameSyncObjects()
 		{
-			ForgetFrameFencesInSecondarySwapchains();
+			ForgetFrameFencesInAuxiliarySwapchains();
 
 			for (FrameData& fr : s_frames) {
 				if (fr.ImageAvailable != VK_NULL_HANDLE) { vkDestroySemaphore(s_device, fr.ImageAvailable, nullptr); fr.ImageAvailable = VK_NULL_HANDLE; }
@@ -2105,15 +2105,15 @@ namespace nCine::RHI::Vulkan
 			return true;
 		}
 
-		// -- Secondary swap chains (the windows ImGui spawns when a panel is dragged out of the main one) --
+		// -- Auxiliary swap chains (windows a panel of ImGui or of the UI is dragged out into) --
 		// Only the PRESENTATION of such a window lives here; its contents are rendered through the ordinary RHI
 		// path into an off-screen render target, so every usual convention (top-down rows, scissor mapping,
-		// pipeline/render-pass caches) applies unchanged. QueueSecondaryPresent() then hands that target's texture
+		// pipeline/render-pass caches) applies unchanged. QueueAuxiliaryPresent() then hands that target's texture
 		// over for the frame, and PresentFrame() blits each one into its window's acquired image and joins it into
 		// the single submit + present the frame already does. While nothing is undocked the pending list stays
 		// empty and none of it runs, so the ordinary path keeps its exact behavior and cost.
 
-		struct SecondarySwapchain
+		struct AuxiliarySwapchain
 		{
 			VkSurfaceKHR Surface = VK_NULL_HANDLE;
 			VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
@@ -2132,16 +2132,16 @@ namespace nCine::RHI::Vulkan
 			bool Ready = false;
 		};
 
-		struct PendingSecondaryPresent
+		struct PendingAuxiliaryPresent
 		{
-			SecondarySwapchain* Chain;
+			AuxiliarySwapchain* Chain;
 			const VulkanTexture* Source;
 		};
 
-		// Every live secondary swap chain, so the per-frame fences they reference can be forgotten when those are
+		// Every live auxiliary swap chain, so the per-frame fences they reference can be forgotten when those are
 		// destroyed - a swap-chain resize recreates all of them, and a stale handle would then be waited on
-		std::vector<SecondarySwapchain*> s_secondarySwapchains;
-		std::vector<PendingSecondaryPresent> s_pendingSecondaryPresents;
+		std::vector<AuxiliarySwapchain*> s_auxiliarySwapchains;
+		std::vector<PendingAuxiliaryPresent> s_pendingAuxiliaryPresents;
 		// Submit/present argument arrays, kept allocated across frames so the common path (nothing undocked, one
 		// swap chain) only clears and refills them instead of allocating
 		std::vector<VkSemaphore> s_submitWaitSemaphores;
@@ -2152,16 +2152,16 @@ namespace nCine::RHI::Vulkan
 		std::vector<VkResult> s_presentResults;
 		// Aligned with s_presentSwapchains, so a per-swap-chain present result can be attributed back to its
 		// window (entry 0 is the main swap chain and stays null)
-		std::vector<SecondarySwapchain*> s_presentChains;
+		std::vector<AuxiliarySwapchain*> s_presentChains;
 
-		void ForgetFrameFencesInSecondarySwapchains()
+		void ForgetFrameFencesInAuxiliarySwapchains()
 		{
-			for (SecondarySwapchain* sc : s_secondarySwapchains) {
+			for (AuxiliarySwapchain* sc : s_auxiliarySwapchains) {
 				sc->ImagesInFlight.assign(sc->ImagesInFlight.size(), VK_NULL_HANDLE);
 			}
 		}
 
-		void DestroySecondarySwapchainObjects(SecondarySwapchain& sc)
+		void DestroyAuxiliarySwapchainObjects(AuxiliarySwapchain& sc)
 		{
 			// The caller has waited the device idle (or the objects were never used), so this is safe here
 			sc.Ready = false;
@@ -2180,7 +2180,7 @@ namespace nCine::RHI::Vulkan
 			}
 		}
 
-		bool CreateSecondarySwapchainObjects(SecondarySwapchain& sc, std::int32_t width, std::int32_t height)
+		bool CreateAuxiliarySwapchainObjects(AuxiliarySwapchain& sc, std::int32_t width, std::int32_t height)
 		{
 			sc.RequestedWidth = width;
 			sc.RequestedHeight = height;
@@ -2188,12 +2188,12 @@ namespace nCine::RHI::Vulkan
 			VkBool32 presentSupported = VK_FALSE;
 			vkGetPhysicalDeviceSurfaceSupportKHR(s_physicalDevice, s_presentFamily, sc.Surface, &presentSupported);
 			if (presentSupported != VK_TRUE) {
-				LOGE("The present queue family cannot present to a secondary window's surface");
+				LOGE("The present queue family cannot present to an auxiliary window's surface");
 				return false;
 			}
 
 			VkSurfaceCapabilitiesKHR caps;
-			if (!CheckVk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_physicalDevice, sc.Surface, &caps), "vkGetPhysicalDeviceSurfaceCapabilitiesKHR(secondary)")) {
+			if (!CheckVk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_physicalDevice, sc.Surface, &caps), "vkGetPhysicalDeviceSurfaceCapabilitiesKHR(auxiliary)")) {
 				return false;
 			}
 
@@ -2231,7 +2231,7 @@ namespace nCine::RHI::Vulkan
 			}
 
 			if ((caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0) {
-				LOGE("A secondary window's swap-chain images lack TRANSFER_DST usage, cannot present into them");
+				LOGE("An auxiliary window's swap-chain images lack TRANSFER_DST usage, cannot present into them");
 				return false;
 			}
 
@@ -2259,7 +2259,7 @@ namespace nCine::RHI::Vulkan
 			sci.presentMode = VK_PRESENT_MODE_FIFO_KHR;
 			sci.clipped = VK_TRUE;
 
-			if (!CheckVk(vkCreateSwapchainKHR(s_device, &sci, nullptr, &sc.Swapchain), "vkCreateSwapchainKHR(secondary)")) {
+			if (!CheckVk(vkCreateSwapchainKHR(s_device, &sci, nullptr, &sc.Swapchain), "vkCreateSwapchainKHR(auxiliary)")) {
 				return false;
 			}
 			sc.Extent = extent;
@@ -2273,13 +2273,13 @@ namespace nCine::RHI::Vulkan
 			semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 			sc.RenderFinishedPerImage.assign(realCount, VK_NULL_HANDLE);
 			for (std::uint32_t i = 0; i < realCount; i++) {
-				if (!CheckVk(vkCreateSemaphore(s_device, &semInfo, nullptr, &sc.RenderFinishedPerImage[i]), "vkCreateSemaphore(secondary renderFinished)")) {
+				if (!CheckVk(vkCreateSemaphore(s_device, &semInfo, nullptr, &sc.RenderFinishedPerImage[i]), "vkCreateSemaphore(auxiliary renderFinished)")) {
 					return false;
 				}
 			}
 			sc.ImagesInFlight.assign(realCount, VK_NULL_HANDLE);
 			for (VkSemaphore& sem : sc.ImageAvailable) {
-				if (!CheckVk(vkCreateSemaphore(s_device, &semInfo, nullptr, &sem), "vkCreateSemaphore(secondary imageAvailable)")) {
+				if (!CheckVk(vkCreateSemaphore(s_device, &semInfo, nullptr, &sem), "vkCreateSemaphore(auxiliary imageAvailable)")) {
 					return false;
 				}
 			}
@@ -2728,13 +2728,13 @@ namespace nCine::RHI::Vulkan
 		}
 	}
 
-	void* VulkanDevice::CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
+	void* VulkanDevice::CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
 	{
 		if (s_device == VK_NULL_HANDLE || s_instance == VK_NULL_HANDLE || windowHandle == nullptr) {
 			return nullptr;
 		}
 
-		SecondarySwapchain* sc = new SecondarySwapchain();
+		AuxiliarySwapchain* sc = new AuxiliarySwapchain();
 		SDL_Window* window = static_cast<SDL_Window*>(windowHandle);
 #if defined(WITH_SDL3)
 		// SDL3 added a VkAllocationCallbacks* parameter (null = default allocator)
@@ -2743,45 +2743,45 @@ namespace nCine::RHI::Vulkan
 		const bool surfaceCreated = (SDL_Vulkan_CreateSurface(window, s_instance, &sc->Surface) == SDL_TRUE);
 #endif
 		if (!surfaceCreated || sc->Surface == VK_NULL_HANDLE) {
-			LOGE("SDL_Vulkan_CreateSurface() failed for a secondary window: {}", SDL_GetError());
+			LOGE("SDL_Vulkan_CreateSurface() failed for an auxiliary window: {}", SDL_GetError());
 			delete sc;
 			return nullptr;
 		}
 
-		s_secondarySwapchains.push_back(sc);
-		if (!CreateSecondarySwapchainObjects(*sc, width, height)) {
+		s_auxiliarySwapchains.push_back(sc);
+		if (!CreateAuxiliarySwapchainObjects(*sc, width, height)) {
 			// Keep the handle alive without a swap chain: the window may still be zero-sized (hidden), and the
 			// next resize retries. Only a failed surface is fatal.
-			DestroySecondarySwapchainObjects(*sc);
+			DestroyAuxiliarySwapchainObjects(*sc);
 		}
 		return sc;
 	}
 
-	void VulkanDevice::DestroySecondarySwapchain(void* handle)
+	void VulkanDevice::DestroyAuxiliarySwapchain(void* handle)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr) {
 			return;
 		}
 
 		// Anything queued for this chain this frame must go before its objects do
-		for (std::size_t i = 0; i < s_pendingSecondaryPresents.size();) {
-			if (s_pendingSecondaryPresents[i].Chain == sc) {
-				s_pendingSecondaryPresents.erase(s_pendingSecondaryPresents.begin() + i);
+		for (std::size_t i = 0; i < s_pendingAuxiliaryPresents.size();) {
+			if (s_pendingAuxiliaryPresents[i].Chain == sc) {
+				s_pendingAuxiliaryPresents.erase(s_pendingAuxiliaryPresents.begin() + i);
 			} else {
 				i++;
 			}
 		}
-		for (std::size_t i = 0; i < s_secondarySwapchains.size(); i++) {
-			if (s_secondarySwapchains[i] == sc) {
-				s_secondarySwapchains.erase(s_secondarySwapchains.begin() + i);
+		for (std::size_t i = 0; i < s_auxiliarySwapchains.size(); i++) {
+			if (s_auxiliarySwapchains[i] == sc) {
+				s_auxiliarySwapchains.erase(s_auxiliarySwapchains.begin() + i);
 				break;
 			}
 		}
 		if (s_device != VK_NULL_HANDLE) {
 			// Its semaphores may still be in flight from the frame that just presented
 			vkDeviceWaitIdle(s_device);
-			DestroySecondarySwapchainObjects(*sc);
+			DestroyAuxiliarySwapchainObjects(*sc);
 			if (sc->Surface != VK_NULL_HANDLE && vkDestroySurfaceKHR != nullptr) {
 				vkDestroySurfaceKHR(s_instance, sc->Surface, nullptr);
 			}
@@ -2789,9 +2789,9 @@ namespace nCine::RHI::Vulkan
 		delete sc;
 	}
 
-	void VulkanDevice::ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height)
+	void VulkanDevice::ResizeAuxiliarySwapchain(void* handle, std::int32_t width, std::int32_t height)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr || s_device == VK_NULL_HANDLE || sc->Surface == VK_NULL_HANDLE) {
 			return;
 		}
@@ -2800,25 +2800,25 @@ namespace nCine::RHI::Vulkan
 		}
 
 		vkDeviceWaitIdle(s_device);
-		DestroySecondarySwapchainObjects(*sc);
-		if (!CreateSecondarySwapchainObjects(*sc, width, height)) {
-			DestroySecondarySwapchainObjects(*sc);	// leaves it not-ready; retried on the next resize
+		DestroyAuxiliarySwapchainObjects(*sc);
+		if (!CreateAuxiliarySwapchainObjects(*sc, width, height)) {
+			DestroyAuxiliarySwapchainObjects(*sc);	// leaves it not-ready; retried on the next resize
 		}
 	}
 
-	void VulkanDevice::QueueSecondaryPresent(void* handle, const VulkanTexture* source)
+	void VulkanDevice::QueueAuxiliaryPresent(void* handle, const VulkanTexture* source)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr || !sc->Ready || source == nullptr) {
 			return;
 		}
-		for (PendingSecondaryPresent& pending : s_pendingSecondaryPresents) {
+		for (PendingAuxiliaryPresent& pending : s_pendingAuxiliaryPresents) {
 			if (pending.Chain == sc) {
 				pending.Source = source;	// re-rendered within the same frame: the last content wins
 				return;
 			}
 		}
-		s_pendingSecondaryPresents.push_back(PendingSecondaryPresent{ sc, source });
+		s_pendingAuxiliaryPresents.push_back(PendingAuxiliaryPresent{ sc, source });
 	}
 
 	void VulkanDevice::BeginGpuTiming()
@@ -2874,7 +2874,7 @@ namespace nCine::RHI::Vulkan
 		struct PendingPresentsReset
 		{
 			~PendingPresentsReset() {
-				s_pendingSecondaryPresents.clear();
+				s_pendingAuxiliaryPresents.clear();
 			}
 		} pendingPresentsReset;
 
@@ -2987,8 +2987,8 @@ namespace nCine::RHI::Vulkan
 		// Undocked ImGui windows: each one's contents were rendered into an off-screen target earlier this frame
 		// (through the ordinary RHI path), so all that is left is the same blit the main window gets. The
 		// loop does not run at all while nothing is undocked.
-		for (PendingSecondaryPresent& pending : s_pendingSecondaryPresents) {
-			SecondarySwapchain& sc = *pending.Chain;
+		for (PendingAuxiliaryPresent& pending : s_pendingAuxiliaryPresents) {
+			AuxiliarySwapchain& sc = *pending.Chain;
 			if (!sc.Ready) {
 				continue;
 			}
@@ -2998,8 +2998,8 @@ namespace nCine::RHI::Vulkan
 			// hidden but not reported minimized) must never be able to stall the game. TIMEOUT / NOT_READY leave
 			// the semaphore unsignalled and no image acquired, so the window simply keeps last frame's contents
 			// and is retried next frame.
-			constexpr std::uint64_t SecondaryAcquireTimeout = 32 * 1000 * 1000;	// ns, ~2 frames at 60 Hz
-			const VkResult secAcquire = vkAcquireNextImageKHR(s_device, sc.Swapchain, SecondaryAcquireTimeout, secImageAvailable, VK_NULL_HANDLE, &secImageIndex);
+			constexpr std::uint64_t AuxiliaryAcquireTimeout = 32 * 1000 * 1000;	// ns, ~2 frames at 60 Hz
+			const VkResult secAcquire = vkAcquireNextImageKHR(s_device, sc.Swapchain, AuxiliaryAcquireTimeout, secImageAvailable, VK_NULL_HANDLE, &secImageIndex);
 			if (secAcquire == VK_TIMEOUT || secAcquire == VK_NOT_READY) {
 				continue;
 			}

@@ -4,8 +4,9 @@
 
 #include "TextPrompt.h"
 #include "../Tools/EditorContext.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -24,7 +25,7 @@ namespace Jazz2::Editor
 	namespace
 	{
 		/** A bar of how far the work is, it closes the window when the work is done */
-		class JobProgressBar : public UiElement
+		class JobProgressBar : public Element
 		{
 		public:
 			JobProgressBar(std::shared_ptr<BackgroundJob> job, Function<void(bool)>&& onDone, Function<void()>&& close)
@@ -32,14 +33,14 @@ namespace Jazz2::Editor
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				return Vector2f(context.Px(240.0f), context.Px(12.0f));
 			}
 
 			void Update(float timeMult) override
 			{
-				UiElement::Update(timeMult);
+				Element::Update(timeMult);
 				if (_finished || !_job->IsDone()) {
 					return;
 				}
@@ -53,12 +54,12 @@ namespace Jazz2::Editor
 				}
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
-				painter.RoundRect(Bounds, UiTheme::InputFill);
+				painter.RoundRect(Bounds, Theme::InputFill);
 				float value = std::clamp(_job->GetProgress().GetValue(), 0.0f, 1.0f);
 				if (value > 0.0f) {
-					painter.RoundRect(Rectf(Bounds.X, Bounds.Y, Bounds.W * value, Bounds.H), UiTheme::Accent);
+					painter.RoundRect(Rectf(Bounds.X, Bounds.Y, Bounds.W * value, Bounds.H), Theme::Accent);
 				}
 			}
 
@@ -76,12 +77,12 @@ namespace Jazz2::Editor
 		auto job = std::make_shared<BackgroundJob>();
 
 #if defined(NCINE_BACKGROUND_JOB_THREADED)
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface != nullptr) {
-			auto dialog = std::make_unique<UiDialog>(title);
-			UiDialog* dialogPtr = dialog.get();
+			auto dialog = std::make_unique<Dialog>(title);
+			Dialog* dialogPtr = dialog.get();
 			auto* content = dialog->GetContent();
-			content->Add<UiLabel>(_x("editor", "It may take a moment for a large image or many levels"), UiTheme::TextDim);
+			content->Add<Label>(_x("editor", "It may take a moment for a large image or many levels"), Theme::TextDim);
 			content->Add<JobProgressBar>(job, Death::move(onDone), [dialogPtr]() { dialogPtr->Close(); });
 			// TRANSLATORS: Button in the dialog with the progress of a long task, cancels the task
 			dialog->AddButton(_x("editor", "Stop"), [job]() { job->Cancel(); }, true);

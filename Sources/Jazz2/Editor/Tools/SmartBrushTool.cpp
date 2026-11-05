@@ -94,7 +94,7 @@ namespace Jazz2::Editor
 		_pending.clear();
 	}
 
-	void SmartBrushTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void SmartBrushTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		if (!hoverValid) {
 			return;
@@ -126,13 +126,13 @@ namespace Jazz2::Editor
 			for (const GhostTile& ghost : _ghost) {
 				Rectf rect = view.CellToScreen(ghost.Cell);
 				if (ghost.Tile.IsEmpty()) {
-					painter.FillRect(rect, Colorf(0.9f, 0.25f, 0.2f, 0.25f), UiLayer::Content);
+					painter.FillRect(rect, Colorf(0.9f, 0.25f, 0.2f, 0.25f), PaintLayer::Content);
 				} else {
 					DrawTile(painter, *tileMap, document, ghost.Tile, ghost.Tile.Flags, rect, 0.6f);
 				}
 			}
 		}
-		DrawCellsOutline(painter, view, hover.Cell, hover.Cell, (_stroke != nullptr && _erase) ? UiTheme::Danger : UiTheme::Cursor);
+		DrawCellsOutline(painter, view, hover.Cell, hover.Cell, (_stroke != nullptr && _erase) ? Theme::Danger : Theme::Cursor);
 	}
 
 	StringView SmartBrushTool::GetHint() const

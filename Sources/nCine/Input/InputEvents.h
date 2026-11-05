@@ -162,6 +162,13 @@ namespace nCine
 		std::int32_t x;
 		/** @brief Pointer position on the Y axis */
 		std::int32_t y;
+		/**
+		 * @brief Window the pointer is over, 0 for the main one
+		 *
+		 * Over an auxiliary window (see @ref IGfxDevice::createAuxiliaryWindow()), the position is still relative to the
+		 * main window, so it can be outside of it.
+		 */
+		std::uint32_t windowId = 0;
 
 		/** @brief Returns `true` if the specified button is currently down */
 		virtual bool isButtonDown(MouseButton button) const = 0;
@@ -180,6 +187,8 @@ namespace nCine
 		std::int32_t y;
 		/** @brief Button that was pressed or released */
 		MouseButton button;
+		/** @brief Window the pointer is over, 0 for the main one, see @ref MouseState::windowId */
+		std::uint32_t windowId = 0;
 	};
 
 	/** @brief Scroll event (mouse wheel, touchpad gesture, etc.) */
@@ -190,6 +199,8 @@ namespace nCine
 		float x;
 		/** @brief Scroll offset on the Y axis, positive away from the user */
 		float y;
+		/** @brief Window the pointer is over, 0 for the main one, see @ref MouseState::windowId */
+		std::uint32_t windowId = 0;
 	};
 
 	/** @brief Current state of the keyboard */

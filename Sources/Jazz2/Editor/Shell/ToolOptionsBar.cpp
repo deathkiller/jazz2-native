@@ -7,8 +7,9 @@
 #include "../Tools/EditorContext.h"
 #include "../Files/EditorSettings.h"
 #include "../Input/ActionRegistry.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -32,30 +33,30 @@ namespace Jazz2::Editor
 		// Width of a number in units
 		constexpr float NumberWidth = 38.0f;
 
-		bool IsTouch(const UiElement& element)
+		bool IsTouch(const Element& element)
 		{
-			UiSurface* surface = element.GetSurface();
+			Surface* surface = element.GetSurface();
 			return (surface != nullptr && surface->TouchInput);
 		}
 
 		// Button of an option, as high as the other buttons of the toolbar, wider for a finger
-		class OptionButton : public UiButton
+		class OptionButton : public Button
 		{
 		public:
 			OptionButton(StringView text, EditorIcon icon, Function<void()>&& onClick)
-				: UiButton(text, icon, Death::move(onClick))
+				: Button(text, icon, Death::move(onClick))
 			{
-				Style = UiButtonStyle::Flat;
-				Height = UiTheme::ButtonHeight + ButtonExtra;
+				Style = ButtonStyle::Flat;
+				Height = Theme::ButtonHeight + ButtonExtra;
 			}
 
 			// Makes the tooltip when it's shown, a shortcut in it may have been changed meanwhile
 			mutable Function<String()> TooltipFunc;
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
-				Vector2f size = UiButton::Measure(context, available);
-				float square = context.Px(UiTheme::ButtonHeight + (IsTouch(*this) ? TouchButtonExtra : ButtonExtra));
+				Vector2f size = Button::Measure(context, available);
+				float square = context.Px(Theme::ButtonHeight + (IsTouch(*this) ? TouchButtonExtra : ButtonExtra));
 				size.X = (Text.empty() ? square : std::max(size.X, square));
 				return size;
 			}
@@ -63,7 +64,7 @@ namespace Jazz2::Editor
 			StringView GetTooltip(Vector2f pos) const override
 			{
 				if (!TooltipFunc) {
-					return UiButton::GetTooltip(pos);
+					return Button::GetTooltip(pos);
 				}
 				_liveTooltip = TooltipFunc();
 				return _liveTooltip;
@@ -74,22 +75,22 @@ namespace Jazz2::Editor
 		};
 
 		// Dropdown as wide as the longest of the texts it can show
-		class OptionDropdown : public UiDropdown
+		class OptionDropdown : public Dropdown
 		{
 		public:
-			OptionDropdown(Function<String()>&& textFunc, Function<void(SmallVectorImpl<UiMenuEntry>&)>&& builder, SmallVector<String, 0>&& texts)
-				: UiDropdown(Death::move(textFunc), Death::move(builder)), _texts(Death::move(texts))
+			OptionDropdown(Function<String()>&& textFunc, Function<void(SmallVectorImpl<MenuEntry>&)>&& builder, SmallVector<String, 0>&& texts)
+				: Dropdown(Death::move(textFunc), Death::move(builder)), _texts(Death::move(texts))
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				float widest = 0.0f;
 				for (const String& text : _texts) {
 					widest = std::max(widest, context.MeasureText(text));
 				}
-				float padding = context.Px(UiTheme::Padding);
-				return Vector2f(std::round(widest + padding * 2.5f + context.Px(UiTheme::IconSize)), context.Px(UiTheme::RowHeight + 2.0f));
+				float padding = context.Px(Theme::Padding);
+				return Vector2f(std::round(widest + padding * 2.5f + context.Px(Theme::IconSize)), context.Px(Theme::RowHeight + 2.0f));
 			}
 
 		private:
@@ -112,10 +113,10 @@ namespace Jazz2::Editor
 		}
 
 		// Label before an option in the list of those that don't fit the row
-		void AddListLabel(UiElement* row, StringView label)
+		void AddListLabel(Element* row, StringView label)
 		{
 			if (!label.empty()) {
-				auto* text = row->Add<UiLabel>(label, UiTheme::TextDim);
+				auto* text = row->Add<Label>(label, Theme::TextDim);
 				text->Width = 48.0f;
 			}
 		}
@@ -214,17 +215,17 @@ namespace Jazz2::Editor
 			}
 		};
 
-		UiElement* MakeChoice(UiElement* parent, bool list, bool dropdown, const std::shared_ptr<Choice>& choice)
+		Element* MakeChoice(Element* parent, bool list, bool dropdown, const std::shared_ptr<Choice>& choice)
 		{
-			UiElement* container = parent;
-			UiStack* row = nullptr;
+			Element* container = parent;
+			Stack* row = nullptr;
 			if (list) {
-				row = parent->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				row = parent->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				AddListLabel(row, choice->Label);
 				container = row;
 			}
 
-			UiElement* element;
+			Element* element;
 			if (dropdown) {
 				SmallVector<String, 0> texts;
 				if (choice->Toggles) {
@@ -234,10 +235,10 @@ namespace Jazz2::Editor
 						texts.push_back(choice->Label.empty() ? entry.Label : String(choice->Label + ": "_s + entry.Label));
 					}
 				}
-				auto* box = container->Add<OptionDropdown>([choice]() { return choice->GetDropdownText(); }, [choice](SmallVectorImpl<UiMenuEntry>& entries) {
+				auto* box = container->Add<OptionDropdown>([choice]() { return choice->GetDropdownText(); }, [choice](SmallVectorImpl<MenuEntry>& entries) {
 					for (std::int32_t i = 0; i < std::int32_t(choice->Entries.size()); i++) {
 						const Choice::Entry& source = choice->Entries[i];
-						UiMenuEntry& entry = entries.emplace_back();
+						MenuEntry& entry = entries.emplace_back();
 						entry.Label = source.Label;
 						entry.Icon = source.Icon;
 						if (source.Action != nullptr) {
@@ -251,7 +252,7 @@ namespace Jazz2::Editor
 				box->Tooltip = choice->Label;
 				element = box;
 			} else {
-				auto* group = container->Add<UiStack>(UiOrientation::Horizontal, 1.0f);
+				auto* group = container->Add<Stack>(Orientation::Horizontal, 1.0f);
 				for (std::int32_t i = 0; i < std::int32_t(choice->Entries.size()); i++) {
 					const Choice::Entry& entry = choice->Entries[i];
 					// In the list with their text, the icons alone could be hard to tell apart there
@@ -304,7 +305,7 @@ namespace Jazz2::Editor
 			};
 		}
 
-		bool OnPointerDown(const UiPointerEvent& event) override
+		bool OnPointerDown(const PointerEvent& event) override
 		{
 			// A click on it while its list is shown only closes the list
 			_skip = *_bar._listJustClosed;
@@ -332,7 +333,7 @@ namespace Jazz2::Editor
 			}
 			EditorIcon shownIcon = (icon != EditorIcon::None ? icon : action->Icon);
 			String text = (label.empty() ? String(action->Label) : String(label));
-			Push([action, shownIcon, text](UiElement* parent, Form form) -> UiElement* {
+			Push([action, shownIcon, text](Element* parent, Form form) -> Element* {
 				bool list = (form == Form::List);
 				// In the list with the whole label of the action, in the row by its icon or a short text
 				StringView shownText = (list ? StringView(action->Label) : (shownIcon != EditorIcon::None ? StringView() : StringView(text)));
@@ -397,7 +398,7 @@ namespace Jazz2::Editor
 			String label = item.Label;
 			EditorIcon icon = item.Icon;
 			String tooltip = (item.Tooltip.empty() ? item.Label : item.Tooltip);
-			Push([get, set, label, icon, tooltip](UiElement* parent, Form form) -> UiElement* {
+			Push([get, set, label, icon, tooltip](Element* parent, Form form) -> Element* {
 				bool list = (form == Form::List);
 				auto* button = parent->Add<OptionButton>(list || icon == EditorIcon::None ? StringView(label) : StringView(), icon, [get, set]() {
 					(*set)(!(*get)());
@@ -419,14 +420,14 @@ namespace Jazz2::Editor
 			String labelText = label;
 			String tooltipText = tooltip;
 			// With its label always, a number alone wouldn't tell what it is
-			Push([get, set, labelText, tooltipText, minValue, maxValue, step](UiElement* parent, Form form) -> UiElement* {
-				auto* row = parent->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			Push([get, set, labelText, tooltipText, minValue, maxValue, step](Element* parent, Form form) -> Element* {
+				auto* row = parent->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				if (form == Form::List) {
 					AddListLabel(row, labelText);
 				} else if (!labelText.empty()) {
-					row->Add<UiLabel>(labelText, UiTheme::TextDim)->Tooltip = tooltipText;
+					row->Add<Label>(labelText, Theme::TextDim)->Tooltip = tooltipText;
 				}
-				auto* box = row->Add<UiNumberBox>([get]() { return (*get)(); }, [set](float value, bool final) { (*set)(value, final); },
+				auto* box = row->Add<NumberBox>([get]() { return (*get)(); }, [set](float value, bool final) { (*set)(value, final); },
 					minValue, maxValue, step, 0);
 				box->Width = NumberWidth;
 				box->Tooltip = tooltipText;
@@ -463,20 +464,20 @@ namespace Jazz2::Editor
 			}
 			// Icons side by side are as small as a dropdown already, and a dropdown is the same in the smaller row
 			bool hasCompact = (!choice->PreferDropdown && !choice->HasAllIcons());
-			Push([choice](UiElement* parent, Form form) -> UiElement* {
+			Push([choice](Element* parent, Form form) -> Element* {
 				bool dropdown = (form == Form::Compact || choice->PreferDropdown);
 				return MakeChoice(parent, form == Form::List, dropdown, choice);
 			}, hasCompact);
 		}
 
-		void Push(Function<UiElement*(UiElement*, Form)>&& make, bool hasCompact)
+		void Push(Function<Element*(Element*, Form)>&& make, bool hasCompact)
 		{
 			// No line before the first option or twice in a row
 			if (_separatorPending && !_bar._items.empty()) {
 				Item& separator = _bar._items.emplace_back();
 				separator.IsSeparator = true;
-				separator.Make = [](UiElement* parent, Form form) -> UiElement* {
-					return parent->Add<UiSeparator>(form == Form::List ? UiOrientation::Horizontal : UiOrientation::Vertical);
+				separator.Make = [](Element* parent, Form form) -> Element* {
+					return parent->Add<Separator>(form == Form::List ? Orientation::Horizontal : Orientation::Vertical);
 				};
 				separator.Full = separator.Make(&_bar, Form::Full);
 			}
@@ -493,7 +494,7 @@ namespace Jazz2::Editor
 
 	ToolOptionsBar::ToolOptionsBar(IEditorContext& session)
 		: _session(session), _more(nullptr), _firstHidden(0), _built(false), _shownTool(EditorToolType::Count), _shownExpert(false),
-			_list(std::make_shared<UiElement*>(nullptr)), _listJustClosed(std::make_shared<bool>(false))
+			_list(std::make_shared<Element*>(nullptr)), _listJustClosed(std::make_shared<bool>(false))
 	{
 	}
 
@@ -502,13 +503,13 @@ namespace Jazz2::Editor
 		// The list goes with the interface, it only shares the pointer to itself
 	}
 
-	Vector2f ToolOptionsBar::Measure(const UiContext& context, Vector2f available)
+	Vector2f ToolOptionsBar::Measure(const Context& context, Vector2f available)
 	{
 		// It takes what the toolbar has left, see Arrange()
-		return Vector2f(0.0f, context.Px(UiTheme::ButtonHeight + ButtonExtra));
+		return Vector2f(0.0f, context.Px(Theme::ButtonHeight + ButtonExtra));
 	}
 
-	void ToolOptionsBar::Arrange(const UiContext& context, const Rectf& bounds)
+	void ToolOptionsBar::Arrange(const Context& context, const Rectf& bounds)
 	{
 		Bounds = bounds;
 		std::size_t count = _items.size();
@@ -555,7 +556,7 @@ namespace Jazz2::Editor
 		float x = bounds.X;
 		for (std::size_t i = 0; i < count; i++) {
 			Item& item = _items[i];
-			UiElement* used = (i < shown ? getElement(i, compact) : nullptr);
+			Element* used = (i < shown ? getElement(i, compact) : nullptr);
 			item.Full->Visible = (used == item.Full);
 			if (item.Compact != nullptr) {
 				item.Compact->Visible = (used == item.Compact);
@@ -588,7 +589,7 @@ namespace Jazz2::Editor
 		if (!_built || _session.GetTools().GetChosenType() != _shownTool || _session.GetSettings().Expert != _shownExpert) {
 			Rebuild();
 		}
-		UiElement::Update(timeMult);
+		Element::Update(timeMult);
 	}
 
 	void ToolOptionsBar::Rebuild()
@@ -619,8 +620,8 @@ namespace Jazz2::Editor
 		// A line between them and the buttons before
 		Item separator;
 		separator.IsSeparator = true;
-		separator.Make = [](UiElement* parent, Form form) -> UiElement* {
-			return parent->Add<UiSeparator>(form == Form::List ? UiOrientation::Horizontal : UiOrientation::Vertical);
+		separator.Make = [](Element* parent, Form form) -> Element* {
+			return parent->Add<Separator>(form == Form::List ? Orientation::Horizontal : Orientation::Vertical);
 		};
 		separator.Full = separator.Make(this, Form::Full);
 		_items.insert(_items.begin(), Death::move(separator));
@@ -629,7 +630,7 @@ namespace Jazz2::Editor
 
 	void ToolOptionsBar::ShowList()
 	{
-		UiSurface* surface = GetSurface();
+		Surface* surface = GetSurface();
 		if (surface == nullptr || _more == nullptr) {
 			return;
 		}
@@ -638,7 +639,7 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		auto panel = std::make_unique<UiPanel>(UiPanelStyle::Floating, UiOrientation::Vertical, UiTheme::Spacing, UiThickness(UiTheme::Padding));
+		auto panel = std::make_unique<Panel>(PanelStyle::Floating, Orientation::Vertical, Theme::Spacing, Thickness(Theme::Padding));
 		bool separatorPending = false;
 		bool any = false;
 		for (std::size_t i = _firstHidden; i < _items.size(); i++) {
@@ -648,7 +649,7 @@ namespace Jazz2::Editor
 				continue;
 			}
 			if (separatorPending) {
-				panel->Add<UiSeparator>(UiOrientation::Horizontal);
+				panel->Add<Separator>(Orientation::Horizontal);
 				separatorPending = false;
 			}
 			item.Make(panel.get(), Form::List);
@@ -658,9 +659,9 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Position = Vector2f(_more->Bounds.X, _more->Bounds.Y + _more->Bounds.H);
-		std::shared_ptr<UiElement*> list = _list;
+		std::shared_ptr<Element*> list = _list;
 		std::shared_ptr<bool> justClosed = _listJustClosed;
 		options.OnClosed = [list, justClosed]() {
 			*list = nullptr;
@@ -672,9 +673,9 @@ namespace Jazz2::Editor
 	void ToolOptionsBar::CloseList()
 	{
 		if (*_list != nullptr) {
-			UiElement* element = *_list;
+			Element* element = *_list;
 			*_list = nullptr;
-			if (UiSurface* surface = GetSurface()) {
+			if (Surface* surface = GetSurface()) {
 				surface->CloseOverlay(element);
 			}
 		}

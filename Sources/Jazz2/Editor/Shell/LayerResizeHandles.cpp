@@ -6,7 +6,8 @@
 #include "ShellCommon.h"
 #include "../Document/Commands.h"
 #include "../Tools/EditorContext.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../Formats/LevelFile.h"
 
 #include "../../../nCine/Application.h"
@@ -31,9 +32,9 @@ namespace Jazz2::Editor
 		constexpr float HandleSize = 5.0f;
 		constexpr float TouchHandleSize = 8.0f;
 
-		bool IsTouch(const UiElement& element)
+		bool IsTouch(const Element& element)
 		{
-			UiSurface* surface = element.GetSurface();
+			Surface* surface = element.GetSurface();
 			return (surface != nullptr && surface->TouchInput);
 		}
 
@@ -133,7 +134,7 @@ namespace Jazz2::Editor
 
 	float LayerResizeHandles::GetGrabDistance() const
 	{
-		UiSurface* surface = GetSurface();
+		Surface* surface = GetSurface();
 		float scale = (surface != nullptr ? surface->GetScale() : 1.0f);
 		return std::round((IsTouch(*this) ? TouchGrabDistance : GrabDistance) * scale);
 	}
@@ -162,7 +163,7 @@ namespace Jazz2::Editor
 		return edges;
 	}
 
-	UiElement* LayerResizeHandles::HitTest(Vector2f pos)
+	Element* LayerResizeHandles::HitTest(Vector2f pos)
 	{
 		if (!IsShown()) {
 			return nullptr;
@@ -184,7 +185,7 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	bool LayerResizeHandles::OnPointerDown(const UiPointerEvent& event)
+	bool LayerResizeHandles::OnPointerDown(const PointerEvent& event)
 	{
 		if (event.Button != MouseButton::Left || _dragging || !IsActive()) {
 			return false;
@@ -210,13 +211,13 @@ namespace Jazz2::Editor
 		_grab = Vector2f((edges & EdgeLeft) != 0 ? event.Pos.X - frame.X : ((edges & EdgeRight) != 0 ? event.Pos.X - (frame.X + frame.W) : 0.0f),
 			(edges & EdgeTop) != 0 ? event.Pos.Y - frame.Y : ((edges & EdgeBottom) != 0 ? event.Pos.Y - (frame.Y + frame.H) : 0.0f));
 		_dragging = true;
-		if (UiSurface* surface = GetSurface()) {
+		if (Surface* surface = GetSurface()) {
 			surface->SetFocus(this);
 		}
 		return true;
 	}
 
-	void LayerResizeHandles::OnPointerMove(const UiPointerEvent& event)
+	void LayerResizeHandles::OnPointerMove(const PointerEvent& event)
 	{
 		Rectf frame, viewRect;
 		if (!_dragging || !GetFrame(frame, viewRect) || _startSize.X <= 0 || _startSize.Y <= 0) {
@@ -262,7 +263,7 @@ namespace Jazz2::Editor
 		_offset = Vector2i((_edges & EdgeLeft) != 0 ? size.X - _startSize.X : 0, (_edges & EdgeTop) != 0 ? size.Y - _startSize.Y : 0);
 	}
 
-	void LayerResizeHandles::OnPointerUp(const UiPointerEvent& event, bool inside)
+	void LayerResizeHandles::OnPointerUp(const PointerEvent& event, bool inside)
 	{
 		if (!_dragging) {
 			return;
@@ -342,13 +343,13 @@ namespace Jazz2::Editor
 		_moving = false;
 		_dragging = false;
 		if (IsFocused()) {
-			if (UiSurface* surface = GetSurface()) {
+			if (Surface* surface = GetSurface()) {
 				surface->SetFocus(nullptr);
 			}
 		}
 	}
 
-	void LayerResizeHandles::Draw(UiPainter& painter)
+	void LayerResizeHandles::Draw(Painter& painter)
 	{
 		if (!_dragging && !IsActive()) {
 			return;
@@ -358,7 +359,7 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		UiSurface* surface = GetSurface();
+		Surface* surface = GetSurface();
 		Vector2f pointer = (surface != nullptr ? surface->GetPointerPos() : Vector2f());
 		bool touch = IsTouch(*this);
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
@@ -373,8 +374,8 @@ namespace Jazz2::Editor
 			float tileX = frame.W / float(_startSize.X), tileY = frame.H / float(_startSize.Y);
 			target = Rectf(frame.X - _offset.X * tileX, frame.Y - _offset.Y * tileY, _size.X * tileX, _size.Y * tileY);
 			Rectf outer(std::round(target.X) - thickness, std::round(target.Y) - thickness, std::round(target.W) + thickness * 2.0f, std::round(target.H) + thickness * 2.0f);
-			painter.Frame(Rectf(outer.X - thickness, outer.Y - thickness, outer.W + thickness * 2.0f, outer.H + thickness * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), thickness, UiLayer::Overlay);
-			painter.Frame(outer, UiTheme::Accent, thickness * 2.0f, UiLayer::Overlay);
+			painter.Frame(Rectf(outer.X - thickness, outer.Y - thickness, outer.W + thickness * 2.0f, outer.H + thickness * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), thickness, PaintLayer::Overlay);
+			painter.Frame(outer, Theme::Accent, thickness * 2.0f, PaintLayer::Overlay);
 		}
 
 		// The squares of the handles, the one pointed at or dragged highlighted
@@ -392,15 +393,15 @@ namespace Jazz2::Editor
 				}
 				Rectf square(std::round(xs[x] - size * 0.5f), std::round(ys[y] - size * 0.5f), size, size);
 				bool lit = (highlighted == edges);
-				painter.FillRect(Rectf(square.X - thickness, square.Y - thickness, square.W + thickness * 2.0f, square.H + thickness * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.6f), UiLayer::Overlay);
-				painter.FillRect(square, lit ? UiTheme::Accent : Colorf(1.0f, 1.0f, 1.0f, 0.9f), UiLayer::Overlay);
+				painter.FillRect(Rectf(square.X - thickness, square.Y - thickness, square.W + thickness * 2.0f, square.H + thickness * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.6f), PaintLayer::Overlay);
+				painter.FillRect(square, lit ? Theme::Accent : Colorf(1.0f, 1.0f, 1.0f, 0.9f), PaintLayer::Overlay);
 			}
 		}
 
 		// Arrows by the pointer, which way the edge goes, as the cursor of a window would show it (the surface draws them
 		// over everything and leaves them out for a finger)
 		if (highlighted != 0 && surface != nullptr) {
-			surface->SetCursorOverlay(moving ? UiCursorOverlay::Move : UiSurface::GetResizeOverlay((highlighted & EdgeLeft) != 0, (highlighted & EdgeTop) != 0,
+			surface->SetCursorOverlay(moving ? CursorOverlay::Move : Surface::GetResizeOverlay((highlighted & EdgeLeft) != 0, (highlighted & EdgeTop) != 0,
 				(highlighted & EdgeRight) != 0, (highlighted & EdgeBottom) != 0));
 		}
 

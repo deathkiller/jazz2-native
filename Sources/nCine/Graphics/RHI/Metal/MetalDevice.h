@@ -170,26 +170,26 @@ namespace nCine::RHI::Metal
 		static inline void EndGpuTiming() {}
 
 		/**
-			@brief Creates an additional Metal view and layer for a secondary window
+			@brief Creates an additional Metal view and layer for an auxiliary window
 
 			Used by the ImGui multi-viewport support for the windows it spawns when a panel is dragged out of the
 			main one. Only their presentation lives in the backend: the contents are rendered through the ordinary
 			RHI path into an off-screen render target, whose texture is handed over for the frame with
-			@ref QueueSecondaryPresent(). @ref PresentFrame() then draws each queued texture into its window's
+			@ref QueueAuxiliaryPresent(). @ref PresentFrame() then draws each queued texture into its window's
 			drawable and presents it with the frame's single commit.
 
-			@param windowHandle  `SDL_Window*` of the secondary window, passed as a `void*`
+			@param windowHandle  `SDL_Window*` of the auxiliary window, passed as a `void*`
 			@param width         Drawable width in pixels
 			@param height        Drawable height in pixels
-			@returns An opaque handle to pass to the other `*Secondary*` functions, or `nullptr` if the view failed
+			@returns An opaque handle to pass to the other `*Auxiliary*` functions, or `nullptr` if the view failed
 		*/
-		static void* CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height);
-		/** @brief Releases a secondary view and layer created by @ref CreateSecondarySwapchain() */
-		static void DestroySecondarySwapchain(void* handle);
-		/** @brief Resizes a secondary layer's drawables */
-		static void ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height);
-		/** @brief Hands the texture holding a secondary window's contents over to the next @ref PresentFrame() */
-		static void QueueSecondaryPresent(void* handle, const MetalTexture* source);
+		static void* CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height);
+		/** @brief Releases an auxiliary view and layer created by @ref CreateAuxiliarySwapchain() */
+		static void DestroyAuxiliarySwapchain(void* handle);
+		/** @brief Resizes an auxiliary layer's drawables */
+		static void ResizeAuxiliarySwapchain(void* handle, std::int32_t width, std::int32_t height);
+		/** @brief Hands the texture holding an auxiliary window's contents over to the next @ref PresentFrame() */
+		static void QueueAuxiliaryPresent(void* handle, const MetalTexture* source);
 
 		// -- Device limits (consumed by MetalRhiCapabilities to publish the backend's values) --
 

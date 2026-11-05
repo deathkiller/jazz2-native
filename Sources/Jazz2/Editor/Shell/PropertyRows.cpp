@@ -3,7 +3,8 @@
 #if defined(WITH_EDITOR)
 
 #include "ShellCommon.h"
-#include "../UI/UiMenu.h"
+#include "../../UI/Windows/Menu.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -26,7 +27,7 @@ namespace Jazz2::Editor
 		};
 	}
 
-	UiDropdown* AddChoiceDropdown(UiElement* row, ArrayView<const PropertyChoice> choices, Function<std::int32_t()>&& getter,
+	Dropdown* AddChoiceDropdown(Element* row, ArrayView<const PropertyChoice> choices, Function<std::int32_t()>&& getter,
 		Function<void(std::int32_t)>&& setter, Function<String(std::int32_t)>&& otherLabel, Function<bool(std::int32_t)>&& isEnabled)
 	{
 		auto binding = std::make_shared<ChoiceBinding>();
@@ -36,7 +37,7 @@ namespace Jazz2::Editor
 		binding->OtherLabel = Death::move(otherLabel);
 		binding->IsEnabled = Death::move(isEnabled);
 
-		return row->Add<UiDropdown>([binding]() {
+		return row->Add<Dropdown>([binding]() {
 			std::int32_t value = binding->Getter();
 			for (const PropertyChoice& choice : binding->Choices) {
 				if (choice.Value == value) {
@@ -44,10 +45,10 @@ namespace Jazz2::Editor
 				}
 			}
 			return (binding->OtherLabel ? binding->OtherLabel(value) : String());
-		}, [binding](SmallVectorImpl<UiMenuEntry>& entries) {
+		}, [binding](SmallVectorImpl<MenuEntry>& entries) {
 			for (const PropertyChoice& choice : binding->Choices) {
 				std::int32_t value = choice.Value;
-				UiMenuEntry entry;
+				MenuEntry entry;
 				entry.Label = choice.Label;
 				entry.IsChecked = [binding, value]() { return (binding->Getter() == value); };
 				if (binding->IsEnabled) {
@@ -59,19 +60,19 @@ namespace Jazz2::Editor
 		});
 	}
 
-	UiNumberBox* AddByteBox(UiElement* row, Function<std::uint8_t()>&& getter, Function<void(std::uint8_t, bool)>&& setter)
+	NumberBox* AddByteBox(Element* row, Function<std::uint8_t()>&& getter, Function<void(std::uint8_t, bool)>&& setter)
 	{
-		return row->Add<UiNumberBox>([getter = Death::move(getter)]() mutable {
+		return row->Add<NumberBox>([getter = Death::move(getter)]() mutable {
 			return float(getter());
 		}, [setter = Death::move(setter)](float value, bool final) mutable {
 			setter(std::uint8_t(std::clamp<std::int32_t>(std::int32_t(std::round(value)), 0, 255)), final);
 		}, 0.0f, 255.0f, 1.0f, 0);
 	}
 
-	void ShowRowWhen(UiStack* row, Function<bool()>&& isVisible)
+	void ShowRowWhen(Stack* row, Function<bool()>&& isVisible)
 	{
-		UiElement* parent = row->GetParent();
-		UiElement* target = (parent != nullptr && runtime_cast<UiFormRow>(parent) != nullptr ? parent : row);
+		Element* parent = row->GetParent();
+		Element* target = (parent != nullptr && runtime_cast<FormRow>(parent) != nullptr ? parent : row);
 		target->IsVisibleFunc = Death::move(isVisible);
 	}
 }

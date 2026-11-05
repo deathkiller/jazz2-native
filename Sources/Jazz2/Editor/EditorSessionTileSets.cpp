@@ -261,7 +261,7 @@ namespace Jazz2::Editor
 	{
 		const Formats::TileSetData* tileSetData = GetTileSetData(_document.Properties.DefaultTileSet);
 		if (tileSetData == nullptr) {
-			return UiTheme::Accent;
+			return Theme::Accent;
 		}
 
 		// Asked for at each start and end of a play-test, it stays the same as long as the level and its palette do
@@ -275,7 +275,7 @@ namespace Jazz2::Editor
 		}
 		_accentKey = key;
 		_accentRevision = revision;
-		_accentColor = UiTheme::Accent;
+		_accentColor = Theme::Accent;
 
 		// Only the tiles of the sprite layer, the player sees them the most, as often as they're there
 		SmallVector<float, 0> weights;

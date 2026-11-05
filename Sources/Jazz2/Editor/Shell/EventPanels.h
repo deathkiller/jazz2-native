@@ -3,7 +3,8 @@
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Events/EventCatalog.h"
-#include "../UI/UiWidgets.h"
+#include "../../UI/Windows/Widgets.h"
+#include "../UI/EditorUi.h"
 
 #include <memory>
 
@@ -14,9 +15,9 @@ namespace Jazz2::Editor
 	/**
 		@brief Events to choose from, as a grid of their pictures and names
 	*/
-	class EventGrid : public UiElement
+	class EventGrid : public Element
 	{
-		DEATH_RUNTIME_OBJECT(UiElement);
+		DEATH_RUNTIME_OBJECT(Element);
 
 	public:
 		/** @brief Category shown when all categories are */
@@ -36,11 +37,11 @@ namespace Jazz2::Editor
 		}
 
 		void Update(float timeMult) override;
-		Vector2f Measure(const UiContext& context, Vector2f available) override;
-		void Draw(UiPainter& painter) override;
+		Vector2f Measure(const Context& context, Vector2f available) override;
+		void Draw(Painter& painter) override;
 		bool AcceptsPointer() const override;
-		bool OnPointerDown(const UiPointerEvent& event) override;
-		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		bool OnPointerDown(const PointerEvent& event) override;
+		void OnPointerUp(const PointerEvent& event, bool inside) override;
 		void OnPointerCancel() override;
 		/** @brief An event is only clicked, so a finger dragged over the events scrolls them */
 		bool YieldsToScroll() const override;
@@ -69,9 +70,9 @@ namespace Jazz2::Editor
 	/**
 		@brief Panel with the events to choose from, by category
 	*/
-	class EventPickerPanel : public UiPanel
+	class EventPickerPanel : public Panel
 	{
-		DEATH_RUNTIME_OBJECT(UiPanel);
+		DEATH_RUNTIME_OBJECT(Panel);
 
 	public:
 		explicit EventPickerPanel(IEditorContext& session);
@@ -84,9 +85,9 @@ namespace Jazz2::Editor
 	/**
 		@brief Properties of the selected events, or of the event to place when none is selected
 	*/
-	class EventInspectorPanel : public UiPanel
+	class EventInspectorPanel : public Panel
 	{
-		DEATH_RUNTIME_OBJECT(UiPanel);
+		DEATH_RUNTIME_OBJECT(Panel);
 
 	public:
 		explicit EventInspectorPanel(IEditorContext& session);
@@ -132,8 +133,10 @@ namespace Jazz2::Editor
 		};
 
 		IEditorContext& _session;
-		UiScrollView* _scroll;
+		ScrollView* _scroll;
 		std::int32_t _shownType;
+		// Events of one type can be described differently by their parameters, as those the script of the level describes
+		const EventDescriptor* _shownDescriptor = nullptr;
 		std::int32_t _shownCount;
 		bool _shownBrush;
 		std::uint32_t _shownRevision;
@@ -160,8 +163,8 @@ namespace Jazz2::Editor
 		// into the other selected events, nor clamped to the range of the field only by being shown; a drag still ends
 		bool IsShownValue(std::int32_t shown, std::int32_t committed, const EventParamField* field, bool final);
 		// Adds a mark shown while a value of @p mask, bits of _mixed, differs among the selected events
-		void AddMixedMark(UiElement* parent, std::uint64_t mask);
-		void AddMixedMark(UiElement* parent, std::int32_t bit) {
+		void AddMixedMark(Element* parent, std::uint64_t mask);
+		void AddMixedMark(Element* parent, std::int32_t bit) {
 			AddMixedMark(parent, std::uint64_t(1) << bit);
 		}
 
@@ -170,14 +173,14 @@ namespace Jazz2::Editor
 		// Returns `true` if the events are shown still as they were when the pick began
 		bool IsPickTargetShown(const PickTarget& target) const;
 		void Rebuild();
-		void AddCommonRows(UiElement* rows);
-		void AddField(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
-		void AddFieldRowsWithCondition(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
-		void AddFieldRows(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
+		void AddCommonRows(Element* rows);
+		void AddField(Element* rows, const EventDescriptor& descriptor, std::int32_t index);
+		void AddFieldRowsWithCondition(Element* rows, const EventDescriptor& descriptor, std::int32_t index);
+		void AddFieldRows(Element* rows, const EventDescriptor& descriptor, std::int32_t index);
 		// The text a field of ParamType::TextId refers to, or the part of it that's used
-		void AddTextPreview(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
+		void AddTextPreview(Element* rows, const EventDescriptor& descriptor, std::int32_t index);
 		// The fields of the event inside of a field of ParamType::Contents, of the kind it has now
-		void AddContentsFields(UiElement* rows, const EventDescriptor& descriptor, std::int32_t index);
+		void AddContentsFields(Element* rows, const EventDescriptor& descriptor, std::int32_t index);
 		// Returns the kinds of the events inside the event, the fields shown depend on them
 		std::uint32_t GetContentsSignature(const Formats::EventRecord& event) const;
 	};

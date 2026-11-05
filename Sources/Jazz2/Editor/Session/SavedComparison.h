@@ -4,12 +4,18 @@
 
 #include "../Document/DocumentChanges.h"
 #include "../../../nCine/Primitives/Rect.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/SmallVector.h>
 
 #include <memory>
 
 using namespace nCine;
+
+namespace Jazz2::UI::Windows
+{
+	class Painter;
+}
 
 namespace Jazz2::Editor
 {
@@ -19,7 +25,6 @@ namespace Jazz2::Editor
 
 	class IEditorContext;
 	class LevelDocument;
-	class UiPainter;
 
 	/**
 		@brief Shows where the level being edited differs from its file saved on disk
@@ -55,7 +60,7 @@ namespace Jazz2::Editor
 		/** @brief Reads the saved level again if its file changed since it was read */
 		void ReloadIfSavedChanged();
 		/** @brief Draws the differences over the view, with @p strokeInProgress as in @ref Toggle() */
-		void Draw(UiPainter& painter, const Rectf& viewRect, bool strokeInProgress);
+		void Draw(Painter& painter, const Rectf& viewRect, bool strokeInProgress);
 
 	private:
 		struct SavedLayerDifference

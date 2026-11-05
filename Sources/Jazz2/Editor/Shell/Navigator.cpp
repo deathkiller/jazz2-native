@@ -7,7 +7,7 @@
 #include "../Tools/EditorContext.h"
 #include "../Document/DocumentChanges.h"
 #include "../Events/EventPreviews.h"
-#include "../UI/UiColors.h"
+#include "../../UI/Windows/Colors.h"
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Primitives/Vector3.h"
 #include "../Document/Annotations.h"
@@ -15,8 +15,9 @@
 #include "../Imaging/LevelThumbnail.h"
 #include "../Runtime/EditorCamera.h"
 #include "../Runtime/EditorLevelHandler.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../Formats/TileSetFile.h"
 #include "../../../nCine/Graphics/Texture.h"
@@ -103,15 +104,15 @@ namespace Jazz2::Editor
 		// Asks for the text of a reply to a note, by its index among the annotations
 		void ShowReplyDialog(IEditorContext& session, std::int32_t index)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the dialog that adds a reply to a note in the level
-			auto dialog = std::make_unique<UiDialog>(_x("editor", "Reply to the Note"));
-			UiDialog* dialogPtr = dialog.get();
-			auto* text = dialog->GetContent()->Add<UiTextBox>();
+			auto dialog = std::make_unique<Dialog>(_x("editor", "Reply to the Note"));
+			Dialog* dialogPtr = dialog.get();
+			auto* text = dialog->GetContent()->Add<TextBox>();
 			text->Width = 240.0f;
 			text->MaxLength = 200;
 			// TRANSLATORS: Placeholder of the text box in the Reply to the Note dialog, the text of the reply (noun)
@@ -138,7 +139,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The sprite layer small, a pixel for a tile, and the part of it the view shows */
-		class MinimapView : public UiElement
+		class MinimapView : public Element
 		{
 		public:
 			explicit MinimapView(IEditorContext& session)
@@ -171,7 +172,7 @@ namespace Jazz2::Editor
 				session.AddChangeObserver(_changeObserver);
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				Vector2f fixedSize = GetFixedSize(context);
 				return Vector2f(fixedSize.X >= 0.0f ? fixedSize.X : context.Px(220.0f), fixedSize.Y >= 0.0f ? fixedSize.Y : context.Px(110.0f));
@@ -235,31 +236,31 @@ namespace Jazz2::Editor
 						_eventsDirtyArea = Recti();
 					}
 				}
-				UiElement::Update(timeMult);
+				Element::Update(timeMult);
 			}
 
 			/** @brief Whether the events and where the camera is limited are shown over the map */
 			bool ShowEvents = true;
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
-				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.5f), UiLayer::Fill);
+				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.5f), PaintLayer::Fill);
 				Rectf rect = GetMapRect();
 				if (_texture != nullptr) {
-					painter.Image(*_texture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Content);
+					painter.Image(*_texture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, PaintLayer::Content);
 				}
-				painter.Frame(rect, UiTheme::PanelBorderDim, 1.0f, UiLayer::Content);
+				painter.Frame(rect, Theme::PanelBorderDim, 1.0f, PaintLayer::Content);
 				if (ShowEvents && _eventsTexture != nullptr && _size.X > 0) {
 					// The events in the colors of their categories, the spans the camera is kept in as bars at their rows
-					painter.Image(*_eventsTexture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Overlay);
+					painter.Image(*_eventsTexture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, PaintLayer::Overlay);
 					float thickness = std::max(1.0f, std::round(painter.GetScale()));
 					for (const Vector3i& span : _cameraSpans) {
 						Vector2f from = WorldToMap(rect, Vector2f(span.X * 32.0f, span.Z * 32.0f + 16.0f));
 						Vector2f to = WorldToMap(rect, Vector2f(span.Y * 32.0f, span.Z * 32.0f + 16.0f));
 						Colorf color(1.0f, 0.55f, 0.85f, 0.9f);
-						painter.FillRect(Rectf(from.X, from.Y - thickness * 0.5f, std::max(to.X - from.X, thickness), thickness), color, UiLayer::Overlay);
-						painter.FillRect(Rectf(from.X, from.Y - thickness * 2.0f, thickness, thickness * 4.0f), color, UiLayer::Overlay);
-						painter.FillRect(Rectf(to.X - thickness, to.Y - thickness * 2.0f, thickness, thickness * 4.0f), color, UiLayer::Overlay);
+						painter.FillRect(Rectf(from.X, from.Y - thickness * 0.5f, std::max(to.X - from.X, thickness), thickness), color, PaintLayer::Overlay);
+						painter.FillRect(Rectf(from.X, from.Y - thickness * 2.0f, thickness, thickness * 4.0f), color, PaintLayer::Overlay);
+						painter.FillRect(Rectf(to.X - thickness, to.Y - thickness * 2.0f, thickness, thickness * 4.0f), color, PaintLayer::Overlay);
 					}
 				}
 
@@ -274,7 +275,7 @@ namespace Jazz2::Editor
 				Vector2f bottomRight = WorldToMap(rect, camera.GetCenter() + half);
 				Rectf view(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
 				painter.PushClip(rect);
-				painter.Frame(view, UiTheme::Accent, std::max(1.0f, std::round(painter.GetScale())), UiLayer::Overlay);
+				painter.Frame(view, Theme::Accent, std::max(1.0f, std::round(painter.GetScale())), PaintLayer::Overlay);
 				painter.PopClip();
 
 				// Bookmarks, as their numbers would be too small, in their own colors
@@ -286,7 +287,7 @@ namespace Jazz2::Editor
 					if (annotation.Resolved) {
 						color.A *= 0.4f;
 					}
-					painter.FillRect(Rectf(pos.X - size, pos.Y - size, size * 2.0f, size * 2.0f), color, UiLayer::OverlayText);
+					painter.FillRect(Rectf(pos.X - size, pos.Y - size, size * 2.0f, size * 2.0f), color, PaintLayer::OverlayText);
 				}
 			}
 
@@ -295,7 +296,7 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			bool OnPointerDown(const UiPointerEvent& event) override
+			bool OnPointerDown(const PointerEvent& event) override
 			{
 				if (event.Button != MouseButton::Left) {
 					return false;
@@ -305,14 +306,14 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			void OnPointerMove(const UiPointerEvent& event) override
+			void OnPointerMove(const PointerEvent& event) override
 			{
 				if (_dragging) {
 					MoveViewTo(event.Pos);
 				}
 			}
 
-			void OnPointerUp(const UiPointerEvent& event, bool inside) override
+			void OnPointerUp(const PointerEvent& event, bool inside) override
 			{
 				_dragging = false;
 			}
@@ -638,31 +639,31 @@ namespace Jazz2::Editor
 			In a window made smaller, the list gives up its room first, down to a row, then the map. In a larger one, the
 			map grows as far as the shape of the level can use it, the list gets the rest.
 		*/
-		class NavigatorBody : public UiElement
+		class NavigatorBody : public Element
 		{
 		public:
 			static constexpr float NaturalWidth = 260.0f;
 			// As high as a button each with the spacing between the rows, 4 of them
-			static constexpr float NaturalListHeight = UiTheme::ButtonHeight * 4.0f + 2.0f * 3.0f + 1.0f;
+			static constexpr float NaturalListHeight = Theme::ButtonHeight * 4.0f + 2.0f * 3.0f + 1.0f;
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				float width = std::min(context.Px(NaturalWidth), available.X);
 				float height = GetMapHeight(context, width) + context.Px(NaturalListHeight) + GetFixedHeight(context, width);
 				return Vector2f(width, height);
 			}
 
-			void Arrange(const UiContext& context, const Rectf& bounds) override
+			void Arrange(const Context& context, const Rectf& bounds) override
 			{
 				Bounds = bounds;
 				if (_children.size() < 4) {
 					return;
 				}
-				float spacing = context.Px(UiTheme::Spacing);
+				float spacing = context.Px(Theme::Spacing);
 				float room = std::max(bounds.H - GetFixedHeight(context, bounds.W), 0.0f);
 				float mapNatural = GetMapHeight(context, bounds.W);
 				float listNatural = context.Px(NaturalListHeight);
-				float listMin = context.Px(UiTheme::ButtonHeight);
+				float listMin = context.Px(Theme::ButtonHeight);
 				float mapMin = std::min(context.Px(40.0f), mapNatural);
 				float map;
 				if (room >= mapNatural + listNatural) {
@@ -695,16 +696,16 @@ namespace Jazz2::Editor
 			}
 
 			// As high as the level drawn across the width needs, within what a map is usually given
-			float GetMapHeight(const UiContext& context, float width) const
+			float GetMapHeight(const Context& context, float width) const
 			{
 				float aspect = (!_children.empty() ? GetMinimap()->GetAspect() : 0.5f);
 				return std::clamp(std::round(width * aspect), context.Px(60.0f), context.Px(150.0f));
 			}
 
 			// The options and the search between the map and the list, with the spacing around them
-			float GetFixedHeight(const UiContext& context, float width)
+			float GetFixedHeight(const Context& context, float width)
 			{
-				float height = context.Px(UiTheme::Spacing) * 3.0f;
+				float height = context.Px(Theme::Spacing) * 3.0f;
 				for (std::int32_t i = 1; i <= 2 && i < std::int32_t(_children.size()); i++) {
 					height += _children[i]->MeasureCached(context, Vector2f(width, 1.0e6f)).Y;
 				}
@@ -771,15 +772,15 @@ namespace Jazz2::Editor
 
 	void ShowNavigator(IEditorContext& session, bool toggle)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr || ReuseSingleDialog(session, "navigator", toggle)) {
 			return;
 		}
 
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog with the map of the level, the bookmarks and the notes
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Navigator"));
-		UiDialog* dialogPtr = dialog.get();
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Navigator"));
+		Dialog* dialogPtr = dialog.get();
 		// Resized as needed, the list gets smaller first, then the map; the size stays for the session
 		static Vector2f lastSize(-1.0f, -1.0f);
 		dialog->Resizable = true;
@@ -794,16 +795,16 @@ namespace Jazz2::Editor
 		body->Flex = 1.0f;
 		auto* minimap = body->Add<MinimapView>(session);
 		{
-			auto* options = body->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* options = body->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 			// TRANSLATORS: Check box in the Navigator dialog, shows the events on the map
-			options->Add<UiCheckBox>(_x("editor", "Events"), [minimap]() { return minimap->ShowEvents; }, [minimap](bool value) { minimap->ShowEvents = value; })
+			options->Add<CheckBox>(_x("editor", "Events"), [minimap]() { return minimap->ShowEvents; }, [minimap](bool value) { minimap->ShowEvents = value; })
 				->Tooltip = _x("editor", "Shows the events in the colors of their categories, and where the camera is limited");
 		}
 
 		// The list follows the annotations, rebuilt when their chunk changes or the search does
 		struct ListState { AnnotationCache Cache; std::uint32_t Version = 0; bool Built = false; String Search; };
 		auto state = std::make_shared<ListState>();
-		auto* search = body->Add<UiTextBox>();
+		auto* search = body->Add<TextBox>();
 		search->Placeholder = _x("editor", "Search the notes");
 		search->OnChanged = [state](StringView text) {
 			state->Search = text;
@@ -811,21 +812,21 @@ namespace Jazz2::Editor
 		};
 
 		// 4 bookmarks at a time unless the window is resized, the rest scrolls, see NavigatorBody
-		auto* scroll = body->Add<UiScrollView>();
+		auto* scroll = body->Add<ScrollView>();
 
 		auto rebuild = [s, scroll, state]() {
 			SmallVector<Annotation, 0> annotations;
 			Annotation::Read(s->GetDocument(), annotations);
-			auto* rows = scroll->SetContent<UiStack>(UiOrientation::Vertical, 2.0f);
+			auto* rows = scroll->SetContent<Stack>(Orientation::Vertical, 2.0f);
 			for (std::int32_t slot = 1; slot <= 9; slot++) {
 				auto it = std::find_if(annotations.begin(), annotations.end(), [slot](const Annotation& a) { return a.Slot == slot; });
 				bool isSet = (it != annotations.end());
-				auto* row = rows->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = rows->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				// TRANSLATORS: Number of a bookmark at the start of its row in the Navigator dialog, usually kept as it is
-				row->Add<UiLabel>(_fx("editor", "{}", slot), isSet ? UiTheme::Text : UiTheme::TextDisabled)->Width = 10.0f;
+				row->Add<Label>(_fx("editor", "{}", slot), isSet ? Theme::Text : Theme::TextDisabled)->Width = 10.0f;
 				if (isSet) {
 					// Its name and color, a bookmark is known by them in the view and on the map
-					auto* name = row->Add<UiTextBox>(it->Text);
+					auto* name = row->Add<TextBox>(it->Text);
 					name->Flex = 1.0f;
 					name->MaxLength = 64;
 					// TRANSLATORS: Name of a bookmark in the Navigator dialog until it's named, {} is its number
@@ -846,12 +847,12 @@ namespace Jazz2::Editor
 						return (storedColor != 0 ? Colorf((storedColor & 0xFF) / 255.0f, ((storedColor >> 8) & 0xFF) / 255.0f, ((storedColor >> 16) & 0xFF) / 255.0f, 1.0f)
 							: Colorf(0.4f, 0.8f, 1.0f, 1.0f));
 					};
-					row->Add<UiColorSwatch>(getColor, [s, slot, getColor]() {
-						UiSurface* surface = s->GetSurface();
+					row->Add<ColorSwatch>(getColor, [s, slot, getColor]() {
+						Surface* surface = s->GetSurface();
 						if (surface == nullptr) {
 							return;
 						}
-						UiColorPicker::ShowPopup(*surface, surface->GetPointerPos(), getColor, [s, slot](const Colorf& color) {
+						ColorPicker::ShowPopup(*surface, surface->GetPointerPos(), getColor, [s, slot](const Colorf& color) {
 							std::uint32_t rgb = std::uint32_t(std::round(color.R * 255.0f)) | (std::uint32_t(std::round(color.G * 255.0f)) << 8) |
 								(std::uint32_t(std::round(color.B * 255.0f)) << 16) | 0xFF000000u;
 							// TRANSLATORS: Name of an undo step in the history, the color of a bookmark was changed
@@ -865,23 +866,23 @@ namespace Jazz2::Editor
 						}, false);
 					})->Tooltip = _x("editor", "Color of the bookmark");
 					// TRANSLATORS: Button in the Navigator dialog, moves the view to the bookmark, keep it short
-					row->Add<UiButton>(_x("editor", "Go"), EditorIcon::None, [s, slot]() { GoToBookmark(*s, slot); })->Style = UiButtonStyle::Flat;
+					row->Add<Button>(_x("editor", "Go"), EditorIcon::None, [s, slot]() { GoToBookmark(*s, slot); })->Style = ButtonStyle::Flat;
 				} else {
 					// TRANSLATORS: Name of a bookmark in the Navigator dialog that isn't set, {} is its number
-					row->Add<UiLabel>(_fx("editor", "Bookmark {}", slot), UiTheme::TextDisabled)->Flex = 1.0f;
+					row->Add<Label>(_fx("editor", "Bookmark {}", slot), Theme::TextDisabled)->Flex = 1.0f;
 				}
 				// TRANSLATORS: Button in the Navigator dialog, sets the bookmark to the middle of the view (verb), keep it short
-				auto* set = row->Add<UiButton>(_x("editor", "Set"), EditorIcon::None, [s, slot]() { SetBookmark(*s, slot); });
-				set->Style = UiButtonStyle::Flat;
+				auto* set = row->Add<Button>(_x("editor", "Set"), EditorIcon::None, [s, slot]() { SetBookmark(*s, slot); });
+				set->Style = ButtonStyle::Flat;
 				// TRANSLATORS: Tooltip of the Set button of a bookmark in the Navigator dialog, {} is the number of the bookmark as a key of its shortcut
 				set->Tooltip = _fx("editor", "The middle of the view, Ctrl+Shift+{}", slot);
 				if (isSet) {
-					row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, slot]() {
+					row->Add<Button>(StringView(), EditorIcon::Delete, [s, slot]() {
 						// TRANSLATORS: Name of an undo step in the history, a bookmark was removed
 						ChangeAnnotations(*s, _x("editor", "Remove bookmark"), [slot](SmallVectorImpl<Annotation>& list) {
 							list.erase(std::remove_if(list.begin(), list.end(), [slot](const Annotation& a) { return a.Slot == slot; }), list.end());
 						});
-					})->Style = UiButtonStyle::Flat;
+					})->Style = ButtonStyle::Flat;
 				}
 			}
 
@@ -905,9 +906,9 @@ namespace Jazz2::Editor
 				shownNotes++;
 				std::int32_t index = std::int32_t(i);
 				Vector2f pos(float(note.X), float(note.Y));
-				rows->Add<UiSeparator>();
-				auto* row = rows->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-				auto* text = row->Add<UiTextBox>(note.Text);
+				rows->Add<Separator>();
+				auto* row = rows->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+				auto* text = row->Add<TextBox>(note.Text);
 				text->Flex = 1.0f;
 				text->MaxLength = 200;
 				text->OnCommit = [s, index](StringView value) {
@@ -920,29 +921,29 @@ namespace Jazz2::Editor
 					});
 				};
 				// TRANSLATORS: Button in the Navigator dialog, moves the view to the note, keep it short
-				row->Add<UiButton>(_x("editor", "Go"), EditorIcon::None, [s, pos]() {
+				row->Add<Button>(_x("editor", "Go"), EditorIcon::None, [s, pos]() {
 					if (EditorLevelHandler* editHandler = s->GetEditHandler()) {
 						EditorCamera& camera = editHandler->GetCamera();
 						camera.FlyTo(pos, camera.GetScale());
 					}
-				})->Style = UiButtonStyle::Flat;
-				row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, index]() {
+				})->Style = ButtonStyle::Flat;
+				row->Add<Button>(StringView(), EditorIcon::Delete, [s, index]() {
 					// TRANSLATORS: Name of an undo step in the history, a note was removed
 					ChangeAnnotations(*s, _x("editor", "Remove note"), [index](SmallVectorImpl<Annotation>& list) {
 						if (index < std::int32_t(list.size())) {
 							list.erase(list.begin() + index);
 						}
 					});
-				})->Style = UiButtonStyle::Flat;
+				})->Style = ButtonStyle::Flat;
 
 				// Who wrote it, whether it was done, and the replies to it
-				auto* details = rows->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* details = rows->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				String author = DescribeAuthor(note.Author, note.Time);
 				// TRANSLATORS: Under a note in the Navigator dialog instead of who wrote it, when it isn't known
-				details->Add<UiLabel>(author.empty() ? String(_x("editor", "Unknown author")) : author, UiTheme::TextDim)->Flex = 1.0f;
+				details->Add<Label>(author.empty() ? String(_x("editor", "Unknown author")) : author, Theme::TextDim)->Flex = 1.0f;
 				std::weak_ptr<ListState> weakState = state;
 				// TRANSLATORS: Check box under a note in the Navigator dialog, what the note is about was done (adjective)
-				details->Add<UiCheckBox>(_x("editor", "Done"), [s, weakState, index]() {
+				details->Add<CheckBox>(_x("editor", "Done"), [s, weakState, index]() {
 					std::shared_ptr<ListState> state = weakState.lock();
 					if (state == nullptr) {
 						return false;
@@ -958,19 +959,19 @@ namespace Jazz2::Editor
 					});
 				})->Tooltip = _x("editor", "What the note is about was done, it's shown dimmer");
 				// TRANSLATORS: Button under a note in the Navigator dialog, opens the dialog to reply to it (verb)
-				details->Add<UiButton>(_x("editor", "Reply"), EditorIcon::None, [s, index]() { ShowReplyDialog(*s, index); })->Style = UiButtonStyle::Flat;
+				details->Add<Button>(_x("editor", "Reply"), EditorIcon::None, [s, index]() { ShowReplyDialog(*s, index); })->Style = ButtonStyle::Flat;
 				for (const Annotation::Reply& reply : note.Replies) {
-					auto* replyRow = rows->Add<UiStack>(UiOrientation::Vertical, 0.0f, UiThickness(10.0f, 0.0f, 0.0f, 0.0f));
-					replyRow->Add<UiLabel>(reply.Text, UiTheme::Text);
-					replyRow->Add<UiLabel>(DescribeAuthor(reply.Author, reply.Time), UiTheme::TextDim);
+					auto* replyRow = rows->Add<Stack>(Orientation::Vertical, 0.0f, Thickness(10.0f, 0.0f, 0.0f, 0.0f));
+					replyRow->Add<Label>(reply.Text, Theme::Text);
+					replyRow->Add<Label>(DescribeAuthor(reply.Author, reply.Time), Theme::TextDim);
 				}
 			}
 			if (notes > 0 && shownNotes == 0) {
-				rows->Add<UiLabel>(_x("editor", "No note matches"), UiTheme::TextDisabled);
+				rows->Add<Label>(_x("editor", "No note matches"), Theme::TextDisabled);
 			}
 		};
 		// Checked every frame, a note added in the view or a bookmark set by its keys shows at once
-		content->Add<UiUpdateWatcher>([s, state, rebuild, dialogPtr](float) {
+		content->Add<UpdateWatcher>([s, state, rebuild, dialogPtr](float) {
 			if (dialogPtr->Width > 0.0f && dialogPtr->Height > 0.0f) {
 				lastSize = Vector2f(dialogPtr->Width, dialogPtr->Height);
 			}
@@ -992,7 +993,7 @@ namespace Jazz2::Editor
 		dialog->OnCancel = [dialogPtr]() { dialogPtr->Close(); };
 
 		// In the bottom right corner, out of the way of the view, the position is moved to fit the screen
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Position = Vector2f(1.0e6f, 1.0e6f);
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

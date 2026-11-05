@@ -4,19 +4,24 @@
 
 #include "../Document/Annotations.h"
 #include "../Events/EventCatalog.h"
-#include "../UI/UiWidgets.h"
+#include "../../UI/Windows/Widgets.h"
+#include "../UI/EditorUi.h"
+
+namespace Jazz2::UI::Windows
+{
+	class Surface;
+	struct MenuEntry;
+	struct OverlayOptions;
+}
 
 namespace Jazz2::Editor
 {
 	class IEditorContext;
 	class LevelDocument;
-	class UiSurface;
 	struct EditorAction;
-	struct UiMenuEntry;
-	struct UiOverlayOptions;
 
 	/** @brief Makes an item of a menu running an action, with its label, icon and shortcut */
-	UiMenuEntry MakeMenuEntry(EditorAction& action);
+	MenuEntry MakeMenuEntry(EditorAction& action);
 	/** @brief Formats a whole number */
 	String FormatInteger(std::int32_t value);
 	/** @brief Returns the short name of a unit of a parameter of an event shown after its name, empty for none */
@@ -27,7 +32,7 @@ namespace Jazz2::Editor
 	 * A form puts the labels in a column as wide as the longest of them, any other element gets a row with a label
 	 * of @p labelWidth units.
 	 */
-	UiStack* AddLabeledRow(UiElement* parent, StringView label, StringView tooltip = {}, float labelWidth = 62.0f);
+	Stack* AddLabeledRow(Element* parent, StringView label, StringView tooltip = {}, float labelWidth = 62.0f);
 	/** @brief Returns `true` if all words of a search are in a text, whatever the case of the letters */
 	bool MatchesSearch(StringView text, StringView search);
 	/** @brief Returns the first parameter of an event of a type, or `nullptr` */
@@ -53,7 +58,7 @@ namespace Jazz2::Editor
 	 *
 	 * The editor remembers the dialog under @p id until it's closed. Returns the dialog.
 	 */
-	UiElement* ShowSingleDialog(IEditorContext& session, const char* id, std::unique_ptr<UiElement> dialog, UiOverlayOptions&& options,
+	Element* ShowSingleDialog(IEditorContext& session, const char* id, std::unique_ptr<Element> dialog, OverlayOptions&& options,
 		Function<void()>&& onShownAgain = {});
 	/**
 	 * @brief Returns `true` if a dialog of @p id is shown already
@@ -65,13 +70,13 @@ namespace Jazz2::Editor
 	/**
 		@brief Takes no room, only calls a function every frame
 	*/
-	class UiUpdateWatcher : public UiElement
+	class UpdateWatcher : public Element
 	{
 	public:
 		/** @brief Creates a new instance */
-		explicit UiUpdateWatcher(Function<void(float)>&& onUpdate);
+		explicit UpdateWatcher(Function<void(float)>&& onUpdate);
 
-		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		Vector2f Measure(const Context& context, Vector2f available) override;
 		void Update(float timeMult) override;
 
 	private:

@@ -12,9 +12,10 @@
 #include "../Shell/ShellCommon.h"
 #include "../Tools/BlockGrab.h"
 #include "../Tools/EditorTool.h"
-#include "../UI/UiRadialMenu.h"
-#include "../UI/UiSurface.h"
-#include "../UI/UiWidgets.h"
+#include "../../UI/Windows/RadialMenu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../../UI/Windows/Widgets.h"
+#include "../UI/EditorUi.h"
 #include "../../LevelHandler.h"
 
 #include "../../../nCine/Application.h"
@@ -60,6 +61,51 @@ namespace Jazz2::Editor
 
 	void EditorInputRouter::Update(float timeMult)
 	{
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS)
+		// Over the title bar of a window or outside of all of them, no move may be told while a button is held, what is
+		// dragged would stop there; the pointer is followed by where the system has it then
+		bool movedThisFrame = _movedThisFrame;
+		_movedThisFrame = false;
+		if (_heldButtons != 0 && !movedThisFrame && _context.GetEditHandler() != nullptr) {
+			IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
+			Vector2i global;
+			if (gfxDevice.globalMousePosition(global)) {
+				Vector2i mainPos = gfxDevice.windowPosition();
+				Vector2i units = global - mainPos;
+				if (AuxiliaryWindow* window = AuxiliaryWindow::FindById(_pointerWindow)) {
+					// As the backend makes positions over that window relative to the main window
+					Recti bounds = window->GetBounds();
+					float scale = window->GetInputScale();
+					units = Vector2i(std::int32_t(std::round(float(global.X - bounds.X) * scale)) + bounds.X - mainPos.X,
+						std::int32_t(std::round(float(global.Y - bounds.Y) * scale)) + bounds.Y - mainPos.Y);
+				}
+				Vector2f pos = ToDrawable(units.X, units.Y);
+				if ((pos - _mousePos).SqrLength() >= 1.0f) {
+					_mousePos = pos;
+					PointerMove(pos);
+				}
+			}
+		}
+
+		// A release that went to a window just shown or moved under the pointer may not come, a drag would go on with no
+		// button held; told by the system, it's released then, a frame later, in case the event is only late
+		if (_heldButtons != 0) {
+			std::uint32_t buttons;
+			std::uint32_t missed = (theApplication().GetGfxDevice().globalMouseButtons(buttons) ? (_heldButtons & ~buttons) : 0);
+			if (missed == 0) {
+				_missedReleaseFrames = 0;
+			} else if (++_missedReleaseFrames >= 2) {
+				_missedReleaseFrames = 0;
+				_heldButtons &= ~missed;
+				for (MouseButton button : { MouseButton::Left, MouseButton::Right, MouseButton::Middle }) {
+					if ((missed & GetButtonBit(button)) != 0 && _context.GetEditHandler() != nullptr) {
+						PointerUp(_pointerPos, button);
+					}
+				}
+			}
+		}
+#endif
+
 		// A key released while the window didn't have the focus isn't told, it's held no more once it's up
 		if (!_heldKeys.empty()) {
 			const KeyboardState& keyboard = theApplication().GetInputManager().keyboardState();
@@ -79,19 +125,19 @@ namespace Jazz2::Editor
 		// The keyboard of the system covers a part of the screen, it goes away once nothing is typed into, so it's asked
 		// for again by the next box tapped
 		if (_screenKeyboardShown) {
-			UiSurface* surface = _context.GetSurface();
-			UiElement* focus = (surface != nullptr ? surface->GetFocus() : nullptr);
-			if (focus == nullptr || runtime_cast<UiTextBox>(focus) == nullptr) {
+			Surface* surface = _context.GetSurface();
+			Element* focus = (surface != nullptr ? surface->GetFocus() : nullptr);
+			if (focus == nullptr || runtime_cast<TextBox>(focus) == nullptr) {
 				_screenKeyboardShown = false;
 				theApplication().HideScreenKeyboard();
 			}
 		}
-		if (UiSurface* surface = _context.GetSurface()) {
+		if (Surface* surface = _context.GetSurface()) {
 			surface->KeyboardInset = (_screenKeyboardShown ? float(theApplication().GetScreenKeyboardInset()) : 0.0f);
 		}
 	}
 
-	bool EditorInputRouter::ShowScreenKeyboard(UiTextBox& field)
+	bool EditorInputRouter::ShowScreenKeyboard(TextBox& field)
 	{
 		if (!field.ShowScreenKeyboard()) {
 			return false;
@@ -255,7 +301,7 @@ namespace Jazz2::Editor
 			}
 			return;
 		}
-		if (UiSurface* surface = _context.GetSurface()) {
+		if (Surface* surface = _context.GetSurface()) {
 			surface->OnTextInput(event);
 		}
 	}
@@ -266,7 +312,7 @@ namespace Jazz2::Editor
 			OnPlayTouchEvent(event);
 			return;
 		}
-		UiSurface* surface = _context.GetSurface();
+		Surface* surface = _context.GetSurface();
 		if (_barTouchId >= 0) {
 			// The level isn't played anymore while a finger still holds the bar, as when a key went back to the editor
 			_barTouchId = -1;
@@ -284,7 +330,7 @@ namespace Jazz2::Editor
 	void EditorInputRouter::OnPlayTouchEvent(const TouchEvent& event)
 	{
 		LevelHandler& game = _playTest.GetPlayTest()->GetLevelHandler();
-		UiSurface* surface = _context.GetSurface();
+		Surface* surface = _context.GetSurface();
 		if (surface == nullptr) {
 			game.OnTouchEvent(event);
 			return;
@@ -375,8 +421,8 @@ namespace Jazz2::Editor
 			PointerUp(pos, MouseButton::Left);
 			// A box tapped to type into needs a keyboard, of the system or of the editor, a number too once it's typed
 			// into (it takes the focus only by a tap without dragging), a tap into a box being typed into keeps its caret
-			UiSurface* surface = _context.GetSurface();
-			if (UiTextBox* field = (surface->GetFocus() != nullptr ? runtime_cast<UiTextBox>(surface->GetFocus()) : nullptr)) {
+			Surface* surface = _context.GetSurface();
+			if (TextBox* field = (surface->GetFocus() != nullptr ? runtime_cast<TextBox>(surface->GetFocus()) : nullptr)) {
 				ShowScreenKeyboard(*field);
 			}
 		};
@@ -406,19 +452,19 @@ namespace Jazz2::Editor
 
 	void EditorInputRouter::ShowToolMenu(Vector2f pos)
 	{
-		UiSurface* surface = _context.GetSurface();
+		Surface* surface = _context.GetSurface();
 		if (surface == nullptr || _radialMenu != nullptr) {
 			return;
 		}
 		ActionRegistry& actions = _context.GetActions();
-		SmallVector<UiMenuEntry, 0> entries;
+		SmallVector<MenuEntry, 0> entries;
 		for (const char* id : { ActionIds::ToolBrush, ActionIds::ToolEraser, ActionIds::ToolRectangle, ActionIds::ToolFill, ActionIds::ToolSmart, ActionIds::ToolEyedropper,
 			ActionIds::ToolSelect, ActionIds::ToolEvent, ActionIds::ToolHand, ActionIds::EditUndo, ActionIds::EditRedo }) {
 			if (EditorAction* action = actions.Find(id)) {
 				entries.push_back(MakeMenuEntry(*action));
 			}
 		}
-		_radialMenu = UiRadialMenu::Show(*surface, pos, Death::move(entries), [this]() { _radialMenu = nullptr; });
+		_radialMenu = RadialMenu::Show(*surface, pos, Death::move(entries), [this]() { _radialMenu = nullptr; });
 	}
 
 	void EditorInputRouter::OnMouseDown(const MouseEvent& event)
@@ -437,7 +483,19 @@ namespace Jazz2::Editor
 			return;
 		}
 		SetInputModality(InputModality::KeyboardMouse);
+		_pointerWindow = event.windowId;
+		_heldButtons |= GetButtonBit(event.button);
 		PointerDown(ToDrawable(event.x, event.y), event.button);
+	}
+
+	std::uint32_t EditorInputRouter::GetButtonBit(MouseButton button)
+	{
+		switch (button) {
+			case MouseButton::Left: return 0x01;
+			case MouseButton::Right: return 0x02;
+			case MouseButton::Middle: return 0x04;
+			default: return 0;
+		}
 	}
 
 	void EditorInputRouter::SetInputModality(InputModality modality)
@@ -446,7 +504,7 @@ namespace Jazz2::Editor
 			return;
 		}
 		_inputModality = modality;
-		if (UiSurface* surface = _context.GetSurface()) {
+		if (Surface* surface = _context.GetSurface()) {
 			// Tooltips by holding a finger still and lists scrolled by dragging them
 			surface->TouchInput = (modality == InputModality::Touch);
 		}
@@ -504,7 +562,7 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		UiSurface& surface = *_context.GetSurface();
+		Surface& surface = *_context.GetSurface();
 		ToolManager& tools = _context.GetTools();
 		float scale = surface.GetScale();
 		EditorCamera& camera = _context.GetEditHandler()->GetCamera();
@@ -542,9 +600,9 @@ namespace Jazz2::Editor
 
 		// A box for a value focused or under the cursor takes the pad and Y: the pad changes a number, Y opens the
 		// screen keyboard of the system to type into it
-		UiElement* fieldElement = (surface.GetFocus() != nullptr ? surface.GetFocus() : surface.GetHover());
-		UiTextBox* field = (fieldElement != nullptr ? runtime_cast<UiTextBox>(fieldElement) : nullptr);
-		UiNumberBox* numberField = (field != nullptr ? runtime_cast<UiNumberBox>(field) : nullptr);
+		Element* fieldElement = (surface.GetFocus() != nullptr ? surface.GetFocus() : surface.GetHover());
+		TextBox* field = (fieldElement != nullptr ? runtime_cast<TextBox>(fieldElement) : nullptr);
+		NumberBox* numberField = (field != nullptr ? runtime_cast<NumberBox>(field) : nullptr);
 		bool fieldTakesY = false;
 		if (field != nullptr && field->IsUsable() && wasPressed(ButtonName::Y)) {
 			fieldTakesY = ShowScreenKeyboard(*field);
@@ -618,9 +676,9 @@ namespace Jazz2::Editor
 		// A list that scrolls follows the cursor held near its top or bottom edge, faster the closer to it, as the cursor
 		// can't be pushed past the edge to the rows cut off there - a menu taller than the screen included
 		if (_radialMenu == nullptr) {
-			UiScrollView* edgeView = nullptr;
-			for (UiElement* element = surface.GetHover(); element != nullptr && edgeView == nullptr; element = element->GetParent()) {
-				UiScrollView* scrollView = runtime_cast<UiScrollView>(element);
+			ScrollView* edgeView = nullptr;
+			for (Element* element = surface.GetHover(); element != nullptr && edgeView == nullptr; element = element->GetParent()) {
+				ScrollView* scrollView = runtime_cast<ScrollView>(element);
 				if (scrollView != nullptr && scrollView->IsScrollable()) {
 					edgeView = scrollView;
 				}
@@ -650,12 +708,12 @@ namespace Jazz2::Editor
 		// Over a list that scrolls, the right stick scrolls it, it moves the view otherwise
 		bool scrolled = false;
 		if (std::abs(rightStick.Y) > 0.0f) {
-			UiScrollView* scrollView = nullptr;
-			for (UiElement* element = surface.GetHover(); element != nullptr && scrollView == nullptr; element = element->GetParent()) {
-				scrollView = runtime_cast<UiScrollView>(element);
+			ScrollView* scrollView = nullptr;
+			for (Element* element = surface.GetHover(); element != nullptr && scrollView == nullptr; element = element->GetParent()) {
+				scrollView = runtime_cast<ScrollView>(element);
 			}
 			if (scrollView != nullptr) {
-				UiPointerEvent wheel;
+				PointerEvent wheel;
 				wheel.Pos = _gamepadCursor;
 				wheel.Wheel = Vector2f(0.0f, -rightStick.Y * std::abs(rightStick.Y) * GamepadScrollSpeed * timeMult);
 				scrolled = scrollView->OnWheel(wheel);
@@ -795,10 +853,11 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		UiPointerEvent uiEvent;
+		PointerEvent uiEvent;
 		uiEvent.Pos = _pointerPos;
 		uiEvent.Button = button;
 		uiEvent.Modifiers = _modifiers;
+		uiEvent.WindowId = _pointerWindow;
 		// The panels are only seen while a ring grows over them, they don't take what is meant for the game. While the
 		// view flies into the level they don't take anything either, the level is played as it is then.
 		if (_playTest.IsEntering() || (!_playTest.IsEditing() && _playTest.GetTransition().IsActive())) {
@@ -845,7 +904,7 @@ namespace Jazz2::Editor
 		if (_toolPointerDown || _context.GetTools().GetActive()->HasPointerCapture()) {
 			CancelToolStroke();
 		}
-		UiSurface* surface = _context.GetSurface();
+		Surface* surface = _context.GetSurface();
 		if (releasePointer && surface != nullptr) {
 			// A handle of the layer dragged, or anything else of the interface held by the pointer, is let go without
 			// doing what the release would do
@@ -866,6 +925,8 @@ namespace Jazz2::Editor
 		if (_context.GetEditHandler() == nullptr || Shortcut::GetMouseButtonKey(event.button) != Keys::Unknown) {
 			return;
 		}
+		_pointerWindow = event.windowId;
+		_heldButtons &= ~GetButtonBit(event.button);
 		PointerUp(ToDrawable(event.x, event.y), event.button);
 	}
 
@@ -894,10 +955,11 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		UiPointerEvent uiEvent;
+		PointerEvent uiEvent;
 		uiEvent.Pos = _pointerPos;
 		uiEvent.Button = button;
 		uiEvent.Modifiers = _modifiers;
+		uiEvent.WindowId = _pointerWindow;
 		_context.GetSurface()->OnPointerUp(uiEvent);
 	}
 
@@ -909,6 +971,8 @@ namespace Jazz2::Editor
 		Vector2f pos = ToDrawable(state.x, state.y);
 		bool moved = ((pos - _mousePos).Length() >= 4.0f);
 		_mousePos = pos;
+		_pointerWindow = state.windowId;
+		_movedThisFrame = true;
 		if (_inputModality == InputModality::Gamepad && !moved) {
 			// The mouse barely moved, the gamepad is still used
 			return;
@@ -922,7 +986,7 @@ namespace Jazz2::Editor
 		_pointerPos = pos;
 		_pointerKnown = true;
 		// Also while a tool or the view holds the pointer, what is shown by it stays with it
-		UiSurface* surface = _context.GetSurface();
+		Surface* surface = _context.GetSurface();
 		if (surface != nullptr) {
 			surface->TrackPointer(pos);
 		}
@@ -938,9 +1002,10 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		UiPointerEvent uiEvent;
+		PointerEvent uiEvent;
 		uiEvent.Pos = _pointerPos;
 		uiEvent.Modifiers = _modifiers;
+		uiEvent.WindowId = _pointerWindow;
 		if (!surface->OnPointerMove(uiEvent) && _playTest.IsEditing()) {
 			_toolCallbackDepth++;
 			_context.GetTools().GetActive()->OnPointerMove(MakeToolPointer(_pointerPos, _toolButton));
@@ -955,10 +1020,12 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		UiPointerEvent uiEvent;
+		_pointerWindow = event.windowId;
+		PointerEvent uiEvent;
 		uiEvent.Pos = _pointerPos;
 		uiEvent.Wheel = Vector2f(event.x, event.y);
 		uiEvent.Modifiers = _modifiers;
+		uiEvent.WindowId = _pointerWindow;
 		if (_context.GetSurface()->OnWheel(uiEvent) || !_playTest.IsEditing()) {
 			return;
 		}

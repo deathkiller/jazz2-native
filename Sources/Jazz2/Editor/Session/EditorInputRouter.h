@@ -9,17 +9,22 @@
 #include "../../../nCine/Input/InputEvents.h"
 #include "../../../nCine/Primitives/Rect.h"
 #include "../../../nCine/Primitives/Vector2.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/SmallVector.h>
 
 using namespace nCine;
 
+namespace Jazz2::UI::Windows
+{
+	class RadialMenu;
+	class TextBox;
+}
+
 namespace Jazz2::Editor
 {
 	class PlayTestController;
-	class UiRadialMenu;
 	struct EditorAction;
-	class UiTextBox;
 
 	/**
 		@brief What @ref EditorInputRouter needs of the level editor beyond @ref IEditorContext
@@ -83,6 +88,10 @@ namespace Jazz2::Editor
 		void PointerMove(Vector2f pos);
 		/** @brief Switches what the editor is used with, the hints follow */
 		void SetInputModality(InputModality modality);
+		/** @brief Forgets the mouse buttons pressed, for a press that isn't of the mouse of the system, as from the debug console */
+		void ForgetHeldButtons() {
+			_heldButtons = 0;
+		}
 		/** @brief Returns what the editor was used with last */
 		InputModality GetInputModality() const {
 			return _inputModality;
@@ -98,7 +107,7 @@ namespace Jazz2::Editor
 		/** @brief Shows the menu of tools in a ring around a position on the screen */
 		void ShowToolMenu(Vector2f pos);
 		/** @brief Returns the menu of tools in a ring shown, or `nullptr` */
-		UiRadialMenu* GetRadialMenu() const {
+		RadialMenu* GetRadialMenu() const {
 			return _radialMenu;
 		}
 		/** @brief Returns the modifier keys held, as the last key event had them */
@@ -142,6 +151,8 @@ namespace Jazz2::Editor
 
 		// Last position of the pointer in pixels of the drawable, which may differ from the window on a high-DPI display
 		Vector2f _pointerPos;
+		// Window the mouse is over, 0 for the main one, see PointerEvent::WindowId
+		std::uint32_t _pointerWindow = 0;
 		bool _pointerKnown = false;
 		bool _panning = false;
 		bool _toolPointerDown = false;
@@ -154,13 +165,21 @@ namespace Jazz2::Editor
 
 		// What the editor was used with last, and the state of the gamepad
 		InputModality _inputModality = InputModality::KeyboardMouse;
+		// Mouse buttons pressed and not released yet, bits as of IGfxDevice::globalMouseButtons(), and for how many frames
+		// the system has some of them released without a release told
+		std::uint32_t _heldButtons = 0;
+		std::int32_t _missedReleaseFrames = 0;
+		// Whether a move of the mouse was told since the last update, see Update()
+		bool _movedThisFrame = false;
+
+		static std::uint32_t GetButtonBit(MouseButton button);
 		Vector2f _mousePos;
 		Vector2f _gamepadCursor;
 		std::uint32_t _gamepadButtons = 0;
 		float _gamepadRepeat = 0.0f;
 		// How long Y has been held, held long it opens the menu of tools around the cursor
 		float _gamepadYTime = -1.0f;
-		UiRadialMenu* _radialMenu = nullptr;
+		RadialMenu* _radialMenu = nullptr;
 		TouchGestures _touch;
 		// Frames the sticks have been held for, they move faster then
 		float _gamepadCursorHold = 0.0f;
@@ -191,7 +210,7 @@ namespace Jazz2::Editor
 		// Passes the fingers on the screen to the level being played, except one on the bar shown over it, which is the pointer
 		void OnPlayTouchEvent(const TouchEvent& event);
 		// Shows the keyboard of the system for a box being typed into, remembering it was asked for, returns `false` if there's none
-		bool ShowScreenKeyboard(UiTextBox& field);
+		bool ShowScreenKeyboard(TextBox& field);
 		// Releases the pointer at a position on the screen
 		void PointerUp(Vector2f pos, MouseButton button);
 		// Reads the gamepad and uses the editor by it

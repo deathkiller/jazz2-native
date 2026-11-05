@@ -114,7 +114,7 @@ namespace nCine::RHI::Metal
 		MTL::Texture* s_dummyTexture = nullptr;
 		MTL::SamplerState* s_dummySampler = nullptr;
 
-		// The present pass: a fullscreen triangle sampling the screen texture (or a secondary window's texture)
+		// The present pass: a fullscreen triangle sampling the screen texture (or an auxiliary window's texture)
 		MTL::Library* s_presentLibrary = nullptr;
 		MTL::RenderPipelineState* s_presentPipeline = nullptr;
 		MTL::SamplerState* s_presentSampler = nullptr;
@@ -184,12 +184,12 @@ namespace nCine::RHI::Metal
 			s_lastCullValid = false;
 		}
 
-		// -- Secondary windows (the windows ImGui spawns when a panel is dragged out of the main one) --
+		// -- Auxiliary windows (windows a panel of ImGui or of the UI is dragged out into) --
 		// Only the PRESENTATION of such a window lives here; its contents are rendered through the ordinary RHI
 		// path into an off-screen render target, so every usual convention (top-down rows, scissor mapping,
-		// pipeline cache) applies unchanged. QueueSecondaryPresent() hands that target's texture over for the
+		// pipeline cache) applies unchanged. QueueAuxiliaryPresent() hands that target's texture over for the
 		// frame, and PresentFrame() draws each one into its window's drawable with the same present pass.
-		struct SecondarySwapchain
+		struct AuxiliarySwapchain
 		{
 			void* SdlWindow = nullptr;
 			void* View = nullptr;		// SDL_MetalView
@@ -198,13 +198,13 @@ namespace nCine::RHI::Metal
 			std::int32_t Height = 0;
 			bool Ready = false;
 		};
-		struct PendingSecondaryPresent
+		struct PendingAuxiliaryPresent
 		{
-			SecondarySwapchain* Chain;
+			AuxiliarySwapchain* Chain;
 			const MetalTexture* Source;
 		};
-		std::vector<SecondarySwapchain*> s_secondarySwapchains;
-		std::vector<PendingSecondaryPresent> s_pendingSecondaryPresents;
+		std::vector<AuxiliarySwapchain*> s_auxiliarySwapchains;
+		std::vector<PendingAuxiliaryPresent> s_pendingAuxiliaryPresents;
 
 		MTL::PrimitiveType MapPrimitive(PrimitiveType p)
 		{
@@ -518,7 +518,7 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 				s_framePool->release();
 				s_framePool = nullptr;
 			}
-			s_pendingSecondaryPresents.clear();
+			s_pendingAuxiliaryPresents.clear();
 		}
 
 		void BeginCommandBuffer()
@@ -1389,17 +1389,17 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		}
 	}
 
-	void* MetalDevice::CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
+	void* MetalDevice::CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
 	{
 #if defined(WITH_SDL2) || defined(WITH_SDL3)
 		if (s_device == nullptr || windowHandle == nullptr) {
 			return nullptr;
 		}
-		SecondarySwapchain* sc = new SecondarySwapchain();
+		AuxiliarySwapchain* sc = new AuxiliarySwapchain();
 		sc->SdlWindow = windowHandle;
 		sc->View = SDL_Metal_CreateView(reinterpret_cast<SDL_Window*>(windowHandle));
 		if (sc->View == nullptr) {
-			LOGE("SDL_Metal_CreateView() failed for a secondary window: {}", SDL_GetError());
+			LOGE("SDL_Metal_CreateView() failed for an auxiliary window: {}", SDL_GetError());
 			delete sc;
 			return nullptr;
 		}
@@ -1411,8 +1411,8 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		}
 		// Always synced: these windows carry UI, and nextDrawable's pacing is what keeps them from running ahead
 		MtlLayerSetup(sc->Layer, s_device, true);
-		s_secondarySwapchains.push_back(sc);
-		ResizeSecondarySwapchain(sc, width, height);
+		s_auxiliarySwapchains.push_back(sc);
+		ResizeAuxiliarySwapchain(sc, width, height);
 		return sc;
 #else
 		static_cast<void>(windowHandle);
@@ -1422,23 +1422,23 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 #endif
 	}
 
-	void MetalDevice::DestroySecondarySwapchain(void* handle)
+	void MetalDevice::DestroyAuxiliarySwapchain(void* handle)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr) {
 			return;
 		}
 		// Anything queued for this chain this frame must go before its objects do
-		for (std::size_t i = 0; i < s_pendingSecondaryPresents.size();) {
-			if (s_pendingSecondaryPresents[i].Chain == sc) {
-				s_pendingSecondaryPresents.erase(s_pendingSecondaryPresents.begin() + i);
+		for (std::size_t i = 0; i < s_pendingAuxiliaryPresents.size();) {
+			if (s_pendingAuxiliaryPresents[i].Chain == sc) {
+				s_pendingAuxiliaryPresents.erase(s_pendingAuxiliaryPresents.begin() + i);
 			} else {
 				i++;
 			}
 		}
-		for (std::size_t i = 0; i < s_secondarySwapchains.size(); i++) {
-			if (s_secondarySwapchains[i] == sc) {
-				s_secondarySwapchains.erase(s_secondarySwapchains.begin() + i);
+		for (std::size_t i = 0; i < s_auxiliarySwapchains.size(); i++) {
+			if (s_auxiliarySwapchains[i] == sc) {
+				s_auxiliarySwapchains.erase(s_auxiliarySwapchains.begin() + i);
 				break;
 			}
 		}
@@ -1452,9 +1452,9 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		delete sc;
 	}
 
-	void MetalDevice::ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height)
+	void MetalDevice::ResizeAuxiliarySwapchain(void* handle, std::int32_t width, std::int32_t height)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr || sc->Layer == nullptr) {
 			return;
 		}
@@ -1469,19 +1469,19 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		}
 	}
 
-	void MetalDevice::QueueSecondaryPresent(void* handle, const MetalTexture* source)
+	void MetalDevice::QueueAuxiliaryPresent(void* handle, const MetalTexture* source)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr || !sc->Ready || source == nullptr) {
 			return;
 		}
-		for (PendingSecondaryPresent& pending : s_pendingSecondaryPresents) {
+		for (PendingAuxiliaryPresent& pending : s_pendingAuxiliaryPresents) {
 			if (pending.Chain == sc) {
 				pending.Source = source;	// re-rendered within the same frame: the last content wins
 				return;
 			}
 		}
-		s_pendingSecondaryPresents.push_back(PendingSecondaryPresent{ sc, source });
+		s_pendingAuxiliaryPresents.push_back(PendingAuxiliaryPresent{ sc, source });
 	}
 
 	void MetalDevice::PresentFrame()
@@ -1491,7 +1491,7 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		struct PendingPresentsReset
 		{
 			~PendingPresentsReset() {
-				s_pendingSecondaryPresents.clear();
+				s_pendingAuxiliaryPresents.clear();
 			}
 		} pendingPresentsReset;
 
@@ -1540,9 +1540,9 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		// Undocked ImGui windows: each one's contents were rendered into an off-screen target earlier this frame
 		// (through the ordinary RHI path), so all that is left is the same present pass the main window gets. The
 		// loop does not run at all while nothing is undocked.
-		std::vector<CA::MetalDrawable*> secondaryDrawables;
-		for (PendingSecondaryPresent& pending : s_pendingSecondaryPresents) {
-			SecondarySwapchain& sc = *pending.Chain;
+		std::vector<CA::MetalDrawable*> auxiliaryDrawables;
+		for (PendingAuxiliaryPresent& pending : s_pendingAuxiliaryPresents) {
+			AuxiliarySwapchain& sc = *pending.Chain;
 			if (!sc.Ready || sc.Layer == nullptr) {
 				continue;
 			}
@@ -1550,13 +1550,13 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 			if (source == nullptr) {
 				continue;
 			}
-			CA::MetalDrawable* secondary = MtlLayerNextDrawable(sc.Layer);
-			if (secondary == nullptr) {
+			CA::MetalDrawable* auxiliary = MtlLayerNextDrawable(sc.Layer);
+			if (auxiliary == nullptr) {
 				continue;	// nobody is consuming this window's drawables: keep last frame's contents, retry next frame
 			}
-			EncodePresent(secondary, source);
-			s_commandBuffer->presentDrawable(secondary);
-			secondaryDrawables.push_back(secondary);
+			EncodePresent(auxiliary, source);
+			s_commandBuffer->presentDrawable(auxiliary);
+			auxiliaryDrawables.push_back(auxiliary);
 		}
 
 		// Commit: the command buffer retains the drawables and every resource it references until it completes,
@@ -1568,8 +1568,8 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		if (drawable != nullptr) {
 			drawable->release();
 		}
-		for (CA::MetalDrawable* secondary : secondaryDrawables) {
-			secondary->release();
+		for (CA::MetalDrawable* auxiliary : auxiliaryDrawables) {
+			auxiliary->release();
 		}
 		if (s_framePool != nullptr) {
 			s_framePool->release();
@@ -1589,7 +1589,7 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		s_pipelines.clear();
 		s_lastPipeline = nullptr;
 
-		for (SecondarySwapchain* sc : s_secondarySwapchains) {
+		for (AuxiliarySwapchain* sc : s_auxiliarySwapchains) {
 #if defined(WITH_SDL2) || defined(WITH_SDL3)
 			if (sc->View != nullptr) {
 				SDL_Metal_DestroyView(static_cast<SDL_MetalView>(sc->View));
@@ -1597,7 +1597,7 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 #endif
 			delete sc;
 		}
-		s_secondarySwapchains.clear();
+		s_auxiliarySwapchains.clear();
 
 		DestroyScreenTarget();
 		if (s_presentPipeline != nullptr) { s_presentPipeline->release(); s_presentPipeline = nullptr; }

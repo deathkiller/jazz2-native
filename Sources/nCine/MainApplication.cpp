@@ -1651,13 +1651,15 @@ namespace nCine
 					}
 					break;
 				case SDL_EVENT_WINDOW_FOCUS_GAINED:
-					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+					if (SdlGfxDevice::isOwnWindow(event.window.windowID)) {
 						SetFocus(true);
 					}
 					break;
 				case SDL_EVENT_WINDOW_FOCUS_LOST:
-					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
-						SetFocus(false);
+					// The focus going over to an auxiliary window of the application isn't a loss of it
+					if (SdlGfxDevice::isOwnWindow(event.window.windowID)) {
+						SDL_Window* focused = SDL_GetKeyboardFocus();
+						SetFocus(focused != nullptr && SdlGfxDevice::isOwnWindow(SDL_GetWindowID(focused)));
 					}
 					break;
 				case SDL_EVENT_WINDOW_RESIZED:
@@ -1742,14 +1744,24 @@ namespace nCine
 					_gfxDevice->updateMonitors();
 					break;
 				case SDL_WINDOWEVENT: {
-					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+					if (SdlGfxDevice::isAuxiliaryWindow(event.window.windowID)) {
+						// The focus going over between the windows of the application isn't a loss of it
+						if (event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+							SetFocus(true);
+						} else if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+							SDL_Window* focused = SDL_GetKeyboardFocus();
+							SetFocus(focused != nullptr && SdlGfxDevice::isOwnWindow(SDL_GetWindowID(focused)));
+						}
+					} else if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
 						switch (event.window.event) {
 							case SDL_WINDOWEVENT_FOCUS_GAINED:
 								SetFocus(true);
 								break;
-							case SDL_WINDOWEVENT_FOCUS_LOST:
-								SetFocus(false);
+							case SDL_WINDOWEVENT_FOCUS_LOST: {
+								SDL_Window* focused = SDL_GetKeyboardFocus();
+								SetFocus(focused != nullptr && SdlGfxDevice::isOwnWindow(SDL_GetWindowID(focused)));
 								break;
+							}
 							case SDL_WINDOWEVENT_CLOSE:
 								// SDL only turns a close into SDL_QUIT when the closed window is the LAST one, which
 								// stops being true as soon as another window exists (ImGui opens one per panel

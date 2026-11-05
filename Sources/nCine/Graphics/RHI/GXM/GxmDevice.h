@@ -269,36 +269,6 @@ namespace nCine::RHI::GXM
 		/** @brief No-op */
 		static inline void EndGpuTiming() {}
 
-		// The Vita has no multi-window support at all, so the ImGui multi-viewport hooks are inert here
-		/** @brief Not supported on this platform (returns `nullptr`) */
-		static inline void* CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height) {
-			static_cast<void>(windowHandle);
-			static_cast<void>(width);
-			static_cast<void>(height);
-			return nullptr;
-		}
-		/** @brief Not supported on this platform */
-		static inline void DestroySecondarySwapchain(void* handle) {
-			static_cast<void>(handle);
-		}
-		/** @brief Not supported on this platform */
-		static inline void ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height) {
-			static_cast<void>(handle);
-			static_cast<void>(width);
-			static_cast<void>(height);
-		}
-		/** @brief Not supported on this platform */
-		static inline void BeginSecondaryFrame(void* handle, bool clear) {
-			static_cast<void>(handle);
-			static_cast<void>(clear);
-		}
-		/** @brief Not supported on this platform */
-		static inline void EndSecondaryFrame() {}
-		/** @brief Not supported on this platform */
-		static inline void PresentSecondaryFrame(void* handle) {
-			static_cast<void>(handle);
-		}
-
 		/**
 			@brief Brings up the runtime Cg compiler if it is not up already
 

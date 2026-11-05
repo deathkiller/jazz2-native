@@ -22,6 +22,7 @@
 #include "Tools/BlockGrab.h"
 #include "Tools/EditorContext.h"
 #include "Tools/EventTools.h"
+#include "UI/EditorUi.h"
 
 #include <memory>
 
@@ -33,6 +34,13 @@ namespace Jazz2
 namespace Jazz2::Formats
 {
 	struct TileSetData;
+}
+
+namespace Jazz2::UI::Windows
+{
+	class Painter;
+	class Surface;
+	struct FileRoot;
 }
 
 namespace Jazz2::Editor
@@ -47,9 +55,6 @@ namespace Jazz2::Editor
 	class SavedComparison;
 	class TileLod;
 	class ToolManager;
-	class UiPainter;
-	class UiSurface;
-	struct UiFileRoot;
 
 	/**
 		@brief The level editor
@@ -94,7 +99,7 @@ namespace Jazz2::Editor
 			return _editHandler.get();
 		}
 		/** @brief Returns the surface of the interface */
-		UiSurface* GetSurface() const override {
+		Surface* GetSurface() const override {
 			return _surface.get();
 		}
 		/** @brief Returns the settings */
@@ -118,9 +123,9 @@ namespace Jazz2::Editor
 		/** @brief Returns the name of the level as episode/level, may be empty */
 		StringView GetLevelName() const override;
 		/** @brief Returns the places levels are opened from or saved to */
-		void GetFileRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots) override;
+		void GetFileRoots(bool forSaving, SmallVectorImpl<FileRoot>& roots) override;
 		/** @brief Returns the places images are opened from or saved to, outside of the content of the game too */
-		void GetImageRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots) override;
+		void GetImageRoots(bool forSaving, SmallVectorImpl<FileRoot>& roots) override;
 
 		/** @brief Starts playing the level */
 		void StartPlayTest(PlayStartMode mode) override;
@@ -163,7 +168,7 @@ namespace Jazz2::Editor
 		 */
 		bool ComputeReachability(SmallVectorImpl<std::int32_t>& distances) override;
 		/** @brief Draws what is shown over the level of the editor, the differences from the saved file and the deaths in the last play-tests */
-		void DrawSessionOverlays(UiPainter& painter, const Rectf& viewRect);
+		void DrawSessionOverlays(Painter& painter, const Rectf& viewRect);
 		/** @brief Loads the level again from the document, so the events in the game are as they are now, see @ref ComputeReachability() */
 		void ReloadRuntime() override {
 			RebuildRuntime();
@@ -339,7 +344,7 @@ namespace Jazz2::Editor
 		LevelDocument _document;
 		std::unique_ptr<CommandHistory> _history;
 		std::shared_ptr<EditorLevelHandler> _editHandler;
-		std::unique_ptr<UiSurface> _surface;
+		std::unique_ptr<Surface> _surface;
 		EditorShell* _shell;
 		ActionRegistry _actions;
 		EditorSettings _settings;

@@ -10,8 +10,9 @@
 #include "../Tools/EventTools.h"
 #include "../Document/DocumentChanges.h"
 #include "../Events/EventCatalog.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -186,7 +187,7 @@ namespace Jazz2::Editor
 			session.ShowMessage(_fnx("editor", "{} event selected", "{} events selected", count, count));
 		}
 
-		void FillStatistics(UiStack* content, IEditorContext& session)
+		void FillStatistics(Stack* content, IEditorContext& session)
 		{
 			const LevelDocument& document = session.GetDocument();
 			LevelStatistics stats[3] = {
@@ -212,7 +213,7 @@ namespace Jazz2::Editor
 				for (std::int32_t i = 0; i < 3; i++) {
 					row.Values[i] = FormatInteger(stats[i].*member);
 				}
-				row.Color = UiTheme::Text;
+				row.Color = Theme::Text;
 				row.Tooltip = Death::move(tooltip);
 				row.Counted = std::make_shared<Function<bool(const LevelStatistics&)>>([member](const LevelStatistics& single) { return (single.*member > 0); });
 			};
@@ -240,7 +241,7 @@ namespace Jazz2::Editor
 					for (std::int32_t i = 0; i < 3; i++) {
 						row.Values[i] = FormatInteger(stats[i].Starts[c]);
 					}
-					row.Color = (stats[1].Starts[c] == 0 ? UiTheme::TextDanger : UiTheme::Text);
+					row.Color = (stats[1].Starts[c] == 0 ? Theme::TextDanger : Theme::Text);
 					row.Counted = std::make_shared<Function<bool(const LevelStatistics&)>>([c](const LevelStatistics& single) { return (single.Starts[c] > 0); });
 				}
 			}
@@ -250,12 +251,12 @@ namespace Jazz2::Editor
 			String header[3] = { _("Easy"), _x("editor", "Normal"), _("Hard") };
 
 			// A count is a flat button, its text is this far from its right edge, the header above it is placed the same
-			const float inset = UiTheme::Padding * 1.5f;
+			const float inset = Theme::Padding * 1.5f;
 			float labelWidth = LabelWidth;
 			float valueWidth = ValueWidth;
-			if (UiSurface* surface = session.GetSurface()) {
+			if (Surface* surface = session.GetSurface()) {
 				// In units, with a little to spare, as the text is scaled in steps
-				UiContext context = surface->GetContext();
+				Context context = surface->GetContext();
 				auto measure = [&context](StringView text) {
 					return (context.Scale > 0.0f ? context.MeasureText(text) / context.Scale + 2.0f : 0.0f);
 				};
@@ -269,47 +270,47 @@ namespace Jazz2::Editor
 						widestValue = std::max(widestValue, measure(value));
 					}
 				}
-				labelWidth = std::max(widestLabel + UiTheme::Spacing, 60.0f);
+				labelWidth = std::max(widestLabel + Theme::Spacing, 60.0f);
 				valueWidth = std::max(widestValue + inset * 2.0f, 36.0f);
 			}
 
 			{
-				auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-				row->Add<UiLabel>(StringView(), UiTheme::TextHeader)->Width = labelWidth;
+				auto* row = content->Add<Stack>(Orientation::Horizontal, 2.0f);
+				row->Add<Label>(StringView(), Theme::TextHeader)->Width = labelWidth;
 				for (const String& text : header) {
 					// As wide as the buttons below, so the columns don't drift apart by rounding
-					auto* cell = row->Add<UiStack>(UiOrientation::Horizontal, 0.0f, UiThickness(0.0f, 0.0f, inset, 0.0f));
+					auto* cell = row->Add<Stack>(Orientation::Horizontal, 0.0f, Thickness(0.0f, 0.0f, inset, 0.0f));
 					cell->Width = valueWidth;
-					cell->Add<UiLabel>(text, UiTheme::TextHeader, Alignment::Right)->Width = valueWidth - inset;
+					cell->Add<Label>(text, Theme::TextHeader, Alignment::Right)->Width = valueWidth - inset;
 				}
 			}
 			IEditorContext* s = &session;
 			for (CountRow& countRow : rows) {
-				auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-				row->Add<UiLabel>(countRow.Label, countRow.Color)->Width = labelWidth;
+				auto* row = content->Add<Stack>(Orientation::Horizontal, 2.0f);
+				row->Add<Label>(countRow.Label, countRow.Color)->Width = labelWidth;
 				if (!countRow.Tooltip.empty()) {
 					row->Tooltip = countRow.Tooltip;
 				}
 				for (std::int32_t i = 0; i < 3; i++) {
 					std::uint8_t bit = DifficultyBits[i];
 					auto counted = countRow.Counted;
-					auto* button = row->Add<UiButton>(countRow.Values[i], EditorIcon::None, [s, bit, counted]() {
+					auto* button = row->Add<Button>(countRow.Values[i], EditorIcon::None, [s, bit, counted]() {
 						SelectCounted(*s, bit, [counted](const LevelStatistics& single) { return (*counted)(single); });
 					});
-					button->Style = UiButtonStyle::Flat;
+					button->Style = ButtonStyle::Flat;
 					button->TextAlign = Alignment::Right;
 					button->TextColor = countRow.Color;
 					button->Width = valueWidth;
 					button->Tooltip = _x("editor", "Select the events counted here");
 				}
 			}
-			content->Add<UiLabel>(_x("editor", "Events only in multiplayer aren't counted"), UiTheme::TextDim);
+			content->Add<Label>(_x("editor", "Events only in multiplayer aren't counted"), Theme::TextDim);
 		}
 	}
 
 	void ShowLevelStatisticsDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr || ReuseSingleDialog(session, "statistics")) {
 			return;
 		}
@@ -317,8 +318,8 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		// Scrolled if it's taller than the screen, the title stays
 		// TRANSLATORS: Title of the dialog with the counts of things in the level
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Statistics"), true);
-		auto* table = dialog->GetContent()->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Statistics"), true);
+		auto* table = dialog->GetContent()->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 		FillStatistics(table, session);
 
 		// The play-tests kept with the level, how fast it was finished and how often the player died
@@ -331,16 +332,16 @@ namespace Jazz2::Editor
 				return String(buffer);
 			};
 			const PlayPath& last = history.GetPaths().back();
-			UiStack* playTests = dialog->GetContent()->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+			Stack* playTests = dialog->GetContent()->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 			// TRANSLATORS: Header of the play-tests kept with the level in the Statistics dialog, {} is how many there are
-			playTests->Add<UiLabel>(_fnx("editor", "Last {} play-test", "Last {} play-tests", std::int32_t(history.GetPaths().size()), std::int32_t(history.GetPaths().size())), UiTheme::TextHeader);
+			playTests->Add<Label>(_fnx("editor", "Last {} play-test", "Last {} play-tests", std::int32_t(history.GetPaths().size()), std::int32_t(history.GetPaths().size())), Theme::TextHeader);
 			float best = history.GetBestExitTime();
 			// TRANSLATORS: In the Statistics dialog, {} is the best time of the play-tests as minutes:seconds.hundredths
-			playTests->Add<UiLabel>(best >= 0.0f ? String(_fx("editor", "Finished in {} at best", formatTime(best))) : String(_x("editor", "Not finished yet")), UiTheme::Text);
+			playTests->Add<Label>(best >= 0.0f ? String(_fx("editor", "Finished in {} at best", formatTime(best))) : String(_x("editor", "Not finished yet")), Theme::Text);
 			// TRANSLATORS: In the Statistics dialog, {} is how many times the player died in all the play-tests together
-			playTests->Add<UiLabel>(_fx("editor", "{} deaths in them", history.GetTotalDeaths()), UiTheme::Text);
+			playTests->Add<Label>(_fx("editor", "{} deaths in them", history.GetTotalDeaths()), Theme::Text);
 			// TRANSLATORS: In the Statistics dialog, the time the last play-test took as minutes:seconds.hundredths and how many times the player died in it
-			playTests->Add<UiLabel>(_fx("editor", "The last one took {}, {} deaths", formatTime(last.Duration), last.GetDeathCount()), UiTheme::TextDim);
+			playTests->Add<Label>(_fx("editor", "The last one took {}, {} deaths", formatTime(last.Duration), last.GetDeathCount()), Theme::TextDim);
 		}
 
 		// Counted again once the events stop changing for a moment, the counts are always those of the level as it is
@@ -360,7 +361,7 @@ namespace Jazz2::Editor
 			}
 		});
 		session.AddChangeObserver(state->Observer);
-		dialog->GetContent()->Add<UiUpdateWatcher>([s, state, table](float timeMult) {
+		dialog->GetContent()->Add<UpdateWatcher>([s, state, table](float timeMult) {
 			if (state->Dirty) {
 				state->Wait -= timeMult;
 				if (state->Wait <= 0.0f) {
@@ -371,7 +372,7 @@ namespace Jazz2::Editor
 		});
 
 		// Closed by its cross or Escape, a window that stays while the level is changed, not a popup
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

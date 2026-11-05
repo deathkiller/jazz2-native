@@ -2,7 +2,8 @@
 
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../UI/UiWidgets.h"
+#include "../../UI/Windows/Widgets.h"
+#include "../UI/EditorUi.h"
 
 #include <memory>
 
@@ -20,7 +21,7 @@ namespace Jazz2::Editor
 	struct DocumentLayer;
 
 	/** @brief Adds the tabs that switch what the panel with the tiles and the events shows */
-	void AddPickerPanelTabs(UiElement* header, IEditorContext& session);
+	void AddPickerPanelTabs(Element* header, IEditorContext& session);
 	/**
 	 * @brief Returns a name for a layer that has none, by what it is
 	 *
@@ -38,9 +39,9 @@ namespace Jazz2::Editor
 		A layer is renamed by a double click on it, and moved in the list by dragging it, by a finger after holding it
 		for a moment. Alt+click on the eye shows only that layer. Each row has a small picture of its layer.
 	*/
-	class LayersPanel : public UiPanel
+	class LayersPanel : public Panel
 	{
-		DEATH_RUNTIME_OBJECT(UiPanel);
+		DEATH_RUNTIME_OBJECT(Panel);
 
 	public:
 		explicit LayersPanel(IEditorContext& session);
@@ -54,7 +55,7 @@ namespace Jazz2::Editor
 		nCine::Texture* GetThumbnail(std::int32_t index) const;
 
 		void Update(float timeMult) override;
-		void Draw(UiPainter& painter) override;
+		void Draw(Painter& painter) override;
 
 	private:
 		// A small picture of a layer, found by its identity, made again a while after its tiles change
@@ -68,7 +69,7 @@ namespace Jazz2::Editor
 		};
 
 		IEditorContext& _session;
-		UiScrollView* _list;
+		ScrollView* _list;
 		std::int32_t _shownCount;
 		// Layer being dragged and the gap between the rows it would go into, or -1
 		std::int32_t _dragFrom;
@@ -91,9 +92,9 @@ namespace Jazz2::Editor
 	/**
 		@brief Properties of the layer being edited
 	*/
-	class InspectorPanel : public UiPanel
+	class InspectorPanel : public Panel
 	{
-		DEATH_RUNTIME_OBJECT(UiPanel);
+		DEATH_RUNTIME_OBJECT(Panel);
 
 	public:
 		explicit InspectorPanel(IEditorContext& session);
@@ -105,9 +106,9 @@ namespace Jazz2::Editor
 	/**
 		@brief Tiles of a tile set to pick the stamp from
 	*/
-	class TileGrid : public UiElement
+	class TileGrid : public Element
 	{
-		DEATH_RUNTIME_OBJECT(UiElement);
+		DEATH_RUNTIME_OBJECT(Element);
 
 	public:
 		explicit TileGrid(IEditorContext& session);
@@ -132,17 +133,17 @@ namespace Jazz2::Editor
 		/** @brief Whether how often the level uses each tile is shown, unused tiles darkened */
 		bool ShowUsage;
 
-		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		Vector2f Measure(const Context& context, Vector2f available) override;
 		void Update(float timeMult) override;
-		void Draw(UiPainter& painter) override;
+		void Draw(Painter& painter) override;
 		bool AcceptsPointer() const override;
-		bool OnPointerDown(const UiPointerEvent& event) override;
-		void OnPointerMove(const UiPointerEvent& event) override;
-		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		bool OnPointerDown(const PointerEvent& event) override;
+		void OnPointerMove(const PointerEvent& event) override;
+		void OnPointerUp(const PointerEvent& event, bool inside) override;
 		void OnPointerCancel() override;
 		/** @brief A finger dragged over the tiles scrolls them, held on a tile it picks a block of them from there */
 		bool DragsAfterHold() const override;
-		bool OnWheel(const UiPointerEvent& event) override;
+		bool OnWheel(const PointerEvent& event) override;
 		StringView GetTooltip(Vector2f pos) const override;
 
 	private:
@@ -166,15 +167,15 @@ namespace Jazz2::Editor
 		mutable String _tooltip;
 
 		Vector2i GetCellAt(Vector2f pos) const;
-		float GetTileSize(const UiContext& context, float availableWidth) const;
+		float GetTileSize(const Context& context, float availableWidth) const;
 	};
 
 	/**
 		@brief Panel with the tile grid and its controls
 	*/
-	class TilePickerPanel : public UiPanel
+	class TilePickerPanel : public Panel
 	{
-		DEATH_RUNTIME_OBJECT(UiPanel);
+		DEATH_RUNTIME_OBJECT(Panel);
 
 	public:
 		explicit TilePickerPanel(IEditorContext& session);
@@ -193,15 +194,15 @@ namespace Jazz2::Editor
 	/**
 		@brief The stamp of the brush, drawn small
 	*/
-	class StampPreview : public UiElement
+	class StampPreview : public Element
 	{
-		DEATH_RUNTIME_OBJECT(UiElement);
+		DEATH_RUNTIME_OBJECT(Element);
 
 	public:
 		explicit StampPreview(IEditorContext& session);
 
-		Vector2f Measure(const UiContext& context, Vector2f available) override;
-		void Draw(UiPainter& painter) override;
+		Vector2f Measure(const Context& context, Vector2f available) override;
+		void Draw(Painter& painter) override;
 		bool AcceptsPointer() const override;
 		StringView GetTooltip(Vector2f pos) const override;
 
@@ -213,15 +214,15 @@ namespace Jazz2::Editor
 	/**
 		@brief Status bar at the bottom of the window
 	*/
-	class StatusBar : public UiElement
+	class StatusBar : public Element
 	{
-		DEATH_RUNTIME_OBJECT(UiElement);
+		DEATH_RUNTIME_OBJECT(Element);
 
 	public:
 		explicit StatusBar(IEditorContext& session);
 
-		Vector2f Measure(const UiContext& context, Vector2f available) override;
-		void Draw(UiPainter& painter) override;
+		Vector2f Measure(const Context& context, Vector2f available) override;
+		void Draw(Painter& painter) override;
 		bool AcceptsPointer() const override;
 
 	private:

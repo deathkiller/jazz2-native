@@ -14,9 +14,10 @@
 #include "../../Utils/ZipWriter.h"
 #include "../Imaging/LevelThumbnail.h"
 #include "../Imaging/PngCodec.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
-#include "../UI/UiVirtualList.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../../UI/Windows/VirtualList.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 
 #include "../../../nCine/I18n.h"
@@ -392,29 +393,29 @@ namespace Jazz2::Editor
 		}
 
 		/** The files of the package as they're collected now, only to be read, only the rows seen are drawn, a whole episode has many */
-		class PackageFileList : public UiVirtualList
+		class PackageFileList : public VirtualList
 		{
 		public:
 			explicit PackageFileList(std::shared_ptr<PackageState> state)
 				: _state(Death::move(state))
 			{
 				// As high as a label and the space between labels in a stack
-				RowHeight = UiTheme::RowHeight + 1.0f;
+				RowHeight = Theme::RowHeight + 1.0f;
 				Selectable = false;
 				// The manifest and the preview first, every package has them
 				CountFunc = [this]() { return std::int32_t(_state->Items.size()) + 2; };
-				DrawRow = [this](UiPainter& painter, std::int32_t index, const Rectf& rect, bool, float) {
+				DrawRow = [this](Painter& painter, std::int32_t index, const Rectf& rect, bool, float) {
 					// Kept off the scroll bar a little, as a label is high
-					Rectf textRect(rect.X, rect.Y, std::max(rect.W - painter.Px(3.0f), 0.0f), painter.Px(UiTheme::RowHeight));
+					Rectf textRect(rect.X, rect.Y, std::max(rect.W - painter.Px(3.0f), 0.0f), painter.Px(Theme::RowHeight));
 					painter.PushClip(textRect);
 					if (index < 2) {
-						painter.TextInRect(index == 0 ? "manifest.json"_s : "preview.png"_s, textRect, UiTheme::TextDim);
+						painter.TextInRect(index == 0 ? "manifest.json"_s : "preview.png"_s, textRect, Theme::TextDim);
 					} else {
 						const PackageItem& item = _state->Items[index - 2];
 						if (item.Problem.empty()) {
-							painter.TextInRect(item.ArchivePath, textRect, UiTheme::Text);
+							painter.TextInRect(item.ArchivePath, textRect, Theme::Text);
 						} else {
-							painter.TextInRect(String(item.ArchivePath + " ("_s + item.Problem + ")"_s), textRect, UiTheme::TextDanger);
+							painter.TextInRect(String(item.ArchivePath + " ("_s + item.Problem + ")"_s), textRect, Theme::TextDanger);
 						}
 					}
 					painter.PopClip();
@@ -425,10 +426,10 @@ namespace Jazz2::Editor
 			std::shared_ptr<PackageState> _state;
 		};
 
-		UiTextBox* AddTextRow(UiForm* form, StringView label, String PackageState::* member, const std::shared_ptr<PackageState>& state, std::int32_t maxLength)
+		TextBox* AddTextRow(Form* form, StringView label, String PackageState::* member, const std::shared_ptr<PackageState>& state, std::int32_t maxLength)
 		{
 			auto* row = form->AddRow(label);
-			auto* box = row->Add<UiTextBox>(state.get()->*member);
+			auto* box = row->Add<TextBox>(state.get()->*member);
 			box->Width = 220.0f;
 			box->MaxLength = maxLength;
 			box->OnChanged = [state, member](StringView text) { (*state).*member = text; };
@@ -439,7 +440,7 @@ namespace Jazz2::Editor
 
 	void ShowExportPackageDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -454,12 +455,12 @@ namespace Jazz2::Editor
 
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog that saves the level with the files it needs as a ZIP archive to publish
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Export Package"));
-		UiDialog* dialogPtr = dialog.get();
-		UiStack* content = dialog->GetContent();
-		content->Add<UiLabel>(_x("editor", "A ZIP archive to publish, laid out as the content of the game"), UiTheme::TextDim);
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Export Package"));
+		Dialog* dialogPtr = dialog.get();
+		Stack* content = dialog->GetContent();
+		content->Add<Label>(_x("editor", "A ZIP archive to publish, laid out as the content of the game"), Theme::TextDim);
 
-		UiForm* form = content->Add<UiForm>(UiTheme::Spacing);
+		Form* form = content->Add<Form>(Theme::Spacing);
 		// TRANSLATORS: Labels of the details of the package in the Export Package dialog
 		AddTextRow(form, _x("editor", "Name"), &PackageState::Name, state, 255);
 		AddTextRow(form, _x("editor", "Author"), &PackageState::Author, state, 255);
@@ -469,31 +470,31 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Label of the tags of the package in the Export Package dialog, and the placeholder of its empty box
 		AddTextRow(form, _x("editor", "Tags"), &PackageState::Tags, state, 255)->Placeholder = _x("editor", "separated by commas");
 
-		auto* episode = content->Add<UiCheckBox>(_x("editor", "All levels of the episode"), [s, state]() { return (state->WholeEpisode && HasEpisode(*s)); }, [s, state](bool value) {
+		auto* episode = content->Add<CheckBox>(_x("editor", "All levels of the episode"), [s, state]() { return (state->WholeEpisode && HasEpisode(*s)); }, [s, state](bool value) {
 			state->WholeEpisode = value;
 			CollectItems(*s, *state);
 		});
 		episode->Tooltip = _x("editor", "The other levels of the episode as they are saved, the episode file and what they need");
 		episode->IsEnabledFunc = [s]() { return HasEpisode(*s); };
-		auto* editorData = content->Add<UiCheckBox>(_x("editor", "Keep what only the editor uses"), [state]() { return state->EditorData; }, [state](bool value) {
+		auto* editorData = content->Add<CheckBox>(_x("editor", "Keep what only the editor uses"), [state]() { return state->EditorData; }, [state](bool value) {
 			state->EditorData = value;
 		});
 		editorData->Tooltip = _x("editor", "Layer names, notes and ground lines stay in the level, so it can be edited further as it was");
 
 		// TRANSLATORS: Header of the list of files the package will have in the Export Package dialog
-		content->Add<UiLabel>(_x("editor", "Files"), UiTheme::TextHeader);
-		auto* scroll = content->Add<UiScrollView>();
+		content->Add<Label>(_x("editor", "Files"), Theme::TextHeader);
+		auto* scroll = content->Add<ScrollView>();
 		scroll->Width = 340.0f;
 		scroll->Height = 110.0f;
 		scroll->SetContent<PackageFileList>(state);
 
 		// TRANSLATORS: Button in the Export Package dialog, verb
 		dialog->AddButton(_x("editor", "Export"), [s, state, dialogPtr]() {
-			UiSurface* surface = s->GetSurface();
+			Surface* surface = s->GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			s->GetImageRoots(true, roots);
 			if (roots.empty()) {
 				s->ShowMessage(_x("editor", "There is no place to save files to"));
@@ -505,7 +506,7 @@ namespace Jazz2::Editor
 			if (name.empty()) {
 				name = "level"_s;
 			}
-			UiFileDialog::Show(*surface, _x("editor", "Export Package"), UiFileDialogMode::Save, Death::move(roots), ".zip"_s, {}, String(name + ".zip"_s),
+			FileDialog::Show(*surface, _x("editor", "Export Package"), FileDialogMode::Save, Death::move(roots), ".zip"_s, {}, String(name + ".zip"_s),
 				[s, state, dialogPtr](StringView path) {
 				StorePackageInfo(*s, *state);
 				String problem;

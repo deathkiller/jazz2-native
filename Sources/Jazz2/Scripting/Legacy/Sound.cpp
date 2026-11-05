@@ -264,9 +264,11 @@ namespace Jazz2::Scripting
 	}
 
 	void jjSetModPosition(std::int32_t order, std::int32_t row, bool reset) {
+#if defined(WITH_AUDIO)
 		if (AudioStreamPlayer* music = GetActiveMusic()) {
 			music->SetModulePosition(order, row);
 		}
+#endif
 	}
 	void jjSlideModChannelVolume(std::int32_t channel, float volume, std::int32_t milliseconds) {
 		if (AudioStreamPlayer* music = GetActiveMusic()) {

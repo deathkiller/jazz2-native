@@ -117,6 +117,8 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IDebugOverlay.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/AuxiliaryWindow.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/AuxiliaryWindowPresenter.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.h
 	#${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Material.h

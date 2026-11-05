@@ -491,11 +491,14 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwAuxiliaryWindow.h
 		)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwKeys.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwAuxiliaryWindow.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/AuxiliaryWindowWin32.cpp
 		)
 	elseif((SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2") OR (SDL3_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL3"))
 		# Both SDL versions share the same backend sources (SDL2/SDL3 API differences are handled inline
@@ -516,11 +519,15 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/SdlAuxiliaryWindow.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/AuxiliaryWindowWin32.h
 		)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/SdlKeys.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/SdlAuxiliaryWindow.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/AuxiliaryWindowWin32.cpp
 		)
 	elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_QT5")
@@ -1984,21 +1991,7 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/ToolActions.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/ToolHost.h
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/EditorIcons.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiColors.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiDialogs.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiDock.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiElement.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiKeyboard.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiMenu.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiPainter.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiRadialMenu.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiReadableFont.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSkin.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSurface.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiTheme.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiVirtualList.h
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiWidgets.h
-		${NCINE_SOURCE_DIR}/Dependencies/stb/stb_truetype.h
+		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/EditorUi.h
 	)
 
 	list(APPEND SOURCES
@@ -2124,20 +2117,52 @@ if(WITH_EDITOR)
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/TileTools.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/Tools/ToolActions.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/EditorIcons.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiColors.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiDialogs.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiDock.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiElement.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiKeyboard.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiMenu.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiPainter.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiRadialMenu.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiReadableFont.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSkin.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiSurface.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiTheme.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiVirtualList.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Editor/UI/UiWidgets.cpp
+	)
+endif()
+
+# The toolkit of windows and controls, it's used by the level editor
+if(WITH_EDITOR)
+	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_UI_WINDOWS")
+
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Colors.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/DetachedWindow.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Dialogs.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Dock.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Element.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Icons.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Keyboard.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Menu.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Painter.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/RadialMenu.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/ReadableFont.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Skin.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Surface.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Theme.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/VectorArt.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/VirtualList.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Widgets.h
+		${NCINE_SOURCE_DIR}/Dependencies/stb/stb_truetype.h
+	)
+
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Colors.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/DetachedWindow.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Dialogs.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Dock.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Element.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Icons.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Keyboard.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Menu.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Painter.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/RadialMenu.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/ReadableFont.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Skin.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Surface.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Theme.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/VectorArt.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/VirtualList.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Windows/Widgets.cpp
 	)
 endif()
 

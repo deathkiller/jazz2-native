@@ -5,7 +5,8 @@
 #include "../Tools/EditorContext.h"
 #include "../Common/ToolMath.h"
 #include "../Smart/SmartTileModel.h"
-#include "../UI/UiPainter.h"
+#include "../../UI/Windows/Painter.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -47,20 +48,20 @@ namespace Jazz2::Editor
 		}
 	}
 
-	Vector2f TerrainCoverageView::Measure(const UiContext& context, Vector2f available)
+	Vector2f TerrainCoverageView::Measure(const Context& context, Vector2f available)
 	{
 		// Smaller where there isn't room for the cells, with the legend below them
 		float cell = context.Px(CellSize);
 		if (available.X > 0.0f && cell * Columns > available.X) {
 			cell = std::max(std::floor(available.X / Columns), context.Px(MinCellSize));
 		}
-		float legend = context.Px(UiTheme::Spacing) + context.Px(UiTheme::RowHeight) * LegendRows;
+		float legend = context.Px(Theme::Spacing) + context.Px(Theme::RowHeight) * LegendRows;
 		return Vector2f(cell * Columns, cell * GetRows(_patternCount) + legend);
 	}
 
 	void TerrainCoverageView::Update(float timeMult)
 	{
-		UiElement::Update(timeMult);
+		Element::Update(timeMult);
 		_refresh -= timeMult;
 		if (_refresh > 0.0f) {
 			return;
@@ -76,12 +77,12 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void TerrainCoverageView::Draw(UiPainter& painter)
+	void TerrainCoverageView::Draw(Painter& painter)
 	{
 		// Within the bounds, whatever the parent gives, a wider dialog doesn't make the cells taller than the room for them
 		std::int32_t rows = GetRows(_patternCount);
-		float rowHeight = painter.Px(UiTheme::RowHeight);
-		float legendHeight = painter.Px(UiTheme::Spacing) + rowHeight * LegendRows;
+		float rowHeight = painter.Px(Theme::RowHeight);
+		float legendHeight = painter.Px(Theme::Spacing) + rowHeight * LegendRows;
 		float cell = std::floor(std::min(Bounds.W / Columns, (Bounds.H - legendHeight) / std::max<std::int32_t>(rows, 1)));
 		if (cell < 6.0f) {
 			return;
@@ -93,7 +94,7 @@ namespace Jazz2::Editor
 			std::uint8_t pattern = _patterns[i];
 			Rectf rect(left + (i % Columns) * cell, Bounds.Y + (i / Columns) * cell, cell, cell);
 			const Colorf& background = (_coverage[pattern] == 2 ? ColorByHand : (_coverage[pattern] == 1 ? ColorLearned : ColorMissing));
-			painter.FillRect(Rectf(rect.X + 1.0f, rect.Y + 1.0f, rect.W - 2.0f, rect.H - 2.0f), background, UiLayer::Fill);
+			painter.FillRect(Rectf(rect.X + 1.0f, rect.Y + 1.0f, rect.W - 2.0f, rect.H - 2.0f), background, PaintLayer::Fill);
 			// The cell in the middle is the one the tile is for, the 8 around are solid or not as the pattern says
 			for (std::int32_t y = 0; y < 3; y++) {
 				for (std::int32_t x = 0; x < 3; x++) {
@@ -108,7 +109,7 @@ namespace Jazz2::Editor
 					}
 					Rectf square(rect.X + pad + x * mini, rect.Y + pad + y * mini, mini - 1.0f, mini - 1.0f);
 					Colorf color = (x == 1 && y == 1 ? Colorf(1.0f, 1.0f, 1.0f, 0.95f) : (solid ? Colorf(0.85f, 0.85f, 0.85f, 0.85f) : Colorf(0.0f, 0.0f, 0.0f, 0.35f)));
-					painter.FillRect(square, color, UiLayer::Content);
+					painter.FillRect(square, color, PaintLayer::Content);
 				}
 			}
 		}
@@ -117,13 +118,13 @@ namespace Jazz2::Editor
 		const Colorf* legendColors[LegendRows] = { &ColorByHand, &ColorLearned, &ColorMissing };
 		// TRANSLATORS: Legend of the colors in the overview of the terrain rules, where the tile of each pattern of neighbors comes from
 		StringView legendTexts[LegendRows] = { _x("editor", "Chosen by hand"), _x("editor", "Learned from the levels"), _x("editor", "No tile, a rule is needed") };
-		float y = Bounds.Y + cell * rows + painter.Px(UiTheme::Spacing);
+		float y = Bounds.Y + cell * rows + painter.Px(Theme::Spacing);
 		float swatch = std::max(4.0f, rowHeight - painter.Px(4.0f));
 		for (std::int32_t i = 0; i < LegendRows; i++) {
 			Rectf box(left, std::round(y + (rowHeight - swatch) * 0.5f), swatch, swatch);
-			painter.FillRect(box, *legendColors[i], UiLayer::Fill);
-			float textX = box.X + swatch + painter.Px(UiTheme::Spacing);
-			painter.TextInRect(legendTexts[i], Rectf(textX, y, std::max(0.0f, Bounds.X + Bounds.W - textX), rowHeight), UiTheme::TextDim);
+			painter.FillRect(box, *legendColors[i], PaintLayer::Fill);
+			float textX = box.X + swatch + painter.Px(Theme::Spacing);
+			painter.TextInRect(legendTexts[i], Rectf(textX, y, std::max(0.0f, Bounds.X + Bounds.W - textX), rowHeight), Theme::TextDim);
 			y += rowHeight;
 		}
 	}

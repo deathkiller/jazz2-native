@@ -43,6 +43,7 @@ namespace nCine::Backends
 	class GlfwGfxDevice : public IGfxDevice
 	{
 		friend class GlfwInputManager;
+		friend class GlfwAuxiliaryWindow;
 		friend class GlfwMouseState;
 		friend class GlfwKeyboardState;
 		friend class ImGuiDrawing;
@@ -74,6 +75,15 @@ namespace nCine::Backends
 
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
 		bool setVideoMode(unsigned int modeIndex) override;
+
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		bool supportsAuxiliaryWindows() const override;
+		std::unique_ptr<AuxiliaryWindow> createAuxiliaryWindow(const AuxiliaryWindowDesc& desc) override;
+		bool globalMousePosition(Vector2i& position) const override;
+		float windowContentScale() const override;
+		bool globalMouseButtons(std::uint32_t& buttons) const override;
+		bool desktopWorkArea(Vector2i point, Recti& area) const override;
+#endif
 
 	protected:
 		void setResolutionInternal(int width, int height) override;

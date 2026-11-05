@@ -303,7 +303,8 @@ namespace nCine::Backends
 		switch (event.type) {
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
-				if (!SdlGfxDevice::isMainWindow(event.key.windowID)) {
+				// Keys typed into an auxiliary window of the application are the application's as well
+				if (!SdlGfxDevice::isOwnWindow(event.key.windowID)) {
 					return;
 				}
 #if defined(WITH_SDL3)
@@ -318,7 +319,7 @@ namespace nCine::Backends
 #endif
 				break;
 			case SDL_TEXTINPUT: {
-				if (!SdlGfxDevice::isMainWindow(event.text.windowID)) {
+				if (!SdlGfxDevice::isOwnWindow(event.text.windowID)) {
 					return;
 				}
 				_textInputEvent.length = copyStringFirst(_textInputEvent.text, event.text.text, 4);
@@ -326,21 +327,30 @@ namespace nCine::Backends
 			}
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
-				if (!SdlGfxDevice::isMainWindow(event.button.windowID) || IsMouseEventFromTouch(event.button.which)) {
+				if (!SdlGfxDevice::isOwnWindow(event.button.windowID) || IsMouseEventFromTouch(event.button.which)) {
 					return;
 				}
-				// SDL3 reports mouse coordinates as float; the engine's event structures store integers
-				_mouseEvent.x = static_cast<int>(event.button.x);
-				_mouseEvent.y = static_cast<int>(event.button.y);
+				{
+					// SDL3 reports mouse coordinates as float; the engine's event structures store integers. Over an auxiliary
+					// window, the position is made relative to the main window.
+					Vector2i position = SdlGfxDevice::toMainWindowPosition(event.button.windowID,
+						Vector2i(static_cast<int>(event.button.x), static_cast<int>(event.button.y)));
+					_mouseEvent.x = position.X;
+					_mouseEvent.y = position.Y;
+					_mouseEvent.windowId = (SdlGfxDevice::isMainWindow(event.button.windowID) ? 0 : event.button.windowID);
+				}
 				_mouseEvent.button = sdlToNcineMouseButton(event.button.button);
 				break;
 			case SDL_MOUSEMOTION:
-				if (!SdlGfxDevice::isMainWindow(event.motion.windowID) || IsMouseEventFromTouch(event.motion.which)) {
+				if (!SdlGfxDevice::isOwnWindow(event.motion.windowID) || IsMouseEventFromTouch(event.motion.which)) {
 					return;
 				}
+				_mouseState.windowId = (SdlGfxDevice::isMainWindow(event.motion.windowID) ? 0 : event.motion.windowID);
 				if (_cursor != Cursor::HiddenLocked) {
-					_mouseState.x = static_cast<int>(event.motion.x);
-					_mouseState.y = static_cast<int>(event.motion.y);
+					Vector2i position = SdlGfxDevice::toMainWindowPosition(event.motion.windowID,
+						Vector2i(static_cast<int>(event.motion.x), static_cast<int>(event.motion.y)));
+					_mouseState.x = position.X;
+					_mouseState.y = position.Y;
 				} else {
 					_mouseState.x += static_cast<int>(event.motion.xrel);
 					_mouseState.y -= static_cast<int>(event.motion.yrel);
@@ -348,9 +358,10 @@ namespace nCine::Backends
 				_mouseState._buttons = event.motion.state;
 				break;
 			case SDL_MOUSEWHEEL:
-				if (!SdlGfxDevice::isMainWindow(event.wheel.windowID) || IsMouseEventFromTouch(event.wheel.which)) {
+				if (!SdlGfxDevice::isOwnWindow(event.wheel.windowID) || IsMouseEventFromTouch(event.wheel.which)) {
 					return;
 				}
+				_scrollEvent.windowId = (SdlGfxDevice::isMainWindow(event.wheel.windowID) ? 0 : event.wheel.windowID);
 #if !defined(WITH_SDL3) && SDL_VERSION_ATLEAST(2, 0, 18)
 				// The fractional amounts of a touchpad scroll, SDL3 reports them in the plain fields
 				_scrollEvent.x = event.wheel.preciseX;

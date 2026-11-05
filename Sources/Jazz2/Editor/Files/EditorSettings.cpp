@@ -32,6 +32,7 @@ namespace Jazz2::Editor
 			placement.Y = std::clamp<float>(Utils::JsonAccess::GetFloat(value, "Y", 0.0f), -10000.0f, 10000.0f);
 			placement.Width = std::clamp<float>(Utils::JsonAccess::GetFloat(value, "Width", 0.0f), 0.0f, 4000.0f);
 			placement.Height = std::clamp<float>(Utils::JsonAccess::GetFloat(value, "Height", 0.0f), 0.0f, 4000.0f);
+			placement.Detached = Utils::JsonAccess::GetBool(value, "Detached", false);
 		}
 
 		Json::Value WritePlacement(const EditorSettings::PanelPlacement& placement)
@@ -42,6 +43,7 @@ namespace Jazz2::Editor
 			value["Y"] = placement.Y;
 			value["Width"] = placement.Width;
 			value["Height"] = placement.Height;
+			value["Detached"] = placement.Detached;
 			return value;
 		}
 

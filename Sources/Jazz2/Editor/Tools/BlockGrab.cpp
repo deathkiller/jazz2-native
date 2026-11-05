@@ -8,8 +8,9 @@
 #include "../Common/StampClipboard.h"
 #include "../Document/Commands.h"
 #include "../Input/ActionRegistry.h"
-#include "../UI/UiSurface.h"
-#include "../UI/UiTheme.h"
+#include "../../UI/Windows/Surface.h"
+#include "../../UI/Windows/Theme.h"
+#include "../UI/EditorUi.h"
 #include "../../../nCine/I18n.h"
 
 #include <algorithm>
@@ -121,7 +122,7 @@ namespace Jazz2::Editor
 		_zone = Zone::None;
 	}
 
-	void BlockGrab::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void BlockGrab::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		if (_zone != Zone::Level || !hoverValid || _layer != _session.GetCurrentLayer()) {
 			return;
@@ -132,11 +133,11 @@ namespace Jazz2::Editor
 		Rectf bottomRight = view.CellToScreen(Vector2i(cells.X + cells.W - 1, cells.Y + cells.H - 1));
 		Rectf rect(topLeft.X, topLeft.Y, bottomRight.X + bottomRight.W - topLeft.X, bottomRight.Y + bottomRight.H - topLeft.Y);
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
-		painter.FillRect(rect, UiTheme::Selection, UiLayer::Content);
+		painter.FillRect(rect, Theme::Selection, PaintLayer::Content);
 		// A dark edge under a light one, so it can be seen over anything, as the outlines of the tools
-		painter.Frame(Rectf(rect.X - thickness, rect.Y - thickness, rect.W + thickness * 2.0f, rect.H + thickness * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), thickness, UiLayer::Overlay);
-		painter.Frame(rect, _mode == Mode::Subtract ? UiTheme::Danger : UiTheme::Accent, thickness, UiLayer::Overlay);
-		if (UiSurface* surface = _session.GetSurface()) {
+		painter.Frame(Rectf(rect.X - thickness, rect.Y - thickness, rect.W + thickness * 2.0f, rect.H + thickness * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), thickness, PaintLayer::Overlay);
+		painter.Frame(rect, _mode == Mode::Subtract ? Theme::Danger : Theme::Accent, thickness, PaintLayer::Overlay);
+		if (Surface* surface = _session.GetSurface()) {
 			// TRANSLATORS: Shown by the pointer while a block of tiles is being grabbed with B, its width and height in tiles
 			surface->SetPointerTooltip(_fx("editor", "{} x {}", cells.W, cells.H));
 		}

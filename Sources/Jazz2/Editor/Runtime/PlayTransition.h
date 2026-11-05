@@ -2,7 +2,8 @@
 
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../UI/UiPainter.h"
+#include "../../UI/Windows/Painter.h"
+#include "../UI/EditorUi.h"
 #include "../../../nCine/Graphics/RenderCommand.h"
 #include "../../../nCine/Graphics/Texture.h"
 
@@ -69,11 +70,11 @@ namespace Jazz2::Editor
 		/** @brief Advances the transition */
 		void Update(float timeMult);
 		/** @brief Draws the transition over a screen of a size, both parts at once */
-		void Draw(UiPainter& painter, Vector2f screenSize);
+		void Draw(Painter& painter, Vector2f screenSize);
 		/** @brief Draws only the image of the outside, under what is drawn after it */
-		void DrawOutside(UiPainter& painter, Vector2f screenSize);
+		void DrawOutside(Painter& painter, Vector2f screenSize);
 		/** @brief Draws only the image of the inside, if there's one, and the ring */
-		void DrawRing(UiPainter& painter, Vector2f screenSize);
+		void DrawRing(Painter& painter, Vector2f screenSize);
 		/**
 		 * @brief Returns the circle in which the game is seen, on a screen of a size at a scale of the interface
 		 *

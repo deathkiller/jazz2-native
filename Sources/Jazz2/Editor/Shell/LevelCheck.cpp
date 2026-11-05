@@ -18,8 +18,9 @@
 #include "../Events/EventPreviews.h"
 #include "../Runtime/EditorCamera.h"
 #include "../Runtime/EditorLevelHandler.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../Formats/TileSetFile.h"
 #include "../../Tiles/TileMap.h"
@@ -934,12 +935,12 @@ namespace Jazz2::Editor
 		}
 
 		// The levels that follow, as a level of the same episode is written without the episode, see ShowLevelPropertiesDialog()
-		SmallVector<UiFileRoot, 4> roots;
+		SmallVector<FileRoot, 4> roots;
 		session.GetFileRoots(false, roots);
 		StringView episode = session.GetLevelName().partition('/')[0];
 		auto levelExists = [&roots, episode](StringView name) {
 			String levelName = (name.contains('/') || episode.empty() ? String(name) : String(episode + "/"_s + name));
-			for (const UiFileRoot& root : roots) {
+			for (const FileRoot& root : roots) {
 				if (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(root.Path, String(levelName + ".j2l"_s))))) {
 					return true;
 				}
@@ -1209,14 +1210,14 @@ namespace Jazz2::Editor
 			float Wait = 0.0f;
 			// Problems found of each severity, shown on the filters
 			std::int32_t Counts[3] = {};
-			UiButton* FilterButtons[3] = {};
+			Button* FilterButtons[3] = {};
 			std::shared_ptr<Function<void(const DocumentChanges&)>> Observer;
 		};
 	}
 
 	void ShowCheckLevelDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		// Asked for again, the level is checked again
 		if (surface == nullptr || ReuseSingleDialog(session, "checkLevel")) {
 			return;
@@ -1224,19 +1225,19 @@ namespace Jazz2::Editor
 
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog that lists the problems found in the level
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Check Level"));
-		UiDialog* dialogPtr = dialog.get();
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Check Level"));
+		Dialog* dialogPtr = dialog.get();
 		// As large as the screen allows for long problems and many of them, the list scrolls, the texts don't make it
 		// wider, they're cut off with the whole of them in their tooltips
 		dialog->MaxScreenHeightFraction = 0.8f;
 		dialog->MinScreenWidthFraction = 0.7f;
 		auto* content = dialog->GetContent();
-		auto* summary = content->Add<UiLabel>(StringView(), UiTheme::TextDim);
+		auto* summary = content->Add<Label>(StringView(), Theme::TextDim);
 		summary->Width = 1.0f;
 		// Which problems are shown, by how bad they are, remembered
-		auto* filters = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+		auto* filters = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 		// What's left between the filters and the buttons, which stay
-		auto* scroll = content->Add<UiScrollView>();
+		auto* scroll = content->Add<ScrollView>();
 		scroll->Flex = 1.0f;
 
 		auto state = std::make_shared<CheckState>();
@@ -1282,26 +1283,26 @@ namespace Jazz2::Editor
 			summary->Text = Death::move(text);
 
 			std::int32_t filter = s->GetSettings().CheckLevelFilter;
-			auto* rows = scroll->SetContent<UiStack>(UiOrientation::Vertical, 2.0f);
+			auto* rows = scroll->SetContent<Stack>(Orientation::Vertical, 2.0f);
 			std::int32_t shown = 0;
 			for (const LevelProblem& problem : problems) {
 				if ((filter & (1 << std::int32_t(problem.Severity))) == 0) {
 					continue;
 				}
 				shown++;
-				auto* row = rows->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-				const Colorf& color = (problem.Severity == LevelProblemSeverity::Error ? UiTheme::TextDanger
-					: (problem.Severity == LevelProblemSeverity::Warning ? UiTheme::TextAccent : UiTheme::TextDim));
-				auto* label = row->Add<UiLabel>(problem.Text, color);
+				auto* row = rows->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+				const Colorf& color = (problem.Severity == LevelProblemSeverity::Error ? Theme::TextDanger
+					: (problem.Severity == LevelProblemSeverity::Warning ? Theme::TextAccent : Theme::TextDim));
+				auto* label = row->Add<Label>(problem.Text, color);
 				label->Width = 1.0f;
 				label->Flex = 1.0f;
 				label->Tooltip = problem.Text;
 				if (problem.Cell.X >= 0 || problem.OffGrid >= 0 || problem.Layer >= 0) {
 					// TRANSLATORS: Button next to a problem in the Check Level dialog, moves the view to it
-					auto* button = row->Add<UiButton>(_x("editor", "Show"), EditorIcon::None, [s, problem]() {
+					auto* button = row->Add<Button>(_x("editor", "Show"), EditorIcon::None, [s, problem]() {
 						ShowProblem(*s, problem);
 					});
-					button->Style = UiButtonStyle::Flat;
+					button->Style = ButtonStyle::Flat;
 				}
 				// Fixes that are obvious, the level is checked again right after
 				std::weak_ptr<CheckState> weakState = state;
@@ -1310,7 +1311,7 @@ namespace Jazz2::Editor
 						continue;
 					}
 					std::int32_t value = problem.FixValue;
-					auto* button = row->Add<UiButton>(GetLevelProblemFixLabel(fix), EditorIcon::None, [s, fix, value, weakState]() {
+					auto* button = row->Add<Button>(GetLevelProblemFixLabel(fix), EditorIcon::None, [s, fix, value, weakState]() {
 						if (FixLevelProblem(*s, fix, value)) {
 							if (std::shared_ptr<CheckState> state = weakState.lock()) {
 								state->Dirty = true;
@@ -1318,23 +1319,23 @@ namespace Jazz2::Editor
 							}
 						}
 					});
-					button->Style = UiButtonStyle::Flat;
+					button->Style = ButtonStyle::Flat;
 					button->Tooltip = (fix == LevelProblemFix::RemoveWarp ? _x("editor", "Removes the warp, all of its tiles") : _x("editor", "Places it at the empty tile nearest to the middle of the view"));
 				}
 			}
 			if (shown == 0 && !problems.empty()) {
-				rows->Add<UiLabel>(_x("editor", "The problems found are filtered out"), UiTheme::TextDisabled);
+				rows->Add<Label>(_x("editor", "The problems found are filtered out"), Theme::TextDisabled);
 			}
 		};
 		// Filters by how bad a problem is
 		for (std::int32_t i = 0; i < 3; i++) {
-			auto* button = filters->Add<UiButton>(StringView(), EditorIcon::None, [s, i, show]() {
+			auto* button = filters->Add<Button>(StringView(), EditorIcon::None, [s, i, show]() {
 				EditorSettings& settings = s->GetSettings();
 				settings.CheckLevelFilter ^= (1 << i);
 				settings.Save();
 				(*show)();
 			});
-			button->Style = UiButtonStyle::Flat;
+			button->Style = ButtonStyle::Flat;
 			button->IsCheckedFunc = [s, i]() { return (s->GetSettings().CheckLevelFilter & (1 << i)) != 0; };
 			button->Tooltip = _x("editor", "Shows or hides these problems");
 			state->FilterButtons[i] = button;
@@ -1364,7 +1365,7 @@ namespace Jazz2::Editor
 			}
 		});
 		session.AddChangeObserver(state->Observer);
-		content->Add<UiUpdateWatcher>([state, show](float timeMult) {
+		content->Add<UpdateWatcher>([state, show](float timeMult) {
 			if (state->Dirty) {
 				state->Wait -= timeMult;
 				if (state->Wait <= 0.0f) {
@@ -1380,7 +1381,7 @@ namespace Jazz2::Editor
 		dialog->OnCancel = [dialogPtr]() { dialogPtr->Close(); };
 
 		// The level is seen behind it, a problem shown in the view stays to be fixed
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

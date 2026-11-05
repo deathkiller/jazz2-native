@@ -27,7 +27,7 @@ namespace Jazz2::Editor
 		void OnPointerMove(const ToolPointer& pointer) override;
 		void OnPointerUp(const ToolPointer& pointer) override;
 		void Cancel() override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 
 	private:

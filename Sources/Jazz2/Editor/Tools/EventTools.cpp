@@ -7,7 +7,8 @@
 #include "../Document/Commands.h"
 #include "../Input/ActionIds.h"
 #include "../Events/EventPreviews.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -756,7 +757,7 @@ namespace Jazz2::Editor
 		LayerView view = _host.GetLayerView(document.GetSpriteLayerIndex());
 		// The nearest within reach, the reach doesn't shrink with the view, so a handle can be grabbed zoomed out; it's
 		// well beyond the small square drawn, more so for a finger
-		UiSurface* surface = _host.GetSurface();
+		Surface* surface = _host.GetSurface();
 		float uiScale = (surface != nullptr ? surface->GetScale() : 1.0f);
 		float reach = std::max((surface != nullptr && surface->TouchInput ? 18.0f : 10.0f) * uiScale, 8.0f);
 		std::int32_t nearest = -1;
@@ -1244,7 +1245,7 @@ namespace Jazz2::Editor
 		selection.AssignOffGrid(Death::move(offGridIndices));
 	}
 
-	void EventTool::DrawSelectedEvents(UiPainter& painter, const LayerView& view)
+	void EventTool::DrawSelectedEvents(Painter& painter, const LayerView& view)
 	{
 		const LevelDocument& document = _host.GetDocument();
 		const EventSelection& selection = _host.GetEventSelection();
@@ -1264,7 +1265,7 @@ namespace Jazz2::Editor
 				return;
 			}
 			if (!ants) {
-				painter.Frame(rect, UiTheme::Accent, thickness, UiLayer::Overlay);
+				painter.Frame(rect, Theme::Accent, thickness, PaintLayer::Overlay);
 				return;
 			}
 			DrawSelectionEdge(painter, rect.X, rect.Y, rect.W, true, animTime);
@@ -1297,7 +1298,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void EventTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void EventTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		LevelDocument& document = _host.GetDocument();
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
@@ -1326,7 +1327,7 @@ namespace Jazz2::Editor
 					Vector2f pos = view.WorldToScreen(gizmo.World);
 					if (gizmo.Kind == EventGizmoKind::ChainLength || gizmo.Kind == EventGizmoKind::Offset) {
 						// What it's measured from
-						painter.Line(view.WorldToScreen(gizmo.Anchor), pos, thickness, Colorf(1.0f, 1.0f, 1.0f, 0.6f), UiLayer::Overlay);
+						painter.Line(view.WorldToScreen(gizmo.Anchor), pos, thickness, Colorf(1.0f, 1.0f, 1.0f, 0.6f), PaintLayer::Overlay);
 					}
 					bool active = (std::int32_t(i) == hovered || (_mode == Mode::Gizmo && gizmo.Kind == _gizmo.Kind && gizmo.Field == _gizmo.Field));
 					if (active) {
@@ -1335,25 +1336,25 @@ namespace Jazz2::Editor
 					// Centered on the nearest corner of pixels, where the arrow of a direction ends too, see EditorShell::DrawEvents()
 					Rectf outer(std::round(pos.X) - size - thickness, std::round(pos.Y) - size - thickness, (size + thickness) * 2.0f, (size + thickness) * 2.0f);
 					Rectf inner(outer.X + thickness, outer.Y + thickness, outer.W - thickness * 2.0f, outer.H - thickness * 2.0f);
-					painter.FillRect(outer, Colorf(0.0f, 0.0f, 0.0f, 0.75f), UiLayer::Overlay);
-					painter.FillRect(inner, active ? UiTheme::Accent : Colorf::White, UiLayer::Overlay);
+					painter.FillRect(outer, Colorf(0.0f, 0.0f, 0.0f, 0.75f), PaintLayer::Overlay);
+					painter.FillRect(inner, active ? Theme::Accent : Colorf::White, PaintLayer::Overlay);
 				}
 				// Arrows by the pointer, which way the handle pointed at or dragged goes (the surface draws them over
 				// everything and leaves them out for a finger)
-				UiSurface* surface = _host.GetSurface();
+				Surface* surface = _host.GetSurface();
 				if (activeIndex >= 0 && surface != nullptr) {
 					Vector2f direction = EventGizmos::GetDragDirection(document.GetEvent(gizmoCell.X, gizmoCell.Y), gizmos[activeIndex]);
 					constexpr float Sin22_5 = 0.38268343f;
-					UiCursorOverlay overlay;
+					CursorOverlay overlay;
 					if (direction.X == 0.0f && direction.Y == 0.0f) {
-						overlay = UiCursorOverlay::Move;
+						overlay = CursorOverlay::Move;
 					} else if (std::abs(direction.Y) < Sin22_5) {
-						overlay = UiCursorOverlay::ResizeHorizontal;
+						overlay = CursorOverlay::ResizeHorizontal;
 					} else if (std::abs(direction.X) < Sin22_5) {
-						overlay = UiCursorOverlay::ResizeVertical;
+						overlay = CursorOverlay::ResizeVertical;
 					} else {
 						// Y goes down, so right and down is the diagonal of the top left and bottom right corners
-						overlay = ((direction.X > 0.0f) == (direction.Y > 0.0f) ? UiCursorOverlay::ResizeDiagonalNWSE : UiCursorOverlay::ResizeDiagonalNESW);
+						overlay = ((direction.X > 0.0f) == (direction.Y > 0.0f) ? CursorOverlay::ResizeDiagonalNWSE : CursorOverlay::ResizeDiagonalNESW);
 					}
 					surface->SetCursorOverlay(overlay);
 				}
@@ -1380,7 +1381,7 @@ namespace Jazz2::Editor
 				bool inside = IsInGrid(to, gridSize);
 				bool replaces = (inside && cellOffset != Vector2i() && !LevelDocument::IsEmptyEvent(document.GetEvent(to.X, to.Y)) &&
 					!selection.Contains(std::uint32_t(to.X + to.Y * gridSize.X)));
-				painter.Frame(rect, inside && !replaces ? UiTheme::Accent : UiTheme::Danger, thickness, UiLayer::Overlay);
+				painter.Frame(rect, inside && !replaces ? Theme::Accent : Theme::Danger, thickness, PaintLayer::Overlay);
 			}
 			for (std::int32_t index : selection.GetOffGrid()) {
 				if (index < 0 || index >= std::int32_t(document.OffGridEvents.size())) {
@@ -1391,7 +1392,7 @@ namespace Jazz2::Editor
 				Rectf rect = offGridRect(pos);
 				bool inside = (pos.X >= 0.0f && pos.Y >= 0.0f && pos.X < gridSize.X * 32.0f && pos.Y < gridSize.Y * 32.0f);
 				previews.DrawPlaced(painter, record.Event, rect, view.Scale, 0.7f, animTime, pos, false, true);
-				painter.Frame(rect, inside ? UiTheme::Accent : UiTheme::Danger, thickness, UiLayer::Overlay);
+				painter.Frame(rect, inside ? Theme::Accent : Theme::Danger, thickness, PaintLayer::Overlay);
 			}
 		};
 		if (_mode == Mode::MoveOffGrid) {
@@ -1405,7 +1406,7 @@ namespace Jazz2::Editor
 			if (offGrid >= 0) {
 				if (!selection.ContainsOffGrid(offGrid)) {
 					const Formats::OffGridEventRecord& record = document.OffGridEvents[offGrid];
-					painter.Frame(offGridRect(Vector2f(float(record.X), float(record.Y))), UiTheme::Cursor, thickness, UiLayer::Overlay);
+					painter.Frame(offGridRect(Vector2f(float(record.X), float(record.Y))), Theme::Cursor, thickness, PaintLayer::Overlay);
 				}
 				return;
 			}
@@ -1421,7 +1422,7 @@ namespace Jazz2::Editor
 		if (_mode == Mode::Marquee) {
 			Vector2i from(std::min(_start.X, _current.X), std::min(_start.Y, _current.Y));
 			Vector2i to(std::max(_start.X, _current.X), std::max(_start.Y, _current.Y));
-			DrawCellsOutline(painter, view, from, to, UiTheme::Accent);
+			DrawCellsOutline(painter, view, from, to, Theme::Accent);
 			return;
 		}
 
@@ -1441,7 +1442,7 @@ namespace Jazz2::Editor
 					}
 				}
 			}
-			DrawCellsOutline(painter, view, _start, _current, UiTheme::Accent);
+			DrawCellsOutline(painter, view, _start, _current, Theme::Accent);
 			return;
 		}
 
@@ -1454,7 +1455,7 @@ namespace Jazz2::Editor
 		const EventStamp& brush = _host.GetEventBrush();
 		if (_mode == Mode::Erase || (hasEvent && !shift && _mode == Mode::None) || brush.IsEmpty() || (_mode == Mode::None && !selection.IsEmpty() && !shift) ||
 			IsSelectOnly()) {
-			painter.Frame(view.CellToScreen(cell), _mode == Mode::Erase ? UiTheme::Danger : UiTheme::Cursor, thickness, UiLayer::Overlay);
+			painter.Frame(view.CellToScreen(cell), _mode == Mode::Erase ? Theme::Danger : Theme::Cursor, thickness, PaintLayer::Overlay);
 			return;
 		}
 
@@ -1463,7 +1464,7 @@ namespace Jazz2::Editor
 			Vector2f pos(cell.X * 32.0f + item.Offset.X, cell.Y * 32.0f + item.Offset.Y);
 			Rectf rect = offGridRect(pos);
 			previews.DrawPlaced(painter, item.Event, rect, view.Scale, 0.6f, animTime, pos, false, true);
-			painter.Frame(rect, UiTheme::Cursor, thickness, UiLayer::Overlay);
+			painter.Frame(rect, Theme::Cursor, thickness, PaintLayer::Overlay);
 		}
 
 		// Where the stamp would be placed
@@ -1475,7 +1476,7 @@ namespace Jazz2::Editor
 			Rectf rect = view.CellToScreen(target);
 			bool blocked = (!shift && !LevelDocument::IsEmptyEvent(document.GetEvent(target.X, target.Y)));
 			previews.DrawPlaced(painter, item.Event, rect, view.Scale, blocked ? 0.25f : 0.6f, animTime, Vector2f(target.X * 32.0f + 16.0f, target.Y * 32.0f + 16.0f));
-			painter.Frame(rect, blocked ? UiTheme::Danger : UiTheme::Cursor, thickness, UiLayer::Overlay);
+			painter.Frame(rect, blocked ? Theme::Danger : Theme::Cursor, thickness, PaintLayer::Overlay);
 		}
 	}
 

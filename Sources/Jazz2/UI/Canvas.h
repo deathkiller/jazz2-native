@@ -41,6 +41,13 @@ namespace Jazz2::UI
 		Vector2f LayerOffset = Vector2f::Zero;
 		/** @brief Uniform scale applied to every drawn primitive */
 		float LayerScale = 1.0f;
+		/**
+		 * @brief Pixels of the target for a unit drawn, 1 by default
+		 *
+		 * Glyphs are put on whole pixels of the target, a canvas drawn into a target larger than the units it's drawn
+		 * in --- by its camera --- puts them on its pixels with it.
+		 */
+		float PixelScale = 1.0f;
 		/** @brief Tint multiplied into the color of every drawn primitive */
 		Colorf LayerColor = Colorf::White;
 

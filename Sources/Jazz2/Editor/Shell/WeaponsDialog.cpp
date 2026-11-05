@@ -15,9 +15,10 @@
 #include "../Imaging/PngCodec.h"
 #include "../Imaging/Quantizer.h"
 #include "../Tools/EditorContext.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
 
@@ -482,9 +483,9 @@ namespace Jazz2::Editor
 			return (powered ? weapon.GetCustom().ShotPowered : weapon.GetCustom().Shot);
 		}
 
-		UiDropdown* AddChoice(UiElement* row, ArrayView<const PropertyChoice> choices, Function<std::int32_t()>&& getter, Function<void(std::int32_t)>&& setter)
+		Dropdown* AddChoice(Element* row, ArrayView<const PropertyChoice> choices, Function<std::int32_t()>&& getter, Function<void(std::int32_t)>&& setter)
 		{
-			UiDropdown* dropdown = AddChoiceDropdown(row, choices, Death::move(getter), Death::move(setter));
+			Dropdown* dropdown = AddChoiceDropdown(row, choices, Death::move(getter), Death::move(setter));
 			dropdown->Width = ChoiceWidth;
 			return dropdown;
 		}
@@ -492,13 +493,13 @@ namespace Jazz2::Editor
 		// Color of the pencil of a value changed, dimmed as the text around it
 		Colorf GetChangedMarkColor()
 		{
-			Colorf color = UiTheme::IconColor;
+			Colorf color = Theme::IconColor;
 			color.A *= 0.55f;
 			return color;
 		}
 
 		/** A pencil after a value while it isn't as the stock weapon has it */
-		class ChangedMark : public UiElement
+		class ChangedMark : public Element
 		{
 		public:
 			ChangedMark()
@@ -507,9 +508,9 @@ namespace Jazz2::Editor
 				Tooltip = _x("editor", "Changed from the stock weapon");
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
-				return Vector2f(context.Px(UiTheme::IconSize), context.Px(UiTheme::RowHeight + 4.0f));
+				return Vector2f(context.Px(Theme::IconSize), context.Px(Theme::RowHeight + 4.0f));
 			}
 
 			bool AcceptsPointer() const override
@@ -517,24 +518,24 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
-				painter.Icon(EditorIcon::Pencil, Bounds, GetChangedMarkColor(), UiLayer::Content);
+				painter.Icon(EditorIcon::Pencil, Bounds, GetChangedMarkColor(), PaintLayer::Content);
 			}
 		};
 
 		// Shown after a value while it isn't as the stock weapon has it, see WeaponsState::GetBaseline()
-		void AddChangedMark(UiStack* row, Function<bool()>&& isChanged)
+		void AddChangedMark(Stack* row, Function<bool()>&& isChanged)
 		{
 			auto* mark = row->Add<ChangedMark>();
 			mark->IsVisibleFunc = Death::move(isChanged);
 		}
 
 		// As tall as the pencil, so the rows below don't move when it shows
-		UiStack* AddCheckRow(UiElement* form)
+		Stack* AddCheckRow(Element* form)
 		{
-			auto* row = form->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			row->Height = UiTheme::RowHeight + 4.0f;
+			auto* row = form->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+			row->Height = Theme::RowHeight + 4.0f;
 			return row;
 		}
 
@@ -545,12 +546,12 @@ namespace Jazz2::Editor
 			return (name.empty() ? _fx("editor", "Embedded sound {}", index + 1) : String(FormatInteger(index + 1) + ". "_s + name));
 		}
 
-		UiNumberBox* AddNumber(UiElement* form, IEditorContext& session, const StatePtr& state, StringView label, StringView tooltip,
+		NumberBox* AddNumber(Element* form, IEditorContext& session, const StatePtr& state, StringView label, StringView tooltip,
 			float (*get)(const WeaponDefinition&), void (*set)(WeaponDefinition&, float), float minValue, float maxValue, float step, std::int32_t decimals)
 		{
 			IEditorContext* s = &session;
 			auto* row = AddLabeledRow(form, label, tooltip);
-			auto* box = row->Add<UiNumberBox>([s, state, get]() {
+			auto* box = row->Add<NumberBox>([s, state, get]() {
 				return get(state->GetCurrent(*s));
 			}, [s, state, set](float value, bool final) {
 				Change(*s, state, [set, value](WeaponDefinition& weapon) { set(weapon, value); }, final);
@@ -561,12 +562,12 @@ namespace Jazz2::Editor
 			return box;
 		}
 
-		UiNumberBox* AddShotNumber(UiElement* form, IEditorContext& session, const StatePtr& state, bool powered, StringView label, StringView tooltip,
+		NumberBox* AddShotNumber(Element* form, IEditorContext& session, const StatePtr& state, bool powered, StringView label, StringView tooltip,
 			float (*get)(const WeaponShotOptions&), void (*set)(WeaponShotOptions&, float), float minValue, float maxValue, float step, std::int32_t decimals)
 		{
 			IEditorContext* s = &session;
 			auto* row = AddLabeledRow(form, label, tooltip);
-			auto* box = row->Add<UiNumberBox>([s, state, powered, get]() {
+			auto* box = row->Add<NumberBox>([s, state, powered, get]() {
 				return get(GetShot(state->GetCurrent(*s), powered));
 			}, [s, state, powered, set](float value, bool final) {
 				Change(*s, state, [powered, set, value](WeaponDefinition& weapon) { set(GetShot(weapon, powered), value); }, final);
@@ -579,12 +580,12 @@ namespace Jazz2::Editor
 			return box;
 		}
 
-		UiCheckBox* AddCheck(UiElement* form, IEditorContext& session, const StatePtr& state, StringView label, StringView tooltip,
+		CheckBox* AddCheck(Element* form, IEditorContext& session, const StatePtr& state, StringView label, StringView tooltip,
 			bool (*get)(const WeaponDefinition&), void (*set)(WeaponDefinition&, bool))
 		{
 			IEditorContext* s = &session;
 			auto* row = AddCheckRow(form);
-			auto* box = row->Add<UiCheckBox>(label, [s, state, get]() {
+			auto* box = row->Add<CheckBox>(label, [s, state, get]() {
 				return get(state->GetCurrent(*s));
 			}, [s, state, set](bool value) {
 				Change(*s, state, [set, value](WeaponDefinition& weapon) { set(weapon, value); });
@@ -594,12 +595,12 @@ namespace Jazz2::Editor
 			return box;
 		}
 
-		UiCheckBox* AddShotCheck(UiElement* form, IEditorContext& session, const StatePtr& state, bool powered, StringView label, StringView tooltip,
+		CheckBox* AddShotCheck(Element* form, IEditorContext& session, const StatePtr& state, bool powered, StringView label, StringView tooltip,
 			bool (*get)(const WeaponShotOptions&), void (*set)(WeaponShotOptions&, bool))
 		{
 			IEditorContext* s = &session;
 			auto* row = AddCheckRow(form);
-			auto* box = row->Add<UiCheckBox>(label, [s, state, powered, get]() {
+			auto* box = row->Add<CheckBox>(label, [s, state, powered, get]() {
 				return get(GetShot(state->GetCurrent(*s), powered));
 			}, [s, state, powered, set](bool value) {
 				Change(*s, state, [powered, set, value](WeaponDefinition& weapon) { set(GetShot(weapon, powered), value); });
@@ -732,7 +733,7 @@ namespace Jazz2::Editor
 		}
 
 		// Shortened with dots at the end if it's wider
-		String FitText(UiPainter& painter, StringView text, float width)
+		String FitText(Painter& painter, StringView text, float width)
 		{
 			if (painter.MeasureText(text) <= width) {
 				return text;
@@ -751,19 +752,19 @@ namespace Jazz2::Editor
 		}
 
 		/** A weapon in the list, its icon, its name and what the level makes of it */
-		class WeaponSlotButton : public UiButton
+		class WeaponSlotButton : public Button
 		{
 		public:
 			WeaponSlotButton(IEditorContext& session, const StatePtr& state, std::int32_t slot)
-				: UiButton(StringView(), EditorIcon::None), _session(session), _state(state), _slot(slot)
+				: Button(StringView(), EditorIcon::None), _session(session), _state(state), _slot(slot)
 			{
 				OnClick = [state, slot]() { state->Slot = slot; };
 				IsCheckedFunc = [state, slot]() { return state->Slot == slot; };
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
-				return Vector2f(std::min(context.Px(150.0f), available.X), context.Px(UiTheme::ButtonHeight + 6.0f));
+				return Vector2f(std::min(context.Px(150.0f), available.X), context.Px(Theme::ButtonHeight + 6.0f));
 			}
 
 			StringView GetTooltip(Vector2f pos) const override
@@ -771,15 +772,15 @@ namespace Jazz2::Editor
 				return _tooltip;
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				// The background and the border of a button, with no text of its own
-				UiButton::Draw(painter);
+				Button::Draw(painter);
 
 				const WeaponsDescription& weapons = _state->Get(_session);
 				float padding = painter.Px(4.0f);
 				float gap = painter.Px(3.0f);
-				const Colorf& textColor = (IsChecked() ? UiTheme::TextOnAccent : UiTheme::Text);
+				const Colorf& textColor = (IsChecked() ? Theme::TextOnAccent : Theme::Text);
 				painter.PushClip(Bounds);
 
 				// The numbers in a column of their own, aligned to the right, as wide as the widest of them
@@ -799,7 +800,7 @@ namespace Jazz2::Editor
 				float x = iconRect.X + iconRect.W + padding;
 				Rectf textRect(x, Bounds.Y, std::max(Bounds.X + Bounds.W - x - padding, 0.0f), Bounds.H);
 				float nameWidth = painter.MeasureText(name);
-				float markWidth = painter.Px(UiTheme::IconSize);
+				float markWidth = painter.Px(Theme::IconSize);
 				String shownSuffix;
 				bool shownMark = false;
 				if (!suffix.empty()) {
@@ -816,9 +817,9 @@ namespace Jazz2::Editor
 				painter.TextInRect(shownName, textRect, textColor);
 				float afterName = textRect.X + painter.MeasureText(shownName) + gap;
 				if (!shownSuffix.empty()) {
-					painter.TextInRect(shownSuffix, Rectf(afterName, textRect.Y, std::max(textRect.X + textRect.W - afterName, 0.0f), textRect.H), UiTheme::TextDim);
+					painter.TextInRect(shownSuffix, Rectf(afterName, textRect.Y, std::max(textRect.X + textRect.W - afterName, 0.0f), textRect.H), Theme::TextDim);
 				} else if (changed) {
-					painter.Icon(EditorIcon::Pencil, Rectf(afterName, Bounds.Y, markWidth, Bounds.H), GetChangedMarkColor(), UiLayer::Content);
+					painter.Icon(EditorIcon::Pencil, Rectf(afterName, Bounds.Y, markWidth, Bounds.H), GetChangedMarkColor(), PaintLayer::Content);
 				}
 				painter.PopClip();
 			}
@@ -833,7 +834,7 @@ namespace Jazz2::Editor
 		void ApplyCustomTemplate(IEditorContext& session, const StatePtr& state, const CustomWeaponTemplate& weaponTemplate);
 		void SaveCustomTemplate(IEditorContext& session, const StatePtr& state);
 
-		void AddGeneralPage(UiForm* form, IEditorContext& session, const StatePtr& state)
+		void AddGeneralPage(Form* form, IEditorContext& session, const StatePtr& state)
 		{
 			IEditorContext* s = &session;
 			{
@@ -862,12 +863,12 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label in the Weapons dialog, a described weapon the weapon can be made as with one click
 				auto* row = AddLabeledRow(form, _x("editor", "Template"));
-				auto* dropdown = row->Add<UiDropdown>([]() {
+				auto* dropdown = row->Add<Dropdown>([]() {
 					// TRANSLATORS: In the Weapons dialog, the list of templates of weapons, before one is chosen
 					return String(_x("editor", "Make it as a template"));
-				}, [s, state](SmallVectorImpl<UiMenuEntry>& entries) {
+				}, [s, state](SmallVectorImpl<MenuEntry>& entries) {
 					for (CustomWeaponTemplate& weaponTemplate : state->FindCustomTemplates()) {
-						UiMenuEntry entry;
+						MenuEntry entry;
 						// TRANSLATORS: In the list of templates of the Weapons dialog, after the name of a custom weapon
 						entry.Label = (weaponTemplate.Name.empty() ? String(fs::GetFileNameWithoutExtension(weaponTemplate.SourcePath)) : weaponTemplate.Name)
 							+ " "_s + _x("editor", "(custom)");
@@ -879,10 +880,10 @@ namespace Jazz2::Editor
 					bool separated = entries.empty();
 					for (const ScriptWeaponTemplate& weaponTemplate : state->Templates) {
 						if (!separated) {
-							entries.push_back(UiMenuEntry::Separator());
+							entries.push_back(MenuEntry::Separator());
 							separated = true;
 						}
-						UiMenuEntry entry;
+						MenuEntry entry;
 						entry.Label = (weaponTemplate.Name.empty() ? weaponTemplate.Constructor : weaponTemplate.Name) + " "_s + _x("editor", "(script)");
 						entry.IsEnabled = [state]() { return state->Slot < MaxScriptWeapons; };
 						const ScriptWeaponTemplate* t = &weaponTemplate;
@@ -903,7 +904,7 @@ namespace Jazz2::Editor
 						entries.push_back(Death::move(entry));
 					}
 					if (entries.empty()) {
-						UiMenuEntry none;
+						MenuEntry none;
 						// TRANSLATORS: In the list of templates of the Weapons dialog when there are none
 						none.Label = _x("editor", "No templates in \"Editor/Weapons\"");
 						none.IsEnabled = []() { return false; };
@@ -913,14 +914,14 @@ namespace Jazz2::Editor
 				dropdown->Width = 180.0f;
 				dropdown->Flex = 1.0f;
 				dropdown->Tooltip = _x("editor", "Makes the weapon as a template of \"Editor/Weapons\" describes it, the images and sounds it needs are embedded in the level");
-				auto* save = row->Add<UiButton>(StringView(), EditorIcon::Save, [s, state]() { SaveCustomTemplate(*s, state); });
+				auto* save = row->Add<Button>(StringView(), EditorIcon::Save, [s, state]() { SaveCustomTemplate(*s, state); });
 				// TRANSLATORS: Tooltip of the button next to the templates in the Weapons dialog
 				save->Tooltip = _x("editor", "Saves the custom weapon as a template, with its images and sounds, to make it in other levels");
 				save->IsVisibleFunc = [s, state]() { return state->GetCurrent(*s).Kind == WeaponKind::Custom; };
 			}
 			{
 				// What the dialog can't show, the script changes it as it runs
-				auto* note = form->Add<UiWrappedLabel>(StringView(), UiTheme::TextWarning);
+				auto* note = form->Add<WrappedLabel>(StringView(), Theme::TextWarning);
 				note->TextFunc = [s, state]() {
 					// TRANSLATORS: In the Weapons dialog, the script of the level changes the weapon by its own code, which is shown after it
 					return _fx("editor", "The script of the level also changes it by itself: {}", state->GetHandWrittenSetUp(*s, state->Slot));
@@ -930,14 +931,14 @@ namespace Jazz2::Editor
 			}
 #if !defined(WITH_ANGELSCRIPT)
 			{
-				auto* noScripts = form->Add<UiWrappedLabel>(_x("editor", "Scripts can't run in this build"), UiTheme::TextWarning);
+				auto* noScripts = form->Add<WrappedLabel>(_x("editor", "Scripts can't run in this build"), Theme::TextWarning);
 				noScripts->IsVisibleFunc = [s, state]() { return state->GetCurrent(*s).Kind == WeaponKind::Script; };
 			}
 #endif
 			{
 				// TRANSLATORS: Label of the name of a weapon in the Weapons dialog
 				auto* row = AddLabeledRow(form, _x("editor", "Name"));
-				auto* box = row->Add<UiTextBox>();
+				auto* box = row->Add<TextBox>();
 				box->Width = 160.0f;
 				box->Flex = 1.0f;
 				box->MaxLength = 64;
@@ -966,9 +967,9 @@ namespace Jazz2::Editor
 				ShowRowWhen(row, [s, state]() { return state->GetCurrent(*s).Kind == WeaponKind::Custom; });
 			}
 			{
-				auto* row = form->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = form->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				// TRANSLATORS: Button in the Weapons dialog, the weapon becomes the weapon of the game again
-				auto* reset = row->Add<UiButton>(_x("editor", "Reset to Default"), EditorIcon::Undo, [s, state]() {
+				auto* reset = row->Add<Button>(_x("editor", "Reset to Default"), EditorIcon::Undo, [s, state]() {
 					WeaponType slot = WeaponType(state->Slot);
 					ChangeWithEditorData(*s, state, [slot](WeaponDefinition& weapon, WeaponEditorData& editorData) {
 						weapon = WeaponDefinition::MakeDefault(slot);
@@ -979,7 +980,7 @@ namespace Jazz2::Editor
 			}
 		}
 
-		void AddAmmoPage(UiForm* form, IEditorContext& session, const StatePtr& state)
+		void AddAmmoPage(Form* form, IEditorContext& session, const StatePtr& state)
 		{
 			// TRANSLATORS: Checkbox in the Weapons dialog
 			AddCheck(form, session, state, _x("editor", "Allowed"), _x("editor", "Players can have and fire it in the level"),
@@ -1055,7 +1056,7 @@ namespace Jazz2::Editor
 			}
 		}
 
-		void AddFiringPage(UiForm* form, IEditorContext& session, const StatePtr& state)
+		void AddFiringPage(Form* form, IEditorContext& session, const StatePtr& state)
 		{
 			IEditorContext* s = &session;
 			// TRANSLATORS: Label in the Weapons dialog, frames between two shots
@@ -1096,7 +1097,7 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label in the Weapons dialog, the name of the sound played when the weapon fires
 				auto* row = AddLabeledRow(form, _x("editor", "Sound"));
-				auto* source = row->Add<UiDropdown>([s, state]() {
+				auto* source = row->Add<Dropdown>([s, state]() {
 					const WeaponsDescription& weapons = state->Get(*s);
 					std::int32_t index = state->GetCurrent(*s).GetCustom().Fire.SoundIndex;
 					if (index >= 0 && index < std::int32_t(weapons.Sounds.size())) {
@@ -1104,8 +1105,8 @@ namespace Jazz2::Editor
 					}
 					// TRANSLATORS: In the Weapons dialog, the sound of a weapon given by the name of a sound of the game
 					return String(_x("editor", "By name"));
-				}, [s, state](SmallVectorImpl<UiMenuEntry>& entries) {
-					UiMenuEntry byName;
+				}, [s, state](SmallVectorImpl<MenuEntry>& entries) {
+					MenuEntry byName;
 					byName.Label = _x("editor", "By name");
 					byName.IsChecked = [s, state]() { return state->GetCurrent(*s).GetCustom().Fire.SoundIndex < 0; };
 					byName.Execute = [s, state]() {
@@ -1114,7 +1115,7 @@ namespace Jazz2::Editor
 					entries.push_back(Death::move(byName));
 					const WeaponsDescription& weapons = state->Get(*s);
 					for (std::int32_t i = 0; i < std::int32_t(weapons.Sounds.size()); i++) {
-						UiMenuEntry sound;
+						MenuEntry sound;
 						sound.Label = GetEmbeddedSoundLabel(weapons, i);
 						sound.IsChecked = [s, state, i]() { return state->GetCurrent(*s).GetCustom().Fire.SoundIndex == i; };
 						sound.Execute = [s, state, i]() {
@@ -1125,7 +1126,7 @@ namespace Jazz2::Editor
 				});
 				source->Width = 110.0f;
 				source->Tooltip = _x("editor", "A sound of the game by its name, or a sound embedded in the level, see Embedded assets on the Animations page");
-				auto* box = row->Add<UiTextBox>();
+				auto* box = row->Add<TextBox>();
 				box->Width = 110.0f;
 				box->Flex = 1.0f;
 				box->MaxLength = 64;
@@ -1138,7 +1139,7 @@ namespace Jazz2::Editor
 					Change(*s, state, [&sound](WeaponDefinition& weapon) { weapon.GetCustom().Fire.Sound = sound; });
 				};
 				box->Tooltip = _x("editor", "Name of a sound of the shot's metadata or of the player's, such as \"Fire\" or \"WeaponBlaster\"");
-				auto* play = row->Add<UiButton>(StringView(), EditorIcon::Play, [s, state]() {
+				auto* play = row->Add<Button>(StringView(), EditorIcon::Play, [s, state]() {
 					const WeaponsDescription& weapons = state->Get(*s);
 					const WeaponDefinition& weapon = weapons.Weapons[state->Slot];
 					WeaponType basedOn = weapon.GetCustom().GetBasedOn(WeaponType(state->Slot));
@@ -1154,7 +1155,7 @@ namespace Jazz2::Editor
 				// TRANSLATORS: Tooltip of the button next to the sound of a weapon in the Weapons dialog
 				play->Tooltip = _x("editor", "Plays the sound as the game does");
 				play->IsVisibleFunc = [state]() { return !state->IsSoundPlaying(); };
-				auto* stop = row->Add<UiButton>(StringView(), EditorIcon::Stop, [state]() { state->StopSound(); });
+				auto* stop = row->Add<Button>(StringView(), EditorIcon::Stop, [state]() { state->StopSound(); });
 				stop->Tooltip = _x("editor", "Stops the sound");
 				stop->IsVisibleFunc = [state]() { return state->IsSoundPlaying(); };
 				AddChangedMark(row, [s, state]() {
@@ -1168,13 +1169,13 @@ namespace Jazz2::Editor
 				[](const WeaponDefinition& w) { return w.GetCustom().Fire.LoopSound; }, [](WeaponDefinition& w, bool v) { w.GetCustom().Fire.LoopSound = v; });
 		}
 
-		void AddShotPage(UiForm* form, IEditorContext& session, const StatePtr& state, bool powered)
+		void AddShotPage(Form* form, IEditorContext& session, const StatePtr& state, bool powered)
 		{
 			IEditorContext* s = &session;
 			if (powered) {
-				auto* row = form->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = form->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				// TRANSLATORS: Button in the Weapons dialog, the powered-up shot becomes the same as the usual one
-				auto* same = row->Add<UiButton>(_x("editor", "Same as the Usual Shot"), EditorIcon::Copy, [s, state]() {
+				auto* same = row->Add<Button>(_x("editor", "Same as the Usual Shot"), EditorIcon::Copy, [s, state]() {
 					Change(*s, state, [](WeaponDefinition& weapon) { weapon.GetCustom().ShotPowered = weapon.GetCustom().Shot; });
 				});
 				same->Tooltip = _x("editor", "What the powered-up shot doesn't change is as the usual one");
@@ -1428,11 +1429,11 @@ namespace Jazz2::Editor
 			}
 		}
 
-		UiStack* AddSpriteRow(UiForm* form, IEditorContext& session, const StatePtr& state, StringView label, StringView tooltip, SpriteSlot slot)
+		Stack* AddSpriteRow(Form* form, IEditorContext& session, const StatePtr& state, StringView label, StringView tooltip, SpriteSlot slot)
 		{
 			IEditorContext* s = &session;
 			auto* row = AddLabeledRow(form, label, tooltip);
-			auto* source = row->Add<UiDropdown>([s, state, slot]() {
+			auto* source = row->Add<Dropdown>([s, state, slot]() {
 				const WeaponSprite& sprite = GetSprite(state->GetCurrent(*s), slot);
 				if (sprite.Image >= 0) {
 					// TRANSLATORS: In the Weapons dialog, a sprite that is an image of the level, followed by its number
@@ -1444,15 +1445,15 @@ namespace Jazz2::Editor
 				}
 				// TRANSLATORS: In the Weapons dialog, a sprite that is an animation of the game
 				return String(_x("editor", "Animation"));
-			}, [s, state, slot](SmallVectorImpl<UiMenuEntry>& entries) {
-				UiMenuEntry stock;
+			}, [s, state, slot](SmallVectorImpl<MenuEntry>& entries) {
+				MenuEntry stock;
 				stock.Label = (IsAltSprite(slot) ? _x("editor", "None") : _x("editor", "As in the game"));
 				stock.IsChecked = [s, state, slot]() { return GetSprite(state->GetCurrent(*s), slot).IsEmpty(); };
 				stock.Execute = [s, state, slot]() {
 					Change(*s, state, [slot](WeaponDefinition& weapon) { GetSprite(weapon, slot) = WeaponSprite(); });
 				};
 				entries.push_back(Death::move(stock));
-				UiMenuEntry animation;
+				MenuEntry animation;
 				// TRANSLATORS: Choice in the Weapons dialog, an animation of the game given by its metadata
 				animation.Label = _x("editor", "Animation of the game");
 				animation.IsChecked = [s, state, slot]() { return !GetSprite(state->GetCurrent(*s), slot).Metadata.empty(); };
@@ -1468,7 +1469,7 @@ namespace Jazz2::Editor
 				entries.push_back(Death::move(animation));
 				const WeaponsDescription& weapons = state->Get(*s);
 				for (std::int32_t i = 0; i < std::int32_t(weapons.Images.size()); i++) {
-					UiMenuEntry image;
+					MenuEntry image;
 					image.Label = _x("editor", "Embedded image") + " "_s + String(FormatInteger(i + 1));
 					image.IsChecked = [s, state, slot, i]() { return GetSprite(state->GetCurrent(*s), slot).Image == i; };
 					image.Execute = [s, state, slot, i]() {
@@ -1484,7 +1485,7 @@ namespace Jazz2::Editor
 			});
 			source->Width = 110.0f;
 
-			auto* path = row->Add<UiTextBox>();
+			auto* path = row->Add<TextBox>();
 			path->Width = 110.0f;
 			path->Flex = 1.0f;
 			path->MaxLength = 128;
@@ -1500,7 +1501,7 @@ namespace Jazz2::Editor
 				Change(*s, state, [slot, &metadata](WeaponDefinition& weapon) { GetSprite(weapon, slot).Metadata = metadata; });
 			};
 			path->Tooltip = _x("editor", "Metadata of the animation, such as \"Weapon/Seeker\"");
-			auto* animState = row->Add<UiNumberBox>([s, state, slot]() {
+			auto* animState = row->Add<NumberBox>([s, state, slot]() {
 				return float(GetSprite(state->GetCurrent(*s), slot).AnimState);
 			}, [s, state, slot](float value, bool final) {
 				Change(*s, state, [slot, value](WeaponDefinition& weapon) { GetSprite(weapon, slot).AnimState = std::uint32_t(std::max(value, 0.0f)); }, final);
@@ -1629,11 +1630,11 @@ namespace Jazz2::Editor
 
 		void ExportImage(IEditorContext& session, const WeaponImage& image)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetImageRoots(true, roots);
 			if (roots.empty()) {
 				session.ShowMessage(_x("editor", "There is no place to save files to"));
@@ -1642,7 +1643,7 @@ namespace Jazz2::Editor
 			auto copy = std::make_shared<WeaponImage>(image);
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the file dialog saving an image of the weapons of the level
-			UiFileDialog::Show(*surface, _x("editor", "Export Weapon Image"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, {}, "weapon.png"_s,
+			FileDialog::Show(*surface, _x("editor", "Export Weapon Image"), FileDialogMode::Save, Death::move(roots), ".png"_s, {}, "weapon.png"_s,
 				[s, copy](StringView path) {
 				if (!WriteWeaponImage(path, *copy)) {
 					s->ShowMessage(_x("editor", "The file couldn't be written"));
@@ -1652,14 +1653,14 @@ namespace Jazz2::Editor
 
 		void ShowOpenSoundDialog(IEditorContext& session, Function<void(StringView)>&& onChosen)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetImageRoots(false, roots);
 			// TRANSLATORS: Title of the file dialog choosing a sound for the weapons of the level
-			UiFileDialog::Show(*surface, _x("editor", "Import Weapon Sound"), UiFileDialogMode::Open, Death::move(roots), ".wav;.ogg"_s, {}, {}, Death::move(onChosen));
+			FileDialog::Show(*surface, _x("editor", "Import Weapon Sound"), FileDialogMode::Open, Death::move(roots), ".wav;.ogg"_s, {}, {}, Death::move(onChosen));
 		}
 
 		// Reads a sound file as it is, the name keeps its extension to tell the format by
@@ -1795,11 +1796,11 @@ namespace Jazz2::Editor
 		// A custom weapon written as a template, with its embedded images and sounds as files next to it
 		void SaveCustomTemplate(IEditorContext& session, const StatePtr& state)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			StringView writableContent = ContentResolver::Get().GetWritableContentPath(true);
 			String directory;
 			if (!writableContent.empty()) {
@@ -1817,7 +1818,7 @@ namespace Jazz2::Editor
 			String name = (weapon.Name.empty() ? String(GetStockWeaponName(WeaponType(state->Slot))) : weapon.Name);
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the file dialog saving a custom weapon as a template for other levels
-			UiFileDialog::Show(*surface, _x("editor", "Save Weapon Template"), UiFileDialogMode::Save, Death::move(roots), ".json"_s, directory,
+			FileDialog::Show(*surface, _x("editor", "Save Weapon Template"), FileDialogMode::Save, Death::move(roots), ".json"_s, directory,
 				String(name + ".json"_s), [s, state](StringView path) {
 				const WeaponsDescription& weapons = state->Get(*s);
 				const WeaponDefinition& weapon = state->GetCurrent(*s);
@@ -1860,7 +1861,7 @@ namespace Jazz2::Editor
 			});
 		}
 
-		void AddAnimationsPage(UiForm* form, IEditorContext& session, const StatePtr& state)
+		void AddAnimationsPage(Form* form, IEditorContext& session, const StatePtr& state)
 		{
 			IEditorContext* s = &session;
 			// TRANSLATORS: Label in the Weapons dialog, the sprite of the shot
@@ -1880,18 +1881,18 @@ namespace Jazz2::Editor
 			// TRANSLATORS: Label in the Weapons dialog, the sprite of the ammo pickup of the weapon
 			AddSpriteRow(form, session, state, _x("editor", "Ammo"), _x("editor", "Sprite of the ammo of the weapon placed in the level"), SpriteSlot::Pickup);
 
-			form->Add<UiSeparator>();
+			form->Add<Separator>();
 			// TRANSLATORS: Header of the images of the weapons in the Weapons dialog
-			form->Add<UiLabel>(_x("editor", "Embedded assets"), UiTheme::TextHeader);
-			form->Add<UiWrappedLabel>(_x("editor", "PNG images of frames in rows and columns, in the colors of the sprites"), UiTheme::TextDim);
+			form->Add<Label>(_x("editor", "Embedded assets"), Theme::TextHeader);
+			form->Add<WrappedLabel>(_x("editor", "PNG images of frames in rows and columns, in the colors of the sprites"), Theme::TextDim);
 			for (std::int32_t i = 0; i < std::int32_t(Formats::WeaponsChunk::MaxImages); i++) {
-				auto* row = form->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = form->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				row->IsVisibleFunc = [s, state, i]() { return i < std::int32_t(state->Get(*s).Images.size()); };
 				row->Add<WeaponSpriteView>(session, [s, state, i](bool& additive) -> const GraphicResource* {
 					const auto& images = state->Get(*s).Images;
 					return (i < std::int32_t(images.size()) ? FindWeaponAnimation(WeaponsDescription::GetImageMetadataPath(images[i]), 0) : nullptr);
 				});
-				auto* label = row->Add<UiLabel>(StringView(), UiTheme::Text);
+				auto* label = row->Add<Label>(StringView(), Theme::Text);
 				label->TextFunc = [s, state, i]() {
 					const auto& images = state->Get(*s).Images;
 					if (i >= std::int32_t(images.size())) {
@@ -1902,7 +1903,7 @@ namespace Jazz2::Editor
 					return _fx("editor", "{}. {} × {}, {} frames", i + 1, image.GetFrameWidth(), image.GetFrameHeight(), image.FrameCount);
 				};
 				label->Flex = 1.0f;
-				auto* hotspotX = row->Add<UiNumberBox>([s, state, i]() {
+				auto* hotspotX = row->Add<NumberBox>([s, state, i]() {
 					const auto& images = state->Get(*s).Images;
 					return (i < std::int32_t(images.size()) ? float(images[i].HotspotX) : 0.0f);
 				}, [s, i](float value, bool final) {
@@ -1914,7 +1915,7 @@ namespace Jazz2::Editor
 				}, -256.0f, 512.0f, 1.0f, 0);
 				hotspotX->Width = 88.0f;
 				hotspotX->Tooltip = _x("editor", "Hotspot X, the point of a frame at the position of the shot");
-				auto* hotspotY = row->Add<UiNumberBox>([s, state, i]() {
+				auto* hotspotY = row->Add<NumberBox>([s, state, i]() {
 					const auto& images = state->Get(*s).Images;
 					return (i < std::int32_t(images.size()) ? float(images[i].HotspotY) : 0.0f);
 				}, [s, i](float value, bool final) {
@@ -1926,7 +1927,7 @@ namespace Jazz2::Editor
 				}, -256.0f, 512.0f, 1.0f, 0);
 				hotspotY->Width = 88.0f;
 				hotspotY->Tooltip = _x("editor", "Hotspot Y, the point of a frame at the position of the shot");
-				auto* rate = row->Add<UiNumberBox>([s, state, i]() {
+				auto* rate = row->Add<NumberBox>([s, state, i]() {
 					const auto& images = state->Get(*s).Images;
 					return (i < std::int32_t(images.size()) ? images[i].FrameRate : 0.0f);
 				}, [s, i](float value, bool final) {
@@ -1938,14 +1939,14 @@ namespace Jazz2::Editor
 				}, 0.0f, 120.0f, 0.5f, 1);
 				rate->Width = 88.0f;
 				rate->Tooltip = _x("editor", "Speed of the animation, as the metadata of the game have it");
-				auto* exportButton = row->Add<UiButton>(StringView(), EditorIcon::Export, [s, state, i]() {
+				auto* exportButton = row->Add<Button>(StringView(), EditorIcon::Export, [s, state, i]() {
 					const auto& images = state->Get(*s).Images;
 					if (i < std::int32_t(images.size())) {
 						ExportImage(*s, images[i]);
 					}
 				});
 				exportButton->Tooltip = _x("editor", "Saves the image as PNG, as it was imported");
-				auto* remove = row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, i]() {
+				auto* remove = row->Add<Button>(StringView(), EditorIcon::Delete, [s, i]() {
 					// TRANSLATORS: Name of an undo step in the history, an image of the weapons of the level removed
 					ChangeLevelWeapons(*s, _x("editor", "Remove weapon image"), [i](LevelWeapons& weapons) {
 						if (i >= std::int32_t(weapons.Images.size())) {
@@ -1980,7 +1981,7 @@ namespace Jazz2::Editor
 					const auto& images = state->Get(*s).Images;
 					return (i < std::int32_t(images.size()) ? &images[i] : nullptr);
 				};
-				auto* columns = layout->Add<UiNumberBox>([getImage]() {
+				auto* columns = layout->Add<NumberBox>([getImage]() {
 					const WeaponImage* image = getImage();
 					return (image != nullptr ? float(image->FrameColumns) : 1.0f);
 				}, [s, getImage, i](float value, bool final) {
@@ -1991,8 +1992,8 @@ namespace Jazz2::Editor
 				}, 1.0f, float(Formats::WeaponsChunk::MaxFrameCount), 1.0f, 0);
 				columns->Width = 70.0f;
 				columns->Tooltip = _x("editor", "Frames in a row of the image");
-				layout->Add<UiLabel>("×"_s, UiTheme::TextDim);
-				auto* rows = layout->Add<UiNumberBox>([getImage]() {
+				layout->Add<Label>("×"_s, Theme::TextDim);
+				auto* rows = layout->Add<NumberBox>([getImage]() {
 					const WeaponImage* image = getImage();
 					return (image != nullptr ? float(image->FrameRows) : 1.0f);
 				}, [s, getImage, i](float value, bool final) {
@@ -2003,7 +2004,7 @@ namespace Jazz2::Editor
 				}, 1.0f, float(Formats::WeaponsChunk::MaxFrameCount), 1.0f, 0);
 				rows->Width = 70.0f;
 				rows->Tooltip = _x("editor", "Rows of frames in the image");
-				auto* count = layout->Add<UiNumberBox>([getImage]() {
+				auto* count = layout->Add<NumberBox>([getImage]() {
 					const WeaponImage* image = getImage();
 					return (image != nullptr ? float(image->FrameCount) : 1.0f);
 				}, [s, getImage, i](float value, bool final) {
@@ -2015,19 +2016,19 @@ namespace Jazz2::Editor
 				count->Tooltip = _x("editor", "How many of them are frames, by rows from the top left, the last row may have fewer");
 			}
 			{
-				auto* row = form->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = form->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				// TRANSLATORS: Button in the Weapons dialog, reads a PNG strip as a new image of the weapons
-				row->Add<UiButton>(_x("editor", "Import Image"), EditorIcon::Import, [s, state]() {
+				row->Add<Button>(_x("editor", "Import Image"), EditorIcon::Import, [s, state]() {
 					// TRANSLATORS: Title of the file dialog choosing a PNG strip for the weapons of the level
 					ShowOpenImageDialog(*s, _x("editor", "Import Weapon Image"), [s, state](StringView path) { ImportImage(*s, state, path); });
 				})->Tooltip = _x("editor", "Reads a PNG image, square frames side by side or one below another if it's a strip of them, its frame layout can be changed after");
 			}
 
-			form->Add<UiWrappedLabel>(_x("editor", "Sounds in WAV or Ogg Vorbis, a custom weapon can fire with them"), UiTheme::TextDim);
+			form->Add<WrappedLabel>(_x("editor", "Sounds in WAV or Ogg Vorbis, a custom weapon can fire with them"), Theme::TextDim);
 			for (std::int32_t i = 0; i < std::int32_t(Formats::WeaponsChunk::MaxSounds); i++) {
-				auto* row = form->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = form->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				row->IsVisibleFunc = [s, state, i]() { return i < std::int32_t(state->Get(*s).Sounds.size()); };
-				auto* label = row->Add<UiLabel>(StringView(), UiTheme::Text);
+				auto* label = row->Add<Label>(StringView(), Theme::Text);
 				label->TextFunc = [s, state, i]() {
 					const WeaponsDescription& weapons = state->Get(*s);
 					if (i >= std::int32_t(weapons.Sounds.size())) {
@@ -2037,14 +2038,14 @@ namespace Jazz2::Editor
 					return _fx("editor", "{}, {} kB", GetEmbeddedSoundLabel(weapons, i), (weapons.Sounds[i].Data.size() + 1023) / 1024);
 				};
 				label->Flex = 1.0f;
-				auto* play = row->Add<UiButton>(StringView(), EditorIcon::Play, [s, state, i]() {
+				auto* play = row->Add<Button>(StringView(), EditorIcon::Play, [s, state, i]() {
 					const WeaponsDescription& weapons = state->Get(*s);
 					if (i < std::int32_t(weapons.Sounds.size()) && !state->PlaySound({}, WeaponsDescription::GetSoundIdentifier(weapons.Sounds[i]), false)) {
 						s->ShowMessage(_x("editor", "The sound can't be played, it may be damaged or sounds are muted"));
 					}
 				});
 				play->Tooltip = _x("editor", "Plays the sound");
-				auto* remove = row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, i]() {
+				auto* remove = row->Add<Button>(StringView(), EditorIcon::Delete, [s, i]() {
 					// TRANSLATORS: Name of an undo step in the history, a sound of the weapons of the level removed
 					ChangeLevelWeapons(*s, _x("editor", "Remove weapon sound"), [i](LevelWeapons& weapons) {
 						if (i >= std::int32_t(weapons.Sounds.size())) {
@@ -2068,9 +2069,9 @@ namespace Jazz2::Editor
 				remove->Tooltip = _x("editor", "Removes the sound, what uses it fires with the sound by its name again");
 			}
 			{
-				auto* row = form->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = form->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				// TRANSLATORS: Button in the Weapons dialog, reads a WAV or Ogg file as a new sound of the weapons
-				row->Add<UiButton>(_x("editor", "Import Sound"), EditorIcon::Import, [s, state]() {
+				row->Add<Button>(_x("editor", "Import Sound"), EditorIcon::Import, [s, state]() {
 					ShowOpenSoundDialog(*s, [s, state](StringView path) { ImportSound(*s, state, path); });
 				})->Tooltip = _x("editor", "Reads a WAV or Ogg Vorbis file, embedded in the level as it is");
 			}
@@ -2094,7 +2095,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The parameters of a weapon of a script as its description has them, made again for another description */
-		class ScriptParamsForm : public UiForm
+		class ScriptParamsForm : public Form
 		{
 		public:
 			ScriptParamsForm(IEditorContext& session, const StatePtr& state)
@@ -2112,7 +2113,7 @@ namespace Jazz2::Editor
 					_shown = weaponTemplate;
 					Rebuild();
 				}
-				UiForm::Update(timeMult);
+				Form::Update(timeMult);
 			}
 
 		private:
@@ -2176,7 +2177,7 @@ namespace Jazz2::Editor
 
 					if (param.Type == ScriptParamType::Bool) {
 						auto* row = AddCheckRow(this);
-						auto* box = row->Add<UiCheckBox>(label, [s, state, t, i]() {
+						auto* box = row->Add<CheckBox>(label, [s, state, t, i]() {
 							return GetValue(*s, state, t, i).Number != 0.0;
 						}, [s, state, t, i](bool value) {
 							ScriptParamValue v;
@@ -2190,7 +2191,7 @@ namespace Jazz2::Editor
 
 					auto* row = AddLabeledRow(this, label, param.Description);
 					if (param.Type == ScriptParamType::String) {
-						auto* box = row->Add<UiTextBox>();
+						auto* box = row->Add<TextBox>();
 						box->Width = 160.0f;
 						box->Flex = 1.0f;
 						box->MaxLength = 255;
@@ -2201,7 +2202,7 @@ namespace Jazz2::Editor
 							SetValue(*s, state, t, i, v);
 						};
 					} else if (!param.Choices.empty()) {
-						auto* dropdown = row->Add<UiDropdown>([s, state, t, i]() {
+						auto* dropdown = row->Add<Dropdown>([s, state, t, i]() {
 							double value = GetValue(*s, state, t, i).Number;
 							for (const ScriptParamChoice& choice : t->Params[i].Choices) {
 								if (choice.Value == value) {
@@ -2209,10 +2210,10 @@ namespace Jazz2::Editor
 								}
 							}
 							return String(FormatInteger(std::int32_t(value)));
-						}, [s, state, t, i](SmallVectorImpl<UiMenuEntry>& entries) {
+						}, [s, state, t, i](SmallVectorImpl<MenuEntry>& entries) {
 							for (const ScriptParamChoice& choice : t->Params[i].Choices) {
 								double value = choice.Value;
-								UiMenuEntry entry;
+								MenuEntry entry;
 								entry.Label = choice.Name;
 								entry.IsChecked = [s, state, t, i, value]() { return GetValue(*s, state, t, i).Number == value; };
 								entry.Execute = [s, state, t, i, value]() {
@@ -2226,7 +2227,7 @@ namespace Jazz2::Editor
 						dropdown->Width = ChoiceWidth;
 					} else {
 						bool decimals = (param.Type == ScriptParamType::Float || param.Type == ScriptParamType::Double);
-						auto* box = row->Add<UiNumberBox>([s, state, t, i]() {
+						auto* box = row->Add<NumberBox>([s, state, t, i]() {
 							return float(GetValue(*s, state, t, i).Number);
 						}, [s, state, t, i](float value, bool final) {
 							ScriptParamValue v;
@@ -2240,7 +2241,7 @@ namespace Jazz2::Editor
 				}
 
 				// What the description doesn't tell
-				auto* rest = Add<UiWrappedLabel>(StringView(), UiTheme::TextDim);
+				auto* rest = Add<WrappedLabel>(StringView(), Theme::TextDim);
 				rest->TextFunc = [s, state, t]() {
 					SmallVector<ScriptParamValue, 8> values;
 					std::size_t used = ReadValues(*s, state, *t, values);
@@ -2255,45 +2256,45 @@ namespace Jazz2::Editor
 			}
 		};
 
-		void AddScriptPage(UiForm* page, IEditorContext& session, const StatePtr& state)
+		void AddScriptPage(Form* page, IEditorContext& session, const StatePtr& state)
 		{
 			IEditorContext* s = &session;
 			{
 				// What the code of the script does to the weapon by itself, which the editor doesn't change
-				auto* handWritten = page->Add<UiWrappedLabel>(StringView(), UiTheme::TextWarning);
+				auto* handWritten = page->Add<WrappedLabel>(StringView(), Theme::TextWarning);
 				handWritten->TextFunc = [s, state]() {
 					// TRANSLATORS: In the Weapons dialog, the code of the level script that sets the weapon up follows
 					return _fx("editor", "The script of the level sets this weapon up by its own code: {}", state->GetHandWrittenSetUp(*s, state->Slot));
 				};
 				handWritten->IsVisibleFunc = [s, state]() { return !state->GetHandWrittenSetUp(*s, state->Slot).empty(); };
 				handWritten->Tooltip = _x("editor", "Its look and how it fires come from that code, the editor only shows it");
-				auto* conflict = page->Add<UiWrappedLabel>(_x("editor", "It's a script-driven weapon too, so it's set up twice, which one wins depends on the script"),
-					UiTheme::TextDanger);
+				auto* conflict = page->Add<WrappedLabel>(_x("editor", "It's a script-driven weapon too, so it's set up twice, which one wins depends on the script"),
+					Theme::TextDanger);
 				conflict->IsVisibleFunc = [s, state]() {
 					return (state->GetCurrent(*s).Kind == WeaponKind::Script && !state->GetHandWrittenSetUp(*s, state->Slot).empty());
 				};
 #if defined(WITH_ANGELSCRIPT)
 				// TRANSLATORS: In the Weapons dialog, the option of the game that lets scripts of levels run is off
-				auto* scriptsOff = page->Add<UiWrappedLabel>(_x("editor", "Scripts of levels are turned off in the options of the game, script-driven weapons don't work even in play-tests"),
-					UiTheme::TextWarning);
+				auto* scriptsOff = page->Add<WrappedLabel>(_x("editor", "Scripts of levels are turned off in the options of the game, script-driven weapons don't work even in play-tests"),
+					Theme::TextWarning);
 				scriptsOff->IsVisibleFunc = []() { return !PreferencesCache::AllowUnsignedScripts; };
 #else
 				// TRANSLATORS: In the Weapons dialog of a build of the game without the scripting engine
-				page->Add<UiWrappedLabel>(_x("editor", "Scripts can't run in this build"), UiTheme::TextWarning);
+				page->Add<WrappedLabel>(_x("editor", "Scripts can't run in this build"), Theme::TextWarning);
 #endif
-				auto* notDriven = page->Add<UiWrappedLabel>(_x("editor", "Choose Script-driven weapon on the General page to set it up as MLLE does"), UiTheme::TextDim);
+				auto* notDriven = page->Add<WrappedLabel>(_x("editor", "Choose Script-driven weapon on the General page to set it up as MLLE does"), Theme::TextDim);
 				notDriven->IsVisibleFunc = [s, state]() { return state->GetCurrent(*s).Kind != WeaponKind::Script; };
 			}
-			UiForm* form = page->Add<UiForm>();
+			Form* form = page->Add<Form>();
 			form->MinLabelWidth = LabelWidth;
 			form->MaxLabelWidth = LabelWidth;
 			form->IsEnabledFunc = [s, state]() { return (state->GetCurrent(*s).Kind == WeaponKind::Script && !state->IsReadOnly()); };
-			form->Add<UiWrappedLabel>(_x("editor", "The script of the level sets this weapon up, as MLLE does"), UiTheme::TextDim);
-			form->Add<UiWrappedLabel>(_x("editor", "The lines that do it are written into the script when the level is saved"), UiTheme::TextDim);
+			form->Add<WrappedLabel>(_x("editor", "The script of the level sets this weapon up, as MLLE does"), Theme::TextDim);
+			form->Add<WrappedLabel>(_x("editor", "The lines that do it are written into the script when the level is saved"), Theme::TextDim);
 			{
 				// TRANSLATORS: Label in the Weapons dialog, the weapon of a script library
 				auto* row = AddLabeledRow(form, _x("editor", "Weapon"));
-				auto* dropdown = row->Add<UiDropdown>([s, state]() {
+				auto* dropdown = row->Add<Dropdown>([s, state]() {
 					const WeaponEditorData& weapon = state->GetCurrentEditorData(*s);
 					if (weapon.ScriptConstructor.empty()) {
 						// TRANSLATORS: In the Weapons dialog, no weapon of a script is chosen
@@ -2304,7 +2305,7 @@ namespace Jazz2::Editor
 						return String(weaponTemplate->Name + " - "_s + weapon.ScriptLibrary);
 					}
 					return String(weapon.ScriptLibrary + " - "_s + weapon.ScriptConstructor);
-				}, [s, state](SmallVectorImpl<UiMenuEntry>& entries) {
+				}, [s, state](SmallVectorImpl<MenuEntry>& entries) {
 					state->LoadTemplates();
 					state->FindLibraries(*s);
 					auto isCurrent = [s, state](StringView library, StringView constructor) {
@@ -2320,15 +2321,15 @@ namespace Jazz2::Editor
 						}
 					}
 					for (const String& file : files) {
-						UiMenuEntry group;
+						MenuEntry group;
 						group.Label = fs::GetFileNameWithoutExtension(file);
-						group.Submenu = [s, state, file, isCurrent](SmallVectorImpl<UiMenuEntry>& items) {
+						group.Submenu = [s, state, file, isCurrent](SmallVectorImpl<MenuEntry>& items) {
 							for (std::size_t i = 0; i < state->Templates.size(); i++) {
 								const ScriptWeaponTemplate& weaponTemplate = state->Templates[i];
 								if (weaponTemplate.SourcePath != file) {
 									continue;
 								}
-								UiMenuEntry entry;
+								MenuEntry entry;
 								entry.Label = (weaponTemplate.Name.empty() ? weaponTemplate.Constructor : weaponTemplate.Name);
 								entry.IsChecked = [state, i, isCurrent]() {
 									return isCurrent(state->Templates[i].Library, state->Templates[i].Constructor);
@@ -2355,12 +2356,12 @@ namespace Jazz2::Editor
 						}
 					}
 					if (!found.empty()) {
-						UiMenuEntry group;
+						MenuEntry group;
 						// TRANSLATORS: Submenu in the Weapons dialog, weapons found in script libraries that no description of weapons tells
 						group.Label = _x("editor", "Found in libraries");
-						group.Submenu = [s, state, found, isCurrent](SmallVectorImpl<UiMenuEntry>& items) {
+						group.Submenu = [s, state, found, isCurrent](SmallVectorImpl<MenuEntry>& items) {
 							for (std::size_t i : found) {
-								UiMenuEntry entry;
+								MenuEntry entry;
 								entry.Label = state->ScriptWeapons[i].Library + " - "_s + state->ScriptWeapons[i].Constructor;
 								entry.IsChecked = [state, i, isCurrent]() {
 									return isCurrent(state->ScriptWeapons[i].Library, state->ScriptWeapons[i].Constructor);
@@ -2376,7 +2377,7 @@ namespace Jazz2::Editor
 					}
 
 					if (entries.empty()) {
-						UiMenuEntry none;
+						MenuEntry none;
 						// TRANSLATORS: In the Weapons dialog, no weapon of a script was found, keep "Editor/Weapons" as it is
 						none.Label = _x("editor", "No weapons found, descriptions go into \"Editor/Weapons\" of the content");
 						none.IsEnabled = []() { return false; };
@@ -2388,7 +2389,7 @@ namespace Jazz2::Editor
 			}
 			{
 				// A library that isn't there fails the whole script, not only the weapon
-				auto* missing = form->Add<UiWrappedLabel>(StringView(), UiTheme::TextDanger);
+				auto* missing = form->Add<WrappedLabel>(StringView(), Theme::TextDanger);
 				missing->TextFunc = [s, state]() {
 					// TRANSLATORS: In the Weapons dialog, the script library of a weapon isn't found, {} is its file name
 					return _fx("editor", "The library \"{}\" isn't next to the level or in the files of the original game, the script of the level won't run",
@@ -2402,7 +2403,7 @@ namespace Jazz2::Editor
 			}
 			{
 				// Where the parameters come from, and the calls of the hook the weapon needs that the script doesn't make
-				auto* source = form->Add<UiWrappedLabel>(StringView(), UiTheme::TextDim);
+				auto* source = form->Add<WrappedLabel>(StringView(), Theme::TextDim);
 				source->TextFunc = [s, state]() {
 					const ScriptWeaponTemplate* weaponTemplate = state->FindCurrentTemplate(*s);
 					if (weaponTemplate == nullptr) {
@@ -2424,7 +2425,7 @@ namespace Jazz2::Editor
 				};
 				source->IsVisibleFunc = [s, state]() { return state->FindCurrentTemplate(*s) != nullptr; };
 
-				auto* hooks = form->Add<UiWrappedLabel>(StringView(), UiTheme::TextWarning);
+				auto* hooks = form->Add<WrappedLabel>(StringView(), Theme::TextWarning);
 				auto getMissingHooks = [](IEditorContext& session, const StatePtr& state) {
 					String missing;
 					const ScriptWeaponTemplate* weaponTemplate = state->FindCurrentTemplate(session);
@@ -2449,10 +2450,10 @@ namespace Jazz2::Editor
 			}
 			form->Add<ScriptParamsForm>(session, state);
 			{
-				auto* row = form->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = form->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				row->IsVisibleFunc = [s, state]() { return state->FindCurrentTemplate(*s) != nullptr; };
 				// TRANSLATORS: Button in the Weapons dialog, the parameters of a weapon of a script become as its description has them
-				auto* reset = row->Add<UiButton>(_x("editor", "Reset Parameters"), EditorIcon::Undo, [s, state]() {
+				auto* reset = row->Add<Button>(_x("editor", "Reset Parameters"), EditorIcon::Undo, [s, state]() {
 					if (const ScriptWeaponTemplate* weaponTemplate = state->FindCurrentTemplate(*s)) {
 						SmallVector<std::uint8_t, 0> params;
 						MakeDefaultScriptParams(*weaponTemplate, params);
@@ -2464,7 +2465,7 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label in the Weapons dialog, the script code that creates the weapon
 				auto* row = AddLabeledRow(form, _x("editor", "Created by"));
-				auto* box = row->Add<UiTextBox>();
+				auto* box = row->Add<TextBox>();
 				box->Width = 180.0f;
 				box->Flex = 1.0f;
 				box->MaxLength = 255;
@@ -2481,12 +2482,12 @@ namespace Jazz2::Editor
 				// TRANSLATORS: Label in the Weapons dialog, the parameters the script gets for the weapon
 				auto* row = AddLabeledRow(form, _x("editor", "Parameters"));
 				ShowRowWhen(row, [s, state]() { return state->FindCurrentTemplate(*s) == nullptr; });
-				auto* label = row->Add<UiLabel>(StringView(), UiTheme::TextDim);
+				auto* label = row->Add<Label>(StringView(), Theme::TextDim);
 				label->TextFunc = [s, state]() {
 					std::int32_t size = std::int32_t(state->GetCurrent(*s).ScriptParams.size());
 					return _fnx("editor", "{} byte, kept as it is", "{} bytes, kept as they are", size, size);
 				};
-				auto* clear = row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, state]() {
+				auto* clear = row->Add<Button>(StringView(), EditorIcon::Delete, [s, state]() {
 					Change(*s, state, [](WeaponDefinition& weapon) { weapon.ScriptParams.clear(); });
 				});
 				clear->Tooltip = _x("editor", "Removes the parameters, the weapon starts with what it has by default");
@@ -2494,7 +2495,7 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label in the Weapons dialog, the argument of the hook all weapons of the script share
 				auto* row = AddLabeledRow(form, _x("editor", "Hook argument"));
-				auto* box = row->Add<UiNumberBox>([s, state]() {
+				auto* box = row->Add<NumberBox>([s, state]() {
 					return float(state->Get(*s).ScriptHookArgument);
 				}, [s](float value, bool final) {
 					ChangeLevelWeapons(*s, _x("editor", "Weapons"), [value](LevelWeapons& weapons) {
@@ -2623,7 +2624,7 @@ namespace Jazz2::Editor
 
 	void ShowWeaponsDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr || ReuseSingleDialog(session, "weapons")) {
 			return;
 		}
@@ -2631,15 +2632,15 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		auto state = std::make_shared<WeaponsState>();
 		// TRANSLATORS: Title of the dialog of the weapons of the level
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Weapons"));
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Weapons"));
 		dialog->MaxScreenHeightFraction = 0.9f;
 		dialog->MinScreenWidthFraction = 0.6f;
 		dialog->MaxStretchedWidth = 720.0f;
 		dialog->Resizable = true;
 		dialog->MinResizeSize = Vector2f(560.0f, 260.0f);
-		UiStack* content = dialog->GetContent();
+		Stack* content = dialog->GetContent();
 
-		auto* readOnly = content->Add<UiWrappedLabel>(StringView(), UiTheme::TextDanger);
+		auto* readOnly = content->Add<WrappedLabel>(StringView(), Theme::TextDanger);
 		readOnly->TextFunc = [s, state]() {
 			state->Get(*s);
 			return String(state->GetResult() == Formats::WeaponsChunk::ReadResult::NewerVersion
@@ -2651,34 +2652,34 @@ namespace Jazz2::Editor
 			return state->IsReadOnly();
 		};
 
-		auto* columns = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 2.0f);
+		auto* columns = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing * 2.0f);
 		columns->Flex = 1.0f;
 
 		// The weapons, which scroll in a low window, and trying the one chosen
-		auto* left = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+		auto* left = columns->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 		left->Width = 190.0f;
-		auto* slotScroll = left->Add<UiScrollView>();
+		auto* slotScroll = left->Add<ScrollView>();
 		slotScroll->Flex = 1.0f;
-		auto* slots = slotScroll->SetContent<UiStack>(UiOrientation::Vertical, UiTheme::Spacing, UiThickness(0.0f, 0.0f, 4.0f, 0.0f));
+		auto* slots = slotScroll->SetContent<Stack>(Orientation::Vertical, Theme::Spacing, Thickness(0.0f, 0.0f, 4.0f, 0.0f));
 		for (std::int32_t i = 0; i < SlotCount; i++) {
 			slots->Add<WeaponSlotButton>(session, state, i);
 		}
-		left->Add<UiSeparator>();
+		left->Add<Separator>();
 		// TRANSLATORS: Button in the Weapons dialog, plays the level with the chosen weapon in hand
-		auto* tryIt = left->Add<UiButton>(_x("editor", "Try It"), EditorIcon::Weapon, [s, state]() {
+		auto* tryIt = left->Add<Button>(_x("editor", "Try It"), EditorIcon::Weapon, [s, state]() {
 			s->PlayTestWeapon(WeaponType(state->Slot), false);
 		});
 		tryIt->IconColor = Colorf::White;
 		tryIt->Tooltip = _x("editor", "Plays the level from the middle of the view with this weapon in hand and full of ammo");
 		// TRANSLATORS: Button in the Weapons dialog, plays the level with the chosen weapon powered up in hand
-		auto* tryPowered = left->Add<UiButton>(_x("editor", "Try Powered Up"), EditorIcon::Weapon, [s, state]() {
+		auto* tryPowered = left->Add<Button>(_x("editor", "Try Powered Up"), EditorIcon::Weapon, [s, state]() {
 			s->PlayTestWeapon(WeaponType(state->Slot), true);
 		});
 		tryPowered->IconColor = Colorf::White;
 		tryPowered->Tooltip = _x("editor", "The same, with the weapon powered up");
 
-		columns->Add<UiSeparator>(UiOrientation::Vertical);
-		auto* right = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+		columns->Add<Separator>(Orientation::Vertical);
+		auto* right = columns->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 		right->Flex = 1.0f;
 		right->Width = 380.0f;
 
@@ -2686,9 +2687,9 @@ namespace Jazz2::Editor
 			return [s, state, kind]() { return state->GetCurrent(*s).Kind == kind; };
 		};
 		{
-			auto* tabs = right->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* tabs = right->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 			auto addTab = [&tabs, state](WeaponsPage page, StringView label, Function<bool()>&& isVisible) {
-				auto* tab = tabs->Add<UiButton>(label, EditorIcon::None, [state, page]() { state->Page = page; });
+				auto* tab = tabs->Add<Button>(label, EditorIcon::None, [state, page]() { state->Page = page; });
 				tab->IsCheckedFunc = [state, page]() { return state->Page == page; };
 				if (isVisible) {
 					tab->IsVisibleFunc = Death::move(isVisible);
@@ -2706,12 +2707,12 @@ namespace Jazz2::Editor
 			});
 		}
 
-		auto* scroll = right->Add<UiScrollView>();
+		auto* scroll = right->Add<ScrollView>();
 		scroll->Flex = 1.0f;
 		scroll->Height = 220.0f;
-		auto* pages = scroll->SetContent<UiStack>(UiOrientation::Vertical, UiTheme::Spacing, UiThickness(0.0f, 0.0f, 4.0f, 0.0f));
+		auto* pages = scroll->SetContent<Stack>(Orientation::Vertical, Theme::Spacing, Thickness(0.0f, 0.0f, 4.0f, 0.0f));
 		auto addPage = [&pages, s, state](WeaponsPage page) {
-			UiForm* form = pages->Add<UiForm>();
+			Form* form = pages->Add<Form>();
 			// The same on all pages, so the values don't move between them or as rows are shown
 			form->MinLabelWidth = LabelWidth;
 			form->MaxLabelWidth = LabelWidth;
@@ -2738,9 +2739,9 @@ namespace Jazz2::Editor
 
 		// The shots of a custom weapon in a firing range
 		{
-			auto* previewArea = right->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+			auto* previewArea = right->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 			previewArea->IsVisibleFunc = isKind(WeaponKind::Custom);
-			previewArea->Add<UiSeparator>();
+			previewArea->Add<Separator>();
 			auto* preview = previewArea->Add<WeaponPreview>(session, [s, state]() -> const WeaponsDescription* {
 				return &state->Get(*s);
 			}, [state]() {
@@ -2749,16 +2750,16 @@ namespace Jazz2::Editor
 				return state->PreviewPowered;
 			});
 			preview->Height = 104.0f;
-			auto* row = previewArea->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* row = previewArea->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 			// TRANSLATORS: Checkbox under the preview of a weapon in the Weapons dialog
-			row->Add<UiCheckBox>(_x("editor", "Show it powered up"), [state]() { return state->PreviewPowered; },
+			row->Add<CheckBox>(_x("editor", "Show it powered up"), [state]() { return state->PreviewPowered; },
 				[state](bool value) { state->PreviewPowered = value; });
-			auto* summary = row->Add<UiLabel>(StringView(), UiTheme::TextDim, Alignment::Right);
+			auto* summary = row->Add<Label>(StringView(), Theme::TextDim, Alignment::Right);
 			summary->Flex = 1.0f;
 			summary->TextFunc = [preview]() { return preview->GetSummary(); };
 		}
 
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

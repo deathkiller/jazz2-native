@@ -4,6 +4,7 @@
 
 #include "../../../nCine/Primitives/Rect.h"
 #include "../../../nCine/Primitives/Vector2.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/ArrayView.h>
 #include <Containers/SmallVector.h>
@@ -11,6 +12,11 @@
 #include <cstdint>
 
 using namespace nCine;
+
+namespace Jazz2::UI::Windows
+{
+	class Painter;
+}
 
 namespace Jazz2::Editor
 {
@@ -22,7 +28,6 @@ namespace Jazz2::Editor
 
 	class DocumentChanges;
 	class IEditorContext;
-	class UiPainter;
 
 	/**
 		@brief What is shown over the level being edited of how it's played
@@ -75,7 +80,7 @@ namespace Jazz2::Editor
 		/** @brief Finds again where the player can get once the level stopped changing, not while @p strokeInProgress */
 		void Update(float timeMult, bool strokeInProgress);
 		/** @brief Draws the places where the player died in the last play-tests, if the settings say so */
-		void DrawDeaths(UiPainter& painter, const Rectf& viewRect);
+		void DrawDeaths(Painter& painter, const Rectf& viewRect);
 
 	private:
 		// A place where the player died, those close to each other are one

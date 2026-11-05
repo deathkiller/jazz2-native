@@ -182,28 +182,35 @@ namespace nCine::RHI::D3D11
 		static void EndGpuTiming();
 
 		/**
-			@brief Creates an additional swap chain for a secondary window
+			@brief Creates an additional swap chain for an auxiliary window
 
 			Used by the ImGui multi-viewport support to render into the platform windows it spawns when a panel
-			is dragged out of the main window. Unlike the main swap chain, a secondary one is rendered into and
+			is dragged out of the main window. Unlike the main swap chain, an auxiliary one is rendered into and
 			presented directly, with no intermediate present texture.
 
-			@param windowHandle  Native `HWND` of the secondary window, passed as a `void*`
+			@param windowHandle  Native `HWND` of the auxiliary window, passed as a `void*`
 			@param width         Back-buffer width in pixels
 			@param height        Back-buffer height in pixels
-			@returns An opaque handle to pass to the other `*Secondary*` functions, or `nullptr` on failure
+			@returns An opaque handle to pass to the other `*Auxiliary*` functions, or `nullptr` on failure
 		*/
-		static void* CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height);
-		/** @brief Releases a secondary swap chain created by @ref CreateSecondarySwapchain() */
-		static void DestroySecondarySwapchain(void* handle);
-		/** @brief Resizes a secondary swap chain's back-buffer */
-		static void ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height);
-		/** @brief Directs the following draws (and clears) into a secondary swap chain's back-buffer, optionally clearing it first */
-		static void BeginSecondaryFrame(void* handle, bool clear);
-		/** @brief Ends the redirection started by @ref BeginSecondaryFrame() (the next draw targets the main window again) */
-		static void EndSecondaryFrame();
-		/** @brief Presents a secondary swap chain */
-		static void PresentSecondaryFrame(void* handle);
+		static void* CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height);
+		/** @brief Releases an auxiliary swap chain created by @ref CreateAuxiliarySwapchain() */
+		static void DestroyAuxiliarySwapchain(void* handle);
+		/** @brief Resizes an auxiliary swap chain's back-buffer */
+		static void ResizeAuxiliarySwapchain(void* handle, std::int32_t width, std::int32_t height);
+		/** @brief Directs the following draws (and clears) into an auxiliary swap chain's back-buffer, optionally clearing it first */
+		static void BeginAuxiliaryFrame(void* handle, bool clear);
+		/** @brief Ends the redirection started by @ref BeginAuxiliaryFrame() (the next draw targets the main window again) */
+		static void EndAuxiliaryFrame();
+		/** @brief Presents an auxiliary swap chain */
+		static void PresentAuxiliaryFrame(void* handle);
+		/**
+		 * @brief Copies a texture into an auxiliary swap chain's back-buffer and presents it
+		 *
+		 * For a window whose contents are rendered into a texture first, see @ref nCine::AuxiliaryWindow. The part the
+		 * texture doesn't cover is black, the part out of the back-buffer is left out.
+		 */
+		static void PresentAuxiliaryTexture(void* handle, const D3D11Texture* source);
 
 		/** @brief Returns the D3D11 device (for resource creation), or `nullptr` before creation */
 		static ID3D11Device* GetD3DDevice();
@@ -258,10 +265,10 @@ namespace nCine::RHI::D3D11
 		static ID3D11RenderTargetView* _presentRtv;
 		static ID3D11ShaderResourceView* _presentSrv;
 
-		// Set while BeginSecondaryFrame() redirects drawing into a secondary swap chain (an ImGui platform
+		// Set while BeginAuxiliaryFrame() redirects drawing into an auxiliary swap chain (an ImGui platform
 		// window): its back-buffer view stands in for the screen target, and it is presented directly, without
 		// the intermediate texture and its blit
-		static ID3D11RenderTargetView* _secondaryTargetRtv;
+		static ID3D11RenderTargetView* _auxiliaryTargetRtv;
 		static ID3D11VertexShader* _presentVs;
 		static ID3D11PixelShader* _presentPs;
 		static ID3D11SamplerState* _presentSampler;
@@ -328,7 +335,7 @@ namespace nCine::RHI::D3D11
 		/** @brief Forgets all last-applied context state so the next draw re-issues every binding */
 		static void InvalidateCachedState();
 
-		/** @brief Returns the view standing in for the "screen" target: the present texture, or a secondary swap chain's back-buffer while one is bound */
+		/** @brief Returns the view standing in for the "screen" target: the present texture, or an auxiliary swap chain's back-buffer while one is bound */
 		static ID3D11RenderTargetView* ScreenRtv();
 
 		/** @brief (Re)creates @ref _backbufferRtv from the current swap-chain back-buffer and binds it */

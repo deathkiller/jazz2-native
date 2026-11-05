@@ -16,10 +16,11 @@
 #include "../Document/DocumentSnapshot.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Imaging/PaletteMatch.h"
-#include "../UI/UiColors.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Colors.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../Formats/TileSetFile.h"
 #include "../../Tiles/LayerTypes.h"
@@ -289,7 +290,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The picked entries as they are and as the gradient would make them, one row each */
-		class GradientPreview : public UiElement
+		class GradientPreview : public Element
 		{
 		public:
 			GradientPreview(IEditorContext& session, std::shared_ptr<PaletteSelection> selection, std::shared_ptr<PaletteUsage> usage)
@@ -297,12 +298,12 @@ namespace Jazz2::Editor
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				return Vector2f(context.Px(PaletteSideWidth), context.Px(18.0f));
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				const std::uint32_t* palette = GetShownPalette(_session);
 				std::int32_t first = _selection->First(), last = _selection->Last();
@@ -311,12 +312,12 @@ namespace Jazz2::Editor
 				std::int32_t count = last - first + 1;
 				float width = Bounds.W / float(count), half = std::floor(Bounds.H * 0.5f);
 				for (std::int32_t i = 0; i < count; i++) {
-					Colorf before = UiPaletteGrid::ToColor(palette[first + i]);
-					Colorf after = UiPaletteGrid::ToColor(result[first + i]);
+					Colorf before = PaletteGrid::ToColor(palette[first + i]);
+					Colorf after = PaletteGrid::ToColor(result[first + i]);
 					before.A = after.A = 1.0f;
 					Rectf rect(Bounds.X + i * width, Bounds.Y, std::ceil(width), half);
-					painter.FillRect(rect, before, UiLayer::Content);
-					painter.FillRect(Rectf(rect.X, rect.Y + half, rect.W, Bounds.H - half), after, UiLayer::Content);
+					painter.FillRect(rect, before, PaintLayer::Content);
+					painter.FillRect(Rectf(rect.X, rect.Y + half, rect.W, Bounds.H - half), after, PaintLayer::Content);
 				}
 			}
 
@@ -693,14 +694,14 @@ namespace Jazz2::Editor
 		}
 
 		// A number of the color of the edited entry, its value is a part of the entry
-		UiNumberBox* AddChannel(UiStack* row, IEditorContext& session, std::shared_ptr<PaletteSelection> selection, StringView label,
+		NumberBox* AddChannel(Stack* row, IEditorContext& session, std::shared_ptr<PaletteSelection> selection, StringView label,
 			float max, Function<float(std::uint32_t)>&& get, Function<std::uint32_t(std::uint32_t, float)>&& set)
 		{
 			IEditorContext* s = &session;
-			row->Add<UiLabel>(label, UiTheme::TextDim);
+			row->Add<Label>(label, Theme::TextDim);
 			auto getShared = std::make_shared<Function<float(std::uint32_t)>>(Death::move(get));
 			auto setShared = std::make_shared<Function<std::uint32_t(std::uint32_t, float)>>(Death::move(set));
-			auto* number = row->Add<UiNumberBox>([s, selection, getShared]() {
+			auto* number = row->Add<NumberBox>([s, selection, getShared]() {
 				return (*getShared)(GetShownPalette(*s)[selection->Anchor]);
 			}, [s, selection, setShared](float value, bool final) {
 				std::int32_t index = selection->Anchor;
@@ -865,21 +866,21 @@ namespace Jazz2::Editor
 		}
 
 		// Which palette is edited, and what can be done with the palettes of the level
-		void AddPaletteBar(UiStack* content, IEditorContext& session)
+		void AddPaletteBar(Stack* content, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			auto* list = row->Add<UiDropdown>([s]() {
+			auto* row = content->Add<Stack>(Orientation::Horizontal, 2.0f);
+			auto* list = row->Add<Dropdown>([s]() {
 				// TRANSLATORS: The palette of the level in the list of the Palettes dialog, as opposed to its additional palettes
 				return (EditsLevelPalette(*s) ? String(_x("editor", "Level palette")) : GetAdditionalPaletteLabel(*s, EditedPaletteIndex()));
-			}, [s](SmallVectorImpl<UiMenuEntry>& entries) {
-				UiMenuEntry level;
+			}, [s](SmallVectorImpl<MenuEntry>& entries) {
+				MenuEntry level;
 				level.Label = _x("editor", "Level palette");
 				level.IsChecked = [s]() { return EditsLevelPalette(*s); };
 				level.Execute = []() { EditedPaletteIndex() = -1; };
 				entries.push_back(Death::move(level));
 				for (std::int32_t i = 0; i < std::int32_t(s->GetDocument().AdditionalPalettes.size()); i++) {
-					UiMenuEntry entry;
+					MenuEntry entry;
 					entry.Label = GetAdditionalPaletteLabel(*s, i);
 					entry.IsChecked = [s, i]() { return (!EditsLevelPalette(*s) && EditedPaletteIndex() == i); };
 					entry.Execute = [i]() { EditedPaletteIndex() = i; };
@@ -890,7 +891,7 @@ namespace Jazz2::Editor
 			list->Tooltip = _x("editor", "The palette of the level, or one of its additional palettes, which layers can be drawn through by their number");
 
 			// TRANSLATORS: Button in the Palettes dialog, adds an additional palette to the level (verb)
-			auto* add = row->Add<UiButton>(_x("editor", "New"), EditorIcon::None, [s]() {
+			auto* add = row->Add<Button>(_x("editor", "New"), EditorIcon::None, [s]() {
 				std::uint32_t colors[ColorCount];
 				std::memcpy(colors, GetShownPalette(*s), sizeof(colors));
 				std::int32_t number = std::int32_t(s->GetDocument().AdditionalPalettes.size());
@@ -898,7 +899,7 @@ namespace Jazz2::Editor
 			});
 			add->Tooltip = _x("editor", "Add an additional palette, a copy of the shown one");
 			// TRANSLATORS: Button in the Palettes dialog, renames the shown additional palette (verb)
-			auto* rename = row->Add<UiButton>(_x("editor", "Rename"), EditorIcon::None, [s]() {
+			auto* rename = row->Add<Button>(_x("editor", "Rename"), EditorIcon::None, [s]() {
 				const Formats::PaletteRecord* palette = GetEditedAdditionalPalette(*s);
 				if (palette == nullptr || s->GetSurface() == nullptr) {
 					return;
@@ -918,7 +919,7 @@ namespace Jazz2::Editor
 			});
 			rename->IsVisibleFunc = [s]() { return !EditsLevelPalette(*s); };
 			// TRANSLATORS: Button in the Palettes dialog, removes the shown additional palette (verb)
-			auto* remove = row->Add<UiButton>(_x("editor", "Remove"), EditorIcon::None, [s]() {
+			auto* remove = row->Add<Button>(_x("editor", "Remove"), EditorIcon::None, [s]() {
 				if (!EditsLevelPalette(*s)) {
 					RemoveAdditionalPalette(*s, EditedPaletteIndex());
 				}
@@ -926,7 +927,7 @@ namespace Jazz2::Editor
 			remove->IsVisibleFunc = [s]() { return !EditsLevelPalette(*s); };
 			remove->Tooltip = _x("editor", "Layers drawn through it are drawn in their own colors then, those of the palettes after it keep theirs");
 
-			auto* note = content->Add<UiLabel>(StringView(), UiTheme::TextDim);
+			auto* note = content->Add<Label>(StringView(), Theme::TextDim);
 			note->TextFunc = [s]() {
 				if (EditsLevelPalette(*s)) {
 					std::int32_t count = std::int32_t(s->GetDocument().AdditionalPalettes.size());
@@ -954,7 +955,7 @@ namespace Jazz2::Editor
 
 	void ShowPalettesDialog(IEditorContext& session, std::int32_t index)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -967,12 +968,12 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		auto selection = std::make_shared<PaletteSelection>();
 		// TRANSLATORS: Title of the dialog that edits the palette of the level and its additional palettes
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Palettes"), true);
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Palettes"), true);
 		dialog->MaxScreenHeightFraction = 0.9f;
 		auto* content = dialog->GetContent();
 		AddPaletteBar(content, session);
 
-		auto* ownPalette = content->Add<UiCheckBox>(_x("editor", "The level has its own palette"), [s]() {
+		auto* ownPalette = content->Add<CheckBox>(_x("editor", "The level has its own palette"), [s]() {
 			return UsesOwnPalette(*s);
 		}, [s](bool value) {
 			// It starts as a copy of the palette the level is shown in
@@ -988,8 +989,8 @@ namespace Jazz2::Editor
 		ownPalette->Tooltip = _x("editor", "Otherwise the level is shown in the palette of its default tile set");
 		ownPalette->IsVisibleFunc = [s]() { return EditsLevelPalette(*s); };
 
-		auto* columns = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 2.0f);
-		auto* grid = columns->Add<UiPaletteGrid>([s]() {
+		auto* columns = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing * 2.0f);
+		auto* grid = columns->Add<PaletteGrid>([s]() {
 			return GetShownPalette(*s);
 		}, [selection]() {
 			return selection->Anchor;
@@ -1022,16 +1023,16 @@ namespace Jazz2::Editor
 			}
 		};
 
-		auto* right = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+		auto* right = columns->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 		right->Width = PaletteSideWidth;
 		{
 			auto getColor = [s, selection]() {
-				Colorf color = UiPaletteGrid::ToColor(GetShownPalette(*s)[selection->Anchor]);
+				Colorf color = PaletteGrid::ToColor(GetShownPalette(*s)[selection->Anchor]);
 				color.A = 1.0f;
 				return color;
 			};
-			auto* swatch = right->Add<UiColorSwatch>(getColor, [s, selection]() {
-				UiSurface* surface = s->GetSurface();
+			auto* swatch = right->Add<ColorSwatch>(getColor, [s, selection]() {
+				Surface* surface = s->GetSurface();
 				if (surface == nullptr) {
 					return;
 				}
@@ -1039,8 +1040,8 @@ namespace Jazz2::Editor
 				std::int32_t index = selection->Anchor;
 				// The colors picked in the popup are one step, not merged into a change before it
 				s->GetHistory().BreakMerge();
-				UiColorPicker::ShowPopup(*surface, surface->GetPointerPos(), [s, index]() {
-					Colorf color = UiPaletteGrid::ToColor(GetShownPalette(*s)[index]);
+				ColorPicker::ShowPopup(*surface, surface->GetPointerPos(), [s, index]() {
+					Colorf color = PaletteGrid::ToColor(GetShownPalette(*s)[index]);
 					color.A = 1.0f;
 					return color;
 				}, [s, index](const Colorf& color) {
@@ -1056,7 +1057,7 @@ namespace Jazz2::Editor
 			swatch->Tooltip = _x("editor", "Pick a color");
 			swatch->Height = 32.0f;
 			swatch->Width = PaletteSideWidth;
-			auto* index = right->Add<UiLabel>(StringView(), UiTheme::TextDim);
+			auto* index = right->Add<Label>(StringView(), Theme::TextDim);
 			index->TextFunc = [selection]() {
 				// The first entry picked is the one edited, the others take part in the gradient
 				return (selection->First() == selection->Last()
@@ -1069,7 +1070,7 @@ namespace Jazz2::Editor
 
 		// The edited entry as red, green and blue, and as hue, saturation and value
 		{
-			auto* row = right->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+			auto* row = right->Add<Stack>(Orientation::Horizontal, 2.0f);
 			for (std::int32_t channel = 0; channel < 3; channel++) {
 				static const char* const Names[] = { "R", "G", "B" };
 				std::int32_t shift = channel * 8;
@@ -1082,7 +1083,7 @@ namespace Jazz2::Editor
 			}
 		}
 		{
-			auto* row = right->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+			auto* row = right->Add<Stack>(Orientation::Horizontal, 2.0f);
 			// TRANSLATORS: Hue, saturation and value of a color, one letter each
 			AddChannel(row, session, selection, _x("editor", "H"), 359.0f, [](std::uint32_t entry) {
 				float h, sat, v;
@@ -1113,7 +1114,7 @@ namespace Jazz2::Editor
 			});
 		}
 		{
-			auto* hex = right->Add<UiTextBox>();
+			auto* hex = right->Add<TextBox>();
 			hex->MaxLength = 7;
 			hex->TextFunc = [s, selection]() { return FormatHex(GetShownPalette(*s)[selection->Anchor]); };
 			hex->OnCommit = [s, selection](StringView text) {
@@ -1133,9 +1134,9 @@ namespace Jazz2::Editor
 
 		// Which entries the tiles use, and moving entries, of the palette of the level only
 		{
-			auto* levelTools = right->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+			auto* levelTools = right->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 			levelTools->IsVisibleFunc = [s]() { return EditsLevelPalette(*s); };
-			auto* used = levelTools->Add<UiLabel>(StringView(), UiTheme::TextDim);
+			auto* used = levelTools->Add<Label>(StringView(), Theme::TextDim);
 			used->TextFunc = [s, selection, usage]() {
 				UpdateUsage(*s, *usage);
 				if (usage->UnreadTiles > 0) {
@@ -1148,7 +1149,7 @@ namespace Jazz2::Editor
 				}
 				return text;
 			};
-			auto* unusedRow = levelTools->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+			auto* unusedRow = levelTools->Add<Stack>(Orientation::Horizontal, 2.0f);
 			// Which entries are crossed out: those no tile uses, those of the colors of sprites, those that differ from
 			// the palette of the tile set
 			struct MarkOption { String Label; PaletteUsage::Marks Mark; };
@@ -1159,17 +1160,17 @@ namespace Jazz2::Editor
 				{ _x("editor", "Mark sprite colors"), PaletteUsage::Marks::Sprites },
 				{ _x("editor", "Mark changed"), PaletteUsage::Marks::TileSetDiff },
 			};
-			auto* marks = unusedRow->Add<UiDropdown>([usage]() {
+			auto* marks = unusedRow->Add<Dropdown>([usage]() {
 				for (const MarkOption& option : MarkOptions) {
 					if (option.Mark == usage->Mark) {
 						return String(option.Label);
 					}
 				}
 				return String();
-			}, [usage](SmallVectorImpl<UiMenuEntry>& entries) {
+			}, [usage](SmallVectorImpl<MenuEntry>& entries) {
 				for (const MarkOption& option : MarkOptions) {
 					PaletteUsage::Marks mark = option.Mark;
-					UiMenuEntry entry;
+					MenuEntry entry;
 					entry.Label = option.Label;
 					entry.IsChecked = [usage, mark]() { return (usage->Mark == mark); };
 					entry.Execute = [usage, mark]() { usage->Mark = mark; };
@@ -1179,7 +1180,7 @@ namespace Jazz2::Editor
 			marks->Flex = 1.0f;
 			marks->Tooltip = _x("editor", "Cross out the entries no tile of the level uses, those the sprites share, or those that differ from the palette of the tile set");
 			// TRANSLATORS: The button that picks the next entry of the palette no tile of the level uses, keep it short
-			auto* nextUnused = unusedRow->Add<UiButton>(_x("editor", "Next"), EditorIcon::ChevronRight, [s, selection, usage]() {
+			auto* nextUnused = unusedRow->Add<Button>(_x("editor", "Next"), EditorIcon::ChevronRight, [s, selection, usage]() {
 				UpdateUsage(*s, *usage);
 				if (!CanTellUnused(*usage)) {
 					s->ShowMessage(usage->UnreadTiles > 0 ? String(_x("editor", "Some tiles can't be read from their tile sets, so it can't be told which entries are unused"))
@@ -1196,42 +1197,42 @@ namespace Jazz2::Editor
 				}
 				s->ShowMessage(_x("editor", "Every entry is used by the tiles of the level"));
 			});
-			nextUnused->Style = UiButtonStyle::Flat;
+			nextUnused->Style = ButtonStyle::Flat;
 			nextUnused->Tooltip = _x("editor", "Pick the next entry no tile of the level uses - sprites may still use it");
 
 			// The tiles that use the entry become the brush, so they can be found and painted
 			// TRANSLATORS: Button in the Level Palette dialog, makes the tiles that use the picked entry of the palette the brush
-			auto* findTiles = levelTools->Add<UiButton>(_x("editor", "Tiles Using It"), EditorIcon::Search, [s, selection]() {
+			auto* findTiles = levelTools->Add<Button>(_x("editor", "Tiles Using It"), EditorIcon::Search, [s, selection]() {
 				FindTilesUsingEntry(*s, selection->Anchor);
 			});
-			findTiles->Style = UiButtonStyle::Flat;
+			findTiles->Style = ButtonStyle::Flat;
 			findTiles->Tooltip = _x("editor", "Make the tiles of the tile sets that use the entry the brush, the default tile set and the parts of extra ones the level takes");
 
-			auto* lockSprites = levelTools->Add<UiCheckBox>(_x("editor", "Keep the colors of sprites"), []() { return GetSpriteLock(); }, [](bool value) { GetSpriteLock() = value; });
+			auto* lockSprites = levelTools->Add<CheckBox>(_x("editor", "Keep the colors of sprites"), []() { return GetSpriteLock(); }, [](bool value) { GetSpriteLock() = value; });
 			lockSprites->Tooltip = _x("editor", "The entries the sprites share with the level aren't changed nor moved, the sprites are drawn in the palette too");
 
 			auto canMove = [selection]() { return (selection->First() >= 1); };
-			auto* moveRow = levelTools->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-			auto* earlier = moveRow->Add<UiButton>(StringView(), EditorIcon::ChevronLeft, [s, selection, usage]() {
+			auto* moveRow = levelTools->Add<Stack>(Orientation::Horizontal, 2.0f);
+			auto* earlier = moveRow->Add<Button>(StringView(), EditorIcon::ChevronLeft, [s, selection, usage]() {
 				if (MovePaletteEntries(*s, selection->First(), selection->Last(), -1, usage->KeepLook)) {
 					selection->Anchor--;
 					selection->End--;
 				}
 			});
-			earlier->Style = UiButtonStyle::Flat;
+			earlier->Style = ButtonStyle::Flat;
 			earlier->Tooltip = _x("editor", "Move the picked entries an entry earlier");
 			earlier->IsEnabledFunc = [canMove, selection]() { return canMove() && selection->First() > 1; };
-			auto* later = moveRow->Add<UiButton>(StringView(), EditorIcon::ChevronRight, [s, selection, usage]() {
+			auto* later = moveRow->Add<Button>(StringView(), EditorIcon::ChevronRight, [s, selection, usage]() {
 				if (MovePaletteEntries(*s, selection->First(), selection->Last(), 1, usage->KeepLook)) {
 					selection->Anchor++;
 					selection->End++;
 				}
 			});
-			later->Style = UiButtonStyle::Flat;
+			later->Style = ButtonStyle::Flat;
 			later->Tooltip = _x("editor", "Move the picked entries an entry later");
 			later->IsEnabledFunc = [canMove, selection]() { return canMove() && selection->Last() < ColorCount - 1; };
 			// TRANSLATORS: Button in the Level Palette dialog, swaps the first and the last picked entry of the palette (verb)
-			auto* swap = moveRow->Add<UiButton>(_x("editor", "Swap"), EditorIcon::None, [s, selection, usage]() {
+			auto* swap = moveRow->Add<Button>(_x("editor", "Swap"), EditorIcon::None, [s, selection, usage]() {
 				std::int32_t first = selection->First(), last = selection->Last();
 				std::uint8_t permutation[ColorCount];
 				for (std::int32_t i = 0; i < ColorCount; i++) {
@@ -1240,11 +1241,11 @@ namespace Jazz2::Editor
 				// TRANSLATORS: Name of an undo step in the history, two entries of the palette of the level were swapped
 				PermutePalette(*s, permutation, usage->KeepLook, _x("editor", "Swap palette entries"));
 			});
-			swap->Style = UiButtonStyle::Flat;
+			swap->Style = ButtonStyle::Flat;
 			swap->Flex = 1.0f;
 			swap->Tooltip = _x("editor", "Swap the first and the last picked entry, Shift+click picks the other one");
 			swap->IsEnabledFunc = [canMove, selection]() { return canMove() && selection->First() != selection->Last(); };
-			auto* keepLook = levelTools->Add<UiCheckBox>(_x("editor", "Keep the look of the level"), [usage]() { return usage->KeepLook; }, [usage](bool value) { usage->KeepLook = value; });
+			auto* keepLook = levelTools->Add<CheckBox>(_x("editor", "Keep the look of the level"), [usage]() { return usage->KeepLook; }, [usage](bool value) { usage->KeepLook = value; });
 			keepLook->Tooltip = _x("editor", "Moved colors take their pixels with them, the tiles of the default tile set the level shows are changed in this level for it - "
 				"otherwise the pixels show other colors. Sprites and tiles of the default tile set placed later show the moved colors");
 		}
@@ -1254,7 +1255,7 @@ namespace Jazz2::Editor
 			// The colors between the ends of the range, seen before they're made
 			auto* preview = right->Add<GradientPreview>(session, selection, usage);
 			preview->IsVisibleFunc = [selection]() { return (selection->Last() - selection->First() >= 2); };
-			auto* gradientRow = right->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+			auto* gradientRow = right->Add<Stack>(Orientation::Horizontal, 2.0f);
 			struct StepOption { String Label; PaletteUsage::Steps Steps; };
 			static const StepOption StepOptions[] = {
 				// TRANSLATORS: Options of the dropdown in the Level Palette dialog, how the colors of a gradient are stepped (evenly as they look, by red, green and blue, or around the color wheel)
@@ -1262,17 +1263,17 @@ namespace Jazz2::Editor
 				{ _x("editor", "Red, green, blue"), PaletteUsage::Steps::Rgb },
 				{ _x("editor", "Around the hue"), PaletteUsage::Steps::Hue },
 			};
-			auto* steps = gradientRow->Add<UiDropdown>([usage]() {
+			auto* steps = gradientRow->Add<Dropdown>([usage]() {
 				for (const StepOption& option : StepOptions) {
 					if (option.Steps == usage->Gradient) {
 						return String(option.Label);
 					}
 				}
 				return String();
-			}, [usage](SmallVectorImpl<UiMenuEntry>& entries) {
+			}, [usage](SmallVectorImpl<MenuEntry>& entries) {
 				for (const StepOption& option : StepOptions) {
 					PaletteUsage::Steps value = option.Steps;
-					UiMenuEntry entry;
+					MenuEntry entry;
 					entry.Label = option.Label;
 					entry.IsChecked = [usage, value]() { return (usage->Gradient == value); };
 					entry.Execute = [usage, value]() { usage->Gradient = value; };
@@ -1282,7 +1283,7 @@ namespace Jazz2::Editor
 			steps->Flex = 1.0f;
 			steps->Tooltip = _x("editor", "Even steps of how the colors look, of their red, green and blue, or around the color wheel");
 			// TRANSLATORS: Button in the Level Palette dialog, fills the picked entries of the palette with a gradient
-			auto* gradient = gradientRow->Add<UiButton>(_x("editor", "Gradient"), EditorIcon::None, [s, selection, usage]() {
+			auto* gradient = gradientRow->Add<Button>(_x("editor", "Gradient"), EditorIcon::None, [s, selection, usage]() {
 				std::int32_t first = selection->First(), last = selection->Last();
 				PaletteUsage::Steps mode = usage->Gradient;
 				// TRANSLATORS: Name of an undo step in the history, entries of the palette of the level were filled with a gradient
@@ -1298,7 +1299,7 @@ namespace Jazz2::Editor
 			gradient->IsEnabledFunc = [s, selection]() { return CanEditPalette(*s) && selection->Last() - selection->First() >= 2; };
 
 			// TRANSLATORS: Button in the Level Palette dialog, gives the picked entries the colors of the palette of the tile set
-			auto* reset = right->Add<UiButton>(_x("editor", "From Tile Set"), EditorIcon::Undo, [s, selection]() {
+			auto* reset = right->Add<Button>(_x("editor", "From Tile Set"), EditorIcon::Undo, [s, selection]() {
 				std::uint32_t tileSetPalette[ColorCount];
 				if (!s->GetTileSetLibrary().ReadPalette(s->GetDocument().Properties.DefaultTileSet, tileSetPalette)) {
 					s->ShowMessage(_x("editor", "The palette of the tile set can't be read"));
@@ -1316,7 +1317,7 @@ namespace Jazz2::Editor
 			reset->IsEnabledFunc = [s]() { return UsesOwnPalette(*s); };
 			reset->IsVisibleFunc = [s]() { return EditsLevelPalette(*s); };
 			// How the palette of the level differs from that of its tile set, "Mark changed" crosses those entries out
-			auto* differences = right->Add<UiLabel>(StringView(), UiTheme::TextDim);
+			auto* differences = right->Add<Label>(StringView(), Theme::TextDim);
 			differences->TextFunc = [s, usage]() {
 				const std::uint32_t* tileSetPalette = GetTileSetPalette(*s, *usage);
 				if (tileSetPalette == nullptr || !UsesOwnPalette(*s) || !EditsLevelPalette(*s)) {
@@ -1332,7 +1333,7 @@ namespace Jazz2::Editor
 			};
 			// The other way, the tile set gets the palette of the level, other levels that use it then have it too
 			// TRANSLATORS: Button in the Level Palette dialog, saves the palette of the level into its tile set
-			auto* save = right->Add<UiButton>(_x("editor", "Into Tile Set"), EditorIcon::Save, [s]() {
+			auto* save = right->Add<Button>(_x("editor", "Into Tile Set"), EditorIcon::Save, [s]() {
 				ShowApplyTileChangesDialog(*s, TileRef::DefaultTileSet);
 			});
 			save->Tooltip = _x("editor", "Save the palette of the level into its default tile set, or a new one");
@@ -1340,13 +1341,13 @@ namespace Jazz2::Editor
 			save->IsVisibleFunc = [s]() { return EditsLevelPalette(*s); };
 
 			// To and from other programs
-			auto* files = right->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+			auto* files = right->Add<Stack>(Orientation::Horizontal, 2.0f);
 			// TRANSLATORS: Button in the Level Palette dialog, reads a palette from a file (verb)
-			auto* import = files->Add<UiButton>(_x("editor", "Import"), EditorIcon::None, [s]() {
-				SmallVector<UiFileRoot, 4> roots;
+			auto* import = files->Add<Button>(_x("editor", "Import"), EditorIcon::None, [s]() {
+				SmallVector<FileRoot, 4> roots;
 				s->GetImageRoots(false, roots);
 				// TRANSLATORS: Title of the file dialog that reads a palette from a file
-				UiFileDialog::Show(*s->GetSurface(), _x("editor", "Import Palette"), UiFileDialogMode::Open, Death::move(roots), ".pal;.gpl;.act;.png"_s, {}, {}, [s](StringView path) {
+				FileDialog::Show(*s->GetSurface(), _x("editor", "Import Palette"), FileDialogMode::Open, Death::move(roots), ".pal;.gpl;.act;.png"_s, {}, {}, [s](StringView path) {
 					// The colors the file has replace those of the level, the first entry stays transparent
 					std::uint32_t palette[ColorCount];
 					std::memcpy(palette, GetShownPalette(*s), sizeof(palette));
@@ -1375,8 +1376,8 @@ namespace Jazz2::Editor
 			import->Flex = 1.0f;
 			import->Tooltip = _x("editor", "Take the colors of a palette of another program, JASC (.pal), GIMP (.gpl) or Adobe (.act), or of an image (.png)");
 			// TRANSLATORS: Button in the Level Palette dialog, saves the palette into a file of another program (verb)
-			auto* exportButton = files->Add<UiButton>(_x("editor", "Export"), EditorIcon::None, [s]() {
-				SmallVector<UiFileRoot, 4> roots;
+			auto* exportButton = files->Add<Button>(_x("editor", "Export"), EditorIcon::None, [s]() {
+				SmallVector<FileRoot, 4> roots;
 				s->GetImageRoots(true, roots);
 				// The name of the level without its episode, a level that wasn't saved yet has none
 				StringView levelName = s->GetLevelName();
@@ -1387,7 +1388,7 @@ namespace Jazz2::Editor
 				StringView baseName = levelName.exceptPrefix(slash);
 				String name = (baseName.empty() ? String("palette"_s) : String(baseName)) + ".pal"_s;
 				// TRANSLATORS: Title of the file dialog that saves the palette into a file
-				UiFileDialog::Show(*s->GetSurface(), _x("editor", "Export Palette"), UiFileDialogMode::Save, Death::move(roots), ".pal;.gpl;.act;.png"_s, {}, name, [s](StringView path) {
+				FileDialog::Show(*s->GetSurface(), _x("editor", "Export Palette"), FileDialogMode::Save, Death::move(roots), ".pal;.gpl;.act;.png"_s, {}, name, [s](StringView path) {
 					std::uint32_t palette[ColorCount];
 					std::memcpy(palette, GetShownPalette(*s), sizeof(palette));
 					if (!PaletteFile::Write(path, palette, s->GetDocument().Properties.DisplayName)) {
@@ -1403,7 +1404,7 @@ namespace Jazz2::Editor
 		}
 
 		// The level is seen behind it, in the colors as they change; it edits the palette of the level when it's shown again
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

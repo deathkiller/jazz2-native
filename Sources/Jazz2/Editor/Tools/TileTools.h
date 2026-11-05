@@ -78,7 +78,7 @@ namespace Jazz2::Editor
 		void OnPointerMove(const ToolPointer& pointer) override;
 		void OnPointerUp(const ToolPointer& pointer) override;
 		void Cancel() override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 		void BuildOptions(ToolOptionsBuilder& builder) override;
 
@@ -109,7 +109,7 @@ namespace Jazz2::Editor
 		void OnPointerUp(const ToolPointer& pointer) override;
 		void Cancel() override;
 		bool IsBusy() const override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 		void BuildOptions(ToolOptionsBuilder& builder) override;
 
@@ -130,7 +130,7 @@ namespace Jazz2::Editor
 
 		EditorToolType GetType() const override;
 		void OnPointerDown(const ToolPointer& pointer) override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 		void BuildOptions(ToolOptionsBuilder& builder) override;
 	};
@@ -149,7 +149,7 @@ namespace Jazz2::Editor
 		void OnPointerUp(const ToolPointer& pointer) override;
 		void Cancel() override;
 		bool IsBusy() const override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 
 	private:
@@ -172,7 +172,7 @@ namespace Jazz2::Editor
 		void OnPointerUp(const ToolPointer& pointer) override;
 		void Cancel() override;
 		bool IsBusy() const override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 
 	private:
@@ -187,7 +187,7 @@ namespace Jazz2::Editor
 	};
 
 	/** @brief Marks the tiles of a layer seen in a rectangle of the screen that are translucent or invisible */
-	void DrawTileModifiers(UiPainter& painter, const DocumentLayer& layer, const LayerView& view, const Rectf& viewRect);
+	void DrawTileModifiers(Painter& painter, const DocumentLayer& layer, const LayerView& view, const Rectf& viewRect);
 
 	/**
 	 * @brief Draws an edge of a selection as marching ants, short dashes moving along a dark line, as a bitmap editor has them
@@ -195,7 +195,7 @@ namespace Jazz2::Editor
 	 * The edge goes right or down from @p x, @p y, as thick as a pixel of the interface. The dashes follow the diagonal
 	 * of the screen, so they go on around corners, and move on with @p animTime, see @ref IToolHost::GetAnimTime().
 	 */
-	void DrawSelectionEdge(UiPainter& painter, float x, float y, float length, bool horizontal, float animTime);
+	void DrawSelectionEdge(Painter& painter, float x, float y, float length, bool horizontal, float animTime);
 
 	/**
 	 * @brief Splits a rectangle of cells of the view into rectangles of a layer, returns how many there are, at most 4

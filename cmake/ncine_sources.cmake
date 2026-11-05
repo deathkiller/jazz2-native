@@ -89,6 +89,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/AuxiliaryWindow.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/AuxiliaryWindowPresenter.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiCapabilitiesBase.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.cpp
 	#${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.cpp

@@ -17,8 +17,9 @@
 #include "../Imaging/TileImages.h"
 #include "../Runtime/TileDrawing.h"
 #include "../Smart/RulesFile.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../Formats/LevelFile.h"
 #include "../../Formats/TileSetFile.h"
@@ -223,9 +224,9 @@ namespace Jazz2::Editor
 			if (!input.OwnPath.empty()) {
 				input.OwnDirectory = fs::GetDirectoryName(input.OwnPath);
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetFileRoots(true, roots);
-			for (const UiFileRoot& root : roots) {
+			for (const FileRoot& root : roots) {
 				if (root.Writable) {
 					input.WritableRoots.push_back(NormalizePath(root.Path));
 				}
@@ -1124,7 +1125,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The tiles in their new order, a click selects, with Ctrl one more, with Shift a range, they can be dragged */
-		class LayoutGrid : public UiElement
+		class LayoutGrid : public Element
 		{
 		public:
 			// Size of a cell in units
@@ -1135,20 +1136,20 @@ namespace Jazz2::Editor
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				float cell = context.Px(CellSize);
 				std::int32_t rows = (std::int32_t(_state->Order.size()) + Columns - 1) / Columns;
 				return Vector2f(cell * Columns, cell * rows);
 			}
 
-			void Arrange(const UiContext& context, const Rectf& bounds) override
+			void Arrange(const Context& context, const Rectf& bounds) override
 			{
-				UiElement::Arrange(context, bounds);
+				Element::Arrange(context, bounds);
 				_cell = context.Px(CellSize);
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				Tiles::TileMap* tileMap = _session.GetTileMap();
 				LevelDocument& document = _session.GetDocument();
@@ -1166,24 +1167,24 @@ namespace Jazz2::Editor
 					std::int32_t from = _state->Order[i];
 					bool moved = (from != i);
 					painter.FillRect(Rectf(rect.X + 1.0f, rect.Y + 1.0f, rect.W - 2.0f, rect.H - 2.0f),
-						from < 0 ? Colorf(0.2f, 0.4f, 0.25f, 0.5f) : Colorf(0.0f, 0.0f, 0.0f, 0.3f), UiLayer::Fill);
+						from < 0 ? Colorf(0.2f, 0.4f, 0.25f, 0.5f) : Colorf(0.0f, 0.0f, 0.0f, 0.3f), PaintLayer::Fill);
 					if (from > 0 && tileMap != nullptr) {
 						DrawTile(painter, *tileMap, document, TileRef{ std::uint16_t(from), TileRef::DefaultTileSet, 0 }, 0,
-							Rectf(rect.X + 1.0f, rect.Y + 1.0f, rect.W - 2.0f, rect.H - 2.0f), 1.0f, UiLayer::Content);
+							Rectf(rect.X + 1.0f, rect.Y + 1.0f, rect.W - 2.0f, rect.H - 2.0f), 1.0f, PaintLayer::Content);
 					}
 					if (moved && from >= 0) {
 						// A dot in the corner of a tile that isn't where it was
-						painter.FillRect(Rectf(rect.X + 2.0f, rect.Y + 2.0f, thickness * 3.0f, thickness * 3.0f), UiTheme::Accent, UiLayer::Overlay);
+						painter.FillRect(Rectf(rect.X + 2.0f, rect.Y + 2.0f, thickness * 3.0f, thickness * 3.0f), Theme::Accent, PaintLayer::Overlay);
 					}
 					if (i < std::int32_t(_state->Selected.size()) && _state->Selected[i]) {
-						painter.Frame(rect, UiTheme::Accent, thickness, UiLayer::Overlay);
+						painter.Frame(rect, Theme::Accent, thickness, PaintLayer::Overlay);
 					}
 				}
 				// Where the dragged tiles would go, before the tile under the pointer
 				if (_dragging && _dropIndex >= 1) {
 					Rectf rect = GetCellRect(std::min<std::int32_t>(_dropIndex, std::int32_t(_state->Order.size()) - 1));
 					float x = (_dropIndex < std::int32_t(_state->Order.size()) ? rect.X : rect.X + rect.W);
-					painter.FillRect(Rectf(x - thickness, rect.Y, thickness * 2.0f, rect.H), UiTheme::Accent, UiLayer::Overlay);
+					painter.FillRect(Rectf(x - thickness, rect.Y, thickness * 2.0f, rect.H), Theme::Accent, PaintLayer::Overlay);
 				}
 			}
 
@@ -1192,7 +1193,7 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			bool OnPointerDown(const UiPointerEvent& event) override
+			bool OnPointerDown(const PointerEvent& event) override
 			{
 				std::int32_t index = GetIndexAt(event.Pos);
 				if (index < 1) {
@@ -1230,7 +1231,7 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			void OnPointerMove(const UiPointerEvent& event) override
+			void OnPointerMove(const PointerEvent& event) override
 			{
 				if (!_pressed) {
 					return;
@@ -1245,7 +1246,7 @@ namespace Jazz2::Editor
 				_dropIndex = GetDropIndexAt(event.Pos);
 			}
 
-			void OnPointerUp(const UiPointerEvent& event, bool inside) override
+			void OnPointerUp(const PointerEvent& event, bool inside) override
 			{
 				if (_dragging) {
 					_dragging = false;
@@ -1311,22 +1312,22 @@ namespace Jazz2::Editor
 		};
 
 		/** The window of the new order, the grid of the tiles takes what the window can grow by */
-		class LayoutWindow : public UiDialog
+		class LayoutWindow : public Dialog
 		{
-			DEATH_RUNTIME_OBJECT(UiDialog);
+			DEATH_RUNTIME_OBJECT(Dialog);
 
 		public:
 			LayoutGrid* Grid = nullptr;
-			UiScrollView* GridScroll = nullptr;
-			UiElement* GridColumn = nullptr;
+			ScrollView* GridScroll = nullptr;
+			Element* GridColumn = nullptr;
 
 			explicit LayoutWindow(StringView title)
-				: UiDialog(title, true)
+				: Dialog(title, true)
 			{
 				MaxScreenHeightFraction = 0.9f;
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				float scale = std::max(context.Scale, 0.5f);
 				Vector2f units(available.X / scale, available.Y * MaxScreenHeightFraction / scale);
@@ -1336,14 +1337,14 @@ namespace Jazz2::Editor
 					float gridUnits = std::min(units.X * 0.5f, units.X - 370.0f);
 					Grid->CellSize = std::floor(std::clamp(gridUnits / float(Columns), MinCellUnits, MaxCellUnits));
 					float gridWidth = std::ceil(context.Px(Grid->CellSize) * float(Columns) / scale);
-					GridScroll->Width = gridWidth + UiTheme::ScrollBarWidth + 1.0f;
+					GridScroll->Width = gridWidth + Theme::ScrollBarWidth + 1.0f;
 					// As tall as the window may be without the title, the buttons, the text above the grid and the padding
 					GridScroll->Height = std::floor(std::clamp(units.Y - 130.0f, 160.0f, 1200.0f));
 					if (GridColumn != nullptr) {
 						GridColumn->Width = GridScroll->Width;
 					}
 				}
-				return UiDialog::Measure(context, available);
+				return Dialog::Measure(context, available);
 			}
 		};
 	}
@@ -1366,18 +1367,18 @@ namespace Jazz2::Editor
 		// Shows a list of files, with a button that does something with them if it's given
 		void ShowFileList(IEditorContext& session, StringView title, SmallVector<FileLine, 0>&& lines, StringView action, Function<void()>&& onAction)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			auto dialog = std::make_unique<UiDialog>(title);
-			UiDialog* dialogPtr = dialog.get();
-			auto* scroll = dialog->GetContent()->Add<UiScrollView>();
+			auto dialog = std::make_unique<Dialog>(title);
+			Dialog* dialogPtr = dialog.get();
+			auto* scroll = dialog->GetContent()->Add<ScrollView>();
 			scroll->Width = 420.0f;
 			scroll->Height = 240.0f;
-			auto* list = scroll->SetContent<UiStack>(UiOrientation::Vertical, 2.0f);
+			auto* list = scroll->SetContent<Stack>(Orientation::Vertical, 2.0f);
 			for (const FileLine& line : lines) {
-				list->Add<UiLabel>(line.Text, line.Header ? UiTheme::TextHeader : UiTheme::TextDim);
+				list->Add<Label>(line.Text, line.Header ? Theme::TextHeader : Theme::TextDim);
 			}
 			if (onAction) {
 				auto shared = std::make_shared<Function<void()>>(Death::move(onAction));
@@ -1454,7 +1455,7 @@ namespace Jazz2::Editor
 
 		// Puts back the files kept as .bak when the tile set was changed, the tile set, the levels that use it and the
 		// rules that refer to it
-		void ShowRestoreBackups(IEditorContext& session, std::shared_ptr<LayoutState> state, UiDialog* layoutDialog)
+		void ShowRestoreBackups(IEditorContext& session, std::shared_ptr<LayoutState> state, Dialog* layoutDialog)
 		{
 			SmallVector<String, 0> files;
 			String tileSetPath = ContentTileSetLibrary::GetWritablePath(state->TileSet, false);
@@ -1549,7 +1550,7 @@ namespace Jazz2::Editor
 		 * tile set is still the old one, which they are read with. Only when all of it could be written, the files are
 		 * replaced, so a level that can't be changed doesn't leave the others in the new order and itself in the old one.
 		 */
-		void ChangeTileSet(IEditorContext& session, std::shared_ptr<LayoutState> state, UiDialog* layoutDialog)
+		void ChangeTileSet(IEditorContext& session, std::shared_ptr<LayoutState> state, Dialog* layoutDialog)
 		{
 			const Formats::TileSetData* original = session.GetTileSetData(state->TileSet);
 			String tileSetPath = ContentTileSetLibrary::GetWritablePath(state->TileSet, true);
@@ -1656,7 +1657,7 @@ namespace Jazz2::Editor
 
 	static void ShowLayoutWindow(IEditorContext& session, std::shared_ptr<LayoutState> state)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -1664,16 +1665,16 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog that changes the order of the tiles of a tile set, {} is the name of the tile set
 		auto dialog = std::make_unique<LayoutWindow>(_fx("editor", "Rearrange Tile Set \"{}\"", state->TileSet));
-		UiDialog* dialogPtr = dialog.get();
+		Dialog* dialogPtr = dialog.get();
 		// The controls on the left, the tiles on the right
-		auto* columns = dialog->GetContent()->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 2.0f);
-		auto* content = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+		auto* columns = dialog->GetContent()->Add<Stack>(Orientation::Horizontal, Theme::Spacing * 2.0f);
+		auto* content = columns->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 		content->Width = 300.0f;
-		columns->Add<UiSeparator>(UiOrientation::Vertical);
+		columns->Add<Separator>(Orientation::Vertical);
 		{
-			auto* gridColumn = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
-			gridColumn->Add<UiWrappedLabel>(_x("editor", "Click a tile to select it, Ctrl+click another one, Shift+click a range - drag them to move them"), UiTheme::TextDim);
-			auto* scroll = gridColumn->Add<UiScrollView>();
+			auto* gridColumn = columns->Add<Stack>(Orientation::Vertical, Theme::Spacing);
+			gridColumn->Add<WrappedLabel>(_x("editor", "Click a tile to select it, Ctrl+click another one, Shift+click a range - drag them to move them"), Theme::TextDim);
+			auto* scroll = gridColumn->Add<ScrollView>();
 			scroll->Height = 200.0f;
 			dialog->Grid = scroll->SetContent<LayoutGrid>(session, state);
 			dialog->GridScroll = scroll;
@@ -1681,12 +1682,12 @@ namespace Jazz2::Editor
 		}
 
 		// TRANSLATORS: Header of the buttons that change the selected tiles in the Rearrange Tile Set dialog
-		content->Add<UiLabel>(_x("editor", "Selected tiles"), UiTheme::TextHeader);
-		auto* row = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-		auto* secondRow = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-		auto addOperation = [state](UiStack* buttons, StringView text, EditorIcon icon, StringView tooltip, Function<void()>&& operation) {
-			auto* button = buttons->Add<UiButton>(text, icon, Death::move(operation));
-			button->Style = UiButtonStyle::Flat;
+		content->Add<Label>(_x("editor", "Selected tiles"), Theme::TextHeader);
+		auto* row = content->Add<Stack>(Orientation::Horizontal, 2.0f);
+		auto* secondRow = content->Add<Stack>(Orientation::Horizontal, 2.0f);
+		auto addOperation = [state](Stack* buttons, StringView text, EditorIcon icon, StringView tooltip, Function<void()>&& operation) {
+			auto* button = buttons->Add<Button>(text, icon, Death::move(operation));
+			button->Style = ButtonStyle::Flat;
 			button->Tooltip = tooltip;
 			button->IsEnabledFunc = [state]() { return state->HasSelection(); };
 			return button;
@@ -1707,19 +1708,19 @@ namespace Jazz2::Editor
 		addOperation(secondRow, _x("editor", "Insert Empty"), EditorIcon::Plus, _x("editor", "Put an empty tile before the selected ones"), [state]() {
 			InsertEmptyBeforeSelected(*state);
 		});
-		auto* reset = row->Add<UiButton>(_("Reset"), EditorIcon::Undo, [state]() {
+		auto* reset = row->Add<Button>(_("Reset"), EditorIcon::Undo, [state]() {
 			state->Reset();
 		});
-		reset->Style = UiButtonStyle::Flat;
+		reset->Style = ButtonStyle::Flat;
 		reset->Tooltip = _x("editor", "Put all tiles back where they were");
 
 		// Tiles that can go, found in all levels that use the tile set
-		content->Add<UiSeparator>();
+		content->Add<Separator>();
 		// TRANSLATORS: Header of the buttons that leave out duplicate and unused tiles in the Rearrange Tile Set dialog, a noun
-		content->Add<UiLabel>(_x("editor", "Clean up"), UiTheme::TextHeader);
-		auto* cleanRow = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+		content->Add<Label>(_x("editor", "Clean up"), Theme::TextHeader);
+		auto* cleanRow = content->Add<Stack>(Orientation::Horizontal, 2.0f);
 		// TRANSLATORS: Button in the Rearrange Tile Set dialog, leaves out the tiles that are the same as another one
-		auto* merge = cleanRow->Add<UiButton>(_x("editor", "Merge Duplicates"), EditorIcon::Copy, [s, state]() {
+		auto* merge = cleanRow->Add<Button>(_x("editor", "Merge Duplicates"), EditorIcon::Copy, [s, state]() {
 			const Formats::TileSetData* data = s->GetTileSetData(state->TileSet);
 			if (data == nullptr) {
 				s->ShowMessage(_x("editor", "The tile set can't be read"));
@@ -1730,10 +1731,10 @@ namespace Jazz2::Editor
 				? String(_fnx("editor", "{} tile was the same as another one, the levels show that one instead", "{} tiles were the same as others, the levels show those instead", merged, merged))
 				: String(_x("editor", "No tile is the same as another one")));
 		});
-		merge->Style = UiButtonStyle::Flat;
+		merge->Style = ButtonStyle::Flat;
 		merge->Tooltip = _x("editor", "Leave out the tiles that look the same as one before them and have the same mask, the levels show that one instead");
 		// TRANSLATORS: Button in the Rearrange Tile Set dialog, leaves out the tiles no level uses
-		auto* unused = cleanRow->Add<UiButton>(_x("editor", "Remove Unused"), EditorIcon::Delete, [s, state]() {
+		auto* unused = cleanRow->Add<Button>(_x("editor", "Remove Unused"), EditorIcon::Delete, [s, state]() {
 			// The levels are read off the user interface, they know their default tile sets, the counts of tiles come
 			// from the editor
 			struct UsageJob
@@ -1772,10 +1773,10 @@ namespace Jazz2::Editor
 					: String(_x("editor", "Every tile is used by a level, a prefab or a rule")));
 			});
 		});
-		unused->Style = UiButtonStyle::Flat;
+		unused->Style = ButtonStyle::Flat;
 		unused->Tooltip = _x("editor", "Leave out the tiles that neither this level nor any level found that uses the tile set shows, nor its prefabs and rules");
 
-		auto* status = content->Add<UiWrappedLabel>(StringView(), UiTheme::TextDim);
+		auto* status = content->Add<WrappedLabel>(StringView(), Theme::TextDim);
 		status->TextFunc = [state]() {
 			std::int32_t moved = 0, inserted = 0;
 			SmallVector<bool, 0> kept;
@@ -1802,22 +1803,22 @@ namespace Jazz2::Editor
 
 		std::int32_t writable = std::int32_t(state->WritableLevels.size());
 		std::int32_t readOnly = std::int32_t(state->ReadOnlyLevels.size());
-		content->Add<UiSeparator>();
+		content->Add<Separator>();
 		// TRANSLATORS: Header of the levels that use the tile set in the Rearrange Tile Set dialog
-		content->Add<UiLabel>(_x("editor", "Levels"), UiTheme::TextHeader);
-		content->Add<UiWrappedLabel>(_fx("editor", "Used by {} levels - {} of them are changed with the tile set", writable + readOnly, writable), UiTheme::TextDim);
+		content->Add<Label>(_x("editor", "Levels"), Theme::TextHeader);
+		content->Add<WrappedLabel>(_fx("editor", "Used by {} levels - {} of them are changed with the tile set", writable + readOnly, writable), Theme::TextDim);
 		if (readOnly > 0) {
-			content->Add<UiWrappedLabel>(_fnx("editor", "{} level is in the files of the game and can't be changed, it would show other tiles",
-				"{} levels are in the files of the game and can't be changed, they would show other tiles", readOnly, readOnly), UiTheme::TextDanger);
-			content->Add<UiWrappedLabel>(_x("editor", "So the tile set itself can't be changed, saving it as a new tile set changes only this level and leaves the others as they are"), UiTheme::TextDim);
+			content->Add<WrappedLabel>(_fnx("editor", "{} level is in the files of the game and can't be changed, it would show other tiles",
+				"{} levels are in the files of the game and can't be changed, they would show other tiles", readOnly, readOnly), Theme::TextDanger);
+			content->Add<WrappedLabel>(_x("editor", "So the tile set itself can't be changed, saving it as a new tile set changes only this level and leaves the others as they are"), Theme::TextDim);
 		}
-		content->Add<UiWrappedLabel>(_x("editor", "Levels are looked for in the episodes and next to this level, levels elsewhere aren't changed"), UiTheme::TextDim);
+		content->Add<WrappedLabel>(_x("editor", "Levels are looked for in the episodes and next to this level, levels elsewhere aren't changed"), Theme::TextDim);
 
-		content->Add<UiSeparator>();
-		auto* nameRow = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+		content->Add<Separator>();
+		auto* nameRow = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 		// TRANSLATORS: Label of the name of the tile set saved as a new one in the Rearrange Tile Set dialog
-		nameRow->Add<UiLabel>(_x("editor", "New name"), UiTheme::TextDim);
-		auto* nameBox = nameRow->Add<UiTextBox>(SuggestTileSetName(state->TileSet, "-new"_s));
+		nameRow->Add<Label>(_x("editor", "New name"), Theme::TextDim);
+		auto* nameBox = nameRow->Add<TextBox>(SuggestTileSetName(state->TileSet, "-new"_s));
 		nameBox->Flex = 1.0f;
 		nameBox->MaxLength = 32;
 
@@ -1891,7 +1892,7 @@ namespace Jazz2::Editor
 			String text = _fx("editor", "The tile set and {} levels that use it are saved changed, the previous files are kept as .bak files.", writable);
 			text += "\n"_s + _x("editor", "This can't be undone, the history of changes of this level is cleared.");
 			// TRANSLATORS: Title of the question before the tile set and its levels are saved, and its button that confirms it
-			UiMessageDialog::Show(*s->GetSurface(), _x("editor", "Change the Tile Set"), text, { _x("editor", "Change It"), _x("editor", "Cancel") }, [s, state, dialogPtr](std::int32_t choice) {
+			MessageDialog::Show(*s->GetSurface(), _x("editor", "Change the Tile Set"), text, { _x("editor", "Change It"), _x("editor", "Cancel") }, [s, state, dialogPtr](std::int32_t choice) {
 				if (choice == 0) {
 					ChangeTileSet(*s, state, dialogPtr);
 				}
@@ -1905,17 +1906,17 @@ namespace Jazz2::Editor
 
 		// What would be written, and putting back what was
 		{
-			auto* filesRow = content->Add<UiStack>(UiOrientation::Horizontal, 2.0f);
+			auto* filesRow = content->Add<Stack>(Orientation::Horizontal, 2.0f);
 			// TRANSLATORS: Button in the Rearrange Tile Set dialog, lists the files that would be written
-			auto* files = filesRow->Add<UiButton>(_x("editor", "Files"), EditorIcon::Folder, [s, state]() {
+			auto* files = filesRow->Add<Button>(_x("editor", "Files"), EditorIcon::Folder, [s, state]() {
 				ShowChangedFiles(*s, *state);
 			});
-			files->Style = UiButtonStyle::Flat;
+			files->Style = ButtonStyle::Flat;
 			files->Tooltip = _x("editor", "List the files changing the tile set would write, nothing is written");
-			auto* restore = filesRow->Add<UiButton>(_x("editor", "Restore Backups"), EditorIcon::Undo, [s, state, dialogPtr]() {
+			auto* restore = filesRow->Add<Button>(_x("editor", "Restore Backups"), EditorIcon::Undo, [s, state, dialogPtr]() {
 				ShowRestoreBackups(*s, state, dialogPtr);
 			});
-			restore->Style = UiButtonStyle::Flat;
+			restore->Style = ButtonStyle::Flat;
 			restore->Tooltip = _x("editor", "Put back the tile set and its levels as they were before they were last written over, from their .bak files");
 		}
 

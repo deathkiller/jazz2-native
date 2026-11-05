@@ -4,13 +4,17 @@
 
 #include "EditorTool.h"
 #include "../Document/TerrainSplines.h"
+#include "../UI/EditorUi.h"
 
 #include <memory>
 
+namespace Jazz2::UI::Windows
+{
+	class Element;
+}
+
 namespace Jazz2::Editor
 {
-	class UiElement;
-
 	/**
 		@brief Draws ground along a line, with slopes as steep as the line, and changes it later
 
@@ -51,7 +55,7 @@ namespace Jazz2::Editor
 		void Cancel() override;
 		bool IsBusy() const override;
 		bool HasPointerCapture() const override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 		void BuildOptions(ToolOptionsBuilder& builder) override;
 

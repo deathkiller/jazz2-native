@@ -32,11 +32,12 @@
 #include "../Document/Commands.h"
 #include "../Document/DocumentChanges.h"
 #include "../Runtime/TileDrawing.h"
-#include "../UI/UiDialogs.h"
+#include "../../UI/Windows/Dialogs.h"
 #include "../Runtime/EditorCamera.h"
-#include "../UI/UiColors.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Colors.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../Tiles/TileMap.h"
 
@@ -117,22 +118,22 @@ namespace Jazz2::Editor
 		}
 
 		/** An editable text over a part of the interface, @p onDone gets the text unless the edit is cancelled by Escape */
-		class InlineTextEdit : public UiTextBox
+		class InlineTextEdit : public TextBox
 		{
 		public:
 			InlineTextEdit(StringView text, Function<void(StringView)>&& onDone)
-				: UiTextBox(text), _onDone(Death::move(onDone)), _done(false)
+				: TextBox(text), _onDone(Death::move(onDone)), _done(false)
 			{
 				OnCommit = [this](StringView text) { Finish(text); };
 			}
 
 			void OnFocusChanged(bool focused) override
 			{
-				UiTextBox::OnFocusChanged(focused);
+				TextBox::OnFocusChanged(focused);
 				if (!focused) {
 					// Confirmed by Enter or by clicking elsewhere, which committed it already, or cancelled by Escape
 					_done = true;
-					if (UiSurface* surface = GetSurface()) {
+					if (Surface* surface = GetSurface()) {
 						surface->CloseOverlay(this);
 					}
 				}
@@ -150,14 +151,14 @@ namespace Jazz2::Editor
 				}
 			}
 
-			static void Show(UiSurface& surface, const Rectf& rect, StringView text, StringView placeholder, Function<void(StringView)>&& onDone)
+			static void Show(Surface& surface, const Rectf& rect, StringView text, StringView placeholder, Function<void(StringView)>&& onDone)
 			{
 				auto edit = std::make_unique<InlineTextEdit>(text, Death::move(onDone));
 				InlineTextEdit* editPtr = edit.get();
 				edit->Width = rect.W / surface.GetScale();
 				edit->MaxLength = 64;
 				edit->Placeholder = placeholder;
-				UiOverlayOptions options;
+				OverlayOptions options;
 				options.Position = Vector2f(rect.X, rect.Y);
 				options.OnClosed = [editPtr]() { editPtr->Finish(editPtr->Text); };
 				surface.PushOverlay(Death::move(edit), Death::move(options));
@@ -423,9 +424,9 @@ namespace Jazz2::Editor
 		}
 
 		// Adds the folders of textures as the first places of a file dialog
-		void AddLayerTextureRoots(SmallVectorImpl<UiFileRoot>& roots, bool forSaving)
+		void AddLayerTextureRoots(SmallVectorImpl<FileRoot>& roots, bool forSaving)
 		{
-			SmallVector<UiFileRoot, 4> textureRoots;
+			SmallVector<FileRoot, 4> textureRoots;
 			if (forSaving) {
 				String writable = GetWritableLayerTextureFolder();
 				if (!writable.empty()) {
@@ -442,39 +443,39 @@ namespace Jazz2::Editor
 						: String(_x("editor", "Game textures")), folder, fs::IsWritable(folder) });
 				}
 			}
-			for (UiFileRoot& root : roots) {
+			for (FileRoot& root : roots) {
 				textureRoots.push_back(Death::move(root));
 			}
 			roots.clear();
-			for (UiFileRoot& root : textureRoots) {
+			for (FileRoot& root : textureRoots) {
 				roots.push_back(Death::move(root));
 			}
 		}
 
 		void ImportLayerTexture(IEditorContext& session)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr || GetCurrentLayer(session) == nullptr || !CheckLayerUnlocked(session, session.GetCurrentLayer())) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetImageRoots(false, roots);
 			AddLayerTextureRoots(roots, false);
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the file dialog that opens an image to texture a layer with
-			UiFileDialog::Show(*surface, _x("editor", "Import Layer Texture"), UiFileDialogMode::Open, Death::move(roots), ".png"_s, {}, {}, [s](StringView path) {
+			FileDialog::Show(*surface, _x("editor", "Import Layer Texture"), FileDialogMode::Open, Death::move(roots), ".png"_s, {}, {}, [s](StringView path) {
 				ImportLayerTextureFile(*s, path);
 			});
 		}
 
 		void ExportLayerTexture(IEditorContext& session)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			const DocumentLayer* layer = GetCurrentLayer(session);
 			if (surface == nullptr || layer == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetImageRoots(true, roots);
 			// The folder of textures first, an exported texture is listed with the others then
 			AddLayerTextureRoots(roots, true);
@@ -492,7 +493,7 @@ namespace Jazz2::Editor
 			IEditorContext* s = &session;
 			String name = GetLayerTitle(session.GetDocument(), session.GetCurrentLayer()) + ".png"_s;
 			String directory = GetWritableLayerTextureFolder();
-			UiFileDialog::Show(*surface, _x("editor", "Export Layer Texture"), UiFileDialogMode::Save, Death::move(roots), ".png"_s, directory, name, [s, texture](StringView path) {
+			FileDialog::Show(*surface, _x("editor", "Export Layer Texture"), FileDialogMode::Save, Death::move(roots), ".png"_s, directory, name, [s, texture](StringView path) {
 				PngImage png = MakeTextureImage(texture->data(), LayerTextureSize, ContentResolver::Get().GetPalettes().data());
 				// The folder of textures may not be there yet
 				fs::CreateDirectories(fs::GetDirectoryName(path));
@@ -509,7 +510,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The texture of its own of the current layer, drawn through the palette, so it follows the palette as the level does */
-		class LayerTexturePreview : public UiElement
+		class LayerTexturePreview : public Element
 		{
 		public:
 			explicit LayerTexturePreview(IEditorContext& session)
@@ -519,7 +520,7 @@ namespace Jazz2::Editor
 				Tooltip = _x("editor", "The image of its own the layer is textured with");
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				// Made again when the layer or anything of the level changed, by a step or from outside
 				CommandHistory& history = _session.GetHistory();
@@ -537,8 +538,8 @@ namespace Jazz2::Editor
 				}
 				float side = std::floor(std::min(Bounds.W, Bounds.H));
 				Rectf rect(std::round(Bounds.X), std::round(Bounds.Y), side, side);
-				painter.FillRect(rect, Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
-				painter.Image(*_texture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, 0, UiLayer::Content);
+				painter.FillRect(rect, Colorf(0.0f, 0.0f, 0.0f, 0.35f), PaintLayer::Fill);
+				painter.Image(*_texture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, 0, PaintLayer::Content);
 			}
 
 		private:
@@ -567,7 +568,7 @@ namespace Jazz2::Editor
 		};
 
 		/** Row of the layer list */
-		class LayerRow : public UiElement
+		class LayerRow : public Element
 		{
 		public:
 			LayerRow(IEditorContext& session, LayersPanel& panel, std::int32_t index)
@@ -575,12 +576,12 @@ namespace Jazz2::Editor
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
-				return Vector2f(available.X, context.Px(UiTheme::RowHeight + 5.0f));
+				return Vector2f(available.X, context.Px(Theme::RowHeight + 5.0f));
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				LevelDocument& document = _session.GetDocument();
 				if (_index >= std::int32_t(document.Layers.size())) {
@@ -594,40 +595,40 @@ namespace Jazz2::Editor
 				bool locked = (layer.EditorFlags & DocumentLayer::EditorLocked) != 0;
 
 				if (selected) {
-					painter.RoundRect(Bounds, UiTheme::Selection);
-					painter.RoundRectBorder(Bounds, UiTheme::AccentDim);
+					painter.RoundRect(Bounds, Theme::Selection);
+					painter.RoundRectBorder(Bounds, Theme::AccentDim);
 				} else if (_hoverAmount > 0.0f) {
-					Colorf hover = UiTheme::Hover;
+					Colorf hover = Theme::Hover;
 					hover.A *= _hoverAmount;
 					painter.RoundRect(Bounds, hover);
 				}
 
-				float iconSize = painter.Px(UiTheme::IconSize);
+				float iconSize = painter.Px(Theme::IconSize);
 				Rectf eye = GetEyeRect(painter.GetScale());
 				Rectf lock = GetLockRect(painter.GetScale());
 				if (hiddenInGame) {
 					// In its own colors, the red line over the grey eye
 					painter.Icon(EditorIcon::EyeOff, eye, Colorf::White);
 				} else {
-					painter.Icon(hidden ? EditorIcon::EyeClosed : EditorIcon::Eye, eye, hidden ? UiTheme::IconDisabled : UiTheme::IconColor);
+					painter.Icon(hidden ? EditorIcon::EyeClosed : EditorIcon::Eye, eye, hidden ? Theme::IconDisabled : Theme::IconColor);
 				}
-				painter.Icon(locked ? EditorIcon::Lock : EditorIcon::Unlock, lock, locked ? UiTheme::Accent : Colorf(1.0f, 1.0f, 1.0f, 0.25f));
+				painter.Icon(locked ? EditorIcon::Lock : EditorIcon::Unlock, lock, locked ? Theme::Accent : Colorf(1.0f, 1.0f, 1.0f, 0.25f));
 
 				// A small picture of the layer, on a dark backdrop so its empty tiles can be told
 				Rectf thumbnailRect = GetThumbnailRect(painter.GetScale());
-				painter.FillRect(thumbnailRect, Colorf(0.0f, 0.0f, 0.0f, 0.45f), UiLayer::Content);
+				painter.FillRect(thumbnailRect, Colorf(0.0f, 0.0f, 0.0f, 0.45f), PaintLayer::Content);
 				if (nCine::Texture* thumbnail = _panel.GetThumbnail(_index)) {
 					// The shape of the layer kept, centered in its place
 					Vector2i size(thumbnail->GetWidth(), thumbnail->GetHeight());
 					float fit = std::min(thumbnailRect.W / float(std::max<std::int32_t>(size.X, 1)), thumbnailRect.H / float(std::max<std::int32_t>(size.Y, 1)));
 					float w = std::round(size.X * fit), h = std::round(size.Y * fit);
 					Rectf image(std::round(thumbnailRect.X + (thumbnailRect.W - w) * 0.5f), std::round(thumbnailRect.Y + (thumbnailRect.H - h) * 0.5f), w, h);
-					painter.Image(*thumbnail, image, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), hidden ? Colorf(1.0f, 1.0f, 1.0f, 0.35f) : Colorf::White, -1, UiLayer::Content);
+					painter.Image(*thumbnail, image, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), hidden ? Colorf(1.0f, 1.0f, 1.0f, 0.35f) : Colorf::White, -1, PaintLayer::Content);
 				}
 
 				// A name the layer only gets by what it is is dimmer than one it was given
-				Colorf textColor = (hidden ? UiTheme::TextDisabled
-					: (layer.IsSpriteLayer() ? UiTheme::TextHeader : (layer.Name.empty() ? UiTheme::TextDim : UiTheme::Text)));
+				Colorf textColor = (hidden ? Theme::TextDisabled
+					: (layer.IsSpriteLayer() ? Theme::TextHeader : (layer.Name.empty() ? Theme::TextDim : Theme::Text)));
 				painter.PushClip(Bounds);
 				painter.TextInRect(GetLayerTitle(document, _index), GetNameRect(painter.GetScale()), textColor);
 				painter.PopClip();
@@ -638,7 +639,7 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			bool OnPointerDown(const UiPointerEvent& event) override
+			bool OnPointerDown(const PointerEvent& event) override
 			{
 				if (event.Button != MouseButton::Left) {
 					return false;
@@ -660,14 +661,14 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			void OnPointerHold(const UiPointerEvent& event) override
+			void OnPointerHold(const PointerEvent& event) override
 			{
 				_pressPos = event.Pos;
 				_dragging = true;
 				_panel.UpdateLayerDrag(_index, event.Pos);
 			}
 
-			void OnPointerMove(const UiPointerEvent& event) override
+			void OnPointerMove(const PointerEvent& event) override
 			{
 				if (!_pressed) {
 					return;
@@ -683,7 +684,7 @@ namespace Jazz2::Editor
 				}
 			}
 
-			void OnPointerUp(const UiPointerEvent& event, bool inside) override
+			void OnPointerUp(const PointerEvent& event, bool inside) override
 			{
 				if (_dragging) {
 					_dragging = false;
@@ -752,19 +753,19 @@ namespace Jazz2::Editor
 				Rectf lock = GetLockRect(scale);
 				float inset = std::round(2.0f * scale);
 				float height = Bounds.H - inset * 2.0f;
-				return Rectf(lock.X + lock.W + std::round(UiTheme::Padding * scale), Bounds.Y + inset, std::round(height * 2.0f), height);
+				return Rectf(lock.X + lock.W + std::round(Theme::Padding * scale), Bounds.Y + inset, std::round(height * 2.0f), height);
 			}
 
 			Rectf GetNameRect(float scale) const
 			{
 				Rectf thumbnail = GetThumbnailRect(scale);
-				float x = thumbnail.X + thumbnail.W + std::round(UiTheme::Padding * scale);
+				float x = thumbnail.X + thumbnail.W + std::round(Theme::Padding * scale);
 				return Rectf(x, Bounds.Y, Bounds.X + Bounds.W - x, Bounds.H);
 			}
 
 			void BeginRename()
 			{
-				UiSurface* surface = GetSurface();
+				Surface* surface = GetSurface();
 				LevelDocument& document = _session.GetDocument();
 				if (surface == nullptr || _index >= std::int32_t(document.Layers.size())) {
 					return;
@@ -788,7 +789,7 @@ namespace Jazz2::Editor
 
 			Rectf GetEyeRect(float scale) const
 			{
-				float iconSize = std::round(UiTheme::IconSize * scale);
+				float iconSize = std::round(Theme::IconSize * scale);
 				return Rectf(Bounds.X + std::round(2.0f * scale), Bounds.Y, iconSize, Bounds.H);
 			}
 
@@ -800,17 +801,17 @@ namespace Jazz2::Editor
 		};
 
 		// Button whose tooltip is made when it's shown, the shortcut in it may have been changed meanwhile
-		class LiveTooltipButton : public UiButton
+		class LiveTooltipButton : public Button
 		{
 		public:
-			using UiButton::UiButton;
+			using Button::Button;
 
 			mutable Function<String()> TooltipFunc;
 
 			StringView GetTooltip(Vector2f pos) const override
 			{
 				if (!TooltipFunc) {
-					return UiButton::GetTooltip(pos);
+					return Button::GetTooltip(pos);
 				}
 				_liveTooltip = TooltipFunc();
 				return _liveTooltip;
@@ -821,7 +822,7 @@ namespace Jazz2::Editor
 		};
 
 		/** Row of the inspector, a name and an editor */
-		UiStack* AddPropertyRow(UiElement* parent, StringView label)
+		Stack* AddPropertyRow(Element* parent, StringView label)
 		{
 			return AddLabeledRow(parent, label, {}, 60.0f);
 		}
@@ -843,7 +844,7 @@ namespace Jazz2::Editor
 		}
 
 		/** A byte of the color of the current layer, 0 is red, 3 is alpha */
-		UiNumberBox* AddLayerColorByte(UiStack* row, IEditorContext& session, std::int32_t i)
+		NumberBox* AddLayerColorByte(Stack* row, IEditorContext& session, std::int32_t i)
 		{
 			IEditorContext* s = &session;
 			auto* number = AddByteBox(row, [s, i]() {
@@ -857,10 +858,10 @@ namespace Jazz2::Editor
 		}
 
 		/** A position of a tunnel or a reflection of the current layer in percent of the view, 0 is the horizontal one, 1 the vertical one */
-		UiNumberBox* AddTexturedFadePosition(UiStack* row, IEditorContext& session, std::int32_t axis)
+		NumberBox* AddTexturedFadePosition(Stack* row, IEditorContext& session, std::int32_t axis)
 		{
 			IEditorContext* s = &session;
-			auto* number = row->Add<UiNumberBox>([s, axis]() {
+			auto* number = row->Add<NumberBox>([s, axis]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				if (layer == nullptr) {
 					return 50.0f;
@@ -879,7 +880,7 @@ namespace Jazz2::Editor
 		}
 
 		/** Swatch of the color of the current layer that opens a color picker, alpha is picked too if @p withAlpha */
-		UiColorSwatch* AddLayerColorSwatch(UiStack* row, IEditorContext& session, bool withAlpha)
+		ColorSwatch* AddLayerColorSwatch(Stack* row, IEditorContext& session, bool withAlpha)
 		{
 			IEditorContext* s = &session;
 			auto getColor = [s, withAlpha]() {
@@ -889,14 +890,14 @@ namespace Jazz2::Editor
 				}
 				return color;
 			};
-			auto* swatch = row->Add<UiColorSwatch>(getColor, [s, getColor, withAlpha]() {
-				UiSurface* surface = s->GetSurface();
+			auto* swatch = row->Add<ColorSwatch>(getColor, [s, getColor, withAlpha]() {
+				Surface* surface = s->GetSurface();
 				if (surface == nullptr) {
 					return;
 				}
 				// All picked while the picker is open is a single step, which starts here
 				s->GetHistory().BreakMerge();
-				UiColorPicker::ShowPopup(*surface, surface->GetPointerPos(), getColor, [s, withAlpha](const Colorf& color) {
+				ColorPicker::ShowPopup(*surface, surface->GetPointerPos(), getColor, [s, withAlpha](const Colorf& color) {
 					std::uint8_t bytes[4] = { std::uint8_t(std::round(color.R * 255.0f)), std::uint8_t(std::round(color.G * 255.0f)),
 						std::uint8_t(std::round(color.B * 255.0f)), std::uint8_t(std::round(color.A * 255.0f)) };
 					ChangeLayer(*s, [&bytes, withAlpha](Formats::LayerRecord& record, String&) {
@@ -910,7 +911,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void AddPickerPanelTabs(UiElement* header, IEditorContext& session)
+	void AddPickerPanelTabs(Element* header, IEditorContext& session)
 	{
 		IEditorContext* s = &session;
 		struct Tab { String Label; EditorIcon Icon; PickerPanel Panel; };
@@ -920,10 +921,10 @@ namespace Jazz2::Editor
 			{ _x("editor", "Events"), EditorIcon::Event, PickerPanel::Events },
 		};
 		// When either of them is too narrow for its text, both show only their icons
-		auto buttons = std::make_shared<SmallVector<UiButton*, 2>>();
+		auto buttons = std::make_shared<SmallVector<Button*, 2>>();
 		for (const Tab& tab : Tabs) {
 			PickerPanel panel = tab.Panel;
-			auto* button = header->Add<UiButton>(tab.Label, tab.Icon, [s, panel]() {
+			auto* button = header->Add<Button>(tab.Label, tab.Icon, [s, panel]() {
 				s->SetPickerPanel(panel);
 				// Events are placed by their own tool
 				if (panel == PickerPanel::Events) {
@@ -932,11 +933,11 @@ namespace Jazz2::Editor
 					s->GetTools().SetActive(EditorToolType::Brush);
 				}
 			});
-			button->Style = UiButtonStyle::Flat;
+			button->Style = ButtonStyle::Flat;
 			button->Flex = 1.0f;
 			button->IsCheckedFunc = [s, panel]() { return (s->GetPickerPanel() == panel); };
 			button->IconOnlyFunc = [buttons]() {
-				for (UiButton* b : *buttons) {
+				for (Button* b : *buttons) {
 					if (b->IsTextCut()) {
 						return true;
 					}
@@ -948,11 +949,11 @@ namespace Jazz2::Editor
 	}
 
 	LayersPanel::LayersPanel(IEditorContext& session)
-		: UiPanel(UiPanelStyle::None, UiOrientation::Vertical, UiTheme::Spacing, UiThickness()), _session(session), _list(nullptr), _shownCount(-1),
+		: Panel(PanelStyle::None, Orientation::Vertical, Theme::Spacing, Thickness()), _session(session), _list(nullptr), _shownCount(-1),
 			_dragFrom(-1), _dropSlot(-1), _revalidateColors(false)
 	{
 		// The title is in the header of the panel it's in
-		_list = Add<UiScrollView>();
+		_list = Add<ScrollView>();
 		_list->Flex = 1.0f;
 
 		// The pictures of the layers are made again as their tiles change
@@ -978,7 +979,7 @@ namespace Jazz2::Editor
 		});
 		session.AddChangeObserver(_changeObserver);
 
-		auto* buttons = Add<UiStack>(UiOrientation::Horizontal, 1.0f);
+		auto* buttons = Add<Stack>(Orientation::Horizontal, 1.0f);
 		IEditorContext* s = &session;
 		for (const char* id : { ActionIds::LayerAdd, ActionIds::LayerDuplicate, ActionIds::LayerRemove, ActionIds::LayerUp, ActionIds::LayerDown }) {
 			if (EditorAction* action = session.GetActions().Find(id)) {
@@ -989,14 +990,14 @@ namespace Jazz2::Editor
 					}
 					// The button is right next to the one that adds a layer, a layer with tiles isn't removed by a slip
 					const DocumentLayer* layer = GetCurrentLayer(*s);
-					UiSurface* surface = s->GetSurface();
+					Surface* surface = s->GetSurface();
 					bool hasTiles = (layer != nullptr && std::any_of(layer->Tiles.begin(), layer->Tiles.end(), [](const TileRef& tile) { return !tile.IsEmpty(); }));
 					if (isRemove && hasTiles && surface != nullptr) {
 						// Removed only if it's still the layer that was asked about, by its identity, an undo meanwhile
 						// could put another one at its place
 						std::int32_t index = s->GetCurrentLayer();
 						std::uint32_t layerId = layer->Id;
-						UiMessageDialog::Show(*surface, _x("editor", "Remove Layer"), _fx("editor", "Remove the layer \"{}\" with all its tiles?", GetLayerTitle(s->GetDocument(), index)),
+						MessageDialog::Show(*surface, _x("editor", "Remove Layer"), _fx("editor", "Remove the layer \"{}\" with all its tiles?", GetLayerTitle(s->GetDocument(), index)),
 							// TRANSLATORS: Buttons of the dialog that asks before removing a layer with tiles, "Remove" is a verb
 							{ _x("editor", "Remove"), _x("editor", "Cancel") }, [action, s, layerId](std::int32_t button) {
 								const DocumentLayer* current = GetCurrentLayer(*s);
@@ -1008,7 +1009,7 @@ namespace Jazz2::Editor
 					}
 					action->Execute();
 				});
-				button->Style = UiButtonStyle::Flat;
+				button->Style = ButtonStyle::Flat;
 				// With the shortcut it has when it's shown, it can be changed meanwhile
 				button->TooltipFunc = [action]() {
 					return action->GetTooltip();
@@ -1031,13 +1032,13 @@ namespace Jazz2::Editor
 			Rebuild();
 		}
 		UpdateThumbnails(timeMult);
-		UiPanel::Update(timeMult);
+		Panel::Update(timeMult);
 
 		if (_dragFrom >= 0 && _list->IsScrollable()) {
 			// A layer dragged to the top or the bottom of the list scrolls it, faster the closer it gets to the edge, as a
 			// finger can't scroll the list while it drags
-			UiSurface* surface = GetSurface();
-			float edge = std::round(UiTheme::RowHeight * (surface != nullptr ? surface->GetScale() : 1.0f));
+			Surface* surface = GetSurface();
+			float edge = std::round(Theme::RowHeight * (surface != nullptr ? surface->GetScale() : 1.0f));
 			const Rectf& list = _list->Bounds;
 			float speed = 0.0f;
 			if (_dragPos.Y < list.Y + edge) {
@@ -1150,7 +1151,7 @@ namespace Jazz2::Editor
 		_shownCount = std::int32_t(_session.GetDocument().Layers.size());
 		_dragFrom = -1;
 		_dropSlot = -1;
-		auto* rows = _list->SetContent<UiStack>(UiOrientation::Vertical, 1.0f);
+		auto* rows = _list->SetContent<Stack>(Orientation::Vertical, 1.0f);
 		for (std::int32_t i = 0; i < _shownCount; i++) {
 			rows->Add<LayerRow>(_session, *this, i);
 		}
@@ -1158,7 +1159,7 @@ namespace Jazz2::Editor
 
 	void LayersPanel::UpdateLayerDrag(std::int32_t from, Vector2f pos)
 	{
-		UiElement* rows = _list->GetContent();
+		Element* rows = _list->GetContent();
 		if (rows == nullptr) {
 			return;
 		}
@@ -1212,7 +1213,7 @@ namespace Jazz2::Editor
 
 	Rectf LayersPanel::GetSlotLine(std::int32_t slot) const
 	{
-		UiElement* rows = _list->GetContent();
+		Element* rows = _list->GetContent();
 		if (rows == nullptr || rows->GetChildCount() == 0) {
 			return Rectf();
 		}
@@ -1222,15 +1223,15 @@ namespace Jazz2::Editor
 		return Rectf(row.X, y, row.W, 0.0f);
 	}
 
-	void LayersPanel::Draw(UiPainter& painter)
+	void LayersPanel::Draw(Painter& painter)
 	{
-		UiPanel::Draw(painter);
+		Panel::Draw(painter);
 
 		// The dragged layer is lit up, so a finger holding it sees it was lifted before it moves
-		UiElement* rows = _list->GetContent();
+		Element* rows = _list->GetContent();
 		if (_dragFrom >= 0 && rows != nullptr && _dragFrom < rows->GetChildCount()) {
 			painter.PushClip(_list->Bounds);
-			painter.RoundRectBorder(rows->GetChild(_dragFrom)->Bounds, UiTheme::Accent, UiLayer::Overlay);
+			painter.RoundRectBorder(rows->GetChild(_dragFrom)->Bounds, Theme::Accent, PaintLayer::Overlay);
 			painter.PopClip();
 		}
 
@@ -1239,7 +1240,7 @@ namespace Jazz2::Editor
 			Rectf line = GetSlotLine(_dropSlot);
 			float thickness = std::max(2.0f, std::round(painter.GetScale() * 2.0f));
 			painter.PushClip(_list->Bounds);
-			painter.FillRect(Rectf(line.X, std::round(line.Y - thickness * 0.5f), line.W, thickness), UiTheme::Accent, UiLayer::Overlay);
+			painter.FillRect(Rectf(line.X, std::round(line.Y - thickness * 0.5f), line.W, thickness), Theme::Accent, PaintLayer::Overlay);
 			painter.PopClip();
 		}
 	}
@@ -1286,13 +1287,13 @@ namespace Jazz2::Editor
 		}
 
 		/** The name and the size of the layer */
-		void AddLayerNameRows(UiForm* rows, IEditorContext& session)
+		void AddLayerNameRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			{
 				// TRANSLATORS: Label of a property in the layer properties panel, the name of the layer
 				auto* row = AddPropertyRow(rows, _x("editor", "Name"));
-				auto* name = row->Add<UiTextBox>();
+				auto* name = row->Add<TextBox>();
 				name->Flex = 1.0f;
 				name->MaxLength = 64;
 				// Without a name, the layer is known by what it is
@@ -1347,7 +1348,7 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label of a property in the layer properties panel, the width and the height of the layer in tiles
 				auto* row = AddPropertyRow(rows, _x("editor", "Size"));
-				auto* size = row->Add<UiLabel>();
+				auto* size = row->Add<Label>();
 				size->TextFunc = [s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr ? String(FormatInteger(layer->GetWidth()) + " x "_s + FormatInteger(layer->GetHeight())) : String());
@@ -1356,7 +1357,7 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label of a property in the layer properties panel, the order the layers are drawn in
 				auto* row = AddPropertyRow(rows, _x("editor", "Depth"));
-				auto* number = row->Add<UiNumberBox>([s]() {
+				auto* number = row->Add<NumberBox>([s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr ? float(layer->Record.Depth) : 0.0f);
 				}, [s](float value, bool final) {
@@ -1368,7 +1369,7 @@ namespace Jazz2::Editor
 		}
 
 		/** How the layer moves with the camera, a common way of it, the speeds, the offsets, the depth and the models */
-		void AddLayerMovementRows(UiForm* rows, IEditorContext& session)
+		void AddLayerMovementRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			auto isMovable = [s]() { return IsMovableLayer(*s); };
@@ -1398,7 +1399,7 @@ namespace Jazz2::Editor
 				};
 				// TRANSLATORS: Label of a property in the layer properties panel, the common way the layer moves with the view
 				auto* row = AddPropertyRow(rows, _x("editor", "Movement"));
-				auto* dropdown = row->Add<UiDropdown>([s, matches]() {
+				auto* dropdown = row->Add<Dropdown>([s, matches]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					if (layer != nullptr) {
 						for (const Preset& preset : Presets) {
@@ -1409,10 +1410,10 @@ namespace Jazz2::Editor
 					}
 					// TRANSLATORS: Shown as the Movement of a layer in the layer properties panel when it moves in none of the common ways
 					return String(_x("editor", "Custom"));
-				}, [s, matches](SmallVectorImpl<UiMenuEntry>& entries) {
+				}, [s, matches](SmallVectorImpl<MenuEntry>& entries) {
 					for (const Preset& preset : Presets) {
 						const Preset* p = &preset;
-						UiMenuEntry entry;
+						MenuEntry entry;
 						entry.Label = preset.Label;
 						entry.IsChecked = [s, p, matches]() {
 							const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -1461,7 +1462,7 @@ namespace Jazz2::Editor
 			for (const FloatProperty& property : FloatProperties) {
 				auto* row = AddPropertyRow(rows, property.Label);
 				float Formats::LayerRecord::* member = property.Member;
-				auto* number = row->Add<UiNumberBox>([s, member]() {
+				auto* number = row->Add<NumberBox>([s, member]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr ? layer->Record.*member : 0.0f);
 				}, [s, member](float value, bool final) {
@@ -1500,7 +1501,7 @@ namespace Jazz2::Editor
 		}
 
 		/** How the tiles of the layer are drawn */
-		void AddLayerRendererRow(UiForm* rows, IEditorContext& session)
+		void AddLayerRendererRow(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			static const PropertyChoice RendererChoices[] = {
@@ -1589,7 +1590,7 @@ namespace Jazz2::Editor
 		}
 
 		/** What makes the layer drawn black, wrong or not at all, right under how it's drawn (see CheckLayerDrawing()) */
-		void AddLayerProblemRows(UiForm* rows, IEditorContext& session)
+		void AddLayerProblemRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			// Found again only when the level or the layer changes, a blur behind layer looks its tiles up in their tile sets
@@ -1628,7 +1629,7 @@ namespace Jazz2::Editor
 				}
 			};
 
-			auto* warnings = rows->Add<UiWrappedLabel>(StringView(), UiTheme::TextDanger);
+			auto* warnings = rows->Add<WrappedLabel>(StringView(), Theme::TextDanger);
 			warnings->TextFunc = [update, state]() {
 				update();
 				return state->Warnings;
@@ -1637,7 +1638,7 @@ namespace Jazz2::Editor
 				update();
 				return !state->Warnings.empty();
 			};
-			auto* notes = rows->Add<UiWrappedLabel>(StringView(), UiTheme::TextDim);
+			auto* notes = rows->Add<WrappedLabel>(StringView(), Theme::TextDim);
 			notes->TextFunc = [update, state]() {
 				update();
 				return state->Notes;
@@ -1649,7 +1650,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The texture of a textured layer and the image of its own it may have */
-		void AddLayerTextureRows(UiForm* rows, IEditorContext& session)
+		void AddLayerTextureRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			// A textured layer takes the tiles at its top left, unless it has an image of its own, such as a texture of JJ2+ of
@@ -1657,26 +1658,26 @@ namespace Jazz2::Editor
 			// the tiles or removed
 			// TRANSLATORS: Label of a property in the layer properties panel, what a textured layer is textured with
 			auto* row = AddPropertyRow(rows, _x("editor", "Texture"));
-			auto* dropdown = row->Add<UiDropdown>([s]() {
+			auto* dropdown = row->Add<Dropdown>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				// TRANSLATORS: Value of the Texture property of a layer, textured with an image of its own or with its own tiles
 				return String(layer != nullptr && !layer->Texture.empty() ? _x("editor", "Own image") : _x("editor", "Its tiles"));
-			}, [s](SmallVectorImpl<UiMenuEntry>& entries) {
+			}, [s](SmallVectorImpl<MenuEntry>& entries) {
 				auto hasOwnImage = [s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr && !layer->Texture.empty());
 				};
-				UiMenuEntry importImage;
+				MenuEntry importImage;
 				// TRANSLATORS: Entry in the Texture choice of a layer, opens an image file as its texture (verb)
 				importImage.Label = _x("editor", "Import image");
 				importImage.Execute = [s]() { ImportLayerTexture(*s); };
 				entries.push_back(Death::move(importImage));
-				UiMenuEntry exportImage;
+				MenuEntry exportImage;
 				// TRANSLATORS: Entry in the Texture choice of a layer, saves its texture as an image file (verb)
 				exportImage.Label = _x("editor", "Export image");
 				exportImage.Execute = [s]() { ExportLayerTexture(*s); };
 				entries.push_back(Death::move(exportImage));
-				UiMenuEntry fromTiles;
+				MenuEntry fromTiles;
 				fromTiles.Label = _x("editor", "Make image of its tiles");
 				fromTiles.Execute = [s]() {
 					if (const DocumentLayer* layer = GetCurrentLayer(*s)) {
@@ -1685,7 +1686,7 @@ namespace Jazz2::Editor
 					}
 				};
 				entries.push_back(Death::move(fromTiles));
-				UiMenuEntry useTiles;
+				MenuEntry useTiles;
 				// TRANSLATORS: Entry in the Texture choice of a layer, drops the image of its own so its tiles texture it again
 				useTiles.Label = _x("editor", "Use its tiles");
 				useTiles.IsEnabled = hasOwnImage;
@@ -1694,18 +1695,18 @@ namespace Jazz2::Editor
 				entries.push_back(Death::move(useTiles));
 
 				// The images put into the folders of textures, picked as they are, the level keeps its own copy
-				entries.push_back(UiMenuEntry::Separator());
+				entries.push_back(MenuEntry::Separator());
 				SmallVector<LayerTextureFile, 0> files;
 				FindLayerTextures(files);
 				for (LayerTextureFile& file : files) {
-					UiMenuEntry entry;
+					MenuEntry entry;
 					entry.Label = file.Name;
 					entry.Icon = EditorIcon::File;
 					entry.Execute = [s, path = Death::move(file.Path)]() { ImportLayerTextureFile(*s, path); };
 					entries.push_back(Death::move(entry));
 				}
 				if (files.empty()) {
-					UiMenuEntry hint;
+					MenuEntry hint;
 					// TRANSLATORS: Disabled entry in the Texture choice of a layer while no images are in the folder of textures, keep "Editor/Textures" as it is
 					hint.Label = _x("editor", "Images in \"Content/Editor/Textures\" are listed here");
 					hint.IsEnabled = []() { return false; };
@@ -1732,14 +1733,14 @@ namespace Jazz2::Editor
 		}
 
 		/** The colors of the additional palette of an index under the row that picks it, clicked it opens the palettes, -1 for the palette of the level */
-		void AddAdditionalPalettePreviewRow(UiForm* rows, IEditorContext& session, Function<std::int32_t()>&& indexFunc, Function<bool()>&& showWhen)
+		void AddAdditionalPalettePreviewRow(Form* rows, IEditorContext& session, Function<std::int32_t()>&& indexFunc, Function<bool()>&& showWhen)
 		{
 			IEditorContext* s = &session;
 			auto getIndex = std::make_shared<Function<std::int32_t()>>(Death::move(indexFunc));
 			auto* row = AddPropertyRow(rows, StringView());
-			auto* column = row->Add<UiStack>(UiOrientation::Vertical, 2.0f);
+			auto* column = row->Add<Stack>(Orientation::Vertical, 2.0f);
 			column->Flex = 1.0f;
-			auto* name = column->Add<UiLabel>(StringView(), UiTheme::TextDim);
+			auto* name = column->Add<Label>(StringView(), Theme::TextDim);
 			name->TextFunc = [s, getIndex]() {
 				std::int32_t index = (*getIndex)();
 				if (index < 0) {
@@ -1749,7 +1750,7 @@ namespace Jazz2::Editor
 				// TRANSLATORS: Shown under the palette a layer is drawn through, when the level has no additional palette of the number
 				return (label.empty() ? String(_x("editor", "The level has no such palette")) : label);
 			};
-			auto* grid = column->Add<UiPaletteGrid>([s, getIndex]() -> const std::uint32_t* {
+			auto* grid = column->Add<PaletteGrid>([s, getIndex]() -> const std::uint32_t* {
 				std::int32_t index = (*getIndex)();
 				if (index < 0) {
 					return ContentResolver::Get().GetPalettes().data();
@@ -1765,7 +1766,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The additional palette a textured layer is drawn through */
-		void AddLayerTextureMappingRow(UiForm* rows, IEditorContext& session)
+		void AddLayerTextureMappingRow(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			// TRANSLATORS: Label of a property in the layer properties panel, which palette the texture of a textured layer is drawn through
@@ -1793,7 +1794,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The color of the layer, as each renderer that has one takes it */
-		void AddLayerColorRows(UiForm* rows, IEditorContext& session)
+		void AddLayerColorRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			auto isUnlocked = [s]() { return IsCurrentLayerUnlocked(*s); };
@@ -1842,20 +1843,20 @@ namespace Jazz2::Editor
 			// palette as it changes
 			auto addPaletteEntryRow = [rows, s](StringView label, StringView tooltip, Tiles::LayerRendererType type) {
 				auto* row = AddPropertyRow(rows, label);
-				row->Add<UiColorSwatch>([s]() {
+				row->Add<ColorSwatch>([s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					if (layer == nullptr) {
 						return Colorf::White;
 					}
-					Colorf color = UiPaletteGrid::ToColor(ContentResolver::Get().GetPalettes()[layer->Record.Color[0]]);
+					Colorf color = PaletteGrid::ToColor(ContentResolver::Get().GetPalettes()[layer->Record.Color[0]]);
 					color.A *= layer->Record.Color[3] / 255.0f;
 					return color;
 				}, [s]() {
-					UiSurface* surface = s->GetSurface();
+					Surface* surface = s->GetSurface();
 					if (surface == nullptr) {
 						return;
 					}
-					UiPaletteGrid::ShowPopup(*surface, surface->GetPointerPos(), []() {
+					PaletteGrid::ShowPopup(*surface, surface->GetPointerPos(), []() {
 						return ContentResolver::Get().GetPalettes().data();
 					}, [s]() {
 						const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -1910,7 +1911,7 @@ namespace Jazz2::Editor
 		}
 
 		/** How the layer is blended over what is behind it */
-		void AddLayerBlendRows(UiForm* rows, IEditorContext& session)
+		void AddLayerBlendRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			auto isUnlocked = [s]() { return IsCurrentLayerUnlocked(*s); };
@@ -1977,7 +1978,7 @@ namespace Jazz2::Editor
 				return (layer != nullptr && TakesLayerBlend(*layer, std::int32_t(Tiles::LayerBlend::Screen)));
 			});
 
-			auto addParamByte = [s](UiStack* row) {
+			auto addParamByte = [s](Stack* row) {
 				auto* number = AddByteBox(row, [s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return std::uint8_t(layer != nullptr ? layer->Record.BlendParam : 255);
@@ -1998,15 +1999,15 @@ namespace Jazz2::Editor
 			});
 
 			auto* keyRow = AddPropertyRow(rows, _x("editor", "Key"));
-			keyRow->Add<UiColorSwatch>([s]() {
+			keyRow->Add<ColorSwatch>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
-				return (layer != nullptr ? UiPaletteGrid::ToColor(ContentResolver::Get().GetPalettes()[layer->Record.BlendParam]) : Colorf::White);
+				return (layer != nullptr ? PaletteGrid::ToColor(ContentResolver::Get().GetPalettes()[layer->Record.BlendParam]) : Colorf::White);
 			}, [s]() {
-				UiSurface* surface = s->GetSurface();
+				Surface* surface = s->GetSurface();
 				if (surface == nullptr) {
 					return;
 				}
-				UiPaletteGrid::ShowPopup(*surface, surface->GetPointerPos(), []() {
+				PaletteGrid::ShowPopup(*surface, surface->GetPointerPos(), []() {
 					return ContentResolver::Get().GetPalettes().data();
 				}, [s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -2021,13 +2022,13 @@ namespace Jazz2::Editor
 		}
 
 		/** Where a sky, a tunnel or a cylinder is drawn, and how its texture moves inside the layer if only where the layer is */
-		void AddLayerSurfaceRows(UiForm* rows, IEditorContext& session)
+		void AddLayerSurfaceRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			// The layer being edited is drawn as plain tiles to be painted on, or as in the game to see what its properties do
 			// (see EditorSettings::PreviewTexturedLayers)
 			// TRANSLATORS: Checkbox in the layer properties panel, the textured layer being edited is drawn as in the game instead of as plain tiles
-			auto* preview = rows->Add<UiCheckBox>(_x("editor", "Show as in game"), [s]() {
+			auto* preview = rows->Add<CheckBox>(_x("editor", "Show as in game"), [s]() {
 				return s->GetSettings().PreviewTexturedLayers;
 			}, [s](bool) {
 				s->GetActions().Execute(ActionIds::ViewPreviewTextured);
@@ -2101,7 +2102,7 @@ namespace Jazz2::Editor
 			for (const InnerSpeed& property : InnerSpeeds) {
 				auto* row = AddPropertyRow(rows, property.Label);
 				float Formats::TexturedLayerParams::* member = property.Member;
-				auto* number = row->Add<UiNumberBox>([s, member]() {
+				auto* number = row->Add<NumberBox>([s, member]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr ? layer->Record.Textured.*member : 0.0f);
 				}, [s, member](float value, bool final) {
@@ -2115,7 +2116,7 @@ namespace Jazz2::Editor
 		}
 
 		/** The horizon of a sky, a tunnel or a cylinder, and the stars over it */
-		void AddLayerHorizonRows(UiForm* rows, IEditorContext& session)
+		void AddLayerHorizonRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			// The background blends towards the color of the horizon in the distance
@@ -2140,7 +2141,7 @@ namespace Jazz2::Editor
 			horizonRow->Tooltip = _x("editor", "How far down the view the horizon is in percent, or down the layer if it's drawn where the layer is");
 			ShowRowWhen(horizonRow, isSky);
 
-			auto* fade = rows->Add<UiCheckBox>(_x("editor", "Fade"), [s]() {
+			auto* fade = rows->Add<CheckBox>(_x("editor", "Fade"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Textured.Fade != 0);
 			}, [s](bool value) {
@@ -2152,7 +2153,7 @@ namespace Jazz2::Editor
 			fade->IsVisibleFunc = isSky;
 
 			// TRANSLATORS: Checkbox in the layer properties panel, shows stars over the horizon of a sky or tunnel layer
-			auto* stars = rows->Add<UiCheckBox>(_x("editor", "Stars"), [s]() {
+			auto* stars = rows->Add<CheckBox>(_x("editor", "Stars"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Color[3] != 0);
 			}, [s](bool value) {
@@ -2163,7 +2164,7 @@ namespace Jazz2::Editor
 		}
 
 		/** A tunnel, as the one of JJ2+, kept apart from the color (see Formats::TexturedLayerParams) */
-		void AddLayerTunnelRows(UiForm* rows, IEditorContext& session)
+		void AddLayerTunnelRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			auto isTunnel = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Tunnel }); };
@@ -2175,7 +2176,7 @@ namespace Jazz2::Editor
 			ShowRowWhen(centerRow, isTunnel);
 
 			// TRANSLATORS: Checkbox in the layer properties panel, a tunnel or a cylinder layer fades into the color of the horizon in the distance
-			auto* fade = rows->Add<UiCheckBox>(_x("editor", "Fade"), [s]() {
+			auto* fade = rows->Add<CheckBox>(_x("editor", "Fade"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Textured.Fade != 0);
 			}, [s](bool value) {
@@ -2187,7 +2188,7 @@ namespace Jazz2::Editor
 			fade->IsVisibleFunc = isTunnel;
 
 			// TRANSLATORS: Checkbox in the layer properties panel, the circles of a tunnel layer spiral inwards
-			auto* spiral = rows->Add<UiCheckBox>(_x("editor", "Spiral"), [s]() {
+			auto* spiral = rows->Add<CheckBox>(_x("editor", "Spiral"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && (layer->Record.Textured.Flags & Formats::TexturedLayerParams::Spiral) != 0);
 			}, [s](bool value) {
@@ -2201,7 +2202,7 @@ namespace Jazz2::Editor
 		}
 
 		/** A cylinder, as the one of JJ2+, kept apart from the color the same way */
-		void AddLayerCylinderRows(UiForm* rows, IEditorContext& session)
+		void AddLayerCylinderRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			auto isCylinder = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Cylinder }); };
@@ -2211,7 +2212,7 @@ namespace Jazz2::Editor
 			centerRow->Tooltip = _x("editor", "Where the center of the horizon of the cylinder is, in percent of the width and the height of the view - far from the middle, the tube looks bent");
 			ShowRowWhen(centerRow, isCylinder);
 
-			auto* fade = rows->Add<UiCheckBox>(_x("editor", "Fade"), [s]() {
+			auto* fade = rows->Add<CheckBox>(_x("editor", "Fade"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Textured.Fade != 0);
 			}, [s](bool value) {
@@ -2223,7 +2224,7 @@ namespace Jazz2::Editor
 			fade->IsVisibleFunc = isCylinder;
 
 			// TRANSLATORS: Checkbox in the layer properties panel, the texture of a cylinder layer is drawn at half size
-			auto* halfSize = rows->Add<UiCheckBox>(_x("editor", "Half size"), [s]() {
+			auto* halfSize = rows->Add<CheckBox>(_x("editor", "Half size"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && (layer->Record.Textured.Flags & Formats::TexturedLayerParams::HalfSize) != 0);
 			}, [s](bool value) {
@@ -2237,7 +2238,7 @@ namespace Jazz2::Editor
 		}
 
 		/** A wave, as the one of JJ2+, its parameters in the color and apart from it (see Formats::LayerRecord::Color) */
-		void AddLayerWaveRows(UiForm* rows, IEditorContext& session)
+		void AddLayerWaveRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			auto isWave = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Wave }); };
@@ -2251,7 +2252,7 @@ namespace Jazz2::Editor
 			// The position of the fade of the other textured layers, JJ2+ keeps the amplitudes there
 			auto* amplitudeRow = AddPropertyRow(rows, _x("editor", "Amplitude"));
 			for (std::int32_t axis = 0; axis < 2; axis++) {
-				auto* number = amplitudeRow->Add<UiNumberBox>([s, axis]() {
+				auto* number = amplitudeRow->Add<NumberBox>([s, axis]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr ? (axis == 0 ? layer->Record.Textured.FadeX : layer->Record.Textured.FadeY) : 0.5f);
 				}, [s, axis](float value, bool final) {
@@ -2267,7 +2268,7 @@ namespace Jazz2::Editor
 			// The blue of the color as a signed byte, as JJ2+ keeps it
 			// TRANSLATORS: Label of a property in the layer properties panel, how fast the waves of a wave layer move (noun)
 			auto* speedRow = AddPropertyRow(rows, _x("editor", "Speed"));
-			auto* speed = speedRow->Add<UiNumberBox>([s]() {
+			auto* speed = speedRow->Add<NumberBox>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return float(layer != nullptr ? std::int8_t(layer->Record.Color[2]) : 0);
 			}, [s](float value, bool final) {
@@ -2279,7 +2280,7 @@ namespace Jazz2::Editor
 			ShowRowWhen(speedRow, isWave);
 
 			// TRANSLATORS: Checkbox in the layer properties panel, the vertical waves of a wave layer move the other way
-			auto* angle = rows->Add<UiCheckBox>(_x("editor", "Swap angles"), [s]() {
+			auto* angle = rows->Add<CheckBox>(_x("editor", "Swap angles"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && (layer->Record.Textured.Flags & Formats::TexturedLayerParams::DistortionAngle) != 0);
 			}, [s](bool value) {
@@ -2293,7 +2294,7 @@ namespace Jazz2::Editor
 		}
 
 		/** A reflection, as the one of JJ2+, its parameters in the color and apart from it (see Formats::LayerRecord::Color) */
-		void AddLayerReflectionRows(UiForm* rows, IEditorContext& session)
+		void AddLayerReflectionRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			auto isReflection = [s]() { return RendererIs(*s, { Tiles::LayerRendererType::Reflection }); };
@@ -2332,20 +2333,20 @@ namespace Jazz2::Editor
 
 			// The tint is an entry of the palette, so it follows the palette as it changes
 			auto* tintRow = AddPropertyRow(rows, _x("editor", "Tint"));
-			tintRow->Add<UiColorSwatch>([s]() {
+			tintRow->Add<ColorSwatch>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				if (layer == nullptr) {
 					return Colorf::White;
 				}
-				Colorf color = UiPaletteGrid::ToColor(ContentResolver::Get().GetPalettes()[layer->Record.Textured.Fade]);
+				Colorf color = PaletteGrid::ToColor(ContentResolver::Get().GetPalettes()[layer->Record.Textured.Fade]);
 				color.A *= layer->Record.Color[0] / 255.0f;
 				return color;
 			}, [s]() {
-				UiSurface* surface = s->GetSurface();
+				Surface* surface = s->GetSurface();
 				if (surface == nullptr) {
 					return;
 				}
-				UiPaletteGrid::ShowPopup(*surface, surface->GetPointerPos(), []() {
+				PaletteGrid::ShowPopup(*surface, surface->GetPointerPos(), []() {
 					return ContentResolver::Get().GetPalettes().data();
 				}, [s]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
@@ -2397,7 +2398,7 @@ namespace Jazz2::Editor
 			for (const InnerSpeed& property : InnerSpeeds) {
 				auto* row = AddPropertyRow(rows, property.Label);
 				float Formats::TexturedLayerParams::* member = property.Member;
-				auto* number = row->Add<UiNumberBox>([s, member]() {
+				auto* number = row->Add<NumberBox>([s, member]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr ? layer->Record.Textured.*member : 0.0f);
 				}, [s, member](float value, bool final) {
@@ -2410,7 +2411,7 @@ namespace Jazz2::Editor
 			}
 
 			// TRANSLATORS: Checkbox in the layer properties panel, blurs what a reflection layer mirrors
-			auto* blur = rows->Add<UiCheckBox>(_x("editor", "Blur"), [s]() {
+			auto* blur = rows->Add<CheckBox>(_x("editor", "Blur"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && layer->Record.Color[3] != 0);
 			}, [s](bool value) {
@@ -2421,14 +2422,14 @@ namespace Jazz2::Editor
 		}
 
 		/** What only the editor uses, the level isn't changed by it */
-		void AddLayerEditorRows(UiForm* rows, IEditorContext& session)
+		void AddLayerEditorRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			// Only how the editor shows it, the layers in front can be seen through to edit those behind; for any renderer, so
 			// it's after the rows of the color of each of them, right below the color itself where it has one
 			// TRANSLATORS: Label of a property in the layer properties panel, how opaque the editor shows the layer, not the game
 			auto* row = AddPropertyRow(rows, _x("editor", "Editor opacity"));
-			auto* number = row->Add<UiNumberBox>([s]() {
+			auto* number = row->Add<NumberBox>([s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr ? std::round(layer->EditorOpacity * 100.0f / 255.0f) : 100.0f);
 			}, [s](float value, bool final) {
@@ -2441,11 +2442,11 @@ namespace Jazz2::Editor
 		}
 
 		/** Whether the layer is shown in the game, first, as a layer hidden in it isn't shown in the editor either */
-		void AddLayerVisibleRow(UiForm* rows, IEditorContext& session)
+		void AddLayerVisibleRow(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			// TRANSLATORS: Checkbox in the layer properties panel, whether the game draws the layer
-			auto* check = rows->Add<UiCheckBox>(_x("editor", "Visible in game"), [s]() {
+			auto* check = rows->Add<CheckBox>(_x("editor", "Visible in game"), [s]() {
 				const DocumentLayer* layer = GetCurrentLayer(*s);
 				return (layer != nullptr && (layer->Record.Flags & Formats::LayerRecord::Visible) != 0);
 			}, [s](bool value) {
@@ -2466,7 +2467,7 @@ namespace Jazz2::Editor
 		}
 
 		/** How the layer repeats and whether it has the inherent offset, whether it's shown in the game is at the top, see AddLayerVisibleRow() */
-		void AddLayerFlagRows(UiForm* rows, IEditorContext& session)
+		void AddLayerFlagRows(Form* rows, IEditorContext& session)
 		{
 			IEditorContext* s = &session;
 			struct FlagProperty {
@@ -2481,7 +2482,7 @@ namespace Jazz2::Editor
 			};
 			for (const FlagProperty& property : FlagProperties) {
 				std::uint16_t flag = property.Flag;
-				auto* check = rows->Add<UiCheckBox>(property.Label, [s, flag]() {
+				auto* check = rows->Add<CheckBox>(property.Label, [s, flag]() {
 					const DocumentLayer* layer = GetCurrentLayer(*s);
 					return (layer != nullptr && (layer->Record.Flags & flag) != 0);
 				}, [s, flag](bool value) {
@@ -2495,14 +2496,14 @@ namespace Jazz2::Editor
 	}
 
 	InspectorPanel::InspectorPanel(IEditorContext& session)
-		: UiPanel(UiPanelStyle::None, UiOrientation::Vertical, UiTheme::Spacing, UiThickness()), _session(session)
+		: Panel(PanelStyle::None, Orientation::Vertical, Theme::Spacing, Thickness()), _session(session)
 	{
 		// The edge above, between it and the list of layers, is drawn by the splitter that resizes them
-		Add<UiStack>(UiOrientation::Vertical, 0.0f, UiThickness(4.0f, 0.0f, 0.0f, 0.0f))->Add<UiLabel>(_x("editor", "Layer Properties"), UiTheme::TextHeader);
+		Add<Stack>(Orientation::Vertical, 0.0f, Thickness(4.0f, 0.0f, 0.0f, 0.0f))->Add<Label>(_x("editor", "Layer Properties"), Theme::TextHeader);
 
-		auto* scroll = Add<UiScrollView>();
+		auto* scroll = Add<ScrollView>();
 		scroll->Flex = 1.0f;
-		auto* rows = scroll->SetContent<UiForm>(2.0f, UiThickness(4.0f, 0.0f, 2.0f, 0.0f));
+		auto* rows = scroll->SetContent<Form>(2.0f, Thickness(4.0f, 0.0f, 2.0f, 0.0f));
 
 		// Whether it's shown in the game first, then how the layer is placed and moves, how it's drawn by each renderer, then
 		// what only the editor uses and the flags
@@ -2547,7 +2548,7 @@ namespace Jazz2::Editor
 	void TileGrid::Update(float timeMult)
 	{
 		_usageCooldown = std::max(_usageCooldown - timeMult, 0.0f);
-		UiElement::Update(timeMult);
+		Element::Update(timeMult);
 	}
 
 	void TileGrid::UpdateUsage() const
@@ -2621,13 +2622,13 @@ namespace Jazz2::Editor
 		return std::max<std::int32_t>(count, 0);
 	}
 
-	float TileGrid::GetTileSize(const UiContext& context, float availableWidth) const
+	float TileGrid::GetTileSize(const Context& context, float availableWidth) const
 	{
 		// As large as the width allows for the number of tiles in a row
 		return std::max(std::floor(availableWidth / GetColumns()), 4.0f);
 	}
 
-	Vector2f TileGrid::Measure(const UiContext& context, Vector2f available)
+	Vector2f TileGrid::Measure(const Context& context, Vector2f available)
 	{
 		std::int32_t columns = GetColumns();
 		_tileSize = GetTileSize(context, available.X);
@@ -2640,7 +2641,7 @@ namespace Jazz2::Editor
 		return Vector2i(std::int32_t(std::floor((pos.X - Bounds.X) / _tileSize)), std::int32_t(std::floor((pos.Y - Bounds.Y) / _tileSize)));
 	}
 
-	void TileGrid::Draw(UiPainter& painter)
+	void TileGrid::Draw(Painter& painter)
 	{
 		Tiles::TileMap* tileMap = _session.GetTileMap();
 		if (tileMap == nullptr) {
@@ -2660,7 +2661,7 @@ namespace Jazz2::Editor
 		std::int32_t firstRow = std::max<std::int32_t>(0, std::int32_t((clipTop - Bounds.Y) / _tileSize));
 		std::int32_t lastRow = std::min(rows - 1, std::int32_t((clipBottom - Bounds.Y) / _tileSize));
 
-		painter.FillRect(Rectf(Bounds.X, Bounds.Y, width, rows * _tileSize), Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
+		painter.FillRect(Rectf(Bounds.X, Bounds.Y, width, rows * _tileSize), Colorf(0.0f, 0.0f, 0.0f, 0.35f), PaintLayer::Fill);
 		for (std::int32_t row = firstRow; row <= lastRow; row++) {
 			for (std::int32_t column = 0; column < columns; column++) {
 				std::int32_t index = row * columns + column;
@@ -2688,11 +2689,11 @@ namespace Jazz2::Editor
 					Rectf rect(Bounds.X + column * _tileSize, Bounds.Y + row * _tileSize, _tileSize, _tileSize);
 					std::int32_t used = _usage[index];
 					if (used == 0) {
-						painter.FillRect(rect, Colorf(0.0f, 0.0f, 0.0f, 0.65f), UiLayer::Content);
+						painter.FillRect(rect, Colorf(0.0f, 0.0f, 0.0f, 0.65f), PaintLayer::Content);
 					} else {
 						float fraction = std::log(float(used) + 1.0f) / maxLog;
 						painter.FillRect(Rectf(rect.X, rect.Y + rect.H - barHeight, std::max(barHeight, std::round(rect.W * fraction)), barHeight),
-							Colorf(0.4f + 0.6f * fraction, 0.9f - 0.5f * fraction, 0.3f, 0.95f), UiLayer::Overlay);
+							Colorf(0.4f + 0.6f * fraction, 0.9f - 0.5f * fraction, 0.3f, 0.95f), PaintLayer::Overlay);
 					}
 				}
 			}
@@ -2714,8 +2715,8 @@ namespace Jazz2::Editor
 							continue;
 						}
 						Vector2f corner(Bounds.X + (index % columns + 1) * _tileSize - markRadius * 1.5f, Bounds.Y + (index / columns) * _tileSize + markRadius * 1.5f);
-						painter.Circle(corner, markRadius + 1.0f, Colorf(0.0f, 0.0f, 0.0f, 0.6f), UiLayer::Overlay);
-						painter.Circle(corner, markRadius, Colorf(1.0f, 0.85f, 0.3f, 1.0f), UiLayer::Overlay);
+						painter.Circle(corner, markRadius + 1.0f, Colorf(0.0f, 0.0f, 0.0f, 0.6f), PaintLayer::Overlay);
+						painter.Circle(corner, markRadius, Colorf(1.0f, 0.85f, 0.3f, 1.0f), PaintLayer::Overlay);
 					}
 					break;
 				}
@@ -2733,8 +2734,8 @@ namespace Jazz2::Editor
 			}
 			if (same) {
 				Rectf rect(Bounds.X + (first % columns) * _tileSize, Bounds.Y + (first / columns) * _tileSize, stamp.Width * _tileSize, stamp.Height * _tileSize);
-				painter.FillRect(rect, UiTheme::Selection, UiLayer::Overlay);
-				painter.Frame(rect, UiTheme::Accent, std::max(1.0f, std::round(painter.GetScale())), UiLayer::Overlay);
+				painter.FillRect(rect, Theme::Selection, PaintLayer::Overlay);
+				painter.Frame(rect, Theme::Accent, std::max(1.0f, std::round(painter.GetScale())), PaintLayer::Overlay);
 			}
 		}
 
@@ -2751,14 +2752,14 @@ namespace Jazz2::Editor
 			std::int32_t x2 = std::max(a.X, b.X), y2 = std::max(a.Y, b.Y);
 			Rectf rect(Bounds.X + x1 * _tileSize, Bounds.Y + y1 * _tileSize, (x2 - x1 + 1) * _tileSize, (y2 - y1 + 1) * _tileSize);
 			if (grabbing) {
-				painter.FillRect(rect, UiTheme::Selection, UiLayer::Overlay);
+				painter.FillRect(rect, Theme::Selection, PaintLayer::Overlay);
 			}
-			painter.Frame(rect, UiTheme::Accent, thickness, UiLayer::Overlay);
+			painter.Frame(rect, Theme::Accent, thickness, PaintLayer::Overlay);
 		} else if (_hovered) {
-			if (UiSurface* surface = GetSurface()) {
+			if (Surface* surface = GetSurface()) {
 				Vector2i cell = GetCellAt(surface->GetPointerPos());
 				if (cell.X >= 0 && cell.X < columns && cell.Y >= 0 && cell.Y * columns + cell.X < count) {
-					painter.Frame(Rectf(Bounds.X + cell.X * _tileSize, Bounds.Y + cell.Y * _tileSize, _tileSize, _tileSize), UiTheme::Cursor, thickness, UiLayer::Overlay);
+					painter.Frame(Rectf(Bounds.X + cell.X * _tileSize, Bounds.Y + cell.Y * _tileSize, _tileSize, _tileSize), Theme::Cursor, thickness, PaintLayer::Overlay);
 				}
 			}
 		}
@@ -2769,7 +2770,7 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	bool TileGrid::OnPointerDown(const UiPointerEvent& event)
+	bool TileGrid::OnPointerDown(const PointerEvent& event)
 	{
 		Vector2i cell = GetCellAt(event.Pos);
 		std::int32_t columns = GetColumns();
@@ -2796,7 +2797,7 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	void TileGrid::OnPointerMove(const UiPointerEvent& event)
+	void TileGrid::OnPointerMove(const PointerEvent& event)
 	{
 		if (_dragging) {
 			Vector2i cell = GetCellAt(event.Pos);
@@ -2817,7 +2818,7 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	void TileGrid::OnPointerUp(const UiPointerEvent& event, bool inside)
+	void TileGrid::OnPointerUp(const PointerEvent& event, bool inside)
 	{
 		if (!_dragging) {
 			return;
@@ -2828,7 +2829,7 @@ namespace Jazz2::Editor
 
 	bool TileGrid::GetCellUnderPointer(Vector2i& cell) const
 	{
-		UiSurface* surface = GetSurface();
+		Surface* surface = GetSurface();
 		if (surface == nullptr || _tileSize <= 0.0f) {
 			return false;
 		}
@@ -2865,7 +2866,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	bool TileGrid::OnWheel(const UiPointerEvent& event)
+	bool TileGrid::OnWheel(const PointerEvent& event)
 	{
 		if ((event.Modifiers & KeyMod::Ctrl) == 0) {
 			return false;
@@ -2897,7 +2898,7 @@ namespace Jazz2::Editor
 	namespace
 	{
 		/** Tiles the levels have next to the tiles around the cell under the pointer, a click makes one the brush */
-		class SuggestionStrip : public UiElement
+		class SuggestionStrip : public Element
 		{
 		public:
 			static constexpr std::int32_t MaxTiles = 8;
@@ -2908,14 +2909,14 @@ namespace Jazz2::Editor
 				// Always there, so the tiles below don't move when something is suggested
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
-				return Vector2f(available.X, context.Px(UiTheme::ButtonHeight + 4.0f));
+				return Vector2f(available.X, context.Px(Theme::ButtonHeight + 4.0f));
 			}
 
 			void Update(float timeMult) override
 			{
-				UiElement::Update(timeMult);
+				Element::Update(timeMult);
 				// While the pointer is over the view, it keeps what it suggested when it moves here to pick one
 				ToolPointer pointer;
 				if (_session.IsPlaying() || !_session.GetHoverPointer(pointer)) {
@@ -2946,7 +2947,7 @@ namespace Jazz2::Editor
 				_session.GetSmartTiles().Suggest(at(cell.X - 1, cell.Y), at(cell.X, cell.Y - 1), at(cell.X + 1, cell.Y), at(cell.X, cell.Y + 1), MaxTiles, _tiles);
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				Tiles::TileMap* tileMap = _session.GetTileMap();
 				if (tileMap == nullptr) {
@@ -2954,13 +2955,13 @@ namespace Jazz2::Editor
 				}
 				float size = Bounds.H - painter.Px(4.0f);
 				// TRANSLATORS: Before tiles suggested to place next to the tiles around the cell under the pointer, keep it short
-				float label = painter.MeasureText(_x("editor", "Next:")) + painter.Px(UiTheme::Spacing);
-				painter.TextInRect(_x("editor", "Next:"), Rectf(Bounds.X, Bounds.Y, label, Bounds.H), _tiles.empty() ? UiTheme::TextDisabled : UiTheme::TextDim);
+				float label = painter.MeasureText(_x("editor", "Next:")) + painter.Px(Theme::Spacing);
+				painter.TextInRect(_x("editor", "Next:"), Rectf(Bounds.X, Bounds.Y, label, Bounds.H), _tiles.empty() ? Theme::TextDisabled : Theme::TextDim);
 				if (_tiles.empty()) {
 					// TRANSLATORS: In the row of suggested tiles while there's nothing to suggest, keep it short
 					String hint = _x("editor", "point at the level");
 					if (label + painter.MeasureText(hint) <= Bounds.W) {
-						painter.TextInRect(hint, Rectf(Bounds.X + label, Bounds.Y, Bounds.W - label, Bounds.H), UiTheme::TextDisabled);
+						painter.TextInRect(hint, Rectf(Bounds.X + label, Bounds.Y, Bounds.W - label, Bounds.H), Theme::TextDisabled);
 					}
 				}
 				std::int32_t hovered = (_hovered && GetSurface() != nullptr ? GetIndexAt(GetSurface()->GetPointerPos()) : -1);
@@ -2969,9 +2970,9 @@ namespace Jazz2::Editor
 					if (rect.X + rect.W > Bounds.X + Bounds.W) {
 						break;
 					}
-					DrawTile(painter, *tileMap, _session.GetDocument(), _tiles[i], _tiles[i].Flags, rect, 1.0f, UiLayer::Content);
+					DrawTile(painter, *tileMap, _session.GetDocument(), _tiles[i], _tiles[i].Flags, rect, 1.0f, PaintLayer::Content);
 					if (i == hovered) {
-						painter.Frame(rect, UiTheme::Accent, std::max(1.0f, std::round(painter.GetScale())), UiLayer::Overlay);
+						painter.Frame(rect, Theme::Accent, std::max(1.0f, std::round(painter.GetScale())), PaintLayer::Overlay);
 					}
 				}
 			}
@@ -2981,7 +2982,7 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			bool OnPointerDown(const UiPointerEvent& event) override
+			bool OnPointerDown(const PointerEvent& event) override
 			{
 				std::int32_t index = GetIndexAt(event.Pos);
 				if (index >= 0) {
@@ -3004,9 +3005,9 @@ namespace Jazz2::Editor
 
 			std::int32_t GetIndexAt(Vector2f pos) const
 			{
-				UiContext context = (GetSurface() != nullptr ? GetSurface()->GetContext() : UiContext{ 1.0f });
+				Context context = (GetSurface() != nullptr ? GetSurface()->GetContext() : Context{ 1.0f });
 				float size = Bounds.H - context.Px(4.0f);
-				float label = context.MeasureText(_x("editor", "Next:")) + context.Px(UiTheme::Spacing);
+				float label = context.MeasureText(_x("editor", "Next:")) + context.Px(Theme::Spacing);
 				if (!Bounds.Contains(pos) || pos.X < Bounds.X + label) {
 					return -1;
 				}
@@ -3016,7 +3017,7 @@ namespace Jazz2::Editor
 		};
 
 		/** Favourite tiles of the tile set shown and those picked recently, a click makes one the brush, a right click a favourite or not */
-		class TileShortcutStrip : public UiElement
+		class TileShortcutStrip : public Element
 		{
 		public:
 			TileShortcutStrip(IEditorContext& session, TileGrid*& grid)
@@ -3024,14 +3025,14 @@ namespace Jazz2::Editor
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
-				return Vector2f(available.X, context.Px(UiTheme::ButtonHeight + 2.0f));
+				return Vector2f(available.X, context.Px(Theme::ButtonHeight + 2.0f));
 			}
 
 			void Update(float timeMult) override
 			{
-				UiElement::Update(timeMult);
+				Element::Update(timeMult);
 				// Favourites first, then the recent ones that aren't, those the tile set as the level has it doesn't have left out
 				_tiles.clear();
 				_favoriteCount = 0;
@@ -3066,14 +3067,14 @@ namespace Jazz2::Editor
 				}
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				Tiles::TileMap* tileMap = _session.GetTileMap();
 				if (tileMap == nullptr) {
 					return;
 				}
 				if (_tiles.empty()) {
-					painter.TextInRect(_x("editor", "Right-click a tile to keep it here"), Bounds, UiTheme::TextDisabled);
+					painter.TextInRect(_x("editor", "Right-click a tile to keep it here"), Bounds, Theme::TextDisabled);
 					return;
 				}
 				std::int32_t hovered = (_hovered && GetSurface() != nullptr ? GetIndexAt(GetSurface()->GetPointerPos()) : -1);
@@ -3083,13 +3084,13 @@ namespace Jazz2::Editor
 					if (rect.X + rect.W > Bounds.X + Bounds.W) {
 						break;
 					}
-					DrawTile(painter, *tileMap, _session.GetDocument(), _tiles[i], 0, rect, 1.0f, UiLayer::Content);
+					DrawTile(painter, *tileMap, _session.GetDocument(), _tiles[i], 0, rect, 1.0f, PaintLayer::Content);
 					if (i < _favoriteCount) {
 						float radius = std::max(1.5f, painter.Px(1.5f));
-						painter.Circle(Vector2f(rect.X + rect.W - radius * 1.5f, rect.Y + radius * 1.5f), radius, Colorf(1.0f, 0.85f, 0.3f, 1.0f), UiLayer::Overlay);
+						painter.Circle(Vector2f(rect.X + rect.W - radius * 1.5f, rect.Y + radius * 1.5f), radius, Colorf(1.0f, 0.85f, 0.3f, 1.0f), PaintLayer::Overlay);
 					}
 					if (i == hovered) {
-						painter.Frame(rect, UiTheme::Accent, std::max(1.0f, std::round(painter.GetScale())), UiLayer::Overlay);
+						painter.Frame(rect, Theme::Accent, std::max(1.0f, std::round(painter.GetScale())), PaintLayer::Overlay);
 					}
 				}
 			}
@@ -3099,7 +3100,7 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			bool OnPointerDown(const UiPointerEvent& event) override
+			bool OnPointerDown(const PointerEvent& event) override
 			{
 				std::int32_t index = GetIndexAt(event.Pos);
 				if (index < 0) {
@@ -3148,17 +3149,17 @@ namespace Jazz2::Editor
 	}
 
 	TilePickerPanel::TilePickerPanel(IEditorContext& session)
-		: UiPanel(UiPanelStyle::None, UiOrientation::Vertical, UiTheme::Spacing, UiThickness()), _session(session), _grid(nullptr)
+		: Panel(PanelStyle::None, Orientation::Vertical, Theme::Spacing, Thickness()), _session(session), _grid(nullptr)
 	{
-		auto* header = Add<UiStack>(UiOrientation::Horizontal, 2.0f);
-		auto* previous = header->Add<UiButton>(StringView(), EditorIcon::ChevronLeft, [this]() { NextSource(-1); });
-		previous->Style = UiButtonStyle::Flat;
+		auto* header = Add<Stack>(Orientation::Horizontal, 2.0f);
+		auto* previous = header->Add<Button>(StringView(), EditorIcon::ChevronLeft, [this]() { NextSource(-1); });
+		previous->Style = ButtonStyle::Flat;
 		previous->Tooltip = _x("editor", "Previous tile set");
-		auto* name = header->Add<UiDropdown>([this]() { return GetSourceName(_grid->GetSource()); }, [this](SmallVectorImpl<UiMenuEntry>& entries) {
+		auto* name = header->Add<Dropdown>([this]() { return GetSourceName(_grid->GetSource()); }, [this](SmallVectorImpl<MenuEntry>& entries) {
 			SmallVector<std::uint8_t, 8> sources;
 			GetSources(sources);
 			for (std::uint8_t source : sources) {
-				UiMenuEntry entry;
+				MenuEntry entry;
 				entry.Label = GetSourceName(source);
 				entry.Execute = [this, source]() { _grid->SetSource(source); };
 				entry.IsChecked = [this, source]() { return (_grid->GetSource() == source); };
@@ -3167,25 +3168,25 @@ namespace Jazz2::Editor
 		});
 		name->Flex = 1.0f;
 		name->Tooltip = _x("editor", "Tile set to pick tiles from");
-		auto* next = header->Add<UiButton>(StringView(), EditorIcon::ChevronRight, [this]() { NextSource(1); });
-		next->Style = UiButtonStyle::Flat;
+		auto* next = header->Add<Button>(StringView(), EditorIcon::ChevronRight, [this]() { NextSource(1); });
+		next->Style = ButtonStyle::Flat;
 		next->Tooltip = _x("editor", "Next tile set");
-		header->Add<UiSeparator>(UiOrientation::Vertical);
-		auto* zoomOut = header->Add<UiButton>(StringView(), EditorIcon::ZoomOut, [this]() { _grid->SetColumns(_grid->GetColumns() + 1); });
-		zoomOut->Style = UiButtonStyle::Flat;
+		header->Add<Separator>(Orientation::Vertical);
+		auto* zoomOut = header->Add<Button>(StringView(), EditorIcon::ZoomOut, [this]() { _grid->SetColumns(_grid->GetColumns() + 1); });
+		zoomOut->Style = ButtonStyle::Flat;
 		zoomOut->Tooltip = _x("editor", "More tiles in a row, smaller");
-		auto* zoomIn = header->Add<UiButton>(StringView(), EditorIcon::ZoomIn, [this]() { _grid->SetColumns(_grid->GetColumns() - 1); });
-		zoomIn->Style = UiButtonStyle::Flat;
+		auto* zoomIn = header->Add<Button>(StringView(), EditorIcon::ZoomIn, [this]() { _grid->SetColumns(_grid->GetColumns() - 1); });
+		zoomIn->Style = ButtonStyle::Flat;
 		zoomIn->Tooltip = _x("editor", "Fewer tiles in a row, larger");
-		auto* usage = header->Add<UiButton>(StringView(), EditorIcon::Usage, [this]() { _grid->ShowUsage = !_grid->ShowUsage; });
-		usage->Style = UiButtonStyle::Flat;
+		auto* usage = header->Add<Button>(StringView(), EditorIcon::Usage, [this]() { _grid->ShowUsage = !_grid->ShowUsage; });
+		usage->Style = ButtonStyle::Flat;
 		usage->IsCheckedFunc = [this]() { return _grid->ShowUsage; };
 		usage->Tooltip = _x("editor", "Show how often the level uses each tile, unused ones are dark");
 
 		Add<TileShortcutStrip>(session, _grid);
 		Add<SuggestionStrip>(session);
 
-		auto* scroll = Add<UiScrollView>();
+		auto* scroll = Add<ScrollView>();
 		scroll->Flex = 1.0f;
 		_grid = scroll->SetContent<TileGrid>(session);
 	}
@@ -3199,7 +3200,7 @@ namespace Jazz2::Editor
 			(source != TileRef::Animated && source != TileRef::DefaultTileSet && source > document.ExtraTileSets.size())) {
 			_grid->SetSource(TileRef::DefaultTileSet);
 		}
-		UiPanel::Update(timeMult);
+		Panel::Update(timeMult);
 	}
 
 	String TilePickerPanel::GetSourceName(std::uint8_t source) const
@@ -3246,14 +3247,14 @@ namespace Jazz2::Editor
 	{
 	}
 
-	Vector2f StampPreview::Measure(const UiContext& context, Vector2f available)
+	Vector2f StampPreview::Measure(const Context& context, Vector2f available)
 	{
 		return Vector2f(available.X, available.X);
 	}
 
-	void StampPreview::Draw(UiPainter& painter)
+	void StampPreview::Draw(Painter& painter)
 	{
-		painter.RoundRect(Bounds, UiTheme::InputFill);
+		painter.RoundRect(Bounds, Theme::InputFill);
 		const TileStamp& stamp = _session.GetStamp();
 		Tiles::TileMap* tileMap = _session.GetTileMap();
 		if (stamp.IsEmpty() || tileMap == nullptr) {
@@ -3297,18 +3298,18 @@ namespace Jazz2::Editor
 	{
 	}
 
-	Vector2f StatusBar::Measure(const UiContext& context, Vector2f available)
+	Vector2f StatusBar::Measure(const Context& context, Vector2f available)
 	{
-		return Vector2f(available.X, context.Px(UiTheme::StatusBarHeight));
+		return Vector2f(available.X, context.Px(Theme::StatusBarHeight));
 	}
 
-	void StatusBar::Draw(UiPainter& painter)
+	void StatusBar::Draw(Painter& painter)
 	{
-		painter.FillRect(Bounds, painter.Backdrop(Bounds, UiTheme::PanelHeader, false));
+		painter.FillRect(Bounds, painter.Backdrop(Bounds, Theme::PanelHeader, false));
 		float thickness = std::max(1.0f, std::round(painter.GetScale() * 0.5f));
-		painter.FillRect(Rectf(Bounds.X, Bounds.Y, Bounds.W, thickness), UiTheme::PanelBorderDim);
+		painter.FillRect(Rectf(Bounds.X, Bounds.Y, Bounds.W, thickness), Theme::PanelBorderDim);
 
-		float padding = painter.Px(UiTheme::Padding * 1.5f);
+		float padding = painter.Px(Theme::Padding * 1.5f);
 		Rectf inner(Bounds.X + padding, Bounds.Y, Bounds.W - padding * 2.0f, Bounds.H);
 
 		String info;
@@ -3352,7 +3353,7 @@ namespace Jazz2::Editor
 				: std::snprintf(buffer, sizeof(buffer), "%d%%", std::int32_t(std::round(zoom))));
 			info += "   "_s + StringView(buffer, std::size_t(std::max<std::int32_t>(length, 0)));
 		}
-		painter.TextInRect(info, inner, UiTheme::Text, Alignment::Right);
+		painter.TextInRect(info, inner, Theme::Text, Alignment::Right);
 
 		// The hint gets what the information leaves
 		float hintWidth = inner.W - painter.MeasureText(info) - padding * 2.0f;
@@ -3374,7 +3375,7 @@ namespace Jazz2::Editor
 					text = _session.GetTools().GetActive()->GetHint();
 					break;
 			}
-			painter.TextInRect(text, hint, UiTheme::TextDim);
+			painter.TextInRect(text, hint, Theme::TextDim);
 			painter.PopClip();
 		}
 	}

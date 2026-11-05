@@ -9,8 +9,9 @@
 #include "../Runtime/EditorLevelHandler.h"
 #include "../Runtime/PlayPathHistory.h"
 #include "../Tools/EditorContext.h"
-#include "../UI/UiPainter.h"
-#include "../UI/UiTheme.h"
+#include "../../UI/Windows/Painter.h"
+#include "../../UI/Windows/Theme.h"
+#include "../UI/EditorUi.h"
 #include "../../EventType.h"
 #include "../../PlayerType.h"
 #include "../../Events/EventMap.h"
@@ -163,7 +164,7 @@ namespace Jazz2::Editor
 		RecomputeReachability(reload);
 	}
 
-	void PlayOverlays::DrawDeaths(UiPainter& painter, const Rectf& viewRect)
+	void PlayOverlays::DrawDeaths(Painter& painter, const Rectf& viewRect)
 	{
 		if (!_context.GetSettings().PlayTest.ShowDeaths) {
 			return;
@@ -220,11 +221,11 @@ namespace Jazz2::Editor
 				center.Y - radius > viewRect.Y + viewRect.H) {
 				continue;
 			}
-			Colorf color = UiTheme::OverlayBad;
+			Colorf color = Theme::OverlayBad;
 			color.A = 0.3f + 0.45f * float(spot.Count) / float(maxCount);
-			painter.Circle(center, radius, color, UiLayer::Content);
-			Colorf core = UiTheme::OverlayBad;
-			painter.Circle(center, std::max(2.0f, radius * 0.3f), core, UiLayer::Content);
+			painter.Circle(center, radius, color, PaintLayer::Content);
+			Colorf core = Theme::OverlayBad;
+			painter.Circle(center, std::max(2.0f, radius * 0.3f), core, PaintLayer::Content);
 		}
 	}
 }

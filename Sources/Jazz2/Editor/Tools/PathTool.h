@@ -3,13 +3,17 @@
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "EditorTool.h"
+#include "../UI/EditorUi.h"
 
 #include <memory>
 
+namespace Jazz2::UI::Windows
+{
+	class Element;
+}
+
 namespace Jazz2::Editor
 {
-	class UiElement;
-
 	/**
 		@brief Places the event to place along a path, at even distances --- a row or an arc of coins or gems
 
@@ -40,7 +44,7 @@ namespace Jazz2::Editor
 		void Cancel() override;
 		bool IsBusy() const override;
 		bool HasPointerCapture() const override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 		void BuildOptions(ToolOptionsBuilder& builder) override;
 

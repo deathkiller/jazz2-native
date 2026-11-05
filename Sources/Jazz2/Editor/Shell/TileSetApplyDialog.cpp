@@ -11,9 +11,10 @@
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Imaging/PaletteMatch.h"
 #include "../Imaging/TileMasks.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../Formats/TileSetFile.h"
 
@@ -292,7 +293,7 @@ namespace Jazz2::Editor
 
 	void ShowApplyTileChangesDialog(IEditorContext& session, std::int32_t source)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -329,27 +330,27 @@ namespace Jazz2::Editor
 		};
 
 		// TRANSLATORS: Title of the dialog that saves the tiles changed in the level into a tile set
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Save Tile Changes into Tile Set"));
-		UiDialog* dialogPtr = dialog.get();
-		auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Save Tile Changes into Tile Set"));
+		Dialog* dialogPtr = dialog.get();
+		auto* content = dialog->GetContent()->Add<Form>(Theme::Spacing);
 		// TRANSLATORS: First line of a sentence in the Save Tile Changes into Tile Set dialog, the next text continues it
-		content->Add<UiLabel>(_x("editor", "The tiles changed in this level become tiles of a tile set,"), UiTheme::TextDim);
+		content->Add<Label>(_x("editor", "The tiles changed in this level become tiles of a tile set,"), Theme::TextDim);
 		// TRANSLATORS: Second line of a sentence in the Save Tile Changes into Tile Set dialog, continues the previous text
-		content->Add<UiLabel>(_x("editor", "the level doesn't change them anymore."), UiTheme::TextDim);
+		content->Add<Label>(_x("editor", "the level doesn't change them anymore."), Theme::TextDim);
 		// The name of the new tile set follows the tile set chosen
-		auto nameHolder = std::make_shared<UiTextBox*>(nullptr);
+		auto nameHolder = std::make_shared<TextBox*>(nullptr);
 		{
 			// TRANSLATORS: Label of the choice of the tile set whose changed tiles are saved, followed by its name
 			auto* row = content->AddRow(_x("editor", "Tiles of"));
-			auto* dropdown = row->Add<UiDropdown>([state, sourceName]() {
+			auto* dropdown = row->Add<Dropdown>([state, sourceName]() {
 				return sourceName(state->Source);
-			}, [s, state, sourceName, sourceCount, nameHolder](SmallVectorImpl<UiMenuEntry>& entries) {
+			}, [s, state, sourceName, sourceCount, nameHolder](SmallVectorImpl<MenuEntry>& entries) {
 				for (std::int32_t i = 0; i < sourceCount; i++) {
 					std::int32_t changed = CountChangedTiles(*s, std::uint8_t(i));
 					if (changed <= 0 && !(i == TileRef::DefaultTileSet && HasLevelPalette(*s))) {
 						continue;
 					}
-					UiMenuEntry entry;
+					MenuEntry entry;
 					// TRANSLATORS: Number of the tiles the level changes in a tile set, shown after the name of the tile set
 					entry.Label = sourceName(i) + " ("_s + _fnx("editor", "{} changed tile", "{} changed tiles", changed, changed) + ")"_s;
 					entry.IsChecked = [state, i]() { return (state->Source == i); };
@@ -363,7 +364,7 @@ namespace Jazz2::Editor
 				}
 			});
 			dropdown->Width = 160.0f;
-			auto* count = row->Add<UiLabel>(StringView(), UiTheme::TextDim);
+			auto* count = row->Add<Label>(StringView(), Theme::TextDim);
 			// Counted again only when the level or the tile set chosen changes, not every frame
 			struct CountCache
 			{
@@ -385,18 +386,18 @@ namespace Jazz2::Editor
 		}
 		{
 			// TRANSLATORS: Checkbox in the Save Tile Changes into Tile Set dialog, the palette of the level is saved into the tile set too
-			auto* withPalette = content->Add<UiCheckBox>(_x("editor", "With the palette of the level"), [state]() { return state->WithPalette; },
+			auto* withPalette = content->Add<CheckBox>(_x("editor", "With the palette of the level"), [state]() { return state->WithPalette; },
 				[state](bool value) { state->WithPalette = value; });
 			withPalette->Tooltip = _x("editor", "It becomes the palette of the tile set, the level then doesn't have its own");
 			withPalette->IsVisibleFunc = [s, state]() { return (state->Source == TileRef::DefaultTileSet && HasLevelPalette(*s)); };
 		}
-		UiTextBox* nameBox;
+		TextBox* nameBox;
 		{
-			content->Add<UiCheckBox>(_x("editor", "Into a new tile set, this level then uses it instead"), [state]() { return !state->IntoItself; },
+			content->Add<CheckBox>(_x("editor", "Into a new tile set, this level then uses it instead"), [state]() { return !state->IntoItself; },
 				[state](bool value) { state->IntoItself = !value; });
 			// TRANSLATORS: Label of the name of the new tile set in the Save Tile Changes into Tile Set dialog
 			auto* row = content->AddRow(_x("editor", "Name"));
-			nameBox = row->Add<UiTextBox>(MakeNewName(document, std::uint8_t(state->Source)));
+			nameBox = row->Add<TextBox>(MakeNewName(document, std::uint8_t(state->Source)));
 			*nameHolder = nameBox;
 			nameBox->Width = 160.0f;
 			nameBox->MaxLength = 32;
@@ -404,13 +405,13 @@ namespace Jazz2::Editor
 			nameBox->IsEnabledFunc = [state]() { return !state->IntoItself; };
 		}
 		{
-			auto* warning = content->Add<UiLabel>(StringView(), UiTheme::TextAccent);
+			auto* warning = content->Add<Label>(StringView(), Theme::TextAccent);
 			warning->TextFunc = [s, state]() {
 				return (state->IntoItself && !IsLevelTileSet(s->GetDocument(), std::uint8_t(state->Source))
 					? String(_x("editor", "Every level that uses the tile set shows the changes")) : String());
 			};
 			// Its own copy in the user content is written over, any other one is covered by a copy there
-			auto* copy = content->Add<UiLabel>(StringView(), UiTheme::TextAccent);
+			auto* copy = content->Add<Label>(StringView(), Theme::TextAccent);
 			copy->TextFunc = [s, state, sourceName]() {
 				if (IsLevelTileSet(s->GetDocument(), std::uint8_t(state->Source))) {
 					return String();

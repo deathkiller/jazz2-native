@@ -3,16 +3,21 @@
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../../LevelDescriptor.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 
 #include <memory>
 
+namespace Jazz2::UI::Windows
+{
+	class Stack;
+}
+
 namespace Jazz2::Editor
 {
 	class IEditorContext;
-	class UiStack;
 
 	/**
 		@brief Language of the translations shown in the dialog of the level texts
@@ -35,9 +40,9 @@ namespace Jazz2::Editor
 	};
 
 	/** @brief Adds the choice of the language and the buttons to export and import the texts for translators */
-	void AddLevelTextLanguageBar(UiStack* content, IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state);
+	void AddLevelTextLanguageBar(Stack* content, IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state);
 	/** @brief Adds the box of the translation of a text, shown only while a language is chosen */
-	void AddLevelTextTranslationBox(UiStack* row, IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state, std::int32_t index);
+	void AddLevelTextTranslationBox(Stack* row, IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state, std::int32_t index);
 	/** @brief Changes the translation of a text as an undoable step, an empty one removes it */
 	void SetLevelTextTranslation(IEditorContext& session, StringView language, std::int32_t index, StringView text);
 }

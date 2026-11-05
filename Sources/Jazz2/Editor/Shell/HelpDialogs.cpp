@@ -7,9 +7,10 @@
 #include "../Tools/EditorContext.h"
 #include "../Document/CommandHistory.h"
 #include "../Input/ActionRegistry.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -29,7 +30,7 @@ namespace Jazz2::Editor
 	namespace
 	{
 		/** Panel of the command palette, as wide as the window allows up to a limit */
-		class CommandPalettePanel : public UiPanel
+		class CommandPalettePanel : public Panel
 		{
 		public:
 			// Width of the content in units, at most and at least, and the part of the window it can take
@@ -38,26 +39,26 @@ namespace Jazz2::Editor
 			static constexpr float WindowFraction = 0.8f;
 
 			CommandPalettePanel()
-				: UiPanel(UiPanelStyle::Floating), _widthElements{}
+				: Panel(PanelStyle::Floating), _widthElements{}
 			{
 			}
 
-			void SetWidthElements(UiElement* search, UiElement* list)
+			void SetWidthElements(Element* search, Element* list)
 			{
 				_widthElements[0] = search;
 				_widthElements[1] = list;
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				float units = available.X * WindowFraction / context.Scale - Padding.Left - Padding.Right;
 				units = std::floor(std::clamp(units, MinUnits, MaxUnits));
-				for (UiElement* element : _widthElements) {
+				for (Element* element : _widthElements) {
 					if (element != nullptr) {
 						element->Width = units;
 					}
 				}
-				return UiPanel::Measure(context, available);
+				return Panel::Measure(context, available);
 			}
 
 			// Enter is passed on from the search once it's confirmed, leaving the search confirms it too, but only Enter runs
@@ -67,14 +68,14 @@ namespace Jazz2::Editor
 					OnEnter();
 					return true;
 				}
-				return UiPanel::OnKeyPressed(event);
+				return Panel::OnKeyPressed(event);
 			}
 
 			/** Called when Enter is pressed */
 			Function<void()> OnEnter;
 
 		private:
-			UiElement* _widthElements[2];
+			Element* _widthElements[2];
 		};
 
 		// Shortcuts are rare enough to be read as a word, unless it's only modifier keys being held
@@ -93,7 +94,7 @@ namespace Jazz2::Editor
 			All actions with their shortcuts, only the rows seen are drawn. A click on a shortcut, a double click or Enter
 			waits for the keys of a new one, Backspace removes it then, Esc keeps it.
 		*/
-		class ShortcutList : public UiVirtualList
+		class ShortcutList : public VirtualList
 		{
 		public:
 			// Width of the column of shortcuts in units at least, and the part of the list it takes when that's more
@@ -114,10 +115,10 @@ namespace Jazz2::Editor
 						? _x("editor", "The shortcut works while the level is played - click and press the keys of a new one, Backspace removes it, Esc keeps it")
 						: _x("editor", "Click and press the keys of a new shortcut, or a side button of the mouse - Backspace removes it, Esc keeps it"));
 				};
-				DrawRow = [this](UiPainter& painter, std::int32_t index, const Rectf& rect, bool selected, float hover) {
+				DrawRow = [this](Painter& painter, std::int32_t index, const Rectf& rect, bool selected, float hover) {
 					DrawShortcutRow(painter, index, rect, selected, hover);
 				};
-				OnRowPressed = [this](std::int32_t index, Vector2f pos, const UiPointerEvent& event) {
+				OnRowPressed = [this](std::int32_t index, Vector2f pos, const PointerEvent& event) {
 					// A click on the shortcut waits for a new one
 					if (pos.X >= Bounds.W - GetShortcutColumn(Bounds.W, painter_Px(ShortcutColumn))) {
 						Listen(index);
@@ -156,7 +157,7 @@ namespace Jazz2::Editor
 			bool OnKeyPressed(const KeyboardEvent& event) override
 			{
 				if (_listening == nullptr) {
-					return UiVirtualList::OnKeyPressed(event);
+					return VirtualList::OnKeyPressed(event);
 				}
 				if (IsModifierKey(event.sym)) {
 					// Waits for the key that goes with them
@@ -203,7 +204,7 @@ namespace Jazz2::Editor
 				if (!focused) {
 					_listening = nullptr;
 				}
-				UiVirtualList::OnFocusChanged(focused);
+				VirtualList::OnFocusChanged(focused);
 			}
 
 		private:
@@ -213,7 +214,7 @@ namespace Jazz2::Editor
 
 			float painter_Px(float units) const
 			{
-				UiSurface* surface = GetSurface();
+				Surface* surface = GetSurface();
 				return std::round(units * (surface != nullptr ? surface->GetScale() : 1.0f));
 			}
 
@@ -230,7 +231,7 @@ namespace Jazz2::Editor
 				}
 				SetSelected(index, true);
 				_listening = _shown[index];
-				if (UiSurface* surface = GetSurface()) {
+				if (Surface* surface = GetSurface()) {
 					surface->SetFocus(this);
 				}
 			}
@@ -242,20 +243,20 @@ namespace Jazz2::Editor
 				}
 			}
 
-			void DrawShortcutRow(UiPainter& painter, std::int32_t index, const Rectf& rect, bool selected, float hover)
+			void DrawShortcutRow(Painter& painter, std::int32_t index, const Rectf& rect, bool selected, float hover)
 			{
 				EditorAction& action = *_shown[index];
 				if (selected) {
-					painter.RoundRect(rect, UiTheme::Selection);
+					painter.RoundRect(rect, Theme::Selection);
 				} else if (hover > 0.0f) {
-					Colorf color = UiTheme::Hover;
+					Colorf color = Theme::Hover;
 					color.A *= hover;
 					painter.RoundRect(rect, color);
 				}
-				float padding = painter.Px(UiTheme::Padding);
+				float padding = painter.Px(Theme::Padding);
 				float column = GetShortcutColumn(rect.W, painter.Px(ShortcutColumn));
 				painter.PushClip(Rectf(rect.X, rect.Y, std::max(rect.W - column, 1.0f), rect.H));
-				painter.TextInRect(action.Label, Rectf(rect.X + padding, rect.Y, rect.W - column - padding, rect.H), UiTheme::Text);
+				painter.TextInRect(action.Label, Rectf(rect.X + padding, rect.Y, rect.W - column - padding, rect.H), Theme::Text);
 				painter.PopClip();
 
 				// The shortcut and the other one, red if another action has one of them, the first of them runs by it
@@ -276,26 +277,26 @@ namespace Jazz2::Editor
 				bool conflict = (&action != _listening && _session.GetActions().HasConflict(action));
 				Rectf shortcutRect(rect.X + rect.W - column, rect.Y, column - padding, rect.H);
 				painter.PushClip(shortcutRect);
-				painter.TextInRect(text, shortcutRect, conflict ? UiTheme::TextDanger : (&action == _listening ? UiTheme::TextAccent : UiTheme::TextDim),
+				painter.TextInRect(text, shortcutRect, conflict ? Theme::TextDanger : (&action == _listening ? Theme::TextAccent : Theme::TextDim),
 					Alignment::Right);
 				painter.PopClip();
 			}
 		};
 
 		/** Button that waits for keys and puts them into the search, to find the actions with a shortcut */
-		class KeySearchButton : public UiButton
+		class KeySearchButton : public Button
 		{
 		public:
-			KeySearchButton(UiTextBox* search, Function<void(StringView)>&& onFound)
+			KeySearchButton(TextBox* search, Function<void(StringView)>&& onFound)
 				// TRANSLATORS: Button next to the search in the Keyboard Shortcuts dialog, waits for keys to find the action they run
-				: UiButton(_x("editor", "Press Keys")), _search(search), _onFound(Death::move(onFound)), _listening(false)
+				: Button(_x("editor", "Press Keys")), _search(search), _onFound(Death::move(onFound)), _listening(false)
 			{
-				Style = UiButtonStyle::Flat;
+				Style = ButtonStyle::Flat;
 				Tooltip = _x("editor", "Press the keys of a shortcut, or a side button of the mouse, to find what it does");
 				IsCheckedFunc = [this]() { return _listening; };
 				OnClick = [this]() {
 					_listening = true;
-					if (UiSurface* surface = GetSurface()) {
+					if (Surface* surface = GetSurface()) {
 						surface->SetFocus(this);
 					}
 				};
@@ -311,13 +312,13 @@ namespace Jazz2::Editor
 				if (!focused) {
 					_listening = false;
 				}
-				UiButton::OnFocusChanged(focused);
+				Button::OnFocusChanged(focused);
 			}
 
 			bool OnKeyPressed(const KeyboardEvent& event) override
 			{
 				if (!_listening) {
-					return UiButton::OnKeyPressed(event);
+					return Button::OnKeyPressed(event);
 				}
 				if (IsModifierKey(event.sym)) {
 					return true;
@@ -332,30 +333,30 @@ namespace Jazz2::Editor
 						}
 					}
 				}
-				if (UiSurface* surface = GetSurface()) {
+				if (Surface* surface = GetSurface()) {
 					surface->SetFocus(nullptr);
 				}
 				return true;
 			}
 
 		private:
-			UiTextBox* _search;
+			TextBox* _search;
 			Function<void(StringView)> _onFound;
 			bool _listening;
 		};
 
 		// Where keymaps are imported from and exported to, the places of levels and the directory of the settings
-		void GetKeymapRoots(IEditorContext& session, SmallVectorImpl<UiFileRoot>& roots)
+		void GetKeymapRoots(IEditorContext& session, SmallVectorImpl<FileRoot>& roots)
 		{
 			// TRANSLATORS: Name of a place in the file dialog, the folder of the settings of the game
-			roots.push_back(UiFileRoot{ String(_x("editor", "Settings")), String(fs::GetDirectoryName(IEditorContext::GetHotkeysPath())), true });
+			roots.push_back(FileRoot{ String(_x("editor", "Settings")), String(fs::GetDirectoryName(IEditorContext::GetHotkeysPath())), true });
 			session.GetFileRoots(true, roots);
 		}
 	}
 
 	void ShowCommandPalette(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		// Its key again hides it
 		if (surface == nullptr || ReuseSingleDialog(session, "commandPalette", true)) {
 			return;
@@ -364,11 +365,11 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		auto panel = std::make_unique<CommandPalettePanel>();
 		CommandPalettePanel* panelPtr = panel.get();
-		auto* column = panel->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
-		auto* search = column->Add<UiTextBox>();
+		auto* column = panel->Add<Stack>(Orientation::Vertical, Theme::Spacing);
+		auto* search = column->Add<TextBox>();
 		// TRANSLATORS: Placeholder of the search box of the command palette, which finds actions of the editor by name
 		search->Placeholder = _x("editor", "Type what to do...");
-		auto* scroll = column->Add<UiScrollView>();
+		auto* scroll = column->Add<ScrollView>();
 		scroll->Height = 180.0f;
 		// The widths are set when it's measured, from the size of the window
 		panel->SetWidthElements(search, scroll);
@@ -382,29 +383,29 @@ namespace Jazz2::Editor
 		};
 		auto fill = std::make_shared<Function<void(StringView)>>();
 		*fill = [s, scroll, run](StringView text) {
-			auto* rows = scroll->SetContent<UiStack>(UiOrientation::Vertical, 1.0f);
+			auto* rows = scroll->SetContent<Stack>(Orientation::Vertical, 1.0f);
 			std::int32_t shown = 0;
 			for (const auto& action : s->GetActions().GetAll()) {
 				if (action->Label.empty() || !action->Execute || !MatchesSearch(action->Label, text)) {
 					continue;
 				}
 				EditorAction* actionPtr = action.get();
-				auto* row = rows->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-				auto* button = row->Add<UiButton>(action->Label, action->Icon, [run, actionPtr]() { run(actionPtr); });
-				button->Style = UiButtonStyle::Flat;
+				auto* row = rows->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+				auto* button = row->Add<Button>(action->Label, action->Icon, [run, actionPtr]() { run(actionPtr); });
+				button->Style = ButtonStyle::Flat;
 				button->TextAlign = Alignment::Left;
 				button->Flex = 1.0f;
 				button->IsEnabledFunc = [actionPtr]() { return actionPtr->CanExecute(); };
 				String shortcut = action->Key.ToString();
 				if (!shortcut.empty()) {
-					row->Add<UiLabel>(shortcut, UiTheme::TextDim);
+					row->Add<Label>(shortcut, Theme::TextDim);
 				}
 				if (++shown >= 50) {
 					break;
 				}
 			}
 			if (shown == 0) {
-				rows->Add<UiLabel>(_x("editor", "Nothing is called like that"), UiTheme::TextDisabled);
+				rows->Add<Label>(_x("editor", "Nothing is called like that"), Theme::TextDisabled);
 			}
 		};
 		search->OnChanged = [fill](StringView text) { (*fill)(text); };
@@ -423,7 +424,7 @@ namespace Jazz2::Editor
 		};
 		(*fill)({});
 
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		ShowSingleDialog(session, "commandPalette", Death::move(panel), Death::move(options));
 		search->BeginEdit();
@@ -431,15 +432,15 @@ namespace Jazz2::Editor
 
 	void ShowShortcutsDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
 
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog that lists and changes the shortcuts of the editor
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Keyboard Shortcuts"));
-		UiDialog* dialogPtr = dialog.get();
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Keyboard Shortcuts"));
+		Dialog* dialogPtr = dialog.get();
 		// Wide enough for long names next to two shortcuts, the list grows with it
 		dialog->MinScreenWidthFraction = 0.58f;
 		dialog->MaxScreenHeightFraction = 0.85f;
@@ -454,21 +455,21 @@ namespace Jazz2::Editor
 			{ _x("editor", "Pick what's under the pointer"), _x("editor", "Alt + click") },
 			{ _x("editor", "Erase or pick"), _x("editor", "Right button") },
 		};
-		auto* hints = content->Add<UiStack>(UiOrientation::Vertical, 1.0f);
+		auto* hints = content->Add<Stack>(Orientation::Vertical, 1.0f);
 		for (const MouseHint& hint : MouseHints) {
-			auto* row = hints->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			row->Add<UiLabel>(hint.Action, UiTheme::TextDim)->Flex = 1.0f;
-			row->Add<UiLabel>(hint.Input, UiTheme::TextDim, Alignment::Right);
+			auto* row = hints->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+			row->Add<Label>(hint.Action, Theme::TextDim)->Flex = 1.0f;
+			row->Add<Label>(hint.Input, Theme::TextDim, Alignment::Right);
 		}
 
 		// A name to look for, or the keys of a shortcut ("Ctrl+S"), typed or pressed
-		auto* searchRow = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-		auto* search = searchRow->Add<UiTextBox>();
+		auto* searchRow = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+		auto* search = searchRow->Add<TextBox>();
 		// TRANSLATORS: Placeholder of the search box in the Keyboard Shortcuts dialog, "Ctrl+S" is an example of a shortcut as the list shows it
 		search->Placeholder = _x("editor", "Search, or keys such as Ctrl+S...");
 		search->Flex = 1.0f;
 		// Shorter on a small screen, by what's left between the rows above and the buttons
-		auto* scroll = content->Add<UiScrollView>();
+		auto* scroll = content->Add<ScrollView>();
 		scroll->Width = 416.0f;
 		scroll->Height = 230.0f;
 		scroll->Flex = 1.0f;
@@ -481,11 +482,11 @@ namespace Jazz2::Editor
 		(*fill)({});
 
 		// Sets of shortcuts like those of other level editors, and keymaps of other computers
-		auto* keymapRow = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+		auto* keymapRow = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 		// TRANSLATORS: Label in the Keyboard Shortcuts dialog before the choice of shortcuts like those of another level editor
-		keymapRow->Add<UiLabel>(_x("editor", "Shortcuts like"), UiTheme::TextDim);
+		keymapRow->Add<Label>(_x("editor", "Shortcuts like"), Theme::TextDim);
 		// TRANSLATORS: Text of the choice of shortcuts like those of another level editor in the Keyboard Shortcuts dialog (verb)
-		auto* presets = keymapRow->Add<UiDropdown>([]() { return String(_x("editor", "Choose")); }, [s, fill, search](SmallVectorImpl<UiMenuEntry>& entries) {
+		auto* presets = keymapRow->Add<Dropdown>([]() { return String(_x("editor", "Choose")); }, [s, fill, search](SmallVectorImpl<MenuEntry>& entries) {
 			struct PresetChoice { String Label; KeymapPreset Preset; };
 			static const PresetChoice Choices[] = {
 				// TRANSLATORS: Level editor whose shortcuts can be chosen in the Keyboard Shortcuts dialog, this one, the others are names of programs
@@ -495,16 +496,16 @@ namespace Jazz2::Editor
 				{ "MLLE", KeymapPreset::Mlle },
 			};
 			for (const PresetChoice& choice : Choices) {
-				UiMenuEntry entry;
+				MenuEntry entry;
 				entry.Label = choice.Label;
 				KeymapPreset preset = choice.Preset;
 				entry.Execute = [s, fill, search, preset]() {
-					UiSurface* surface = s->GetSurface();
+					Surface* surface = s->GetSurface();
 					if (surface == nullptr) {
 						return;
 					}
 					// The shortcuts changed by hand would be lost
-					UiMessageDialog::Show(*surface, _x("editor", "Keyboard Shortcuts"), _x("editor", "Replace all shortcuts by the chosen ones? The ones you changed are lost."),
+					MessageDialog::Show(*surface, _x("editor", "Keyboard Shortcuts"), _x("editor", "Replace all shortcuts by the chosen ones? The ones you changed are lost."),
 						// TRANSLATORS: Buttons of the message box asking before replacing all shortcuts by those of another level editor
 						{ _x("editor", "Replace"), _x("editor", "Cancel") }, [s, fill, search, preset](std::int32_t button) {
 							if (button != 0) {
@@ -522,17 +523,17 @@ namespace Jazz2::Editor
 			}
 		});
 		presets->Width = 120.0f;
-		keymapRow->Add<UiElement>()->Flex = 1.0f;
+		keymapRow->Add<Element>()->Flex = 1.0f;
 		// TRANSLATORS: Button in the Keyboard Shortcuts dialog, reads shortcuts from a file (verb)
-		keymapRow->Add<UiButton>(_x("editor", "Import"), EditorIcon::Import, [s, fill, search]() {
-			UiSurface* surface = s->GetSurface();
+		keymapRow->Add<Button>(_x("editor", "Import"), EditorIcon::Import, [s, fill, search]() {
+			Surface* surface = s->GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			GetKeymapRoots(*s, roots);
 			// TRANSLATORS: Title of the file dialog that reads shortcuts from a file
-			UiFileDialog::Show(*surface, _x("editor", "Import Shortcuts"), UiFileDialogMode::Open, Death::move(roots), ".json"_s, {}, {}, [s, fill, search](StringView path) {
+			FileDialog::Show(*surface, _x("editor", "Import Shortcuts"), FileDialogMode::Open, Death::move(roots), ".json"_s, {}, {}, [s, fill, search](StringView path) {
 				if (!s->GetActions().ImportKeymap(path)) {
 					s->ShowMessage(_x("editor", "The shortcuts couldn't be read"));
 					return;
@@ -543,27 +544,27 @@ namespace Jazz2::Editor
 			});
 		})->Tooltip = _x("editor", "Take the shortcuts of a file exported elsewhere");
 		// TRANSLATORS: Button in the Keyboard Shortcuts dialog, saves all shortcuts into a file (verb)
-		keymapRow->Add<UiButton>(_x("editor", "Export"), EditorIcon::Export, [s]() {
-			UiSurface* surface = s->GetSurface();
+		keymapRow->Add<Button>(_x("editor", "Export"), EditorIcon::Export, [s]() {
+			Surface* surface = s->GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			GetKeymapRoots(*s, roots);
 			// TRANSLATORS: Title of the file dialog that saves all shortcuts into a file
-			UiFileDialog::Show(*surface, _x("editor", "Export Shortcuts"), UiFileDialogMode::Save, Death::move(roots), ".json"_s, {}, "Shortcuts.json"_s, [s](StringView path) {
+			FileDialog::Show(*surface, _x("editor", "Export Shortcuts"), FileDialogMode::Save, Death::move(roots), ".json"_s, {}, "Shortcuts.json"_s, [s](StringView path) {
 				s->ShowMessage(s->GetActions().ExportKeymap(path) ? String(_x("editor", "The shortcuts were exported")) : String(_x("editor", "The shortcuts couldn't be saved")));
 			});
 		})->Tooltip = _x("editor", "Save all shortcuts into a file, to take them to another computer");
 
 		// TRANSLATORS: Button in the Keyboard Shortcuts dialog, sets all shortcuts back to how they were
 		dialog->AddButton(_x("editor", "Reset All"), [s, fill, search]() {
-			UiSurface* surface = s->GetSurface();
+			Surface* surface = s->GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
 			// Every shortcut changed would be lost, it can't be undone
-			UiMessageDialog::Show(*surface, _x("editor", "Reset All"), _x("editor", "Set all shortcuts back to how they were? The ones you changed are lost."),
+			MessageDialog::Show(*surface, _x("editor", "Reset All"), _x("editor", "Set all shortcuts back to how they were? The ones you changed are lost."),
 				// TRANSLATORS: Buttons of the message box asking before setting all shortcuts back to how they were
 				{ _x("editor", "Reset All"), _x("editor", "Cancel") }, [s, fill, search](std::int32_t button) {
 					if (button != 0) {
@@ -584,23 +585,23 @@ namespace Jazz2::Editor
 
 	void ShowHistoryDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr || ReuseSingleDialog(session, "history")) {
 			return;
 		}
 
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog that lists the changes that can be undone and redone
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "History"));
+		auto dialog = std::make_unique<Dialog>(_x("editor", "History"));
 		// Narrow by default, as the names of the changes are short, and resized as needed; the size stays for the session
 		static Vector2f lastSize(180.0f, 300.0f);
 		dialog->Resizable = true;
 		dialog->MinResizeSize = Vector2f(140.0f, 140.0f);
 		dialog->Width = lastSize.X;
 		dialog->Height = lastSize.Y;
-		UiDialog* dialogPtr = dialog.get();
+		Dialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
-		auto* scroll = content->Add<UiScrollView>();
+		auto* scroll = content->Add<ScrollView>();
 		scroll->Flex = 1.0f;
 		// The newest changes at the end, shown first, and followed as more are made, unless it's scrolled back
 		scroll->FollowEnd = true;
@@ -614,38 +615,38 @@ namespace Jazz2::Editor
 			CommandHistory& history = s->GetHistory();
 			state->Count = history.GetCount();
 			state->Done = history.GetDoneCount();
-			auto* rows = scroll->SetContent<UiStack>(UiOrientation::Vertical, 1.0f);
+			auto* rows = scroll->SetContent<Stack>(Orientation::Vertical, 1.0f);
 			// Back to before all changes
 			// TRANSLATORS: First entry of the History dialog, the level as it was when it was opened, before all changes
-			auto* first = rows->Add<UiButton>(_x("editor", "Opened"), EditorIcon::None, [s]() {
+			auto* first = rows->Add<Button>(_x("editor", "Opened"), EditorIcon::None, [s]() {
 				while (s->GetHistory().GetDoneCount() > 0 && s->Undo()) {
 				}
 			});
-			first->Style = UiButtonStyle::Flat;
+			first->Style = ButtonStyle::Flat;
 			first->TextAlign = Alignment::Left;
-			first->TextColor = UiTheme::TextDim;
+			first->TextColor = Theme::TextDim;
 			first->IsCheckedFunc = [s]() { return (s->GetHistory().GetDoneCount() == 0); };
 			for (std::int32_t i = 0; i < state->Count; i++) {
 				std::int32_t target = i + 1;
-				auto* button = rows->Add<UiButton>(history.GetName(i), EditorIcon::None, [s, target]() {
+				auto* button = rows->Add<Button>(history.GetName(i), EditorIcon::None, [s, target]() {
 					while (s->GetHistory().GetDoneCount() > target && s->Undo()) {
 					}
 					while (s->GetHistory().GetDoneCount() < target && s->Redo()) {
 					}
 				});
-				button->Style = UiButtonStyle::Flat;
+				button->Style = ButtonStyle::Flat;
 				button->TextAlign = Alignment::Left;
 				button->IsCheckedFunc = [s, target]() { return (s->GetHistory().GetDoneCount() == target); };
 				// Undone changes are dimmed, they're gone once something else is changed
 				if (target > state->Done) {
-					button->TextColor = UiTheme::TextDisabled;
+					button->TextColor = Theme::TextDisabled;
 					button->Tooltip = _x("editor", "Undone, it can be redone");
 				}
 			}
 		};
 		(*rebuild)();
 		// Checked every frame, the history changes by the editor too while the window is open, and another level has its own
-		content->Add<UiUpdateWatcher>([s, state, rebuild, dialogPtr](float) {
+		content->Add<UpdateWatcher>([s, state, rebuild, dialogPtr](float) {
 			lastSize = Vector2f(dialogPtr->Width, dialogPtr->Height);
 			CommandHistory& history = s->GetHistory();
 			if (history.GetCount() != state->Count || history.GetDoneCount() != state->Done || &history != state->History) {
@@ -654,7 +655,7 @@ namespace Jazz2::Editor
 			}
 		});
 
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

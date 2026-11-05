@@ -646,7 +646,7 @@ namespace Jazz2::Editor
 	void EditorSession::GrabBlock(BlockGrab::Mode mode)
 	{
 		// Over the tiles of the picker a block of them, otherwise of the layer being edited
-		UiElement* hover = (_surface != nullptr ? _surface->GetHover() : nullptr);
+		Element* hover = (_surface != nullptr ? _surface->GetHover() : nullptr);
 		if (TileGrid* grid = (hover != nullptr ? runtime_cast<TileGrid>(hover) : nullptr)) {
 			Vector2i cell, start;
 			if (grid->GetCellUnderPointer(cell) && _blockGrab->PressTileSet(grid->GetSource(), grid->GetColumns(), cell, start)) {

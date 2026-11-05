@@ -659,6 +659,33 @@ namespace Jazz2::Editor
 		}
 	}
 
+	void TileLod::Evict()
+	{
+		if (_evicted) {
+			return;
+		}
+		// Those made ahead are kept for when the view gets far again, with the colors of the tiles
+		for (std::size_t i = 0; i < _chunks.size(); ) {
+			if (!_chunks[i].Base) {
+				_bytes -= _chunks[i].Bytes;
+				if (i + 1 < _chunks.size()) {
+					_chunks[i] = Death::move(_chunks.back());
+				}
+				_chunks.pop_back();
+			} else {
+				i++;
+			}
+		}
+		_chunkIndex.clear();
+		for (std::size_t i = 0; i < _chunks.size(); i++) {
+			_chunkIndex.emplace(GetChunkKey(_chunks[i].Layer, _chunks[i].Size, _chunks[i].Start, _chunks[i].Base), std::int32_t(i));
+		}
+		_texturePool = SmallVector<PooledTexture, 0>();
+		_pooledBytes = 0;
+		_pixels = SmallVector<std::uint32_t, 0>();
+		_evicted = true;
+	}
+
 	void TileLod::BeginFrame(float scale)
 	{
 		_frame++;
@@ -675,28 +702,9 @@ namespace Jazz2::Editor
 			_lastScale = scale;
 			_lastChange = TimeStamp::now();
 		}
-		if (!_evicted && _frame - _lastOverrideFrame > EvictFrames) {
-			// The view is close for a while, so the images aren't drawn, but those made ahead are kept for when it gets far
-			// again, with the colors of the tiles
-			for (std::size_t i = 0; i < _chunks.size(); ) {
-				if (!_chunks[i].Base) {
-					_bytes -= _chunks[i].Bytes;
-					if (i + 1 < _chunks.size()) {
-						_chunks[i] = Death::move(_chunks.back());
-					}
-					_chunks.pop_back();
-				} else {
-					i++;
-				}
-			}
-			_chunkIndex.clear();
-			for (std::size_t i = 0; i < _chunks.size(); i++) {
-				_chunkIndex.emplace(GetChunkKey(_chunks[i].Layer, _chunks[i].Size, _chunks[i].Start, _chunks[i].Base), std::int32_t(i));
-			}
-			_texturePool = SmallVector<PooledTexture, 0>();
-			_pooledBytes = 0;
-			_pixels = SmallVector<std::uint32_t, 0>();
-			_evicted = true;
+		if (_frame - _lastOverrideFrame > EvictFrames) {
+			// The view is close for a while, so the images aren't drawn
+			Evict();
 		}
 
 		// At least as many pixels for a tile as a tile takes on the screen, so the images aren't blurred by being stretched,

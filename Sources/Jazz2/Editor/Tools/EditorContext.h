@@ -4,6 +4,7 @@
 
 #include "ToolHost.h"
 #include "../Document/DocumentChanges.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/Function.h>
 #include <Containers/SmallVector.h>
@@ -19,6 +20,11 @@ namespace Jazz2
 namespace Jazz2::Formats
 {
 	struct TileSetData;
+}
+
+namespace Jazz2::UI::Windows
+{
+	struct FileRoot;
 }
 
 namespace Jazz2::Editor
@@ -38,7 +44,6 @@ namespace Jazz2::Editor
 	class ToolManager;
 	struct EditorSettings;
 	struct ToolPointer;
-	struct UiFileRoot;
 	enum class SnapshotParts : std::uint32_t;
 
 	/** @brief What the editor was used with last */
@@ -111,9 +116,9 @@ namespace Jazz2::Editor
 		/** @brief Returns the name of the level as episode/level, may be empty */
 		virtual StringView GetLevelName() const = 0;
 		/** @brief Returns the places levels are opened from or saved to */
-		virtual void GetFileRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots) = 0;
+		virtual void GetFileRoots(bool forSaving, SmallVectorImpl<FileRoot>& roots) = 0;
 		/** @brief Returns the places images are opened from or saved to, outside of the content of the game too */
-		virtual void GetImageRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots) = 0;
+		virtual void GetImageRoots(bool forSaving, SmallVectorImpl<FileRoot>& roots) = 0;
 		/** @brief Opens a level file in the editor, asking about unsaved changes first */
 		virtual void OpenFile(StringView path) = 0;
 		/** @brief Restores a recovery copy into the editor, asking about unsaved changes first, see @ref EditorSession::OpenRecoveryCopy() */

@@ -143,7 +143,7 @@ namespace Jazz2::Editor
 		void OnKeyReleased(const KeyboardEvent& event) override;
 		void Cancel() override;
 		bool IsBusy() const override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 		void BuildOptions(ToolOptionsBuilder& builder) override;
 
@@ -209,7 +209,7 @@ namespace Jazz2::Editor
 		// Changes the selection by the rectangle dragged, or by the event clicked if it wasn't dragged
 		void EndMarquee();
 		// Draws marching ants around the selected events seen in the view
-		void DrawSelectedEvents(UiPainter& painter, const LayerView& view);
+		void DrawSelectedEvents(Painter& painter, const LayerView& view);
 
 		/** @brief Returns the handle under the pointer, `-1` if there's none */
 		std::int32_t FindGizmo(ArrayView<const EventGizmo> gizmos, Vector2f screen);

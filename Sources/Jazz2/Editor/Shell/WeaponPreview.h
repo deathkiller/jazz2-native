@@ -2,7 +2,8 @@
 
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../UI/UiElement.h"
+#include "../../UI/Windows/Element.h"
+#include "../UI/EditorUi.h"
 #include "../../WeaponDefinition.h"
 
 #include "../../../nCine/Primitives/Rect.h"
@@ -16,10 +17,14 @@ namespace Jazz2::Resources
 	struct GraphicResource;
 }
 
+namespace Jazz2::UI::Windows
+{
+	class Painter;
+}
+
 namespace Jazz2::Editor
 {
 	class IEditorContext;
-	class UiPainter;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	using Resources::GraphicResource;
@@ -116,7 +121,7 @@ namespace Jazz2::Editor
 	 * All frames of the animation are at the same scale and place, at most a pixel a unit of the interface, a whole
 	 * scale if it's larger. With @p additive, it's added to what's behind, as shots that glow are.
 	 */
-	void DrawFittedFrame(UiPainter& painter, const GraphicResource& resource, std::int32_t frame, const Rectf& rect, bool additive = false);
+	void DrawFittedFrame(Painter& painter, const GraphicResource& resource, std::int32_t frame, const Rectf& rect, bool additive = false);
 
 	/**
 		@brief Preview of a custom weapon in a firing range
@@ -124,7 +129,7 @@ namespace Jazz2::Editor
 		Shows the paths of the shots and the shots themselves flying along them, with their sprites, again and again.
 		The player and the target are moved by dragging them.
 	*/
-	class WeaponPreview : public UiElement
+	class WeaponPreview : public Element
 	{
 	public:
 		/** @brief Creates a new instance, the functions return the weapons of the level, the weapon and whether it's powered up */
@@ -134,13 +139,13 @@ namespace Jazz2::Editor
 		/** @brief Returns what one press of fire does, in numbers, empty if there's nothing shown */
 		String GetSummary();
 
-		Vector2f Measure(const UiContext& context, Vector2f available) override;
+		Vector2f Measure(const Context& context, Vector2f available) override;
 		void Update(float timeMult) override;
-		void Draw(UiPainter& painter) override;
+		void Draw(Painter& painter) override;
 		bool AcceptsPointer() const override;
-		bool OnPointerDown(const UiPointerEvent& event) override;
-		void OnPointerMove(const UiPointerEvent& event) override;
-		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		bool OnPointerDown(const PointerEvent& event) override;
+		void OnPointerMove(const PointerEvent& event) override;
+		void OnPointerUp(const PointerEvent& event, bool inside) override;
 		void OnPointerCancel() override;
 		StringView GetTooltip(Vector2f pos) const override;
 
@@ -179,14 +184,14 @@ namespace Jazz2::Editor
 
 		Nothing is shown while the function returns `nullptr`.
 	*/
-	class WeaponSpriteView : public UiElement
+	class WeaponSpriteView : public Element
 	{
 	public:
 		/** @brief Creates a new instance, the function returns the animation and whether it glows */
 		WeaponSpriteView(IEditorContext& session, Function<const GraphicResource*(bool&)>&& getResource);
 
-		Vector2f Measure(const UiContext& context, Vector2f available) override;
-		void Draw(UiPainter& painter) override;
+		Vector2f Measure(const Context& context, Vector2f available) override;
+		void Draw(Painter& painter) override;
 
 	private:
 		IEditorContext& _session;

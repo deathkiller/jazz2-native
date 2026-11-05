@@ -389,14 +389,14 @@ namespace Jazz2::Editor
 		expert.IsChecked = [this]() { return _settings.Expert; };
 		// How the interface looks and moves, for eyes that need it
 		auto applyTheme = [this]() {
-			UiTheme::Apply(UiThemeKind(_settings.Theme), _settings.ReducedMotion, _settings.ReadableFont);
+			Theme::Apply(ThemeKind(_settings.Theme), _settings.ReducedMotion, _settings.ReadableFont);
 			_settings.Save();
 		};
 		auto& highContrast = a.Add(ActionIds::ViewHighContrast, _x("editor", "High Contrast Interface"), EditorIcon::None, [this, applyTheme]() {
-			_settings.Theme = (_settings.Theme == std::int32_t(UiThemeKind::HighContrast) ? std::int32_t(UiThemeKind::Default) : std::int32_t(UiThemeKind::HighContrast));
+			_settings.Theme = (_settings.Theme == std::int32_t(ThemeKind::HighContrast) ? std::int32_t(ThemeKind::Default) : std::int32_t(ThemeKind::HighContrast));
 			applyTheme();
 		});
-		highContrast.IsChecked = [this]() { return (_settings.Theme == std::int32_t(UiThemeKind::HighContrast)); };
+		highContrast.IsChecked = [this]() { return (_settings.Theme == std::int32_t(ThemeKind::HighContrast)); };
 		// TRANSLATORS: Menu item in the View menu, text is shown in a plain font instead of the one of the game
 		auto& readableFont = a.Add(ActionIds::ViewReadableFont, _x("editor", "Readable Font"), EditorIcon::None, [this, applyTheme]() {
 			_settings.ReadableFont = !_settings.ReadableFont;

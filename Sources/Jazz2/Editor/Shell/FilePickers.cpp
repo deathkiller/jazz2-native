@@ -5,8 +5,9 @@
 #include "ProgressDialog.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Tools/EditorContext.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../Formats/LevelPreview.h"
 #include "../../Formats/TileSetFile.h"
@@ -160,18 +161,18 @@ namespace Jazz2::Editor
 			return ((header.Flags & LevelFlags::NotEditable) == LevelFlags::NotEditable ? FileStatus::PlayOnly : FileStatus::Valid);
 		}
 
-		UiFileKind MakeLevelKind(FileStatus status, bool scripted)
+		FileKind MakeLevelKind(FileStatus status, bool scripted)
 		{
-			UiFileKind kind;
+			FileKind kind;
 			if (status == FileStatus::Unrecognized) {
 				kind.Icon = EditorIcon::BrokenFile;
-				kind.Color = UiTheme::Danger;
+				kind.Color = Theme::Danger;
 				// TRANSLATORS: Tooltip of a file in the list of the file dialog picking a level
 				kind.Description = _x("editor", "Not a level of this version of the game, or it's damaged");
 				return kind;
 			}
 			kind.Icon = (scripted ? EditorIcon::ScriptedLevelFile : EditorIcon::LevelFile);
-			kind.Color = (scripted ? ScriptedLevelColor : UiTheme::IconColor);
+			kind.Color = (scripted ? ScriptedLevelColor : Theme::IconColor);
 			if (status == FileStatus::PlayOnly) {
 				// TRANSLATORS: Tooltips of a file in the list of the file dialog picking a level
 				kind.Description = (scripted ? _x("editor", "Level with a script, exported only to be played") : _x("editor", "Level exported only to be played"));
@@ -181,7 +182,7 @@ namespace Jazz2::Editor
 			return kind;
 		}
 
-		bool GetLevelKind(StringView path, UiFileKind& kind)
+		bool GetLevelKind(StringView path, FileKind& kind)
 		{
 			FileStatus status = GetCachedStatus(path, FileType::Level, ReadLevelStatus);
 			kind = MakeLevelKind(status, status != FileStatus::Unrecognized && !GetScriptPath(path).empty());
@@ -189,7 +190,7 @@ namespace Jazz2::Editor
 		}
 
 		// An empty value isn't shown at all
-		void AddLevelRow(UiFileInfo& info, StringView label, StringView value)
+		void AddLevelRow(FileInfo& info, StringView label, StringView value)
 		{
 			if (!value.empty()) {
 				info.Rows.push_back({ label, value });
@@ -197,7 +198,7 @@ namespace Jazz2::Editor
 		}
 
 		// Values of the next level that aren't levels, as the game takes them when a level ends (see GameEventHandler::ChangeLevel())
-		void GetSpecialLevels(SmallVectorImpl<UiFileSpecialEntry>& entries)
+		void GetSpecialLevels(SmallVectorImpl<FileSpecialEntry>& entries)
 		{
 			// TRANSLATORS: Special value at the top of the file dialog picking the next level, the episode ends instead
 			entries.push_back({ _x("editor", "End of the episode"), ":end"_s, EditorIcon::RaceFlag,
@@ -208,14 +209,14 @@ namespace Jazz2::Editor
 		}
 
 		// A level that follows, a special value by its name too
-		void AddLevelReferenceRow(UiFileInfo& info, StringView label, StringView value)
+		void AddLevelReferenceRow(FileInfo& info, StringView label, StringView value)
 		{
 			if (value.empty()) {
 				return;
 			}
-			SmallVector<UiFileSpecialEntry, 2> special;
+			SmallVector<FileSpecialEntry, 2> special;
 			GetSpecialLevels(special);
-			for (const UiFileSpecialEntry& entry : special) {
+			for (const FileSpecialEntry& entry : special) {
 				if (entry.Value == value) {
 					info.Rows.push_back({ label, String(entry.Label + " ("_s + value + ")"_s) });
 					return;
@@ -224,7 +225,7 @@ namespace Jazz2::Editor
 			info.Rows.push_back({ label, value });
 		}
 
-		bool GetLevelInfo(StringView path, UiFileInfo& info)
+		bool GetLevelInfo(StringView path, FileInfo& info)
 		{
 			String scriptPath = GetScriptPath(path);
 			info.HasKind = true;
@@ -234,7 +235,7 @@ namespace Jazz2::Editor
 			if (!s->IsValid() || !Formats::LevelFile::ReadHeader(*s, header)) {
 				SetCachedStatus(path, FileType::Level, FileStatus::Unrecognized);
 				info.Kind = MakeLevelKind(FileStatus::Unrecognized, false);
-				info.Rows.push_back({ {}, _x("editor", "The file isn't a level of this version of the game"), UiTheme::TextDanger });
+				info.Rows.push_back({ {}, _x("editor", "The file isn't a level of this version of the game"), Theme::TextDanger });
 				return true;
 			}
 			Formats::LevelReader reader(*s, header);
@@ -243,7 +244,7 @@ namespace Jazz2::Editor
 			if (!reader.IsValid()) {
 				SetCachedStatus(path, FileType::Level, FileStatus::Unrecognized);
 				info.Kind = MakeLevelKind(FileStatus::Unrecognized, false);
-				info.Rows.push_back({ {}, _x("editor", "The level is damaged"), UiTheme::TextDanger });
+				info.Rows.push_back({ {}, _x("editor", "The level is damaged"), Theme::TextDanger });
 				return true;
 			}
 			// All of it is read, the preview is at its end, so a damaged level is told apart too
@@ -271,7 +272,7 @@ namespace Jazz2::Editor
 			AddLevelRow(info, _x("editor", "Music"), properties.Music);
 			if (!properties.DefaultTileSet.empty() && ContentTileSetLibrary::FindTileSetFile(properties.DefaultTileSet).empty()) {
 				// TRANSLATORS: Tile set of the selected level in the file dialog, {} is its name
-				info.Rows.push_back({ _x("editor", "Tile set"), _fx("editor", "{} - not found", properties.DefaultTileSet), UiTheme::TextDanger });
+				info.Rows.push_back({ _x("editor", "Tile set"), _fx("editor", "{} - not found", properties.DefaultTileSet), Theme::TextDanger });
 			} else {
 				AddLevelRow(info, _x("editor", "Tile set"), properties.DefaultTileSet);
 			}
@@ -282,9 +283,9 @@ namespace Jazz2::Editor
 			// TRANSLATORS: Label next to the selected level in the file dialog, the script file of the level
 			AddLevelRow(info, _x("editor", "Script"), fs::GetFileName(scriptPath));
 			if (!complete) {
-				info.Rows.push_back({ {}, _x("editor", "The level is damaged"), UiTheme::TextDanger });
+				info.Rows.push_back({ {}, _x("editor", "The level is damaged"), Theme::TextDanger });
 			} else if (playOnly) {
-				info.Rows.push_back({ {}, _x("editor", "Exported only to be played"), UiTheme::TextWarning });
+				info.Rows.push_back({ {}, _x("editor", "Exported only to be played"), Theme::TextWarning });
 			}
 			return true;
 		}
@@ -300,12 +301,12 @@ namespace Jazz2::Editor
 			return (header.ChannelCount == 4 ? FileStatus::TrueColor : FileStatus::Valid);
 		}
 
-		UiFileKind MakeTileSetKind(FileStatus status)
+		FileKind MakeTileSetKind(FileStatus status)
 		{
-			UiFileKind kind;
+			FileKind kind;
 			if (status == FileStatus::Unrecognized) {
 				kind.Icon = EditorIcon::BrokenFile;
-				kind.Color = UiTheme::Danger;
+				kind.Color = Theme::Danger;
 				// TRANSLATORS: Tooltip of a file in the list of the file dialog picking a tile set
 				kind.Description = _x("editor", "Not a tile set of this version of the game, or it's damaged");
 			} else if (status == FileStatus::TrueColor) {
@@ -320,14 +321,14 @@ namespace Jazz2::Editor
 			return kind;
 		}
 
-		bool GetTileSetKind(StringView path, UiFileKind& kind)
+		bool GetTileSetKind(StringView path, FileKind& kind)
 		{
 			kind = MakeTileSetKind(GetCachedStatus(path, FileType::TileSet, ReadTileSetStatus));
 			return true;
 		}
 
 		// The first rows of tiles at half their size, ten in a row as the original tile sets have them
-		void MakeTileSetPreview(const Formats::TileSetData& data, UiFileInfo& info)
+		void MakeTileSetPreview(const Formats::TileSetData& data, FileInfo& info)
 		{
 			constexpr std::int32_t Columns = 10, MaxRows = 6, Cell = 16;
 			std::int32_t rows = std::min<std::int32_t>(MaxRows, (data.TileCount + Columns - 1) / Columns);
@@ -377,7 +378,7 @@ namespace Jazz2::Editor
 			}
 		}
 
-		bool GetTileSetInfo(StringView path, UiFileInfo& info)
+		bool GetTileSetInfo(StringView path, FileInfo& info)
 		{
 			info.HasKind = true;
 			Formats::TileSetHeader header;
@@ -386,7 +387,7 @@ namespace Jazz2::Editor
 				if (!s->IsValid() || !Formats::TileSetFile::ReadHeader(*s, header)) {
 					SetCachedStatus(path, FileType::TileSet, FileStatus::Unrecognized);
 					info.Kind = MakeTileSetKind(FileStatus::Unrecognized);
-					info.Rows.push_back({ {}, _x("editor", "The file isn't a tile set of this version of the game"), UiTheme::TextDanger });
+					info.Rows.push_back({ {}, _x("editor", "The file isn't a tile set of this version of the game"), Theme::TextDanger });
 					return true;
 				}
 			}
@@ -410,7 +411,7 @@ namespace Jazz2::Editor
 			// TRANSLATORS: Label next to the selected file in the file dialog, how large the file is
 			info.Rows.push_back({ _x("editor", "Size"), FormatFileSize(fs::GetFileSize(path)) });
 			if (!complete) {
-				info.Rows.push_back({ {}, _x("editor", "The tile set is damaged"), UiTheme::TextDanger });
+				info.Rows.push_back({ {}, _x("editor", "The tile set is damaged"), Theme::TextDanger });
 			}
 			return true;
 		}
@@ -482,12 +483,12 @@ namespace Jazz2::Editor
 		}
 
 
-		UiFileKind MakeMusicKind(FileStatus status)
+		FileKind MakeMusicKind(FileStatus status)
 		{
-			UiFileKind kind;
+			FileKind kind;
 			if (status == FileStatus::Unrecognized) {
 				kind.Icon = EditorIcon::BrokenFile;
-				kind.Color = UiTheme::Danger;
+				kind.Color = Theme::Danger;
 				// TRANSLATORS: Tooltip of a file in the list of the file dialog picking music
 				kind.Description = _x("editor", "Not music of the format its name tells, or it's damaged");
 			} else {
@@ -498,7 +499,7 @@ namespace Jazz2::Editor
 			return kind;
 		}
 
-		bool GetMusicKind(StringView path, UiFileKind& kind)
+		bool GetMusicKind(StringView path, FileKind& kind)
 		{
 			// Told by the name only, the dialog lists only known extensions; the selected file is looked into
 			static_cast<void>(path);
@@ -506,7 +507,7 @@ namespace Jazz2::Editor
 			return true;
 		}
 
-		bool GetMusicInfo(StringView path, UiFileInfo& info)
+		bool GetMusicInfo(StringView path, FileInfo& info)
 		{
 			StringView format;
 			String title;
@@ -522,7 +523,7 @@ namespace Jazz2::Editor
 			}
 			info.Rows.push_back({ _x("editor", "Size"), FormatFileSize(fs::GetFileSize(path)) });
 			if (!valid) {
-				info.Rows.push_back({ {}, _x("editor", "The file isn't of this format, or it's damaged"), UiTheme::TextDanger });
+				info.Rows.push_back({ {}, _x("editor", "The file isn't of this format, or it's damaged"), Theme::TextDanger });
 			}
 			return true;
 		}
@@ -553,7 +554,7 @@ namespace Jazz2::Editor
 		}
 #endif
 
-		void GetTileSetRoots(SmallVectorImpl<UiFileRoot>& roots)
+		void GetTileSetRoots(SmallVectorImpl<FileRoot>& roots)
 		{
 			auto& resolver = ContentResolver::Get();
 			StringView userContent = resolver.GetUserContentPath();
@@ -567,7 +568,7 @@ namespace Jazz2::Editor
 			roots.push_back({ _x("editor", "Cache"), fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s), false });
 #if defined(WITH_LEVEL_PACKS)
 			// TRANSLATORS: Name of a place tile sets are picked from, the tile sets of the installed level packs
-			UiFileRoot levelPacks{ _x("editor", "Level packs"), fs::CombinePath(resolver.GetLevelPacksCachePath(), "Tilesets"_s), false };
+			FileRoot levelPacks{ _x("editor", "Level packs"), fs::CombinePath(resolver.GetLevelPacksCachePath(), "Tilesets"_s), false };
 			levelPacks.LabelFunc = GetStoredFileLabel;
 			roots.push_back(Death::move(levelPacks));
 #endif
@@ -581,33 +582,33 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void SetupLevelFileDialog(UiFileDialog& dialog)
+	void SetupLevelFileDialog(FileDialog& dialog)
 	{
-		dialog.KindFunc = [](StringView path, UiFileKind& kind) { return GetLevelKind(path, kind); };
-		dialog.InfoFunc = [](StringView path, UiFileInfo& info) { return GetLevelInfo(path, info); };		// The whole level is read for its details
+		dialog.KindFunc = [](StringView path, FileKind& kind) { return GetLevelKind(path, kind); };
+		dialog.InfoFunc = [](StringView path, FileInfo& info) { return GetLevelInfo(path, info); };		// The whole level is read for its details
 		dialog.Asynchronous = true;
 	}
 
-	void SetupTileSetFileDialog(UiFileDialog& dialog)
+	void SetupTileSetFileDialog(FileDialog& dialog)
 	{
-		dialog.KindFunc = [](StringView path, UiFileKind& kind) { return GetTileSetKind(path, kind); };
-		dialog.InfoFunc = [](StringView path, UiFileInfo& info) { return GetTileSetInfo(path, info); };		// The whole tile set is read for its preview
+		dialog.KindFunc = [](StringView path, FileKind& kind) { return GetTileSetKind(path, kind); };
+		dialog.InfoFunc = [](StringView path, FileInfo& info) { return GetTileSetInfo(path, info); };		// The whole tile set is read for its preview
 		dialog.Asynchronous = true;
 	}
 
-	void SetupMusicFileDialog(UiFileDialog& dialog)
+	void SetupMusicFileDialog(FileDialog& dialog)
 	{
-		dialog.KindFunc = [](StringView path, UiFileKind& kind) { return GetMusicKind(path, kind); };
-		dialog.InfoFunc = [](StringView path, UiFileInfo& info) { return GetMusicInfo(path, info); };	}
+		dialog.KindFunc = [](StringView path, FileKind& kind) { return GetMusicKind(path, kind); };
+		dialog.InfoFunc = [](StringView path, FileInfo& info) { return GetMusicInfo(path, info); };	}
 
 	void ShowLevelPicker(IEditorContext& session, StringView title, StringView current, Function<void(StringView)>&& onPicked)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
 		IEditorContext* s = &session;
-		SmallVector<UiFileRoot, 4> roots;
+		SmallVector<FileRoot, 4> roots;
 		session.GetFileRoots(false, roots);
 		// Opens where the level is now, or next to the level being edited, the next level is usually there
 		StringView filePath = session.GetFilePath();
@@ -616,7 +617,7 @@ namespace Jazz2::Editor
 		StringView episode = session.GetLevelName().partition('/')[0];
 		if (!current.empty() && current[0] != ':' && (current.contains('/') || !episode.empty())) {
 			String levelName = (current.contains('/') ? String(current) : String(episode + "/"_s + current));
-			for (const UiFileRoot& root : roots) {
+			for (const FileRoot& root : roots) {
 				String path = fs::FindPathCaseInsensitive(fs::CombinePath(root.Path, String(levelName + ".j2l"_s)));
 				if (fs::IsReadableFile(path)) {
 					directory = fs::GetDirectoryName(path);
@@ -626,14 +627,14 @@ namespace Jazz2::Editor
 			}
 		}
 		auto sharedOnPicked = std::make_shared<Function<void(StringView)>>(Death::move(onPicked));
-		UiFileDialog* dialog = UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".j2l"_s, directory, fileName,
+		FileDialog* dialog = FileDialog::Show(*surface, title, FileDialogMode::Open, Death::move(roots), ".j2l"_s, directory, fileName,
 			[s, sharedOnPicked](StringView path) {
 				// The level is looked up by its name, so it doesn't matter which root it was picked from
 				(*sharedOnPicked)(MakeLevelReference(IEditorContext::MakeLevelName(path), s->GetLevelName()));
 			}, false);
 		SetupLevelFileDialog(*dialog);
 		// The values the game takes instead of a level, stored as they are
-		SmallVector<UiFileSpecialEntry, 2> special;
+		SmallVector<FileSpecialEntry, 2> special;
 		GetSpecialLevels(special);
 		dialog->SetSpecialEntries(Death::move(special), current, [sharedOnPicked](StringView value) {
 			(*sharedOnPicked)(value);
@@ -642,14 +643,14 @@ namespace Jazz2::Editor
 
 	void ShowTileSetPicker(IEditorContext& session, StringView title, StringView current, Function<void(StringView)>&& onPicked)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
-		SmallVector<UiFileRoot, 4> roots;
+		SmallVector<FileRoot, 4> roots;
 		GetTileSetRoots(roots);
 		SmallVector<String, 4> rootPaths;
-		for (const UiFileRoot& root : roots) {
+		for (const FileRoot& root : roots) {
 			rootPaths.push_back(root.Path);
 		}
 		String directory, fileName;
@@ -658,7 +659,7 @@ namespace Jazz2::Editor
 			directory = fs::GetDirectoryName(currentPath);
 			fileName = fs::GetFileName(currentPath);
 		}
-		UiFileDialog* dialog = UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".j2t"_s, directory, fileName,
+		FileDialog* dialog = FileDialog::Show(*surface, title, FileDialogMode::Open, Death::move(roots), ".j2t"_s, directory, fileName,
 			[rootPaths = Death::move(rootPaths), onPicked = Death::move(onPicked)](StringView path) mutable {
 				// Tile sets are referred to by their path relative to "Tilesets", without the extension
 				StringView name = fs::GetFileName(path);
@@ -683,13 +684,13 @@ namespace Jazz2::Editor
 
 	void ShowMusicPicker(IEditorContext& session, StringView title, StringView current, Function<void(StringView)>&& onPicked)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
 		// As ContentResolver::GetMusic() looks for it, the value is the path relative to one of them
 		auto& resolver = ContentResolver::Get();
-		SmallVector<UiFileRoot, 4> roots;
+		SmallVector<FileRoot, 4> roots;
 		StringView userContent = resolver.GetUserContentPath();
 		if (!userContent.empty()) {
 			// TRANSLATORS: Place in the file dialog choosing the music of the level, the folder of content added by the user
@@ -710,7 +711,7 @@ namespace Jazz2::Editor
 		String levelPacksPath = resolver.GetLevelPacksPath(false);
 		if (!levelPacksPath.empty()) {
 			// TRANSLATORS: Place in the file dialog choosing the music of the level, the music of the installed level packs
-			UiFileRoot levelPacks{ _x("editor", "Level packs"), fs::CombinePath(levelPacksPath, "Files"_s), false };
+			FileRoot levelPacks{ _x("editor", "Level packs"), fs::CombinePath(levelPacksPath, "Files"_s), false };
 			levelPacks.LabelFunc = GetStoredFileLabel;
 			roots.push_back(Death::move(levelPacks));
 		}
@@ -733,7 +734,7 @@ namespace Jazz2::Editor
 			rootPaths.push_back(roots[i].Path);
 			i++;
 		}
-		UiFileDialog* dialog = UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".j2b;.it;.mo3;.mod;.s3m;.xm;.ogg;.wav"_s, directory, fileName,
+		FileDialog* dialog = FileDialog::Show(*surface, title, FileDialogMode::Open, Death::move(roots), ".j2b;.it;.mo3;.mod;.s3m;.xm;.ogg;.wav"_s, directory, fileName,
 			[rootPaths = Death::move(rootPaths), onPicked = Death::move(onPicked)](StringView path) mutable {
 				String value = fs::GetFileName(path);
 				for (const String& rootPath : rootPaths) {

@@ -137,7 +137,7 @@ namespace Jazz2::Editor
 		return 0.0f;
 	}
 
-	UiSurface* FakeToolHost::GetSurface() const
+	Surface* FakeToolHost::GetSurface() const
 	{
 		return nullptr;
 	}

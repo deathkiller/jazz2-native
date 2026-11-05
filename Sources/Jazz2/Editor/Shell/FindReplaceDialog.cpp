@@ -12,9 +12,10 @@
 #include "../Events/EventPreviews.h"
 #include "../Runtime/TileDrawing.h"
 #include "../Tools/EventTools.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../Tiles/TileMap.h"
 #include "../../../nCine/Base/BitArray.h"
 
@@ -155,14 +156,14 @@ namespace Jazz2::Editor
 		}
 
 		/** The parameters of the event found or of the new one, edited by the same controls as in the event properties */
-		class EventParamsEditor : public UiForm
+		class EventParamsEditor : public Form
 		{
 		public:
 			// Under the kind they belong to
 			static constexpr float Indent = 12.0f;
 
 			EventParamsEditor(std::shared_ptr<FindState> state, bool find)
-				: UiForm(UiTheme::Spacing, UiThickness(Indent, 0.0f, 0.0f, 0.0f)), _state(Death::move(state)),
+				: Form(Theme::Spacing, Thickness(Indent, 0.0f, 0.0f, 0.0f)), _state(Death::move(state)),
 					_find(find), _shownType(EventType::Empty), _shownRevision(0), _built(false)
 			{
 			}
@@ -181,7 +182,7 @@ namespace Jazz2::Editor
 					_shownRevision = revision;
 					Rebuild(type);
 				}
-				UiStack::Update(timeMult);
+				Stack::Update(timeMult);
 			}
 
 		private:
@@ -206,7 +207,7 @@ namespace Jazz2::Editor
 					if (count == 0 && _find) {
 						// Short, the window is as wide as its content
 						// TRANSLATORS: Above the parameters of the event to find in the Find and Replace dialog, only events with the ticked values are found, keep it short
-						Add<UiLabel>(_x("editor", "Only those with the values ticked"), UiTheme::TextDim);
+						Add<Label>(_x("editor", "Only those with the values ticked"), Theme::TextDim);
 					}
 					count++;
 					std::int32_t firstChild = GetChildCount();
@@ -225,7 +226,7 @@ namespace Jazz2::Editor
 				}
 				if (count == 0) {
 					// TRANSLATORS: In the Find and Replace dialog instead of the parameters of the event, when it has none
-					Add<UiLabel>(_x("editor", "No parameters"), UiTheme::TextDisabled);
+					Add<Label>(_x("editor", "No parameters"), Theme::TextDisabled);
 				}
 			}
 
@@ -264,10 +265,10 @@ namespace Jazz2::Editor
 				};
 
 				// The label in the column of the form, a box that ticks the parameter for finding, and the control of the value
-				UiStack* row = nullptr;
+				Stack* row = nullptr;
 				if (find) {
 					row = AddRow(label, tooltip);
-					auto* check = row->Add<UiCheckBox>(StringView(), [state, bit]() {
+					auto* check = row->Add<CheckBox>(StringView(), [state, bit]() {
 						return (state->FindMask & bit) != 0;
 					}, [state, bit](bool value) {
 						state->FindMask = (value ? (state->FindMask | bit) : (state->FindMask & ~bit));
@@ -275,7 +276,7 @@ namespace Jazz2::Editor
 					check->Tooltip = _x("editor", "Find only the events with this value");
 				} else if (f->Type == ParamType::Bool) {
 					// As in the event properties, the box is the value
-					auto* check = Add<UiCheckBox>(label, [read]() { return (read() != 0); }, [write](bool value) { write(value ? 1 : 0); });
+					auto* check = Add<CheckBox>(label, [read]() { return (read() != 0); }, [write](bool value) { write(value ? 1 : 0); });
 					check->Tooltip = tooltip;
 					check->IsEnabledFunc = [isKept]() { return !isKept(); };
 					return;
@@ -287,12 +288,12 @@ namespace Jazz2::Editor
 
 				switch (f->Type) {
 					case ParamType::Bool: {
-						auto* dropdown = row->Add<UiDropdown>([read]() {
+						auto* dropdown = row->Add<Dropdown>([read]() {
 							return String(read() != 0 ? _("Yes") : _("No"));
-						}, [read, write](SmallVectorImpl<UiMenuEntry>& entries) {
+						}, [read, write](SmallVectorImpl<MenuEntry>& entries) {
 							std::int32_t current = (read() != 0 ? 1 : 0);
 							for (std::int32_t value : { 1, 0 }) {
-								UiMenuEntry entry;
+								MenuEntry entry;
 								entry.Label = (value != 0 ? _("Yes") : _("No"));
 								entry.IsChecked = [current, value]() { return (current == value); };
 								entry.Execute = [write, value]() { write(value); };
@@ -304,7 +305,7 @@ namespace Jazz2::Editor
 						break;
 					}
 					case ParamType::Enum: {
-						auto* dropdown = row->Add<UiDropdown>([read, key]() {
+						auto* dropdown = row->Add<Dropdown>([read, key]() {
 							std::int32_t value = read();
 							if (const EventParamField* field = ResolveField(key)) {
 								for (std::uint8_t i = 0; i < field->OptionCount; i++) {
@@ -314,7 +315,7 @@ namespace Jazz2::Editor
 								}
 							}
 							return FormatInteger(value);
-						}, [read, write, key](SmallVectorImpl<UiMenuEntry>& entries) {
+						}, [read, write, key](SmallVectorImpl<MenuEntry>& entries) {
 							const EventParamField* field = ResolveField(key);
 							if (field == nullptr) {
 								return;
@@ -322,7 +323,7 @@ namespace Jazz2::Editor
 							std::int32_t current = read();
 							for (std::uint8_t i = 0; i < field->OptionCount; i++) {
 								std::int32_t value = field->Options[i].Value;
-								UiMenuEntry entry;
+								MenuEntry entry;
 								entry.Label = field->Options[i].Label;
 								entry.IsChecked = [current, value]() { return (current == value); };
 								entry.Execute = [write, value]() { write(value); };
@@ -335,14 +336,14 @@ namespace Jazz2::Editor
 					}
 					case ParamType::Flags: {
 						// Each flag below, the parameter as a whole is compared
-						row->Add<UiElement>()->Flex = 1.0f;
-						auto* checks = Add<UiStack>(UiOrientation::Vertical, 1.0f, UiThickness(8.0f, 0.0f, 0.0f, 0.0f));
+						row->Add<Element>()->Flex = 1.0f;
+						auto* checks = Add<Stack>(Orientation::Vertical, 1.0f, Thickness(8.0f, 0.0f, 0.0f, 0.0f));
 						if (!find) {
 							checks->IsEnabledFunc = [isKept]() { return !isKept(); };
 						}
 						for (std::uint8_t i = 0; i < f->OptionCount; i++) {
 							std::int32_t mask = f->Options[i].Value;
-							checks->Add<UiCheckBox>(f->Options[i].Label, [read, mask]() {
+							checks->Add<CheckBox>(f->Options[i].Label, [read, mask]() {
 								return ((read() & mask) == mask);
 							}, [read, write, mask](bool value) {
 								std::int32_t flags = read();
@@ -353,7 +354,7 @@ namespace Jazz2::Editor
 					}
 					default: {
 						// Shown multiplied by its scale, as the steps of a bridge in pixels, see EventParamField::DisplayScale
-						auto* number = row->Add<UiNumberBox>([read, key]() {
+						auto* number = row->Add<NumberBox>([read, key]() {
 							const EventParamField* field = ResolveField(key);
 							return (field != nullptr ? float(EventCatalog::ToDisplayValue(*field, read())) : 0.0f);
 						}, [write, key](float value, bool final) {
@@ -371,7 +372,7 @@ namespace Jazz2::Editor
 		};
 
 		/** A tile or nothing, as the brush has it */
-		class TileSlot : public UiElement
+		class TileSlot : public Element
 		{
 		public:
 			TileSlot(IEditorContext& session, Function<const TileRef*()>&& tile)
@@ -379,15 +380,15 @@ namespace Jazz2::Editor
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
-				float size = context.Px(UiTheme::RowHeight) * 1.5f;
+				float size = context.Px(Theme::RowHeight) * 1.5f;
 				return Vector2f(size, size);
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
-				painter.RoundRect(Bounds, UiTheme::InputFill);
+				painter.RoundRect(Bounds, Theme::InputFill);
 				const TileRef* tile = _tile();
 				Tiles::TileMap* tileMap = _session.GetTileMap();
 				if (tile == nullptr || tileMap == nullptr) {
@@ -587,7 +588,7 @@ namespace Jazz2::Editor
 
 	void ShowFindReplaceDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr || ReuseSingleDialog(session, "findReplace")) {
 			return;
 		}
@@ -605,19 +606,19 @@ namespace Jazz2::Editor
 
 		// The parameters of the events make it tall, it scrolls on a small screen
 		// TRANSLATORS: Title of the dialog that finds and replaces tiles and events in the level
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Find and Replace"), true);
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Find and Replace"), true);
 		auto* content = dialog->GetContent();
 
 		// Tiles
 		// TRANSLATORS: Header of the part of the Find and Replace dialog that replaces tiles
-		content->Add<UiLabel>(_x("editor", "Tiles"), UiTheme::TextHeader);
+		content->Add<Label>(_x("editor", "Tiles"), Theme::TextHeader);
 		{
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* row = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 			// TRANSLATORS: Label in the Find and Replace dialog next to the tile to find (verb), keep it short
-			row->Add<UiLabel>(_x("editor", "Find"))->Width = 95.0f;
+			row->Add<Label>(_x("editor", "Find"))->Width = 95.0f;
 			row->Add<TileSlot>(session, Function<const TileRef*()>([state]() -> const TileRef* { return (state->HasFindTile ? &state->FindTile : nullptr); }));
 			// TRANSLATORS: Button in the Find and Replace dialog, takes the first tile of the brush
-			row->Add<UiButton>(_x("editor", "From Brush"), EditorIcon::Brush, [s, state]() {
+			row->Add<Button>(_x("editor", "From Brush"), EditorIcon::Brush, [s, state]() {
 				if (const TileRef* tile = GetBrushTile(*s)) {
 					state->FindTile = *tile;
 					state->HasFindTile = true;
@@ -625,12 +626,12 @@ namespace Jazz2::Editor
 			})->Tooltip = _x("editor", "The first tile of the brush, pick it in the tiles or in the level with the eyedropper");
 		}
 		{
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* row = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 			// TRANSLATORS: Label in the Find and Replace dialog next to the tile that replaces the found ones, keep it short
-			row->Add<UiLabel>(_x("editor", "Replace with"))->Width = 95.0f;
+			row->Add<Label>(_x("editor", "Replace with"))->Width = 95.0f;
 			row->Add<TileSlot>(session, Function<const TileRef*()>([state]() -> const TileRef* { return (state->HasReplaceTile ? &state->ReplaceTile : nullptr); }));
 			// TRANSLATORS: Button in the Find and Replace dialog, takes the first tile of the brush
-			row->Add<UiButton>(_x("editor", "From Brush"), EditorIcon::Brush, [s, state]() {
+			row->Add<Button>(_x("editor", "From Brush"), EditorIcon::Brush, [s, state]() {
 				if (const TileRef* tile = GetBrushTile(*s)) {
 					state->ReplaceTile = *tile;
 					state->HasReplaceTile = true;
@@ -638,18 +639,18 @@ namespace Jazz2::Editor
 			});
 		}
 		// TRANSLATORS: Check box in the Find and Replace dialog, finds the tile also when it's flipped in another way
-		content->Add<UiCheckBox>(_x("editor", "Flipped any way"), [state]() { return state->AnyFlip; }, [state](bool value) { state->AnyFlip = value; })
+		content->Add<CheckBox>(_x("editor", "Flipped any way"), [state]() { return state->AnyFlip; }, [state](bool value) { state->AnyFlip = value; })
 			->Tooltip = _x("editor", "Otherwise only tiles flipped the same way are found");
 		// TRANSLATORS: Check box in the Find and Replace dialog, replaces the tile in all layers of the level
-		content->Add<UiCheckBox>(_x("editor", "In all layers"), [state]() { return state->AllLayers; }, [state](bool value) { state->AllLayers = value; })
+		content->Add<CheckBox>(_x("editor", "In all layers"), [state]() { return state->AllLayers; }, [state](bool value) { state->AllLayers = value; })
 			->Tooltip = _x("editor", "Otherwise only in the layer being edited, selecting is always in it");
 		// TRANSLATORS: Check box in the Find and Replace dialog, replaces only the selected tiles
-		content->Add<UiCheckBox>(_x("editor", "Only in the selection"), [state]() { return state->TilesInSelection; }, [state](bool value) { state->TilesInSelection = value; })
+		content->Add<CheckBox>(_x("editor", "Only in the selection"), [state]() { return state->TilesInSelection; }, [state](bool value) { state->TilesInSelection = value; })
 			->Tooltip = _x("editor", "Replaces only the selected tiles, in the layer they're selected in");
 		{
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* row = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 			// TRANSLATORS: Button in the Find and Replace dialog, selects the found tiles (verb)
-			auto* select = row->Add<UiButton>(_x("editor", "Select"), EditorIcon::Select, [s, state]() {
+			auto* select = row->Add<Button>(_x("editor", "Select"), EditorIcon::Select, [s, state]() {
 				std::int32_t layerIndex = s->GetCurrentLayer();
 				LevelDocument& document = s->GetDocument();
 				if (layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size())) {
@@ -670,23 +671,23 @@ namespace Jazz2::Editor
 			select->IsEnabledFunc = [state]() { return state->HasFindTile; };
 			select->Tooltip = _x("editor", "Select the tiles found in the layer being edited");
 			// TRANSLATORS: Button in the Find and Replace dialog, replaces the found tiles (verb)
-			auto* replace = row->Add<UiButton>(_x("editor", "Replace"), EditorIcon::None, [s, state]() {
+			auto* replace = row->Add<Button>(_x("editor", "Replace"), EditorIcon::None, [s, state]() {
 				std::int32_t count = ReplaceTiles(*s, state->AllLayers ? -1 : s->GetCurrentLayer(), state->FindTile, state->ReplaceTile, state->AnyFlip, state->TilesInSelection);
 				s->ShowMessage(count == 0 ? String(_x("editor", "No tile was found")) : _fnx("editor", "{} tile replaced", "{} tiles replaced", count, count));
 			});
 			replace->IsEnabledFunc = [state]() { return state->HasFindTile && state->HasReplaceTile; };
 		}
 
-		content->Add<UiSeparator>();
+		content->Add<Separator>();
 
 		// Events
 		// TRANSLATORS: Header of the part of the Find and Replace dialog that replaces events
-		content->Add<UiLabel>(_x("editor", "Events"), UiTheme::TextHeader);
+		content->Add<Label>(_x("editor", "Events"), Theme::TextHeader);
 		// The kind and, under it, its parameters as the event properties show them
 		auto addEventRows = [s, content](StringView label, bool find, std::shared_ptr<FindState> state) {
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			row->Add<UiLabel>(label)->Width = 95.0f;
-			auto* name = row->Add<UiLabel>(StringView());
+			auto* row = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+			row->Add<Label>(label)->Width = 95.0f;
+			auto* name = row->Add<Label>(StringView());
 			name->Flex = 1.0f;
 			name->TextFunc = [state, find]() {
 				EventType type = (find ? state->FindEvent : state->ReplaceEvent);
@@ -694,14 +695,14 @@ namespace Jazz2::Editor
 				return (type == EventType::Empty ? String(_x("editor", "Nothing")) : EventPreviews::GetEventName(std::uint16_t(type)));
 			};
 			// TRANSLATORS: Button in the Find and Replace dialog, the event is then picked in the Events tab (verb)
-			row->Add<UiButton>(_x("editor", "Choose"), EditorIcon::Event, [s, state, find]() {
+			row->Add<Button>(_x("editor", "Choose"), EditorIcon::Event, [s, state, find]() {
 				// The function waiting in the session holds it, it's gone once the pick ends in any way
 				auto token = std::make_shared<bool>(true);
 				state->PendingPick = token;
 				s->PickEventFromList([state, find, token](EventType type) { state->SetEvent(find, type); });
 			});
 			// TRANSLATORS: Button in the Find and Replace dialog, takes the selected event with its parameters
-			row->Add<UiButton>(_x("editor", "Selected"), EditorIcon::None, [s, state, find]() {
+			row->Add<Button>(_x("editor", "Selected"), EditorIcon::None, [s, state, find]() {
 				// With its parameters too
 				Formats::EventRecord event;
 				if (GetPrimaryEvent(*s, event)) {
@@ -717,15 +718,15 @@ namespace Jazz2::Editor
 		// TRANSLATORS: Label in the Find and Replace dialog next to the event that replaces the found ones, keep it short
 		addEventRows(_x("editor", "Replace with"), false, state);
 		// TRANSLATORS: Check box in the Find and Replace dialog, finds only among the selected events
-		content->Add<UiCheckBox>(_x("editor", "Only the selected events"), [state]() { return state->EventsInSelection; }, [state](bool value) { state->EventsInSelection = value; })
+		content->Add<CheckBox>(_x("editor", "Only the selected events"), [state]() { return state->EventsInSelection; }, [state](bool value) { state->EventsInSelection = value; })
 			->Tooltip = _x("editor", "Finds only among the selected events");
 		// TRANSLATORS: Check box in the Find and Replace dialog, the new events keep the values of the parameters of the same name
-		content->Add<UiCheckBox>(_x("editor", "Keep matching parameters"), [state]() { return state->KeepParams; }, [state](bool value) { state->KeepParams = value; })
+		content->Add<CheckBox>(_x("editor", "Keep matching parameters"), [state]() { return state->KeepParams; }, [state](bool value) { state->KeepParams = value; })
 			->Tooltip = _x("editor", "The new events keep the values of the parameters of the same name, those are dimmed above, the others get the values set");
 		{
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* row = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 			// TRANSLATORS: Button in the Find and Replace dialog, selects the found events (verb)
-			auto* select = row->Add<UiButton>(_x("editor", "Select"), EditorIcon::Select, [s, state]() {
+			auto* select = row->Add<Button>(_x("editor", "Select"), EditorIcon::Select, [s, state]() {
 				LevelDocument& document = s->GetDocument();
 				EventFindOptions find = state->GetEventFind();
 				SmallVector<std::uint32_t, 0> cells;
@@ -751,8 +752,8 @@ namespace Jazz2::Editor
 			});
 			select->IsEnabledFunc = [state]() { return state->FindEvent != EventType::Empty; };
 			// TRANSLATORS: Button in the Find and Replace dialog, replaces the found events (verb)
-			auto* replace = row->Add<UiButton>(_x("editor", "Replace"), EditorIcon::None, [s, state]() {
-				UiSurface* surface = s->GetSurface();
+			auto* replace = row->Add<Button>(_x("editor", "Replace"), EditorIcon::None, [s, state]() {
+				Surface* surface = s->GetSurface();
 				EventFindOptions find = state->GetEventFind();
 				std::int32_t found = CountFoundEvents(*s, find);
 				if (found == 0 || surface == nullptr) {
@@ -779,7 +780,7 @@ namespace Jazz2::Editor
 						"Replace {} events \"{}\" with \"{}\"? They get the values of the parameters set.", found, found,
 						EventPreviews::GetEventName(std::uint16_t(find.Type)), EventPreviews::GetEventName(replaceWith.Type)));
 				// TRANSLATORS: Title and buttons of the message box asking before replacing events
-				UiMessageDialog::Show(*surface, _x("editor", "Replace Events"), text, { _x("editor", "Replace"), _x("editor", "Cancel") }, [s, find, replaceWith, keepParams](std::int32_t button) {
+				MessageDialog::Show(*surface, _x("editor", "Replace Events"), text, { _x("editor", "Replace"), _x("editor", "Cancel") }, [s, find, replaceWith, keepParams](std::int32_t button) {
 					if (button != 0) {
 						return;
 					}
@@ -800,7 +801,7 @@ namespace Jazz2::Editor
 		}
 
 		// The level is seen and the brush can be picked while it's open
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Position = Vector2f(1.0e6f, 1.0e6f);
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

@@ -537,8 +537,8 @@ namespace nCine::Backends
 
 #	if defined(DEATH_TARGET_WINDOWS)
 			HINSTANCE inst = ((HINSTANCE)&__ImageBase);
-			windowIcon = (HICON)::LoadImage(inst, L"IMGUI_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTSIZE);
-			windowIconSmall = (HICON)::LoadImage(inst, L"IMGUI_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTSIZE);
+			windowIcon = (HICON)::LoadImage(inst, L"WINDOW_AUXILIARY_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTSIZE);
+			windowIconSmall = (HICON)::LoadImage(inst, L"WINDOW_AUXILIARY_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTSIZE);
 #	endif
 		}
 #endif

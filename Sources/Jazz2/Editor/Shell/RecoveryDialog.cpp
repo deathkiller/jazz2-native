@@ -6,8 +6,9 @@
 #include "../Tools/EditorContext.h"
 #include "../Document/CommandArchive.h"
 #include "../Files/AutosaveService.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/I18n.h"
@@ -108,11 +109,11 @@ namespace Jazz2::Editor
 		}
 
 		/** The recovery copies, rebuilt when they're read again */
-		class RecoveryList : public UiStack
+		class RecoveryList : public Stack
 		{
 		public:
-			RecoveryList(IEditorContext& session, std::shared_ptr<RecoveryState> state, UiDialog* dialog)
-				: UiStack(UiOrientation::Vertical, 3.0f, UiThickness(0.0f, 0.0f, 3.0f, 0.0f)), _session(session), _state(Death::move(state)),
+			RecoveryList(IEditorContext& session, std::shared_ptr<RecoveryState> state, Dialog* dialog)
+				: Stack(Orientation::Vertical, 3.0f, Thickness(0.0f, 0.0f, 3.0f, 0.0f)), _session(session), _state(Death::move(state)),
 					_dialog(dialog), _shownGeneration(UINT32_MAX)
 			{
 			}
@@ -122,13 +123,13 @@ namespace Jazz2::Editor
 				if (_state->Generation != _shownGeneration) {
 					Rebuild();
 				}
-				UiStack::Update(timeMult);
+				Stack::Update(timeMult);
 			}
 
 		private:
 			IEditorContext& _session;
 			std::shared_ptr<RecoveryState> _state;
-			UiDialog* _dialog;
+			Dialog* _dialog;
 			std::uint32_t _shownGeneration;
 
 			void Rebuild()
@@ -136,30 +137,30 @@ namespace Jazz2::Editor
 				_shownGeneration = _state->Generation;
 				ClearChildren();
 				if (_state->Copies.empty()) {
-					Add<UiLabel>(_x("editor", "There are no recovery copies, all changes were saved or discarded"), UiTheme::TextDisabled);
+					Add<Label>(_x("editor", "There are no recovery copies, all changes were saved or discarded"), Theme::TextDisabled);
 					return;
 				}
 				IEditorContext* s = &_session;
 				std::shared_ptr<RecoveryState> state = _state;
-				UiDialog* dialog = _dialog;
+				Dialog* dialog = _dialog;
 				for (const RecoveryCopy& copy : _state->Copies) {
-					auto* row = Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+					auto* row = Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 					// TRANSLATORS: In the Recovery Copies dialog instead of the name of a level that has none
-					auto* label = row->Add<UiLabel>(copy.DisplayName.empty() ? String(_x("editor", "Untitled level")) : copy.DisplayName, UiTheme::Text);
+					auto* label = row->Add<Label>(copy.DisplayName.empty() ? String(_x("editor", "Untitled level")) : copy.DisplayName, Theme::Text);
 					label->Flex = 1.0f;
 					String path = copy.Path;
 					// TRANSLATORS: Button next to a recovery copy in the Recovery Copies dialog, opens the level as the copy has it
-					row->Add<UiButton>(_x("editor", "Restore"), EditorIcon::None, [s, dialog, path]() {
+					row->Add<Button>(_x("editor", "Restore"), EditorIcon::None, [s, dialog, path]() {
 						dialog->Close();
 						s->OpenRecoveryCopy(path);
 					})->Tooltip = _x("editor", "Edit the level as the copy has it, with the history of its changes");
-					row->Add<UiButton>(StringView(), EditorIcon::Delete, [s, state, path]() {
-						UiSurface* surface = s->GetSurface();
+					row->Add<Button>(StringView(), EditorIcon::Delete, [s, state, path]() {
+						Surface* surface = s->GetSurface();
 						if (surface == nullptr) {
 							return;
 						}
 						// TRANSLATORS: Title and buttons of the message confirming that a recovery copy is removed
-						UiMessageDialog::Show(*surface, _x("editor", "Recovery Copies"), _x("editor", "The changes in this copy will be lost. Remove it?"), { _x("editor", "Remove"), _x("editor", "Cancel") },
+						MessageDialog::Show(*surface, _x("editor", "Recovery Copies"), _x("editor", "The changes in this copy will be lost. Remove it?"), { _x("editor", "Remove"), _x("editor", "Cancel") },
 							[state, path](std::int32_t button) {
 							if (button == 0) {
 								fs::RemoveFile(path);
@@ -185,7 +186,7 @@ namespace Jazz2::Editor
 						// TRANSLATORS: At the end of the details of a recovery copy in the Recovery Copies dialog, the copy has the undo history of its changes too
 						details = String(details + ", "_s + _x("editor", "with history"));
 					}
-					Add<UiLabel>(details, UiTheme::TextDim);
+					Add<Label>(details, Theme::TextDim);
 				}
 			}
 		};
@@ -193,7 +194,7 @@ namespace Jazz2::Editor
 
 	void ShowRecoveryDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -202,11 +203,11 @@ namespace Jazz2::Editor
 		ReadCopies(*state);
 
 		// TRANSLATORS: Title of the dialog listing the copies of levels with changes that weren't saved, kept in case the game ended unexpectedly
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Recovery Copies"));
-		UiDialog* dialogPtr = dialog.get();
-		UiStack* content = dialog->GetContent();
-		content->Add<UiLabel>(_x("editor", "Changes that weren't saved, kept in case the game ended unexpectedly"), UiTheme::TextDim);
-		auto* scroll = content->Add<UiScrollView>();
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Recovery Copies"));
+		Dialog* dialogPtr = dialog.get();
+		Stack* content = dialog->GetContent();
+		content->Add<Label>(_x("editor", "Changes that weren't saved, kept in case the game ended unexpectedly"), Theme::TextDim);
+		auto* scroll = content->Add<ScrollView>();
 		scroll->Width = 420.0f;
 		scroll->Height = 200.0f;
 		scroll->SetContent<RecoveryList>(session, state, dialogPtr);

@@ -695,8 +695,9 @@ namespace Jazz2::UI
 							float glyphScale = atlasScale * layerScale;
 							Colorf glyphColor = color * canvas->LayerColor;
 
-							pos.X = std::round(pos.X);
-							pos.Y = std::round(pos.Y);
+							const float pixelScale = canvas->PixelScale;
+							pos.X = std::round(pos.X * pixelScale) / pixelScale;
+							pos.Y = std::round(pos.Y * pixelScale) / pixelScale;
 
 							Vector4f texCoords = Vector4f(
 								glyph.Width * invTexWidth,

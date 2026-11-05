@@ -210,7 +210,7 @@ namespace Jazz2::Editor
 			[options]() { return options->OnGrid; }, [options](bool value) { options->OnGrid = value; });
 	}
 
-	void PathTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void PathTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		std::int32_t spriteLayer = _host.GetDocument().GetSpriteLayerIndex();
 		LayerView view = _host.GetLayerView(spriteLayer >= 0 ? spriteLayer : 0);
@@ -251,9 +251,9 @@ namespace Jazz2::Editor
 		for (Vector2f& p : line) {
 			p = view.WorldToScreen(p);
 		}
-		painter.Polyline(line, thickness, Colorf(1.0f, 1.0f, 1.0f, 0.5f), UiLayer::Overlay);
+		painter.Polyline(line, thickness, Colorf(1.0f, 1.0f, 1.0f, 0.5f), PaintLayer::Overlay);
 		for (const Vector2f& p : _points) {
-			painter.Circle(view.WorldToScreen(p), std::max(2.0f, painter.Px(2.5f)), UiTheme::Accent, UiLayer::Overlay);
+			painter.Circle(view.WorldToScreen(p), std::max(2.0f, painter.Px(2.5f)), Theme::Accent, PaintLayer::Overlay);
 		}
 	}
 

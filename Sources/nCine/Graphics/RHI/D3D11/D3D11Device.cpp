@@ -218,7 +218,7 @@ namespace nCine::RHI::D3D11
 	ID3D11VertexShader* D3D11Device::_presentVs = nullptr;
 	ID3D11PixelShader* D3D11Device::_presentPs = nullptr;
 	ID3D11SamplerState* D3D11Device::_presentSampler = nullptr;
-	ID3D11RenderTargetView* D3D11Device::_secondaryTargetRtv = nullptr;
+	ID3D11RenderTargetView* D3D11Device::_auxiliaryTargetRtv = nullptr;
 
 	SmallVector<D3D11Device::PooledCBuffer, 0> D3D11Device::_cbufferPool;
 	SmallVector<std::uint8_t, 0> D3D11Device::_cbufferStaging;
@@ -433,10 +433,10 @@ namespace nCine::RHI::D3D11
 	ID3D11RenderTargetView* D3D11Device::ScreenRtv()
 	{
 		// "Screen" is the intermediate present texture (copied into the back-buffer at present time), or the
-		// back-buffer itself if that texture is missing - unless drawing is currently redirected into a secondary
+		// back-buffer itself if that texture is missing - unless drawing is currently redirected into an auxiliary
 		// swap chain, whose back-buffer then stands in for the screen target
-		if (_secondaryTargetRtv != nullptr) {
-			return _secondaryTargetRtv;
+		if (_auxiliaryTargetRtv != nullptr) {
+			return _auxiliaryTargetRtv;
 		}
 		return (_presentRtv != nullptr ? _presentRtv : _backbufferRtv);
 	}
@@ -1384,9 +1384,9 @@ namespace nCine::RHI::D3D11
 
 	namespace
 	{
-		// Opaque payload behind the void* handle the *Secondary* functions hand out (ImGui keeps it in
+		// Opaque payload behind the void* handle the *Auxiliary* functions hand out (ImGui keeps it in
 		// ImGuiViewport::RendererUserData). Deliberately not a member type: nothing outside this file needs it.
-		struct SecondarySwapchain
+		struct AuxiliarySwapchain
 		{
 			IDXGISwapChain* Swapchain = nullptr;
 			ID3D11RenderTargetView* Rtv = nullptr;
@@ -1395,7 +1395,7 @@ namespace nCine::RHI::D3D11
 		};
 	}
 
-	void* D3D11Device::CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
+	void* D3D11Device::CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
 	{
 		if (_device == nullptr || _swapchain == nullptr || windowHandle == nullptr) {
 			return nullptr;
@@ -1406,7 +1406,7 @@ namespace nCine::RHI::D3D11
 		// Every swap chain of a device must come from the factory that owns its adapter - reuse the main one's
 		IDXGIFactory* factory = nullptr;
 		if (FAILED(_swapchain->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory))) || factory == nullptr) {
-			LOGE("Failed to obtain the DXGI factory for a secondary swap chain");
+			LOGE("Failed to obtain the DXGI factory for an auxiliary swap chain");
 			return nullptr;
 		}
 
@@ -1438,11 +1438,11 @@ namespace nCine::RHI::D3D11
 		// re-associating it here would move DXGI's fullscreen handling onto a transient UI window)
 		SafeRelease(factory);
 		if (chain == nullptr) {
-			LOGE("Failed to create a secondary swap chain");
+			LOGE("Failed to create an auxiliary swap chain");
 			return nullptr;
 		}
 
-		SecondarySwapchain* sc = new SecondarySwapchain();
+		AuxiliarySwapchain* sc = new AuxiliarySwapchain();
 		sc->Swapchain = chain;
 		sc->Width = width;
 		sc->Height = height;
@@ -1453,21 +1453,21 @@ namespace nCine::RHI::D3D11
 			backBuffer->Release();
 		}
 		if (sc->Rtv == nullptr) {
-			LOGE("Failed to create the render target view of a secondary swap chain");
-			DestroySecondarySwapchain(sc);
+			LOGE("Failed to create the render target view of an auxiliary swap chain");
+			DestroyAuxiliarySwapchain(sc);
 			return nullptr;
 		}
 		return sc;
 	}
 
-	void D3D11Device::DestroySecondarySwapchain(void* handle)
+	void D3D11Device::DestroyAuxiliarySwapchain(void* handle)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr) {
 			return;
 		}
-		if (_secondaryTargetRtv == sc->Rtv) {
-			EndSecondaryFrame();
+		if (_auxiliaryTargetRtv == sc->Rtv) {
+			EndAuxiliaryFrame();
 		}
 		if (sc->Rtv != nullptr) {
 			// Scrub the view from the last-bound shadow first: it is released right below and a new view
@@ -1479,9 +1479,9 @@ namespace nCine::RHI::D3D11
 		delete sc;
 	}
 
-	void D3D11Device::ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height)
+	void D3D11Device::ResizeAuxiliarySwapchain(void* handle, std::int32_t width, std::int32_t height)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr || sc->Swapchain == nullptr || _device == nullptr || width <= 0 || height <= 0) {
 			return;
 		}
@@ -1490,8 +1490,8 @@ namespace nCine::RHI::D3D11
 		}
 
 		// Every reference to the back-buffer must be gone before ResizeBuffers
-		if (_secondaryTargetRtv == sc->Rtv) {
-			EndSecondaryFrame();
+		if (_auxiliaryTargetRtv == sc->Rtv) {
+			EndAuxiliaryFrame();
 		}
 		if (sc->Rtv != nullptr) {
 			OnRtvReleased(sc->Rtv);
@@ -1499,7 +1499,7 @@ namespace nCine::RHI::D3D11
 		SafeRelease(sc->Rtv);
 
 		if (FAILED(sc->Swapchain->ResizeBuffers(0, static_cast<UINT>(width), static_cast<UINT>(height), DXGI_FORMAT_UNKNOWN, 0))) {
-			LOGE("IDXGISwapChain::ResizeBuffers() failed for a secondary swap chain");
+			LOGE("IDXGISwapChain::ResizeBuffers() failed for an auxiliary swap chain");
 			return;
 		}
 		sc->Width = width;
@@ -1512,9 +1512,9 @@ namespace nCine::RHI::D3D11
 		}
 	}
 
-	void D3D11Device::BeginSecondaryFrame(void* handle, bool clear)
+	void D3D11Device::BeginAuxiliaryFrame(void* handle, bool clear)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (_context == nullptr || sc == nullptr || sc->Rtv == nullptr) {
 			return;
 		}
@@ -1522,7 +1522,7 @@ namespace nCine::RHI::D3D11
 		// The redirection works through the "screen" target (see ScreenRtv()), so any off-screen render target
 		// left bound by the scene must be cleared first, and the shadow state dropped so the next draw rebinds
 		_currentRenderTarget = nullptr;
-		_secondaryTargetRtv = sc->Rtv;
+		_auxiliaryTargetRtv = sc->Rtv;
 		InvalidateCachedState();
 
 		if (clear) {
@@ -1531,22 +1531,52 @@ namespace nCine::RHI::D3D11
 		}
 	}
 
-	void D3D11Device::EndSecondaryFrame()
+	void D3D11Device::EndAuxiliaryFrame()
 	{
-		if (_secondaryTargetRtv == nullptr) {
+		if (_auxiliaryTargetRtv == nullptr) {
 			return;
 		}
-		_secondaryTargetRtv = nullptr;
+		_auxiliaryTargetRtv = nullptr;
 		// The next draw must not keep writing into the window that is no longer bound
 		InvalidateCachedState();
 	}
 
-	void D3D11Device::PresentSecondaryFrame(void* handle)
+	void D3D11Device::PresentAuxiliaryFrame(void* handle)
 	{
-		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc != nullptr && sc->Swapchain != nullptr) {
 			sc->Swapchain->Present(0, 0);
 		}
+	}
+
+	void D3D11Device::PresentAuxiliaryTexture(void* handle, const D3D11Texture* source)
+	{
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
+		if (_context == nullptr || sc == nullptr || sc->Swapchain == nullptr || sc->Rtv == nullptr) {
+			return;
+		}
+
+		// A flip-model swap chain doesn't keep the previous frame, so the part the texture doesn't cover is cleared
+		const float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		_context->ClearRenderTargetView(sc->Rtv, black);
+
+		ID3D11Texture2D* texture = (source != nullptr ? source->GetOrCreateTexture2D() : nullptr);
+		ID3D11Texture2D* backBuffer = nullptr;
+		if (texture != nullptr && SUCCEEDED(sc->Swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer))) && backBuffer != nullptr) {
+			D3D11_TEXTURE2D_DESC sourceDesc, targetDesc;
+			texture->GetDesc(&sourceDesc);
+			backBuffer->GetDesc(&targetDesc);
+			// Both are top-down, a plain copy keeps the picture as it is
+			if (sourceDesc.Format == targetDesc.Format && sourceDesc.SampleDesc.Count == 1) {
+				D3D11_BOX box = {};
+				box.right = (sourceDesc.Width < targetDesc.Width ? sourceDesc.Width : targetDesc.Width);
+				box.bottom = (sourceDesc.Height < targetDesc.Height ? sourceDesc.Height : targetDesc.Height);
+				box.back = 1;
+				_context->CopySubresourceRegion(backBuffer, 0, 0, 0, 0, texture, 0, &box);
+			}
+			backBuffer->Release();
+		}
+		sc->Swapchain->Present(0, 0);
 	}
 
 	void D3D11Device::ReleasePipelineObjects()
@@ -1573,9 +1603,9 @@ namespace nCine::RHI::D3D11
 			_context->ClearState();
 			_context->Flush();
 		}
-		// Secondary swap chains are owned by whoever created them (ImGui destroys its platform windows on
+		// Auxiliary swap chains are owned by whoever created them (ImGui destroys its platform windows on
 		// shutdown); just make sure a redirection cannot outlive the device
-		_secondaryTargetRtv = nullptr;
+		_auxiliaryTargetRtv = nullptr;
 		InvalidateCachedState();
 		ReleasePipelineObjects();
 		ReleasePresentResources();

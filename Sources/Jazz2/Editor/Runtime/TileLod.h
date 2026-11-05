@@ -139,6 +139,13 @@ namespace Jazz2::Editor
 		/** @brief Called once a frame before the level is drawn, with the scale of the view */
 		void BeginFrame(float scale);
 		/**
+		 * @brief Drops the images while they aren't drawn, as while the level is played
+		 *
+		 * Those of the layers made ahead and the colors of the tiles are kept, they show the level from far away at once
+		 * when it's seen again, until the images are made again. Done by itself a while after the view got closer.
+		 */
+		void Evict();
+		/**
 		 * @brief Prepares the colors of the tiles the level uses for some time, called in frames the level is edited in
 		 *
 		 * Computing the colors of a tile is what takes the time when a part of the level is first seen from far away, so

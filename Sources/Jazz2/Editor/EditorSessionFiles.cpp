@@ -16,12 +16,12 @@ namespace Jazz2::Editor
 		return _files->GetLevelName();
 	}
 
-	void EditorSession::GetFileRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots)
+	void EditorSession::GetFileRoots(bool forSaving, SmallVectorImpl<FileRoot>& roots)
 	{
 		_files->GetFileRoots(forSaving, roots);
 	}
 
-	void EditorSession::GetImageRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots)
+	void EditorSession::GetImageRoots(bool forSaving, SmallVectorImpl<FileRoot>& roots)
 	{
 		_files->GetImageRoots(forSaving, roots);
 	}

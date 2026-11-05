@@ -2,6 +2,12 @@
 
 #include "SdlGfxDevice.h"
 #include "../Graphics/ITextureLoader.h"
+#include "SdlAuxiliaryWindow.h"
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
 
 #if defined(DEATH_TARGET_IOS) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_METAL)
 	// The GL view's framebuffer and renderbuffer handles (see initDevice)
@@ -1133,6 +1139,122 @@ namespace nCine::Backends
 				break;
 		}
 	}
+
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS)
+	bool SdlGfxDevice::supportsAuxiliaryWindows() const
+	{
+		return SdlAuxiliaryWindow::IsSupported();
+	}
+
+	std::unique_ptr<AuxiliaryWindow> SdlGfxDevice::createAuxiliaryWindow(const AuxiliaryWindowDesc& desc)
+	{
+		return SdlAuxiliaryWindow::Create(desc);
+	}
+
+	bool SdlGfxDevice::globalMousePosition(Vector2i& position) const
+	{
+		if (!SdlAuxiliaryWindow::IsSupported()) {
+			return false;
+		}
+#if defined(WITH_SDL3)
+		float x = 0.0f, y = 0.0f;
+		SDL_GetGlobalMouseState(&x, &y);
+		position = Vector2i(std::int32_t(x), std::int32_t(y));
+#else
+		SDL_GetGlobalMouseState(&position.X, &position.Y);
+#endif
+		return true;
+	}
+
+	bool SdlGfxDevice::globalMouseButtons(std::uint32_t& buttons) const
+	{
+		if (!SdlAuxiliaryWindow::IsSupported()) {
+			return false;
+		}
+#if defined(WITH_SDL3)
+		float x = 0.0f, y = 0.0f;
+		std::uint32_t state = SDL_GetGlobalMouseState(&x, &y);
+#else
+		int x = 0, y = 0;
+		std::uint32_t state = SDL_GetGlobalMouseState(&x, &y);
+#endif
+		buttons = ((state & SDL_BUTTON_LMASK) != 0 ? 0x01 : 0) | ((state & SDL_BUTTON_RMASK) != 0 ? 0x02 : 0) | ((state & SDL_BUTTON_MMASK) != 0 ? 0x04 : 0);
+		return true;
+	}
+
+	bool SdlGfxDevice::desktopWorkArea(Vector2i point, Recti& area) const
+	{
+		// The display at the point, or the nearest one by the distance to its edges
+		auto distanceTo = [&point](const SDL_Rect& r) {
+			std::int64_t dx = std::max<std::int64_t>({ std::int64_t(r.x) - point.X, 0, std::int64_t(point.X) - (std::int64_t(r.x) + r.w) });
+			std::int64_t dy = std::max<std::int64_t>({ std::int64_t(r.y) - point.Y, 0, std::int64_t(point.Y) - (std::int64_t(r.y) + r.h) });
+			return dx * dx + dy * dy;
+		};
+		SDL_Rect usable;
+		bool found = false;
+#if defined(WITH_SDL3)
+		int count = 0;
+		SDL_DisplayID* displays = SDL_GetDisplays(&count);
+		std::int64_t best = INT64_MAX;
+		for (int i = 0; i < count; i++) {
+			SDL_Rect bounds;
+			if (SDL_GetDisplayBounds(displays[i], &bounds)) {
+				std::int64_t distance = distanceTo(bounds);
+				if (distance < best && SDL_GetDisplayUsableBounds(displays[i], &usable)) {
+					best = distance;
+					area = Recti(usable.x, usable.y, usable.w, usable.h);
+					found = true;
+				}
+			}
+		}
+		SDL_free(displays);
+#else
+		std::int64_t best = INT64_MAX;
+		for (int i = 0; i < SDL_GetNumVideoDisplays(); i++) {
+			SDL_Rect bounds;
+			if (SDL_GetDisplayBounds(i, &bounds) == 0) {
+				std::int64_t distance = distanceTo(bounds);
+				if (distance < best && SDL_GetDisplayUsableBounds(i, &usable) == 0) {
+					best = distance;
+					area = Recti(usable.x, usable.y, usable.w, usable.h);
+					found = true;
+				}
+			}
+		}
+#endif
+		return found;
+	}
+
+	float SdlGfxDevice::windowContentScale() const
+	{
+#if defined(WITH_SDL3)
+		float scale = SDL_GetWindowDisplayScale(_windowHandle);
+		return (scale > 0.0f ? scale : 1.0f);
+#else
+		return IGfxDevice::windowContentScale();
+#endif
+	}
+
+	bool SdlGfxDevice::isAuxiliaryWindow(std::uint32_t windowId)
+	{
+		// The identifier of an auxiliary window made with SDL is the one SDL gave it
+		return (AuxiliaryWindow::FindById(windowId) != nullptr);
+	}
+
+	Vector2i SdlGfxDevice::toMainWindowPosition(std::uint32_t windowId, Vector2i position)
+	{
+		if (AuxiliaryWindow* window = AuxiliaryWindow::FindById(windowId)) {
+			Recti bounds = window->GetBounds();
+			Vector2i mainPosition;
+			SDL_GetWindowPosition(_windowHandle, &mainPosition.X, &mainPosition.Y);
+			// What it shows may be drawn at another scale, on a display with another scale
+			float scale = window->GetInputScale();
+			return Vector2i(std::int32_t(std::round(float(position.X) * scale)) + bounds.X - mainPosition.X,
+				std::int32_t(std::round(float(position.Y) * scale)) + bounds.Y - mainPosition.Y);
+		}
+		return position;
+	}
+#endif
 }
 
 #endif

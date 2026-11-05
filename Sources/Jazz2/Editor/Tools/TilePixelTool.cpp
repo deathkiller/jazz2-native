@@ -126,7 +126,7 @@ namespace Jazz2::Editor
 		return _painting;
 	}
 
-	void TilePixelTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void TilePixelTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		if (_tileId < 0) {
 			return;
@@ -142,14 +142,14 @@ namespace Jazz2::Editor
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
 		if (std::int64_t(to.X - from.X + 1) * std::int64_t(to.Y - from.Y + 1) <= MaxOutlinedCells) {
 			// Every place the tile is seen at, which all change together
-			Colorf color = UiTheme::Accent;
+			Colorf color = Theme::Accent;
 			color.A = 0.7f;
 			for (std::int32_t y = from.Y; y <= to.Y; y++) {
 				for (std::int32_t x = from.X; x <= to.X; x++) {
 					Vector2i tile;
 					std::uint8_t flags;
 					if (view.Wrap(Vector2i(x, y), tile) && ShowsTile(layer, tile, flags)) {
-						painter.Frame(view.CellToScreen(Vector2i(x, y)), color, thickness, UiLayer::Overlay);
+						painter.Frame(view.CellToScreen(Vector2i(x, y)), color, thickness, PaintLayer::Overlay);
 					}
 				}
 			}
@@ -163,9 +163,9 @@ namespace Jazz2::Editor
 			Vector2f b = view.WorldToScreen(world + Vector2f(1.0f, 1.0f));
 			Rectf rect(std::round(a.X), std::round(a.Y), std::max(std::round(b.X - a.X), 1.0f), std::max(std::round(b.Y - a.Y), 1.0f));
 			if (rect.W >= 3.0f) {
-				painter.Frame(rect, UiTheme::Cursor, thickness, UiLayer::Overlay);
+				painter.Frame(rect, Theme::Cursor, thickness, PaintLayer::Overlay);
 			} else {
-				painter.FillRect(rect, UiTheme::Cursor, UiLayer::Overlay);
+				painter.FillRect(rect, Theme::Cursor, PaintLayer::Overlay);
 			}
 		}
 	}

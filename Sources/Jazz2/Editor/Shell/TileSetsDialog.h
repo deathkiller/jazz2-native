@@ -3,6 +3,7 @@
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Document/LevelDocument.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/Function.h>
 #include <Containers/String.h>
@@ -16,6 +17,11 @@ namespace Jazz2::Formats
 	struct TileSetData;
 }
 
+namespace Jazz2::UI::Windows
+{
+	class Stack;
+}
+
 namespace Jazz2::Editor
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -25,7 +31,6 @@ namespace Jazz2::Editor
 #endif
 
 	class IEditorContext;
-	class UiStack;
 
 	/**
 		@brief Name of the extra tile set a level stores in itself, see @ref Formats::ExtraTileSetRecord::Embedded
@@ -99,9 +104,9 @@ namespace Jazz2::Editor
 	};
 
 	/** @brief Adds a dropdown to choose where tiles are added to into a row, with the name of a new tile set next to it */
-	void AddTileTargetRow(IEditorContext& session, UiStack* row, std::shared_ptr<TileTarget> target);
+	void AddTileTargetRow(IEditorContext& session, Stack* row, std::shared_ptr<TileTarget> target);
 	/** @brief Adds a note about where the tiles go, for a tile set file shadowed by its copy in the user content, say */
-	void AddTileTargetNote(IEditorContext& session, UiStack* parent, std::shared_ptr<TileTarget> target);
+	void AddTileTargetNote(IEditorContext& session, Stack* parent, std::shared_ptr<TileTarget> target);
 
 	/**
 		@brief Shows the tile sets of the level --- the default one and the extra ones that follow it

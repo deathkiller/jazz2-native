@@ -37,6 +37,8 @@ namespace Jazz2::Editor
 			float Width = 0.0f;
 			/** @brief Height */
 			float Height = 0.0f;
+			/** @brief Whether it floats in a window of its own outside of the main window, the bounds are relative to it */
+			bool Detached = false;
 		};
 
 		/** @brief Scale of the interface, 0 to choose it by the size of the window */
@@ -110,11 +112,11 @@ namespace Jazz2::Editor
 		SmallVector<std::uint16_t, 0> FavoriteEvents;
 		/** @brief Recently used and favourite tiles of each tile set */
 		SmallVector<TileSetFavorites, 0> TileFavorites;
-		/** @brief Theme of the interface, 0 for the usual one, 1 for high contrast, see @ref UiThemeKind */
+		/** @brief Theme of the interface, 0 for the usual one, 1 for high contrast, see @ref UI::Windows::ThemeKind */
 		std::int32_t Theme = 0;
 		/** @brief Whether movement of the interface and the view is kept to the least --- panels and lists don't glide, the view doesn't fly */
 		bool ReducedMotion = false;
-		/** @brief Whether text is in a plain readable font instead of the pixel font of the game, see @ref UiReadableFont */
+		/** @brief Whether text is in a plain readable font instead of the pixel font of the game, see @ref UI::Windows::ReadableFont */
 		bool ReadableFont = true;
 		/**
 		 * @brief Program the script of a level is edited in, empty for the one the system opens such files with

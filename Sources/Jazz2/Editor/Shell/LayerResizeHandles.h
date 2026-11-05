@@ -3,7 +3,8 @@
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Tools/EditorTool.h"
-#include "../UI/UiElement.h"
+#include "../../UI/Windows/Element.h"
+#include "../UI/EditorUi.h"
 
 namespace Jazz2::Editor
 {
@@ -23,9 +24,9 @@ namespace Jazz2::Editor
 		it, so they never take a stroke of a tool that paints near the edge of a layer, and not on a locked or hidden
 		layer. Of a layer that repeats, they're on the copy that is framed, see @ref EditorShell.
 	*/
-	class LayerResizeHandles : public UiElement
+	class LayerResizeHandles : public Element
 	{
-		DEATH_RUNTIME_OBJECT(UiElement);
+		DEATH_RUNTIME_OBJECT(Element);
 
 	public:
 		/**
@@ -41,13 +42,13 @@ namespace Jazz2::Editor
 			return _dragging;
 		}
 
-		void Draw(UiPainter& painter) override;
-		UiElement* HitTest(Vector2f pos) override;
+		void Draw(Painter& painter) override;
+		Element* HitTest(Vector2f pos) override;
 		bool AcceptsPointer() const override;
 		bool YieldsToViewGestures() const override;
-		bool OnPointerDown(const UiPointerEvent& event) override;
-		void OnPointerMove(const UiPointerEvent& event) override;
-		void OnPointerUp(const UiPointerEvent& event, bool inside) override;
+		bool OnPointerDown(const PointerEvent& event) override;
+		void OnPointerMove(const PointerEvent& event) override;
+		void OnPointerUp(const PointerEvent& event, bool inside) override;
 		void OnPointerCancel() override;
 		bool OnKeyPressed(const KeyboardEvent& event) override;
 		/** @brief Takes the focus while a handle is dragged, so <kbd>Esc</kbd> cancels it */

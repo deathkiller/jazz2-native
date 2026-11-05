@@ -7,9 +7,10 @@
 #include "../Runtime/TileDrawing.h"
 #include "../Smart/TilePrefabs.h"
 #include "../Tools/ToolActions.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
-#include "../UI/UiVirtualList.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../../UI/Windows/VirtualList.h"
+#include "../UI/EditorUi.h"
 #include "../../Tiles/TileMap.h"
 
 #include "../../../nCine/I18n.h"
@@ -34,7 +35,7 @@ namespace Jazz2::Editor
 		};
 
 		/** The tiles of a prefab, small */
-		class PrefabPreview : public UiElement
+		class PrefabPreview : public Element
 		{
 		public:
 			PrefabPreview(IEditorContext& session, std::shared_ptr<PrefabsState> state)
@@ -48,14 +49,14 @@ namespace Jazz2::Editor
 				_index = index;
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				return Vector2f(context.Px(64.0f), context.Px(40.0f));
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
-				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
+				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), PaintLayer::Fill);
 				Tiles::TileMap* tileMap = _session.GetTileMap();
 				if (tileMap == nullptr || _index < 0 || _index >= std::int32_t(_state->Prefabs.size())) {
 					return;
@@ -76,7 +77,7 @@ namespace Jazz2::Editor
 						}
 						const TileRef& tile = stamp.GetTile(x, y);
 						if (!tile.IsEmpty()) {
-							DrawTile(painter, *tileMap, document, tile, tile.Flags, Rectf(x0 + x * cell, y0 + y * cell, cell, cell), 1.0f, UiLayer::Content);
+							DrawTile(painter, *tileMap, document, tile, tile.Flags, Rectf(x0 + x * cell, y0 + y * cell, cell, cell), 1.0f, PaintLayer::Content);
 						}
 					}
 				}
@@ -88,23 +89,23 @@ namespace Jazz2::Editor
 			std::int32_t _index;
 		};
 
-		/** Row of the list of prefabs, shows the prefab it's bound to and acts on it, see UiVirtualList::CreateRow */
-		class PrefabRow : public UiStack
+		/** Row of the list of prefabs, shows the prefab it's bound to and acts on it, see VirtualList::CreateRow */
+		class PrefabRow : public Stack
 		{
 		public:
 			// The space below it is the one between the rows of a stack
 			static constexpr float BottomSpace = 2.0f;
 
 			PrefabRow(IEditorContext& session, std::shared_ptr<PrefabsState> state)
-				: UiStack(UiOrientation::Horizontal, UiTheme::Spacing, UiThickness(0.0f, 0.0f, 0.0f, BottomSpace)), _state(state), _index(-1)
+				: Stack(Orientation::Horizontal, Theme::Spacing, Thickness(0.0f, 0.0f, 0.0f, BottomSpace)), _state(state), _index(-1)
 			{
 				IEditorContext* s = &session;
 				PrefabRow* self = this;
 				_preview = Add<PrefabPreview>(session, state);
-				_name = Add<UiLabel>();
+				_name = Add<Label>();
 				_name->Flex = 1.0f;
 				// TRANSLATORS: Button next to a prefab in the Prefabs dialog, makes it the brush to paint with (verb), keep it short
-				auto* use = Add<UiButton>(_x("editor", "Use"), EditorIcon::Brush, [s, state, self]() {
+				auto* use = Add<Button>(_x("editor", "Use"), EditorIcon::Brush, [s, state, self]() {
 					std::int32_t i = self->_index;
 					if (i < 0 || i >= std::int32_t(state->Prefabs.size())) {
 						return;
@@ -115,7 +116,7 @@ namespace Jazz2::Editor
 					}
 				});
 				use->Tooltip = _x("editor", "Paint with it");
-				auto* remove = Add<UiButton>(StringView(), EditorIcon::Delete, [s, state, self]() {
+				auto* remove = Add<Button>(StringView(), EditorIcon::Delete, [s, state, self]() {
 					std::int32_t i = self->_index;
 					if (i < 0 || i >= std::int32_t(state->Prefabs.size())) {
 						return;
@@ -141,11 +142,11 @@ namespace Jazz2::Editor
 			std::shared_ptr<PrefabsState> _state;
 			std::int32_t _index;
 			PrefabPreview* _preview;
-			UiLabel* _name;
+			Label* _name;
 		};
 
 		/** The prefabs, only the rows seen have elements, the rows are bound again when the prefabs change */
-		class PrefabList : public UiVirtualList
+		class PrefabList : public VirtualList
 		{
 		public:
 			PrefabList(IEditorContext& session, std::shared_ptr<PrefabsState> state)
@@ -159,10 +160,10 @@ namespace Jazz2::Editor
 				CountFunc = [this]() { return std::int32_t(_state->Prefabs.size()); };
 				IEditorContext* s = &session;
 				std::shared_ptr<PrefabsState> rowState = _state;
-				CreateRow = [s, rowState]() -> std::unique_ptr<UiElement> {
+				CreateRow = [s, rowState]() -> std::unique_ptr<Element> {
 					return std::make_unique<PrefabRow>(*s, rowState);
 				};
-				BindRow = [](UiElement& row, std::int32_t index) {
+				BindRow = [](Element& row, std::int32_t index) {
 					static_cast<PrefabRow&>(row).Bind(index);
 				};
 			}
@@ -173,7 +174,7 @@ namespace Jazz2::Editor
 					_shownRevision = _state->Revision;
 					RebindRows();
 				}
-				UiVirtualList::Update(timeMult);
+				VirtualList::Update(timeMult);
 			}
 
 		private:
@@ -184,7 +185,7 @@ namespace Jazz2::Editor
 
 	void ShowPrefabsDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -195,22 +196,22 @@ namespace Jazz2::Editor
 		TilePrefab::Load(state->TileSet, state->Prefabs);
 
 		// TRANSLATORS: Title of the dialog with the prefabs of the tile set, saved pieces of tiles to paint with again
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Prefabs"));
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Prefabs"));
 		auto* content = dialog->GetContent();
-		content->Add<UiLabel>(_fx("editor", "Prefabs of tile set \"{}\", for any level of it", state->TileSet), UiTheme::TextDim);
-		auto* scroll = content->Add<UiScrollView>();
+		content->Add<Label>(_fx("editor", "Prefabs of tile set \"{}\", for any level of it", state->TileSet), Theme::TextDim);
+		auto* scroll = content->Add<ScrollView>();
 		scroll->Width = 280.0f;
 		scroll->Height = 200.0f;
 		scroll->SetContent<PrefabList>(session, state);
 
-		content->Add<UiSeparator>();
-		auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-		auto* nameBox = row->Add<UiTextBox>();
+		content->Add<Separator>();
+		auto* row = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+		auto* nameBox = row->Add<TextBox>();
 		nameBox->Flex = 1.0f;
 		nameBox->MaxLength = 48;
 		nameBox->Placeholder = _x("editor", "Name of the prefab");
 		// TRANSLATORS: Button in the Prefabs dialog, saves the brush as a new prefab
-		auto* save = row->Add<UiButton>(_x("editor", "Save Brush"), EditorIcon::Plus, [s, state, nameBox]() {
+		auto* save = row->Add<Button>(_x("editor", "Save Brush"), EditorIcon::Plus, [s, state, nameBox]() {
 			String name = nameBox->Text.trimmed();
 			if (name.empty()) {
 				s->ShowMessage(_x("editor", "Name the prefab first"));
@@ -243,7 +244,7 @@ namespace Jazz2::Editor
 		});
 		save->Tooltip = _x("editor", "Save the brush as a prefab of the tile set, the rules of the tile set in the user content keep it");
 		// TRANSLATORS: Button in the Prefabs dialog, saves what the Copy All Layers action copied last as a new prefab
-		auto* saveLayers = content->Add<UiButton>(_x("editor", "Save Copy of All Layers"), EditorIcon::Layers, [s, state, nameBox]() {
+		auto* saveLayers = content->Add<Button>(_x("editor", "Save Copy of All Layers"), EditorIcon::Layers, [s, state, nameBox]() {
 			String name = nameBox->Text.trimmed();
 			if (name.empty()) {
 				s->ShowMessage(_x("editor", "Name the prefab first"));

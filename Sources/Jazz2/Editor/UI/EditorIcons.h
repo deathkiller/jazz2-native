@@ -2,15 +2,45 @@
 
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../../../Main.h"
+#include "../../UI/Windows/Icons.h"
 
 namespace Jazz2::Editor
 {
-	/** @brief Icon of the level editor */
-	enum class EditorIcon : std::uint8_t
+	/**
+		@brief Icon of the level editor
+
+		Those every interface has are named here too, with the values of their @ref UI::Windows::StockIcon, the rest
+		are the editor's own, see @ref EditorIcons.
+	*/
+	enum class EditorIcon : std::uint16_t
 	{
-		None,
-		Brush,
+		None = std::uint16_t(UI::Windows::StockIcon::None),
+		Close = std::uint16_t(UI::Windows::StockIcon::Close),
+		CloseSmall = std::uint16_t(UI::Windows::StockIcon::CloseSmall),
+		Check = std::uint16_t(UI::Windows::StockIcon::Check),
+		ChevronLeft = std::uint16_t(UI::Windows::StockIcon::ChevronLeft),
+		ChevronRight = std::uint16_t(UI::Windows::StockIcon::ChevronRight),
+		ChevronDown = std::uint16_t(UI::Windows::StockIcon::ChevronDown),
+		ArrowUp = std::uint16_t(UI::Windows::StockIcon::ArrowUp),
+		ArrowDown = std::uint16_t(UI::Windows::StockIcon::ArrowDown),
+		Up = std::uint16_t(UI::Windows::StockIcon::Up),
+		Plus = std::uint16_t(UI::Windows::StockIcon::Plus),
+		Minus = std::uint16_t(UI::Windows::StockIcon::Minus),
+		Folder = std::uint16_t(UI::Windows::StockIcon::Folder),
+		File = std::uint16_t(UI::Windows::StockIcon::File),
+		Delete = std::uint16_t(UI::Windows::StockIcon::Delete),
+		Search = std::uint16_t(UI::Windows::StockIcon::Search),
+		Info = std::uint16_t(UI::Windows::StockIcon::Info),
+		Warning = std::uint16_t(UI::Windows::StockIcon::Warning),
+		Undock = std::uint16_t(UI::Windows::StockIcon::Undock),
+		Dock = std::uint16_t(UI::Windows::StockIcon::Dock),
+		CursorResizeHorizontal = std::uint16_t(UI::Windows::StockIcon::CursorResizeHorizontal),
+		CursorResizeVertical = std::uint16_t(UI::Windows::StockIcon::CursorResizeVertical),
+		CursorResizeNWSE = std::uint16_t(UI::Windows::StockIcon::CursorResizeNWSE),
+		CursorResizeNESW = std::uint16_t(UI::Windows::StockIcon::CursorResizeNESW),
+		CursorMove = std::uint16_t(UI::Windows::StockIcon::CursorMove),
+
+		Brush = UI::Windows::IconId::FirstCustom,
 		Eraser,
 		Rectangle,
 		Fill,
@@ -25,12 +55,7 @@ namespace Jazz2::Editor
 		EyeClosed,
 		Lock,
 		Unlock,
-		Plus,
-		Minus,
-		ArrowUp,
-		ArrowDown,
 		Layers,
-		Folder,
 		Save,
 		New,
 		Play,
@@ -38,27 +63,16 @@ namespace Jazz2::Editor
 		ZoomIn,
 		ZoomOut,
 		Fit,
-		Check,
-		Close,
-		ChevronRight,
-		ChevronDown,
 		FlipX,
 		FlipY,
 		Copy,
 		Paste,
 		Cut,
-		Delete,
 		Settings,
 		Parallax,
-		Warning,
-		Info,
 		Tiles,
 		Export,
-		File,
-		Up,
-		ChevronLeft,
 		Event,
-		Search,
 		Mask,
 		Pause,
 		Path,
@@ -66,8 +80,6 @@ namespace Jazz2::Editor
 		Reach,
 		SmartBrush,
 		Slope,
-		Undock,
-		Dock,
 		Usage,
 		EventPath,
 		Map,
@@ -94,8 +106,6 @@ namespace Jazz2::Editor
 		Passthrough,
 		// A sprite in front of the one it replaces, what the script of the level gives objects instead of theirs
 		OverriddenAssets,
-		// A smaller and thinner Close, for the menu bar
-		CloseSmall,
 		// Half of a square filled inside a selection
 		InvertSelection,
 		// A screen with a landscape, the frame of what the game screen shows
@@ -132,40 +142,25 @@ namespace Jazz2::Editor
 		MusicFile,
 		// A page with a gradient, a tile set with true color tiles
 		TrueColorTileSetFile,
-		// Shown by the pointer, see UiCursorOverlay
-		CursorResizeHorizontal,
-		CursorResizeVertical,
-		CursorResizeNWSE,
-		CursorResizeNESW,
-		CursorMove,
 
-		Count
+		// The end of the editor's own icons
+		CustomEnd
 	};
 
-	/**
-		@brief Pixels of the icons of the level editor
-
-		Each icon is 16 × 16 pixels, written as text a row per string: `.` is transparent, `#` is the color the
-		icon is drawn with, `+` the same color half transparent. An icon in the style of the game is drawn in colors
-		of its own with a dark outline, see @ref GetPixelColor() --- the color it's drawn with multiplies them, so
-		it's drawn in white to show them as they are, and the outline stays dark in any color.
-	*/
+	/** @brief Vector art of the icons of the level editor, see @ref UI::Windows::Icons */
 	struct EditorIcons
 	{
-		/** @brief Size of an icon in pixels */
-		static constexpr std::int32_t Size = 16;
-
-		/** @brief Returns the rows of an icon */
-		static const char* const* GetRows(EditorIcon icon);
-		/**
-		 * @brief Returns the color of a pixel of an icon as R, G, B and A bytes from the lowest, 0 for transparent
-		 *
-		 * Besides `#` and `+`, `1` to `7` are the color an eighth to seven eighths opaque, `o` is the dark outline and the letters are colors of the game, the capital one a
-		 * shade darker: `w` white, `y` yellow, `r` red, `p` pink, `g` grey, `t` tan, `n` green and `b` blue. `m` is
-		 * the shine on green, a pale green.
-		 */
-		static std::uint32_t GetPixelColor(char pixel);
+		/** @brief Adds the editor's own icons to the interface, it does nothing if they're added already */
+		static void Register();
+		/** @brief Returns how an icon of the editor is drawn, empty for a stock icon */
+		static UI::Windows::IconArt GetArt(UI::Windows::IconId icon);
 	};
+}
+
+namespace Jazz2::UI::Windows
+{
+	template<>
+	struct IsIconEnum<Editor::EditorIcon> : std::true_type {};
 }
 
 #endif

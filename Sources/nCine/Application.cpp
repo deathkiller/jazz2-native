@@ -1692,6 +1692,10 @@ namespace nCine
 					}
 					_screenViewport->SortAndCommitQueue();
 					_screenViewport->Draw();
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS)
+					// Whatever auxiliary windows show is drawn with the frame, it's handed over to them now
+					_gfxDevice->presentAuxiliaryWindows();
+#endif
 					if (measure) {
 						_timings[(std::int32_t)Timings::Draw] = _profileStartTime.secondsSince();
 					}

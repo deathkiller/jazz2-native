@@ -6,7 +6,8 @@
 #include "../Common/LayerView.h"
 #include "../Common/TileStamp.h"
 #include "../Document/CommandHistory.h"
-#include "../UI/UiPainter.h"
+#include "../../UI/Windows/Painter.h"
+#include "../UI/EditorUi.h"
 #include "../../../nCine/Input/InputEvents.h"
 
 #include <Containers/Function.h>
@@ -18,14 +19,17 @@ namespace Jazz2::Tiles
 	class TileMap;
 }
 
+namespace Jazz2::UI::Windows
+{
+	class Dialog;
+	class Element;
+}
+
 namespace Jazz2::Editor
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	using Death::Containers::Function;
 #endif
-
-	class UiDialog;
-	class UiElement;
 
 	/** @brief Tool of the level editor */
 	enum class EditorToolType : std::uint8_t
@@ -237,7 +241,7 @@ namespace Jazz2::Editor
 		 */
 		virtual bool HasPointerCapture() const;
 		/** @brief Draws what the tool shows over the view */
-		virtual void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid);
+		virtual void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid);
 		/** @brief Returns a hint of how the tool is used */
 		virtual StringView GetHint() const;
 		/** @brief Makes the options of the tool shown in the toolbar while it's chosen, none by default */
@@ -256,14 +260,14 @@ namespace Jazz2::Editor
 		const ToolSettings& GetSettings() const;
 
 		/** @brief Draws the outline of cells of a layer on the screen */
-		void DrawCellsOutline(UiPainter& painter, const LayerView& view, Vector2i from, Vector2i to, const Colorf& color);
+		void DrawCellsOutline(Painter& painter, const LayerView& view, Vector2i from, Vector2i to, const Colorf& color);
 		/**
 		 * @brief Draws a stamp on the screen, its cell at the anchor at a cell of a layer
 		 *
 		 * Its events are drawn too while the sprite layer is edited. Empty tiles that are transparent (see
 		 * @ref TileStamp::EmptyIsTransparent) are left out unless @p emptyToo, as they're painted.
 		 */
-		void DrawStampGhost(UiPainter& painter, const LayerView& view, const TileStamp& stamp, Vector2i cell, Vector2i anchor, float alpha,
+		void DrawStampGhost(Painter& painter, const LayerView& view, const TileStamp& stamp, Vector2i cell, Vector2i anchor, float alpha,
 			bool emptyToo = false);
 
 		/** @brief Adds the options of the stamp to the options of a tool --- flipping, turning and painting its tiles at random */

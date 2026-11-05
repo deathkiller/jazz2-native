@@ -69,7 +69,7 @@ namespace Jazz2::Editor
 		_showGrid = _settings.ShowGrid;
 		// The debug toggles of play-tests are kept for all of them
 		ApplyPlayTestDebugOptions();
-		UiTheme::Apply(UiThemeKind(_settings.Theme), _settings.ReducedMotion, _settings.ReadableFont);
+		Theme::Apply(ThemeKind(_settings.Theme), _settings.ReducedMotion, _settings.ReadableFont);
 
 		String fullPath, levelName, filePath;
 		if (!editorInit.FilePath.empty()) {
@@ -195,7 +195,8 @@ namespace Jazz2::Editor
 
 	void EditorSession::CreateInterface()
 	{
-		_surface = std::make_unique<UiSurface>();
+		EditorIcons::Register();
+		_surface = std::make_unique<Surface>();
 		_surface->TouchInput = (_input->GetInputModality() == InputModality::Touch);
 		// Saving works while a text is typed, see EditorAction::WorksWhileTyping
 		_surface->IsPassThroughKey = [this](const KeyboardEvent& event) { return _actions.MatchesWhileTyping(event); };
@@ -207,7 +208,7 @@ namespace Jazz2::Editor
 		_shell = _surface->SetRoot<EditorShell>(*this);
 		// The ring back into the editor reveals all of it, the panels too, so it's over them. The ring into the game is
 		// over the panels too, they're seen outside of it as long as it grows.
-		_surface->DrawOver = [this](UiPainter& painter, Vector2f screenSize) {
+		_surface->DrawOver = [this](Painter& painter, Vector2f screenSize) {
 			PlayTransition& transition = _playTest->GetTransition();
 			// The ring back from a play-test grows on while the view already flies into the next one
 			if (_playTest->IsEditing() || _playTest->IsEntering()) {
@@ -222,7 +223,7 @@ namespace Jazz2::Editor
 			return (_editHandler != nullptr && _playTest->IsEditing() && _playTest->GetGameHandler() == nullptr && _editHandler->CanBlurFrameBelow());
 		};
 		// Only the editor's view, the game's blur is taken before its lighting
-		_surface->GetBackdrop = [this](UiBackdrop backdrop, Vector2f screenSize, Rectf& bounds, bool inLevel) -> const Texture* {
+		_surface->GetBackdrop = [this](BackdropKind backdrop, Vector2f screenSize, Rectf& bounds, bool inLevel) -> const Texture* {
 #if defined(RHI_CAP_POSTPROCESSING)
 			if (!PreferencesCache::BlurEffects || _editHandler == nullptr || _playTest->GetGameHandler() != nullptr) {
 				return nullptr;
@@ -230,11 +231,11 @@ namespace Jazz2::Editor
 			if (inLevel) {
 				// The image of the level is at the size of the screen in the editor
 				bounds = Rectf(0.0f, 0.0f, screenSize.X, screenSize.Y);
-				if (backdrop == UiBackdrop::UnderModal) {
-					return _editHandler->RequestFrameBlurBelowWindows(UiSurface::GetOverlaysDepth());
+				if (backdrop == BackdropKind::UnderModal) {
+					return _editHandler->RequestFrameBlurBelowWindows(Surface::GetOverlaysDepth());
 				}
-				Texture* whole = (backdrop == UiBackdrop::Overlays ? _editHandler->GetFrameBlur() : nullptr);
-				return (whole != nullptr ? whole : _editHandler->RequestFrameBlurBelow(UiSurface::GetPanelsDepth()));
+				Texture* whole = (backdrop == BackdropKind::Overlays ? _editHandler->GetFrameBlur() : nullptr);
+				return (whole != nullptr ? whole : _editHandler->RequestFrameBlurBelow(Surface::GetPanelsDepth()));
 			}
 			// The level without what is shown over it
 			Rendering::PlayerViewport* viewport = _editHandler->GetViewport();
@@ -330,7 +331,7 @@ namespace Jazz2::Editor
 		return *_playOverlays;
 	}
 
-	void EditorSession::DrawSessionOverlays(UiPainter& painter, const Rectf& viewRect)
+	void EditorSession::DrawSessionOverlays(Painter& painter, const Rectf& viewRect)
 	{
 		_comparison->Draw(painter, viewRect, _input->IsToolPointerDown());
 		_playOverlays->DrawDeaths(painter, viewRect);
@@ -743,12 +744,16 @@ namespace Jazz2::Editor
 			_surface->WindowsHidden = !_playTest->IsEditing();
 			// Clear of the edges of the screen the game keeps its own interface clear of, the setting can be changed in the
 			// pause menu of a play-test
-			_surface->SafeMargins = UiThickness(PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Left)] * 0.001f,
+			_surface->SafeMargins = Thickness(PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Left)] * 0.001f,
 				PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Top)] * 0.001f, PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Right)] * 0.001f,
 				PreferencesCache::SafeArea[std::size_t(SafeAreaEdge::Bottom)] * 0.001f);
 		}
 		if (LevelHandler* gameHandler = _playTest->GetGameHandler()) {
 			_playTest->UpdateTransition(timeMult);
+			if (_playTest->IsInGame() && !_playTest->GetTransition().IsActive()) {
+				// Nothing of the editor is seen while the level is played, the images of the view from far away take memory
+				_tileLod->Evict();
+			}
 			gameHandler->OnBeginFrame();
 		} else if (_editHandler != nullptr) {
 			// The ring back into the editor, the play-test it shows the last frame of is released once it's done

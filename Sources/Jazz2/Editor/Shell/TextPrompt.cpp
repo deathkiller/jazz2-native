@@ -2,8 +2,9 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -11,18 +12,18 @@
 
 namespace Jazz2::Editor
 {
-	UiElement* ShowModal(UiSurface& surface, std::unique_ptr<UiElement> dialog)
+	Element* ShowModal(Surface& surface, std::unique_ptr<Element> dialog)
 	{
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		options.Modal = true;
 		options.CloseOnOutsideClick = false;
 		return surface.PushOverlay(Death::move(dialog), Death::move(options));
 	}
 
-	UiElement* ShowModeless(UiSurface& surface, std::unique_ptr<UiElement> dialog, Function<void()>&& onClosed)
+	Element* ShowModeless(Surface& surface, std::unique_ptr<Element> dialog, Function<void()>&& onClosed)
 	{
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;
@@ -30,16 +31,16 @@ namespace Jazz2::Editor
 		return surface.PushOverlay(Death::move(dialog), Death::move(options));
 	}
 
-	void ShowTextPrompt(UiSurface& surface, StringView title, StringView label, StringView initialText, std::int32_t maxLength,
+	void ShowTextPrompt(Surface& surface, StringView title, StringView label, StringView initialText, std::int32_t maxLength,
 		Function<void(StringView)>&& onConfirmed)
 	{
-		auto dialog = std::make_unique<UiDialog>(title);
-		UiDialog* dialogPtr = dialog.get();
-		UiStack* content = dialog->GetContent();
+		auto dialog = std::make_unique<Dialog>(title);
+		Dialog* dialogPtr = dialog.get();
+		Stack* content = dialog->GetContent();
 		if (!label.empty()) {
-			content->Add<UiLabel>(label, UiTheme::TextDim);
+			content->Add<Label>(label, Theme::TextDim);
 		}
-		auto* box = content->Add<UiTextBox>(initialText);
+		auto* box = content->Add<TextBox>(initialText);
 		box->Width = 220.0f;
 		box->MaxLength = maxLength;
 

@@ -8,9 +8,10 @@
 #include "../Common/TileStamp.h"
 #include "../Document/LevelDocument.h"
 #include "../Common/ToolMath.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../Formats/TileSetFile.h"
 
 #include "../../../nCine/I18n.h"
@@ -207,7 +208,7 @@ namespace Jazz2::Editor
 
 	void ShowFxTileGeneratorDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -215,24 +216,24 @@ namespace Jazz2::Editor
 		IEditorContext* s = &session;
 		auto state = std::make_shared<GeneratorState>();
 		// TRANSLATORS: Title of the dialog that generates tiles for a layer with a blur or glass effect
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Generate Effect Tiles"));
-		UiDialog* dialogPtr = dialog.get();
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Generate Effect Tiles"));
+		Dialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
 		// TRANSLATORS: Note in the Generate Effect Tiles dialog, "Blur Behind" is the name of a way a layer is drawn
-		content->Add<UiLabel>(_x("editor", "Tiles for a layer drawn as Blur Behind"), UiTheme::TextDim);
+		content->Add<Label>(_x("editor", "Tiles for a layer drawn as Blur Behind"), Theme::TextDim);
 
 		auto addRow = [content](StringView label) {
-			auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-			row->Add<UiLabel>(label)->Width = 100.0f;
+			auto* row = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+			row->Add<Label>(label)->Width = 100.0f;
 			return row;
 		};
 		{
 			// TRANSLATORS: Label of the choice of the kind of effect in the Generate Effect Tiles dialog
 			auto* row = addRow(_x("editor", "Effect"));
-			row->Add<UiDropdown>([state]() { return GetKindName(state->Kind); }, [state](SmallVectorImpl<UiMenuEntry>& entries) {
+			row->Add<Dropdown>([state]() { return GetKindName(state->Kind); }, [state](SmallVectorImpl<MenuEntry>& entries) {
 				for (std::int32_t i = 0; i < std::int32_t(FxTileKind::Count); i++) {
 					FxTileKind kind = FxTileKind(i);
-					UiMenuEntry entry;
+					MenuEntry entry;
 					entry.Label = GetKindName(kind);
 					entry.IsChecked = [state, kind]() { return state->Kind == kind; };
 					entry.Execute = [state, kind]() { state->Kind = kind; };
@@ -243,18 +244,18 @@ namespace Jazz2::Editor
 		{
 			// TRANSLATORS: Label of the width and height of the generated effect in tiles in the Generate Effect Tiles dialog
 			auto* row = addRow(_x("editor", "Size (tiles)"));
-			row->Add<UiNumberBox>([state]() { return float(state->Width); }, [state](float value, bool final) {
+			row->Add<NumberBox>([state]() { return float(state->Width); }, [state](float value, bool final) {
 				state->Width = std::clamp<std::int32_t>(std::int32_t(std::round(value)), 1, 16);
 			}, 1.0f, 16.0f, 1.0f, 0)->Width = 48.0f;
-			row->Add<UiLabel>("x"_s, UiTheme::TextDim);
-			row->Add<UiNumberBox>([state]() { return float(state->Height); }, [state](float value, bool final) {
+			row->Add<Label>("x"_s, Theme::TextDim);
+			row->Add<NumberBox>([state]() { return float(state->Height); }, [state](float value, bool final) {
 				state->Height = std::clamp<std::int32_t>(std::int32_t(std::round(value)), 1, 16);
 			}, 1.0f, 16.0f, 1.0f, 0)->Width = 48.0f;
 		}
 		{
 			// TRANSLATORS: Label of the strength of the generated effect in percent in the Generate Effect Tiles dialog
 			auto* row = addRow(_x("editor", "Strength (%)"));
-			row->Add<UiNumberBox>([state]() { return state->Strength; }, [state](float value, bool final) {
+			row->Add<NumberBox>([state]() { return state->Strength; }, [state](float value, bool final) {
 				state->Strength = std::clamp(value, 0.0f, 200.0f);
 			}, 0.0f, 200.0f, 5.0f, 0)->Width = 60.0f;
 		}
@@ -263,7 +264,7 @@ namespace Jazz2::Editor
 		target->Type = TileTarget::Kind::Level;
 		// TRANSLATORS: Label of the choice of where the generated tiles are added, followed by the level or a tile set
 		AddTileTargetRow(session, addRow(_x("editor", "Add to")), target);
-		content->Add<UiLabel>(_x("editor", "The tiles are added to the end of the tile set"), UiTheme::TextDim);
+		content->Add<Label>(_x("editor", "The tiles are added to the end of the tile set"), Theme::TextDim);
 		AddTileTargetNote(session, content, target);
 
 		// TRANSLATORS: Button in the Generate Effect Tiles dialog, a verb

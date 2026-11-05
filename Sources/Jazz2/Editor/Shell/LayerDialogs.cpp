@@ -10,9 +10,10 @@
 #include "../Document/Commands.h"
 #include "../Document/DocumentSnapshot.h"
 #include "../Document/TerrainSplines.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -46,7 +47,7 @@ namespace Jazz2::Editor
 		};
 
 		/** One of the 3 × 3 points the layer can stay fixed at, with arrows to where it grows */
-		class AnchorButton : public UiElement
+		class AnchorButton : public Element
 		{
 		public:
 			AnchorButton(std::shared_ptr<ResizeState> state, Vector2i anchor)
@@ -54,19 +55,19 @@ namespace Jazz2::Editor
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				float size = context.Px(16.0f);
 				return Vector2f(size, size);
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				bool checked = (_state->Anchor == _anchor);
-				painter.RoundRect(Bounds, checked ? UiTheme::ButtonChecked : (_hoverAmount > 0.0f ? UiTheme::ButtonHover : UiTheme::ButtonFill));
+				painter.RoundRect(Bounds, checked ? Theme::ButtonChecked : (_hoverAmount > 0.0f ? Theme::ButtonHover : Theme::ButtonFill));
 				Vector2f center(Bounds.X + Bounds.W * 0.5f, Bounds.Y + Bounds.H * 0.5f);
 				if (checked) {
-					painter.Circle(center, std::max(2.0f, Bounds.W * 0.18f), UiTheme::TextOnAccent);
+					painter.Circle(center, std::max(2.0f, Bounds.W * 0.18f), Theme::TextOnAccent);
 					return;
 				}
 				// Points away from the fixed point, which way the layer grows
@@ -77,10 +78,10 @@ namespace Jazz2::Editor
 					float reach = Bounds.W * 0.28f;
 					Vector2f tip = center + direction * reach;
 					float thickness = std::max(1.0f, std::round(painter.GetScale()));
-					painter.Line(center - direction * reach, tip, thickness, UiTheme::IconColor, UiLayer::Content);
+					painter.Line(center - direction * reach, tip, thickness, Theme::IconColor, PaintLayer::Content);
 					Vector2f side(-direction.Y, direction.X);
-					painter.Line(tip, tip - direction * reach * 0.6f + side * reach * 0.6f, thickness, UiTheme::IconColor, UiLayer::Content);
-					painter.Line(tip, tip - direction * reach * 0.6f - side * reach * 0.6f, thickness, UiTheme::IconColor, UiLayer::Content);
+					painter.Line(tip, tip - direction * reach * 0.6f + side * reach * 0.6f, thickness, Theme::IconColor, PaintLayer::Content);
+					painter.Line(tip, tip - direction * reach * 0.6f - side * reach * 0.6f, thickness, Theme::IconColor, PaintLayer::Content);
 				}
 			}
 
@@ -89,7 +90,7 @@ namespace Jazz2::Editor
 				return true;
 			}
 
-			bool OnPointerDown(const UiPointerEvent& event) override
+			bool OnPointerDown(const PointerEvent& event) override
 			{
 				if (event.Button == MouseButton::Left) {
 					_state->Anchor = _anchor;
@@ -136,7 +137,7 @@ namespace Jazz2::Editor
 
 	void ShowResizeLayerDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		LevelDocument& document = session.GetDocument();
 		std::int32_t layerIndex = session.GetCurrentLayer();
 		if (surface == nullptr || layerIndex < 0 || layerIndex >= std::int32_t(document.Layers.size()) || !CheckLayerUnlocked(session, layerIndex)) {
@@ -154,27 +155,27 @@ namespace Jazz2::Editor
 
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog that resizes a layer, {} is the name of the layer
-		auto dialog = std::make_unique<UiDialog>(_fx("editor", "Resize Layer - {}", GetLayerTitle(document, layerIndex)));
-		UiDialog* dialogPtr = dialog.get();
-		auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
+		auto dialog = std::make_unique<Dialog>(_fx("editor", "Resize Layer - {}", GetLayerTitle(document, layerIndex)));
+		Dialog* dialogPtr = dialog.get();
+		auto* content = dialog->GetContent()->Add<Form>(Theme::Spacing);
 
 		{
 			// TRANSLATORS: Label in the Resize Layer dialog before the current size of the layer, keep it short
 			auto* row = content->AddRow(_x("editor", "Now"));
 			// TRANSLATORS: Current size of the layer in the Resize Layer dialog, {} are its width and height in tiles
-			row->Add<UiLabel>(_fx("editor", "{} x {} tiles", state->OldSize.X, state->OldSize.Y), UiTheme::TextDim);
+			row->Add<Label>(_fx("editor", "{} x {} tiles", state->OldSize.X, state->OldSize.Y), Theme::TextDim);
 		}
 		for (std::int32_t axis = 0; axis < 2; axis++) {
 			// TRANSLATORS: Labels in the Resize Layer dialog, the new width and height of the layer in tiles, keep them short
 			auto* row = content->AddRow(axis == 0 ? _x("editor", "Width") : _x("editor", "Height"));
-			auto* number = row->Add<UiNumberBox>([state, axis]() {
+			auto* number = row->Add<NumberBox>([state, axis]() {
 				return float(axis == 0 ? state->Size.X : state->Size.Y);
 			}, [state, axis](float value, bool final) {
 				std::int32_t size = std::clamp<std::int32_t>(std::int32_t(std::round(value)), 1, std::int32_t(UINT16_MAX));
 				(axis == 0 ? state->Size.X : state->Size.Y) = size;
 			}, 1.0f, float(UINT16_MAX), 1.0f, 0);
 			number->Width = 60.0f;
-			auto* change = row->Add<UiLabel>(StringView(), UiTheme::TextDim);
+			auto* change = row->Add<Label>(StringView(), Theme::TextDim);
 			change->TextFunc = [state, axis]() {
 				std::int32_t delta = (axis == 0 ? state->Size.X - state->OldSize.X : state->Size.Y - state->OldSize.Y);
 				// TRANSLATORS: Next to the new width or height in the Resize Layer dialog, {} is how many tiles are added or removed, usually kept as it is
@@ -185,9 +186,9 @@ namespace Jazz2::Editor
 			// The point of the layer that stays where it is, it grows or shrinks away from it
 			// TRANSLATORS: Label in the Resize Layer dialog before the 3x3 buttons that choose which side or corner of the layer stays where it is
 			auto* row = content->AddRow(_x("editor", "Fixed at"));
-			auto* grid = row->Add<UiStack>(UiOrientation::Vertical, 1.0f);
+			auto* grid = row->Add<Stack>(Orientation::Vertical, 1.0f);
 			for (std::int32_t y = 0; y < 3; y++) {
-				auto* line = grid->Add<UiStack>(UiOrientation::Horizontal, 1.0f);
+				auto* line = grid->Add<Stack>(Orientation::Horizontal, 1.0f);
 				for (std::int32_t x = 0; x < 3; x++) {
 					line->Add<AnchorButton>(state, Vector2i(x, y));
 				}
@@ -203,17 +204,17 @@ namespace Jazz2::Editor
 			};
 			// TRANSLATORS: Label in the Resize Layer dialog before the choice of what the layer gets where it grows
 			auto* row = content->AddRow(_x("editor", "New tiles"));
-			auto* dropdown = row->Add<UiDropdown>([state]() {
+			auto* dropdown = row->Add<Dropdown>([state]() {
 				for (const FillOption& option : FillOptions) {
 					if (option.Fill == state->Fill) {
 						return String(option.Label);
 					}
 				}
 				return String();
-			}, [state](SmallVectorImpl<UiMenuEntry>& entries) {
+			}, [state](SmallVectorImpl<MenuEntry>& entries) {
 				for (const FillOption& option : FillOptions) {
 					LevelDocument::ResizeFill fill = option.Fill;
-					UiMenuEntry entry;
+					MenuEntry entry;
 					entry.Label = option.Label;
 					entry.IsChecked = [state, fill]() { return (state->Fill == fill); };
 					entry.Execute = [state, fill]() { state->Fill = fill; };
@@ -224,7 +225,7 @@ namespace Jazz2::Editor
 			row->Tooltip = _x("editor", "What the layer gets where it grows - the edge tiles go on to the edge, the corner tiles fill the corners");
 		}
 		if (layer.IsSpriteLayer()) {
-			content->Add<UiLabel>(_x("editor", "Events and the water level move with the tiles"), UiTheme::TextDim);
+			content->Add<Label>(_x("editor", "Events and the water level move with the tiles"), Theme::TextDim);
 		}
 
 		// TRANSLATORS: Button in the Resize Layer dialog, resizes the layer (verb)

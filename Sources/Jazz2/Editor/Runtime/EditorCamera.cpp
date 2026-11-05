@@ -2,7 +2,8 @@
 
 #if defined(WITH_EDITOR)
 
-#include "../UI/UiTheme.h"
+#include "../../UI/Windows/Theme.h"
+#include "../UI/EditorUi.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -139,7 +140,7 @@ namespace Jazz2::Editor
 			// The dragged point stays under the pointer, it's the one zoomed at
 			_dragAnchorWorld = ViewToWorld(_dragLastView);
 		}
-		if (_zooming && UiTheme::ReducedMotion) {
+		if (_zooming && Theme::ReducedMotion) {
 			// With reduced motion, at once
 			_scale = _targetScale;
 			_zooming = false;
@@ -208,7 +209,7 @@ namespace Jazz2::Editor
 		}
 		_dragging = false;
 		// The pointer stood still before it was let go, so the view stays where it is, with reduced motion always
-		if (_dragFrames > 4.0f || UiTheme::ReducedMotion) {
+		if (_dragFrames > 4.0f || Theme::ReducedMotion) {
 			_velocity = Vector2f::Zero;
 		}
 	}
@@ -216,7 +217,7 @@ namespace Jazz2::Editor
 	void EditorCamera::FlyTo(Vector2f center, float scale)
 	{
 		scale = std::clamp(scale, GetMinScale(), GetMaxScale());
-		if (UiTheme::ReducedMotion) {
+		if (Theme::ReducedMotion) {
 			// With reduced motion, the view is there at once
 			JumpTo(center, scale);
 			return;

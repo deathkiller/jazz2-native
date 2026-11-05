@@ -110,6 +110,10 @@ namespace nCine::Backends
 
 		/** @brief Returns `true` if the window currently has input focus */
 		static bool hasFocus();
+		/** @brief Lets input over a window besides the main one go where input over the main window goes, see @ref AuxiliaryWindow */
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		static void attachAuxiliaryWindow(GLFWwindow* window);
+#endif
 		/** @brief Updates joystick state structures and simulates events */
 		static void updateJoystickStates();
 
@@ -196,6 +200,8 @@ namespace nCine::Backends
 		static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 		static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 		static void joystickCallback(int joy, int event);
+		// Position over a window of the application relative to the main window, and the identifier of the window, 0 for the main one
+		static Vector2i toMainWindowPosition(GLFWwindow* window, double x, double y, std::uint32_t& windowId);
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		static EM_BOOL emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* event, void* userData);
 #endif

@@ -169,26 +169,26 @@ namespace nCine::RHI::Vulkan
 		static void EndGpuTiming();
 
 		/**
-			@brief Creates an additional surface and swap chain for a secondary window
+			@brief Creates an additional surface and swap chain for an auxiliary window
 
 			Used by the ImGui multi-viewport support for the windows it spawns when a panel is dragged out of the
 			main one. Only their presentation lives in the backend: the contents are rendered through the ordinary
 			RHI path into an off-screen render target, whose texture is handed over for the frame with
-			@ref QueueSecondaryPresent(). @ref PresentFrame() then blits each queued texture into its window's
+			@ref QueueAuxiliaryPresent(). @ref PresentFrame() then blits each queued texture into its window's
 			acquired image and joins it into the frame's single submit and present.
 
-			@param windowHandle  `SDL_Window*` of the secondary window, passed as a `void*`
+			@param windowHandle  `SDL_Window*` of the auxiliary window, passed as a `void*`
 			@param width         Swap-chain image width in pixels
 			@param height        Swap-chain image height in pixels
-			@returns An opaque handle to pass to the other `*Secondary*` functions, or `nullptr` if the surface failed
+			@returns An opaque handle to pass to the other `*Auxiliary*` functions, or `nullptr` if the surface failed
 		*/
-		static void* CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height);
-		/** @brief Releases a secondary surface and swap chain created by @ref CreateSecondarySwapchain() */
-		static void DestroySecondarySwapchain(void* handle);
-		/** @brief Recreates a secondary swap chain at a new size (waits for the device to go idle first) */
-		static void ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height);
-		/** @brief Hands the texture holding a secondary window's contents over to the next @ref PresentFrame() */
-		static void QueueSecondaryPresent(void* handle, const VulkanTexture* source);
+		static void* CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height);
+		/** @brief Releases an auxiliary surface and swap chain created by @ref CreateAuxiliarySwapchain() */
+		static void DestroyAuxiliarySwapchain(void* handle);
+		/** @brief Recreates an auxiliary swap chain at a new size (waits for the device to go idle first) */
+		static void ResizeAuxiliarySwapchain(void* handle, std::int32_t width, std::int32_t height);
+		/** @brief Hands the texture holding an auxiliary window's contents over to the next @ref PresentFrame() */
+		static void QueueAuxiliaryPresent(void* handle, const VulkanTexture* source);
 
 		// -- Physical-device limits (consumed by VulkanRhiCapabilities to publish the backend's real values) --
 

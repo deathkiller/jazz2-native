@@ -14,8 +14,9 @@
 #include "../Input/ActionRegistry.h"
 #include "../Runtime/TileDrawing.h"
 #include "../Smart/TilePrefabs.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../Tiles/TileMap.h"
 
 #include "../../../nCine/Application.h"
@@ -226,7 +227,7 @@ namespace Jazz2::Editor::ToolActions
 		}
 
 		/** The tiles of the brush that paints at random, with how often each of them is chosen */
-		class WeightTile : public UiElement
+		class WeightTile : public Element
 		{
 		public:
 			WeightTile(IEditorContext& session, const TileRef& tile)
@@ -234,17 +235,17 @@ namespace Jazz2::Editor::ToolActions
 			{
 			}
 
-			Vector2f Measure(const UiContext& context, Vector2f available) override
+			Vector2f Measure(const Context& context, Vector2f available) override
 			{
 				return Vector2f(context.Px(24.0f), context.Px(24.0f));
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
-				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
+				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), PaintLayer::Fill);
 				Tiles::TileMap* tileMap = _session.GetTileMap();
 				if (tileMap != nullptr && !_tile.IsEmpty()) {
-					DrawTile(painter, *tileMap, _session.GetDocument(), _tile, _tile.Flags, Bounds, 1.0f, UiLayer::Content);
+					DrawTile(painter, *tileMap, _session.GetDocument(), _tile, _tile.Flags, Bounds, 1.0f, PaintLayer::Content);
 				}
 			}
 
@@ -874,7 +875,7 @@ namespace Jazz2::Editor::ToolActions
 
 	void ShowStampWeights(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		TileStamp& stamp = session.GetStamp();
 		if (surface == nullptr) {
 			return;
@@ -905,24 +906,24 @@ namespace Jazz2::Editor::ToolActions
 
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog that sets how often each tile of the brush is painted at random
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Weights of Tiles"));
-		UiDialog* dialogPtr = dialog.get();
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Weights of Tiles"));
+		Dialog* dialogPtr = dialog.get();
 		auto* content = dialog->GetContent();
 		// On as many lines as it needs, the window is only as wide as the list
 		constexpr float ListWidth = 200.0f;
-		content->Add<UiWrappedLabel>(_x("editor", "How often each tile is painted when the brush paints at random"), UiTheme::TextDim)->Width = ListWidth;
-		auto* scroll = content->Add<UiScrollView>();
+		content->Add<WrappedLabel>(_x("editor", "How often each tile is painted when the brush paints at random"), Theme::TextDim)->Width = ListWidth;
+		auto* scroll = content->Add<ScrollView>();
 		scroll->Width = ListWidth;
 		scroll->Height = std::min<float>(40.0f + 28.0f * float(entries.size()), 240.0f);
 		// Shorter on a short screen, the check box below it stays in the window
 		scroll->Flex = 1.0f;
-		auto* list = scroll->SetContent<UiStack>(UiOrientation::Vertical, 2.0f);
+		auto* list = scroll->SetContent<Stack>(Orientation::Vertical, 2.0f);
 		for (const Entry& entry : entries) {
 			TileRef tile = entry.Tile;
-			auto* row = list->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+			auto* row = list->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 			row->Add<WeightTile>(session, tile);
 			// TRANSLATORS: Row in the Weights of Tiles dialog, {} is the number of the tile in the tile set
-			row->Add<UiLabel>(_fx("editor", "Tile {}", std::int32_t(tile.Index)))->Flex = 1.0f;
+			row->Add<Label>(_fx("editor", "Tile {}", std::int32_t(tile.Index)))->Flex = 1.0f;
 			auto weightOf = [s, tile]() {
 				// The weight of a tile is the sum of its places, each 1 unless set
 				const TileStamp& current = s->GetStamp();
@@ -934,7 +935,7 @@ namespace Jazz2::Editor::ToolActions
 				}
 				return sum;
 			};
-			auto* box = row->Add<UiNumberBox>(weightOf, [s, tile](float value, bool final) {
+			auto* box = row->Add<NumberBox>(weightOf, [s, tile](float value, bool final) {
 				TileStamp& current = s->GetStamp();
 				if (current.Weights.size() != current.Tiles.size()) {
 					current.Weights.clear();
@@ -952,13 +953,13 @@ namespace Jazz2::Editor::ToolActions
 			}, 0.0f, 100.0f, 1.0f, 1);
 			box->Width = 56.0f;
 		}
-		content->Add<UiCheckBox>(_x("editor", "Paint tiles at random"), [s]() { return s->GetStamp().Random; },
+		content->Add<CheckBox>(_x("editor", "Paint tiles at random"), [s]() { return s->GetStamp().Random; },
 			[s](bool value) { s->GetStamp().Random = value; });
 		dialog->AddButton(_("Reset"), [s]() { s->GetStamp().Weights.clear(); });
 		// Closed by its cross or Escape, resetting isn't what they do
 		dialog->OnCancel = [dialogPtr]() { dialogPtr->Close(); };
 
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Centered = true;
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

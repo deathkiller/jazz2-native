@@ -40,7 +40,7 @@ namespace Jazz2::Editor
 		void OnPointerUp(const ToolPointer& pointer) override;
 		void Cancel() override;
 		bool IsBusy() const override;
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid) override;
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid) override;
 		StringView GetHint() const override;
 
 		/** @brief Sets the tile, by its ID as the level file stores it, and what paints it, `nullptr` to stop */

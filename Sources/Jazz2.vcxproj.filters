@@ -250,8 +250,14 @@
     <Filter Include="Header Files\Jazz2\Utils">
       <UniqueIdentifier>{1ca17b3e-2142-4471-b1dc-84475c279298}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Jazz2\UI\Windows">
+      <UniqueIdentifier>{a548c482-33ca-44f4-b6b2-bb30416389e1}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\Jazz2\UI\Menu">
       <UniqueIdentifier>{5de8bce6-a2aa-4513-886c-4bdcb532a14e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\UI\Windows">
+      <UniqueIdentifier>{b3eb2097-d335-407c-90db-c6876d393ed8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Jazz2\UI\Menu">
       <UniqueIdentifier>{a65d3a71-4070-4f0b-84d8-d8be78337c28}</UniqueIdentifier>
@@ -427,6 +433,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\IGfxDevice.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\AuxiliaryWindow.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\DisplayMode.h">
@@ -2097,44 +2106,56 @@
     <ClInclude Include="Jazz2\Editor\UI\EditorIcons.h">
       <Filter>Header Files\Jazz2\Editor\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiColors.h">
+    <ClInclude Include="Jazz2\Editor\UI\EditorUi.h">
       <Filter>Header Files\Jazz2\Editor\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiDialogs.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\Icons.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiDock.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\DetachedWindow.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiElement.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\VectorArt.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiKeyboard.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\Colors.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiMenu.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\Dialogs.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiPainter.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\Dock.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiRadialMenu.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\Element.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiReadableFont.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\Keyboard.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiSkin.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\Menu.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiSurface.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\Painter.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiTheme.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\RadialMenu.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiWidgets.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\ReadableFont.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Windows\Skin.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Windows\Surface.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Windows\Theme.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Windows\Widgets.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\HighscoresSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
@@ -2409,8 +2430,8 @@
     <ClInclude Include="Jazz2\Editor\Tools\ToolHost.h">
       <Filter>Header Files\Jazz2\Editor\Tools</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Editor\UI\UiVirtualList.h">
-      <Filter>Header Files\Jazz2\Editor\UI</Filter>
+    <ClInclude Include="Jazz2\UI\Windows\VirtualList.h">
+      <Filter>Header Files\Jazz2\UI\Windows</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Formats\LevelPreview.h">
       <Filter>Header Files\Jazz2\Formats</Filter>
@@ -2792,41 +2813,50 @@
     <ClCompile Include="Jazz2\Editor\UI\EditorIcons.cpp">
       <Filter>Source Files\Jazz2\Editor\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiColors.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Icons.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiDialogs.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\DetachedWindow.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiDock.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\VectorArt.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiElement.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Colors.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiKeyboard.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Dialogs.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiMenu.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Dock.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiPainter.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Element.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiRadialMenu.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Keyboard.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiReadableFont.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Menu.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiSkin.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Painter.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiSurface.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\RadialMenu.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiWidgets.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\ReadableFont.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Windows\Skin.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Windows\Surface.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Windows\Widgets.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\LevelHandler.cpp">
       <Filter>Source Files\Jazz2</Filter>
@@ -4043,11 +4073,11 @@
     <ClCompile Include="Jazz2\Editor\Tools\ToolActions.cpp">
       <Filter>Source Files\Jazz2\Editor\Tools</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiTheme.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\Theme.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Editor\UI\UiVirtualList.cpp">
-      <Filter>Source Files\Jazz2\Editor\UI</Filter>
+    <ClCompile Include="Jazz2\UI\Windows\VirtualList.cpp">
+      <Filter>Source Files\Jazz2\UI\Windows</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Formats\LevelPreview.cpp">
       <Filter>Source Files\Jazz2\Formats</Filter>
@@ -4175,5 +4205,32 @@
     <Image Include="Icons\Main.ico">
       <Filter>Resource Files\Icons</Filter>
     </Image>
+    <ClInclude Include="nCine\Graphics\AuxiliaryWindowPresenter.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\SdlAuxiliaryWindow.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\GlfwAuxiliaryWindow.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\AuxiliaryWindowWin32.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClCompile Include="nCine\Graphics\AuxiliaryWindow.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\AuxiliaryWindowPresenter.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\SdlAuxiliaryWindow.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\GlfwAuxiliaryWindow.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\AuxiliaryWindowWin32.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

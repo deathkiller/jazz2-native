@@ -5,6 +5,7 @@
 #include "../Weapons/TNT.h"
 #include "../Enemies/TurtleShell.h"
 #include "../../ILevelHandler.h"
+#include "../../Events/EventMap.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/Base/Random.h"
@@ -105,8 +106,16 @@ namespace Jazz2::Actors::Collectibles
 		if (_untouched) {
 			_phase += timeMult * 0.15f;
 
+			// Carried by a belt in the tile below as the player is, until it's off its end, as in the original
+			float x = _pos.X;
+			std::uint8_t* p;
+			if (_levelHandler->EventMap()->GetEventByPosition(_pos.X, _startingY + 32.0f, &p) == EventType::AreaHForce && (p[0] != 0 || p[1] != 0)) {
+				float factor = (_levelHandler->IsReforged() ? 0.7f : Player::LegacyBeltFactor);
+				x += (float(p[1]) - float(p[0])) * factor * timeMult;
+			}
+
 			float waveOffset = 3.2f * cosApprox((_phase * 0.25f) * fPi) + 0.6f;
-			MoveInstantly(Vector2f(_pos.X, _startingY + waveOffset), MoveType::Absolute);
+			MoveInstantly(Vector2f(x, _startingY + waveOffset), MoveType::Absolute);
 		} else if (_timeLeft > 0.0f) {
 			_timeLeft -= timeMult;
 			if (_timeLeft <= 0.0f) {

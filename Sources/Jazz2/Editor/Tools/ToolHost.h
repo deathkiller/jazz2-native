@@ -3,6 +3,7 @@
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../../../nCine/Primitives/Rect.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/Containers.h>
 
@@ -13,6 +14,11 @@ using namespace nCine;
 namespace Jazz2::Tiles
 {
 	class TileMap;
+}
+
+namespace Jazz2::UI::Windows
+{
+	class Surface;
 }
 
 namespace Jazz2::Editor
@@ -30,7 +36,6 @@ namespace Jazz2::Editor
 	class SmartTileModel;
 	class TileSelection;
 	class TileShapes;
-	class UiSurface;
 	struct EventStamp;
 	struct LayerView;
 	struct TileRef;
@@ -117,7 +122,7 @@ namespace Jazz2::Editor
 		/** @brief Shows a short message */
 		virtual void ShowMessage(StringView text) = 0;
 		/** @brief Returns the surface of the interface, for a tool that shows something over it, or `nullptr` */
-		virtual UiSurface* GetSurface() const = 0;
+		virtual Surface* GetSurface() const = 0;
 	};
 
 	/**

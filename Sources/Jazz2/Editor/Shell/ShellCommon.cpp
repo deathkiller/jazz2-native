@@ -7,9 +7,10 @@
 #include "../Document/LevelDocument.h"
 #include "../Tools/EventTools.h"
 #include "../Input/ActionRegistry.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../GameDifficulty.h"
 
 #include "../../../nCine/Application.h"
@@ -24,9 +25,9 @@ using namespace Death::Containers::Literals;
 
 namespace Jazz2::Editor
 {
-	UiMenuEntry MakeMenuEntry(EditorAction& action)
+	MenuEntry MakeMenuEntry(EditorAction& action)
 	{
-		UiMenuEntry entry;
+		MenuEntry entry;
 		entry.Label = action.Label;
 		entry.Icon = action.Icon;
 		entry.ShortcutText = action.Key.ToString();
@@ -72,13 +73,13 @@ namespace Jazz2::Editor
 		}
 	}
 
-	UiStack* AddLabeledRow(UiElement* parent, StringView label, StringView tooltip, float labelWidth)
+	Stack* AddLabeledRow(Element* parent, StringView label, StringView tooltip, float labelWidth)
 	{
-		if (auto* form = runtime_cast<UiForm>(parent)) {
+		if (auto* form = runtime_cast<Form>(parent)) {
 			return form->AddRow(label, tooltip);
 		}
-		auto* row = parent->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-		auto* labelElement = row->Add<UiLabel>(label, UiTheme::TextDim);
+		auto* row = parent->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+		auto* labelElement = row->Add<Label>(label, Theme::TextDim);
 		labelElement->Width = labelWidth;
 		labelElement->Tooltip = tooltip;
 		return row;
@@ -170,23 +171,23 @@ namespace Jazz2::Editor
 
 	void ShowOpenImageDialog(IEditorContext& session, StringView title, Function<void(StringView)>&& onChosen)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
-		SmallVector<UiFileRoot, 4> roots;
+		SmallVector<FileRoot, 4> roots;
 		session.GetImageRoots(false, roots);
-		UiFileDialog::Show(*surface, title, UiFileDialogMode::Open, Death::move(roots), ".png"_s, {}, {}, Death::move(onChosen));
+		FileDialog::Show(*surface, title, FileDialogMode::Open, Death::move(roots), ".png"_s, {}, {}, Death::move(onChosen));
 	}
 
-	UiElement* ShowSingleDialog(IEditorContext& session, const char* id, std::unique_ptr<UiElement> dialog, UiOverlayOptions&& options,
+	Element* ShowSingleDialog(IEditorContext& session, const char* id, std::unique_ptr<Element> dialog, OverlayOptions&& options,
 		Function<void()>&& onShownAgain)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return nullptr;
 		}
-		UiElement* element = dialog.get();
+		Element* element = dialog.get();
 		EditorShell* shell = runtime_cast<EditorShell>(surface->GetRoot());
 		if (shell != nullptr) {
 			// Forgotten as it's closed, it's destroyed a little later
@@ -207,9 +208,9 @@ namespace Jazz2::Editor
 
 	bool ReuseSingleDialog(IEditorContext& session, const char* id, bool close)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		EditorShell* shell = (surface != nullptr ? runtime_cast<EditorShell>(surface->GetRoot()) : nullptr);
-		UiElement* dialog = (shell != nullptr ? shell->FindDialog(id) : nullptr);
+		Element* dialog = (shell != nullptr ? shell->FindDialog(id) : nullptr);
 		if (dialog == nullptr) {
 			return false;
 		}
@@ -223,22 +224,22 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	UiUpdateWatcher::UiUpdateWatcher(Function<void(float)>&& onUpdate)
+	UpdateWatcher::UpdateWatcher(Function<void(float)>&& onUpdate)
 		: _onUpdate(Death::move(onUpdate))
 	{
 	}
 
-	Vector2f UiUpdateWatcher::Measure(const UiContext& context, Vector2f available)
+	Vector2f UpdateWatcher::Measure(const Context& context, Vector2f available)
 	{
 		return Vector2f(0.0f, 0.0f);
 	}
 
-	void UiUpdateWatcher::Update(float timeMult)
+	void UpdateWatcher::Update(float timeMult)
 	{
 		if (_onUpdate) {
 			_onUpdate(timeMult);
 		}
-		UiElement::Update(timeMult);
+		Element::Update(timeMult);
 	}
 
 	const SmallVectorImpl<Annotation>& AnnotationCache::Get(const LevelDocument& document)

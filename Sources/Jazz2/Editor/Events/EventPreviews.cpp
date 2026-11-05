@@ -72,7 +72,7 @@ namespace Jazz2::Editor
 
 		// Sprites often reach over other tiles, a square in the corner tells which tile the event is at. An event off the grid is
 		// at no tile, it has a triangle there instead, a quarter longer on each side.
-		void DrawCornerMark(UiPainter& painter, const Rectf& tileRect, Colorf color, float alpha, bool offGrid)
+		void DrawCornerMark(Painter& painter, const Rectf& tileRect, Colorf color, float alpha, bool offGrid)
 		{
 			if (tileRect.W < 10.0f) {
 				return;
@@ -80,13 +80,13 @@ namespace Jazz2::Editor
 			float size = std::max(2.0f, std::round(tileRect.W / 8.0f));
 			color.A *= alpha;
 			if (!offGrid) {
-				painter.FillRect(Rectf(tileRect.X, tileRect.Y, size, size), color, UiLayer::Overlay);
+				painter.FillRect(Rectf(tileRect.X, tileRect.Y, size, size), color, PaintLayer::Overlay);
 				return;
 			}
 			float corner = std::round(size * 1.25f);
 			float x = std::round(tileRect.X), y = std::round(tileRect.Y);
 			for (float row = 0.0f; row < corner; row += 1.0f) {
-				painter.FillRect(Rectf(x, y + row, corner - row, 1.0f), color, UiLayer::Overlay);
+				painter.FillRect(Rectf(x, y + row, corner - row, 1.0f), color, PaintLayer::Overlay);
 			}
 		}
 	}
@@ -364,7 +364,7 @@ namespace Jazz2::Editor
 		DrawSprite(partTarget, resource, part.Spec, spawnPos + part.Spec.Offset, alpha, animTime);
 	}
 
-	void EventPreviews::DrawPlaced(UiPainter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime,
+	void EventPreviews::DrawPlaced(Painter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime,
 		Vector2f spawnPos, bool inScene, bool offGrid)
 	{
 		if (DrawStart(painter, event, tileRect, scale, alpha, animTime, offGrid)) {
@@ -411,7 +411,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	bool EventPreviews::DrawStart(UiPainter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime, bool offGrid)
+	bool EventPreviews::DrawStart(Painter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime, bool offGrid)
 	{
 		// The characters that start there, next to each other
 		std::uint8_t players;
@@ -460,12 +460,12 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	void EventPreviews::DrawFitted(UiPainter& painter, std::uint16_t type, const Rectf& rect, float animTime, float alpha)
+	void EventPreviews::DrawFitted(Painter& painter, std::uint16_t type, const Rectf& rect, float animTime, float alpha)
 	{
 		DrawFitted(painter, EventCatalog::MakeDefault(EventType(type)), rect, animTime, alpha);
 	}
 
-	void EventPreviews::DrawFitted(UiPainter& painter, const Formats::EventRecord& event, const Rectf& rect, float animTime, float alpha)
+	void EventPreviews::DrawFitted(Painter& painter, const Formats::EventRecord& event, const Rectf& rect, float animTime, float alpha)
 	{
 		EventPreviewSpec spec;
 		GraphicResource* resource = GetScriptSprite(event);
@@ -488,7 +488,7 @@ namespace Jazz2::Editor
 				case EventType::LightIlluminate: icon = EditorIcon::LightBulb; break;
 				default: break;
 			}
-			painter.Icon(icon, rect, Colorf(1.0f, 1.0f, 1.0f, 0.7f * alpha), UiLayer::Overlay);
+			painter.Icon(icon, rect, Colorf(1.0f, 1.0f, 1.0f, 0.7f * alpha), PaintLayer::Overlay);
 			return;
 		}
 
@@ -554,10 +554,10 @@ namespace Jazz2::Editor
 			angle = TurnRect(target, Vector2f(cellPos.X + cell.X * scale * 0.5f, cellPos.Y + cell.Y * scale * 0.5f), spec.QuarterTurns, true);
 		}
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? resource->PaletteOffset : -1);
-		painter.Image(*base->TextureDiffuse, target, texCoords, Colorf(1.0f, 1.0f, 1.0f, alpha), paletteOffset, UiLayer::Content, angle);
+		painter.Image(*base->TextureDiffuse, target, texCoords, Colorf(1.0f, 1.0f, 1.0f, alpha), paletteOffset, PaintLayer::Content, angle);
 	}
 
-	void EventPreviews::DrawFittedWithParts(UiPainter& painter, std::uint16_t type, GraphicResource* resource, const EventPreviewSpec& spec,
+	void EventPreviews::DrawFittedWithParts(Painter& painter, std::uint16_t type, GraphicResource* resource, const EventPreviewSpec& spec,
 		ArrayView<const ExtraPart> parts, const Rectf& rect, float animTime, float alpha)
 	{
 		// Whole cells of all of them around their hotspots, in pixels of the level from the position of the object
@@ -683,7 +683,7 @@ namespace Jazz2::Editor
 		}
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? resource->PaletteOffset : -1);
 		if (drawTarget.Painter != nullptr) {
-			drawTarget.Painter->Image(*base->TextureDiffuse, target, texCoords, Colorf(1.0f, 1.0f, 1.0f, alpha), paletteOffset, UiLayer::Content, angle);
+			drawTarget.Painter->Image(*base->TextureDiffuse, target, texCoords, Colorf(1.0f, 1.0f, 1.0f, alpha), paletteOffset, PaintLayer::Content, angle);
 		} else if (drawTarget.Canvas != nullptr) {
 			drawTarget.Canvas->DrawTexture(*base->TextureDiffuse, Vector2f(target.X, target.Y), drawTarget.Z, Vector2f(target.W, target.H), texCoords,
 				Colorf(1.0f, 1.0f, 1.0f, alpha), UI::BlendMode::Normal, angle, paletteOffset);
@@ -704,7 +704,7 @@ namespace Jazz2::Editor
 			float(frameRect.H) / float(texSize.Y), float(frameRect.Y) / float(texSize.Y));
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? resource->PaletteOffset : -1);
 		if (drawTarget.Painter != nullptr) {
-			drawTarget.Painter->Image(*base->TextureDiffuse, target, texCoords, Colorf(1.0f, 1.0f, 1.0f, alpha), paletteOffset, UiLayer::Content, angle);
+			drawTarget.Painter->Image(*base->TextureDiffuse, target, texCoords, Colorf(1.0f, 1.0f, 1.0f, alpha), paletteOffset, PaintLayer::Content, angle);
 		} else if (drawTarget.Canvas != nullptr) {
 			drawTarget.Canvas->DrawTexture(*base->TextureDiffuse, Vector2f(target.X, target.Y), drawTarget.Z, Vector2f(target.W, target.H), texCoords,
 				Colorf(1.0f, 1.0f, 1.0f, alpha), UI::BlendMode::Normal, angle, paletteOffset);
@@ -737,7 +737,7 @@ namespace Jazz2::Editor
 		return 40.0f + 0.4f * float(std::max(cell.X, cell.Y));
 	}
 
-	void EventPreviews::DrawBox(UiPainter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel)
+	void EventPreviews::DrawBox(Painter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel)
 	{
 		if (rect.W <= 0.0f || rect.H <= 0.0f) {
 			return;
@@ -750,13 +750,13 @@ namespace Jazz2::Editor
 		// Many boxes are drawn when the view is far, a rounded one is 18 rectangles, a plain one with a border 5 and one
 		// without 1, as small as they are then, they look the same
 		if (rect.W >= 20.0f) {
-			painter.RoundRect(rect, fill, UiLayer::Content);
-			painter.RoundRectBorder(rect, border, UiLayer::Content);
+			painter.RoundRect(rect, fill, PaintLayer::Content);
+			painter.RoundRectBorder(rect, border, PaintLayer::Content);
 		} else if (rect.W >= 12.0f) {
-			painter.FillRect(rect, fill, UiLayer::Content);
-			painter.Frame(rect, border, 1.0f, UiLayer::Content);
+			painter.FillRect(rect, fill, PaintLayer::Content);
+			painter.Frame(rect, border, 1.0f, PaintLayer::Content);
 		} else {
-			painter.FillRect(rect, border, UiLayer::Content);
+			painter.FillRect(rect, border, PaintLayer::Content);
 		}
 
 		if (!withLabel || rect.W < 10.0f) {
@@ -786,7 +786,7 @@ namespace Jazz2::Editor
 			(std::uint64_t(std::clamp<std::int32_t>(widthStep + 0x8000, 0, 0xFFFF)) << 16) |
 			(std::uint64_t(std::clamp<std::int32_t>(heightStep + 0x8000, 0, 0xFFFF)) << 32) |
 			(std::uint64_t(std::clamp<std::int32_t>(std::int32_t(std::round(painter.GetScale() * 64.0f)), 0, 0x7FFF)) << 48) |
-			(UiTheme::ReadableFont ? (std::uint64_t(1) << 63) : 0);
+			(Theme::ReadableFont ? (std::uint64_t(1) << 63) : 0);
 		BoxLabel* label;
 		auto it = _boxLabels.find(key);
 		if (it != _boxLabels.end() && it->second.Name == name) {
@@ -806,7 +806,7 @@ namespace Jazz2::Editor
 		// The text is never larger than at the size of the interface, see LayoutBoxLabel()
 		float textSize = std::min(label->Size * rect.W / layoutWidth, 1.0f);
 
-		Colorf textColor = UiTheme::Text;
+		Colorf textColor = Theme::Text;
 		textColor.A *= alpha;
 		float originalSize = painter.GetTextSize();
 		painter.SetTextSize(textSize);
@@ -815,21 +815,21 @@ namespace Jazz2::Editor
 		painter.PushClip(inner);
 		float height = (label->Second.empty() ? lineHeight : lineHeight + lineStep);
 		float y = std::round(inner.Y + (inner.H - height) * 0.5f);
-		painter.Text(label->First, Vector2f(std::round(inner.X + inner.W * 0.5f), y), textColor, Alignment::Top, UiLayer::OverlayText);
+		painter.Text(label->First, Vector2f(std::round(inner.X + inner.W * 0.5f), y), textColor, Alignment::Top, PaintLayer::OverlayText);
 		if (!label->Second.empty()) {
-			painter.Text(label->Second, Vector2f(std::round(inner.X + inner.W * 0.5f), y + lineStep), textColor, Alignment::Top, UiLayer::OverlayText);
+			painter.Text(label->Second, Vector2f(std::round(inner.X + inner.W * 0.5f), y + lineStep), textColor, Alignment::Top, PaintLayer::OverlayText);
 		}
 		painter.PopClip();
 		painter.SetTextSize(originalSize);
 	}
 
-	void EventPreviews::LayoutBoxLabel(UiPainter& painter, StringView name, const Rectf& inner, float boxWidth, BoxLabel& label)
+	void EventPreviews::LayoutBoxLabel(Painter& painter, StringView name, const Rectf& inner, float boxWidth, BoxLabel& label)
 	{
 		// The text gets smaller with the box, a box smaller than a tile at the size of the interface has a smaller one
 		// too. If it doesn't fit even at the smallest size, it's broken into two lines, or only the initials are left.
 		// The readable font gets blurry sooner than the pixel font.
-		const float MinTextSize = (UiTheme::ReadableFont ? 0.85f : 0.75f);
-		const float MinInitialsSize = (UiTheme::ReadableFont ? 0.6f : 0.5f);
+		const float MinTextSize = (Theme::ReadableFont ? 0.85f : 0.75f);
+		const float MinInitialsSize = (Theme::ReadableFont ? 0.6f : 0.5f);
 		label.Name = name;
 		label.First = {};
 		label.Second = {};

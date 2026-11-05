@@ -11,10 +11,11 @@
 #include "../../Utils/AtomicFile.h"
 #include "../Files/EpisodeFile.h"
 #include "../Imaging/PngCodec.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiPainter.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Painter.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Graphics/Texture.h"
@@ -78,9 +79,9 @@ namespace Jazz2::Editor
 		};
 
 		// Whether a level is in any of the places the game looks for levels in
-		bool LevelExistsIn(ArrayView<const UiFileRoot> roots, StringView episode, StringView level)
+		bool LevelExistsIn(ArrayView<const FileRoot> roots, StringView episode, StringView level)
 		{
-			for (const UiFileRoot& root : roots) {
+			for (const FileRoot& root : roots) {
 				String path = fs::FindPathCaseInsensitive(fs::CombinePath({ root.Path, episode, String(level + ".j2l"_s) }));
 				if (fs::IsReadableFile(path)) {
 					return true;
@@ -113,7 +114,7 @@ namespace Jazz2::Editor
 			}
 
 		private:
-			SmallVector<UiFileRoot, 4> _roots;
+			SmallVector<FileRoot, 4> _roots;
 			SmallVector<std::pair<String, bool>, 0> _known;
 		};
 
@@ -133,7 +134,7 @@ namespace Jazz2::Editor
 				return (state.FindLevel(level) >= 0 ? LinkState::Inside : LinkState::Broken);
 			}
 			// Another episode, looked for where the game looks for levels
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetFileRoots(false, roots);
 			return (LevelExistsIn(roots, episode, level) ? LinkState::Outside : LinkState::Broken);
 		}
@@ -246,10 +247,10 @@ namespace Jazz2::Editor
 		template<class F>
 		void ForEachWritableLevel(IEditorContext& session, StringView skipDirectory, F&& callback)
 		{
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetFileRoots(false, roots);
 			String skipped = StringUtils::lowercase(fs::FromNativeSeparators(String(skipDirectory)));
-			for (const UiFileRoot& root : roots) {
+			for (const FileRoot& root : roots) {
 				if (!root.Writable || !fs::DirectoryExists(root.Path)) {
 					continue;
 				}
@@ -367,13 +368,13 @@ namespace Jazz2::Editor
 				message = String(message + "\n"_s + _x("editor", "The links to it change in these levels too, their files are kept as .bak:"));
 				AppendLevelList(message, *changes);
 			}
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title and buttons of the message confirming that a level of the episode is renamed
-			UiMessageDialog::Show(*surface, _x("editor", "Rename Level"), message, { _x("editor", "Rename"), _x("editor", "Cancel") },
+			MessageDialog::Show(*surface, _x("editor", "Rename Level"), message, { _x("editor", "Rename"), _x("editor", "Cancel") },
 				[s, state, level, newName, newLower, newPath, changes, isOpen](std::int32_t button) {
 				if (button == 0) {
 					PerformRename(*s, state, level, newName, newLower, newPath, *changes, isOpen);
@@ -557,12 +558,12 @@ namespace Jazz2::Editor
 
 		void ExportImage(IEditorContext& session, const std::shared_ptr<EpisodeState>& state, bool title)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			const EpisodeImage& source = (title ? state->Episode.Title : state->Episode.Background);
 			if (surface == nullptr || source.IsEmpty()) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetImageRoots(true, roots);
 			if (roots.empty()) {
 				session.ShowMessage(_x("editor", "There is no place to save files to"));
@@ -571,7 +572,7 @@ namespace Jazz2::Editor
 			IEditorContext* s = &session;
 			String name = state->Name + (title ? "-title.png"_s : "-background.png"_s);
 			// TRANSLATORS: Title of the file dialog saving the title image or the background image of the episode as a PNG file
-			UiFileDialog::Show(*surface, title ? _x("editor", "Export Title Image") : _x("editor", "Export Background Image"), UiFileDialogMode::Save, Death::move(roots), ".png"_s,
+			FileDialog::Show(*surface, title ? _x("editor", "Export Title Image") : _x("editor", "Export Background Image"), FileDialogMode::Save, Death::move(roots), ".png"_s,
 				{}, name, [s, state, title](StringView path) {
 				const EpisodeImage& image = (title ? state->Episode.Title : state->Episode.Background);
 				PngImage png;
@@ -595,7 +596,7 @@ namespace Jazz2::Editor
 		}
 
 		/** A small preview of an image of the episode as it fits, made again when the image is replaced or removed */
-		class EpisodeImagePreview : public UiElement
+		class EpisodeImagePreview : public Element
 		{
 		public:
 			EpisodeImagePreview(std::shared_ptr<EpisodeState> state, bool title)
@@ -605,14 +606,14 @@ namespace Jazz2::Editor
 				Height = 36.0f;
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				const EpisodeImage& image = (_title ? _state->Episode.Title : _state->Episode.Background);
 				if (_shownGeneration != _state->ImageGeneration) {
 					_shownGeneration = _state->ImageGeneration;
 					Rebuild(image);
 				}
-				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
+				painter.FillRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), PaintLayer::Fill);
 				if (_texture == nullptr || image.IsEmpty()) {
 					return;
 				}
@@ -621,7 +622,7 @@ namespace Jazz2::Editor
 				float w = std::max(std::round(image.Width * fit), 1.0f);
 				float h = std::max(std::round(image.Height * fit), 1.0f);
 				Rectf rect(std::round(Bounds.X + (Bounds.W - w) * 0.5f), std::round(Bounds.Y + (Bounds.H - h) * 0.5f), w, h);
-				painter.Image(*_texture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Content);
+				painter.Image(*_texture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, PaintLayer::Content);
 			}
 
 		private:
@@ -679,20 +680,20 @@ namespace Jazz2::Editor
 			}
 		};
 
-		void AddImageRow(UiForm* form, IEditorContext& session, const std::shared_ptr<EpisodeState>& state, bool title)
+		void AddImageRow(Form* form, IEditorContext& session, const std::shared_ptr<EpisodeState>& state, bool title)
 		{
 			IEditorContext* s = &session;
 			// TRANSLATORS: Labels of the rows of the title image and the background image of the episode in the Episode dialog
 			auto* row = form->AddRow(title ? _x("editor", "Title image") : _x("editor", "Background"));
-			auto* size = row->Add<UiLabel>();
+			auto* size = row->Add<Label>();
 			size->TextFunc = [state, title]() { return FormatImage(title ? state->Episode.Title : state->Episode.Background); };
 			size->Width = 90.0f;
 			// TRANSLATORS: Button in the Episode dialog that replaces the title or background image of the episode by a PNG file, and its tooltip
-			row->Add<UiButton>(_x("editor", "Import"), EditorIcon::Import, [s, state, title]() { ImportImage(*s, state, title); })->Tooltip = _x("editor", "Replace it by a PNG image");
-			auto* exportButton = row->Add<UiButton>(StringView(), EditorIcon::Export, [s, state, title]() { ExportImage(*s, state, title); });
+			row->Add<Button>(_x("editor", "Import"), EditorIcon::Import, [s, state, title]() { ImportImage(*s, state, title); })->Tooltip = _x("editor", "Replace it by a PNG image");
+			auto* exportButton = row->Add<Button>(StringView(), EditorIcon::Export, [s, state, title]() { ExportImage(*s, state, title); });
 			exportButton->Tooltip = _x("editor", "Save it as a PNG image");
 			exportButton->IsEnabledFunc = [state, title]() { return !(title ? state->Episode.Title : state->Episode.Background).IsEmpty(); };
-			auto* removeButton = row->Add<UiButton>(StringView(), EditorIcon::Delete, [state, title]() {
+			auto* removeButton = row->Add<Button>(StringView(), EditorIcon::Delete, [state, title]() {
 				EpisodeImage& image = (title ? state->Episode.Title : state->Episode.Background);
 				image = EpisodeImage();
 				state->Changed = true;
@@ -708,20 +709,20 @@ namespace Jazz2::Editor
 		}
 
 		/** A level and its links in the list of levels, every other one on a lighter background */
-		class EpisodeLevelEntry : public UiStack
+		class EpisodeLevelEntry : public Stack
 		{
 		public:
 			explicit EpisodeLevelEntry(bool striped)
-				: UiStack(UiOrientation::Vertical, 1.0f, UiThickness(3.0f, 2.0f)), _striped(striped)
+				: Stack(Orientation::Vertical, 1.0f, Thickness(3.0f, 2.0f)), _striped(striped)
 			{
 			}
 
-			void Draw(UiPainter& painter) override
+			void Draw(Painter& painter) override
 			{
 				if (_striped) {
-					painter.FillRect(Bounds, Colorf(UiTheme::Hover.R, UiTheme::Hover.G, UiTheme::Hover.B, 0.05f), UiLayer::Fill);
+					painter.FillRect(Bounds, Colorf(Theme::Hover.R, Theme::Hover.G, Theme::Hover.B, 0.05f), PaintLayer::Fill);
 				}
-				UiStack::Draw(painter);
+				Stack::Draw(painter);
 			}
 
 		private:
@@ -729,11 +730,11 @@ namespace Jazz2::Editor
 		};
 
 		/** The levels of the episode in the order the links lead, rebuilt when they're read again */
-		class EpisodeLevelList : public UiStack
+		class EpisodeLevelList : public Stack
 		{
 		public:
-			EpisodeLevelList(IEditorContext& session, std::shared_ptr<EpisodeState> state, UiDialog* dialog)
-				: UiStack(UiOrientation::Vertical, 0.0f, UiThickness(0.0f, 0.0f, 3.0f, 0.0f)), _session(session), _state(Death::move(state)),
+			EpisodeLevelList(IEditorContext& session, std::shared_ptr<EpisodeState> state, Dialog* dialog)
+				: Stack(Orientation::Vertical, 0.0f, Thickness(0.0f, 0.0f, 3.0f, 0.0f)), _session(session), _state(Death::move(state)),
 					_dialog(dialog), _shownGeneration(UINT32_MAX)
 			{
 			}
@@ -744,14 +745,14 @@ namespace Jazz2::Editor
 				if (_state->Generation != _shownGeneration || _state->Episode.FirstLevel != _shownFirstLevel) {
 					Rebuild();
 				}
-				UiStack::Update(timeMult);
+				Stack::Update(timeMult);
 			}
 
 		private:
 			IEditorContext& _session;
 			std::shared_ptr<EpisodeState> _state;
 			// The dialog the list is in, it outlives the list
-			UiDialog* _dialog;
+			Dialog* _dialog;
 			std::uint32_t _shownGeneration;
 			String _shownFirstLevel;
 
@@ -761,7 +762,7 @@ namespace Jazz2::Editor
 				_shownFirstLevel = _state->Episode.FirstLevel;
 				ClearChildren();
 				if (_state->Levels.empty()) {
-					Add<UiLabel>(_state->IsNoEpisode ? _x("editor", "There are no levels") : _x("editor", "The episode has no levels yet"), UiTheme::TextDisabled);
+					Add<Label>(_state->IsNoEpisode ? _x("editor", "There are no levels") : _x("editor", "The episode has no levels yet"), Theme::TextDisabled);
 					return;
 				}
 				if (_state->IsNoEpisode) {
@@ -815,7 +816,7 @@ namespace Jazz2::Editor
 				std::shared_ptr<EpisodeState> state = _state;
 
 				auto* entry = Add<EpisodeLevelEntry>(striped);
-				auto* row = entry->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* row = entry->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				String title = level.Name;
 				if (!level.DisplayName.empty()) {
 					title += " - "_s + level.DisplayName;
@@ -827,12 +828,12 @@ namespace Jazz2::Editor
 					// TRANSLATORS: In parentheses after a level in the list of levels of the Episode dialog that no other level links to
 					title += " ("_s + _x("editor", "nothing leads here") + ")"_s;
 				}
-				auto* label = row->Add<UiLabel>(title, isFirst ? UiTheme::TextAccent : (isOrphan ? UiTheme::TextDanger : UiTheme::Text));
+				auto* label = row->Add<Label>(title, isFirst ? Theme::TextAccent : (isOrphan ? Theme::TextDanger : Theme::Text));
 				label->Flex = 1.0f;
 				String path = level.Path;
-				UiDialog* dialog = _dialog;
+				Dialog* dialog = _dialog;
 				// TRANSLATORS: Button next to a level in the Episode dialog, opens it in the editor
-				auto* open = row->Add<UiButton>(_x("editor", "Open"), EditorIcon::None, [s, path, dialog]() {
+				auto* open = row->Add<Button>(_x("editor", "Open"), EditorIcon::None, [s, path, dialog]() {
 					// The level being edited stays as it is, the dialog only goes away
 					if (IsSameFile(s->GetFilePath(), path)) {
 						if (dialog != nullptr) {
@@ -842,10 +843,10 @@ namespace Jazz2::Editor
 					}
 					s->OpenFile(path);
 				});
-				open->Style = UiButtonStyle::Flat;
+				open->Style = ButtonStyle::Flat;
 				// TRANSLATORS: Button next to a level in the Episode dialog, gives it another name
-				auto* rename = row->Add<UiButton>(_x("editor", "Rename"), EditorIcon::None, [s, state, index]() {
-					UiSurface* surface = s->GetSurface();
+				auto* rename = row->Add<Button>(_x("editor", "Rename"), EditorIcon::None, [s, state, index]() {
+					Surface* surface = s->GetSurface();
 					if (surface == nullptr || index >= std::int32_t(state->Levels.size())) {
 						return;
 					}
@@ -855,7 +856,7 @@ namespace Jazz2::Editor
 						RenameLevel(*s, state, index, name);
 					});
 				});
-				rename->Style = UiButtonStyle::Flat;
+				rename->Style = ButtonStyle::Flat;
 
 				// Where its links lead
 				struct LinkField { String Label; const String* Value; };
@@ -893,14 +894,14 @@ namespace Jazz2::Editor
 					// TRANSLATORS: Below a level in the Episode dialog that has no links to other levels
 					links = _x("editor", "Leads nowhere");
 				}
-				auto* linksLabel = entry->Add<UiLabel>(links, broken ? UiTheme::TextDanger : UiTheme::TextDim);
+				auto* linksLabel = entry->Add<Label>(links, broken ? Theme::TextDanger : Theme::TextDim);
 				linksLabel->Tooltip = _x("editor", "Next, secret and bonus level of the level, as set in its properties");
 			}
 		};
 
 		void ShowEpisodeWindow(IEditorContext& session, const std::shared_ptr<EpisodeState>& state)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
@@ -908,19 +909,19 @@ namespace Jazz2::Editor
 			IEditorContext* s = &session;
 			// The list of levels has no scroll bar of its own, the whole content scrolls with it
 			// TRANSLATORS: Title of the Episode dialog, which shows the episode of the level and its levels
-			auto dialog = std::make_unique<UiDialog>(_x("editor", "Episode"), true);
+			auto dialog = std::make_unique<Dialog>(_x("editor", "Episode"), true);
 			dialog->MinScreenWidthFraction = 0.7f;
 			dialog->MaxStretchedWidth = 720.0f;
 			dialog->MaxScreenHeightFraction = 0.8f;
-			UiDialog* dialogPtr = dialog.get();
-			UiStack* content = dialog->GetContent();
+			Dialog* dialogPtr = dialog.get();
+			Stack* content = dialog->GetContent();
 
 			if (state->IsNoEpisode) {
 				// Only the levels, there's nothing of an episode to set
 				// TRANSLATORS: Header of the Episode dialog for the levels that aren't in any episode
-				content->Add<UiLabel>(_x("editor", "Levels of no episode"), UiTheme::TextHeader);
+				content->Add<Label>(_x("editor", "Levels of no episode"), Theme::TextHeader);
 				// TRANSLATORS: "unknown" is the name of a folder, keep it as it is
-				content->Add<UiLabel>(_x("editor", "They're in \"unknown\", which isn't an episode, the game finds them there by their names"), UiTheme::TextDim);
+				content->Add<Label>(_x("editor", "They're in \"unknown\", which isn't an episode, the game finds them there by their names"), Theme::TextDim);
 				content->Add<EpisodeLevelList>(session, state, dialogPtr);
 
 				ShowModal(*surface, Death::move(dialog));
@@ -928,16 +929,16 @@ namespace Jazz2::Editor
 			}
 
 			// TRANSLATORS: Header of the Episode dialog, {} is the name of the folder of the episode
-			content->Add<UiLabel>(state->Exists ? _fx("editor", "Episode \"{}\"", state->Name) : _fx("editor", "Episode \"{}\" has no episode file yet, saving makes it", state->Name),
-				UiTheme::TextHeader);
+			content->Add<Label>(state->Exists ? _fx("editor", "Episode \"{}\"", state->Name) : _fx("editor", "Episode \"{}\" has no episode file yet, saving makes it", state->Name),
+				Theme::TextHeader);
 
 			// The properties in the first column, the levels in the second one
-			auto* columns = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing * 4.0f);
-			UiForm* form = columns->Add<UiForm>(UiTheme::Spacing);
+			auto* columns = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing * 4.0f);
+			Form* form = columns->Add<Form>(Theme::Spacing);
 			{
 				// TRANSLATORS: Label of the name of the episode shown in the game in the Episode dialog
 				auto* row = form->AddRow(_x("editor", "Name"));
-				auto* box = row->Add<UiTextBox>();
+				auto* box = row->Add<TextBox>();
 				box->Width = 190.0f;
 				box->MaxLength = 255;
 				box->TextFunc = [state]() { return state->Episode.DisplayName; };
@@ -951,13 +952,13 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label of the level the episode starts with in the Episode dialog
 				auto* row = form->AddRow(_x("editor", "First level"));
-				auto* dropdown = row->Add<UiDropdown>([state]() {
+				auto* dropdown = row->Add<Dropdown>([state]() {
 					// TRANSLATORS: In the Episode dialog when the episode has no first level set
 					return (state->Episode.FirstLevel.empty() ? String(_x("editor", "None")) : state->Episode.FirstLevel);
-				}, [state](SmallVectorImpl<UiMenuEntry>& entries) {
+				}, [state](SmallVectorImpl<MenuEntry>& entries) {
 					for (const EpisodeLevelInfo& level : state->Levels) {
 						String name = level.Name;
-						UiMenuEntry entry;
+						MenuEntry entry;
 						entry.Label = (level.DisplayName.empty() ? name : String(name + " - "_s + level.DisplayName));
 						entry.IsChecked = [state, name]() { return StringUtils::lowercase(state->Episode.FirstLevel) == name; };
 						entry.Execute = [state, name]() {
@@ -973,7 +974,7 @@ namespace Jazz2::Editor
 			for (bool previous : { true, false }) {
 				// TRANSLATORS: Labels of the episodes played before and after this one in the Episode dialog
 				auto* row = form->AddRow(previous ? _x("editor", "Previous episode") : _x("editor", "Next episode"));
-				auto* box = row->Add<UiTextBox>();
+				auto* box = row->Add<TextBox>();
 				box->Width = 190.0f;
 				box->MaxLength = 255;
 				// TRANSLATORS: Placeholder of the empty box of the previous or next episode in the Episode dialog
@@ -993,7 +994,7 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label of the order of the episode in the list of episodes in the Episode dialog
 				auto* row = form->AddRow(_x("editor", "Position"));
-				auto* number = row->Add<UiNumberBox>([state]() { return float(state->Episode.Position); }, [state](float value, bool) {
+				auto* number = row->Add<NumberBox>([state]() { return float(state->Episode.Position); }, [state](float value, bool) {
 					std::uint16_t position = std::uint16_t(std::clamp<std::int32_t>(std::int32_t(value), 0, 65535));
 					if (position != state->Episode.Position) {
 						state->Episode.Position = position;
@@ -1006,9 +1007,9 @@ namespace Jazz2::Editor
 			AddImageRow(form, session, state, true);
 			AddImageRow(form, session, state, false);
 
-			auto* levels = columns->Add<UiStack>(UiOrientation::Vertical, UiTheme::Spacing);
+			auto* levels = columns->Add<Stack>(Orientation::Vertical, Theme::Spacing);
 			levels->Flex = 1.0f;
-			levels->Add<UiLabel>(_x("editor", "Levels, in the order the links lead from the first one"), UiTheme::TextHeader);
+			levels->Add<Label>(_x("editor", "Levels, in the order the links lead from the first one"), Theme::TextHeader);
 			levels->Add<EpisodeLevelList>(session, state, dialogPtr);
 
 			dialog->AddButton(_("Save"), [s, state]() {
@@ -1026,13 +1027,13 @@ namespace Jazz2::Editor
 					dialogPtr->Close();
 					return;
 				}
-				UiSurface* surface = s->GetSurface();
+				Surface* surface = s->GetSurface();
 				if (surface == nullptr) {
 					dialogPtr->Close();
 					return;
 				}
 				// TRANSLATORS: Title and buttons of the message asking to save the changed episode when the Episode dialog is closed
-				UiMessageDialog::Show(*surface, _x("editor", "Episode"), _x("editor", "The episode was changed, do you want to save it?"), { _("Save"), _x("editor", "Don't Save"), _x("editor", "Cancel") },
+				MessageDialog::Show(*surface, _x("editor", "Episode"), _x("editor", "The episode was changed, do you want to save it?"), { _("Save"), _x("editor", "Don't Save"), _x("editor", "Cancel") },
 					[dialogPtr, s, state](std::int32_t button) {
 					if (button == 0) {
 						if (!state->Episode.Write(state->FilePath, state->Exists)) {
@@ -1125,9 +1126,9 @@ namespace Jazz2::Editor
 		}
 
 		// Whether an episode of the name is anywhere the game looks for episodes, by its file or by the directory of its levels
-		bool EpisodeExists(ArrayView<const UiFileRoot> roots, StringView name)
+		bool EpisodeExists(ArrayView<const FileRoot> roots, StringView name)
 		{
-			for (const UiFileRoot& root : roots) {
+			for (const FileRoot& root : roots) {
 				if (fs::DirectoryExists(fs::FindPathCaseInsensitive(fs::CombinePath(root.Path, name))) ||
 					fs::FileExists(fs::FindPathCaseInsensitive(fs::CombinePath(root.Path, String(name + ".j2e"_s))))) {
 					return true;
@@ -1139,9 +1140,9 @@ namespace Jazz2::Editor
 		// The episodes in the places levels can be saved to, each name once, as the game finds the first of them
 		void FindEpisodeTargets(IEditorContext& session, SmallVectorImpl<EpisodeTarget>& targets)
 		{
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetFileRoots(true, roots);
-			for (const UiFileRoot& root : roots) {
+			for (const FileRoot& root : roots) {
 				if (!fs::DirectoryExists(root.Path)) {
 					continue;
 				}
@@ -1327,7 +1328,7 @@ namespace Jazz2::Editor
 		// Asks to move the level out of "unknown" into an episode, with all that changes along listed first
 		void ConfirmMove(IEditorContext& session, EpisodeTarget&& target, bool isNew)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
@@ -1415,7 +1416,7 @@ namespace Jazz2::Editor
 
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the message confirming that the level is moved into a new or an existing episode
-			UiMessageDialog::Show(*surface, isNew ? _x("editor", "New Episode") : _x("editor", "Move to Episode"), message,
+			MessageDialog::Show(*surface, isNew ? _x("editor", "New Episode") : _x("editor", "Move to Episode"), message,
 				// TRANSLATORS: Buttons of the message confirming that the level is moved or copied into a new or an existing episode
 				{ isNew ? _x("editor", "Create") : (plan->IsCopy ? _x("editor", "Copy") : _x("editor", "Move")), _x("editor", "Cancel") },
 				[s, plan](std::int32_t button) {
@@ -1427,11 +1428,11 @@ namespace Jazz2::Editor
 
 		void ShowNewEpisodeDialog(IEditorContext& session)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetFileRoots(true, roots);
 			if (roots.empty()) {
 				session.ShowMessage(_x("editor", "There is no place to save levels to"));
@@ -1456,15 +1457,15 @@ namespace Jazz2::Editor
 			String directory = roots[0].Path;
 
 			// TRANSLATORS: Title of the dialog that makes a new episode for a level that isn't in any episode
-			auto dialog = std::make_unique<UiDialog>(_x("editor", "New Episode"));
-			UiDialog* dialogPtr = dialog.get();
-			UiStack* content = dialog->GetContent();
-			UiForm* form = content->Add<UiForm>(UiTheme::Spacing);
-			UiTextBox* nameBox;
+			auto dialog = std::make_unique<Dialog>(_x("editor", "New Episode"));
+			Dialog* dialogPtr = dialog.get();
+			Stack* content = dialog->GetContent();
+			Form* form = content->Add<Form>(Theme::Spacing);
+			TextBox* nameBox;
 			{
 				// TRANSLATORS: Label of the name of the episode shown in the game in the New Episode dialog
 				auto* row = form->AddRow(_x("editor", "Name"));
-				nameBox = row->Add<UiTextBox>(settings->DisplayName);
+				nameBox = row->Add<TextBox>(settings->DisplayName);
 				nameBox->Width = 220.0f;
 				nameBox->MaxLength = 255;
 				nameBox->OnChanged = [settings](StringView text) {
@@ -1478,7 +1479,7 @@ namespace Jazz2::Editor
 			{
 				// TRANSLATORS: Label of the name of the folder of the episode in the New Episode dialog
 				auto* row = form->AddRow(_x("editor", "Folder"));
-				auto* box = row->Add<UiTextBox>();
+				auto* box = row->Add<TextBox>();
 				box->Width = 220.0f;
 				box->MaxLength = std::int32_t(MaxEpisodeNameLength);
 				box->TextFunc = [settings]() { return settings->Name; };
@@ -1488,7 +1489,7 @@ namespace Jazz2::Editor
 				};
 				box->Tooltip = _x("editor", "The episode is known by it, other episodes link to its levels as \"folder/level\"");
 			}
-			auto* result = content->Add<UiLabel>(StringView(), UiTheme::TextDim);
+			auto* result = content->Add<Label>(StringView(), Theme::TextDim);
 			// TRANSLATORS: In the New Episode dialog, the new name of the level, {}/{} are the folder of the episode and the name of the level
 			result->TextFunc = [settings, levelName]() { return _fx("editor", "The level becomes \"{}/{}\"", settings->Name, levelName); };
 
@@ -1504,7 +1505,7 @@ namespace Jazz2::Editor
 					s->ShowMessage(_x("editor", "A folder of an episode may have only letters, numbers, - and _"));
 					return;
 				}
-				SmallVector<UiFileRoot, 4> allRoots;
+				SmallVector<FileRoot, 4> allRoots;
 				s->GetFileRoots(false, allRoots);
 				if (EpisodeExists(allRoots, settings->Name)) {
 					s->ShowMessage(_x("editor", "There is an episode of that name already"));
@@ -1529,7 +1530,7 @@ namespace Jazz2::Editor
 
 		void ShowMoveToEpisodeDialog(IEditorContext& session)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
@@ -1538,7 +1539,7 @@ namespace Jazz2::Editor
 			IEditorContext* s = &session;
 			if (targets->empty()) {
 				// TRANSLATORS: Title and buttons of the message when there is no episode the level could be moved into
-				UiMessageDialog::Show(*surface, _x("editor", "Move to Episode"), _x("editor", "There is no episode the level could be moved into yet."), { _x("editor", "New Episode"), _x("editor", "Cancel") },
+				MessageDialog::Show(*surface, _x("editor", "Move to Episode"), _x("editor", "There is no episode the level could be moved into yet."), { _x("editor", "New Episode"), _x("editor", "Cancel") },
 					[s](std::int32_t button) {
 					if (button == 0) {
 						ShowNewEpisodeDialog(*s);
@@ -1548,29 +1549,29 @@ namespace Jazz2::Editor
 			}
 
 			String levelName = StringUtils::lowercase(fs::GetFileNameWithoutExtension(session.GetFilePath()));
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetFileRoots(false, roots);
 
 			// TRANSLATORS: Title of the dialog that moves a level that isn't in any episode into an existing episode
-			auto dialog = std::make_unique<UiDialog>(_x("editor", "Move to Episode"));
-			UiDialog* dialogPtr = dialog.get();
+			auto dialog = std::make_unique<Dialog>(_x("editor", "Move to Episode"));
+			Dialog* dialogPtr = dialog.get();
 			// As large as the screen allows, the list scrolls
 			dialog->MaxScreenHeightFraction = 0.8f;
 			dialog->MinScreenWidthFraction = 0.5f;
-			UiStack* content = dialog->GetContent();
-			content->Add<UiLabel>(_fx("editor", "Episodes the level \"{}\" can be moved into", levelName), UiTheme::TextHeader);
-			auto* scroll = content->Add<UiScrollView>();
+			Stack* content = dialog->GetContent();
+			content->Add<Label>(_fx("editor", "Episodes the level \"{}\" can be moved into", levelName), Theme::TextHeader);
+			auto* scroll = content->Add<ScrollView>();
 			scroll->Flex = 1.0f;
-			auto* list = scroll->SetContent<UiStack>(UiOrientation::Vertical, 3.0f, UiThickness(0.0f, 0.0f, 3.0f, 0.0f));
+			auto* list = scroll->SetContent<Stack>(Orientation::Vertical, 3.0f, Thickness(0.0f, 0.0f, 3.0f, 0.0f));
 			for (std::size_t i = 0; i < targets->size(); i++) {
 				const EpisodeTarget& target = (*targets)[i];
 				// The level would hide that one, or be hidden by it
 				bool taken = LevelExistsIn(roots, target.Name, levelName);
-				auto* row = list->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-				auto* label = row->Add<UiLabel>(target.DisplayName.empty() ? target.Name : target.DisplayName, UiTheme::Text);
+				auto* row = list->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+				auto* label = row->Add<Label>(target.DisplayName.empty() ? target.Name : target.DisplayName, Theme::Text);
 				label->Flex = 1.0f;
 				// TRANSLATORS: Button next to an episode in the Move to Episode dialog, moves the level into it
-				auto* move = row->Add<UiButton>(_x("editor", "Move Here"), EditorIcon::None, [s, dialogPtr, targets, i]() {
+				auto* move = row->Add<Button>(_x("editor", "Move Here"), EditorIcon::None, [s, dialogPtr, targets, i]() {
 					EpisodeTarget chosen = (*targets)[i];
 					dialogPtr->Close();
 					ConfirmMove(*s, Death::move(chosen), false);
@@ -1587,7 +1588,7 @@ namespace Jazz2::Editor
 					// TRANSLATORS: Below an episode in the Move to Episode dialog, {} is the name of the level being moved
 					details = String(details + " - "_s + _fx("editor", "has a level named \"{}\" already", levelName));
 				}
-				list->Add<UiLabel>(details, taken ? UiTheme::TextDanger : UiTheme::TextDim);
+				list->Add<Label>(details, taken ? Theme::TextDanger : Theme::TextDim);
 			}
 
 			ShowModal(*surface, Death::move(dialog));
@@ -1596,13 +1597,13 @@ namespace Jazz2::Editor
 		// A level of "unknown" isn't in any episode, a new one can be made for it, or it can be moved into one
 		void ShowNoEpisodeChoice(IEditorContext& session, const std::shared_ptr<EpisodeState>& state)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the message for a level that isn't in any episode, "unknown" is the name of a folder, keep it as it is
-			UiMessageDialog::Show(*surface, _x("editor", "Episode"), _x("editor", "The level is in \"unknown\", where the levels of no episode are.\nDo you want to make a new episode for it, or move it into an existing one?"),
+			MessageDialog::Show(*surface, _x("editor", "Episode"), _x("editor", "The level is in \"unknown\", where the levels of no episode are.\nDo you want to make a new episode for it, or move it into an existing one?"),
 				// TRANSLATORS: Buttons of the message for a level that isn't in any episode, the third one shows the levels that aren't in any episode
 				{ _x("editor", "New Episode"), _x("editor", "Move to Episode"), _x("editor", "Levels of No Episode"), _x("editor", "Cancel") }, [s, state](std::int32_t button) {
 				if (button == 0) {
@@ -1619,7 +1620,7 @@ namespace Jazz2::Editor
 
 	void ShowEpisodeDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -1628,7 +1629,7 @@ namespace Jazz2::Editor
 			// The episode is the directory the level is saved into, it's shown once it's saved
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the message shown instead of the Episode dialog for a level that wasn't saved yet
-			UiMessageDialog::Show(*surface, _x("editor", "Episode"), _x("editor", "The level wasn't saved yet, its episode is the folder it's saved into.\nDo you want to save it now?"),
+			MessageDialog::Show(*surface, _x("editor", "Episode"), _x("editor", "The level wasn't saved yet, its episode is the folder it's saved into.\nDo you want to save it now?"),
 				// TRANSLATORS: Buttons of the message for a level that wasn't saved yet, the first one opens the Save As dialog
 				{ _x("editor", "Save As"), _x("editor", "Cancel") }, [s](std::int32_t button) {
 				if (button == 0) {

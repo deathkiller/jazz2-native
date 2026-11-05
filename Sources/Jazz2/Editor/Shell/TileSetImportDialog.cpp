@@ -12,10 +12,11 @@
 #include "../Imaging/PaletteMatch.h"
 #include "../Imaging/PngCodec.h"
 #include "../Imaging/TileImages.h"
-#include "../UI/UiColors.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Colors.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 #include "../../Compatibility/JJ2Tileset.h"
 #include "../../Formats/TileSetFile.h"
@@ -43,7 +44,7 @@ namespace Jazz2::Editor
 
 		// Adds the choice of what is done with a new tile set once it's made, as `Use` of the state
 		template<class TState>
-		void AddUseRow(UiForm* content, std::shared_ptr<TState> state)
+		void AddUseRow(Form* content, std::shared_ptr<TState> state)
 		{
 			struct UseOption { String Label; ImportUse Use; };
 			UseOption options[] = {
@@ -58,17 +59,17 @@ namespace Jazz2::Editor
 			}
 			// TRANSLATORS: Label of the choice of what is done with the new tile set after it's made, as in "and then"
 			auto* row = content->AddRow(_x("editor", "Then"));
-			auto* dropdown = row->Add<UiDropdown>([state, shared]() {
+			auto* dropdown = row->Add<Dropdown>([state, shared]() {
 				for (const UseOption& option : *shared) {
 					if (option.Use == state->Use) {
 						return String(option.Label);
 					}
 				}
 				return String();
-			}, [state, shared](SmallVectorImpl<UiMenuEntry>& entries) {
+			}, [state, shared](SmallVectorImpl<MenuEntry>& entries) {
 				for (const UseOption& option : *shared) {
 					ImportUse use = option.Use;
-					UiMenuEntry entry;
+					MenuEntry entry;
 					entry.Label = option.Label;
 					entry.IsChecked = [state, use]() { return (state->Use == use); };
 					entry.Execute = [state, use]() { state->Use = use; };
@@ -328,17 +329,17 @@ namespace Jazz2::Editor
 
 		void ShowOptions(IEditorContext& session, std::shared_ptr<ImportState> state)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the dialog that makes a new tile set from an image file
-			auto dialog = std::make_unique<UiDialog>(_x("editor", "New Tile Set from Image"));
-			UiDialog* dialogPtr = dialog.get();
-			auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
+			auto dialog = std::make_unique<Dialog>(_x("editor", "New Tile Set from Image"));
+			Dialog* dialogPtr = dialog.get();
+			auto* content = dialog->GetContent()->Add<Form>(Theme::Spacing);
 
 			{
 				// TRANSLATORS: Label of the row with the size and kind of the chosen image in the New Tile Set from Image dialog, a noun
 				auto* row = content->AddRow(_x("editor", "Image"));
-				auto* info = row->Add<UiLabel>(StringView(), UiTheme::TextDim);
+				auto* info = row->Add<Label>(StringView(), Theme::TextDim);
 				info->TextFunc = [state]() {
 					// The tiles as the margin and the gutters lay them out
 					TileImportOptions options;
@@ -350,11 +351,11 @@ namespace Jazz2::Editor
 						state->Image.Indexed ? _x("editor", "indexed") : _x("editor", "true color")));
 				};
 			}
-			UiTextBox* nameBox;
+			TextBox* nameBox;
 			{
 				// TRANSLATORS: Label of the name of the new tile set
 				auto* row = content->AddRow(_x("editor", "Name"));
-				nameBox = row->Add<UiTextBox>(SuggestTileSetName(fs::GetFileNameWithoutExtension(state->Path), {}));
+				nameBox = row->Add<TextBox>(SuggestTileSetName(fs::GetFileNameWithoutExtension(state->Path), {}));
 				nameBox->Width = 140.0f;
 				nameBox->MaxLength = 32;
 				nameBox->Tooltip = _x("editor", "The tile set is saved in the user content, Tilesets/<name>.j2t");
@@ -371,20 +372,20 @@ namespace Jazz2::Editor
 				state->Settings.Colors = (state->Image.Indexed ? TileImportColors::OwnPalette : TileImportColors::TrueColor);
 				// TRANSLATORS: Label of the choice of the colors of the tiles made from an image, a noun
 				auto* row = content->AddRow(_x("editor", "Colors"));
-				auto* dropdown = row->Add<UiDropdown>([state]() {
+				auto* dropdown = row->Add<Dropdown>([state]() {
 					for (const ColorOption& option : ColorOptions) {
 						if (option.Colors == state->Settings.Colors) {
 							return String(option.Label);
 						}
 					}
 					return String();
-				}, [state](SmallVectorImpl<UiMenuEntry>& entries) {
+				}, [state](SmallVectorImpl<MenuEntry>& entries) {
 					for (const ColorOption& option : ColorOptions) {
 						if (option.IndexedOnly && !state->Image.Indexed) {
 							continue;
 						}
 						TileImportColors colors = option.Colors;
-						UiMenuEntry entry;
+						MenuEntry entry;
 						entry.Label = option.Label;
 						entry.IsChecked = [state, colors]() { return (state->Settings.Colors == colors); };
 						entry.Execute = [state, colors]() { state->Settings.Colors = colors; };
@@ -403,17 +404,17 @@ namespace Jazz2::Editor
 				};
 				// TRANSLATORS: Label of the choice of how colors missing in the palette are mixed from others, a noun
 				auto* ditherRow = content->AddRow(_x("editor", "Dither"));
-				auto* dither = ditherRow->Add<UiDropdown>([state]() {
+				auto* dither = ditherRow->Add<Dropdown>([state]() {
 					for (const DitherOption& option : DitherOptions) {
 						if (option.Mode == state->Settings.Dither) {
 							return String(option.Label);
 						}
 					}
 					return String();
-				}, [state](SmallVectorImpl<UiMenuEntry>& entries) {
+				}, [state](SmallVectorImpl<MenuEntry>& entries) {
 					for (const DitherOption& option : DitherOptions) {
 						DitherMode mode = option.Mode;
-						UiMenuEntry entry;
+						MenuEntry entry;
 						entry.Label = option.Label;
 						entry.IsChecked = [state, mode]() { return (state->Settings.Dither == mode); };
 						entry.Execute = [state, mode]() { state->Settings.Dither = mode; };
@@ -423,21 +424,21 @@ namespace Jazz2::Editor
 				dither->Width = 170.0f;
 				dither->Tooltip = _x("editor", "Colors between two of the palette are mixed - by a regular pattern, or by spreading what each pixel misses to the next ones (Floyd-Steinberg)");
 				dither->IsEnabledFunc = [state]() { return (state->Settings.Colors == TileImportColors::MatchPalette || state->Settings.Colors == TileImportColors::Reduce); };
-				content->Add<UiCheckBox>(_x("editor", "Skip tiles that are the same as another"), [state]() { return state->Settings.SkipDuplicates; },
+				content->Add<CheckBox>(_x("editor", "Skip tiles that are the same as another"), [state]() { return state->Settings.SkipDuplicates; },
 					[state](bool value) { state->Settings.SkipDuplicates = value; });
 			}
 			if (state->HasMasks) {
 				// TRANSLATORS: Checkbox in the New Tile Set from Image dialog, the collision masks of the tiles come from the image of masks saved next to the image
-				content->Add<UiCheckBox>(_x("editor", "Masks from the image of masks next to it"), [state]() { return state->Settings.UseMasks; },
+				content->Add<CheckBox>(_x("editor", "Masks from the image of masks next to it"), [state]() { return state->Settings.UseMasks; },
 					[state](bool value) { state->Settings.UseMasks = value; })->Tooltip = _x("editor", "Otherwise the tiles are solid where they aren't transparent");
 			} else {
-				content->Add<UiLabel>(_x("editor", "The tiles are solid where they aren't transparent"), UiTheme::TextDim);
+				content->Add<Label>(_x("editor", "The tiles are solid where they aren't transparent"), Theme::TextDim);
 			}
 
 			// Sprite sheets have a margin around the tiles and gutters between them
-			auto addNumber = [](UiStack* row, Function<std::int32_t&()>&& value, float max, StringView tooltip) {
+			auto addNumber = [](Stack* row, Function<std::int32_t&()>&& value, float max, StringView tooltip) {
 				auto shared = std::make_shared<Function<std::int32_t&()>>(Death::move(value));
-				auto* number = row->Add<UiNumberBox>([shared]() { return float((*shared)()); }, [shared](float v, bool) {
+				auto* number = row->Add<NumberBox>([shared]() { return float((*shared)()); }, [shared](float v, bool) {
 					(*shared)() = std::int32_t(std::round(v));
 				}, 0.0f, max, 1.0f, 0);
 				number->Width = 48.0f;
@@ -459,16 +460,16 @@ namespace Jazz2::Editor
 				// TRANSLATORS: Label of the row of options of what is transparent in the image, an adjective
 				auto* row = content->AddRow(_x("editor", "Transparent"));
 				// TRANSLATORS: Checkbox after "Transparent", pixels of a chosen color are transparent
-				row->Add<UiCheckBox>(_x("editor", "Color"), [state]() { return state->Settings.UseColorKey; }, [state](bool value) { state->Settings.UseColorKey = value; })
+				row->Add<CheckBox>(_x("editor", "Color"), [state]() { return state->Settings.UseColorKey; }, [state](bool value) { state->Settings.UseColorKey = value; })
 					->Tooltip = _x("editor", "Pixels of this color are transparent, magenta in many sprite sheets");
-				UiColorSwatch* swatch = row->Add<UiColorSwatch>([state]() {
+				ColorSwatch* swatch = row->Add<ColorSwatch>([state]() {
 					std::uint32_t key = state->Settings.ColorKey;
 					return Colorf((key & 0xFF) / 255.0f, ((key >> 8) & 0xFF) / 255.0f, ((key >> 16) & 0xFF) / 255.0f, 1.0f);
 				});
 				swatch->Width = 24.0f;
 				swatch->Height = 16.0f;
 				swatch->OnClick = [s, state, swatch]() {
-					UiColorPicker::ShowPopup(*s->GetSurface(), Vector2f(swatch->Bounds.X, swatch->Bounds.Y + swatch->Bounds.H), [state]() {
+					ColorPicker::ShowPopup(*s->GetSurface(), Vector2f(swatch->Bounds.X, swatch->Bounds.Y + swatch->Bounds.H), [state]() {
 						std::uint32_t key = state->Settings.ColorKey;
 						return Colorf((key & 0xFF) / 255.0f, ((key >> 8) & 0xFF) / 255.0f, ((key >> 16) & 0xFF) / 255.0f, 1.0f);
 					}, [state](const Colorf& color) {
@@ -479,7 +480,7 @@ namespace Jazz2::Editor
 				};
 				swatch->IsEnabledFunc = [state]() { return state->Settings.UseColorKey; };
 				// TRANSLATORS: Label of the lowest opacity of a pixel that isn't transparent, from 1 to 255
-				row->Add<UiLabel>(_x("editor", "Alpha"), UiTheme::TextDim);
+				row->Add<Label>(_x("editor", "Alpha"), Theme::TextDim);
 				addNumber(row, [state]() -> std::int32_t& { return state->Settings.AlphaThreshold; }, 255.0f,
 					_x("editor", "How opaque a pixel has to be to be seen, and a pixel of the masks to be solid, from 1 to 255"));
 			}
@@ -487,18 +488,18 @@ namespace Jazz2::Editor
 
 			// What the tile set would be, before it's saved
 			{
-				auto* previewRow = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+				auto* previewRow = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 				// TRANSLATORS: Button in the New Tile Set from Image dialog, makes the tile set to see it without saving it
-				auto* previewButton = previewRow->Add<UiButton>(_x("editor", "Preview"), EditorIcon::Search, [s, state]() {
+				auto* previewButton = previewRow->Add<Button>(_x("editor", "Preview"), EditorIcon::Search, [s, state]() {
 					SliceAsync(*s, state, [state](std::shared_ptr<SlicedTileSet> job) {
 						state->Preview = Death::move(job);
 					});
 				});
 				previewButton->Tooltip = _x("editor", "Make the tile set to see its palette and how many tiles it has, without saving it");
-				auto* previewInfo = previewRow->Add<UiLabel>(StringView(), UiTheme::TextDim);
+				auto* previewInfo = previewRow->Add<Label>(StringView(), Theme::TextDim);
 				previewInfo->Flex = 1.0f;
 				previewInfo->TextFunc = [state]() { return DescribePreview(*state); };
-				auto* palette = content->Add<UiPaletteGrid>([state]() -> const std::uint32_t* {
+				auto* palette = content->Add<PaletteGrid>([state]() -> const std::uint32_t* {
 					return (state->Preview != nullptr ? state->Preview->TileSet.Palette : ContentResolver::Get().GetPalettes().data());
 				}, []() -> std::int32_t { return -1; }, [](std::int32_t, bool) {});
 				palette->CellSize = 8.0f;
@@ -614,7 +615,7 @@ namespace Jazz2::Editor
 
 	void ShowNewTileSetDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
@@ -627,17 +628,17 @@ namespace Jazz2::Editor
 		auto state = std::make_shared<NewTileSetState>();
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog that makes a new tile set of empty tiles
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "New Tile Set"));
-		UiDialog* dialogPtr = dialog.get();
-		auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
-		content->Add<UiLabel>(_x("editor", "Empty tiles in the palette of the level, painted then by a double click on them."), UiTheme::TextDim);
+		auto dialog = std::make_unique<Dialog>(_x("editor", "New Tile Set"));
+		Dialog* dialogPtr = dialog.get();
+		auto* content = dialog->GetContent()->Add<Form>(Theme::Spacing);
+		content->Add<Label>(_x("editor", "Empty tiles in the palette of the level, painted then by a double click on them."), Theme::TextDim);
 
-		UiTextBox* nameBox;
+		TextBox* nameBox;
 		{
 			// A name that isn't taken yet
 			String name = SuggestTileSetName("new"_s, "-tiles"_s);
 			auto* row = content->AddRow(_x("editor", "Name"));
-			nameBox = row->Add<UiTextBox>(name);
+			nameBox = row->Add<TextBox>(name);
 			nameBox->Width = 140.0f;
 			nameBox->MaxLength = 32;
 			nameBox->Tooltip = _x("editor", "The tile set is saved in the user content, Tilesets/<name>.j2t");
@@ -645,7 +646,7 @@ namespace Jazz2::Editor
 		{
 			// TRANSLATORS: Label of the number of tiles of the new tile set in the New Tile Set dialog
 			auto* row = content->AddRow(_x("editor", "Tiles"));
-			auto* count = row->Add<UiNumberBox>([state]() { return state->TileCount; }, [state](float value, bool final) {
+			auto* count = row->Add<NumberBox>([state]() { return state->TileCount; }, [state](float value, bool final) {
 				state->TileCount = std::round(value);
 			}, 10.0f, 4000.0f, 10.0f, 0);
 			count->Width = 80.0f;
@@ -724,12 +725,12 @@ namespace Jazz2::Editor
 
 	void ShowImportTileSetFileDialog(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr) {
 			return;
 		}
 		// The original game is where its tile sets are, any other place can be browsed too
-		SmallVector<UiFileRoot, 4> roots;
+		SmallVector<FileRoot, 4> roots;
 		String sourcePath = String(ContentResolver::Get().GetSourcePath().trimmedSuffix("/\\"_s));
 		if (!sourcePath.empty() && fs::DirectoryExists(sourcePath)) {
 			// TRANSLATORS: Name of a place in the file dialog, the folder of the original game
@@ -737,7 +738,7 @@ namespace Jazz2::Editor
 		}
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the file dialog that picks a tile set file of the original game, or of this game, to import
-		UiFileDialog::Show(*surface, _x("editor", "Import Tile Set"), UiFileDialogMode::Open, Death::move(roots), ".j2t"_s, sourcePath, {}, [s](StringView path) {
+		FileDialog::Show(*surface, _x("editor", "Import Tile Set"), FileDialogMode::Open, Death::move(roots), ".j2t"_s, sourcePath, {}, [s](StringView path) {
 			struct ImportFileState
 			{
 				Formats::TileSetData Data;
@@ -749,14 +750,14 @@ namespace Jazz2::Editor
 				s->ShowMessage(_x("editor", "The file isn't a tile set that can be read"));
 				return;
 			}
-			UiSurface* surface = s->GetSurface();
+			Surface* surface = s->GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
 
-			auto dialog = std::make_unique<UiDialog>(_x("editor", "Import Tile Set"));
-			UiDialog* dialogPtr = dialog.get();
-			auto* content = dialog->GetContent()->Add<UiForm>(UiTheme::Spacing);
+			auto dialog = std::make_unique<Dialog>(_x("editor", "Import Tile Set"));
+			Dialog* dialogPtr = dialog.get();
+			auto* content = dialog->GetContent()->Add<Form>(Theme::Spacing);
 			String description = (state->Original
 				// TRANSLATORS: In the Import Tile Set dialog, {} is the number of tiles of the tile set file picked
 				? _fnx("editor", "A tile set of the original game with {} tile, it's converted and saved into the user content.",
@@ -764,22 +765,22 @@ namespace Jazz2::Editor
 				// TRANSLATORS: In the Import Tile Set dialog, {} is the number of tiles of the tile set file picked
 				: _fnx("editor", "A tile set with {} tile, it's copied into the user content.",
 					"A tile set with {} tiles, it's copied into the user content.", state->Data.TileCount, state->Data.TileCount));
-			content->Add<UiLabel>(description, UiTheme::TextDim);
+			content->Add<Label>(description, Theme::TextDim);
 
 			// The name of the file as tile sets are named, the same one is likely there already, converted by the game
 			StringView fileNameWithCase = fs::GetFileNameWithoutExtension(path);
 			String baseName = SuggestTileSetName(fileNameWithCase, {});
 			String fileName = StringUtils::lowercase(fileNameWithCase);
-			UiTextBox* nameBox;
+			TextBox* nameBox;
 			{
 				auto* row = content->AddRow(_x("editor", "Name"));
-				nameBox = row->Add<UiTextBox>(baseName);
+				nameBox = row->Add<TextBox>(baseName);
 				nameBox->Width = 140.0f;
 				nameBox->MaxLength = 32;
 				nameBox->Tooltip = _x("editor", "The tile set is saved in the user content, Tilesets/<name>.j2t");
 			}
 			if (baseName != fileName && !ContentTileSetLibrary::FindTileSetFile(fileName).empty()) {
-				content->Add<UiLabel>(_fx("editor", "A tile set named \"{}\" is there already, it may be this one, then it can be used without importing it.", fileName), UiTheme::TextDim);
+				content->Add<Label>(_fx("editor", "A tile set named \"{}\" is there already, it may be this one, then it can be used without importing it.", fileName), Theme::TextDim);
 			}
 			AddUseRow(content, state);
 

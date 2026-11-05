@@ -4,7 +4,8 @@
 
 #include "EventCatalog.h"
 #include "EventPreviewResolver.h"
-#include "../UI/UiPainter.h"
+#include "../../UI/Windows/Painter.h"
+#include "../UI/EditorUi.h"
 #include "../../../nCine/Primitives/AABB.h"
 
 #include <Containers/Function.h>
@@ -150,7 +151,7 @@ namespace Jazz2::Editor
 		 * @param offGrid    Whether it's an event off the grid, centered in @p tileRect, its mark is a triangle instead of
 		 *                   a square then
 		 */
-		void DrawPlaced(UiPainter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime,
+		void DrawPlaced(Painter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime,
 			Vector2f spawnPos, bool inScene = false, bool offGrid = false);
 		/**
 		 * @brief Draws the sprite of an event placed in the level into a canvas of the level, in pixels of the level
@@ -162,9 +163,9 @@ namespace Jazz2::Editor
 		/** @brief Returns `true` if the sprite of an event is drawn by @ref DrawInScene(), a start of the level isn't */
 		bool HasSceneSprite(const Formats::EventRecord& event);
 		/** @brief Draws an event fitted into a rectangle, as an item of a list */
-		void DrawFitted(UiPainter& painter, const Formats::EventRecord& event, const Rectf& rect, float animTime, float alpha = 1.0f);
+		void DrawFitted(Painter& painter, const Formats::EventRecord& event, const Rectf& rect, float animTime, float alpha = 1.0f);
 		/** @brief Draws a new event of a type fitted into a rectangle */
-		void DrawFitted(UiPainter& painter, std::uint16_t type, const Rectf& rect, float animTime, float alpha = 1.0f);
+		void DrawFitted(Painter& painter, std::uint16_t type, const Rectf& rect, float animTime, float alpha = 1.0f);
 		/** @brief Releases all loaded sprites */
 		void Clear();
 
@@ -317,7 +318,7 @@ namespace Jazz2::Editor
 		// a canvas of the level, in its pixels at a depth
 		struct DrawTarget
 		{
-			UiPainter* Painter = nullptr;
+			UI::Windows::Painter* Painter = nullptr;
 			UI::Canvas* Canvas = nullptr;
 			std::uint16_t Z = 0;
 			Vector2f Origin;
@@ -339,13 +340,13 @@ namespace Jazz2::Editor
 		/** @brief Finds how an event at a position is drawn, as @ref GetPreview() with what its position changes */
 		bool GetPlacedPreview(const Formats::EventRecord& event, Vector2f spawnPos, EventPreviewSpec& spec);
 		/** @brief Draws the characters a start is for, returns `false` if it isn't a start */
-		bool DrawStart(UiPainter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime, bool offGrid);
+		bool DrawStart(Painter& painter, const Formats::EventRecord& event, const Rectf& tileRect, float scale, float alpha, float animTime, bool offGrid);
 		/** @brief Draws the sprite of an event at its spawn position, all pieces of a bridge and the parts an object adds to itself */
 		void DrawPlacedSprite(const DrawTarget& target, const Formats::EventRecord& event, GraphicResource* resource, const EventPreviewSpec& spec,
 			Vector2f spawnPos, float alpha, float animTime);
 		void DrawExtraPart(const DrawTarget& target, std::uint16_t type, const ExtraPart& part, Vector2f spawnPos, float alpha, float animTime);
 		/** @brief Draws the sprite of an event and its parts fitted into a rectangle together */
-		void DrawFittedWithParts(UiPainter& painter, std::uint16_t type, GraphicResource* resource, const EventPreviewSpec& spec,
+		void DrawFittedWithParts(Painter& painter, std::uint16_t type, GraphicResource* resource, const EventPreviewSpec& spec,
 			ArrayView<const ExtraPart> parts, const Rectf& rect, float animTime, float alpha);
 		/** @brief Draws a frame at its hotspot, the current frame for -1 */
 		void DrawSprite(const DrawTarget& target, GraphicResource* resource, const EventPreviewSpec& spec, Vector2f pos, float alpha, float animTime,
@@ -357,8 +358,8 @@ namespace Jazz2::Editor
 			float animTime);
 		/** @brief Returns how far the gems of a gem ring reach from its position at most, in pixels of the level */
 		static float GetGemRingExtent(GraphicResource* resource);
-		void DrawBox(UiPainter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel);
-		static void LayoutBoxLabel(UiPainter& painter, StringView name, const Rectf& inner, float boxWidth, BoxLabel& label);
+		void DrawBox(Painter& painter, std::uint16_t type, const std::uint8_t* params, const Rectf& rect, float alpha, bool withLabel);
+		static void LayoutBoxLabel(Painter& painter, StringView name, const Rectf& inner, float boxWidth, BoxLabel& label);
 	};
 }
 

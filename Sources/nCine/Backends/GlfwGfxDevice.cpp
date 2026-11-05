@@ -2,10 +2,18 @@
 
 #include "GlfwGfxDevice.h"
 #include "GlfwInputManager.h"
+#include "GlfwAuxiliaryWindow.h"
 #include "../Graphics/ITextureLoader.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
 #	include "GLFW/emscripten_glfw3.h"
+#endif
+#include <algorithm>
+#include <cstdint>
+
+#if defined(DEATH_TARGET_WINDOWS) && defined(NCINE_HAS_AUXILIARY_WINDOWS)
+#	undef APIENTRY
+#	include <CommonWindows.h>
 #endif
 
 #define GLFW_VERSION_COMBINED (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION)
@@ -146,6 +154,80 @@ namespace nCine::Backends
 		glfwGetWindowPos(_windowHandle, &position.X, &position.Y);
 		return position;
 	}
+
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS)
+	bool GlfwGfxDevice::supportsAuxiliaryWindows() const
+	{
+		return GlfwAuxiliaryWindow::IsSupported();
+	}
+
+	std::unique_ptr<AuxiliaryWindow> GlfwGfxDevice::createAuxiliaryWindow(const AuxiliaryWindowDesc& desc)
+	{
+		return GlfwAuxiliaryWindow::Create(desc);
+	}
+
+	bool GlfwGfxDevice::globalMousePosition(Vector2i& position) const
+	{
+		if (!GlfwAuxiliaryWindow::IsSupported()) {
+			return false;
+		}
+		// GLFW knows the pointer only relative to a window, the main one is as good as any
+		double x = 0.0, y = 0.0;
+		glfwGetCursorPos(_windowHandle, &x, &y);
+		Vector2i windowPos = windowPosition();
+		position = Vector2i(windowPos.X + std::int32_t(x), windowPos.Y + std::int32_t(y));
+		return true;
+	}
+
+	bool GlfwGfxDevice::globalMouseButtons(std::uint32_t& buttons) const
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		// GLFW knows only the buttons of its own events, the system is asked, with the buttons swapped if they're set so
+		bool swapped = (::GetSystemMetrics(SM_SWAPBUTTON) != 0);
+		auto isDown = [](int key) { return (::GetAsyncKeyState(key) & 0x8000) != 0; };
+		buttons = (isDown(swapped ? VK_RBUTTON : VK_LBUTTON) ? 0x01 : 0) | (isDown(swapped ? VK_LBUTTON : VK_RBUTTON) ? 0x02 : 0) | (isDown(VK_MBUTTON) ? 0x04 : 0);
+		return true;
+#else
+		static_cast<void>(buttons);
+		return false;
+#endif
+	}
+
+	bool GlfwGfxDevice::desktopWorkArea(Vector2i point, Recti& area) const
+	{
+		// The monitor at the point, or the nearest one by the distance to its edges
+		int count = 0;
+		GLFWmonitor** monitors = glfwGetMonitors(&count);
+		std::int64_t best = INT64_MAX;
+		bool found = false;
+		for (int i = 0; i < count; i++) {
+			int x, y;
+			glfwGetMonitorPos(monitors[i], &x, &y);
+			const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]);
+			if (mode == nullptr) {
+				continue;
+			}
+			std::int64_t dx = std::max<std::int64_t>({ std::int64_t(x) - point.X, 0, std::int64_t(point.X) - (std::int64_t(x) + mode->width) });
+			std::int64_t dy = std::max<std::int64_t>({ std::int64_t(y) - point.Y, 0, std::int64_t(point.Y) - (std::int64_t(y) + mode->height) });
+			std::int64_t distance = dx * dx + dy * dy;
+			if (distance < best) {
+				best = distance;
+				int wx, wy, ww, wh;
+				glfwGetMonitorWorkarea(monitors[i], &wx, &wy, &ww, &wh);
+				area = Recti(wx, wy, ww, wh);
+				found = true;
+			}
+		}
+		return found;
+	}
+
+	float GlfwGfxDevice::windowContentScale() const
+	{
+		float xScale = 1.0f, yScale = 1.0f;
+		glfwGetWindowContentScale(_windowHandle, &xScale, &yScale);
+		return (xScale > 0.0f ? xScale : 1.0f);
+	}
+#endif
 
 	void GlfwGfxDevice::setWindowPosition(int x, int y)
 	{

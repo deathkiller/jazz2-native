@@ -800,7 +800,7 @@ namespace nCine
 #elif defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_D3D11)
 	// The Direct3D 11 multi-viewport path renders through the ordinary RHI pipeline: one device serves every
 	// window, so a platform window only needs a swap chain of its own that the device can be redirected into
-	// (D3D11Device::BeginSecondaryFrame). No second context, and no backend calls behind the RHI's back.
+	// (D3D11Device::BeginAuxiliaryFrame). No second context, and no backend calls behind the RHI's back.
 	void ImGuiDrawing::PrepareForViewports()
 	{
 		ImGuiIO& io = ImGui::GetIO();
@@ -823,19 +823,19 @@ namespace nCine
 	void ImGuiDrawing::OnCreatePlatformWindow(ImGuiViewport* viewport)
 	{
 		// PlatformHandleRaw is the native handle of the window the platform backend created for this viewport
-		viewport->RendererUserData = RHI::Device::CreateSecondarySwapchain(viewport->PlatformHandleRaw,
+		viewport->RendererUserData = RHI::Device::CreateAuxiliarySwapchain(viewport->PlatformHandleRaw,
 			std::int32_t(viewport->Size.x), std::int32_t(viewport->Size.y));
 	}
 
 	void ImGuiDrawing::OnDestroyPlatformWindow(ImGuiViewport* viewport)
 	{
-		RHI::Device::DestroySecondarySwapchain(viewport->RendererUserData);
+		RHI::Device::DestroyAuxiliarySwapchain(viewport->RendererUserData);
 		viewport->RendererUserData = nullptr;
 	}
 
 	void ImGuiDrawing::OnResizePlatformWindow(ImGuiViewport* viewport, ImVec2 size)
 	{
-		RHI::Device::ResizeSecondarySwapchain(viewport->RendererUserData, std::int32_t(size.x), std::int32_t(size.y));
+		RHI::Device::ResizeAuxiliarySwapchain(viewport->RendererUserData, std::int32_t(size.x), std::int32_t(size.y));
 	}
 
 	void ImGuiDrawing::OnRenderPlatformWindow(ImGuiViewport* viewport, void*)
@@ -846,7 +846,7 @@ namespace nCine
 
 	void ImGuiDrawing::OnSwapPlatformWindowBuffers(ImGuiViewport* viewport, void*)
 	{
-		RHI::Device::PresentSecondaryFrame(viewport->RendererUserData);
+		RHI::Device::PresentAuxiliaryFrame(viewport->RendererUserData);
 	}
 
 	void ImGuiDrawing::DrawPlatformWindow(ImGuiViewport* viewport)
@@ -866,14 +866,14 @@ namespace nCine
 		// device back to the main window. The swap chain is presented afterwards, from Renderer_SwapBuffers -
 		// ImGui renders every platform window first and only then swaps them all.
 		const Recti previousViewport = RHI::Device::GetViewport();
-		RHI::Device::BeginSecondaryFrame(viewport->RendererUserData, (viewport->Flags & ImGuiViewportFlags_NoRendererClear) == 0);
+		RHI::Device::BeginAuxiliaryFrame(viewport->RendererUserData, (viewport->Flags & ImGuiViewportFlags_NoRendererClear) == 0);
 		RHI::Device::SetViewport(Recti(0, 0, fbWidth, fbHeight));
 
 		// The shared buffers are enough here: this backend executes each draw as it is issued, so the next window
 		// overwriting them cannot affect the draws already made
 		DrawData(drawData, _vbo.get(), _ibo.get());
 
-		RHI::Device::EndSecondaryFrame();
+		RHI::Device::EndAuxiliaryFrame();
 		RHI::Device::SetViewport(previousViewport);
 	}
 #elif defined(IMGUI_HAS_VIEWPORT) && (defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL)) && (defined(WITH_SDL2) || defined(WITH_SDL3))
@@ -925,7 +925,7 @@ namespace nCine
 		data->Ibo = std::make_unique<RHI::Buffer>(BufferTarget::Index);
 		// The surface / layer is created from the SDL window itself (SDL only allows that on a Vulkan resp. Metal
 		// window, which the platform backend creates because the RHI is Vulkan resp. Metal)
-		data->Swapchain = RHI::Device::CreateSecondarySwapchain(ImGuiSdlInput::getPlatformWindowHandle(viewport),
+		data->Swapchain = RHI::Device::CreateAuxiliarySwapchain(ImGuiSdlInput::getPlatformWindowHandle(viewport),
 			std::int32_t(viewport->Size.x), std::int32_t(viewport->Size.y));
 		viewport->RendererUserData = data;
 	}
@@ -933,7 +933,7 @@ namespace nCine
 	void ImGuiDrawing::OnDestroyPlatformWindow(ImGuiViewport* viewport)
 	{
 		if (PlatformWindowData* data = static_cast<PlatformWindowData*>(viewport->RendererUserData)) {
-			RHI::Device::DestroySecondarySwapchain(data->Swapchain);
+			RHI::Device::DestroyAuxiliarySwapchain(data->Swapchain);
 			delete data;	// releases the render target and the texture behind it
 		}
 		viewport->RendererUserData = nullptr;
@@ -942,7 +942,7 @@ namespace nCine
 	void ImGuiDrawing::OnResizePlatformWindow(ImGuiViewport* viewport, ImVec2 size)
 	{
 		if (PlatformWindowData* data = static_cast<PlatformWindowData*>(viewport->RendererUserData)) {
-			RHI::Device::ResizeSecondarySwapchain(data->Swapchain, std::int32_t(size.x), std::int32_t(size.y));
+			RHI::Device::ResizeAuxiliarySwapchain(data->Swapchain, std::int32_t(size.x), std::int32_t(size.y));
 		}
 	}
 
@@ -993,7 +993,7 @@ namespace nCine
 		RHI::Device::SetViewport(previousViewport);
 
 		// Hand the rendered texture over for this frame; the device presents it with the main window
-		RHI::Device::QueueSecondaryPresent(data->Swapchain, data->Target.get());
+		RHI::Device::QueueAuxiliaryPresent(data->Swapchain, data->Target.get());
 	}
 #endif
 }

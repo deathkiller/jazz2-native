@@ -55,7 +55,7 @@ namespace Jazz2::Editor
 		/** @brief Forgets the corner marked */
 		void Cancel();
 		/** @brief Draws the block from the corner marked to the pointer, over the level */
-		void DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid);
+		void DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid);
 
 		/**
 		 * @brief Makes a stamp of a rectangle of cells of the view of a layer, with the events on them if it's the sprite layer

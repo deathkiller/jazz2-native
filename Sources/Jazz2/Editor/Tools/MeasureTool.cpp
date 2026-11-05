@@ -394,7 +394,7 @@ namespace Jazz2::Editor
 		return false;
 	}
 
-	void MeasureTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void MeasureTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		std::int32_t spriteLayer = _host.GetDocument().GetSpriteLayerIndex();
 		LayerView view = _host.GetLayerView(spriteLayer >= 0 ? spriteLayer : 0);
@@ -403,7 +403,7 @@ namespace Jazz2::Editor
 		if (!_hasMeasure) {
 			if (hoverValid) {
 				// Where it would start
-				painter.Circle(view.WorldToScreen(GetPoint(hover)), std::max(2.0f, painter.Px(2.5f)), UiTheme::Cursor, UiLayer::Overlay);
+				painter.Circle(view.WorldToScreen(GetPoint(hover)), std::max(2.0f, painter.Px(2.5f)), Theme::Cursor, PaintLayer::Overlay);
 			}
 			return;
 		}
@@ -442,7 +442,7 @@ namespace Jazz2::Editor
 				for (Vector2f& p : path) {
 					p = view.WorldToScreen(p);
 				}
-				painter.Polyline(path, thickness + 1.0f, UiTheme::OverlayCaution, UiLayer::Overlay);
+				painter.Polyline(path, thickness + 1.0f, Theme::OverlayCaution, PaintLayer::Overlay);
 				char buffer[64];
 				if (horizontal) {
 					std::snprintf(buffer, sizeof(buffer), "%.1f", std::abs(farthest - springStart.X) / 32.0f);
@@ -476,9 +476,9 @@ namespace Jazz2::Editor
 				for (Vector2f& p : path) {
 					p = view.WorldToScreen(p);
 				}
-				Colorf color = UiTheme::OverlaySeries[i];
+				Colorf color = Theme::OverlaySeries[i];
 				color.A = 0.85f;
-				painter.Polyline(path, thickness, color, UiLayer::Overlay);
+				painter.Polyline(path, thickness, color, PaintLayer::Overlay);
 				if (reachingArc < 0 && std::abs(delta.X) >= 1.0f && Reaches(arcs[i], _start, _end, collisions)) {
 					reachingArc = i;
 				}
@@ -487,10 +487,10 @@ namespace Jazz2::Editor
 
 		// The measured line, its ends, and how long it is
 		Vector2f line[2] = { a, b };
-		painter.Polyline(line, thickness + 1.0f, Colorf::White, UiLayer::Overlay);
+		painter.Polyline(line, thickness + 1.0f, Colorf::White, PaintLayer::Overlay);
 		float dot = std::max(2.0f, painter.Px(2.5f));
-		painter.Circle(a, dot, UiTheme::Accent, UiLayer::Overlay);
-		painter.Circle(b, dot, UiTheme::Accent, UiLayer::Overlay);
+		painter.Circle(a, dot, Theme::Accent, PaintLayer::Overlay);
+		painter.Circle(b, dot, Theme::Accent, PaintLayer::Overlay);
 
 		char buffer[96];
 		std::snprintf(buffer, sizeof(buffer), "%d x %d px - %.1f x %.1f tiles - %d px", std::int32_t(std::abs(delta.X)), std::int32_t(std::abs(delta.Y)),
@@ -503,20 +503,20 @@ namespace Jazz2::Editor
 			reach = (reachingArc >= 0 ? ReachTexts[reachingArc] : String(_x("editor", "No jump gets there")));
 		}
 
-		float padding = painter.Px(UiTheme::Padding);
-		float rowHeight = painter.Px(UiTheme::RowHeight);
+		float padding = painter.Px(Theme::Padding);
+		float rowHeight = painter.Px(Theme::RowHeight);
 		float width = std::max(painter.MeasureText(text), painter.MeasureText(reach)) + padding * 2.0f;
 		float height = rowHeight * (reach.empty() ? 1.0f : 2.0f);
 		// Under the middle of the line, where the arcs above it aren't
 		Vector2f labelPos(std::round((a.X + b.X - width) * 0.5f), std::round(std::max(a.Y, b.Y) + painter.Px(10.0f)));
 		Rectf label(labelPos.X, labelPos.Y, width, height);
 		// Over the arcs and the line
-		painter.FillRect(label, UiTheme::PanelFill, UiLayer::Overlay);
-		painter.Frame(label, UiTheme::PanelBorderDim, thickness, UiLayer::Overlay);
-		painter.TextInRect(text, Rectf(label.X + padding, label.Y, label.W - padding * 2.0f, rowHeight), UiTheme::Text, Alignment::Left, UiLayer::OverlayText);
+		painter.FillRect(label, Theme::PanelFill, PaintLayer::Overlay);
+		painter.Frame(label, Theme::PanelBorderDim, thickness, PaintLayer::Overlay);
+		painter.TextInRect(text, Rectf(label.X + padding, label.Y, label.W - padding * 2.0f, rowHeight), Theme::Text, Alignment::Left, PaintLayer::OverlayText);
 		if (!reach.empty()) {
 			painter.TextInRect(reach, Rectf(label.X + padding, label.Y + rowHeight, label.W - padding * 2.0f, rowHeight),
-				(reachingArc < 0 && springText.empty()) ? UiTheme::TextDanger : UiTheme::TextAccent, Alignment::Left, UiLayer::OverlayText);
+				(reachingArc < 0 && springText.empty()) ? Theme::TextDanger : Theme::TextAccent, Alignment::Left, PaintLayer::OverlayText);
 		}
 	}
 

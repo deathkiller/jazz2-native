@@ -4,9 +4,10 @@
 
 #include "../Files/EditorSettings.h"
 #include "../Tools/EditorContext.h"
-#include "../UI/UiPainter.h"
-#include "../UI/UiSurface.h"
-#include "../UI/UiTheme.h"
+#include "../../UI/Windows/Painter.h"
+#include "../../UI/Windows/Surface.h"
+#include "../../UI/Windows/Theme.h"
+#include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
 
 #include "../../../nCine/I18n.h"
@@ -229,8 +230,8 @@ namespace Jazz2::Editor
 		}
 
 		// A frame with its hotspot at a point of the screen, turned around the hotspot
-		void DrawAnchored(UiPainter& painter, const GraphicResource& resource, std::int32_t frame, Vector2f at, float scale, bool flippedX,
-			float angle, const Colorf& color, UI::BlendMode blend, UiLayer layer, bool flippedY = false)
+		void DrawAnchored(Painter& painter, const GraphicResource& resource, std::int32_t frame, Vector2f at, float scale, bool flippedX,
+			float angle, const Colorf& color, UI::BlendMode blend, PaintLayer layer, bool flippedY = false)
 		{
 			const GenericGraphicResource& base = *resource.Base;
 			Recti frameRect = base.GetFrameRect(frame);
@@ -291,7 +292,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void DrawFittedFrame(UiPainter& painter, const GraphicResource& resource, std::int32_t frame, const Rectf& rect, bool additive)
+	void DrawFittedFrame(Painter& painter, const GraphicResource& resource, std::int32_t frame, const Rectf& rect, bool additive)
 	{
 		if (!IsDrawable(&resource)) {
 			return;
@@ -315,7 +316,7 @@ namespace Jazz2::Editor
 		Vector2f center = Vector2f(std::round(rect.X + rect.W * 0.5f), std::round(rect.Y + rect.H * 0.5f));
 		Rectf target(std::round(center.X - float(hotspot.X - offset.X) * scale), std::round(center.Y - float(hotspot.Y - offset.Y) * scale),
 			std::round(frameRect.W * scale), std::round(frameRect.H * scale));
-		painter.Image(*base.TextureDiffuse, target, GetTexCoords(base, frame, false), Colorf::White, GetPaletteOffset(resource), UiLayer::Content, 0.0f,
+		painter.Image(*base.TextureDiffuse, target, GetTexCoords(base, frame, false), Colorf::White, GetPaletteOffset(resource), PaintLayer::Content, 0.0f,
 			additive ? UI::BlendMode::Additive : UI::BlendMode::Normal);
 	}
 
@@ -376,7 +377,7 @@ namespace Jazz2::Editor
 		return _fx("editor", "Shots {}, hits {}, reach {} px, time {:.2} s", std::int32_t(_shots.size()), hits, std::int32_t(reach), float(longest) / 60.0f);
 	}
 
-	Vector2f WeaponPreview::Measure(const UiContext& context, Vector2f available)
+	Vector2f WeaponPreview::Measure(const Context& context, Vector2f available)
 	{
 		Vector2f size = GetFixedSize(context);
 		return Vector2f(size.X >= 0.0f ? size.X : context.Px(ViewWidth), size.Y >= 0.0f ? size.Y : context.Px(ViewHeight));
@@ -424,7 +425,7 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	bool WeaponPreview::OnPointerDown(const UiPointerEvent& event)
+	bool WeaponPreview::OnPointerDown(const PointerEvent& event)
 	{
 		if (event.Button != MouseButton::Left) {
 			return false;
@@ -437,7 +438,7 @@ namespace Jazz2::Editor
 		return true;
 	}
 
-	void WeaponPreview::OnPointerMove(const UiPointerEvent& event)
+	void WeaponPreview::OnPointerMove(const PointerEvent& event)
 	{
 		Vector2f p = ToRange(event.Pos) - _dragOffset;
 		p = Vector2f(std::round(p.X), std::round(p.Y));
@@ -451,7 +452,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void WeaponPreview::OnPointerUp(const UiPointerEvent& event, bool inside)
+	void WeaponPreview::OnPointerUp(const PointerEvent& event, bool inside)
 	{
 		_dragging = DragTarget::None;
 	}
@@ -468,24 +469,24 @@ namespace Jazz2::Editor
 
 	void WeaponPreview::Update(float timeMult)
 	{
-		UiElement::Update(timeMult);
-		UiSurface* surface = GetSurface();
+		Element::Update(timeMult);
+		Surface* surface = GetSurface();
 		_pointedAt = (surface != nullptr && IsHovered() && GetWeapon() != nullptr ? HitTestDraggable(surface->GetPointerPos()) : DragTarget::None);
 		if (surface != nullptr && (_dragging != DragTarget::None || _pointedAt != DragTarget::None)) {
-			surface->SetCursorOverlay(UiCursorOverlay::Move);
+			surface->SetCursorOverlay(CursorOverlay::Move);
 		}
 	}
 
-	void WeaponPreview::Draw(UiPainter& painter)
+	void WeaponPreview::Draw(Painter& painter)
 	{
-		painter.RoundRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
-		painter.RoundRectBorder(Bounds, UiTheme::PanelBorderDim, UiLayer::Fill);
+		painter.RoundRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), PaintLayer::Fill);
+		painter.RoundRectBorder(Bounds, Theme::PanelBorderDim, PaintLayer::Fill);
 
 		const WeaponsDescription* weapons = _getWeapons();
 		WeaponType slot = _getSlot();
 		const WeaponDefinition* current = GetWeapon();
 		if (current == nullptr) {
-			painter.TextInRect(_x("editor", "Only a custom weapon is shown here"), Bounds, UiTheme::TextDim, Alignment::Center);
+			painter.TextInRect(_x("editor", "Only a custom weapon is shown here"), Bounds, Theme::TextDim, Alignment::Center);
 			return;
 		}
 		const WeaponDefinition& weapon = *current;
@@ -525,9 +526,9 @@ namespace Jazz2::Editor
 
 		if (hasGun) {
 			DrawAnchored(painter, *player, player->GetFrameForTime(animTime), toScreen(_playerPos), scale, facingLeft, 0.0f,
-				Colorf::White, UI::BlendMode::Normal, UiLayer::Content);
+				Colorf::White, UI::BlendMode::Normal, PaintLayer::Content);
 		} else {
-			painter.FillRect(toScreenRect(GetPlayerRect()), Colorf(0.4f, 0.7f, 1.0f, 0.35f), UiLayer::Content);
+			painter.FillRect(toScreenRect(GetPlayerRect()), Colorf(0.4f, 0.7f, 1.0f, 0.35f), PaintLayer::Content);
 		}
 
 		// The target, turned to the player
@@ -538,15 +539,15 @@ namespace Jazz2::Editor
 			Recti frameRect = enemy->Base->GetFrameRect(frame);
 			Vector2f bottom = toScreen(_range.Target);
 			Rectf rect(std::round(bottom.X - frameRect.W * scale * 0.5f), std::round(bottom.Y - frameRect.H * scale), frameRect.W * scale, frameRect.H * scale);
-			painter.Image(*enemy->Base->TextureDiffuse, rect, GetTexCoords(*enemy->Base, frame, !facingLeft), Colorf::White, GetPaletteOffset(*enemy), UiLayer::Content);
+			painter.Image(*enemy->Base->TextureDiffuse, rect, GetTexCoords(*enemy->Base, frame, !facingLeft), Colorf::White, GetPaletteOffset(*enemy), PaintLayer::Content);
 		} else {
-			painter.FillRect(toScreenRect(target), Colorf(1.0f, 0.35f, 0.3f, 0.35f), UiLayer::Content);
+			painter.FillRect(toScreenRect(target), Colorf(1.0f, 0.35f, 0.3f, 0.35f), PaintLayer::Content);
 		}
 		// The hitbox that's dragged, dimmed while it's only pointed at
 		DragTarget shown = (_dragging != DragTarget::None ? _dragging : _pointedAt);
 		if (shown != DragTarget::None) {
 			Rectf hitbox = toScreenRect(shown == DragTarget::Target ? target : GetPlayerRect());
-			painter.FillRect(hitbox, Colorf(1.0f, 1.0f, 1.0f, _dragging != DragTarget::None ? 0.12f : 0.06f), UiLayer::Overlay);
+			painter.FillRect(hitbox, Colorf(1.0f, 1.0f, 1.0f, _dragging != DragTarget::None ? 0.12f : 0.06f), PaintLayer::Overlay);
 			painter.Frame(hitbox, Colorf(1.0f, 1.0f, 1.0f, _dragging != DragTarget::None ? 0.45f : 0.22f), 1.0f);
 		}
 
@@ -560,7 +561,7 @@ namespace Jazz2::Editor
 				painter.Polyline(points, 1.0f, Colorf(1.0f, 0.85f, 0.4f, 0.35f));
 			}
 			if (!shot.Points.empty() && (shot.End != SimulatedShotEnd::Lifetime || options.Trigger == ShotTrigger::Timer) && options.AreaRadius > 0.0f) {
-				painter.Circle(toScreen(shot.Points.back()), options.AreaRadius * scale, Colorf(1.0f, 0.5f, 0.2f, 0.18f), UiLayer::Overlay);
+				painter.Circle(toScreen(shot.Points.back()), options.AreaRadius * scale, Colorf(1.0f, 0.5f, 0.2f, 0.18f), PaintLayer::Overlay);
 			}
 		}
 
@@ -593,7 +594,7 @@ namespace Jazz2::Editor
 			std::int32_t spriteFrame = (resource != nullptr ? GetFrameSinceStart(*resource, float(frame) / 60.0f) : 0);
 			if (!IsDrawable(resource)) {
 				painter.Circle(toScreen(shot.Points[std::min<std::int32_t>(frame, std::int32_t(shot.Points.size()) - 1)]),
-					std::max(2.0f, 3.0f * scale), Colorf(1.0f, 0.9f, 0.5f, 0.9f), UiLayer::Overlay);
+					std::max(2.0f, 3.0f * scale), Colorf(1.0f, 0.9f, 0.5f, 0.9f), PaintLayer::Overlay);
 				continue;
 			}
 
@@ -603,7 +604,7 @@ namespace Jazz2::Editor
 				bool flipped = (std::cos(angle) < 0.0f);
 				float turned = (flipped ? std::atan2(-std::sin(angle), -std::cos(angle)) : angle);
 				DrawAnchored(painter, *resource, spriteFrame, toScreen(shot.Points[0]), scale, flipped != shot.FlippedX, turned, Colorf::White, blend,
-					UiLayer::Overlay, shot.FlippedY);
+					PaintLayer::Overlay, shot.FlippedY);
 				continue;
 			}
 
@@ -629,7 +630,7 @@ namespace Jazz2::Editor
 						std::int32_t particle = resource->FrameOffset + ((powered ? 2 : 0) + ((step + i) & 1)) % frameCount;
 						Rectf rect(p.X - size * scale * 0.5f, p.Y - size * scale * 0.5f, size * scale, size * scale);
 						painter.Image(*resource->Base->TextureDiffuse, rect, GetTexCoords(*resource->Base, particle, false), Colorf(1.0f, 1.0f, 1.0f, fade),
-							GetPaletteOffset(*resource), UiLayer::Overlay, angle);
+							GetPaletteOffset(*resource), PaintLayer::Overlay, angle);
 					}
 				}
 				continue;
@@ -639,7 +640,7 @@ namespace Jazz2::Editor
 			bool flipped = (std::cos(angle) < 0.0f);
 			float turned = (!options.RotatesWithSpeed ? 0.0f : (flipped ? std::atan2(-std::sin(angle), -std::cos(angle)) : angle));
 			DrawAnchored(painter, *resource, spriteFrame, toScreen(shot.Points[std::min<std::int32_t>(frame, std::int32_t(shot.Points.size()) - 1)]),
-				scale, flipped != shot.FlippedX, turned, Colorf::White, blend, UiLayer::Overlay, shot.FlippedY);
+				scale, flipped != shot.FlippedX, turned, Colorf::White, blend, PaintLayer::Overlay, shot.FlippedY);
 		}
 		painter.PopClip();
 	}
@@ -649,15 +650,15 @@ namespace Jazz2::Editor
 	{
 	}
 
-	Vector2f WeaponSpriteView::Measure(const UiContext& context, Vector2f available)
+	Vector2f WeaponSpriteView::Measure(const Context& context, Vector2f available)
 	{
 		Vector2f size = GetFixedSize(context);
-		return Vector2f(size.X >= 0.0f ? size.X : context.Px(36.0f), size.Y >= 0.0f ? size.Y : context.Px(UiTheme::ButtonHeight + 6.0f));
+		return Vector2f(size.X >= 0.0f ? size.X : context.Px(36.0f), size.Y >= 0.0f ? size.Y : context.Px(Theme::ButtonHeight + 6.0f));
 	}
 
-	void WeaponSpriteView::Draw(UiPainter& painter)
+	void WeaponSpriteView::Draw(Painter& painter)
 	{
-		painter.RoundRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), UiLayer::Fill);
+		painter.RoundRect(Bounds, Colorf(0.0f, 0.0f, 0.0f, 0.35f), PaintLayer::Fill);
 		bool additive = false;
 		const GraphicResource* resource = _getResource(additive);
 		if (!IsDrawable(resource)) {

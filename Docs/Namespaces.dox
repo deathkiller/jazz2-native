@@ -500,6 +500,14 @@ See also @ref third-party for the licenses of the libraries used.
 
 	@experimental
 */
+/** @dir Jazz2/UI/Windows
+	@brief Namespace @ref Jazz2::UI::Windows
+*/
+/** @namespace Jazz2::UI::Windows
+	@brief Toolkit of windows, panels and controls, compiled only if `WITH_UI_WINDOWS`
+
+	It's used by the level editor, `WITH_UI_WINDOWS` is defined whenever `WITH_EDITOR` is.
+*/
 /** @dir Jazz2/Utils
 	@brief Namespace @ref Jazz2::Utils
 */

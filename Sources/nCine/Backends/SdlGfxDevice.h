@@ -89,6 +89,36 @@ namespace nCine::Backends
 		 */
 		static void queryDrawableSize(SDL_Window* windowHandle, int fallbackWidth, int fallbackHeight, int& width, int& height);
 
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		bool supportsAuxiliaryWindows() const override;
+		std::unique_ptr<AuxiliaryWindow> createAuxiliaryWindow(const AuxiliaryWindowDesc& desc) override;
+		bool globalMousePosition(Vector2i& position) const override;
+		float windowContentScale() const override;
+		bool globalMouseButtons(std::uint32_t& buttons) const override;
+		bool desktopWorkArea(Vector2i point, Recti& area) const override;
+
+		/** @brief Returns `true` if the SDL window ID is one of the auxiliary windows of the application, see @ref createAuxiliaryWindow() */
+		static bool isAuxiliaryWindow(std::uint32_t windowId);
+		/**
+		 * @brief Converts a position over a window of the application to one relative to the main window
+		 *
+		 * A position over an auxiliary window can be outside of the main window then. A position over the main window
+		 * stays as it is.
+		 */
+		static Vector2i toMainWindowPosition(std::uint32_t windowId, Vector2i position);
+#else
+		static bool isAuxiliaryWindow(std::uint32_t windowId) {
+			return false;
+		}
+		static Vector2i toMainWindowPosition(std::uint32_t windowId, Vector2i position) {
+			return position;
+		}
+#endif
+		/** @brief Returns `true` if the SDL window ID is the main window or an auxiliary window of the application */
+		static bool isOwnWindow(std::uint32_t windowId) {
+			return (isMainWindow(windowId) || isAuxiliaryWindow(windowId));
+		}
+
 		/**
 		 * @brief Follows a fullscreen change of the main window that the window system reports
 		 *

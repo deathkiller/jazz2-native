@@ -15,8 +15,9 @@
 #include "../Input/ActionIds.h"
 #include "../Runtime/EditorCamera.h"
 #include "../Runtime/TileDrawing.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../Tiles/TileMap.h"
 #include "../../../nCine/I18n.h"
 
@@ -226,11 +227,11 @@ namespace Jazz2::Editor
 		return IsBusy();
 	}
 
-	void EditorTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void EditorTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		if (hoverValid) {
 			LayerView view = _host.GetLayerView(_host.GetCurrentLayer());
-			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, UiTheme::Cursor);
+			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, Theme::Cursor);
 		}
 	}
 
@@ -239,7 +240,7 @@ namespace Jazz2::Editor
 		return {};
 	}
 
-	void EditorTool::DrawCellsOutline(UiPainter& painter, const LayerView& view, Vector2i from, Vector2i to, const Colorf& color)
+	void EditorTool::DrawCellsOutline(Painter& painter, const LayerView& view, Vector2i from, Vector2i to, const Colorf& color)
 	{
 		Recti cells = MakeRect(from, to);
 		Rectf topLeft = view.CellToScreen(Vector2i(cells.X, cells.Y));
@@ -247,11 +248,11 @@ namespace Jazz2::Editor
 		Rectf rect(topLeft.X, topLeft.Y, bottomRight.X + bottomRight.W - topLeft.X, bottomRight.Y + bottomRight.H - topLeft.Y);
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
 		// A dark edge under a light one, so it can be seen over anything
-		painter.Frame(Rectf(rect.X - thickness, rect.Y - thickness, rect.W + thickness * 2.0f, rect.H + thickness * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), thickness, UiLayer::Overlay);
-		painter.Frame(rect, color, thickness, UiLayer::Overlay);
+		painter.Frame(Rectf(rect.X - thickness, rect.Y - thickness, rect.W + thickness * 2.0f, rect.H + thickness * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), thickness, PaintLayer::Overlay);
+		painter.Frame(rect, color, thickness, PaintLayer::Overlay);
 	}
 
-	void EditorTool::DrawStampGhost(UiPainter& painter, const LayerView& view, const TileStamp& stamp, Vector2i cell, Vector2i anchor, float alpha,
+	void EditorTool::DrawStampGhost(Painter& painter, const LayerView& view, const TileStamp& stamp, Vector2i cell, Vector2i anchor, float alpha,
 		bool emptyToo)
 	{
 		Tiles::TileMap* tileMap = _host.GetTileMap();
@@ -273,7 +274,7 @@ namespace Jazz2::Editor
 				Vector2i at(cell.X - anchor.X + x, cell.Y - anchor.Y + y);
 				Rectf rect = view.CellToScreen(at);
 				if (tile.IsEmpty()) {
-					painter.FillRect(rect, Colorf(0.9f, 0.25f, 0.2f, 0.25f * alpha), UiLayer::Content);
+					painter.FillRect(rect, Colorf(0.9f, 0.25f, 0.2f, 0.25f * alpha), PaintLayer::Content);
 				} else {
 					// By where it comes from, a tile past the IDs the level can address yet is still drawn as itself
 					DrawTile(painter, *tileMap, document, tile, tile.Flags, rect, alpha);
@@ -658,7 +659,7 @@ namespace Jazz2::Editor
 		StrokeTool::Cancel();
 	}
 
-	void BrushTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void BrushTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		if (!hoverValid) {
 			return;
@@ -678,7 +679,7 @@ namespace Jazz2::Editor
 				} else {
 					Vector2i from(cell.X - anchor.X, cell.Y - anchor.Y);
 					DrawCellsOutline(painter, view, from, Vector2i(from.X + (stamp.Random ? 0 : stamp.Width - 1), from.Y + (stamp.Random ? 0 : stamp.Height - 1)),
-						_erase ? UiTheme::Danger : UiTheme::Accent);
+						_erase ? Theme::Danger : Theme::Accent);
 				}
 			});
 			return;
@@ -689,14 +690,14 @@ namespace Jazz2::Editor
 			if (_stroke == nullptr && stamp.GetPatternTile(hover.Cell.X, hover.Cell.Y, Vector2i(), tile)) {
 				DrawStampGhost(painter, view, TileStamp::FromTile(tile), hover.Cell, Vector2i(), 0.65f);
 			}
-			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, _erase ? UiTheme::Danger : UiTheme::Cursor);
+			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, _erase ? Theme::Danger : Theme::Cursor);
 			return;
 		}
 		if (_stroke == nullptr) {
 			DrawStampGhost(painter, view, stamp, hover.Cell, anchor, 0.65f, emptyToo);
 		}
 		Vector2i from(hover.Cell.X - anchor.X, hover.Cell.Y - anchor.Y);
-		DrawCellsOutline(painter, view, from, Vector2i(from.X + stamp.Width - 1, from.Y + stamp.Height - 1), _erase ? UiTheme::Danger : UiTheme::Cursor);
+		DrawCellsOutline(painter, view, from, Vector2i(from.X + stamp.Width - 1, from.Y + stamp.Height - 1), _erase ? Theme::Danger : Theme::Cursor);
 	}
 
 	StringView BrushTool::GetHint() const
@@ -788,12 +789,12 @@ namespace Jazz2::Editor
 		return _dragging;
 	}
 
-	void RectangleTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void RectangleTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		LayerView view = _host.GetLayerView(_host.GetCurrentLayer());
 		if (!_dragging) {
 			if (hoverValid) {
-				DrawCellsOutline(painter, view, hover.Cell, hover.Cell, UiTheme::Cursor);
+				DrawCellsOutline(painter, view, hover.Cell, hover.Cell, Theme::Cursor);
 			}
 			return;
 		}
@@ -815,9 +816,9 @@ namespace Jazz2::Editor
 			Rectf topLeft = view.CellToScreen(Vector2i(rect.X, rect.Y));
 			Rectf bottomRight = view.CellToScreen(Vector2i(rect.X + rect.W - 1, rect.Y + rect.H - 1));
 			painter.FillRect(Rectf(topLeft.X, topLeft.Y, bottomRight.X + bottomRight.W - topLeft.X, bottomRight.Y + bottomRight.H - topLeft.Y),
-				Colorf(0.9f, 0.25f, 0.2f, 0.25f), UiLayer::Content);
+				Colorf(0.9f, 0.25f, 0.2f, 0.25f), PaintLayer::Content);
 		}
-		DrawCellsOutline(painter, view, _start, _end, _erase ? UiTheme::Danger : UiTheme::Accent);
+		DrawCellsOutline(painter, view, _start, _end, _erase ? Theme::Danger : Theme::Accent);
 	}
 
 	StringView RectangleTool::GetHint() const
@@ -897,12 +898,12 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void FillTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void FillTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		if (hoverValid) {
 			LayerView view = _host.GetLayerView(_host.GetCurrentLayer());
 			DrawStampGhost(painter, view, TileStamp::FromTile(_host.GetStamp().IsEmpty() ? TileRef{} : _host.GetStamp().Tiles[0]), hover.Cell, Vector2i(), 0.5f);
-			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, UiTheme::Cursor);
+			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, Theme::Cursor);
 		}
 	}
 
@@ -1000,13 +1001,13 @@ namespace Jazz2::Editor
 		return _dragging;
 	}
 
-	void EyedropperTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void EyedropperTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		LayerView view = _host.GetLayerView(_host.GetCurrentLayer());
 		if (_dragging) {
-			DrawCellsOutline(painter, view, _start, _end, UiTheme::Accent);
+			DrawCellsOutline(painter, view, _start, _end, Theme::Accent);
 		} else if (hoverValid) {
-			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, UiTheme::Accent);
+			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, Theme::Accent);
 		}
 	}
 
@@ -1015,7 +1016,7 @@ namespace Jazz2::Editor
 		return _x("editor", "Click to pick a tile, drag to pick an area");
 	}
 
-	void DrawTileModifiers(UiPainter& painter, const DocumentLayer& layer, const LayerView& view, const Rectf& viewRect)
+	void DrawTileModifiers(Painter& painter, const DocumentLayer& layer, const LayerView& view, const Rectf& viewRect)
 	{
 		Vector2i from = view.WorldToCell(view.ScreenToWorld(Vector2f(viewRect.X, viewRect.Y)));
 		Vector2i to = view.WorldToCell(view.ScreenToWorld(Vector2f(viewRect.X + viewRect.W, viewRect.Y + viewRect.H)));
@@ -1037,32 +1038,32 @@ namespace Jazz2::Editor
 				Rectf rect = view.CellToScreen(Vector2i(x, y));
 				if (modifier == Formats::TileRecord::ModifierTranslucent) {
 					// Translucent, framed
-					Colorf color = UiTheme::OverlayInfo;
+					Colorf color = Theme::OverlayInfo;
 					color.A = 0.22f;
-					painter.FillRect(rect, color, UiLayer::Fill);
+					painter.FillRect(rect, color, PaintLayer::Fill);
 					color.A = 0.8f;
-					painter.Frame(rect, color, thickness, UiLayer::Overlay);
+					painter.Frame(rect, color, thickness, PaintLayer::Overlay);
 				} else {
 					// Invisible, solid but not drawn, crossed out
-					Colorf color = UiTheme::OverlayCaution;
+					Colorf color = Theme::OverlayCaution;
 					color.A = 0.2f;
-					painter.FillRect(rect, color, UiLayer::Fill);
+					painter.FillRect(rect, color, PaintLayer::Fill);
 					color.A = 0.85f;
-					painter.Line(Vector2f(rect.X, rect.Y), Vector2f(rect.X + rect.W, rect.Y + rect.H), thickness, color, UiLayer::Overlay);
-					painter.Line(Vector2f(rect.X + rect.W, rect.Y), Vector2f(rect.X, rect.Y + rect.H), thickness, color, UiLayer::Overlay);
+					painter.Line(Vector2f(rect.X, rect.Y), Vector2f(rect.X + rect.W, rect.Y + rect.H), thickness, color, PaintLayer::Overlay);
+					painter.Line(Vector2f(rect.X + rect.W, rect.Y), Vector2f(rect.X, rect.Y + rect.H), thickness, color, PaintLayer::Overlay);
 				}
 			}
 		}
 	}
 
-	void DrawSelectionEdge(UiPainter& painter, float x, float y, float length, bool horizontal, float animTime)
+	void DrawSelectionEdge(Painter& painter, float x, float y, float length, bool horizontal, float animTime)
 	{
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
 		float dash = 2.0f * thickness;
 		float period = dash * 2.0f;
 		float offset = std::fmod(animTime * dash * 4.0f, period);
 		Rectf line = (horizontal ? Rectf(x, y, length, thickness) : Rectf(x, y, thickness, length));
-		painter.FillRect(line, Colorf(0.1f, 0.08f, 0.2f, 1.0f), UiLayer::Content);
+		painter.FillRect(line, Colorf(0.1f, 0.08f, 0.2f, 1.0f), PaintLayer::Content);
 		float from = (horizontal ? x : y);
 		float across = (horizontal ? y : x);
 		float to = from + length;
@@ -1071,7 +1072,7 @@ namespace Jazz2::Editor
 		for (float pos = start; pos < to; pos += period) {
 			float a = std::max(pos, from), b = std::min(pos + dash, to);
 			if (b > a) {
-				painter.FillRect(horizontal ? Rectf(a, y, b - a, thickness) : Rectf(x, a, thickness, b - a), UiTheme::Accent, UiLayer::Overlay);
+				painter.FillRect(horizontal ? Rectf(a, y, b - a, thickness) : Rectf(x, a, thickness, b - a), Theme::Accent, PaintLayer::Overlay);
 			}
 		}
 	}
@@ -1347,7 +1348,7 @@ namespace Jazz2::Editor
 		return (_dragging || _moving);
 	}
 
-	void SelectTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void SelectTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		LayerView view = _host.GetLayerView(_host.GetCurrentLayer());
 		if (_moving) {
@@ -1355,15 +1356,15 @@ namespace Jazz2::Editor
 			Vector2i offset = _end - _start;
 			Vector2i at = _moveOrigin + offset;
 			DrawStampGhost(painter, view, _moveStamp, at, Vector2i(), 0.75f);
-			DrawCellsOutline(painter, view, at, Vector2i(at.X + _moveStamp.Width - 1, at.Y + _moveStamp.Height - 1), UiTheme::Accent);
+			DrawCellsOutline(painter, view, at, Vector2i(at.X + _moveStamp.Width - 1, at.Y + _moveStamp.Height - 1), Theme::Accent);
 			// Arrows to all four sides by the pointer, as a window's cursor of moving (the surface leaves them out for a finger)
-			if (UiSurface* surface = _host.GetSurface()) {
-				surface->SetCursorOverlay(UiCursorOverlay::Move);
+			if (Surface* surface = _host.GetSurface()) {
+				surface->SetCursorOverlay(CursorOverlay::Move);
 			}
 		} else if (_dragging) {
-			DrawCellsOutline(painter, view, _start, _end, UiTheme::Accent);
+			DrawCellsOutline(painter, view, _start, _end, Theme::Accent);
 		} else if (hoverValid) {
-			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, UiTheme::Cursor);
+			DrawCellsOutline(painter, view, hover.Cell, hover.Cell, Theme::Cursor);
 		}
 	}
 

@@ -1,6 +1,7 @@
 #if defined(WITH_GLFW)
 
 #include "GlfwInputManager.h"
+#include "GlfwAuxiliaryWindow.h"
 #include "../Input/IInputEventHandler.h"
 #include "../Input/JoyMapping.h"
 #include "../Application.h"
@@ -171,7 +172,12 @@ namespace nCine::Backends
 
 	bool GlfwInputManager::hasFocus()
 	{
+		// The focus going over to a window besides the main one isn't a loss of it
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS)
+		const bool glfwFocused = (glfwGetWindowAttrib(GlfwGfxDevice::windowHandle(), GLFW_FOCUSED) != 0 || AuxiliaryWindow::IsAnyFocused());
+#else
 		const bool glfwFocused = (glfwGetWindowAttrib(GlfwGfxDevice::windowHandle(), GLFW_FOCUSED) != 0);
+#endif
 
 		// A focus event has occurred (either gain or loss)
 		if (_windowHasFocus != glfwFocused) {
@@ -179,6 +185,44 @@ namespace nCine::Backends
 		}
 
 		return _windowHasFocus;
+	}
+
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS)
+	void GlfwInputManager::attachAuxiliaryWindow(GLFWwindow* window)
+	{
+		glfwSetKeyCallback(window, keyCallback);
+		glfwSetCharCallback(window, charCallback);
+		glfwSetCursorPosCallback(window, cursorPosCallback);
+		glfwSetMouseButtonCallback(window, mouseButtonCallback);
+		glfwSetScrollCallback(window, scrollCallback);
+		// Closed only by the application, the main window closes it
+		glfwSetWindowCloseCallback(window, [](GLFWwindow* w) {
+			glfwSetWindowShouldClose(w, GLFW_FALSE);
+		});
+	}
+#endif
+
+	Vector2i GlfwInputManager::toMainWindowPosition(GLFWwindow* window, double x, double y, std::uint32_t& windowId)
+	{
+		windowId = 0;
+		Vector2i position(static_cast<int>(x), static_cast<int>(y));
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS)
+		if (window != GlfwGfxDevice::windowHandle()) {
+			if (GlfwAuxiliaryWindow* auxiliary = GlfwAuxiliaryWindow::FromHandle(window)) {
+				windowId = auxiliary->GetId();
+				// What it shows may be drawn at another scale, on a display with another scale
+				float scale = auxiliary->GetInputScale();
+				position = Vector2i(static_cast<int>(std::round(x * scale)), static_cast<int>(std::round(y * scale)));
+				Vector2i windowPos, mainPos;
+				glfwGetWindowPos(window, &windowPos.X, &windowPos.Y);
+				glfwGetWindowPos(GlfwGfxDevice::windowHandle(), &mainPos.X, &mainPos.Y);
+				position += windowPos - mainPos;
+			}
+		}
+#else
+		static_cast<void>(window);
+#endif
+		return position;
 	}
 
 	void GlfwInputManager::updateJoystickStates()
@@ -411,8 +455,10 @@ namespace nCine::Backends
 			return;
 		}
 
-		_mouseState.x = static_cast<int>(x);
-		_mouseState.y = static_cast<int>(y);
+		// Over a window besides the main one, the position is made relative to the main window
+		Vector2i position = toMainWindowPosition(window, x, y, _mouseState.windowId);
+		_mouseState.x = position.X;
+		_mouseState.y = position.Y;
 		_inputEventHandler->OnMouseMove(_mouseState);
 	}
 
@@ -424,8 +470,9 @@ namespace nCine::Backends
 
 		double xCursor, yCursor;
 		glfwGetCursorPos(window, &xCursor, &yCursor);
-		_mouseEvent.x = static_cast<int>(xCursor);
-		_mouseEvent.y = static_cast<int>(yCursor);
+		Vector2i position = toMainWindowPosition(window, xCursor, yCursor, _mouseEvent.windowId);
+		_mouseEvent.x = position.X;
+		_mouseEvent.y = position.Y;
 		_mouseEvent.button = glfwToNcineMouseButton(button);
 
 		if (action == GLFW_PRESS) {
@@ -445,6 +492,14 @@ namespace nCine::Backends
 		// the opposite of the other backends
 		_scrollEvent.x = static_cast<float>(-xoffset);
 		_scrollEvent.y = static_cast<float>(yoffset);
+		_scrollEvent.windowId = 0;
+#if defined(NCINE_HAS_AUXILIARY_WINDOWS)
+		if (window != GlfwGfxDevice::windowHandle()) {
+			if (GlfwAuxiliaryWindow* auxiliary = GlfwAuxiliaryWindow::FromHandle(window)) {
+				_scrollEvent.windowId = auxiliary->GetId();
+			}
+		}
+#endif
 		_inputEventHandler->OnMouseWheel(_scrollEvent);
 	}
 

@@ -4,7 +4,8 @@
 
 #include "RuntimeSync.h"
 #include "../Common/ToolMath.h"
-#include "../UI/UiPainter.h"
+#include "../../UI/Windows/Painter.h"
+#include "../UI/EditorUi.h"
 #include "../../Rendering/PolylineRenderer.h"
 #include "../../Tiles/TileMap.h"
 #include "../../Tiles/TileSet.h"
@@ -183,7 +184,7 @@ namespace Jazz2::Editor
 		return (std::uint64_t(std::uint32_t(start.X)) << 32) | (std::uint64_t(std::uint32_t(start.Y) & 0xFFFFFFu) << 8) | std::uint64_t(step & 0xFF);
 	}
 
-	void MaskOverlay::Draw(UiPainter& painter, TileMap& tileMap, const LevelDocument& document, std::int32_t layer,
+	void MaskOverlay::Draw(Painter& painter, TileMap& tileMap, const LevelDocument& document, std::int32_t layer,
 		const LayerView& view, const Rectf& viewRect, bool alone)
 	{
 		_frame++;
@@ -197,7 +198,7 @@ namespace Jazz2::Editor
 
 		if (alone) {
 			// The masks only, the level is only hinted behind them
-			painter.FillRect(viewRect, Colorf(0.42f, 0.42f, 0.48f, 0.94f), UiLayer::Back);
+			painter.FillRect(viewRect, Colorf(0.42f, 0.42f, 0.48f, 0.94f), PaintLayer::Back);
 		}
 		float cellSize = TileSet::DefaultTileSize * view.Scale;
 		if (cellSize < 4.0f || layer < 0 || layer >= std::int32_t(document.Layers.size()) || view.Size.X <= 0 || view.Size.Y <= 0) {
@@ -259,7 +260,7 @@ namespace Jazz2::Editor
 				Rectf last = view.CellToScreen(Vector2i(cx * ChunkTiles + ChunkTiles - 1, cy * ChunkTiles + ChunkTiles - 1));
 				Rectf rect(first.X, first.Y, last.X + last.W - first.X, last.Y + last.H - first.Y);
 				if (chunk->Image != nullptr) {
-					painter.Image(*chunk->Image, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, UiLayer::Fill);
+					painter.Image(*chunk->Image, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White, -1, PaintLayer::Fill);
 				}
 				if (reuseOutline || !drawsOutline) {
 					continue;
@@ -294,7 +295,7 @@ namespace Jazz2::Editor
 			float halfThickness = std::max(1.0f, painter.GetScale()) * std::clamp(0.5f + 0.35f * view.Scale, 0.75f, 1.5f);
 			// Far away, all the outlines are more than one command can draw
 			SmallVector<RenderCommand*, 8> commands;
-			_outlineRenderer->DrawMany(_screenOutline, _screenOutlineEnds, halfThickness, painter.GetDepth(UiLayer::Content), OutlineColor, commands);
+			_outlineRenderer->DrawMany(_screenOutline, _screenOutlineEnds, halfThickness, painter.GetDepth(PaintLayer::Content), OutlineColor, commands);
 			for (RenderCommand* command : commands) {
 				painter.Command(command);
 			}

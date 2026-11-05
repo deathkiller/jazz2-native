@@ -1,9 +1,15 @@
-﻿#pragma once
+﻿#include "../UI/EditorUi.h"
+#pragma once
 
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include <Containers/Function.h>
 #include <Containers/StringView.h>
+
+namespace Jazz2::UI::Windows
+{
+	class FileDialog;
+}
 
 namespace Jazz2::Editor
 {
@@ -13,7 +19,6 @@ namespace Jazz2::Editor
 #endif
 
 	class IEditorContext;
-	class UiFileDialog;
 
 	/**
 	 * @brief Makes a file dialog show levels as the editor knows them
@@ -21,11 +26,11 @@ namespace Jazz2::Editor
 	 * Their icons tell a level from a level with a script and from a file that isn't a level of this version of the
 	 * game, the selected one is shown with its preview, name, author, music, tile set and the levels that follow it.
 	 */
-	void SetupLevelFileDialog(UiFileDialog& dialog);
+	void SetupLevelFileDialog(FileDialog& dialog);
 	/** @brief Makes a file dialog show tile sets with their icons, the first tiles and how many there are */
-	void SetupTileSetFileDialog(UiFileDialog& dialog);
+	void SetupTileSetFileDialog(FileDialog& dialog);
 	/** @brief Makes a file dialog show music with its icons, the format and the title of the song */
-	void SetupMusicFileDialog(UiFileDialog& dialog);
+	void SetupMusicFileDialog(FileDialog& dialog);
 
 	/**
 	 * @brief Lets a level be picked, @p onPicked gets how a level refers to it

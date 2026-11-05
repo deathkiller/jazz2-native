@@ -12,9 +12,10 @@
 #include "../Events/EventPreviews.h"
 #include "../Runtime/EditorCamera.h"
 #include "../Runtime/EditorLevelHandler.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiSurface.h"
-#include "../UI/UiVirtualList.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Surface.h"
+#include "../../UI/Windows/VirtualList.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -226,15 +227,15 @@ namespace Jazz2::Editor
 
 	void ShowEventOutline(IEditorContext& session)
 	{
-		UiSurface* surface = session.GetSurface();
+		Surface* surface = session.GetSurface();
 		if (surface == nullptr || ReuseSingleDialog(session, "eventList")) {
 			return;
 		}
 
 		IEditorContext* s = &session;
 		// TRANSLATORS: Title of the dialog with the list of all events placed in the level
-		auto dialog = std::make_unique<UiDialog>(_x("editor", "Event List"));
-		UiDialog* dialogPtr = dialog.get();
+		auto dialog = std::make_unique<Dialog>(_x("editor", "Event List"));
+		Dialog* dialogPtr = dialog.get();
 		// Resized as needed, the list takes the room; the size stays for the session
 		static Vector2f lastSize(-1.0f, -1.0f);
 		dialog->Resizable = true;
@@ -244,28 +245,28 @@ namespace Jazz2::Editor
 			dialog->Height = lastSize.Y;
 		}
 		auto* content = dialog->GetContent();
-		auto* header = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
-		auto* search = header->Add<UiTextBox>();
+		auto* header = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
+		auto* search = header->Add<TextBox>();
 		search->Placeholder = _x("editor", "Filter by name or parameters");
 		search->Flex = 1.0f;
-		auto* summary = header->Add<UiLabel>(StringView(), UiTheme::TextDim);
-		auto* scroll = content->Add<UiScrollView>();
+		auto* summary = header->Add<Label>(StringView(), Theme::TextDim);
+		auto* scroll = content->Add<ScrollView>();
 		// The size it starts with, it gets what the window has once it's resized
 		scroll->Width = 440.0f;
 		scroll->Height = 260.0f;
 		scroll->Flex = 1.0f;
-		content->Add<UiLabel>(_x("editor", "The selected events are changed together in the event properties"), UiTheme::TextDim);
+		content->Add<Label>(_x("editor", "The selected events are changed together in the event properties"), Theme::TextDim);
 
 		// Only the rows seen are drawn, a level can have thousands of events
 		auto state = std::make_shared<OutlineState>();
-		auto* list = scroll->SetContent<UiVirtualList>();
-		list->RowHeight = UiTheme::RowHeight + 2.0f;
+		auto* list = scroll->SetContent<VirtualList>();
+		list->RowHeight = Theme::RowHeight + 2.0f;
 		list->CountFunc = [state]() { return std::int32_t(state->Items.size()); };
 		list->RowText = [state](std::int32_t index) { return (index >= 0 && index < std::int32_t(state->Items.size()) ? state->GetName(state->Items[index].Record.Type) : String()); };
 		list->RowTooltip = [](std::int32_t index) {
 			return String(_x("editor", "Click to select the event and go to it, Ctrl+click to add it to the selection, Shift+click to select all from the last one"));
 		};
-		list->DrawRow = [s, state](UiPainter& painter, std::int32_t index, const Rectf& row, bool picked, float hover) {
+		list->DrawRow = [s, state](Painter& painter, std::int32_t index, const Rectf& row, bool picked, float hover) {
 			if (index < 0 || index >= std::int32_t(state->Items.size())) {
 				return;
 			}
@@ -274,16 +275,16 @@ namespace Jazz2::Editor
 			const EventSelection& selection = s->GetEventSelection();
 			bool selected = (item.OffGrid >= 0 ? selection.ContainsOffGrid(item.OffGrid) : selection.Contains(item.Cell));
 			if (selected) {
-				painter.RoundRect(row, UiTheme::Selection);
+				painter.RoundRect(row, Theme::Selection);
 			} else if (hover > 0.0f) {
-				Colorf color = UiTheme::Hover;
+				Colorf color = Theme::Hover;
 				color.A *= hover;
 				painter.RoundRect(row, color);
 			}
 			if (picked) {
-				painter.RoundRectBorder(row, UiTheme::AccentDim);
+				painter.RoundRectBorder(row, Theme::AccentDim);
 			}
-			float padding = painter.Px(UiTheme::Padding);
+			float padding = painter.Px(Theme::Padding);
 			float iconSize = row.H - painter.Px(2.0f);
 			float positionWidth = painter.Px(64.0f);
 			float difficultyWidth = painter.Px(36.0f);
@@ -293,14 +294,14 @@ namespace Jazz2::Editor
 			float nameWidth = std::max<float>((row.W - (x - row.X) - positionWidth - difficultyWidth) * 0.45f, 0.0f);
 			float detailsX = x + nameWidth + positionWidth + difficultyWidth;
 			painter.PushClip(Rectf(x, row.Y, std::max<float>(row.X + row.W - x, 0.0f), row.H));
-			painter.TextInRect(state->GetName(item.Record.Type), Rectf(x, row.Y, nameWidth, row.H), item.OffGrid >= 0 ? UiTheme::TextAccent : UiTheme::Text);
+			painter.TextInRect(state->GetName(item.Record.Type), Rectf(x, row.Y, nameWidth, row.H), item.OffGrid >= 0 ? Theme::TextAccent : Theme::Text);
 			String position = FormatInteger(item.Position.X) + ", "_s + FormatInteger(item.Position.Y);
-			painter.TextInRect(position, Rectf(x + nameWidth, row.Y, positionWidth, row.H), UiTheme::TextDim);
-			painter.TextInRect(item.Difficulty, Rectf(x + nameWidth + positionWidth, row.Y, difficultyWidth, row.H), UiTheme::TextDim);
-			painter.TextInRect(item.Details, Rectf(detailsX, row.Y, std::max<float>(row.X + row.W - detailsX, 0.0f), row.H), UiTheme::TextDim);
+			painter.TextInRect(position, Rectf(x + nameWidth, row.Y, positionWidth, row.H), Theme::TextDim);
+			painter.TextInRect(item.Difficulty, Rectf(x + nameWidth + positionWidth, row.Y, difficultyWidth, row.H), Theme::TextDim);
+			painter.TextInRect(item.Details, Rectf(detailsX, row.Y, std::max<float>(row.X + row.W - detailsX, 0.0f), row.H), Theme::TextDim);
 			painter.PopClip();
 		};
-		list->OnRowPressed = [s, state](std::int32_t index, Vector2f, const UiPointerEvent& event) {
+		list->OnRowPressed = [s, state](std::int32_t index, Vector2f, const PointerEvent& event) {
 			state->PendingKeyPick = -1;
 			ChooseRow(*s, *state, index, event.Modifiers);
 		};
@@ -366,7 +367,7 @@ namespace Jazz2::Editor
 			}
 		});
 		session.AddChangeObserver(state->Observer);
-		content->Add<UiUpdateWatcher>([s, state, rebuild, list, dialogPtr](float) {
+		content->Add<UpdateWatcher>([s, state, rebuild, list, dialogPtr](float) {
 			if (dialogPtr->Width > 0.0f && dialogPtr->Height > 0.0f) {
 				lastSize = Vector2f(dialogPtr->Width, dialogPtr->Height);
 			}
@@ -386,7 +387,7 @@ namespace Jazz2::Editor
 		});
 		rebuild();
 
-		UiOverlayOptions options;
+		OverlayOptions options;
 		options.Position = Vector2f(1.0e6f, 0.0f);
 		options.Modal = false;
 		options.CloseOnOutsideClick = false;

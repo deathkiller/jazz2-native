@@ -3,6 +3,7 @@
 #if defined(WITH_EDITOR) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Files/AutosaveService.h"
+#include "../UI/EditorUi.h"
 
 #include <Containers/Function.h>
 #include <Containers/SmallVector.h>
@@ -13,6 +14,11 @@
 namespace Jazz2
 {
 	class IRootController;
+}
+
+namespace Jazz2::UI::Windows
+{
+	struct FileRoot;
 }
 
 namespace Jazz2::Editor
@@ -27,7 +33,6 @@ namespace Jazz2::Editor
 
 	class IEditorContext;
 	class LevelDocument;
-	struct UiFileRoot;
 
 	/**
 		@brief What @ref DocumentFiles needs of the level editor beyond @ref IEditorContext
@@ -87,9 +92,9 @@ namespace Jazz2::Editor
 		/** @brief Returns `true` if the level can be saved to its file */
 		bool CanSaveInPlace() const;
 		/** @brief Returns the places levels are opened from or saved to */
-		void GetFileRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots);
+		void GetFileRoots(bool forSaving, SmallVectorImpl<FileRoot>& roots);
 		/** @brief Returns the places images are opened from or saved to, outside of the content of the game too */
-		void GetImageRoots(bool forSaving, SmallVectorImpl<UiFileRoot>& roots);
+		void GetImageRoots(bool forSaving, SmallVectorImpl<FileRoot>& roots);
 		/** @brief Returns a tile set to make a new level with */
 		String FindDefaultTileSet();
 
@@ -202,7 +207,7 @@ namespace Jazz2::Editor
 		bool GetUpdatedScript(String& path, String& text, String& updated) const;
 		void RememberSavedWeapons();
 #if defined(WITH_LEVEL_PACKS)
-		// Name of a level pack or its level in the file dialog, see UiFileRoot::LabelFunc
+		// Name of a level pack or its level in the file dialog, see FileRoot::LabelFunc
 		static String GetLevelPackLabel(StringView path, bool isDirectory);
 		// Copies the tile sets and the music of a level pack the level uses into the user content
 		void CopyLevelPackAssets(const LevelDocument& document);

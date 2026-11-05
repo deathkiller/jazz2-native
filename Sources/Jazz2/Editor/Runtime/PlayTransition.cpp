@@ -19,7 +19,7 @@ namespace Jazz2::Editor
 	}
 
 	PlayTransition::PlayTransition()
-		: _outside(nullptr), _inside(nullptr), _color(UiTheme::Accent), _time(0.0f), _hold(false)
+		: _outside(nullptr), _inside(nullptr), _color(Theme::Accent), _time(0.0f), _hold(false)
 	{
 	}
 
@@ -30,7 +30,7 @@ namespace Jazz2::Editor
 	void PlayTransition::Start(Texture* outside, Texture* inside, const Colorf& color)
 	{
 		// With reduced motion, what's next is shown at once, without the ring
-		if (UiTheme::ReducedMotion) {
+		if (Theme::ReducedMotion) {
 			Stop();
 			return;
 		}
@@ -75,13 +75,13 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void PlayTransition::Draw(UiPainter& painter, Vector2f screenSize)
+	void PlayTransition::Draw(Painter& painter, Vector2f screenSize)
 	{
 		DrawOutside(painter, screenSize);
 		DrawRing(painter, screenSize);
 	}
 
-	void PlayTransition::DrawOutside(UiPainter& painter, Vector2f screenSize)
+	void PlayTransition::DrawOutside(Painter& painter, Vector2f screenSize)
 	{
 		if (_outside == nullptr || screenSize.X <= 0.0f || screenSize.Y <= 0.0f) {
 			return;
@@ -93,10 +93,10 @@ namespace Jazz2::Editor
 		float coverRadius = screenSize.Length() * 0.5f + 2.0f;
 
 		// The last image around the hole, sampled where it was on the screen
-		painter.Command(DrawBand(0, center, hole, coverRadius, *_outside, screenSize, 0.0f, 0.0f, painter.GetDepth(UiLayer::Back), Colorf::White));
+		painter.Command(DrawBand(0, center, hole, coverRadius, *_outside, screenSize, 0.0f, 0.0f, painter.GetDepth(PaintLayer::Back), Colorf::White));
 	}
 
-	void PlayTransition::DrawRing(UiPainter& painter, Vector2f screenSize)
+	void PlayTransition::DrawRing(Painter& painter, Vector2f screenSize)
 	{
 		if (_outside == nullptr || screenSize.X <= 0.0f || screenSize.Y <= 0.0f) {
 			return;
@@ -108,7 +108,7 @@ namespace Jazz2::Editor
 
 		// What is shown now in the hole, over whatever was drawn before, a little into the ring so no gap is seen
 		if (_inside != nullptr && hole > 0.0f) {
-			painter.Command(DrawBand(6, center, 0.0f, std::min(hole + 2.0f, outer), *_inside, screenSize, 0.0f, 0.0f, painter.GetDepth(UiLayer::Back), Colorf::White));
+			painter.Command(DrawBand(6, center, 0.0f, std::min(hole + 2.0f, outer), *_inside, screenSize, 0.0f, 0.0f, painter.GetDepth(PaintLayer::Back), Colorf::White));
 		}
 
 		// The ring over all of the slot, so it covers what the editor still shows outside of it, solid but for
@@ -117,7 +117,7 @@ namespace Jazz2::Editor
 			_ring = std::make_unique<Rendering::PolylineRenderer>(256);
 		}
 		Texture& feather = _ring->GetFeatherTexture();
-		std::uint16_t ringDepth = std::uint16_t(painter.GetDepth(UiLayer::Back) + 2 * UiPainter::SlotDepth);
+		std::uint16_t ringDepth = std::uint16_t(painter.GetDepth(PaintLayer::Back) + 2 * Painter::SlotDepth);
 		float fade = std::max(1.0f, painter.GetScale());
 		constexpr float Opaque = 0.175f;
 		painter.Command(DrawBand(1, center, std::max(hole - fade, 0.0f), hole, feather, Vector2f(), 0.0f, Opaque, ringDepth, _color));
@@ -128,8 +128,8 @@ namespace Jazz2::Editor
 		if (hole > 1.0f) {
 			float line = std::max(2.0f, painter.GetScale() * 2.0f);
 			Colorf dark(_color.R * 0.2f, _color.G * 0.2f, _color.B * 0.25f, 0.9f);
-			painter.Command(DrawBand(4, center, std::max(hole - line - fade, 0.0f), hole - line, feather, Vector2f(), 0.0f, Opaque, painter.GetDepth(UiLayer::OverlayText), dark));
-			painter.Command(DrawBand(5, center, hole - line, hole, feather, Vector2f(), 0.5f, 0.5f, painter.GetDepth(UiLayer::OverlayText), dark));
+			painter.Command(DrawBand(4, center, std::max(hole - line - fade, 0.0f), hole - line, feather, Vector2f(), 0.0f, Opaque, painter.GetDepth(PaintLayer::OverlayText), dark));
+			painter.Command(DrawBand(5, center, hole - line, hole, feather, Vector2f(), 0.5f, 0.5f, painter.GetDepth(PaintLayer::OverlayText), dark));
 		}
 	}
 

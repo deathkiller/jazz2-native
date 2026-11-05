@@ -311,7 +311,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Black, faded out with the square of the distance from the edge of the preview, as the shadows of the editor's
-		// menus are (see Editor::UiSkin), around the same corners rounded off by a pixel
+		// menus are (see Editor::Skin), around the same corners rounded off by a pixel
 		constexpr float MaxOpacity = 0.45f;
 		constexpr float Radius = 1.0f;
 		const std::int32_t spread = PreviewShadowSpread;

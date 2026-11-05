@@ -75,7 +75,7 @@ namespace Jazz2::Editor
 		EventSelection& GetEventSelection() override;
 		EventPreviews& GetEventPreviews() override;
 		float GetAnimTime() const override;
-		UiSurface* GetSurface() const override;
+		Surface* GetSurface() const override;
 		SmartTileModel& GetSmartTiles() override;
 		const TileShapes& GetTileShapes() override;
 

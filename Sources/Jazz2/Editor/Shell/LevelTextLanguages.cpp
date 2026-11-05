@@ -7,9 +7,10 @@
 #include "../Document/Commands.h"
 #include "../../Utils/AtomicFile.h"
 #include "../Files/PoFile.h"
-#include "../UI/UiDialogs.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Dialogs.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../Formats/LevelTextsChunk.h"
 
 #include "../../../nCine/I18n.h"
@@ -142,11 +143,11 @@ namespace Jazz2::Editor
 
 		void ExportCatalog(IEditorContext& session, StringView language)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetImageRoots(true, roots);
 			if (roots.empty()) {
 				session.ShowMessage(_x("editor", "There is no place to save files to"));
@@ -156,7 +157,7 @@ namespace Jazz2::Editor
 			String name = (language.empty() ? String(GetLevelFileStem(session) + ".pot"_s) : String(GetLevelFileStem(session) + "."_s + language + ".po"_s));
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the file dialog saving the texts of the level as a gettext template, or with their translation to the chosen language
-			UiFileDialog::Show(*surface, language.empty() ? _x("editor", "Export Texts for Translators") : _x("editor", "Export Translation"), UiFileDialogMode::Save,
+			FileDialog::Show(*surface, language.empty() ? _x("editor", "Export Texts for Translators") : _x("editor", "Export Translation"), FileDialogMode::Save,
 				Death::move(roots), language.empty() ? ".pot"_s : ".po"_s, {}, name, [s, languageCopy](StringView path) {
 				SmallVector<LocalizedLevelTexts, 0> languages;
 				ReadLanguages(s->GetDocument(), languages);
@@ -174,15 +175,15 @@ namespace Jazz2::Editor
 
 		void ImportCatalog(IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state)
 		{
-			UiSurface* surface = session.GetSurface();
+			Surface* surface = session.GetSurface();
 			if (surface == nullptr) {
 				return;
 			}
-			SmallVector<UiFileRoot, 4> roots;
+			SmallVector<FileRoot, 4> roots;
 			session.GetImageRoots(false, roots);
 			IEditorContext* s = &session;
 			// TRANSLATORS: Title of the file dialog reading the translations of the texts of the level from a gettext catalog
-			UiFileDialog::Show(*surface, _x("editor", "Import Translation"), UiFileDialogMode::Open, Death::move(roots), ".po"_s, {}, {}, [s, state](StringView path) {
+			FileDialog::Show(*surface, _x("editor", "Import Translation"), FileDialogMode::Open, Death::move(roots), ".po"_s, {}, {}, [s, state](StringView path) {
 				auto file = fs::Open(path, FileAccess::Read);
 				std::int64_t size = (file->IsValid() ? file->GetSize() : -1);
 				if (size <= 0 || size > 16 * 1024 * 1024) {
@@ -304,35 +305,35 @@ namespace Jazz2::Editor
 		WriteLanguages(session, languages, _x("editor", "Level text translation"));
 	}
 
-	void AddLevelTextLanguageBar(UiStack* content, IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state)
+	void AddLevelTextLanguageBar(Stack* content, IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state)
 	{
 		IEditorContext* s = &session;
-		auto* row = content->Add<UiStack>(UiOrientation::Horizontal, UiTheme::Spacing);
+		auto* row = content->Add<Stack>(Orientation::Horizontal, Theme::Spacing);
 		// TRANSLATORS: Label of the choice of the language the texts are translated to in the Level Texts dialog
-		row->Add<UiLabel>(_x("editor", "Translation"), UiTheme::TextDim);
-		auto* dropdown = row->Add<UiDropdown>([state]() {
+		row->Add<Label>(_x("editor", "Translation"), Theme::TextDim);
+		auto* dropdown = row->Add<Dropdown>([state]() {
 			// TRANSLATORS: In the choice of the language of translations in the Level Texts dialog, no language, only the texts are edited
 			return (state->Language.empty() ? String(_x("editor", "None")) : FormatLanguage(state->Language));
-		}, [s, state](SmallVectorImpl<UiMenuEntry>& entries) {
-			UiMenuEntry none;
+		}, [s, state](SmallVectorImpl<MenuEntry>& entries) {
+			MenuEntry none;
 			none.Label = _x("editor", "None");
 			none.IsChecked = [state]() { return state->Language.empty(); };
 			none.Execute = [state]() { state->Language = {}; };
 			entries.push_back(Death::move(none));
 			for (const LocalizedLevelTexts& language : state->GetLanguages(*s)) {
 				String code = language.Language;
-				UiMenuEntry entry;
+				MenuEntry entry;
 				entry.Label = FormatLanguage(code);
 				entry.IsChecked = [state, code]() { return StringUtils::equalsIgnoreCase(state->Language, code); };
 				entry.Execute = [state, code]() { state->Language = code; };
 				entries.push_back(Death::move(entry));
 			}
-			UiMenuEntry add;
+			MenuEntry add;
 			// TRANSLATORS: Last item of the choice of the language of translations in the Level Texts dialog
 			add.Label = _x("editor", "Add Language");
 			add.Icon = EditorIcon::Plus;
 			add.Execute = [s, state]() {
-				UiSurface* surface = s->GetSurface();
+				Surface* surface = s->GetSurface();
 				if (surface == nullptr) {
 					return;
 				}
@@ -355,21 +356,21 @@ namespace Jazz2::Editor
 		dropdown->Tooltip = _x("editor", "Language the texts are translated to, the game shows the translation in that language");
 
 		// TRANSLATORS: Button in the Level Texts dialog, .pot is the file extension of a gettext template, keep it
-		auto* exportTemplate = row->Add<UiButton>(_x("editor", "Export .pot"), EditorIcon::Export, [s]() { ExportCatalog(*s, {}); });
+		auto* exportTemplate = row->Add<Button>(_x("editor", "Export .pot"), EditorIcon::Export, [s]() { ExportCatalog(*s, {}); });
 		exportTemplate->Tooltip = _x("editor", "Writes the texts for translators, as a gettext template");
 		// TRANSLATORS: Button in the Level Texts dialog, .po is the file extension of a gettext catalog, keep it
-		auto* exportTranslation = row->Add<UiButton>(_x("editor", "Export .po"), EditorIcon::Export, [s, state]() { ExportCatalog(*s, state->Language); });
+		auto* exportTranslation = row->Add<Button>(_x("editor", "Export .po"), EditorIcon::Export, [s, state]() { ExportCatalog(*s, state->Language); });
 		exportTranslation->Tooltip = _x("editor", "Writes the texts with their translation to the chosen language");
 		exportTranslation->IsEnabledFunc = [state]() { return !state->Language.empty(); };
 		// TRANSLATORS: Button in the Level Texts dialog, .po is the file extension of a gettext catalog, keep it
-		auto* importTranslation = row->Add<UiButton>(_x("editor", "Import .po"), EditorIcon::Import, [s, state]() { ImportCatalog(*s, state); });
+		auto* importTranslation = row->Add<Button>(_x("editor", "Import .po"), EditorIcon::Import, [s, state]() { ImportCatalog(*s, state); });
 		importTranslation->Tooltip = _x("editor", "Reads the translations of a gettext catalog into the level");
 	}
 
-	void AddLevelTextTranslationBox(UiStack* row, IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state, std::int32_t index)
+	void AddLevelTextTranslationBox(Stack* row, IEditorContext& session, const std::shared_ptr<LevelTextLanguageState>& state, std::int32_t index)
 	{
 		IEditorContext* s = &session;
-		auto* box = row->Add<UiTextBox>();
+		auto* box = row->Add<TextBox>();
 		box->Flex = 1.0f;
 		box->MaxLength = 4096;
 		box->Multiline = true;

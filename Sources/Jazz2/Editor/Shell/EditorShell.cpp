@@ -16,8 +16,9 @@
 #include "../Session/PlayOverlays.h"
 #include "../Tools/BlockGrab.h"
 #include "../Tools/TileTools.h"
-#include "../UI/UiMenu.h"
-#include "../UI/UiSurface.h"
+#include "../../UI/Windows/Menu.h"
+#include "../../UI/Windows/Surface.h"
+#include "../UI/EditorUi.h"
 #include "../../Rendering/PolylineRenderer.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
@@ -40,8 +41,8 @@ namespace Jazz2::Editor
 	namespace
 	{
 		// Sizes of the docked panels in units, and at most which part of the screen they take
-		// The buttons of the actions (UiTheme::ButtonHeight + 4) and the padding around them
-		constexpr float ToolStripWidth = UiTheme::ButtonHeight + 4.0f + 5.0f * 2.0f;
+		// The buttons of the actions (Theme::ButtonHeight + 4) and the padding around them
+		constexpr float ToolStripWidth = Theme::ButtonHeight + 4.0f + 5.0f * 2.0f;
 		constexpr float RightDockMinWidth = 100.0f;
 		constexpr float RightDockMaxFraction = 0.6f;
 		constexpr float PickerDockMinWidth = 80.0f;
@@ -59,7 +60,7 @@ namespace Jazz2::Editor
 		// Most of the screen a drawer takes
 		constexpr float DrawerMaxFraction = 0.85f;
 		// What's shown over the level is drawn in slot 0 and what the tool shows in slot 1, the bubbles with texts go over
-		// both, so no mark, sprite or link of an event covers them, still under the panels (see UiSurface::RootSlots)
+		// both, so no mark, sprite or link of an event covers them, still under the panels (see Surface::RootSlots)
 		constexpr std::int32_t BubbleSlot = 2;
 
 		// Tools and commands only experts are offered, see EditorSettings::Expert
@@ -82,17 +83,17 @@ namespace Jazz2::Editor
 		};
 
 		// Button whose tooltip is made when it's shown, the shortcuts in it may have been changed meanwhile
-		class LiveTooltipButton : public UiButton
+		class LiveTooltipButton : public Button
 		{
 		public:
-			using UiButton::UiButton;
+			using Button::Button;
 
 			mutable Function<String()> TooltipFunc;
 
 			StringView GetTooltip(Vector2f pos) const override
 			{
 				if (!TooltipFunc) {
-					return UiButton::GetTooltip(pos);
+					return Button::GetTooltip(pos);
 				}
 				_liveTooltip = TooltipFunc();
 				return _liveTooltip;
@@ -235,11 +236,12 @@ namespace Jazz2::Editor
 		});
 		session.AddChangeObserver(_changeObserver);
 
-		_rightFrame = Add<UiDockFrame>(UiDockSide::Right, _x("editor", "Drag to move the panel, to the edge of the screen to dock it again"));
+		_rightFrame = Add<DockFrame>(DockSide::Right, _x("editor", "Drag to move the panel, to the edge of the screen to dock it again"));
 		_rightDock = _rightFrame->GetPanel();
 		_rightDock->Spacing = LayersGap;
 		// TRANSLATORS: Header of the panel with the list of layers of the level and their properties
-		_rightFrame->GetHeaderContent()->Add<UiLabel>(_x("editor", "Layers"), UiTheme::TextHeader)->Flex = 1.0f;
+		_rightFrame->GetHeaderContent()->Add<Label>(_x("editor", "Layers"), Theme::TextHeader)->Flex = 1.0f;
+		_rightFrame->Title = _x("editor", "Layers");
 		_layersPanel = _rightDock->Add<LayersPanel>(session);
 		EditorSession* s = &session;
 		auto* inspector = _rightDock->Add<InspectorPanel>(session);
@@ -250,8 +252,10 @@ namespace Jazz2::Editor
 		eventInspector->IsVisibleFunc = [s]() { return s->IsEditingEvents(); };
 
 		// Tiles and events to pick from, next to the tools, where there's more room than below the view
-		_pickerFrame = Add<UiDockFrame>(UiDockSide::Left, _x("editor", "Drag to move the panel, to the edge of the screen to dock it again"));
+		_pickerFrame = Add<DockFrame>(DockSide::Left, _x("editor", "Drag to move the panel, to the edge of the screen to dock it again"));
 		_pickerDock = _pickerFrame->GetPanel();
+		// TRANSLATORS: Title of the panel with the tile and event pickers, shown on the taskbar while it's in a window of its own
+		_pickerFrame->Title = _x("editor", "Tiles and Events");
 		_pickerDock->ClipContent = true;
 		AddPickerPanelTabs(_pickerFrame->GetHeaderContent(), session);
 		auto* tilePicker = _pickerDock->Add<TilePickerPanel>(session);
@@ -264,8 +268,8 @@ namespace Jazz2::Editor
 
 		// The panels make way for the game while the level is played, only a bar to get back stays
 		auto isEditing = [s]() { return s->ArePanelsShown(); };
-		for (UiElement* element : { static_cast<UiElement*>(_menuBar), static_cast<UiElement*>(_toolbar), static_cast<UiElement*>(_toolStrip),
-				static_cast<UiElement*>(_rightFrame), static_cast<UiElement*>(_pickerFrame), _statusBar }) {
+		for (Element* element : { static_cast<Element*>(_menuBar), static_cast<Element*>(_toolbar), static_cast<Element*>(_toolStrip),
+				static_cast<Element*>(_rightFrame), static_cast<Element*>(_pickerFrame), _statusBar }) {
 			element->IsVisibleFunc = isEditing;
 		}
 
@@ -274,8 +278,10 @@ namespace Jazz2::Editor
 		for (auto [frame, placement] : { std::make_pair(_pickerFrame, &settings->PickerPanelPlacement), std::make_pair(_rightFrame, &settings->RightPanelPlacement) }) {
 			frame->FloatingBounds = Rectf(placement->X, placement->Y, placement->Width, placement->Height);
 			frame->SetFloating(placement->Floating, false);
+			frame->Detached = (placement->Floating && placement->Detached);
 			frame->OnChanged = [frame = frame, placement = placement, settings]() {
 				placement->Floating = frame->IsFloating();
+				placement->Detached = frame->Detached;
 				placement->X = frame->FloatingBounds.X;
 				placement->Y = frame->FloatingBounds.Y;
 				placement->Width = frame->FloatingBounds.W;
@@ -293,7 +299,7 @@ namespace Jazz2::Editor
 		}
 
 		// The panels are resized by their inner edges, the size is remembered
-		_rightSplitter = Add<UiSplitter>(UiOrientation::Vertical, [this]() {
+		_rightSplitter = Add<Splitter>(Orientation::Vertical, [this]() {
 			_dragStartSize = _rightDockWidth;
 		}, [this, settings](float offset) {
 			float scale = (GetSurface() != nullptr ? GetSurface()->GetScale() : 1.0f);
@@ -304,7 +310,7 @@ namespace Jazz2::Editor
 		// A floating panel is resized by its own edges
 		_rightSplitter->IsVisibleFunc = [s, this]() { return (s->ArePanelsShown() && !_rightFrame->IsLifted() && !_compact); };
 		// The edge between the layers and the properties goes with the panel, wherever it is
-		_layersSplitter = _rightFrame->Add<UiSplitter>(UiOrientation::Horizontal, [this]() {
+		_layersSplitter = _rightFrame->Add<Splitter>(Orientation::Horizontal, [this]() {
 			_dragStartSize = _layerListHeight;
 		}, [this, settings](float offset) {
 			float scale = (GetSurface() != nullptr ? GetSurface()->GetScale() : 1.0f);
@@ -315,7 +321,7 @@ namespace Jazz2::Editor
 		_layersSplitter->IsVisibleFunc = isEditing;
 		// It's the separator between them too, so the line seen is the one that is dragged
 		_layersSplitter->ShowLine = true;
-		_pickerSplitter = Add<UiSplitter>(UiOrientation::Vertical, [this]() {
+		_pickerSplitter = Add<Splitter>(Orientation::Vertical, [this]() {
 			_dragStartSize = _pickerDockWidth;
 		}, [this, settings](float offset) {
 			float scale = (GetSurface() != nullptr ? GetSurface()->GetScale() : 1.0f);
@@ -325,12 +331,12 @@ namespace Jazz2::Editor
 		});
 		_pickerSplitter->IsVisibleFunc = [s, this]() { return (s->ArePanelsShown() && !_pickerFrame->IsLifted() && !_compact); };
 
-		_playBar = Add<UiPanel>(UiPanelStyle::Floating, UiOrientation::Horizontal, UiTheme::Spacing, UiThickness(3.0f, 4.0f));
+		_playBar = Add<Panel>(PanelStyle::Floating, Orientation::Horizontal, Theme::Spacing, Thickness(3.0f, 4.0f));
 		_playBar->IsVisibleFunc = [s]() { return !s->ArePanelsShown(); };
 		auto* back = _playBar->Add<LiveTooltipButton>(_("Back to Editor"), EditorIcon::EnterEditor, [s]() { s->StopPlayTest(true); });
-		back->Style = UiButtonStyle::Accent;
+		back->Style = ButtonStyle::Accent;
 		// A little taller than elsewhere, the bar is over the game
-		back->Height = UiTheme::ButtonHeight + 2.0f;
+		back->Height = Theme::ButtonHeight + 2.0f;
 		// The icons over the game are in its style, in colors of their own, white shows them as they are
 		back->IconColor = Colorf::White;
 		back->TooltipFunc = [s]() {
@@ -339,17 +345,17 @@ namespace Jazz2::Editor
 		};
 		// TRANSLATORS: Button in the bar shown while the level is play-tested, plays the level again from its start
 		// The outline of Play, as Play Here, so it isn't taken for the button going on with the level
-		auto* restart = _playBar->Add<UiButton>(_x("editor", "Restart"), EditorIcon::PlayOutline, [s]() {
+		auto* restart = _playBar->Add<Button>(_x("editor", "Restart"), EditorIcon::PlayOutline, [s]() {
 			s->StopPlayTest(false);
 			s->StartPlayTest(PlayStartMode::FromStart);
 		});
-		restart->Style = UiButtonStyle::Flat;
+		restart->Style = ButtonStyle::Flat;
 		restart->Height = back->Height;
 		restart->IconColor = Colorf::White;
 		// The debug toggles of the play-test, their keys work while the level is played
 		// TRANSLATORS: Button in the bar shown while the level is play-tested, opens a menu of debug tools such as pause and slow motion
 		LiveTooltipButton* debug = _playBar->Add<LiveTooltipButton>(_x("editor", "Debug"), EditorIcon::Debug);
-		debug->Style = UiButtonStyle::Flat;
+		debug->Style = ButtonStyle::Flat;
 		debug->Height = back->Height;
 		debug->IconColor = Colorf::White;
 		debug->TooltipFunc = [s]() {
@@ -367,22 +373,28 @@ namespace Jazz2::Editor
 		debug->OnClick = [s, debug]() {
 			static const char* const DebugActions[] = { ActionIds::PlayPause, ActionIds::PlayStep, ActionIds::PlaySlowMotion, ActionIds::PlayTeleport, nullptr,
 				ActionIds::PlayHitboxes, ActionIds::PlayEventZones };
-			SmallVector<UiMenuEntry, 0> entries;
+			SmallVector<MenuEntry, 0> entries;
 			for (const char* id : DebugActions) {
 				if (id == nullptr) {
-					entries.push_back(UiMenuEntry::Separator());
+					entries.push_back(MenuEntry::Separator());
 				} else if (EditorAction* action = s->GetActions().Find(id)) {
 					entries.push_back(MakeMenuEntry(*action));
 				}
 			}
-			if (UiSurface* surface = s->GetSurface()) {
-				UiPopupMenu::Show(*surface, Death::move(entries), Vector2f(debug->Bounds.X, debug->Bounds.Y + debug->Bounds.H));
+			if (Surface* surface = s->GetSurface()) {
+				PopupMenu::Show(*surface, Death::move(entries), Vector2f(debug->Bounds.X, debug->Bounds.Y + debug->Bounds.H));
 			}
 		};
 	}
 
 	EditorShell::~EditorShell()
 	{
+		// A panel in a window of its own moved relative to the main window when the main window moved, it comes back there
+		for (DockFrame* frame : { _pickerFrame, _rightFrame }) {
+			if (frame != nullptr && frame->Detached && frame->OnChanged) {
+				frame->OnChanged();
+			}
+		}
 	}
 
 	bool EditorShell::IsExpertAction(StringView actionId)
@@ -395,7 +407,7 @@ namespace Jazz2::Editor
 		return false;
 	}
 
-	UiElement* EditorShell::FindDialog(StringView id) const
+	Element* EditorShell::FindDialog(StringView id) const
 	{
 		for (const ShownDialog& dialog : _shownDialogs) {
 			if (dialog.Id == id) {
@@ -405,7 +417,7 @@ namespace Jazz2::Editor
 		return nullptr;
 	}
 
-	void EditorShell::TrackDialog(StringView id, UiElement* dialog, Function<void()>&& onShownAgain)
+	void EditorShell::TrackDialog(StringView id, Element* dialog, Function<void()>&& onShownAgain)
 	{
 		ShownDialog& shown = _shownDialogs.emplace_back();
 		shown.Id = id;
@@ -413,7 +425,7 @@ namespace Jazz2::Editor
 		shown.OnShownAgain = Death::move(onShownAgain);
 	}
 
-	void EditorShell::ForgetDialog(UiElement* dialog)
+	void EditorShell::ForgetDialog(Element* dialog)
 	{
 		for (std::size_t i = 0; i < _shownDialogs.size(); i++) {
 			if (_shownDialogs[i].Element == dialog) {
@@ -423,7 +435,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void EditorShell::ShowDialogAgain(UiElement* dialog)
+	void EditorShell::ShowDialogAgain(Element* dialog)
 	{
 		// Taken out while it runs, it may close the dialog, which forgets it
 		Function<void()> onShownAgain;
@@ -455,8 +467,8 @@ namespace Jazz2::Editor
 
 	void EditorShell::ToggleDrawer(bool picker)
 	{
-		UiDockFrame* frame = (picker ? _pickerFrame : _rightFrame);
-		UiDockFrame* other = (picker ? _rightFrame : _pickerFrame);
+		DockFrame* frame = (picker ? _pickerFrame : _rightFrame);
+		DockFrame* other = (picker ? _rightFrame : _pickerFrame);
 		if (!frame->IsDrawer()) {
 			return;
 		}
@@ -470,23 +482,23 @@ namespace Jazz2::Editor
 
 	bool EditorShell::IsDrawerOpen(bool picker) const
 	{
-		const UiDockFrame* frame = (picker ? _pickerFrame : _rightFrame);
+		const DockFrame* frame = (picker ? _pickerFrame : _rightFrame);
 		return (frame->IsDrawer() && frame->IsDrawerOpen());
 	}
 
 	void EditorShell::CreateMenuBar()
 	{
-		_menuBar = Add<UiMenuBar>();
+		_menuBar = Add<MenuBar>();
 		ActionRegistry& actions = _session.GetActions();
 
 		EditorSettings* settings = &_session.GetSettings();
-		auto addActionRange = [&actions, settings](SmallVectorImpl<UiMenuEntry>& entries, const char* const* ids, std::size_t count) {
+		auto addActionRange = [&actions, settings](SmallVectorImpl<MenuEntry>& entries, const char* const* ids, std::size_t count) {
 			for (std::size_t i = 0; i < count; i++) {
 				const char* id = ids[i];
 				if (id == nullptr) {
 					// No separator first, or twice in a row, as some of the items between may be left out
 					if (!entries.empty() && !entries.back().IsSeparator()) {
-						entries.push_back(UiMenuEntry::Separator());
+						entries.push_back(MenuEntry::Separator());
 					}
 				} else if (!settings->Expert && IsExpertAction(id)) {
 					continue;
@@ -498,22 +510,22 @@ namespace Jazz2::Editor
 				entries.pop_back();
 			}
 		};
-		auto addActions = [addActionRange](SmallVectorImpl<UiMenuEntry>& entries, std::initializer_list<const char*> ids) {
+		auto addActions = [addActionRange](SmallVectorImpl<MenuEntry>& entries, std::initializer_list<const char*> ids) {
 			addActionRange(entries, ids.begin(), ids.size());
 		};
 		// Left out if none of its items is shown
-		auto addSubmenu = [addActionRange](SmallVectorImpl<UiMenuEntry>& entries, StringView label, EditorIcon icon, std::initializer_list<const char*> ids) {
-			SmallVector<UiMenuEntry, 0> items;
+		auto addSubmenu = [addActionRange](SmallVectorImpl<MenuEntry>& entries, StringView label, EditorIcon icon, std::initializer_list<const char*> ids) {
+			SmallVector<MenuEntry, 0> items;
 			addActionRange(items, ids.begin(), ids.size());
 			if (items.empty()) {
 				return;
 			}
 			SmallVector<const char*, 0> itemIds;
 			itemIds.append(ids.begin(), ids.end());
-			UiMenuEntry entry;
+			MenuEntry entry;
 			entry.Label = label;
 			entry.Icon = icon;
-			entry.Submenu = [addActionRange, itemIds = Death::move(itemIds)](SmallVectorImpl<UiMenuEntry>& entries) {
+			entry.Submenu = [addActionRange, itemIds = Death::move(itemIds)](SmallVectorImpl<MenuEntry>& entries) {
 				addActionRange(entries, itemIds.data(), itemIds.size());
 			};
 			entries.push_back(Death::move(entry));
@@ -521,7 +533,7 @@ namespace Jazz2::Editor
 
 		EditorSession* session = &_session;
 		// TRANSLATORS: Menu in the menu bar of the editor
-		_menuBar->AddMenu(_x("editor", "File"), [addActions, session](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "File"), [addActions, session](SmallVectorImpl<MenuEntry>& entries) {
 			addActions(entries, { ActionIds::FileNew, ActionIds::FileOpen, nullptr, ActionIds::FileSave, ActionIds::FileSaveAs, ActionIds::FileExport, ActionIds::FileExportPackage });
 			// Recent files, the one open now first and checked, as a level just saved under a new name is
 			const auto& recentFiles = session->GetSettings().RecentFiles;
@@ -535,8 +547,8 @@ namespace Jazz2::Editor
 			};
 			std::int32_t shown = 0;
 			if (!openPath.empty() && fs::FileExists(openPath)) {
-				entries.push_back(UiMenuEntry::Separator());
-				UiMenuEntry entry;
+				entries.push_back(MenuEntry::Separator());
+				MenuEntry entry;
 				entry.Label = makeLabel(openPath);
 				entry.Icon = getIcon(openPath);
 				entry.IsChecked = []() { return true; };
@@ -550,9 +562,9 @@ namespace Jazz2::Editor
 					continue;
 				}
 				if (shown == 0) {
-					entries.push_back(UiMenuEntry::Separator());
+					entries.push_back(MenuEntry::Separator());
 				}
-				UiMenuEntry entry;
+				MenuEntry entry;
 				entry.Label = makeLabel(path);
 				entry.Icon = getIcon(path);
 				String pathCopy = path;
@@ -563,17 +575,17 @@ namespace Jazz2::Editor
 			addActions(entries, { nullptr, ActionIds::FileRecovery, nullptr, ActionIds::FileExit });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor
-		_menuBar->AddMenu(_x("editor", "Edit"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "Edit"), [addActions](SmallVectorImpl<MenuEntry>& entries) {
 			addActions(entries, { ActionIds::EditUndo, ActionIds::EditRedo, ActionIds::EditHistory, nullptr, ActionIds::EditCut, ActionIds::EditCopy, ActionIds::EditCopyWithEvents, ActionIds::EditPaste, ActionIds::EditDelete, nullptr,
 				ActionIds::EditGrabBlock, ActionIds::EditGrabBlockAdd, ActionIds::EditGrabBlockSubtract, nullptr,
 				ActionIds::EditSelectAll, ActionIds::EditDeselect, ActionIds::EditFindReplace, nullptr, ActionIds::EditFillGround, ActionIds::EditSmartRetile, ActionIds::EditBeautify, ActionIds::EditContinueRow, ActionIds::EditTerrainRules, ActionIds::EditTraceGround, ActionIds::EditBakeGround, nullptr,
 				ActionIds::EventsTakeAtPointer, ActionIds::EventsPlaceAtPointer, ActionIds::EventsSelectSameType, ActionIds::EventsCopyToMatchingTiles, nullptr, ActionIds::EditPrefabs });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor, the camera, what is drawn over the level and the look of the editor
-		_menuBar->AddMenu(_x("editor", "View"), [addActions, addSubmenu](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "View"), [addActions, addSubmenu](SmallVectorImpl<MenuEntry>& entries) {
 			addActions(entries, { ActionIds::ViewZoomIn, ActionIds::ViewZoomOut, ActionIds::ViewZoomGame, ActionIds::ViewFit, nullptr, ActionIds::ViewGrid, ActionIds::ViewMasks, ActionIds::ViewEvents,
 				ActionIds::ViewEventsOnTop, ActionIds::ViewPlayPath, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewPreviewTextured, ActionIds::ViewOverriddenAssets });
-			entries.push_back(UiMenuEntry::Separator());
+			entries.push_back(MenuEntry::Separator());
 			// TRANSLATORS: Submenu in the View menu, shows where the player can get and with which character
 			addSubmenu(entries, _x("editor", "Reachable Area"), EditorIcon::Reach, { ActionIds::ViewReachability, nullptr, ActionIds::ViewReachAny, ActionIds::ViewReachJazz,
 				ActionIds::ViewReachSpaz, ActionIds::ViewReachLori, nullptr, ActionIds::ViewReachFromMpStarts });
@@ -581,41 +593,41 @@ namespace Jazz2::Editor
 			addSubmenu(entries, _x("editor", "Game Screen Frame"), EditorIcon::ScreenFrame, { ActionIds::ViewScreenFrame, nullptr, ActionIds::ViewScreenFrameGame, ActionIds::ViewScreenFrame4x3,
 				ActionIds::ViewScreenFrame16x9, ActionIds::ViewScreenFrameSplit });
 			addActions(entries, { ActionIds::ViewCompareSaved, nullptr, ActionIds::ViewNavigator, ActionIds::ViewAddNote });
-			entries.push_back(UiMenuEntry::Separator());
+			entries.push_back(MenuEntry::Separator());
 			// TRANSLATORS: Submenu in the View menu, the size, layout and look of the editor itself
 			addSubmenu(entries, _x("editor", "Interface"), EditorIcon::None, { ActionIds::ViewUiLarger, ActionIds::ViewUiSmaller, ActionIds::ViewUiAuto, nullptr,
 				ActionIds::ViewLayoutAuto, ActionIds::ViewLayoutDesktop, ActionIds::ViewLayoutCompact, nullptr, ActionIds::ViewHighContrast, ActionIds::ViewReadableFont, ActionIds::ViewReducedMotion });
 			addActions(entries, { ActionIds::ViewExpert });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor, commands for the selection
-		_menuBar->AddMenu(_x("editor", "Select"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "Select"), [addActions](SmallVectorImpl<MenuEntry>& entries) {
 			addActions(entries, { ActionIds::EditSelectAll, ActionIds::EditDeselect, ActionIds::SelectInvert, ActionIds::SelectGrow, ActionIds::SelectShrink, ActionIds::SelectSameTiles, nullptr,
 				ActionIds::SelectMoveLeft, ActionIds::SelectMoveRight, ActionIds::SelectMoveUp, ActionIds::SelectMoveDown, nullptr, ActionIds::EditMirrorH, ActionIds::EditMirrorV, ActionIds::EditMirrorSwapTeams, nullptr,
 				ActionIds::EditCopyLayers, ActionIds::EditPasteLayers, nullptr, ActionIds::EditModifierNormal, ActionIds::EditModifierTranslucent, ActionIds::EditModifierInvisible,
 				ActionIds::EditModifierHeat, nullptr, ActionIds::EventsFillSelection });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor
-		_menuBar->AddMenu(_x("editor", "Tools"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "Tools"), [addActions](SmallVectorImpl<MenuEntry>& entries) {
 			// Only the tools, the options of the chosen one are in the toolbar; in the order of the tool strip
 			addActions(entries, { ActionIds::ToolSelect, ActionIds::ToolBrush, ActionIds::ToolEraser, ActionIds::ToolRectangle, ActionIds::ToolFill, ActionIds::ToolEyedropper,
 				ActionIds::ToolWand, ActionIds::ToolShape, ActionIds::ToolSmart, ActionIds::ToolGround, nullptr, ActionIds::ToolEvent, ActionIds::ToolPath, nullptr,
 				ActionIds::ToolHand, ActionIds::ToolMeasure });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor, a layer of tiles
-		_menuBar->AddMenu(_x("editor", "Layer"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "Layer"), [addActions](SmallVectorImpl<MenuEntry>& entries) {
 			// Going to the previous or the next layer is left to its shortcuts and the layer list
 			addActions(entries, { ActionIds::LayerAdd, ActionIds::LayerDuplicate, ActionIds::LayerRemove, ActionIds::LayerResize, nullptr, ActionIds::LayerUp, ActionIds::LayerDown });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor, the level as a whole
-		_menuBar->AddMenu(_x("editor", "Level"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "Level"), [addActions](SmallVectorImpl<MenuEntry>& entries) {
 			// Making tile sets, adding tiles to them, exporting and rearranging them is in the Tile Sets dialog
 			addActions(entries, { ActionIds::LevelProperties, ActionIds::LevelTexts, ActionIds::LevelWeapons, ActionIds::LevelEpisode, ActionIds::LevelStatistics, ActionIds::LevelCheck, ActionIds::EventsList, ActionIds::LevelSnapOffGrid, ActionIds::LevelReloadEvents, ActionIds::LevelEditScript, nullptr, ActionIds::LevelAnimations, ActionIds::LevelTileSets, ActionIds::LevelPalette, ActionIds::LevelEditTile, ActionIds::LevelApplyTileChanges });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor, for play-testing the level
-		_menuBar->AddMenu(_x("editor", "Play"), [addActions, addSubmenu](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "Play"), [addActions, addSubmenu](SmallVectorImpl<MenuEntry>& entries) {
 			// The debug toggles of a running play-test are in its play bar only
 			addActions(entries, { ActionIds::PlayResume, ActionIds::PlayHere, ActionIds::PlayStart });
-			entries.push_back(UiMenuEntry::Separator());
+			entries.push_back(MenuEntry::Separator());
 			// Names of the submenus are shared with the menus of the game, they're without the context
 			addSubmenu(entries, _("Character"), EditorIcon::None, { ActionIds::PlayJazz, ActionIds::PlaySpaz, ActionIds::PlayLori });
 			addSubmenu(entries, _("Difficulty"), EditorIcon::None, { ActionIds::PlayEasy, ActionIds::PlayNormal, ActionIds::PlayHard });
@@ -626,60 +638,60 @@ namespace Jazz2::Editor
 			addActions(entries, { ActionIds::PlayReforged, ActionIds::PlayLedgeClimb, nullptr, ActionIds::ViewPlayPath, ActionIds::ViewDeaths, ActionIds::PlayClearPaths });
 		});
 		// TRANSLATORS: Menu in the menu bar of the editor
-		_menuBar->AddMenu(_x("editor", "Help"), [addActions](SmallVectorImpl<UiMenuEntry>& entries) {
+		_menuBar->AddMenu(_x("editor", "Help"), [addActions](SmallVectorImpl<MenuEntry>& entries) {
 			// Presets of the shortcuts are chosen in the shortcuts dialog
 			addActions(entries, { ActionIds::HelpCommands, ActionIds::HelpShortcuts });
 		});
 
 		// The cross on the right closes the editor, as the one of a window does
-		_menuBar->Add<UiElement>()->Flex = 1.0f;
-		if (UiButton* exit = AddActionButton(_menuBar, ActionIds::FileExit)) {
-			exit->Width = UiTheme::MenuBarHeight + 6.0f;
-			exit->Height = UiTheme::MenuBarHeight;
+		_menuBar->Add<Element>()->Flex = 1.0f;
+		if (Button* exit = AddActionButton(_menuBar, ActionIds::FileExit)) {
+			exit->Width = Theme::MenuBarHeight + 6.0f;
+			exit->Height = Theme::MenuBarHeight;
 		}
 	}
 
 	void EditorShell::CreateToolbar()
 	{
-		_toolbar = Add<UiPanel>(UiPanelStyle::Header, UiOrientation::Horizontal, 1.0f, UiThickness(UiTheme::Padding, 2.0f));
+		_toolbar = Add<Panel>(PanelStyle::Header, Orientation::Horizontal, 1.0f, Thickness(Theme::Padding, 2.0f));
 		_toolbar->ClipContent = true;
 		// The panels in drawers on a small screen
 		for (const char* id : { ActionIds::ViewDrawerTiles, ActionIds::ViewDrawerLayers }) {
-			if (UiButton* button = AddActionButton(_toolbar, id)) {
+			if (Button* button = AddActionButton(_toolbar, id)) {
 				button->IsVisibleFunc = [this]() { return _compact; };
 			}
 		}
 		AddActionButton(_toolbar, ActionIds::FileNew);
 		AddActionButton(_toolbar, ActionIds::FileOpen);
 		AddActionButton(_toolbar, ActionIds::FileSave);
-		_toolbar->Add<UiSeparator>(UiOrientation::Vertical);
+		_toolbar->Add<Separator>(Orientation::Vertical);
 		AddActionButton(_toolbar, ActionIds::EditUndo);
 		AddActionButton(_toolbar, ActionIds::EditRedo);
 		// A narrow window leaves out what the menus have too
 		auto notNarrow = [this]() { return !_narrow; };
-		_toolbar->Add<UiSeparator>(UiOrientation::Vertical)->IsVisibleFunc = notNarrow;
+		_toolbar->Add<Separator>(Orientation::Vertical)->IsVisibleFunc = notNarrow;
 		for (const char* id : { ActionIds::EditCut, ActionIds::EditCopy, ActionIds::EditPaste }) {
-			if (UiButton* button = AddActionButton(_toolbar, id)) {
+			if (Button* button = AddActionButton(_toolbar, id)) {
 				button->IsVisibleFunc = notNarrow;
 			}
 		}
-		_toolbar->Add<UiSeparator>(UiOrientation::Vertical)->IsVisibleFunc = notNarrow;
+		_toolbar->Add<Separator>(Orientation::Vertical)->IsVisibleFunc = notNarrow;
 		EditorSettings* settings = &_session.GetSettings();
 		for (const char* id : { ActionIds::ViewGrid, ActionIds::ViewFlat, ActionIds::ViewPauseLayers, ActionIds::ViewMasks, ActionIds::ViewEvents, ActionIds::ViewEventsOnTop, ActionIds::ViewOverriddenAssets, ActionIds::ViewPlayPath,
 			ActionIds::ViewReachability }) {
-			if (UiButton* button = AddActionButton(_toolbar, id)) {
+			if (Button* button = AddActionButton(_toolbar, id)) {
 				bool expert = IsExpertAction(id);
 				button->IsVisibleFunc = [this, settings, expert]() { return (!_narrow && (!expert || settings->Expert)); };
 			}
 		}
-		_toolbar->Add<UiSeparator>(UiOrientation::Vertical);
+		_toolbar->Add<Separator>(Orientation::Vertical);
 		AddActionButton(_toolbar, ActionIds::ViewZoomOut);
 		AddActionButton(_toolbar, ActionIds::ViewZoomIn);
 		AddActionButton(_toolbar, ActionIds::ViewFit);
 		// The options of the tool chosen take the rest, as many as fit, see ToolOptionsBar
 		_toolbar->Add<ToolOptionsBar>(_session)->Flex = 1.0f;
-		if (UiButton* play = AddActionButton(_toolbar, ActionIds::PlayResume, true)) {
-			play->Style = UiButtonStyle::Accent;
+		if (Button* play = AddActionButton(_toolbar, ActionIds::PlayResume, true)) {
+			play->Style = ButtonStyle::Accent;
 			// In the style of the game like the buttons of the play bar, white shows its colors as they are
 			play->IconColor = Colorf::White;
 			// The outline of the icon would touch the text otherwise
@@ -689,15 +701,15 @@ namespace Jazz2::Editor
 
 	void EditorShell::CreateToolStrip()
 	{
-		_toolStrip = Add<UiPanel>(UiPanelStyle::Docked, UiOrientation::Vertical, 0.0f, UiThickness(5.0f));
+		_toolStrip = Add<Panel>(PanelStyle::Docked, Orientation::Vertical, 0.0f, Thickness(5.0f));
 		// A short window scrolls the buttons that don't fit, by the wheel or a finger, the strip is too narrow to give a bar
 		// room of its own, so it's only a mark over the buttons
-		auto* scroll = _toolStrip->Add<UiScrollView>();
+		auto* scroll = _toolStrip->Add<ScrollView>();
 		scroll->Flex = 1.0f;
 		scroll->OverlayBar = true;
 		// Into the padding of the strip, off the buttons
 		scroll->OverlayBarOffset = 5.0f;
-		_toolStripItems = scroll->SetContent<UiStack>(UiOrientation::Vertical, 2.0f);
+		_toolStripItems = scroll->SetContent<Stack>(Orientation::Vertical, 2.0f);
 		// Selecting first, then the tools that paint tiles, those that make them up by themselves, apart from them those of
 		// events, and the ones that change nothing last (a separator where the ID is null)
 		static const char* const ToolStripItems[] = { ActionIds::ToolSelect, ActionIds::ToolBrush, ActionIds::ToolEraser, ActionIds::ToolRectangle,
@@ -705,17 +717,17 @@ namespace Jazz2::Editor
 			ActionIds::ToolEvent, ActionIds::ToolPath, nullptr, ActionIds::ToolHand, ActionIds::ToolMeasure };
 		for (const char* id : ToolStripItems) {
 			if (id == nullptr) {
-				_toolStripItems->Add<UiSeparator>();
+				_toolStripItems->Add<Separator>();
 			} else {
 				AddActionButton(_toolStripItems, id);
 			}
 		}
 		// Flipping and turning the stamp is among the options of the tools that paint it, in the toolbar
-		_toolStripItems->Add<UiSeparator>();
+		_toolStripItems->Add<Separator>();
 		_toolStripItems->Add<StampPreview>(_session);
 	}
 
-	UiButton* EditorShell::AddActionButton(UiElement* parent, StringView actionId, bool showText)
+	Button* EditorShell::AddActionButton(Element* parent, StringView actionId, bool showText)
 	{
 		EditorAction* action = _session.GetActions().Find(actionId);
 		if (action == nullptr) {
@@ -726,7 +738,7 @@ namespace Jazz2::Editor
 				action->Execute();
 			}
 		});
-		button->Style = UiButtonStyle::Flat;
+		button->Style = ButtonStyle::Flat;
 		// With the shortcut it has when it's shown, it can be changed meanwhile
 		button->TooltipFunc = [action]() {
 			return action->GetTooltip();
@@ -739,9 +751,9 @@ namespace Jazz2::Editor
 			button->IsVisibleFunc = [settings]() { return settings->Expert; };
 		}
 		// A unit more around the icon than other buttons have, the bars would look crowded otherwise
-		button->Height = UiTheme::ButtonHeight + 4.0f;
+		button->Height = Theme::ButtonHeight + 4.0f;
 		if (!showText) {
-			button->Width = UiTheme::ButtonHeight + 4.0f;
+			button->Width = Theme::ButtonHeight + 4.0f;
 		}
 		if (action->IsChecked) {
 			button->IsCheckedFunc = [action]() {
@@ -751,13 +763,13 @@ namespace Jazz2::Editor
 		return button;
 	}
 
-	void EditorShell::Arrange(const UiContext& context, const Rectf& bounds)
+	void EditorShell::Arrange(const Context& context, const Rectf& bounds)
 	{
 		Bounds = bounds;
 
 		// The panels keep clear of the edges a display may cut off, the level is still seen behind them there
 		Rectf area = bounds;
-		if (UiSurface* surface = GetSurface()) {
+		if (Surface* surface = GetSurface()) {
 			Rectf safe = surface->GetSafeBounds();
 			float x1 = std::max(bounds.X, safe.X), y1 = std::max(bounds.Y, safe.Y);
 			float x2 = std::min(bounds.X + bounds.W, safe.X + safe.W), y2 = std::min(bounds.Y + bounds.H, safe.Y + safe.H);
@@ -767,9 +779,9 @@ namespace Jazz2::Editor
 		}
 		_safeArea = area;
 
-		float menuHeight = context.Px(UiTheme::MenuBarHeight);
-		float toolbarHeight = context.Px(UiTheme::ToolbarHeight);
-		float statusHeight = context.Px(UiTheme::StatusBarHeight);
+		float menuHeight = context.Px(Theme::MenuBarHeight);
+		float toolbarHeight = context.Px(Theme::ToolbarHeight);
+		float statusHeight = context.Px(Theme::StatusBarHeight);
 		const EditorSettings& settings = _session.GetSettings();
 
 		// A small screen gets the panels in drawers, a narrow one the tools at the bottom too
@@ -778,12 +790,12 @@ namespace Jazz2::Editor
 		_narrow = (_compact && widthUnits < NarrowWidth);
 		_pickerFrame->SetDrawerMode(_compact);
 		_rightFrame->SetDrawerMode(_compact);
-		UiOrientation stripOrientation = (_narrow ? UiOrientation::Horizontal : UiOrientation::Vertical);
+		Orientation stripOrientation = (_narrow ? Orientation::Horizontal : Orientation::Vertical);
 		if (_toolStripItems->Orientation != stripOrientation) {
 			_toolStripItems->Orientation = stripOrientation;
 			for (std::int32_t i = 0; i < _toolStripItems->GetChildCount(); i++) {
-				if (UiSeparator* separator = runtime_cast<UiSeparator>(_toolStripItems->GetChild(i))) {
-					separator->Orientation = (_narrow ? UiOrientation::Vertical : UiOrientation::Horizontal);
+				if (Separator* separator = runtime_cast<Separator>(_toolStripItems->GetChild(i))) {
+					separator->Orientation = (_narrow ? Orientation::Vertical : Orientation::Horizontal);
 				}
 			}
 		}
@@ -822,8 +834,8 @@ namespace Jazz2::Editor
 		float right = area.X + area.W - std::round(rightWidth * _rightFrame->GetDockedAmount());
 
 		// The list of layers is as high as it was dragged to, the properties take the rest
-		float padding = context.Px(UiTheme::Padding);
-		float header = context.Px(UiTheme::ButtonHeight) + context.Px(UiTheme::Spacing);
+		float padding = context.Px(Theme::Padding);
+		float header = context.Px(Theme::ButtonHeight) + context.Px(Theme::Spacing);
 		float dockInner = _rightFrame->GetTargetBounds(context, rightDockBounds).H - padding * 2.0f - header;
 		float layerListHeight = std::clamp(context.Px(settings.LayerListHeight), context.Px(LayerListMinHeight),
 			std::max(context.Px(LayerListMinHeight), dockInner - context.Px(InspectorMinHeight)));
@@ -852,13 +864,13 @@ namespace Jazz2::Editor
 	{
 		// The bar of the level being played comes in when the panels are gone, in about a third of a second
 		constexpr float PlayBarAppearFrames = 20.0f;
-		_playBarAppear = (_session.ArePanelsShown() ? 0.0f : std::min(_playBarAppear + UiTheme::GetAnimationStep(timeMult, PlayBarAppearFrames), 1.0f));
-		UiElement::Update(timeMult);
+		_playBarAppear = (_session.ArePanelsShown() ? 0.0f : std::min(_playBarAppear + Theme::GetAnimationStep(timeMult, PlayBarAppearFrames), 1.0f));
+		Element::Update(timeMult);
 	}
 
-	void EditorShell::Draw(UiPainter& painter)
+	void EditorShell::Draw(Painter& painter)
 	{
-		UiSurface* surface = GetSurface();
+		Surface* surface = GetSurface();
 		_drawRect = (_session.ArePanelsShown() && surface != nullptr && surface->IsDrawingInLevel() ? Bounds : _viewRect);
 		PlayTransition& transition = _session.GetPlayTransition();
 		if (!_session.ArePanelsShown()) {
@@ -878,7 +890,7 @@ namespace Jazz2::Editor
 			painter.SetSlot(slot);
 			// Only the bar to get back
 			painter.PushOpacity(_playBarAppear);
-			UiElement::Draw(painter);
+			Element::Draw(painter);
 			painter.PopOpacity();
 			return;
 		}
@@ -929,11 +941,11 @@ namespace Jazz2::Editor
 		// The edges a display may cut off are filled as the bars are, the level is seen only between the panels
 		if (_safeArea.W < Bounds.W || _safeArea.H < Bounds.H) {
 			// As the bars are, the level shows through a little
-			const Colorf& fill = UiTheme::PanelHeader;
+			const Colorf& fill = Theme::PanelHeader;
 			float top = _safeArea.Y - Bounds.Y, bottom = Bounds.Y + Bounds.H - (_safeArea.Y + _safeArea.H);
 			float left = _safeArea.X - Bounds.X, right = Bounds.X + Bounds.W - (_safeArea.X + _safeArea.W);
 			auto fillEdge = [&painter, &fill](const Rectf& rect) {
-				painter.FillRect(rect, painter.Backdrop(rect, fill, false), UiLayer::Back);
+				painter.FillRect(rect, painter.Backdrop(rect, fill, false), PaintLayer::Back);
 			};
 			if (top > 0.0f) {
 				fillEdge(Rectf(Bounds.X, Bounds.Y, Bounds.W, top));
@@ -950,10 +962,10 @@ namespace Jazz2::Editor
 		}
 
 		// The docked panels, then where a panel being dragged would dock, then the floating panels over them, each in
-		// a slot of its own (see UiSurface::RootSlots), so one doesn't show through another
+		// a slot of its own (see Surface::RootSlots), so one doesn't show through another
 		for (auto& child : _children) {
-			UiElement* element = child.get();
-			bool lifted = ((element == _pickerFrame || element == _rightFrame) && static_cast<UiDockFrame*>(element)->IsLifted());
+			Element* element = child.get();
+			bool lifted = ((element == _pickerFrame || element == _rightFrame) && static_cast<DockFrame*>(element)->IsLifted());
 			if (!lifted && element->IsShown()) {
 				element->Draw(painter);
 			}
@@ -962,8 +974,9 @@ namespace Jazz2::Editor
 		_pickerFrame->DrawDockPreview(painter);
 		_rightFrame->DrawDockPreview(painter);
 		std::int32_t nextSlot = slot + 2;
-		for (UiDockFrame* frame : _floatOrder) {
-			if (frame->IsLifted() && frame->IsShown()) {
+		for (DockFrame* frame : _floatOrder) {
+			// One in a window of its own is drawn there
+			if (frame->IsLifted() && frame->IsShown() && !frame->IsDetached()) {
 				painter.SetSlot(nextSlot++);
 				frame->Draw(painter);
 			}
@@ -971,33 +984,33 @@ namespace Jazz2::Editor
 		painter.SetSlot(slot);
 	}
 
-	UiElement* EditorShell::HitTest(Vector2f pos)
+	Element* EditorShell::HitTest(Vector2f pos)
 	{
 		if (!IsShown() || !Bounds.Contains(pos)) {
 			return nullptr;
 		}
 		// Floating panels first, from the top one
 		for (std::size_t i = _floatOrder.size(); i > 0; i--) {
-			UiDockFrame* frame = _floatOrder[i - 1];
-			if (frame->IsLifted()) {
-				if (UiElement* hit = frame->HitTest(pos)) {
+			DockFrame* frame = _floatOrder[i - 1];
+			if (frame->IsLifted() && !frame->IsDetached()) {
+				if (Element* hit = frame->HitTest(pos)) {
 					return hit;
 				}
 			}
 		}
 		for (std::size_t i = _children.size(); i > 0; i--) {
-			UiElement* element = _children[i - 1].get();
-			if ((element == _pickerFrame || element == _rightFrame) && static_cast<UiDockFrame*>(element)->IsLifted()) {
+			Element* element = _children[i - 1].get();
+			if ((element == _pickerFrame || element == _rightFrame) && static_cast<DockFrame*>(element)->IsLifted()) {
 				continue;
 			}
-			if (UiElement* hit = element->HitTest(pos)) {
+			if (Element* hit = element->HitTest(pos)) {
 				return hit;
 			}
 		}
 		return nullptr;
 	}
 
-	void EditorShell::DrawGrid(UiPainter& painter, const LayerView& view)
+	void EditorShell::DrawGrid(Painter& painter, const LayerView& view)
 	{
 		float cellSize = 32.0f * view.Scale;
 		float alpha = std::clamp((cellSize - GridMinCellSize) / GridFadeRange, 0.0f, 1.0f);
@@ -1026,21 +1039,21 @@ namespace Jazz2::Editor
 		float left = std::max(topLeft.X, _drawRect.X);
 		float right = std::min(bottomRight.X + bottomRight.W, _drawRect.X + _drawRect.W);
 
-		Colorf color = UiTheme::GridLine;
+		Colorf color = Theme::GridLine;
 		color.A *= alpha;
-		Colorf strong = UiTheme::GridLineStrong;
+		Colorf strong = Theme::GridLineStrong;
 		strong.A *= alpha;
 		for (std::int32_t x = from.X; x <= to.X + 1; x++) {
 			float sx = view.CellToScreen(Vector2i(x, from.Y)).X;
-			painter.FillRect(Rectf(sx, top, 1.0f, bottom - top), (x % 10) == 0 ? strong : color, UiLayer::Fill);
+			painter.FillRect(Rectf(sx, top, 1.0f, bottom - top), (x % 10) == 0 ? strong : color, PaintLayer::Fill);
 		}
 		for (std::int32_t y = from.Y; y <= to.Y + 1; y++) {
 			float sy = view.CellToScreen(Vector2i(from.X, y)).Y;
-			painter.FillRect(Rectf(left, sy, right - left, 1.0f), (y % 10) == 0 ? strong : color, UiLayer::Fill);
+			painter.FillRect(Rectf(left, sy, right - left, 1.0f), (y % 10) == 0 ? strong : color, PaintLayer::Fill);
 		}
 	}
 
-	void EditorShell::DrawSelection(UiPainter& painter, const LayerView& view)
+	void EditorShell::DrawSelection(Painter& painter, const LayerView& view)
 	{
 		TileSelection& selection = _session.GetSelection();
 		if (selection.IsEmpty() || selection.GetLayer() != _session.GetCurrentLayer()) {
@@ -1188,7 +1201,7 @@ namespace Jazz2::Editor
 		for (const SelectionRun& run : _selectionRuns) {
 			float top = unitY(run.Y), bottom = unitY(run.Y + 1);
 			float left = unitX(run.Start), right = unitX(run.End);
-			painter.FillRect(Rectf(left, top, right - left, bottom - top), UiTheme::Selection, UiLayer::Fill);
+			painter.FillRect(Rectf(left, top, right - left, bottom - top), Theme::Selection, PaintLayer::Fill);
 		}
 		// The edges between selected and unselected tiles are marching ants
 		float thickness = std::max(1.0f, std::round(painter.GetScale()));
@@ -1218,7 +1231,7 @@ namespace Jazz2::Editor
 		return std::max<std::int32_t>(std::int32_t(std::ceil(MinUnitSize / std::max(cellSize, 0.001f))), 1);
 	}
 
-	void EditorShell::DrawPlayPath(UiPainter& painter)
+	void EditorShell::DrawPlayPath(Painter& painter)
 	{
 		const PlayPath& path = _session.GetLastPlayPath();
 		std::int32_t pointCount = path.GetPointCount();
@@ -1304,7 +1317,7 @@ namespace Jazz2::Editor
 		float minMarkerRadius = std::max(1.5f, painter.GetScale() * 1.8f) * zoom;
 		float ringWidth = std::max(1.0f, painter.GetScale() * 1.2f * zoom);
 		Rectf visible(_drawRect.X - maxHalfThickness, _drawRect.Y - maxHalfThickness, _drawRect.W + maxHalfThickness * 2.0f, _drawRect.H + maxHalfThickness * 2.0f);
-		std::uint16_t z = painter.GetDepth(UiLayer::Content);
+		std::uint16_t z = painter.GetDepth(PaintLayer::Content);
 
 		// From blue at the start to gold at the end, in short runs of a single color each
 		std::int32_t total = 0;
@@ -1353,9 +1366,9 @@ namespace Jazz2::Editor
 			endHalfThickness = halfThicknesses.back();
 			float radius = std::max(endHalfThickness * 1.4f, minMarkerRadius);
 			switch (PlayPath::Break(segment.End)) {
-				case PlayPath::Break::Died: painter.Circle(last, radius, UiTheme::Danger, UiLayer::Overlay); break;
-				case PlayPath::Break::Warped: painter.Circle(last, radius, Colorf(0.4f, 0.6f, 1.0f, 1.0f), UiLayer::Overlay); break;
-				case PlayPath::Break::Exited: painter.Circle(last, radius, UiTheme::Play, UiLayer::Overlay); break;
+				case PlayPath::Break::Died: painter.Circle(last, radius, Theme::Danger, PaintLayer::Overlay); break;
+				case PlayPath::Break::Warped: painter.Circle(last, radius, Colorf(0.4f, 0.6f, 1.0f, 1.0f), PaintLayer::Overlay); break;
+				case PlayPath::Break::Exited: painter.Circle(last, radius, Theme::Play, PaintLayer::Overlay); break;
 				default: break;
 			}
 		}
@@ -1364,11 +1377,11 @@ namespace Jazz2::Editor
 		if (!last.Points.empty()) {
 			Vector2f end = view.WorldToScreen(last.Points.back());
 			float inner = std::max(endHalfThickness * 1.2f, minMarkerRadius);
-			painter.Circle(end, inner + ringWidth, Colorf(1.0f, 1.0f, 1.0f, 0.9f), UiLayer::Overlay);
-			painter.Circle(end, inner, UiTheme::Accent, UiLayer::Overlay);
+			painter.Circle(end, inner + ringWidth, Colorf(1.0f, 1.0f, 1.0f, 0.9f), PaintLayer::Overlay);
+			painter.Circle(end, inner, Theme::Accent, PaintLayer::Overlay);
 		}
 	}
-	void EditorShell::DrawMasks(UiPainter& painter, const LayerView& view)
+	void EditorShell::DrawMasks(Painter& painter, const LayerView& view)
 	{
 		std::int32_t mode = _session.GetMaskMode();
 		Tiles::TileMap* tileMap = _session.GetTileMap();
@@ -1386,7 +1399,7 @@ namespace Jazz2::Editor
 		DrawTileModifiers(painter, document.Layers[layerIndex], view, _drawRect);
 	}
 
-	void EditorShell::DrawReachability(UiPainter& painter)
+	void EditorShell::DrawReachability(Painter& painter)
 	{
 		const PlayOverlays& playOverlays = _session.GetPlayOverlays();
 		ArrayView<const std::int32_t> distances = playOverlays.GetReachability();
@@ -1439,16 +1452,16 @@ namespace Jazz2::Editor
 					continue;
 				}
 				// The color of reached places, as the theme has it
-				Colorf color = UiTheme::OverlayGood;
+				Colorf color = Theme::OverlayGood;
 				color.A = 0.14f + 0.18f * (float(step) / float(Steps));
 				float left = view.CellToScreen(Vector2i(start * unit, 0)).X;
 				float right = view.CellToScreen(Vector2i(std::min<std::int32_t>(ux * unit, gridSize.X), 0)).X;
-				painter.FillRect(Rectf(left, top, right - left, bottom - top), color, UiLayer::Fill);
+				painter.FillRect(Rectf(left, top, right - left, bottom - top), color, PaintLayer::Fill);
 			}
 		}
 	}
 
-	void EditorShell::DrawAnnotations(UiPainter& painter)
+	void EditorShell::DrawAnnotations(Painter& painter)
 	{
 		const SmallVectorImpl<Annotation>& annotations = _annotations.Get(_session.GetDocument());
 		if (annotations.empty()) {
@@ -1457,7 +1470,7 @@ namespace Jazz2::Editor
 		std::int32_t spriteLayer = _session.GetDocument().GetSpriteLayerIndex();
 		LayerView view = _session.GetLayerView(spriteLayer >= 0 ? spriteLayer : 0);
 		float size = std::round(painter.Px(5.0f));
-		float padding = painter.Px(UiTheme::Padding);
+		float padding = painter.Px(Theme::Padding);
 		for (const Annotation& annotation : annotations) {
 			Vector2f pos = view.WorldToScreen(Vector2f(float(annotation.X), float(annotation.Y)));
 			if (!_drawRect.Contains(pos)) {
@@ -1473,25 +1486,25 @@ namespace Jazz2::Editor
 				Vector2f diamond[5] = { pos + Vector2f(0.0f, -size * 1.6f), pos + Vector2f(size * 1.6f, 0.0f), pos + Vector2f(0.0f, size * 1.6f),
 					pos + Vector2f(-size * 1.6f, 0.0f), pos + Vector2f(0.0f, -size * 1.6f) };
 				Colorf color = (annotation.Color != 0 ? ownColor : Colorf(0.4f, 0.8f, 1.0f, 1.0f));
-				painter.Circle(pos, size * 1.3f, Colorf(color.R * 0.4f, color.G * 0.4f, color.B * 0.4f, 0.9f), UiLayer::Overlay);
-				painter.Polyline(diamond, std::max(1.0f, painter.Px(1.0f)), color, UiLayer::Overlay);
+				painter.Circle(pos, size * 1.3f, Colorf(color.R * 0.4f, color.G * 0.4f, color.B * 0.4f, 0.9f), PaintLayer::Overlay);
+				painter.Polyline(diamond, std::max(1.0f, painter.Px(1.0f)), color, PaintLayer::Overlay);
 				char number[2] = { char('0' + annotation.Slot), '\0' };
 				painter.TextInRect(StringView(number, 1), Rectf(pos.X - size * 2.0f, pos.Y - size * 2.0f, size * 4.0f, size * 4.0f),
-					UiTheme::Text, Alignment::Center, UiLayer::OverlayText);
+					Theme::Text, Alignment::Center, PaintLayer::OverlayText);
 				if (!annotation.Text.empty()) {
 					String text = EventCatalog::MakeTextPreview(annotation.Text, 32);
-					float height = painter.Px(UiTheme::RowHeight);
+					float height = painter.Px(Theme::RowHeight);
 					std::int32_t previousSlot = painter.GetSlot();
 					painter.SetSlot(BubbleSlot);
 					painter.TextInRect(text, Rectf(pos.X + size * 2.0f, pos.Y - height * 0.5f, painter.MeasureText(text) + padding, height),
-						UiTheme::Text, Alignment::Left, UiLayer::OverlayText);
+						Theme::Text, Alignment::Left, PaintLayer::OverlayText);
 					painter.SetSlot(previousSlot);
 				}
 			} else {
 				// A pin with the text next to it, and how many replies it has
 				Colorf color = (annotation.Color != 0 ? ownColor : Colorf(1.0f, 0.85f, 0.35f, 1.0f));
-				painter.Circle(pos, size, color, UiLayer::Overlay);
-				painter.Circle(pos, size * 0.45f, Colorf(color.R * 0.4f, color.G * 0.35f, color.B * 0.3f, 1.0f), UiLayer::Overlay);
+				painter.Circle(pos, size, color, PaintLayer::Overlay);
+				painter.Circle(pos, size * 0.45f, Colorf(color.R * 0.4f, color.G * 0.35f, color.B * 0.3f, 1.0f), PaintLayer::Overlay);
 				String text = EventCatalog::MakeTextPreview(annotation.Text, 40);
 				if (!annotation.Replies.empty()) {
 					// TRANSLATORS: After the text of a note pinned in the level, {} is the number of its replies, keep the space in front
@@ -1499,12 +1512,12 @@ namespace Jazz2::Editor
 				}
 				if (!text.empty()) {
 					float width = painter.MeasureText(text) + padding * 2.0f;
-					float height = painter.Px(UiTheme::RowHeight);
+					float height = painter.Px(Theme::RowHeight);
 					Rectf bubble(pos.X + size * 1.5f, pos.Y - height * 0.5f, width, height);
 					std::int32_t previousSlot = painter.GetSlot();
 					painter.SetSlot(BubbleSlot);
-					painter.FillRect(bubble, Colorf(0.25f, 0.2f, 0.08f, 0.85f), UiLayer::Overlay);
-					painter.TextInRect(text, Rectf(bubble.X + padding, bubble.Y, bubble.W - padding * 2.0f, bubble.H), UiTheme::TextAccent, Alignment::Left, UiLayer::OverlayText);
+					painter.FillRect(bubble, Colorf(0.25f, 0.2f, 0.08f, 0.85f), PaintLayer::Overlay);
+					painter.TextInRect(text, Rectf(bubble.X + padding, bubble.Y, bubble.W - padding * 2.0f, bubble.H), Theme::TextAccent, Alignment::Left, PaintLayer::OverlayText);
 					painter.SetSlot(previousSlot);
 				}
 			}
@@ -1537,7 +1550,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void EditorShell::DrawMaskGlyphs(UiPainter& painter, const LayerView& view)
+	void EditorShell::DrawMaskGlyphs(Painter& painter, const LayerView& view)
 	{
 		LevelDocument& document = _session.GetDocument();
 		Vector2i gridSize = document.GetEventGridSize();
@@ -1564,7 +1577,7 @@ namespace Jazz2::Editor
 			for (const Vector2f& p : points) {
 				screen.push_back(Vector2f(rect.X + p.X * rect.W, rect.Y + p.Y * rect.H));
 			}
-			painter.Polyline(screen, thickness, color, UiLayer::Overlay);
+			painter.Polyline(screen, thickness, color, PaintLayer::Overlay);
 		};
 		auto arrowUp = [&stroke](float x, float top, float bottom, const Colorf& color) {
 			stroke({ Vector2f(x, bottom), Vector2f(x, top) }, color);
@@ -1747,7 +1760,7 @@ namespace Jazz2::Editor
 		return (tools.GetActiveType() == EditorToolType::Event && static_cast<const EventTool*>(tools.GetActive())->IsMovingEvents());
 	}
 
-	void EditorShell::DrawEvents(UiPainter& painter, const Rectf& area, Vector2f holeCenter, float holeRadius)
+	void EditorShell::DrawEvents(Painter& painter, const Rectf& area, Vector2f holeCenter, float holeRadius)
 	{
 		LevelDocument& document = _session.GetDocument();
 		std::int32_t spriteLayer = document.GetSpriteLayerIndex();
@@ -1829,14 +1842,14 @@ namespace Jazz2::Editor
 						static const std::uint8_t Bits[] = { Formats::EventRecord::Easy, Formats::EventRecord::Normal, Formats::EventRecord::Hard };
 						for (std::int32_t d = 0; d < 3; d++) {
 							Colorf color = ((difficulties & Bits[d]) != 0 ? Colorf(0.95f, 0.95f, 0.95f, alpha) : Colorf(0.15f, 0.12f, 0.2f, alpha));
-							painter.FillRect(Rectf(rect.X + rect.W - badge * float(3 - d) - badge * 0.5f * float(2 - d), rect.Y + rect.H - badge, badge, badge), color, UiLayer::Overlay);
+							painter.FillRect(Rectf(rect.X + rect.W - badge * float(3 - d) - badge * 0.5f * float(2 - d), rect.Y + rect.H - badge, badge, badge), color, PaintLayer::Overlay);
 						}
 					}
 					if ((flags & Formats::EventRecord::Generator) != 0) {
-						painter.FillRect(Rectf(rect.X + rect.W - badge, rect.Y, badge, badge), Colorf(0.35f, 0.85f, 1.0f, alpha), UiLayer::Overlay);
+						painter.FillRect(Rectf(rect.X + rect.W - badge, rect.Y, badge, badge), Colorf(0.35f, 0.85f, 1.0f, alpha), PaintLayer::Overlay);
 					}
 					if ((flags & Formats::EventRecord::MultiplayerOnly) != 0) {
-						painter.FillRect(Rectf(rect.X, rect.Y + rect.H - badge, badge, badge), Colorf(0.85f, 0.4f, 1.0f, alpha), UiLayer::Overlay);
+						painter.FillRect(Rectf(rect.X, rect.Y + rect.H - badge, badge, badge), Colorf(0.85f, 0.4f, 1.0f, alpha), PaintLayer::Overlay);
 					}
 				}
 				// Which way it pushes or rolls, an arrow for each group of values, longer for a stronger one; of the selected
@@ -1858,18 +1871,18 @@ namespace Jazz2::Editor
 							continue;
 						}
 						Vector2f unit = (tip - tail) / length;
-						Colorf arrowColor = UiTheme::OverlaySeries[directions[d].Group % 4];
+						Colorf arrowColor = Theme::OverlaySeries[directions[d].Group % 4];
 						arrowColor.A = 0.9f * alpha;
 						float arrowThickness = std::max(1.0f, std::round(painter.GetScale() * 1.5f));
-						painter.Line(tail, tip, arrowThickness, arrowColor, UiLayer::Overlay);
+						painter.Line(tail, tip, arrowThickness, arrowColor, PaintLayer::Overlay);
 						Vector2f side(-unit.Y, unit.X);
 						float head = std::max(4.0f, length * 0.3f);
-						painter.Line(tip, tip - unit * head + side * head * 0.5f, arrowThickness, arrowColor, UiLayer::Overlay);
-						painter.Line(tip, tip - unit * head - side * head * 0.5f, arrowThickness, arrowColor, UiLayer::Overlay);
+						painter.Line(tip, tip - unit * head + side * head * 0.5f, arrowThickness, arrowColor, PaintLayer::Overlay);
+						painter.Line(tip, tip - unit * head - side * head * 0.5f, arrowThickness, arrowColor, PaintLayer::Overlay);
 					}
 				}
 				if (selected) {
-					painter.Frame(rect, UiTheme::Accent, thickness, UiLayer::Overlay);
+					painter.Frame(rect, Theme::Accent, thickness, PaintLayer::Overlay);
 				}
 			}
 		}
@@ -1896,7 +1909,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void EditorShell::DrawAmbientLight(UiPainter& painter, const LayerView& view)
+	void EditorShell::DrawAmbientLight(Painter& painter, const LayerView& view)
 	{
 		LevelDocument& document = _session.GetDocument();
 		Vector2i gridSize = document.GetEventGridSize();
@@ -1951,10 +1964,10 @@ namespace Jazz2::Editor
 		float blockSize = 32.0f * float(_ambientStep) * view.Scale;
 		Vector2f origin = view.WorldToScreen(Vector2f(0.0f, 0.0f));
 		Rectf rect(origin.X, origin.Y, float(_ambientTexture->GetWidth()) * blockSize, float(_ambientTexture->GetHeight()) * blockSize);
-		painter.Image(*_ambientTexture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), darkness, -1, UiLayer::Back);
+		painter.Image(*_ambientTexture, rect, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), darkness, -1, PaintLayer::Back);
 	}
 
-	void EditorShell::DrawSelectedEventDetails(UiPainter& painter, const LayerView& view)
+	void EditorShell::DrawSelectedEventDetails(Painter& painter, const LayerView& view)
 	{
 		LevelDocument& document = _session.GetDocument();
 		Vector2i gridSize = document.GetEventGridSize();
@@ -1990,7 +2003,7 @@ namespace Jazz2::Editor
 				// A pulsing light grows and shrinks as the game pulses it, both radii by the same; with motion reduced, the rings
 				// stay in the middle of the pulse. It's seen as far as it reaches at its largest, so the rings don't come and go
 				// at the edge of the view.
-				bool pulsing = (!UiTheme::ReducedMotion && light.Pulse > 0.0f && light.PulseSpeed > 0.0f);
+				bool pulsing = (!Theme::ReducedMotion && light.Pulse > 0.0f && light.PulseSpeed > 0.0f);
 				float pulse = (pulsing ? EventPreviews::GetLightPulse(light, _session.GetAnimTime()) : 0.0f);
 				float largest = (light.RadiusFar + (pulsing ? light.Pulse : 0.0f)) * view.Scale;
 				if (largest >= 2.0f && center.X + largest >= _drawRect.X && center.X - largest <= _drawRect.X + _drawRect.W &&
@@ -2006,7 +2019,7 @@ namespace Jazz2::Editor
 						for (std::int32_t s = 1; s <= Segments; s++) {
 							float angle = 6.2831853f * float(s) / float(Segments);
 							Vector2f next = center + Vector2f(std::cos(angle) * radius, std::sin(angle) * radius);
-							painter.Line(last, next, lineThickness, color, UiLayer::Overlay);
+							painter.Line(last, next, lineThickness, color, PaintLayer::Overlay);
 							last = next;
 						}
 					};
@@ -2059,7 +2072,7 @@ namespace Jazz2::Editor
 					for (std::int32_t s = 1; s <= Segments; s++) {
 						float angle = 6.2831853f * float(s) / float(Segments);
 						Vector2f next = center + Vector2f(std::cos(angle) * radius, std::sin(angle) * radius);
-						painter.Line(last, next, thickness, detailColor, UiLayer::Overlay);
+						painter.Line(last, next, thickness, detailColor, PaintLayer::Overlay);
 						last = next;
 					}
 				} else if (field.Type == ParamType::TextId && isNearView) {
@@ -2084,8 +2097,8 @@ namespace Jazz2::Editor
 			// what's around it can still be seen. A boss has a text when it shows up and one when it's beaten, they're stacked
 			// in the order of the fields from the top, and each says which one it is.
 			if (!bubbles.empty()) {
-				float padding = painter.Px(UiTheme::Padding * 2.0f);
-				float height = painter.Px(UiTheme::RowHeight) + painter.Px(6.0f);
+				float padding = painter.Px(Theme::Padding * 2.0f);
+				float height = painter.Px(Theme::RowHeight) + painter.Px(6.0f);
 				float gap = painter.Px(4.0f);
 				float bottom = center.Y - 16.0f * view.Scale - painter.Px(14.0f);
 				std::int32_t previousSlot = painter.GetSlot();
@@ -2099,9 +2112,9 @@ namespace Jazz2::Editor
 					bottom = bubble.Y - gap;
 					painter.Panel(bubble, false);
 					if (!label.empty()) {
-						painter.TextInRect(label, Rectf(bubble.X + padding, bubble.Y, labelWidth, bubble.H), UiTheme::TextDim, Alignment::Left, UiLayer::OverlayText);
+						painter.TextInRect(label, Rectf(bubble.X + padding, bubble.Y, labelWidth, bubble.H), Theme::TextDim, Alignment::Left, PaintLayer::OverlayText);
 					}
-					painter.TextInRect(bubbles[i].Text, Rectf(bubble.X + padding + labelWidth, bubble.Y, bubble.W - padding * 2.0f - labelWidth, bubble.H), UiTheme::Text, Alignment::Left, UiLayer::OverlayText);
+					painter.TextInRect(bubbles[i].Text, Rectf(bubble.X + padding + labelWidth, bubble.Y, bubble.W - padding * 2.0f - labelWidth, bubble.H), Theme::Text, Alignment::Left, PaintLayer::OverlayText);
 				}
 				painter.SetSlot(previousSlot);
 			}
@@ -2110,8 +2123,8 @@ namespace Jazz2::Editor
 				// The new water level across the view
 				drawn++;
 				float y = std::round(view.WorldToScreen(Vector2f(0.0f, float(EventCatalog::ReadField(event, descriptor->Fields[0])))).Y);
-				painter.FillRect(Rectf(_drawRect.X, y, _drawRect.W, std::max(thickness, 2.0f)), Colorf(0.3f, 0.6f, 1.0f, 0.8f), UiLayer::Overlay);
-				painter.Line(center, Vector2f(center.X, y), thickness, Colorf(0.3f, 0.6f, 1.0f, 0.6f), UiLayer::Overlay);
+				painter.FillRect(Rectf(_drawRect.X, y, _drawRect.W, std::max(thickness, 2.0f)), Colorf(0.3f, 0.6f, 1.0f, 0.8f), PaintLayer::Overlay);
+				painter.Line(center, Vector2f(center.X, y), thickness, Colorf(0.3f, 0.6f, 1.0f, 0.6f), PaintLayer::Overlay);
 			} else if (EventType(event.Type) == EventType::ModifierLimitCameraView && descriptor->FieldCount > 1 && isNearView) {
 				// Where the camera is kept, darker outside of it, see Player::HandleAreaEventAt()
 				drawn++;
@@ -2133,25 +2146,25 @@ namespace Jazz2::Editor
 				Colorf shade(0.0f, 0.0f, 0.0f, 0.35f);
 				Colorf edge(1.0f, 0.55f, 0.85f, 0.9f);
 				if (screenEffectiveLeft > _drawRect.X) {
-					painter.FillRect(Rectf(_drawRect.X, _drawRect.Y, std::min(screenEffectiveLeft, _drawRect.X + _drawRect.W) - _drawRect.X, _drawRect.H), shade, UiLayer::Fill);
+					painter.FillRect(Rectf(_drawRect.X, _drawRect.Y, std::min(screenEffectiveLeft, _drawRect.X + _drawRect.W) - _drawRect.X, _drawRect.H), shade, PaintLayer::Fill);
 				}
 				if (screenEffectiveLeft < screenLeft) {
 					// Where the camera can go too, as the view is wider than the span, lighter and with a thinner edge
 					float from = std::max(screenEffectiveLeft, _drawRect.X);
 					float to = std::min(screenLeft, _drawRect.X + _drawRect.W);
 					if (to > from) {
-						painter.FillRect(Rectf(from, _drawRect.Y, to - from, _drawRect.H), Colorf(edge.R, edge.G, edge.B, 0.08f), UiLayer::Fill);
+						painter.FillRect(Rectf(from, _drawRect.Y, to - from, _drawRect.H), Colorf(edge.R, edge.G, edge.B, 0.08f), PaintLayer::Fill);
 					}
-					painter.FillRect(Rectf(screenEffectiveLeft - thickness * 0.5f, _drawRect.Y, thickness, _drawRect.H), Colorf(edge.R, edge.G, edge.B, 0.55f), UiLayer::Overlay);
+					painter.FillRect(Rectf(screenEffectiveLeft - thickness * 0.5f, _drawRect.Y, thickness, _drawRect.H), Colorf(edge.R, edge.G, edge.B, 0.55f), PaintLayer::Overlay);
 				}
 				if (screenRight < _drawRect.X + _drawRect.W) {
 					float from = std::max(screenRight, _drawRect.X);
-					painter.FillRect(Rectf(from, _drawRect.Y, _drawRect.X + _drawRect.W - from, _drawRect.H), shade, UiLayer::Fill);
+					painter.FillRect(Rectf(from, _drawRect.Y, _drawRect.X + _drawRect.W - from, _drawRect.H), shade, PaintLayer::Fill);
 				}
 				float lineWidth = std::max(thickness, 2.0f);
-				painter.FillRect(Rectf(screenLeft - lineWidth * 0.5f, _drawRect.Y, lineWidth, _drawRect.H), edge, UiLayer::Overlay);
-				painter.FillRect(Rectf(screenRight - lineWidth * 0.5f, _drawRect.Y, lineWidth, _drawRect.H), edge, UiLayer::Overlay);
-				painter.Line(Vector2f(screenLeft, center.Y), Vector2f(screenRight, center.Y), thickness, Colorf(edge.R, edge.G, edge.B, 0.5f), UiLayer::Overlay);
+				painter.FillRect(Rectf(screenLeft - lineWidth * 0.5f, _drawRect.Y, lineWidth, _drawRect.H), edge, PaintLayer::Overlay);
+				painter.FillRect(Rectf(screenRight - lineWidth * 0.5f, _drawRect.Y, lineWidth, _drawRect.H), edge, PaintLayer::Overlay);
+				painter.Line(Vector2f(screenLeft, center.Y), Vector2f(screenRight, center.Y), thickness, Colorf(edge.R, edge.G, edge.B, 0.5f), PaintLayer::Overlay);
 			}
 		}
 	}
@@ -2203,7 +2216,7 @@ namespace Jazz2::Editor
 		EventPreviews::CollectRaceTrack(document, _raceLinks);
 	}
 
-	void EditorShell::DrawEventLinks(UiPainter& painter, const LayerView& view, float alpha)
+	void EditorShell::DrawEventLinks(Painter& painter, const LayerView& view, float alpha)
 	{
 		LevelDocument& document = _session.GetDocument();
 		Vector2i gridSize = document.GetEventGridSize();
@@ -2262,12 +2275,12 @@ namespace Jazz2::Editor
 			Vector2f tail = from + direction * start;
 			Vector2f tip = from + direction * end;
 			Vector2f shaft[2] = { tail, tip };
-			painter.Polyline(shaft, lineThickness, color, UiLayer::Overlay);
+			painter.Polyline(shaft, lineThickness, color, PaintLayer::Overlay);
 			if (withHead) {
 				float head = std::min(std::max(lineThickness * 4.0f, 6.0f), (end - start) * 0.5f);
 				Vector2f side(-direction.Y, direction.X);
 				Vector2f arrowHead[3] = { tip - direction * head + side * head * 0.5f, tip, tip - direction * head - side * head * 0.5f };
-				painter.Polyline(arrowHead, lineThickness, color, UiLayer::Overlay);
+				painter.Polyline(arrowHead, lineThickness, color, PaintLayer::Overlay);
 			}
 		};
 
@@ -2281,8 +2294,8 @@ namespace Jazz2::Editor
 				float size = std::max(tileSize * 0.3f, 6.0f);
 				Vector2f from(fromRect.X + fromRect.W * 0.5f, fromRect.Y + fromRect.H * 0.5f);
 				if (crossesView(fromRect, Rectf(from.X - size, from.Y - size, size * 2.0f, size * 2.0f))) {
-					painter.Line(from - Vector2f(size, size), from + Vector2f(size, size), thickness * 1.5f, UiTheme::OverlayBad, UiLayer::Overlay);
-					painter.Line(from - Vector2f(size, -size), from + Vector2f(size, -size), thickness * 1.5f, UiTheme::OverlayBad, UiLayer::Overlay);
+					painter.Line(from - Vector2f(size, size), from + Vector2f(size, size), thickness * 1.5f, Theme::OverlayBad, PaintLayer::Overlay);
+					painter.Line(from - Vector2f(size, -size), from + Vector2f(size, -size), thickness * 1.5f, Theme::OverlayBad, PaintLayer::Overlay);
 				}
 				continue;
 			}
@@ -2327,14 +2340,14 @@ namespace Jazz2::Editor
 					}
 				}
 			}
-			Colorf otherColor = UiTheme::OverlayInfo;
+			Colorf otherColor = Theme::OverlayInfo;
 			otherColor.A *= 0.9f * alpha;
 			float frameThickness = std::max(1.0f, std::round(painter.GetScale()));
 			for (const EventLink& link : _selectedLinks) {
 				Rectf fromRect = levelRect(link.From), toRect = levelRect(link.To);
 				if (crossesView(fromRect, toRect)) {
 					drawLink(fromRect, toRect, std::max(1.0f, thickness * 0.67f), otherColor, link.Directed);
-					painter.Frame(toRect, otherColor, frameThickness, UiLayer::Overlay);
+					painter.Frame(toRect, otherColor, frameThickness, PaintLayer::Overlay);
 				}
 			}
 		}
@@ -2377,7 +2390,7 @@ namespace Jazz2::Editor
 				if (!selectedGroups[it->Group]) {
 					Rectf rect = cellRect(it->Cell);
 					if (crossesView(rect, rect)) {
-						painter.Frame(rect, triggerColor, frameThickness, UiLayer::Overlay);
+						painter.Frame(rect, triggerColor, frameThickness, PaintLayer::Overlay);
 					}
 				}
 			}
@@ -2396,7 +2409,7 @@ namespace Jazz2::Editor
 		}
 	}
 
-	void EditorShell::DrawLayerBounds(UiPainter& painter, const LayerView& view)
+	void EditorShell::DrawLayerBounds(Painter& painter, const LayerView& view)
 	{
 		if (view.Size.X <= 0 || view.Size.Y <= 0) {
 			return;
@@ -2412,13 +2425,13 @@ namespace Jazz2::Editor
 		Colorf shade(0.02f, 0.0f, 0.06f, 0.68f);
 
 		if (right <= left || bottom <= top) {
-			painter.FillRect(_drawRect, shade, UiLayer::Back);
+			painter.FillRect(_drawRect, shade, PaintLayer::Back);
 			return;
 		}
-		painter.FillRect(Rectf(_drawRect.X, _drawRect.Y, _drawRect.W, top - _drawRect.Y), shade, UiLayer::Back);
-		painter.FillRect(Rectf(_drawRect.X, bottom, _drawRect.W, _drawRect.Y + _drawRect.H - bottom), shade, UiLayer::Back);
-		painter.FillRect(Rectf(_drawRect.X, top, left - _drawRect.X, bottom - top), shade, UiLayer::Back);
-		painter.FillRect(Rectf(right, top, _drawRect.X + _drawRect.W - right, bottom - top), shade, UiLayer::Back);
+		painter.FillRect(Rectf(_drawRect.X, _drawRect.Y, _drawRect.W, top - _drawRect.Y), shade, PaintLayer::Back);
+		painter.FillRect(Rectf(_drawRect.X, bottom, _drawRect.W, _drawRect.Y + _drawRect.H - bottom), shade, PaintLayer::Back);
+		painter.FillRect(Rectf(_drawRect.X, top, left - _drawRect.X, bottom - top), shade, PaintLayer::Back);
+		painter.FillRect(Rectf(right, top, _drawRect.X + _drawRect.W - right, bottom - top), shade, PaintLayer::Back);
 
 		if (view.RepeatX || view.RepeatY) {
 			DrawRepeatedLayerBounds(painter, view, topLeft, bottomRight);
@@ -2429,8 +2442,8 @@ namespace Jazz2::Editor
 		Rectf copy = GetLayerFrame(view);
 		float width = std::max(1.0f, std::round(painter.GetScale()));
 		Rectf frame(std::round(copy.X) - width, std::round(copy.Y) - width, std::round(copy.W) + width * 2.0f, std::round(copy.H) + width * 2.0f);
-		painter.Frame(Rectf(frame.X - width, frame.Y - width, frame.W + width * 2.0f, frame.H + width * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.45f), width, UiLayer::Overlay);
-		painter.Frame(frame, Colorf(1.0f, 1.0f, 1.0f, 0.85f), width, UiLayer::Overlay);
+		painter.Frame(Rectf(frame.X - width, frame.Y - width, frame.W + width * 2.0f, frame.H + width * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.45f), width, PaintLayer::Overlay);
+		painter.Frame(frame, Colorf(1.0f, 1.0f, 1.0f, 0.85f), width, PaintLayer::Overlay);
 	}
 
 	Rectf EditorShell::GetLayerFrame(const LayerView& view) const
@@ -2467,7 +2480,7 @@ namespace Jazz2::Editor
 		return copy;
 	}
 
-	void EditorShell::DrawRepeatedLayerBounds(UiPainter& painter, const LayerView& view, const Rectf& topLeft, const Rectf& bottomRight)
+	void EditorShell::DrawRepeatedLayerBounds(Painter& painter, const LayerView& view, const Rectf& topLeft, const Rectf& bottomRight)
 	{
 		// The layer itself, where its tiles start and end, and fainter lines where it starts again, so a small layer
 		// that is seen over and over can be told from its copies
@@ -2483,7 +2496,7 @@ namespace Jazz2::Editor
 				float lineTop = (view.RepeatY ? _drawRect.Y : std::max(layer.Y, _drawRect.Y));
 				float lineBottom = (view.RepeatY ? _drawRect.Y + _drawRect.H : std::min(layer.Y + layer.H, _drawRect.Y + _drawRect.H));
 				if (lineBottom > lineTop) {
-					painter.FillRect(Rectf(std::round(x), lineTop, width, lineBottom - lineTop), seam, UiLayer::Overlay);
+					painter.FillRect(Rectf(std::round(x), lineTop, width, lineBottom - lineTop), seam, PaintLayer::Overlay);
 				}
 			}
 		}
@@ -2493,13 +2506,13 @@ namespace Jazz2::Editor
 				float lineLeft = (view.RepeatX ? _drawRect.X : std::max(layer.X, _drawRect.X));
 				float lineRight = (view.RepeatX ? _drawRect.X + _drawRect.W : std::min(layer.X + layer.W, _drawRect.X + _drawRect.W));
 				if (lineRight > lineLeft) {
-					painter.FillRect(Rectf(lineLeft, std::round(y), lineRight - lineLeft, width), seam, UiLayer::Overlay);
+					painter.FillRect(Rectf(lineLeft, std::round(y), lineRight - lineLeft, width), seam, PaintLayer::Overlay);
 				}
 			}
 		}
 	}
 
-	void EditorShell::DrawScreenFrame(UiPainter& painter)
+	void EditorShell::DrawScreenFrame(Painter& painter)
 	{
 		EditorLevelHandler* editHandler = _session.GetEditHandler();
 		if (editHandler == nullptr) {
@@ -2547,13 +2560,13 @@ namespace Jazz2::Editor
 		Rectf frame(std::round(topLeft.X), std::round(topLeft.Y), std::round(bottomRight.X - topLeft.X), std::round(bottomRight.Y - topLeft.Y));
 		float width = std::max(1.0f, std::round(painter.GetScale()));
 		// Dark under light, so it's seen on bright and dark tiles alike
-		painter.Frame(Rectf(frame.X - width, frame.Y - width, frame.W + width * 2.0f, frame.H + width * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), width, UiLayer::Overlay);
-		painter.Frame(frame, Colorf(1.0f, 1.0f, 1.0f, 0.8f), width, UiLayer::Overlay);
-		float labelHeight = painter.Px(UiTheme::RowHeight);
-		float labelWidth = painter.MeasureText(label) + painter.Px(UiTheme::Padding * 2.0f);
+		painter.Frame(Rectf(frame.X - width, frame.Y - width, frame.W + width * 2.0f, frame.H + width * 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f), width, PaintLayer::Overlay);
+		painter.Frame(frame, Colorf(1.0f, 1.0f, 1.0f, 0.8f), width, PaintLayer::Overlay);
+		float labelHeight = painter.Px(Theme::RowHeight);
+		float labelWidth = painter.MeasureText(label) + painter.Px(Theme::Padding * 2.0f);
 		Rectf labelRect(frame.X, frame.Y - labelHeight, labelWidth, labelHeight);
-		painter.FillRect(labelRect, Colorf(0.0f, 0.0f, 0.0f, 0.55f), UiLayer::Overlay);
-		painter.TextInRect(label, Rectf(labelRect.X + painter.Px(UiTheme::Padding), labelRect.Y, labelRect.W, labelRect.H), UiTheme::Text, Alignment::Left, UiLayer::OverlayText);
+		painter.FillRect(labelRect, Colorf(0.0f, 0.0f, 0.0f, 0.55f), PaintLayer::Overlay);
+		painter.TextInRect(label, Rectf(labelRect.X + painter.Px(Theme::Padding), labelRect.Y, labelRect.W, labelRect.H), Theme::Text, Alignment::Left, PaintLayer::OverlayText);
 	}
 }
 

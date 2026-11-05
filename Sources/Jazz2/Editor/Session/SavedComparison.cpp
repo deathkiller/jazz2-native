@@ -7,8 +7,9 @@
 #include "../Document/LevelDocument.h"
 #include "../Files/ContentTileSetLibrary.h"
 #include "../Tools/EditorContext.h"
-#include "../UI/UiPainter.h"
-#include "../UI/UiTheme.h"
+#include "../../UI/Windows/Painter.h"
+#include "../../UI/Windows/Theme.h"
+#include "../UI/EditorUi.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -306,7 +307,7 @@ namespace Jazz2::Editor
 		_savedEventDifferences = Death::move(cells);
 	}
 
-	void SavedComparison::Draw(UiPainter& painter, const Rectf& viewRect, bool strokeInProgress)
+	void SavedComparison::Draw(Painter& painter, const Rectf& viewRect, bool strokeInProgress)
 	{
 		if (_savedDocument == nullptr) {
 			return;
@@ -315,7 +316,7 @@ namespace Jazz2::Editor
 		UpdateDifferences(strokeInProgress);
 
 		const LevelDocument& document = _context.GetDocument();
-		Colorf fill = UiTheme::OverlayCaution;
+		Colorf fill = Theme::OverlayCaution;
 		fill.A = 0.35f;
 		std::int32_t layerIndex = _context.GetCurrentLayer();
 		for (const SavedLayerDifference& difference : _savedDifferences) {
@@ -327,7 +328,7 @@ namespace Jazz2::Editor
 			if (difference.Whole) {
 				Rectf first = view.CellToScreen(Vector2i(0, 0));
 				Rectf last = view.CellToScreen(Vector2i(layer.GetWidth() - 1, layer.GetHeight() - 1));
-				painter.Frame(Rectf(first.X, first.Y, last.X + last.W - first.X, last.Y + last.H - first.Y), UiTheme::OverlayCaution, std::max(2.0f, painter.GetScale() * 2.0f));
+				painter.Frame(Rectf(first.X, first.Y, last.X + last.W - first.X, last.Y + last.H - first.Y), Theme::OverlayCaution, std::max(2.0f, painter.GetScale() * 2.0f));
 				continue;
 			}
 			std::int32_t width = std::max<std::int32_t>(layer.GetWidth(), 1);
@@ -336,7 +337,7 @@ namespace Jazz2::Editor
 				if (rect.X + rect.W < viewRect.X || rect.Y + rect.H < viewRect.Y || rect.X > viewRect.X + viewRect.W || rect.Y > viewRect.Y + viewRect.H) {
 					continue;
 				}
-				painter.FillRect(rect, fill, UiLayer::Fill);
+				painter.FillRect(rect, fill, PaintLayer::Fill);
 			}
 		}
 
@@ -351,7 +352,7 @@ namespace Jazz2::Editor
 				if (rect.X + rect.W < viewRect.X || rect.Y + rect.H < viewRect.Y || rect.X > viewRect.X + viewRect.W || rect.Y > viewRect.Y + viewRect.H) {
 					continue;
 				}
-				painter.FillRect(Rectf(rect.X, rect.Y, size, size), UiTheme::OverlayCaution, UiLayer::Content);
+				painter.FillRect(Rectf(rect.X, rect.Y, size, size), Theme::OverlayCaution, PaintLayer::Content);
 			}
 		}
 	}

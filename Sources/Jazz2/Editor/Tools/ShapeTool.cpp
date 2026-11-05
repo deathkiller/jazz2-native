@@ -242,12 +242,12 @@ namespace Jazz2::Editor
 		return _dragging;
 	}
 
-	void ShapeTool::DrawOverlay(UiPainter& painter, const ToolPointer& hover, bool hoverValid)
+	void ShapeTool::DrawOverlay(Painter& painter, const ToolPointer& hover, bool hoverValid)
 	{
 		LayerView view = _host.GetLayerView(_host.GetCurrentLayer());
 		if (!_dragging) {
 			if (hoverValid) {
-				DrawCellsOutline(painter, view, hover.Cell, hover.Cell, UiTheme::Cursor);
+				DrawCellsOutline(painter, view, hover.Cell, hover.Cell, Theme::Cursor);
 			}
 			return;
 		}
@@ -264,10 +264,10 @@ namespace Jazz2::Editor
 			if (ghosts && stamp.GetPatternTile(cell.X, cell.Y, _start, tile) && !tile.IsEmpty()) {
 				DrawTile(painter, *tileMap, document, tile, tile.Flags, rect, 0.7f);
 			} else {
-				painter.FillRect(rect, _erase ? Colorf(0.9f, 0.25f, 0.2f, 0.3f) : Colorf(1.0f, 1.0f, 1.0f, 0.25f), UiLayer::Content);
+				painter.FillRect(rect, _erase ? Colorf(0.9f, 0.25f, 0.2f, 0.3f) : Colorf(1.0f, 1.0f, 1.0f, 0.25f), PaintLayer::Content);
 			}
 		}
-		DrawCellsOutline(painter, view, _start, _end, _erase ? UiTheme::Danger : UiTheme::Accent);
+		DrawCellsOutline(painter, view, _start, _end, _erase ? Theme::Danger : Theme::Accent);
 	}
 
 	StringView ShapeTool::GetHint() const
