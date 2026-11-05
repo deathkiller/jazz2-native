@@ -462,7 +462,7 @@ namespace Jazz2
 		 * @brief Sample rate the audio device mixes at in Hz, or `0` to keep the platform's default
 		 *
 		 * Honoured only by the software-mixing backends whose cost is linear in this rate (the PSP, the PS2,
-		 * the 3DS and the Amiga, see @ref IAudioDevice::setMixingFrequency()); every other backend ignores it.
+		 * the 3DS and the Amiga, see @ref IAudioDevice::SetMixingFrequency()); every other backend ignores it.
 		 */
 		static std::int32_t AudioSampleRate;
 

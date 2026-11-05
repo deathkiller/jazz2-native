@@ -250,18 +250,18 @@ namespace Jazz2::Editor
 			void PlayBuffer(nCine::AudioBuffer& buffer, float gain, bool loop)
 			{
 				_sound = std::make_shared<nCine::AudioBufferPlayer>(&buffer);
-				_sound->setSourceRelative(true);
-				_sound->setPosition(nCine::Vector3f::Zero);
-				_sound->setGain(gain);
-				_sound->setLooping(loop);
-				_sound->play();
+				_sound->SetSourceRelative(true);
+				_sound->SetPosition(nCine::Vector3f::Zero);
+				_sound->SetGain(gain);
+				_sound->SetLooping(loop);
+				_sound->Play();
 			}
 #endif
 
 			bool IsSoundPlaying() const
 			{
 #if defined(WITH_AUDIO)
-				return (_sound != nullptr && _sound->isPlaying());
+				return (_sound != nullptr && _sound->IsPlaying());
 #else
 				return false;
 #endif
@@ -271,7 +271,7 @@ namespace Jazz2::Editor
 			{
 #if defined(WITH_AUDIO)
 				if (_sound != nullptr) {
-					_sound->stop();
+					_sound->Stop();
 					_sound = nullptr;
 				}
 #endif

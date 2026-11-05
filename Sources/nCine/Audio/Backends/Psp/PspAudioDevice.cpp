@@ -73,11 +73,9 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			sourceIds[i] = std::uint32_t(i + 1);
 		}
-		setSourcePool(arrayView(sourceIds, MaxSources));
+		SetSourcePool(arrayView(sourceIds, MaxSources));
 
-		// Above the main thread (32), so that it mixes the next block the moment the hardware takes one and
-		// keeps doing so through a long frame; it sleeps in the output call otherwise. The stack is small on
-		// purpose - see Thread.cpp for why thread stacks are a scarce resource on this console.
+		// Above the main thread (32), so it keeps mixing through a long frame; small stack on purpose (see Thread.cpp)
 		PspAudioDevice* self = this;
 		_thread = sceKernelCreateThread("nCine Audio", OutputThread, 0x10, 0x2000, PSP_THREAD_ATTR_USER, nullptr);
 		if (_thread < 0 || sceKernelStartThread(_thread, sizeof(self), &self) < 0) {
@@ -96,7 +94,7 @@ namespace nCine
 
 	PspAudioDevice::~PspAudioDevice()
 	{
-		shutdownDecodeThread();
+		ShutdownDecodeThread();
 
 		if (_thread >= 0) {
 			_threadShouldQuit.store(true, std::memory_order_relaxed);
@@ -137,12 +135,10 @@ namespace nCine
 		std::uint32_t seenResumes = Backends::PspPower::GetResumeCount();
 		std::int32_t current = 0;
 		std::int32_t failures = 0;
-		// A block that was mixed but not taken by the hardware yet is output again rather than mixed anew, so
-		// the sound picks up where it stopped instead of skipping what the failed calls did not play
+		// A block the hardware did not take is output again rather than mixed anew, so no audio is skipped
 		bool blockPending = false;
 		while (!device->_threadShouldQuit.load(std::memory_order_relaxed)) {
-			// Nothing is handed to the hardware from the moment the console starts going to sleep until it has
-			// fully woken up (the firmware freezes this thread somewhere in between)
+			// Stay out of sceAudio until fully woken (the firmware freezes this thread while going to sleep)
 			if (Backends::PspPower::IsSuspended()) {
 				sceKernelDelayThread(RetryDelayUs);
 				continue;
@@ -166,14 +162,12 @@ namespace nCine
 				blockPending = true;
 			}
 
-			// Returns once the hardware has queued the block behind the one it is playing, which paces this
-			// loop at the sample rate and leaves one block of time to mix the next
+			// Blocks until the hardware queued the block, which paces this loop at the sample rate
 			const std::int32_t result = (device->_channel >= 0
 				? sceAudioOutputPannedBlocking(device->_channel, PSP_AUDIO_VOLUME_MAX, PSP_AUDIO_VOLUME_MAX, block)
 				: -1);
 			if (result < 0) {
-				// A failed call returns at once, without the wait for the hardware that paces this loop, and this
-				// thread outranks the game's - retrying straight away would never let the main thread run again
+				// A failed call returns at once and this thread outranks the game's, retrying without a wait would starve it
 				if (device->_channel >= 0) {
 					device->_lastOutputError.store(result, std::memory_order_relaxed);
 					device->_outputFailures.fetch_add(1, std::memory_order_relaxed);
@@ -195,9 +189,7 @@ namespace nCine
 	bool PspAudioDevice::ReserveChannel()
 	{
 		if (_channel >= 0) {
-			// A channel still playing its last block refuses to be released, which it stops doing within a block.
-			// Anything else - a channel the firmware already took back in the sleep - means there is nothing to
-			// release, so a new channel is reserved either way; only a busy one could be left behind that way.
+			// A channel still playing its last block refuses release for up to a block; a new one is reserved either way
 			constexpr SceUInt BlockDurationUs = SceUInt(BlockFrames * 1000000LL / OutputFrequency) + 1000;
 			for (std::int32_t i = 0; i < 4 && sceAudioChRelease(_channel) < 0; i++) {
 				sceKernelDelayThread(BlockDurationUs);
@@ -216,22 +208,20 @@ namespace nCine
 		return true;
 	}
 
-	const char* PspAudioDevice::name() const
+	const char* PspAudioDevice::GetName() const
 	{
 		return "sceAudio";
 	}
 
-	std::int32_t PspAudioDevice::nativeFrequency()
+	std::int32_t PspAudioDevice::GetNativeFrequency()
 	{
-		// The rate the sources are mixed at rather than the hardware's: the module decoder sizes itself by
-		// this, and rendering it above the mixing rate would only be resampled straight back down
+		// The mixing rate, so the module decoder does not render above it only to be resampled down
 		return _mixFrequency;
 	}
 
-	void PspAudioDevice::setMixingFrequency(std::int32_t frequency)
+	void PspAudioDevice::SetMixingFrequency(std::int32_t frequency)
 	{
-		// Only the rates that divide the hardware's are mixed for: the upsample in MixInto() is then a whole
-		// number of output frames per mixed frame, and a block of 1024 frames splits evenly
+		// Only rates that divide the hardware's, so the upsample in MixInto() is a whole number of frames
 		if (frequency != 44100 && frequency != 22050 && frequency != 11025) {
 			if (frequency != 0) {
 				LOGW("Cannot mix at {} Hz (only 11025, 22050 and 44100 Hz divide the hardware's rate), keeping {} Hz", frequency, _mixFrequency);
@@ -248,14 +238,13 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::updatePlayers()
+	void PspAudioDevice::UpdatePlayers()
 	{
 		// Only the players advance here; the mixing itself happens on the output thread
-		AudioDeviceBase::updatePlayers();
+		AudioDeviceBase::UpdatePlayers();
 
-		// What the output thread ran into is logged from here, because its own stack is too small for the trace.
-		// Failures come one per 10 ms for as long as they last, and every line written to this console's memory
-		// stick costs the frame milliseconds, so they are summed up and reported about once a second.
+		// Logged here because the output thread's stack is too small for the trace; failures are summed
+		// and reported about once a second, as each log line costs frame time
 		if (const std::int32_t reservations = _channelReservations.exchange(0, std::memory_order_relaxed)) {
 			LOGI("Audio channel reserved again{}", reservations > 1 ? " (several times)" : "");
 		}
@@ -270,38 +259,38 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::suspendDevice()
+	void PspAudioDevice::SuspendDevice()
 	{
 		_suspended.store(true, std::memory_order_relaxed);
 	}
 
-	void PspAudioDevice::resumeDevice()
+	void PspAudioDevice::ResumeDevice()
 	{
 		_suspended.store(false, std::memory_order_relaxed);
 	}
 
-	bool PspAudioDevice::isValid() const
+	bool PspAudioDevice::IsValid() const
 	{
 		return _valid;
 	}
 
-	void PspAudioDevice::setGain(float gain)
+	void PspAudioDevice::SetGain(float gain)
 	{
 		// Read by the mixer per block; a torn float is not possible on this CPU, so no lock
 		_gain = gain;
 	}
 
-	void PspAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void PspAudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		static_cast<void>(velocity);
 		SemaphoreLock lock(_lock);
 		_listenerPos = position;
 	}
 
-	std::uint32_t PspAudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t PspAudioDevice::RegisterPlayer(IAudioPlayer* player)
 	{
 		SemaphoreLock lock(_lock);
-		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);
+		const std::uint32_t sourceId = AudioDeviceBase::RegisterPlayer(player);
 		if (sourceId != UnavailableSource) {
 			if (Source* source = GetSource(sourceId)) {
 				*source = Source{};
@@ -318,7 +307,7 @@ namespace nCine
 		return &_sources[sourceId - 1];
 	}
 
-	std::uint32_t PspAudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t PspAudioDevice::CreateBuffer(BufferUsage usage)
 	{
 		SemaphoreLock lock(_lock);
 		static_cast<void>(usage);
@@ -366,7 +355,7 @@ namespace nCine
 		buffer.FrameCount = 0;
 	}
 
-	void PspAudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void PspAudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
 		SemaphoreLock lock(_lock);
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount)) {
@@ -376,7 +365,7 @@ namespace nCine
 		_buffers[bufferId].Used = false;
 	}
 
-	bool PspAudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	bool PspAudioDevice::UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
 	{
 		SemaphoreLock lock(_lock);
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount) || data == nullptr || size <= 0) {
@@ -402,8 +391,7 @@ namespace nCine
 			return false;
 		}
 
-		// A streaming source re-uploads several times a second, so an allocation that is already big
-		// enough is kept (the same fragmentation reasoning as the N64 backend)
+		// Streaming sources re-upload often, so an allocation that is big enough is kept
 		if (byteCount > buffer.Capacity) {
 			ReleaseBuffer(buffer);
 			buffer.Samples = static_cast<std::uint8_t*>(std::malloc(std::size_t(byteCount)));
@@ -414,8 +402,7 @@ namespace nCine
 			buffer.Capacity = byteCount;
 		}
 
-		// Samples keep the width they arrived in; 8-bit arrives unsigned with 128 at silence and is
-		// re-centered here, 16-bit is already native-endian (the asset readers swap on load)
+		// 8-bit arrives unsigned and is re-centered, 16-bit is already native-endian
 		if (bytesPerSample == 1) {
 			const std::uint8_t* source = static_cast<const std::uint8_t*>(data);
 			std::int8_t* dest = reinterpret_cast<std::int8_t*>(buffer.Samples);
@@ -433,7 +420,7 @@ namespace nCine
 		return true;
 	}
 
-	void PspAudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void PspAudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -442,7 +429,7 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void PspAudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -450,7 +437,7 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void PspAudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -458,7 +445,7 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void PspAudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -466,7 +453,7 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void PspAudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -474,7 +461,7 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void PspAudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -482,21 +469,21 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void PspAudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
 		// No per-voice DSP in this mixer (see the N64 backend for why the branch is not worth it)
 		static_cast<void>(sourceId);
 		static_cast<void>(value);
 	}
 
-	std::int32_t PspAudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t PspAudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
 		SemaphoreLock lock(_lock);
 		Source* source = GetSource(sourceId);
 		return (source != nullptr ? std::int32_t(source->Cursor >> 32) : 0);
 	}
 
-	void PspAudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void PspAudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -504,7 +491,7 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::playSource(std::uint32_t sourceId)
+	void PspAudioDevice::PlaySource(std::uint32_t sourceId)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -513,7 +500,7 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::pauseSource(std::uint32_t sourceId)
+	void PspAudioDevice::PauseSource(std::uint32_t sourceId)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -521,7 +508,7 @@ namespace nCine
 		}
 	}
 
-	void PspAudioDevice::stopSource(std::uint32_t sourceId)
+	void PspAudioDevice::StopSource(std::uint32_t sourceId)
 	{
 		SemaphoreLock lock(_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -535,14 +522,14 @@ namespace nCine
 		}
 	}
 
-	bool PspAudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool PspAudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
 		SemaphoreLock lock(_lock);
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr && source->Playing && !source->Paused);
 	}
 
-	void PspAudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void PspAudioDevice::QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		SemaphoreLock lock(_lock);
 		Source* source = GetSource(sourceId);
@@ -556,14 +543,14 @@ namespace nCine
 		source->Queue[source->QueueCount++] = bufferId;
 	}
 
-	std::int32_t PspAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	std::int32_t PspAudioDevice::GetProcessedBufferCount(std::uint32_t sourceId)
 	{
 		SemaphoreLock lock(_lock);
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr ? source->ProcessedCount : 0);
 	}
 
-	void PspAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	void PspAudioDevice::UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
 	{
 		SemaphoreLock lock(_lock);
 		Source* source = GetSource(sourceId);
@@ -620,8 +607,7 @@ namespace nCine
 			return false;
 		}
 
-		// Float only per block: the gains become Q15, the cursor step 32.32 - the per-sample loop is
-		// all integer (the reasoning is spelled out in the N64 backend, which this mixer is a copy of)
+		// Float only per block (Q15 gains, 32.32 step), the per-sample loop is all integer
 		float leftGain, rightGain;
 		ComputePanning(source, leftGain, rightGain);
 		const std::int32_t leftQ15 = std::int32_t(leftGain * 32768.0f + 0.5f);
@@ -688,8 +674,7 @@ namespace nCine
 			return;
 		}
 
-		// The sources are mixed at _mixFrequency, which divides the hardware's rate (see setMixingFrequency()),
-		// so a block of `frames` output frames is `frames / ratio` mixed frames
+		// _mixFrequency divides the hardware's rate, so a block holds `frames / ratio` mixed frames
 		const std::int32_t ratio = OutputFrequency / _mixFrequency;
 		const std::int32_t mixFrames = frames / ratio;
 
@@ -715,11 +700,8 @@ namespace nCine
 			return;
 		}
 
-		// Upsample to the hardware's rate: each output frame is interpolated between the previous mixed frame
-		// and the current one, so the last frame of the previous block is carried over rather than the first of
-		// this one being repeated. The ratio is 2 or 4, so the division is a shift. One mixed frame of delay
-		// (45 us at most) is the price, and the interpolation is what keeps the doubled samples from imaging
-		// as a harsh top end the way a plain repeat would.
+		// Upsample by interpolating from the previous mixed frame (carried across blocks), which avoids
+		// the harsh top end of a plain repeat; the ratio is 2 or 4, so the division is a shift
 		const std::int32_t shift = (ratio == 4 ? 2 : 1);
 		std::int32_t previousLeft = _lastMixedLeft;
 		std::int32_t previousRight = _lastMixedRight;

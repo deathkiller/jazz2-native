@@ -15,7 +15,7 @@ namespace nCine
 		AudioLoaderWav(const AudioLoaderWav&) = delete;
 		AudioLoaderWav& operator=(const AudioLoaderWav&) = delete;
 
-		std::unique_ptr<IAudioReader> createReader() override;
+		std::unique_ptr<IAudioReader> CreateReader() override;
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT

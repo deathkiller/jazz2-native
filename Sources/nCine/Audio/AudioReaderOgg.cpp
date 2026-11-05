@@ -45,7 +45,7 @@ namespace nCine
 #endif
 	}
 
-	std::int32_t AudioReaderOgg::read(void* buffer, std::int32_t bufferSize) const
+	std::int32_t AudioReaderOgg::Read(void* buffer, std::int32_t bufferSize) const
 	{
 		// Declared as plain `int` because that is what ov_read() takes a pointer to - on targets where
 		// `std::int32_t` is `long int` (MIPS, among others) the two are distinct types of the same width
@@ -87,7 +87,7 @@ namespace nCine
 		return bufferSeek;
 	}
 
-	void AudioReaderOgg::rewind() const
+	void AudioReaderOgg::Rewind() const
 	{
 #if defined(WITH_VORBIS_DYNAMIC)
 		_ov_raw_seek(&_oggFile, 0);

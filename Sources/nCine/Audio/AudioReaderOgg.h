@@ -38,8 +38,8 @@ namespace nCine
 		AudioReaderOgg(const AudioReaderOgg&) = delete;
 		AudioReaderOgg& operator=(const AudioReaderOgg&) = delete;
 
-		std::int32_t read(void* buffer, std::int32_t bufferSize) const override;
-		void rewind() const override;
+		std::int32_t Read(void* buffer, std::int32_t bufferSize) const override;
+		void Rewind() const override;
 
 	private:
 		/** @brief Audio file handle */

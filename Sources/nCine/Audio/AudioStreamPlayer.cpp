@@ -15,89 +15,92 @@ namespace nCine
 
 	AudioStreamPlayer::~AudioStreamPlayer()
 	{
-		stop();
+		Stop();
 	}
 
-	bool AudioStreamPlayer::loadFromFile(const char* filename)
+	bool AudioStreamPlayer::LoadFromFile(const char* filename)
 	{
 		if (_state != PlayerState::Stopped) {
-			_audioStream.stop(_sourceId);
+			_audioStream.Stop(_sourceId);
 		}
 
-		return _audioStream.loadFromFile(filename);
+		return _audioStream.LoadFromFile(filename);
 	}
 
-	void AudioStreamPlayer::play()
+	void AudioStreamPlayer::Play()
 	{
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
 		switch (_state) {
 			case PlayerState::Initial:
 			case PlayerState::Stopped: {
-				// A refusal is reported by the device itself, see AudioBufferPlayer::play()
-				const std::uint32_t source = device.registerPlayer(this);
+				// A refusal is reported by the device itself, see AudioBufferPlayer::Play()
+				const std::uint32_t source = device.RegisterPlayer(this);
 				if DEATH_UNLIKELY(source == IAudioDevice::UnavailableSource) {
 					break;
 				}
 				_sourceId = source;
 
 				// Streams looping is not handled at enqueued buffer level
-				device.setSourceLooping(_sourceId, false);
+				device.SetSourceLooping(_sourceId, false);
 
-				device.setSourceGain(_sourceId, _gain);
-				device.setSourcePitch(_sourceId, _pitch);
+				device.SetSourceGain(_sourceId, _gain);
+				device.SetSourcePitch(_sourceId, _pitch);
 
-				updateFilters();
+				UpdateFilters();
 
 				bool isSourceRelative = GetFlags(PlayerFlags::SourceRelative);
 				bool isAs2D = GetFlags(PlayerFlags::As2D);
 
-				device.setSourceRelative(_sourceId, isSourceRelative || isAs2D);
-				setPositionInternal(getAdjustedPosition(device, _position, isSourceRelative, isAs2D));
+				device.SetSourceRelative(_sourceId, isSourceRelative || isAs2D);
+				SetPositionInternal(GetAdjustedPosition(device, _position, isSourceRelative, isAs2D));
 
 				_state = PlayerState::Playing;
 
-				// Fill the queue here instead of leaving the first refill to updateState(): the stream
-				// starts a frame earlier that way, and the source is never left in the "playing with an
-				// empty queue" state. OpenAL Soft treats that state as an immediate end, but ALdc walks
-				// its buffer queue with an iterator that is not valid until something is queued and
-				// asserts its way into a kernel panic instead. `enqueue()` starts the source itself once
-				// it has queued the first buffer, which is the same path it uses to recover an underrun.
-				// Nothing is primed for a stream that is turned all the way down - that first chunk is a
-				// decode like any other. The source is left registered but never started, which is safe
-				// precisely because nothing is queued on it: the state the comment above warns about is
-				// a source that has been told to play with an empty queue, and playSource() only ever
-				// happens from inside enqueue(), after a buffer is on the queue.
-				if (!isSilent() && !_audioStream.enqueue(_sourceId, GetFlags(PlayerFlags::Looping))) {
+				// Prime the queue now, so the source never plays with an empty queue (ALdc panics on that).
+				// A silent stream isn't primed, Enqueue() starts the source only after queueing a buffer.
+				if (!IsSilent() && !_audioStream.Enqueue(_sourceId, GetFlags(PlayerFlags::Looping))) {
 					// Nothing could be decoded at all, there is no stream to play
 					_state = PlayerState::Stopped;
-					device.setSourceBuffer(_sourceId, 0);
-					device.unregisterPlayer(this);
+					device.SetSourceBuffer(_sourceId, 0);
+					device.UnregisterPlayer(this);
 				}
 				break;
 			}
 			case PlayerState::Paused: {
-				updateFilters();
+				UpdateFilters();
 
-				device.playSource(_sourceId);
 				_state = PlayerState::Playing;
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
+				// SetModulePosition() dropped the queue while paused, Enqueue() fills it again and starts the source
+				if (_audioStream._nextAvailableBufferIndex == 0) {
+					if (!IsSilent() && !_audioStream.Enqueue(_sourceId, GetFlags(PlayerFlags::Looping))) {
+						_state = PlayerState::Stopped;
+						device.SetSourceBuffer(_sourceId, 0);
+						device.SetSourceLowPass(_sourceId, 1.0f);
+						device.UnregisterPlayer(this);
+					}
+					break;
+				}
+#endif
+				device.PlaySource(_sourceId);
 				break;
 			}
 		}
 	}
 
-	void AudioStreamPlayer::pause()
+	void AudioStreamPlayer::Pause()
 	{
 		switch (_state) {
 			case PlayerState::Playing: {
-				theServiceLocator().GetAudioDevice().pauseSource(_sourceId);
+				theServiceLocator().GetAudioDevice().PauseSource(_sourceId);
 				_state = PlayerState::Paused;
 				break;
 			}
 		}
 	}
 
-	void AudioStreamPlayer::stop()
+	void AudioStreamPlayer::Stop()
 	{
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
@@ -105,45 +108,49 @@ namespace nCine
 			case PlayerState::Playing:
 			case PlayerState::Paused: {
 				// Stop the source then unqueue every buffer
-				_audioStream.stop(_sourceId);
+				_audioStream.Stop(_sourceId);
 				// Detach the buffer from source
-				device.setSourceBuffer(_sourceId, 0);
-				device.setSourceLowPass(_sourceId, 1.0f);
+				device.SetSourceBuffer(_sourceId, 0);
+				device.SetSourceLowPass(_sourceId, 1.0f);
 				_state = PlayerState::Stopped;
 				break;
 			}
 		}
 
-		device.unregisterPlayer(this);
+		device.UnregisterPlayer(this);
 	}
 
-	void AudioStreamPlayer::setLooping(bool value)
+	void AudioStreamPlayer::SetLooping(bool value)
 	{
-		IAudioPlayer::setLooping(value);
+		IAudioPlayer::SetLooping(value);
 
-		_audioStream.setLooping(value);
+		_audioStream.SetLooping(value);
 	}
 
-	void AudioStreamPlayer::updateState()
+	bool AudioStreamPlayer::SetModulePosition(std::int32_t order, std::int32_t row)
+	{
+		// A silent stream isn't decoded, there's nothing to restart
+		bool restart = (_state == PlayerState::Playing && !IsSilent());
+		return _audioStream.SetModulePosition(_sourceId, order, row, restart, GetFlags(PlayerFlags::Looping));
+	}
+
+	void AudioStreamPlayer::UpdateState()
 	{
 		if (_state == PlayerState::Playing) {
-			// Decoding is by far the most expensive thing a streamed player does and none of it is worth doing
-			// for a stream turned all the way down. The player stays registered and stays in the Playing state,
-			// so this resumes by itself the moment the gain comes back: what is already queued plays out,
-			// the source runs dry, and the underrun path inside enqueue() starts it again.
-			if DEATH_UNLIKELY(isSilent()) {
+			// Don't decode a silent stream, it stays Playing and Enqueue() restarts it once the gain returns
+			if DEATH_UNLIKELY(IsSilent()) {
 				return;
 			}
 
-			bool shouldStillPlay = _audioStream.enqueue(_sourceId, GetFlags(PlayerFlags::Looping));
+			bool shouldStillPlay = _audioStream.Enqueue(_sourceId, GetFlags(PlayerFlags::Looping));
 			if (!shouldStillPlay) {
 				IAudioDevice& device = theServiceLocator().GetAudioDevice();
 				// Detach the buffer from source
-				device.setSourceBuffer(_sourceId, 0);
-				device.setSourceLowPass(_sourceId, 1.0f);
+				device.SetSourceBuffer(_sourceId, 0);
+				device.SetSourceLowPass(_sourceId, 1.0f);
 				_state = PlayerState::Stopped;
 
-				device.unregisterPlayer(this);
+				device.UnregisterPlayer(this);
 			}
 		}
 	}

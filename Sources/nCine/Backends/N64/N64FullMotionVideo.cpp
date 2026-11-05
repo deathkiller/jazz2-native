@@ -102,8 +102,8 @@ namespace nCine::Backends
 		// Nothing plays over a video. The audio track takes two channels of its own, the second one only used when
 		// the track is stereo.
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
-		device.stopPlayers();
-		N64AudioDevice* n64Device = (device.isValid() ? static_cast<N64AudioDevice*>(&device) : nullptr);
+		device.StopPlayers();
+		N64AudioDevice* n64Device = (device.IsValid() ? static_cast<N64AudioDevice*>(&device) : nullptr);
 		if (n64Device != nullptr) {
 			audioChannel = n64Device->ReserveExclusiveChannels(2);
 		}

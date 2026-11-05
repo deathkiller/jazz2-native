@@ -44,13 +44,10 @@ namespace nCine
 	{
 		std::memset(_channelOwner, 0, sizeof(_channelOwner));
 
-		// The second argument is a headroom, not a buffer count. With no mixer thread the queue is topped up once
-		// per frame from updatePlayers() (see the class documentation), so it has to outlive a late frame; the
-		// default is 160 ms, about five frames of this game at its usual pace.
+		// The second argument is headroom, not a buffer count: with no mixer thread the queue must outlast a late frame
 		audio_init(OutputFrequency, AUDIO_DEFAULT_LATENCY);
 
-		// The AI clocks itself off the video clock through an integer divider, so the granted rate is only near
-		// the requested one (and differs between NTSC and PAL units); the mixer resamples to the granted one
+		// The granted rate is only near the requested one (and differs between NTSC and PAL)
 		_outputFrequency = audio_get_frequency();
 		if (_outputFrequency <= 0 || audio_get_buffer_length() <= 0) {
 			LOGE("Cannot initialize the audio interface, sound will be disabled");
@@ -59,15 +56,11 @@ namespace nCine
 		}
 
 		mixer_init(MixerChannelCount);
-		// The mixer sizes the ring of a channel that streams from the cartridge by the fastest rate it may be
-		// asked to play at. Channels are prepared for sound effects here; a module retunes the ones it takes
-		// for its instruments, and they are prepared again when an effect gets them back (see StartSource()).
+		// Prepared for effects; a module retunes the channels it takes, and StartSource() prepares them again
 		for (std::int32_t ch = 0; ch < MixerChannelCount; ch++) {
 			mixer_ch_set_limits(ch, 16, float(MaxEffectFrequency), 0);
 		}
-		// VADPCM (level 1) is always available; the asset packer compresses pre-rendered music with ULC
-		// (level 2), whose decoder is only linked in when asked for. Opus (level 3) is not used - it would
-		// cost the CPU far more than the RSP-assisted ULC for the same music.
+		// Pre-rendered music is ULC-compressed (level 2), whose decoder is only linked in on request
 		__wav64_init_compression_lvl2();
 
 		_buffers = static_cast<Buffer*>(std::malloc(std::size_t(InitialBufferCapacity) * sizeof(Buffer)));
@@ -86,7 +79,7 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			sourceIds[i] = std::uint32_t(i + 1);
 		}
-		setSourcePool(arrayView(sourceIds, MaxSources));
+		SetSourcePool(arrayView(sourceIds, MaxSources));
 
 		_valid = true;
 		LOGI("Audio device initialized: libdragon RSP mixer, {} channels at {} Hz, {} buffers of {} samples, {} bytes of heap free",
@@ -98,7 +91,7 @@ namespace nCine
 		if (_valid) {
 			for (NativeStream& stream : _nativeStreams) {
 				if (stream.Kind != NativeStream::Type::None) {
-					closeNativeStream(std::uint32_t(&stream - _nativeStreams) + 1);
+					CloseNativeStream(std::uint32_t(&stream - _nativeStreams) + 1);
 				}
 			}
 			for (std::int32_t ch = 0; ch < MixerChannelCount; ch++) {
@@ -125,17 +118,17 @@ namespace nCine
 		}
 	}
 
-	bool N64AudioDevice::isValid() const
+	bool N64AudioDevice::IsValid() const
 	{
 		return _valid;
 	}
 
-	const char* N64AudioDevice::name() const
+	const char* N64AudioDevice::GetName() const
 	{
 		return "libdragon RSP mixer";
 	}
 
-	void N64AudioDevice::setGain(float gain)
+	void N64AudioDevice::SetGain(float gain)
 	{
 		_gain = gain;
 		if (_valid) {
@@ -143,26 +136,24 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void N64AudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
-		// No Doppler on this backend, so the velocity is not kept. The panning follows at the next
-		// updatePlayers(), which is where every audible source is looked at anyway.
+		// No Doppler; panning follows at the next UpdatePlayers()
 		static_cast<void>(velocity);
 		_listenerPos = position;
 	}
 
-	std::int32_t N64AudioDevice::nativeFrequency()
+	std::int32_t N64AudioDevice::GetNativeFrequency()
 	{
 		return _outputFrequency;
 	}
 
-	std::uint32_t N64AudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t N64AudioDevice::RegisterPlayer(IAudioPlayer* player)
 	{
-		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);
+		const std::uint32_t sourceId = AudioDeviceBase::RegisterPlayer(player);
 		if (sourceId != UnavailableSource) {
 			if (Source* source = GetSource(sourceId)) {
-				// A source comes back from the pool stopped, but make sure no channel or stream binding of its
-				// previous user survives into the new one
+				// Make sure no channel or stream binding of the previous user survives
 				ReleaseSourceChannels(*source);
 				*source = Source{};
 			}
@@ -196,10 +187,9 @@ namespace nCine
 		return (stream.Kind != NativeStream::Type::None ? &stream : nullptr);
 	}
 
-	std::uint32_t N64AudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t N64AudioDevice::CreateBuffer(BufferUsage usage)
 	{
-		// Every buffer is a file streamed from the cartridge (see loadNativeBuffer()), so the usage says
-		// nothing this backend can act on
+		// Every buffer is streamed from the cartridge, so the usage is irrelevant
 		static_cast<void>(usage);
 
 		if (_buffers == nullptr) {
@@ -215,8 +205,7 @@ namespace nCine
 		}
 		if (index < 0) {
 			if (_bufferCount == _bufferCapacity) {
-				// The old table stays valid until the new one exists. Returning 0 is the interface's "no buffer",
-				// and AudioBuffer already reports and survives it.
+				// On failure, 0 is the interface's "no buffer", which AudioBuffer handles
 				const std::int32_t newCapacity = _bufferCapacity * 2;
 				Buffer* grown = static_cast<Buffer*>(std::realloc(_buffers, std::size_t(newCapacity) * sizeof(Buffer)));
 				if (grown == nullptr) {
@@ -267,7 +256,7 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void N64AudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
 		Buffer* buffer = GetBuffer(bufferId);
 		if (buffer == nullptr) {
@@ -282,7 +271,7 @@ namespace nCine
 		buffer->Used = false;
 	}
 
-	bool N64AudioDevice::loadNativeBuffer(std::uint32_t bufferId, StringView path, NativeAudioInfo& info)
+	bool N64AudioDevice::LoadNativeBuffer(std::uint32_t bufferId, StringView path, NativeAudioInfo& info)
 	{
 		Buffer* buffer = GetBuffer(bufferId);
 		if (!_valid || buffer == nullptr || !HasExtension(path, "wav64"_s)) {
@@ -295,8 +284,7 @@ namespace nCine
 
 		ReleaseBufferData(*buffer);
 
-		// Streamed, never preloaded: the samples stay in the cartridge and are DMA'd into the playing channel's
-		// small ring a little ahead of playback, which is the whole point of the format on this console
+		// Streamed, never preloaded: samples stay in the cartridge and are DMA'd just ahead of playback
 		wav64_loadparms_t parms = {};
 		parms.streaming_mode = WAV64_STREAMING_FULL;
 		wav64_t* file = wav64_load(String(path).data(), &parms);
@@ -315,7 +303,7 @@ namespace nCine
 		return true;
 	}
 
-	std::uint32_t N64AudioDevice::openNativeStream(StringView path, NativeAudioInfo& info)
+	std::uint32_t N64AudioDevice::OpenNativeStream(StringView path, NativeAudioInfo& info)
 	{
 		if (!_valid) {
 			return 0;
@@ -344,8 +332,7 @@ namespace nCine
 		stream = NativeStream{};
 		String nullTerminatedPath = path;
 		if (isModule) {
-			// One allocation for the whole module; patterns are decoded as they play and the instruments are
-			// streamed from the cartridge like any other wav64
+			// Patterns are decoded as they play and instruments are streamed from the cartridge
 			xm64player_open(&stream.Module, nullTerminatedPath.data());
 			stream.Kind = NativeStream::Type::Module;
 			stream.ChannelCount = std::int8_t(xm64player_num_channels(&stream.Module));
@@ -376,13 +363,13 @@ namespace nCine
 
 		if (stream.ChannelCount <= 0 || stream.ChannelCount > MixerChannelCount - 4) {
 			LOGE("Cannot play \"{}\" - it needs {} of the {} mixer channels", path, stream.ChannelCount, MixerChannelCount);
-			closeNativeStream(std::uint32_t(index + 1));
+			CloseNativeStream(std::uint32_t(index + 1));
 			return 0;
 		}
 		return std::uint32_t(index + 1);
 	}
 
-	void N64AudioDevice::closeNativeStream(std::uint32_t streamId)
+	void N64AudioDevice::CloseNativeStream(std::uint32_t streamId)
 	{
 		NativeStream* stream = GetNativeStream(streamId);
 		if (stream == nullptr) {
@@ -398,9 +385,8 @@ namespace nCine
 		}
 
 		if (stream->Kind == NativeStream::Type::Module) {
-			// xm64player_close() stops and resets the channels the player was last started on - which are the
-			// first ones of the mixer for a player that never played. So the player is pointed at channels it is
-			// free to touch first: its own if it holds them, a free run otherwise.
+			// xm64player_close() resets the channels it last played on (the first mixer channels if it never played),
+			// so point it at channels it may touch: its own if held, a free run otherwise
 			std::int32_t first = (stream->Active ? stream->Channel : FindFreeChannels(stream->ChannelCount, true));
 			if (first < 0) {
 				first = MixerChannelCount - stream->ChannelCount;
@@ -415,9 +401,8 @@ namespace nCine
 			stream->Module.first_ch = first;
 			xm64player_close(&stream->Module);
 			for (std::int32_t ch = first; ch < first + stream->ChannelCount; ch++) {
-				// The player resets the channels to the default limit - the output rate - but leaves the frequency of
-				// the last note in place, and the mixer checks it against the limit on its next round whether the
-				// channel plays or not. So the frequency goes to zero and the channel is prepared for effects again.
+				// The player keeps the last note's frequency, which the mixer checks against the reset limit
+				// even on an idle channel and asserts, so zero it and prepare the channel for effects again
 				mixer_ch_set_freq(ch, 0.0f);
 				mixer_ch_set_limits(ch, 16, float(MaxEffectFrequency), 0);
 				if (_channelOwner[ch] == ChannelNativeStream) {
@@ -432,7 +417,7 @@ namespace nCine
 		*stream = NativeStream{};
 	}
 
-	void N64AudioDevice::setSourceNativeStream(std::uint32_t sourceId, std::uint32_t streamId)
+	void N64AudioDevice::SetSourceNativeStream(std::uint32_t sourceId, std::uint32_t streamId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			ReleaseSourceChannels(*source);
@@ -474,9 +459,7 @@ namespace nCine
 	{
 		std::int32_t first = FindFreeChannels(count, false);
 		while (first < 0) {
-			// Nothing free: the effect that has been playing the longest gives its channel up. It is the one least
-			// likely to still matter - a new sound is almost always the one the player is reacting to - and its
-			// player notices through isSourcePlaying() and finishes like any other that ran out.
+			// Nothing free: evict the longest-playing effect (least likely to still matter)
 			Source* oldest = nullptr;
 			for (Source& source : _sources) {
 				if (source.Channel >= 0 && source.NativeStream == 0 &&
@@ -557,13 +540,8 @@ namespace nCine
 
 	void N64AudioDevice::SeekSourceChannel(Source& source, double position)
 	{
-		// A VADPCM stream can only be restarted on a frame its file saved the decoder state for - its seek points,
-		// or the start - and the mixer asserts on any other ("invalid VADPCM seeking point"). The effects are
-		// converted without seek points, and a paused one (the whole level pauses its sounds with the game) is
-		// taken off its channel, so resuming it is such a seek; it used to crash whenever the channel it came
-		// back on had played something else in between. wav64_seek() rounds the position to what the file
-		// allows, which for the effects means they start over. A channel that is not playing the file has no
-		// position of it to move.
+		// VADPCM can only restart at a seek point or the start (the mixer asserts otherwise), so wav64_seek()
+		// is used to round the position; effects have no seek points, so a resumed effect starts over
 		const Buffer* buffer = GetBuffer(source.BufferId);
 		if (buffer != nullptr && buffer->File != nullptr && mixer_ch_playing_waveform(source.Channel) == &buffer->File->wave) {
 			wav64_seek(buffer->File, source.Channel, position / double(buffer->File->wave.frequency));
@@ -575,8 +553,7 @@ namespace nCine
 		if (source.Channel < 0) {
 			return;
 		}
-		// The positional model is shared with the software-mixing backends, so panning sounds the same. The
-		// master gain is the mixer's own (see setGain()), so it is left out here.
+		// Master gain is left out, it is the mixer's own (see SetGain())
 		float leftGain, rightGain;
 		AudioMixer::ComputeStereoGains(source.Relative, source.Position, _listenerPos, source.Gain, 1.0f, leftGain, rightGain);
 		if (force || std::abs(leftGain - source.AppliedLeft) > 0.002f || std::abs(rightGain - source.AppliedRight) > 0.002f) {
@@ -586,7 +563,7 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void N64AudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			if (source->BufferId != bufferId) {
@@ -597,7 +574,7 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void N64AudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Gain = gain;
@@ -610,7 +587,7 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void N64AudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			// A non-positive pitch would stall or reverse playback, neither of which the mixer expresses
@@ -623,7 +600,7 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void N64AudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || source->Looping == looping) {
@@ -645,28 +622,28 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void N64AudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Relative = relative;
 		}
 	}
 
-	void N64AudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void N64AudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Position = position;
 		}
 	}
 
-	void N64AudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void N64AudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
 		// The mixer has no per-channel filter
 		static_cast<void>(sourceId);
 		static_cast<void>(value);
 	}
 
-	std::int32_t N64AudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t N64AudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr) {
@@ -676,7 +653,7 @@ namespace nCine
 		return std::int32_t(position);
 	}
 
-	void N64AudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void N64AudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr) {
@@ -690,7 +667,7 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::playSource(std::uint32_t sourceId)
+	void N64AudioDevice::PlaySource(std::uint32_t sourceId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || !_valid) {
@@ -713,7 +690,7 @@ namespace nCine
 		source->Playing = StartSource(sourceId, *source);
 	}
 
-	void N64AudioDevice::pauseSource(std::uint32_t sourceId)
+	void N64AudioDevice::PauseSource(std::uint32_t sourceId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || !source->Playing) {
@@ -731,7 +708,7 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::stopSource(std::uint32_t sourceId)
+	void N64AudioDevice::StopSource(std::uint32_t sourceId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr) {
@@ -747,7 +724,7 @@ namespace nCine
 		ReleaseSourceChannels(*source);
 	}
 
-	bool N64AudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool N64AudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || !source->Playing || source->Paused) {
@@ -805,16 +782,14 @@ namespace nCine
 		stream.Active = true;
 
 		if (stream.Kind == NativeStream::Type::Module) {
-			// The player retunes the limits of the channels its converter measured as used; one it judged unused
-			// keeps whatever limit it had - the output rate by default - and a note played there after all asserts
-			// in the mixer the moment its frequency passes that. So every channel gets a generous one first.
+			// The player only retunes channels it thinks are used, and a note on any other would assert in the
+			// mixer above the default limit, so every channel gets a generous one first
 			for (std::int32_t ch = first; ch < first + count; ch++) {
 				mixer_ch_set_limits(ch, 16, float(MaxModuleFrequency), 0);
 			}
 			xm64player_set_loop(&stream.Module, stream.Looping);
 			xm64player_set_vol(&stream.Module, AudioMixer::Clamp01(stream.Gain));
-			// Continues from wherever the player stopped: the start for a fresh or rewound stream (see
-			// StopNativeStream()), the paused position otherwise
+			// Continues where the player stopped (the start if rewound by StopNativeStream())
 			xm64player_play(&stream.Module, first);
 		} else {
 			for (std::int32_t ch = first; ch < first + count; ch++) {
@@ -839,8 +814,7 @@ namespace nCine
 	{
 		if (stream.Kind == NativeStream::Type::Module) {
 			if (stream.Active && stream.Module.playing) {
-				// Asynchronous - the player stops at its next tick, and its channels are given back once it has
-				// (see RetireNativeStreams()); they are not the engine's to reuse before then
+				// Asynchronous: the channels are freed by RetireNativeStreams() once it has really stopped
 				xm64player_stop(&stream.Module);
 			}
 			if (!pause) {
@@ -944,22 +918,21 @@ namespace nCine
 		}
 	}
 
-	void N64AudioDevice::suspendDevice()
+	void N64AudioDevice::SuspendDevice()
 	{
-		// Nothing to program: once the queue stops being topped up the AI drains what it holds and falls silent
+		// Once the queue stops being topped up, the AI drains it and falls silent
 		_suspended = true;
 	}
 
-	void N64AudioDevice::resumeDevice()
+	void N64AudioDevice::ResumeDevice()
 	{
 		_suspended = false;
 	}
 
-	void N64AudioDevice::updatePlayers()
+	void N64AudioDevice::UpdatePlayers()
 	{
-		// The base class advances the players and retires the finished ones first, so what is mixed below is
-		// the state this frame actually asked for
-		AudioDeviceBase::updatePlayers();
+		// Base class first, so the mix below reflects this frame's state
+		AudioDeviceBase::UpdatePlayers();
 
 		if (!_valid) {
 			return;
@@ -972,7 +945,7 @@ namespace nCine
 				continue;
 			}
 			if (!mixer_ch_playing(source.Channel)) {
-				// Played to the end on its own; the player finds out through isSourcePlaying()
+				// Played to the end on its own; the player finds out through IsSourcePlaying()
 				source.Playing = false;
 				ReleaseSourceChannels(source);
 				continue;

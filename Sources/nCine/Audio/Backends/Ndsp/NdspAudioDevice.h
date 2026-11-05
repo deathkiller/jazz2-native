@@ -19,31 +19,13 @@ namespace nCine
 	/**
 		@brief Implementation of @ref IAudioDevice on top of the Nintendo 3DS's NDSP
 
-		The console's DSP mixes 24 hardware channels with per-channel resampling, volume and a filter stage,
-		which is more than this game ever asks for - but a sound effect here is a whole sample handed to a
-		channel, and the streaming queue every channel keeps holds a few buffers at most, so the OpenAL-shaped
-		contract (sources, queued buffers, a sample-offset query) would have to be emulated on top of the
-		channel API anyway. So this is the PSP backend's design, which is the SDL backend's mixer (which is the
-		Amiga one, which is the N64 one): the sources are mixed by hand into one 16-bit stereo stream with a
-		32-bit integer accumulator, 32.32 fixed-point cursors and Q15 gains, and the mix goes out through ONE
-		NDSP channel as a ring of three wave buffers. Where it runs is the same departure the PSP made from the
-		main-thread mixers: a thread of higher priority than the game's mixes each block right after the DSP
-		finishes one and hands it back, so a frame that runs long on this console - a busy scene, a level
-		load - costs nothing audible. The price is a lock: the mixer reads source and buffer state the game
-		writes from the main thread, so every operation on them takes a `LightLock`, held for microseconds by
-		the game and for the length of one block's mix by the mixer. A blocking lock rather than a spin lock,
-		because the mixer thread has the higher priority - spinning on a lock the main thread holds would never
-		let it be released.
+		The PSP backend's design: sources are mixed in software into one NDSP channel fed by a ring of three
+		wave buffers, on a thread above the game's priority so a long frame causes no dropout. Shared state is
+		guarded by a `LightLock`, because spinning would never let the main thread release it. The DSP resamples
+		the channel from the mixing rate (see @ref SetMixingFrequency()), so any rate works.
 
-		What the DSP does contribute is the resampling: the channel is told the rate the sources are mixed at -
-		22050 Hz by default, the user's "Sample Rate" option otherwise (see @ref setMixingFrequency()) - and
-		the hardware brings it to its own 32728 Hz with linear interpolation, so unlike on the PSP no upsampling
-		pass is needed and any rate is a valid choice. @ref nativeFrequency() reports the mixing rate, so the
-		module decoder renders at it too.
-
-		NDSP needs the DSP's firmware, which libctru loads from `sdmc:/3ds/dspfirm.cdc` - a file every console
-		running homebrew has (DSP1 dumps it) but which cannot be shipped. Without it the device stays silent and
-		the game runs on regardless; Azahar, whose DSP is emulated in software, accepts any file by that name.
+		NDSP needs the DSP firmware `sdmc:/3ds/dspfirm.cdc`, which cannot be shipped; without it the game runs
+		silent (Azahar accepts any file by that name).
 	*/
 	class NdspAudioDevice : public AudioDeviceBase
 	{
@@ -51,40 +33,40 @@ namespace nCine
 		NdspAudioDevice();
 		~NdspAudioDevice() override;
 
-		bool isValid() const override;
-		const char* name() const override;
+		bool IsValid() const override;
+		const char* GetName() const override;
 
-		void setGain(float gain) override;
-		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
-		std::int32_t nativeFrequency() override;
-		void setMixingFrequency(std::int32_t frequency) override;
+		void SetGain(float gain) override;
+		void UpdateListener(const Vector3f& position, const Vector3f& velocity) override;
+		std::int32_t GetNativeFrequency() override;
+		void SetMixingFrequency(std::int32_t frequency) override;
 
-		std::uint32_t registerPlayer(IAudioPlayer* player) override;
-		void updatePlayers() override;
+		std::uint32_t RegisterPlayer(IAudioPlayer* player) override;
+		void UpdatePlayers() override;
 
-		std::uint32_t createBuffer(BufferUsage usage) override;
-		void deleteBuffer(std::uint32_t bufferId) override;
-		bool uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
+		std::uint32_t CreateBuffer(BufferUsage usage) override;
+		void DeleteBuffer(std::uint32_t bufferId) override;
+		bool UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
 
-		void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		void setSourceGain(std::uint32_t sourceId, float gain) override;
-		void setSourcePitch(std::uint32_t sourceId, float pitch) override;
-		void setSourceLooping(std::uint32_t sourceId, bool looping) override;
-		void setSourceRelative(std::uint32_t sourceId, bool relative) override;
-		void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
-		void setSourceLowPass(std::uint32_t sourceId, float value) override;
-		std::int32_t sourceSampleOffset(std::uint32_t sourceId) override;
-		void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
-		void playSource(std::uint32_t sourceId) override;
-		void pauseSource(std::uint32_t sourceId) override;
-		void stopSource(std::uint32_t sourceId) override;
-		bool isSourcePlaying(std::uint32_t sourceId) override;
-		void queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		std::int32_t numProcessedBuffers(std::uint32_t sourceId) override;
-		void unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
+		void SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		void SetSourceGain(std::uint32_t sourceId, float gain) override;
+		void SetSourcePitch(std::uint32_t sourceId, float pitch) override;
+		void SetSourceLooping(std::uint32_t sourceId, bool looping) override;
+		void SetSourceRelative(std::uint32_t sourceId, bool relative) override;
+		void SetSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
+		void SetSourceLowPass(std::uint32_t sourceId, float value) override;
+		std::int32_t GetSourceSampleOffset(std::uint32_t sourceId) override;
+		void SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
+		void PlaySource(std::uint32_t sourceId) override;
+		void PauseSource(std::uint32_t sourceId) override;
+		void StopSource(std::uint32_t sourceId) override;
+		bool IsSourcePlaying(std::uint32_t sourceId) override;
+		void QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		std::int32_t GetProcessedBufferCount(std::uint32_t sourceId) override;
+		void UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
 
-		void suspendDevice() override;
-		void resumeDevice() override;
+		void SuspendDevice() override;
+		void ResumeDevice() override;
 
 	private:
 		static constexpr std::int32_t MaxSources = 32;
@@ -92,13 +74,12 @@ namespace nCine
 		static constexpr std::int32_t ChannelCount = 2;
 		/** @brief The NDSP channel the mix plays through (any of the 24 would do) */
 		static constexpr std::int32_t Channel = 0;
-		/** @brief Rate the sources are mixed at unless @ref setMixingFrequency() says otherwise (see the class documentation) */
+		/** @brief Rate the sources are mixed at unless @ref SetMixingFrequency() says otherwise (see the class documentation) */
 		static constexpr std::int32_t DefaultMixingFrequency = 22050;
 		/**
 			@brief Frames per wave buffer - 23 ms at the default rate
 
-			Also the latency: a sound started by the game is in the block mixed next, which plays after the
-			ones already queued. Three buffers keep the DSP fed across the one the mixer is filling.
+			Also the latency of a newly started sound; three buffers keep the DSP fed while one is being filled.
 		*/
 		static constexpr std::int32_t BlockFrames = 512;
 		static constexpr std::int32_t BlockCount = 3;

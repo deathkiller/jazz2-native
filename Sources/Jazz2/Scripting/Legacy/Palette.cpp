@@ -512,7 +512,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Mode", "INVISIBLE", spriteType_INVISIBLE);	///< Not drawn at all @partialsupport Text drawn in this mode stays visible.
 		engine->RegisterEnumValue("Mode", "SINGLECOLOR", spriteType_SINGLECOLOR);	///< Shape filled with the palette color `param`
 		engine->RegisterEnumValue("Mode", "RESIZED", spriteType_RESIZED);	///< Drawn like `NORMAL`
-		engine->RegisterEnumValue("Mode", "NEONGLOW", spriteType_NEONGLOW);	///< Brightness added to what is behind, `param` selects the color channels @partialsupport Approximated, `param` above 6 counts as 6. Text in the game font and rectangles are drawn plain.
+		engine->RegisterEnumValue("Mode", "NEONGLOW", spriteType_NEONGLOW);	///< Brightness added to what is behind, `param` selects the color channels @partialsupport Approximated, `param` above 6 counts as 6. Text in the game font drawn in the level is blended at half opacity instead, rectangles are drawn plain.
 		engine->RegisterEnumValue("Mode", "FROZEN", spriteType_FROZEN);	///< Drawn frozen in ice @partialsupport Drawn as the game draws frozen objects. Text in the game font and rectangles are drawn plain.
 		engine->RegisterEnumValue("Mode", "PLAYER", spriteType_PLAYER);	///< Drawn in the fur colors of the player with index `param` @partialsupport Text in the game font and rectangles are drawn plain.
 		engine->RegisterEnumValue("Mode", "PALSHIFT", spriteType_PALSHIFT);	///< Palette indices shifted by `param` @partialsupport Text in the game font and rectangles aren't shifted.

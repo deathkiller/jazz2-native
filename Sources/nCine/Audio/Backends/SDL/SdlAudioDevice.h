@@ -9,19 +9,9 @@ namespace nCine
 	/**
 		@brief Implementation of @ref IAudioDevice on top of SDL2's audio queue
 
-		For platforms that have a working SDL2 but no OpenAL: AmigaOS 4 and MorphOS today, where SDL2
-		is the mature and maintained media layer and OpenAL is not part of the SDK at all.
-
-		The mixer is the classic Amiga backend's, which is the N64 one before it: sources are software-
-		mixed by hand into a single 16-bit stereo stream (32-bit integer accumulator, 32.32 fixed-point
-		cursors, Q15 gains). What differs is only where the stream goes - blocks are handed to
-		`SDL_QueueAudio()`, and how much is already waiting is read back with `SDL_GetQueuedAudioSize()`.
-
-		The queue API is used rather than a callback deliberately. A callback would run the mixer on
-		SDL's audio thread and every source operation the game makes would then need a lock around it,
-		for no gain: the mixer is cheap, and running it where the rest of the frame runs keeps this
-		backend the same shape as the console ones. What the queue costs instead is latency, bounded
-		here by @ref TargetQueuedFrames.
+		For platforms with SDL2 but no OpenAL (AmigaOS 4, MorphOS). Sources are mixed in software on the main
+		thread and handed to `SDL_QueueAudio()` rather than an audio callback, so no lock is needed; latency
+		is bounded by @ref TargetQueuedFrames.
 	*/
 	class SdlAudioDevice : public AudioDeviceBase
 	{
@@ -29,43 +19,43 @@ namespace nCine
 		SdlAudioDevice();
 		~SdlAudioDevice() override;
 
-		bool isValid() const override;
+		bool IsValid() const override;
 
-		const char* name() const override;
+		const char* GetName() const override;
 
-		void setGain(float gain) override;
+		void SetGain(float gain) override;
 
-		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
+		void UpdateListener(const Vector3f& position, const Vector3f& velocity) override;
 
-		std::int32_t nativeFrequency() override;
+		std::int32_t GetNativeFrequency() override;
 
-		std::uint32_t registerPlayer(IAudioPlayer* player) override;
-		void updatePlayers() override;
+		std::uint32_t RegisterPlayer(IAudioPlayer* player) override;
+		void UpdatePlayers() override;
 
-		std::uint32_t createBuffer(BufferUsage usage) override;
-		void deleteBuffer(std::uint32_t bufferId) override;
-		bool uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
+		std::uint32_t CreateBuffer(BufferUsage usage) override;
+		void DeleteBuffer(std::uint32_t bufferId) override;
+		bool UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
 
-		void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		void setSourceGain(std::uint32_t sourceId, float gain) override;
-		void setSourcePitch(std::uint32_t sourceId, float pitch) override;
-		void setSourceLooping(std::uint32_t sourceId, bool looping) override;
-		void setSourceRelative(std::uint32_t sourceId, bool relative) override;
-		void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
-		void setSourceLowPass(std::uint32_t sourceId, float value) override;
-		std::int32_t sourceSampleOffset(std::uint32_t sourceId) override;
-		void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
-		void playSource(std::uint32_t sourceId) override;
-		void pauseSource(std::uint32_t sourceId) override;
-		void stopSource(std::uint32_t sourceId) override;
-		bool isSourcePlaying(std::uint32_t sourceId) override;
+		void SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		void SetSourceGain(std::uint32_t sourceId, float gain) override;
+		void SetSourcePitch(std::uint32_t sourceId, float pitch) override;
+		void SetSourceLooping(std::uint32_t sourceId, bool looping) override;
+		void SetSourceRelative(std::uint32_t sourceId, bool relative) override;
+		void SetSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
+		void SetSourceLowPass(std::uint32_t sourceId, float value) override;
+		std::int32_t GetSourceSampleOffset(std::uint32_t sourceId) override;
+		void SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
+		void PlaySource(std::uint32_t sourceId) override;
+		void PauseSource(std::uint32_t sourceId) override;
+		void StopSource(std::uint32_t sourceId) override;
+		bool IsSourcePlaying(std::uint32_t sourceId) override;
 
-		void queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		std::int32_t numProcessedBuffers(std::uint32_t sourceId) override;
-		void unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
+		void QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		std::int32_t GetProcessedBufferCount(std::uint32_t sourceId) override;
+		void UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
 
-		void suspendDevice() override;
-		void resumeDevice() override;
+		void SuspendDevice() override;
+		void ResumeDevice() override;
 
 	private:
 		/** @brief Sources the mixer walks; a silent one costs nothing */
@@ -79,10 +69,8 @@ namespace nCine
 		/**
 			@brief Frames the queue is kept topped up to
 
-			The whole latency budget, and the whole headroom for a late frame - the queue is refilled once
-			per rendered frame, so a frame longer than this leaves the device with nothing to play. About
-			93 ms at 44.1 kHz, which covers a stretch of a level load rendered at ten frames per second
-			without being long enough to hear as delay on a jump.
+			Both the latency and the headroom for a late frame, since the queue is refilled once per
+			rendered frame (about 93 ms at 44.1 kHz).
 		*/
 		static constexpr std::int32_t TargetQueuedFrames = 4 * BlockFrames;
 		/** @brief Entries the buffer table starts with */

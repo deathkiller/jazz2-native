@@ -12,9 +12,8 @@ namespace nCine
 	/**
 		@brief Interface for an audio loader
 		
-		Opens an audio file, reads its header and exposes the format metadata. Use one of the
-		`create*()` factory methods to obtain the loader matching a given file, then call
-		@ref createReader() to decode the actual samples.
+		Opens an audio file and reads its format. Use @ref CreateFromFile() or @ref CreateFromStream(),
+		then @ref CreateReader() to decode the samples.
 	*/
 	class IAudioLoader
 	{
@@ -22,44 +21,44 @@ namespace nCine
 		virtual ~IAudioLoader() { }
 
 		/** @brief Returns `true` if the audio file was loaded successfully */
-		inline bool hasLoaded() const {
+		inline bool HasLoaded() const {
 			return _hasLoaded;
 		}
 
 		/** @brief Returns the number of bytes per sample */
-		inline std::int32_t bytesPerSample() const {
+		inline std::int32_t GetBytesPerSample() const {
 			return _bytesPerSample;
 		}
 		/** @brief Returns the number of channels */
-		inline std::int32_t numChannels() const {
+		inline std::int32_t GetChannelCount() const {
 			return _numChannels;
 		}
 		/** @brief Returns the sample frequency */
-		inline std::int32_t frequency() const {
+		inline std::int32_t GetFrequency() const {
 			return _frequency;
 		}
 
 		/** @brief Returns the total number of samples */
-		inline std::int32_t numSamples() const {
+		inline std::int32_t GetSampleCount() const {
 			return _numSamples;
 		}
 		/** @brief Returns the duration in seconds */
-		inline float duration() const {
+		inline float GetDuration() const {
 			return _duration;
 		}
 
 		/** @brief Returns the decoded buffer size in bytes */
-		inline std::int32_t bufferSize() const {
+		inline std::int32_t GetBufferSize() const {
 			return _numSamples * _numChannels * _bytesPerSample;
 		}
 
 		/** @brief Creates the loader matching the extension of the specified file */
-		static std::unique_ptr<IAudioLoader> createFromFile(const Death::Containers::StringView path);
+		static std::unique_ptr<IAudioLoader> CreateFromFile(const Death::Containers::StringView path);
 		/** @brief Creates the loader matching the specified file for an already opened stream */
-		static std::unique_ptr<IAudioLoader> createFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, Death::Containers::StringView path);
+		static std::unique_ptr<IAudioLoader> CreateFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, Death::Containers::StringView path);
 
 		/** @brief Creates the audio reader matching this loader */
-		virtual std::unique_ptr<IAudioReader> createReader() = 0;
+		virtual std::unique_ptr<IAudioReader> CreateReader() = 0;
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -83,7 +82,7 @@ namespace nCine
 
 		explicit IAudioLoader(std::unique_ptr<Death::IO::Stream> fileHandle);
 
-		static std::unique_ptr<IAudioLoader> createLoader(std::unique_ptr<Death::IO::Stream> fileHandle, Death::Containers::StringView path);
+		static std::unique_ptr<IAudioLoader> CreateLoader(std::unique_ptr<Death::IO::Stream> fileHandle, Death::Containers::StringView path);
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -94,7 +93,7 @@ namespace nCine
 		explicit InvalidAudioLoader()
 			: IAudioLoader(nullptr) { }
 
-		std::unique_ptr<IAudioReader> createReader() override {
+		std::unique_ptr<IAudioReader> CreateReader() override {
 			return nullptr;
 		}
 	};

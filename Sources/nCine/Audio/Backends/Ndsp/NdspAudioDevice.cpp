@@ -38,8 +38,7 @@ namespace nCine
 		LightLock_Init(&_lock);
 		LightEvent_Init(&_blockDone, RESET_ONESHOT);
 
-		// The firmware the DSP runs is loaded from the SD card here (see the class documentation); without it
-		// there is no sound on this console, but there is still a game
+		// Loads the DSP firmware from the SD card; without it the game runs silent
 		const ::Result rc = ndspInit();
 		if (R_FAILED(rc)) {
 			LOGE("Cannot initialize NDSP (0x{:x}), sound will be disabled - the DSP firmware \"sdmc:/3ds/dspfirm.cdc\" is probably missing", std::uint32_t(rc));
@@ -48,7 +47,7 @@ namespace nCine
 		_ndspInitialized = true;
 
 		const std::size_t blockBytes = std::size_t(BlockFrames) * ChannelCount * sizeof(std::int16_t);
-		// The DSP reads the wave buffers by DMA out of the linear heap, the same memory the GPU's textures are in
+		// The DSP reads the wave buffers by DMA out of the linear heap
 		_blocks = static_cast<std::int16_t*>(linearAlloc(blockBytes * BlockCount));
 		_mixBuffer = static_cast<std::int32_t*>(std::malloc(std::size_t(BlockFrames) * ChannelCount * sizeof(std::int32_t)));
 		_buffers = static_cast<Buffer*>(std::malloc(std::size_t(InitialBufferCapacity) * sizeof(Buffer)));
@@ -67,7 +66,7 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			sourceIds[i] = std::uint32_t(i + 1);
 		}
-		setSourcePool(arrayView(sourceIds, MaxSources));
+		SetSourcePool(arrayView(sourceIds, MaxSources));
 
 		ndspSetOutputMode(NDSP_OUTPUT_STEREO);
 		ndspChnReset(Channel);
@@ -87,13 +86,10 @@ namespace nCine
 			ndspChnWaveBufAdd(Channel, &_waveBufs[i]);
 		}
 
-		// The DSP finishes a wave buffer every BlockFrames frames and the callback runs once per DSP frame
-		// (every 4.8 ms), which is what wakes the mixer below
+		// The callback runs once per DSP frame (4.8 ms) and wakes the mixer
 		ndspSetCallback(FrameCallback, this);
 
-		// Above the main thread (0x30), so that it mixes the next block the moment the DSP hands one back and
-		// keeps doing so through a long frame; it sleeps in the event wait otherwise. On the same core as the
-		// game, like every thread of the engine here (see CtrPthread.cpp); the mixer's stack is small on purpose.
+		// Above the main thread (0x30), so it keeps mixing through a long frame; same core as the game (see CtrPthread.cpp)
 		_thread = threadCreate(OutputThread, this, 16 * 1024, 0x18, -2, false);
 		if (_thread == nullptr) {
 			LOGE("Cannot start the audio output thread, sound will be disabled");
@@ -107,7 +103,7 @@ namespace nCine
 
 	NdspAudioDevice::~NdspAudioDevice()
 	{
-		shutdownDecodeThread();
+		ShutdownDecodeThread();
 
 		if (_thread != nullptr) {
 			_threadShouldQuit.store(true, std::memory_order_relaxed);
@@ -140,8 +136,7 @@ namespace nCine
 
 	void NdspAudioDevice::FrameCallback(void* arg)
 	{
-		// Runs on libctru's NDSP thread once per DSP frame; only the wake-up happens here, the mixing belongs
-		// to the output thread so the driver's own thread stays lean
+		// Runs on libctru's NDSP thread, so it only wakes the mixer
 		NdspAudioDevice* device = static_cast<NdspAudioDevice*>(arg);
 		LightEvent_Signal(&device->_blockDone);
 	}
@@ -150,13 +145,12 @@ namespace nCine
 	{
 		NdspAudioDevice* device = static_cast<NdspAudioDevice*>(arg);
 		while (!device->_threadShouldQuit.load(std::memory_order_relaxed)) {
-			// A timeout rather than an unbounded wait, so a DSP that stopped delivering frames (sleep mode) cannot
-			// keep the thread from noticing a shutdown request
+			// With a timeout, so a DSP stopped by sleep mode cannot hide a shutdown request
 			LightEvent_WaitTimeout(&device->_blockDone, 20 * 1000 * 1000);
 			if (device->_threadShouldQuit.load(std::memory_order_relaxed)) {
 				break;
 			}
-			// Every buffer the DSP is done with gets the next block of the mix and goes back into the ring
+			// Refill every buffer the DSP is done with and requeue it
 			for (std::int32_t i = 0; i < BlockCount; i++) {
 				if (device->_waveBufs[i].status == NDSP_WBUF_DONE) {
 					device->FillBlock(i);
@@ -180,22 +174,20 @@ namespace nCine
 		ndspChnWaveBufAdd(Channel, &_waveBufs[index]);
 	}
 
-	const char* NdspAudioDevice::name() const
+	const char* NdspAudioDevice::GetName() const
 	{
 		return "NDSP";
 	}
 
-	std::int32_t NdspAudioDevice::nativeFrequency()
+	std::int32_t NdspAudioDevice::GetNativeFrequency()
 	{
-		// The rate the sources are mixed at rather than the DSP's own: the module decoder sizes itself by
-		// this, and rendering it above the mixing rate would only be resampled straight back down
+		// The mixing rate, so the module decoder does not render above it only to be resampled down
 		return _mixFrequency;
 	}
 
-	void NdspAudioDevice::setMixingFrequency(std::int32_t frequency)
+	void NdspAudioDevice::SetMixingFrequency(std::int32_t frequency)
 	{
-		// The channel is resampled by the DSP whatever the rate, so anything the option can ask for is fine;
-		// the bounds only keep a corrupt setting from asking the DSP for something absurd
+		// The DSP resamples any rate, the bounds only reject a corrupt setting
 		if (frequency < 8000 || frequency > 48000) {
 			if (frequency != 0) {
 				LOGW("Cannot mix at {} Hz, keeping {} Hz", frequency, _mixFrequency);
@@ -207,52 +199,51 @@ namespace nCine
 		if (_mixFrequency != frequency) {
 			_mixFrequency = frequency;
 			if (_ndspInitialized) {
-				// The blocks already queued were mixed at the old rate and play a little fast or slow for a
-				// few dozen milliseconds, which is not worth draining the ring for
+				// Already queued blocks briefly play off-speed, not worth draining the ring for
 				ndspChnSetRate(Channel, float(_mixFrequency));
 			}
 			LOGI("Mixing sound at {} Hz", _mixFrequency);
 		}
 	}
 
-	void NdspAudioDevice::updatePlayers()
+	void NdspAudioDevice::UpdatePlayers()
 	{
 		// Only the players advance here; the mixing itself happens on the output thread
-		AudioDeviceBase::updatePlayers();
+		AudioDeviceBase::UpdatePlayers();
 	}
 
-	void NdspAudioDevice::suspendDevice()
+	void NdspAudioDevice::SuspendDevice()
 	{
 		_suspended.store(true, std::memory_order_relaxed);
 	}
 
-	void NdspAudioDevice::resumeDevice()
+	void NdspAudioDevice::ResumeDevice()
 	{
 		_suspended.store(false, std::memory_order_relaxed);
 	}
 
-	bool NdspAudioDevice::isValid() const
+	bool NdspAudioDevice::IsValid() const
 	{
 		return _valid;
 	}
 
-	void NdspAudioDevice::setGain(float gain)
+	void NdspAudioDevice::SetGain(float gain)
 	{
 		// Read by the mixer per block; a torn float is not possible on this CPU, so no lock
 		_gain = gain;
 	}
 
-	void NdspAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void NdspAudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		static_cast<void>(velocity);
 		LockGuard lock(&_lock);
 		_listenerPos = position;
 	}
 
-	std::uint32_t NdspAudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t NdspAudioDevice::RegisterPlayer(IAudioPlayer* player)
 	{
 		LockGuard lock(&_lock);
-		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);
+		const std::uint32_t sourceId = AudioDeviceBase::RegisterPlayer(player);
 		if (sourceId != UnavailableSource) {
 			if (Source* source = GetSource(sourceId)) {
 				*source = Source{};
@@ -269,7 +260,7 @@ namespace nCine
 		return &_sources[sourceId - 1];
 	}
 
-	std::uint32_t NdspAudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t NdspAudioDevice::CreateBuffer(BufferUsage usage)
 	{
 		LockGuard lock(&_lock);
 		static_cast<void>(usage);
@@ -317,7 +308,7 @@ namespace nCine
 		buffer.FrameCount = 0;
 	}
 
-	void NdspAudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void NdspAudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
 		LockGuard lock(&_lock);
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount)) {
@@ -327,7 +318,7 @@ namespace nCine
 		_buffers[bufferId].Used = false;
 	}
 
-	bool NdspAudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	bool NdspAudioDevice::UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
 	{
 		LockGuard lock(&_lock);
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount) || data == nullptr || size <= 0) {
@@ -353,8 +344,7 @@ namespace nCine
 			return false;
 		}
 
-		// A streaming source re-uploads several times a second, so an allocation that is already big
-		// enough is kept (the same fragmentation reasoning as the N64 backend)
+		// Streaming sources re-upload often, so an allocation that is big enough is kept
 		if (byteCount > buffer.Capacity) {
 			ReleaseBuffer(buffer);
 			buffer.Samples = static_cast<std::uint8_t*>(std::malloc(std::size_t(byteCount)));
@@ -365,8 +355,7 @@ namespace nCine
 			buffer.Capacity = byteCount;
 		}
 
-		// Samples keep the width they arrived in; 8-bit arrives unsigned with 128 at silence and is
-		// re-centered here, 16-bit is already native-endian
+		// 8-bit arrives unsigned and is re-centered, 16-bit is already native-endian
 		if (bytesPerSample == 1) {
 			const std::uint8_t* source = static_cast<const std::uint8_t*>(data);
 			std::int8_t* dest = reinterpret_cast<std::int8_t*>(buffer.Samples);
@@ -384,7 +373,7 @@ namespace nCine
 		return true;
 	}
 
-	void NdspAudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void NdspAudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -393,7 +382,7 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void NdspAudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -401,7 +390,7 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void NdspAudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -409,7 +398,7 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void NdspAudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -417,7 +406,7 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void NdspAudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -425,7 +414,7 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void NdspAudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -433,21 +422,21 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void NdspAudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
 		// No per-voice DSP in this mixer (the channel's own filter would apply to the whole mix)
 		static_cast<void>(sourceId);
 		static_cast<void>(value);
 	}
 
-	std::int32_t NdspAudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t NdspAudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
 		LockGuard lock(&_lock);
 		Source* source = GetSource(sourceId);
 		return (source != nullptr ? std::int32_t(source->Cursor >> 32) : 0);
 	}
 
-	void NdspAudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void NdspAudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -455,7 +444,7 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::playSource(std::uint32_t sourceId)
+	void NdspAudioDevice::PlaySource(std::uint32_t sourceId)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -464,7 +453,7 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::pauseSource(std::uint32_t sourceId)
+	void NdspAudioDevice::PauseSource(std::uint32_t sourceId)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -472,7 +461,7 @@ namespace nCine
 		}
 	}
 
-	void NdspAudioDevice::stopSource(std::uint32_t sourceId)
+	void NdspAudioDevice::StopSource(std::uint32_t sourceId)
 	{
 		LockGuard lock(&_lock);
 		if (Source* source = GetSource(sourceId)) {
@@ -486,14 +475,14 @@ namespace nCine
 		}
 	}
 
-	bool NdspAudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool NdspAudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
 		LockGuard lock(&_lock);
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr && source->Playing && !source->Paused);
 	}
 
-	void NdspAudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void NdspAudioDevice::QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		LockGuard lock(&_lock);
 		Source* source = GetSource(sourceId);
@@ -507,14 +496,14 @@ namespace nCine
 		source->Queue[source->QueueCount++] = bufferId;
 	}
 
-	std::int32_t NdspAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	std::int32_t NdspAudioDevice::GetProcessedBufferCount(std::uint32_t sourceId)
 	{
 		LockGuard lock(&_lock);
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr ? source->ProcessedCount : 0);
 	}
 
-	void NdspAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	void NdspAudioDevice::UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
 	{
 		LockGuard lock(&_lock);
 		Source* source = GetSource(sourceId);
@@ -571,8 +560,7 @@ namespace nCine
 			return false;
 		}
 
-		// Float only per block: the gains become Q15, the cursor step 32.32 - the per-sample loop is
-		// all integer (the reasoning is spelled out in the N64 backend, which this mixer is a copy of)
+		// Float only per block (Q15 gains, 32.32 step), the per-sample loop is all integer
 		float leftGain, rightGain;
 		ComputePanning(source, leftGain, rightGain);
 		const std::int32_t leftQ15 = std::int32_t(leftGain * 32768.0f + 0.5f);

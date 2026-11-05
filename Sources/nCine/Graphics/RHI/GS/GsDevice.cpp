@@ -1408,7 +1408,7 @@ namespace nCine::RHI::GS
 		}
 
 		// What is left of the field before the vertical blank does the background work this console has no
-		// thread for - the audio device decodes music in it (see Ps2AudioDevice::runIdleWork). A step is only
+		// thread for - the audio device decodes music in it (see Ps2AudioDevice::RunIdleWork()). A step is only
 		// started if it fits before the blank, so the flip still lands inside it; the polling is
 		// graph_wait_vsync() split into its two halves. The blanks come at a steady rate, so how far the
 		// field has got is the time since the last one seen, modulo the period - which also covers a frame
@@ -1417,7 +1417,7 @@ namespace nCine::RHI::GS
 		IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
 		while (!graph_check_vsync()) {
 			const float sinceBlank = std::fmod(_lastVsync.millisecondsSince(), _vsyncPeriodMs);
-			if (!audioDevice.runIdleWork(_vsyncPeriodMs - sinceBlank - VsyncMarginMs)) {
+			if (!audioDevice.RunIdleWork(_vsyncPeriodMs - sinceBlank - VsyncMarginMs)) {
 				while (!graph_check_vsync()) {
 				}
 				break;

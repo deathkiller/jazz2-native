@@ -16,52 +16,52 @@ namespace nCine
 
 	AudioBufferPlayer::~AudioBufferPlayer()
 	{
-		stop();
+		Stop();
 	}
 
-	std::uint32_t AudioBufferPlayer::bufferId() const
+	std::uint32_t AudioBufferPlayer::GetBufferId() const
 	{
-		std::uint32_t bufferId = (_audioBuffer != nullptr ? _audioBuffer->bufferId() : 0U);
+		std::uint32_t bufferId = (_audioBuffer != nullptr ? _audioBuffer->GetBufferId() : 0U);
 		return (_state != PlayerState::Initial && _state != PlayerState::Stopped ? bufferId : 0U);
 	}
 
-	std::int32_t AudioBufferPlayer::bytesPerSample() const
+	std::int32_t AudioBufferPlayer::GetBytesPerSample() const
 	{
-		return (_audioBuffer != nullptr ? _audioBuffer->bytesPerSample() : 0);
+		return (_audioBuffer != nullptr ? _audioBuffer->GetBytesPerSample() : 0);
 	}
 
-	std::int32_t AudioBufferPlayer::numChannels() const
+	std::int32_t AudioBufferPlayer::GetChannelCount() const
 	{
-		return (_audioBuffer != nullptr ? _audioBuffer->numChannels() : 0);
+		return (_audioBuffer != nullptr ? _audioBuffer->GetChannelCount() : 0);
 	}
 
-	std::int32_t AudioBufferPlayer::frequency() const
+	std::int32_t AudioBufferPlayer::GetFrequency() const
 	{
-		return (_audioBuffer != nullptr ? _audioBuffer->frequency() : 0);
+		return (_audioBuffer != nullptr ? _audioBuffer->GetFrequency() : 0);
 	}
 
-	std::int32_t AudioBufferPlayer::numSamples() const
+	std::int32_t AudioBufferPlayer::GetSampleCount() const
 	{
-		return (_audioBuffer != nullptr ? _audioBuffer->numSamples() : 0UL);
+		return (_audioBuffer != nullptr ? _audioBuffer->GetSampleCount() : 0UL);
 	}
 
-	float AudioBufferPlayer::duration() const
+	float AudioBufferPlayer::GetDuration() const
 	{
-		return (_audioBuffer != nullptr ? _audioBuffer->duration() : 0.0f);
+		return (_audioBuffer != nullptr ? _audioBuffer->GetDuration() : 0.0f);
 	}
 
-	std::int32_t AudioBufferPlayer::bufferSize() const
+	std::int32_t AudioBufferPlayer::GetBufferSize() const
 	{
-		return (_audioBuffer != nullptr ? _audioBuffer->bufferSize() : 0);
+		return (_audioBuffer != nullptr ? _audioBuffer->GetBufferSize() : 0);
 	}
 
-	void AudioBufferPlayer::setAudioBuffer(AudioBuffer* audioBuffer)
+	void AudioBufferPlayer::SetAudioBuffer(AudioBuffer* audioBuffer)
 	{
-		stop();
+		Stop();
 		_audioBuffer = audioBuffer;
 	}
 
-	void AudioBufferPlayer::play()
+	void AudioBufferPlayer::Play()
 	{
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
@@ -71,105 +71,100 @@ namespace nCine
 				if DEATH_UNLIKELY(_audioBuffer == nullptr) {
 					break;
 				}
-				// A sound at zero gain is one the master or effects slider has turned off, and playing it
-				// would still cost a source and its share of the mix for the whole length of the sample.
-				// Staying Stopped is what the callers already handle: callers usually prune anything stopped
-				// out of its list of playing sounds, and the actors that keep a looping sound around test
-				// the pointer they were handed rather than asking whether it plays, so none of them
-				// re-trigger. Nothing is audible either way, this way nothing is spent.
-				if DEATH_UNLIKELY(isSilent()) {
+				// Don't play a silent sound at all, callers already handle a stopped player
+				if DEATH_UNLIKELY(IsSilent()) {
 					break;
 				}
 
 				// A refusal is reported by the device itself, which can say what is holding the sources
 				// and can keep a caller that retries every frame from flooding the log
-				const std::uint32_t source = device.registerPlayer(this);
+				const std::uint32_t source = device.RegisterPlayer(this);
 				if DEATH_UNLIKELY(source == IAudioDevice::UnavailableSource) {
 					break;
 				}
 				_sourceId = source;
 
-				device.setSourceBuffer(_sourceId, _audioBuffer->bufferId());
+				device.SetSourceBuffer(_sourceId, _audioBuffer->GetBufferId());
 				// Setting source looping only if not streaming
-				device.setSourceLooping(_sourceId, GetFlags(PlayerFlags::Looping));
+				device.SetSourceLooping(_sourceId, GetFlags(PlayerFlags::Looping));
 
-				device.setSourceGain(_sourceId, _gain);
-				device.setSourcePitch(_sourceId, _pitch);
+				device.SetSourceGain(_sourceId, _gain);
+				device.SetSourcePitch(_sourceId, _pitch);
 
-				updateFilters();
+				UpdateFilters();
 
 				bool isSourceRelative = GetFlags(PlayerFlags::SourceRelative);
 				bool isAs2D = GetFlags(PlayerFlags::As2D);
 
-				device.setSourceRelative(_sourceId, isSourceRelative || isAs2D);
-				setPositionInternal(getAdjustedPosition(device, _position, isSourceRelative, isAs2D));
+				device.SetSourceRelative(_sourceId, isSourceRelative || isAs2D);
+				SetPositionInternal(GetAdjustedPosition(device, _position, isSourceRelative, isAs2D));
 
-				device.playSource(_sourceId);
+				device.PlaySource(_sourceId);
 				_state = PlayerState::Playing;
 				break;
 			}
 			case PlayerState::Paused: {
-				updateFilters();
+				UpdateFilters();
 
-				device.playSource(_sourceId);
+				device.PlaySource(_sourceId);
 				_state = PlayerState::Playing;
 				break;
 			}
 		}
 	}
 
-	void AudioBufferPlayer::pause()
+	void AudioBufferPlayer::Pause()
 	{
 		switch (_state) {
 			case PlayerState::Playing: {
-				theServiceLocator().GetAudioDevice().pauseSource(_sourceId);
+				theServiceLocator().GetAudioDevice().PauseSource(_sourceId);
 				_state = PlayerState::Paused;
 				break;
 			}
 		}
 	}
 
-	void AudioBufferPlayer::stop()
+	void AudioBufferPlayer::Stop()
 	{
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
 		switch (_state) {
 			case PlayerState::Playing:
 			case PlayerState::Paused: {
-				device.stopSource(_sourceId);
+				device.StopSource(_sourceId);
 				// Detach the buffer from source
-				device.setSourceBuffer(_sourceId, 0);
-				device.setSourceLowPass(_sourceId, 1.0f);
+				device.SetSourceBuffer(_sourceId, 0);
+				device.SetSourceLowPass(_sourceId, 1.0f);
 				_state = PlayerState::Stopped;
 				break;
 			}
 		}
 
-		device.unregisterPlayer(this);
+		device.UnregisterPlayer(this);
 	}
 
-	void AudioBufferPlayer::setLooping(bool value)
+	void AudioBufferPlayer::SetLooping(bool value)
 	{
-		if (isLooping() != value) {
-			IAudioPlayer::setLooping(value);
+		if (IsLooping() != value) {
+			IAudioPlayer::SetLooping(value);
 			// Applying the change immediately, so the per-frame update doesn't have to re-set it
 			if (_sourceId != IAudioDevice::UnavailableSource) {
-				theServiceLocator().GetAudioDevice().setSourceLooping(_sourceId, value);
+				theServiceLocator().GetAudioDevice().SetSourceLooping(_sourceId, value);
 			}
 		}
 	}
 
-	void AudioBufferPlayer::updateState()
+	void AudioBufferPlayer::UpdateState()
 	{
 		if (_state == PlayerState::Playing) {
 			IAudioDevice& device = theServiceLocator().GetAudioDevice();
-			if (!device.isSourcePlaying(_sourceId)) {
+			if (!device.IsSourcePlaying(_sourceId)) {
 				// Detach the buffer from source
-				device.setSourceBuffer(_sourceId, 0);
-				device.setSourceLowPass(_sourceId, 1.0f);
+				device.SetSourceBuffer(_sourceId, 0);
+				device.SetSourceLowPass(_sourceId, 1.0f);
 				_state = PlayerState::Stopped;
 
-				device.unregisterPlayer(this);
+				device.UnregisterPlayer(this);
 			}
 		}
 	}

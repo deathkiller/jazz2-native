@@ -114,10 +114,13 @@ namespace Jazz2::Actors::Solid
 		if (playerType) {
 			// A bird breaking the bird monitor stays a bird - the original simply morphs it again, which changes nothing
 			if (*playerType != player->GetPlayerType() && !player->MorphTo(*playerType)) {
-				// A character whose sprites aren't available (Lori in the shareware data) is replaced by Jazz. The bird isn't
-				// available there either, but a rabbit is no stand-in for it, so the player stays as it is.
-				if (*playerType != PlayerType::Bird && *playerType != PlayerType::Bird2) {
-					player->MorphTo(PlayerType::Jazz);
+				// A character whose sprites aren't available (Lori in the shareware data) is skipped like one taken out of
+				// the cycle. The bird isn't available there either, but a rabbit is no stand-in for it, so the player stays.
+				if (_morphType == MorphType::Swap2 || _morphType == MorphType::Swap3) {
+					std::optional<PlayerType> nextType = GetTargetType(player->GetPlayerType(), *playerType);
+					if (nextType && *nextType != player->GetPlayerType()) {
+						player->MorphTo(*nextType);
+					}
 				}
 			}
 
@@ -126,23 +129,30 @@ namespace Jazz2::Actors::Solid
 		}
 	}
 
-	std::optional<PlayerType> PowerUpMorphMonitor::GetTargetType(PlayerType currentType)
+	std::optional<PlayerType> PowerUpMorphMonitor::GetTargetType(PlayerType currentType, PlayerType skippedType)
 	{
 		switch (_morphType) {
 			case MorphType::Swap2:
-				if (currentType != PlayerType::Jazz) {
-					return PlayerType::Jazz;
-				} else {
-					return PlayerType::Spaz;
+			case MorphType::Swap3: {
+				static constexpr PlayerType Cycle[] = { PlayerType::Jazz, PlayerType::Spaz, PlayerType::Lori };
+				std::int32_t count = (_morphType == MorphType::Swap2 ? 2 : 3);
+				// A character outside the cycle continues as Spaz would with 2 characters and as Jazz would with 3
+				std::int32_t start = (_morphType == MorphType::Swap2 ? 0 : 1);
+				for (std::int32_t i = 0; i < count; i++) {
+					if (Cycle[i] == currentType) {
+						start = i + 1;
+						break;
+					}
 				}
-			case MorphType::Swap3:
-				if (currentType == PlayerType::Spaz) {
-					return PlayerType::Lori;
-				} else if (currentType == PlayerType::Lori) {
-					return PlayerType::Jazz;
-				} else {
-					return PlayerType::Spaz;
+				// Characters taken out of the cycle are skipped, see CharacterProfile::MorphBoxCycle
+				for (std::int32_t i = 0; i < count; i++) {
+					PlayerType candidate = Cycle[(start + i) % count];
+					if (candidate != currentType && candidate != skippedType && _levelHandler->GetCharacterProfile(candidate).MorphBoxCycle) {
+						return candidate;
+					}
 				}
+				return currentType;
+			}
 
 			case MorphType::ToBird:
 				// The bird that shoots the player's weapon. Deliberately without a time limit, it lasts until a Fly Off or

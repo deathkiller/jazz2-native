@@ -590,11 +590,11 @@ namespace Jazz2::Scripting
 			return value;
 		}
 		std::int32_t jjPLAYER::get_doubleJumpCount() const {
-			return (_player != nullptr && !_player->_canDoubleJump ? 1 : 0);
+			return (_player != nullptr ? _player->_doubleJumpCount : 0);
 		}
 		std::int32_t jjPLAYER::set_doubleJumpCount(std::int32_t value) {
 			if (_player != nullptr) {
-				_player->_canDoubleJump = (value == 0);
+				_player->_doubleJumpCount = std::max<std::int32_t>(value, 0);
 			}
 			return value;
 		}
@@ -602,7 +602,12 @@ namespace Jazz2::Scripting
 			return (get_doubleJumpCount() != 0);
 		}
 		bool jjPLAYER::set_alreadyDoubleJumped(bool value) {
-			set_doubleJumpCount(value ? 1 : 0);
+			if (_player != nullptr) {
+				// Uses up every double jump, the character may have more than one
+				_player->_doubleJumpCount = (value
+					? std::max<std::int32_t>(_player->_levelHandler->GetCharacterProfile(_player->_playerType).DoubleJumpCountMax, 1)
+					: 0);
+			}
 			return value;
 		}
 		std::int32_t jjPLAYER::get_helicopter() const {
@@ -1871,8 +1876,62 @@ namespace Jazz2::Scripting
 	}
 
 	jjCHARACTER* get_jjCHARACTER(int index) {
-		static jjCHARACTER dummy;
-		return &dummy;
+		auto* owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return owner->GetCharacter(CharToPlayerType(std::uint32_t(index)));
+	}
+
+	Legacy::jjCHARACTER* LevelScriptLoader::GetCharacter(PlayerType type)
+	{
+		constexpr std::int32_t Count = std::int32_t(PlayerType::Bird2) - std::int32_t(PlayerType::Jazz) + 1;
+		std::int32_t index = std::int32_t(type) - std::int32_t(PlayerType::Jazz);
+		if (index < 0 || index >= Count) {
+			// Not a character, writes go nowhere
+			_scratchCharacter = {};
+			return &_scratchCharacter;
+		}
+
+		if (_characters == nullptr) {
+			_characters = std::make_unique<jjCHARACTER[]>(Count);
+			for (std::int32_t i = 0; i < Count; i++) {
+				CharacterProfile profile = CharacterProfile::GetDefault(PlayerType(std::int32_t(PlayerType::Jazz) + i));
+				jjCHARACTER& c = _characters[i];
+				c.airJump = std::int32_t(profile.AirJump);
+				c.groundJump = std::int32_t(profile.GroundJump);
+				c.doubleJumpCountMax = profile.DoubleJumpCountMax;
+				c.doubleJumpXSpeed = profile.DoubleJumpSpeedX;
+				c.doubleJumpYSpeed = profile.DoubleJumpSpeedY;
+				c.helicopterDurationMax = profile.CopterDurationMax;
+				c.helicopterXSpeed = profile.CopterSpeedX;
+				c.helicopterYSpeed = profile.CopterSpeedY;
+				c.canHurt = profile.CanHurt;
+				c.canRun = profile.CanRun;
+				c.morphBoxCycle = profile.MorphBoxCycle;
+			}
+		}
+		return &_characters[index];
+	}
+
+	CharacterProfile LevelScriptLoader::GetCharacterProfile(PlayerType type) const
+	{
+		CharacterProfile profile = CharacterProfile::GetDefault(type);
+		std::int32_t index = std::int32_t(type) - std::int32_t(PlayerType::Jazz);
+		if (_characters == nullptr || index < 0 || index > std::int32_t(PlayerType::Bird2) - std::int32_t(PlayerType::Jazz)) {
+			return profile;
+		}
+
+		const jjCHARACTER& c = _characters[index];
+		profile.AirJump = (c.airJump >= airjumpNONE && c.airJump <= airjumpSPAZ ? CharacterAirJump(c.airJump) : CharacterAirJump::None);
+		profile.GroundJump = (c.groundJump >= groundjumpNONE && c.groundJump <= groundjumpLORI ? CharacterGroundJump(c.groundJump) : CharacterGroundJump::Crouch);
+		profile.DoubleJumpCountMax = c.doubleJumpCountMax;
+		profile.DoubleJumpSpeedX = c.doubleJumpXSpeed;
+		profile.DoubleJumpSpeedY = c.doubleJumpYSpeed;
+		profile.CopterDurationMax = c.helicopterDurationMax;
+		profile.CopterSpeedX = c.helicopterXSpeed;
+		profile.CopterSpeedY = c.helicopterYSpeed;
+		profile.CanHurt = c.canHurt;
+		profile.CanRun = c.canRun;
+		profile.MorphBoxCycle = c.morphBoxCycle;
+		return profile;
 	}
 
 	void LevelScriptLoader::RegisterLegacyPlayer(asIScriptEngine* engine)

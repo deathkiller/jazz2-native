@@ -1551,16 +1551,23 @@ game crouches at any speed. That is the existing 0.4 movement-axis deadzone in
 @ref Jazz2::Actors::Player::HandleLookupAndCrouch().
 
 @par A launch refuses the crouch until its forced state lapses
-The press does not set the time. The original crouches at tick <b>133</b> in both pole scenarios
-(`an_crouch_carry`: Down at 130, ten ticks into a horizontal pole carry, crouching at 17.70 px/tick,
-and `an_crouch_pole_e`: Down at 122) and at <b>126 and 125</b> in both spring ones (`an_crouch_spring`: Down 18
-ticks into a green horizontal spring's carry, and `an_crouch_spring_l`: 15 ticks before its end).<br/><br/>
+The press does not set the time. The original crouches at <b>126 and 125</b> in both spring scenarios
+(`an_crouch_spring`: Down 18 ticks into a green horizontal spring's carry, and `an_crouch_spring_l`: 15 ticks
+before its end).<br/><br/>
 A <b>spring</b> blocks for its whole 93-tick carry: the crouch lands on the exit-clamp tick (16.00 to 4.00
-px/tick). A <b>horizontal pole</b> blocks only for its ~20-tick exit animation: the crouch appears the tick
-after its last frame, with `xs` still 17.70 and the clamp 34 ticks later. Ours already does this
-(transition ends at 122, crouch at 123). The spring block is @ref Jazz2::Actors::Player::_springCarry, not
-`_keepRunningTime`, so the pole is not over-blocked. The rev-up launch arms the same timer and is left out:
-what Down does to it is unmeasured.<br/><br/>
+px/tick). A <b>horizontal pole</b> blocks only for its exit animation, <b>35 ticks</b> from the launch
+(@ref Jazz2::Actors::Player::LegacyHPoleCrouchBlockTime), and the carry outlives it by another 35.
+`an_crouch_carry` and `an_crouch_pole_e` press Down after that animation (at 130 and 122, the launch being at
+35) and crouch on the next tick. Their captures hold the pole for only 8 ticks where `ob_hpole` and every
+recording hold it for 70, which is not understood, so ours launches 60 ticks later there and
+`an_crouch_pole_e`'s press lands inside the block. Re-capture them before reading anything into that one. The block itself needs Down held through the launch, which was measured from
+hand-played recordings: three launches, two of them out of a run-in-place, all crouch exactly 35 ticks after
+the launch at the full 20 px/tick. Ours used to crouch as soon as control came back, 5 frames after the launch.
+The spring block is @ref Jazz2::Actors::Player::_springCarry, not `_keepRunningTime`, so the pole is not
+over-blocked.<br/><br/>
+A <b>run-in-place</b> carry refuses the crouch for its whole length (Down held for 150 ticks of one never
+crouched), but a pole ends that carry: launched into a horizontal pole, it behaves exactly like a plain pole,
+and the hold before the speed drops does not resume after it.<br/><br/>
 For a timing rule, vary when the key is pressed before believing it: `an_crouch_carry` and
 `an_crouch_spring` alone suggest "springs refuse, poles do not".
 
@@ -1986,7 +1993,7 @@ Swimming had no model of its own | Both axes follow the vine rule: half the walk
 Holding nothing in water hung motionless | The original sinks at @ref Jazz2::Actors::Player::LegacyWaterGravity indefinitely. The same term makes the vertical caps differ (2.109375 climbing against 2.140625 sinking), so it is folded into the acceleration before the cap. It is applied in @ref Jazz2::Actors::Player::HandleWaterAndModifierMovement() because @ref Jazz2::Actors::Player::OnHandleWater() clears @cpp ApplyGravitation @ce for a swimmer. `wt_swim_down` and `wt_swim_down_run` score exactly 0.0 px/s.
 Float-up areas did nothing useful under water | In water the original crosses a field at the same flat −8.0 px/tick as in air, overriding every input, in all four `wt_float_up*` scenarios. The legacy assignment is no longer gated on @cpp ApplyGravitation @ce. It is excluded from the water model and from the generic branch's @cpp Deceleration @ce, which shaved it to 7.811. Ours used to stall 76 px short of the surface, which the original reaches in 53 ticks. `wt_float_up_u` and `wt_float_up_d` now track within a few px.
 Bolly's chain cannot be shot | Implemented from a report, because bosses are out of the harness's reach. @ref Jazz2::Actors::Bosses::Bolly::ChainBallHealth is 1. Only balls take shots, and the pieces between them let shots pass. Only the ball at the <b>free end</b> can be hit, so the chain shortens but is never cut. A ball takes its two pieces with it (the layout is `[piece, piece, ball]` repeating). Destroyed parts explode and shred in @cpp BollyPart::OnPerish() @ce and are killed rather than dropped. @ref Jazz2::Actors::EnemyBase::OnPerish() only adds a score.
-The run-in-place is not synchronised in online multiplayer | The remote side receives only the pose. The charge (@cpp _revUpChargeTime / RevUpFullChargeTime @ce) is a pure function of how long the pose has been up, so @ref Jazz2::Actors::Multiplayer::RemoteActor counts the frames the pose has been drawn and drives speed and sparks from that, with no protocol change. It is guarded on the metadata having the spark animation. Not measured against the original: the evidence is an argument, not a trace.
+The run-in-place is not synchronised in online multiplayer | The remote side receives only the pose. The charge (@cpp _revUp.ChargeTime / RevUpFullChargeTime @ce) is a pure function of how long the pose has been up, so @ref Jazz2::Actors::Multiplayer::RemoteActor counts the frames the pose has been drawn and drives speed and sparks from that, with no protocol change. It is guarded on the metadata having the spark animation. Not measured against the original: the evidence is an argument, not a trace.
 Shooting from a pinball paddle | The original refuses the shot: on `pb_pad_fire` the ammo stays 50 and the pose stays 58 (the curled ball) for the whole ride. Ours fired six shots and showed Dash + Jump + Shoot. The shot is now blocked, non-Reforged only. The riding pose is still a stand-in (see <em>No pose for riding a tube or a pole</em>).
 Spaz freezes in the air at the end of a sidekick | A float-precision floor. The kick is billed for distance travelled, a difference of float coordinates whose resolution near x ~ 4000 is ~0.0005 px. A remainder below that never pays down, so the player hangs until `_controllableTimeout` (2 s). It happens in the air because gravity is off, and only over a gap, because the ground path moves more than the resolution. @ref Jazz2::Actors::Player::SidekickDistanceEpsilon is 1/64 px (1/28000 of the kick). A deterministic probe cannot hit the coin flip. The fix is neutral on the whole sidekick family.
 Lori can shoot freely through her kick | <b>Each kick allows exactly one shot</b>, taken at the first opportunity (table below). The allowance is spent when the shot leaves, not when the key is read, so a press refused by the cooldown does not count. `sp_lori_kick_fire` shoots at tick 31, the kick starts at 41, and the original's next shot is at 76. Ours reproduces that gap at 46 against 45. Two residuals are unrelated to the kick. Fire held while standing gives 6 against 1, a probe artefact: the original's script writes `keyFire = true` every tick. Fire tapped while standing gives 64 against 49, because the original's weapon cooldown is longer than the 12-tick tap period. The weapon constants are unmeasured.

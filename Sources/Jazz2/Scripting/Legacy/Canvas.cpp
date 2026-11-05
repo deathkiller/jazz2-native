@@ -716,7 +716,14 @@ namespace Jazz2::Scripting
 		}
 		
 		// The color of text drawn in a sprite mode, the font is drawn in its own colors only in the ordinary modes
+		// Whether text in a sprite mode is added to what's behind it on canvases, see DrawScriptText()
+		static bool IsAdditiveTextMode(std::uint32_t mode) {
+			return (mode == spriteType_BLENDLUMINANCE || mode == spriteType_NEONGLOW);
+		}
+
 		static Colorf GetTextColor(std::uint32_t mode, std::uint8_t param) {
+			// Gray as bright as the glyph through the colorizing shader of the font (1.5x the glyph times 1 + (c - 0.5) * 4)
+			constexpr float GlyphLevel = 0.5f - (1.0f - 1.0f / 1.5f) * 0.25f;
 			switch (mode) {
 				case spriteType_TRANSLUCENT:
 				case spriteType_TRANSLUCENTTILE:
@@ -725,8 +732,15 @@ namespace Jazz2::Scripting
 					// The brightness of the font in the colors of what's behind it, mostly the dark boxes scripts draw text
 					// on - gray as bright as the glyph (see SPRITE::BRIGHTNESS below), added to what's behind on canvases (see
 					// DrawScriptText()), the parameter is the opacity (the shader takes alpha as 1 + (a - 0.5) * 4)
-					constexpr float GlyphLevel = 0.5f - (1.0f - 1.0f / 1.5f) * 0.25f;
 					return Colorf(GlyphLevel, GlyphLevel, GlyphLevel, 0.25f + 0.25f * (param / 255.0f));
+				}
+				case spriteType_NEONGLOW: {
+					// Half of the brightness of the glyph in the channels of the parameter (see ContentResolver::BuildNeonGlowPalette()),
+					// the whole glyph at half opacity is the same once added; where it can't be added, it's a half blend
+					static constexpr std::uint8_t ChannelMasks[] = { 0b001, 0b010, 0b100, 0b101, 0b110, 0b011, 0b111 };
+					std::uint8_t mask = ChannelMasks[std::min<std::uint8_t>(param, 6)];
+					return Colorf((mask & 0b001) != 0 ? GlyphLevel : 0.25f, (mask & 0b010) != 0 ? GlyphLevel : 0.25f,
+						(mask & 0b100) != 0 ? GlyphLevel : 0.25f, 0.375f);
 				}
 				case spriteType_BLENDNORMAL:
 				case spriteType_BLENDDARKEN:
@@ -791,8 +805,10 @@ namespace Jazz2::Scripting
 			StringView text = (ch == 127 ? "∞"_s : StringView(&ch, 1));
 			std::int32_t charOffset = 0;
 			// A character of a string is drawn 10 pixels higher than the frame drawn as a sprite (see drawString())
+			Target->AdditiveText = IsAdditiveTextMode(mode);
 			style.Font->DrawString(Target, text, charOffset, xPixel + Offset.X, yPixel + Offset.Y + 10.0f + style.OffsetY, NextLayer(),
 				UI::Alignment::TopLeft, GetTextColor(mode, param), style.Scale, 0.0f, 0.0f, 0.0f, 0.0f, style.CharSpacing, style.LineSpacing);
+			Target->AdditiveText = false;
 			return true;
 		}
 
@@ -904,7 +920,7 @@ namespace Jazz2::Scripting
 			for (const Piece& piece : pieces) {
 				if (piece.Frame < 0) {
 					// Added to what's behind, which keeps its hue as in JJ2+ (lavender over purple bricks)
-					Target->AdditiveText = (spriteMode == spriteType_BLENDLUMINANCE);
+					Target->AdditiveText = IsAdditiveTextMode(spriteMode);
 					style.Font->DrawString(Target, piece.Text, charOffset, x, yPixel + Offset.Y + style.OffsetY, z,
 						textAlign, color, style.Scale, angleOffset, varianceX, varianceY, speed, style.CharSpacing, style.LineSpacing);
 					Target->AdditiveText = false;

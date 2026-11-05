@@ -207,7 +207,7 @@ namespace Jazz2::Actors::Bosses
 	{
 #if defined(WITH_AUDIO)
 		if (_sound != nullptr) {
-			_sound->stop();
+			_sound->Stop();
 			_sound = nullptr;
 		}
 #endif
@@ -231,7 +231,7 @@ namespace Jazz2::Actors::Bosses
 #if defined(WITH_AUDIO)
 		_sound = PlaySfx("Mace"_s, 0.7f);
 		if (_sound != nullptr) {
-			_sound->setLooping(true);
+			_sound->SetLooping(true);
 		}
 #endif
 
@@ -244,7 +244,7 @@ namespace Jazz2::Actors::Bosses
 
 #if defined(WITH_AUDIO)
 		if (_sound != nullptr) {
-			_sound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			_sound->SetPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 		}
 #endif
 

@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Enemies
 	Dragonfly::~Dragonfly()
 	{
 		if (_noise != nullptr) {
-			_noise->stop();
+			_noise->Stop();
 			_noise = nullptr;
 		}
 	}
@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Enemies
 
 		if (_frozenTimeLeft > 0.0f) {
 			if (_noise != nullptr) {
-				_noise->pause();
+				_noise->Pause();
 			}
 			return;
 		}
@@ -90,7 +90,7 @@ namespace Jazz2::Actors::Enemies
 					if (_noise != nullptr) {
 						// TODO: Fade-out
 						//_noise.FadeOut(1f);
-						_noise->stop();
+						_noise->Stop();
 						_noise = nullptr;
 					}
 				} else {
@@ -129,7 +129,7 @@ namespace Jazz2::Actors::Enemies
 				if (_noise != nullptr) {
 					// TODO: Fade-out
 					//_noise.FadeOut(0.4f);
-					_noise->stop();
+					_noise->Stop();
 					_noise = nullptr;
 				}
 			}
@@ -137,7 +137,7 @@ namespace Jazz2::Actors::Enemies
 			_attackCooldown -= timeMult;
 		}
 		if (_noise != nullptr) {
-			_noise->play();
+			_noise->Play();
 		}
 	}
 
@@ -178,7 +178,7 @@ namespace Jazz2::Actors::Enemies
 	bool Dragonfly::OnPerish(ActorBase* collider)
 	{
 		if (_noise != nullptr) {
-			_noise->stop();
+			_noise->Stop();
 			_noise = nullptr;
 		}
 

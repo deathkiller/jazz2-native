@@ -27,50 +27,91 @@ namespace nCine
 		AudioStreamPlayer& operator=(AudioStreamPlayer&&) = default;
 
 		/** @brief Loads the stream from the specified file */
-		bool loadFromFile(const char* filename);
+		bool LoadFromFile(const char* filename);
 
-		inline std::uint32_t bufferId() const override {
-			return _audioStream.bufferId();
-		}
-
-		inline std::int32_t bytesPerSample() const override {
-			return _audioStream.bytesPerSample();
-		}
-		inline std::int32_t numChannels() const override {
-			return _audioStream.numChannels();
-		}
-		inline std::int32_t frequency() const override {
-			return _audioStream.frequency();
+		inline std::uint32_t GetBufferId() const override {
+			return _audioStream.GetBufferId();
 		}
 
-		inline std::int32_t numSamples() const override {
-			return _audioStream.numSamples();
+		inline std::int32_t GetBytesPerSample() const override {
+			return _audioStream.GetBytesPerSample();
 		}
-		inline float duration() const override {
-			return _audioStream.duration();
+		inline std::int32_t GetChannelCount() const override {
+			return _audioStream.GetChannelCount();
+		}
+		inline std::int32_t GetFrequency() const override {
+			return _audioStream.GetFrequency();
 		}
 
-		inline std::int32_t bufferSize() const override {
-			return _audioStream.bufferSize();
+		inline std::int32_t GetSampleCount() const override {
+			return _audioStream.GetSampleCount();
+		}
+		inline float GetDuration() const override {
+			return _audioStream.GetDuration();
+		}
+
+		inline std::int32_t GetBufferSize() const override {
+			return _audioStream.GetBufferSize();
 		}
 
 #if !defined(NCINE_HAS_NATIVE_AUDIO) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns the number of samples held by a single streaming buffer */
-		inline std::int32_t numStreamSamples() const {
-			return _audioStream.numStreamSamples();
+		inline std::int32_t GetStreamSampleCount() const {
+			return _audioStream.GetStreamSampleCount();
 		}
 		/** @brief Returns the size of a single streaming buffer in bytes */
-		inline std::int32_t streamBufferSize() const {
-			return _audioStream.streamBufferSize();
+		inline std::int32_t GetStreamBufferSize() const {
+			return _audioStream.GetStreamBufferSize();
 		}
 #endif
 
-		void play() override;
-		void pause() override;
-		void stop() override;
-		void setLooping(bool value) override;
+		void Play() override;
+		void Pause() override;
+		void Stop() override;
+		void SetLooping(bool value) override;
 
-		void updateState() override;
+		void UpdateState() override;
+
+		/**
+		 * @brief Returns the state of a tracker module at the position being heard, `false` if the stream isn't a module
+		 *
+		 * @partialsupport Not every decoder supports it, always returns `false` where `NCINE_HAS_NATIVE_AUDIO` is defined.
+		 */
+		inline bool GetModuleState(AudioModuleState& state) const {
+			return _audioStream.GetModuleState(state);
+		}
+		/**
+		 * @brief Jumps to a row of a position in the order list of a tracker module
+		 *
+		 * While playing, the jump is heard at once. Otherwise the module continues from there once it plays.
+		 *
+		 * @partialsupport Not every decoder supports it, has no effect where `NCINE_HAS_NATIVE_AUDIO` is defined.
+		 */
+		bool SetModulePosition(std::int32_t order, std::int32_t row);
+		/**
+		 * @brief Sets the ticks per row of a tracker module until the module changes them
+		 *
+		 * @partialsupport Not every decoder supports it, has no effect where `NCINE_HAS_NATIVE_AUDIO` is defined.
+		 */
+		inline bool SetModuleSpeed(std::int32_t speed) {
+			return _audioStream.SetModuleSpeed(speed);
+		}
+		/**
+		 * @brief Sets the tempo of a tracker module until the module changes it
+		 *
+		 * @partialsupport Not every decoder supports it, has no effect where `NCINE_HAS_NATIVE_AUDIO` is defined.
+		 */
+		inline bool SetModuleTempo(std::int32_t tempo) {
+			return _audioStream.SetModuleTempo(tempo);
+		}
+		/**
+		 * @brief Changes the volume of a channel of a tracker module gradually, @p volume is in `0.0` to `1.0`
+		 *
+		 * @partialsupport Not every decoder supports it, has no effect where `NCINE_HAS_NATIVE_AUDIO` is defined.
+		 */
+		inline bool SlideModuleChannelVolume(std::int32_t channel, float volume, std::int32_t milliseconds) {
+			return _audioStream.SlideModuleChannelVolume(channel, volume, milliseconds);
+		}
 
 		/** @brief Returns the static object type of this class */
 		inline static ObjectType sType() {

@@ -1716,7 +1716,7 @@ namespace nCine
 			if (measure) {
 				_profileStartTime = TimeStamp::now();
 			}
-			theServiceLocator().GetAudioDevice().updatePlayers();
+			theServiceLocator().GetAudioDevice().UpdatePlayers();
 			if (measure) {
 				_timings[(std::int32_t)Timings::Audio] = _profileStartTime.secondsSince();
 			}
@@ -2399,7 +2399,7 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		if (_appCfg.withAudio) {
 			IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
-			audioDevice.suspendDevice();
+			audioDevice.SuspendDevice();
 		}
 #endif
 
@@ -2414,7 +2414,7 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		if (_appCfg.withAudio) {
 			IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
-			audioDevice.resumeDevice();
+			audioDevice.ResumeDevice();
 		}
 #endif
 

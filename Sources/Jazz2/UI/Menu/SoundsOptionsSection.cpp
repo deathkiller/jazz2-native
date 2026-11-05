@@ -87,7 +87,7 @@ namespace Jazz2::UI::Menu
 				// `0` means the platform's default, which is whatever the device chose for itself
 				std::int32_t rate = (PreferencesCache::AudioSampleRate > 0
 					? PreferencesCache::AudioSampleRate
-					: theServiceLocator().GetAudioDevice().nativeFrequency());
+					: theServiceLocator().GetAudioDevice().GetNativeFrequency());
 				_sampleRateValue = format("{} Hz", rate);
 				return _sampleRateValue;
 			},
@@ -109,7 +109,7 @@ namespace Jazz2::UI::Menu
 				constexpr std::int32_t count = (std::int32_t)(sizeof(presets) / sizeof(presets[0]));
 				std::int32_t current = (PreferencesCache::AudioSampleRate > 0
 					? PreferencesCache::AudioSampleRate
-					: theServiceLocator().GetAudioDevice().nativeFrequency());
+					: theServiceLocator().GetAudioDevice().GetNativeFrequency());
 				std::int32_t index = count - 1;
 				for (std::int32_t i = 0; i < count; i++) {
 					if (current <= presets[i]) {
@@ -124,7 +124,7 @@ namespace Jazz2::UI::Menu
 					index = count - 1;
 				}
 				PreferencesCache::AudioSampleRate = presets[index];
-				theServiceLocator().GetAudioDevice().setMixingFrequency(presets[index]);
+				theServiceLocator().GetAudioDevice().SetMixingFrequency(presets[index]);
 				_sampleRateChanged = true;
 				_isDirty = true;
 			});

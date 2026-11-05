@@ -13,29 +13,11 @@ namespace nCine
 	/**
 		@brief PlayStation 3 implementation of @ref IAudioDevice on top of PSL1GHT's libaudio
 
-		The console has no mixer to talk to. Where the Dreamcast's AICA is a 64-voice wavetable part with
-		its own sound RAM and the Wii's DSP runs libogc's ASND, lv2 hands a title exactly one thing: a ring
-		of 256-sample blocks of interleaved 32-bit float samples, which the audio hardware scans out
-		verbatim. Everything above that - mixing, resampling, panning, looping, stream queues - is this
-		class, on the PPE.
-
-		<b>Two consequences shape the whole design.</b>
-
-		<em>Everything is mixed by hand into one output.</em> There is no per-source volume or pitch register to
-		program, so @ref setSourceGain() and friends only record a value that @ref MixInto() applies while
-		it walks the sources. That also means a source costs CPU only while it is audible, which is why
-		@ref MaxSources can be generous.
-
-		<em>There is no mixer thread.</em> PSL1GHT ships no pthreads (see the `NCINE_WITH_THREADS` arm in
-		`ncine_options.cmake`), so the ring cannot be topped up from a callback the way every other backend
-		does it - it is filled from @ref updatePlayers(), once per frame, on the main thread. That works
-		because the ring is deliberately long: @ref BlockCount blocks of 256 samples at 48 kHz is about
-		85 ms of audio, so a frame may take five times its 16.6 ms budget before the ring runs dry. What it
-		costs is latency, which for this game is not a meaningful trade.
-
-		Resampling is linear interpolation from the buffer's own rate to the port's 48 kHz. The PPE has the
-		headroom for it at these voice counts, and the alternative - resampling every asset offline to one
-		rate - would trade quality for memory the console does not need to save.
+		lv2 only provides a ring of 256-sample blocks of interleaved float samples, so mixing, linear
+		resampling to 48 kHz, panning and stream queues are all done here on the PPE, and source setters
+		like @ref SetSourceGain() only record values that @ref MixInto() applies. PSL1GHT has no pthreads,
+		so the ring is filled from @ref UpdatePlayers() once per frame and is long enough (@ref BlockCount)
+		to survive a late frame.
 	*/
 	class Ps3AudioDevice : public AudioDeviceBase
 	{
@@ -43,47 +25,47 @@ namespace nCine
 		Ps3AudioDevice();
 		~Ps3AudioDevice() override;
 
-		bool isValid() const override;
+		bool IsValid() const override;
 
-		const char* name() const override;
+		const char* GetName() const override;
 
-		void setGain(float gain) override;
+		void SetGain(float gain) override;
 
-		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
+		void UpdateListener(const Vector3f& position, const Vector3f& velocity) override;
 
-		std::int32_t nativeFrequency() override;
+		std::int32_t GetNativeFrequency() override;
 
-		std::uint32_t registerPlayer(IAudioPlayer* player) override;
-		void updatePlayers() override;
+		std::uint32_t RegisterPlayer(IAudioPlayer* player) override;
+		void UpdatePlayers() override;
 
-		std::uint32_t createBuffer(BufferUsage usage) override;
-		void deleteBuffer(std::uint32_t bufferId) override;
-		bool uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
+		std::uint32_t CreateBuffer(BufferUsage usage) override;
+		void DeleteBuffer(std::uint32_t bufferId) override;
+		bool UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
 
-		void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		void setSourceGain(std::uint32_t sourceId, float gain) override;
-		void setSourcePitch(std::uint32_t sourceId, float pitch) override;
-		void setSourceLooping(std::uint32_t sourceId, bool looping) override;
-		void setSourceRelative(std::uint32_t sourceId, bool relative) override;
-		void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
-		void setSourceLowPass(std::uint32_t sourceId, float value) override;
-		std::int32_t sourceSampleOffset(std::uint32_t sourceId) override;
-		void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
-		void playSource(std::uint32_t sourceId) override;
-		void pauseSource(std::uint32_t sourceId) override;
-		void stopSource(std::uint32_t sourceId) override;
-		bool isSourcePlaying(std::uint32_t sourceId) override;
+		void SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		void SetSourceGain(std::uint32_t sourceId, float gain) override;
+		void SetSourcePitch(std::uint32_t sourceId, float pitch) override;
+		void SetSourceLooping(std::uint32_t sourceId, bool looping) override;
+		void SetSourceRelative(std::uint32_t sourceId, bool relative) override;
+		void SetSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
+		void SetSourceLowPass(std::uint32_t sourceId, float value) override;
+		std::int32_t GetSourceSampleOffset(std::uint32_t sourceId) override;
+		void SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
+		void PlaySource(std::uint32_t sourceId) override;
+		void PauseSource(std::uint32_t sourceId) override;
+		void StopSource(std::uint32_t sourceId) override;
+		bool IsSourcePlaying(std::uint32_t sourceId) override;
 
-		void queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		std::int32_t numProcessedBuffers(std::uint32_t sourceId) override;
-		void unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
+		void QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		std::int32_t GetProcessedBufferCount(std::uint32_t sourceId) override;
+		void UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
 
-		void suspendDevice() override;
-		void resumeDevice() override;
+		void SuspendDevice() override;
+		void ResumeDevice() override;
 
 	protected:
-		void onBlockingOperationBegan() override;
-		void onBlockingOperationEnded() override;
+		void OnBlockingOperationBegan() override;
+		void OnBlockingOperationEnded() override;
 
 	private:
 		/** @brief Sources the mixer walks; a silent one costs nothing, so this is generous */
@@ -93,9 +75,7 @@ namespace nCine
 		/**
 			@brief Blocks the libaudio ring holds
 
-			The port accepts 8, 16 or 32. Sixteen is chosen for the reason given in the class
-			documentation: with no mixer thread the ring has to survive a late frame, and 16 blocks of 256
-			samples at 48 kHz is roughly 85 ms of slack.
+			The port accepts 8, 16 or 32; 16 blocks (about 85 ms) let the ring survive a late frame.
 		*/
 		static constexpr std::uint32_t BlockCount = 16;
 		/** @brief Samples in one block, fixed by the hardware */
@@ -132,16 +112,14 @@ namespace nCine
 			/**
 				@brief Playback cursor in frames, fractional because of the resampling
 
-				Kept as a double rather than a float: at 48 kHz a float's 24-bit mantissa starts losing
-				sub-sample precision after about six minutes of a single buffer, which a long music stream
-				would reach.
+				A double, because a float loses sub-sample precision after a few minutes of one buffer.
 			*/
 			double Cursor = 0.0;
 
 			/** @brief Buffers queued on a streaming source, oldest first */
 			std::uint32_t Queue[MaxQueuedBuffers] = {};
 			std::int32_t QueueCount = 0;
-			/** @brief Buffers played to the end, waiting to be collected by @ref unqueueBuffers() */
+			/** @brief Buffers played to the end, waiting to be collected by @ref UnqueueBuffers() */
 			std::uint32_t Processed[MaxQueuedBuffers] = {};
 			std::int32_t ProcessedCount = 0;
 		};
@@ -161,7 +139,7 @@ namespace nCine
 		/** @brief Scratch the frame's audio is accumulated into before it is written to the ring */
 		SmallVector<float, 0> _mixBuffer;
 
-		/** @brief Returns the source of an id handed out by @ref registerPlayer(), or `nullptr` */
+		/** @brief Returns the source of an id handed out by @ref RegisterPlayer(), or `nullptr` */
 		Source* GetSource(std::uint32_t sourceId);
 
 		/** @brief Fills every ring block the hardware has already played past */

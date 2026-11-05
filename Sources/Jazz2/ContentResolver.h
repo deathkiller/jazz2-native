@@ -238,7 +238,7 @@ namespace Jazz2
 
 			The two do more than bracket the mark-and-sweep of the resource cache: they also tell the audio
 			device that the thread feeding it is about to stop for longer than it queues ahead (see
-			@relativeref{nCine,IAudioDevice::beginBlockingOperation()}). A load that gives up half way - a
+			@relativeref{nCine,IAudioDevice::BeginBlockingOperation()}). A load that gives up half way - a
 			missing or corrupt level, which the game otherwise handles by returning to the menu - used to
 			leave that unpaired, and on the PlayStation 2 the sound module stays closed once stopped, so the
 			console went silent for the rest of the session. Held in a scope, every exit path ends the load.

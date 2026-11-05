@@ -376,8 +376,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns how many double jumps the player made in the air
 			 *
-			 * Counted since the last jump from the ground, currently either 0 or 1. Assigning 0 allows another double
-			 * jump, any other value uses it up.
+			 * Counted since the player last stood on the ground. Once it reaches @ref jjCHARACTER::doubleJumpCountMax of the
+			 * character, no other double jump is allowed until then.
 			 */
 			std::int32_t get_doubleJumpCount() const;
 			/** @brief Sets how many double jumps the player made in the air */
@@ -1202,7 +1202,7 @@ namespace Jazz2::Scripting
 		 * @brief Character profile
 		 *
 		 * Movement and ability settings shared by every player using one character, reached through @ref jjCharacters.
-		 * Currently every character returns the same placeholder profile and none of its properties have any effect.
+		 * Changes last until the level ends. A set that isn't a character gives a copy that changes nothing.
 		 */
 		class jjCHARACTER
 		{
@@ -1210,73 +1210,81 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief What the character does when jump is pressed in the air
 			 *
-			 * An @ref AIR::Jump value.
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * An @ref AIR::Jump value, @ref AIR::HELICOPTER for Jazz and Lori, @ref AIR::DOUBLEJUMP for Spaz and
+			 * @ref AIR::NONE for the others.
+			 * @partialsupport It has no effect on the frog and the birds.
 			 */
 			int airJump;
 			/**
 			 * @brief What the character does when jump is pressed while crouching
 			 *
-			 * A @ref GROUND::Jump value.
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * A @ref GROUND::Jump value, the move of the character itself for Jazz, Spaz and Lori and
+			 * @ref GROUND::CROUCH for the others.
+			 * @partialsupport It has no effect on the frog and the birds. A move of another character is drawn
+			 * with the animations of the player's own move, and the kick of Lori keeps the timing of the player's
+			 * character.
 			 */
 			int groundJump;
 			/**
 			 * @brief Most jumps the character can make in the air
 			 *
-			 * Applies when airJump is @ref AIR::DOUBLEJUMP.
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * Applies when airJump is @ref AIR::DOUBLEJUMP, 1 for Spaz and 0 for the others by default. A press needs
+			 * the jump key to have been up for 5 ticks, so tapping faster doesn't double jump.
 			 */
 			int doubleJumpCountMax;
 			/**
 			 * @brief Horizontal speed gained by a double jump
 			 *
-			 * Relative to the direction the player faces, negative values push backwards.
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * Relative to the direction the player faces, negative values push backwards. 0 by default, which stops
+			 * the player. No faster than the walking speed, or the running speed while running.
 			 */
 			float doubleJumpXSpeed;
 			/**
 			 * @brief Vertical speed gained by a double jump
 			 *
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * -8 for Spaz and 0 for the others by default, negative values go up. The player rises no faster than
+			 * 8 pixels per tick, the rest of the speed only makes the rise last longer.
 			 */
 			float doubleJumpYSpeed;
 			/**
 			 * @brief Longest time the character can use helicopter ears
 			 *
-			 * Applies when airJump is @ref AIR::HELICOPTER.
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * In ticks, counted since the player last stood on the ground. Applies when airJump is
+			 * @ref AIR::HELICOPTER, 9999999 (no limit) by default.
 			 */
 			int helicopterDurationMax;
 			/**
 			 * @brief Horizontal speed while using helicopter ears
 			 *
-			 * Relative to the direction the player faces, negative values push backwards.
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * Relative to the direction the player faces, negative values push backwards. 0 by default. The speed
+			 * changes towards it by a 32nd of it each tick, the direction keys only turn the player around, and it's
+			 * no faster than the walking speed, or the running speed while running.
 			 */
 			float helicopterXSpeed;
 			/**
 			 * @brief Vertical speed while using helicopter ears
 			 *
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * 1 by default, 0 keeps the height. The fall speeds up towards it by a 128th of it each tick. Negative
+			 * values stop a fall and then go up only while the jump key is held, slowly, so tapping it mostly hovers.
 			 */
 			float helicopterYSpeed;
 			/**
-			 * @brief Whether the character's special moves cause damage
+			 * @brief Whether the attack of the bird hurts enemies
 			 *
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * `false` by default.
 			 */
 			bool canHurt;
 			/**
 			 * @brief Whether the character can run
 			 *
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * `true` by default. Without it, the run key does nothing and the player can't run in place.
 			 */
 			bool canRun;
 			/**
 			 * @brief Whether morph monitors can turn a player into the character
 			 *
-			 * @partialsupport Currently reads 0 or false, not the default of the character, and has no effect.
+			 * `true` by default for Jazz, Spaz and Lori. A monitor skips a character without it and continues
+			 * with the next one of its cycle.
 			 */
 			bool morphBoxCycle;
 		};

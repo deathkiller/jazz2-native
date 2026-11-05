@@ -156,6 +156,16 @@ namespace Jazz2
 			return false;
 		}
 
+		/** @brief Returns the abilities of a character, the default returns @ref CharacterProfile::GetDefault() */
+		virtual CharacterProfile GetCharacterProfile(PlayerType type) const {
+			return CharacterProfile::GetDefault(type);
+		}
+
+		/** @brief Returns `true` if a bonus warp turns the remaining coins of a player into gems */
+		virtual bool WarpsTransmuteCoins() const {
+			return true;
+		}
+
 		/** @brief Returns default ambient light intensity */
 		virtual float GetDefaultAmbientLight() const = 0;
 		/** @brief Returns current ambient light intensity */

@@ -539,7 +539,7 @@ namespace Jazz2::Actors
 
 	protected:
 		/** @brief State of level exiting */
-		enum class LevelExitingState {
+		enum class LevelExitingState : std::uint8_t {
 			None,				/**< Not exiting */
 			Waiting,			/**< Waiting before exiting */
 			WaitingForWarp,		/**< Waiting for a warp to complete */
@@ -548,13 +548,22 @@ namespace Jazz2::Actors
 		};
 
 		/** @brief State of HUD weapon wheel */
-		enum class WeaponWheelState {
+		enum class WeaponWheelState : std::uint8_t {
 			Hidden,				/**< Hidden */
 			Opening,			/**< Opening */
 			Visible,			/**< Visible */
 			Closing				/**< Closing */
 		};
-		
+
+		/** @brief Phase of the chain of poses a player sliding to a halt goes through */
+		enum class StopPhase : std::uint8_t {
+			None,				/**< Not sliding to a halt - moving under the player's own steering, or not on the ground at all */
+			Skid,				/**< `walk_stop`, played once for its own 12 ticks however fast the player was going */
+			Slide,				/**< `dash_stop`, looping until the speed falls below @ref StopSettleSpeed */
+			Settle,				/**< `run_stop`, played once and followed by standing, even after the player has stopped */
+			Hold				/**< The skid held on its last frame, for a slide too slow to have reached @ref StopPhase::Slide */
+		};
+
 		/** @brief Reason the current weapon was changed */
 		enum class SetCurrentWeaponReason {
 			Unknown,			/**< Unspecified */
@@ -1044,6 +1053,54 @@ namespace Jazz2::Actors
 		 */
 		static constexpr float LegacyCopterWindUp = (1.0f / 128.0f) * LegacyFrameRateScaleSqr;
 		/**
+		 * @brief Rate copter ears set to rise brake a fall at, before the rise begins (original 3/8 px/tick²)
+		 *
+		 * Measured in JJ2+ with a negative @ref CharacterProfile::CopterSpeedY of -1 and -0.5 alike: a fall of 1.875
+		 * goes 1.5, 1.125, 0.75, 0.375, 0. The rise then winds up at @ref LegacyCopterWindUp times the speed only
+		 * while Jump is held, a released key starts it again from zero, so tapping hovers rather than climbs.
+		 */
+		static constexpr float LegacyCopterAscentBrake = (3.0f / 8.0f) * LegacyFrameRateScaleSqr;
+		/**
+		 * @brief How long Jump has to be up before a press can double jump (original 5 ticks)
+		 *
+		 * Measured in JJ2+ with a press refused at the apex followed by another: 4 ticks of the key up refuse the
+		 * second press too, 5 let it through, and `sp_dj_d05` double jumps 5 ticks after letting go. Tapping faster
+		 * therefore never double jumps, whatever @ref CharacterProfile::DoubleJumpCountMax allows.
+		 */
+		static constexpr float LegacyDoubleJumpKeyUpTime = 4.5f / LegacyFrameRateScale;
+		/**
+		 * @brief Wind-up of the uppercut and the sidekick, in seconds (original 14 ticks from the press to the launch)
+		 *
+		 * The same for both moves and every character in the original (`sp_jazz_upper`, `sp_spaz_side` and Jazz with
+		 * Spaz's kick all launch on the 15th tick). The transitions of both characters last 0.25 s, which launched
+		 * them 3 ticks late, so they are played to fit this instead.
+		 */
+		static constexpr float LegacyGroundMoveWindUp = 14.5f / LegacyTickRate;
+		/**
+		 * @brief How close a floor has to be for copter ears moving sideways to drop onto it (original 8 px)
+		 *
+		 * Measured in JJ2+ with the walk speed, 4, -2 and 8 of @ref CharacterProfile::CopterSpeedX and on
+		 * `sp_jazz_copter_fwd`: the player falls 7.6 px onto the floor in one tick, 8 ticks before this engine used to
+		 * land, and from 8.6 px it doesn't yet. Not without a horizontal speed (`sp_jazz_copter`).
+		 */
+		static constexpr float LegacyCopterFloorSnap = 8.0f;
+		/**
+		 * @brief How long a press keeps copter ears going (original 70 ticks)
+		 *
+		 * Measured in JJ2+: `jjPLAYER::helicopter` reads 69 on the tick after a press. This was 70 frames, which is 82
+		 * ticks, so ears left alone flew 12 ticks too long - seen only where nothing taps them, such as a carried flight.
+		 */
+		static constexpr float LegacyCopterFlightTime = 70.0f / LegacyFrameRateScale;
+		/**
+		 * @brief How long copter ears outlive a landing they dropped onto, so a jump right after keeps them (original 2 ticks)
+		 *
+		 * Measured in JJ2+: an ordinary landing clears the counter at once, one by @ref LegacyCopterFloorSnap only on
+		 * the second tick after, and a jump on that tick still comes first. It carries the rest of the counter into the
+		 * air, the ears take over by themselves once the player falls, and presses don't top it up again - the second
+		 * flight of `sp_jazz_copter_fwd`. Longer here by the half tick the timers run ahead of the jump in a frame.
+		 */
+		static constexpr float LegacyCopterLandGrace = 3.5f / LegacyFrameRateScale;
+		/**
 		 * @brief Non-Reforged launch speed of Spaz's double jump (original 8 px/tick)
 		 *
 		 * A straight speed assignment, like the ordinary jump and unlike the engine's old model of a small
@@ -1292,6 +1349,19 @@ namespace Jazz2::Actors
 		static constexpr float LegacyHPoleLaunchBonus = 8.0f * LegacyFrameRateScale;
 		/** @brief Ceiling on the non-Reforged horizontal pole launch (original 20 px/tick) */
 		static constexpr float LegacyHPoleMaxLaunch = 20.0f * LegacyFrameRateScale;
+		/** @brief How long the horizontal pole's launch carries the player (original 70 ticks) */
+		static constexpr float HPoleKeepRunningTime = 60.0f;
+		/** @brief How long a pole's launch takes control away from the player */
+		static constexpr float PoleLaunchControlTimeout = 4.0f;
+		/**
+		 * @brief How long the non-Reforged horizontal pole refuses the crouch after its launch (original 35 ticks)
+		 *
+		 * The pole's exit animation, and the crouch comes the tick after it ends at any speed. Measured from
+		 * hand-played recordings with Down held through the launch, three times alike: twice off a run-in-place
+		 * launched into the pole and once off a plain run. Waiting for the rest of a run-in-place carry would
+		 * be wrong, the pole ends that carry.
+		 */
+		static constexpr float LegacyHPoleCrouchBlockTime = 35.0f / LegacyFrameRateScale;
 		/**
 		 * @brief Speed a non-Reforged float-up area holds the player at (original 8 px/tick)
 		 *
@@ -1454,14 +1524,85 @@ namespace Jazz2::Actors
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
 		//
-		// Ordered widest first - pointers, then four-byte values, then the enums, then the flags - rather than
-		// grouped by what they mean. The flags in particular were scattered through the four-byte members in
-		// about a dozen short runs, and each run cost up to three bytes of padding to re-align whatever
-		// followed it. Keep new members in the right band; a `bool` dropped in among the floats is free to
-		// write and costs four bytes.
-		ActorBase* _carryingObject;
+		// Ordered widest first - pointers, then four-byte values, then the narrow ones, then the flags - rather than
+		// grouped by what they mean. The flags are one-bit fields, so they must stay together at the end and are
+		// initialized in the constructor, C++17 has no default member initializers for bit-fields. Keep new members
+		// in the right band; a `bool` dropped in among the floats is free to write and costs four bytes.
 
-		std::int32_t _playerIndex;
+		// State of the run-in-place wind-up, reset as a whole
+		struct RevUpState {
+			// What the accumulator currently holds, and how much the press being held has already contributed (so it
+			// can be capped)
+			float Charge = 0.0f;
+			float HeldCharge = 0.0f;
+			// How much of the tap window is left
+			float WindowLeft = 0.0f;
+			// How long it has been wound up, which is what scales the pose's speed
+			float ChargeTime = 0.0f;
+			// The end animation's own countdown
+			float EndLeft = 0.0f;
+			// A light launch's wait, with the speed it will move off at
+			float LaunchLeft = 0.0f;
+			float PendingSpeed = 0.0f;
+			// Until a Run press may restart the wind-up sound again, one cycle of the pose at its current speed
+			float SfxCooldown = 0.0f;
+			// Pitch the next wind-up sound plays at, see RevUpSfxPitchStep
+			float SfxPitch = RevUpSfxMinPitch;
+			// How many presses have landed
+			std::int32_t Presses = 0;
+			// Past the lower threshold: enough to launch when the tapping stops, but not enough to show the wind-up
+			// pose. Both latch, so the charge decaying back below a threshold does not undo the state it reached -
+			// that decay is the grace in which a further tap resumes the wind-up.
+			bool Armed = false;
+			bool Wound = false;
+			// Whether the one-shot start transition has already played for this wind-up. A flag rather than a check
+			// on the current animation, because the looping pose is re-decided every frame and would re-trigger it.
+			bool Started = false;
+		};
+
+		// Rebuilds the recolor palette in the player's palette slot and selects it on the renderer
+		void RefreshColorPalette();
+		// Releases the player's palette offset back to the shared pool (if any)
+		void ReleasePaletteOffset();
+
+		ActorBase* _carryingObject = nullptr;
+		std::shared_ptr<Environment::Bird> _spawnedBird;
+		std::shared_ptr<ActorBase> _activeModifierDecor;
+		// The enemy the first bird's beak charge hit last, see _birdChargeHitCooldown
+		std::weak_ptr<ActorBase> _birdChargeLastHit;
+		SmallVector<LightEmitter, 0> _trail;
+		std::unique_ptr<RenderCommand> _weaponFlareCommand;
+		std::unique_ptr<RenderCommand> _shieldRenderCommands[2];
+#if defined(WITH_AUDIO)
+		std::shared_ptr<AudioBufferPlayer> _copterSound;
+		std::shared_ptr<AudioBufferPlayer> _airboardSound;
+		std::shared_ptr<AudioBufferPlayer> _airboardTurnSound;
+		std::shared_ptr<AudioBufferPlayer> _revUpSound;
+		std::shared_ptr<AudioBufferPlayer> _weaponSound;
+#endif
+
+		InventoryState _inventory = {};
+		InventoryState _inventoryCheckpoint = {};
+		// Refreshed every frame and on morph, see RefreshCharacterProfile()
+		CharacterProfile _characterProfile = CharacterProfile::GetDefault(PlayerType::None);
+		RevUpState _revUp;
+		Vector2f _checkpointPos;
+		Vector2f _trailLastPos;
+		Vector2i _lastPolePos;
+		// Tile of the script callback event last called, it's called again only after the player leaves the tile
+		Vector2i _lastCallbackTile = Vector2i(INT32_MIN, INT32_MIN);
+
+		std::int32_t _playerIndex = 0;
+		std::int32_t _lives = 0, _score = 0;
+		std::int32_t _gemsTotal[4] = {};
+		// Per-player recoloring: packed 4-byte fur color (one section per byte) and the allocated palette offset into
+		// the shared palette texture (-1 = none). The renderer samples this palette via a per-instance offset.
+		std::uint32_t _furColor;
+		std::int32_t _paletteOffset = -1;
+		std::int32_t _inShallowWater = -1;
+		// Double jumps taken in this airtime, see CharacterProfile::DoubleJumpCountMax
+		std::int32_t _doubleJumpCount = 0;
+
 		// `_speed.Y` as it stood at the start of the frame, before this frame's gravity. The non-Reforged
 		// double-jump window is tested against this rather than the live value, because that is what the
 		// original tests: its gravity lands after the check, so a press at the exact apex reads 0.0000 and
@@ -1485,60 +1626,14 @@ namespace Jazz2::Actors
 		float _tubeHeldSpeedY = 0.0f;
 		// Frames the speed can be held for at most, a ceiling it never gets past mustn't keep the player for good
 		float _tubeHeldTimeLeft = 0.0f;
-		float _controllableTimeout;
-		// The run-in-place wind-up accumulator: what it currently holds, how much the press being held has
-		// already contributed (so it can be capped), how many presses have landed, how much of the tap window
-		// is left, how long it has been wound up - which is what scales the pose's speed - the spark timer,
-		// the end animation's own countdown, and a light launch's wait with the speed it will move off at.
-		float _revUpCharge;
-		float _revUpHeldCharge;
-		std::int32_t _revUpPresses;
-		float _revUpWindowLeft;
-		float _revUpChargeTime;
-		float _revUpSparkCooldown;
-		float _revUpEndLeft;
-		// Where the stopping chain has got to, so a pose is issued once rather than restarted every frame
-		std::int32_t _stopPhase;
+		float _controllableTimeout = 0.0f;
+		// The rev-up spark timer, outside RevUpState because it carries over from one wind-up to the next
+		float _revUpSparkCooldown = 0.0f;
 		// How far into the vine's 140-tick idle cycle the player is, see LegacyHookIdleCycle
-		float _hookIdleTime;
-		float _revUpLaunchLeft;
-		float _revUpPendingSpeed;
-		// Until a Run press may restart the wind-up sound again, one cycle of the pose at its current speed
-		float _revUpSfxCooldown;
-		// Pitch the next wind-up sound plays at, see RevUpSfxPitchStep
-		float _revUpSfxPitch;
-		float _copterFramesLeft, _fireFramesLeft, _pushFramesLeft, _waterCooldownLeft;
-		std::int32_t _inShallowWater;
-		float _externalForceCooldown;
-		float _springCooldown;
-		// Per-player recoloring: packed 4-byte fur color (one section per byte) and the allocated palette offset into
-		// the shared palette texture (-1 = none). The renderer samples this palette via a per-instance offset.
-		std::uint32_t _furColor;
-		std::int32_t _paletteOffset;
-
-		ExitType _lastExitType;
-		PlayerType _playerType, _playerTypeOriginal;
-		// Player type at the last checkpoint, restored when the player respawns there
-		PlayerType _checkpointPlayerType;
-		// The character a temporary form (the frog or a bird) was taken from, see IsTemporaryForm(); kept equal to the
-		// current type otherwise
-		PlayerType _playerTypeBeforeMorph;
-		SpecialMoveType _currentSpecialMove;
-		LevelExitingState _levelExiting;
-		Modifier _activeModifier;
-
-		bool _isActivelyPushing, _wasActivelyPushing;
-		// Whether an accelerating belt was carrying the player last frame. Leaving one clamps the speed to
-		// the walk cap, the same way leaving a sucker tube does, so the transition has to be noticed.
-		bool _wasOnAccBelt = false;
-		// `true` only for the physics step in which the player is actually in contact with a wall or pushable object
-		// (set in OnHitWall / OnPushSolidObject, cleared at the start of each PushSolidObjects). Lets the push animation
-		// tell genuine pushing from the lingering grace timer (_pushFramesLeft).
-		bool _pushContactThisFrame;
-		// `true` only for the physics step in which a *sidekick* pushed a solid object. Narrower than
-		// `_pushContactThisFrame`, which a plain wall also raises: a blocked kick has to be billed for the
-		// distance it meant to cover rather than the crawl it manages, and a kick into a wall does not.
-		bool _kickPushedThisFrame = false;
+		float _hookIdleTime = 0.0f;
+		float _copterFramesLeft = 0.0f, _fireFramesLeft = 0.0f, _pushFramesLeft = 0.0f, _waterCooldownLeft = 0.0f;
+		float _externalForceCooldown = 0.0f;
+		float _springCooldown = 0.0f;
 		// Speed a horizontal spring launched the player at, kept so a double jump that discards it knows how
 		// fast to rebuild it; 0 when the speed did not come from a spring. See LegacySpringRebuildTicks.
 		float _springLaunchSpeedX = 0.0f;
@@ -1547,132 +1642,51 @@ namespace Jazz2::Actors
 		// Frames left of a horizontal spring launch's held speed; on reaching zero the speed clamps to the
 		// ordinary carry exit. See LegacySpringHoldTicks.
 		float _springHoldLeft = 0.0f;
-		// Whether a kick was pushing on the previous step, so the step it stops on can be recognised and the
-		// object told to stop with it rather than coasting on - see SolidObjectBase::StopPushing()
-		bool _kickWasPushing = false;
-		bool _controllable;
-		bool _controllableExternal;
-		bool _wasUpPressed, _wasDownPressed, _wasJumpPressed, _wasFirePressed, _isRunPressed;
-		// Whether `_isRunPressed` has been seeded from the live key state yet, for `ToggleRunAction`. A Run key
-		// already held when a level starts produces no rising edge inside it, so the toggle would stay off
-		// until the key was released and hit again - see Player::OnHandleMovement().
-		bool _runActionSeeded;
-		// Fire has been let go of since the player froze, only then does holding it chip the ice away
-		bool _fireReleasedWhileFrozen = false;
-		// Past the lower threshold: enough to launch when the tapping stops, but not enough to show the wind-up
-		// pose. Both latch, so the charge decaying back below a threshold does not undo the state it reached -
-		// that decay is the grace in which a further tap resumes the wind-up.
-		bool _revUpArmed;
-		bool _revUpWound;
-		// Whether the one-shot start transition has already played for this wind-up. A flag rather than a check
-		// on the current animation, because the looping pose is re-decided every frame and would re-trigger it.
-		bool _revUpStarted;
-		// Whether a wind-up sound was started and is still the player's to stop - not after a launch, which lets
-		// it play out. Kept apart from `_revUpSound`, which a dedicated server never has but must still stop.
-		bool _revUpSfxActive;
-		bool _isAttachedToPole, _canPushFurther;
-		bool _isFreefall, _inWater, _isLifting, _isSpring;
-		bool _flyCheatActive;
-		bool _inIdleTransition, _inLedgeTransition;
-		// Set while the stopping chain is swapping one pose for the next: SetTransition() runs the outgoing
-		// transition's callback first, which would otherwise read as the outgoing pose having run out
-		bool _stopPhaseChanging;
-		// Whether the vine's idle flourish is the transition currently playing, so its finish callback knows
-		// to start it again and nothing else has to guess what the transition is
-		bool _inHookIdleFlavor;
-		bool _canDoubleJump;
-		// Whether the ascent under way is one a *jump* launched, as opposed to a spring, a pole, an enemy
-		// bounce or an RF blast. Only those rises let a fresh press take the heavier rise gravity back off
-		// again; every other source has its own answer and holds it whatever the key does. See HandleJump().
-		bool _riseOwnedByJump = false;
+		// Frames left of a landed copter's counter, see LegacyCopterLandGrace and `_copterCarried`
+		float _copterLandGraceLeft = 0.0f;
+		// Frames Jump has been up, read by the press that ends it before it is reset, see LegacyDoubleJumpKeyUpTime
+		float _jumpUpTime = 1000.0f;
+		// Frames of copter flight in this airtime, see CharacterProfile::CopterDurationMax
+		float _copterAirTime = 0.0f;
 		// How long the copter is deaf for, re-armed in Player::HandleJump() on every airborne tick the jump
 		// key is down - so a press inside the window pushes it out rather than merely being refused. This is
 		// the whole of what refuses the copter after an early press; see @ref LegacyCopterEngageMaxSpeed.
 		// Deliberately not `_jumpTime`, which also gates the double jump, and the original does not.
 		float _copterDeafLeft = 0.0f;
-		// Whether *this* press fell outside that window, read by the copter branch of HandleSpecialJump().
-		// Taken before the window is re-armed, or a press would always be refused by the one it just opened.
-		bool _copterPressAllowed = true;
 		// Ticks until Lori's kick repeats, start to start; 0 when no kick is pending. See LegacyLoriKickPeriod.
 		float _loriKickRepeatLeft = 0.0f;
-		// Whether the kick under way has already spent its one shot. Her kick allows exactly one, taken at the
-		// first opportunity, which is the reported "shooting is partially blocked during the end of her kick" -
-		// see the gate in Player::HandleWeaponFire() for the four scenarios that establish it.
-		bool _loriKickShotUsed = false;
-		// Whether this player is currently standing on top of another player (local splitscreen co-op stacking, and
-		// online stacking when this is an `MpPlayer`); guards cancelling the carry so a real solid object is untouched
-		bool _stackCarrying;
-		// Whether another player is standing on top of this one without immobilizing it - drives the lift animation
-		// cosmetically (online; local co-op uses `_isLifting` instead so movement is restricted, like a solid object)
-		bool _beingStoodOn;
-
-		// Rebuilds the recolor palette in the player's palette slot and selects it on the renderer
-		void RefreshColorPalette();
-		// Releases the player's palette offset back to the shared pool (if any)
-		void ReleasePaletteOffset();
-#if defined(WITH_AUDIO)
-		std::shared_ptr<AudioBufferPlayer> _copterSound;
-		std::shared_ptr<AudioBufferPlayer> _airboardSound;
-		std::shared_ptr<AudioBufferPlayer> _airboardTurnSound;
-		std::shared_ptr<AudioBufferPlayer> _revUpSound;
-#endif
-
-		std::int32_t _lives, _score;
-		InventoryState _inventory;
-		InventoryState _inventoryCheckpoint;
-		Vector2f _checkpointPos;
-		float _checkpointLight;
+		float _checkpointLight = 1.0f;
 		// Ambient light currently applied to this player. Mirrors the assigned viewport, but is tracked on the actor
 		// itself so it's also known where no viewport exists - a dedicated server, or a server-side shadow of a
 		// remote player. That's what makes a checkpoint able to remember the light it was activated in.
-		float _currentAmbientLight;
-
-		float _sugarRushLeft, _sugarRushStarsTime;
-		float _shieldSpawnTime;
-		std::int32_t _gemsTotal[4];
-		std::int32_t _gemsPitch;
-		float _gemsTimer;
-		float _bonusWarpTimer;
-
-		// Same ordering as the block above: the wide members first and the flags last
-		std::shared_ptr<Environment::Bird> _spawnedBird;
-		std::shared_ptr<ActorBase> _activeModifierDecor;
-		SmallVector<LightEmitter, 0> _trail;
-		std::unique_ptr<RenderCommand> _weaponFlareCommand;
-		std::unique_ptr<RenderCommand> _shieldRenderCommands[2];
-#if defined(WITH_AUDIO)
-		std::shared_ptr<AudioBufferPlayer> _weaponSound;
-#endif
-		// The enemy the first bird's beak charge hit last, see _birdChargeHitCooldown
-		std::weak_ptr<ActorBase> _birdChargeLastHit;
-
-		Vector2i _lastPolePos;
-		Vector2f _trailLastPos;
-		float _suspendTime;
-		float _invulnerableTime;
-		float _invulnerableBlinkTime;
-		float _jumpTime;
-		float _idleTime;
-		float _hitFloorTime;
-		float _keepRunningTime;
+		float _currentAmbientLight = 1.0f;
+		float _sugarRushLeft = 0.0f, _sugarRushStarsTime = 0.0f;
+		float _shieldSpawnTime = ShieldDisabled;
+		float _gemsTimer = 0.0f;
+		float _bonusWarpTimer = 0.0f;
+		float _suspendTime = 0.0f;
+		float _invulnerableTime = 0.0f;
+		float _invulnerableBlinkTime = 0.0f;
+		float _jumpTime = 0.0f;
+		float _idleTime = 0.0f;
+		float _hitFloorTime = 5.0f;
+		float _keepRunningTime = 0.0f;
 		/** @brief Ticks the non-Reforged dash state still has left after Run was let go (see @ref LegacyDashGraceTicks) */
-		float _dashGraceLeft;
+		float _dashGraceLeft = 0.0f;
 		/** @brief Pixels of travel a non-Reforged sidekick still has; counting distance rather than time makes it exact whatever the frame rate (see @ref CheckEndOfSpecialMoves()) */
-		float _sidekickDistanceLeft;
+		float _sidekickDistanceLeft = 0.0f;
 		/** @brief Ticks elapsed in the current non-Reforged sidekick, for Lori's quadratic ramp (see @ref LegacyLoriKickRamp) */
-		float _sidekickTime;
+		float _sidekickTime = 0.0f;
 		/** @brief Ticks an RF blast still holds the horizontal speed for, with friction and input ignored (see @ref LegacyRFBlastHoldTicks) */
-		float _rfBlastLeft;
+		float _rfBlastLeft = 0.0f;
 		/** @brief Ticks a non-Reforged uppercut still drives for, during which gravity is almost off (see @ref LegacyUppercutGravity) */
-		float _uppercutTimeLeft;
-		float _lastPoleTime;
-		float _inTubeTime;
-		float _dizzyTime;
-		float _activeShieldTime;
-		float _weaponFlareTime;
-		std::int32_t _weaponFlareFrame;
-		float _weaponCooldown;
-
+		float _uppercutTimeLeft = 0.0f;
+		float _lastPoleTime = 0.0f;
+		float _inTubeTime = 0.0f;
+		float _dizzyTime = 0.0f;
+		float _activeShieldTime = 0.0f;
+		float _weaponFlareTime = 0.0f;
+		float _weaponCooldown = 0.0f;
 		// The acceleration a bird steers with, which a held direction winds towards BirdAcceleration a step per tick
 		// and letting go zeroes - see HandleBirdMovement()
 		float _birdAccelX = 0.0f;
@@ -1683,19 +1697,92 @@ namespace Jazz2::Actors
 		// How long until the enemy the beak charge hit last can be hit again, see BirdChargeHitInterval
 		float _birdChargeHitCooldown = 0.0f;
 
-		SuspendType _suspendType;
-		ShieldType _activeShield;
-		WeaponType _currentWeapon;
+		std::uint16_t _weaponFlareFrame = 0;
+
+		ExitType _lastExitType = ExitType::None;
+		PlayerType _playerType = PlayerType::Jazz, _playerTypeOriginal = PlayerType::Jazz;
+		// Player type at the last checkpoint, restored when the player respawns there
+		PlayerType _checkpointPlayerType = PlayerType::Jazz;
+		// The character a temporary form (the frog or a bird) was taken from, see IsTemporaryForm(); kept equal to the
+		// current type otherwise
+		PlayerType _playerTypeBeforeMorph = PlayerType::Jazz;
+		SpecialMoveType _currentSpecialMove = SpecialMoveType::None;
+		LevelExitingState _levelExiting = LevelExitingState::None;
+		Modifier _activeModifier = Modifier::None;
+		SuspendType _suspendType = SuspendType::None;
+		ShieldType _activeShield = ShieldType::None;
+		WeaponType _currentWeapon = WeaponType::Blaster;
 		// Continuous weapon whose looping sound is playing, here and on the peers, or WeaponType::Unknown. Kept apart
 		// from `_weaponSound`, which a dedicated server never has but must still stop.
-		WeaponType _weaponSoundType;
-		WeaponWheelState _weaponWheelState;
+		WeaponType _weaponSoundType = WeaponType::Unknown;
+		WeaponWheelState _weaponWheelState = WeaponWheelState::Hidden;
+		// Where the stopping chain has got to, so a pose is issued once rather than restarted every frame
+		StopPhase _stopPhase = StopPhase::None;
+		// Steps through the gem pickup pitch cycle, back to 0 once no gem was picked up for a while
+		std::uint8_t _gemsPitch = 0;
 		// Which perched pose is on screen, an index into the table in UpdateBirdPerchPose(), or 0 for none yet
 		std::uint8_t _birdPose = 0;
 		// Which way the first bird's beak charge flies vertically, -1 up, 1 down or 0 level. Decided along with the charge
 		// at the end of a frame and carried out at the start of the next one (see HandleBirdMovement()).
 		std::int8_t _birdChargeDirY = 0;
 
+		bool _isActivelyPushing : 1, _wasActivelyPushing : 1;
+		// Whether an accelerating belt was carrying the player last frame. Leaving one clamps the speed to
+		// the walk cap, the same way leaving a sucker tube does, so the transition has to be noticed.
+		bool _wasOnAccBelt : 1;
+		// `true` only for the physics step in which the player is actually in contact with a wall or pushable object
+		// (set in OnHitWall / OnPushSolidObject, cleared at the start of each PushSolidObjects). Lets the push animation
+		// tell genuine pushing from the lingering grace timer (_pushFramesLeft).
+		bool _pushContactThisFrame : 1;
+		// `true` only for the physics step in which a *sidekick* pushed a solid object. Narrower than
+		// `_pushContactThisFrame`, which a plain wall also raises: a blocked kick has to be billed for the
+		// distance it meant to cover rather than the crawl it manages, and a kick into a wall does not.
+		bool _kickPushedThisFrame : 1;
+		// Whether a kick was pushing on the previous step, so the step it stops on can be recognised and the
+		// object told to stop with it rather than coasting on - see SolidObjectBase::StopPushing()
+		bool _kickWasPushing : 1;
+		bool _controllable : 1;
+		bool _controllableExternal : 1;
+		bool _wasUpPressed : 1, _wasDownPressed : 1, _wasJumpPressed : 1, _wasFirePressed : 1, _isRunPressed : 1;
+		// Whether `_isRunPressed` has been seeded from the live key state yet, for `ToggleRunAction`. A Run key
+		// already held when a level starts produces no rising edge inside it, so the toggle would stay off
+		// until the key was released and hit again - see Player::OnHandleMovement().
+		bool _runActionSeeded : 1;
+		// Fire has been let go of since the player froze, only then does holding it chip the ice away
+		bool _fireReleasedWhileFrozen : 1;
+		// Whether a wind-up sound was started and is still the player's to stop - not after a launch, which lets
+		// it play out. Kept apart from `_revUpSound`, which a dedicated server never has but must still stop.
+		bool _revUpSfxActive : 1;
+		bool _isAttachedToPole : 1, _canPushFurther : 1;
+		bool _isFreefall : 1, _inWater : 1, _isLifting : 1, _isSpring : 1;
+		bool _flyCheatActive : 1;
+		bool _inIdleTransition : 1, _inLedgeTransition : 1;
+		// Set while the stopping chain is swapping one pose for the next: SetTransition() runs the outgoing
+		// transition's callback first, which would otherwise read as the outgoing pose having run out
+		bool _stopPhaseChanging : 1;
+		// Whether the vine's idle flourish is the transition currently playing, so its finish callback knows
+		// to start it again and nothing else has to guess what the transition is
+		bool _inHookIdleFlavor : 1;
+		// Whether a jump carried the landed copter's counter into the air, see `_copterLandGraceLeft`
+		bool _copterCarried : 1;
+		// Whether the ascent under way is one a *jump* launched, as opposed to a spring, a pole, an enemy
+		// bounce or an RF blast. Only those rises let a fresh press take the heavier rise gravity back off
+		// again; every other source has its own answer and holds it whatever the key does. See HandleJump().
+		bool _riseOwnedByJump : 1;
+		// Whether *this* press fell outside the copter's deaf window, read by the copter branch of
+		// HandleSpecialJump(). Taken before the window is re-armed, or a press would always be refused by the
+		// one it just opened.
+		bool _copterPressAllowed : 1;
+		// Whether the kick under way has already spent its one shot. Her kick allows exactly one, taken at the
+		// first opportunity, which is the reported "shooting is partially blocked during the end of her kick" -
+		// see the gate in Player::HandleWeaponFire() for the four scenarios that establish it.
+		bool _loriKickShotUsed : 1;
+		// Whether this player is currently standing on top of another player (local splitscreen co-op stacking, and
+		// online stacking when this is an `MpPlayer`); guards cancelling the carry so a real solid object is untouched
+		bool _stackCarrying : 1;
+		// Whether another player is standing on top of this one without immobilizing it - drives the lift animation
+		// cosmetically (online; local co-op uses `_isLifting` instead so movement is restricted, like a solid object)
+		bool _beingStoodOn : 1;
 		/**
 		 * @brief Whether the carry @ref _keepRunningTime is counting down came out of a horizontal pole
 		 *
@@ -1703,7 +1790,7 @@ namespace Jazz2::Actors
 		 * held to @ref LegacyAppliedSpeedCap. It cannot be read off `_keepRunningTime` alone, because a
 		 * spring sets that too and a spring launch *is* capped - measured, it reports 32 and moves 8.
 		 */
-		bool _hPoleCarry = false;
+		bool _hPoleCarry : 1;
 		/**
 		 * @brief Whether the carry @ref _keepRunningTime is counting down came out of a spring
 		 *
@@ -1716,16 +1803,16 @@ namespace Jazz2::Actors
 		 * - A **spring** blocks for the carry itself, all 93 ticks of it, and the crouch and the carry's exit
 		 *   clamp land on the same tick. `an_crouch_spring` presses Down 18 ticks in and `an_crouch_spring_l`
 		 *   presses it 15 ticks from the end; the original crouches at tick 126 and 125 respectively.
-		 * - A **horizontal pole** blocks for its *exit animation* instead, about 20 ticks, and the speed carry
-		 *   outlives it by another 34. `an_crouch_carry` presses Down at 130 and `an_crouch_pole_e` at 122;
-		 *   the original crouches at tick **133 in both**, the tick after that animation's last frame. This
-		 *   engine already reproduces it, because the pole's exit transition is what holds the pose here too.
+		 * - A **horizontal pole** blocks for its *exit animation* instead, 35 ticks from the launch, and the
+		 *   speed carry outlives it by another 35 - see @ref LegacyHPoleCrouchBlockTime. With Down held through
+		 *   the launch the original crouches on the tick that animation ends, a run-in-place launched into the
+		 *   pole included.
 		 *
 		 * So blocking the pole on `_keepRunningTime` as well would over-block it by some fifty ticks, and that
-		 * is the whole reason this flag exists. The rev-up launch arms the same timer and is deliberately left
-		 * out: nothing has measured what Down does to one.
+		 * is the whole reason this flag exists. The rev-up launch arms the same timer and has its own flag,
+		 * @ref _revUpCarry.
 		 */
-		bool _springCarry = false;
+		bool _springCarry : 1;
 		/**
 		 * @brief Whether the carry @ref _keepRunningTime is counting down came out of a run-in-place launch
 		 *
@@ -1735,11 +1822,11 @@ namespace Jazz2::Actors
 		 * over by the direction of travel, so the player can turn round and shoot backwards while still being
 		 * carried forwards.
 		 */
-		bool _revUpCarry = false;
+		bool _revUpCarry : 1;
 		/** @brief Whether the jump key has been let go during the current non-Reforged ascent, which makes the rest of it heavier */
-		bool _jumpReleased;
+		bool _jumpReleased : 1;
 		/** @brief Whether the pole currently held was reached off a spring, which is what picks the rise gravity its launch decays under */
-		bool _poleEnteredOnSpring;
+		bool _poleEnteredOnSpring : 1;
 		/**
 		 * @brief Whether the current non-Reforged ascent came out of a float-up area
 		 *
@@ -1748,7 +1835,7 @@ namespace Jazz2::Actors
 		 * decay at the held rate, so the sources disagree about what "nothing pressed" means and the ascent
 		 * has to remember where it came from. See @ref GetGravityModifier().
 		 */
-		bool _riseFromFloatUp;
+		bool _riseFromFloatUp : 1;
 		/**
 		 * @brief Whether a float-up area was holding the speed at the last sample, which suppresses gravity
 		 *
@@ -1758,7 +1845,7 @@ namespace Jazz2::Actors
 		 * end of the frame, and read by the *next* frame's move - the same order the speed it guards is
 		 * written and read in.
 		 */
-		bool _inFloatUpArea;
+		bool _inFloatUpArea : 1;
 		/**
 		 * @brief Whether the crouch was already up when this frame began, which is what a special move needs
 		 *
@@ -1766,20 +1853,20 @@ namespace Jazz2::Actors
 		 * the live bit cannot tell "ducked a moment ago and then jumped" from "pressed both together" - and
 		 * the original gives an ordinary jump for the second. See @ref IsSpecialMoveCrouchReady().
 		 */
-		bool _crouchHeldBefore;
-		bool _weaponAllowed;
+		bool _crouchHeldBefore : 1;
+		bool _weaponAllowed : 1;
 		// Whether a bird is perched, and whether it stands on the taller box a perch puts under it - the lift onto that
 		// box is refused under a low ceiling, which leaves the pose without the box (see EnterBirdPerch())
-		bool _birdPerched = false;
-		bool _birdStanding = false;
+		bool _birdPerched : 1;
+		bool _birdStanding : 1;
 		// Whether the first bird's beak charge is under way, Fire held while flying along faster than half the cap (see
 		// HandleBirdMovement())
-		bool _birdCharging = false;
+		bool _birdCharging : 1;
 		// Set when the player is restored standing on the exit the level was left through, the exit is ignored
 		// until the player steps off it, otherwise it would be taken again immediately
-		bool _levelExitSuppressed = false;
+		bool _levelExitSuppressed : 1;
 		// A script turned the light around the player off (`jjPLAYER.lightType` of JJ2+ set to `LIGHT::NONE`)
-		bool _lightHiddenByScript = false;
+		bool _lightHiddenByScript : 1;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
@@ -2133,17 +2220,6 @@ namespace Jazz2::Actors
 		static constexpr AnimState HorizontalAnimMask = AnimState::Dash;
 		/** @brief The vertical field beside it, @ref AnimState::Jump | @ref AnimState::Fall */
 		static constexpr AnimState VerticalAnimMask = (AnimState)0x0000000C;
-
-		/** @brief Not sliding to a halt - moving under the player's own steering, or not on the ground at all */
-		static constexpr std::int32_t StopPhaseNone = 0;
-		/** @brief `walk_stop`, played once for its own 12 ticks however fast the player was going */
-		static constexpr std::int32_t StopPhaseSkid = 1;
-		/** @brief `dash_stop`, looping until the speed falls below @ref StopSettleSpeed */
-		static constexpr std::int32_t StopPhaseSlide = 2;
-		/** @brief `run_stop`, played once and followed by standing, even after the player has stopped */
-		static constexpr std::int32_t StopPhaseSettle = 3;
-		/** @brief The skid held on its last frame, for a slide too slow to have reached @ref StopPhaseSlide */
-		static constexpr std::int32_t StopPhaseHold = 4;
 		/** @} */
 
 		/**
@@ -2346,7 +2422,7 @@ namespace Jazz2::Actors
 		// four *ShootTo* returns are the point of it: each is issued **non-cancellable** when a shot ends, so
 		// firing again before one finishes leaves the *end* animation drawn over the new shot.
 		bool ShouldCancelTransitionOnFire() const;
-		void EnterStopPhase(std::int32_t phase);
+		void EnterStopPhase(StopPhase phase);
 		void ParkStopPose();
 		void OnStopPoseFinished();
 		void ApplyStopAnimation(bool sliding);
@@ -2396,6 +2472,24 @@ namespace Jazz2::Actors
 		void HandleWaterAndModifierMovement(float timeMult);
 		void HandleLookupAndCrouch(float timeMult, bool canJumpPrev);
 		void HandleJump(float timeMult);
+		// Gives back the double jumps and the copter time of an airtime
+		void ResetAirJumps();
+		// Fetches the profile of the current player type from the level handler into _characterProfile
+		void RefreshCharacterProfile();
+		// Starts or caps the copter flight, as the air jump of a character
+		void TryStartCopter(const CharacterProfile& profile);
+		// The double jump, as the air jump of a character
+		void TryDoubleJump(const CharacterProfile& profile, float timeMult);
+		// Returns the descent speed of the copter flight
+		float GetCopterDescentSpeed(const CharacterProfile& profile) const;
+		// How long a press keeps copter ears going, see LegacyCopterFlightTime
+		float GetCopterFlightTime() const;
+		// Shortens the wind-up transition of the uppercut and the sidekick just started, see LegacyGroundMoveWindUp
+		void SetLegacyGroundMoveWindUp();
+		// Whether the copter flight has a horizontal speed of its own, see ApplyCopterPush()
+		bool IsCopterPushActive() const;
+		// Drives the horizontal speed of a copter flight with CharacterProfile::CopterSpeedX
+		void ApplyCopterPush(float timeMult);
 		// The launch an ordinary jump from the ground performs, shared with the one-way relaunch below so the
 		// two cannot drift apart
 		void BeginStandardJump(float timeMult);

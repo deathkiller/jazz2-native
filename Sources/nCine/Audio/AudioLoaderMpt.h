@@ -19,7 +19,7 @@ namespace nCine
 		AudioLoaderMpt(const AudioLoaderMpt&) = delete;
 		AudioLoaderMpt& operator=(const AudioLoaderMpt&) = delete;
 
-		std::unique_ptr<IAudioReader> createReader() override;
+		std::unique_ptr<IAudioReader> CreateReader() override;
 	};
 }
 

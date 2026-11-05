@@ -20,7 +20,7 @@ namespace nCine
 		AudioLoaderOgg(const AudioLoaderOgg&) = delete;
 		AudioLoaderOgg& operator=(const AudioLoaderOgg&) = delete;
 
-		std::unique_ptr<IAudioReader> createReader() override;
+		std::unique_ptr<IAudioReader> CreateReader() override;
 
 	private:
 		/** @brief Vorbisfile decoder handle */

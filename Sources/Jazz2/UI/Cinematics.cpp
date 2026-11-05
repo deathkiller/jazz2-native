@@ -563,9 +563,9 @@ namespace Jazz2::UI
 
 #if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP) || defined(WITH_N64AUDIO))
 		if (_music != nullptr) {
-			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-			_music->setSourceRelative(true);
-			_music->play();
+			_music->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+			_music->SetSourceRelative(true);
+			_music->Play();
 		}
 #endif
 
@@ -1315,10 +1315,10 @@ namespace Jazz2::UI
 				}
 
 				item.CurrentPlayer = std::make_unique<nCine::AudioBufferPlayer>(sample.Buffer.get());
-				item.CurrentPlayer->setPosition(Vector3f(item.Panning, 0.0f, 0.0f));
-				item.CurrentPlayer->setAs2D(true);
-				item.CurrentPlayer->setGain(_sfxPlaylist[i].Gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-				item.CurrentPlayer->play();
+				item.CurrentPlayer->SetPosition(Vector3f(item.Panning, 0.0f, 0.0f));
+				item.CurrentPlayer->SetAs2D(true);
+				item.CurrentPlayer->SetGain(_sfxPlaylist[i].Gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
+				item.CurrentPlayer->Play();
 			}
 		}
 #endif

@@ -13,29 +13,11 @@ namespace nCine
 	/**
 		@brief Nintendo 64 implementation of @ref IAudioDevice on top of libdragon's RSP mixer
 
-		The console has no sound chip - its Audio Interface is a bare stereo DAC that DMAs 16-bit samples out
-		of RDRAM - but it has the RSP, and libdragon's mixer runs there: up to 32 channels resampled, panned
-		and summed by microcode, with the result written straight into the buffers the AI plays. This backend
-		used to do all of that on the VR4300 itself, one output sample at a time; now the CPU only decides
-		what plays where and the RSP does the arithmetic. It is also what makes music possible at all:
-		libdragon's tracker player (@ref xm64player_t) and its compressed waveforms (@ref wav64_t) are both
-		clients of the same mixer.
-
-		Every source is a logical voice that holds a mixer channel only while it is audible. Sound effects take
-		channels from the bottom of the range, native streams (music) from the top, and when a new effect finds
-		nothing free the effect that has been playing the longest gives its channel up - the one least likely
-		to still be the sound the player is listening for.
-
-		The engine never decodes a sample here (see `NCINE_HAS_NATIVE_AUDIO`), so no sample data is held in RAM
-		at all. A buffer is a `.wav64` file (@ref loadNativeBuffer()) the mixer **streams from the cartridge** a
-		few hundred samples ahead of playback, so a sound effect costs only its channel's small ring while it
-		plays. Music arrives as a native stream (@ref openNativeStream()): a `.xm64` module played by
-		libdragon's libxm port, which reads its instruments from the cartridge as well, or a `.wav64` recording
-		(the tracks that could not be converted to XM are pre-rendered and compressed by the asset packer).
-
-		*There is no mixer thread* - the mixer is polled from @ref updatePlayers(), once per frame, on the main
-		thread, with @ref audio_init() given enough headroom to outlast a late frame. The mixer itself queues
-		the RSP work asynchronously, so a poll costs the CPU only the bookkeeping.
+		Mixing runs on the RSP; the CPU only assigns sources to mixer channels (effects from the bottom, music
+		from the top, the longest-playing effect is evicted when nothing is free). Buffers are `.wav64` files
+		streamed from the cartridge (@ref LoadNativeBuffer()) and music is a `.xm64` module or a `.wav64`
+		recording (@ref OpenNativeStream()), so no sample data is held in RAM. There is no mixer thread - the
+		mixer is polled once per frame from @ref UpdatePlayers().
 	*/
 	class N64AudioDevice : public AudioDeviceBase
 	{
@@ -43,53 +25,52 @@ namespace nCine
 		N64AudioDevice();
 		~N64AudioDevice() override;
 
-		bool isValid() const override;
-		const char* name() const override;
+		bool IsValid() const override;
+		const char* GetName() const override;
 
-		void setGain(float gain) override;
-		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
-		std::int32_t nativeFrequency() override;
+		void SetGain(float gain) override;
+		void UpdateListener(const Vector3f& position, const Vector3f& velocity) override;
+		std::int32_t GetNativeFrequency() override;
 
-		std::uint32_t registerPlayer(IAudioPlayer* player) override;
-		void updatePlayers() override;
+		std::uint32_t RegisterPlayer(IAudioPlayer* player) override;
+		void UpdatePlayers() override;
 
-		std::uint32_t createBuffer(BufferUsage usage) override;
-		void deleteBuffer(std::uint32_t bufferId) override;
+		std::uint32_t CreateBuffer(BufferUsage usage) override;
+		void DeleteBuffer(std::uint32_t bufferId) override;
 
-		bool loadNativeBuffer(std::uint32_t bufferId, StringView path, NativeAudioInfo& info) override;
-		std::uint32_t openNativeStream(StringView path, NativeAudioInfo& info) override;
-		void closeNativeStream(std::uint32_t streamId) override;
-		void setSourceNativeStream(std::uint32_t sourceId, std::uint32_t streamId) override;
+		bool LoadNativeBuffer(std::uint32_t bufferId, StringView path, NativeAudioInfo& info) override;
+		std::uint32_t OpenNativeStream(StringView path, NativeAudioInfo& info) override;
+		void CloseNativeStream(std::uint32_t streamId) override;
+		void SetSourceNativeStream(std::uint32_t sourceId, std::uint32_t streamId) override;
 
-		void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		void setSourceGain(std::uint32_t sourceId, float gain) override;
-		void setSourcePitch(std::uint32_t sourceId, float pitch) override;
-		void setSourceLooping(std::uint32_t sourceId, bool looping) override;
-		void setSourceRelative(std::uint32_t sourceId, bool relative) override;
-		void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
-		void setSourceLowPass(std::uint32_t sourceId, float value) override;
-		std::int32_t sourceSampleOffset(std::uint32_t sourceId) override;
-		void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
-		void playSource(std::uint32_t sourceId) override;
-		void pauseSource(std::uint32_t sourceId) override;
-		void stopSource(std::uint32_t sourceId) override;
-		bool isSourcePlaying(std::uint32_t sourceId) override;
+		void SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		void SetSourceGain(std::uint32_t sourceId, float gain) override;
+		void SetSourcePitch(std::uint32_t sourceId, float pitch) override;
+		void SetSourceLooping(std::uint32_t sourceId, bool looping) override;
+		void SetSourceRelative(std::uint32_t sourceId, bool relative) override;
+		void SetSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
+		void SetSourceLowPass(std::uint32_t sourceId, float value) override;
+		std::int32_t GetSourceSampleOffset(std::uint32_t sourceId) override;
+		void SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
+		void PlaySource(std::uint32_t sourceId) override;
+		void PauseSource(std::uint32_t sourceId) override;
+		void StopSource(std::uint32_t sourceId) override;
+		bool IsSourcePlaying(std::uint32_t sourceId) override;
 
-		void suspendDevice() override;
-		void resumeDevice() override;
+		void SuspendDevice() override;
+		void ResumeDevice() override;
 
 		/**
 			@brief Takes @p count consecutive mixer channels away from the engine, returning the first one or `-1`
 
-			For code that drives the mixer by itself for a while - the full-motion video player plays its audio
-			track on a channel of its own. Whatever the engine was playing there is stopped. The channels stay
-			out of the engine's hands until @ref ReleaseExclusiveChannels().
+			Used by the video player for its audio track. Whatever played there is stopped, and the channels
+			stay reserved until @ref ReleaseExclusiveChannels().
 		*/
 		std::int32_t ReserveExclusiveChannels(std::int32_t count);
 		/** @brief Gives channels taken by @ref ReserveExclusiveChannels() back to the engine */
 		void ReleaseExclusiveChannels(std::int32_t firstChannel, std::int32_t count);
 		/**
-			@brief Runs the mixer if the AI queue has room, without the rest of @ref updatePlayers()
+			@brief Runs the mixer if the AI queue has room, without the rest of @ref UpdatePlayers()
 
 			For a loop that owns the main thread for a while (the video player) and has to keep the audio fed.
 		*/
@@ -105,26 +86,20 @@ namespace nCine
 		/**
 			@brief Rate the AI is asked for; every channel is resampled to what it actually grants
 
-			32 kHz rather than the 48 kHz this backend used to mix at by hand. The game's own sound effects are
-			8-bit and mostly 11-22 kHz, and its music is tracker instruments of the same era, so nothing it plays
-			carries content above 16 kHz - and every output sample is RSP time and RDRAM bandwidth the renderer
-			shares. The AI derives the rate from the video clock through an integer divider, so the granted rate
-			lands near this rather than on it.
+			Nothing the game plays has content above 16 kHz, and every output sample costs RSP time and RDRAM
+			bandwidth. The granted rate only lands near this (integer divider of the video clock).
 		*/
 		static constexpr std::int32_t OutputFrequency = 32000;
 		/**
 			@brief Highest rate a sound-effect channel is prepared to stream at
 
-			The mixer sizes the ring of a channel that streams from the cartridge by the fastest rate it may be
-			asked for, so this bounds the memory as well: a pitched-up 44.1 kHz sound is the worst the game
-			asks for.
+			Also bounds memory, since the mixer sizes a streaming channel's ring by it.
 		*/
 		static constexpr std::int32_t MaxEffectFrequency = 64000;
 		/**
 			@brief Limit a module's channels get before its player sizes the ones it knows it uses
 
-			A tracker instrument can be played several octaves above its sample rate; the channels the player sizes
-			itself get their own, exact limit, and this only has to cover the rest without an oversized ring.
+			Covers the channels the player does not size itself (an instrument may play octaves above its rate).
 		*/
 		static constexpr std::int32_t MaxModuleFrequency = 128000;
 		/** @brief Entries the buffer table starts with */
@@ -138,14 +113,14 @@ namespace nCine
 		/**
 			@brief One buffer, playable by any number of channels at once
 
-			Held by value in the table: the mixer points at the waveform embedded in @ref File, which libdragon
-			allocated, so growing the table moves nothing a channel plays.
+			Held by value: channels point at the waveform inside @ref File (allocated by libdragon), so growing
+			the table is safe.
 		*/
 		struct Buffer
 		{
 			/** @brief The file streamed from the cartridge, `nullptr` until one is loaded */
 			wav64_t* File = nullptr;
-			/** @brief Whether the entry is handed out (see @ref createBuffer()) */
+			/** @brief Whether the entry is handed out (see @ref CreateBuffer()) */
 			bool Used = false;
 		};
 
@@ -162,7 +137,7 @@ namespace nCine
 
 			/** @brief Buffer a static source plays, or 0 */
 			std::uint32_t BufferId = 0;
-			/** @brief Native stream bound to the source (see @ref setSourceNativeStream()), or 0 */
+			/** @brief Native stream bound to the source (see @ref SetSourceNativeStream()), or 0 */
 			std::uint32_t NativeStream = 0;
 
 			/** @brief First mixer channel while audible, or -1 */
@@ -219,7 +194,7 @@ namespace nCine
 		/** @brief Source id holding each mixer channel, or one of the Channel* markers, 0 if free */
 		std::uint8_t _channelOwner[MixerChannelCount];
 
-		/** @brief Returns the source of an id handed out by @ref registerPlayer(), or `nullptr` */
+		/** @brief Returns the source of an id handed out by @ref RegisterPlayer(), or `nullptr` */
 		Source* GetSource(std::uint32_t sourceId);
 		/** @brief Returns the buffer of an id, or `nullptr` */
 		Buffer* GetBuffer(std::uint32_t bufferId);
@@ -246,8 +221,7 @@ namespace nCine
 		/**
 			@brief Moves an audible source to @p position (in frames)
 
-			A sound streamed from the cartridge can only be moved to a position its file keeps the decoder state
-			for, so the position is rounded to one (see the implementation).
+			A cartridge stream can only seek to positions its file keeps decoder state for, so it is rounded to one.
 		*/
 		void SeekSourceChannel(Source& source, double position);
 		/** @brief Pushes gain, panning and pitch of an audible source to its channel if they changed */

@@ -91,8 +91,8 @@ namespace Jazz2::Actors::Weapons
 					_renderer.setScale(5.0f);
 					if (_noise == nullptr) {
 						_noise = PlaySfx(Random().NextBool() ? "Bell1"_s : "Bell2"_s);
-					} else if (!_noise->isPlaying()) {
-						_noise->play();
+					} else if (!_noise->IsPlaying()) {
+						_noise->Play();
 					}
 				}
 				_renderer.setScale(_renderer.scale() - timeMult * 0.36f);

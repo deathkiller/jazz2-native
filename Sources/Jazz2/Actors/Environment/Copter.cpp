@@ -13,7 +13,7 @@ namespace Jazz2::Actors::Environment
 	{
 #if defined(WITH_AUDIO)
 		if (_noise != nullptr) {
-			_noise->stop();
+			_noise->Stop();
 			_noise = nullptr;
 		}
 #endif
@@ -58,13 +58,13 @@ namespace Jazz2::Actors::Environment
 
 #if defined(WITH_AUDIO)
 		if (_noise != nullptr) {
-			float newGain = _noise->gain() - (_noiseDec * timeMult);
+			float newGain = _noise->GetGain() - (_noiseDec * timeMult);
 			if (newGain <= 0.0f) {
-				_noise->stop();
+				_noise->Stop();
 				_noise = nullptr;
 			} else {
-				_noise->setGain(newGain);
-				_noise->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+				_noise->SetGain(newGain);
+				_noise->SetPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 			}
 		}
 #endif
@@ -124,8 +124,8 @@ namespace Jazz2::Actors::Environment
 #if defined(WITH_AUDIO)
 			_noise = PlaySfx("Copter"_s, 0.8f, 0.8f);
 			if (_noise != nullptr) {
-				_noise->setLooping(true);
-				_noiseDec = _noise->gain() * 0.005f;
+				_noise->SetLooping(true);
+				_noiseDec = _noise->GetGain() * 0.005f;
 			}
 #endif
 

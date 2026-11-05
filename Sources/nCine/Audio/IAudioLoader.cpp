@@ -30,20 +30,20 @@ namespace nCine
 	{
 		// TODO: path cannot be null, otherwise InvalidAudioLoader will be created
 		//LOGI("Loading from memory: 0x{:x}, {} bytes", bufferPtr, bufferSize);
-		return createLoader(std::make_unique<MemoryStream>(bufferPtr, bufferSize), {});
+		return CreateLoader(std::make_unique<MemoryStream>(bufferPtr, bufferSize), {});
 	}*/
 
-	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const StringView path)
+	std::unique_ptr<IAudioLoader> IAudioLoader::CreateFromFile(const StringView path)
 	{
-		return createLoader(fs::Open(path, FileAccess::Read), path);
+		return CreateLoader(fs::Open(path, FileAccess::Read), path);
 	}
 
-	std::unique_ptr<IAudioLoader> IAudioLoader::createFromStream(std::unique_ptr<Stream> fileHandle, StringView path)
+	std::unique_ptr<IAudioLoader> IAudioLoader::CreateFromStream(std::unique_ptr<Stream> fileHandle, StringView path)
 	{
-		return createLoader(Death::move(fileHandle), path);
+		return CreateLoader(Death::move(fileHandle), path);
 	}
 
-	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<Stream> fileHandle, StringView path)
+	std::unique_ptr<IAudioLoader> IAudioLoader::CreateLoader(std::unique_ptr<Stream> fileHandle, StringView path)
 	{
 #if defined(WITH_AUDIO)
 		auto extension = fs::GetExtension(path);
@@ -60,9 +60,7 @@ namespace nCine
 			return std::make_unique<AudioLoaderMpt>(Death::move(fileHandle));
 		}
 #	elif defined(WITH_XMP)
-		// The lightweight module player for platforms where libopenmpt is not real-time-viable
-		// (no ".mo3": that is an Un4seen container libxmp does not parse, and the game's own
-		// soundtrack never uses it)
+		// libxmp for platforms where libopenmpt is too slow (no `.mo3`, libxmp can't parse it)
 		if (extension == "it"_s || extension == "j2b"_s || extension == "mod"_s || extension == "s3m"_s || extension == "xm"_s) {
 			return std::make_unique<AudioLoaderXmp>(Death::move(fileHandle));
 		}

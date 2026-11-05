@@ -343,11 +343,11 @@ namespace Jazz2::UI::Menu
 		if (it != _metadata->Sounds.end() && ContentResolver::Get().ResolveSound(it->second)) {
 			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
-			player->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
-			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-			player->setSourceRelative(true);
+			player->SetPosition(Vector3f(0.0f, 0.0f, 100.0f));
+			player->SetGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
+			player->SetSourceRelative(true);
 
-			player->play();
+			player->Play();
 		} else {
 			LOGE("Sound effect \"{}\" was not found", identifier);
 		}

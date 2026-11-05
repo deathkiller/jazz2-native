@@ -16,12 +16,9 @@ namespace nCine
 {
 	/**
 		@brief Backend-independent part of an audio device
-
-		Owns the pool of free sources, the list of active players and the stream decoding thread (not
-		where `NCINE_HAS_NATIVE_AUDIO` is defined, since nothing is decoded there) - everything an
-		@ref IAudioDevice has to do that does not depend on the sound hardware. A
-		backend derives from this, hands over the source ids it created with @ref setSourcePool()
-		and only implements the buffer and source operations of @ref IAudioDevice.
+		
+		Owns the source pool, the active players and the stream decoding thread. A backend hands over its
+		source ids with @ref SetSourcePool() and implements only the buffer and source operations.
 	*/
 	class AudioDeviceBase : public IAudioDevice
 	{
@@ -31,55 +28,52 @@ namespace nCine
 		AudioDeviceBase(const AudioDeviceBase&) = delete;
 		AudioDeviceBase& operator=(const AudioDeviceBase&) = delete;
 
-		inline float gain() const override {
+		inline float GetGain() const override {
 			return _gain;
 		}
 
-		inline std::uint32_t maxNumPlayers() const override {
+		inline std::uint32_t GetMaxPlayerCount() const override {
 			return std::uint32_t(_sourcePool.size() + _players.size());
 		}
-		inline std::uint32_t numPlayers() const override {
+		inline std::uint32_t GetPlayerCount() const override {
 			return std::uint32_t(_players.size());
 		}
 		// Spelled with the fixed-width type the interface uses: on targets where `std::uint32_t` is `long
 		// unsigned int` (MIPS, among others) `unsigned int` is a different type and would not override it
-		const IAudioPlayer* player(std::uint32_t index) const override;
-		IAudioPlayer* player(std::uint32_t index) override;
+		const IAudioPlayer* GetPlayer(std::uint32_t index) const override;
+		IAudioPlayer* GetPlayer(std::uint32_t index) override;
 
-		void stopPlayers() override;
-		void pausePlayers() override;
-		void stopPlayers(PlayerType playerType) override;
-		void pausePlayers(PlayerType playerType) override;
+		void StopPlayers() override;
+		void PausePlayers() override;
+		void StopPlayers(PlayerType playerType) override;
+		void PausePlayers(PlayerType playerType) override;
 
-		void freezePlayers() override;
-		void unfreezePlayers() override;
+		void FreezePlayers() override;
+		void UnfreezePlayers() override;
 
-		std::uint32_t registerPlayer(IAudioPlayer* player) override;
-		void unregisterPlayer(IAudioPlayer* player) override;
-		void updatePlayers() override;
+		std::uint32_t RegisterPlayer(IAudioPlayer* player) override;
+		void UnregisterPlayer(IAudioPlayer* player) override;
+		void UpdatePlayers() override;
 
 #if !defined(NCINE_HAS_NATIVE_AUDIO)
-		bool submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
-		void drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+		bool SubmitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+		void DrainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
 #endif
 
-		const Vector3f& getListenerPosition() const override;
+		const Vector3f& GetListenerPosition() const override;
 
-		void beginBlockingOperation() override;
-		void endBlockingOperation() override;
+		void BeginBlockingOperation() override;
+		void EndBlockingOperation() override;
 
 	protected:
 		/**
-			@brief Called when the outermost blocking operation begins, for a backend that has to react
-
-			The counting half of @ref beginBlockingOperation() is done here so that no backend has to: two
-			independent owners already open these windows (a level load and the episode scan), and a backend
-			whose "stopped" state is a flag rather than a count would have the inner end reopen its stream in
-			the middle of the outer block. Overridden instead of @ref beginBlockingOperation() itself.
+			@brief Called when the outermost blocking operation begins
+			
+			Blocking operations can nest, so backends override this instead of @ref BeginBlockingOperation().
 		*/
-		virtual void onBlockingOperationBegan() { }
-		/** @brief Called when the last outstanding blocking operation ends (see @ref onBlockingOperationBegan()) */
-		virtual void onBlockingOperationEnded() { }
+		virtual void OnBlockingOperationBegan() { }
+		/** @brief Called when the last outstanding blocking operation ends (see @ref OnBlockingOperationBegan()) */
+		virtual void OnBlockingOperationEnded() { }
 
 		/** @brief Typical number of sources a backend creates, only the inline capacity of the pools */
 		static constexpr std::size_t TypicalNumSources = 16;
@@ -104,34 +98,29 @@ namespace nCine
 		AudioDeviceBase();
 
 		/** @brief Hands the source ids created by the backend over to the pool */
-		void setSourcePool(ArrayView<const std::uint32_t> sourceIds);
+		void SetSourcePool(ArrayView<const std::uint32_t> sourceIds);
 
 		/**
-		 * @brief Reports that @ref registerPlayer() had to refuse for lack of a free source
+		 * @brief Reports that @ref RegisterPlayer() had to refuse for lack of a free source
 		 *
-		 * Rate-limited, because the callers that keep a sound around retry it every frame for as long as
-		 * the condition lasts. Describes what is holding the sources, so a leaked looping sound can be told
-		 * apart from a scene that simply asks for more at once than the device has.
+		 * Rate-limited, because the callers retry every frame.
 		 */
-		void reportNoAvailableSources();
+		void ReportNoAvailableSources();
 
 		/**
 		 * @brief Releases every source when the backend has stopped advancing them
 		 *
-		 * A backend that stops mixing without reporting it keeps every source reading as playing, which no
-		 * player can recover from on its own - the pool empties and stays empty for the rest of the session.
-		 * Looks only at the frames where nothing is free anyway, so a healthy device never pays for it.
+		 * Recovers from a backend that stopped mixing silently, checked only while no source is free.
 		 */
-		void checkForStalledSources();
+		void CheckForStalledSources();
 
 #if !defined(NCINE_HAS_NATIVE_AUDIO)
 		/**
 		 * @brief Stops the decoding thread and releases every request still queued
 		 *
-		 * Has to be called by the backend destructor before it tears down anything the readers
-		 * could still touch, the base destructor is too late for that.
+		 * Must be called from the backend destructor, the base destructor is too late.
 		 */
-		void shutdownDecodeThread();
+		void ShutdownDecodeThread();
 #endif
 
 	private:
@@ -140,7 +129,7 @@ namespace nCine
 		TimeStamp _stalledSince;
 		std::int64_t _lastSourceProgress;
 		std::int32_t _stalledCheckLeft;
-		// Outstanding beginBlockingOperation() calls, so that nesting them is safe
+		// Outstanding BeginBlockingOperation() calls, so that nesting them is safe
 		std::int32_t _blockingOperationDepth;
 #if defined(DEATH_TRACE)
 		// When the exhausted source pool was last reported, and how many reports were left out since
@@ -165,7 +154,7 @@ namespace nCine
 		// Whether the decoding thread should quit
 		bool _decodeThreadShouldQuit;
 
-		static void decodeThreadFunc(void* arg);
+		static void DecodeThreadFunc(void* arg);
 #endif
 	};
 }

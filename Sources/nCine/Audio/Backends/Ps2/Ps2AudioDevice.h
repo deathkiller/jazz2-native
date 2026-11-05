@@ -9,42 +9,10 @@ namespace nCine
 	/**
 		@brief PlayStation 2 implementation of @ref IAudioDevice on top of `audsrv`
 
-		The SPU2 is not on the Emotion Engine's side of the machine. It hangs off the I/O Processor, and the
-		only thing the EE can do with it is ask the IOP to, which is what `audsrv` is: an IRX module that owns
-		the SPU2, keeps a ring buffer of PCM in IOP memory and streams it out through two of the chip's voices
-		at a pitch derived from the format it was given. So this backend is a software mixer - the same one
-		the Nintendo 64, PS3, Amiga, SDL and PSP backends are - whose output stage is `audsrv_play_audio()`
-		rather than a DMA queue.
-
-		<em>There is no mixer thread.</em> The engine's threading is off on this console (a thread created through
-		PS2SDK's `libpthreadglue` is never scheduled, see the `NCINE_WITH_THREADS` arm in `ncine_options.cmake`),
-		so the ring is topped up from @ref updatePlayers(), once per frame, on the main thread - the N64
-		backend's arrangement rather than the PSP's. That works because the ring is deep: whatever `audsrv`
-		was built with, it is measured at startup (see @ref _ringCapacity) and kept as full as it will go, so
-		a frame that runs long is covered by what is already queued on the IOP. Nothing here ever blocks on
-		the hardware: only as much is submitted as @ref audsrv_available() says will fit, which is why
-		`audsrv_wait_audio()` - the call the module's own samples are written around - is never used.
-
-		<em>The mixing rate is not the hardware's rate.</em> The SPU2 runs at 48 kHz and `audsrv` programs the voice
-		pitch from the format it is handed, so a stream submitted at 22050 Hz is resampled by the SPU2 itself,
-		in hardware, for free. The mixer's cost is linear in its rate and the game's content is 8- and 16-bit
-		samples at 11-22 kHz, so the default is 22050 Hz and the per-source loop runs half as often as it
-		would at 44100 for content that has nothing above 11 kHz to lose. @ref setMixingFrequency() reprograms
-		the format (the "Sample Rate" option), and @ref nativeFrequency() reports it so the module decoders
-		render at the rate they will be played at.
-
-		Uploaded sounds keep the width they arrived in rather than being widened to the mixer's 16 bits, the
-		way the N64 backend keeps them: nearly all of the game's own sounds are 8-bit, and the console's 32 MB
-		is shared with a renderer that pages every texture through main memory. Unlike the N64 there is no
-		decimation ladder on top of that - 32 MB is not 8 MB, and the whole sound set of a level fits.
-
-		<em>Music is decoded while the frame waits for the vertical blank.</em> Without a decoding thread, @ref AudioStream
-		would decode each 16 KB chunk on the main thread the moment a buffer frees up - measured at 24-35 ms
-		for libxmp at 22050 Hz, a frame in every eleven that missed the vertical blank. So the device takes the
-		request instead (@ref submitStreamDecode()) and decodes it in short slices from @ref runIdleWork(),
-		which the GS backend calls in the time it would otherwise spend polling for the blank. A chunk the idle
-		time has not finished within @ref IdleDecodeGraceFrames is advanced inside the frame, so a run of frames
-		with no time to spare cannot starve the music.
+		Software mixer whose output goes through `audsrv_play_audio()` into the ring `audsrv` keeps on the IOP.
+		Threads are off on this console, so @ref UpdatePlayers() tops the ring up once per frame without ever
+		blocking, and music chunks are decoded in slices from @ref RunIdleWork() while the frame waits for the
+		vertical blank. Mixes at 22050 Hz by default; the SPU2 resamples to 48 kHz in hardware.
 	*/
 	class Ps2AudioDevice : public AudioDeviceBase
 	{
@@ -52,54 +20,51 @@ namespace nCine
 		Ps2AudioDevice();
 		~Ps2AudioDevice() override;
 
-		bool isValid() const override;
-		const char* name() const override;
+		bool IsValid() const override;
+		const char* GetName() const override;
 
-		void setGain(float gain) override;
-		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
-		std::int32_t nativeFrequency() override;
-		void setMixingFrequency(std::int32_t frequency) override;
+		void SetGain(float gain) override;
+		void UpdateListener(const Vector3f& position, const Vector3f& velocity) override;
+		std::int32_t GetNativeFrequency() override;
+		void SetMixingFrequency(std::int32_t frequency) override;
 
-		std::uint32_t registerPlayer(IAudioPlayer* player) override;
-		void updatePlayers() override;
-		bool submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
-		void drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
-		bool runIdleWork(float availableMs) override;
+		std::uint32_t RegisterPlayer(IAudioPlayer* player) override;
+		void UpdatePlayers() override;
+		bool SubmitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+		void DrainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+		bool RunIdleWork(float availableMs) override;
 
-		std::uint32_t createBuffer(BufferUsage usage) override;
-		void deleteBuffer(std::uint32_t bufferId) override;
-		bool uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
+		std::uint32_t CreateBuffer(BufferUsage usage) override;
+		void DeleteBuffer(std::uint32_t bufferId) override;
+		bool UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
 
-		void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		void setSourceGain(std::uint32_t sourceId, float gain) override;
-		void setSourcePitch(std::uint32_t sourceId, float pitch) override;
-		void setSourceLooping(std::uint32_t sourceId, bool looping) override;
-		void setSourceRelative(std::uint32_t sourceId, bool relative) override;
-		void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
-		void setSourceLowPass(std::uint32_t sourceId, float value) override;
-		std::int32_t sourceSampleOffset(std::uint32_t sourceId) override;
-		void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
-		void playSource(std::uint32_t sourceId) override;
-		void pauseSource(std::uint32_t sourceId) override;
-		void stopSource(std::uint32_t sourceId) override;
-		bool isSourcePlaying(std::uint32_t sourceId) override;
-		void queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		std::int32_t numProcessedBuffers(std::uint32_t sourceId) override;
-		void unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
+		void SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		void SetSourceGain(std::uint32_t sourceId, float gain) override;
+		void SetSourcePitch(std::uint32_t sourceId, float pitch) override;
+		void SetSourceLooping(std::uint32_t sourceId, bool looping) override;
+		void SetSourceRelative(std::uint32_t sourceId, bool relative) override;
+		void SetSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
+		void SetSourceLowPass(std::uint32_t sourceId, float value) override;
+		std::int32_t GetSourceSampleOffset(std::uint32_t sourceId) override;
+		void SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
+		void PlaySource(std::uint32_t sourceId) override;
+		void PauseSource(std::uint32_t sourceId) override;
+		void StopSource(std::uint32_t sourceId) override;
+		bool IsSourcePlaying(std::uint32_t sourceId) override;
+		void QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		std::int32_t GetProcessedBufferCount(std::uint32_t sourceId) override;
+		void UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
 
-		void onBlockingOperationBegan() override;
-		void onBlockingOperationEnded() override;
+		void OnBlockingOperationBegan() override;
+		void OnBlockingOperationEnded() override;
 
-		void suspendDevice() override;
-		void resumeDevice() override;
+		void SuspendDevice() override;
+		void ResumeDevice() override;
 
 		/**
 			@brief Brings the IOP side up - `rom0:LIBSD` and the embedded `audsrv.irx`
 
-			An IRX can only be loaded once per process, but the device is constructed and destroyed with the
-			service locator, which the application may do more than once. So this is idempotent and remembers
-			what it found. `MainApplication::Run()` calls it first, while the boot console is still on the
-			display, and the constructor then only opens a stream format on what it found.
+			Idempotent, because an IRX can only be loaded once per process but the device may be created more than once.
 
 			@returns `false` if the modules could not be loaded, which makes the backend report itself invalid
 		*/
@@ -112,7 +77,7 @@ namespace nCine
 		static constexpr std::int32_t MaxQueuedBuffers = 4;
 		/** @brief The SPU2 plays stereo and `audsrv` streams stereo */
 		static constexpr std::int32_t ChannelCount = 2;
-		/** @brief Rate the sources are mixed at unless @ref setMixingFrequency() says otherwise */
+		/** @brief Rate the sources are mixed at unless @ref SetMixingFrequency() says otherwise */
 		static constexpr std::int32_t DefaultMixingFrequency = 22050;
 		/** @brief Bounds of what `audsrv` accepts as a stream format */
 		static constexpr std::int32_t MinMixingFrequency = 8000;
@@ -120,19 +85,14 @@ namespace nCine
 		/**
 			@brief Largest block the mixer will ever produce, which is what the scratch buffers are sized for
 
-			The block actually used is smaller and derived from the ring (see @ref _blockFrames); this only
-			has to be an upper bound, so a change of mixing rate never reallocates anything.
+			Only an upper bound, the block actually used is @ref _blockFrames, so a rate change never reallocates.
 		*/
 		static constexpr std::int32_t MaxBlockFrames = 1024;
 		/**
 			@brief Blocks the ring is meant to hold, which is what @ref _blockFrames is chosen to give
 
-			A block is only submitted once the ring has room for a whole one, so the ring spends its time
-			somewhere between full and a block short of full - which makes the block size, not the ring size,
-			what decides how much audio is really queued ahead. `audsrv`'s ring turns out to be small (about
-			50 ms at the default rate, measured - the module does not publish it), and a block of that order
-			would leave it averaging half empty and break up on any frame that ran long. Four keeps it
-			averaging seven eighths full for four RPC round trips per ring rather than one.
+			A block is only submitted once a whole one fits, so the block size decides how full the ring stays.
+			The ring is small (about 50 ms), and four blocks keep it about seven eighths full.
 		*/
 		static constexpr std::int32_t TargetBlocksPerRing = 4;
 		/** @brief Granularity @ref _blockFrames is rounded to, and its floor */
@@ -150,7 +110,7 @@ namespace nCine
 			std::uint8_t* Samples = nullptr;
 			/** @brief Bytes actually allocated, kept so a re-upload of the same size does not churn the heap */
 			std::int32_t Capacity = 0;
-			/** @brief Width of one sample in @ref Samples, 1 or 2 (see @ref uploadBuffer()) */
+			/** @brief Width of one sample in @ref Samples, 1 or 2 (see @ref UploadBuffer()) */
 			std::int32_t BytesPerSample = 2;
 			std::int32_t ChannelCount = 1;
 			std::int32_t Frequency = DefaultMixingFrequency;
@@ -177,7 +137,7 @@ namespace nCine
 			/** @brief Buffers queued on a streaming source, oldest first */
 			std::uint32_t Queue[MaxQueuedBuffers] = {};
 			std::int32_t QueueCount = 0;
-			/** @brief Buffers played to the end, waiting to be collected by @ref unqueueBuffers() */
+			/** @brief Buffers played to the end, waiting to be collected by @ref UnqueueBuffers() */
 			std::uint32_t Processed[MaxQueuedBuffers] = {};
 			std::int32_t ProcessedCount = 0;
 		};
@@ -186,17 +146,9 @@ namespace nCine
 		/**
 			@brief Why the module's stream is stopped, if it is - a set of @ref StopReason bits
 
-			`audsrv_stop_audio()` does not merely silence the voices, it leaves the ring refusing everything -
-			@ref audsrv_available() answers 0 from then on - until the format is programmed again, which
-			resets it to the full capacity (both measured). So a stop is always paired with a
-			@ref ApplyFormat(), and nothing is submitted in between.
-
-			A set of reasons rather than one flag because two independent owners stop the same stream and
-			they can overlap: a suspension arriving during a level load used to have the load's
-			@ref endBlockingOperation() reopen the ring behind @ref suspendDevice()'s back, leaving the
-			module streaming from a ring nobody was feeding - which on this hardware is the last block
-			repeating, the very artefact @ref beginBlockingOperation() exists to prevent. The stream is open
-			exactly while this is zero.
+			After `audsrv_stop_audio()` the ring refuses everything until the format is programmed again, so
+			every stop is paired with @ref ApplyFormat(). A set because blocking operations and suspension stop
+			the stream independently and can overlap; the stream is open exactly while this is zero.
 		*/
 		std::uint32_t _stopReasons;
 		/** @brief Rate the sources are mixed at, which is also the rate `audsrv` is streaming */
@@ -206,9 +158,7 @@ namespace nCine
 		/**
 			@brief Bytes the module's ring holds when it is empty, measured rather than assumed
 
-			`audsrv` does not publish its ring size and it has changed between PS2SDK releases, but an empty
-			ring answers @ref audsrv_available() with exactly its capacity - so it is read once, right after
-			the format is set, and only used to report the latency the console is actually running at.
+			`audsrv` does not publish it, but an empty ring answers @ref audsrv_available() with its capacity.
 		*/
 		std::int32_t _ringCapacity;
 
@@ -222,19 +172,17 @@ namespace nCine
 		/**
 			@brief Bytes a slice of the idle decode adds to a chunk, 256 frames of 16-bit stereo
 
-			libxmp renders a whole tick at a time (~440 frames at 22050 Hz and 125 BPM, ~3.3 ms), so a slice
-			costs either next to nothing or a full tick - which is why the cost estimate decays slowly.
+			libxmp renders a whole tick at a time, so a slice costs either almost nothing or a full tick,
+			hence the slowly decaying cost estimate.
 		*/
 		static constexpr std::int32_t IdleDecodeSliceBytes = 1024;
 		/**
 			@brief Frames a chunk may take in the idle time before the frame itself advances it
 
-			A chunk is submitted when the third buffer is queued, so it has the ~11 frames until a buffer is
-			returned and the ~22 the other two still play before the music would gap. The idle time finishes
-			one in about eight frames; past this, the frame takes over with room to spare.
+			The music would only gap after about 30 frames, so the frame takes over with room to spare.
 		*/
 		static constexpr std::uint32_t IdleDecodeGraceFrames = 12;
-		/** @brief Bytes the frame adds to a chunk that is past its grace, 512 frames - a whole chunk in eight frames */
+		/** @brief Bytes the frame adds to a chunk that is past its grace, 512 frames */
 		static constexpr std::int32_t InFrameDecodeSliceBytes = 2048;
 
 		/** @brief A stream chunk being decoded in the idle time, oldest first */
@@ -246,7 +194,7 @@ namespace nCine
 		};
 
 		SmallVector<IdleDecode, 4> _idleDecodes;
-		/** @brief Counts @ref updatePlayers() calls, which is once per frame */
+		/** @brief Counts @ref UpdatePlayers() calls, which is once per frame */
 		std::uint32_t _frameIndex;
 		/** @brief What a slice of the idle decode took lately, in milliseconds - a slice is only started if it fits */
 		float _idleSliceMs;
@@ -264,16 +212,15 @@ namespace nCine
 		/**
 			@brief Frees the buffer table and the scratch buffers, leaving every pointer null
 
-			Shared by the destructor and by the constructor's failure paths, which must not leave a
-			partially built device behind: `createBuffer()` is reachable whether or not @ref isValid(), and
-			it reads a null @ref _buffers as "there is no table" but cannot recognize a table of capacity 0.
+			Also used by the constructor's failure paths: `CreateBuffer()` runs even if not @ref IsValid() and
+			only recognizes a null @ref _buffers as "no table", not a table of capacity 0.
 		*/
 		void ReleaseResources();
 		/** @brief Reasons the stream can be held stopped, combined in @ref _stopReasons */
 		enum StopReason : std::uint32_t {
-			/** @brief A @ref beginBlockingOperation() the caller has not ended yet */
+			/** @brief A @ref BeginBlockingOperation() the caller has not ended yet */
 			StopReasonBlocking = 1,
-			/** @brief A @ref suspendDevice() the caller has not resumed yet */
+			/** @brief A @ref SuspendDevice() the caller has not resumed yet */
 			StopReasonSuspended = 2
 		};
 
@@ -284,13 +231,11 @@ namespace nCine
 		/**
 			@brief Programs @p frequency and reopens the ring, @c false if `audsrv` refused the rate
 
-			The half of @ref RestartStream() that actually talks to the module, shared with
-			@ref setMixingFrequency() so that a rate change goes through the same state the stop reasons
-			describe instead of reprogramming the ring behind them.
+			Shared by @ref RestartStream() and @ref SetMixingFrequency(), so a rate change respects the stop reasons.
 		*/
 		bool ReopenStream(std::int32_t frequency);
 
-		/** @brief Returns the source of an id handed out by @ref registerPlayer(), or `nullptr` */
+		/** @brief Returns the source of an id handed out by @ref RegisterPlayer(), or `nullptr` */
 		Source* GetSource(std::uint32_t sourceId);
 		/** @brief Frees a buffer's sample data and stops anything reading it */
 		void ReleaseBuffer(Buffer& buffer);

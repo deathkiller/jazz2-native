@@ -5,6 +5,8 @@
 #endif
 #include "../ServiceLocator.h"
 
+#include <algorithm>
+
 #include <Containers/String.h>
 
 namespace nCine
@@ -14,7 +16,7 @@ namespace nCine
 		: AudioStream()
 	{
 #if defined(WITH_AUDIO)
-		const bool hasLoaded = loadFromFile(filename);
+		const bool hasLoaded = LoadFromFile(filename);
 		if (!hasLoaded) {
 			LOGE("Audio file \"{}\" cannot be loaded", filename);
 		}
@@ -38,12 +40,12 @@ namespace nCine
 	{
 #	if defined(WITH_AUDIO)
 		if (Id != 0) {
-			theServiceLocator().GetAudioDevice().closeNativeStream(Id);
+			theServiceLocator().GetAudioDevice().CloseNativeStream(Id);
 		}
 #	endif
 	}
 
-	bool AudioStream::enqueue(std::uint32_t source, bool looping)
+	bool AudioStream::Enqueue(std::uint32_t source, bool looping)
 	{
 #	if defined(WITH_AUDIO)
 		if (_nativeStream.Id == 0) {
@@ -53,40 +55,66 @@ namespace nCine
 		// Nothing to decode: the device plays the stream itself once it is bound to the source, and all that is
 		// left to do here is to keep the looping flag in step and report whether it still plays
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
-		device.setSourceLooping(source, looping);
+		device.SetSourceLooping(source, looping);
 		if (!_nativeStream.Started) {
 			_nativeStream.Started = true;
-			device.setSourceNativeStream(source, _nativeStream.Id);
-			device.playSource(source);
+			device.SetSourceNativeStream(source, _nativeStream.Id);
+			device.PlaySource(source);
 		}
-		return device.isSourcePlaying(source);
+		return device.IsSourcePlaying(source);
 #	else
 		return false;
 #	endif
 	}
 
-	void AudioStream::stop(std::uint32_t source)
+	void AudioStream::Stop(std::uint32_t source)
 	{
 #	if defined(WITH_AUDIO)
-		// The device rewinds a native stream when its source is stopped; the next play() binds it again,
+		// The device rewinds a native stream when its source is stopped; the next Play() binds it again,
 		// possibly to another source
-		theServiceLocator().GetAudioDevice().stopSource(source);
+		theServiceLocator().GetAudioDevice().StopSource(source);
 		_nativeStream.Started = false;
 #	endif
 	}
 
-	void AudioStream::setLooping(bool value)
+	void AudioStream::SetLooping(bool value)
 	{
-		// The device takes the flag from every enqueue()
+		// The device takes the flag from every Enqueue()
 		_isLooping = value;
 	}
 
-	bool AudioStream::loadFromFile(StringView filename)
+	// The device plays the file by itself, the engine doesn't see a tracker module at all
+	bool AudioStream::GetModuleState(AudioModuleState& state) const
+	{
+		return false;
+	}
+
+	bool AudioStream::SetModulePosition(std::uint32_t source, std::int32_t order, std::int32_t row, bool restart, bool looping)
+	{
+		return false;
+	}
+
+	bool AudioStream::SetModuleSpeed(std::int32_t speed)
+	{
+		return false;
+	}
+
+	bool AudioStream::SetModuleTempo(std::int32_t tempo)
+	{
+		return false;
+	}
+
+	bool AudioStream::SlideModuleChannelVolume(std::int32_t channel, float volume, std::int32_t milliseconds)
+	{
+		return false;
+	}
+
+	bool AudioStream::LoadFromFile(StringView filename)
 	{
 #	if defined(WITH_AUDIO)
 		// Replacing the handle closes the previous stream, also when this file cannot be played
 		IAudioDevice::NativeAudioInfo info;
-		_nativeStream = NativeStreamHandle(theServiceLocator().GetAudioDevice().openNativeStream(filename, info));
+		_nativeStream = NativeStreamHandle(theServiceLocator().GetAudioDevice().OpenNativeStream(filename, info));
 		if (_nativeStream.Id != 0) {
 			_bytesPerSample = info.BytesPerSample;
 			_numChannels = info.NumChannels;
@@ -107,14 +135,14 @@ namespace nCine
 #	if defined(WITH_AUDIO)
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 		for (std::int32_t i = 0; i < NumBuffers; i++) {
-			_buffersIds[i] = device.createBuffer(IAudioDevice::BufferUsage::Streaming);
+			_buffersIds[i] = device.CreateBuffer(IAudioDevice::BufferUsage::Streaming);
 			if DEATH_UNLIKELY(_buffersIds[i] == 0) {
 				LOGW("Cannot create streaming audio buffer");
 			}
 		}
 		_decodeRequest = std::make_shared<StreamDecodeRequest>();
-		_decodeRequest->buffer = std::make_unique<char[]>(BufferSize);
-		_decodeRequest->bufferSize = BufferSize;
+		_decodeRequest->Buffer = std::make_unique<char[]>(BufferSize);
+		_decodeRequest->BufferSize = BufferSize;
 #	endif
 	}
 
@@ -125,13 +153,13 @@ namespace nCine
 		if (_buffersIds.size() == NumBuffers) {
 			IAudioDevice& device = theServiceLocator().GetAudioDevice();
 			for (std::int32_t i = 0; i < NumBuffers; i++) {
-				device.deleteBuffer(_buffersIds[i]);
+				device.DeleteBuffer(_buffersIds[i]);
 			}
 		}
 #	endif
 	}
 
-	std::int32_t AudioStream::numStreamSamples() const
+	std::int32_t AudioStream::GetStreamSampleCount() const
 	{
 #	if defined(WITH_AUDIO)
 		if (_numChannels * _bytesPerSample > 0) {
@@ -142,25 +170,12 @@ namespace nCine
 	}
 
 	// Returns false once the stream has been entirely decoded and played
-	std::int32_t AudioStream::unqueueProcessedBuffers(IAudioDevice& device, std::uint32_t source)
+	std::int32_t AudioStream::UnqueueProcessedBuffers(IAudioDevice& device, std::uint32_t source)
 	{
 #	if defined(WITH_AUDIO)
-		// The backend's count (AL_BUFFERS_PROCESSED) and this object's own count of what it queued
-		// (_nextAvailableBufferIndex) are supposed to agree, but nothing enforces it: an upload the backend
-		// rejected still counted as queued, and a buffer name that has gone stale queues nothing at all.
-		// Both call sites used to hand the backend's number straight to unqueueBuffers() and then step the
-		// index once per buffer, which made a disagreement memory-unsafe in two different ways:
-		//
-		//  - unqueueBuffers() takes no capacity and fills up to eight entries, while both callers passed a
-		//    three-element stack array. In stop() that array sits in the frame that is about to return, so a
-		//    count above NumBuffers overwrote the return address - a crash with nothing in the log, at a
-		//    level change, which is exactly where stop() runs.
-		//  - decrementing once per buffer stepped the index below zero and wrote in front of _buffersIds.
-		//
-		// Bounding the count here makes both impossible whatever the backend reports. It is the only safe
-		// response as well as the simplest: this object owns exactly NumBuffers names, so it has nowhere to
-		// put more than that many even if the backend really is holding them.
-		std::int32_t count = device.numProcessedBuffers(source);
+		// Bounded by the NumBuffers names this object owns: the backend count can disagree with ours
+		// (rejected uploads, stale names), and trusting it overflowed the caller's array
+		std::int32_t count = device.GetProcessedBufferCount(source);
 		if (count > _nextAvailableBufferIndex) {
 			static bool warnedDrift = false;
 			if (!warnedDrift) {
@@ -180,20 +195,21 @@ namespace nCine
 		// Zero-initialized so a rejected unqueue leaves recognizable ids rather than stack garbage, and the
 		// slot then keeps the name it already held instead of taking a fabricated one
 		std::uint32_t unqueuedBuffers[NumBuffers] = {};
-		device.unqueueBuffers(source, count, unqueuedBuffers);
+		device.UnqueueBuffers(source, count, unqueuedBuffers);
 		for (std::int32_t i = 0; i < count; i++) {
 			_nextAvailableBufferIndex--;
 			if (unqueuedBuffers[i] != 0) {
 				_buffersIds[_nextAvailableBufferIndex] = unqueuedBuffers[i];
 			}
 		}
+		PopQueuedChunks(count);
 		return count;
 #	else
 		return 0;
 #	endif
 	}
 
-	bool AudioStream::enqueue(std::uint32_t source, bool looping)
+	bool AudioStream::Enqueue(std::uint32_t source, bool looping)
 	{
 #	if defined(WITH_AUDIO)
 		if (_audioReader == nullptr) {
@@ -206,77 +222,49 @@ namespace nCine
 		bool shouldKeepPlaying = true;
 
 		// Return everything the backend has finished playing to the free list
-		unqueueProcessedBuffers(device, source);
+		UnqueueProcessedBuffers(device, source);
 
 		bool reachedEndOfData = false;
 
-		// Filling every free buffer that can be filled without decoding on this thread, which in practice is
-		// the one chunk the decoding thread has ready - see below for why it stops there rather than decoding
-		// the rest itself. An empty queue is the exception and does fill in a single call, so a stream starts
-		// playing immediately instead of a frame later.
+		// Fill free buffers only with chunks already decoded, an empty queue is filled at once
+		// so the stream starts immediately
 		while (_nextAvailableBufferIndex < NumBuffers) {
-			StreamDecodeRequest::State requestState = _decodeRequest->state.load(std::memory_order_acquire);
+			StreamDecodeRequest::State requestState = _decodeRequest->CurrentState.load(std::memory_order_acquire);
 			if (requestState == StreamDecodeRequest::State::Pending) {
-				// A chunk is already being decoded elsewhere, so this thread has nothing useful to do:
-				// with data still queued there is no hurry, and with the queue empty the audio has already
-				// gapped and waiting cannot un-gap it. Waiting used to be the answer here, and on a frame
-				// that is comfortably inside its budget it cost nothing - but it turns a slow frame into a
-				// much slower one, and then into a spiral. Measured in the worst part of
-				// `prince/castle1n` on the PSP: a frame that had fallen to 130 ms spent 55-59 ms of it
-				// stopped in this wait, because the decoding thread only gets the CPU the main thread is not
-				// using, so the slower the frame the less of the chunk is ready when the frame asks for it -
-				// and the wait it then does makes the next frame later still. Coming back empty-handed
-				// leaves the music silent for a frame and gives the decoding thread the whole of the vblank
-				// wait to finish, which is what actually ends the underrun.
+				// The chunk is still being decoded elsewhere, don't wait for it - waiting turns a slow frame
+				// into a spiral (the decoding thread only gets the CPU the main thread leaves)
 				break;
 			}
 			if (requestState != StreamDecodeRequest::State::Ready) {
-				// Only ONE chunk is ever decoded ahead - the submit at the bottom of this function starts it -
-				// so reaching here with buffers still queued means decoding on the CALLING thread for a queue
-				// that does not need the data yet. That is what put the whole music decode inside the frame:
-				// this loop fills every free buffer in one call, so after it consumes the single chunk the
-				// decoding thread had ready, the next iteration found the request Idle and decoded inline.
-				// Measured on the PSP at 8.1 ms per frame on 49 frames out of 60 - four fifths of the frame's
-				// audio cost and a fifth of the whole frame - while the decoding thread sat unused.
-				//
-				// Leaving with data still queued costs nothing: the queue is drained by at most one buffer per
-				// frame, and the submit below has a whole frame to refill it beside the frame rather than in
-				// it. A genuine underrun (nothing queued at all) still decodes here, which is what keeps the
-				// stream correct when a frame takes longer than a buffer holds.
-				//
-				// Only when there IS a decoding thread to hand the work to, though. Where there is not, the
-				// submit below cannot start anything, so this thread is the only thing that will ever fill a
-				// buffer - stopping here would leave the queue one buffer deep for the whole stream and throw
-				// away the margin that carries it over a frame hitch.
+				// Only one chunk is decoded ahead, so with buffers still queued don't decode on this thread,
+				// the submit below refills the queue outside the frame. Without a decoding thread, keep filling here.
 				if (_nextAvailableBufferIndex > 0 && _asyncDecodeAvailable) {
 					break;
 				}
-				_decodeRequest->looping = looping;
+				_decodeRequest->Looping = looping;
 				_decodeRequest->Execute();
 			}
 
-			const std::int32_t bytes = _decodeRequest->bytesRead;
-			_decodeRequest->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+			const std::int32_t bytes = _decodeRequest->BytesRead;
+			_decodeRequest->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 
 			// If it is still decoding data then enqueue
 			if (bytes > 0) {
 				const std::uint32_t bufferId = _buffersIds[_nextAvailableBufferIndex];
-				// A buffer the backend refused to fill holds nothing to play, and queueing it anyway - and
-				// counting it as queued - is what drives this object's count apart from the backend's. The
-				// chunk is dropped and the same slot is retried on the next frame, which leaves the two
-				// counts consistent whether the refusal was transient or permanent.
-				if (!device.uploadBuffer(bufferId, _format, _decodeRequest->buffer.get(), bytes, _frequency)) {
+				// Drop a chunk the backend refused and retry the slot next frame, so the queue count stays in sync
+				if (!device.UploadBuffer(bufferId, _format, _decodeRequest->Buffer.get(), bytes, _frequency)) {
 					break;
 				}
 				_currentBufferId = bufferId;
-				device.queueBuffer(source, _currentBufferId);
+				device.QueueBuffer(source, _currentBufferId);
 				_nextAvailableBufferIndex++;
+				PushQueuedChunk(bytes);
 			} else {
 				reachedEndOfData = true;
 				// If there is no more data left to decode and the queue is empty
 				if (_nextAvailableBufferIndex == 0) {
 					shouldKeepPlaying = false;
-					stop(source);
+					Stop(source);
 				}
 				break;
 			}
@@ -284,23 +272,23 @@ namespace nCine
 
 		// Decode the next chunk ahead of time on the decoding thread while the queued buffers play
 		if (shouldKeepPlaying && !reachedEndOfData &&
-			_decodeRequest->state.load(std::memory_order_relaxed) == StreamDecodeRequest::State::Idle) {
-			_decodeRequest->looping = looping;
+			_decodeRequest->CurrentState.load(std::memory_order_relaxed) == StreamDecodeRequest::State::Idle) {
+			_decodeRequest->Looping = looping;
 			// A device that decodes the chunk in slices continues from what is already in the buffer
-			_decodeRequest->bytesRead = 0;
-			_decodeRequest->state.store(StreamDecodeRequest::State::Pending, std::memory_order_relaxed);
-			_asyncDecodeAvailable = device.submitStreamDecode(_decodeRequest);
+			_decodeRequest->BytesRead = 0;
+			_decodeRequest->CurrentState.store(StreamDecodeRequest::State::Pending, std::memory_order_relaxed);
+			_asyncDecodeAvailable = device.SubmitStreamDecode(_decodeRequest);
 			if (!_asyncDecodeAvailable) {
 				// No decoding thread is available, the next chunk will be decoded synchronously instead
-				_decodeRequest->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+				_decodeRequest->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 			}
 		}
 
 		// Handle buffer underrun case: `_nextAvailableBufferIndex` is the number of buffers currently
 		// queued on the source, tracked here instead of queried from the backend
-		if (_nextAvailableBufferIndex > 0 && !device.isSourcePlaying(source)) {
+		if (_nextAvailableBufferIndex > 0 && !device.IsSourcePlaying(source)) {
 			// Need to restart play
-			device.playSource(source);
+			device.PlaySource(source);
 		}
 
 		return shouldKeepPlaying;
@@ -309,7 +297,7 @@ namespace nCine
 #	endif
 	}
 
-	void AudioStream::stop(std::uint32_t source)
+	void AudioStream::Stop(std::uint32_t source)
 	{
 #	if defined(WITH_AUDIO)
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
@@ -317,64 +305,167 @@ namespace nCine
 		// The reader can't be rewound while the decoding thread is using it,
 		// any chunk decoded ahead of time is stale after the rewind anyway
 		if (_decodeRequest != nullptr) {
-			device.drainStreamDecode(_decodeRequest);
-			_decodeRequest->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+			device.DrainStreamDecode(_decodeRequest);
+			_decodeRequest->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 		}
 
 		// In order to unqueue all the buffers, the source must be stopped first
-		device.stopSource(source);
+		device.StopSource(source);
 
 		// Stopping the source marks every queued buffer processed, so this returns all of them
-		unqueueProcessedBuffers(device, source);
+		UnqueueProcessedBuffers(device, source);
 
 		if (_audioReader != nullptr) {
-			_audioReader->rewind();
+			_audioReader->Rewind();
 		}
 		_currentBufferId = 0;
+		_queuedChunkCount = 0;
 #	endif
 	}
 
-	void AudioStream::setLooping(bool value)
+	bool AudioStream::GetModuleState(AudioModuleState& state) const
+	{
+#	if defined(WITH_AUDIO)
+		if (_audioReader == nullptr) {
+			return false;
+		}
+
+		// The frame being heard: the first queued buffer is the one playing, and how far it got is told by the time
+		// since it started, which is noticed one frame late at worst
+		std::int64_t frame;
+		if (_queuedChunkCount > 0) {
+			const QueuedChunk& chunk = _queuedChunks[_firstQueuedChunk];
+			std::int64_t elapsed = std::int64_t(_firstChunkStartTime.secondsSince() * float(_frequency));
+			frame = chunk.StartFrame + std::clamp<std::int64_t>(elapsed, 0, std::max<std::int64_t>(chunk.FrameCount - 1, 0));
+		} else {
+			frame = _audioReader->GetDecodedFrames();
+		}
+		return _audioReader->GetModuleStateAt(frame, state);
+#	else
+		return false;
+#	endif
+	}
+
+	bool AudioStream::SetModulePosition(std::uint32_t source, std::int32_t order, std::int32_t row, bool restart, bool looping)
+	{
+#	if defined(WITH_AUDIO)
+		if (_audioReader == nullptr || !_audioReader->CanSetModulePosition() || order < 0 || row < 0) {
+			return false;
+		}
+
+		// The chunk decoded ahead is from before the jump, it's dropped
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
+		if (_decodeRequest != nullptr) {
+			device.DrainStreamDecode(_decodeRequest);
+			_decodeRequest->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+		}
+
+		if (!_audioReader->SetModulePosition(order, row)) {
+			return false;
+		}
+
+		// The queued buffers are from before the jump too, also when paused (the queue is filled again on resume)
+		if (_nextAvailableBufferIndex > 0) {
+			// Stopping the source marks every queued buffer processed
+			device.StopSource(source);
+			UnqueueProcessedBuffers(device, source);
+			_queuedChunkCount = 0;
+		}
+		if (restart) {
+			Enqueue(source, looping);
+		}
+		return true;
+#	else
+		return false;
+#	endif
+	}
+
+	bool AudioStream::SetModuleSpeed(std::int32_t speed)
+	{
+		return (_audioReader != nullptr && _audioReader->SetModuleSpeed(speed));
+	}
+
+	bool AudioStream::SetModuleTempo(std::int32_t tempo)
+	{
+		return (_audioReader != nullptr && _audioReader->SetModuleTempo(tempo));
+	}
+
+	bool AudioStream::SlideModuleChannelVolume(std::int32_t channel, float volume, std::int32_t milliseconds)
+	{
+		return (_audioReader != nullptr && _audioReader->SlideModuleChannelVolume(channel, volume, milliseconds));
+	}
+
+	void AudioStream::PushQueuedChunk(std::int32_t bytes)
+	{
+		if (_queuedChunkCount >= NumBuffers) {
+			return;
+		}
+
+		std::int32_t frameSize = _numChannels * _bytesPerSample;
+		std::int32_t frames = (frameSize > 0 ? bytes / frameSize : 0);
+		if (_queuedChunkCount == 0) {
+			_firstChunkStartTime = TimeStamp::now();
+		}
+		// Nothing else is decoding now, so the reader stopped right at the end of this chunk
+		QueuedChunk& chunk = _queuedChunks[(_firstQueuedChunk + _queuedChunkCount) % NumBuffers];
+		chunk.StartFrame = _audioReader->GetDecodedFrames() - frames;
+		chunk.FrameCount = frames;
+		_queuedChunkCount++;
+	}
+
+	void AudioStream::PopQueuedChunks(std::int32_t count)
+	{
+		count = std::min(count, _queuedChunkCount);
+		if (count <= 0) {
+			return;
+		}
+
+		_firstQueuedChunk = (_firstQueuedChunk + count) % NumBuffers;
+		_queuedChunkCount -= count;
+		_firstChunkStartTime = TimeStamp::now();
+	}
+
+	void AudioStream::SetLooping(bool value)
 	{
 		_isLooping = value;
 
 #	if defined(WITH_AUDIO)
 		if (_audioReader != nullptr) {
 			// The reader can't be modified while the decoding thread is using it
-			theServiceLocator().GetAudioDevice().drainStreamDecode(_decodeRequest);
-			_audioReader->setLooping(value);
+			theServiceLocator().GetAudioDevice().DrainStreamDecode(_decodeRequest);
+			_audioReader->SetLooping(value);
 		}
 #	endif
 	}
 
-	bool AudioStream::loadFromFile(StringView filename)
+	bool AudioStream::LoadFromFile(StringView filename)
 	{
 #	if defined(WITH_AUDIO)
-		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
-		if (audioLoader->hasLoaded()) {
-			createReader(*audioLoader);
+		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::CreateFromFile(filename);
+		if (audioLoader->HasLoaded()) {
+			CreateReader(*audioLoader);
 			return true;
 		}	
 #	endif
 		return false;
 	}
 
-	void AudioStream::createReader(IAudioLoader& audioLoader)
+	void AudioStream::CreateReader(IAudioLoader& audioLoader)
 	{
 #	if defined(WITH_AUDIO)
 		// The old reader can't be replaced while the decoding thread is still using it
 		if (_decodeRequest == nullptr) {
 			// The object was moved out, recreate the decode request
 			_decodeRequest = std::make_shared<StreamDecodeRequest>();
-			_decodeRequest->buffer = std::make_unique<char[]>(BufferSize);
-			_decodeRequest->bufferSize = BufferSize;
+			_decodeRequest->Buffer = std::make_unique<char[]>(BufferSize);
+			_decodeRequest->BufferSize = BufferSize;
 		} else {
-			theServiceLocator().GetAudioDevice().drainStreamDecode(_decodeRequest);
-			_decodeRequest->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+			theServiceLocator().GetAudioDevice().DrainStreamDecode(_decodeRequest);
+			_decodeRequest->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 		}
 
-		_bytesPerSample = audioLoader.bytesPerSample();
-		_numChannels = audioLoader.numChannels();
+		_bytesPerSample = audioLoader.GetBytesPerSample();
+		_numChannels = audioLoader.GetChannelCount();
 
 		if (_numChannels == 1) {
 			_format = (_bytesPerSample == 2 ? IAudioDevice::BufferFormat::Mono16 : IAudioDevice::BufferFormat::Mono8);
@@ -387,13 +478,13 @@ namespace nCine
 			return;
 		}
 
-		_frequency = audioLoader.frequency();
-		_numSamples = audioLoader.numSamples();
+		_frequency = audioLoader.GetFrequency();
+		_numSamples = audioLoader.GetSampleCount();
 		_duration = (_numSamples == UINT32_MAX ? -1.0f : float(_numSamples) / _frequency);
 
-		_audioReader = audioLoader.createReader();
-		_decodeRequest->reader = _audioReader;
-		_audioReader->setLooping(_isLooping);
+		_audioReader = audioLoader.CreateReader();
+		_decodeRequest->Reader = _audioReader;
+		_audioReader->SetLooping(_isLooping);
 #	endif
 	}
 #endif

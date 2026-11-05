@@ -455,7 +455,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Whether a coin warp in single player turns the remaining coins into gems
 		 *
-		 * @partialsupport Currently has no effect.
+		 * `true` by default. Each coin gives a red gem and 100 points.
 		 */
 		engine->RegisterGlobalProperty("bool jjWarpsTransmuteCoins", &warpsTransmuteCoins);
 		/**

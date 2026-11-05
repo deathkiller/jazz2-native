@@ -8,6 +8,7 @@
 
 #include "../../../nCine/Audio/AudioBuffer.h"
 #include "../../../nCine/Audio/AudioBufferPlayer.h"
+#include "../../../nCine/Audio/AudioStreamPlayer.h"
 #include "../../../nCine/Base/Algorithms.h"
 
 #include <algorithm>
@@ -35,7 +36,7 @@ namespace Jazz2::Scripting
 #if defined(WITH_AUDIO)
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		if (_this->_levelHandler->_music != nullptr) {
-			_this->_levelHandler->_music->stop();
+			_this->_levelHandler->_music->Stop();
 		}
 #endif
 	}
@@ -44,7 +45,7 @@ namespace Jazz2::Scripting
 #if defined(WITH_AUDIO)
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		if (_this->_levelHandler->_music != nullptr) {
-			_this->_levelHandler->_music->play();
+			_this->_levelHandler->_music->Play();
 		}
 #endif
 	}
@@ -52,8 +53,8 @@ namespace Jazz2::Scripting
 
 #if defined(WITH_AUDIO)
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->isPlaying()) {
-			_this->_levelHandler->_music->pause();
+		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->IsPlaying()) {
+			_this->_levelHandler->_music->Pause();
 		}
 #endif
 	}
@@ -61,8 +62,8 @@ namespace Jazz2::Scripting
 
 #if defined(WITH_AUDIO)
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->isPaused()) {
-			_this->_levelHandler->_music->play();
+		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->IsPaused()) {
+			_this->_levelHandler->_music->Play();
 		}
 #endif
 	}
@@ -111,7 +112,7 @@ namespace Jazz2::Scripting
 
 		// JJ2 volume is roughly 0-64 (0x40 = full); frequency 0 means the sample's natural rate
 		float gain = (volume <= 0 ? 0.0f : volume / 64.0f);
-		float pitch = (frequency <= 0 || buffer->frequency() <= 0 ? 1.0f : (float)frequency / (float)buffer->frequency());
+		float pitch = (frequency <= 0 || buffer->GetFrequency() <= 0 ? 1.0f : (float)frequency / (float)buffer->GetFrequency());
 
 		return _levelHandler->PlaySfx(nullptr, {}, buffer, Vector3f(pos.X, pos.Y, 0.0f), sourceRelative, gain, pitch, SfxFlags::None);
 #else
@@ -123,9 +124,9 @@ namespace Jazz2::Scripting
 	{
 #if defined(WITH_AUDIO)
 		auto it = (channel > 0 ? _loopedSamples.find(channel) : _loopedSamples.end());
-		if (it != _loopedSamples.end() && it->second.Player != nullptr && it->second.Player->isPlaying()) {
+		if (it != _loopedSamples.end() && it->second.Player != nullptr && it->second.Player->IsPlaying()) {
 			// Goes on where the object is now
-			it->second.Player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
+			it->second.Player->SetPosition(Vector3f(pos.X, pos.Y, 100.0f));
 			it->second.Tick = GetGameTick();
 			return channel;
 		}
@@ -134,7 +135,7 @@ namespace Jazz2::Scripting
 		if (player == nullptr) {
 			return 0;
 		}
-		player->setLooping(true);
+		player->SetLooping(true);
 		if (it == _loopedSamples.end()) {
 			channel = ++_lastLoopChannel;
 			it = _loopedSamples.emplace(channel, LoopedSample{}).first;
@@ -153,7 +154,7 @@ namespace Jazz2::Scripting
 		for (auto it = _loopedSamples.begin(); it != _loopedSamples.end(); ) {
 			if (currentTick - it->second.Tick > 1) {
 				if (it->second.Player != nullptr) {
-					it->second.Player->stop();
+					it->second.Player->Stop();
 				}
 				it = _loopedSamples.erase(it);
 			} else {
@@ -244,35 +245,59 @@ namespace Jazz2::Scripting
 		return (getMusicVolume() > 0);
 	}
 
-	// TODO
+	AudioStreamPlayer* LevelScriptLoader::GetMusicPlayer() const
+	{
+#if defined(WITH_AUDIO)
+		return _levelHandler->_music.get();
+#else
+		return nullptr;
+#endif
+	}
+
+	static AudioStreamPlayer* GetActiveMusic() {
+		return ScriptLoader::FromActiveContext<LevelScriptLoader>()->GetMusicPlayer();
+	}
+
+	static bool GetModState(AudioModuleState& state) {
+		AudioStreamPlayer* music = GetActiveMusic();
+		return (music != nullptr && music->GetModuleState(state));
+	}
 
 	void jjSetModPosition(std::int32_t order, std::int32_t row, bool reset) {
-		noop();
+		if (AudioStreamPlayer* music = GetActiveMusic()) {
+			music->SetModulePosition(order, row);
+		}
 	}
 	void jjSlideModChannelVolume(std::int32_t channel, float volume, std::int32_t milliseconds) {
-		noop();
+		if (AudioStreamPlayer* music = GetActiveMusic()) {
+			music->SlideModuleChannelVolume(channel, volume, milliseconds);
+		}
 	}
 	std::int32_t jjGetModOrder() {
-		noop();
-		return 0;
+		AudioModuleState state;
+		return (GetModState(state) ? state.Order : -1);
 	}
 	std::int32_t jjGetModRow() {
-		noop();
-		return 0;
+		AudioModuleState state;
+		return (GetModState(state) ? state.Row : -1);
 	}
 	std::int32_t jjGetModTempo() {
-		noop();
-		return 0;
+		AudioModuleState state;
+		return (GetModState(state) ? state.Tempo : -1);
 	}
-	void jjSetModTempo(std::uint8_t speed) {
-		noop();
+	void jjSetModTempo(std::uint8_t tempo) {
+		if (AudioStreamPlayer* music = GetActiveMusic()) {
+			music->SetModuleTempo(tempo);
+		}
 	}
 	std::int32_t jjGetModSpeed() {
-		noop();
-		return 0;
+		AudioModuleState state;
+		return (GetModState(state) ? state.Speed : -1);
 	}
 	void jjSetModSpeed(std::uint8_t speed) {
-		noop();
+		if (AudioStreamPlayer* music = GetActiveMusic()) {
+			music->SetModuleSpeed(speed);
+		}
 	}
 
 	void LevelScriptLoader::RegisterLegacySound(asIScriptEngine* engine)

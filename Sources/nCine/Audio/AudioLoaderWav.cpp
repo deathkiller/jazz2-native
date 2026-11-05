@@ -77,7 +77,7 @@ namespace nCine
 		_hasLoaded = true;
 	}
 
-	std::unique_ptr<IAudioReader> AudioLoaderWav::createReader()
+	std::unique_ptr<IAudioReader> AudioLoaderWav::CreateReader()
 	{
 		return std::make_unique<AudioReaderWav>(Death::move(_fileHandle), _bytesPerSample, _dataOffset, _dataSize);
 	}

@@ -13,7 +13,7 @@ namespace Jazz2::Actors::Environment
 	{
 		// TODO: Fade-out
 		if (_sound != nullptr) {
-			_sound->stop();
+			_sound->Stop();
 			_sound = nullptr;
 		}
 	}
@@ -43,7 +43,7 @@ namespace Jazz2::Actors::Environment
 
 		// TODO: Fade-in
 		if (_sound != nullptr) {
-			_sound->setLooping(true);
+			_sound->SetLooping(true);
 		}
 
 		async_return true;
@@ -53,24 +53,24 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnUpdate(timeMult);
 
-		// The near-field smoothing (see IAudioPlayer::getAdjustedPosition()) is baked against the listener whenever
+		// The near-field smoothing (see IAudioPlayer::GetAdjustedPosition()) is baked against the listener whenever
 		// a position is set, so it has to be re-applied as the listener moves, otherwise it stays displaced
 		if (_sound != nullptr) {
-			_sound->setPosition(Vector3f(_pos.X, _pos.Y, 100.0f));
+			_sound->SetPosition(Vector3f(_pos.X, _pos.Y, 100.0f));
 		}
 
 		// A looping ambience that reports itself stopped was stopped by something other than this actor,
 		// which starts it once and otherwise only stops it in the destructor. The audio device releases
 		// every player when it decides the output has gone away (see
-		// AudioDeviceBase::checkForStalledSources()), and nothing would ever start this one again - the
+		// AudioDeviceBase::CheckForStalledSources()), and nothing would ever start this one again - the
 		// region would simply be silent for the rest of the level. Retried about once a second, so a
 		// device that is genuinely gone is not asked every frame.
-		if (_sound != nullptr && _sound->isStopped()) {
+		if (_sound != nullptr && _sound->IsStopped()) {
 			if (_restartDelay > 0.0f) {
 				_restartDelay -= timeMult;
 			} else {
 				_restartDelay = RestartDelay;
-				_sound->play();
+				_sound->Play();
 			}
 		}
 	}

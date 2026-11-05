@@ -19,7 +19,7 @@ namespace nCine
 		DEATH_ASSERT(_fileHandle->IsValid());
 	}
 
-	std::int32_t AudioReaderWav::read(void* buffer, std::int32_t bufferSize) const
+	std::int32_t AudioReaderWav::Read(void* buffer, std::int32_t bufferSize) const
 	{
 		DEATH_ASSERT(buffer);
 		DEATH_ASSERT(bufferSize > 0);
@@ -56,7 +56,7 @@ namespace nCine
 		return bufferSeek;
 	}
 
-	void AudioReaderWav::rewind() const
+	void AudioReaderWav::Rewind() const
 	{
 		_fileHandle->Seek(_dataOffset, SeekOrigin::Begin);
 	}

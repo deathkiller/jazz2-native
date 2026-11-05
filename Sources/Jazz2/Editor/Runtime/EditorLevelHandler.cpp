@@ -111,7 +111,7 @@ namespace Jazz2::Editor
 		_musicLowPass = value;
 #if defined(WITH_AUDIO)
 		if (_music != nullptr) {
-			_music->setLowPass(value);
+			_music->SetLowPass(value);
 		}
 #endif
 	}
@@ -124,9 +124,9 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (paused) {
-			_music->pause();
+			_music->Pause();
 		} else if (_musicStartDelay == 0) {
-			_music->play();
+			_music->Play();
 		}
 #endif
 	}
@@ -151,16 +151,16 @@ namespace Jazz2::Editor
 		// Other music starts right away, muffled as the one before, so it can be heard when it's chosen
 		if (properties.Music != _musicCurrentPath) {
 			if (_music != nullptr) {
-				_music->stop();
+				_music->Stop();
 			}
 			_music = (!properties.Music.empty() ? ContentResolver::Get().GetMusic(properties.Music) : nullptr);
 			if (_music != nullptr) {
-				_music->setLooping(true);
-				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-				_music->setSourceRelative(true);
-				_music->setLowPass(_musicLowPass);
+				_music->SetLooping(true);
+				_music->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+				_music->SetSourceRelative(true);
+				_music->SetLowPass(_musicLowPass);
 				if (!_musicPaused) {
-					_music->play();
+					_music->Play();
 				}
 			}
 			_musicStartDelay = 0;
@@ -181,9 +181,9 @@ namespace Jazz2::Editor
 
 #if defined(WITH_AUDIO)
 		if DEATH_UNLIKELY(_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
-			_music->setLowPass(_musicLowPass);
+			_music->SetLowPass(_musicLowPass);
 			if (!_musicPaused) {
-				_music->play();
+				_music->Play();
 			}
 		}
 #endif
@@ -205,7 +205,7 @@ namespace Jazz2::Editor
 
 #if defined(WITH_AUDIO)
 		IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
-		audioDevice.updateListener(Vector3f(_camera.GetCenter(), 0.0f), Vector3f::Zero);
+		audioDevice.UpdateListener(Vector3f(_camera.GetCenter(), 0.0f), Vector3f::Zero);
 #endif
 
 		_elapsedFrames += timeMult;

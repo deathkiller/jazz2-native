@@ -26,8 +26,8 @@ namespace nCine
 		AudioReaderWav(const AudioReaderWav&) = delete;
 		AudioReaderWav& operator=(const AudioReaderWav&) = delete;
 
-		std::int32_t read(void* buffer, std::int32_t bufferSize) const override;
-		void rewind() const override;
+		std::int32_t Read(void* buffer, std::int32_t bufferSize) const override;
+		void Rewind() const override;
 
 	private:
 		std::unique_ptr<Death::IO::Stream> _fileHandle;

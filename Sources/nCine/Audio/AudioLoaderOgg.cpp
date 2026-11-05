@@ -9,33 +9,33 @@ namespace nCine
 {
 	namespace
 	{
-		size_t fileRead(void* ptr, size_t size, size_t nmemb, void* datasource)
+		size_t FileRead(void* ptr, size_t size, size_t nmemb, void* datasource)
 		{
 			Stream* file = static_cast<Stream*>(datasource);
 			std::int64_t bytesRead = file->Read(ptr, size * nmemb);
 			return bytesRead > 0 ? (size_t)bytesRead : 0;
 		}
 
-		int fileSeek(void* datasource, ogg_int64_t offset, int whence)
+		int FileSeek(void* datasource, ogg_int64_t offset, int whence)
 		{
 			Stream* file = static_cast<Stream*>(datasource);
 			return file->Seek(offset, (SeekOrigin)whence) >= 0 ? 0 : -1;
 		}
 
-		int fileClose(void* datasource)
+		int FileClose(void* datasource)
 		{
 			Stream* file = static_cast<Stream*>(datasource);
 			file->Dispose();
 			return 0;
 		}
 
-		long fileTell(void* datasource)
+		long FileTell(void* datasource)
 		{
 			Stream* file = static_cast<Stream*>(datasource);
 			return (long)file->GetPosition();
 		}
 
-		const ov_callbacks fileCallbacks = { fileRead, fileSeek, fileClose, fileTell };
+		const ov_callbacks fileCallbacks = { FileRead, FileSeek, FileClose, FileTell };
 	}
 
 	AudioLoaderOgg::AudioLoaderOgg(std::unique_ptr<Stream> fileHandle)
@@ -94,7 +94,7 @@ namespace nCine
 		}
 	}
 
-	std::unique_ptr<IAudioReader> AudioLoaderOgg::createReader()
+	std::unique_ptr<IAudioReader> AudioLoaderOgg::CreateReader()
 	{
 		return std::make_unique<AudioReaderOgg>(Death::move(_fileHandle), _oggFile);
 	}

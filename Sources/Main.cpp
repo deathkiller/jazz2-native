@@ -1966,7 +1966,7 @@ void GameEventHandler::OnBeginInitialize()
 	// The audio device came up at its platform default; the user's mixing rate (if any) has to be in place
 	// before the first music stream is opened, as the module decoders render at the device's rate
 	if (PreferencesCache::AudioSampleRate > 0) {
-		theServiceLocator().GetAudioDevice().setMixingFrequency(PreferencesCache::AudioSampleRate);
+		theServiceLocator().GetAudioDevice().SetMixingFrequency(PreferencesCache::AudioSampleRate);
 	}
 #endif
 	// Likewise before the first handler lays its viewport out (a no-op everywhere but on PS Vita)

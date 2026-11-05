@@ -75,64 +75,29 @@ namespace Jazz2::Actors
 	static constexpr AnimState TransformFrogFromSpaz = (AnimState)0x60000001;
 	static constexpr AnimState TransformFrogFromLori = (AnimState)0x60000002;
 
+	static inline void CountDown(float& timeLeft, float timeMult)
+	{
+		if (timeLeft > 0.0f) {
+			timeLeft -= timeMult;
+		}
+	}
+
 	Player::Player()
 		:
-		_playerIndex(0),
-		_playerType(PlayerType::Jazz), _playerTypeOriginal(PlayerType::Jazz), _checkpointPlayerType(PlayerType::Jazz),
-		_playerTypeBeforeMorph(PlayerType::Jazz),
-		_isActivelyPushing(false),
-		_wasActivelyPushing(false),
-		_pushContactThisFrame(false),
-		_controllable(true),
-		_controllableExternal(true),
-		_controllableTimeout(0.0f),
-		_lastExitType(ExitType::None),
-		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false), _isRunPressed(false),
-		_runActionSeeded(false),
-		_revUpCharge(0.0f), _revUpHeldCharge(0.0f), _revUpPresses(0), _revUpArmed(false), _revUpWound(false), _revUpWindowLeft(0.0f), _revUpChargeTime(0.0f), _revUpSparkCooldown(0.0f), _revUpEndLeft(0.0f), _stopPhase(StopPhaseNone), _hookIdleTime(0.0f), _revUpLaunchLeft(0.0f), _revUpPendingSpeed(0.0f), _revUpSfxCooldown(0.0f), _revUpSfxPitch(RevUpSfxMinPitch), _revUpStarted(false), _revUpSfxActive(false), _weaponSoundType(WeaponType::Unknown),
-		_currentSpecialMove(SpecialMoveType::None),
-		_isAttachedToPole(false), _canPushFurther(false),
-		_copterFramesLeft(0.0f), _fireFramesLeft(0.0f), _pushFramesLeft(0.0f), _waterCooldownLeft(0.0f),
-		_levelExiting(LevelExitingState::None),
-		_isFreefall(false), _inWater(false), _isLifting(false), _isSpring(false),
-		_flyCheatActive(false),
-		_inShallowWater(-1),
-		_activeModifier(Modifier::None),
-		_externalForceCooldown(0.0f),
-		_springCooldown(0.0f),
-		_dashGraceLeft(0.0f), _sidekickDistanceLeft(0.0f), _sidekickTime(0.0f), _rfBlastLeft(0.0f),
-		_uppercutTimeLeft(0.0f), _jumpReleased(false), _poleEnteredOnSpring(false), _riseFromFloatUp(false), _inFloatUpArea(false),
-		_crouchHeldBefore(false),
-		_inIdleTransition(false), _inLedgeTransition(false), _stopPhaseChanging(false), _inHookIdleFlavor(false), _canDoubleJump(true),
-		_carryingObject(nullptr), _stackCarrying(false), _beingStoodOn(false),
 		// Per-player recolor; 0 = use the original colors. The local player defaults to the user's profile color;
 		// remote players get their color from the network (see MpLevelHandler).
-		_furColor(PreferencesCache::PlayerFurColor), _paletteOffset(-1),
-		_lives(0), _score(0),
-		_inventory{}, _inventoryCheckpoint{},
-		_checkpointLight(1.0f), _currentAmbientLight(1.0f),
-		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
-		_shieldSpawnTime(ShieldDisabled),
-		_gemsTotal{}, _gemsPitch(0),
-		_gemsTimer(0.0f),
-		_bonusWarpTimer(0.0f),
-		_suspendType(SuspendType::None),
-		_suspendTime(0.0f),
-		_invulnerableTime(0.0f),
-		_invulnerableBlinkTime(0.0f),
-		_jumpTime(0.0f),
-		_idleTime(0.0f),
-		_hitFloorTime(5.0f),
-		_keepRunningTime(0.0f),
-		_lastPoleTime(0.0f),
-		_inTubeTime(0.0f),
-		_dizzyTime(0.0f),
-		_activeShield(ShieldType::None),
-		_activeShieldTime(0.0f),
-		_weaponFlareTime(0.0f),
-		_weaponCooldown(0.0f),
-		_weaponAllowed(true),
-		_weaponWheelState(WeaponWheelState::Hidden)
+		_furColor(PreferencesCache::PlayerFurColor),
+		_isActivelyPushing(false), _wasActivelyPushing(false), _wasOnAccBelt(false), _pushContactThisFrame(false),
+		_kickPushedThisFrame(false), _kickWasPushing(false), _controllable(true), _controllableExternal(true),
+		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false), _isRunPressed(false),
+		_runActionSeeded(false), _fireReleasedWhileFrozen(false), _revUpSfxActive(false), _isAttachedToPole(false),
+		_canPushFurther(false), _isFreefall(false), _inWater(false), _isLifting(false), _isSpring(false), _flyCheatActive(false),
+		_inIdleTransition(false), _inLedgeTransition(false), _stopPhaseChanging(false), _inHookIdleFlavor(false),
+		_copterCarried(false), _riseOwnedByJump(false), _copterPressAllowed(true), _loriKickShotUsed(false),
+		_stackCarrying(false), _beingStoodOn(false), _hPoleCarry(false), _springCarry(false), _revUpCarry(false),
+		_jumpReleased(false), _poleEnteredOnSpring(false), _riseFromFloatUp(false), _inFloatUpArea(false),
+		_crouchHeldBefore(false), _weaponAllowed(true), _birdPerched(false), _birdStanding(false), _birdCharging(false),
+		_levelExitSuppressed(false), _lightHiddenByScript(false)
 	{
 	}
 
@@ -150,25 +115,11 @@ namespace Jazz2::Actors
 	void Player::StopAllActiveSounds()
 	{
 #if defined(WITH_AUDIO)
-		if (_copterSound != nullptr) {
-			_copterSound->stop();
-			_copterSound = nullptr;
-		}
-		if (_airboardSound != nullptr) {
-			_airboardSound->stop();
-			_airboardSound = nullptr;
-		}
-		if (_airboardTurnSound != nullptr) {
-			_airboardTurnSound->stop();
-			_airboardTurnSound = nullptr;
-		}
-		if (_revUpSound != nullptr) {
-			_revUpSound->stop();
-			_revUpSound = nullptr;
-		}
-		if (_weaponSound != nullptr) {
-			_weaponSound->stop();
-			_weaponSound = nullptr;
+		for (auto* sound : { &_copterSound, &_airboardSound, &_airboardTurnSound, &_revUpSound, &_weaponSound }) {
+			if (*sound != nullptr) {
+				(*sound)->Stop();
+				*sound = nullptr;
+			}
 		}
 #endif
 	}
@@ -287,6 +238,7 @@ namespace Jazz2::Actors
 		_checkpointPlayerType = _playerTypeOriginal;
 		_playerTypeBeforeMorph = _playerTypeOriginal;
 		_playerIndex = details.Params[1];
+		RefreshCharacterProfile();
 
 		// Load the anim set as indexed ONLY when this player is actually being recolored, so it can be recolored at
 		// draw time. Loading indexed without applying a palette would render raw palette indices (glitched sprites).
@@ -474,6 +426,8 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		RefreshCharacterProfile();
+
 		// Delayed spawning
 		if (_lastExitType != ExitType::None) {
 			_controllableTimeout -= timeMult;
@@ -541,7 +495,7 @@ namespace Jazz2::Actors
 		OnHandleMovement(timeMult, areaWeaponAllowed, canJumpPrev);
 
 #if defined(WITH_AUDIO)
-		if (_airboardTurnSound != nullptr && !_airboardTurnSound->isPlaying()) {
+		if (_airboardTurnSound != nullptr && !_airboardTurnSound->IsPlaying()) {
 			if (_activeModifier == Modifier::Airboard) {
 				PlayPlayerSfx("AirboardTurnEnd"_s, 2.0f, 0.8f);
 			}
@@ -1043,16 +997,10 @@ namespace Jazz2::Actors
 			}
 		}
 
-		if (_jumpTime > 0.0f) {
-			_jumpTime -= timeMult;
-		}
+		CountDown(_jumpTime, timeMult);
 		UpdateLoriKickRepeat(timeMult);
-		if (_externalForceCooldown > 0.0f) {
-			_externalForceCooldown -= timeMult;
-		}
-		if (_springCooldown > 0.0f) {
-			_springCooldown -= timeMult;
-		}
+		CountDown(_externalForceCooldown, timeMult);
+		CountDown(_springCooldown, timeMult);
 		if (_uppercutTimeLeft > 0.0f) {
 			_uppercutTimeLeft -= timeMult;
 			if (_uppercutTimeLeft < 0.0f) {
@@ -1061,15 +1009,15 @@ namespace Jazz2::Actors
 		}
 		// Runs before HandleSpecialJump() does, which is what makes this count the same way the original's
 		// does: armed on the tick of the release and already one lower by the time the next tick reads it
-		if (_doubleJumpWindowLeft > 0.0f) {
-			_doubleJumpWindowLeft -= timeMult;
-		}
-		if (_onPinballPaddleTime > 0.0f) {
-			_onPinballPaddleTime -= timeMult;
-		}
+		CountDown(_doubleJumpWindowLeft, timeMult);
+		CountDown(_onPinballPaddleTime, timeMult);
 		// The copter's deaf window, re-armed in HandleJump() on every airborne tick the key is down
-		if (_copterDeafLeft > 0.0f) {
-			_copterDeafLeft -= timeMult;
+		CountDown(_copterDeafLeft, timeMult);
+		if (_copterLandGraceLeft > 0.0f) {
+			_copterLandGraceLeft -= timeMult;
+			if (_copterLandGraceLeft <= 0.0f && !_copterCarried) {
+				SetCopterFlight(0.0f);
+			}
 		}
 		if (_springHoldLeft > 0.0f) {
 			_springHoldLeft -= timeMult;
@@ -1093,15 +1041,9 @@ namespace Jazz2::Actors
 				_speed.X = std::clamp(_speed.X, -LegacyWalkSpeed, LegacyWalkSpeed);
 			}
 		}
-		if (_weaponCooldown > 0.0f) {
-			_weaponCooldown -= timeMult;
-		}
-		if (_bonusWarpTimer > 0.0f) {
-			_bonusWarpTimer -= timeMult;
-		}
-		if (_lastPoleTime > 0.0f) {
-			_lastPoleTime -= timeMult;
-		}
+		CountDown(_weaponCooldown, timeMult);
+		CountDown(_bonusWarpTimer, timeMult);
+		CountDown(_lastPoleTime, timeMult);
 		if (_gemsTimer > 0.0f) {
 			_gemsTimer -= timeMult;
 
@@ -1110,9 +1052,7 @@ namespace Jazz2::Actors
 			}
 		}
 
-		if (_waterCooldownLeft > 0.0f) {
-			_waterCooldownLeft -= timeMult;
-		}
+		CountDown(_waterCooldownLeft, timeMult);
 
 		// Weapons
 		if (_fireFramesLeft > 0.0f) {
@@ -1147,14 +1087,9 @@ namespace Jazz2::Actors
 				}
 			}
 		}
-		if (_weaponFlareTime > 0.0f) {
-			_weaponFlareTime -= timeMult;
-		}
-
+		CountDown(_weaponFlareTime, timeMult);
 		// Dizziness
-		if (_dizzyTime > 0.0f) {
-			_dizzyTime -= timeMult;
-		}
+		CountDown(_dizzyTime, timeMult);
 
 		// Shield
 		if (_activeShieldTime > 0.0f) {
@@ -1208,26 +1143,26 @@ namespace Jazz2::Actors
 #if defined(WITH_AUDIO)
 		if (_copterSound != nullptr) {
 			if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
-				_copterSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+				_copterSound->SetPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 			} else {
-				_copterSound->stop();
+				_copterSound->Stop();
 				_copterSound = nullptr;
 			}
 		}
 		// Kept after the launch too, which lets the last press's sound play out - it has to follow the player off,
 		// because a positional sound's near-field smoothing is fixed at wherever it was last placed
 		if (_revUpSound != nullptr) {
-			if (_revUpSound->isPlaying()) {
-				_revUpSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			if (_revUpSound->IsPlaying()) {
+				_revUpSound->SetPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 			} else {
 				_revUpSound = nullptr;
 			}
 		}
 		if (_airboardSound != nullptr) {
 			if ((_currentAnimation->State & AnimState::Airboard) == AnimState::Airboard) {
-				_airboardSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+				_airboardSound->SetPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 			} else {
-				_airboardSound->stop();
+				_airboardSound->Stop();
 				_airboardSound = nullptr;
 			}
 		}
@@ -1328,6 +1263,9 @@ namespace Jazz2::Actors
 		} else {
 			_isRunPressed = _levelHandler->PlayerActionPressed(this, PlayerAction::Run);
 		}
+		if (_isRunPressed && !_characterProfile.CanRun) {
+			_isRunPressed = false;
+		}
 
 		if (_health <= 0) {
 			return;
@@ -1410,30 +1348,18 @@ namespace Jazz2::Actors
 		// Grounded only. A wind-up is *suspended* rather than cancelled by leaving the ground (see
 		// UpdateRevUp()), and the pose must not go with it into the air - the player jumping out of one shows
 		// the jump and fall poses and picks the wind-up back up on landing.
-		return (_revUpWound && _revUpWindowLeft > 0.0f && CanJump());
+		return (_revUp.Wound && _revUp.WindowLeft > 0.0f && CanJump());
 	}
 
 	void Player::CancelRevUp()
 	{
 		// A pending light launch counts as something to cancel even with the charge already spent, or being hit
 		// or hitting a wall during the wait would still fire the launch a moment later
-		if (_revUpCharge <= 0.0f && !_revUpWound && _revUpLaunchLeft <= 0.0f) {
+		if (_revUp.Charge <= 0.0f && !_revUp.Wound && _revUp.LaunchLeft <= 0.0f) {
 			return;
 		}
 
-		_revUpCharge = 0.0f;
-		_revUpHeldCharge = 0.0f;
-		_revUpPresses = 0;
-		_revUpArmed = false;
-		_revUpWound = false;
-		_revUpWindowLeft = 0.0f;
-		_revUpChargeTime = 0.0f;
-		_revUpStarted = false;
-		_revUpEndLeft = 0.0f;
-		_revUpLaunchLeft = 0.0f;
-		_revUpPendingSpeed = 0.0f;
-		_revUpSfxCooldown = 0.0f;
-		_revUpSfxPitch = RevUpSfxMinPitch;
+		_revUp = {};
 		// The pose runs at a charge-dependent speed, so the ordinary duration has to come back with it or the
 		// next animation inherits however fast the wind-up happened to be going
 		_renderer.AnimDuration = _currentAnimation->AnimDuration;
@@ -1446,12 +1372,12 @@ namespace Jazz2::Actors
 		// Exclusive, so the remote peers replace the previous instance too - they get only the request to play it
 #if defined(WITH_AUDIO)
 		if (_revUpSound != nullptr) {
-			_revUpSound->stop();
+			_revUpSound->Stop();
 		}
-		_revUpSound = PlaySfx("RevUp"_s, RevUpSfxGain, _revUpSfxPitch, SfxFlags::Exclusive);
+		_revUpSound = PlaySfx("RevUp"_s, RevUpSfxGain, _revUp.SfxPitch, SfxFlags::Exclusive);
 #else
 		// Still called without audio, because a dedicated server has none and is the one that tells the peers
-		PlaySfx("RevUp"_s, RevUpSfxGain, _revUpSfxPitch, SfxFlags::Exclusive);
+		PlaySfx("RevUp"_s, RevUpSfxGain, _revUp.SfxPitch, SfxFlags::Exclusive);
 #endif
 		_revUpSfxActive = true;
 	}
@@ -1515,7 +1441,7 @@ namespace Jazz2::Actors
 		PlaySfx("RevUpLaunch"_s);
 		// The last press's sound is let play out. `_revUpSound` stays, only so it keeps following the player.
 		_revUpSfxActive = false;
-		_speed.X = _revUpPendingSpeed;
+		_speed.X = _revUp.PendingSpeed;
 		_externalForce.X = 0.0f;
 		_keepRunningTime = RevUpKeepRunningTime;
 		// Its own kind of carry, and it matches neither of the other two - see @ref _revUpCarry. It refuses
@@ -1528,31 +1454,31 @@ namespace Jazz2::Actors
 		// own behaviour - so the grace is armed to outlast the no-friction window by a hair and deliver it.
 		// UpdateDashState() is non-Reforged only, so Reforged decays out of the hold instead.
 		_dashGraceLeft = RevUpKeepRunningTime + 2.0f;
-		_revUpLaunchLeft = 0.0f;
-		_revUpPendingSpeed = 0.0f;
+		_revUp.LaunchLeft = 0.0f;
+		_revUp.PendingSpeed = 0.0f;
 	}
 
 	void Player::UpdateRevUp(float timeMult)
 	{
 		// A light launch waits at a standstill through its three animation phases before it moves. Counted down
 		// before anything else, so the wait cannot be restarted by taps that are still arriving.
-		if (_revUpLaunchLeft > 0.0f) {
-			float before = _revUpLaunchLeft;
-			_revUpLaunchLeft -= timeMult;
+		if (_revUp.LaunchLeft > 0.0f) {
+			float before = _revUp.LaunchLeft;
+			_revUp.LaunchLeft -= timeMult;
 			// The start animation waits for the base pose to be in place before it goes in. Fired at the moment
 			// the launch is scheduled, the base is still Idle, and UpdateAnimation() changing it to RevUp on the
 			// next frame cancels the transition after a single frame - the same trap the wound path hit.
-			if (!_revUpStarted && (_currentAnimation->State & AnimState::RevUp) == AnimState::RevUp) {
-				_revUpStarted = true;
+			if (!_revUp.Started && (_currentAnimation->State & AnimState::RevUp) == AnimState::RevUp) {
+				_revUp.Started = true;
 				SetPlayerTransition(AnimState::TransitionRevUpStart, true, false, SpecialMoveType::None);
 			}
 			// The end animation goes in once the start animation and the loop after it have had their time. The
-			// base pose stays RevUp throughout (see `_revUpEndLeft`), so the loop is what shows in between - the
+			// base pose stays RevUp throughout (see `_revUp.EndLeft`), so the loop is what shows in between - the
 			// two transitions fired back to back left the player flicking from one pose straight to the other.
-			if (before > RevUpEndTime && _revUpLaunchLeft <= RevUpEndTime) {
+			if (before > RevUpEndTime && _revUp.LaunchLeft <= RevUpEndTime) {
 				SetPlayerTransition(AnimState::TransitionRevUpEnd, true, false, SpecialMoveType::None);
 			}
-			if (_revUpLaunchLeft <= 0.0f) {
+			if (_revUp.LaunchLeft <= 0.0f) {
 				ApplyRevUpLaunch();
 			}
 			return;
@@ -1564,7 +1490,7 @@ namespace Jazz2::Actors
 			_suspendType == SuspendType::None &&
 			_activeModifier == Modifier::None && !_inWater && _dizzyTime <= 0.0f &&
 			std::abs(_levelHandler->PlayerHorizontalMovement(this)) <= 0.4f &&
-			std::abs(_speed.X) < 1.0f);
+			std::abs(_speed.X) < 1.0f && _characterProfile.CanRun);
 
 		// Leaving the ground **suspends** a wind-up, it does not end one. Reported from play: jumping straight
 		// up with no direction held lands the player with the run-in-place intact, and it is what some obstacle
@@ -1591,23 +1517,23 @@ namespace Jazz2::Actors
 		// per press and would count a press and its release as one tap in one mode and two in the other
 		bool runHit = _levelHandler->PlayerActionHit(this, PlayerAction::Run);
 		if (runHit) {
-			_revUpCharge += RevUpChargeGainTap;
-			_revUpHeldCharge = 0.0f;
-			_revUpPresses++;
-			_revUpWindowLeft = RevUpTapWindow;
+			_revUp.Charge += RevUpChargeGainTap;
+			_revUp.HeldCharge = 0.0f;
+			_revUp.Presses++;
+			_revUp.WindowLeft = RevUpTapWindow;
 		} else if (_levelHandler->PlayerActionPressed(this, PlayerAction::Run)) {
 			// Holding adds too, which is what lets a third tap held a little longer do the work of a fourth -
 			// but only up to a cap per press, or one long press would wind the player up on its own
-			float gain = std::min(RevUpChargeGainHeld * timeMult, RevUpChargeHeldCap - _revUpHeldCharge);
+			float gain = std::min(RevUpChargeGainHeld * timeMult, RevUpChargeHeldCap - _revUp.HeldCharge);
 			if (gain > 0.0f) {
-				_revUpCharge += gain;
-				_revUpHeldCharge += gain;
+				_revUp.Charge += gain;
+				_revUp.HeldCharge += gain;
 			}
-			_revUpWindowLeft = RevUpTapWindow;
-		} else if (_revUpCharge > 0.0f) {
-			_revUpCharge = std::max(_revUpCharge - RevUpChargeDecay * timeMult, 0.0f);
-			if (_revUpArmed) {
-				_revUpWindowLeft -= timeMult;
+			_revUp.WindowLeft = RevUpTapWindow;
+		} else if (_revUp.Charge > 0.0f) {
+			_revUp.Charge = std::max(_revUp.Charge - RevUpChargeDecay * timeMult, 0.0f);
+			if (_revUp.Armed) {
+				_revUp.WindowLeft -= timeMult;
 			}
 		}
 
@@ -1615,16 +1541,16 @@ namespace Jazz2::Actors
 		// about three plain taps - leaves the player standing idle, and letting the key go then plays the start
 		// and end animations and sets them running anyway. Only past the second threshold does the wind-up pose
 		// itself appear, and from there the launch grows with how long it runs.
-		if (_revUpCharge >= RevUpChargeLightThreshold && _revUpPresses >= RevUpPressesRequired) {
-			_revUpArmed = true;
+		if (_revUp.Charge >= RevUpChargeLightThreshold && _revUp.Presses >= RevUpPressesRequired) {
+			_revUp.Armed = true;
 		}
-		if (!_revUpWound) {
-			if (_revUpArmed && _revUpCharge >= RevUpChargeThreshold) {
-				_revUpWound = true;
-			} else if (!_revUpArmed || _revUpWindowLeft > 0.0f) {
+		if (!_revUp.Wound) {
+			if (_revUp.Armed && _revUp.Charge >= RevUpChargeThreshold) {
+				_revUp.Wound = true;
+			} else if (!_revUp.Armed || _revUp.WindowLeft > 0.0f) {
 				// Not yet, or still being fed. The charge simply bleeds away; there is nothing to cancel, and a
 				// tap arriving before it reaches zero carries on from whatever is left rather than starting over.
-				if (_revUpCharge <= 0.0f) {
+				if (_revUp.Charge <= 0.0f) {
 					CancelRevUp();
 				}
 				return;
@@ -1636,12 +1562,12 @@ namespace Jazz2::Actors
 		// Wound up. Charge follows the time spent revving rather than the tap count - 15 taps over 75 ticks
 		// launched at 15.87 where 12 taps over 106 ticks reached the full 16.0. An armed-but-never-wound player
 		// accumulates none of it, so their launch comes out at the minimum.
-		if (_revUpWound) {
-			_revUpChargeTime += timeMult;
+		if (_revUp.Wound) {
+			_revUp.ChargeTime += timeMult;
 		}
-		float charge = std::min(_revUpChargeTime / RevUpFullChargeTime, 1.0f);
+		float charge = std::min(_revUp.ChargeTime / RevUpFullChargeTime, 1.0f);
 
-		if (_revUpWound && _revUpWindowLeft > 0.0f) {
+		if (_revUp.Wound && _revUp.WindowLeft > 0.0f) {
 			// The looping pose is chosen in UpdateAnimation(), for the same reason the pinball paddle's is: that
 			// runs earlier in the frame and would overwrite anything assigned here, and re-assigning it from
 			// here every frame restarts the animation on every frame - which shows as a single frozen frame.
@@ -1655,8 +1581,8 @@ namespace Jazz2::Actors
 			// means there is no state change left to cancel it, and the transition can stay *cancellable*,
 			// which matters: a non-cancellable one that outlives its welcome is what left the player stuck in
 			// the wind-up animation after launching.
-			if (!_revUpStarted && (_currentAnimation->State & AnimState::RevUp) == AnimState::RevUp) {
-				_revUpStarted = true;
+			if (!_revUp.Started && (_currentAnimation->State & AnimState::RevUp) == AnimState::RevUp) {
+				_revUp.Started = true;
 				SetPlayerTransition(AnimState::TransitionRevUpStart, true, false, SpecialMoveType::None);
 			}
 			// Measured: the original's wind-up runs at one frame per 7 ticks when it starts and one per 2 at
@@ -1673,17 +1599,17 @@ namespace Jazz2::Actors
 			// A sound for every Run press once wound up, the press that winds the player up included, but no more
 			// often than the pose completes a cycle at its current speed - tapping as fast as possible would
 			// otherwise restart it every few frames and it would never be heard as more than a click
-			_revUpSfxCooldown -= timeMult;
+			_revUp.SfxCooldown -= timeMult;
 			if (runHit) {
-				if (_revUpSfxCooldown <= 0.0f) {
+				if (_revUp.SfxCooldown <= 0.0f) {
 					PlayRevUpSfx();
 					auto* revUpAnim = _metadata->FindAnimation(AnimState::RevUp);
 					float cycleTicks = (revUpAnim != nullptr ? revUpAnim->AnimDuration / FrameTimer::SecondsPerFrame : 0.0f);
-					_revUpSfxCooldown = cycleTicks / (1.0f + charge * RevUpAnimSpeedUp);
+					_revUp.SfxCooldown = cycleTicks / (1.0f + charge * RevUpAnimSpeedUp);
 				}
 				// Every press counts towards the pitch, the ones swallowed by the cooldown too, so it tracks how
 				// hard the player is tapping rather than how often the sound happened to be let through
-				_revUpSfxPitch = std::min(_revUpSfxPitch + RevUpSfxPitchStep, RevUpSfxMaxPitch);
+				_revUp.SfxPitch = std::min(_revUp.SfxPitch + RevUpSfxPitchStep, RevUpSfxMaxPitch);
 			}
 
 			// Sparks come at the same rate the pose runs at - they are the feet striking the ground, so they
@@ -1701,37 +1627,27 @@ namespace Jazz2::Actors
 		// measured, a direction key held at the moment of launch does not steer it, and neither does one
 		// pressed during the hold that follows.
 		float launchSpeed = lerp(RevUpMinLaunchSpeed, RevUpMaxLaunchSpeed, charge);
-		_revUpPendingSpeed = (IsFacingLeft() ? -launchSpeed : launchSpeed);
-		if (_revUpWound) {
+		// Cleared before the transition, so UpdateAnimation() no longer claims the rev-up pose and the launch
+		// animation is free to play over whatever the ordinary movement state has become
+		bool wasWound = _revUp.Wound;
+		_revUp = {};
+		_revUp.PendingSpeed = (IsFacingLeft() ? -launchSpeed : launchSpeed);
+		if (wasWound) {
 			// Measured: the full wind-up moves on the very tick its end animation begins
 			ApplyRevUpLaunch();
 		} else {
 			// The light case stands still through all three phases, and moves off exactly as the last one ends
-			_revUpLaunchLeft = RevUpStartTime + RevUpLightMidTime + RevUpEndTime;
+			_revUp.LaunchLeft = RevUpStartTime + RevUpLightMidTime + RevUpEndTime;
 		}
 		_wasActivelyPushing = false;
 		_renderer.AnimDuration = _currentAnimation->AnimDuration;
-
-		// Cleared before the transition, so UpdateAnimation() no longer claims the rev-up pose and the launch
-		// animation is free to play over whatever the ordinary movement state has become
-		bool wasWound = _revUpWound;
-		_revUpCharge = 0.0f;
-		_revUpHeldCharge = 0.0f;
-		_revUpPresses = 0;
-		_revUpArmed = false;
-		_revUpWound = false;
-		_revUpWindowLeft = 0.0f;
-		_revUpChargeTime = 0.0f;
-		_revUpStarted = false;
-		_revUpSfxCooldown = 0.0f;
-		_revUpSfxPitch = RevUpSfxMinPitch;
 
 		// The base state is held at RevUp for the length of the animations instead of being switched to Dash
 		// straight away - see UpdateAnimation(). That is what lets these stay cancellable: the state does not
 		// change under them, so nothing cancels them, and because they *are* cancellable they can never leave
 		// the player stuck in the wind-up pose if anything unexpected happens.
 		if (wasWound) {
-			_revUpEndLeft = RevUpEndTime;
+			_revUp.EndLeft = RevUpEndTime;
 			SetPlayerTransition(AnimState::TransitionRevUpEnd, true, false, SpecialMoveType::None);
 		} else {
 			// Armed but never wound up: nothing has been shown yet, so the whole thing plays now in miniature -
@@ -1739,7 +1655,7 @@ namespace Jazz2::Actors
 			// for all three, which is both what lets the loop show in the middle and what stops the base state
 			// changing under the transitions and cancelling them. The end animation is fired from the countdown
 			// above rather than from a callback here, so the loop gets its own time in between.
-			_revUpEndLeft = RevUpStartTime + RevUpLightMidTime + RevUpEndTime;
+			_revUp.EndLeft = RevUpStartTime + RevUpLightMidTime + RevUpEndTime;
 		}
 	}
 
@@ -1754,7 +1670,7 @@ namespace Jazz2::Actors
 			return 1.0f;
 		}
 
-		// The same two lines UpdateRevUp() runs, off a clock the receiver keeps itself. `_revUpChargeTime` is
+		// The same two lines UpdateRevUp() runs, off a clock the receiver keeps itself. `_revUp.ChargeTime` is
 		// incremented by `timeMult` on every frame the wind-up is up and the charge is that over
 		// RevUpFullChargeTime, so a receiver that counts the frames the *pose* has been up has the identical
 		// quantity - this is not an estimate standing in for something unsent.
@@ -1983,20 +1899,8 @@ namespace Jazz2::Actors
 
 	void Player::ResetRevUpState()
 	{
-		_revUpCharge = 0.0f;
-		_revUpHeldCharge = 0.0f;
-		_revUpPresses = 0;
-		_revUpArmed = false;
-		_revUpWound = false;
-		_revUpWindowLeft = 0.0f;
-		_revUpChargeTime = 0.0f;
+		_revUp = {};
 		_revUpSparkCooldown = 0.0f;
-		_revUpEndLeft = 0.0f;
-		_revUpLaunchLeft = 0.0f;
-		_revUpPendingSpeed = 0.0f;
-		_revUpSfxCooldown = 0.0f;
-		_revUpSfxPitch = RevUpSfxMinPitch;
-		_revUpStarted = false;
 		StopRevUpSfx();
 	}
 
@@ -2087,7 +1991,13 @@ namespace Jazz2::Actors
 				_currentSpecialMove == SpecialMoveType::Sidekick && playerMovementVelocity > 0.4f) {
 				SetFacingLeft(playerMovement < 0.0f);
 			}
-			if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
+			if (IsCopterPushActive()) {
+				// The direction keys only turn the player around, the push drives the speed (see ApplyCopterPush())
+				if (canWalk && playerMovementVelocity > 0.4f) {
+					SetFacingLeft(_dizzyTime > 0.0f ? (playerMovement > 0.0f) : (playerMovement < 0.0f));
+				}
+				ApplyCopterPush(timeMult);
+			} else if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
 				if (_levelHandler->IsReforged()) {
 					_speed.X = 0.2f * playerMovement;
 					if (_isRunPressed) {
@@ -2889,7 +2799,9 @@ namespace Jazz2::Actors
 					bool canCrouch = (_levelHandler->IsReforged()
 						? std::abs(_speed.X) < std::numeric_limits<float>::epsilon()
 						: (std::abs(_levelHandler->PlayerHorizontalMovement(this)) <= 0.4f &&
-							!((_springCarry || _revUpCarry) && _keepRunningTime > 0.0f)));
+							!((_springCarry || _revUpCarry) && _keepRunningTime > 0.0f) &&
+							// The carry counts down only once control is back, which is that much after the launch
+							!(_hPoleCarry && _keepRunningTime > HPoleKeepRunningTime - (LegacyHPoleCrouchBlockTime - PoleLaunchControlTimeout))));
 					if (!_isLifting && canCrouch) {
 						_wasDownPressed = true;
 						if (_fireFramesLeft > 0.0f) {
@@ -3050,6 +2962,8 @@ namespace Jazz2::Actors
 						HandleSpecialJump(timeMult);
 					}
 				}
+				// Reset only now, the double jump in HandleSpecialJump() reads how long the key was up
+				_jumpUpTime = 0.0f;
 			}
 
 			if (_suspendType != SuspendType::None) {
@@ -3092,14 +3006,14 @@ namespace Jazz2::Actors
 						_jumpTime = 0.0f;
 					}
 					SetState(ActorState::CanJump, true);
-					_canDoubleJump = true;
+					ResetAirJumps();
 				}
 			}
 
 			if (!CanJump()) {
-				// Extend copter time
-				if (_copterFramesLeft > 0.0f) {
-					SetCopterFlight(70.0f, IsFlyCheatActive() ? FlightType::Cheat : FlightType::Normal);
+				// Extend copter time, except a counter carried over a landing
+				if (_copterFramesLeft > 0.0f && !_copterCarried) {
+					SetCopterFlight(GetCopterFlightTime(), IsFlyCheatActive() ? FlightType::Cheat : FlightType::Normal);
 				}
 			// The Down gate is NOT what the original uses, but dropping it for non-Reforged was tried and is
 			// worse, so it stays until the real rule is known. Measured with Down and Jump both held through
@@ -3116,6 +3030,7 @@ namespace Jazz2::Actors
 				}
 			}
 		} else {
+			_jumpUpTime += timeMult;
 			if (_wasJumpPressed) {
 				_wasJumpPressed = false;
 
@@ -3164,6 +3079,12 @@ namespace Jazz2::Actors
 		SetState(ActorState::ApplyGravitation, true);
 		SetState(ActorState::IsSolidObject, false);
 
+		// A jump right after landing takes the copter's counter along, see LegacyCopterLandGrace
+		if (_copterLandGraceLeft > 0.0f && _copterFramesLeft > 0.0f) {
+			_copterCarried = true;
+			_copterLandGraceLeft = 0.0f;
+		}
+
 		if (_levelHandler->IsReforged()) {
 			_speed.Y = -3.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 			_internalForceY = -1.02f - 0.07f * (1.0f - timeMult);
@@ -3207,7 +3128,7 @@ namespace Jazz2::Actors
 		// jump this gives them is one they cannot double-jump out of - having spent it on the jump that
 		// carried them into the platform. The one flag OnHitFloor() clears that matters here, and no others:
 		// this is a launch, not a landing, and nothing else about being grounded is true here.
-		_canDoubleJump = true;
+		ResetAirJumps();
 		// No `_jumpTime` gate. The original's gaps between successive launches on `ow_jump` are 7, 9 and 12
 		// ticks, and the cooldown is 10 frames - 11.7 ticks - so honouring it would swallow the first two.
 		// A cooldown is not what limits this in the original; the spacing of the platforms is.
@@ -3259,9 +3180,10 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		switch (_playerType) {
-			case PlayerType::Jazz: {
-				if (IsSpecialMoveCrouchReady()) {
+		const CharacterProfile& profile = _characterProfile;
+		if (IsSpecialMoveCrouchReady()) {
+			switch (profile.GroundJump) {
+				case CharacterGroundJump::Jazz: {
 					_controllable = false;
 					SetAnimation(AnimState::Uppercut);
 					SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
@@ -3285,58 +3207,10 @@ namespace Jazz2::Actors
 						SetState(ActorState::CanJump, false);
 						SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 					});
-				} else {
-					// Whether the player counts as falling is read at the **start of the frame** outside
-					// Reforged, not live - the same rule the double jump needed and for the same reason. The
-					// original applies its gravity after this test, so a press landing on the exact apex reads
-					// 0.0000 there and is refused; the live value has already crossed zero and accepts it.
-					// Measured on `sp_jazz_dj`, whose press lands one tick either side of the apex: the
-					// original reads 0.0000, refuses, and falls the rest of the way at the ordinary 0.125
-					// gravity, while ours engaged the copter and held 1.0 px/tick for the next eighty ticks -
-					// which is the reported "copter descent winds up out of nowhere".
-					float copterSpeedY = (_levelHandler->IsReforged() ? _speed.Y : _frameStartSpeedY);
-					// There is an **upper** bound on starting it outside Reforged, which this engine had no
-					// equivalent of: the original refuses the copter once the fall is past about 2 px/tick,
-					// so it can only be started early. Engaging at any speed is what pinned every descent
-					// here at 1.0 - see LegacyCopterEngageMaxSpeed. Already flying is exempt, or a tap that
-					// arrives once the copter has been going a while would refuse to extend it.
-					bool alreadyFlying = ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter);
-					// What refuses `cp_tap55` and `cp_tap60` for their whole airtime is a deaf window that every
-					// press re-arms whether or not it does anything - see where `_copterDeafLeft` is set in
-					// HandleJump(). This used to be a one-attempt-per-airtime rule spent on the first press, which
-					// fits those two scenarios and nothing else - see LegacyCopterEngageMaxSpeed.
-					bool copterSpeedAllowed = (copterSpeedY > 0.01f && (_levelHandler->IsReforged() || alreadyFlying ||
-						(_copterPressAllowed && copterSpeedY < LegacyCopterEngageMaxSpeed)));
-					if (copterSpeedAllowed && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-						SetState(ActorState::ApplyGravitation, false);
-					// Engaging only ever *caps* the descent outside Reforged, it does not set it. A copter
-					// started while falling faster than its ceiling drops straight to it - `cp_tap70` engages
-					// at 1.250 and reads 1.0078 the next tick - but one started slower keeps what it has and
-					// winds up from there at LegacyCopterWindUp. Assigning here made the two cases identical
-					// and hid the whole ramp: `cp_tap65` snapped from 0.584 to a full descent in a tick where
-					// the original is still at 0.63.
-					_speed.Y = (_levelHandler->IsReforged()
-						? 1.5f
-						: std::min(copterSpeedY, LegacyCopterDescentSpeed));
-						_externalForce.Y = 0.0f;
-						if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
-							SetAnimation(AnimState::Copter);
-						}
-						SetCopterFlight(70.0f, FlightType::Normal);
-#if defined(WITH_AUDIO)
-						if (_copterSound == nullptr) {
-							_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-							if (_copterSound != nullptr) {
-								_copterSound->setLooping(true);
-							}
-						}
-#endif
-					}
+					SetLegacyGroundMoveWindUp();
+					break;
 				}
-				break;
-			}
-			case PlayerType::Spaz: {
-				if (IsSpecialMoveCrouchReady()) {
+				case CharacterGroundJump::Spaz: {
 					_controllable = false;
 					_controllableTimeout = (_levelHandler->IsReforged() ? 60.0f : 120.0f);
 					SetAnimation(AnimState::Uppercut);
@@ -3359,139 +3233,236 @@ namespace Jazz2::Actors
 						SetState(ActorState::ApplyGravitation, false);
 						SetPlayerTransition(AnimState::TransitionUppercutB, true, false, SpecialMoveType::Sidekick);
 					});
+					SetLegacyGroundMoveWindUp();
 
 					PlayPlayerSfx("Sidekick"_s);
-				} else {
-					// The double jump assigns the vertical speed outright, so allowing it while a spring is still
-					// carrying the player up would replace a launch of -16 or so with its own -0.6 and cut the arc
-					// short. `_isSpring` covers exactly the rising part of a spring launch (it is cleared as soon
-					// as the player starts falling), so the jump simply waits for the apex instead.
-					//
-					// The original also only accepts the second press while the player is falling and within
-					// LegacyDoubleJumpWindowTime of letting the first press go, so a press that comes too
-					// late is simply lost. Nothing else gates it - in particular not the fall speed, which
-					// `sp_dj_r85_d20` and `sp_dj_r85_d25` settle: both are accepted at about 4.0 and 4.6
-					// px/tick, well past the 3.75 the window was first read as.
-					//
-					// The falling half is tested against the speed at the *start* of the frame, not the live
-					// one. The original applies its gravity after this check, so a press landing on the exact
-					// apex reads 0.0000 there and is refused; reading the live value here turns that same
-					// press into +0.44 and accepts it, which made `sp_spaz_dj_hold` rise 166.8 px against 132.1.
-					//
-					// Non-Reforged only, like the rest of this rework: in Reforged the double jump has always
-					// been accepted during a spring rise and changing that is a separate decision.
-					bool inDoubleJumpWindow = (_levelHandler->IsReforged() ||
-						(!_isSpring && _frameStartSpeedY > 0.0f && _doubleJumpWindowLeft > 0.0f));
-					if (!CanJump() && _canDoubleJump && inDoubleJumpWindow) {
-						_canDoubleJump = false;
-						_isFreefall = false;
-
-						if (_levelHandler->IsReforged()) {
-							_internalForceY = -1.15f - 0.1f * (1.0f - timeMult);
-							_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
-							_speed.X = std::clamp(_speed.X * 0.4f, -1.0f, 1.0f);
-						} else {
-							// Measured: a straight speed assignment, exactly like the first jump, and the height
-							// is then governed by how long the key is held through the same released-gravity
-							// switch.
-							//
-							// The horizontal speed is thrown away outright - a dash double jump leaves at
-							// zero and has to build its speed up again from the air acceleration, which is
-							// what makes the move a way to *stop* as well as to climb. Measured directly:
-							// `sp_dj_a_dash` reads 16.00 the tick before the press and 0.3662 - exactly one
-							// dash acceleration step - the tick after, and the walking cases the same with a
-							// 0.1831 step. Reforged only damps it (x0.4 clamped to 1), which is why this was
-							// long read as "the speed carries over": every earlier measurement was a travel
-							// to a wall that both games reach either way.
-							_speed.Y = -LegacyDoubleJumpSpeed;
-							_speed.X = 0.0f;
-							_internalForceY = 0.0f;
-							_jumpReleased = false;
-							_riseFromFloatUp = false;
-							_riseOwnedByJump = true;
-							// ...but a speed a *spring* gave the player is not simply lost. It rebuilds, and at
-							// a rate the launch itself sets: measured off all three horizontal springs, the
-							// rebuild runs at the launch speed over @ref LegacySpringRebuildTicks. Red launches
-							// at 16 and rebuilds at 0.50 px/tick², green at 24 at 0.75 - and blue, at 32, was
-							// *predicted* to rebuild at 1.00 before it was measured, and does. The ceiling is a
-							// flat @ref LegacyDashSpeed whatever the launch was, so blue reaches it early and
-							// stops there rather than climbing to 32.
-							if (_springLaunchSpeedX > 0.0f) {
-								_springRebuildAccel = _springLaunchSpeedX * LegacyFrameRateScale / LegacySpringRebuildTicks;
-								// One rebuild per launch: arming **consumes** the marker. Left set, every later
-								// double jump re-armed it, and on a scenario that taps Jump throughout the
-								// player simply oscillated back to 16 for the rest of the run - 462 px past the
-								// original, where the original ramps up once and then walks at 4. Clearing it
-								// on landing instead does not work either: the landing speed *is* the walk cap,
-								// so a test against that never fires.
-								_springLaunchSpeedX = 0.0f;
-							}
-						}
-
-						PlayPlayerSfx("DoubleJump"_s);
-
-						SetTransition(AnimState::Spring, false);
-					}
+					break;
 				}
-				break;
-			}
-			case PlayerType::Lori: {
-				// Unlike Spaz she kicks over and over while Down and Jump are held. The repeat is **timed**
-				// rather than driven by pressing again - see LegacyLoriKickPeriod - which is why this used to
-				// look right when the keys were worked and did nothing at all when they were simply held.
-				if (IsSpecialMoveCrouchReady()) {
+				case CharacterGroundJump::Lori: {
+					// Unlike Spaz she kicks over and over while Down and Jump are held. The repeat is **timed**
+					// rather than driven by pressing again - see LegacyLoriKickPeriod - which is why this used to
+					// look right when the keys were worked and did nothing at all when they were simply held.
 					TriggerLoriKick();
-				} else {
-					// Whether the player counts as falling is read at the **start of the frame** outside
-					// Reforged, not live - the same rule the double jump needed and for the same reason. The
-					// original applies its gravity after this test, so a press landing on the exact apex reads
-					// 0.0000 there and is refused; the live value has already crossed zero and accepts it.
-					// Measured on `sp_jazz_dj`, whose press lands one tick either side of the apex: the
-					// original reads 0.0000, refuses, and falls the rest of the way at the ordinary 0.125
-					// gravity, while ours engaged the copter and held 1.0 px/tick for the next eighty ticks -
-					// which is the reported "copter descent winds up out of nowhere".
-					float copterSpeedY = (_levelHandler->IsReforged() ? _speed.Y : _frameStartSpeedY);
-					// There is an **upper** bound on starting it outside Reforged, which this engine had no
-					// equivalent of: the original refuses the copter once the fall is past about 2 px/tick,
-					// so it can only be started early. Engaging at any speed is what pinned every descent
-					// here at 1.0 - see LegacyCopterEngageMaxSpeed. Already flying is exempt, or a tap that
-					// arrives once the copter has been going a while would refuse to extend it.
-					bool alreadyFlying = ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter);
-					// What refuses `cp_tap55` and `cp_tap60` for their whole airtime is a deaf window that every
-					// press re-arms whether or not it does anything - see where `_copterDeafLeft` is set in
-					// HandleJump(). This used to be a one-attempt-per-airtime rule spent on the first press, which
-					// fits those two scenarios and nothing else - see LegacyCopterEngageMaxSpeed.
-					bool copterSpeedAllowed = (copterSpeedY > 0.01f && (_levelHandler->IsReforged() || alreadyFlying ||
-						(_copterPressAllowed && copterSpeedY < LegacyCopterEngageMaxSpeed)));
-					if (copterSpeedAllowed && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-						SetState(ActorState::ApplyGravitation, false);
-					// Engaging only ever *caps* the descent outside Reforged, it does not set it. A copter
-					// started while falling faster than its ceiling drops straight to it - `cp_tap70` engages
-					// at 1.250 and reads 1.0078 the next tick - but one started slower keeps what it has and
-					// winds up from there at LegacyCopterWindUp. Assigning here made the two cases identical
-					// and hid the whole ramp: `cp_tap65` snapped from 0.584 to a full descent in a tick where
-					// the original is still at 0.63.
-					_speed.Y = (_levelHandler->IsReforged()
-						? 1.5f
-						: std::min(copterSpeedY, LegacyCopterDescentSpeed));
-						_externalForce.Y = 0.0f;
-						if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
-							SetAnimation(AnimState::Copter);
-						}
-						SetCopterFlight(70.0f, FlightType::Normal);
-#if defined(WITH_AUDIO)
-						if (_copterSound == nullptr) {
-							_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-							if (_copterSound != nullptr) {
-								_copterSound->setLooping(true);
-							}
-						}
-#endif
-					}
+					break;
 				}
-				break;
+				case CharacterGroundJump::Jump: {
+					// Down stays as it was, so the jump doesn't turn into a buttstomp
+					BeginStandardJump(timeMult);
+					break;
+				}
+				default: break;
+			}
+		} else {
+			switch (profile.AirJump) {
+				case CharacterAirJump::Copter: TryStartCopter(profile); break;
+				case CharacterAirJump::DoubleJump: TryDoubleJump(profile, timeMult); break;
+				default: break;
 			}
 		}
+	}
+
+	void Player::TryStartCopter(const CharacterProfile& profile)
+	{
+		// Whether the player counts as falling is read at the **start of the frame** outside
+		// Reforged, not live - the same rule the double jump needed and for the same reason. The
+		// original applies its gravity after this test, so a press landing on the exact apex reads
+		// 0.0000 there and is refused; the live value has already crossed zero and accepts it.
+		// Measured on `sp_jazz_dj`, whose press lands one tick either side of the apex: the
+		// original reads 0.0000, refuses, and falls the rest of the way at the ordinary 0.125
+		// gravity, while ours engaged the copter and held 1.0 px/tick for the next eighty ticks -
+		// which is the reported "copter descent winds up out of nowhere".
+		float copterSpeedY = (_levelHandler->IsReforged() ? _speed.Y : _frameStartSpeedY);
+		// There is an **upper** bound on starting it outside Reforged, which this engine had no
+		// equivalent of: the original refuses the copter once the fall is past about 2 px/tick,
+		// so it can only be started early. Engaging at any speed is what pinned every descent
+		// here at 1.0 - see LegacyCopterEngageMaxSpeed. Already flying is exempt, or a tap that
+		// arrives once the copter has been going a while would refuse to extend it.
+		bool alreadyFlying = ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter);
+		// What refuses `cp_tap55` and `cp_tap60` for their whole airtime is a deaf window that every
+		// press re-arms whether or not it does anything - see where `_copterDeafLeft` is set in
+		// HandleJump(). This used to be a one-attempt-per-airtime rule spent on the first press, which
+		// fits those two scenarios and nothing else - see LegacyCopterEngageMaxSpeed.
+		bool copterSpeedAllowed = (copterSpeedY > 0.01f && (_levelHandler->IsReforged() || alreadyFlying ||
+			(_copterPressAllowed && copterSpeedY < LegacyCopterEngageMaxSpeed)));
+		bool copterTimeLeft = (_copterAirTime < profile.CopterDurationMax / LegacyFrameRateScale);
+		if (copterSpeedAllowed && copterTimeLeft && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+			SetState(ActorState::ApplyGravitation, false);
+			// Engaging only ever *caps* the descent outside Reforged, it does not set it. A copter
+			// started while falling faster than its ceiling drops straight to it - `cp_tap70` engages
+			// at 1.250 and reads 1.0078 the next tick - but one started slower keeps what it has and
+			// winds up from there at LegacyCopterWindUp. Assigning here made the two cases identical
+			// and hid the whole ramp: `cp_tap65` snapped from 0.584 to a full descent in a tick where
+			// the original is still at 0.63.
+			float descentSpeed = GetCopterDescentSpeed(profile);
+			if (_levelHandler->IsReforged()) {
+				_speed.Y = descentSpeed;
+			} else if (alreadyFlying) {
+				// A tap that keeps the ears going leaves the wind-up alone, measured at a speed of 3
+			} else if (profile.CopterSpeedY >= 0.0f) {
+				_speed.Y = std::min(copterSpeedY, descentSpeed);
+			} else {
+				// Rising ears keep the fall and brake it, see LegacyCopterAscentBrake
+				_speed.Y = copterSpeedY;
+			}
+			_externalForce.Y = 0.0f;
+			if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
+				SetAnimation(AnimState::Copter);
+			}
+			if (_copterFramesLeft <= 0.0f) {
+				_copterCarried = false;
+			}
+			if (!_copterCarried) {
+				SetCopterFlight(GetCopterFlightTime(), FlightType::Normal);
+			}
+#if defined(WITH_AUDIO)
+			if (_copterSound == nullptr) {
+				_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+				if (_copterSound != nullptr) {
+					_copterSound->SetLooping(true);
+				}
+			}
+#endif
+		}
+	}
+
+	void Player::TryDoubleJump(const CharacterProfile& profile, float timeMult)
+	{
+		// The double jump assigns the vertical speed outright, so allowing it while a spring is still
+		// carrying the player up would replace a launch of -16 or so with its own -0.6 and cut the arc
+		// short. `_isSpring` covers exactly the rising part of a spring launch (it is cleared as soon
+		// as the player starts falling), so the jump simply waits for the apex instead.
+		//
+		// The original also only accepts the second press while the player is falling and within
+		// LegacyDoubleJumpWindowTime of letting the first press go, so a press that comes too
+		// late is simply lost. Nothing else gates it - in particular not the fall speed, which
+		// `sp_dj_r85_d20` and `sp_dj_r85_d25` settle: both are accepted at about 4.0 and 4.6
+		// px/tick, well past the 3.75 the window was first read as.
+		//
+		// The falling half is tested against the speed at the *start* of the frame, not the live
+		// one. The original applies its gravity after this check, so a press landing on the exact
+		// apex reads 0.0000 there and is refused; reading the live value here turns that same
+		// press into +0.44 and accepts it, which made `sp_spaz_dj_hold` rise 166.8 px against 132.1.
+		//
+		// Non-Reforged only, like the rest of this rework: in Reforged the double jump has always
+		// been accepted during a spring rise and changing that is a separate decision.
+		bool inDoubleJumpWindow = (_levelHandler->IsReforged() ||
+			(!_isSpring && _frameStartSpeedY > 0.0f && _doubleJumpWindowLeft > 0.0f && _jumpUpTime >= LegacyDoubleJumpKeyUpTime));
+		if (!CanJump() && _doubleJumpCount < profile.DoubleJumpCountMax && inDoubleJumpWindow) {
+			_doubleJumpCount++;
+			_isFreefall = false;
+
+			float speedX = (profile.DoubleJumpSpeedX != 0.0f
+				? profile.DoubleJumpSpeedX * LegacyFrameRateScale * (IsFacingLeft() ? -1.0f : 1.0f)
+				: 0.0f);
+			if (_levelHandler->IsReforged()) {
+				// Scaled by the vertical speed against its default of 8
+				float jumpScale = profile.DoubleJumpSpeedY / CharacterProfile::GetDefault(PlayerType::Spaz).DoubleJumpSpeedY;
+				_internalForceY = (-1.15f - 0.1f * (1.0f - timeMult)) * jumpScale;
+				_speed.Y = (-0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f)) * jumpScale;
+				_speed.X = std::clamp(_speed.X * 0.4f, -1.0f, 1.0f) + speedX;
+			} else {
+				// Measured: a straight speed assignment, exactly like the first jump, and the height
+				// is then governed by how long the key is held through the same released-gravity
+				// switch.
+				//
+				// The horizontal speed is thrown away outright - a dash double jump leaves at
+				// zero and has to build its speed up again from the air acceleration, which is
+				// what makes the move a way to *stop* as well as to climb. Measured directly:
+				// `sp_dj_a_dash` reads 16.00 the tick before the press and 0.3662 - exactly one
+				// dash acceleration step - the tick after, and the walking cases the same with a
+				// 0.1831 step. Reforged only damps it (x0.4 clamped to 1), which is why this was
+				// long read as "the speed carries over": every earlier measurement was a travel
+				// to a wall that both games reach either way.
+				_speed.Y = profile.DoubleJumpSpeedY * LegacyFrameRateScale;
+				// Measured with 5: no faster than the walk speed, or the dash speed while the dash is up
+				float capX = (IsDashActive() ? LegacyDashSpeed : LegacyWalkSpeed);
+				_speed.X = std::clamp(speedX, -capX, capX);
+				_internalForceY = 0.0f;
+				_jumpReleased = false;
+				_riseFromFloatUp = false;
+				_riseOwnedByJump = true;
+				// ...but a speed a *spring* gave the player is not simply lost. It rebuilds, and at
+				// a rate the launch itself sets: measured off all three horizontal springs, the
+				// rebuild runs at the launch speed over @ref LegacySpringRebuildTicks. Red launches
+				// at 16 and rebuilds at 0.50 px/tick², green at 24 at 0.75 - and blue, at 32, was
+				// *predicted* to rebuild at 1.00 before it was measured, and does. The ceiling is a
+				// flat @ref LegacyDashSpeed whatever the launch was, so blue reaches it early and
+				// stops there rather than climbing to 32.
+				if (_springLaunchSpeedX > 0.0f) {
+					_springRebuildAccel = _springLaunchSpeedX * LegacyFrameRateScale / LegacySpringRebuildTicks;
+					// One rebuild per launch: arming **consumes** the marker. Left set, every later
+					// double jump re-armed it, and on a scenario that taps Jump throughout the
+					// player simply oscillated back to 16 for the rest of the run - 462 px past the
+					// original, where the original ramps up once and then walks at 4. Clearing it
+					// on landing instead does not work either: the landing speed *is* the walk cap,
+					// so a test against that never fires.
+					_springLaunchSpeedX = 0.0f;
+				}
+			}
+
+			PlayPlayerSfx("DoubleJump"_s);
+
+			SetTransition(AnimState::Spring, false);
+		}
+	}
+
+	void Player::ResetAirJumps()
+	{
+		_doubleJumpCount = 0;
+		_copterAirTime = 0.0f;
+	}
+
+	void Player::RefreshCharacterProfile()
+	{
+		_characterProfile = _levelHandler->GetCharacterProfile(_playerType);
+		if (_playerType == PlayerType::Frog || IsBird()) {
+			// The frog and the birds have no jump moves, a script can't give them any
+			CharacterProfile defaultProfile = CharacterProfile::GetDefault(_playerType);
+			_characterProfile.AirJump = defaultProfile.AirJump;
+			_characterProfile.GroundJump = defaultProfile.GroundJump;
+		}
+	}
+
+	float Player::GetCopterDescentSpeed(const CharacterProfile& profile) const
+	{
+		return (_levelHandler->IsReforged() ? 1.5f : LegacyCopterDescentSpeed) * profile.CopterSpeedY;
+	}
+
+	void Player::SetLegacyGroundMoveWindUp()
+	{
+		// The wind-up is the length of the transition, the metadata's is 3 ticks longer than the original's, see LegacyGroundMoveWindUp
+		if (!_levelHandler->IsReforged() && _currentTransition != nullptr && _currentTransition->State == AnimState::TransitionUppercutA) {
+			if (_renderer.AnimDuration > 0.0f) {
+				_renderer.AnimTime *= LegacyGroundMoveWindUp / _renderer.AnimDuration;
+			}
+			_renderer.AnimDuration = LegacyGroundMoveWindUp;
+		}
+	}
+
+	float Player::GetCopterFlightTime() const
+	{
+		return (_levelHandler->IsReforged() ? 70.0f : LegacyCopterFlightTime);
+	}
+
+	bool Player::IsCopterPushActive() const
+	{
+		return (_characterProfile.CopterSpeedX != 0.0f && _activeModifier == Modifier::None &&
+			_suspendType == SuspendType::None && (_currentAnimation->State & AnimState::Copter) == AnimState::Copter);
+	}
+
+	void Player::ApplyCopterPush(float timeMult)
+	{
+		// Measured in JJ2+ for 4, 8, -2 and from a dash: the speed in the direction of the push is first brought down
+		// to it, then a 32nd of it is added, so the push ramps up from rest, settles a step past a speed that isn't a
+		// whole number of steps (-2 holds at -2.0625) and turns around at the same rate - all capped by the walk speed,
+		// or by the dash speed while the dash is up
+		float push = std::abs(_characterProfile.CopterSpeedX);
+		float sign = (IsFacingLeft() ? -1.0f : 1.0f) * (_characterProfile.CopterSpeedX < 0.0f ? -1.0f : 1.0f);
+		float along = std::min(_speed.X * sign, push * LegacyFrameRateScale) + (push / 32.0f) * LegacyFrameRateScaleSqr * timeMult;
+		float cap = (_levelHandler->IsReforged()
+			? (_isRunPressed ? MaxDashingSpeed : MaxRunningSpeed)
+			: (IsDashActive() ? LegacyDashSpeed : LegacyWalkSpeed));
+		_speed.X = std::clamp(along * sign, -cap, cap);
 	}
 
 	void Player::HandleWeaponFire(bool areaWeaponAllowed)
@@ -3604,7 +3575,7 @@ namespace Jazz2::Actors
 			if (weaponInUse && _currentWeapon == _weaponSoundType) {
 #if defined(WITH_AUDIO)
 				if (_weaponSound != nullptr) {
-					_weaponSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+					_weaponSound->SetPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 				}
 #endif
 			} else {
@@ -4130,7 +4101,7 @@ namespace Jazz2::Actors
 			// The first bird's beak attack hurts only in Reforged. The original has the attack, but its damage is off
 			// unless a script turns it on: JJ2+'s `canHurt`, which it documents as covering this beak, defaults to
 			// false for both birds.
-			bool birdCharge = (_birdCharging && _levelHandler->IsReforged());
+			bool birdCharge = (_birdCharging && (_levelHandler->IsReforged() || _characterProfile.CanHurt));
 			bool rammingFrozen = IsRammingFrozen(enemy);
 			bool otherAttack = (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || rammingFrozen);
 			if (IsButtstompStarting() && _sugarRushLeft <= 0.0f) {
@@ -4226,9 +4197,11 @@ namespace Jazz2::Actors
 					bonusWarp->Activate(this);
 
 					// Convert remaing coins to gems and equivalent score
-					_inventory.Gems[0] += _inventory.Coins;
-					AddScore(_inventory.Coins * 100);
-					_inventory.Coins = 0;
+					if (_levelHandler->WarpsTransmuteCoins()) {
+						_inventory.Gems[0] += _inventory.Coins;
+						AddScore(_inventory.Coins * 100);
+						_inventory.Coins = 0;
+					}
 				} else if (_bonusWarpTimer <= 0.0f) {
 					_levelHandler->HandlePlayerCoins(this, _inventory.Coins, _inventory.Coins);
 					PlaySfx("BonusWarpNotEnoughCoins"_s);
@@ -4282,7 +4255,10 @@ namespace Jazz2::Actors
 		// timer; the reset paths clear it, and nothing else needs to.
 
 		if (_activeModifier == Modifier::None && (_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
-			_copterFramesLeft = 0.0f;
+			// The counter outlives only a landing the copter snapped onto, see LegacyCopterLandGrace
+			if (_levelHandler->IsReforged() || _copterCarried || _copterLandGraceLeft <= 0.0f) {
+				SetCopterFlight(0.0f);
+			}
 			SetAnimation(_currentAnimation->State & ~AnimState::Copter);
 			if (!_isAttachedToPole) {
 				SetState(ActorState::ApplyGravitation, true);
@@ -4322,7 +4298,7 @@ namespace Jazz2::Actors
 			}
 		}
 
-		_canDoubleJump = true;
+		ResetAirJumps();
 		_isFreefall = false;
 		// The copter's deaf window belongs to the airtime that armed it
 		_copterDeafLeft = 0.0f;
@@ -4619,7 +4595,7 @@ namespace Jazz2::Actors
 			// only: in Reforged a spring has never refilled it, and handing Spaz an extra air jump per spring
 			// there would change level routing that has always been balanced without it.
 			if (!_levelHandler->IsReforged()) {
-				_canDoubleJump = true;
+				ResetAirJumps();
 			}
 
 			_wasActivelyPushing = false;
@@ -4721,7 +4697,7 @@ namespace Jazz2::Actors
 				// It only becomes usable once the rise is over, see HandleSpecialJump(). Non-Reforged only,
 				// for the same reason as the horizontal case above.
 				if (!_levelHandler->IsReforged()) {
-					_canDoubleJump = true;
+					ResetAirJumps();
 				}
 				if (_activeModifier == Modifier::None) {
 					SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
@@ -4744,8 +4720,8 @@ namespace Jazz2::Actors
 		// Counted down here rather than in UpdateRevUp(), which is skipped in water and under a modifier - a
 		// timer that holds a base animation must not be able to get stuck because the code that clears it
 		// stopped being called
-		if (_revUpEndLeft > 0.0f) {
-			_revUpEndLeft -= timeMult;
+		if (_revUp.EndLeft > 0.0f) {
+			_revUp.EndLeft -= timeMult;
 		}
 
 		// Spaz's double-jump pose lasts exactly as long as the rise in the original, not as long as its own
@@ -4828,7 +4804,7 @@ namespace Jazz2::Actors
 		bool sliding = IsSlidingToHalt();
 		// Whether a stopping pose is on screen, which is not the same question: the chain starts from any
 		// speed, and its last stage outlives the player reaching zero by about 24 ticks
-		bool stopPoseShowing = (sliding && (_stopPhase != StopPhaseNone || std::abs(_speed.X) > 0.0f));
+		bool stopPoseShowing = (sliding && (_stopPhase != StopPhase::None || std::abs(_speed.X) > 0.0f));
 
 		AnimState oldState = _currentAnimation->State;
 		AnimState newState;
@@ -4857,7 +4833,7 @@ namespace Jazz2::Actors
 			}
 		} else if (_suspendType == SuspendType::SwingingVine) {
 			newState = AnimState::Swing;
-		} else if (IsRevvingUp() || _revUpEndLeft > 0.0f) {
+		} else if (IsRevvingUp() || _revUp.EndLeft > 0.0f) {
 			// Decided here rather than assigned from UpdateRevUp(), which runs later in the frame: everything
 			// below would overwrite it on the next frame, and re-assigning it from there each frame restarts
 			// the animation every frame - which is why the first attempt showed a single frozen frame.
@@ -5275,7 +5251,7 @@ namespace Jazz2::Actors
 		// times the walk cap - but those scenarios press Down on the *same tick* the direction is released,
 		// so the chain never starts first and they cannot see this. Press Down a few ticks later and the skid
 		// is already up, drawn over the crouch, and it only clears when the speed reaches zero and
-		// `StopPhaseHold` cancels the transition. Ducking is a deliberate input rather than coasting to a
+		// `StopPhase::Hold` cancels the transition. Ducking is a deliberate input rather than coasting to a
 		// stop, so it belongs with the carries above.
 		if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 			return false;
@@ -5314,11 +5290,11 @@ namespace Jazz2::Actors
 		}
 		return (CanJump() && _controllable && _currentSpecialMove == SpecialMoveType::None &&
 			_suspendType == SuspendType::None && _activeModifier == Modifier::None && !_inWater &&
-			_revUpLaunchLeft <= 0.0f && !IsRevvingUp() && _revUpEndLeft <= 0.0f && _keepRunningTime <= 0.0f &&
+			_revUp.LaunchLeft <= 0.0f && !IsRevvingUp() && _revUp.EndLeft <= 0.0f && _keepRunningTime <= 0.0f &&
 			std::abs(_levelHandler->PlayerHorizontalMovement(this)) <= 0.4f);
 	}
 
-	void Player::EnterStopPhase(std::int32_t phase)
+	void Player::EnterStopPhase(StopPhase phase)
 	{
 		// Which animation each phase shows is measured, and it is *not* the order the names suggest: the
 		// original skids on `walk_stop`, slides on `dash_stop` and settles on `run_stop`. The names are JJ2's
@@ -5326,8 +5302,8 @@ namespace Jazz2::Actors
 		// how they ended up attached to the wrong parts of the stop when this engine had only two of them.
 		AnimState pose;
 		switch (phase) {
-			case StopPhaseSlide: pose = AnimState::TransitionDashToIdle; break;
-			case StopPhaseSettle: pose = AnimState::TransitionRunToIdle; break;
+			case StopPhase::Slide: pose = AnimState::TransitionDashToIdle; break;
+			case StopPhase::Settle: pose = AnimState::TransitionRunToIdle; break;
 			default: pose = AnimState::TransitionWalkToIdle; break;
 		}
 
@@ -5341,7 +5317,7 @@ namespace Jazz2::Actors
 		_stopPhaseChanging = false;
 		_stopPhase = phase;
 
-		if (phase == StopPhaseHold) {
+		if (phase == StopPhase::Hold) {
 			ParkStopPose();
 		}
 	}
@@ -5366,22 +5342,24 @@ namespace Jazz2::Actors
 		}
 
 		switch (_stopPhase) {
-			case StopPhaseSkid:
+			case StopPhase::Skid:
 				// The one real speed test in the chain. Below it there is no second pose at all - `tb_right`
 				// and `sl_rf_up` simply hold the skid until the player stops - which is why a light tap has a
 				// much shorter stop than a dash does, without the first pose being any shorter.
-				EnterStopPhase(std::abs(_speed.X) >= StopSettleSpeed ? StopPhaseSlide : StopPhaseHold);
+				EnterStopPhase(std::abs(_speed.X) >= StopSettleSpeed ? StopPhase::Slide : StopPhase::Hold);
 				break;
-			case StopPhaseSlide:
-			case StopPhaseHold:
+			case StopPhase::Slide:
+			case StopPhase::Hold:
 				// `dash_stop` loops for as long as the speed keeps it, and a transition cannot loop by itself:
 				// AnimationLoopMode::Loop still ends it after one cycle
 				EnterStopPhase(_stopPhase);
 				break;
-			case StopPhaseSettle:
+			case StopPhase::Settle:
 				// Standing follows it, and only it
-				_stopPhase = StopPhaseNone;
+				_stopPhase = StopPhase::None;
 				_inIdleTransition = false;
+				break;
+			default:
 				break;
 		}
 	}
@@ -5389,9 +5367,9 @@ namespace Jazz2::Actors
 	void Player::ApplyStopAnimation(bool sliding)
 	{
 		if (!sliding) {
-			if (_stopPhase != StopPhaseNone) {
+			if (_stopPhase != StopPhase::None) {
 				// Moving again, or no longer in a state that can slide at all
-				_stopPhase = StopPhaseNone;
+				_stopPhase = StopPhase::None;
 				_inIdleTransition = false;
 				CancelTransition();
 			}
@@ -5400,24 +5378,26 @@ namespace Jazz2::Actors
 
 		float absSpeedX = std::abs(_speed.X);
 		switch (_stopPhase) {
-			case StopPhaseNone:
+			case StopPhase::None:
 				if (absSpeedX > 0.0f) {
-					EnterStopPhase(StopPhaseSkid);
+					EnterStopPhase(StopPhase::Skid);
 				}
 				break;
-			case StopPhaseSlide:
+			case StopPhase::Slide:
 				if (absSpeedX < StopSettleSpeed) {
-					EnterStopPhase(StopPhaseSettle);
+					EnterStopPhase(StopPhase::Settle);
 				}
 				break;
-			case StopPhaseHold:
+			case StopPhase::Hold:
 				if (absSpeedX <= 0.0f) {
-					_stopPhase = StopPhaseNone;
+					_stopPhase = StopPhase::None;
 					_inIdleTransition = false;
 					CancelTransition();
 				} else {
 					ParkStopPose();
 				}
+				break;
+			default:
 				break;
 		}
 	}
@@ -5703,10 +5683,16 @@ namespace Jazz2::Actors
 
 		// Copter Ears
 		if (_activeModifier != Modifier::Copter && _activeModifier != Modifier::LizardCopter) {
+			if (_copterFramesLeft <= 0.0f) {
+				_copterCarried = false;
+			}
 			// TODO: Is this still needed?
 			bool cancelCopter;
 			if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
-				cancelCopter = (CanJump() || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
+				const CharacterProfile& profile = _characterProfile;
+				_copterAirTime += timeMult;
+				cancelCopter = (CanJump() || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f ||
+					_copterAirTime >= profile.CopterDurationMax / LegacyFrameRateScale);
 
 				SetCopterFlight(_copterFramesLeft - timeMult, FlightType::Normal);
 				// Gravity is re-asserted off every frame the copter is up, not just where it engages. The
@@ -5721,27 +5707,69 @@ namespace Jazz2::Actors
 				// before a copter is usually engaged the two are indistinguishable, because both arrive at
 				// the ceiling within a tick or two; it is engaging from *nothing* that separates them, and
 				// then the original takes over a hundred ticks to get there while level gravity takes eight.
-				_speed.Y = (_levelHandler->IsReforged()
-					? std::min(_speed.Y + _levelHandler->GetGravity() * timeMult, 1.5f)
-					: std::min(_speed.Y + LegacyCopterWindUp * timeMult, LegacyCopterDescentSpeed));
+				float descentSpeed = GetCopterDescentSpeed(profile);
+				if (_levelHandler->IsReforged()) {
+					_speed.Y = std::min(_speed.Y + _levelHandler->GetGravity() * timeMult, descentSpeed);
+				} else if (profile.CopterSpeedY >= 0.0f) {
+					// The wind-up scales with the speed, measured at 0.5, 1 and 3
+					_speed.Y = std::min(_speed.Y + LegacyCopterWindUp * profile.CopterSpeedY * timeMult, descentSpeed);
+				} else if (_speed.Y > 0.0f) {
+					// Rising ears brake a fall first, see LegacyCopterAscentBrake
+					_speed.Y = std::max(_speed.Y - LegacyCopterAscentBrake * timeMult, 0.0f);
+				} else {
+					// ...and then rise only while Jump is held, a released key starts the wind-up again from zero
+					if (!_wasJumpPressed) {
+						_speed.Y = 0.0f;
+					}
+					_speed.Y = std::max(_speed.Y + LegacyCopterWindUp * profile.CopterSpeedY * timeMult, descentSpeed);
+				}
+
+				// Descending sideways, the ears drop the player straight onto a floor that is close, see LegacyCopterFloorSnap
+				if (!_levelHandler->IsReforged() && !cancelCopter && _speed.Y > 0.0f && _speed.X != 0.0f) {
+					TileCollisionParams params = { TileDestructType::None, true };
+					AABBf below = AABBf(AABBInner.L, AABBInner.T + LegacyCopterFloorSnap, AABBInner.R, AABBInner.B + LegacyCopterFloorSnap);
+					if (!_levelHandler->IsPositionEmpty(this, below, params)) {
+						for (float drop = LegacyCopterFloorSnap - 0.25f; drop > 0.0f; drop -= 0.25f) {
+							if (MoveInstantly(Vector2f(0.0f, drop), MoveType::Relative)) {
+								break;
+							}
+						}
+						_copterLandGraceLeft = LegacyCopterLandGrace;
+					}
+				}
+			} else if (_copterCarried && _copterFramesLeft > 0.0f) {
+				// Carried over a landing: the counter runs during the rise, and the ears take over once the player falls
+				cancelCopter = false;
+				SetCopterFlight(_copterFramesLeft - timeMult, FlightType::Normal);
+				if (_copterFramesLeft > 0.0f && !CanJump() && _speed.Y >= 0.0f && _suspendType == SuspendType::None) {
+					SetAnimation(AnimState::Copter);
+					SetState(ActorState::ApplyGravitation, false);
+#if defined(WITH_AUDIO)
+					if (_copterSound == nullptr) {
+						_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+						if (_copterSound != nullptr) {
+							_copterSound->SetLooping(true);
+						}
+					}
+#endif
+				}
 			} else {
 				cancelCopter = ((_currentAnimation->State & AnimState::Fall) == AnimState::Fall && _copterFramesLeft > 0.0f);
 			}
 
 			if (cancelCopter) {
-				_copterFramesLeft = 0.0f;
+				// A landing the ears dropped onto keeps the counter for a moment, see LegacyCopterLandGrace
+				if (_copterLandGraceLeft <= 0.0f || _copterCarried || _copterFramesLeft <= 0.0f || _suspendType != SuspendType::None) {
+					_copterFramesLeft = 0.0f;
+					_copterCarried = false;
+				}
 				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
 				if (!_isAttachedToPole) {
 					SetState(ActorState::ApplyGravitation, true);
 				}
-				// A flight *ending* deliberately does **not** hand the airtime's attempt back. It looked as
-				// though it should: `sp_jazz_copter_fwd` shows the original coptering twice, at 76 and 159,
-				// and 83 ticks is almost exactly the 70 frames a flight is armed for. Reading the positions
-				// rather than the engagement ticks says otherwise - by 149 this engine has *landed*, at
-				// y=1328.7, while the original is still airborne at 1277 having jumped again, so the second
-				// flight belongs to a trajectory that had already diverged rather than to a rule. Both games
-				// engage once, within a tick of each other, before they part company. Landing restores it
-				// (see OnHitFloor()), which is what "one attempt per airtime" means and all that is measured.
+				// A flight *ending* deliberately does **not** hand the airtime's attempt back. The second flight
+				// `sp_jazz_copter_fwd` shows in the original, at 159, is a counter carried over a landing by a
+				// jump right after it - see LegacyCopterLandGrace.
 			}
 		}
 	}
@@ -6032,6 +6060,11 @@ namespace Jazz2::Actors
 		// the player is standing in, so they're read at the position it ended up at.
 		if (!statesHandled) {
 			HandleAreaEventAt(_pos.X, _pos.Y, timeMult, AreaEventPass::States, areaWeaponAllowed, areaWaterBlock);
+		}
+
+		// Leaving the tile of the last script callback lets it be called again
+		if (_lastCallbackTile != Vector2i((std::int32_t)_pos.X / Tiles::TileSet::DefaultTileSize, (std::int32_t)_pos.Y / Tiles::TileSet::DefaultTileSize)) {
+			_lastCallbackTile = Vector2i(INT32_MIN, INT32_MIN);
 		}
 
 		// Cleared only after this frame's samples, so a path leaving the exit cannot take it on the way out
@@ -6398,7 +6431,12 @@ namespace Jazz2::Actors
 				if (_currentTransition == nullptr ||
 					(_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpOut &&
 					 _currentTransition->State != AnimState::TransitionWarpInFreefall && _currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
-					_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaCallback, p);
+					// Called once on entering the tile, not on every frame the player stays in it
+					Vector2i tile = Vector2i((std::int32_t)x / Tiles::TileSet::DefaultTileSize, (std::int32_t)y / Tiles::TileSet::DefaultTileSize);
+					if (tile != _lastCallbackTile) {
+						_lastCallbackTile = tile;
+						_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaCallback, p);
+					}
 				}
 				break;
 			}
@@ -6926,7 +6964,7 @@ namespace Jazz2::Actors
 			StartWeaponSfx(WeaponType::Thunderbolt, "WeaponThunderbolt"_s, 1.0f, Random().FastFloat(1.05f, 1.2f));
 #if defined(WITH_AUDIO)
 			if (_weaponSound != nullptr) {
-				_weaponSound->setLowPass(0.9f);
+				_weaponSound->SetLowPass(0.9f);
 			}
 #endif
 		}
@@ -8083,9 +8121,12 @@ namespace Jazz2::Actors
 				}
 				SetFacingLeft(!positive);
 
-				_keepRunningTime = 60.0f;
-				// A pole's carry does **not** refuse the crouch, where a spring's does - see @ref _springCarry
+				_keepRunningTime = HPoleKeepRunningTime;
+				// A pole's carry refuses the crouch only for its exit pose, where a spring's does for its whole length -
+				// see @ref _springCarry and @ref LegacyHPoleCrouchBlockTime
 				_springCarry = false;
+				// Nor is it a run-in-place carry, a lapsed one would otherwise come back with this timer
+				_revUpCarry = false;
 
 				SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, true, SpecialMoveType::None);
 			} else {
@@ -8120,7 +8161,7 @@ namespace Jazz2::Actors
 			_isAttachedToPole = false;
 			_wasActivelyPushing = false;
 
-			_controllableTimeout = 4.0f;
+			_controllableTimeout = PoleLaunchControlTimeout;
 			_lastPoleTime = 10.0f;
 
 			PlayPlayerSfx("HookAttach"_s, 0.8f, 1.2f);
@@ -8142,6 +8183,8 @@ namespace Jazz2::Actors
 		if (timeLeft <= 0.0f) {
 			_copterFramesLeft = 0.0f;
 			_flyCheatActive = false;
+			_copterCarried = false;
+			_copterLandGraceLeft = 0.0f;
 			return;
 		}
 
@@ -8190,7 +8233,7 @@ namespace Jazz2::Actors
 			if (_airboardSound == nullptr) {
 				_airboardSound = PlaySfx("Airboard"_s, 0.6f, 1.0f);
 				if (_airboardSound != nullptr) {
-					_airboardSound->setLooping(true);
+					_airboardSound->SetLooping(true);
 				}
 			}
 #endif
@@ -8219,7 +8262,7 @@ namespace Jazz2::Actors
 				if (_copterSound == nullptr) {
 					_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
 					if (_copterSound != nullptr) {
-						_copterSound->setLooping(true);
+						_copterSound->SetLooping(true);
 					}
 				}
 #endif
@@ -8255,11 +8298,11 @@ namespace Jazz2::Actors
 
 #if defined(WITH_AUDIO)
 				if (_copterSound != nullptr) {
-					_copterSound->stop();
+					_copterSound->Stop();
 					_copterSound = nullptr;
 				}
 				if (_airboardSound != nullptr) {
-					_airboardSound->stop();
+					_airboardSound->Stop();
 					_airboardSound = nullptr;
 				}
 #endif
@@ -8574,7 +8617,8 @@ namespace Jazz2::Actors
 		float pitch = 1.0f - fabs(2.0f * fmod(_gemsPitch * 0.05f, 1.0f) - 1.0f);
 		PlayPlayerSfx("PickupGem"_s, 1.0f, std::min(0.7f + pitch * 0.6f, 1.3f));
 		_gemsTimer = 120.0f;
-		_gemsPitch++;
+		// The pitch above repeats every 20 gems
+		_gemsPitch = (_gemsPitch + 1) % 20;
 	}
 
 	std::int32_t Player::GetConsumedFood() const
@@ -8894,6 +8938,7 @@ namespace Jazz2::Actors
 
 		_playerType = type;
 		_metadata = metadata;
+		RefreshCharacterProfile();
 	}
 
 	void Player::ApplyBirdMorph(PlayerType playerTypePrevious)
@@ -9130,7 +9175,7 @@ namespace Jazz2::Actors
 
 		_carryingObject = actor;
 
-		_canDoubleJump = true;
+		ResetAirJumps();
 
 		if (suspendType == SuspendType::SwingingVine) {
 			_suspendType = suspendType;

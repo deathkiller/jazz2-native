@@ -133,12 +133,12 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_AUDIO)
 		// Music opened by PlayMenuMusic() is started only after the first frames have loaded what they load
 		if (_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
-			_music->play();
-		} else if (_musicStartDelay == 0 && _music != nullptr && _music->isStopped()) {
+			_music->Play();
+		} else if (_musicStartDelay == 0 && _music != nullptr && _music->IsStopped()) {
 			// A looping stream that reports itself stopped was stopped by something other than the game:
 			// the only in-game paths either replace it or clear the pointer, and a pause does not stop it.
 			// The audio device releases every player when it decides the output has gone away (see
-			// AudioDeviceBase::checkForStalledSources() and ALAudioDevice::checkDeviceConnection()), which
+			// AudioDeviceBase::CheckForStalledSources() and ALAudioDevice::CheckDeviceConnection()), which
 			// frees the sources for new sounds but leaves anything long-lived stopped for good - nothing
 			// else in the game ever starts the music a second time. Rescheduling the start handles that,
 			// and costs one retry a second rather than one a frame if the device is genuinely gone.
@@ -148,7 +148,7 @@ namespace Jazz2::UI::Menu
 		// Destroy stopped players
 		auto it = _playingSounds.begin();
 		while (it != _playingSounds.end()) {
-			if ((*it)->isStopped()) {
+			if ((*it)->IsStopped()) {
 				it = _playingSounds.eraseUnordered(it);
 				continue;
 			}
@@ -439,7 +439,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_AUDIO)
 		if ((type & ChangedPreferencesType::Audio) == ChangedPreferencesType::Audio) {
 			if (_music != nullptr) {
-				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+				_music->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			}
 		}
 #endif
@@ -516,9 +516,9 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_music != nullptr) {
-			_music->setLooping(true);
-			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-			_music->setSourceRelative(true);
+			_music->SetLooping(true);
+			_music->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+			_music->SetSourceRelative(true);
 			// Started by OnBeginFrame() once the frames that follow have loaded their resources, so the stream
 			// is not starved right after it begins (see the constructor); two frames is imperceptible when the
 			// music is merely restarted later on

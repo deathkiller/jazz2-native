@@ -27,9 +27,7 @@ namespace nCine
 
 		std::int32_t MixingRateForPreset()
 		{
-			// The mixer's cost is linear in this rate, so it is a preset knob like the resolution: the
-			// fast tiers mix at CD-adjacent quality, the slow ones at the rate the original game shipped
-			// most of its content at anyway. AHI resamples to whatever the user's mode runs at.
+			// Mixing cost is linear in the rate, so it follows the preset; AHI resamples to the user's mode
 			using PerformanceClass = Backends::AmigaPlatform::PerformanceClass;
 			switch (Backends::AmigaPlatform::GetPerformanceClass()) {
 				case PerformanceClass::Ultra:
@@ -54,8 +52,7 @@ namespace nCine
 			return;
 		}
 
-		// The device is opened on the first request; the others are byte copies of it, which is the
-		// documented ahi.device double-buffering arrangement (they share the opened unit)
+		// The device is opened on the first request; the others are copies sharing the opened unit
 		_requests[0] = reinterpret_cast<AHIRequest*>(CreateIORequest(_replyPort, sizeof(AHIRequest)));
 		if (_requests[0] == nullptr) {
 			LOGE("Cannot create the AHI request, sound will be disabled");
@@ -102,10 +99,7 @@ namespace nCine
 		const PerformanceClass performanceClass = Backends::AmigaPlatform::GetPerformanceClass();
 		const bool slowTier = (performanceClass != PerformanceClass::Ultra && performanceClass != PerformanceClass::High);
 		if (slowTier) {
-			// A long frame is the norm here, so the queue is sized to cover one - and links are given up,
-			// because only an unlinked queue can be this deep. The probe below is skipped along with them:
-			// it plays two silent blocks out and waits for the reply, which is startup time this tier can
-			// least afford spending on an answer that is not used
+			// Long frames are the norm here, so use the deepest (unlinked) queue and skip the probe
 			_linkSupported = false;
 			_blockFrames = MaxBlockFrames;
 			_maxInFlight = BlockCount;
@@ -123,7 +117,7 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			sourceIds[i] = std::uint32_t(i + 1);
 		}
-		setSourcePool(arrayView(sourceIds, MaxSources));
+		SetSourcePool(arrayView(sourceIds, MaxSources));
 
 		_valid = true;
 		LOGI("Audio device initialized: ahi.device, mixing {} Hz stereo into {} frames per block, {} in flight, {}",
@@ -132,7 +126,7 @@ namespace nCine
 
 	AmigaAudioDevice::~AmigaAudioDevice()
 	{
-		shutdownDecodeThread();
+		ShutdownDecodeThread();
 
 		for (std::int32_t i = 0; i < 2; i++) {
 			if (_probeRequests[i] != nullptr) {
@@ -177,38 +171,36 @@ namespace nCine
 		_mixBuffer = nullptr;
 	}
 
-	bool AmigaAudioDevice::isValid() const
+	bool AmigaAudioDevice::IsValid() const
 	{
 		return _valid;
 	}
 
-	const char* AmigaAudioDevice::name() const
+	const char* AmigaAudioDevice::GetName() const
 	{
 		return "ahi.device";
 	}
 
-	void AmigaAudioDevice::setGain(float gain)
+	void AmigaAudioDevice::SetGain(float gain)
 	{
 		// Applied while mixing; ahir_Volume stays at unity
 		_gain = gain;
 	}
 
-	void AmigaAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void AmigaAudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		static_cast<void>(velocity);
 		_listenerPos = position;
 	}
 
-	std::int32_t AmigaAudioDevice::nativeFrequency()
+	std::int32_t AmigaAudioDevice::GetNativeFrequency()
 	{
 		return _outputFrequency;
 	}
 
-	void AmigaAudioDevice::setMixingFrequency(std::int32_t frequency)
+	void AmigaAudioDevice::SetMixingFrequency(std::int32_t frequency)
 	{
-		// Anything AHI can resample from; the preset picks the default (see MixingRateForPreset()), this is
-		// the user's override. Every block request carries its own frequency, so the blocks already queued
-		// play out at the old rate and the ones mixed from now on at the new - nothing in flight is affected.
+		// User override of MixingRateForPreset(); each request carries its own rate, so queued blocks are unaffected
 		if (frequency < 8000 || frequency > 48000) {
 			if (frequency != 0) {
 				LOGW("Cannot mix at {} Hz, keeping {} Hz", frequency, _outputFrequency);
@@ -221,9 +213,9 @@ namespace nCine
 		}
 	}
 
-	std::uint32_t AmigaAudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t AmigaAudioDevice::RegisterPlayer(IAudioPlayer* player)
 	{
-		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);
+		const std::uint32_t sourceId = AudioDeviceBase::RegisterPlayer(player);
 		if (sourceId != UnavailableSource) {
 			if (Source* source = GetSource(sourceId)) {
 				*source = Source{};
@@ -240,7 +232,7 @@ namespace nCine
 		return &_sources[sourceId - 1];
 	}
 
-	std::uint32_t AmigaAudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t AmigaAudioDevice::CreateBuffer(BufferUsage usage)
 	{
 		static_cast<void>(usage);
 
@@ -288,7 +280,7 @@ namespace nCine
 		buffer.FrameCount = 0;
 	}
 
-	void AmigaAudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void AmigaAudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount)) {
 			return;
@@ -297,7 +289,7 @@ namespace nCine
 		_buffers[bufferId].Used = false;
 	}
 
-	bool AmigaAudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	bool AmigaAudioDevice::UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
 	{
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount) || data == nullptr || size <= 0) {
 			return false;
@@ -322,8 +314,7 @@ namespace nCine
 			return false;
 		}
 
-		// A streaming source re-uploads several times a second, so an allocation that is already big
-		// enough is kept (the same fragmentation reasoning as the N64 backend)
+		// Streaming sources re-upload often, so keep an allocation that is already big enough
 		if (byteCount > buffer.Capacity) {
 			ReleaseBuffer(buffer);
 			buffer.Samples = static_cast<std::uint8_t*>(std::malloc(std::size_t(byteCount)));
@@ -335,8 +326,7 @@ namespace nCine
 			buffer.Capacity = byteCount;
 		}
 
-		// Samples keep the width they arrived in; 8-bit arrives unsigned with 128 at silence and is
-		// re-centered here, 16-bit is already native-endian (the asset readers swap on load)
+		// 8-bit arrives unsigned and is re-centered; 16-bit is already native-endian
 		if (bytesPerSample == 1) {
 			const std::uint8_t* source = static_cast<const std::uint8_t*>(data);
 			std::int8_t* dest = reinterpret_cast<std::int8_t*>(buffer.Samples);
@@ -354,7 +344,7 @@ namespace nCine
 		return true;
 	}
 
-	void AmigaAudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void AmigaAudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->BufferId = bufferId;
@@ -362,62 +352,62 @@ namespace nCine
 		}
 	}
 
-	void AmigaAudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void AmigaAudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Gain = gain;
 		}
 	}
 
-	void AmigaAudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void AmigaAudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Pitch = (pitch > 0.0f ? pitch : 1.0f);
 		}
 	}
 
-	void AmigaAudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void AmigaAudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Looping = looping;
 		}
 	}
 
-	void AmigaAudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void AmigaAudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Relative = relative;
 		}
 	}
 
-	void AmigaAudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void AmigaAudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Position = position;
 		}
 	}
 
-	void AmigaAudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void AmigaAudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
-		// No per-voice DSP in this mixer (see the N64 backend for why the branch is not worth it)
+		// No per-voice filter in this mixer
 		static_cast<void>(sourceId);
 		static_cast<void>(value);
 	}
 
-	std::int32_t AmigaAudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t AmigaAudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
 		Source* source = GetSource(sourceId);
 		return (source != nullptr ? std::int32_t(source->Cursor >> 32) : 0);
 	}
 
-	void AmigaAudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void AmigaAudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Cursor = std::int64_t(offset > 0 ? offset : 0) << 32;
 		}
 	}
 
-	void AmigaAudioDevice::playSource(std::uint32_t sourceId)
+	void AmigaAudioDevice::PlaySource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Playing = true;
@@ -425,14 +415,14 @@ namespace nCine
 		}
 	}
 
-	void AmigaAudioDevice::pauseSource(std::uint32_t sourceId)
+	void AmigaAudioDevice::PauseSource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Paused = true;
 		}
 	}
 
-	void AmigaAudioDevice::stopSource(std::uint32_t sourceId)
+	void AmigaAudioDevice::StopSource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Playing = false;
@@ -445,13 +435,13 @@ namespace nCine
 		}
 	}
 
-	bool AmigaAudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool AmigaAudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr && source->Playing && !source->Paused);
 	}
 
-	void AmigaAudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void AmigaAudioDevice::QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || bufferId == 0 || bufferId >= std::uint32_t(_bufferCount)) {
@@ -464,13 +454,13 @@ namespace nCine
 		source->Queue[source->QueueCount++] = bufferId;
 	}
 
-	std::int32_t AmigaAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	std::int32_t AmigaAudioDevice::GetProcessedBufferCount(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr ? source->ProcessedCount : 0);
 	}
 
-	void AmigaAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	void AmigaAudioDevice::UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || count <= 0) {
@@ -490,10 +480,9 @@ namespace nCine
 		}
 	}
 
-	void AmigaAudioDevice::suspendDevice()
+	void AmigaAudioDevice::SuspendDevice()
 	{
-		// Stop feeding and cut what is queued: unlike a hardware ring there is up to ~90 ms in flight,
-		// and a suspend should silence promptly
+		// Also abort what is queued, so a suspend silences promptly
 		for (std::int32_t i = 0; i < BlockCount; i++) {
 			if (_inFlight[i]) {
 				AbortIO(reinterpret_cast<struct IORequest*>(_requests[i]));
@@ -505,14 +494,14 @@ namespace nCine
 		_suspended = true;
 	}
 
-	void AmigaAudioDevice::resumeDevice()
+	void AmigaAudioDevice::ResumeDevice()
 	{
 		_suspended = false;
 	}
 
-	void AmigaAudioDevice::updatePlayers()
+	void AmigaAudioDevice::UpdatePlayers()
 	{
-		AudioDeviceBase::updatePlayers();
+		AudioDeviceBase::UpdatePlayers();
 
 		if (_valid && !_suspended) {
 			FillQueue();
@@ -549,9 +538,7 @@ namespace nCine
 			SendIO(reinterpret_cast<struct IORequest*>(request));
 		}
 
-		// The first block is replied once the second one takes over from it, which cannot happen before
-		// the first has played out; a second of grace is many times that and still imperceptible here,
-		// because what is playing is silence and the game is still loading
+		// The first block is replied once the second takes over; a second of grace is plenty
 		bool linkSupported = false;
 		const std::uint64_t deadline = Backends::AmigaPlatform::TimerTicks() +
 			std::uint64_t(Backends::AmigaPlatform::TimerFrequency());
@@ -560,9 +547,8 @@ namespace nCine
 				linkSupported = true;
 				break;
 			}
-			// Polled rather than slept through dos.library: `proto/dos.h` cannot be included here (its
-			// DateTime clashes with Death::Containers::DateTime), and AHI mixes at a higher priority
-			// than this task, so spinning for the moment it takes cannot starve the playback itself
+			// Polled, not slept: `proto/dos.h` clashes with Death::Containers::DateTime, and AHI runs at
+			// a higher priority, so spinning cannot starve playback
 		}
 
 		for (std::int32_t i = 1; i >= 0; i--) {
@@ -602,9 +588,7 @@ namespace nCine
 
 	void AmigaAudioDevice::FillQueue()
 	{
-		// Retire finished requests first (their messages sit on the reply port), then top the queue up,
-		// bounded so a late frame cannot spend itself catching up - the same discipline as the N64/PS3
-		// backends. GetMsg never blocks, and neither does SendIO.
+		// Retire finished requests, then top the queue up to _maxInFlight; neither GetMsg() nor SendIO() blocks
 		struct Message* message;
 		bool anyRetired = false;
 		while ((message = GetMsg(_replyPort)) != nullptr) {
@@ -658,10 +642,8 @@ namespace nCine
 			request->ahir_Frequency = ULONG(_outputFrequency);
 			request->ahir_Volume = 0x10000;   // unity - the mixer applied the gains already
 			request->ahir_Position = 0x8000;  // center
-			// Linking to the one still-playing request is what makes consecutive blocks gapless. The
-			// link target must not have finished already - a request linked to a replied one never
-			// plays - and it can finish between the drain above and here, so its completion is
-			// re-tested rather than taken from _inFlight
+			// A request linked to an already replied one never plays, and the target may have finished
+			// since the drain above, so re-check it rather than trust _inFlight
 			AHIRequest* link = (_linkSupported ? _lastQueued : nullptr);
 			if (link != nullptr && CheckIO(reinterpret_cast<struct IORequest*>(link)) != nullptr) {
 				link = nullptr;
@@ -710,8 +692,7 @@ namespace nCine
 			return false;
 		}
 
-		// Float only per block: the gains become Q15, the cursor step 32.32 - the per-sample loop is
-		// all integer (the reasoning is spelled out in the N64 backend, which this mixer is a copy of)
+		// Float only per block (Q15 gains, 32.32 step); the per-sample loop is all integer
 		float leftGain, rightGain;
 		ComputePanning(source, leftGain, rightGain);
 		const std::int32_t leftQ15 = std::int32_t(leftGain * 32768.0f + 0.5f);
@@ -763,7 +744,7 @@ namespace nCine
 
 	void AmigaAudioDevice::MixInto(std::int16_t* output, std::int32_t frames)
 	{
-		// Silence is the common case and skips the accumulator entirely (see the N64 backend)
+		// Silence is the common case and skips the accumulator entirely
 		bool anyPlaying = false;
 		for (const Source& source : _sources) {
 			if (source.Playing && !source.Paused) {

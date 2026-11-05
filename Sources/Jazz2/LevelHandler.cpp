@@ -161,10 +161,10 @@ namespace Jazz2
 	public:
 		explicit AudioBufferPlayerForSplitscreen(AudioBuffer* audioBuffer, ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports);
 
-		Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D) override;
+		Vector3f GetAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D) override;
 
-		void updatePosition();
-		void updateViewports(ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports);
+		void UpdatePosition();
+		void UpdateViewports(ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports);
 
 	private:
 		ArrayView<std::unique_ptr<Rendering::PlayerViewport>> _viewports;
@@ -175,10 +175,10 @@ namespace Jazz2
 	{
 	}
 
-	Vector3f AudioBufferPlayerForSplitscreen::getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)
+	Vector3f AudioBufferPlayerForSplitscreen::GetAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)
 	{
 		if (isSourceRelative || isAs2D) {
-			return AudioBufferPlayer::getAdjustedPosition(device, pos, isSourceRelative, isAs2D);
+			return AudioBufferPlayer::GetAdjustedPosition(device, pos, isSourceRelative, isAs2D);
 		}
 
 		std::size_t minIndex = 0;
@@ -193,20 +193,20 @@ namespace Jazz2
 		}
 
 		Vector3f relativePos = (pos - Vector3f(_viewports[minIndex]->_cameraPos, 0.0f));
-		return AudioBufferPlayer::getAdjustedPosition(device, relativePos, false, false);
+		return AudioBufferPlayer::GetAdjustedPosition(device, relativePos, false, false);
 	}
 
-	void AudioBufferPlayerForSplitscreen::updatePosition()
+	void AudioBufferPlayerForSplitscreen::UpdatePosition()
 	{
 		if (_state != PlayerState::Playing || GetFlags(PlayerFlags::SourceRelative) || GetFlags(PlayerFlags::As2D)) {
 			return;
 		}
 
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
-		setPositionInternal(getAdjustedPosition(device, _position, false, false));
+		SetPositionInternal(GetAdjustedPosition(device, _position, false, false));
 	}
 
-	void AudioBufferPlayerForSplitscreen::updateViewports(ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports)
+	void AudioBufferPlayerForSplitscreen::UpdateViewports(ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports)
 	{
 		_viewports = viewports;
 	}
@@ -520,6 +520,26 @@ namespace Jazz2
 		return PreferencesCache::EnableLedgeClimb;
 	}
 
+	CharacterProfile LevelHandler::GetCharacterProfile(PlayerType type) const
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			return _scripts->GetCharacterProfile(type);
+		}
+#endif
+		return CharacterProfile::GetDefault(type);
+	}
+
+	bool LevelHandler::WarpsTransmuteCoins() const
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			return _scripts->WarpsTransmuteCoins();
+		}
+#endif
+		return true;
+	}
+
 	bool LevelHandler::CanActivateSugarRush() const
 	{
 		return true;
@@ -773,9 +793,9 @@ namespace Jazz2
 		if (!_musicCurrentPath.empty() && !IsSandbox()) {
 			_music = ContentResolver::Get().GetMusic(_musicCurrentPath);
 			if (_music != nullptr) {
-				_music->setLooping(true);
-				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-				_music->setSourceRelative(true);
+				_music->SetLooping(true);
+				_music->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+				_music->SetSourceRelative(true);
 				// Not started here: the rest of the level (the actors, their metadata on first sight) is
 				// still to load, and the stream is fed from the main thread once per frame, so a stream
 				// started now ran dry against that loading and came back with an audible gap after a second
@@ -975,12 +995,12 @@ namespace Jazz2
 		// The level music is started only after the first frames have loaded what they load (see the level
 		// loading above); it keeps playing under the pause menu, so a pause in the meantime changes nothing
 		if DEATH_UNLIKELY(_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
-			_music->play();
-		} else if DEATH_UNLIKELY(_musicStartDelay == 0 && _music != nullptr && _music->isStopped()) {
+			_music->Play();
+		} else if DEATH_UNLIKELY(_musicStartDelay == 0 && _music != nullptr && _music->IsStopped()) {
 			// A looping stream that reports itself stopped was stopped by something other than the game:
 			// the only in-game paths either replace it or clear the pointer, and a pause does not stop it.
 			// The audio device releases every player when it decides the output has gone away (see
-			// AudioDeviceBase::checkForStalledSources() and ALAudioDevice::checkDeviceConnection()), which
+			// AudioDeviceBase::CheckForStalledSources() and ALAudioDevice::CheckDeviceConnection()), which
 			// frees the sources for new sounds but leaves anything long-lived stopped for good - nothing
 			// else in the game ever starts the music a second time. Rescheduling the start handles that,
 			// and costs one retry a second rather than one a frame if the device is genuinely gone.
@@ -1029,16 +1049,16 @@ namespace Jazz2
 
 #if defined(WITH_AUDIO)
 		// Destroy stopped players and resume music after Sugar Rush
-		if (_sugarRushMusic != nullptr && _sugarRushMusic->isStopped()) {
+		if (_sugarRushMusic != nullptr && _sugarRushMusic->IsStopped()) {
 			_sugarRushMusic = nullptr;
 			if (_music != nullptr) {
-				_music->play();
+				_music->Play();
 			}
 		}
 
 		auto it = _playingSounds.begin();
 		while (it != _playingSounds.end()) {
-			if ((*it)->isStopped()) {
+			if ((*it)->IsStopped()) {
 				it = _playingSounds.eraseUnordered(it);
 				continue;
 			}
@@ -1152,15 +1172,15 @@ namespace Jazz2
 					if (_assignedViewports.size() == 1) {
 						// A free camera has no target, so nothing it hears moves relative to it
 						Actors::ActorBase* listener = _assignedViewports[0]->_targetActor;
-						audioDevice.updateListener(Vector3f(_assignedViewports[0]->_cameraPos, 0.0f),
+						audioDevice.UpdateListener(Vector3f(_assignedViewports[0]->_cameraPos, 0.0f),
 							Vector3f(listener != nullptr ? listener->GetSpeed() : Vector2f::Zero, 0.0f));
 					} else {
-						audioDevice.updateListener(Vector3f::Zero, Vector3f::Zero);
+						audioDevice.UpdateListener(Vector3f::Zero, Vector3f::Zero);
 
 						// All audio players must be updated to the nearest listener
 						for (auto& current : _playingSounds) {
 							if (auto* currentForSplitscreen = runtime_cast<AudioBufferPlayerForSplitscreen>(current.get())) {
-								currentForSplitscreen->updatePosition();
+								currentForSplitscreen->UpdatePosition();
 							}
 						}
 					}
@@ -1443,19 +1463,19 @@ namespace Jazz2
 			auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
 				? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer, _assignedViewports)
 				: std::make_shared<AudioBufferPlayer>(buffer));
-			player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
-			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-			player->setSourceRelative(sourceRelative);
-			player->setLooping((flags & SfxFlags::Looping) == SfxFlags::Looping);
+			player->SetPosition(Vector3f(pos.X, pos.Y, 100.0f));
+			player->SetGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
+			player->SetSourceRelative(sourceRelative);
+			player->SetLooping((flags & SfxFlags::Looping) == SfxFlags::Looping);
 
 			if (pos.Y >= _waterLevel) {
-				player->setLowPass(0.05f);
-				player->setPitch(pitch * 0.7f);
+				player->SetLowPass(0.05f);
+				player->SetPitch(pitch * 0.7f);
 			} else {
-				player->setPitch(pitch);
+				player->SetPitch(pitch);
 			}
 
-			player->play();
+			player->Play();
 			return player;
 		}
 #endif
@@ -1466,7 +1486,7 @@ namespace Jazz2
 	{
 #if defined(WITH_AUDIO)
 		if (player != nullptr) {
-			player->stop();
+			player->Stop();
 		}
 #endif
 	}
@@ -1481,17 +1501,17 @@ namespace Jazz2
 			auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
 				? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer, _assignedViewports)
 				: std::make_shared<AudioBufferPlayer>(buffer));
-			player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
-			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
+			player->SetPosition(Vector3f(pos.X, pos.Y, 100.0f));
+			player->SetGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 
 			if (pos.Y >= _waterLevel) {
-				player->setLowPass(0.05f);
-				player->setPitch(pitch * 0.7f);
+				player->SetLowPass(0.05f);
+				player->SetPitch(pitch * 0.7f);
 			} else {
-				player->setPitch(pitch);
+				player->SetPitch(pitch);
 			}
 
-			player->play();
+			player->Play();
 			return player;
 		}	
 #endif
@@ -1787,11 +1807,11 @@ namespace Jazz2
 
 #if defined(WITH_AUDIO)
 			if (_sugarRushMusic != nullptr) {
-				_sugarRushMusic->stop();
+				_sugarRushMusic->Stop();
 				_sugarRushMusic = nullptr;
 			}
 			if (_music != nullptr) {
-				_music->stop();
+				_music->Stop();
 				_music = nullptr;
 			}
 #endif
@@ -2021,13 +2041,13 @@ namespace Jazz2
 		if (it != _commonResources->Sounds.end() && ContentResolver::Get().ResolveSound(it->second)) {
 			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			_sugarRushMusic = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
-			_sugarRushMusic->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
-			_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-			_sugarRushMusic->setSourceRelative(true);
-			_sugarRushMusic->play();
+			_sugarRushMusic->SetPosition(Vector3f(0.0f, 0.0f, 100.0f));
+			_sugarRushMusic->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+			_sugarRushMusic->SetSourceRelative(true);
+			_sugarRushMusic->Play();
 
 			if (_music != nullptr) {
-				_music->pause();
+				_music->Pause();
 			}
 		}
 #endif
@@ -2281,9 +2301,9 @@ namespace Jazz2
 		}
 		target._music = Death::move(_music);
 		target._musicStartDelay = 0;
-		target._music->setLowPass(lowPass);
-		if (target._music->isStopped() || target._music->isPaused()) {
-			target._music->play();
+		target._music->SetLowPass(lowPass);
+		if (target._music->IsStopped() || target._music->IsPaused()) {
+			target._music->Play();
 		}
 		_musicStartDelay = 0;
 		return true;
@@ -2303,9 +2323,9 @@ namespace Jazz2
 		}
 		_music = Death::move(music);
 		_musicStartDelay = 0;
-		_music->setLowPass(lowPass);
-		if (_music->isStopped() || _music->isPaused()) {
-			_music->play();
+		_music->SetLowPass(lowPass);
+		if (_music->IsStopped() || _music->IsPaused()) {
+			_music->Play();
 		}
 		return true;
 	}
@@ -2313,7 +2333,7 @@ namespace Jazz2
 	void LevelHandler::SetMusicMuffling(float lowPass)
 	{
 		if (_music != nullptr) {
-			_music->setLowPass(lowPass);
+			_music->SetLowPass(lowPass);
 		}
 	}
 #	endif
@@ -3142,7 +3162,7 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 		for (auto& current : _playingSounds) {
 			if (auto* currentForSplitscreen = runtime_cast<AudioBufferPlayerForSplitscreen>(current.get())) {
-				currentForSplitscreen->updateViewports(_assignedViewports);
+				currentForSplitscreen->UpdateViewports(_assignedViewports);
 			}
 		}
 #endif
@@ -3163,7 +3183,7 @@ namespace Jazz2
 		if (success) {
 			for (auto& current : _playingSounds) {
 				if (auto* currentForSplitscreen = runtime_cast<AudioBufferPlayerForSplitscreen>(current.get())) {
-					currentForSplitscreen->updateViewports(_assignedViewports);
+					currentForSplitscreen->UpdateViewports(_assignedViewports);
 				}
 			}
 		}
@@ -3370,13 +3390,13 @@ namespace Jazz2
 
 #if defined(WITH_AUDIO)
 		if (_sugarRushMusic != nullptr) {
-			_sugarRushMusic->stop();
+			_sugarRushMusic->Stop();
 		}
 
 		if (!forceReload && _musicCurrentPath == path) {
 			// Music is already playing or is paused
 			if (_music != nullptr) {
-				_music->play();
+				_music->Play();
 			}
 			if (setDefault) {
 				_musicDefaultPath = path;
@@ -3385,16 +3405,16 @@ namespace Jazz2
 		}
 
 		if (_music != nullptr) {
-			_music->stop();
+			_music->Stop();
 		}
 
 		if (!path.empty()) {
 			_music = ContentResolver::Get().GetMusic(path);
 			if (_music != nullptr) {
-				_music->setLooping(true);
-				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-				_music->setSourceRelative(true);
-				_music->play();
+				_music->SetLooping(true);
+				_music->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+				_music->SetSourceRelative(true);
+				_music->Play();
 				result = true;
 			}
 		} else {
@@ -3622,13 +3642,13 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 		// Use low-pass filter on music and pause all SFX
 		if (_music != nullptr) {
-			_music->setLowPass(0.1f);
+			_music->SetLowPass(0.1f);
 		}
 		if (IsPausable()) {
 			PauseAllSfx();
 			// If Sugar Rush music is playing, pause it and play normal music instead
 			if (_sugarRushMusic != nullptr && _music != nullptr) {
-				_music->play();
+				_music->Play();
 			}
 		}
 #endif
@@ -3644,12 +3664,12 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 		// If Sugar Rush music was playing, resume it and pause normal music again
 		if (_sugarRushMusic != nullptr && _music != nullptr) {
-			_music->pause();
+			_music->Pause();
 		}
 		// Resume all SFX
 		ResumeAllSfx();
 		if (_music != nullptr) {
-			_music->setLowPass(1.0f);
+			_music->SetLowPass(1.0f);
 		}
 #endif
 
@@ -3664,8 +3684,8 @@ namespace Jazz2
 	{
 #if defined(WITH_AUDIO)
 		for (auto& sound : _playingSounds) {
-			if (sound->isPlaying()) {
-				sound->pause();
+			if (sound->IsPlaying()) {
+				sound->Pause();
 			}
 		}
 #endif
@@ -3675,8 +3695,8 @@ namespace Jazz2
 	{
 #if defined(WITH_AUDIO)
 		for (auto& sound : _playingSounds) {
-			if (sound->isPaused()) {
-				sound->play();
+			if (sound->IsPaused()) {
+				sound->Play();
 			}
 		}
 #endif

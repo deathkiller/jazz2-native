@@ -40,7 +40,7 @@ namespace Jazz2::Editor
 #if defined(WITH_AUDIO)
 		// A play-test that isn't kept anymore takes its sounds with it, also the paused ones and those an actor still holds
 		for (auto& sound : _playingSounds) {
-			sound->stop();
+			sound->Stop();
 		}
 #endif
 	}
@@ -91,12 +91,12 @@ namespace Jazz2::Editor
 	{
 #if defined(WITH_AUDIO)
 		if (_music != nullptr) {
-			_music->pause();
+			_music->Pause();
 		}
 		// The sound effects wait for the play-test to go on, as in the pause menu. The music of Sugar Rush ends, the music
 		// of the level comes back instead, as it always did.
 		if (_sugarRushMusic != nullptr) {
-			_sugarRushMusic->stop();
+			_sugarRushMusic->Stop();
 		}
 		PauseAllSfx();
 #endif
@@ -106,7 +106,7 @@ namespace Jazz2::Editor
 	{
 #if defined(WITH_AUDIO)
 		if (_music != nullptr && _musicStartDelay == 0) {
-			_music->play();
+			_music->Play();
 		}
 		// Under the pause menu they go on once it's closed
 		if (!IsPausable() || _pauseMenu == nullptr) {

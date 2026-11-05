@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Enemies
 	Bee::~Bee()
 	{
 		if (_noise != nullptr) {
-			_noise->stop();
+			_noise->Stop();
 			_noise = nullptr;
 		}
 	}
@@ -48,7 +48,7 @@ namespace Jazz2::Actors::Enemies
 
 		if (_frozenTimeLeft > 0.0f) {
 			if (_noise != nullptr) {
-				_noise->pause();
+				_noise->Pause();
 			}
 			return;
 		}
@@ -65,7 +65,7 @@ namespace Jazz2::Actors::Enemies
 			} else {
 				if (_noise != nullptr) {
 					// TODO: Fade-out
-					_noise->stop();
+					_noise->Stop();
 					_noise = nullptr;
 				}
 
@@ -73,7 +73,7 @@ namespace Jazz2::Actors::Enemies
 			}
 		}
 		if (_noise != nullptr) {
-			_noise->play();
+			_noise->Play();
 		}
 
 		_anglePhase += timeMult * 0.05f;
@@ -136,7 +136,7 @@ namespace Jazz2::Actors::Enemies
 		if ((flags & 0x04) != 0 && _noise == nullptr) {
 			_noise = PlaySfx("Noise"_s, 0.5f, 2.0f);
 			if (_noise != nullptr) {
-				_noise->setLooping(true);
+				_noise->SetLooping(true);
 			}
 		}
 	}
@@ -144,7 +144,7 @@ namespace Jazz2::Actors::Enemies
 	bool Bee::OnPerish(ActorBase* collider)
 	{
 		if (_noise != nullptr) {
-			_noise->stop();
+			_noise->Stop();
 			_noise = nullptr;
 		}
 
@@ -192,7 +192,7 @@ namespace Jazz2::Actors::Enemies
 			if (_noise == nullptr) {
 				_noise = PlaySfx("Noise"_s, 0.5f, 2.0f);
 				if (_noise != nullptr) {
-					_noise->setLooping(true);
+					_noise->SetLooping(true);
 				}
 			}
 		} else {

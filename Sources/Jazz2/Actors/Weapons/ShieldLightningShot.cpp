@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Weapons
 	{
 #if defined(WITH_AUDIO)
 		if (_noise != nullptr) {
-			_noise->stop();
+			_noise->Stop();
 			_noise = nullptr;
 		}
 #endif
@@ -100,7 +100,7 @@ namespace Jazz2::Actors::Weapons
 
 #if defined(WITH_AUDIO)
 		if (_noise != nullptr) {
-			_noise->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			_noise->SetPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 		}
 #endif
 	}

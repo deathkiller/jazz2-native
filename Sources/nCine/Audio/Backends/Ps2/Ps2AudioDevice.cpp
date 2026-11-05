@@ -35,10 +35,7 @@ namespace nCine
 
 	bool Ps2AudioDevice::InitializeModules()
 	{
-		// The device is constructed and destroyed with the service locator, which the application may do more
-		// than once, but an IRX can only be loaded once - so this runs at most once per process and remembers
-		// what it found. Everything it does is on the IOP side; the EE side (the format, the ring) belongs to
-		// the instance and is set up in the constructor.
+		// Runs at most once per process, an IRX cannot be loaded twice
 		static bool attempted = false;
 		static bool succeeded = false;
 		if (attempted) {
@@ -46,29 +43,22 @@ namespace nCine
 		}
 		attempted = true;
 
-		// audsrv drives the SPU2 through `libsd`, the ROM module that owns the sound registers, so that goes
-		// first; audsrv itself is carried inside the executable rather than read from the disc, because the
-		// game also boots from an SD card where there is no disc to read it from (see Ps2Modules.h)
+		// audsrv drives the SPU2 through `libsd`, so that goes first
 		const int libsdId = SifLoadModule("rom0:LIBSD", 0, nullptr);
 		if (libsdId < 0) {
 			LOGE("SifLoadModule(\"rom0:LIBSD\") failed with error {}, sound will be disabled", libsdId);
 			return false;
 		}
 
-		// From the disc where there is one - the packaging stages it next to `CDFS.IRX` - and out of the
-		// executable only where there is not (see Ps2Modules::Load())
+		// From the disc if there is one, otherwise out of the executable (see Ps2Modules::Load())
 		if (!Backends::Ps2Modules::Load("audsrv.irx"_s, "cdrom0:\\AUDSRV.IRX;1",
 				Backends::Ps2Modules::Audsrv, Backends::Ps2Modules::AudsrvSize)) {
 			LOGE("Cannot load \"audsrv.irx\", sound will be disabled");
 			return false;
 		}
 
-		// `Ps2Modules::Load()` cannot tell an already-resident copy from one that ran and failed - both leave
-		// `_start()` with MODULE_NO_RESIDENT_END - and `audsrv_init()` binds to the module's RPC server in a
-		// loop that NEVER ENDS if nothing registered one. On a module that failed its own initialization
-		// (no memory for its ring, LIBSD absent) that is a black screen at boot with nothing logged, which
-		// is unrecoverable rather than merely silent. So the bind audsrv would spin on is done here first,
-		// with a cap: if the server is not there, the module is not serving and sound is disabled instead.
+		// `audsrv_init()` spins forever if the module failed its own init and registered no RPC server,
+		// so bind with a cap first and disable sound instead of hanging at boot
 		{
 			constexpr std::int32_t BindAttempts = 100;
 			constexpr std::int32_t BindPollIntervalMs = 10;
@@ -111,13 +101,8 @@ namespace nCine
 			return;
 		}
 
-		// Each allocation is released again if a later one fails, so a device that gives up here is left
-		// with every pointer still null. Nothing gates createBuffer() on isValid() - AudioBuffer's
-		// constructor calls it regardless, and this device is registered either way - so `_buffers` being
-		// null is what tells it there is no table, and a half-built one would be worse than none: with
-		// `_bufferCapacity` still 0 its growth step computes a new capacity of 0, hands that to
-		// `std::realloc()` (which on this newlib shrinks the block and returns it rather than freeing it)
-		// and then constructs a Buffer into the few bytes that came back.
+		// On failure every pointer must end up null: CreateBuffer() runs even on an invalid device, and only
+		// a null `_buffers` stops it (a capacity of 0 would make it realloc to 0 bytes and write past them)
 		_mixBuffer = static_cast<std::int32_t*>(std::malloc(std::size_t(MaxBlockFrames) * ChannelCount * sizeof(std::int32_t)));
 		// The block is handed to the SIF transfer inside `audsrv_play_audio()`, so it starts on a cache line
 		_block = static_cast<std::int16_t*>(memalign(64, std::size_t(MaxBlockFrames) * FrameBytes));
@@ -129,9 +114,7 @@ namespace nCine
 		}
 		_bufferCapacity = InitialBufferCapacity;
 
-		// Buffer id 0 is reserved as "no buffer", so the table starts with an unused entry. It is claimed
-		// BEFORE anything else can fail, because a table whose slot 0 is free would hand that id out as an
-		// ordinary buffer - and every caller reads 0 back as failure.
+		// Id 0 means "no buffer", so slot 0 is claimed before anything else can fail
 		::new (&_buffers[0]) Buffer{};
 		_bufferCount = 1;
 
@@ -140,16 +123,14 @@ namespace nCine
 			return;
 		}
 
-		// The module's own volume is left at the maximum: everything the game controls - the master volume,
-		// per-player gains, the positional attenuation - is already applied while mixing, and halving it
-		// twice would only cost resolution in the 16-bit samples the SPU2 receives
+		// Left at maximum, all gains are applied while mixing and attenuating twice would only cost resolution
 		audsrv_set_volume(MAX_VOLUME);
 
 		std::uint32_t sourceIds[MaxSources];
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			sourceIds[i] = std::uint32_t(i + 1);
 		}
-		setSourcePool(arrayView(sourceIds, MaxSources));
+		SetSourcePool(arrayView(sourceIds, MaxSources));
 
 		_valid = true;
 		LOGI("Audio device initialized: audsrv on the SPU2, mixing {} Hz stereo in blocks of {} frames "
@@ -160,11 +141,10 @@ namespace nCine
 
 	Ps2AudioDevice::~Ps2AudioDevice()
 	{
-		// The base class's decoding thread can still be handing buffers over, so it goes first (a no-op on
-		// this console, where the engine's threading is off, but the order is the contract)
-		shutdownDecodeThread();
+		// The decoding thread goes first (a no-op on this console, but the order is the contract)
+		ShutdownDecodeThread();
 		for (IdleDecode& decode : _idleDecodes) {
-			decode.Request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+			decode.Request->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 		}
 		_idleDecodes.clear();
 
@@ -176,8 +156,7 @@ namespace nCine
 
 		ReleaseResources();
 
-		// audsrv itself is NOT shut down: the module stays resident for the life of the process (an IRX
-		// cannot be loaded a second time), and `InitializeModules()` above is what remembers that
+		// audsrv stays resident, an IRX cannot be loaded twice (see InitializeModules())
 	}
 
 	void Ps2AudioDevice::ReleaseResources()
@@ -214,34 +193,23 @@ namespace nCine
 		}
 
 		_mixFrequency = frequency;
-		// An empty ring answers with its whole capacity, which is the only way to learn what this build of
-		// the module was compiled with (and the ring IS empty here - the format was just reprogrammed)
+		// An empty ring reports its whole capacity, and it is empty right after the format is set
 		const int available = audsrv_available();
 		_ringCapacity = (available > 0 ? std::int32_t(available) : 0);
 
-		// The largest block of which TargetBlocksPerRing still fit, rounded down to a whole number of units
-		// so the figure stays a tidy one in the log.
+		// The largest block of which TargetBlocksPerRing still fit, rounded down to whole units
 		std::int32_t blockFrames = (_ringCapacity / (TargetBlocksPerRing * FrameBytes) / BlockFramesUnit) * BlockFramesUnit;
 		if (_ringCapacity <= 0) {
-			// The module answered with nothing at all, which means the measurement is unusable rather than
-			// that the ring is tiny - so the MAXIMUM goes in, not the minimum. Clamping down here instead
-			// would pick the smallest block this backend can submit: at 64 frames, `FillRing()` can queue at
-			// most MaxBlocksPerFill of them per call, which is under 23 ms of audio against a frame that can
-			// easily run 33 - a mixer permanently starved by the recovery path, and paying eight SIF round
-			// trips a frame to do it.
+			// No answer means the measurement failed, not a tiny ring - the minimum block would starve the mixer
 			blockFrames = MaxBlockFrames;
 		} else if (blockFrames > MaxBlockFrames) {
 			blockFrames = MaxBlockFrames;
 		} else if (blockFrames < BlockFramesUnit) {
-			// A ring that measured smaller than TargetBlocksPerRing blocks of one unit is a real answer, not
-			// a failed measurement, and the maximum must NOT be assumed for it: `FillRing()` only submits
-			// while `audsrv_available() >= blockBytes`, so a block bigger than the whole ring is a gate that
-			// can never open - no samples, no log, no `break`, and isValid() still true. Whatever whole
-			// units do fit is used instead; a starved mixer still plays.
+			// A real but small ring: a block bigger than the ring would silently never be submitted,
+			// so use whatever whole units fit
 			blockFrames = (_ringCapacity / (FrameBytes * BlockFramesUnit)) * BlockFramesUnit;
 			if (blockFrames < BlockFramesUnit) {
-				// Under one unit the ring cannot hold a submission at all, so there is nothing to fall back
-				// to - said plainly here rather than left to look like silence with no cause
+				// Not even one unit fits, so fail loudly rather than stay silent with no cause
 				LOGE("audsrv reported a {} byte ring, too small to submit {} frames into - sound will be disabled",
 					_ringCapacity, BlockFramesUnit);
 				return false;
@@ -253,35 +221,35 @@ namespace nCine
 		return true;
 	}
 
-	bool Ps2AudioDevice::isValid() const
+	bool Ps2AudioDevice::IsValid() const
 	{
 		return _valid;
 	}
 
-	const char* Ps2AudioDevice::name() const
+	const char* Ps2AudioDevice::GetName() const
 	{
 		return "audsrv";
 	}
 
-	void Ps2AudioDevice::setGain(float gain)
+	void Ps2AudioDevice::SetGain(float gain)
 	{
 		// Applied while mixing rather than programmed into the module (see the constructor)
 		_gain = gain;
 	}
 
-	void Ps2AudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void Ps2AudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		// No Doppler on this backend, so the velocity is not kept
 		static_cast<void>(velocity);
 		_listenerPos = position;
 	}
 
-	std::int32_t Ps2AudioDevice::nativeFrequency()
+	std::int32_t Ps2AudioDevice::GetNativeFrequency()
 	{
 		return _mixFrequency;
 	}
 
-	void Ps2AudioDevice::setMixingFrequency(std::int32_t frequency)
+	void Ps2AudioDevice::SetMixingFrequency(std::int32_t frequency)
 	{
 		if (!_valid || frequency == _mixFrequency ||
 			frequency < MinMixingFrequency || frequency > MaxMixingFrequency) {
@@ -289,30 +257,20 @@ namespace nCine
 		}
 
 		if (_stopReasons != 0) {
-			// Held stopped by a blocking operation or a suspension, and reopening the ring behind either of
-			// those is exactly what the stop reasons exist to prevent. Recording the rate is enough:
-			// RestartStream() programs `_mixFrequency` when the last reason is dropped.
+			// Held stopped, so only record the rate; RestartStream() programs it when the last reason is dropped
 			_mixFrequency = frequency;
 			return;
 		}
 
 		const std::int32_t previousFrequency = _mixFrequency;
 
-		// Everything already queued was mixed at the old rate and would be played back at the new one, so
-		// the ring is dropped rather than left to play a burst at the wrong pitch. ReopenStream() below is
-		// also what reopens it - a stopped ring accepts nothing until then.
-		//
-		// Through StopStream() rather than by calling `audsrv_stop_audio()` directly: the ring really is
-		// closed here, and a state that says otherwise is one nothing can recover from. It used to leave
-		// the stream marked open while the module was refusing everything, so RestartStream() - the one
-		// function whose job is to reopen it - returned immediately and the device was silent for good.
+		// Drop audio mixed at the old rate, it would play at the wrong pitch. Through StopStream() so the
+		// stop reasons stay truthful, otherwise RestartStream() would never reopen the ring.
 		StopStream(StopReasonBlocking);
 		if (!ReopenStream(frequency)) {
-			// The module refused the new rate and the old format is gone with it, so the old one is put
-			// back - it was accepted once, so it should be again, but that is checked rather than assumed
+			// Refused, and the old format is gone with it, so restore the old rate (checked, not assumed)
 			if (!ReopenStream(previousFrequency)) {
-				// Both refused. The reason is deliberately left in place: the stream stays marked stopped,
-				// which is the truth, and the next endBlockingOperation() or resumeDevice() retries it
+				// Both refused: the reason stays set, so the next EndBlockingOperation() or ResumeDevice() retries
 				LOGE("Cannot reprogram the audio stream at {} Hz, nor back to {} Hz - sound is silent until "
 					"the next level load", frequency, previousFrequency);
 				return;
@@ -325,9 +283,9 @@ namespace nCine
 			_mixFrequency, _blockFrames, _ringCapacity, (_ringCapacity * 1000) / (_mixFrequency * FrameBytes));
 	}
 
-	std::uint32_t Ps2AudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t Ps2AudioDevice::RegisterPlayer(IAudioPlayer* player)
 	{
-		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);
+		const std::uint32_t sourceId = AudioDeviceBase::RegisterPlayer(player);
 		if (sourceId != UnavailableSource) {
 			if (Source* source = GetSource(sourceId)) {
 				*source = Source{};
@@ -344,10 +302,9 @@ namespace nCine
 		return &_sources[sourceId - 1];
 	}
 
-	std::uint32_t Ps2AudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t Ps2AudioDevice::CreateBuffer(BufferUsage usage)
 	{
-		// Every sound lives in main memory here - the SPU2's own 2 MB is owned by audsrv's streaming voices -
-		// so the usage says nothing this backend can act on
+		// Every sound lives in main memory (SPU2 RAM belongs to audsrv), so the usage is irrelevant
 		static_cast<void>(usage);
 
 		if (_buffers == nullptr) {
@@ -356,9 +313,7 @@ namespace nCine
 
 		for (std::int32_t i = 1; i < _bufferCount; i++) {
 			if (!_buffers[i].Used) {
-				// A free slot has already had its samples released by deleteBuffer(), so resetting the
-				// descriptor drops nothing - it only keeps the previous sound's rate and channel count from
-				// being read if the next upload fails before it sets its own
+				// Samples are already released; the reset keeps a failed upload from reusing stale rate/channels
 				_buffers[i] = Buffer{};
 				_buffers[i].Used = true;
 				return std::uint32_t(i);
@@ -366,9 +321,7 @@ namespace nCine
 		}
 
 		if (_bufferCount == _bufferCapacity) {
-			// The old table stays valid until the new one exists, which is the whole point of doing this by
-			// hand. Returning 0 is the interface's "no buffer" and AudioBuffer already reports and survives
-			// it, so a full heap costs sounds rather than the game.
+			// The old table stays valid on failure, and AudioBuffer survives 0, so a full heap only costs sounds
 			const std::int32_t newCapacity = _bufferCapacity * 2;
 			Buffer* grown = static_cast<Buffer*>(std::realloc(_buffers, std::size_t(newCapacity) * sizeof(Buffer)));
 			if (grown == nullptr) {
@@ -387,7 +340,7 @@ namespace nCine
 	void Ps2AudioDevice::ReleaseBuffer(Buffer& buffer)
 	{
 		// A source still reading this buffer would walk freed samples, so it is stopped first.
-		// The id is range-checked because setSourceBuffer() takes whatever it is handed.
+		// The id is range-checked because SetSourceBuffer() takes whatever it is handed.
 		for (Source& source : _sources) {
 			if (source.BufferId != 0 && source.BufferId < std::uint32_t(_bufferCount) && &_buffers[source.BufferId] == &buffer) {
 				source.Playing = false;
@@ -402,7 +355,7 @@ namespace nCine
 		buffer.FrameCount = 0;
 	}
 
-	void Ps2AudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void Ps2AudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount)) {
 			return;
@@ -411,7 +364,7 @@ namespace nCine
 		_buffers[bufferId].Used = false;
 	}
 
-	bool Ps2AudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	bool Ps2AudioDevice::UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
 	{
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount) || data == nullptr || size <= 0) {
 			return false;
@@ -426,8 +379,7 @@ namespace nCine
 			default: return false;
 		}
 
-		// `size` is a byte count on every path into here, so a trailing partial frame is dropped rather than
-		// turned into a sample count that disagrees with the data
+		// `size` is in bytes, a trailing partial frame is dropped
 		const std::int32_t frameSize = bytesPerSample * channelCount;
 		const std::int32_t frameCount = size / frameSize;
 		const std::int32_t byteCount = frameCount * frameSize;
@@ -438,8 +390,7 @@ namespace nCine
 			return false;
 		}
 
-		// A streaming source uploads into the same buffer several times a second, so an allocation that is
-		// already big enough is kept rather than churned
+		// Streaming sources re-upload often, so an allocation that is big enough is kept
 		if (byteCount > buffer.Capacity) {
 			ReleaseBuffer(buffer);
 
@@ -453,11 +404,8 @@ namespace nCine
 			_residentBytes += byteCount;
 		}
 
-		// Samples keep the width they arrived in. The mixer works in 16 bits and widening here would save it
-		// one shift per sample, but it would also double what this console's content costs to hold - nearly
-		// all of the game's sounds are 8-bit - on a machine whose 32 MB is shared with a renderer that pages
-		// every texture through main memory. The 8-bit form is unsigned with 128 at silence, which is the one
-		// conversion left to make; 16-bit data is already native-endian (the asset readers swap on load).
+		// Samples keep their width to save memory (most sounds are 8-bit); 8-bit is unsigned and gets
+		// re-centered on 0, 16-bit is already native-endian
 		if (bytesPerSample == 1) {
 			const std::uint8_t* source = static_cast<const std::uint8_t*>(data);
 			std::int8_t* dest = reinterpret_cast<std::int8_t*>(buffer.Samples);
@@ -475,7 +423,7 @@ namespace nCine
 		return true;
 	}
 
-	void Ps2AudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void Ps2AudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->BufferId = bufferId;
@@ -483,14 +431,14 @@ namespace nCine
 		}
 	}
 
-	void Ps2AudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void Ps2AudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Gain = gain;
 		}
 	}
 
-	void Ps2AudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void Ps2AudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			// A non-positive pitch would stall or reverse the cursor, neither of which the mixer expresses
@@ -498,49 +446,48 @@ namespace nCine
 		}
 	}
 
-	void Ps2AudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void Ps2AudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Looping = looping;
 		}
 	}
 
-	void Ps2AudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void Ps2AudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Relative = relative;
 		}
 	}
 
-	void Ps2AudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void Ps2AudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Position = position;
 		}
 	}
 
-	void Ps2AudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void Ps2AudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
-		// audsrv streams through two plain voices and exposes nothing per-source, and filtering in the mixer
-		// would cost every source a per-sample branch for the single effect that asks for it
+		// Not supported: audsrv has no per-source filter, and the mixer would pay for it on every source
 		static_cast<void>(sourceId);
 		static_cast<void>(value);
 	}
 
-	std::int32_t Ps2AudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t Ps2AudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr ? std::int32_t(source->Cursor >> 32) : 0);
 	}
 
-	void Ps2AudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void Ps2AudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Cursor = std::int64_t(offset > 0 ? offset : 0) << 32;
 		}
 	}
 
-	void Ps2AudioDevice::playSource(std::uint32_t sourceId)
+	void Ps2AudioDevice::PlaySource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Playing = true;
@@ -548,14 +495,14 @@ namespace nCine
 		}
 	}
 
-	void Ps2AudioDevice::pauseSource(std::uint32_t sourceId)
+	void Ps2AudioDevice::PauseSource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Paused = true;
 		}
 	}
 
-	void Ps2AudioDevice::stopSource(std::uint32_t sourceId)
+	void Ps2AudioDevice::StopSource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Playing = false;
@@ -569,13 +516,13 @@ namespace nCine
 		}
 	}
 
-	bool Ps2AudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool Ps2AudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr && source->Playing && !source->Paused);
 	}
 
-	void Ps2AudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void Ps2AudioDevice::QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || bufferId == 0 || bufferId >= std::uint32_t(_bufferCount)) {
@@ -588,13 +535,13 @@ namespace nCine
 		source->Queue[source->QueueCount++] = bufferId;
 	}
 
-	std::int32_t Ps2AudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	std::int32_t Ps2AudioDevice::GetProcessedBufferCount(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr ? source->ProcessedCount : 0);
 	}
 
-	void Ps2AudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	void Ps2AudioDevice::UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || count <= 0) {
@@ -616,8 +563,7 @@ namespace nCine
 
 	bool Ps2AudioDevice::ReopenStream(std::int32_t frequency)
 	{
-		// Programming the format is what reopens the ring; without it `audsrv_available()` answers 0 for the
-		// rest of the session and FillRing() below would never submit anything again (see _stopReasons)
+		// Programming the format is what reopens a stopped ring (see _stopReasons)
 		if (!ApplyFormat(frequency)) {
 			return false;
 		}
@@ -633,12 +579,10 @@ namespace nCine
 		const std::uint32_t previous = _stopReasons;
 		_stopReasons |= std::uint32_t(reason);
 		if (previous != 0) {
-			// Already held stopped by the other owner, so the module needs nothing - this only records that
-			// it must stay stopped until this reason is dropped as well
+			// Already stopped by the other owner, only record this reason
 			return;
 		}
-		// What the module still holds is discarded rather than left to drain - it is the scene that is being
-		// left, and it would otherwise play over whatever comes next
+		// Discard what the module holds, otherwise it would play over whatever comes next
 		audsrv_stop_audio();
 	}
 
@@ -649,8 +593,7 @@ namespace nCine
 		}
 		_stopReasons &= ~std::uint32_t(reason);
 		if (_stopReasons != 0) {
-			// Somebody else still wants it stopped - reopening here is what used to let a level load's
-			// endBlockingOperation() undo a suspension that was still in force
+			// Another owner still wants it stopped
 			return;
 		}
 		if (!ReopenStream(_mixFrequency)) {
@@ -660,35 +603,30 @@ namespace nCine
 		}
 	}
 
-	void Ps2AudioDevice::onBlockingOperationBegan()
+	void Ps2AudioDevice::OnBlockingOperationBegan()
 	{
-		// The caller is about to stop calling updatePlayers() for far longer than the ring holds. Left alone,
-		// the module would spend that whole time repeating the last block it was given - a fragment of the
-		// music, over and over, for as long as the load takes (measured; fed silence, by contrast, comes out
-		// as silence, so this is the module repeating rather than the hardware idling). Stopping it turns
-		// that into the silence it should have been.
+		// UpdatePlayers() stops for longer than the ring holds, and an unfed module loops its last block
 		StopStream(StopReasonBlocking);
 	}
 
-	void Ps2AudioDevice::onBlockingOperationEnded()
+	void Ps2AudioDevice::OnBlockingOperationEnded()
 	{
 		RestartStream(StopReasonBlocking);
 	}
 
-	void Ps2AudioDevice::suspendDevice()
+	void Ps2AudioDevice::SuspendDevice()
 	{
 		StopStream(StopReasonSuspended);
 	}
 
-	void Ps2AudioDevice::resumeDevice()
+	void Ps2AudioDevice::ResumeDevice()
 	{
 		RestartStream(StopReasonSuspended);
 	}
 
-	void Ps2AudioDevice::updatePlayers()
+	void Ps2AudioDevice::UpdatePlayers()
 	{
-		// A chunk the idle time has not finished in a while gets its share inside the frame - before the
-		// players run, so a chunk this completes is queued by its stream in the same frame
+		// Advance chunks past their grace before the players run, so a finished one is queued this frame
 		_frameIndex++;
 		for (std::size_t i = 0; i < _idleDecodes.size(); ) {
 			IdleDecode& decode = _idleDecodes[i];
@@ -700,18 +638,16 @@ namespace nCine
 			}
 		}
 
-		// The base class advances the players and retires the finished ones first, so the mix below sees the
-		// state this frame actually asked for
-		AudioDeviceBase::updatePlayers();
+		// Players first, so the mix below sees this frame's state
+		AudioDeviceBase::UpdatePlayers();
 
 		if (_valid) {
-			// A suspension is one of the reasons FillRing() finds the stream stopped, so it needs no test
-			// of its own here (see _stopReasons)
+			// FillRing() also handles suspension (see _stopReasons)
 			FillRing();
 		}
 	}
 
-	bool Ps2AudioDevice::submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
+	bool Ps2AudioDevice::SubmitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
 	{
 		if (request == nullptr) {
 			return false;
@@ -720,24 +656,21 @@ namespace nCine
 		return true;
 	}
 
-	void Ps2AudioDevice::drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
+	void Ps2AudioDevice::DrainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
 	{
-		// Everything runs on the one thread, so a request is never in the middle of a slice here - taking it
-		// off the list is all it needs, the bytes it already holds are discarded with the submit that follows
+		// Single-threaded, so a request is never mid-slice here and unlisting it is enough
 		for (std::size_t i = 0; i < _idleDecodes.size(); i++) {
 			if (_idleDecodes[i].Request == request) {
-				request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+				request->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 				_idleDecodes.erase(&_idleDecodes[i]);
 				return;
 			}
 		}
 	}
 
-	bool Ps2AudioDevice::runIdleWork(float availableMs)
+	bool Ps2AudioDevice::RunIdleWork(float availableMs)
 	{
-		// The estimate is the larger of the last slice and a slowly decaying maximum, so the cheap slices that
-		// only copy what the last tick rendered cannot talk the caller into starting one that renders a tick
-		// just before the blank
+		// The estimate is a slowly decaying maximum, so cheap slices cannot start an expensive one just before the blank
 		if (_idleDecodes.empty() || availableMs < _idleSliceMs) {
 			return false;
 		}
@@ -756,36 +689,25 @@ namespace nCine
 		const std::int32_t blockBytes = _blockFrames * FrameBytes;
 
 		if (_stopReasons != 0) {
-			// The ring refuses everything until the format is programmed again, so there is nothing to do
-			// here until everyone who stopped the stream has put it back (see StopStream())
+			// The ring refuses everything until the stream is reopened (see StopStream())
 			return;
 		}
 
-		// `audsrv_wait_audio()` is what the module's own samples are written around, and it BLOCKS until the
-		// ring has room - which on a frame that already ran long would stall the game on the SPU2. Asking how
-		// much fits and submitting only that is the non-blocking form of the same thing.
+		// Submit only what fits instead of `audsrv_wait_audio()`, which blocks until the ring has room
 		std::int32_t available = std::int32_t(audsrv_available());
 
-		// The count is capped only as a backstop. Filling this ring completely is around fifty milliseconds of
-		// audio, which is cheap enough to mix inside one frame - unlike the consoles whose queue holds three
-		// times that, where an unbounded catch-up turns a late frame into a much later one. What the cap
-		// really rules out is a ring that reports space it never consumes, which would otherwise spin here.
+		// Backstop against a ring that reports space it never consumes
 		for (std::int32_t i = 0; i < MaxBlocksPerFill && available >= blockBytes; i++) {
 			MixInto(_block, _blockFrames);
 
 			const std::int32_t sent = std::int32_t(audsrv_play_audio(reinterpret_cast<const char*>(_block), blockBytes));
 			if (sent <= 0) {
-				// The module refused the block outright, so there is nothing to be gained by offering another
+				// Refused outright, offering another block would not help
 				break;
 			}
 			if (sent < blockBytes) {
-				// A SHORT accept. The EE side of `audsrv_play_audio()` chunks the block through its own RPC
-				// buffer and returns how much the IOP took, breaking out of that loop if a chunk is refused
-				// - so this is a value the module can genuinely return, whatever the space measured above
-				// said. It costs samples rather than just latency: `MixInto()` has already walked every
-				// source's cursor across the WHOLE block, so the part that was not taken is gone and is
-				// heard as a click. Nothing here can put it back, but continuing would compound it against
-				// an `available` that is now wrong, so the fill ends and the next frame starts clean.
+				// Short accepts happen despite `available`; the rest is already mixed and lost (a click),
+				// and `available` is now wrong, so let the next frame start clean
 				LOGW("audsrv accepted only {} of {} bytes, {} frames of audio were dropped",
 					sent, blockBytes, (blockBytes - sent) / FrameBytes);
 				break;
@@ -810,11 +732,8 @@ namespace nCine
 		/**
 			@brief Mixes the frames one buffer still holds into @p output, from frame @p i until either runs out
 
-			The sample format is a template parameter, so the loop is compiled once per format with nothing to test
-			per sample, and the cursor, the gains and the counter are locals the compiler keeps in registers. Written
-			inline in MixSource() they would not be: the buffer can change partway through a block, so the format
-			would be re-read and re-tested for every sample, and the cursor - a member of the source, in a build
-			without strict aliasing, where any store to the output might change it - stored and reloaded on every one.
+			A template per sample format, so the loop has no per-sample format tests and keeps the cursor and
+			gains in registers (without strict aliasing, a member cursor would be reloaded on every store).
 
 			@returns The index of the first output frame not mixed, which is @p frames unless the buffer ran out
 		*/
@@ -824,16 +743,12 @@ namespace nCine
 			std::int32_t leftQ15, std::int32_t rightQ15)
 		{
 			using Sample = typename std::conditional<BytesPerSample == 1, std::int8_t, std::int16_t>::type;
-			// An 8-bit source is stored as it arrived and shifted into the mixer's 16-bit scale here: one
-			// instruction per sample against holding the whole sound at twice the size
+			// 8-bit samples are widened here, one shift each instead of storing them at twice the size
 			constexpr std::int32_t Shift = (BytesPerSample == 1 ? 8 : 0);
 			const Sample* samples = reinterpret_cast<const Sample*>(data);
 			std::int64_t cursor = cursorInOut;
 			for (; i < frames && cursor < end; i++) {
-				// Linear interpolation between the two frames the cursor sits between, with the fraction held in
-				// Q8 - plenty for 16-bit samples. The upper neighbour is clamped to the last frame rather than
-				// wrapped: at the very end of a non-looping buffer there is nothing after it, and wrapping would
-				// fold the first sample into the last one as a click.
+				// Linear interpolation with a Q8 fraction; the upper neighbor is clamped, wrapping would click
 				const std::int32_t index = std::int32_t(cursor >> 32);
 				const std::int32_t fraction = std::int32_t((cursor >> 24) & 0xFF);
 				const std::int32_t nextIndex = (index + 1 < frameCount ? index + 1 : index);
@@ -868,18 +783,13 @@ namespace nCine
 			return false;
 		}
 
-		// The gains are computed in float - the same math as every other backend, so panning sounds identical
-		// - then held in Q15 for the block, keeping the per-sample loop entirely in integer registers. Both
-		// are at most 1.0, so a Q15 gain times a 16-bit sample stays inside 31 bits.
+		// Q15 gains keep the per-sample loop in integers; both are at most 1.0, so products fit in 31 bits
 		float leftGain, rightGain;
 		ComputePanning(source, leftGain, rightGain);
 		const std::int32_t leftQ15 = std::int32_t(leftGain * 32768.0f + 0.5f);
 		const std::int32_t rightQ15 = std::int32_t(rightGain * 32768.0f + 0.5f);
 
-		// One output frame advances the cursor by this much of an input frame (in the cursor's 32.32 fixed
-		// point), which is where both the source's pitch and the rate difference between the buffer and the
-		// stream are applied. Computed once per block and per buffer - the per-sample loop never touches the
-		// FPU, which on the R5900 also keeps it out of the way of everything else that does.
+		// Cursor advance per output frame in 32.32, covering both pitch and the buffer/stream rate difference
 		std::int64_t step = AudioMixer::ComputeResampleStep(buffer->Frequency, _mixFrequency, source.Pitch);
 		std::int64_t end = std::int64_t(buffer->FrameCount) << 32;
 
@@ -903,14 +813,11 @@ namespace nCine
 						source.Cursor = cursor;
 						return false;
 					}
-					// The next buffer may be at another rate, so the step follows it - and the loop re-tests
-					// rather than skipping this output frame, so a buffer boundary costs no gap
+					// The next buffer may have another rate; re-test instead of skipping a frame, so no gap
 					step = AudioMixer::ComputeResampleStep(buffer->Frequency, _mixFrequency, source.Pitch);
 					end = std::int64_t(buffer->FrameCount) << 32;
 				} else if (source.Looping) {
-					// Wrapped rather than reset, so a step that overshoots the end does not lose the fraction
-					// of a frame it went past by - over a long loop that would drift audibly
-					// (GetActiveBuffer() guarantees FrameCount > 0, so `end` is never zero here)
+					// Wrapped, not reset, to keep the overshoot fraction (`end` is never zero here)
 					cursor %= end;
 				} else {
 					source.Cursor = cursor;
@@ -936,10 +843,7 @@ namespace nCine
 
 	void Ps2AudioDevice::MixInto(std::int16_t* output, std::int32_t frames)
 	{
-		// Silence is the common case - a menu with the music off, and most frames of a level between effects -
-		// and it does not need the accumulator at all. Zeroing 32 bits per channel and then converting every
-		// one of them back down to 16 is twice the memory traffic of writing the silence straight out, and
-		// the ring is topped up with a block or two of it every single frame.
+		// Silence is common, so write it straight out without the accumulator
 		bool anyPlaying = false;
 		for (const Source& source : _sources) {
 			if (source.Playing && !source.Paused) {
@@ -960,16 +864,13 @@ namespace nCine
 				continue;
 			}
 			if (!MixSource(source, accumulator, frames)) {
-				// Ran out of audio: a static source has finished, and a streaming one has been starved by a
-				// decoder that could not keep up. Both stop; the player notices through isSourcePlaying().
+				// Finished or starved, the player notices through IsSourcePlaying()
 				source.Playing = false;
 				source.Cursor = 0;
 			}
 		}
 
-		// The stream carries 16 bits and wrapping the excess would flip its polarity, a far worse artefact
-		// than the clipping this is instead. With this many voices a loud moment can exceed the range, which
-		// is the whole reason the accumulator is wider than the output.
+		// Clamp rather than wrap, wrapping would flip the polarity
 		const std::int32_t total = frames * ChannelCount;
 		for (std::int32_t i = 0; i < total; i++) {
 			output[i] = AudioMixer::ClampToInt16(accumulator[i]);

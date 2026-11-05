@@ -69,7 +69,7 @@ namespace Jazz2::UI::Menu
 		// Destroy stopped players
 		auto it = _owner->_playingSounds.begin();
 		while (it != _owner->_playingSounds.end()) {
-			if ((*it)->isStopped()) {
+			if ((*it)->IsStopped()) {
 				it = _owner->_playingSounds.eraseUnordered(it);
 				continue;
 			}
@@ -344,10 +344,10 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_AUDIO)
 		if ((type & ChangedPreferencesType::Audio) == ChangedPreferencesType::Audio) {
 			if (_root->_music != nullptr) {
-				_root->_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+				_root->_music->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			}
 			if (_root->_sugarRushMusic != nullptr) {
-				_root->_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+				_root->_sugarRushMusic->SetGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			}
 		}
 #endif

@@ -22,7 +22,7 @@ namespace nCine
 {
 	namespace
 	{
-		ALenum alFormat(IAudioDevice::BufferFormat format)
+		ALenum ToALFormat(IAudioDevice::BufferFormat format)
 		{
 			switch (format) {
 				case IAudioDevice::BufferFormat::Stereo8: return AL_FORMAT_STEREO8;
@@ -59,9 +59,7 @@ namespace nCine
 		LOGD("Initializing OpenAL audio device...");
 
 #if defined(WITH_LIBRETRO)
-		// The core hands mixed audio to the frontend instead of playing it itself: an ALC_SOFT_loopback
-		// device mixes on demand and retro_run pulls the samples through renderSamples(). The core is
-		// always built against OpenAL Soft, which has the extension since v1.14.
+		// The frontend plays the audio: an ALC_SOFT_loopback device mixes on demand for RenderSamples()
 		auto alcLoopbackOpenDeviceSOFT = (LPALCLOOPBACKOPENDEVICESOFT)alcGetProcAddress(nullptr, "alcLoopbackOpenDeviceSOFT");
 		_alcRenderSamplesSOFT = (LPALCRENDERSAMPLESSOFT)alcGetProcAddress(nullptr, "alcRenderSamplesSOFT");
 		if (alcLoopbackOpenDeviceSOFT != nullptr && _alcRenderSamplesSOFT != nullptr) {
@@ -79,8 +77,7 @@ namespace nCine
 		_deviceName = alcGetString(_device, ALC_DEVICE_SPECIFIER);
 
 #if defined(WITH_LIBRETRO)
-		// A loopback context must be created with its render format: 16-bit interleaved stereo (what
-		// retro_audio_sample_batch expects) at the rate advertised in retro_system_av_info
+		// A loopback context needs its render format: 16-bit stereo at the rate in retro_system_av_info
 		const ALCint loopbackAttrs[] = {
 			ALC_FORMAT_CHANNELS_SOFT, ALC_STEREO_SOFT,
 			ALC_FORMAT_TYPE_SOFT, ALC_SHORT_SOFT,
@@ -124,8 +121,7 @@ namespace nCine
 		if (error != AL_NO_ERROR) {
 			LOGE("alGenSources() failed with error 0x{:x}", error);
 		} else {
-			// The distance model parameters never change per source, so they are applied once here
-			// instead of every time a player takes a source out of the pool
+			// Distance model parameters never change per source, so they are set once
 			for (std::int32_t i = 0; i < MaxSources; i++) {
 				alSourcef(_sources[i], AL_REFERENCE_DISTANCE, ReferenceDistance);
 				alSourcef(_sources[i], AL_MAX_DISTANCE, MaxDistance);
@@ -135,7 +131,7 @@ namespace nCine
 			for (std::int32_t i = 0; i < MaxSources; i++) {
 				sourceIds[i] = _sources[i];
 			}
-			setSourcePool(arrayView(sourceIds, MaxSources));
+			SetSourcePool(arrayView(sourceIds, MaxSources));
 		}
 
 		alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
@@ -145,26 +141,20 @@ namespace nCine
 		alListenerf(AL_GAIN, _gain);
 
 #if defined(AL_STOP_SOURCES_ON_DISCONNECT_SOFT) && defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Don't stop sources when device is disconnected, so a device that comes back carries on playing
-		// what it was playing. That is only safe while something notices a device that does NOT come back:
-		// with the mixer gone the sources stay AL_PLAYING for good, no player ever hands its source back
-		// and the pool runs dry within seconds. checkDeviceConnection() is what notices, so this is left
-		// to OpenAL's default (stop them) wherever the connection cannot be queried at all.
+		// Keep sources playing on disconnect so a returning device resumes them; only safe where
+		// CheckDeviceConnection() can release them if it never returns, otherwise the pool runs dry
 		alDisable(AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
 #endif
 
 #if defined(ALC_SOFT_reopen_device)
-		// Try to use ALC_SOFT_reopen_device extension to reopen the device, it's a context
-		// extension, so it has to be queried with alcGetProcAddress() and the device. It is not only
-		// Windows that needs it: every platform has to be able to recover a device that went away,
-		// see checkDeviceConnection().
+		// ALC extension, so it is queried with the device; all platforms use it (see CheckDeviceConnection())
 		if (alcIsExtensionPresent(_device, "ALC_SOFT_reopen_device")) {
 			_alcReopenDeviceSOFT = (LPALCREOPENDEVICESOFT)alcGetProcAddress(_device, "alcReopenDeviceSOFT");
 		}
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		registerAudioEvents();
+		RegisterAudioEvents();
 #endif
 
 #if defined(DEATH_TRACE)
@@ -270,10 +260,10 @@ namespace nCine
 		LOGD("Disposing OpenAL audio device...");
 
 		// Shut down the decoding thread first, so it doesn't touch any readers afterwards
-		shutdownDecodeThread();
+		ShutdownDecodeThread();
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		unregisterAudioEvents();
+		UnregisterAudioEvents();
 #endif
 
 		if (_device == nullptr) {
@@ -302,23 +292,23 @@ namespace nCine
 		}
 	}
 
-	bool ALAudioDevice::isValid() const
+	bool ALAudioDevice::IsValid() const
 	{
 		return (_device != nullptr);
 	}
 
-	const char* ALAudioDevice::name() const
+	const char* ALAudioDevice::GetName() const
 	{
 		return _deviceName;
 	}
 
-	void ALAudioDevice::setGain(float gain)
+	void ALAudioDevice::SetGain(float gain)
 	{
 		_gain = gain;
 		alListenerf(AL_GAIN, _gain);
 	}
 
-	void ALAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void ALAudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		_listenerPos = position;
 
@@ -326,17 +316,15 @@ namespace nCine
 		alListener3f(AL_VELOCITY, velocity.X * VelocityToPhysical, velocity.Y * -VelocityToPhysical, velocity.Z * -VelocityToPhysical);
 	}
 
-	std::int32_t ALAudioDevice::nativeFrequency()
+	std::int32_t ALAudioDevice::GetNativeFrequency()
 	{
 		return _nativeFreq;
 	}
 
-	std::uint32_t ALAudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t ALAudioDevice::CreateBuffer(BufferUsage usage)
 	{
 		alGetError();
-		// Through a local of OpenAL's own type: `ALuint` is `unsigned int` while `std::uint32_t` can be
-		// `long unsigned int` (it is on MIPS), and taking the address of the caller's variable would then
-		// hand the library a pointer to the wrong type even though both are 32 bits wide
+		// Through an `ALuint` local, `std::uint32_t` can be a different type (`long unsigned int` on MIPS)
 		ALuint bufferId = 0;
 		alGenBuffers(1, &bufferId);
 		const ALenum error = alGetError();
@@ -347,18 +335,18 @@ namespace nCine
 		return bufferId;
 	}
 
-	void ALAudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void ALAudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
 		const ALuint id = bufferId;
 		alDeleteBuffers(1, &id);
 		AL_LOG_ERRORS();
 	}
 
-	bool ALAudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	bool ALAudioDevice::UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
 	{
 		alGetError();
 		// On iOS `alBufferDataStatic()` could be used instead
-		alBufferData(bufferId, alFormat(format), data, size, frequency);
+		alBufferData(bufferId, ToALFormat(format), data, size, frequency);
 		const ALenum error = alGetError();
 		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
 			LOGW("alBufferData() failed with error 0x{:x}", error);
@@ -367,44 +355,44 @@ namespace nCine
 		return true;
 	}
 
-	void ALAudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void ALAudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		alSourcei(sourceId, AL_BUFFER, ALint(bufferId));
 		AL_LOG_ERRORS();
 	}
 
-	void ALAudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void ALAudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
 		alSourcef(sourceId, AL_GAIN, gain);
 		AL_LOG_ERRORS();
 	}
 
-	void ALAudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void ALAudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
 		alSourcef(sourceId, AL_PITCH, pitch);
 		AL_LOG_ERRORS();
 	}
 
-	void ALAudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void ALAudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
 		alSourcei(sourceId, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
 		AL_LOG_ERRORS();
 	}
 
-	void ALAudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void ALAudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
 		alSourcei(sourceId, AL_SOURCE_RELATIVE, relative ? AL_TRUE : AL_FALSE);
 		AL_LOG_ERRORS();
 	}
 
-	void ALAudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void ALAudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
 		alSource3f(sourceId, AL_POSITION, position.X, position.Y, position.Z);
 		AL_LOG_ERRORS();
 	}
 
 #if defined(OPENAL_FILTERS_SUPPORTED)
-	ALuint* ALAudioDevice::filterForSource(std::uint32_t sourceId)
+	ALuint* ALAudioDevice::GetSourceFilter(std::uint32_t sourceId)
 	{
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			if (_sources[i] == sourceId) {
@@ -415,10 +403,10 @@ namespace nCine
 	}
 #endif
 
-	void ALAudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void ALAudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
 #if defined(OPENAL_FILTERS_SUPPORTED)
-		ALuint* filterHandle = filterForSource(sourceId);
+		ALuint* filterHandle = GetSourceFilter(sourceId);
 		if (filterHandle == nullptr) {
 			return;
 		}
@@ -441,7 +429,7 @@ namespace nCine
 #endif
 	}
 
-	std::int32_t ALAudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t ALAudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
 		ALint sampleOffset = 0;
 		alGetSourcei(sourceId, AL_SAMPLE_OFFSET, &sampleOffset);
@@ -449,31 +437,31 @@ namespace nCine
 		return sampleOffset;
 	}
 
-	void ALAudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void ALAudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		alSourcei(sourceId, AL_SAMPLE_OFFSET, offset);
 		AL_LOG_ERRORS();
 	}
 
-	void ALAudioDevice::playSource(std::uint32_t sourceId)
+	void ALAudioDevice::PlaySource(std::uint32_t sourceId)
 	{
 		alSourcePlay(sourceId);
 		AL_LOG_ERRORS();
 	}
 
-	void ALAudioDevice::pauseSource(std::uint32_t sourceId)
+	void ALAudioDevice::PauseSource(std::uint32_t sourceId)
 	{
 		alSourcePause(sourceId);
 		AL_LOG_ERRORS();
 	}
 
-	void ALAudioDevice::stopSource(std::uint32_t sourceId)
+	void ALAudioDevice::StopSource(std::uint32_t sourceId)
 	{
 		alSourceStop(sourceId);
 		AL_LOG_ERRORS();
 	}
 
-	bool ALAudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool ALAudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
 		ALenum state = AL_STOPPED;
 		alGetSourcei(sourceId, AL_SOURCE_STATE, &state);
@@ -481,14 +469,14 @@ namespace nCine
 		return (state == AL_PLAYING);
 	}
 
-	void ALAudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void ALAudioDevice::QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		const ALuint id = bufferId;
 		alSourceQueueBuffers(sourceId, 1, &id);
 		AL_LOG_ERRORS();
 	}
 
-	std::int32_t ALAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	std::int32_t ALAudioDevice::GetProcessedBufferCount(std::uint32_t sourceId)
 	{
 		ALint numProcessedBuffers = 0;
 		alGetSourcei(sourceId, AL_BUFFERS_PROCESSED, &numProcessedBuffers);
@@ -496,21 +484,17 @@ namespace nCine
 		return numProcessedBuffers;
 	}
 
-	void ALAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	void ALAudioDevice::UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
 	{
-		// Through locals of OpenAL's own type, for the same reason as in createBuffer()
+		// Through locals of OpenAL's own type, for the same reason as in CreateBuffer()
 		constexpr std::int32_t MaxUnqueuedBuffers = 8;
 		ALuint unqueuedIds[MaxUnqueuedBuffers] = {};
 		if DEATH_UNLIKELY(count > MaxUnqueuedBuffers) {
 			count = MaxUnqueuedBuffers;
 		}
 
-		// `count` entries of the caller's array are written, so the caller has to be able to hold that many -
-		// this cannot check it, and the local clamp above is not that check (it bounds the local buffer, not
-		// the caller's). Zero-initialized because `alSourceUnqueueBuffers()` either unqueues exactly `count`
-		// buffers or fails and unqueues none, leaving the locals untouched: without this the caller would
-		// then copy uninitialized stack into its own buffer-name table and later ask the library to fill a
-		// name that was never valid.
+		// The caller must hold `count` entries (the clamp above only bounds the local array);
+		// a failed unqueue returns zeros instead of invalid buffer names
 		alGetError();
 		alSourceUnqueueBuffers(sourceId, count, unqueuedIds);
 		if DEATH_UNLIKELY(alGetError() != AL_NO_ERROR) {
@@ -525,7 +509,7 @@ namespace nCine
 	}
 
 #if defined(WITH_LIBRETRO)
-	bool ALAudioDevice::renderSamples(std::int16_t* buffer, std::int32_t numFrames)
+	bool ALAudioDevice::RenderSamples(std::int16_t* buffer, std::int32_t numFrames)
 	{
 		if (_device == nullptr) {
 			return false;
@@ -535,7 +519,7 @@ namespace nCine
 	}
 #endif
 
-	void ALAudioDevice::suspendDevice()
+	void ALAudioDevice::SuspendDevice()
 	{
 #if defined(ALC_SOFT_pause_device)
 		if (_device != nullptr) {
@@ -544,7 +528,7 @@ namespace nCine
 #endif
 	}
 
-	void ALAudioDevice::resumeDevice()
+	void ALAudioDevice::ResumeDevice()
 	{
 #if defined(ALC_SOFT_pause_device)
 		if (_device != nullptr) {
@@ -552,31 +536,29 @@ namespace nCine
 		}
 #endif
 #if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
-		// Starting the backend again is where a device that went away while the application was in the
-		// background gives up, so the very next frame is the one that should look - not half a second of
-		// sounds later, every one of which would be spending a source that cannot come back
+		// A device lost in the background shows up on resume, so check on the very next frame
 		_connectionCheckLeft = 0;
 #endif
 	}
 
-	void ALAudioDevice::updatePlayers()
+	void ALAudioDevice::UpdatePlayers()
 	{
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		// Audio device cannot be recreated in event callback, so do it here
 		if (_shouldRecreate) {
 			_shouldRecreate = false;
-			recreateAudioDevice();
+			RecreateAudioDevice();
 		}
 #endif
 #if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
-		checkDeviceConnection();
+		CheckDeviceConnection();
 #endif
 
-		AudioDeviceBase::updatePlayers();
+		AudioDeviceBase::UpdatePlayers();
 	}
 
 #if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
-	void ALAudioDevice::checkDeviceConnection()
+	void ALAudioDevice::CheckDeviceConnection()
 	{
 		if (_device == nullptr) {
 			return;
@@ -598,14 +580,8 @@ namespace nCine
 			return;
 		}
 
-		// A device that has gone away takes its mixer with it, and the sources are deliberately not stopped
-		// when that happens (see Init()) so that a device which comes back carries on playing what it was
-		// playing. The sources are then frozen mid-sample: nothing advances them, alGetSourcei() keeps
-		// answering AL_PLAYING and no player ever reaches the "finished" branch of its updateState() that
-		// would hand the source back. Every source in the pool is spent within seconds of the disconnection
-		// and stays spent, so from then on the game is silent for good and every play() fails - which, with
-		// the players that keep a looping sound around retrying once a frame, is thousands of
-		// "No more available audio sources for playing" lines a second for the rest of the session.
+		// Sources are not stopped on disconnect (see Init()), so they stay frozen in AL_PLAYING,
+		// no player ever releases its source and the pool runs dry
 		if (!_deviceDisconnected) {
 			_deviceDisconnected = true;
 			LOGW("Audio device has been disconnected");
@@ -628,16 +604,14 @@ namespace nCine
 		}
 #	endif
 
-		// There is nothing to reopen onto, so let the players go instead of leaving them holding sources
-		// that can never finish. Nothing is audible either way, but the pool goes back to full, the game
-		// can keep starting (inaudible) sounds as usual and a device that reappears is picked up by the
-		// next check rather than found by a player that has no source left to ask for.
-		stopPlayers();
+		// Nothing to reopen onto, so release the players to refill the pool; a device that reappears is
+		// picked up by the next check
+		StopPlayers();
 	}
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-	void ALAudioDevice::recreateAudioDevice()
+	void ALAudioDevice::RecreateAudioDevice()
 	{
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device
 		// TODO: If the extension is not present, the device should be fully recreated
@@ -673,7 +647,7 @@ namespace nCine
 		}
 	}
 
-	void ALAudioDevice::registerAudioEvents()
+	void ALAudioDevice::RegisterAudioEvents()
 	{
 		HRESULT hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&_pEnumerator));
 		if (hr == CO_E_NOTINITIALIZED) {
@@ -697,7 +671,7 @@ namespace nCine
 		}
 	}
 
-	void ALAudioDevice::unregisterAudioEvents()
+	void ALAudioDevice::UnregisterAudioEvents()
 	{
 		if (_pEnumerator == nullptr) {
 			return;

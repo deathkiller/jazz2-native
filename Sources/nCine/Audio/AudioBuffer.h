@@ -14,15 +14,9 @@ namespace nCine
 
 	/**
 		@brief Fully decoded audio buffer
-
-		Holds an entire sound effect decoded into memory. Inherits from @ref Object so a single
-		buffer can be shared by multiple @ref AudioBufferPlayer instances. The samples live in
-		a buffer object owned by the current @ref IAudioDevice, which on some backends means
-		dedicated sound memory rather than the main heap.
-
-		Where `NCINE_HAS_NATIVE_AUDIO` is defined, nothing is decoded: @ref loadFromFile() hands the
-		file over to the device (see @ref IAudioDevice::loadNativeBuffer()), which plays it by itself,
-		and the functions that take encoded or raw samples do not exist.
+		
+		Holds an entire sound effect in device memory, can be shared by multiple @ref AudioBufferPlayer instances.
+		Where `NCINE_HAS_NATIVE_AUDIO` is defined, @ref LoadFromFile() hands the file over to the device instead.
 	*/
 	class AudioBuffer : public Object
 	{
@@ -39,7 +33,7 @@ namespace nCine
 		AudioBuffer& operator=(AudioBuffer&& other) noexcept;
 
 		/** @brief Loads audio data from the specified file */
-		bool loadFromFile(StringView filename);
+		bool LoadFromFile(StringView filename);
 
 #if !defined(NCINE_HAS_NATIVE_AUDIO) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Sample format */
@@ -49,43 +43,43 @@ namespace nCine
 		AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
 
 		/** @brief Initializes an empty buffer with the specified format and frequency */
-		void init(Format format, std::int32_t frequency);
+		void Init(Format format, std::int32_t frequency);
 
 		/** @brief Loads audio data from an already opened stream */
-		bool loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
+		bool LoadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
 		/** @brief Loads samples in raw PCM format from a memory buffer */
-		bool loadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize);
+		bool LoadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize);
 #endif
 
 		/** @brief Returns the backend buffer id */
-		inline std::uint32_t bufferId() const {
+		inline std::uint32_t GetBufferId() const {
 			return _bufferId;
 		}
 
 		/** @brief Returns the number of bytes per sample */
-		inline std::int32_t bytesPerSample() const {
+		inline std::int32_t GetBytesPerSample() const {
 			return _bytesPerSample;
 		}
 		/** @brief Returns the number of audio channels */
-		inline std::int32_t numChannels() const {
+		inline std::int32_t GetChannelCount() const {
 			return _numChannels;
 		}
 		/** @brief Returns the sample frequency */
-		inline std::int32_t frequency() const {
+		inline std::int32_t GetFrequency() const {
 			return _frequency;
 		}
 
 		/** @brief Returns the total number of samples */
-		inline std::int32_t numSamples() const {
+		inline std::int32_t GetSampleCount() const {
 			return _numSamples;
 		}
 		/** @brief Returns the duration in seconds */
-		inline float duration() const {
+		inline float GetDuration() const {
 			return _duration;
 		}
 
 		/** @brief Returns the size of the buffer in bytes */
-		inline std::int32_t bufferSize() const {
+		inline std::int32_t GetBufferSize() const {
 			return _numSamples * _numChannels * _bytesPerSample;
 		}
 
@@ -112,7 +106,7 @@ namespace nCine
 
 #if !defined(NCINE_HAS_NATIVE_AUDIO)
 		/** @brief Loads audio samples using the supplied loader and its reader */
-		bool load(IAudioLoader& audioLoader);
+		bool Load(IAudioLoader& audioLoader);
 #endif
 	};
 }

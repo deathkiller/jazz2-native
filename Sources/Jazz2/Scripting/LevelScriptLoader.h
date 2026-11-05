@@ -19,6 +19,7 @@ namespace Jazz2::UI
 namespace nCine
 {
 	class AudioBuffer;
+	class AudioStreamPlayer;
 	class Texture;
 }
 
@@ -279,6 +280,16 @@ namespace Jazz2::Scripting
 		 * The energy of the object against the one of its template, as JJ2+ shows the health of a boss.
 		 */
 		bool GetScriptBossHealth(std::int32_t& health, std::int32_t& maxHealth);
+		/** @brief Returns the abilities of a character as `jjCharacters` changed them */
+		CharacterProfile GetCharacterProfile(PlayerType type) const;
+		/** @brief Returns `jjCharacters[]` of a player type, a scratch copy for a type that isn't a character */
+		Legacy::jjCHARACTER* GetCharacter(PlayerType type);
+		/** @brief Returns the player of the music of the level, `nullptr` if there's none */
+		nCine::AudioStreamPlayer* GetMusicPlayer() const;
+		/** @brief Returns `jjWarpsTransmuteCoins` */
+		bool WarpsTransmuteCoins() const {
+			return warpsTransmuteCoins;
+		}
 		/** @brief Returns `true` once a boss of a script was activated, see @ref OnBossAreaActivated() */
 		bool IsBossAreaActivated() const {
 			return _bossAreaActivated;
@@ -566,6 +577,10 @@ namespace Jazz2::Scripting
 		std::unique_ptr<jjPLAYER> _absentPlayer;
 		// `jjWeapons[0]`, no weapon in JJ2+ (see GetWeapon())
 		Legacy::jjWEAPON _scratchWeapon = {};
+		// `jjCharacters` by `PlayerType` from Jazz, made on first use
+		std::unique_ptr<Legacy::jjCHARACTER[]> _characters;
+		// `jjCharacters` of a set that isn't a character
+		Legacy::jjCHARACTER _scratchCharacter = {};
 		// Whether `MLLE::Setup()` of the include of weapons is in the module already, see OnProcessInclude()
 		bool _mlleWeaponsAdded = false;
 		// Text of the script in place of its file, see OnReadScript()
@@ -883,7 +898,7 @@ namespace Jazz2::Scripting
 
 		std::int32_t levelEcho = 0;
 
-		bool warpsTransmuteCoins = false;
+		bool warpsTransmuteCoins = true;
 		bool delayGeneratedCrateOrigins = false;
 
 		bool g_levelHasFood = false;

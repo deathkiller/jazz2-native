@@ -43,6 +43,6 @@ namespace Jazz2::Actors::Solid
 
 		MorphType _morphType;
 
-		std::optional<PlayerType> GetTargetType(PlayerType currentType);
+		std::optional<PlayerType> GetTargetType(PlayerType currentType, PlayerType skippedType = PlayerType::None);
 	};
 }

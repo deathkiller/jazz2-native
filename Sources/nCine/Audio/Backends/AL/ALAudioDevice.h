@@ -35,55 +35,51 @@ namespace nCine
 		ALAudioDevice();
 		~ALAudioDevice() override;
 
-		bool isValid() const override;
+		bool IsValid() const override;
 
-		const char* name() const override;
+		const char* GetName() const override;
 
-		void setGain(float gain) override;
+		void SetGain(float gain) override;
 
-		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
+		void UpdateListener(const Vector3f& position, const Vector3f& velocity) override;
 
-		std::int32_t nativeFrequency() override;
+		std::int32_t GetNativeFrequency() override;
 
-		std::uint32_t createBuffer(BufferUsage usage) override;
-		void deleteBuffer(std::uint32_t bufferId) override;
-		bool uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
+		std::uint32_t CreateBuffer(BufferUsage usage) override;
+		void DeleteBuffer(std::uint32_t bufferId) override;
+		bool UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
 
-		void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		void setSourceGain(std::uint32_t sourceId, float gain) override;
-		void setSourcePitch(std::uint32_t sourceId, float pitch) override;
-		void setSourceLooping(std::uint32_t sourceId, bool looping) override;
-		void setSourceRelative(std::uint32_t sourceId, bool relative) override;
-		void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
-		void setSourceLowPass(std::uint32_t sourceId, float value) override;
-		std::int32_t sourceSampleOffset(std::uint32_t sourceId) override;
-		void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
-		void playSource(std::uint32_t sourceId) override;
-		void pauseSource(std::uint32_t sourceId) override;
-		void stopSource(std::uint32_t sourceId) override;
-		bool isSourcePlaying(std::uint32_t sourceId) override;
+		void SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		void SetSourceGain(std::uint32_t sourceId, float gain) override;
+		void SetSourcePitch(std::uint32_t sourceId, float pitch) override;
+		void SetSourceLooping(std::uint32_t sourceId, bool looping) override;
+		void SetSourceRelative(std::uint32_t sourceId, bool relative) override;
+		void SetSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
+		void SetSourceLowPass(std::uint32_t sourceId, float value) override;
+		std::int32_t GetSourceSampleOffset(std::uint32_t sourceId) override;
+		void SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
+		void PlaySource(std::uint32_t sourceId) override;
+		void PauseSource(std::uint32_t sourceId) override;
+		void StopSource(std::uint32_t sourceId) override;
+		bool IsSourcePlaying(std::uint32_t sourceId) override;
 
-		void queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
-		std::int32_t numProcessedBuffers(std::uint32_t sourceId) override;
-		void unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
+		void QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		std::int32_t GetProcessedBufferCount(std::uint32_t sourceId) override;
+		void UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
 
 #if defined(WITH_LIBRETRO)
-		bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) override;
+		bool RenderSamples(std::int16_t* buffer, std::int32_t numFrames) override;
 #endif
 
-		void suspendDevice() override;
-		void resumeDevice() override;
+		void SuspendDevice() override;
+		void ResumeDevice() override;
 
-		void updatePlayers() override;
+		void UpdatePlayers() override;
 
 	private:
 		/** @brief Maximum number of OpenAL sources */
 #if defined(DEATH_TARGET_PSP)
-		// Every source is mixed in software on the main CPU here, so this is a frame-time budget rather than
-		// a memory one: each one that is actually playing costs a resample-and-accumulate pass over the
-		// output block. Sixteen is well above what the game ever has sounding at once (the level handler
-		// reaps finished players every frame), and it is the point past which a burst of simultaneous
-		// explosions would start showing up in the frame time instead of just in the mix.
+		// Mixed in software on the main CPU, so this is a frame-time budget; still above what the game plays at once
 		static const std::int32_t MaxSources = 16;
 #elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		static const std::int32_t MaxSources = 48;
@@ -108,7 +104,7 @@ namespace nCine
 		ALuint _filters[MaxSources];
 
 		/** @brief Returns a reference to the filter slot of the specified source, or `nullptr` if unknown */
-		ALuint* filterForSource(std::uint32_t sourceId);
+		ALuint* GetSourceFilter(std::uint32_t sourceId);
 #endif
 
 #if defined(ALC_SOFT_reopen_device)
@@ -116,7 +112,7 @@ namespace nCine
 		LPALCREOPENDEVICESOFT _alcReopenDeviceSOFT;
 #endif
 #if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
-		/** @brief Number of calls to @ref updatePlayers() between two checks of the device connection */
+		/** @brief Number of calls to @ref UpdatePlayers() between two checks of the device connection */
 		static constexpr std::int32_t ConnectionCheckInterval = 30;
 
 		/** @brief Frames left until the next check of the device connection */
@@ -124,8 +120,8 @@ namespace nCine
 		/** @brief Whether the device was disconnected the last time it was checked */
 		bool _deviceDisconnected;
 
-		/** @brief Notices a device that went away and tries to bring it back, see @ref updatePlayers() */
-		void checkDeviceConnection();
+		/** @brief Notices a device that went away and tries to bring it back, see @ref UpdatePlayers() */
+		void CheckDeviceConnection();
 #endif
 
 		void Init();
@@ -143,9 +139,9 @@ namespace nCine
 		String _lastDeviceId;
 		bool _shouldRecreate;
 
-		void recreateAudioDevice();
-		void registerAudioEvents();
-		void unregisterAudioEvents();
+		void RecreateAudioDevice();
+		void RegisterAudioEvents();
+		void UnregisterAudioEvents();
 
 		// IMMNotificationClient implementation
 		IFACEMETHODIMP_(ULONG) AddRef() override;

@@ -16,13 +16,13 @@ namespace nCine
 
 		_bytesPerSample = 2;
 		_numChannels = 2;
-		_frequency = device.nativeFrequency();
+		_frequency = device.GetNativeFrequency();
 
 		_numSamples = UINT32_MAX;
 		_hasLoaded = true;
 	}
 
-	std::unique_ptr<IAudioReader> AudioLoaderMpt::createReader()
+	std::unique_ptr<IAudioReader> AudioLoaderMpt::CreateReader()
 	{
 		return std::make_unique<AudioReaderMpt>(Death::move(_fileHandle), _frequency);
 	}

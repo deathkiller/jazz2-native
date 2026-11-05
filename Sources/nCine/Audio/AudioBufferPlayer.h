@@ -27,31 +27,31 @@ namespace nCine
 		AudioBufferPlayer(AudioBufferPlayer&&) = default;
 		AudioBufferPlayer& operator=(AudioBufferPlayer&&) = default;
 
-		std::uint32_t bufferId() const override;
+		std::uint32_t GetBufferId() const override;
 
-		std::int32_t bytesPerSample() const override;
-		std::int32_t numChannels() const override;
-		std::int32_t frequency() const override;
+		std::int32_t GetBytesPerSample() const override;
+		std::int32_t GetChannelCount() const override;
+		std::int32_t GetFrequency() const override;
 
-		std::int32_t numSamples() const override;
-		float duration() const override;
+		std::int32_t GetSampleCount() const override;
+		float GetDuration() const override;
 
-		std::int32_t bufferSize() const override;
+		std::int32_t GetBufferSize() const override;
 
 		/** @brief Returns the audio buffer used for playback */
-		inline const AudioBuffer* audioBuffer() const {
+		inline const AudioBuffer* GetAudioBuffer() const {
 			return _audioBuffer;
 		}
 		/** @brief Sets the audio buffer used for playback */
-		void setAudioBuffer(AudioBuffer* audioBuffer);
+		void SetAudioBuffer(AudioBuffer* audioBuffer);
 
-		void play() override;
-		void pause() override;
-		void stop() override;
+		void Play() override;
+		void Pause() override;
+		void Stop() override;
 
-		void setLooping(bool value) override;
+		void SetLooping(bool value) override;
 
-		void updateState() override;
+		void UpdateState() override;
 
 		/** @brief Returns the static object type of this class */
 		inline static ObjectType sType() {

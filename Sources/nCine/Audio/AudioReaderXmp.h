@@ -17,15 +17,9 @@ namespace nCine
 {
 	/**
 		@brief Audio reader for tracker module formats, backed by `libxmp`
-
-		The lightweight alternative to @ref AudioReaderMpt for platforms where libopenmpt is not
-		real-time-viable (the classic Amiga above all - where a tracker player is also the native
-		idiom). libxmp covers everything the game's soundtrack ships: `.it`, `.mod`, `.s3m`, `.xm`
-		and, through its Galaxy Music System loaders, the original `.j2b` modules.
-
-		Unlike libopenmpt's pull-from-stream interface, libxmp wants the whole file up front, so the
-		module (at most a few hundred KB) is read into memory once at load; that also keeps the
-		per-frame render free of file I/O, which matters on the slow-storage machines this exists for.
+		
+		Lightweight alternative to @ref AudioReaderMpt for slow platforms (e.g. Amiga). The whole module
+		is loaded into memory, so rendering needs no file I/O.
 	*/
 	class AudioReaderXmp : public IAudioReader
 	{
@@ -36,9 +30,9 @@ namespace nCine
 		AudioReaderXmp(const AudioReaderXmp&) = delete;
 		AudioReaderXmp& operator=(const AudioReaderXmp&) = delete;
 
-		std::int32_t read(void* buffer, std::int32_t bufferSize) const override;
-		void rewind() const override;
-		void setLooping(bool value) override;
+		std::int32_t Read(void* buffer, std::int32_t bufferSize) const override;
+		void Rewind() const override;
+		void SetLooping(bool value) override;
 
 	private:
 		std::int32_t _frequency;

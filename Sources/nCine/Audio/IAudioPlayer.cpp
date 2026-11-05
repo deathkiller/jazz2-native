@@ -16,81 +16,81 @@ namespace nCine
 	{
 	}
 
-	std::int32_t IAudioPlayer::sampleOffset() const
+	std::int32_t IAudioPlayer::GetSampleOffset() const
 	{
 		if (_sourceId != IAudioDevice::UnavailableSource) {
-			return theServiceLocator().GetAudioDevice().sourceSampleOffset(_sourceId);
+			return theServiceLocator().GetAudioDevice().GetSourceSampleOffset(_sourceId);
 		}
 		return 0;
 	}
 
-	void IAudioPlayer::setSampleOffset(std::int32_t offset)
+	void IAudioPlayer::SetSampleOffset(std::int32_t offset)
 	{
 		if (_sourceId != IAudioDevice::UnavailableSource) {
-			theServiceLocator().GetAudioDevice().setSourceSampleOffset(_sourceId, offset);
+			theServiceLocator().GetAudioDevice().SetSourceSampleOffset(_sourceId, offset);
 		}
 	}
 
 	// The change is applied to the backend source only when a source is assigned (playing or paused)
-	void IAudioPlayer::setSourceRelative(bool value)
+	void IAudioPlayer::SetSourceRelative(bool value)
 	{
 		if (GetFlags(PlayerFlags::SourceRelative) != value) {
 			SetFlags(PlayerFlags::SourceRelative, value);
 			if (_sourceId != IAudioDevice::UnavailableSource) {
-				theServiceLocator().GetAudioDevice().setSourceRelative(_sourceId, value);
+				theServiceLocator().GetAudioDevice().SetSourceRelative(_sourceId, value);
 			}
 		}
 	}
 
 	// The change is applied to the backend source only when a source is assigned (playing or paused)
-	void IAudioPlayer::setGain(float gain)
+	void IAudioPlayer::SetGain(float gain)
 	{
 		_gain = gain;
 		if (_sourceId != IAudioDevice::UnavailableSource) {
-			theServiceLocator().GetAudioDevice().setSourceGain(_sourceId, _gain);
+			theServiceLocator().GetAudioDevice().SetSourceGain(_sourceId, _gain);
 		}
 	}
 
 	// The change is applied to the backend source only when a source is assigned (playing or paused)
-	void IAudioPlayer::setPitch(float pitch)
+	void IAudioPlayer::SetPitch(float pitch)
 	{
 		_pitch = pitch;
 		if (_sourceId != IAudioDevice::UnavailableSource) {
-			theServiceLocator().GetAudioDevice().setSourcePitch(_sourceId, _pitch);
+			theServiceLocator().GetAudioDevice().SetSourcePitch(_sourceId, _pitch);
 		}
 	}
 
-	void IAudioPlayer::setLowPass(float value)
+	void IAudioPlayer::SetLowPass(float value)
 	{
 		if (_lowPass != value) {
 			_lowPass = value;
 			if (_sourceId != IAudioDevice::UnavailableSource) {
-				updateFilters();
+				UpdateFilters();
 			}
 		}
 	}
 
 	// The change is applied to the backend source only when a source is assigned (playing or paused)
-	void IAudioPlayer::setPosition(const Vector3f& position)
+	void IAudioPlayer::SetPosition(const Vector3f& position)
 	{
 		_position = position;
 		if (_sourceId != IAudioDevice::UnavailableSource) {
 			IAudioDevice& device = theServiceLocator().GetAudioDevice();
-			setPositionInternal(getAdjustedPosition(device, _position, GetFlags(PlayerFlags::SourceRelative), GetFlags(PlayerFlags::As2D)));
+			SetPositionInternal(GetAdjustedPosition(device, _position, GetFlags(PlayerFlags::SourceRelative), GetFlags(PlayerFlags::As2D)));
 		}
 	}
 
-	void IAudioPlayer::updateFilters()
+	void IAudioPlayer::UpdateFilters()
 	{
-		theServiceLocator().GetAudioDevice().setSourceLowPass(_sourceId, _lowPass);
+		theServiceLocator().GetAudioDevice().SetSourceLowPass(_sourceId, _lowPass);
 	}
 
-	void IAudioPlayer::setPositionInternal(const Vector3f& position)
+	void IAudioPlayer::SetPositionInternal(const Vector3f& position)
 	{
-		theServiceLocator().GetAudioDevice().setSourcePosition(_sourceId, position);
+		theServiceLocator().GetAudioDevice().SetSourcePosition(_sourceId, position);
 	}
 
-	Vector3f IAudioPlayer::getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)
+	Vector3f IAudioPlayer::GetAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)
 	{
 		if (isAs2D) {
 			// Let's do a +/- 30° panning for 2D audio, locked to front
@@ -102,7 +102,7 @@ namespace nCine
 		Vector3f adjustedPos = Vector3f(pos.X * IAudioDevice::LengthToPhysical, pos.Y * -IAudioDevice::LengthToPhysical, pos.Z * -IAudioDevice::LengthToPhysical);
 
 		if (!isSourceRelative) {
-			listenerPos = device.getListenerPosition();
+			listenerPos = device.GetListenerPosition();
 			listenerPos.X *= IAudioDevice::LengthToPhysical;
 			listenerPos.Y *= -IAudioDevice::LengthToPhysical;
 			listenerPos.Z *= -IAudioDevice::LengthToPhysical;

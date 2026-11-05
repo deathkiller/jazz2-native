@@ -41,9 +41,9 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_AUDIO)
 		// Twenty-odd episodes read from storage, each with a title and a backdrop to decode and upload - long
-		// enough on a disc to starve a device fed once per frame (see IAudioDevice::beginBlockingOperation())
+		// enough on a disc to starve a device fed once per frame (see IAudioDevice::BeginBlockingOperation())
 		auto& audioDevice = theServiceLocator().GetAudioDevice();
-		audioDevice.beginBlockingOperation();
+		audioDevice.BeginBlockingOperation();
 #endif
 
 		// Search user "Content/Episodes/", "Content/Episodes/" and "Cache/Episodes/", the first file with a given name
@@ -74,7 +74,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 #if defined(WITH_AUDIO)
-		audioDevice.endBlockingOperation();
+		audioDevice.EndBlockingOperation();
 #endif
 
 		std::int32_t maxPosition = 0;

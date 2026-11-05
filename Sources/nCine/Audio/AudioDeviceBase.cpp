@@ -20,11 +20,11 @@ namespace nCine
 #if !defined(NCINE_HAS_NATIVE_AUDIO)
 		// The backend destructor is expected to have done this already, it runs first and the
 		// decoding thread must not outlive the readers it touches
-		shutdownDecodeThread();
+		ShutdownDecodeThread();
 #endif
 	}
 
-	void AudioDeviceBase::setSourcePool(ArrayView<const std::uint32_t> sourceIds)
+	void AudioDeviceBase::SetSourcePool(ArrayView<const std::uint32_t> sourceIds)
 	{
 		_sourcePool.clear();
 		_sourcePool.reserve(sourceIds.size());
@@ -34,7 +34,7 @@ namespace nCine
 		}
 	}
 
-	const IAudioPlayer* AudioDeviceBase::player(std::uint32_t index) const
+	const IAudioPlayer* AudioDeviceBase::GetPlayer(std::uint32_t index) const
 	{
 		if (index < _players.size()) {
 			return _players[index];
@@ -42,7 +42,7 @@ namespace nCine
 		return nullptr;
 	}
 
-	IAudioPlayer* AudioDeviceBase::player(std::uint32_t index)
+	IAudioPlayer* AudioDeviceBase::GetPlayer(std::uint32_t index)
 	{
 		if (index < _players.size()) {
 			return _players[index];
@@ -50,74 +50,72 @@ namespace nCine
 		return nullptr;
 	}
 
-	void AudioDeviceBase::stopPlayers()
+	void AudioDeviceBase::StopPlayers()
 	{
-		// Iterating backwards because stop() unregisters the player, erasing it from the array
+		// Iterating backwards because Stop() unregisters the player, erasing it from the array
 		for (std::size_t i = _players.size(); i > 0; i--) {
-			_players[i - 1]->stop();
+			_players[i - 1]->Stop();
 		}
 		_players.clear();
 	}
 
-	void AudioDeviceBase::pausePlayers()
+	void AudioDeviceBase::PausePlayers()
 	{
 		for (auto& player : _players) {
-			player->pause();
+			player->Pause();
 		}
-		// The players stay registered: a paused player still owns its source (that is what lets play()
-		// resume it from where it is), so dropping it from the array only loses track of the source.
-		// It could then never come back to the pool - not when the player is resumed and runs out, because
-		// updatePlayers() no longer reaches it, and not when it is paused for good either.
+		// Keep paused players registered, they still own their source
 	}
 
-	void AudioDeviceBase::stopPlayers(PlayerType playerType)
+	void AudioDeviceBase::StopPlayers(PlayerType playerType)
 	{
 		const Object::ObjectType objectType = (playerType == PlayerType::Buffer)
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
-		// Iterating backwards because stop() unregisters the player, erasing it from the array
+		// Iterating backwards because Stop() unregisters the player, erasing it from the array
 		for (std::size_t i = _players.size(); i > 0; i--) {
 			IAudioPlayer* player = _players[i - 1];
 			if (player->type() == objectType) {
-				player->stop();
+				player->Stop();
 			}
 		}
 	}
 
-	void AudioDeviceBase::pausePlayers(PlayerType playerType)
+	void AudioDeviceBase::PausePlayers(PlayerType playerType)
 	{
 		const Object::ObjectType objectType = (playerType == PlayerType::Buffer)
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
-		// The players stay registered, see pausePlayers() above
+		// The players stay registered, see PausePlayers() above
 		for (auto& player : _players) {
 			if (player->type() == objectType) {
-				player->pause();
+				player->Pause();
 			}
 		}
 	}
 
-	void AudioDeviceBase::freezePlayers()
+	void AudioDeviceBase::FreezePlayers()
 	{
 		for (auto& player : _players) {
-			player->pause();
+			player->Pause();
 		}
 		// The players array is not cleared at this point, it is needed as-is by the unfreeze method
 	}
 
-	void AudioDeviceBase::unfreezePlayers()
+	void AudioDeviceBase::UnfreezePlayers()
 	{
-		for (auto& player : _players) {
-			player->play();
+		// Backwards, a stream that has nothing left to play unregisters itself
+		for (std::size_t i = _players.size(); i > 0; i--) {
+			_players[i - 1]->Play();
 		}
 	}
 
-	std::uint32_t AudioDeviceBase::registerPlayer(IAudioPlayer* player)
+	std::uint32_t AudioDeviceBase::RegisterPlayer(IAudioPlayer* player)
 	{
 		if (_sourcePool.empty()) {
-			reportNoAvailableSources();
+			ReportNoAvailableSources();
 			return UnavailableSource;
 		}
 
@@ -126,7 +124,7 @@ namespace nCine
 		return sourceId;
 	}
 
-	void AudioDeviceBase::reportNoAvailableSources()
+	void AudioDeviceBase::ReportNoAvailableSources()
 	{
 #if defined(DEATH_TRACE)
 		// A device that never created a source in the first place already said so when it failed, and there
@@ -135,12 +133,7 @@ namespace nCine
 			return;
 		}
 
-		// Every caller that keeps a sound around retries it on the next frame, so a line per refused play()
-		// is thousands of lines a second for as long as the condition lasts. That buries the part of the log
-		// this would be diagnosed from and costs more time than the audio it replaced, so it is said once
-		// per interval instead, with what is holding the sources: a looping count close to the total means a
-		// looping sound that nobody stopped, a low one means genuinely more sounds at once than there is
-		// room for.
+		// Rate-limited, refused players retry every frame. The looping count tells a leaked loop from a busy scene.
 		_suppressedSourceWarnings++;
 		if (_lastSourceWarningTime.ticks() != 0 && _lastSourceWarningTime.secondsSince() < SourceWarningIntervalSecs) {
 			return;
@@ -151,7 +144,7 @@ namespace nCine
 		for (auto& activePlayer : _players) {
 			if (activePlayer->type() == AudioStreamPlayer::sType()) {
 				numStreamed++;
-			} else if (activePlayer->isLooping()) {
+			} else if (activePlayer->IsLooping()) {
 				numLooping++;
 			}
 		}
@@ -169,7 +162,7 @@ namespace nCine
 #endif
 	}
 
-	void AudioDeviceBase::unregisterPlayer(IAudioPlayer* player)
+	void AudioDeviceBase::UnregisterPlayer(IAudioPlayer* player)
 	{
 		if (player->_sourceId == UnavailableSource) {
 			return;
@@ -188,29 +181,26 @@ namespace nCine
 		}
 	}
 
-	void AudioDeviceBase::updatePlayers()
+	void AudioDeviceBase::UpdatePlayers()
 	{
 		// Iterating backwards because a finished player unregisters itself, erasing it from the array
 		for (std::size_t i = _players.size(); i > 0; i--) {
-			_players[i - 1]->updateState();
+			_players[i - 1]->UpdateState();
 		}
 
-		checkForStalledSources();
+		CheckForStalledSources();
 	}
 
-	void AudioDeviceBase::beginBlockingOperation()
+	void AudioDeviceBase::BeginBlockingOperation()
 	{
-		// Counted rather than latched: two owners open these windows independently (ContentResolver's load
-		// and the episode scan), and a backend that stops its stream on a flag would have the inner end
-		// reopen it in the middle of the outer block - on the PlayStation 2 that is the module repeating
-		// its last buffer, the artefact the mechanism exists to prevent
+		// Counted, because blocking operations can nest (level load and episode scan)
 		_blockingOperationDepth++;
 		if (_blockingOperationDepth == 1) {
-			onBlockingOperationBegan();
+			OnBlockingOperationBegan();
 		}
 	}
 
-	void AudioDeviceBase::endBlockingOperation()
+	void AudioDeviceBase::EndBlockingOperation()
 	{
 		if (_blockingOperationDepth <= 0) {
 			// An end without a matching begin is a caller bug, not something to act on - reopening a stream
@@ -219,11 +209,11 @@ namespace nCine
 		}
 		_blockingOperationDepth--;
 		if (_blockingOperationDepth == 0) {
-			onBlockingOperationEnded();
+			OnBlockingOperationEnded();
 		}
 	}
 
-	void AudioDeviceBase::checkForStalledSources()
+	void AudioDeviceBase::CheckForStalledSources()
 	{
 		if (!_sourcePool.empty()) {
 			// Something is free, so nothing is waiting and there is nothing to judge
@@ -237,25 +227,16 @@ namespace nCine
 		}
 		_stalledCheckLeft = StalledCheckInterval;
 
-		// Every source is taken and the loop above released none of them. For a scene with more sounds at
-		// once than the device has room for that is normal and passes by itself - the samples end and the
-		// pool refills. What it must not be is permanent, and it becomes permanent as soon as the backend
-		// stops mixing without saying so: an output the system took back while the application was in the
-		// background, a device that went away and never came back. Every source then reads as playing for
-		// good, no player ever reaches the "finished" branch of its updateState(), and from that point on
-		// the application is silent for the rest of the session while every play() fails.
-		//
-		// The playback positions are what tells the two apart, and they cost nothing to ask for on the
-		// frames this looks at - only those where nothing is free anyway. A mixer that is running moves
-		// them; one that has stopped does not move any of them, ever.
+		// No source is free - normal for a busy scene, but permanent if the backend stopped mixing silently.
+		// Playback positions tell the two apart, a stopped mixer never advances them.
 		std::int64_t progress = 0;
 		std::uint32_t numPlaying = 0;
 		std::uint32_t numWithOffset = 0;
 		for (auto& player : _players) {
 			// Only the ones that claim to be playing: a paused player is supposed to stand still, and a
 			// pause menu holding every source would otherwise look exactly like a stalled device
-			if (player->isPlaying()) {
-				const std::int32_t offset = player->sampleOffset();
+			if (player->IsPlaying()) {
+				const std::int32_t offset = player->GetSampleOffset();
 				progress += offset;
 				numPlaying++;
 				if (offset != 0) {
@@ -268,12 +249,7 @@ namespace nCine
 			return;
 		}
 		if (numWithOffset == 0) {
-			// Not every backend can answer this question. AICA returns 0 for every STREAMED source by
-			// construction (Dreamcast), and ASND returns 0 for any source whose buffer is not queued yet
-			// (Wii, GameCube) - so a pool held entirely by streams reads as a constant sum on perfectly
-			// good hardware, and would be given up on after the timeout below. A sum that is flat at zero
-			// is no evidence of a stall, it is the absence of evidence either way, so nothing is judged
-			// on it - a device those backends really did lose is left to their own recovery.
+			// AICA and ASND report 0 for streamed or unqueued sources, so a sum stuck at zero proves nothing
 			_stalledSince = TimeStamp{};
 			return;
 		}
@@ -290,22 +266,20 @@ namespace nCine
 		LOGW("No audio source has advanced in {} seconds while all {} are in use, the device seems to have stopped mixing - releasing them",
 			StalledTimeoutSecs, _players.size());
 
-		// Nothing of this is audible in any case, and letting the players go is what keeps the application
-		// able to play again the moment the device does mix: the pool goes back to full, and a source that
-		// a stopped device refuses to start is simply reaped on the next frame instead of held forever
-		stopPlayers();
+		// Release everything, so playback recovers as soon as the device mixes again
+		StopPlayers();
 		_stalledSince = TimeStamp{};
 	}
 
 #if !defined(NCINE_HAS_NATIVE_AUDIO)
-	bool AudioDeviceBase::submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
+	bool AudioDeviceBase::SubmitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
 	{
 #	if defined(WITH_THREADS)
 		_decodeMutex.Lock();
 		if (!_decodeThreadCreated) {
 			// The decoding thread is created lazily on the first streamed sound
 			_decodeThreadCreated = true;
-			_decodeThread = Thread(AudioDeviceBase::decodeThreadFunc, this);
+			_decodeThread = Thread(AudioDeviceBase::DecodeThreadFunc, this);
 		}
 		_decodeQueue.push_back(request);
 		_decodeMutex.Unlock();
@@ -316,7 +290,7 @@ namespace nCine
 #	endif
 	}
 
-	void AudioDeviceBase::drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
+	void AudioDeviceBase::DrainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
 	{
 #	if defined(WITH_THREADS)
 		// A null request would compare equal to the idle active request and wait forever
@@ -329,7 +303,7 @@ namespace nCine
 		for (std::size_t i = 0; i < _decodeQueue.size(); i++) {
 			if (_decodeQueue[i] == request) {
 				_decodeQueue.erase(&_decodeQueue[i]);
-				request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+				request->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 				_decodeMutex.Unlock();
 				return;
 			}
@@ -342,7 +316,7 @@ namespace nCine
 #	endif
 	}
 
-	void AudioDeviceBase::shutdownDecodeThread()
+	void AudioDeviceBase::ShutdownDecodeThread()
 	{
 #	if defined(WITH_THREADS)
 		_decodeMutex.Lock();
@@ -353,7 +327,7 @@ namespace nCine
 		_decodeThreadShouldQuit = true;
 		// Requests still in the queue will never be executed, reset them so their owners don't wait forever
 		for (auto& request : _decodeQueue) {
-			request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+			request->CurrentState.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 		}
 		_decodeQueue.clear();
 		_decodeMutex.Unlock();
@@ -366,7 +340,7 @@ namespace nCine
 	}
 
 #	if defined(WITH_THREADS)
-	void AudioDeviceBase::decodeThreadFunc(void* arg)
+	void AudioDeviceBase::DecodeThreadFunc(void* arg)
 	{
 		Thread::SetCurrentName("Audio decoding");
 
@@ -396,7 +370,7 @@ namespace nCine
 #	endif
 #endif
 
-	const Vector3f& AudioDeviceBase::getListenerPosition() const
+	const Vector3f& AudioDeviceBase::GetListenerPosition() const
 	{
 		return _listenerPos;
 	}

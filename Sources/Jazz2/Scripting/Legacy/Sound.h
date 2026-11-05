@@ -35,54 +35,56 @@ namespace Jazz2::Scripting
 	 */
 	bool loadSample(std::int32_t sample, const String& filename);
 
-	// TODO
-
 	/**
-	 * @brief Jumps to a position in the playing module music
+	 * @brief Jumps to a row of a position in the order list of the playing module music
 	 *
-	 * @partialsupport Currently has no effect.
+	 * The jump is heard at once. While the music is paused, it continues from there once it's resumed.
+	 * @partialsupport `reset` is ignored, the jump keeps what the music plays at the time, as `reset = false` does.
 	 */
 	void jjSetModPosition(std::int32_t order, std::int32_t row, bool reset);
 	/**
 	 * @brief Gradually changes the volume of a channel of the playing module music
 	 *
-	 * @partialsupport Currently has no effect.
+	 * From its current volume to `volume` (0 to 1) in `milliseconds`, a new slide of the channel replaces the previous
+	 * one.
+	 * @partialsupport It changes the volume of the channel that the module itself can set (with the `Mxx` effect), so the
+	 * module may change it again. The change is heard after the audio already prepared, up to about a third of a second.
 	 */
 	void jjSlideModChannelVolume(std::int32_t channel, float volume, std::int32_t milliseconds);
 	/**
-	 * @brief Returns the current order (pattern position) of the playing module music
+	 * @brief Returns the current position in the order list of the playing module music
 	 *
-	 * @partialsupport Currently always returns 0.
+	 * -1 if no module music plays.
 	 */
 	std::int32_t jjGetModOrder();
 	/**
 	 * @brief Returns the current row of the playing module music
 	 *
-	 * @partialsupport Currently always returns 0.
+	 * -1 if no module music plays.
 	 */
 	std::int32_t jjGetModRow();
 	/**
-	 * @brief Returns the tempo of the playing module music
+	 * @brief Returns the tempo of the playing module music, in beats per minute
 	 *
-	 * @partialsupport Currently always returns 0.
+	 * -1 if no module music plays.
 	 */
 	std::int32_t jjGetModTempo();
 	/**
-	 * @brief Sets the tempo of the playing module music
+	 * @brief Sets the tempo of the playing module music, until the module sets another one
 	 *
-	 * @partialsupport Currently has no effect.
+	 * @partialsupport The change is heard after the audio already prepared, up to about a third of a second.
 	 */
-	void jjSetModTempo(std::uint8_t speed);
+	void jjSetModTempo(std::uint8_t tempo);
 	/**
-	 * @brief Returns the speed of the playing module music
+	 * @brief Returns the speed (ticks per row) of the playing module music
 	 *
-	 * @partialsupport Currently always returns 0.
+	 * -1 if no module music plays.
 	 */
 	std::int32_t jjGetModSpeed();
 	/**
-	 * @brief Sets the speed of the playing module music
+	 * @brief Sets the speed (ticks per row) of the playing module music, until the module sets another one
 	 *
-	 * @partialsupport Currently has no effect.
+	 * @partialsupport The change is heard after the audio already prepared, up to about a third of a second.
 	 */
 	void jjSetModSpeed(std::uint8_t speed);
 }

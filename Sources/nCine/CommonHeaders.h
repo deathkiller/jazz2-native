@@ -124,7 +124,7 @@
 #endif
 
 // Whether the EFX low-pass filter the underwater effect uses is available, i.e. whether
-// ALAudioDevice::setSourceLowPass() has anything to call. The PSP's OpenAL is an early OpenAL Soft
+// ALAudioDevice::SetSourceLowPass() has anything to call. The PSP's OpenAL is an early OpenAL Soft
 // that predates EFX being a header: the library exports alGenFilters() but ships no efx.h, so the
 // enums the low-pass path needs do not exist there and sounds are simply not muffled underwater.
 #if (defined(NCINE_INCLUDE_OPENAL) || defined(NCINE_INCLUDE_OPENALC)) && \

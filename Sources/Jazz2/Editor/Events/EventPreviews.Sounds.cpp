@@ -72,7 +72,7 @@ namespace Jazz2::Editor
 		// as the output went away, isn't tried again every frame, only once the event is selected again
 		if (identifier == _soundIdentifier) {
 			if (_sound != nullptr && gain != _soundGain) {
-				_sound->setGain(gain);
+				_sound->SetGain(gain);
 				_soundGain = gain;
 			}
 			return;
@@ -99,11 +99,11 @@ namespace Jazz2::Editor
 
 		// Over and over as in the game, but the same wherever the event is, as it's the one being edited
 		_sound = std::make_shared<nCine::AudioBufferPlayer>(&it->second.Buffers[0]->Buffer);
-		_sound->setSourceRelative(true);
-		_sound->setPosition(nCine::Vector3f::Zero);
-		_sound->setGain(gain);
-		_sound->setLooping(true);
-		_sound->play();
+		_sound->SetSourceRelative(true);
+		_sound->SetPosition(nCine::Vector3f::Zero);
+		_sound->SetGain(gain);
+		_sound->SetLooping(true);
+		_sound->Play();
 #endif
 	}
 
@@ -111,7 +111,7 @@ namespace Jazz2::Editor
 	{
 #if defined(WITH_AUDIO)
 		if (_sound != nullptr) {
-			_sound->stop();
+			_sound->Stop();
 		}
 #endif
 		_sound = nullptr;

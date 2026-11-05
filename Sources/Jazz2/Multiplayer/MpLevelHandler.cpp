@@ -5123,11 +5123,11 @@ namespace Jazz2::Multiplayer
 
 #if defined(WITH_AUDIO)
 			if (_sugarRushMusic != nullptr) {
-				_sugarRushMusic->stop();
+				_sugarRushMusic->Stop();
 				_sugarRushMusic = nullptr;
 			}
 			if (_music != nullptr) {
-				_music->stop();
+				_music->Stop();
 				_music = nullptr;
 			}
 #endif
@@ -5209,7 +5209,7 @@ namespace Jazz2::Multiplayer
 		for (std::int32_t i = (std::int32_t)_trackedSfx.size() - 1; i >= 0; i--) {
 			auto& sfx = _trackedSfx[i];
 			if (sfx.ActorId == actorId && sfx.Identifier == identifier) {
-				sfx.Player->stop();
+				sfx.Player->Stop();
 				_trackedSfx.eraseUnordered(i);
 			}
 		}
@@ -5228,12 +5228,12 @@ namespace Jazz2::Multiplayer
 			auto& sfx = _trackedSfx[i];
 			// An actor gone without a stop (destroyed, or the server's StopSfx lost to a level change) takes its
 			// sound with it, otherwise a looping one would play forever
-			Actors::ActorBase* actor = (sfx.Player->isPlaying() ? FindSfxActor(sfx.ActorId) : nullptr);
+			Actors::ActorBase* actor = (sfx.Player->IsPlaying() ? FindSfxActor(sfx.ActorId) : nullptr);
 			if (actor != nullptr) {
 				Vector2f pos = actor->GetPos();
-				sfx.Player->setPosition(Vector3f(pos.X, pos.Y, 0.8f));
+				sfx.Player->SetPosition(Vector3f(pos.X, pos.Y, 0.8f));
 			} else {
-				sfx.Player->stop();
+				sfx.Player->Stop();
 				_trackedSfx.eraseUnordered(i);
 			}
 		}

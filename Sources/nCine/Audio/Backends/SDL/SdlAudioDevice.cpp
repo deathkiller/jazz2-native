@@ -38,8 +38,7 @@ namespace nCine
 		want.callback = nullptr;
 
 		SDL_AudioSpec have{};
-		// The rate and the buffer size may be adjusted (the mixer follows whatever comes back), but a
-		// changed format or channel count would need conversion the mixer does not do, so those are refused
+		// Rate and buffer size may change, format and channel count may not (the mixer does no conversion)
 		_deviceId = SDL_OpenAudioDevice(nullptr, 0, &want, &have,
 			SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
 		if (_deviceId == 0) {
@@ -65,7 +64,7 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			sourceIds[i] = std::uint32_t(i + 1);
 		}
-		setSourcePool(arrayView(sourceIds, MaxSources));
+		SetSourcePool(arrayView(sourceIds, MaxSources));
 
 		SDL_PauseAudioDevice(_deviceId, 0);
 
@@ -75,14 +74,13 @@ namespace nCine
 
 	SdlAudioDevice::~SdlAudioDevice()
 	{
-		shutdownDecodeThread();
+		ShutdownDecodeThread();
 
 		if (_deviceId != 0) {
 			SDL_CloseAudioDevice(_deviceId);
 			_deviceId = 0;
 		}
-		// Only what this instance brought up is taken down again - the subsystem is reference-counted,
-		// and a quit that no init of ours matches would count against whoever else initialized it
+		// The subsystem is reference-counted, so only quit it if this instance initialized it
 		if (_subsystemInitialized) {
 			SDL_QuitSubSystem(SDL_INIT_AUDIO);
 			_subsystemInitialized = false;
@@ -101,19 +99,19 @@ namespace nCine
 		_block = nullptr;
 	}
 
-	const char* SdlAudioDevice::name() const
+	const char* SdlAudioDevice::GetName() const
 	{
 		return "SDL";
 	}
 
-	std::int32_t SdlAudioDevice::nativeFrequency()
+	std::int32_t SdlAudioDevice::GetNativeFrequency()
 	{
 		return _outputFrequency;
 	}
 
-	void SdlAudioDevice::updatePlayers()
+	void SdlAudioDevice::UpdatePlayers()
 	{
-		AudioDeviceBase::updatePlayers();
+		AudioDeviceBase::UpdatePlayers();
 
 		if (_valid && !_suspended) {
 			FillQueue();
@@ -125,8 +123,7 @@ namespace nCine
 		const std::int32_t blockBytes = BlockFrames * ChannelCount * std::int32_t(sizeof(std::int16_t));
 		const std::uint32_t targetBytes = std::uint32_t(TargetQueuedFrames) * ChannelCount * sizeof(std::int16_t);
 
-		// Bounded by the target rather than by a block count: a frame that fell behind refills the whole
-		// queue, and one that did not costs a single mix of silence at most
+		// Bounded by the target rather than a block count, so a frame that fell behind refills the whole queue
 		while (SDL_GetQueuedAudioSize(_deviceId) < targetBytes) {
 			MixInto(_block, BlockFrames);
 			if (SDL_QueueAudio(_deviceId, _block, std::uint32_t(blockBytes)) != 0) {
@@ -136,17 +133,17 @@ namespace nCine
 		}
 	}
 
-	void SdlAudioDevice::suspendDevice()
+	void SdlAudioDevice::SuspendDevice()
 	{
 		if (_deviceId != 0) {
 			SDL_PauseAudioDevice(_deviceId, 1);
-			// What is already queued would otherwise play on resume, up to a fifth of a second late
+			// Otherwise the stale queue would play late on resume
 			SDL_ClearQueuedAudio(_deviceId);
 		}
 		_suspended = true;
 	}
 
-	void SdlAudioDevice::resumeDevice()
+	void SdlAudioDevice::ResumeDevice()
 	{
 		if (_deviceId != 0) {
 			SDL_PauseAudioDevice(_deviceId, 0);
@@ -154,26 +151,26 @@ namespace nCine
 		_suspended = false;
 	}
 
-	bool SdlAudioDevice::isValid() const
+	bool SdlAudioDevice::IsValid() const
 	{
 		return _valid;
 	}
 
-	void SdlAudioDevice::setGain(float gain)
+	void SdlAudioDevice::SetGain(float gain)
 	{
 		// Applied while mixing, so the device itself always plays at unity
 		_gain = gain;
 	}
 
-	void SdlAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void SdlAudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		static_cast<void>(velocity);
 		_listenerPos = position;
 	}
 
-	std::uint32_t SdlAudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t SdlAudioDevice::RegisterPlayer(IAudioPlayer* player)
 	{
-		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);
+		const std::uint32_t sourceId = AudioDeviceBase::RegisterPlayer(player);
 		if (sourceId != UnavailableSource) {
 			if (Source* source = GetSource(sourceId)) {
 				*source = Source{};
@@ -190,7 +187,7 @@ namespace nCine
 		return &_sources[sourceId - 1];
 	}
 
-	std::uint32_t SdlAudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t SdlAudioDevice::CreateBuffer(BufferUsage usage)
 	{
 		static_cast<void>(usage);
 
@@ -237,7 +234,7 @@ namespace nCine
 		buffer.FrameCount = 0;
 	}
 
-	void SdlAudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void SdlAudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount)) {
 			return;
@@ -246,7 +243,7 @@ namespace nCine
 		_buffers[bufferId].Used = false;
 	}
 
-	bool SdlAudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	bool SdlAudioDevice::UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
 	{
 		if (bufferId == 0 || bufferId >= std::uint32_t(_bufferCount) || data == nullptr || size <= 0) {
 			return false;
@@ -271,8 +268,7 @@ namespace nCine
 			return false;
 		}
 
-		// A streaming source re-uploads several times a second, so an allocation that is already big
-		// enough is kept (the same fragmentation reasoning as the N64 backend)
+		// Streaming sources re-upload often, so an allocation that is big enough is kept
 		if (byteCount > buffer.Capacity) {
 			ReleaseBuffer(buffer);
 			buffer.Samples = static_cast<std::uint8_t*>(std::malloc(std::size_t(byteCount)));
@@ -283,8 +279,7 @@ namespace nCine
 			buffer.Capacity = byteCount;
 		}
 
-		// Samples keep the width they arrived in; 8-bit arrives unsigned with 128 at silence and is
-		// re-centered here, 16-bit is already native-endian (the asset readers swap on load)
+		// 8-bit arrives unsigned and is re-centered, 16-bit is already native-endian
 		if (bytesPerSample == 1) {
 			const std::uint8_t* source = static_cast<const std::uint8_t*>(data);
 			std::int8_t* dest = reinterpret_cast<std::int8_t*>(buffer.Samples);
@@ -302,7 +297,7 @@ namespace nCine
 		return true;
 	}
 
-	void SdlAudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void SdlAudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->BufferId = bufferId;
@@ -310,62 +305,62 @@ namespace nCine
 		}
 	}
 
-	void SdlAudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void SdlAudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Gain = gain;
 		}
 	}
 
-	void SdlAudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void SdlAudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Pitch = (pitch > 0.0f ? pitch : 1.0f);
 		}
 	}
 
-	void SdlAudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void SdlAudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Looping = looping;
 		}
 	}
 
-	void SdlAudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void SdlAudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Relative = relative;
 		}
 	}
 
-	void SdlAudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void SdlAudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Position = position;
 		}
 	}
 
-	void SdlAudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void SdlAudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
 		// No per-voice DSP in this mixer (see the N64 backend for why the branch is not worth it)
 		static_cast<void>(sourceId);
 		static_cast<void>(value);
 	}
 
-	std::int32_t SdlAudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t SdlAudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
 		Source* source = GetSource(sourceId);
 		return (source != nullptr ? std::int32_t(source->Cursor >> 32) : 0);
 	}
 
-	void SdlAudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void SdlAudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Cursor = std::int64_t(offset > 0 ? offset : 0) << 32;
 		}
 	}
 
-	void SdlAudioDevice::playSource(std::uint32_t sourceId)
+	void SdlAudioDevice::PlaySource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Playing = true;
@@ -373,14 +368,14 @@ namespace nCine
 		}
 	}
 
-	void SdlAudioDevice::pauseSource(std::uint32_t sourceId)
+	void SdlAudioDevice::PauseSource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Paused = true;
 		}
 	}
 
-	void SdlAudioDevice::stopSource(std::uint32_t sourceId)
+	void SdlAudioDevice::StopSource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Playing = false;
@@ -393,13 +388,13 @@ namespace nCine
 		}
 	}
 
-	bool SdlAudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool SdlAudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr && source->Playing && !source->Paused);
 	}
 
-	void SdlAudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void SdlAudioDevice::QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || bufferId == 0 || bufferId >= std::uint32_t(_bufferCount)) {
@@ -412,13 +407,13 @@ namespace nCine
 		source->Queue[source->QueueCount++] = bufferId;
 	}
 
-	std::int32_t SdlAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	std::int32_t SdlAudioDevice::GetProcessedBufferCount(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr ? source->ProcessedCount : 0);
 	}
 
-	void SdlAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	void SdlAudioDevice::UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || count <= 0) {
@@ -474,8 +469,7 @@ namespace nCine
 			return false;
 		}
 
-		// Float only per block: the gains become Q15, the cursor step 32.32 - the per-sample loop is
-		// all integer (the reasoning is spelled out in the N64 backend, which this mixer is a copy of)
+		// Float only per block (Q15 gains, 32.32 step), the per-sample loop is all integer
 		float leftGain, rightGain;
 		ComputePanning(source, leftGain, rightGain);
 		const std::int32_t leftQ15 = std::int32_t(leftGain * 32768.0f + 0.5f);

@@ -996,7 +996,7 @@ namespace Jazz2
 		// for much longer than any of them queues ahead. Most devices have nothing to do about that and this
 		// is a no-op for them; the one that does is the PlayStation 2, whose sound module repeats its last
 		// buffer while it is starved instead of falling silent.
-		theServiceLocator().GetAudioDevice().beginBlockingOperation();
+		theServiceLocator().GetAudioDevice().BeginBlockingOperation();
 #endif
 
 #if defined(WITH_AUDIO)
@@ -1131,7 +1131,7 @@ namespace Jazz2
 		_isLoading = false;
 
 #if defined(WITH_AUDIO)
-		theServiceLocator().GetAudioDevice().endBlockingOperation();
+		theServiceLocator().GetAudioDevice().EndBlockingOperation();
 #endif
 	}
 
@@ -1291,7 +1291,7 @@ namespace Jazz2
 		if (!_isHeadless && !sound.Data.empty()) {
 			auto s = std::make_unique<MemoryStream>(InPlaceInit, arrayView(sound.Data));
 			auto resource = std::make_unique<GenericSoundResource>(Death::move(s), sound.Name);
-			if (resource->Buffer.numSamples() > 0) {
+			if (resource->Buffer.GetSampleCount() > 0) {
 				entry->Resource = Death::move(resource);
 				entry->Sound.Buffers.push_back(entry->Resource.get());
 			}
@@ -1613,7 +1613,7 @@ namespace Jazz2
 				auto s = OpenContentFile(fs::CombinePath("Animations"_s, assetPath));
 				auto resource = std::make_unique<GenericSoundResource>(Death::move(s), assetPath);
 #	endif
-				if (resource->Buffer.numSamples() <= 0) {
+				if (resource->Buffer.GetSampleCount() <= 0) {
 					// The file was missing or could not be decoded (AudioBuffer already logged it).
 					// Keeping the dead resource cached would hold it for the rest of the level and
 					// pretend the sound is playable; dropping it here lets the empty-Buffers path

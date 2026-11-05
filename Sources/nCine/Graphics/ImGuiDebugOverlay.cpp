@@ -776,44 +776,44 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		if (ImGui::CollapsingHeader("Audio Players")) {
-			ImGui::Text("Device Name: %s", theServiceLocator().GetAudioDevice().name());
-			ImGui::Text("Listener Gain: %f", theServiceLocator().GetAudioDevice().gain());
+			ImGui::Text("Device Name: %s", theServiceLocator().GetAudioDevice().GetName());
+			ImGui::Text("Listener Gain: %f", theServiceLocator().GetAudioDevice().GetGain());
 
-			std::uint32_t numPlayers = theServiceLocator().GetAudioDevice().numPlayers();
+			std::uint32_t numPlayers = theServiceLocator().GetAudioDevice().GetPlayerCount();
 			ImGui::Text("Active Players: %d", numPlayers);
 
 			if (numPlayers > 0) {
 				if (ImGui::Button("Stop"))
-					theServiceLocator().GetAudioDevice().stopPlayers();
+					theServiceLocator().GetAudioDevice().StopPlayers();
 				ImGui::SameLine();
 				if (ImGui::Button("Pause"))
-					theServiceLocator().GetAudioDevice().pausePlayers();
+					theServiceLocator().GetAudioDevice().PausePlayers();
 			}
 
 			// Stopping or pausing players change the number of active ones
-			numPlayers = theServiceLocator().GetAudioDevice().numPlayers();
+			numPlayers = theServiceLocator().GetAudioDevice().GetPlayerCount();
 			for (std::uint32_t i = 0; i < numPlayers; i++) {
-				const IAudioPlayer* player = theServiceLocator().GetAudioDevice().player(i);
+				const IAudioPlayer* player = theServiceLocator().GetAudioDevice().GetPlayer(i);
 				char widgetName[32];
 				std::size_t length = formatInto(widgetName, "Player {}", i);
 				widgetName[length] = '\0';
 				if (ImGui::TreeNode(widgetName)) {
-					ImGui::Text("Source Id: %u", player->sourceId());
-					ImGui::Text("Buffer Id: %u", player->bufferId());
-					ImGui::Text("Channels: %d", player->numChannels());
-					ImGui::Text("Frequency: %d Hz", player->frequency());
-					auto bufferSize = player->bufferSize();
+					ImGui::Text("Source Id: %u", player->GetSourceId());
+					ImGui::Text("Buffer Id: %u", player->GetBufferId());
+					ImGui::Text("Channels: %d", player->GetChannelCount());
+					ImGui::Text("Frequency: %d Hz", player->GetFrequency());
+					auto bufferSize = player->GetBufferSize();
 					if (bufferSize < 0) {
 						ImGui::Text("Buffer Size: Streaming");
 					} else {
 						ImGui::Text("Buffer Size: %lu bytes", bufferSize);
 					}
-					ImGui::Text("State: %s", audioPlayerStateToString(player->state()));
-					ImGui::Text("Looping: %s", player->isLooping() ? "true" : "false");
-					ImGui::Text("Gain: %f", player->gain());
-					ImGui::Text("Pitch: %f", player->pitch());
-					ImGui::Text("Low-pass: %f", player->lowPass());
-					const Vector3f& pos = player->position();
+					ImGui::Text("State: %s", audioPlayerStateToString(player->GetState()));
+					ImGui::Text("Looping: %s", player->IsLooping() ? "true" : "false");
+					ImGui::Text("Gain: %f", player->GetGain());
+					ImGui::Text("Pitch: %f", player->GetPitch());
+					ImGui::Text("Low-pass: %f", player->GetLowPass());
+					const Vector3f& pos = player->GetPosition();
 					ImGui::Text("Position: <%f, %f, %f>", pos.X, pos.Y, pos.Z);
 
 					ImGui::TreePop();

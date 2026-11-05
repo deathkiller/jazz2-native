@@ -240,7 +240,7 @@ Each console's SDK provides what its backend needs, so nothing has to be install
 `NCINE_WITH_AUDIO` is @cpp ON @ce everywhere. Clearing it removes the whole subsystem.
 
 Backends that mix on the main thread starve when it blocks longer than they have queued, e.g. during a
-level load. @ref nCine::IAudioDevice::beginBlockingOperation() and its counterpart are called around
+level load. @ref nCine::IAudioDevice::BeginBlockingOperation() and its counterpart are called around
 the level load and the episode scan, and the PS2 stops its stream for the duration
 @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan.
 
@@ -264,7 +264,7 @@ the level load and the episode scan, and the PS2 stops its stream for the durati
     decoding thread it decodes in place, unless the device takes over @m_span{m-text m-dim} (PS2, see
     @ref consoles-ps2-limits) @m_endspan. Level and menu music start two frames late
     @m_span{m-text m-dim} (`_musicStartDelay`) @m_endspan to clear the deferred-loading frames.
--   <b>Silent players</b> @m_span{m-text m-dim} (@ref nCine::IAudioPlayer::isSilent()) @m_endspan do
+-   <b>Silent players</b> @m_span{m-text m-dim} (@ref nCine::IAudioPlayer::IsSilent()) @m_endspan do
     no work: a stream decodes nothing but resumes where it left off, a buffer player never takes a
     source.
 -   <b>Byte order:</b> @ref nCine::IAudioDevice buffer formats are native-endian. The WAVE and Vorbis
@@ -794,7 +794,7 @@ and serial output is block-buffered, so a crash loses everything since the last 
     `pow()`/`log()` @m_span{m-text m-dim} (see @ref consoles-common-skips) @m_endspan.
 -   A stream's rate is fixed once started, so pitch changes apply to sound effects only.
 -   <b>Streams are stopped during a load</b> and resumed afterwards, so loads are silent rather than
-    looping the last fragment (see @ref nCine::IAudioDevice::beginBlockingOperation).
+    looping the last fragment (see @ref nCine::IAudioDevice::BeginBlockingOperation).
 
 <b>Saving</b>
 
@@ -1375,9 +1375,9 @@ so the console always has a way out.
     @m_endspan.
 -   <b>Audio mixes at 44100 Hz by default, and the "Sample Rate" option in Options > Sounds can halve it</b>
     @m_span{m-text m-dim} (22050 or 44100 Hz, stored in @ref Jazz2::PreferencesCache::AudioSampleRate,
-    applied through @ref nCine::IAudioDevice::setMixingFrequency()) @m_endspan, halving the mixer's and
+    applied through @ref nCine::IAudioDevice::SetMixingFrequency()) @m_endspan, halving the mixer's and
     the module decoder's cost. @ref nCine::PspAudioDevice mixes at that rate and linearly upsamples below
-    44100 Hz. The decoder renders at @ref nCine::IAudioDevice::nativeFrequency(). Effects switch at once,
+    44100 Hz. The decoder renders at @ref nCine::IAudioDevice::GetNativeFrequency(). Effects switch at once,
     music when the next stream opens.
 -   <b>This libm is very slow --- `sinf()` costs about 13.5 us.</b> Appearance-only math (flicker, pulse,
     orbit) goes through @ref nCine::sinApprox() / @ref nCine::cosApprox() (331 ns, within 0.0014), which
@@ -1721,10 +1721,10 @@ Black        | Never --- none of the executable ran: the loader, the file or the
     -   Its ring buffer is small @m_span{m-text m-dim} (about 50 ms at the default 22050 Hz, reported in the
         trace) @m_endspan and there is no mixer thread, so a long frame is heard as a <em>repeat</em> of
         the last buffer. Anything that blocks the main thread longer (a level load, the episode list) must
-        call @ref nCine::IAudioDevice::beginBlockingOperation() first, which stops the stream. Gameplay
+        call @ref nCine::IAudioDevice::BeginBlockingOperation() first, which stops the stream. Gameplay
         below about 19 fps still repeats.
     -   Music is decoded on the main thread in 1 KB slices during the vertical-blank wait
-        @m_span{m-text m-dim} (@ref nCine::IAudioDevice::runIdleWork()) @m_endspan. A chunk unfinished
+        @m_span{m-text m-dim} (@ref nCine::IAudioDevice::RunIdleWork()) @m_endspan. A chunk unfinished
         after twelve frames is decoded inside the frame. libxmp's double-precision hot paths (soft-float on
         the EE) are replaced @m_span{m-text m-dim} (see @ref consoles-common-skips) @m_endspan.
     -   `NCINE_WITH_OPENMPT` is forced off @m_span{m-text m-dim} (libopenmpt's

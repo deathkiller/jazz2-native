@@ -174,6 +174,8 @@ namespace Jazz2
 		ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const override;
 		ArrayView<Actors::Player* const> GetPlayers() const override;
 		Actors::ActorBase* FindPlayerToStandOn(Actors::Player* player, float timeMult) override;
+		CharacterProfile GetCharacterProfile(PlayerType type) const override;
+		bool WarpsTransmuteCoins() const override;
 
 		/** @brief Returns the internal name (path) of the current level */
 		StringView GetLevelName() const {

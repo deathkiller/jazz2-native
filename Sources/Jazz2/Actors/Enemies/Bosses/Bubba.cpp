@@ -135,7 +135,7 @@ namespace Jazz2::Actors::Bosses
 						_state = State::Falling;
 
 						if (_tornadoNoise != nullptr) {
-							_tornadoNoise->stop();
+							_tornadoNoise->Stop();
 							_tornadoNoise = nullptr;
 						}
 						SetAnimation((AnimState)1073741833);

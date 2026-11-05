@@ -19,11 +19,9 @@ namespace nCine
 		/** @brief Alignment ASND requires of every buffer it is handed */
 		constexpr std::int32_t BufferAlignment = 32;
 
-		std::int32_t asndVoiceFormat(IAudioDevice::BufferFormat format)
+		std::int32_t ToAsndVoiceFormat(IAudioDevice::BufferFormat format)
 		{
-			// The samples are native-endian by the time they reach a buffer (the WAV and Vorbis readers
-			// swap them on big-endian targets and the module decoder produces them that way), so the
-			// big-endian formats are the ones to use here. 8-bit PCM is unsigned, like AL_FORMAT_MONO8.
+			// Samples arrive native-endian (big-endian here), 8-bit PCM is unsigned like AL_FORMAT_MONO8
 			switch (format) {
 				case IAudioDevice::BufferFormat::Stereo8: return VOICE_STEREO_8BIT_U;
 				case IAudioDevice::BufferFormat::Mono16: return VOICE_MONO_16BIT_BE;
@@ -32,16 +30,14 @@ namespace nCine
 			}
 		}
 
-		bool isStereoFormat(std::int32_t voiceFormat)
+		bool IsStereoFormat(std::int32_t voiceFormat)
 		{
 			return (voiceFormat == VOICE_STEREO_8BIT_U || voiceFormat == VOICE_STEREO_16BIT_BE);
 		}
 
-		// Keeps a streaming voice alive while its queue is momentarily empty. ASND frees a voice as soon
-		// as it runs out of data unless it has a callback, which would end the music on any refill that
-		// arrives a frame late. Nothing is done here - this runs in the DSP interrupt handler, and the
-		// queue is refilled from pump() on the main thread instead.
-		void streamVoiceCallback(s32 voice)
+		// Only keeps a starved streaming voice alive, ASND frees voices without a callback. Runs in
+		// the DSP interrupt, the queue is refilled from Pump() instead.
+		void StreamVoiceCallback(s32 voice)
 		{
 		}
 
@@ -51,13 +47,10 @@ namespace nCine
 		/**
 			@brief Lets a DSP interrupt that came without a mail pass
 
-			libogc's callback waits for the DSP's mail without any limit, with interrupts disabled, before it
-			looks at what the mail says - and Dolphin's high-level emulation of ASND's mixer microcode (its
-			default DSP engine) every so often raises the interrupt with no mail behind it, which froze the
-			whole console in that loop after a few dozen menu sounds. A real DSP writes the mail before it
-			raises the interrupt, so there the mail is always present on the first look and nothing changes.
+			libogc's callback spins on the mail with interrupts disabled, and Dolphin's DSP HLE sometimes
+			raises the interrupt without one, freezing the console. Real hardware is unaffected.
 		*/
-		void guardedDspCallback()
+		void GuardedDspCallback()
 		{
 			for (std::int32_t i = 0; i < 64; i++) {
 				if (DSP_CheckMailFrom()) {
@@ -76,7 +69,7 @@ namespace nCine
 		// Sets up the DSP mixer task and starts the audio DMA, including DSP_Init() and AUDIO_Init()
 		ASND_Init();
 		if (libogcDspCallback == nullptr) {
-			libogcDspCallback = DSP_RegisterCallback(guardedDspCallback);
+			libogcDspCallback = DSP_RegisterCallback(GuardedDspCallback);
 		}
 		// The mixer starts out paused
 		ASND_Pause(0);
@@ -87,7 +80,7 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			sourceIds[i] = std::uint32_t(i + 1);
 		}
-		setSourcePool(arrayView(sourceIds, MaxSources));
+		SetSourcePool(arrayView(sourceIds, MaxSources));
 
 		LOGI("--- ASND audio device info ---");
 		LOGI("Output Frequency: {} Hz", OutputFrequency);
@@ -99,7 +92,7 @@ namespace nCine
 		LOGD("Disposing ASND audio device...");
 
 		// Shut down the decoding thread first, so it doesn't touch any readers afterwards
-		shutdownDecodeThread();
+		ShutdownDecodeThread();
 
 		if (_initialized) {
 			for (std::int32_t i = 0; i < MaxSources; i++) {
@@ -115,69 +108,63 @@ namespace nCine
 		}
 	}
 
-	bool AsndAudioDevice::isValid() const
+	bool AsndAudioDevice::IsValid() const
 	{
 		return _initialized;
 	}
 
-	const char* AsndAudioDevice::name() const
+	const char* AsndAudioDevice::GetName() const
 	{
 		return "ASND";
 	}
 
-	void AsndAudioDevice::setGain(float gain)
+	void AsndAudioDevice::SetGain(float gain)
 	{
 		_gain = gain;
 
 		// The DSP has no master volume, it is folded into the per-voice volume instead
 		for (std::int32_t i = 0; i < MaxSources; i++) {
-			applyVolume(i);
+			ApplyVolume(i);
 		}
 	}
 
-	void AsndAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void AsndAudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		_listenerPos = position;
 
-		// Moving the listener changes the panning and attenuation of every source that is not relative
-		// to it, which the mix here has to be told about explicitly
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			if (!_sources[i].relative) {
-				applyVolume(i);
+				ApplyVolume(i);
 			}
 		}
 	}
 
-	std::int32_t AsndAudioDevice::nativeFrequency()
+	std::int32_t AsndAudioDevice::GetNativeFrequency()
 	{
-		// The DSP resamples every voice to its own output rate for free, so a stream does not have to be
-		// decoded at 48 kHz. Module music is by far the most expensive thing decoded here and the samples
-		// inside the original modules were recorded at around this rate to begin with.
+		// The DSP resamples for free, and decoding modules at 48 kHz would only cost more CPU
 		return 32000;
 	}
 
-	std::uint32_t AsndAudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t AsndAudioDevice::RegisterPlayer(IAudioPlayer* player)
 	{
-		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);
+		const std::uint32_t sourceId = AudioDeviceBase::RegisterPlayer(player);
 
-		// A voice handed to a new player starts from a clean slate. Every player does release its
-		// source properly, but the state here is what decides whether a voice loops or streams, and
-		// inheriting any of it from the previous owner would be a silent and confusing bug.
-		const std::int32_t voice = voiceForId(sourceId);
+		// Start from a clean slate, so nothing (looping, streaming) is inherited from the previous owner
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice >= 0) {
 			_sources[voice] = Source();
 		}
 		return sourceId;
 	}
 
-	void AsndAudioDevice::updatePlayers()
+	void AsndAudioDevice::UpdatePlayers()
 	{
-		pump();
+		Pump();
 
-		AudioDeviceBase::updatePlayers();
+		AudioDeviceBase::UpdatePlayers();
 	}
 
-	std::int32_t AsndAudioDevice::voiceForId(std::uint32_t sourceId)
+	std::int32_t AsndAudioDevice::GetVoiceIndex(std::uint32_t sourceId)
 	{
 		if (sourceId == 0 || sourceId > std::uint32_t(MaxSources)) {
 			return -1;
@@ -185,7 +172,7 @@ namespace nCine
 		return std::int32_t(sourceId) - 1;
 	}
 
-	AsndAudioDevice::Buffer* AsndAudioDevice::bufferForId(std::uint32_t bufferId)
+	AsndAudioDevice::Buffer* AsndAudioDevice::FindBuffer(std::uint32_t bufferId)
 	{
 		if (bufferId == 0 || bufferId > _buffers.size()) {
 			return nullptr;
@@ -194,7 +181,7 @@ namespace nCine
 		return (buffer.used ? &buffer : nullptr);
 	}
 
-	std::uint32_t AsndAudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t AsndAudioDevice::CreateBuffer(BufferUsage usage)
 	{
 		for (std::size_t i = 0; i < _buffers.size(); i++) {
 			if (!_buffers[i].used) {
@@ -209,9 +196,9 @@ namespace nCine
 		return std::uint32_t(_buffers.size());
 	}
 
-	void AsndAudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void AsndAudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
-		Buffer* buffer = bufferForId(bufferId);
+		Buffer* buffer = FindBuffer(bufferId);
 		if (buffer == nullptr) {
 			return;
 		}
@@ -220,16 +207,14 @@ namespace nCine
 		*buffer = Buffer();
 	}
 
-	bool AsndAudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	bool AsndAudioDevice::UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
 	{
-		Buffer* buffer = bufferForId(bufferId);
+		Buffer* buffer = FindBuffer(bufferId);
 		if (buffer == nullptr || size < 0) {
 			return false;
 		}
 
-		// ASND reads the samples by DMA and flushes them out of the data cache by whole lines, so the
-		// block has to be aligned and padded to a cache line - otherwise the flush would write back
-		// whatever shares the first and last line with it
+		// ASND flushes whole cache lines before DMA, so align and pad to a cache line
 		const std::int32_t requiredCapacity = (size + BufferAlignment - 1) & ~(BufferAlignment - 1);
 		if (requiredCapacity > buffer->capacity) {
 			std::free(buffer->data);
@@ -251,28 +236,26 @@ namespace nCine
 
 		buffer->size = size;
 		buffer->frequency = frequency;
-		buffer->voiceFormat = asndVoiceFormat(format);
+		buffer->voiceFormat = ToAsndVoiceFormat(format);
 		return true;
 	}
 
-	void AsndAudioDevice::computeVolume(std::int32_t voice, std::int32_t& volumeLeft, std::int32_t& volumeRight)
+	void AsndAudioDevice::ComputeVolume(std::int32_t voice, std::int32_t& volumeLeft, std::int32_t& volumeRight)
 	{
 		const Source& source = _sources[voice];
 
-		// Which buffer is sounding decides whether the position is used at all: OpenAL plays a stereo
-		// buffer straight to the output and ignores its position, and that is matched here
+		// A stereo buffer ignores its position, like in OpenAL
 		const std::uint32_t bufferId = (source.streaming
 			? (source.numQueued > 0 ? source.queuedBufferIds[0] : 0)
 			: source.attachedBufferId);
-		const Buffer* buffer = bufferForId(bufferId);
-		const bool isStereo = (buffer != nullptr && isStereoFormat(buffer->voiceFormat));
+		const Buffer* buffer = FindBuffer(bufferId);
+		const bool isStereo = (buffer != nullptr && IsStereoFormat(buffer->voiceFormat));
 
 		float left = _gain * source.gain;
 		float right = left;
 
 		if (!isStereo) {
-			// The player hands over a position in the same physical frame the listener lives in (see
-			// IAudioPlayer::getAdjustedPosition), so it only has to be made relative to the listener
+			// Already in the listener's physical frame (see IAudioPlayer::GetAdjustedPosition)
 			Vector3f relative = source.position;
 			if (!source.relative) {
 				relative -= Vector3f(_listenerPos.X * LengthToPhysical,
@@ -281,8 +264,7 @@ namespace nCine
 
 			const float distance = relative.Length();
 
-			// AL_LINEAR_DISTANCE_CLAMPED with a rolloff factor of 1, which is what the OpenAL backend
-			// asks for, so a sound is equally loud on both backends
+			// AL_LINEAR_DISTANCE_CLAMPED with rolloff 1, to match the OpenAL backend
 			float attenuation = 1.0f;
 			if (distance > ReferenceDistance) {
 				const float clamped = (distance < MaxDistance ? distance : MaxDistance);
@@ -309,24 +291,22 @@ namespace nCine
 		volumeRight = toVolume(right);
 	}
 
-	void AsndAudioDevice::applyVolume(std::int32_t voice)
+	void AsndAudioDevice::ApplyVolume(std::int32_t voice)
 	{
 		if (!_sources[voice].started) {
 			return;
 		}
 
 		std::int32_t volumeLeft, volumeRight;
-		computeVolume(voice, volumeLeft, volumeRight);
+		ComputeVolume(voice, volumeLeft, volumeRight);
 		ASND_ChangeVolumeVoice(voice, volumeLeft, volumeRight);
 	}
 
-	void AsndAudioDevice::startVoice(std::int32_t voice, const Buffer& buffer)
+	void AsndAudioDevice::StartVoice(std::int32_t voice, const Buffer& buffer)
 	{
 		Source& source = _sources[voice];
 
-		// ASND expresses the playback rate as the sample rate of the source data, so the pitch
-		// multiplier scales it. The DSP resamples anything up to 144 kHz, but past its own output
-		// rate it costs noticeably more, so a pitch that high is not worth honouring.
+		// ASND takes the playback rate in Hz, so the pitch scales the sample rate
 		std::int32_t pitchHz = std::int32_t(buffer.frequency * source.pitch + 0.5f);
 		if (pitchHz < MIN_PITCH) {
 			pitchHz = MIN_PITCH;
@@ -334,16 +314,14 @@ namespace nCine
 			pitchHz = MAX_PITCH;
 		}
 
-		// The volume has to be right in the very first call: ASND_ChangeVolumeVoice() only takes effect
-		// when the DSP next picks the voice up, so starting at full volume and correcting afterwards
-		// would play the attack of every sound at full loudness regardless of its distance
+		// The volume must be right on start, a later change would let the attack play at full volume
 		source.started = true;
 		std::int32_t volumeLeft, volumeRight;
-		computeVolume(voice, volumeLeft, volumeRight);
+		ComputeVolume(voice, volumeLeft, volumeRight);
 
 		if (source.streaming) {
 			ASND_SetVoice(voice, buffer.voiceFormat, pitchHz, 0, buffer.data, buffer.size,
-				volumeLeft, volumeRight, streamVoiceCallback);
+				volumeLeft, volumeRight, StreamVoiceCallback);
 		} else if (source.looping) {
 			ASND_SetInfiniteVoice(voice, buffer.voiceFormat, pitchHz, 0, buffer.data, buffer.size,
 				volumeLeft, volumeRight);
@@ -357,7 +335,7 @@ namespace nCine
 		}
 	}
 
-	void AsndAudioDevice::pump()
+	void AsndAudioDevice::Pump()
 	{
 		for (std::int32_t voice = 0; voice < MaxSources; voice++) {
 			Source& source = _sources[voice];
@@ -365,11 +343,9 @@ namespace nCine
 				continue;
 			}
 
-			// Move every buffer the DSP is done with to the processed count. Only submitted buffers are
-			// tested, and a submitted one is either sounding, waiting in the voice's second slot, or
-			// finished - which is exactly what ASND_TestPointer() distinguishes.
+			// Count submitted buffers the DSP is done with as processed
 			while (source.numProcessed < source.numSubmitted) {
-				const Buffer* buffer = bufferForId(source.queuedBufferIds[source.numProcessed]);
+				const Buffer* buffer = FindBuffer(source.queuedBufferIds[source.numProcessed]);
 				if (buffer != nullptr && ASND_TestPointer(voice, buffer->data) == SND_BUSY) {
 					break;
 				}
@@ -379,7 +355,7 @@ namespace nCine
 			// Hand the voice as much of the rest of the queue as it can hold
 			while (source.numSubmitted < source.numQueued &&
 				   source.numSubmitted - source.numProcessed < MaxBuffersInFlight) {
-				const Buffer* buffer = bufferForId(source.queuedBufferIds[source.numSubmitted]);
+				const Buffer* buffer = FindBuffer(source.queuedBufferIds[source.numSubmitted]);
 				if (buffer == nullptr || buffer->size <= 0) {
 					// Nothing playable, count it as done so the stream can reclaim it
 					source.numSubmitted++;
@@ -388,7 +364,7 @@ namespace nCine
 				}
 
 				if (!source.started || ASND_StatusVoice(voice) == SND_UNUSED) {
-					startVoice(voice, *buffer);
+					StartVoice(voice, *buffer);
 					source.numSubmitted++;
 				} else if (ASND_AddVoice(voice, buffer->data, buffer->size) == SND_OK) {
 					source.numSubmitted++;
@@ -400,9 +376,9 @@ namespace nCine
 		}
 	}
 
-	void AsndAudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void AsndAudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0) {
 			return;
 		}
@@ -411,7 +387,7 @@ namespace nCine
 		source.attachedBufferId = bufferId;
 
 		if (bufferId == 0) {
-			// Detaching is how a player releases a source, so everything about the voice is reset here
+			// Detaching releases the source, so reset everything
 			if (source.started) {
 				ASND_StopVoice(voice);
 			}
@@ -426,18 +402,18 @@ namespace nCine
 		}
 	}
 
-	void AsndAudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void AsndAudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice >= 0) {
 			_sources[voice].gain = gain;
-			applyVolume(voice);
+			ApplyVolume(voice);
 		}
 	}
 
-	void AsndAudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void AsndAudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0) {
 			return;
 		}
@@ -450,7 +426,7 @@ namespace nCine
 			const std::uint32_t bufferId = (source.streaming
 				? (source.numQueued > 0 ? source.queuedBufferIds[0] : 0)
 				: source.attachedBufferId);
-			const Buffer* buffer = bufferForId(bufferId);
+			const Buffer* buffer = FindBuffer(bufferId);
 			if (buffer != nullptr && buffer->frequency > 0) {
 				std::int32_t pitchHz = std::int32_t(buffer->frequency * pitch + 0.5f);
 				if (pitchHz < MIN_PITCH) {
@@ -463,49 +439,48 @@ namespace nCine
 		}
 	}
 
-	void AsndAudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void AsndAudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice >= 0) {
-			// Taken into account when the voice is started, ASND decides between a one-shot and a
-			// looping voice at that point and cannot be told to switch afterwards
+			// Applied on the next start, ASND cannot switch a sounding voice
 			_sources[voice].looping = looping;
 		}
 	}
 
-	void AsndAudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void AsndAudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice >= 0) {
 			_sources[voice].relative = relative;
-			applyVolume(voice);
+			ApplyVolume(voice);
 		}
 	}
 
-	void AsndAudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void AsndAudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice >= 0) {
 			_sources[voice].position = position;
-			applyVolume(voice);
+			ApplyVolume(voice);
 		}
 	}
 
-	void AsndAudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void AsndAudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
 		// The DSP mixer has no filter stage, so sounds are not muffled underwater
 	}
 
-	std::int32_t AsndAudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t AsndAudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0 || !_sources[voice].started) {
 			return 0;
 		}
 
 		// The tick counter runs at the output rate, the caller wants samples of the source data
 		const Source& source = _sources[voice];
-		const Buffer* buffer = bufferForId(source.streaming
+		const Buffer* buffer = FindBuffer(source.streaming
 			? (source.numQueued > 0 ? source.queuedBufferIds[0] : 0)
 			: source.attachedBufferId);
 		if (buffer == nullptr || buffer->frequency <= 0) {
@@ -514,14 +489,14 @@ namespace nCine
 		return std::int32_t(std::uint64_t(ASND_GetTickCounterVoice(voice)) * buffer->frequency / OutputFrequency);
 	}
 
-	void AsndAudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void AsndAudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		// ASND plays a buffer from its start, there is no way to seek within a voice
 	}
 
-	void AsndAudioDevice::playSource(std::uint32_t sourceId)
+	void AsndAudioDevice::PlaySource(std::uint32_t sourceId)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0) {
 			return;
 		}
@@ -537,20 +512,19 @@ namespace nCine
 		}
 
 		if (source.attachedBufferId != 0) {
-			const Buffer* buffer = bufferForId(source.attachedBufferId);
+			const Buffer* buffer = FindBuffer(source.attachedBufferId);
 			if (buffer != nullptr && buffer->size > 0) {
-				startVoice(voice, *buffer);
+				StartVoice(voice, *buffer);
 			}
 		} else {
-			// A streaming player starts before it has queued anything, pump() picks the voice up as
-			// soon as the first buffer arrives
+			// Streaming, Pump() starts the voice once the first buffer is queued
 			source.streaming = true;
 		}
 	}
 
-	void AsndAudioDevice::pauseSource(std::uint32_t sourceId)
+	void AsndAudioDevice::PauseSource(std::uint32_t sourceId)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0) {
 			return;
 		}
@@ -561,9 +535,9 @@ namespace nCine
 		}
 	}
 
-	void AsndAudioDevice::stopSource(std::uint32_t sourceId)
+	void AsndAudioDevice::StopSource(std::uint32_t sourceId)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0) {
 			return;
 		}
@@ -575,15 +549,14 @@ namespace nCine
 		}
 		source.paused = false;
 
-		// A stopped source hands every buffer it still holds back to its owner, which reclaims them
-		// through numProcessedBuffers() and unqueueBuffers() right after this
+		// Mark everything processed, so the owner can unqueue all buffers
 		source.numSubmitted = 0;
 		source.numProcessed = source.numQueued;
 	}
 
-	bool AsndAudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool AsndAudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0) {
 			return false;
 		}
@@ -595,9 +568,9 @@ namespace nCine
 		return (ASND_StatusVoice(voice) == SND_WORKING);
 	}
 
-	void AsndAudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void AsndAudioDevice::QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0) {
 			return;
 		}
@@ -612,20 +585,19 @@ namespace nCine
 		source.queuedBufferIds[source.numQueued] = bufferId;
 		source.numQueued++;
 
-		// Submit right away when the voice has room, so the first buffer of a stream starts sounding
-		// in the same frame it was decoded in instead of one later
-		pump();
+		// Submit right away, so the stream starts this frame instead of the next
+		Pump();
 	}
 
-	std::int32_t AsndAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	std::int32_t AsndAudioDevice::GetProcessedBufferCount(std::uint32_t sourceId)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		return (voice >= 0 ? _sources[voice].numProcessed : 0);
 	}
 
-	void AsndAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	void AsndAudioDevice::UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
 	{
-		const std::int32_t voice = voiceForId(sourceId);
+		const std::int32_t voice = GetVoiceIndex(sourceId);
 		if (voice < 0) {
 			return;
 		}
@@ -651,14 +623,14 @@ namespace nCine
 		}
 	}
 
-	void AsndAudioDevice::suspendDevice()
+	void AsndAudioDevice::SuspendDevice()
 	{
 		if (_initialized) {
 			ASND_Pause(1);
 		}
 	}
 
-	void AsndAudioDevice::resumeDevice()
+	void AsndAudioDevice::ResumeDevice()
 	{
 		if (_initialized) {
 			ASND_Pause(0);

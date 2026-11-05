@@ -196,7 +196,7 @@ RETRO_API void retro_run(void)
 		if (numFrames > MaxAudioFramesPerRun) {
 			numFrames = MaxAudioFramesPerRun;
 		}
-		if (!theServiceLocator().GetAudioDevice().renderSamples(audioBuffer, numFrames)) {
+		if (!theServiceLocator().GetAudioDevice().RenderSamples(audioBuffer, numFrames)) {
 			// No audio device available, keep the frontend's pacing fed with silence
 			std::memset(audioBuffer, 0, (std::size_t)numFrames * 2 * sizeof(std::int16_t));
 		}

@@ -17,8 +17,7 @@ namespace nCine
 		: _valid(false), _suspended(false), _portNumber(0), _portBuffer(nullptr),
 			_readIndexAddress(nullptr), _writeBlock(0)
 	{
-		// The audio port lives in a firmware module rather than in the ELF, so it has to be pulled in
-		// before any of the calls below resolve
+		// The audio port lives in a firmware module that must be loaded first
 		if (sysModuleLoad(SYSMODULE_AUDIO) != 0) {
 			LOGE("Cannot load the audio system module, sound will be disabled");
 			return;
@@ -50,10 +49,7 @@ namespace nCine
 			return;
 		}
 
-		// Both of these are lv2 addresses of memory the firmware owns: the ring the hardware scans out, and
-		// the block index it has most recently read. Nothing here waits on an event queue - the ring is
-		// topped up from updatePlayers() instead (see the class documentation) - so the read index is the
-		// only thing that says how much of it has been consumed.
+		// Firmware-owned memory: the ring the hardware scans out, and the block index it last read (polled, no event queue)
 		_portBuffer = reinterpret_cast<float*>(std::uint64_t(config.audioDataStart));
 		_readIndexAddress = reinterpret_cast<std::uint64_t*>(std::uint64_t(config.readIndex));
 
@@ -74,7 +70,7 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxSources; i++) {
 			sourceIds[i] = std::uint32_t(i + 1);
 		}
-		setSourcePool(arrayView(sourceIds, MaxSources));
+		SetSourcePool(arrayView(sourceIds, MaxSources));
 
 		_valid = true;
 		LOGI("Audio device initialized: PSL1GHT libaudio, {} Hz stereo, {} blocks of {} samples",
@@ -84,7 +80,7 @@ namespace nCine
 	Ps3AudioDevice::~Ps3AudioDevice()
 	{
 		// The base class's decoding thread can still be handing buffers over, so it goes first
-		shutdownDecodeThread();
+		ShutdownDecodeThread();
 
 		if (_valid) {
 			audioPortStop(_portNumber);
@@ -94,38 +90,37 @@ namespace nCine
 		}
 	}
 
-	bool Ps3AudioDevice::isValid() const
+	bool Ps3AudioDevice::IsValid() const
 	{
 		return _valid;
 	}
 
-	const char* Ps3AudioDevice::name() const
+	const char* Ps3AudioDevice::GetName() const
 	{
 		return "libaudio";
 	}
 
-	void Ps3AudioDevice::setGain(float gain)
+	void Ps3AudioDevice::SetGain(float gain)
 	{
-		// Applied while mixing rather than programmed anywhere: the port's own level is set once at open
-		// time, and changing it would fade the whole ring including audio already written into it
+		// Applied while mixing; changing the port level would also affect audio already in the ring
 		_gain = gain;
 	}
 
-	void Ps3AudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
+	void Ps3AudioDevice::UpdateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		// No Doppler on this backend, so the velocity is not kept
 		static_cast<void>(velocity);
 		_listenerPos = position;
 	}
 
-	std::int32_t Ps3AudioDevice::nativeFrequency()
+	std::int32_t Ps3AudioDevice::GetNativeFrequency()
 	{
 		return OutputFrequency;
 	}
 
-	std::uint32_t Ps3AudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t Ps3AudioDevice::RegisterPlayer(IAudioPlayer* player)
 	{
-		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);
+		const std::uint32_t sourceId = AudioDeviceBase::RegisterPlayer(player);
 		if (sourceId != UnavailableSource) {
 			if (Source* source = GetSource(sourceId)) {
 				*source = Source{};
@@ -142,10 +137,9 @@ namespace nCine
 		return &_sources[sourceId - 1];
 	}
 
-	std::uint32_t Ps3AudioDevice::createBuffer(BufferUsage usage)
+	std::uint32_t Ps3AudioDevice::CreateBuffer(BufferUsage usage)
 	{
-		// Both kinds live in main memory here - there is no separate sound RAM to place them in - so the
-		// usage says nothing this backend can act on
+		// Everything lives in main memory, so the usage is irrelevant
 		static_cast<void>(usage);
 
 		for (std::uint32_t i = 1; i < _buffers.size(); i++) {
@@ -160,7 +154,7 @@ namespace nCine
 		return std::uint32_t(_buffers.size() - 1);
 	}
 
-	void Ps3AudioDevice::deleteBuffer(std::uint32_t bufferId)
+	void Ps3AudioDevice::DeleteBuffer(std::uint32_t bufferId)
 	{
 		if (bufferId == 0 || bufferId >= _buffers.size()) {
 			return;
@@ -175,7 +169,7 @@ namespace nCine
 		_buffers[bufferId] = Buffer{};
 	}
 
-	bool Ps3AudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	bool Ps3AudioDevice::UploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
 	{
 		if (bufferId == 0 || bufferId >= _buffers.size() || data == nullptr || size <= 0) {
 			return false;
@@ -184,8 +178,7 @@ namespace nCine
 		Buffer& buffer = _buffers[bufferId];
 		buffer.Frequency = (frequency > 0 ? frequency : OutputFrequency);
 
-		// Everything is normalized to interleaved 16-bit here, so the mixer has one input format to read.
-		// The 8-bit forms are unsigned with 128 at silence, which is the one conversion worth spelling out.
+		// Normalized to interleaved 16-bit; 8-bit input is unsigned with 128 at silence
 		switch (format) {
 			case BufferFormat::Mono8:
 			case BufferFormat::Stereo8: {
@@ -213,7 +206,7 @@ namespace nCine
 		return true;
 	}
 
-	void Ps3AudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void Ps3AudioDevice::SetSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->BufferId = bufferId;
@@ -221,14 +214,14 @@ namespace nCine
 		}
 	}
 
-	void Ps3AudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	void Ps3AudioDevice::SetSourceGain(std::uint32_t sourceId, float gain)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Gain = gain;
 		}
 	}
 
-	void Ps3AudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	void Ps3AudioDevice::SetSourcePitch(std::uint32_t sourceId, float pitch)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			// A non-positive pitch would stall or reverse the cursor, neither of which the mixer expresses
@@ -236,49 +229,48 @@ namespace nCine
 		}
 	}
 
-	void Ps3AudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	void Ps3AudioDevice::SetSourceLooping(std::uint32_t sourceId, bool looping)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Looping = looping;
 		}
 	}
 
-	void Ps3AudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	void Ps3AudioDevice::SetSourceRelative(std::uint32_t sourceId, bool relative)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Relative = relative;
 		}
 	}
 
-	void Ps3AudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	void Ps3AudioDevice::SetSourcePosition(std::uint32_t sourceId, const Vector3f& position)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Position = position;
 		}
 	}
 
-	void Ps3AudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	void Ps3AudioDevice::SetSourceLowPass(std::uint32_t sourceId, float value)
 	{
-		// The mixer has no filter stage, and adding one for the single effect that asks for it would cost
-		// every source a per-sample branch
+		// No filter stage, it would cost every source a per-sample branch
 		static_cast<void>(sourceId);
 		static_cast<void>(value);
 	}
 
-	std::int32_t Ps3AudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	std::int32_t Ps3AudioDevice::GetSourceSampleOffset(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr ? std::int32_t(source->Cursor) : 0);
 	}
 
-	void Ps3AudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	void Ps3AudioDevice::SetSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Cursor = double(offset > 0 ? offset : 0);
 		}
 	}
 
-	void Ps3AudioDevice::playSource(std::uint32_t sourceId)
+	void Ps3AudioDevice::PlaySource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Playing = true;
@@ -286,14 +278,14 @@ namespace nCine
 		}
 	}
 
-	void Ps3AudioDevice::pauseSource(std::uint32_t sourceId)
+	void Ps3AudioDevice::PauseSource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Paused = true;
 		}
 	}
 
-	void Ps3AudioDevice::stopSource(std::uint32_t sourceId)
+	void Ps3AudioDevice::StopSource(std::uint32_t sourceId)
 	{
 		if (Source* source = GetSource(sourceId)) {
 			source->Playing = false;
@@ -307,13 +299,13 @@ namespace nCine
 		}
 	}
 
-	bool Ps3AudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	bool Ps3AudioDevice::IsSourcePlaying(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr && source->Playing && !source->Paused);
 	}
 
-	void Ps3AudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	void Ps3AudioDevice::QueueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || bufferId == 0 || bufferId >= _buffers.size()) {
@@ -326,13 +318,13 @@ namespace nCine
 		source->Queue[source->QueueCount++] = bufferId;
 	}
 
-	std::int32_t Ps3AudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	std::int32_t Ps3AudioDevice::GetProcessedBufferCount(std::uint32_t sourceId)
 	{
 		const Source* source = GetSource(sourceId);
 		return (source != nullptr ? source->ProcessedCount : 0);
 	}
 
-	void Ps3AudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	void Ps3AudioDevice::UnqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
 	{
 		Source* source = GetSource(sourceId);
 		if (source == nullptr || count <= 0) {
@@ -352,7 +344,7 @@ namespace nCine
 		}
 	}
 
-	void Ps3AudioDevice::suspendDevice()
+	void Ps3AudioDevice::SuspendDevice()
 	{
 		if (_valid && !_suspended) {
 			audioPortStop(_portNumber);
@@ -360,11 +352,10 @@ namespace nCine
 		}
 	}
 
-	void Ps3AudioDevice::resumeDevice()
+	void Ps3AudioDevice::ResumeDevice()
 	{
 		if (_valid && _suspended) {
-			// The ring still holds whatever was in it when the port stopped, which would be replayed as a
-			// burst of stale audio; the write cursor is resynchronized with the hardware instead
+			// Clear stale audio from the ring and resync the write cursor with the hardware
 			std::memset(_portBuffer, 0, std::size_t(BlockCount) * BlockSamples * ChannelCount * sizeof(float));
 			audioPortStart(_portNumber);
 			_writeBlock = std::uint32_t(*_readIndexAddress);
@@ -372,30 +363,25 @@ namespace nCine
 		}
 	}
 
-	void Ps3AudioDevice::onBlockingOperationBegan()
+	void Ps3AudioDevice::OnBlockingOperationBegan()
 	{
-		// The ring is topped up from updatePlayers(), which the caller is about to stop calling for far longer
-		// than the ring holds - it is 85 ms, a level load is seconds - and the hardware keeps scanning the ring
-		// meanwhile, so left alone it would play the last 85 ms of the mix over and over for the whole load
-		// (the same artefact the PS2's module and the Dreamcast's stream driver produce). Silenced instead, and
-		// the write cursor is left for the first FillRing() afterwards to put back just ahead of the hardware,
-		// which by then is anywhere in the ring
+		// The hardware would keep looping the ring while UpdatePlayers() is not called, so silence it;
+		// the next FillRing() puts the write cursor back just ahead of the hardware
 		if (_valid && !_suspended) {
 			std::memset(_portBuffer, 0, std::size_t(BlockCount) * BlockSamples * ChannelCount * sizeof(float));
 			_writeBlock = BlockCount;
 		}
 	}
 
-	void Ps3AudioDevice::onBlockingOperationEnded()
+	void Ps3AudioDevice::OnBlockingOperationEnded()
 	{
-		// Nothing to do: the next FillRing() resynchronizes the write cursor (see onBlockingOperationBegan())
+		// Nothing to do: the next FillRing() resynchronizes the write cursor (see OnBlockingOperationBegan())
 	}
 
-	void Ps3AudioDevice::updatePlayers()
+	void Ps3AudioDevice::UpdatePlayers()
 	{
-		// The base class advances the players and retires the finished ones first, so the mix below sees the
-		// state this frame actually asked for
-		AudioDeviceBase::updatePlayers();
+		// Base class first, so the mix below reflects this frame's state
+		AudioDeviceBase::UpdatePlayers();
 
 		if (_valid && !_suspended) {
 			FillRing();
@@ -404,13 +390,10 @@ namespace nCine
 
 	void Ps3AudioDevice::FillRing()
 	{
-		// The hardware publishes the block it is reading; everything from the one after it up to (but not
-		// including) it again is ours to write. Stopping one block short of the read cursor keeps the mixer
-		// from overwriting the block currently being scanned out.
+		// Every block except the one the hardware is reading is ours to write
 		const std::uint32_t readBlock = std::uint32_t(*_readIndexAddress) % BlockCount;
 
-		// A first call (or a resume) starts writing just ahead of the hardware rather than wherever the
-		// cursor happened to be left, so the ring fills forwards from a known point
+		// After the first call or a blocking operation, start just ahead of the hardware
 		if (_writeBlock >= BlockCount) {
 			_writeBlock = (readBlock + 1) % BlockCount;
 		}
@@ -454,8 +437,7 @@ namespace nCine
 		float leftGain, rightGain;
 		ComputePanning(source, leftGain, rightGain);
 
-		// One output frame advances the cursor by this much of an input frame, which is where both the
-		// source's pitch and the rate difference between the buffer and the port are applied
+		// Cursor advance per output frame, combining pitch and the buffer-to-port rate ratio
 		double step = (double(buffer->Frequency) / double(OutputFrequency)) * double(source.Pitch);
 
 		for (std::uint32_t i = 0; i < frames; i++) {
@@ -474,22 +456,17 @@ namespace nCine
 					if (buffer == nullptr) {
 						return false;
 					}
-					// The next buffer may carry another sample rate, so the step follows it - and the loop
-					// re-tests rather than skipping this output frame, so a buffer boundary no longer costs
-					// a one-sample gap (mirrors the N64 mixer)
+					// The next buffer may have another rate; the loop re-tests instead of skipping a frame
 					step = (double(buffer->Frequency) / double(OutputFrequency)) * double(source.Pitch);
 				} else if (source.Looping) {
-					// Wrapped rather than reset, so a step that overshoots the end does not lose the
-					// fraction of a frame it went past by - over a long loop that would drift audibly
+					// Wrapped rather than reset, so the overshoot is kept and long loops do not drift
 					source.Cursor = std::fmod(source.Cursor, double(buffer->FrameCount));
 				} else {
 					return false;
 				}
 			}
 
-			// Linear interpolation between the two frames the cursor sits between. The upper neighbour is
-			// clamped to the last frame rather than wrapped: at the very end of a non-looping buffer there
-			// is nothing after it, and wrapping would fold the first sample into the last one as a click.
+			// Linear interpolation; the upper neighbour is clamped, not wrapped, to avoid a click at the end
 			const std::int32_t index = std::int32_t(source.Cursor);
 			const float fraction = float(source.Cursor - double(index));
 			const std::int32_t nextIndex = (index + 1 < buffer->FrameCount ? index + 1 : index);
@@ -526,16 +503,13 @@ namespace nCine
 				continue;
 			}
 			if (!MixSource(source, output, frames)) {
-				// Ran out of audio: a static source has finished, and a streaming one has been starved by a
-				// decoder that could not keep up. Both stop; the player notices through isSourcePlaying().
+				// Finished or starved; the player notices through IsSourcePlaying()
 				source.Playing = false;
 				source.Cursor = 0.0;
 			}
 		}
 
-		// The hardware takes -1..1 and wraps anything outside it into the opposite polarity, which is a far
-		// worse artefact than the clipping it would otherwise be. With this many voices a loud moment can
-		// exceed unity, so the sum is clamped rather than left to fold over.
+		// The hardware wraps values outside -1..1 into the opposite polarity, so the sum is clamped
 		const std::uint32_t total = frames * ChannelCount;
 		for (std::uint32_t i = 0; i < total; i++) {
 			const float value = output[i];
