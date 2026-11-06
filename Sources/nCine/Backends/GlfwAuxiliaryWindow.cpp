@@ -20,6 +20,11 @@
 
 #include <algorithm>
 
+#define GLFW_HAS_GET_PLATFORM (GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4))
+#if GLFW_HAS_GET_PLATFORM && defined(__ELF__)
+// The header can be newer than the linked library
+#	pragma weak glfwGetPlatform
+#endif
 
 namespace nCine::Backends
 {
@@ -34,9 +39,13 @@ namespace nCine::Backends
 		if (!AuxiliaryWindowPresenter::IsSupported()) {
 			return false;
 		}
-#if GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4)
+#if GLFW_HAS_GET_PLATFORM
 		// Wayland doesn't let an application put its windows where it wants
+#	if defined(__ELF__)
+		if (glfwGetPlatform != nullptr && glfwGetPlatform() == GLFW_PLATFORM_WAYLAND) {
+#	else
 		if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND) {
+#	endif
 			return false;
 		}
 #endif

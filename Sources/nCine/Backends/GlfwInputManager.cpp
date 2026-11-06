@@ -590,16 +590,16 @@ namespace nCine::Backends
 
 		for (int i = 0; i < touchEvent.Count; i++) {
 			auto& pointer = touchEvent.Pointers[i];
-			pointer.id = event->touches[i].identifier;
-			pointer.x = (float)(event->touches[i].targetX / cssWidth);
-			pointer.y = (float)(event->touches[i].targetY / cssHeight);
-			pointer.pressure = 1.0f;
+			pointer.Id = event->touches[i].identifier;
+			pointer.X = (float)(event->touches[i].targetX / cssWidth);
+			pointer.Y = (float)(event->touches[i].targetY / cssHeight);
+			pointer.Pressure = 1.0f;
 
 			if (!event->touches[i].isChanged) {
 				continue;
 			}
 
-			touchEvent.ActionIndex = pointer.id;
+			touchEvent.ActionIndex = pointer.Id;
 		}
 
 		inputManager->_inputEventHandler->OnTouchEvent(touchEvent);
